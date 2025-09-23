@@ -1,10 +1,13 @@
 // netlify/functions/run-nano-banana.js
 // Creates a Nano Banana job and polls until it's finished.
-// Uses env KIE_API_KEY and KIE_CREATE_URL. Returns the final JSON (incl. URLs).
+// Also includes webhook/callback + meta so KIE posts result to our callback.
 
 const CREATE_URL = process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/jobs/createTask";
-const API_KEY = process.env.KIE_API_KEY; // <-- put your key in Netlify env
+const API_KEY = process.env.KIE_API_KEY;
+const WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
+
 if (!API_KEY) console.warn("[run-nano-banana] Missing KIE_API_KEY env!");
+if (!WEBHOOK_URL) console.warn("[run-nano-banana] Missing MAKE_WEBHOOK_URL env!");
 
 const RESULT_URLS = [
   (id) => `https://api.kie.ai/api/v1/jobs/getTask?taskId=${id}`,
@@ -12,7 +15,7 @@ const RESULT_URLS = [
   (id) => `https://api.kie.ai/api/v1/jobs/result?taskId=${id}`,
 ];
 
-function normalizeImageSize(v) { 
+function normalizeImageSize(v) {
   if (!v) return "auto";
   const raw = String(v).trim().toLowerCase().replace(/\s+/g, "").replace(/_/g, ":").replace(/-/g, ":");
   const ok = new Set(["auto","1:1","3:4","9:16","4:3","16:9"]);
@@ -32,6 +35,9 @@ exports.handler = async (event) => {
     const format = (body.format || "png").toLowerCase();
     const size = normalizeImageSize(body.size);
 
+    const uid = event.headers["x-user-id"] || event.headers["X-USER-ID"] || "anon";
+    const rid = body.run_id || `${uid}-${Date.now()}`;
+
     if (!API_KEY) return {"statusCode": 500, "headers": cors(), "body": "Missing: KIE_API_KEY"};
     if (!urls.length) return {"statusCode": 400, "headers": cors(), "body": "urls[] required"};
 
@@ -42,7 +48,15 @@ exports.handler = async (event) => {
         image_urls: urls,
         output_format: format,
         image_size: size
-      }
+      },
+      // Make sure KIE calls back when done
+      webhook_url: WEBHOOK_URL,
+      callbackUrl: WEBHOOK_URL,
+      callBackUrl: WEBHOOK_URL,
+      notify_url: WEBHOOK_URL,
+      // Identifiers so callback can save result
+      meta: { uid, run_id: rid },
+      metadata: { uid, run_id: rid }
     };
 
     const create = await fetch(CREATE_URL, {
@@ -57,12 +71,16 @@ exports.handler = async (event) => {
     const createText = await create.text();
     let createJson; try { createJson = JSON.parse(createText); } catch { createJson = { raw: createText }; }
 
-    const taskId = createJson.taskId || createJson.id || createJson.data?.taskId || createJson.data?.id || createJson.result?.taskId || createJson.result?.id;
+    const taskId = createJson.taskId || createJson.id || createJson.data?.taskId || createJson.data?.id;
     if (!taskId) {
-      return {"statusCode": 502, "headers": {...cors(), "Content-Type":"application/json"}, "body": JSON.stringify({ error:"No taskId from KIE", createJson }) };
+      return {
+        "statusCode": 502,
+        "headers": {...cors(), "Content-Type":"application/json"},
+        "body": JSON.stringify({ error:"No taskId from KIE", createJson })
+      };
     }
 
-    // Poll ~2 minutes
+    // Server-side poll for ~2 minutes
     const deadline = Date.now() + 120000;
     let last = null;
     while (Date.now() < deadline) {
@@ -73,17 +91,35 @@ exports.handler = async (event) => {
         last = js;
         const status = String(js.status || js.data?.status || js.result?.status || js.state || "").toLowerCase();
         if (["success","succeeded","completed","done"].includes(status)) {
-          return {"statusCode": 200, "headers": {...cors(), "Content-Type":"application/json"}, "body": JSON.stringify({ taskId, ...js }) };
+          return {
+            "statusCode": 200,
+            "headers": {...cors(), "Content-Type":"application/json"},
+            "body": JSON.stringify({ taskId, run_id: rid, ...js })
+          };
         }
         if (["failed","error"].includes(status)) {
-          return {"statusCode": 500, "headers": {...cors(), "Content-Type":"application/json"}, "body": JSON.stringify({ taskId, ...js }) };
+          return {
+            "statusCode": 500,
+            "headers": {...cors(), "Content-Type":"application/json"},
+            "body": JSON.stringify({ taskId, run_id: rid, ...js })
+          };
         }
       }
       await new Promise(r => setTimeout(r, 2000));
     }
-    return {"statusCode": 504, "headers": {...cors(), "Content-Type":"application/json"}, "body": JSON.stringify({ taskId, timeout: true, last }) };
+
+    // Not ready yet
+    return {
+      "statusCode": 504,
+      "headers": {...cors(), "Content-Type":"application/json"},
+      "body": JSON.stringify({ taskId, run_id: rid, timeout: true, last })
+    };
   } catch (e) {
-    return {"statusCode": 500, "headers": {...cors(), "Content-Type":"text/plain"}, "body": String(e) };
+    return {
+      "statusCode": 500,
+      "headers": {...cors(), "Content-Type":"text/plain"},
+      "body": String(e)
+    };
   }
 };
 
@@ -91,6 +127,6 @@ function cors() {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-USER-ID, x-user-id"
   };
 }
