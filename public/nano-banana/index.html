@@ -170,16 +170,43 @@ window.__run=async function(){
     let d=null;try{d=JSON.parse(text)}catch{d={raw:text}}
     const url=await tryExtractImageUrl(d);
 
+    // ---- NEW: deduct when accepted (success or timeout) ----
+    if (res.ok || res.status === 504) {
+      await chargeOneCredit();
+    }
+    // -------------------------------------------------------
+
     if(url){
       const img=new Image();
       img.onload=()=>{resultBox.innerHTML='';img.className='w-full h-full object-contain';resultBox.appendChild(img);downloadLink.href=url;downloadLink.classList.remove('hidden');downloadLink.textContent='Download'};
       img.src=url;
       showStatus('✅ Done.','text-emerald-300');
     }else{
-      showStatus('✅ Submitted. Result will arrive shortly.','text-emerald-300');
+      // ---- NEW: client polling when server returned 504 + taskId ----
+      if (res.status === 504 && d?.taskId) {
+        showStatus('Processing… still working on it.','text-zinc-400');
+        const taskId = d.taskId;
+        const started = Date.now();
+        while (Date.now() - started < 90000) { // up to 90s
+          await new Promise(r => setTimeout(r, 2000)); // every 2s
+          const r2 = await fetch('/.netlify/functions/run-nano-banana?taskId='+encodeURIComponent(taskId));
+          const t2 = await r2.text();
+          let d2 = null; try { d2 = JSON.parse(t2) } catch { d2 = { raw:t2 } }
+          const url2 = await tryExtractImageUrl(d2);
+          if (url2) {
+            const img=new Image();
+            img.onload=()=>{resultBox.innerHTML='';img.className='w-full h-full object-contain';resultBox.appendChild(img);downloadLink.href=url2;downloadLink.classList.remove('hidden');downloadLink.textContent='Download'};
+            img.src=url2;
+            showStatus('✅ Done.','text-emerald-300');
+            return;
+          }
+        }
+        showStatus('Still processing. Please try again in a moment.','text-yellow-300');
+      } else {
+        showStatus('✅ Submitted. Result will arrive shortly.','text-emerald-300');
+      }
+      // --------------------------------------------------------------
     }
-
-    await chargeOneCredit();
 
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300')
