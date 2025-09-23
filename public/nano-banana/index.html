@@ -37,7 +37,6 @@
       </nav>
       <div class="flex items-center gap-3">
         <a href="#" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
-        <!-- These anchors just navigate back to the main page for auth; no auth code is modified here -->
         <a id="btnLoginNav" href="index.html#login" class="rounded-xl btn px-3 py-2 text-sm">Log in</a>
         <a id="btnGetStarted" href="index.html#login" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Get Started</a>
         <div id="navUser" class="hidden items-center gap-2">
@@ -130,29 +129,11 @@ const filesEl=document.getElementById('files');const thumbsEl=document.getElemen
 filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,4).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
-// ------- ADDED: block run unless logged in --------
-function bindRunGate(){
-  runBtn.disabled = false;
-  runBtn.onclick = __run; // default
-  supabase.auth.getUser().then(({data})=>{
-    if(!data.user){
-      runBtn.onclick = (e)=>{
-        e.preventDefault();
-        alert('Please log in or register first.');
-      };
-    }
-  });
-}
-bindRunGate();
-window.addEventListener('storage', bindRunGate);
-// --------------------------------------------------
-
 async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur<=0)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
-
 async function tryExtractImageUrl(o){if(!o)return null;if(typeof o==='string'&&/^https?:\/\//.test(o))return o;if(o.imageUrl)return o.imageUrl;if(o.outputUrl)return o.outputUrl;if(o.url)return o.url;if(o.data)return await tryExtractImageUrl(o.data);if(Array.isArray(o.images)&&o.images[0]?.url)return o.images[0].url;if(Array.isArray(o.output)&&o.output[0]?.url)return o.output[0].url;return null;}
 
 window.__run=async function(){
-  // hard-check again at click time
+  // HARD CHECK: block anonymous users (so inline onclick still works)
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
@@ -166,7 +147,7 @@ window.__run=async function(){
   resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
 
   try{
-    const uid=authData.user.id; // enforce logged in
+    const uid=authData.user.id;
     const rid=uid+'-'+Date.now();
     const urls=[];
 
@@ -198,7 +179,6 @@ window.__run=async function(){
       showStatus('✅ Submitted. Result will arrive shortly.','text-emerald-300');
     }
 
-    // deduct only for logged-in users (we are), same logic as before
     await chargeOneCredit();
 
   }catch(e){
