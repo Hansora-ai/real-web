@@ -15,7 +15,7 @@ const RESULT_URLS = [
   (id) => `https://api.kie.ai/api/v1/jobs/result?taskId=${id}`,
 ];
 
-// ✅ Hard-coded correct callback URL
+// Hard-coded correct Netlify Functions callback
 const CALLBACK_URL = "https://webhansora.netlify.app/.netlify/functions/kie-callback";
 
 function normalizeImageSize(v) {
@@ -33,7 +33,9 @@ exports.handler = async (event) => {
 
   try {
     const body = JSON.parse(event.body || "{}");
-    const urls = Array.isArray(body.urls) ? body.urls : [];
+
+    // Encode URLs to avoid spaces/commas breaking KIE
+    const urls = (Array.isArray(body.urls) ? body.urls : []).map(u => encodeURI(String(u)));
     const prompt = body.prompt || "";
     const format = (body.format || "png").toLowerCase();
     const size = normalizeImageSize(body.size);
@@ -52,7 +54,7 @@ exports.handler = async (event) => {
         output_format: format,
         image_size: size
       },
-      // ✅ Always post back to our Netlify function
+      // Always post back to our Netlify function
       webhook_url: CALLBACK_URL,
       callbackUrl: CALLBACK_URL,
       callBackUrl: CALLBACK_URL,
@@ -71,21 +73,29 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify(payload)
     });
+
     const createText = await create.text();
     let createJson; try { createJson = JSON.parse(createText); } catch { createJson = { raw: createText }; }
 
-    const taskId = createJson.taskId || createJson.id || createJson.data?.taskId || createJson.data?.id;
+    // If KIE returned a task id even with a non-200, keep going
+    const taskId =
+      createJson.taskId || createJson.id ||
+      createJson.data?.taskId || createJson.data?.id ||
+      create.headers?.get?.("x-task-id");
+
     if (!taskId) {
+      // Surface exact KIE message to the client for visibility
       return {
-        "statusCode": 502,
+        "statusCode": create.ok ? 502 : create.status || 502,
         "headers": {...cors(), "Content-Type":"application/json"},
-        "body": JSON.stringify({ error:"No taskId from KIE", createJson })
+        "body": JSON.stringify({ error: "create_failed", details: createJson })
       };
     }
 
-    // Server-side poll for ~2 minutes
-    const deadline = Date.now() + 120000;
+    // Poll up to ~2.5 minutes (KIE is fast but give buffer)
+    const deadline = Date.now() + 150000;
     let last = null;
+
     while (Date.now() < deadline) {
       for (const makeUrl of RESULT_URLS) {
         const res = await fetch(makeUrl(taskId), { headers: { "Authorization": `Bearer ${API_KEY}` } });
@@ -93,7 +103,7 @@ exports.handler = async (event) => {
         let js; try { js = JSON.parse(txt); } catch { js = { raw: txt }; }
         last = js;
 
-        // ✅ Expanded status checks
+        // Expanded status extraction (KIE responses vary)
         const status = String(
           js.status ||
           js.data?.status ||
