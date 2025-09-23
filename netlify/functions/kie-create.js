@@ -1,147 +1,147 @@
-// netlify/functions/run-nano-banana.js
-// Creates a Nano Banana job and (optionally) lets the client poll it by taskId.
-// Sends webhook/callback + meta so KIE posts result to our callback.
+// netlify/functions/kie-create.js
 
-const CREATE_URL = process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/jobs/createTask";
-const API_KEY = process.env.KIE_API_KEY;
-const WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
+const UPLOAD_BASE64_URL = 'https://kieai.redpandaai.co/api/file-base64-upload';
 
-if (!API_KEY) console.warn("[run-nano-banana] Missing KIE_API_KEY env!");
-if (!WEBHOOK_URL) console.warn("[run-nano-banana] Missing MAKE_WEBHOOK_URL env!");
-
-const RESULT_URLS = [
-  (id) => `https://api.kie.ai/api/v1/jobs/getTask?taskId=${id}`,
-  (id) => `https://api.kie.ai/api/v1/jobs/getTaskResult?taskId=${id}`,
-  (id) => `https://api.kie.ai/api/v1/jobs/result?taskId=${id}`,
-];
-
+// Map any user/legacy values -> exact KIE tokens
 function normalizeImageSize(v) {
-  if (!v) return "auto";
-  const raw = String(v).trim().toLowerCase().replace(/\s+/g, "").replace(/_/g, ":").replace(/-/g, ":");
-  const ok = new Set(["auto","1:1","3:4","9:16","4:3","16:9"]);
-  if (ok.has(raw)) return raw;
-  const map = { square: "1:1", portrait: "3:4", landscape: "16:9" };
-  return map[raw] || "auto";
+  if (!v) return 'auto';
+  const raw = String(v).trim().toLowerCase();
+
+  // unify separators to colon
+  let s = raw.replace(/\s+/g, '')
+             .replace(/_/g, ':')
+             .replace(/-/g, ':');
+
+  const ALLOWED = new Set(['auto','1:1','3:4','9:16','4:3','16:9']);
+  if (ALLOWED.has(s)) return s;
+
+  const MAP = {
+    'square':'1:1',
+    'portrait3:4':'3:4',
+    'portrait3/4':'3:4',
+    'portrait_3_4':'3:4',
+    'portrait9:16':'9:16',
+    'portrait9/16':'9:16',
+    'portrait_9_16':'9:16',
+    'landscape4:3':'4:3',
+    'landscape4/3':'4:3',
+    'landscape_4_3':'4:3',
+    'landscape16:9':'16:9',
+    'landscape16/9':'16:9',
+    'landscape_16_9':'16:9',
+    'portrait':'3:4',
+    'landscape':'16:9'
+  };
+  return MAP[s] || 'auto';
 }
 
-exports.handler = async (event) => {
-  // Preflight
-  if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: cors(), body: "" };
-
-  // --- POLL: GET ?taskId=... ---
-  const url = new URL(event.rawUrl || `http://x${event.path}?${event.queryStringParameters || ""}`);
-  const taskIdParam = url.searchParams.get("taskId");
-  if (event.httpMethod === "GET" && taskIdParam) {
-    try {
-      const r = await pollOnce(taskIdParam);
-      return {
-        statusCode: 200,
-        headers: { ...cors(), "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId: taskIdParam, ...r })
-      };
-    } catch (e) {
-      return { statusCode: 502, headers: { ...cors(), "Content-Type": "application/json" }, body: JSON.stringify({ error: String(e) }) };
-    }
-  }
-
-  // All other calls must be POST create
-  if (event.httpMethod !== "POST") return { statusCode: 405, headers: cors(), body: "Use POST" };
-
+export const handler = async (event) => {
   try {
-    const body = JSON.parse(event.body || "{}");
-    const urls = Array.isArray(body.urls) ? body.urls : [];
-    const prompt = body.prompt || "";
-    const format = (body.format || "png").toLowerCase();
-    const size = normalizeImageSize(body.size);
+    if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
+    if (event.httpMethod !== 'POST')   return { statusCode: 405, headers: cors(), body: 'Method Not Allowed' };
 
-    const uid = event.headers["x-user-id"] || event.headers["X-USER-ID"] || "anon";
-    const rid = body.run_id || `${uid}-${Date.now()}`;
+    const KIE_API_URL      = process.env.KIE_API_URL;
+    const KIE_API_KEY      = process.env.KIE_API_KEY;
+    const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
 
-    if (!API_KEY) return { statusCode: 500, headers: cors(), body: "Missing: KIE_API_KEY" };
-    if (!urls.length) return { statusCode: 400, headers: cors(), body: "urls[] required" };
+    const miss = [];
+    if (!KIE_API_URL)      miss.push('KIE_API_URL');
+    if (!KIE_API_KEY)      miss.push('KIE_API_KEY');
+    if (!MAKE_WEBHOOK_URL) miss.push('MAKE_WEBHOOK_URL');
+    if (miss.length) return { statusCode: 500, headers: cors(), body: `Missing: ${miss.join(', ')}` };
 
-    const payload = {
-      model: "google/nano-banana-edit",
-      input: {
-        prompt,
-        image_urls: urls,
-        output_format: format,
-        image_size: size
-      },
-      // Make sure KIE calls back when done (support both spellings)
-      webhook_url: WEBHOOK_URL,
-      callbackUrl: WEBHOOK_URL,
-      callBackUrl: WEBHOOK_URL,
-      notify_url: WEBHOOK_URL,
-      // Identifiers so callback can save result
-      meta: { uid, run_id: rid },
-      metadata: { uid, run_id: rid }
+    let bodyIn = {};
+    try { bodyIn = JSON.parse(event.body || '{}'); }
+    catch { return { statusCode: 400, headers: cors(), body: 'Bad JSON' }; }
+
+    const {
+      prompt,
+      format = 'png',
+      files = [],
+      imageUrls = [],
+      uid = '',
+      run_id = '',
+      image_size = 'auto'
+    } = bodyIn;
+
+    if (!prompt) return { statusCode: 400, headers: cors(), body: 'Missing "prompt"' };
+
+    let image_urls = [];
+    if (Array.isArray(imageUrls) && imageUrls.length) {
+      image_urls = imageUrls;
+    } else {
+      if (!files.length)    return { statusCode: 400, headers: cors(), body: 'Provide at least one file or imageUrls' };
+      if (files.length > 4) return { statusCode: 400, headers: cors(), body: 'Up to 4 files allowed' };
+
+      for (const f of files) {
+        const dataUrl = `data:${f.contentType || 'application/octet-stream'};base64,${f.data}`;
+        const up = await fetch(UPLOAD_BASE64_URL, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${KIE_API_KEY}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ base64Data: dataUrl, uploadPath: 'images/user-uploads', fileName: f.name || 'image.png' })
+        });
+        const uj = await up.json().catch(()=> ({}));
+        if (!up.ok || !uj?.data?.downloadUrl) {
+          return { statusCode: 502, headers: cors(), body: `Upload failed: ${up.status} ${JSON.stringify(uj)}` };
+        }
+        image_urls.push(uj.data.downloadUrl);
+      }
+    }
+
+    if (!image_urls.length) return { statusCode: 400, headers: cors(), body: 'No image URLs provided.' };
+
+    // keep your previous direct-file normalization
+    image_urls = image_urls.map(u => {
+      try { const url = new URL(u); url.pathname = url.pathname.replace('/download/', '/files/'); return url.toString(); }
+      catch { return u; }
+    });
+
+    const outFormat = String(format).toLowerCase();
+    const first = image_urls[0];
+    const COST = 1.5;
+
+    const clientContext = { prompt, format: outFormat, submittedAt: new Date().toISOString(), run_id, uid };
+    const callbackUrl =
+      `${MAKE_WEBHOOK_URL}?ctx=${encodeURIComponent(JSON.stringify(clientContext))}` +
+      `&uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}&cost=${encodeURIComponent(COST)}`;
+
+    const input = {
+      prompt,
+      image_urls,
+      init_image: first,
+      init_image_url: first,
+      output_format: outFormat,
+      image_size: normalizeImageSize(image_size) // EXACT KIE tokens
     };
 
-    const create = await fetch(CREATE_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
+    const payload = {
+      model: 'google/nano-banana-edit',
+      callbackUrl,
+      callBackUrl: callbackUrl,   // both spellings for safety
+      notify_url: callbackUrl,    // ensure provider notifies
+      metadata: { uid, run_id },  // identifiers for your callback
+      meta:      { uid, run_id },
+      input
+    };
+
+    const resp = await fetch(KIE_API_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${KIE_API_KEY}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(payload)
     });
 
-    const createText = await create.text();
-    let createJson; try { createJson = JSON.parse(createText); } catch { createJson = { raw: createText }; }
-
-    const taskId = createJson.taskId || createJson.id || createJson.data?.taskId || createJson.data?.id;
-    if (!taskId) {
-      return {
-        statusCode: 502,
-        headers: { ...cors(), "Content-Type":"application/json" },
-        body: JSON.stringify({ error: "No taskId from KIE", createJson })
-      };
-    }
-
-    // Return immediately; client will either receive a quick URL from callback/poll
-    return {
-      statusCode: 200,
-      headers: { ...cors(), "Content-Type": "application/json" },
-      body: JSON.stringify({ taskId, run_id: rid, queued: true })
-    };
-
+    const ct = resp.headers.get('content-type') || 'application/json';
+    const body = await resp.text();
+    return { statusCode: resp.status, headers: { ...cors(), 'Content-Type': ct, 'Cache-Control': 'no-store' }, body };
   } catch (e) {
-    return {
-      statusCode: 500,
-      headers: { ...cors(), "Content-Type":"text/plain" },
-      body: String(e)
-    };
+    return { statusCode: 502, headers: cors(), body: `Server error: ${e.message || e}` };
   }
 };
 
-async function pollOnce(taskId) {
-  if (!API_KEY) throw new Error("Missing KIE_API_KEY");
-  for (const makeUrl of RESULT_URLS) {
-    const res = await fetch(makeUrl(taskId), { headers: { "Authorization": `Bearer ${API_KEY}` } });
-    const txt = await res.text();
-    let js; try { js = JSON.parse(txt); } catch { js = { raw: txt }; }
-
-    const status = String(js.status || js.data?.status || js.result?.status || js.state || "").toLowerCase();
-    const imageUrl =
-      js.imageUrl || js.outputUrl || js.url ||
-      js.data?.imageUrl || js.data?.url ||
-      (Array.isArray(js.images) && js.images[0]?.url) ||
-      (Array.isArray(js.output) && js.output[0]?.url) ||
-      null;
-
-    if (imageUrl) return { status, imageUrl };
-    if (["failed","error"].includes(status)) return { status, error: js };
-    if (["success","succeeded","completed","done"].includes(status)) return { status, imageUrl: imageUrl || null };
-  }
-  return { status: "pending" };
-}
-
 function cors() {
   return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-USER-ID, x-user-id"
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
   };
 }
