@@ -1,22 +1,95 @@
 // netlify/functions/run-nano-banana.js
-// Creates a Nano Banana job and polls until it's finished.
-// Also includes webhook/callback + meta so KIE posts result to our callback.
+// Create Nano Banana job and immediately return "submitted".
+// KIE will POST the final result to our callback; UI should watch Supabase by run_id.
 
 const CREATE_URL = process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/jobs/createTask";
 const API_KEY = process.env.KIE_API_KEY;
-const WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
 
 if (!API_KEY) console.warn("[run-nano-banana] Missing KIE_API_KEY env!");
-if (!WEBHOOK_URL) console.warn("[run-nano-banana] Missing MAKE_WEBHOOK_URL env!");
 
-const RESULT_URLS = [
-  (id) => `https://api.kie.ai/api/v1/jobs/getTask?taskId=${id}`,
-  (id) => `https://api.kie.ai/api/v1/jobs/getTaskResult?taskId=${id}`,
-  (id) => `https://api.kie.ai/api/v1/jobs/result?taskId=${id}`,
-];
-
-// Correct Netlify Functions callback (with the dot)
+// Correct Netlify Functions callback (WITH DOT)
 const CALLBACK_URL = "https://webhansora.netlify.app/.netlify/functions/kie-callback";
+const VERSION_TAG  = "nb_fn_final_submit_only";
+
+exports.handler = async (event) => {
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 204, headers: cors(), body: "" };
+  }
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, headers: cors(), body: "Use POST" };
+  }
+
+  try {
+    const body = JSON.parse(event.body || "{}");
+
+    // Required inputs
+    const rawUrls = Array.isArray(body.urls) ? body.urls : [];
+    if (!rawUrls.length) {
+      return ok({ submitted: false, note: "urls_required", version: VERSION_TAG });
+    }
+
+    // Normalize/encode URLs (handles spaces/commas)
+    const image_urls = rawUrls.map(u => encodeURI(String(u)));
+
+    const prompt  = body.prompt || "";
+    const format  = (body.format || "png").toLowerCase();
+    const size    = normalizeImageSize(body.size);
+
+    // Identify the user/run to bind result
+    const uid = event.headers["x-user-id"] || event.headers["X-USER-ID"] || "anon";
+    const run_id = body.run_id || `${uid}-${Date.now()}`;
+
+    // Build KIE payload
+    const payload = {
+      model: "google/nano-banana-edit",
+      input: { prompt, image_urls, output_format: format, image_size: size },
+
+      // Force the correct callback everywhere
+      webhook_url: CALLBACK_URL,
+      callbackUrl: CALLBACK_URL,
+      callBackUrl: CALLBACK_URL,
+      notify_url:  CALLBACK_URL,
+
+      // meta used by kie-callback.js
+      meta:      { uid, run_id, version: VERSION_TAG, cb: CALLBACK_URL },
+      metadata:  { uid, run_id, version: VERSION_TAG, cb: CALLBACK_URL }
+    };
+
+    // Create the job
+    const create = await fetch(CREATE_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type":  "application/json",
+        "Accept":        "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    // Parse response (even if not 200)
+    const text = await create.text();
+    let js; try { js = JSON.parse(text); } catch { js = { raw: text }; }
+
+    // Best-effort taskId extraction
+    const taskId =
+      js.taskId || js.id || js.data?.taskId || js.data?.id || null;
+
+    // Always return 200 submitted (let callback deliver final result)
+    return ok({
+      submitted: true,
+      taskId,
+      run_id,
+      version: VERSION_TAG,
+      used_callback: CALLBACK_URL
+    });
+
+  } catch (e) {
+    // Still 200 so the UI stays in "submitted" and waits for callback
+    return ok({ submitted: true, note: "exception", message: String(e), version: VERSION_TAG });
+  }
+};
+
+// ───────────────────────────────── helpers
 
 function normalizeImageSize(v) {
   if (!v) return "auto";
@@ -27,112 +100,13 @@ function normalizeImageSize(v) {
   return map[raw] || "auto";
 }
 
-exports.handler = async (event) => {
-  if (event.httpMethod === "OPTIONS") return {"statusCode": 204, "headers": cors(), "body": ""};
-  if (event.httpMethod !== "POST") return {"statusCode": 405, "headers": cors(), "body": "Use POST"};
-
-  try {
-    const body = JSON.parse(event.body || "{}");
-
-    // Encode any spaces/commas in filenames
-    const urls = (Array.isArray(body.urls) ? body.urls : []).map(u => encodeURI(String(u)));
-    const prompt = body.prompt || "";
-    const format = (body.format || "png").toLowerCase();
-    const size = normalizeImageSize(body.size);
-
-    const uid = event.headers["x-user-id"] || event.headers["X-USER-ID"] || "anon";
-    const rid = body.run_id || `${uid}-${Date.now()}`;
-
-    if (!API_KEY) return {"statusCode": 500, "headers": cors(), "body": "Missing: KIE_API_KEY"};
-    if (!urls.length) return {"statusCode": 400, "headers": cors(), "body": "urls[] required"};
-
-    const payload = {
-      model: "google/nano-banana-edit",
-      input: { prompt, image_urls: urls, output_format: format, image_size: size },
-      // Always post back to our Netlify function
-      webhook_url: CALLBACK_URL,
-      callbackUrl: CALLBACK_URL,
-      callBackUrl: CALLBACK_URL,
-      notify_url: CALLBACK_URL,
-      // Identifiers so callback can save result
-      meta: { uid, run_id: rid },
-      metadata: { uid, run_id: rid }
-    };
-
-    const create = await fetch(CREATE_URL, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    const createText = await create.text();
-    let createJson; try { createJson = JSON.parse(createText); } catch { createJson = { raw: createText }; }
-
-    // proceed if we have a task id at all
-    const taskId =
-      createJson.taskId || createJson.id ||
-      createJson.data?.taskId || createJson.data?.id;
-
-    if (!taskId) {
-      // bubble up exact KIE error to client (UI can show message from details)
-      return {
-        "statusCode": create.ok ? 502 : (create.status || 502),
-        "headers": {...cors(), "Content-Type":"application/json"},
-        "body": JSON.stringify({ error: "create_failed", details: createJson })
-      };
-    }
-
-    // Poll up to ~2 minutes, but DO NOT fail early on transient 'error'
-    const deadline = Date.now() + 120000;
-    let last = null;
-
-    while (Date.now() < deadline) {
-      let sawSuccess = false;
-
-      for (const makeUrl of RESULT_URLS) {
-        const res = await fetch(makeUrl(taskId), { headers: { "Authorization": `Bearer ${API_KEY}` } });
-        const txt = await res.text();
-        let js; try { js = JSON.parse(txt); } catch { js = { raw: txt }; }
-        last = js;
-
-        const status = String(
-          js.status ||
-          js.data?.status ||
-          js.result?.status ||
-          js.state ||
-          js.output?.status ||
-          js.task?.status ||
-          ""
-        ).toLowerCase();
-
-        if (["success","succeeded","completed","done"].includes(status)) {
-          sawSuccess = true;
-          break;
-        }
-        // IMPORTANT: we *ignore* "failed"/"error" here because KIE can flip to success afterwards.
-      }
-
-      if (sawSuccess) {
-        return {
-          "statusCode": 200,
-          "headers": {...cors(), "Content-Type":"application/json"},
-          "body": JSON.stringify({ taskId, run_id: rid, ...last })
-        };
-      }
-
-      await new Promise(r => setTimeout(r, 2000));
-    }
-
-    // Timed out waiting: treat as SUBMITTED (old behavior your UI expects).
-    return {
-      "statusCode": 504,
-      "headers": {...cors(), "Content-Type":"application/json"},
-      "body": JSON.stringify({ taskId, run_id: rid, timeout: true, submitted: true, last })
-    };
-  } catch (e) {
-    return { "statusCode": 500, "headers": {...cors(), "Content-Type":"text/plain"}, "body": String(e) };
-  }
-};
+function ok(json) {
+  return {
+    statusCode: 200,
+    headers: { ...cors(), "X-NB-Version": "nb_fn_final_submit_only", "X-NB-Callback": CALLBACK_URL },
+    body: JSON.stringify(json)
+  };
+}
 
 function cors() {
   return {
