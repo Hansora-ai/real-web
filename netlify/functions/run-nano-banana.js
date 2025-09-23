@@ -15,7 +15,7 @@ const RESULT_URLS = [
   (id) => `https://api.kie.ai/api/v1/jobs/result?taskId=${id}`,
 ];
 
-// Hard-coded correct Netlify Functions callback
+// Correct Netlify Functions callback (with the dot)
 const CALLBACK_URL = "https://webhansora.netlify.app/.netlify/functions/kie-callback";
 
 function normalizeImageSize(v) {
@@ -34,7 +34,7 @@ exports.handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
 
-    // Encode URLs to avoid spaces/commas breaking KIE
+    // Encode any spaces/commas in filenames
     const urls = (Array.isArray(body.urls) ? body.urls : []).map(u => encodeURI(String(u)));
     const prompt = body.prompt || "";
     const format = (body.format || "png").toLowerCase();
@@ -48,12 +48,7 @@ exports.handler = async (event) => {
 
     const payload = {
       model: "google/nano-banana-edit",
-      input: {
-        prompt,
-        image_urls: urls,
-        output_format: format,
-        image_size: size
-      },
+      input: { prompt, image_urls: urls, output_format: format, image_size: size },
       // Always post back to our Netlify function
       webhook_url: CALLBACK_URL,
       callbackUrl: CALLBACK_URL,
@@ -66,44 +61,40 @@ exports.handler = async (event) => {
 
     const create = await fetch(CREATE_URL, {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
+      headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json", "Accept": "application/json" },
       body: JSON.stringify(payload)
     });
 
     const createText = await create.text();
     let createJson; try { createJson = JSON.parse(createText); } catch { createJson = { raw: createText }; }
 
-    // If KIE returned a task id even with a non-200, keep going
+    // proceed if we have a task id at all
     const taskId =
       createJson.taskId || createJson.id ||
-      createJson.data?.taskId || createJson.data?.id ||
-      create.headers?.get?.("x-task-id");
+      createJson.data?.taskId || createJson.data?.id;
 
     if (!taskId) {
-      // Surface exact KIE message to the client for visibility
       return {
-        "statusCode": create.ok ? 502 : create.status || 502,
+        "statusCode": create.ok ? 502 : (create.status || 502),
         "headers": {...cors(), "Content-Type":"application/json"},
         "body": JSON.stringify({ error: "create_failed", details: createJson })
       };
     }
 
-    // Poll up to ~2.5 minutes (KIE is fast but give buffer)
-    const deadline = Date.now() + 150000;
+    // Poll up to ~2 minutes, but DO NOT fail early on transient 'error'
+    const deadline = Date.now() + 120000;
     let last = null;
 
     while (Date.now() < deadline) {
+      let sawSuccess = false;
+      let sawDefiniteFail = false;
+
       for (const makeUrl of RESULT_URLS) {
         const res = await fetch(makeUrl(taskId), { headers: { "Authorization": `Bearer ${API_KEY}` } });
         const txt = await res.text();
         let js; try { js = JSON.parse(txt); } catch { js = { raw: txt }; }
         last = js;
 
-        // Expanded status extraction (KIE responses vary)
         const status = String(
           js.status ||
           js.data?.status ||
@@ -115,35 +106,35 @@ exports.handler = async (event) => {
         ).toLowerCase();
 
         if (["success","succeeded","completed","done"].includes(status)) {
-          return {
-            "statusCode": 200,
-            "headers": {...cors(), "Content-Type":"application/json"},
-            "body": JSON.stringify({ taskId, run_id: rid, ...js })
-          };
+          sawSuccess = true;
+          break;
         }
         if (["failed","error"].includes(status)) {
-          return {
-            "statusCode": 500,
-            "headers": {...cors(), "Content-Type":"application/json"},
-            "body": JSON.stringify({ taskId, run_id: rid, ...js })
-          };
+          // don't immediately fail — just mark and keep checking other endpoints / next tick
+          sawDefiniteFail = true;
         }
       }
+
+      if (sawSuccess) {
+        return {
+          "statusCode": 200,
+          "headers": {...cors(), "Content-Type":"application/json"},
+          "body": JSON.stringify({ taskId, run_id: rid, ...last })
+        };
+      }
+
+      // keep waiting; KIE often flips from "error" to "success" as outputs land
       await new Promise(r => setTimeout(r, 2000));
     }
 
-    // Not ready yet
+    // Timed out waiting: treat as submitted and let the callback deliver the image
     return {
-      "statusCode": 504,
+      "statusCode": 202,
       "headers": {...cors(), "Content-Type":"application/json"},
-      "body": JSON.stringify({ taskId, run_id: rid, timeout: true, last })
+      "body": JSON.stringify({ taskId, run_id: rid, submitted: true, waiting_for_callback: true, last })
     };
   } catch (e) {
-    return {
-      "statusCode": 500,
-      "headers": {...cors(), "Content-Type":"text/plain"},
-      "body": String(e)
-    };
+    return { "statusCode": 500, "headers": {...cors(), "Content-Type":"text/plain"}, "body": String(e) };
   }
 };
 
