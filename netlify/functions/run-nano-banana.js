@@ -15,6 +15,9 @@ const RESULT_URLS = [
   (id) => `https://api.kie.ai/api/v1/jobs/result?taskId=${id}`,
 ];
 
+// ✅ Hard-coded correct callback URL (Netlify Functions require the dot)
+const CALLBACK_URL = "https://webhansora.netlify.app/.netlify/functions/kie-callback";
+
 function normalizeImageSize(v) {
   if (!v) return "auto";
   const raw = String(v).trim().toLowerCase().replace(/\s+/g, "").replace(/_/g, ":").replace(/-/g, ":");
@@ -49,11 +52,11 @@ exports.handler = async (event) => {
         output_format: format,
         image_size: size
       },
-      // Make sure KIE calls back when done
-      webhook_url: WEBHOOK_URL,
-      callbackUrl: WEBHOOK_URL,
-      callBackUrl: WEBHOOK_URL,
-      notify_url: WEBHOOK_URL,
+      // ✅ Always post back to our Netlify function
+      webhook_url: CALLBACK_URL,
+      callbackUrl: CALLBACK_URL,
+      callBackUrl: CALLBACK_URL,
+      notify_url: CALLBACK_URL,
       // Identifiers so callback can save result
       meta: { uid, run_id: rid },
       metadata: { uid, run_id: rid }
