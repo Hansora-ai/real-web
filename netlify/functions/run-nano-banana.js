@@ -1,95 +1,18 @@
 // netlify/functions/run-nano-banana.js
-// Create Nano Banana job and immediately return "submitted".
-// KIE will POST the final result to our callback; UI should watch Supabase by run_id.
-
 const CREATE_URL = process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/jobs/createTask";
 const API_KEY = process.env.KIE_API_KEY;
 
 if (!API_KEY) console.warn("[run-nano-banana] Missing KIE_API_KEY env!");
 
-// Correct Netlify Functions callback (WITH DOT)
-const CALLBACK_URL = "https://webhansora.netlify.app/.netlify/functions/kie-callback";
-const VERSION_TAG  = "nb_fn_final_submit_only";
+const RESULT_URLS = [
+  (id) => `https://api.kie.ai/api/v1/jobs/getTask?taskId=${id}`,
+  (id) => `https://api.kie.ai/api/v1/jobs/getTaskResult?taskId=${id}`,
+  (id) => `https://api.kie.ai/api/v1/jobs/result?taskId=${id}`,
+];
 
-exports.handler = async (event) => {
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 204, headers: cors(), body: "" };
-  }
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, headers: cors(), body: "Use POST" };
-  }
-
-  try {
-    const body = JSON.parse(event.body || "{}");
-
-    // Required inputs
-    const rawUrls = Array.isArray(body.urls) ? body.urls : [];
-    if (!rawUrls.length) {
-      return ok({ submitted: false, note: "urls_required", version: VERSION_TAG });
-    }
-
-    // Normalize/encode URLs (handles spaces/commas)
-    const image_urls = rawUrls.map(u => encodeURI(String(u)));
-
-    const prompt  = body.prompt || "";
-    const format  = (body.format || "png").toLowerCase();
-    const size    = normalizeImageSize(body.size);
-
-    // Identify the user/run to bind result
-    const uid = event.headers["x-user-id"] || event.headers["X-USER-ID"] || "anon";
-    const run_id = body.run_id || `${uid}-${Date.now()}`;
-
-    // Build KIE payload
-    const payload = {
-      model: "google/nano-banana-edit",
-      input: { prompt, image_urls, output_format: format, image_size: size },
-
-      // Force the correct callback everywhere
-      webhook_url: CALLBACK_URL,
-      callbackUrl: CALLBACK_URL,
-      callBackUrl: CALLBACK_URL,
-      notify_url:  CALLBACK_URL,
-
-      // meta used by kie-callback.js
-      meta:      { uid, run_id, version: VERSION_TAG, cb: CALLBACK_URL },
-      metadata:  { uid, run_id, version: VERSION_TAG, cb: CALLBACK_URL }
-    };
-
-    // Create the job
-    const create = await fetch(CREATE_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type":  "application/json",
-        "Accept":        "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    // Parse response (even if not 200)
-    const text = await create.text();
-    let js; try { js = JSON.parse(text); } catch { js = { raw: text }; }
-
-    // Best-effort taskId extraction
-    const taskId =
-      js.taskId || js.id || js.data?.taskId || js.data?.id || null;
-
-    // Always return 200 submitted (let callback deliver final result)
-    return ok({
-      submitted: true,
-      taskId,
-      run_id,
-      version: VERSION_TAG,
-      used_callback: CALLBACK_URL
-    });
-
-  } catch (e) {
-    // Still 200 so the UI stays in "submitted" and waits for callback
-    return ok({ submitted: true, note: "exception", message: String(e), version: VERSION_TAG });
-  }
-};
-
-// ───────────────────────────────── helpers
+// Base callback (WITH DOT path)
+const CALLBACK_BASE = "https://webhansora.netlify.app/.netlify/functions/kie-callback";
+const VERSION_TAG   = "nb_fn_submit_qs_cb";
 
 function normalizeImageSize(v) {
   if (!v) return "auto";
@@ -100,13 +23,64 @@ function normalizeImageSize(v) {
   return map[raw] || "auto";
 }
 
-function ok(json) {
-  return {
-    statusCode: 200,
-    headers: { ...cors(), "X-NB-Version": "nb_fn_final_submit_only", "X-NB-Callback": CALLBACK_URL },
-    body: JSON.stringify(json)
-  };
-}
+exports.handler = async (event) => {
+  if (event.httpMethod === "OPTIONS") return {"statusCode": 204, "headers": cors(), "body": ""};
+  if (event.httpMethod !== "POST") return {"statusCode": 405, "headers": cors(), "body": "Use POST"};
+
+  try {
+    const body = JSON.parse(event.body || "{}");
+    const urls = Array.isArray(body.urls) ? body.urls : [];
+    const prompt = body.prompt || "";
+    const format = (body.format || "png").toLowerCase();
+    const size = normalizeImageSize(body.size);
+
+    const uid = event.headers["x-user-id"] || event.headers["X-USER-ID"] || "anon";
+    const rid = body.run_id || `${uid}-${Date.now()}`;
+
+    if (!API_KEY) return {"statusCode": 500, "headers": cors(), "body": "Missing: KIE_API_KEY"};
+    if (!urls.length) return {"statusCode": 200, "headers": cors(), "body": JSON.stringify({submitted:false, reason:"urls_required"})};
+
+    // Build callback with identifiers in the query string (robust if body isn't JSON)
+    const cb = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(rid)}`;
+
+    const payload = {
+      model: "google/nano-banana-edit",
+      input: { prompt, image_urls: urls, output_format: format, image_size: size },
+
+      webhook_url: cb,
+      callbackUrl: cb,
+      callBackUrl: cb,
+      notify_url:  cb,
+
+      meta:     { uid, run_id: rid, version: VERSION_TAG, cb },
+      metadata: { uid, run_id: rid, version: VERSION_TAG, cb }
+    };
+
+    const create = await fetch(CREATE_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const text = await create.text();
+    let js; try { js = JSON.parse(text); } catch { js = { raw: text }; }
+    const taskId = js.taskId || js.id || js.data?.taskId || js.data?.id || null;
+
+    // Always tell the UI it was submitted; callback will deliver the row
+    return {
+      statusCode: 200,
+      headers: { ...cors(), "X-NB-Version": VERSION_TAG, "X-NB-Callback": cb },
+      body: JSON.stringify({ submitted: true, taskId, run_id: rid })
+    };
+
+  } catch (e) {
+    return { statusCode: 200, headers: cors(), body: JSON.stringify({ submitted:true, note:"exception", message:String(e) }) };
+  }
+};
 
 function cors() {
   return {
