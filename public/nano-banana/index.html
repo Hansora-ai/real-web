@@ -129,9 +129,84 @@ async function getOrCreateProfile(user){const r=await supabase.from('profiles').
 const filesEl=document.getElementById('files');const thumbsEl=document.getElementById('thumbs');const promptEl=document.getElementById('prompt');const runBtn=document.getElementById('runBtn');const statusEl=document.getElementById('status');const resultBox=document.getElementById('resultBox');const downloadLink=document.getElementById('downloadLink');
 filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,4).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
+
+// ------- ADDED: block run unless logged in --------
+function bindRunGate(){
+  runBtn.disabled = false;
+  runBtn.onclick = __run; // default
+  supabase.auth.getUser().then(({data})=>{
+    if(!data.user){
+      runBtn.onclick = (e)=>{
+        e.preventDefault();
+        alert('Please log in or register first.');
+      };
+    }
+  });
+}
+bindRunGate();
+window.addEventListener('storage', bindRunGate);
+// --------------------------------------------------
+
 async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur<=0)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
+
 async function tryExtractImageUrl(o){if(!o)return null;if(typeof o==='string'&&/^https?:\/\//.test(o))return o;if(o.imageUrl)return o.imageUrl;if(o.outputUrl)return o.outputUrl;if(o.url)return o.url;if(o.data)return await tryExtractImageUrl(o.data);if(Array.isArray(o.images)&&o.images[0]?.url)return o.images[0].url;if(Array.isArray(o.output)&&o.output[0]?.url)return o.output[0].url;return null;}
-window.__run=async function(){const files=[...filesEl.files];if(!files.length){alert('Choose at least one image.');return;}if(files.length>4){alert('Max 4 images.');return;}for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}runBtn.disabled=true;runBtn.textContent='Working…';showStatus('Submitting…','text-zinc-400');resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';try{const {data}=await supabase.auth.getUser();const uid=data.user?.id||'web-'+Math.random().toString(36).slice(2,8);const rid=uid+'-'+Date.now();const urls=[];for(let i=0;i<files.length;i++){const fd=new FormData();fd.append('file',files[i],files[i].name||('image-'+i+'.png'));fd.append('run_id',rid);const r=await fetch('/.netlify/functions/kie-upload',{method:'POST',body:fd});const j=await r.json().catch(()=>null);if(!r.ok||!j||!j.downloadUrl)throw new Error(j?.error||'Upload failed');urls.push(j.downloadUrl);}const payload={prompt:promptEl.value||'.',imageUrls:urls,uid,run_id:rid};const res=await fetch('/.netlify/functions/run-nano-banana', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({urls, prompt: promptEl.value||'.', format:'png', size:'auto'})});const text=await res.text();let d=null;try{d=JSON.parse(text)}catch{d={raw:text}}const url=await tryExtractImageUrl(d);if(url){const img=new Image();img.onload=()=>{resultBox.innerHTML='';img.className='w-full h-full object-contain';resultBox.appendChild(img);downloadLink.href=url;downloadLink.classList.remove('hidden');downloadLink.textContent='Download'};img.src=url;showStatus('✅ Done.','text-emerald-300');}else{showStatus('✅ Submitted. Result will arrive shortly.','text-emerald-300');}await chargeOneCredit();}catch(e){showStatus('❌ '+(e.message||String(e)),'text-rose-300')}finally{runBtn.disabled=false;runBtn.textContent='Run (cost: 1⚡)'}};
+
+window.__run=async function(){
+  // hard-check again at click time
+  const {data:authData}=await supabase.auth.getUser();
+  if(!authData.user){ alert('Please log in or register first.'); return; }
+
+  const files=[...filesEl.files];
+  if(!files.length){alert('Choose at least one image.');return;}
+  if(files.length>4){alert('Max 4 images.');return;}
+  for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}
+
+  runBtn.disabled=true;runBtn.textContent='Working…';
+  showStatus('Submitting…','text-zinc-400');
+  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
+
+  try{
+    const uid=authData.user.id; // enforce logged in
+    const rid=uid+'-'+Date.now();
+    const urls=[];
+
+    for(let i=0;i<files.length;i++){
+      const fd=new FormData();
+      fd.append('file',files[i],files[i].name||('image-'+i+'.png'));
+      fd.append('run_id',rid);
+      const r=await fetch('/.netlify/functions/kie-upload',{method:'POST',headers:{'X-USER-ID':uid},body:fd});
+      const j=await r.json().catch(()=>null);
+      if(!r.ok||!j||!j.downloadUrl)throw new Error(j?.error||'Upload failed');
+      urls.push(j.downloadUrl);
+    }
+
+    const res=await fetch('/.netlify/functions/run-nano-banana',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-USER-ID':uid},
+      body:JSON.stringify({urls, prompt: promptEl.value||'.', format:'png', size:'auto'})
+    });
+    const text=await res.text();
+    let d=null;try{d=JSON.parse(text)}catch{d={raw:text}}
+    const url=await tryExtractImageUrl(d);
+
+    if(url){
+      const img=new Image();
+      img.onload=()=>{resultBox.innerHTML='';img.className='w-full h-full object-contain';resultBox.appendChild(img);downloadLink.href=url;downloadLink.classList.remove('hidden');downloadLink.textContent='Download'};
+      img.src=url;
+      showStatus('✅ Done.','text-emerald-300');
+    }else{
+      showStatus('✅ Submitted. Result will arrive shortly.','text-emerald-300');
+    }
+
+    // deduct only for logged-in users (we are), same logic as before
+    await chargeOneCredit();
+
+  }catch(e){
+    showStatus('❌ '+(e.message||String(e)),'text-rose-300')
+  }finally{
+    runBtn.disabled=false;runBtn.textContent='Run (cost: 1⚡)';
+  }
+};
 </script>
 </body>
 </html>
