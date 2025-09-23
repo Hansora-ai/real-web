@@ -15,7 +15,7 @@ const RESULT_URLS = [
   (id) => `https://api.kie.ai/api/v1/jobs/result?taskId=${id}`,
 ];
 
-// ✅ Hard-coded correct callback URL (Netlify Functions require the dot)
+// ✅ Hard-coded correct callback URL
 const CALLBACK_URL = "https://webhansora.netlify.app/.netlify/functions/kie-callback";
 
 function normalizeImageSize(v) {
@@ -92,7 +92,18 @@ exports.handler = async (event) => {
         const txt = await res.text();
         let js; try { js = JSON.parse(txt); } catch { js = { raw: txt }; }
         last = js;
-        const status = String(js.status || js.data?.status || js.result?.status || js.state || "").toLowerCase();
+
+        // ✅ Expanded status checks
+        const status = String(
+          js.status ||
+          js.data?.status ||
+          js.result?.status ||
+          js.state ||
+          js.output?.status ||
+          js.task?.status ||
+          ""
+        ).toLowerCase();
+
         if (["success","succeeded","completed","done"].includes(status)) {
           return {
             "statusCode": 200,
