@@ -74,6 +74,7 @@ exports.handler = async (event) => {
       createJson.data?.taskId || createJson.data?.id;
 
     if (!taskId) {
+      // bubble up exact KIE error to client (UI can show message from details)
       return {
         "statusCode": create.ok ? 502 : (create.status || 502),
         "headers": {...cors(), "Content-Type":"application/json"},
@@ -87,7 +88,6 @@ exports.handler = async (event) => {
 
     while (Date.now() < deadline) {
       let sawSuccess = false;
-      let sawDefiniteFail = false;
 
       for (const makeUrl of RESULT_URLS) {
         const res = await fetch(makeUrl(taskId), { headers: { "Authorization": `Bearer ${API_KEY}` } });
@@ -109,10 +109,7 @@ exports.handler = async (event) => {
           sawSuccess = true;
           break;
         }
-        if (["failed","error"].includes(status)) {
-          // don't immediately fail — just mark and keep checking other endpoints / next tick
-          sawDefiniteFail = true;
-        }
+        // IMPORTANT: we *ignore* "failed"/"error" here because KIE can flip to success afterwards.
       }
 
       if (sawSuccess) {
@@ -123,15 +120,14 @@ exports.handler = async (event) => {
         };
       }
 
-      // keep waiting; KIE often flips from "error" to "success" as outputs land
       await new Promise(r => setTimeout(r, 2000));
     }
 
-    // Timed out waiting: treat as submitted and let the callback deliver the image
+    // Timed out waiting: treat as SUBMITTED (old behavior your UI expects).
     return {
-      "statusCode": 202,
+      "statusCode": 504,
       "headers": {...cors(), "Content-Type":"application/json"},
-      "body": JSON.stringify({ taskId, run_id: rid, submitted: true, waiting_for_callback: true, last })
+      "body": JSON.stringify({ taskId, run_id: rid, timeout: true, submitted: true, last })
     };
   } catch (e) {
     return { "statusCode": 500, "headers": {...cors(), "Content-Type":"text/plain"}, "body": String(e) };
