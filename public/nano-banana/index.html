@@ -178,24 +178,41 @@ window.__run=async function(){
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
 
-    // Poll Supabase nb_results for this run_id (inserted by webhook)
+    // ---- NEW: Realtime subscribe for this run_id (auto-unsubscribe when received)
+    const channel = supabase.channel('nb_results_' + rid)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'nb_results', filter: 'run_id=eq.' + rid },
+        (payload) => {
+          const url = payload?.new?.image_url;
+          if (url) {
+            const img=new Image();
+            img.onload=()=>{resultBox.innerHTML='';img.className='w-full h-full object-contain';resultBox.appendChild(img);downloadLink.href=url;downloadLink.classList.remove('hidden');downloadLink.textContent='Download';showStatus('✅ Done.','text-emerald-300');};
+            img.src=url;
+            channel.unsubscribe();
+          }
+        }
+      )
+      .subscribe();
+
+    // ---- Minimal polling fallback (removed fragile created_at ordering)
     const started = Date.now();
     while (Date.now() - started < 120000) { // up to 120s
       await new Promise(r => setTimeout(r, 1500));
-      const r1 = await supabase
+      const { data: row } = await supabase
         .from('nb_results')
         .select('image_url')
         .eq('user_id', uid)
         .eq('run_id', rid)
-        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
-      const url = r1?.data?.image_url || null;
+      const url = row?.image_url || null;
       if (url) {
         const img=new Image();
-        img.onload=()=>{resultBox.innerHTML='';img.className='w-full h-full object-contain';resultBox.appendChild(img);downloadLink.href=url;downloadLink.classList.remove('hidden');downloadLink.textContent='Download'};
+        img.onload=()=>{resultBox.innerHTML='';img.className='w-full h-full object-contain';resultBox.appendChild(img);downloadLink.href=url;downloadLink.classList.remove('hidden');downloadLink.textContent='Download';showStatus('✅ Done.','text-emerald-300');};
         img.src=url;
-        showStatus('✅ Done.','text-emerald-300');
+        channel.unsubscribe();
         break;
       }
     }
