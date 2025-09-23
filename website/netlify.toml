@@ -1,0 +1,17 @@
+[build]
+  publish   = "public"
+  functions = "netlify/functions"
+  node_version = "18"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Add this block (name must match netlify/functions/kie-create.js)
+[functions."kie-create"]
+  timeout = 26
+  memory  = 512
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+  Access-Control-Allow-Origin = "*"

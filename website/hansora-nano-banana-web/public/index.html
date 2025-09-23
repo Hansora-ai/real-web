@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA AI — Create Images & Video</title>
+  <meta name="description" content="Simple, beautiful AI generation for images & video." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+                       var(--base-bg); color:#e5e7eb}
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .brand{color:var(--brand)}
+    .glass{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .hero-glow{position:absolute; inset:-20%; background:
+      radial-gradient(800px 400px at 0% 0%, rgba(99,102,241,.25), transparent 60%),
+      radial-gradient(800px 400px at 100% 100%, rgba(56,189,248,.18), transparent 60%);
+      filter: blur(40px); opacity:.6; pointer-events:none}
+    a{transition:all .15s}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+    #authCard{ background: var(--base-bg); }
+    .menu{ display:none; }
+    .menu.show{ display:block; }
+  #navAvatar{background-image:url('data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='%2391c1ff'/><stop offset='100%' stop-color='%235a8cff'/></linearGradient></defs><circle cx='64' cy='64' r='64' fill='url(%23g)'/><circle cx='64' cy='50' r='22' fill='white' fill-opacity='.9'/><path d='M20 108a44 30 0 0 1 88 0' fill='white' fill-opacity='.9'/></svg>');background-size:cover;background-position:center;}
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="min-h-screen">
+  <!-- HEADER -->
+  <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+        <div class="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center font-bold">H</div>
+        <span class="font-semibold tracking-wide">HANSORA AI</span>
+      </a>
+      </div>
+      <nav class="hidden md:flex items-center gap-8 text-sm">
+        <a href="#models" class="hover:text-white/90">Models</a>
+        <a href="#templates" class="hover:text-white/90">Templates</a>
+        <a href="#pricing" class="hover:text-white/90">Pricing</a>
+        <a href="#faq" class="hover:text-white/90">FAQ</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="#" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
+
+        <!-- pre-login -->
+        <a id="btnLoginNav" href="#" class="rounded-xl btn px-3 py-2 text-sm">Log in</a>
+        <a id="btnGetStarted" href="#" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Get Started</a>
+
+        <!-- after login -->
+        <div id="navUser" class="hidden items-center gap-2">
+          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
+          <div class="relative">
+            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
+              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
+            </button>
+            <div id="navMenu" class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm">
+              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a>
+              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Edit profile</a>
+              <a href="#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a>
+              <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="relative overflow-hidden">
+    <div class="hero-glow"></div>
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 md:py-28">
+      <div class="grid md:grid-cols-2 gap-10 items-center">
+        <div>
+          <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80 mb-4">
+            <span class="inline-flex size-1.5 rounded-full bg-emerald-400"></span>
+            Live models: Veo 3 • Kling • Runway
+          </div>
+          <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight">
+            Create stunning <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-blue-400 to-sky-300">AI video & images</span> in seconds.
+          </h1>
+          <p class="mt-5 text-zinc-400 max-w-xl">Simple, beautiful, and fast. Pick a model, paste a prompt or upload an image, and generate. Clean UI inspired by the best—tuned for real work.</p>
+          <div class="mt-8 flex flex-wrap items-center gap-3">
+            <a href="#models" class="rounded-xl btn-brand px-5 py-3 text-sm font-semibold shadow-soft">Explore Models</a>
+            <a href="#templates" class="rounded-xl btn px-5 py-3 text-sm">See Templates</a>
+            <button id="btnLogin" class="rounded-xl btn px-5 py-3 text-sm">Log in / Sign up</button>
+          </div>
+          <p class="mt-3 text-xs text-zinc-400">New users automatically receive <b>3 credits</b>.</p>
+          <div class="mt-6 flex items-center gap-6 text-xs text-zinc-400">
+            <div class="flex items-center gap-2"><span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>Online 24/7</div>
+            <div>Credits • RU / EN</div>
+          </div>
+        </div>
+        <div>
+          <div class="glass relative rounded-2xl p-3 md:p-4 shadow-soft">
+            <div class="aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60">
+              <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop" alt="Showcase" class="h-full w-full object-cover opacity-90">
+            </div>
+            <div class="mt-3 flex items-center justify-between text-xs text-zinc-400">
+              <span>Veo 3 • 1080p • 8s</span>
+              <span>Prompt → Video with sound</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Models / Pricing / FAQ / Footer identical to v2 (omitted here for brevity in this comment)—they are included in the file. -->
+  <section id="models" class="border-t border-base-line/60 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,.07),transparent_60%)]">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+      <div class="mb-8 flex items-end justify-between gap-4">
+        <div>
+          <h2 class="text-2xl sm:text-3xl font-bold">Models</h2>
+          <p class="mt-2 text-zinc-400">Pick the engine that fits your goal. Add prompts later — today we focus on the UI.</p>
+        </div>
+        <a href="#" class="hidden sm:inline rounded-xl btn px-4 py-2 text-sm">View docs</a>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Cards identical to v2 -->
+        <a href="#" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
+          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+            <img src="https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Veo 3">
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <h3 class="font-semibold">Veo 3</h3>
+            <span class="text-xs text-emerald-300">Video</span>
+          </div>
+          <p class="mt-1 text-sm text-zinc-400">Text → video with sound. Fast or high-quality modes.</p>
+        </a>
+        <a href="#" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
+          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+            <img src="https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Kling">
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <h3 class="font-semibold">Kling</h3>
+            <span class="text-xs text-emerald-300">Video</span>
+          </div>
+          <p class="mt-1 text-sm text-zinc-400">High-motion, cinematic video. 9:16 • 16:9 • 1:1.</p>
+        </a>
+        <a href="#" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
+          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+            <img src="https://images.unsplash.com/photo-1496302662116-35cc4f36df92?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Runway">
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <h3 class="font-semibold">Runway</h3>
+            <span class="text-xs text-indigo-300">Image → Video</span>
+          </div>
+          <p class="mt-1 text-sm text-zinc-400">Image-to-video & v2v. Polish your edits with control.</p>
+        </a>
+        <a href="#" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
+          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+            <img src="https://images.unsplash.com/photo-1517816428104-797678c7cf0e?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Imagen">
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <h3 class="font-semibold">Imagen</h3>
+            <span class="text-xs text-sky-300">Image</span>
+          </div>
+          <p class="mt-1 text-sm text-zinc-400">Photoreal image generation & upscale pipelines.</p>
+        </a>
+        <a href="#" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
+          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+            <img src="https://images.unsplash.com/photo-1495567720989-cebdbdd97913?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Midjourney">
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <h3 class="font-semibold">Midjourney</h3>
+            <span class="text-xs text-sky-300">Image</span>
+          </div>
+          <p class="mt-1 text-sm text-zinc-400">Consistent style systems for ad creatives.</p>
+        </a>
+        <a href="#" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
+          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+            <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="GPT-Image">
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <h3 class="font-semibold">GPT-Image</h3>
+            <span class="text-xs text-violet-300">Image</span>
+          </div>
+          <p class="mt-1 text-sm text-zinc-400">Prompt-to-image with strong text understanding.</p>
+        </a>
+
+        <a href="nano-banana.html" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
+          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+            <img src="https://images.unsplash.com/photo-1518779578993-ec3579fee39f?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Nano Banana">
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <h3 class="font-semibold">Nano Banana</h3>
+            <span class="text-xs text-violet-300">Image→Image</span>
+          </div>
+          <p class="mt-1 text-sm text-zinc-400">Refine images by prompt. Opens a dedicated generator page.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- TEMPLATES -->
+  <section id="templates" class="border-t border-base-line/60">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+      <h2 class="text-2xl sm:text-3xl font-bold">Templates</h2>
+      <p class="mt-2 text-zinc-400 max-w-2xl">Upload your own examples later. For now, these are placeholders using Unsplash so the page looks complete after deploy.</p>
+      <div class="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <article class="glass rounded-2xl overflow-hidden border border-white/10">
+          <img src="https://images.unsplash.com/photo-1542228262-3d663b306a55?q=80&w=1600&auto=format&fit=crop" class="h-44 w-full object-cover" alt="Template 1">
+          <div class="p-4">
+            <h3 class="font-semibold">Perfume Macro</h3>
+            <p class="mt-1 text-sm text-zinc-400 line-clamp-2">Soft studio macro with droplets, cinematic camera, glossy glass textures.</p>
+            <div class="mt-3 flex items-center gap-3 text-xs text-zinc-400">
+              <span class="rounded-full bg-white/5 px-2 py-1 border border-white/10">Veo 3</span>
+              <button class="rounded-full bg-brand/10 text-brand border border-brand/30 px-3 py-1 hover:bg-brand/20">Use</button>
+            </div>
+          </div>
+        </article>
+        <article class="glass rounded-2xl overflow-hidden border border-white/10">
+          <img src="https://images.unsplash.com/photo-1460355976672-71c3f0a4bdac?q=80&w=1600&auto=format&fit=crop" class="h-44 w-full object-cover" alt="Template 2">
+          <div class="p-4">
+            <h3 class="font-semibold">Sneaker Spin</h3>
+            <p class="mt-1 text-sm text-zinc-400 line-clamp-2">Product turntable, clean white cyclorama, shadow catcher, 24fps.</p>
+            <div class="mt-3 flex items-center gap-3 text-xs text-zinc-400">
+              <span class="rounded-full bg-white/5 px-2 py-1 border border-white/10">Kling</span>
+              <button class="rounded-full bg-brand/10 text-brand border border-brand/30 px-3 py-1 hover:bg-brand/20">Use</button>
+            </div>
+          </div>
+        </article>
+        <article class="glass rounded-2xl overflow-hidden border border-white/10">
+          <img src="https://images.unsplash.com/photo-1499955085172-a104c9463ece?q=80&w=1600&auto=format&fit=crop" class="h-44 w-full object-cover" alt="Template 3">
+          <div class="p-4">
+            <h3 class="font-semibold">Cosmic Type</h3>
+            <p class="mt-1 text-sm text-zinc-400 line-clamp-2">Crystal letters over mirror lake, volumetric fog, reflective highlights.</p>
+            <div class="mt-3 flex items-center gap-3 text-xs text-zinc-400">
+              <span class="rounded-full bg-white/5 px-2 py-1 border border-white/10">Imagen</span>
+              <button class="rounded-full bg-brand/10 text-brand border border-brand/30 px-3 py-1 hover:bg-brand/20">Use</button>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="mt-8">
+        <a href="#" class="rounded-xl btn px-4 py-2 text-sm">Open templates gallery</a>
+      </div>
+    </div>
+  </section>
+
+
+  <section id="pricing" class="border-t border-base-line/60 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,.07),transparent_60%)]">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+      <h2 class="text-2xl sm:text-3xl font-bold">Pricing</h2>
+      <p class="mt-2 text-zinc-400">Credits-based. Hook up your payments later. UI only for now.</p>
+      <div class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="glass rounded-2xl p-6 border border-white/10">
+          <h3 class="text-lg font-semibold">Starter</h3>
+          <div class="mt-3 text-3xl font-extrabold">$9<span class="text-base font-medium text-zinc-400"> / 50⚡</span></div>
+          <ul class="mt-4 space-y-2 text-sm text-zinc-400">
+            <li>• Veo 3 Fast, Kling short clips</li>
+            <li>• Basic templates</li>
+          </ul>
+          <button class="mt-6 w-full rounded-xl btn-brand px-4 py-2 font-semibold">Buy</button>
+        </div>
+        <div class="glass rounded-2xl p-6 border border-white/10 ring-2 ring-indigo-400/60">
+          <h3 class="text-lg font-semibold">Pro</h3>
+          <div class="mt-3 text-3xl font-extrabold">$29<span class="text-base font-medium text-zinc-400"> / 250⚡</span></div>
+          <ul class="mt-4 space-y-2 text-sm text-zinc-400">
+            <li>• Veo 3 HQ, Kling 16:9/9:16</li>
+            <li>• Priority queue</li>
+          </ul>
+          <button class="mt-6 w-full rounded-xl btn-brand px-4 py-2 font-semibold">Buy</button>
+        </div>
+        <div class="glass rounded-2xl p-6 border border-white/10">
+          <h3 class="text-lg font-semibold">Studio</h3>
+          <div class="mt-3 text-3xl font-extrabold">$79<span class="text-base font-medium text-zinc-400"> / 1000⚡</span></div>
+          <ul class="mt-4 space-y-2 text-sm text-zinc-400">
+            <li>• All models + API</li>
+            <li>• Team seats</li>
+          </ul>
+          <button class="mt-6 w-full rounded-xl btn-brand px-4 py-2 font-semibold">Buy</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="border-t border-base-line/60">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+      <h2 class="text-2xl sm:text-3xl font-bold">FAQ</h2>
+      <div class="mt-6 grid gap-4">
+        <details class="glass rounded-xl p-4 border border-white/10">
+          <summary class="cursor-pointer font-medium">Is login required?</summary>
+          <p class="mt-2 text-zinc-400">Only for saving credits and using generators. Guests can browse the UI.</p>
+        </details>
+        <details class="glass rounded-xl p-4 border border-white/10">
+          <summary class="cursor-pointer font-medium">Do new users get 3 credits?</summary>
+          <p class="mt-2 text-zinc-400">Yes. When you sign up, we set <code>credits = 3</code> in your profile.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <footer class="border-t border-base-line/60">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
+      <nav class="flex items-center gap-5">
+        <a href="#" class="hover:text-white/80">Terms</a>
+        <a href="#" class="hover:text-white/80">Privacy</a>
+        <a href="#" class="hover:text-white/80">Contact</a>
+      </nav>
+    </div>
+  </footer>
+
+  <!-- AUTH MODAL -->
+  <div id="authModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4">
+    <div id="authCard" class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 id="authTitle" class="text-lg font-semibold">Log in</h3>
+        <button id="authClose" class="rounded-lg btn px-2 py-1 text-sm">✕</button>
+      </div>
+      <form id="authForm" class="space-y-3">
+        <input id="authEmail" type="email" placeholder="Email" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
+        <input id="authPass" type="password" placeholder="Password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
+        <input id="authPass2" type="password" placeholder="Repeat password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden">
+        <div class="flex gap-2">
+          <button id="btnDoLogin" type="button" class="w-1/2 rounded-lg btn px-3 py-2 font-semibold">Log in</button>
+          <button id="btnDoSignup" type="button" class="w-1/2 rounded-lg btn px-3 py-2">Sign up</button>
+        </div>
+        <p id="authMsg" class="text-xs text-zinc-400"></p>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Header elements
+    const $btnLoginNav = document.getElementById('btnLoginNav');
+    const $btnGetStarted = document.getElementById('btnGetStarted');
+    const $navUser = document.getElementById('navUser');
+    const $navCredits = document.getElementById('navCredits');
+    const $navAvatar = document.getElementById('navAvatar');
+    const $navMenu = document.getElementById('navMenu');
+    const $btnLogout = document.getElementById('btnLogout');
+    const $navAvatarImg = document.getElementById('navAvatarImg');
+
+    // Hero button
+    const $btnLogin = document.getElementById('btnLogin');
+
+    // Modal elements
+    const $modal = document.getElementById('authModal');
+    const $close = document.getElementById('authClose');
+    const $title = document.getElementById('authTitle');
+    const $emailIn = document.getElementById('authEmail');
+    const $passIn = document.getElementById('authPass');
+    const $pass2In = document.getElementById('authPass2');
+    const $msg = document.getElementById('authMsg');
+    const $doLogin = document.getElementById('btnDoLogin');
+    const $doSignup = document.getElementById('btnDoSignup');
+
+    let authMode = 'login';
+    function openAuth(){ $modal.classList.remove('hidden'); $msg.textContent=''; }
+    function closeAuth(){ $modal.classList.add('hidden'); $msg.textContent=''; }
+    function setAuthMode(mode){
+      authMode = mode;
+      if(mode==='signup'){
+        $title.textContent = 'Sign up';
+        $pass2In.classList.remove('hidden');
+        $doSignup.classList.add('btn-brand'); $doLogin.classList.remove('btn-brand');
+      }else{
+        $title.textContent = 'Log in';
+        $pass2In.classList.add('hidden');
+        $doLogin.classList.add('btn-brand'); $doSignup.classList.remove('btn-brand');
+      }
+    }
+    function showLoggedInUI(profile, user){
+      $btnLoginNav.classList.add('hidden');
+      $btnGetStarted.classList.add('hidden');
+      $navUser.classList.remove('hidden');
+      $navUser.classList.add('flex');
+      $navCredits.textContent = (profile?.credits ?? 0) + '⚡';
+      if(user?.user_metadata?.avatar_url){
+        $navAvatarImg.src = user.user_metadata.avatar_url;
+        $navAvatarImg.classList.remove('hidden');
+      } else {
+        $navAvatarImg.classList.add('hidden');
+      }
+    }
+    function showLoggedOutUI(){
+      $btnLoginNav.classList.remove('hidden');
+      $btnGetStarted.classList.remove('hidden');
+      $navUser.classList.add('hidden');
+      $navUser.classList.remove('flex');
+    }
+    // Dropdown
+    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
+    document.addEventListener('click', (e)=>{
+      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
+    });
+    // Openers
+    $btnLogin.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+    $btnLoginNav.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+    $btnGetStarted.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
+    $close.addEventListener('click', closeAuth);
+
+    async function getOrCreateProfile(user){
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id,email,credits')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if(error){ throw error; }
+      if(!data){
+        const ins = await supabase.from('profiles').insert({
+          user_id: user.id, email: user.email, credits: 3
+        }).select().single();
+        if(ins.error){ throw ins.error; }
+        return ins.data;
+      }
+      return data;
+    }
+    async function refreshCredits(){
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if(!user) return;
+      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      if(prof?.data?.credits != null){ $navCredits.textContent = prof.data.credits + '⚡'; }
+    }
+    window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
+
+    // Sign up
+    $doSignup.addEventListener('click', async ()=>{
+      if(authMode!=='signup'){ setAuthMode('signup'); $msg.textContent=''; return; }
+      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
+      if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
+      $msg.textContent = 'Creating account…';
+      const { data, error } = await supabase.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+      if(error){ $msg.textContent = error.message; return; }
+      $msg.textContent = 'Check your email to confirm, then Log in.';
+      setAuthMode('login');
+    });
+    // Log in
+    $doLogin.addEventListener('click', async ()=>{
+      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
+      $msg.textContent = 'Signing in…';
+      try{
+        const { data, error } = await supabase.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+        if(error){ $msg.textContent = error.message; return; }
+        const user = data.user;
+        const prof = await getOrCreateProfile(user);
+        showLoggedInUI(prof, user);
+        closeAuth();
+      }catch(e){ $msg.textContent = e.message || 'Login failed.'; }
+    });
+    // Logout
+    document.getElementById('btnLogout').addEventListener('click', async ()=>{
+      await supabase.auth.signOut();
+      showLoggedOutUI();
+    });
+    
+    // === Credit helpers (pure Supabase; no Make.com) ===
+    async function getUserId() {
+      const { data } = await supabase.auth.getUser();
+      return data.user?.id || null;
+    }
+    async function setCredits(value) {
+      const uid = await getUserId();
+      if (!uid) throw new Error('Not logged in');
+      const { error } = await supabase
+        .from('profiles')
+        .update({ credits: value })
+        .eq('user_id', uid);
+      if (error) throw error;
+      await window.refreshCredits();
+    }
+    async function addCredits(delta) {
+      const uid = await getUserId();
+      if (!uid) throw new Error('Not logged in');
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (error) throw error;
+      const next = (data?.credits ?? 0) + delta;
+      await setCredits(next);
+    }
+    async function useCredits(cost) {
+      const uid = await getUserId();
+      if (!uid) throw new Error('Not logged in');
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (error) throw error;
+      const current = data?.credits ?? 0;
+      if (current < cost) throw new Error('Not enough credits');
+      await setCredits(current - cost);
+    }
+    window.hansoraCredits = { addCredits, useCredits, setCredits };
+
+    // Restore session
+    (async ()=>{
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if(user){
+        try{
+          const prof = await getOrCreateProfile(user);
+          showLoggedInUI(prof, user);
+        }catch{ showLoggedOutUI(); }
+      }else{
+        showLoggedOutUI();
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+HANSORA • Nano Banana (Website) — Environment Variables
+
+Set these in Netlify → Site configuration → Environment variables:
+
+KIE_API_KEY = 554834c01c1f6512aa28d3b744b21317
+KIE_CREATE_URL = https://api.kie.ai/api/v1/jobs/createTask
+# Optional (only if you still use kie-create.js anywhere)
+KIE_API_URL = https://api.kie.ai/api/v1/jobs/createTask
+# Only if you want KIE to ping Make on completion (not needed for on-page results)
+MAKE_WEBHOOK_URL = https://hook.eu2.make.com/PASTE_EXACT_TRIGGER_URL
+
+Notes:
+- The page uploads to '/.netlify/functions/kie-upload', then calls '/.netlify/functions/run-nano-banana'.
+- The function creates the task and POLLS until done, then returns the final JSON with a direct image URL.
+- The UI shows a loader and then a Download button. Results appear to the SAME user who clicked Run.
+- No changes to your login/register buttons or header layout.

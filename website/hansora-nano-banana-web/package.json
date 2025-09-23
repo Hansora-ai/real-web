@@ -1,0 +1,8 @@
+{
+  "name": "nano-banna",
+  "private": true,
+  "type": "commonjs",
+  "dependencies": {
+    "busboy": "^1.6.0"
+  }
+}
