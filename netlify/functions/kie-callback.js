@@ -1,3 +1,4 @@
+// netlify/functions/kie-callback.js
 // Handles KIE -> webhook callback and stores the result in Supabase nb_results
 // Expects query params ?uid=...&run_id=...
 
@@ -10,7 +11,7 @@ const KIE_KEY       = process.env.KIE_API_KEY;
 // Try multiple bases if we need to verify by taskId
 const KIE_BASES     = Array.from(new Set([KIE_BASE_MAIN, 'https://api.kie.ai', 'https://kieai.redpandaai.co']));
 
-// ✅ Allow-list: accept only these result hosts (covers your two real cases)
+// Accept only these result hosts (covers your account’s CDNs)
 const ALLOWED_RESULT_HOSTS = [
   'tempfile.aiquickdraw.com',
   'tempfile.redpandaai.co',
@@ -57,49 +58,43 @@ exports.handler = async (event) => {
     ).toLowerCase();
     const isSuccess = ['success','succeeded','completed','done'].includes(statusStr);
 
-    // collect input urls so we never save previews/inputs
-    const inputUrls = []
-      .concat(get(data,'input.image_urls') || [])
-      .concat(get(data,'data.input.image_urls') || [])
-      .concat(get(data,'meta.image_urls') || [])
-      .map(String);
+    // Gather *input* URLs to blacklist
+    const inputUrls = new Set();
+    collectInputUrls(data, inputUrls); // fills from data.input.*, input.image_urls, input.images[].url etc.
 
-    // Prefer real result fields
-    const payloadUrl = pickUrl(data, inputUrls);
+    // Prefer result-only fields (do NOT touch generic 'images' at top-level)
+    let final_url = pickResultUrlOnly(data);
 
-    // Accept any http(s) result that isn't preview/input; if status not final OR url missing -> verify by taskId
-    let final_url = payloadUrl;
-    const looksLikePreview =
-      !final_url ||
-      /webhansora|netlify|localhost/i.test(hostname(final_url)) ||
-      inputUrls.includes(String(final_url));
+    // Reject obvious non-results
+    if (isLikelyInputOrPreview(final_url, inputUrls)) final_url = null;
 
-    if ((looksLikePreview || !isSuccess) && taskId && KIE_KEY) {
+    // If unsure OR not success yet, verify via taskId and upgrade to the true result URL
+    if ((!final_url || !isSuccess) && taskId && KIE_KEY) {
       for (const base of KIE_BASES) {
         try {
           const r = await fetch(
             `${base}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
             { headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' } }
           );
-          if (r.status === 404) continue; // try next host
+          if (r.status === 404) continue; // try next base
           const j = await r.json();
           const s = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
           if (['success','succeeded','completed','done'].includes(s)) {
-            final_url =
+            const verUrl =
               j?.data?.result?.images?.[0]?.url ||
               j?.data?.result_url ||
               j?.image_url ||
               j?.url ||
-              final_url;
+              null;
+            if (!isLikelyInputOrPreview(verUrl, inputUrls)) final_url = verUrl;
             break;
           }
         } catch { /* try next base */ }
       }
     }
 
-    // 🔒 Enforce allow-list
-    if (final_url && !isAllowedHost(final_url)) {
-      console.log('[kie-callback] rejecting non-allowed host:', hostname(final_url), 'url:', final_url);
+    // Enforce allow-list & non-input
+    if (final_url && (!isAllowedHost(final_url) || isLikelyInputOrPreview(final_url, inputUrls))) {
       final_url = null;
     }
 
@@ -133,7 +128,8 @@ exports.handler = async (event) => {
   }
 };
 
-// ───────────────── helpers
+// ───────────── helpers
+
 function reply(statusCode, body) {
   return { statusCode, headers: { ...cors(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
 }
@@ -143,41 +139,61 @@ function parseFormLike(s){const out={}; try{ for(const part of s.split('&')){ co
 function get(o,p){ try{ return p.split('.').reduce((a,k)=> (a && k in a ? a[k] : undefined), o); } catch { return undefined; } }
 function isUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u); }
 function hostname(u){ try{ return new URL(u).hostname; } catch { return ''; } }
+function pathname(u){ try{ return new URL(u).pathname; } catch { return ''; } }
 
 function isAllowedHost(u) {
   const h = hostname(u);
   return ALLOWED_RESULT_HOSTS.some(d => h === d || h.endsWith('.' + d));
 }
 
-// Prefer result fields; avoid saving input/preview URLs
-function pickUrl(obj, inputUrls){
-  const prefer = [
+// Treat as input/preview if: our site, localhost, or "/user-uploads/" path, or appears in inputUrls set
+function isLikelyInputOrPreview(u, inputUrls) {
+  if (!isUrl(u)) return true;
+  const h = hostname(u);
+  const p = pathname(u);
+  if (/webhansora|netlify|localhost/i.test(h)) return true;
+  if (p.includes('/user-uploads/')) return true;       // <- your input case
+  if (inputUrls && inputUrls.has(String(u))) return true;
+  return false;
+}
+
+// Collect input URLs from common shapes so we can blacklist them
+function collectInputUrls(obj, outSet) {
+  const push = (arr) => { if (Array.isArray(arr)) for (const it of arr) if (isUrl(it)) outSet.add(String(it)); };
+  // Arrays like image_urls: [...]
+  push(get(obj, 'input.image_urls'));
+  push(get(obj, 'data.input.image_urls'));
+  push(get(obj, 'meta.image_urls'));
+  // Arrays of objects with {url: ...}
+  const asObjs = (arr) => Array.isArray(arr) ? arr.map(x => x && x.url).filter(isUrl) : [];
+  for (const path of [
+    'input.images', 'data.input.images', 'param.images', 'data.param.images',
+    'request.images', 'data.request.images'
+  ]) push(asObjs(get(obj, path)));
+
+  // Deep scan only under likely input nodes
+  for (const key of ['input','inputs','request','param','params']) {
+    const node = get(obj, key);
+    (function walk(x){
+      if (!x) return;
+      if (typeof x === 'string') { if (isUrl(x)) outSet.add(String(x)); }
+      else if (Array.isArray(x)) { for (const v of x) walk(v); }
+      else if (typeof x === 'object') { for (const v of Object.values(x)) walk(v); }
+    })(node);
+  }
+}
+
+// Strictly pick from result-only locations (no generic "images" lookups)
+function pickResultUrlOnly(obj){
+  const cand = [
     get(obj,'result.image_url'), get(obj,'result.imageUrl'), get(obj,'result.outputUrl'),
     get(obj,'result_url'),
     get(obj,'data.result.image_url'), get(obj,'data.result.imageUrl'), get(obj,'data.result.outputUrl'),
     get(obj,'data.result_url'),
     get(obj,'data.result.images?.[0]?.url'),
     get(obj,'data.output?.[0]?.url'),
-    get(obj,'images?.[0]?.url'),
-    get(obj,'output?.[0]?.url'),
-    get(obj,'image_url'), get(obj,'imageUrl'), get(obj,'url')
+    get(obj,'result.images?.[0]?.url'),
   ];
-  for (const u of prefer) {
-    if (isUrl(u) && !inputUrls.includes(String(u))) return u;
-  }
-  // last resort: deep scan (but still avoid input URLs)
-  let found = null;
-  (function walk(x){
-    if (found || !x) return;
-    if (typeof x === 'string'){
-      const m = x.match(/https?:\/\/[^\s"']+/i);
-      const cand = m && m[0];
-      if (cand && isUrl(cand) && !inputUrls.includes(String(cand))) { found = cand; return; }
-    } else if (Array.isArray(x)){
-      for (const v of x) walk(v);
-    } else if (typeof x === 'object'){
-      for (const v of Object.values(x)) walk(v);
-    }
-  })(obj);
-  return found;
+  for (const u of cand) if (isUrl(u)) return u;
+  return null;
 }
