@@ -5,8 +5,14 @@ const SUPABASE_URL  = process.env.SUPABASE_URL;
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY; // service role key (NOT anon)
 const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
 
-const KIE_BASE = process.env.KIE_BASE_URL || 'https://api.kie.ai';
-const KIE_KEY  = process.env.KIE_API_KEY;
+// Use your configured base, plus safe fallbacks (host mismatch is your 404)
+const KIE_BASE_MAIN = process.env.KIE_BASE_URL || 'https://api.kie.ai';
+const KIE_KEY       = process.env.KIE_API_KEY;
+const KIE_BASES     = Array.from(new Set([
+  KIE_BASE_MAIN.replace(/\/+$/,''),
+  'https://api.kie.ai',
+  'https://kieai.redpandaai.co'
+]));
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
@@ -45,15 +51,14 @@ exports.handler = async (event) => {
     // status gate: only insert when job is really done
     const statusStr = String(
       get(data,'status') || get(data,'state') ||
-      get(data,'data.status') || get(data,'data.state') ||
-      ''
+      get(data,'data.status') || get(data,'data.state') || ''
     ).toLowerCase();
     const isSuccess = ['success','succeeded','completed','done'].includes(statusStr);
 
-    // Pick a result URL from payload (prefers real result fields, avoids input URLs)
+    // Pick a result URL from payload (prefer result fields, ignore input URLs)
     const payloadUrl = pickUrl(data);
 
-    // If not clearly a final KIE URL OR status not success, verify with KIE by taskId
+    // If payload looks wrong OR status not success, verify with KIE by taskId across bases
     let final_url = payloadUrl;
     const looksWrong =
       !final_url ||
@@ -61,37 +66,31 @@ exports.handler = async (event) => {
       !/(kie\.ai|redpandaai\.co)/i.test(hostname(final_url));
 
     if ((looksWrong || !isSuccess) && taskId && KIE_KEY) {
-      try {
-        const r = await fetch(
-          `${KIE_BASE}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
-          { headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' } }
-        );
-        const j = await r.json();
-        const s = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
-
-        if (['success','succeeded','completed','done'].includes(s)) {
-          final_url =
-            j?.data?.result?.images?.[0]?.url ||
-            j?.data?.result_url ||
-            j?.image_url ||
-            j?.url ||
-            final_url;
-        } else {
-          // still not done -> do not insert a stub row
-          final_url = null;
-        }
-      } catch (e) {
-        console.log('[kie-callback] verify fetch failed:', String(e));
+      for (const base of KIE_BASES) {
+        try {
+          const r = await fetch(
+            `${base}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+            { headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' } }
+          );
+          if (r.status === 404) continue; // try next host
+          const j = await r.json();
+          const s = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
+          if (['success','succeeded','completed','done'].includes(s)) {
+            final_url =
+              j?.data?.result?.images?.[0]?.url ||
+              j?.data?.result_url ||
+              j?.image_url ||
+              j?.url ||
+              final_url;
+            break;
+          }
+        } catch (_) { /* try next base */ }
       }
     }
 
     // Don’t insert stub rows
     if (!final_url) {
-      return reply(200, {
-        ok: true,
-        saved: false,
-        note: 'no final image_url yet; not inserting'
-      });
+      return reply(200, { ok: true, saved: false, note: 'no final image_url yet; not inserting' });
     }
 
     // Insert only when we have a real, final URL
@@ -145,10 +144,10 @@ function pickUrl(obj){
     get(obj,'result_url'),
     get(obj,'data.result.image_url'), get(obj,'data.result.imageUrl'), get(obj,'data.result.outputUrl'),
     get(obj,'data.result_url'),
-    // common structured outputs
+    // structured outputs
     get(obj,'data.result.images?.[0]?.url'),
     get(obj,'data.output?.[0]?.url'),
-    // very last resort: direct fields (still filtered)
+    // last resort (still filtered)
     get(obj,'image_url'), get(obj,'imageUrl'), get(obj,'url')
   ];
 
@@ -156,7 +155,7 @@ function pickUrl(obj){
     if (isUrl(u) && !inputUrls.includes(String(u))) return u;
   }
 
-  // deep scan last (but still avoid input URLs)
+  // deep scan last (avoid input URLs)
   let found = null;
   (function walk(x){
     if (found || !x) return;
