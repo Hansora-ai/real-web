@@ -45,7 +45,7 @@ exports.handler = async (event) => {
     // Build KIE payload
     const payload = {
       model: "google/nano-banana-edit",
-      input: { prompt, image_urls, output_format: format, image_size: size },
+      input: { prompt, image_urls, output_format: format, image_size: size, aspect_ratio: sizeToAspect(size) },
 
       // Callbacks (add all variants)
       webhook_url: cb,
@@ -97,28 +97,25 @@ exports.handler = async (event) => {
 
 function normalizeImageSize(v) {
   if (!v) return "auto";
-  const s = String(v).trim().toLowerCase();
-  const allowedNamed = new Set([
-    "auto",
-    "square",
-    "portrait_3_4",
-    "portrait_9_16",
-    "landscape_4_3",
-    "landscape_16_9"
-  ]);
-  if (allowedNamed.has(s)) return s;
-  const ratios = new Map([
-    ["1:1", "square"],
-    ["3:4", "portrait_3_4"],
-    ["9:16", "portrait_9_16"],
-    ["4:3", "landscape_4_3"],
-    ["16:9", "landscape_16_9"]
-  ]);
-  if (ratios.has(s)) return ratios.get(s);
-  const digitsOnly = s.replace(/(\d)[_\-:](\d)/g, "$1:$2");
-  if (ratios.has(digitsOnly)) return ratios.get(digitsOnly);
-  return "auto";
+  const raw = String(v).trim().toLowerCase().replace(/\s+/g, "").replace(/_/g, ":").replace(/-/g, ":");
+  const ok = new Set(["auto","1:1","3:4","9:16","4:3","16:9"]);
+  if (ok.has(raw)) return raw;
+  const map = { square: "1:1", portrait: "3:4", landscape: "16:9" };
+  return map[raw] || "auto";
 }
+
+function sizeToAspect(s){
+  if (!s) return undefined;
+  s = String(s).toLowerCase();
+  if (s === "square") return "1:1";
+  if (s === "portrait_3_4") return "3:4";
+  if (s === "portrait_9_16") return "9:16";
+  if (s === "landscape_4_3") return "4:3";
+  if (s === "landscape_16_9") return "16:9";
+  if (s === "1:1" || s === "3:4" || s === "4:3" || s === "9:16" || s === "16:9") return s;
+  return undefined;
+}
+
 
 function ok(json) {
   return {
