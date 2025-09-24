@@ -4,77 +4,89 @@ import fetch from "node-fetch";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
-export default async (req) => {
-  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+// Helper to safely parse body as JSON or form
+async function readBody(req) {
+  const text = await req.text();
+  if (!text) return {};
+  try { return JSON.parse(text); } catch {}
+  try {
+    // handle x-www-form-urlencoded
+    const p = new URLSearchParams(text);
+    const obj = {};
+    for (const [k,v] of p.entries()) obj[k] = v;
+    return obj;
+  } catch {}
+  return { raw: text };
+}
 
-  // --- parse query + body ----------------------------------------------------
-  const { searchParams } = new URL(req.url);
-  const qs_uid   = searchParams.get("uid");
-  const qs_runid = searchParams.get("run_id") || searchParams.get("runId") || searchParams.get("rid");
-
-  let text = "";
-  try { text = await req.text(); } catch {}
-  const ct = (req.headers.get("content-type") || "").toLowerCase();
-
-  let payload = {};
-  if (text) {
-    if (ct.includes("application/json")) { try { payload = JSON.parse(text); } catch {} }
-    if (!Object.keys(payload).length && ct.includes("application/x-www-form-urlencoded")) {
-      payload = Object.fromEntries(new URLSearchParams(text).entries());
-      // Some providers stick nested JSON in a field; try to parse shallowly if present
-      for (const k of Object.keys(payload)) {
-        if (typeof payload[k] === "string" && payload[k].startsWith("{")) {
-          try { payload[k] = JSON.parse(payload[k]); } catch {}
-        }
-      }
-    }
-  }
-
-  // --- figure out ids --------------------------------------------------------
-  const meta = payload?.meta || payload?.metadata || payload?.data?.meta || {};
-  const user_id = meta?.uid ?? meta?.user_id ?? meta?.userId ?? qs_uid ?? "00000000-0000-0000-0000-000000000000";
-  const run_id  = meta?.run_id ?? meta?.runId ?? meta?.rid ?? qs_runid ?? null;
-  const task_id = payload?.taskId ?? payload?.id ?? payload?.data?.taskId ?? payload?.data?.id ?? null;
-
-  // --- collect input URLs so we can exclude them -----------------------------
-  const inputSet = new Set();
-  const addIn = (u) => { if (u && typeof u === "string") inputSet.add(u); };
-  const addInArr = (arr) => { if (Array.isArray(arr)) arr.forEach(addIn); };
-
-  addInArr(payload?.input?.image_urls);
-  addInArr(payload?.data?.input?.image_urls);
-  addInArr(payload?.image_urls);
-  addInArr(payload?.data?.image_urls);
-
-  // --- pick output URL, preferring result/output fields ----------------------
-  const candidates = [];
-  const pushOut = (u) => {
-    if (!u || typeof u !== "string") return;
-    if (!/\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(u)) return;
-    if (inputSet.has(u)) return;              // exclude inputs
-    candidates.push(u);
+// Try hard to find a final image URL (avoid input image_urls)
+function extractImageUrl(p) {
+  if (!p || typeof p !== "object") return null;
+  const tryObj = (o) => {
+    if (!o || typeof o !== "object") return null;
+    if (typeof o.image_url === "string") return o.image_url;
+    if (typeof o.output_url === "string") return o.output_url;
+    if (typeof o.url === "string")        return o.url;
+    if (Array.isArray(o.output) && o.output[0]?.url) return o.output[0].url;
+    if (Array.isArray(o.images) && o.images[0]?.url) return o.images[0].url;
+    return null;
   };
 
-  // Prefer known output shapes first
-  pushOut(payload?.result?.imageUrl);
-  (payload?.result?.images || []).forEach(x => pushOut(x?.url));
-  (payload?.output || []).forEach(x => pushOut(x?.url || (typeof x === "string" ? x : null)));
-  (payload?.data?.result?.images || []).forEach(x => pushOut(x?.url));
-  pushOut(payload?.data?.imageUrl);
-  (payload?.images || []).forEach(x => pushOut(x?.url || (typeof x === "string" ? x : null)));
+  // common places KIE-like payloads use
+  return (
+    tryObj(p) ||
+    tryObj(p.data) ||
+    tryObj(p.result) ||
+    tryObj(p.results) ||
+    tryObj(p.response) ||
+    tryObj(p.output?.[0]) ||
+    null
+  );
+}
 
-  // As a fallback, scan the raw text (outputs usually come after inputs)
-  if (text) {
-    const m = text.match(/https?:\/\/[^\s"']+/g);
-    if (m) m.forEach(pushOut);
+export default async (req) => {
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
   }
 
-  // Prefer the last candidate (outputs often appear later in payload/log)
-  const image_url = candidates.length ? candidates[candidates.length - 1] : null;
+  // read payload and query params
+  let payload;
+  try { payload = await readBody(req); }
+  catch { return new Response("Bad Request", { status: 400 }); }
 
-  if (!run_id) return new Response("OK (missing run_id)", { status: 200 });
+  const url = new URL(req.url);
+  const qs_uid   = url.searchParams.get("uid")    || url.searchParams.get("user_id");
+  const qs_run   = url.searchParams.get("run_id") || url.searchParams.get("runId");
 
-  // --- write to Supabase -----------------------------------------------------
+  const meta     = payload?.meta || payload?.metadata || {};
+  const user_id  = meta.uid || qs_uid || null;
+  const run_id   = meta.run_id || meta.runId || qs_run || null;
+
+  // If we still don't have identifiers, we can't bind it to the user/session
+  if (!user_id || !run_id) {
+    return new Response("Missing uid/run_id", { status: 400 });
+  }
+
+  // Pull a final image URL (do NOT fall back to input.image_urls)
+  const image_url =
+    extractImageUrl(payload) ??
+    extractImageUrl(payload?.data) ??
+    null;
+
+  // We still insert even if image_url is null (lets you see a row + debug)
+  const row = {
+    user_id,
+    run_id,
+    task_id:
+      payload?.taskId ||
+      payload?.id ||
+      payload?.data?.taskId ||
+      payload?.data?.id ||
+      null,
+    image_url
+  };
+
+  // Insert into Supabase (service role)
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/nb_results`, {
       method: "POST",
@@ -84,12 +96,17 @@ export default async (req) => {
         "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`,
         "Prefer": "return=representation"
       },
-      body: JSON.stringify({ user_id, run_id, task_id, image_url })
+      body: JSON.stringify(row)
     });
-    const t = await r.text().catch(() => "");
-    if (!r.ok) return new Response(`OK (insert_failed) ${t}`, { status: 200 });
-    return new Response("OK", { status: 200 });
+
+    // If RLS/table misconfig, this will show you the error text
+    if (!r.ok) {
+      const t = await r.text().catch(() => "");
+      return new Response(`Supabase insert failed: ${t}`, { status: 500 });
+    }
   } catch (e) {
-    return new Response(`OK (insert_exception) ${String(e)}`, { status: 200 });
+    return new Response(`Supabase error: ${String(e)}`, { status: 500 });
   }
+
+  return new Response("OK", { status: 200 });
 };
