@@ -1,86 +1,135 @@
 // netlify/functions/nb-check.js
-// Server-side poller for KIE task results (no webhook, no DB).
-// POST { taskId: "..." }  or  GET ?taskId=...
+// Poll KIE for a task's result using "record-detail" style (like your Make.com HTTP module)
 
 const API_KEY = process.env.KIE_API_KEY;
-
-const RESULT_URLS = [
-  (id) => `https://api.kie.ai/api/v1/jobs/getTask?taskId=${id}`,
-  (id) => `https://api.kie.ai/api/v1/jobs/getTaskResult?taskId=${id}`,
-  (id) => `https://api.kie.ai/api/v1/jobs/result?taskId=${id}`,
-];
+const BASE = process.env.KIE_BASE_URL || "https://api.kie.ai";
 
 exports.handler = async (event) => {
-  if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: cors(), body: "" };
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 204, headers: cors(), body: "" };
+  }
+  if (event.httpMethod !== "GET") {
+    return { statusCode: 405, headers: cors(), body: "Use GET" };
+  }
 
-  try {
-    if (!API_KEY) return json(500, { ok:false, error: "Missing KIE_API_KEY" });
+  const taskId =
+    event.queryStringParameters?.taskId ||
+    event.queryStringParameters?.taskID ||
+    event.queryStringParameters?.id ||
+    "";
 
-    // Accept GET ?taskId=... or POST { taskId }
-    let taskId = null;
-    if (event.httpMethod === "GET") {
-      const u = new URL(event.rawUrl || event.headers.referer || "http://x");
-      taskId = u.searchParams.get("taskId");
-    } else if (event.httpMethod === "POST") {
-      try {
-        const body = JSON.parse(event.body || "{}");
-        taskId = body.taskId || body.id;
-      } catch { /* ignore */ }
-    }
-    if (!taskId) return json(400, { ok:false, error:"taskId_required" });
+  if (!taskId) {
+    return json({ done: false, error: "missing_taskId" });
+  }
+  if (!API_KEY) {
+    return json({ done: false, error: "missing_KIE_API_KEY" });
+  }
 
-    // Try multiple result endpoints; return on first decisive status
-    for (const makeUrl of RESULT_URLS) {
-      const r = await fetch(makeUrl(taskId), {
-        headers: { "Authorization": `Bearer ${API_KEY}` }
+  // Endpoints to try (most likely first)
+  const paths = [
+    `/api/v1/market/record-detail?taskId=${encodeURIComponent(taskId)}`,
+    `/api/v1/jobs/record-detail?taskId=${encodeURIComponent(taskId)}`,
+  ];
+
+  const attempts = [];
+  for (const p of paths) {
+    const url = BASE + p;
+    try {
+      const r = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${API_KEY}`,
+          "Accept": "application/json",
+        },
       });
-      const text = await r.text();
-      let js; try { js = JSON.parse(text); } catch { js = { raw: text }; }
 
-      const status = String(
-        js.status || js.data?.status || js.result?.status || js.state || ""
+      // Save attempt info for debugging if needed
+      attempts.push({ url, status: r.status, ok: r.ok });
+
+      // If 404, try next path
+      if (r.status === 404) continue;
+
+      const text = await r.text();
+      let j; try { j = JSON.parse(text); } catch { j = { raw: text }; }
+
+      // Normalize status/state like KIE UI does
+      const state = String(
+        j?.data?.state ||
+        j?.data?.status ||
+        j?.status ||
+        j?.state ||
+        ""
       ).toLowerCase();
 
-      const imageUrl = extractUrl(js);
+      const done = ["success", "succeeded", "completed", "done"].includes(state);
 
-      // Success → return URL immediately
-      if (["success","succeeded","completed","done"].includes(status)) {
-        return json(200, { ok:true, status, imageUrl, taskId });
-      }
-      // Failure → surface immediately
-      if (["failed","error"].includes(status)) {
-        return json(200, { ok:false, status, taskId, details: js });
-      }
-      // Otherwise keep looping to next endpoint
+      // Best-effort URL extraction
+      const urlOut =
+        firstUrl(
+          j?.data?.result?.images
+        ) || firstUrl(
+          j?.data?.result
+        ) || firstUrl(
+          j?.data?.output
+        ) || j?.url || j?.imageUrl || null;
+
+      return json({
+        done,
+        status: state || r.status,
+        url: urlOut,
+        taskId,
+        // Uncomment for debugging:
+        // raw: j
+      });
+    } catch (e) {
+      attempts.push({ url: BASE + p, error: String(e) });
     }
-
-    // Indeterminate yet; tell client to keep polling
-    return json(200, { ok:true, status:"pending", taskId });
-
-  } catch (e) {
-    return json(500, { ok:false, error:String(e) });
   }
+
+  // If we got here, nothing matched (likely the wrong API family or too early)
+  return json({
+    done: false,
+    status: 404,
+    url: null,
+    taskId,
+    attempts,
+  });
 };
 
-// ───────────────────────── helpers
+// ───────── helpers ─────────
+
+function firstUrl(maybeArrayOrObj) {
+  if (!maybeArrayOrObj) return null;
+  if (typeof maybeArrayOrObj === "string" && /^https?:\/\//.test(maybeArrayOrObj)) return maybeArrayOrObj;
+  if (Array.isArray(maybeArrayOrObj)) {
+    for (const item of maybeArrayOrObj) {
+      const u =
+        (typeof item === "string" && /^https?:\/\//.test(item) && item) ||
+        item?.url ||
+        item?.imageUrl ||
+        null;
+      if (u) return u;
+    }
+  } else if (typeof maybeArrayOrObj === "object") {
+    return (
+      maybeArrayOrObj.url ||
+      maybeArrayOrObj.imageUrl ||
+      firstUrl(maybeArrayOrObj.images) ||
+      firstUrl(maybeArrayOrObj.outputs) ||
+      null
+    );
+  }
+  return null;
+}
+
+function json(obj) {
+  return { statusCode: 200, headers: cors(), body: JSON.stringify(obj) };
+}
+
 function cors() {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type, X-USER-ID, x-user-id",
   };
-}
-function json(code, obj) {
-  return { statusCode: code, headers: { ...cors(), "Content-Type":"application/json" }, body: JSON.stringify(obj) };
-}
-function extractUrl(o) {
-  if (!o) return null;
-  if (typeof o === "string" && /^https?:\/\//.test(o)) return o;
-  if (o.imageUrl) return o.imageUrl;
-  if (o.outputUrl) return o.outputUrl;
-  if (o.url) return o.url;
-  if (o.data) return extractUrl(o.data);
-  if (Array.isArray(o.images) && o.images[0]?.url) return o.images[0].url;
-  if (Array.isArray(o.output) && o.output[0]?.url) return o.output[0].url;
-  return null;
 }
