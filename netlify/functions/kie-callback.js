@@ -125,12 +125,11 @@ function isUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u); }
 function host(u){ try{ return new URL(u).hostname; } catch { return ''; } }
 function isAllowedFinal(u){
   if (!isUrl(u)) return false;
-  const h = host(u);
-  if (!ALLOWED_HOSTS.has(h)) return false;
-  // Generated images come from workers (avoid user-uploads echoes)
-  if (!/\/workers\//i.test(u)) return false;
+  // Relaxed: accept any HTTPS URL; don't require specific host or /workers/ path
+  // (This fixes cases where sized outputs use a different CDN/path.)
   return true;
 }
+
 
 // Prefer result subtree and known result fields; avoid user-upload echoes.
 function pickResultUrl(obj){
