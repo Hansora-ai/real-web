@@ -5,6 +5,10 @@ const SUPABASE_URL  = process.env.SUPABASE_URL;
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY; // service role key (NOT anon)
 const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
 
+// NEW: read KIE host/key so we can verify final result if needed
+const KIE_BASE = process.env.KIE_BASE_URL || 'https://api.kie.ai';
+const KIE_KEY  = process.env.KIE_API_KEY;
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
   if (event.httpMethod !== 'POST')   return { statusCode: 405, headers: cors(), body: 'Use POST' };
@@ -42,8 +46,35 @@ exports.handler = async (event) => {
     // Try hard to find an image URL anywhere in the payload (more shapes covered)
     const image_url = pickUrl(data);
 
+    // --- NEW: verify/upgrade to the official KIE result URL when needed ---
+    let final_url = image_url;
+    const looksWrong =
+      !final_url ||
+      /webhansora|netlify|localhost/i.test(hostname(final_url)) ||   // our own site / preview
+      !/(kie\.ai|redpandaai\.co)/i.test(hostname(final_url));        // not a known KIE host
+
+    if ((looksWrong || !final_url) && taskId && KIE_KEY) {
+      try {
+        const r = await fetch(
+          `${KIE_BASE}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+          { headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' } }
+        );
+        const j = await r.json();
+        // Prefer explicit result paths
+        final_url =
+          j?.data?.result?.images?.[0]?.url ||
+          j?.data?.result_url ||
+          j?.image_url ||
+          j?.url ||
+          final_url;
+      } catch (e) {
+        console.log('[kie-callback] verify fetch failed:', String(e));
+      }
+    }
+    // ---------------------------------------------------------------------
+
     // ⛔️ Don’t insert a stub row with NULL image_url — that’s what kept your UI spinning.
-    if (!image_url) {
+    if (!final_url) {
       return reply(200, {
         ok: true,
         saved: false,
@@ -57,7 +88,7 @@ exports.handler = async (event) => {
       user_id: uid || '00000000-0000-0000-0000-000000000000',
       run_id:  run_id || 'unknown',
       task_id: taskId || null,
-      image_url
+      image_url: final_url      // <-- use verified final URL
     };
 
     const resp = await fetch(TABLE_URL, {
@@ -116,6 +147,8 @@ function parseFormLike(s) {
 function get(o, path) { try { return path.split('.').reduce((a,k)=> (a && k in a ? a[k] : undefined), o); } catch { return undefined; } }
 
 function isUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u); }
+
+function hostname(u){ try { return new URL(u).hostname; } catch { return ''; } }
 
 // Known KIE shapes first, then deep-scan
 function pickUrl(obj){
