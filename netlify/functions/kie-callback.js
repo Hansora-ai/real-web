@@ -3,113 +3,135 @@ import fetch from "node-fetch";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const KIE_API_KEY = process.env.KIE_API_KEY;
+
+// try multiple result endpoints (KIE isn't consistent)
+const RESULT_URLS = [
+  (id) => `https://api.kie.ai/api/v1/jobs/getTaskResult?taskId=${id}`,
+  (id) => `https://api.kie.ai/api/v1/jobs/result?taskId=${id}`,
+  (id) => `https://api.kie.ai/api/v1/jobs/getTask?taskId=${id}`,
+];
 
 export default async (req) => {
-  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
 
-  // ---- parse query + body (JSON or x-www-form-urlencoded)
-  const { searchParams } = new URL(req.url);
-  const qs_uid   = searchParams.get("uid");
-  const qs_runid = searchParams.get("run_id") || searchParams.get("runId") || searchParams.get("rid");
+  // uid/run_id can be passed in the query string
+  const url = new URL(req.url);
+  const qs_uid = url.searchParams.get("uid");
+  const qs_run = url.searchParams.get("run_id");
 
-  let text = "";
-  try { text = await req.text(); } catch {}
-
-  const ct = (req.headers.get("content-type") || "").toLowerCase();
-  let payload = {};
-  if (text) {
-    if (ct.includes("application/json")) {
-      try { payload = JSON.parse(text); } catch {}
+  // read body as text, then try JSON; if not, try form-encoded
+  let payload = null;
+  const raw = await req.text();
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    try {
+      const form = new URLSearchParams(raw);
+      payload = {};
+      for (const [k, v] of form.entries()) payload[k] = v;
+    } catch {
+      payload = { raw };
     }
-    if (!Object.keys(payload).length && ct.includes("application/x-www-form-urlencoded")) {
-      payload = Object.fromEntries(new URLSearchParams(text).entries());
-      // some providers nest json inside fields; shallow-parse if possible
-      for (const k of Object.keys(payload)) {
-        if (typeof payload[k] === "string" && payload[k].startsWith("{")) {
-          try { payload[k] = JSON.parse(payload[k]); } catch {}
-        }
+  }
+
+  const meta = payload?.meta || payload?.metadata || payload?.data?.meta || {};
+  const user_id =
+    qs_uid || meta?.uid || payload?.uid || payload?.user_id || null;
+  const run_id =
+    qs_run || meta?.run_id || payload?.run_id || payload?.data?.run_id || null;
+
+  const taskId =
+    payload?.taskId ||
+    payload?.id ||
+    payload?.data?.taskId ||
+    payload?.data?.id ||
+    null;
+
+  // try to grab a final image URL directly from webhook
+  let imageUrl =
+    payload?.imageUrl ||
+    payload?.outputUrl ||
+    payload?.url ||
+    payload?.result_url ||
+    payload?.data?.imageUrl ||
+    null;
+
+  // common array shapes
+  const candidates = [
+    payload?.images,
+    payload?.output,
+    payload?.outputs,
+    payload?.result,
+    payload?.data?.images,
+    payload?.data?.output,
+    payload?.data?.outputs,
+  ];
+  if (!imageUrl) {
+    for (const arr of candidates) {
+      if (Array.isArray(arr) && arr[0]?.url) {
+        imageUrl = arr[0].url;
+        break;
       }
     }
   }
 
-  // ---- ids
-  const meta = payload?.meta || payload?.metadata || payload?.data?.meta || {};
-  const user_id = meta?.uid ?? meta?.user_id ?? meta?.userId ?? qs_uid ?? "00000000-0000-0000-0000-000000000000";
-  const run_id  = meta?.run_id ?? meta?.runId ?? meta?.rid ?? qs_runid ?? null;
-  const task_id = payload?.taskId ?? payload?.id ?? payload?.data?.taskId ?? payload?.data?.id ?? null;
+  // if webhook didn't include it, fetch the result from KIE by taskId
+  if (!imageUrl && taskId && KIE_API_KEY) {
+    for (const mk of RESULT_URLS) {
+      try {
+        const r = await fetch(mk(taskId), {
+          headers: { Authorization: `Bearer ${KIE_API_KEY}` },
+        });
+        const t = await r.text();
+        let j;
+        try {
+          j = JSON.parse(t);
+        } catch {
+          continue;
+        }
+        imageUrl =
+          j?.imageUrl ||
+          j?.outputUrl ||
+          j?.url ||
+          (Array.isArray(j?.images) && j.images[0]?.url) ||
+          (Array.isArray(j?.output) && j.output[0]?.url) ||
+          (Array.isArray(j?.outputs) && j.outputs[0]?.url) ||
+          null;
+        if (imageUrl) break;
+      } catch {}
+    }
+  }
 
-  if (!run_id) return new Response("OK (missing run_id)", { status: 200 });
+  if (!user_id || !run_id) {
+    return new Response("Missing uid/run_id", { status: 400 });
+  }
 
-  // ---- collect INPUT urls to exclude (your uploads / origin)
-  const inputSet = new Set();
-  const addIn = (u) => { if (u && typeof u === "string") inputSet.add(u); };
-  const addInArr = (arr) => { if (Array.isArray(arr)) arr.forEach(addIn); };
-
-  addInArr(payload?.input?.image_urls);
-  addInArr(payload?.data?.input?.image_urls);
-  addInArr(payload?.image_urls);
-  addInArr(payload?.data?.image_urls);
-  addInArr(payload?.originUrls);
-  addInArr(payload?.data?.originUrls);
-  addInArr(payload?.data?.info?.originUrls);
-
-  // helper: push candidate output urls
-  const outs = [];
-  const pushOut = (u) => {
-    if (!u || typeof u !== "string") return;
-    if (!/^https?:\/\//.test(u)) return;
-    if (!/\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(u)) return;
-    if (inputSet.has(u)) return;
-    if (/user-uploads|upload|input/i.test(u)) return;
-    outs.push(u);
+  // write one row per callback (even if imageUrl is still null)
+  const insertBody = {
+    user_id,
+    run_id,
+    task_id: taskId || null,
+    image_url: imageUrl || null,
   };
-  const pushArr = (arr) => { if (Array.isArray(arr)) arr.forEach(x => pushOut(x?.url || (typeof x === "string" ? x : null))); };
 
-  // ---- prefer known image result locations (Nano Banana callbacks vary)
-  // 1) resultUrls under data/info (mirroring Veo-style but used by some image jobs too)
-  pushArr(payload?.data?.info?.resultUrls);
-  pushArr(payload?.data?.resultUrls);
-  pushArr(payload?.resultUrls);
+  const ins = await fetch(`${SUPABASE_URL}/rest/v1/nb_results`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify(insertBody),
+  });
 
-  // 2) images/output arrays
-  pushArr(payload?.result?.images);
-  pushArr(payload?.data?.result?.images);
-  pushArr(payload?.images);
-  pushArr(payload?.data?.images);
-  pushArr(payload?.output);
-  pushArr(payload?.data?.output);
-
-  // 3) single fields
-  pushOut(payload?.imageUrl);
-  pushOut(payload?.outputUrl);
-  pushOut(payload?.data?.imageUrl);
-  pushOut(payload?.data?.outputUrl);
-
-  // 4) last-resort: scan text for any URLs (outputs usually appear later in the payload/log)
-  if (!outs.length && text) {
-    const m = text.match(/https?:\/\/[^\s"'<>]+/g);
-    if (m) m.forEach(pushOut);
+  if (!ins.ok) {
+    const errTxt = await ins.text().catch(() => "");
+    return new Response(`Supabase insert failed: ${errTxt}`, { status: 500 });
   }
 
-  // prefer the last candidate (often the final output)
-  const image_url = outs.length ? outs[outs.length - 1] : null;
-
-  // ---- insert into Supabase (service role bypasses RLS)
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/nb_results`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_SERVICE_KEY,
-        "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`,
-        "Prefer": "return=representation"
-      },
-      body: JSON.stringify({ user_id, run_id, task_id, image_url })
-    });
-    const t = await r.text().catch(() => "");
-    if (!r.ok) return new Response(`OK (insert_failed) ${t}`, { status: 200 });
-    return new Response("OK", { status: 200 });
-  } catch (e) {
-    return new Response(`OK (insert_exception) ${String(e)}`, { status: 200 });
-  }
+  return new Response("OK", { status: 200 });
 };
