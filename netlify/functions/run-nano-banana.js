@@ -97,11 +97,27 @@ exports.handler = async (event) => {
 
 function normalizeImageSize(v) {
   if (!v) return "auto";
-  const raw = String(v).trim().toLowerCase().replace(/\s+/g, "").replace(/_/g, ":").replace(/-/g, ":");
-  const ok = new Set(["auto","1:1","3:4","9:16","4:3","16:9"]);
-  if (ok.has(raw)) return raw;
-  const map = { square: "1:1", portrait: "3:4", landscape: "16:9" };
-  return map[raw] || "auto";
+  const s = String(v).trim().toLowerCase().replace(/\s+/g, "");
+  const direct = new Set(["auto", "1:1", "3:4", "4:3", "9:16", "16:9"]);
+  if (direct.has(s)) return s;
+
+  // unify separators only between digits (e.g., 16_9, 16-9, 16:9 → 16:9)
+  const digitsOnly = s.replace(/(\d)[_\-:](\d)/g, "$1:$2");
+  if (direct.has(digitsOnly)) return digitsOnly;
+
+  // named forms (portrait_9_16, landscape_4_3, square, etc.)
+  if (s.startsWith("square")) return "1:1";
+  if (s.startsWith("portrait")) {
+    if (digitsOnly.includes("3:4")) return "3:4";
+    if (digitsOnly.includes("9:16")) return "9:16";
+    return "3:4";
+  }
+  if (s.startsWith("landscape")) {
+    if (digitsOnly.includes("4:3")) return "4:3";
+    if (digitsOnly.includes("16:9")) return "16:9";
+    return "16:9";
+  }
+  return "auto";
 }
 
 function ok(json) {
