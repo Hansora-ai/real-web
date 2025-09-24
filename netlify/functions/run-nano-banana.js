@@ -45,7 +45,7 @@ exports.handler = async (event) => {
     // Build KIE payload
     const payload = {
       model: "google/nano-banana-edit",
-      input: { prompt, image_urls, output_format: format, image_size: size, aspect_ratio: sizeToAspect(size) },
+      input: { prompt, image_urls, output_format: format, image_size: size },
 
       // Callbacks (add all variants)
       webhook_url: cb,
@@ -97,25 +97,19 @@ exports.handler = async (event) => {
 
 function normalizeImageSize(v) {
   if (!v) return "auto";
-  const raw = String(v).trim().toLowerCase().replace(/\s+/g, "").replace(/_/g, ":").replace(/-/g, ":");
-  const ok = new Set(["auto","1:1","3:4","9:16","4:3","16:9"]);
-  if (ok.has(raw)) return raw;
-  const map = { square: "1:1", portrait: "3:4", landscape: "16:9" };
-  return map[raw] || "auto";
+  const s = String(v).trim();
+  // Pass-through exactly what the client sends for known values
+  const allowed = new Set([
+    "auto",
+    "square",
+    "portrait_3_4",
+    "portrait_9_16",
+    "landscape_4_3",
+    "landscape_16_9"
+  ]);
+  if (allowed.has(s)) return s;
+  return "auto";
 }
-
-function sizeToAspect(s){
-  if (!s) return undefined;
-  s = String(s).toLowerCase();
-  if (s === "square") return "1:1";
-  if (s === "portrait_3_4") return "3:4";
-  if (s === "portrait_9_16") return "9:16";
-  if (s === "landscape_4_3") return "4:3";
-  if (s === "landscape_16_9") return "16:9";
-  if (s === "1:1" || s === "3:4" || s === "4:3" || s === "9:16" || s === "16:9") return s;
-  return undefined;
-}
-
 
 function ok(json) {
   return {
