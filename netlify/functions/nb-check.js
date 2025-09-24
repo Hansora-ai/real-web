@@ -1,69 +1,64 @@
-// netlify/functions/nb-check.js
-// Returns final image when KIE is done OR when the webhook row exists in Supabase.
+// Poll KIE for a task result and return a clean, final image URL.
 
-const SUPABASE_URL  = process.env.SUPABASE_URL;
-const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
+const KIE_BASE = process.env.KIE_BASE_URL || 'https://api.kie.ai';
+const KIE_KEY  = process.env.KIE_API_KEY;
 
-const KIE_KEY       = process.env.KIE_API_KEY;
-const KIE_BASE_MAIN = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,'');
-const KIE_BASES     = Array.from(new Set([KIE_BASE_MAIN, 'https://api.kie.ai', 'https://kieai.redpandaai.co']));
+// Only accept real generated-image hosts (avoid user-upload echoes)
+const ALLOWED_HOSTS = new Set([
+  'tempfile.aiquickdraw.com',
+  'tempfile.redpandaai.co',
+]);
 
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
-  if (event.httpMethod !== 'GET')     return { statusCode: 405, headers: cors(), body: 'Use GET' };
+  try {
+    const qs = event.queryStringParameters || {};
+    const taskId = qs.taskId || qs.task_id || '';
 
-  const qs     = event.queryStringParameters || {};
-  const taskId = qs.taskId || qs.task_id || null;
-  const run_id = qs.run_id || null;
-  const uid    = qs.uid    || null;
+    if (!taskId) return json(400, { ok:false, error:'missing taskId' });
+    if (!KIE_KEY) return json(500, { ok:false, error:'missing KIE_API_KEY' });
 
-  let status = 'unknown';
-  let final  = null;
-
-  // 1) Ask KIE if we have a taskId
-  if (taskId && KIE_KEY) {
-    for (const base of KIE_BASES) {
-      try {
-        const r = await fetch(`${base}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`, {
-          headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' }
-        });
-        if (r.status === 404) continue;
-        const j = await r.json();
-        status = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
-        if (['success','succeeded','completed','done'].includes(status)) {
-          final = j?.data?.result?.images?.[0]?.url || j?.data?.result_url || j?.image_url || j?.url || null;
-          break;
-        }
-      } catch {}
+    const r = await fetch(`${KIE_BASE}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`, {
+      headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' }
+    });
+    if (!r.ok) {
+      return json(200, { done:false, status:r.status, ok:false });
     }
+    const j = await r.json();
+
+    const status = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
+    const url =
+      j?.data?.result?.images?.[0]?.url ||
+      j?.data?.result_url ||
+      j?.image_url ||
+      j?.url ||
+      null;
+
+    if (!['success','succeeded','completed','done'].includes(status)) {
+      return json(200, { done:false, status: status || 'unknown', note:'not ready' });
+    }
+
+    if (!url) return json(200, { done:false, status:'success', note:'no url in payload' });
+
+    const host = safeHost(url);
+    const looksFinal = host && ALLOWED_HOSTS.has(host) && /\/workers\//i.test(url);
+    if (!looksFinal) {
+      return json(200, { done:false, status:'success', note:'final url not allowed', url });
+    }
+
+    return json(200, { done:true, status:'success', url });
+  } catch (e) {
+    return json(200, { done:false, error:String(e) });
   }
-
-  // 2) Fallback: look for the webhook row (run_id / task_id / user_id)
-  if (!final && (run_id || taskId)) {
-    const params = new URLSearchParams();
-    if (uid)    params.append('user_id', `eq.${uid}`);
-    if (run_id) params.append('run_id',  `eq.${run_id}`);
-    if (taskId) params.append('task_id', `eq.${taskId}`);
-    params.append('select', 'image_url,created_at');
-    params.append('order',  'created_at.desc');
-    params.append('limit',  '1');
-
-    try {
-      const rr = await fetch(`${TABLE_URL}?${params.toString()}`, {
-        headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
-      });
-      const rows = await rr.json().catch(() => []);
-      if (Array.isArray(rows) && rows[0]?.image_url) {
-        final = rows[0].image_url;
-        status = 'success';
-      }
-    } catch {}
-  }
-
-  if (final) return reply(200, { done: true, status: 'success', url: final });
-  return reply(200, { done: false, status, note: 'not ready' });
 };
 
-function reply(code, body){ return { statusCode: code, headers: { ...cors(), 'Content-Type':'application/json' }, body: JSON.stringify(body) }; }
-function cors(){ return { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization' }; }
+function json(statusCode, body) {
+  return {
+    statusCode,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*'
+    },
+    body: JSON.stringify(body)
+  };
+}
+function safeHost(u){ try{ return new URL(u).hostname; } catch { return ''; } }
