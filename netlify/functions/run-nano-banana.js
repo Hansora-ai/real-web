@@ -1,115 +1,121 @@
-// netlify/functions/kie-callback.js
-import fetch from "node-fetch";
+// netlify/functions/run-nano-banana.js
+// Create Nano Banana job and immediately return "submitted".
+// KIE will POST the final result to our callback; UI should watch Supabase by run_id.
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const CREATE_URL = process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/jobs/createTask";
+const API_KEY = process.env.KIE_API_KEY;
 
-export default async (req) => {
-  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+if (!API_KEY) console.warn("[run-nano-banana] Missing KIE_API_KEY env!");
 
-  // ---- parse query + body (JSON or x-www-form-urlencoded)
-  const { searchParams } = new URL(req.url);
-  const qs_uid   = searchParams.get("uid");
-  const qs_runid = searchParams.get("run_id") || searchParams.get("runId") || searchParams.get("rid");
+// Base Netlify Functions callback (WITH DOT)
+const CALLBACK_URL = "https://webhansora.netlify.app/.netlify/functions/kie-callback";
+const VERSION_TAG  = "nb_fn_final_submit_only_qs";
 
-  let text = "";
-  try { text = await req.text(); } catch {}
-
-  const ct = (req.headers.get("content-type") || "").toLowerCase();
-  let payload = {};
-  if (text) {
-    if (ct.includes("application/json")) {
-      try { payload = JSON.parse(text); } catch {}
-    }
-    if (!Object.keys(payload).length && ct.includes("application/x-www-form-urlencoded")) {
-      payload = Object.fromEntries(new URLSearchParams(text).entries());
-      // some providers nest json inside fields; shallow-parse if possible
-      for (const k of Object.keys(payload)) {
-        if (typeof payload[k] === "string" && payload[k].startsWith("{")) {
-          try { payload[k] = JSON.parse(payload[k]); } catch {}
-        }
-      }
-    }
+exports.handler = async (event) => {
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 204, headers: cors(), body: "" };
+  }
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, headers: cors(), body: "Use POST" };
   }
 
-  // ---- ids
-  const meta = payload?.meta || payload?.metadata || payload?.data?.meta || {};
-  const user_id = meta?.uid ?? meta?.user_id ?? meta?.userId ?? qs_uid ?? "00000000-0000-0000-0000-000000000000";
-  const run_id  = meta?.run_id ?? meta?.runId ?? meta?.rid ?? qs_runid ?? null;
-  const task_id = payload?.taskId ?? payload?.id ?? payload?.data?.taskId ?? payload?.data?.id ?? null;
-
-  if (!run_id) return new Response("OK (missing run_id)", { status: 200 });
-
-  // ---- collect INPUT urls to exclude (your uploads / origin)
-  const inputSet = new Set();
-  const addIn = (u) => { if (u && typeof u === "string") inputSet.add(u); };
-  const addInArr = (arr) => { if (Array.isArray(arr)) arr.forEach(addIn); };
-
-  addInArr(payload?.input?.image_urls);
-  addInArr(payload?.data?.input?.image_urls);
-  addInArr(payload?.image_urls);
-  addInArr(payload?.data?.image_urls);
-  addInArr(payload?.originUrls);
-  addInArr(payload?.data?.originUrls);
-  addInArr(payload?.data?.info?.originUrls);
-
-  // helper: push candidate output urls
-  const outs = [];
-  const pushOut = (u) => {
-    if (!u || typeof u !== "string") return;
-    if (!/^https?:\/\//.test(u)) return;
-    if (!/\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(u)) return;
-    if (inputSet.has(u)) return;
-    if (/user-uploads|upload|input/i.test(u)) return;
-    outs.push(u);
-  };
-  const pushArr = (arr) => { if (Array.isArray(arr)) arr.forEach(x => pushOut(x?.url || (typeof x === "string" ? x : null))); };
-
-  // ---- prefer known image result locations (Nano Banana callbacks vary)
-  // 1) resultUrls under data/info (mirroring Veo-style but used by some image jobs too)
-  pushArr(payload?.data?.info?.resultUrls);
-  pushArr(payload?.data?.resultUrls);
-  pushArr(payload?.resultUrls);
-
-  // 2) images/output arrays
-  pushArr(payload?.result?.images);
-  pushArr(payload?.data?.result?.images);
-  pushArr(payload?.images);
-  pushArr(payload?.data?.images);
-  pushArr(payload?.output);
-  pushArr(payload?.data?.output);
-
-  // 3) single fields
-  pushOut(payload?.imageUrl);
-  pushOut(payload?.outputUrl);
-  pushOut(payload?.data?.imageUrl);
-  pushOut(payload?.data?.outputUrl);
-
-  // 4) last-resort: scan text for any URLs (outputs usually appear later in the payload/log)
-  if (!outs.length && text) {
-    const m = text.match(/https?:\/\/[^\s"'<>]+/g);
-    if (m) m.forEach(pushOut);
-  }
-
-  // prefer the last candidate (often the final output)
-  const image_url = outs.length ? outs[outs.length - 1] : null;
-
-  // ---- insert into Supabase (service role bypasses RLS)
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/nb_results`, {
+    const body = JSON.parse(event.body || "{}");
+
+    // Required inputs
+    const rawUrls = Array.isArray(body.urls) ? body.urls : [];
+    if (!rawUrls.length) {
+      return ok({ submitted: false, note: "urls_required", version: VERSION_TAG });
+    }
+
+    // Normalize/encode URLs (handles spaces/commas)
+    const image_urls = rawUrls.map(u => encodeURI(String(u)));
+
+    const prompt  = body.prompt || "";
+    const format  = (body.format || "png").toLowerCase();
+    const size    = normalizeImageSize(body.size);
+
+    // Identify the user/run to bind result
+    const uid    = event.headers["x-user-id"] || event.headers["X-USER-ID"] || "anon";
+    const run_id = body.run_id || `${uid}-${Date.now()}`;
+
+    // include uid & run_id in the callback URL (works even if KIE posts non-JSON)
+    const cb = `${CALLBACK_URL}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
+
+    // Build KIE payload
+    const payload = {
+      model: "google/nano-banana-edit",
+      input: { prompt, image_urls, output_format: format, image_size: size },
+
+      // Callbacks (add all variants)
+      webhook_url: cb,
+      webhookUrl:  cb, // ← added line (minimal change)
+      callbackUrl: cb,
+      callBackUrl: cb,
+      notify_url:  cb,
+
+      // meta used by kie-callback.js
+      meta:      { uid, run_id, version: VERSION_TAG, cb },
+      metadata:  { uid, run_id, version: VERSION_TAG, cb }
+    };
+
+    // Create the job
+    const create = await fetch(CREATE_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_SERVICE_KEY,
-        "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`,
-        "Prefer": "return=representation"
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type":  "application/json",
+        "Accept":        "application/json"
       },
-      body: JSON.stringify({ user_id, run_id, task_id, image_url })
+      body: JSON.stringify(payload)
     });
-    const t = await r.text().catch(() => "");
-    if (!r.ok) return new Response(`OK (insert_failed) ${t}`, { status: 200 });
-    return new Response("OK", { status: 200 });
+
+    // Parse response (even if not 200)
+    const text = await create.text();
+    let js; try { js = JSON.parse(text); } catch { js = { raw: text }; }
+
+    // Best-effort taskId extraction
+    const taskId =
+      js.taskId || js.id || js.data?.taskId || js.data?.id || null;
+
+    // Always return 200 submitted (let callback deliver final result)
+    return ok({
+      submitted: true,
+      taskId,
+      run_id,
+      version: VERSION_TAG,
+      used_callback: cb
+    });
+
   } catch (e) {
-    return new Response(`OK (insert_exception) ${String(e)}`, { status: 200 });
+    // Still 200 so the UI stays in "submitted" and waits for callback
+    return ok({ submitted: true, note: "exception", message: String(e), version: VERSION_TAG });
   }
 };
+
+// ───────────────────────────────── helpers
+
+function normalizeImageSize(v) {
+  if (!v) return "auto";
+  const raw = String(v).trim().toLowerCase().replace(/\s+/g, "").replace(/_/g, ":").replace(/-/g, ":");
+  const ok = new Set(["auto","1:1","3:4","9:16","4:3","16:9"]);
+  if (ok.has(raw)) return raw;
+  const map = { square: "1:1", portrait: "3:4", landscape: "16:9" };
+  return map[raw] || "auto";
+}
+
+function ok(json) {
+  return {
+    statusCode: 200,
+    headers: { ...cors(), "X-NB-Version": VERSION_TAG },
+    body: JSON.stringify(json)
+  };
+}
+
+function cors() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-USER-ID, x-user-id"
+  };
+}
