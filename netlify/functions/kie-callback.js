@@ -5,14 +5,10 @@ const SUPABASE_URL  = process.env.SUPABASE_URL;
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY; // service role key (NOT anon)
 const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
 
-// Use your configured base, plus safe fallbacks (host mismatch is your 404)
-const KIE_BASE_MAIN = process.env.KIE_BASE_URL || 'https://api.kie.ai';
+const KIE_BASE_MAIN = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,'');
 const KIE_KEY       = process.env.KIE_API_KEY;
-const KIE_BASES     = Array.from(new Set([
-  KIE_BASE_MAIN.replace(/\/+$/,''),
-  'https://api.kie.ai',
-  'https://kieai.redpandaai.co'
-]));
+// Try a couple of bases if we need to verify by taskId (host mismatches cause 404)
+const KIE_BASES     = Array.from(new Set([KIE_BASE_MAIN, 'https://api.kie.ai', 'https://kieai.redpandaai.co']));
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
@@ -48,31 +44,39 @@ exports.handler = async (event) => {
     const taskId = qs.taskId || qs.task_id || get(data,'taskId') || get(data,'id') ||
                    get(data,'data.taskId') || get(data,'result.taskId') || null;
 
-    // status gate: only insert when job is really done
+    // status gate
     const statusStr = String(
       get(data,'status') || get(data,'state') ||
       get(data,'data.status') || get(data,'data.state') || ''
     ).toLowerCase();
     const isSuccess = ['success','succeeded','completed','done'].includes(statusStr);
 
-    // Pick a result URL from payload (prefer result fields, ignore input URLs)
-    const payloadUrl = pickUrl(data);
+    // Gather input urls so we don't save a preview/input as result
+    const inputUrls = []
+      .concat(get(data,'input.image_urls') || [])
+      .concat(get(data,'data.input.image_urls') || [])
+      .concat(get(data,'meta.image_urls') || [])
+      .map(String);
 
-    // If payload looks wrong OR status not success, verify with KIE by taskId across bases
+    // Prefer real result fields
+    const payloadUrl = pickUrl(data, inputUrls);
+
+    // Accept ANY http(s) result URL that isn't our own preview and isn't an input
     let final_url = payloadUrl;
-    const looksWrong =
+    const looksLikePreview =
       !final_url ||
       /webhansora|netlify|localhost/i.test(hostname(final_url)) ||
-      !/(kie\.ai|redpandaai\.co)/i.test(hostname(final_url));
+      inputUrls.includes(String(final_url));
 
-    if ((looksWrong || !isSuccess) && taskId && KIE_KEY) {
+    // Only verify with KIE if status isn't success OR we still don't have a safe URL
+    if ((looksLikePreview || !isSuccess) && taskId && KIE_KEY) {
       for (const base of KIE_BASES) {
         try {
           const r = await fetch(
             `${base}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
             { headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' } }
           );
-          if (r.status === 404) continue; // try next host
+          if (r.status === 404) continue; // try next base
           const j = await r.json();
           const s = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
           if (['success','succeeded','completed','done'].includes(s)) {
@@ -84,16 +88,15 @@ exports.handler = async (event) => {
               final_url;
             break;
           }
-        } catch (_) { /* try next base */ }
+        } catch { /* try next base */ }
       }
     }
 
-    // Don’t insert stub rows
+    // Do not insert stub rows
     if (!final_url) {
       return reply(200, { ok: true, saved: false, note: 'no final image_url yet; not inserting' });
     }
 
-    // Insert only when we have a real, final URL
     const row = {
       user_id: uid || '00000000-0000-0000-0000-000000000000',
       run_id:  run_id || 'unknown',
@@ -130,14 +133,8 @@ function get(o,p){ try{ return p.split('.').reduce((a,k)=> (a && k in a ? a[k] :
 function isUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u); }
 function hostname(u){ try{ return new URL(u).hostname; } catch { return ''; } }
 
-// Prefer real result fields; explicitly ignore input image URLs
-function pickUrl(obj){
-  const inputUrls = []
-    .concat(get(obj,'input.image_urls') || [])
-    .concat(get(obj,'data.input.image_urls') || [])
-    .concat(get(obj,'meta.image_urls') || [])
-    .map(String);
-
+// Prefer result fields; avoid saving input/preview URLs
+function pickUrl(obj, inputUrls){
   const prefer = [
     // explicit result shapes
     get(obj,'result.image_url'), get(obj,'result.imageUrl'), get(obj,'result.outputUrl'),
@@ -147,14 +144,14 @@ function pickUrl(obj){
     // structured outputs
     get(obj,'data.result.images?.[0]?.url'),
     get(obj,'data.output?.[0]?.url'),
-    // last resort (still filtered)
+    get(obj,'images?.[0]?.url'),
+    get(obj,'output?.[0]?.url'),
+    // last resort direct fields
     get(obj,'image_url'), get(obj,'imageUrl'), get(obj,'url')
   ];
-
   for (const u of prefer) {
     if (isUrl(u) && !inputUrls.includes(String(u))) return u;
   }
-
   // deep scan last (avoid input URLs)
   let found = null;
   (function walk(x){
