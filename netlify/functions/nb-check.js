@@ -1,66 +1,70 @@
-// Poll KIE for a task's result (record-detail family first, then jobs/getTask* fallbacks)
+// netlify/functions/nb-check.js
+// Polls job status. Succeeds if KIE says "success" OR if a row already exists in nb_results.
 
-const API_KEY = process.env.KIE_API_KEY;
-const BASE = process.env.KIE_BASE_URL || "https://api.kie.ai";
+const SUPABASE_URL  = process.env.SUPABASE_URL;
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
+
+const KIE_KEY       = process.env.KIE_API_KEY;
+const KIE_BASE_MAIN = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,'');
+const KIE_BASES     = Array.from(new Set([KIE_BASE_MAIN, 'https://api.kie.ai', 'https://kieai.redpandaai.co']));
 
 exports.handler = async (event) => {
-  if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: cors(), body: "" };
-  if (event.httpMethod !== "GET")     return { statusCode: 405, headers: cors(), body: "Use GET" };
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
+  if (event.httpMethod !== 'GET')   return { statusCode: 405, headers: cors(), body: 'Use GET' };
 
-  const qs = event.queryStringParameters || {};
-  const taskId = qs.taskId || qs.task_id || qs.taskID || qs.id || "";
+  const qs     = event.queryStringParameters || {};
+  const taskId = qs.taskId || qs.task_id || null;
+  const run_id = qs.run_id || null;
+  const uid    = qs.uid    || null;
 
-  if (!taskId)  return json({ done:false, error:"missing_taskId" });
-  if (!API_KEY) return json({ done:false, error:"missing_KIE_API_KEY" });
+  let status = 'unknown';
+  let final  = null;
 
-  // Try multiple endpoint families (prevents 404 when APIs differ)
-  const paths = [
-    `/api/v1/market/record-detail?taskId=${encodeURIComponent(taskId)}`,
-    `/api/v1/jobs/record-detail?taskId=${encodeURIComponent(taskId)}`,
-    `/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
-    `/api/v1/jobs/getTask?taskId=${encodeURIComponent(taskId)}`,
-    `/api/v1/jobs/result?taskId=${encodeURIComponent(taskId)}`
-  ];
-
-  const attempts = [];
-  for (const p of paths) {
-    const url = BASE + p;
-    try {
-      const r = await fetch(url, { method:"GET", headers:{ "Authorization":`Bearer ${API_KEY}`, "Accept":"application/json" }});
-      attempts.push({ url, status:r.status, ok:r.ok });
-
-      if (r.status === 404) continue;
-
-      const text = await r.text();
-      let j; try { j = JSON.parse(text); } catch { j = { raw:text }; }
-
-      const state = String(
-        j?.data?.state || j?.data?.status || j?.status || j?.state || ""
-      ).toLowerCase();
-
-      const done = ["success","succeeded","completed","done"].includes(state);
-
-      const urlOut =
-        firstUrl(j?.data?.result?.images) ||
-        firstUrl(j?.data?.result) ||
-        firstUrl(j?.data?.output) ||
-        j?.url || j?.imageUrl || null;
-
-      return json({ done, status: state || r.status, url: urlOut, taskId });
-    } catch (e) {
-      attempts.push({ url, error:String(e) });
+  // 1) Ask KIE if we have a taskId
+  if (taskId && KIE_KEY) {
+    for (const base of KIE_BASES) {
+      try {
+        const r = await fetch(`${base}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`, {
+          headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' }
+        });
+        if (r.status === 404) continue;
+        const j = await r.json();
+        status = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
+        if (['success','succeeded','completed','done'].includes(status)) {
+          final = j?.data?.result?.images?.[0]?.url || j?.data?.result_url || j?.image_url || j?.url || null;
+          break;
+        }
+      } catch {}
     }
   }
 
-  return json({ done:false, status:404, url:null, taskId, attempts });
+  // 2) Fallback: check Supabase for the row the webhook saved (matches current run/task)
+  if (!final && (run_id || taskId)) {
+    const params = new URLSearchParams();
+    if (uid)    params.append('user_id', `eq.${uid}`);
+    if (run_id) params.append('run_id',  `eq.${run_id}`);
+    if (taskId) params.append('task_id', `eq.${taskId}`);
+    params.append('select', 'image_url,created_at');
+    params.append('order',  'created_at.desc');
+    params.append('limit',  '1');
+
+    try {
+      const rr = await fetch(`${TABLE_URL}?${params.toString()}`, {
+        headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+      });
+      const rows = await rr.json().catch(() => []);
+      if (Array.isArray(rows) && rows[0]?.image_url) {
+        final = rows[0].image_url;
+        status = 'success';
+      }
+    } catch {}
+  }
+
+  if (final) return reply(200, { done: true, status: 'success', url: final });
+  return reply(200, { done: false, status, note: 'not ready' });
 };
 
-// ───────── helpers ─────────
-function firstUrl(m){ if(!m) return null;
-  if (typeof m==='string' && /^https?:\/\//.test(m)) return m;
-  if (Array.isArray(m)){ for (const it of m){ const u=(typeof it==='string'&&/^https?:\/\//.test(it)&&it)||it?.url||it?.imageUrl||null; if(u) return u; } }
-  else if (typeof m==='object'){ return m.url||m.imageUrl||firstUrl(m.images)||firstUrl(m.outputs)||null; }
-  return null;
-}
-function json(o){ return { statusCode:200, headers:cors(), body:JSON.stringify(o) }; }
-function cors(){ return { "Access-Control-Allow-Origin":"*", "Access-Control-Allow-Methods":"GET, OPTIONS", "Access-Control-Allow-Headers":"Authorization, Content-Type, X-USER-ID, x-user-id" }; }
+// ───────── helpers
+function reply(code, body){ return { statusCode: code, headers: { ...cors(), 'Content-Type':'application/json' }, body: JSON.stringify(body) }; }
+function cors(){ return { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization' }; }
