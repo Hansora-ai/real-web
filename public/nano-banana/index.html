@@ -107,7 +107,7 @@ const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Header session (minimal to show credits/avatar only; does NOT change login/register)
+// Header UI
 const $btnLoginNav = document.getElementById('btnLoginNav');
 const $btnGetStarted = document.getElementById('btnGetStarted');
 const $navUser = document.getElementById('navUser');
@@ -124,12 +124,20 @@ $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();sho
 async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
 (async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
 
-// Nano Banana submission (uploads to your Netlify functions; shows result; deducts 1 credit)
-const filesEl=document.getElementById('files');const thumbsEl=document.getElementById('thumbs');const promptEl=document.getElementById('prompt');const runBtn=document.getElementById('runBtn');const statusEl=document.getElementById('status');const resultBox=document.getElementById('resultBox');const downloadLink=document.getElementById('downloadLink');
+// Elements
+const filesEl=document.getElementById('files');
+const thumbsEl=document.getElementById('thumbs');
+const promptEl=document.getElementById('prompt');
+const runBtn=document.getElementById('runBtn');
+const statusEl=document.getElementById('status');
+const resultBox=document.getElementById('resultBox');
+const downloadLink=document.getElementById('downloadLink');
+
 filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,4).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
+
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
-// NEW: centralized renderer + guards to avoid double-render
+// Guarded renderer so we don't double-render if both paths return
 let __done=false; let channel=null;
 function onResult(url){
   if(__done || !url) return;
@@ -148,10 +156,22 @@ function onResult(url){
   try{ channel?.unsubscribe?.(); }catch{}
 }
 
+// Credits + URL extraction helpers
 async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur<=0)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
-async function tryExtractImageUrl(o){if(!o)return null;if(typeof o==='string'&&/^https?:\/\//.test(o))return o;if(o.imageUrl)return o.imageUrl;if(o.outputUrl)return o.outputUrl;if(o.url)return o.url;if(o.data)return await tryExtractImageUrl(o.data);if(Array.isArray(o.images)&&o.images[0]?.url)return o.images[0].url;if(Array.isArray(o.output)&&o.output[0]?.url)return o.output[0].url;return null;}
+async function tryExtractImageUrl(o){
+  if(!o) return null;
+  if(typeof o==='string'&&/^https?:\/\//.test(o)) return o;
+  if(o.imageUrl) return o.imageUrl;
+  if(o.outputUrl) return o.outputUrl;
+  if(o.url) return o.url;
+  if(o.data) { const x=await tryExtractImageUrl(o.data); if(x) return x; }
+  if(o.result) { const x=await tryExtractImageUrl(o.result); if(x) return x; }
+  if(Array.isArray(o.images)&&o.images[0]?.url) return o.images[0].url;
+  if(Array.isArray(o.output)&&o.output[0]?.url) return o.output[0].url;
+  return null;
+}
 
-// NEW: Option-A polling of nb-check by taskId
+// Option A: poll our nb-check function by taskId (does NOT rely on webhook)
 async function nbCheckPoll(taskId, uid){
   if(!taskId) return;
   const start = Date.now();
@@ -178,8 +198,8 @@ async function nbCheckPoll(taskId, uid){
   }
 }
 
+// Main run
 window.__run=async function(){
-  // HARD CHECK: block anonymous users (so inline onclick still works)
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
@@ -198,6 +218,7 @@ window.__run=async function(){
     const rid=uid+'-'+Date.now();
     const urls=[];
 
+    // upload images
     for(let i=0;i<files.length;i++){
       const fd=new FormData();
       fd.append('file',files[i],files[i].name||('image-'+i+'.png'));
@@ -208,14 +229,13 @@ window.__run=async function(){
       urls.push(j.downloadUrl);
     }
 
-    // Create task (webhook may deliver to Supabase; we also poll nb-check)
+    // create job
     const res=await fetch('/.netlify/functions/run-nano-banana',{
       method:'POST',
       headers:{'Content-Type':'application/json','X-USER-ID':uid},
       body:JSON.stringify({urls, prompt: promptEl.value||'.', format:'png', size:'auto', run_id: rid})
     });
 
-    // Deduct credit once accepted
     if (res.status === 202 || res.ok) {
       await chargeOneCredit();
     } else {
@@ -228,7 +248,7 @@ window.__run=async function(){
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
 
-    // ---- Realtime subscribe for this run_id
+    // subscribe to Supabase (if webhook inserts there)
     channel = supabase.channel('nb_results_' + rid)
       .on(
         'postgres_changes',
@@ -240,10 +260,10 @@ window.__run=async function(){
       )
       .subscribe();
 
-    // ---- Start taskId polling (Option-A)
+    // start polling taskId (Option A)
     nbCheckPoll(taskId, uid);
 
-    // ---- Minimal polling fallback via Supabase table
+    // fallback polling of the table in case realtime is blocked
     const started = Date.now();
     while (!__done && Date.now() - started < 120000) { // up to 120s
       await new Promise(r => setTimeout(r, 1500));
