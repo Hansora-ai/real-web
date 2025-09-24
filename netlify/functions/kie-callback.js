@@ -10,6 +10,9 @@ const KIE_KEY       = process.env.KIE_API_KEY;
 // Try a couple of bases if we need to verify by taskId (host mismatches cause 404)
 const KIE_BASES     = Array.from(new Set([KIE_BASE_MAIN, 'https://api.kie.ai', 'https://kieai.redpandaai.co']));
 
+// ✅ Allow-list: only accept result URLs from these hosts
+const ALLOWED_RESULT_HOSTS = ['tempfile.aiquickdraw.com'];
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
   if (event.httpMethod !== 'POST')   return { statusCode: 405, headers: cors(), body: 'Use POST' };
@@ -51,7 +54,7 @@ exports.handler = async (event) => {
     ).toLowerCase();
     const isSuccess = ['success','succeeded','completed','done'].includes(statusStr);
 
-    // Gather input urls so we don't save a preview/input as result
+    // collect input urls so we never save previews/inputs
     const inputUrls = []
       .concat(get(data,'input.image_urls') || [])
       .concat(get(data,'data.input.image_urls') || [])
@@ -61,14 +64,13 @@ exports.handler = async (event) => {
     // Prefer real result fields
     const payloadUrl = pickUrl(data, inputUrls);
 
-    // Accept ANY http(s) result URL that isn't our own preview and isn't an input
+    // Accept any http(s) result that isn't preview/input; if status not final OR url missing -> verify by taskId
     let final_url = payloadUrl;
     const looksLikePreview =
       !final_url ||
       /webhansora|netlify|localhost/i.test(hostname(final_url)) ||
       inputUrls.includes(String(final_url));
 
-    // Only verify with KIE if status isn't success OR we still don't have a safe URL
     if ((looksLikePreview || !isSuccess) && taskId && KIE_KEY) {
       for (const base of KIE_BASES) {
         try {
@@ -76,7 +78,7 @@ exports.handler = async (event) => {
             `${base}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
             { headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' } }
           );
-          if (r.status === 404) continue; // try next base
+          if (r.status === 404) continue; // try next host
           const j = await r.json();
           const s = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
           if (['success','succeeded','completed','done'].includes(s)) {
@@ -92,9 +94,15 @@ exports.handler = async (event) => {
       }
     }
 
-    // Do not insert stub rows
+    // 🚫 Enforce allow-list: only accept tempfile.aiquickdraw.com
+    if (final_url && !isAllowedHost(final_url)) {
+      console.log('[kie-callback] rejecting non-allowed host:', hostname(final_url));
+      final_url = null;
+    }
+
+    // Don’t insert stub rows
     if (!final_url) {
-      return reply(200, { ok: true, saved: false, note: 'no final image_url yet; not inserting' });
+      return reply(200, { ok: true, saved: false, note: 'no allowed final image_url; not inserting' });
     }
 
     const row = {
@@ -133,26 +141,28 @@ function get(o,p){ try{ return p.split('.').reduce((a,k)=> (a && k in a ? a[k] :
 function isUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u); }
 function hostname(u){ try{ return new URL(u).hostname; } catch { return ''; } }
 
+function isAllowedHost(u) {
+  const h = hostname(u);
+  return ALLOWED_RESULT_HOSTS.some(d => h === d || h.endsWith('.' + d));
+}
+
 // Prefer result fields; avoid saving input/preview URLs
 function pickUrl(obj, inputUrls){
   const prefer = [
-    // explicit result shapes
     get(obj,'result.image_url'), get(obj,'result.imageUrl'), get(obj,'result.outputUrl'),
     get(obj,'result_url'),
     get(obj,'data.result.image_url'), get(obj,'data.result.imageUrl'), get(obj,'data.result.outputUrl'),
     get(obj,'data.result_url'),
-    // structured outputs
     get(obj,'data.result.images?.[0]?.url'),
     get(obj,'data.output?.[0]?.url'),
     get(obj,'images?.[0]?.url'),
     get(obj,'output?.[0]?.url'),
-    // last resort direct fields
     get(obj,'image_url'), get(obj,'imageUrl'), get(obj,'url')
   ];
   for (const u of prefer) {
     if (isUrl(u) && !inputUrls.includes(String(u))) return u;
   }
-  // deep scan last (avoid input URLs)
+  // last resort: deep scan (but still avoid input URLs)
   let found = null;
   (function walk(x){
     if (found || !x) return;
