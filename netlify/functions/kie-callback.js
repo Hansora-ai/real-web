@@ -8,10 +8,10 @@ const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
 
 const KIE_BASE_MAIN = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,'');
 const KIE_KEY       = process.env.KIE_API_KEY;
-// Try multiple bases if we need to verify by taskId
+// Try multiple bases in case an account is served from a different ingress
 const KIE_BASES     = Array.from(new Set([KIE_BASE_MAIN, 'https://api.kie.ai', 'https://kieai.redpandaai.co']));
 
-// Accept only these result hosts (covers your account’s CDNs)
+// Accept only these result CDNs (your account uses these)
 const ALLOWED_RESULT_HOSTS = [
   'tempfile.aiquickdraw.com',
   'tempfile.redpandaai.co',
@@ -58,17 +58,17 @@ exports.handler = async (event) => {
     ).toLowerCase();
     const isSuccess = ['success','succeeded','completed','done'].includes(statusStr);
 
-    // Gather *input* URLs to blacklist
+    // Gather *input* URLs to blacklist (so we never save the user's upload/preview)
     const inputUrls = new Set();
-    collectInputUrls(data, inputUrls); // fills from data.input.*, input.image_urls, input.images[].url etc.
+    collectInputUrls(data, inputUrls); // fills from input.* common shapes
 
-    // Prefer result-only fields (do NOT touch generic 'images' at top-level)
+    // Prefer result-only fields (do NOT touch generic top-level "images")
     let final_url = pickResultUrlOnly(data);
 
     // Reject obvious non-results
     if (isLikelyInputOrPreview(final_url, inputUrls)) final_url = null;
 
-    // If unsure OR not success yet, verify via taskId and upgrade to the true result URL
+    // If unsure OR not success yet, verify via taskId and upgrade to true result URL
     if ((!final_url || !isSuccess) && taskId && KIE_KEY) {
       for (const base of KIE_BASES) {
         try {
@@ -98,7 +98,7 @@ exports.handler = async (event) => {
       final_url = null;
     }
 
-    // Don’t insert stub rows
+    // Don’t insert stub rows (prevents spinner with bad data)
     if (!final_url) {
       return reply(200, { ok: true, saved: false, note: 'no allowed final image_url; not inserting' });
     }
@@ -152,7 +152,7 @@ function isLikelyInputOrPreview(u, inputUrls) {
   const h = hostname(u);
   const p = pathname(u);
   if (/webhansora|netlify|localhost/i.test(h)) return true;
-  if (p.includes('/user-uploads/')) return true;       // <- your input case
+  if (p.includes('/user-uploads/')) return true;       // <- input uploads live here
   if (inputUrls && inputUrls.has(String(u))) return true;
   return false;
 }
@@ -184,16 +184,35 @@ function collectInputUrls(obj, outSet) {
 }
 
 // Strictly pick from result-only locations (no generic "images" lookups)
+// Array-aware (no "?.[0]?" strings that get() can't handle)
 function pickResultUrlOnly(obj){
-  const cand = [
-    get(obj,'result.image_url'), get(obj,'result.imageUrl'), get(obj,'result.outputUrl'),
+  // direct fields first
+  const direct = [
+    get(obj,'result.image_url'),
+    get(obj,'result.imageUrl'),
+    get(obj,'result.outputUrl'),
     get(obj,'result_url'),
-    get(obj,'data.result.image_url'), get(obj,'data.result.imageUrl'), get(obj,'data.result.outputUrl'),
+    get(obj,'data.result.image_url'),
+    get(obj,'data.result.imageUrl'),
+    get(obj,'data.result.outputUrl'),
     get(obj,'data.result_url'),
-    get(obj,'data.result.images?.[0]?.url'),
-    get(obj,'data.output?.[0]?.url'),
-    get(obj,'result.images?.[0]?.url'),
   ];
-  for (const u of cand) if (isUrl(u)) return u;
+  for (const u of direct) if (isUrl(u)) return u;
+
+  // array shapes
+  const arrays = [
+    get(obj,'data.result.images'),
+    get(obj,'result.images'),
+    get(obj,'data.output'),
+    get(obj,'output'),
+  ];
+  for (const arr of arrays) {
+    if (Array.isArray(arr)) {
+      for (const it of arr) {
+        const u = it && (it.url || it.image_url || it.imageUrl || it.outputUrl);
+        if (isUrl(u)) return u;
+      }
+    }
+  }
   return null;
 }
