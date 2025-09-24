@@ -1,137 +1,152 @@
-// netlify/functions/kie-callback.js
-import fetch from "node-fetch";
+// Handles KIE -> webhook callback and stores the result in Supabase nb_results
+// Expects query params ?uid=...&run_id=... (we already append them in run-nano-banana.js)
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const KIE_API_KEY = process.env.KIE_API_KEY;
+const SUPABASE_URL  = process.env.SUPABASE_URL;
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY; // service role key (NOT anon)
+const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
 
-// try multiple result endpoints (KIE isn't consistent)
-const RESULT_URLS = [
-  (id) => `https://api.kie.ai/api/v1/jobs/getTaskResult?taskId=${id}`,
-  (id) => `https://api.kie.ai/api/v1/jobs/result?taskId=${id}`,
-  (id) => `https://api.kie.ai/api/v1/jobs/getTask?taskId=${id}`,
-];
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
+  if (event.httpMethod !== 'POST')   return { statusCode: 405, headers: cors(), body: 'Use POST' };
 
-export default async (req) => {
-  if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405 });
-  }
-
-  // uid/run_id can be passed in the query string
-  const url = new URL(req.url);
-  const qs_uid = url.searchParams.get("uid");
-  const qs_run = url.searchParams.get("run_id");
-
-  // read body as text, then try JSON; if not, try form-encoded
-  let payload = null;
-  const raw = await req.text();
   try {
-    payload = JSON.parse(raw);
-  } catch {
-    try {
-      const form = new URLSearchParams(raw);
-      payload = {};
-      for (const [k, v] of form.entries()) payload[k] = v;
-    } catch {
-      payload = { raw };
+    const qs = event.queryStringParameters || {};
+    const headers = lowerKeys(event.headers || {});
+    const ctype = headers['content-type'] || '';
+
+    // Body can be JSON, urlencoded, or plain text
+    let bodyRaw = event.body || '';
+    if (event.isBase64Encoded) bodyRaw = Buffer.from(bodyRaw, 'base64').toString('utf8');
+
+    let data = null;
+    if (ctype.includes('application/json')) {
+      try { data = JSON.parse(bodyRaw); } catch {}
     }
-  }
-
-  const meta = payload?.meta || payload?.metadata || payload?.data?.meta || {};
-  const user_id =
-    qs_uid || meta?.uid || payload?.uid || payload?.user_id || null;
-  const run_id =
-    qs_run || meta?.run_id || payload?.run_id || payload?.data?.run_id || null;
-
-  const taskId =
-    payload?.taskId ||
-    payload?.id ||
-    payload?.data?.taskId ||
-    payload?.data?.id ||
-    null;
-
-  // try to grab a final image URL directly from webhook
-  let imageUrl =
-    payload?.imageUrl ||
-    payload?.outputUrl ||
-    payload?.url ||
-    payload?.result_url ||
-    payload?.data?.imageUrl ||
-    null;
-
-  // common array shapes
-  const candidates = [
-    payload?.images,
-    payload?.output,
-    payload?.outputs,
-    payload?.result,
-    payload?.data?.images,
-    payload?.data?.output,
-    payload?.data?.outputs,
-  ];
-  if (!imageUrl) {
-    for (const arr of candidates) {
-      if (Array.isArray(arr) && arr[0]?.url) {
-        imageUrl = arr[0].url;
-        break;
+    if (!data && (ctype.includes('application/x-www-form-urlencoded') || ctype.includes('text/plain'))) {
+      data = parseFormLike(bodyRaw);
+      // KIE sometimes nests JSON under a "data" or "result" string — parse if needed
+      for (const k of ['data','result','payload']) {
+        if (typeof data[k] === 'string') {
+          try { data[k] = JSON.parse(data[k]); } catch {}
+        }
       }
     }
-  }
-
-  // if webhook didn't include it, fetch the result from KIE by taskId
-  if (!imageUrl && taskId && KIE_API_KEY) {
-    for (const mk of RESULT_URLS) {
-      try {
-        const r = await fetch(mk(taskId), {
-          headers: { Authorization: `Bearer ${KIE_API_KEY}` },
-        });
-        const t = await r.text();
-        let j;
-        try {
-          j = JSON.parse(t);
-        } catch {
-          continue;
-        }
-        imageUrl =
-          j?.imageUrl ||
-          j?.outputUrl ||
-          j?.url ||
-          (Array.isArray(j?.images) && j.images[0]?.url) ||
-          (Array.isArray(j?.output) && j.output[0]?.url) ||
-          (Array.isArray(j?.outputs) && j.outputs[0]?.url) ||
-          null;
-        if (imageUrl) break;
-      } catch {}
+    if (!data) {
+      try { data = JSON.parse(bodyRaw); } catch { data = { raw: bodyRaw }; }
     }
+
+    // uid / run_id / taskId from query first, then from body meta/metadata
+    const uid    = qs.uid    || get(data, 'meta.uid')      || get(data, 'metadata.uid')      || null;
+    const run_id = qs.run_id || get(data, 'meta.run_id')   || get(data, 'metadata.run_id')   || null;
+    const taskId = qs.taskId || get(data, 'taskId')        || get(data, 'id')                ||
+                   get(data, 'data.taskId') || get(data, 'result.taskId') || null;
+
+    // Try hard to find an image URL anywhere in the payload
+    const image_url = findFirstUrl(data);
+
+    // Insert into Supabase (service role; bypass RLS)
+    const row = {
+      user_id: uid || '00000000-0000-0000-0000-000000000000', // fallback to avoid 400s
+      run_id:  run_id || 'unknown',
+      task_id: taskId || null,
+      image_url: image_url || null,
+    };
+
+    const resp = await fetch(TABLE_URL, {
+      method: 'POST',
+      headers: {
+        'apikey': SERVICE_KEY,
+        'Authorization': `Bearer ${SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(row)
+    });
+
+    const insText = await resp.text();
+    const ok = resp.ok;
+
+    // Always 200 back to KIE; include a tiny debug summary
+    return {
+      statusCode: 200,
+      headers: { ...cors(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ok,
+        saved: row,
+        insert_status: resp.status,
+        note: image_url ? 'image_url saved' : 'no image_url found; saved stub row',
+      })
+    };
+
+  } catch (e) {
+    // Still return 200 so KIE doesn’t spam retries, but include the error
+    return {
+      statusCode: 200,
+      headers: { ...cors(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ok:false, error: String(e) })
+    };
   }
-
-  if (!user_id || !run_id) {
-    return new Response("Missing uid/run_id", { status: 400 });
-  }
-
-  // write one row per callback (even if imageUrl is still null)
-  const insertBody = {
-    user_id,
-    run_id,
-    task_id: taskId || null,
-    image_url: imageUrl || null,
-  };
-
-  const ins = await fetch(`${SUPABASE_URL}/rest/v1/nb_results`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: SUPABASE_SERVICE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
-      Prefer: "return=representation",
-    },
-    body: JSON.stringify(insertBody),
-  });
-
-  if (!ins.ok) {
-    const errTxt = await ins.text().catch(() => "");
-    return new Response(`Supabase insert failed: ${errTxt}`, { status: 500 });
-  }
-
-  return new Response("OK", { status: 200 });
 };
+
+// ───────────────── helpers
+
+function cors() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+  };
+}
+
+function lowerKeys(obj) {
+  const out = {};
+  for (const k in obj) out[k.toLowerCase()] = obj[k];
+  return out;
+}
+
+function parseFormLike(s) {
+  const out = {};
+  try {
+    for (const part of s.split('&')) {
+      const [k,v] = part.split('=');
+      if (!k) continue;
+      out[decodeURIComponent(k)] = decodeURIComponent(v || '');
+    }
+  } catch {}
+  return out;
+}
+
+function get(o, path) {
+  try {
+    return path.split('.').reduce((a,k)=> (a && k in a ? a[k] : undefined), o);
+  } catch { return undefined; }
+}
+
+function findFirstUrl(obj) {
+  // Prioritize common fields
+  const direct = get(obj,'image_url') || get(obj,'imageUrl') || get(obj,'outputUrl') || get(obj,'url');
+  const arr1   = get(obj,'images.0.url') || get(obj,'output.0.url');
+  const early  = direct || arr1;
+  if (isUrl(early)) return early;
+
+  // Deep scan for any http(s) URL (first match)
+  let found = null;
+  (function walk(x) {
+    if (found) return;
+    if (!x) return;
+    if (typeof x === 'string') {
+      const m = x.match(/https?:\/\/[^\s"']+/i);
+      if (m && isUrl(m[0])) { found = m[0]; return; }
+    } else if (Array.isArray(x)) {
+      for (const v of x) walk(v);
+    } else if (typeof x === 'object') {
+      for (const v of Object.values(x)) walk(v);
+    }
+  })(obj);
+
+  return found;
+}
+
+function isUrl(u) {
+  return typeof u === 'string' && /^https?:\/\//i.test(u);
+}
