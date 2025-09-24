@@ -5,85 +5,76 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 export default async (req) => {
-  // Accept POST (and don't crash if someone GETs)
-  if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405 });
-  }
+  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
+  // --- parse query + body ----------------------------------------------------
   const { searchParams } = new URL(req.url);
   const qs_uid   = searchParams.get("uid");
   const qs_runid = searchParams.get("run_id") || searchParams.get("runId") || searchParams.get("rid");
 
-  // Read raw body
   let text = "";
-  try { text = await req.text(); } catch { /* ignore */ }
-
-  // Try to parse JSON; also handle form-encoded
-  let payload = null;
+  try { text = await req.text(); } catch {}
   const ct = (req.headers.get("content-type") || "").toLowerCase();
+
+  let payload = {};
   if (text) {
-    if (ct.includes("application/json")) {
-      try { payload = JSON.parse(text); } catch { /* fall through */ }
+    if (ct.includes("application/json")) { try { payload = JSON.parse(text); } catch {} }
+    if (!Object.keys(payload).length && ct.includes("application/x-www-form-urlencoded")) {
+      payload = Object.fromEntries(new URLSearchParams(text).entries());
+      // Some providers stick nested JSON in a field; try to parse shallowly if present
+      for (const k of Object.keys(payload)) {
+        if (typeof payload[k] === "string" && payload[k].startsWith("{")) {
+          try { payload[k] = JSON.parse(payload[k]); } catch {}
+        }
+      }
     }
-    if (!payload && ct.includes("application/x-www-form-urlencoded")) {
-      const p = new URLSearchParams(text);
-      payload = Object.fromEntries(p.entries());
-    }
-    if (!payload) payload = { raw: text };
-  } else {
-    payload = {};
   }
 
-  // ----- Extract identifiers
-  const meta =
-    payload?.meta ||
-    payload?.metadata ||
-    payload?.data?.meta ||
-    {};
+  // --- figure out ids --------------------------------------------------------
+  const meta = payload?.meta || payload?.metadata || payload?.data?.meta || {};
+  const user_id = meta?.uid ?? meta?.user_id ?? meta?.userId ?? qs_uid ?? "00000000-0000-0000-0000-000000000000";
+  const run_id  = meta?.run_id ?? meta?.runId ?? meta?.rid ?? qs_runid ?? null;
+  const task_id = payload?.taskId ?? payload?.id ?? payload?.data?.taskId ?? payload?.data?.id ?? null;
 
-  const user_id =
-    meta?.uid ?? meta?.user_id ?? meta?.userId ?? qs_uid ?? null;
+  // --- collect input URLs so we can exclude them -----------------------------
+  const inputSet = new Set();
+  const addIn = (u) => { if (u && typeof u === "string") inputSet.add(u); };
+  const addInArr = (arr) => { if (Array.isArray(arr)) arr.forEach(addIn); };
 
-  const run_id =
-    meta?.run_id ?? meta?.runId ?? meta?.rid ?? qs_runid ?? null;
+  addInArr(payload?.input?.image_urls);
+  addInArr(payload?.data?.input?.image_urls);
+  addInArr(payload?.image_urls);
+  addInArr(payload?.data?.image_urls);
 
-  const task_id =
-    payload?.taskId ?? payload?.id ?? payload?.data?.taskId ?? payload?.data?.id ?? null;
+  // --- pick output URL, preferring result/output fields ----------------------
+  const candidates = [];
+  const pushOut = (u) => {
+    if (!u || typeof u !== "string") return;
+    if (!/\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(u)) return;
+    if (inputSet.has(u)) return;              // exclude inputs
+    candidates.push(u);
+  };
 
-  // ----- Extract image URL from many possible shapes
-  const urls = [];
+  // Prefer known output shapes first
+  pushOut(payload?.result?.imageUrl);
+  (payload?.result?.images || []).forEach(x => pushOut(x?.url));
+  (payload?.output || []).forEach(x => pushOut(x?.url || (typeof x === "string" ? x : null)));
+  (payload?.data?.result?.images || []).forEach(x => pushOut(x?.url));
+  pushOut(payload?.data?.imageUrl);
+  (payload?.images || []).forEach(x => pushOut(x?.url || (typeof x === "string" ? x : null)));
 
-  const push = (u) => { if (u && typeof u === "string") urls.push(u); };
-
-  push(payload?.imageUrl);
-  push(payload?.outputUrl);
-  push(payload?.url);
-  push(payload?.data?.imageUrl);
-
-  const arrs = [
-    payload?.images, payload?.output, payload?.result?.images, payload?.data?.images
-  ];
-  for (const a of arrs) {
-    if (Array.isArray(a)) a.forEach(x => push(x?.url || (typeof x === "string" ? x : null)));
-  }
-
-  // Also scrape any URL from raw text as a last resort
+  // As a fallback, scan the raw text (outputs usually come after inputs)
   if (text) {
     const m = text.match(/https?:\/\/[^\s"']+/g);
-    if (m) urls.push(...m);
+    if (m) m.forEach(pushOut);
   }
 
-  const image_url =
-    urls.find(u => /\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(u)) || urls[0] || null;
+  // Prefer the last candidate (outputs often appear later in payload/log)
+  const image_url = candidates.length ? candidates[candidates.length - 1] : null;
 
-  // If we don't have a run_id, we can't bind the row. Still 200 so KIE doesn't retry forever.
-  if (!run_id) {
-    return new Response("OK (missing run_id)", { status: 200 });
-  }
+  if (!run_id) return new Response("OK (missing run_id)", { status: 200 });
 
-  // Insert row using service key (bypasses RLS)
-  const row = { user_id: user_id || "00000000-0000-0000-0000-000000000000", run_id, task_id, image_url };
-
+  // --- write to Supabase -----------------------------------------------------
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/nb_results`, {
       method: "POST",
@@ -93,10 +84,8 @@ export default async (req) => {
         "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`,
         "Prefer": "return=representation"
       },
-      body: JSON.stringify(row)
+      body: JSON.stringify({ user_id, run_id, task_id, image_url })
     });
-
-    // Always return 200 to KIE
     const t = await r.text().catch(() => "");
     if (!r.ok) return new Response(`OK (insert_failed) ${t}`, { status: 200 });
     return new Response("OK", { status: 200 });
