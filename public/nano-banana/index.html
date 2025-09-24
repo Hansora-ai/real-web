@@ -46,10 +46,10 @@
               <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
             </button>
             <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden">
-              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a>
-              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Edit profile</a>
-              <a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a>
-              <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
+              <a href="#" class="block rounded-lg px-3 py-2 hover:bg白/5">Settings</a>
+              <a href="#" class="block rounded-lg px-3 py-2 hover:bg白/5">Edit profile</a>
+              <a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg白/5">Subscriptions</a>
+              <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg白/5">Log out</button>
             </div>
           </div>
         </div>
@@ -70,7 +70,7 @@
           </div>
           <div>
             <label class="text-xs text-zinc-400">Prompt</label>
-            <textarea id="prompt" placeholder="Describe the edit or style…" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none min-h-[120px]"></textarea>
+            <textarea id="prompt" placeholder="Describe the edit or style…" class="mt-1 w-full rounded-lg border border-white/10 bg白/5 px-3 py-2 outline-none min-h-[120px]"></textarea>
           </div>
           <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()">Run (cost: 1⚡)</button>
           <div id="status" class="mt-2 text-sm"></div>
@@ -102,7 +102,7 @@
 <script>
 document.getElementById('y').textContent = new Date().getFullYear();
 
-// Supabase init (read-only header session; no auth changes here)
+// Supabase init
 const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -137,7 +137,7 @@ filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
-// Guarded renderer so we don't double-render if both paths return
+// Guarded renderer
 let __done=false; let channel=null;
 function onResult(url){
   if(__done || !url) return;
@@ -158,6 +158,7 @@ function onResult(url){
 
 // Credits + URL extraction helpers
 async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur<=0)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
+
 async function tryExtractImageUrl(o){
   if(!o) return null;
   if(typeof o==='string'&&/^https?:\/\//.test(o)) return o;
@@ -171,8 +172,25 @@ async function tryExtractImageUrl(o){
   return null;
 }
 
-// Option A: poll our nb-check function by taskId (does NOT rely on webhook)
-async function nbCheckPoll(taskId, uid){
+// ADDED: make sure DB gets a row even if webhook is late/blocked
+async function backfillRow(uid, rid, taskId, url){
+  try{
+    await fetch(
+      '/.netlify/functions/kie-callback?uid='+encodeURIComponent(uid)+'&run_id='+encodeURIComponent(rid)+'&taskId='+encodeURIComponent(taskId),
+      {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          status:'success',
+          result:{ images:[{ url }] }
+        })
+      }
+    );
+  }catch{}
+}
+
+// Option A: poll nb-check (does NOT rely on webhook)
+async function nbCheckPoll(taskId, uid, rid){
   if(!taskId) return;
   const start = Date.now();
   while(!__done && Date.now() - start < 180000){ // up to 3 min
@@ -180,13 +198,21 @@ async function nbCheckPoll(taskId, uid){
       const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId), {
         headers: { 'X-USER-ID': uid }
       });
-      const txt = await r.text();
-      let j; try{ j = JSON.parse(txt); } catch { j = { raw: txt }; }
+
+      let j;
+      try { j = await r.json(); }
+      catch {
+        const txt = await r.text();
+        try { j = JSON.parse(txt); } catch { j = { raw: txt }; }
+      }
 
       const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
       if(['success','succeeded','completed','done'].includes(status)){
         const url = await tryExtractImageUrl(j);
-        if(url) onResult(url);
+        if(url){
+          onResult(url);               // show immediately
+          backfillRow(uid, rid, taskId, url); // ensure Supabase row exists
+        }
         break;
       }
       if(['failed','error'].includes(status)){
@@ -260,10 +286,10 @@ window.__run=async function(){
       )
       .subscribe();
 
-    // start polling taskId (Option A)
-    nbCheckPoll(taskId, uid);
+    // start polling taskId (and backfill DB when done)
+    nbCheckPoll(taskId, uid, rid);
 
-    // fallback polling of the table in case realtime is blocked
+    // fallback: poll table directly in case realtime is blocked
     const started = Date.now();
     while (!__done && Date.now() - started < 120000) { // up to 120s
       await new Promise(r => setTimeout(r, 1500));
