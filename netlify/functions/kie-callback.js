@@ -14,7 +14,6 @@ exports.handler = async (event) => {
     const headers = lowerKeys(event.headers || {});
     const ctype = headers['content-type'] || '';
 
-    // Body can be JSON, urlencoded, or plain text
     let bodyRaw = event.body || '';
     if (event.isBase64Encoded) bodyRaw = Buffer.from(bodyRaw, 'base64').toString('utf8');
 
@@ -24,7 +23,6 @@ exports.handler = async (event) => {
     }
     if (!data && (ctype.includes('application/x-www-form-urlencoded') || ctype.includes('text/plain'))) {
       data = parseFormLike(bodyRaw);
-      // KIE sometimes nests JSON under a "data" or "result" string — parse if needed
       for (const k of ['data','result','payload']) {
         if (typeof data[k] === 'string') {
           try { data[k] = JSON.parse(data[k]); } catch {}
@@ -38,18 +36,28 @@ exports.handler = async (event) => {
     // uid / run_id / taskId from query first, then from body meta/metadata
     const uid    = qs.uid    || get(data, 'meta.uid')      || get(data, 'metadata.uid')      || null;
     const run_id = qs.run_id || get(data, 'meta.run_id')   || get(data, 'metadata.run_id')   || null;
-    const taskId = qs.taskId || get(data, 'taskId')        || get(data, 'id')                ||
-                   get(data, 'data.taskId') || get(data, 'result.taskId') || null;
+    const taskId = qs.taskId || qs.task_id || get(data,'taskId') || get(data,'id') ||
+                   get(data,'data.taskId') || get(data,'result.taskId') || null;
 
-    // Try hard to find an image URL anywhere in the payload
-    const image_url = findFirstUrl(data);
+    // Try hard to find an image URL anywhere in the payload (more shapes covered)
+    const image_url = pickUrl(data);
 
-    // Insert into Supabase (service role; bypass RLS)
+    // ⛔️ Don’t insert a stub row with NULL image_url — that’s what kept your UI spinning.
+    if (!image_url) {
+      return reply(200, {
+        ok: true,
+        saved: false,
+        note: 'no image_url found; not inserting stub row',
+        debug: { has_uid: !!uid, has_run_id: !!run_id, has_taskId: !!taskId }
+      });
+    }
+
+    // Insert into Supabase only when we have a real URL (service role; bypass RLS)
     const row = {
-      user_id: uid || '00000000-0000-0000-0000-000000000000', // fallback to avoid 400s
+      user_id: uid || '00000000-0000-0000-0000-000000000000',
       run_id:  run_id || 'unknown',
       task_id: taskId || null,
-      image_url: image_url || null,
+      image_url
     };
 
     const resp = await fetch(TABLE_URL, {
@@ -63,32 +71,25 @@ exports.handler = async (event) => {
       body: JSON.stringify(row)
     });
 
-    const insText = await resp.text();
     const ok = resp.ok;
-
-    // Always 200 back to KIE; include a tiny debug summary
-    return {
-      statusCode: 200,
-      headers: { ...cors(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ok,
-        saved: row,
-        insert_status: resp.status,
-        note: image_url ? 'image_url saved' : 'no image_url found; saved stub row',
-      })
-    };
+    return reply(200, {
+      ok,
+      saved: true,
+      insert_status: resp.status,
+      row
+    });
 
   } catch (e) {
     // Still return 200 so KIE doesn’t spam retries, but include the error
-    return {
-      statusCode: 200,
-      headers: { ...cors(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ok:false, error: String(e) })
-    };
+    return reply(200, { ok:false, error:String(e) });
   }
 };
 
 // ───────────────── helpers
+
+function reply(statusCode, body) {
+  return { statusCode, headers: { ...cors(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+}
 
 function cors() {
   return {
@@ -98,11 +99,7 @@ function cors() {
   };
 }
 
-function lowerKeys(obj) {
-  const out = {};
-  for (const k in obj) out[k.toLowerCase()] = obj[k];
-  return out;
-}
+function lowerKeys(obj) { const out={}; for (const k in obj) out[k.toLowerCase()] = obj[k]; return out; }
 
 function parseFormLike(s) {
   const out = {};
@@ -116,37 +113,45 @@ function parseFormLike(s) {
   return out;
 }
 
-function get(o, path) {
-  try {
-    return path.split('.').reduce((a,k)=> (a && k in a ? a[k] : undefined), o);
-  } catch { return undefined; }
-}
+function get(o, path) { try { return path.split('.').reduce((a,k)=> (a && k in a ? a[k] : undefined), o); } catch { return undefined; } }
 
-function findFirstUrl(obj) {
-  // Prioritize common fields
-  const direct = get(obj,'image_url') || get(obj,'imageUrl') || get(obj,'outputUrl') || get(obj,'url');
-  const arr1   = get(obj,'images.0.url') || get(obj,'output.0.url');
-  const early  = direct || arr1;
-  if (isUrl(early)) return early;
+function isUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u); }
 
-  // Deep scan for any http(s) URL (first match)
-  let found = null;
-  (function walk(x) {
-    if (found) return;
-    if (!x) return;
-    if (typeof x === 'string') {
+// Known KIE shapes first, then deep-scan
+function pickUrl(obj){
+  const candidates = [
+    get(obj,'image_url'),
+    get(obj,'imageUrl'),
+    get(obj,'outputUrl'),
+    get(obj,'url'),
+    get(obj,'result.image_url'),
+    get(obj,'result.imageUrl'),
+    get(obj,'data.image_url'),
+    get(obj,'data.imageUrl'),
+    get(obj,'data.result.image_url'),
+    get(obj,'data.result.imageUrl'),
+    get(obj,'data.output_url'),
+    get(obj,'result_url'),
+    get(obj,'data.result_url'),
+    get(obj,'images.0.url'),
+    get(obj,'output.0.url'),
+    get(obj,'data.images.0.url'),
+    get(obj,'data.output.0.url')
+  ];
+  for (const u of candidates) if (isUrl(u)) return u;
+
+  // Deep scan for first http(s) URL anywhere
+  let found=null;
+  (function walk(x){
+    if (found || !x) return;
+    if (typeof x==='string'){
       const m = x.match(/https?:\/\/[^\s"']+/i);
       if (m && isUrl(m[0])) { found = m[0]; return; }
     } else if (Array.isArray(x)) {
       for (const v of x) walk(v);
-    } else if (typeof x === 'object') {
+    } else if (typeof x==='object') {
       for (const v of Object.values(x)) walk(v);
     }
   })(obj);
-
   return found;
-}
-
-function isUrl(u) {
-  return typeof u === 'string' && /^https?:\/\//i.test(u);
 }
