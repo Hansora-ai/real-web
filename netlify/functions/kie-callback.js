@@ -1,11 +1,10 @@
 // Handles KIE -> webhook callback and stores the result in Supabase nb_results
-// Expects query params ?uid=...&run_id=... (we already append them in run-nano-banana.js)
+// Expects query params ?uid=...&run_id=...
 
 const SUPABASE_URL  = process.env.SUPABASE_URL;
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY; // service role key (NOT anon)
 const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
 
-// NEW: read KIE host/key so we can verify final result if needed
 const KIE_BASE = process.env.KIE_BASE_URL || 'https://api.kie.ai';
 const KIE_KEY  = process.env.KIE_API_KEY;
 
@@ -37,58 +36,71 @@ exports.handler = async (event) => {
       try { data = JSON.parse(bodyRaw); } catch { data = { raw: bodyRaw }; }
     }
 
-    // uid / run_id / taskId from query first, then from body meta/metadata
+    // ids
     const uid    = qs.uid    || get(data, 'meta.uid')      || get(data, 'metadata.uid')      || null;
     const run_id = qs.run_id || get(data, 'meta.run_id')   || get(data, 'metadata.run_id')   || null;
     const taskId = qs.taskId || qs.task_id || get(data,'taskId') || get(data,'id') ||
                    get(data,'data.taskId') || get(data,'result.taskId') || null;
 
-    // Try hard to find an image URL anywhere in the payload (more shapes covered)
-    const image_url = pickUrl(data);
+    // status gate: only insert when job is really done
+    const statusStr = String(
+      get(data,'status') || get(data,'state') ||
+      get(data,'data.status') || get(data,'data.state') ||
+      ''
+    ).toLowerCase();
+    const isSuccess = ['success','succeeded','completed','done'].includes(statusStr);
 
-    // --- NEW: verify/upgrade to the official KIE result URL when needed ---
-    let final_url = image_url;
+    // Try to pick a result URL from payload (prefer result subtree)
+    const payloadUrl = pickUrl(data);
+
+    // If not clearly a final KIE URL OR status not success, verify with KIE by taskId
+    let final_url = payloadUrl;
     const looksWrong =
       !final_url ||
-      /webhansora|netlify|localhost/i.test(hostname(final_url)) ||   // our own site / preview
-      !/(kie\.ai|redpandaai\.co)/i.test(hostname(final_url));        // not a known KIE host
+      /webhansora|netlify|localhost/i.test(hostname(final_url)) ||
+      !/(kie\.ai|redpandaai\.co)/i.test(hostname(final_url));
 
-    if ((looksWrong || !final_url) && taskId && KIE_KEY) {
+    if ((looksWrong || !isSuccess) && taskId && KIE_KEY) {
       try {
         const r = await fetch(
           `${KIE_BASE}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
           { headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' } }
         );
         const j = await r.json();
-        // Prefer explicit result paths
-        final_url =
-          j?.data?.result?.images?.[0]?.url ||
-          j?.data?.result_url ||
-          j?.image_url ||
-          j?.url ||
-          final_url;
+        const s = String(
+          j?.data?.status || j?.status || j?.state || ''
+        ).toLowerCase();
+        if (['success','succeeded','completed','done'].includes(s)) {
+          final_url =
+            j?.data?.result?.images?.[0]?.url ||
+            j?.data?.result_url ||
+            j?.image_url ||
+            j?.url ||
+            final_url;
+        } else {
+          // still not done -> do not insert a stub row
+          final_url = null;
+        }
       } catch (e) {
         console.log('[kie-callback] verify fetch failed:', String(e));
       }
     }
-    // ---------------------------------------------------------------------
 
-    // ⛔️ Don’t insert a stub row with NULL image_url — that’s what kept your UI spinning.
+    // Don’t insert stub rows
     if (!final_url) {
       return reply(200, {
         ok: true,
         saved: false,
-        note: 'no image_url found; not inserting stub row',
-        debug: { has_uid: !!uid, has_run_id: !!run_id, has_taskId: !!taskId }
+        note: 'no final image_url yet; not inserting'
       });
     }
 
-    // Insert into Supabase only when we have a real URL (service role; bypass RLS)
+    // Insert only when we have a real, final URL
     const row = {
       user_id: uid || '00000000-0000-0000-0000-000000000000',
       run_id:  run_id || 'unknown',
       task_id: taskId || null,
-      image_url: final_url      // <-- use verified final URL
+      image_url: final_url
     };
 
     const resp = await fetch(TABLE_URL, {
@@ -102,87 +114,48 @@ exports.handler = async (event) => {
       body: JSON.stringify(row)
     });
 
-    const ok = resp.ok;
-    return reply(200, {
-      ok,
-      saved: true,
-      insert_status: resp.status,
-      row
-    });
+    return reply(200, { ok: resp.ok, saved: true, insert_status: resp.status, row });
 
   } catch (e) {
-    // Still return 200 so KIE doesn’t spam retries, but include the error
     return reply(200, { ok:false, error:String(e) });
   }
 };
 
 // ───────────────── helpers
-
 function reply(statusCode, body) {
   return { statusCode, headers: { ...cors(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
 }
-
-function cors() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-  };
-}
-
-function lowerKeys(obj) { const out={}; for (const k in obj) out[k.toLowerCase()] = obj[k]; return out; }
-
-function parseFormLike(s) {
-  const out = {};
-  try {
-    for (const part of s.split('&')) {
-      const [k,v] = part.split('=');
-      if (!k) continue;
-      out[decodeURIComponent(k)] = decodeURIComponent(v || '');
-    }
-  } catch {}
-  return out;
-}
-
-function get(o, path) { try { return path.split('.').reduce((a,k)=> (a && k in a ? a[k] : undefined), o); } catch { return undefined; } }
-
+function cors(){ return {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization'}; }
+function lowerKeys(obj){const out={}; for(const k in obj) out[k.toLowerCase()]=obj[k]; return out;}
+function parseFormLike(s){const out={}; try{ for(const part of s.split('&')){ const [k,v]=part.split('='); if(!k) continue; out[decodeURIComponent(k)]=decodeURIComponent(v||''); } }catch{} return out;}
+function get(o,p){ try{ return p.split('.').reduce((a,k)=> (a && k in a ? a[k] : undefined), o); } catch { return undefined; } }
 function isUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u); }
+function hostname(u){ try{ return new URL(u).hostname; } catch { return ''; } }
 
-function hostname(u){ try { return new URL(u).hostname; } catch { return ''; } }
-
-// Known KIE shapes first, then deep-scan
+// Prefer result fields, then fall back (avoid picking input URLs)
 function pickUrl(obj){
-  const candidates = [
-    get(obj,'image_url'),
-    get(obj,'imageUrl'),
-    get(obj,'outputUrl'),
-    get(obj,'url'),
-    get(obj,'result.image_url'),
-    get(obj,'result.imageUrl'),
-    get(obj,'data.image_url'),
-    get(obj,'data.imageUrl'),
-    get(obj,'data.result.image_url'),
-    get(obj,'data.result.imageUrl'),
-    get(obj,'data.output_url'),
-    get(obj,'result_url'),
+  const prefer = [
+    get(obj,'result.image_url'), get(obj,'result.imageUrl'),
+    get(obj,'data.result.image_url'), get(obj,'data.result.imageUrl'),
     get(obj,'data.result_url'),
-    get(obj,'images.0.url'),
-    get(obj,'output.0.url'),
-    get(obj,'data.images.0.url'),
-    get(obj,'data.output.0.url')
+    get(obj,'data.output?.[0]?.url'), get(obj,'result_url'),
+    get(obj,'data.output_url'),
+    get(obj,'images?.[0]?.url'), get(obj,'output?.[0]?.url'),
+    get(obj,'data.images?.[0]?.url'), get(obj,'data.output?.[0]?.url'),
+    get(obj,'image_url'), get(obj,'imageUrl'), get(obj,'outputUrl'), get(obj,'url')
   ];
-  for (const u of candidates) if (isUrl(u)) return u;
+  for (const u of prefer) if (isUrl(u)) return u;
 
-  // Deep scan for first http(s) URL anywhere
-  let found=null;
+  // deep scan last
+  let found = null;
   (function walk(x){
     if (found || !x) return;
-    if (typeof x==='string'){
+    if (typeof x === 'string'){
       const m = x.match(/https?:\/\/[^\s"']+/i);
       if (m && isUrl(m[0])) { found = m[0]; return; }
-    } else if (Array.isArray(x)) {
+    } else if (Array.isArray(x)){
       for (const v of x) walk(v);
-    } else if (typeof x==='object') {
+    } else if (typeof x === 'object'){
       for (const v of Object.values(x)) walk(v);
     }
   })(obj);
