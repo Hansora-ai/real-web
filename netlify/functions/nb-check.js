@@ -1,5 +1,5 @@
 // netlify/functions/nb-check.js
-// Polls job status. Succeeds if KIE says "success" OR if a row already exists in nb_results.
+// Returns final image when KIE is done OR when the webhook row exists in Supabase.
 
 const SUPABASE_URL  = process.env.SUPABASE_URL;
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -11,7 +11,7 @@ const KIE_BASES     = Array.from(new Set([KIE_BASE_MAIN, 'https://api.kie.ai', '
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
-  if (event.httpMethod !== 'GET')   return { statusCode: 405, headers: cors(), body: 'Use GET' };
+  if (event.httpMethod !== 'GET')     return { statusCode: 405, headers: cors(), body: 'Use GET' };
 
   const qs     = event.queryStringParameters || {};
   const taskId = qs.taskId || qs.task_id || null;
@@ -39,7 +39,7 @@ exports.handler = async (event) => {
     }
   }
 
-  // 2) Fallback: check Supabase for the row the webhook saved (matches current run/task)
+  // 2) Fallback: look for the webhook row (run_id / task_id / user_id)
   if (!final && (run_id || taskId)) {
     const params = new URLSearchParams();
     if (uid)    params.append('user_id', `eq.${uid}`);
@@ -65,6 +65,5 @@ exports.handler = async (event) => {
   return reply(200, { done: false, status, note: 'not ready' });
 };
 
-// ───────── helpers
 function reply(code, body){ return { statusCode: code, headers: { ...cors(), 'Content-Type':'application/json' }, body: JSON.stringify(body) }; }
 function cors(){ return { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization' }; }
