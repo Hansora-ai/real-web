@@ -125,11 +125,12 @@ function isUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u); }
 function host(u){ try{ return new URL(u).hostname; } catch { return ''; } }
 function isAllowedFinal(u){
   if (!isUrl(u)) return false;
-  // Relaxed: accept any HTTPS URL; don't require specific host or /workers/ path
-  // (This fixes cases where sized outputs use a different CDN/path.)
+  const h = host(u);
+  if (!ALLOWED_HOSTS.has(h)) return false;
+  // Generated images come from workers (avoid user-uploads echoes)
+  if (!/\/workers\//i.test(u)) return false;
   return true;
 }
-
 
 // Prefer result subtree and known result fields; avoid user-upload echoes.
 function pickResultUrl(obj){
@@ -152,7 +153,7 @@ function pickResultUrl(obj){
     if (found || !x) return;
     if (typeof x === 'string'){
       const m = x.match(/https?:\/\/[^\s"']+/i);
-      if (m && isUrl(m[0]) && /\/workers\//i.test(m[0])) { found = m[0]; return; }
+      if (m && isUrl(m[0]) && /\/(workers|f)\//i.test(m[0])) { found = m[0]; return; }
     } else if (Array.isArray(x)){
       for (const v of x) walk(v);
     } else if (typeof x === 'object'){
