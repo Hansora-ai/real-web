@@ -129,14 +129,61 @@ const filesEl=document.getElementById('files');const thumbsEl=document.getElemen
 filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,4).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
+// NEW: centralized renderer + guards to avoid double-render
+let __done=false; let channel=null;
+function onResult(url){
+  if(__done || !url) return;
+  __done = true;
+  const img=new Image();
+  img.onload=()=>{
+    resultBox.innerHTML='';
+    img.className='w-full h-full object-contain';
+    resultBox.appendChild(img);
+    downloadLink.href=url;
+    downloadLink.classList.remove('hidden');
+    downloadLink.textContent='Download';
+    showStatus('✅ Done.','text-emerald-300');
+  };
+  img.src=url;
+  try{ channel?.unsubscribe?.(); }catch{}
+}
+
 async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur<=0)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
 async function tryExtractImageUrl(o){if(!o)return null;if(typeof o==='string'&&/^https?:\/\//.test(o))return o;if(o.imageUrl)return o.imageUrl;if(o.outputUrl)return o.outputUrl;if(o.url)return o.url;if(o.data)return await tryExtractImageUrl(o.data);if(Array.isArray(o.images)&&o.images[0]?.url)return o.images[0].url;if(Array.isArray(o.output)&&o.output[0]?.url)return o.output[0].url;return null;}
+
+// NEW: Option-A polling of nb-check by taskId
+async function nbCheckPoll(taskId, uid){
+  if(!taskId) return;
+  const start = Date.now();
+  while(!__done && Date.now() - start < 180000){ // up to 3 min
+    try{
+      const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId), {
+        headers: { 'X-USER-ID': uid }
+      });
+      const txt = await r.text();
+      let j; try{ j = JSON.parse(txt); } catch { j = { raw: txt }; }
+
+      const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
+      if(['success','succeeded','completed','done'].includes(status)){
+        const url = await tryExtractImageUrl(j);
+        if(url) onResult(url);
+        break;
+      }
+      if(['failed','error'].includes(status)){
+        showStatus('❌ Generation failed.','text-rose-300');
+        break;
+      }
+    }catch{}
+    await new Promise(r=>setTimeout(r,1500));
+  }
+}
 
 window.__run=async function(){
   // HARD CHECK: block anonymous users (so inline onclick still works)
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
+  __done=false;
   const files=[...filesEl.files];
   if(!files.length){alert('Choose at least one image.');return;}
   if(files.length>4){alert('Max 4 images.');return;}
@@ -161,7 +208,7 @@ window.__run=async function(){
       urls.push(j.downloadUrl);
     }
 
-    // Create task (webhook will deliver result to Supabase)
+    // Create task (webhook may deliver to Supabase; we also poll nb-check)
     const res=await fetch('/.netlify/functions/run-nano-banana',{
       method:'POST',
       headers:{'Content-Type':'application/json','X-USER-ID':uid},
@@ -176,28 +223,29 @@ window.__run=async function(){
       throw new Error('Create failed: ' + errT);
     }
 
+    const resJson = await res.json().catch(()=> ({}));
+    const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
+
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
 
-    // ---- NEW: Realtime subscribe for this run_id (auto-unsubscribe when received)
-    const channel = supabase.channel('nb_results_' + rid)
+    // ---- Realtime subscribe for this run_id
+    channel = supabase.channel('nb_results_' + rid)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'nb_results', filter: 'run_id=eq.' + rid },
         (payload) => {
           const url = payload?.new?.image_url;
-          if (url) {
-            const img=new Image();
-            img.onload=()=>{resultBox.innerHTML='';img.className='w-full h-full object-contain';resultBox.appendChild(img);downloadLink.href=url;downloadLink.classList.remove('hidden');downloadLink.textContent='Download';showStatus('✅ Done.','text-emerald-300');};
-            img.src=url;
-            channel.unsubscribe();
-          }
+          if (url) onResult(url);
         }
       )
       .subscribe();
 
-    // ---- Minimal polling fallback (removed fragile created_at ordering)
+    // ---- Start taskId polling (Option-A)
+    nbCheckPoll(taskId, uid);
+
+    // ---- Minimal polling fallback via Supabase table
     const started = Date.now();
-    while (Date.now() - started < 120000) { // up to 120s
+    while (!__done && Date.now() - started < 120000) { // up to 120s
       await new Promise(r => setTimeout(r, 1500));
       const { data: row } = await supabase
         .from('nb_results')
@@ -208,16 +256,10 @@ window.__run=async function(){
         .maybeSingle();
 
       const url = row?.image_url || null;
-      if (url) {
-        const img=new Image();
-        img.onload=()=>{resultBox.innerHTML='';img.className='w-full h-full object-contain';resultBox.appendChild(img);downloadLink.href=url;downloadLink.classList.remove('hidden');downloadLink.textContent='Download';showStatus('✅ Done.','text-emerald-300');};
-        img.src=url;
-        channel.unsubscribe();
-        break;
-      }
+      if (url) { onResult(url); break; }
     }
 
-    if (downloadLink.classList.contains('hidden')) {
+    if (!__done) {
       showStatus('Still processing… you can wait or try again.','text-yellow-300');
     }
 
