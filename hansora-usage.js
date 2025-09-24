@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA • Nano Banana</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+                       var(--base-bg); color:#e5e7eb}
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    #navAvatar{background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%25%22 stop-color=%2291c1ff%22/><stop offset=%22100%25%22 stop-color=%225a8cff%22/></linearGradient></defs><circle cx=%2264%22 cy=%2264%22 r=%2264%22 fill=%22url(%23g)%22/><circle cx=%2264%22 cy=%2250%22 r=%2222%22 fill=%22white%22 fill-opacity=%22.9%22/><path d=%22M20 108a44 30 0 0 1 88 0%22 fill=%22white%22 fill-opacity=%22.9%22/></svg>');background-size:cover;background-position:center;}
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+        <div class="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center font-bold">H</div>
+        <span class="font-semibold tracking-wide">HANSORA AI</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-8 text-sm">
+        <a href="index.html#models" class="hover:text-white/90">Models</a>
+        <a href="index.html#templates" class="hover:text-white/90">Templates</a>
+        <a href="index.html#pricing" class="hover:text-white/90">Pricing</a>
+        <a href="index.html#faq" class="hover:text-white/90">FAQ</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="#" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
+        <a id="btnLoginNav" href="index.html#login" class="rounded-xl btn px-3 py-2 text-sm">Log in</a>
+        <a id="btnGetStarted" href="index.html#login" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Get Started</a>
+        <div id="navUser" class="hidden items-center gap-2">
+          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
+          <div class="relative">
+            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
+              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
+            </button>
+            <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden">
+              <a href="#" class="block rounded-lg px-3 py-2 hover:bg白/5">Settings</a>
+              <a href="#" class="block rounded-lg px-3 py-2 hover:bg白/5">Edit profile</a>
+              <a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg白/5">Subscriptions</a>
+              <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg白/5">Log out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+    <div class="grid md:grid-cols-2 gap-6 items-start">
+      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+        <h1 class="text-2xl font-bold">Nano Banana — Image to Image</h1>
+        <p class="mt-1 text-sm text-zinc-400">Upload 1–4 images and describe the edit you want.</p>
+        <div class="mt-4 space-y-3">
+          <div>
+            <label class="text-xs text-zinc-400">Select 1–4 images (jpeg/png/webp, ≤10MB each)</label>
+            <input id="files" type="file" accept="image/*" multiple class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
+            <div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div>
+          </div>
+          <div>
+            <label class="text-xs text-zinc-400">Prompt</label>
+            <textarea id="prompt" placeholder="Describe the edit or style…" class="mt-1 w-full rounded-lg border border-white/10 bg白/5 px-3 py-2 outline-none min-h-[120px]"></textarea>
+          </div>
+          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()">Run (cost: 1⚡)</button>
+          <div id="status" class="mt-2 text-sm"></div>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+        <h3 class="text-lg font-semibold">Result</h3>
+        <p class="text-xs text-zinc-400">Generated image will appear below.</p>
+        <div id="resultBox" class="mt-3 aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
+          <span class="text-xs text-zinc-500">No result yet</span>
+        </div>
+        <a id="downloadLink" href="#" class="hidden mt-3 inline-block rounded-xl btn px-4 py-2 text-sm">Download</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="border-t border-base-line/60">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
+      <nav class="flex items-center gap-5">
+        <a href="index.html#terms" class="hover:text-white/80">Terms</a>
+        <a href="index.html#privacy" class="hover:text-white/80">Privacy</a>
+        <a href="index.html#contact" class="hover:text-white/80">Contact</a>
+      </nav>
+    </div>
+  </footer>
+
+<script>
+document.getElementById('y').textContent = new Date().getFullYear();
+
+// Supabase init
+const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Header UI
+const $btnLoginNav = document.getElementById('btnLoginNav');
+const $btnGetStarted = document.getElementById('btnGetStarted');
+const $navUser = document.getElementById('navUser');
+const $navCredits = document.getElementById('navCredits');
+const $navAvatar = document.getElementById('navAvatar');
+const $navMenu = document.getElementById('navMenu');
+const $btnLogout = document.getElementById('btnLogout');
+const $navAvatarImg = document.getElementById('navAvatarImg');
+function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
+function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
+$navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
+document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
+$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
+async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
+
+// Elements
+const filesEl=document.getElementById('files');
+const thumbsEl=document.getElementById('thumbs');
+const promptEl=document.getElementById('prompt');
+const runBtn=document.getElementById('runBtn');
+const statusEl=document.getElementById('status');
+const resultBox=document.getElementById('resultBox');
+const downloadLink=document.getElementById('downloadLink');
+
+filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,4).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
+
+function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
+
+// Guarded renderer
+let __done=false; let channel=null;
+function onResult(url){
+  if(__done || !url) return;
+  __done = true;
+  const img=new Image();
+  img.onload=()=>{
+    resultBox.innerHTML='';
+    img.className='w-full h-full object-contain';
+    resultBox.appendChild(img);
+    downloadLink.href=url;
+    downloadLink.classList.remove('hidden');
+    downloadLink.textContent='Download';
+    showStatus('✅ Done.','text-emerald-300');
+  };
+  \1logGeneration(url);
+    try{ channel?.unsubscribe?.(); }catch{}
+}
+
+// Credits + URL extraction helpers
+async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur<=0)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
+
+async function tryExtractImageUrl(o){
+  if(!o) return null;
+  if(typeof o==='string'&&/^https?:\/\//.test(o)) return o;
+  if(o.imageUrl) return o.imageUrl;
+  if(o.outputUrl) return o.outputUrl;
+  if(o.url) return o.url;
+  if(o.data) { const x=await tryExtractImageUrl(o.data); if(x) return x; }
+  if(o.result) { const x=await tryExtractImageUrl(o.result); if(x) return x; }
+  if(Array.isArray(o.images)&&o.images[0]?.url) return o.images[0].url;
+  if(Array.isArray(o.output)&&o.output[0]?.url) return o.output[0].url;
+  return null;
+}
+
+
+// Log to Supabase: save user's generation for Usage page
+async function logGeneration(url){
+  try{
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if(!user || !url) return;
+    await supabase.from('user_generations').insert({
+      user_id: user.id,
+      provider: 'Nano Banana',
+      kind: 'image',
+      prompt: promptEl.value || null,
+      result_url: url,
+      meta: { run: 'nano-banana' }
+    });
+  }catch(err){ console.warn('logGeneration failed', err); }
+}
+
+// ADDED: make sure DB gets a row even if webhook is late/blocked
+async function backfillRow(uid, rid, taskId, url){
+  try{
+    await fetch(
+      '/.netlify/functions/kie-callback?uid='+encodeURIComponent(uid)+'&run_id='+encodeURIComponent(rid)+'&taskId='+encodeURIComponent(taskId),
+      {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          status:'success',
+          result:{ images:[{ url }] }
+        })
+      }
+    );
+  }catch{}
+}
+
+// Option A: poll nb-check (does NOT rely on webhook)
+async function nbCheckPoll(taskId, uid, rid){
+  if(!taskId) return;
+  const start = Date.now();
+  while(!__done && Date.now() - start < 180000){ // up to 3 min
+    try{
+      const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId), {
+        headers: { 'X-USER-ID': uid }
+      });
+
+      let j;
+      try { j = await r.json(); }
+      catch {
+        const txt = await r.text();
+        try { j = JSON.parse(txt); } catch { j = { raw: txt }; }
+      }
+
+      const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
+      if(['success','succeeded','completed','done'].includes(status)){
+        const url = await tryExtractImageUrl(j);
+        if(url){
+          onResult(url);               // show immediately
+          backfillRow(uid, rid, taskId, url); // ensure Supabase row exists
+        }
+        break;
+      }
+      if(['failed','error'].includes(status)){
+        showStatus('❌ Generation failed.','text-rose-300');
+        break;
+      }
+    }catch{}
+    await new Promise(r=>setTimeout(r,1500));
+  }
+}
+
+// Main run
+window.__run=async function(){
+  const {data:authData}=await supabase.auth.getUser();
+  if(!authData.user){ alert('Please log in or register first.'); return; }
+
+  __done=false;
+  const files=[...filesEl.files];
+  if(!files.length){alert('Choose at least one image.');return;}
+  if(files.length>4){alert('Max 4 images.');return;}
+  for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}
+
+  runBtn.disabled=true;runBtn.textContent='Working…';
+  showStatus('Submitting…','text-zinc-400');
+  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
+
+  try{
+    const uid=authData.user.id;
+    const rid=uid+'-'+Date.now();
+    const urls=[];
+
+    // upload images
+    for(let i=0;i<files.length;i++){
+      const fd=new FormData();
+      fd.append('file',files[i],files[i].name||('image-'+i+'.png'));
+      fd.append('run_id',rid);
+      const r=await fetch('/.netlify/functions/kie-upload',{method:'POST',headers:{'X-USER-ID':uid},body:fd});
+      const j=await r.json().catch(()=>null);
+      if(!r.ok||!j||!j.downloadUrl)throw new Error(j?.error||'Upload failed');
+      urls.push(j.downloadUrl);
+    }
+
+    // create job
+    const res=await fetch('/.netlify/functions/run-nano-banana',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-USER-ID':uid},
+      body:JSON.stringify({urls, prompt: promptEl.value||'.', format:'png', size:'auto', run_id: rid})
+    });
+
+    if (res.status === 202 || res.ok) {
+      await chargeOneCredit();
+    } else {
+      const errT = await res.text().catch(()=> '');
+      throw new Error('Create failed: ' + errT);
+    }
+
+    const resJson = await res.json().catch(()=> ({}));
+    const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
+
+    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+
+    // subscribe to Supabase (if webhook inserts there)
+    channel = supabase.channel('nb_results_' + rid)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'nb_results', filter: 'run_id=eq.' + rid },
+        (payload) => {
+          const url = payload?.new?.image_url;
+          if (url) onResult(url);
+        }
+      )
+      .subscribe();
+
+    // start polling taskId (and backfill DB when done)
+    nbCheckPoll(taskId, uid, rid);
+
+    // fallback: poll table directly in case realtime is blocked
+    const started = Date.now();
+    while (!__done && Date.now() - started < 120000) { // up to 120s
+      await new Promise(r => setTimeout(r, 1500));
+      const { data: row } = await supabase
+        .from('nb_results')
+        .select('image_url')
+        .eq('user_id', uid)
+        .eq('run_id', rid)
+        .limit(1)
+        .maybeSingle();
+
+      const url = row?.image_url || null;
+      if (url) { onResult(url); break; }
+    }
+
+    if (!__done) {
+      showStatus('Still processing… you can wait or try again.','text-yellow-300');
+    }
+
+  }catch(e){
+    showStatus('❌ '+(e.message||String(e)),'text-rose-300')
+  }finally{
+    runBtn.disabled=false;runBtn.textContent='Run (cost: 1⚡)';
+  }
+};
+</script>
+</body>
+</html>
