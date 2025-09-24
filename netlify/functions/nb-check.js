@@ -1,5 +1,5 @@
 // netlify/functions/nb-check.js
-// Returns final image when KIE is done OR when the webhook row exists in Supabase.
+// Ask KIE for the task status OR fall back to the last webhook row in Supabase.
 
 const SUPABASE_URL  = process.env.SUPABASE_URL;
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -21,7 +21,7 @@ exports.handler = async (event) => {
   let status = 'unknown';
   let final  = null;
 
-  // 1) Ask KIE if we have a taskId
+  // 1) Try KIE first if we have a taskId
   if (taskId && KIE_KEY) {
     for (const base of KIE_BASES) {
       try {
@@ -39,7 +39,7 @@ exports.handler = async (event) => {
     }
   }
 
-  // 2) Fallback: look for the webhook row (run_id / task_id / user_id)
+  // 2) Fallback: check webhook row in Supabase by uid/run_id/taskId
   if (!final && (run_id || taskId)) {
     const params = new URLSearchParams();
     if (uid)    params.append('user_id', `eq.${uid}`);
@@ -61,9 +61,9 @@ exports.handler = async (event) => {
     } catch {}
   }
 
-  if (final) return reply(200, { done: true, status: 'success', url: final });
-  return reply(200, { done: false, status, note: 'not ready' });
+  if (final) return json(200, { done: true, status: 'success', url: final });
+  return json(200, { done: false, status, note: 'not ready' });
 };
 
-function reply(code, body){ return { statusCode: code, headers: { ...cors(), 'Content-Type':'application/json' }, body: JSON.stringify(body) }; }
 function cors(){ return { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization' }; }
+function json(code, body){ return { statusCode: code, headers: { ...cors(), 'Content-Type':'application/json' }, body: JSON.stringify(body) }; }
