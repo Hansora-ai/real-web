@@ -7,11 +7,14 @@ const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
 
 const KIE_BASE_MAIN = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,'');
 const KIE_KEY       = process.env.KIE_API_KEY;
-// Try a couple of bases if we need to verify by taskId (host mismatches cause 404)
+// Try multiple bases if we need to verify by taskId
 const KIE_BASES     = Array.from(new Set([KIE_BASE_MAIN, 'https://api.kie.ai', 'https://kieai.redpandaai.co']));
 
-// ✅ Allow-list: only accept result URLs from these hosts
-const ALLOWED_RESULT_HOSTS = ['tempfile.aiquickdraw.com'];
+// ✅ Allow-list: accept only these result hosts (covers your two real cases)
+const ALLOWED_RESULT_HOSTS = [
+  'tempfile.aiquickdraw.com',
+  'tempfile.redpandaai.co',
+];
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
@@ -94,9 +97,9 @@ exports.handler = async (event) => {
       }
     }
 
-    // 🚫 Enforce allow-list: only accept tempfile.aiquickdraw.com
+    // 🔒 Enforce allow-list
     if (final_url && !isAllowedHost(final_url)) {
-      console.log('[kie-callback] rejecting non-allowed host:', hostname(final_url));
+      console.log('[kie-callback] rejecting non-allowed host:', hostname(final_url), 'url:', final_url);
       final_url = null;
     }
 
