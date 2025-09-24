@@ -97,17 +97,23 @@ exports.handler = async (event) => {
 
 function normalizeImageSize(v) {
   if (!v) return "auto";
-  const s = String(v).trim();
-  // Pass-through exactly what the client sends for known values
-  const allowed = new Set([
-    "auto",
-    "square",
-    "portrait_3_4",
-    "portrait_9_16",
-    "landscape_4_3",
-    "landscape_16_9"
-  ]);
-  if (allowed.has(s)) return s;
+  const s = String(v).trim().toLowerCase();
+
+  // Pass through if already valid ratio or auto
+  const direct = new Set(["auto", "1:1", "3:4", "4:3", "9:16", "16:9"]);
+  if (direct.has(s)) return s;
+
+  // Map named tokens to ratio strings (KIE-accepted)
+  if (s === "square") return "1:1";
+  if (s === "portrait_3_4") return "3:4";
+  if (s === "portrait_9_16") return "9:16";
+  if (s === "landscape_4_3") return "4:3";
+  if (s === "landscape_16_9") return "16:9";
+
+  // Coerce variants like "16_9", "16-9" → "16:9"
+  const coerced = s.replace(/(\d)[_\-:](\d)/g, "$1:$2");
+  if (direct.has(coerced)) return coerced;
+
   return "auto";
 }
 
