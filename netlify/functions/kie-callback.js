@@ -50,7 +50,7 @@ exports.handler = async (event) => {
     ).toLowerCase();
     const isSuccess = ['success','succeeded','completed','done'].includes(statusStr);
 
-    // Try to pick a result URL from payload (prefer result subtree)
+    // Pick a result URL from payload (prefers real result fields, avoids input URLs)
     const payloadUrl = pickUrl(data);
 
     // If not clearly a final KIE URL OR status not success, verify with KIE by taskId
@@ -67,9 +67,8 @@ exports.handler = async (event) => {
           { headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' } }
         );
         const j = await r.json();
-        const s = String(
-          j?.data?.status || j?.status || j?.state || ''
-        ).toLowerCase();
+        const s = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
+
         if (['success','succeeded','completed','done'].includes(s)) {
           final_url =
             j?.data?.result?.images?.[0]?.url ||
@@ -132,27 +131,39 @@ function get(o,p){ try{ return p.split('.').reduce((a,k)=> (a && k in a ? a[k] :
 function isUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u); }
 function hostname(u){ try{ return new URL(u).hostname; } catch { return ''; } }
 
-// Prefer result fields, then fall back (avoid picking input URLs)
+// Prefer real result fields; explicitly ignore input image URLs
 function pickUrl(obj){
-  const prefer = [
-    get(obj,'result.image_url'), get(obj,'result.imageUrl'),
-    get(obj,'data.result.image_url'), get(obj,'data.result.imageUrl'),
-    get(obj,'data.result_url'),
-    get(obj,'data.output?.[0]?.url'), get(obj,'result_url'),
-    get(obj,'data.output_url'),
-    get(obj,'images?.[0]?.url'), get(obj,'output?.[0]?.url'),
-    get(obj,'data.images?.[0]?.url'), get(obj,'data.output?.[0]?.url'),
-    get(obj,'image_url'), get(obj,'imageUrl'), get(obj,'outputUrl'), get(obj,'url')
-  ];
-  for (const u of prefer) if (isUrl(u)) return u;
+  const inputUrls = []
+    .concat(get(obj,'input.image_urls') || [])
+    .concat(get(obj,'data.input.image_urls') || [])
+    .concat(get(obj,'meta.image_urls') || [])
+    .map(String);
 
-  // deep scan last
+  const prefer = [
+    // explicit result shapes
+    get(obj,'result.image_url'), get(obj,'result.imageUrl'), get(obj,'result.outputUrl'),
+    get(obj,'result_url'),
+    get(obj,'data.result.image_url'), get(obj,'data.result.imageUrl'), get(obj,'data.result.outputUrl'),
+    get(obj,'data.result_url'),
+    // common structured outputs
+    get(obj,'data.result.images?.[0]?.url'),
+    get(obj,'data.output?.[0]?.url'),
+    // very last resort: direct fields (still filtered)
+    get(obj,'image_url'), get(obj,'imageUrl'), get(obj,'url')
+  ];
+
+  for (const u of prefer) {
+    if (isUrl(u) && !inputUrls.includes(String(u))) return u;
+  }
+
+  // deep scan last (but still avoid input URLs)
   let found = null;
   (function walk(x){
     if (found || !x) return;
     if (typeof x === 'string'){
       const m = x.match(/https?:\/\/[^\s"']+/i);
-      if (m && isUrl(m[0])) { found = m[0]; return; }
+      const cand = m && m[0];
+      if (cand && isUrl(cand) && !inputUrls.includes(String(cand))) { found = cand; return; }
     } else if (Array.isArray(x)){
       for (const v of x) walk(v);
     } else if (typeof x === 'object'){
