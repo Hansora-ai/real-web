@@ -216,7 +216,7 @@
               <span>${pretty}</span>
             </div>
             <p class="mt-2 text-sm text-zinc-300 line-clamp-2">${esc(row.prompt)}</p>
-            ${row.result_url ? `<a href="${row.result_url}" download class="mt-2 inline-block rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-sm">Download</a>` : ''}
+            ${row.result_url ? `<a href="/.netlify/functions/download-proxy?url=${encodeURIComponent(row.result_url)}&name=${encodeURIComponent((row.result_url||"").split("/").pop()||"generation")}" download class="mt-2 inline-block rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-sm">Download</a>` : ''}
           </div>`;
         $usageList.appendChild(card);
       }
@@ -226,28 +226,5 @@
 
     loadUsage();
   </script>
-<script>
-// --- Force download for Usage cards ---
-document.addEventListener('click', async (e)=>{
-  const a = e.target.closest('a[data-download], a.usage-download');
-  if(!a) return;
-  const url = a.getAttribute('href');
-  if(!url) return;
-  e.preventDefault();
-  const name = a.getAttribute('download') || (url.split('/').pop()||'generation');
-  try{
-    const res = await fetch(url, { mode: 'cors' });
-    const blob = await res.blob();
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = name;
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(()=>{ URL.revokeObjectURL(link.href); link.remove(); }, 0);
-  }catch(err){
-    window.open(url, '_blank');
-  }
-});
-</script>
 </body>
 </html>
