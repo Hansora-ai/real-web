@@ -5,7 +5,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HANSORA • Nano Banana</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com">
+// === Live credits (Supabase Realtime) + pre-run check ===
+(async function HANSORA_LIVE_CREDITS(){
+  try{
+    const navCreditsEl = document.getElementById('navCredits');
+    const runBtn = document.getElementById('runBtn');
+    function renderCredits(c){
+      if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+      if (runBtn) {
+        const ok = (c ?? 0) > 0;
+        runBtn.disabled = !ok;
+        runBtn.classList.toggle('opacity-50', !ok);
+        runBtn.classList.toggle('cursor-not-allowed', !ok);
+      }
+    }
+
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if(!user) return;
+
+    // initial fetch
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    renderCredits(prof?.credits ?? 0);
+
+    // subscribe to updates
+    supabase.channel('credits_live_' + user.id)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
+        (payload) => { renderCredits(payload.new?.credits ?? 0); }
+      )
+      .subscribe();
+
+    // patch __run to guard when credits are 0 (without changing its internals)
+    const __origRun = window.__run;
+    window.__run = async function(){
+      try{
+        const { data: prof2 } = await supabase
+          .from('profiles')
+          .select('credits')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        const c = prof2?.credits ?? 0;
+        if (c <= 0) {
+          console.warn('No credits left.');
+          alert('No credits left.'); 
+          return;
+        }
+      }catch{}
+      return __origRun ? __origRun() : undefined;
+    };
+  }catch(e){ console.warn('credits live failed', e); }
+})();
+
+</script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
