@@ -152,8 +152,8 @@ function onResult(url){
     downloadLink.textContent='Download';
     showStatus('✅ Done.','text-emerald-300');
   };
-  img.src=url;
-  try{ channel?.unsubscribe?.(); }catch{}
+  \1logGeneration(url);
+    try{ channel?.unsubscribe?.(); }catch{}
 }
 
 // Credits + URL extraction helpers
@@ -170,6 +170,24 @@ async function tryExtractImageUrl(o){
   if(Array.isArray(o.images)&&o.images[0]?.url) return o.images[0].url;
   if(Array.isArray(o.output)&&o.output[0]?.url) return o.output[0].url;
   return null;
+}
+
+
+// Log to Supabase: save user's generation for Usage page
+async function logGeneration(url){
+  try{
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if(!user || !url) return;
+    await supabase.from('user_generations').insert({
+      user_id: user.id,
+      provider: 'Nano Banana',
+      kind: 'image',
+      prompt: promptEl.value || null,
+      result_url: url,
+      meta: { run: 'nano-banana' }
+    });
+  }catch(err){ console.warn('logGeneration failed', err); }
 }
 
 // ADDED: make sure DB gets a row even if webhook is late/blocked
