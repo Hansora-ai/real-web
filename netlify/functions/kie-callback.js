@@ -128,7 +128,7 @@ function isAllowedFinal(u){
   const h = host(u);
   if (!ALLOWED_HOSTS.has(h)) return false;
   // Generated images come from workers (avoid user-uploads echoes)
-  if (!/\/workers\//i.test(u)) return false;
+  if (!/\/(workers|f)\//i.test(u)) return false;
   return true;
 }
 
@@ -144,7 +144,7 @@ function pickResultUrl(obj){
   ];
 
   for (const u of prefer) {
-    if (isUrl(u) && /\/workers\//i.test(u)) return u; // only accept worker paths here
+    if (isUrl(u) && /\/(workers|f)\//i.test(u)) return u; // only accept worker paths here
   }
 
   // Deep scan last, but still require workers in path
