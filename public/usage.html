@@ -226,5 +226,28 @@
 
     loadUsage();
   </script>
+<script>
+// --- Force download for Usage cards ---
+document.addEventListener('click', async (e)=>{
+  const a = e.target.closest('a[data-download], a.usage-download');
+  if(!a) return;
+  const url = a.getAttribute('href');
+  if(!url) return;
+  e.preventDefault();
+  const name = a.getAttribute('download') || (url.split('/').pop()||'generation');
+  try{
+    const res = await fetch(url, { mode: 'cors' });
+    const blob = await res.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(()=>{ URL.revokeObjectURL(link.href); link.remove(); }, 0);
+  }catch(err){
+    window.open(url, '_blank');
+  }
+});
+</script>
 </body>
 </html>
