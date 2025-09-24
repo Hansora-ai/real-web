@@ -5,30 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HANSORA • Nano Banana</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
-  <script src="https://cdn.tailwindcss.com">
-// --- Force real file download (no preview) ---
-async function __forceDownload(url, suggestedName){
-  try{
-    const res = await fetch(url, { mode: 'cors' });
-    const blob = await res.blob();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = suggestedName || (url.split('/').pop() || 'generation');
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
-  }catch(e){
-    // Fallback if CORS blocks fetch
-    const a = document.createElement('a');
-    a.href = url;
-    a.setAttribute('download', suggestedName || 'generation');
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
-}
-
-</script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
@@ -170,9 +147,9 @@ function onResult(url){
     resultBox.innerHTML='';
     img.className='w-full h-full object-contain';
     resultBox.appendChild(img);
-        downloadLink.href=url;
-    downloadLink.setAttribute('download', (url.split('/').pop()||'generation'));
-    downloadLink.onclick = (e)=>{ e.preventDefault(); __forceDownload(url, downloadLink.getAttribute('download')); };
+        const __name = (url.split('/').pop()||'generation');
+    downloadLink.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(url)+'&name='+encodeURIComponent(__name);
+    downloadLink.setAttribute('download', __name);
     downloadLink.classList.remove('hidden');
     downloadLink.textContent='Download';
 
