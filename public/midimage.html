@@ -38,7 +38,10 @@
     // subscribe to updates
     supabase.channel('credits_live_' + user.id)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
-        (payload) => { renderCredits(payload.new?.credits ?? 0); }
+        (payload) => { 
+            const u = payload?.new?.image_url;
+            if (u) { urls.add(u); render(Array.from(urls)); }
+        }
       )
       .subscribe();
 
@@ -257,6 +260,7 @@ const runBtn=document.getElementById('runBtn');
 const statusEl=document.getElementById('status');
 const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
+  const urls = new Set();
 
 filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,1).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
 
