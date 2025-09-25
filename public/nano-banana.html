@@ -64,6 +64,59 @@
 })();
 </script>
 
+<script>
+(function(){
+  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  ready(async function(){
+    try{
+      if (typeof supabase === 'undefined' || !supabase.auth) return;
+
+      async function __refreshCredits(){
+        try{
+          const ures = await supabase.auth.getUser();
+          const user = ures?.data?.user; if(!user) return null;
+          const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+          const c = prof?.credits ?? 0;
+          const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
+          const runBtn = document.getElementById('runBtn'); if (runBtn){
+            const zero = (c ?? 0) <= 0;
+            runBtn.disabled = zero;
+            runBtn.classList.toggle('opacity-50', zero);
+            runBtn.classList.toggle('cursor-not-allowed', zero);
+          }
+          return c;
+        }catch(e){ console.warn('refreshCredits failed', e); return null; }
+      }
+
+      // On load
+      await __refreshCredits();
+
+      // Wrap chargeOneCredit (client debit) to repaint after debit
+      if (typeof window.chargeOneCredit === 'function'){
+        const __origCharge = window.chargeOneCredit;
+        window.chargeOneCredit = async function(){
+          const out = await __origCharge();
+          await __refreshCredits();
+          return out;
+        };
+      }
+
+      // Also poll briefly after Run to catch server-side debit
+      if (typeof window.__run === 'function'){
+        const __origRun = window.__run;
+        window.__run = async function(){
+          const ret = await __origRun();
+          // poll for 15s every 1.5s
+          const id = setInterval(__refreshCredits, 1500);
+          setTimeout(()=>clearInterval(id), 15000);
+          return ret;
+        };
+      }
+    }catch(e){ console.warn('live credits wrapper error', e); }
+  });
+})();
+</script>
+
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
@@ -144,7 +197,7 @@
             <label class="text-xs text-zinc-400">Prompt</label>
             <textarea id="prompt" placeholder="Describe the edit or style…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark"></textarea>
           </div>
-          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()">Run (cost: 1⚡)</button>
+          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()">Run (cost: 0.5⚡)</button>
           <div id="status" class="mt-2 text-sm"></div>
         </div>
       </div>
@@ -194,7 +247,7 @@ $navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMen
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
 async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedInUI(null,user)}}else{showLoggedOutUI()}})();
+(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
 
 // Elements
 const filesEl=document.getElementById('files');
@@ -251,7 +304,7 @@ function onResult(url){
 }
 
 // Credits + URL extraction helpers
-async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur<=0)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
+async function chargeOneCredit() { /* no-op; server charges */ }=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur<=0)throw new Error('Not enough credits (need 0.5).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
 
 async function tryExtractImageUrl(o){
   if(!o) return null;
@@ -406,7 +459,7 @@ window.__run=async function(){
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300')
   }finally{
-    runBtn.disabled=false;runBtn.textContent='Run (cost: 1⚡)';
+    runBtn.disabled=false;runBtn.textContent='Run (cost: 0.5⚡)';
   }
 };
 </script>
