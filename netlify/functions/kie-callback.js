@@ -42,38 +42,38 @@ exports.handler = async (event) => {
       try { data = JSON.parse(bodyRaw); } catch { data = { raw: bodyRaw }; }
     }
 
-    const uid    = qs.uid    || get(data, 'meta.uid')      || get(data, 'metadata.uid')      || null;
+    let uid    = qs.uid    || get(data, 'meta.uid')      || get(data, 'metadata.uid')      || null;
     const run_id = qs.run_id || get(data, 'meta.run_id')   || get(data, 'metadata.run_id')   || null;
     const taskId = qs.taskId || qs.task_id || get(data,'taskId') || get(data,'id') ||
                    get(data,'data.taskId') || get(data,'result.taskId') || null;
 
-
-  // --- uid fallback: resolve from placeholder if missing ---
-  if (!uid && (run_id || taskId)) {
-    try {
-      const base = process.env.SUPABASE_URL;
-      const svc  = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (base && svc) {
-        const ug = `${base}/rest/v1/user_generations`;
-        // Try by run_id first
-        let q = `${ug}?select=user_id&meta->>run_id=eq.${encodeURIComponent(run_id||'')}&limit=1`;
-        let r = await fetch(q, { headers: { 'apikey': svc, 'Authorization': `Bearer ${svc}` } });
-        let arr = await r.json().catch(()=>[]);
-        if (Array.isArray(arr) && arr[0]?.user_id) {
-          uid = arr[0].user_id;
-        } else if (taskId) {
-          // Fallback by taskId if run_id lookup failed
-          q = `${ug}?select=user_id&meta->>task_id=eq.${encodeURIComponent(taskId)}&limit=1`;
-          r = await fetch(q, { headers: { 'apikey': svc, 'Authorization': `Bearer ${svc}` } });
-          arr = await r.json().catch(()=>[]);
+    // --- uid fallback: resolve from placeholder if missing ---
+    if (!uid && (run_id || taskId)) {
+      try {
+        const base = process.env.SUPABASE_URL;
+        const svc  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (base && svc) {
+          const ug = `${base}/rest/v1/user_generations`;
+          // Try by run_id first
+          let q = `${ug}?select=user_id&meta->>run_id=eq.${encodeURIComponent(run_id||'')}&limit=1`;
+          let r = await fetch(q, { headers: { 'apikey': svc, 'Authorization': `Bearer ${svc}` } });
+          let arr = await r.json().catch(()=>[]);
           if (Array.isArray(arr) && arr[0]?.user_id) {
             uid = arr[0].user_id;
+          } else if (taskId) {
+            // Fallback by taskId if run_id lookup failed
+            q = `${ug}?select=user_id&meta->>task_id=eq.${encodeURIComponent(taskId)}&limit=1`;
+            r = await fetch(q, { headers: { 'apikey': svc, 'Authorization': `Bearer ${svc}` } });
+            arr = await r.json().catch(()=>[]);
+            if (Array.isArray(arr) && arr[0]?.user_id) {
+              uid = arr[0].user_id;
+            }
           }
         }
-      }
-    } catch (_) { /* keep uid as-is if lookup fails */ }
-  }
-  // --- end uid fallback ---
+      } catch (_) { /* keep uid as-is if lookup fails */ }
+    }
+    // --- end uid fallback ---
+
     const statusStr = String(
       get(data,'status') || get(data,'state') ||
       get(data,'data.status') || get(data,'data.state') || ''
@@ -118,7 +118,8 @@ exports.handler = async (event) => {
 
     const row = {
       user_id: uid || '00000000-0000-0000-0000-000000000000',
-      run_id:  run_id || 'unknown',
+      // 🔧 FIX #1: DO NOT write 'unknown' here; keep null if missing so the UI filter by run_id is not broken
+      run_id:  run_id || null,
       task_id: taskId || null,
       image_url: url
     };
@@ -135,7 +136,8 @@ exports.handler = async (event) => {
           const hasRow = Array.isArray(arr) && arr.length > 0;
           const bodyJson = {
             result_url: url,
-            provider: 'Nano Banana',
+            // 🔧 FIX #2: label as MidJourney (this does NOT affect your page logic; it’s just for usage labeling)
+            provider: 'MidJourney',
             kind: 'image',
             meta: { run_id, task_id: taskId, status: 'done' }
           };
@@ -169,7 +171,6 @@ exports.handler = async (event) => {
     } catch (e) {
       console.warn('[callback] usage patch failed', e);
     }
-
 
     const resp = await fetch(TABLE_URL, {
       method: 'POST',
@@ -224,7 +225,6 @@ function pickResultUrl(obj){
     if (isUrl(u) && /\/(workers|f|m)\//i.test(u)) return u; // only accept worker paths here
   }
 
-  
   // Also handle arrays of plain strings (e.g., MidJourney returns [ "https://...0.jpeg", ... ])
   const arrStrings = Array.isArray(get(obj,'result.images')) ? get(obj,'result.images')
                     : Array.isArray(get(obj,'data.result.images')) ? get(obj,'data.result.images')
@@ -235,7 +235,8 @@ function pickResultUrl(obj){
       if (s && typeof s === 'object' && isUrl(s.url) && /\/(workers|f|m)\//i.test(s.url)) return s.url;
     }
   }
-// Deep scan last, but still require workers in path
+
+  // Deep scan last, but still require workers in path
   let found=null;
   (function walk(x){
     if (found || !x) return;
