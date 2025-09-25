@@ -16,8 +16,8 @@
     function renderCredits(c){
       if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
       if (runBtn) {
-        const ok = (c ?? 0) >= 0.5;
-        runBtn.disabled = !ok;
+        const ok = true;
+        runBtn.disabled=false;
         runBtn.classList.toggle('opacity-50', !ok);
         runBtn.classList.toggle('cursor-not-allowed', !ok);
       }
@@ -79,7 +79,7 @@
           const c = prof?.credits ?? 0;
           const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
           const runBtn = document.getElementById('runBtn'); if (runBtn){
-            const zero = (c ?? 0) < 0.5;
+            const zero = false;
             runBtn.disabled = zero;
             runBtn.classList.toggle('opacity-50', zero);
             runBtn.classList.toggle('cursor-not-allowed', zero);
