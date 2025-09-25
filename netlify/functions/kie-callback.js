@@ -57,6 +57,7 @@ exports.handler = async (event) => {
 
     // If status isn't clearly success or URL doesn't look final, verify with KIE
     const looksFinal = isAllowedFinal(url);
+    let verifiedFinal = false;
     const isSuccess = ['success','succeeded','completed','done'].includes(statusStr);
 
     if ((!isSuccess || !looksFinal) && taskId && KIE_KEY) {
@@ -67,7 +68,7 @@ exports.handler = async (event) => {
         );
         const j = await r.json();
         const s = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
-        if (['success','succeeded','completed','done'].includes(s)) {
+        if (['success','succeeded','completed','done'].includes(s)) { verifiedFinal = true;
           url =
             j?.data?.result?.images?.[0]?.url ||
             j?.data?.result_url ||
@@ -80,7 +81,7 @@ exports.handler = async (event) => {
       } catch {}
     }
 
-    if (!isAllowedFinal(url)) {
+    if (!(isAllowedFinal(url) || (verifiedFinal && typeof url==='string' && /^https?:\/\//i.test(url)))) {
       return reply(200, {
         ok:true, saved:false,
         note:'no allowed final image_url; not inserting',
@@ -99,21 +100,44 @@ exports.handler = async (event) => {
     try {
       if (UG_URL && SERVICE_KEY && uid) {
         const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id || '')}`;
-        await fetch(UG_URL + q, {
-          method: 'PATCH',
-          headers: {
-            'apikey': SERVICE_KEY,
-            'Authorization': `Bearer ${SERVICE_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify({
+        try {
+          const chk = await fetch(UG_URL + q + '&select=id', {
+            headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+          });
+          const arr = await chk.json();
+          const hasRow = Array.isArray(arr) && arr.length > 0;
+          const bodyJson = {
             result_url: url,
             provider: 'Nano Banana',
             kind: 'image',
             meta: { run_id, task_id: taskId, status: 'done' }
-          })
-        });
+          };
+          if (hasRow) {
+            await fetch(UG_URL + q, {
+              method: 'PATCH',
+              headers: {
+                'apikey': SERVICE_KEY,
+                'Authorization': `Bearer ${SERVICE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+              },
+              body: JSON.stringify(bodyJson)
+            });
+          } else {
+            await fetch(UG_URL, {
+              method: 'POST',
+              headers: {
+                'apikey': SERVICE_KEY,
+                'Authorization': `Bearer ${SERVICE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+              },
+              body: JSON.stringify({ user_id: uid, ...bodyJson })
+            });
+          }
+        } catch (e) {
+          console.warn('[callback] usage upsert failed', e);
+        }
       }
     } catch (e) {
       console.warn('[callback] usage patch failed', e);
