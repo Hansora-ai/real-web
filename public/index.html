@@ -535,17 +535,16 @@
   </div>
 
 
+  <!-- HANSORA: credits polling patch -->
   <script>
-  /* HANSORA: live credits patch */
   (function(){ 
-    // Wait for Supabase and DOM
     function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-    ready(async function(){
+    ready(async function(){ 
       try {
         if (typeof supabase === 'undefined' || !supabase.auth) return;
         const navCreditsEl = document.getElementById('navCredits');
         const runBtn = document.getElementById('runBtn');
-        function renderCredits(c){
+        const R = (c)=>{ 
           if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
           if (runBtn) {
             const ok = (c ?? 0) > 0;
@@ -553,45 +552,48 @@
             runBtn.classList.toggle('opacity-50', !ok);
             runBtn.classList.toggle('cursor-not-allowed', !ok);
           }
-        }
+        };
+
         const ures = await supabase.auth.getUser();
         const user = ures?.data?.user;
         if(!user) return;
 
-        // Initial read
-        try {
-          const { data: prof } = await supabase.from('profiles')
-            .select('credits').eq('user_id', user.id).maybeSingle();
-          renderCredits(prof?.credits ?? 0);
-        } catch (e) { console.warn('credits initial read failed', e); }
-
-        // Live subscription
-        try {
-          supabase.channel('credits_live_' + user.id)
-            .on('postgres_changes', {
-              event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id
-            }, (payload) => {
-              renderCredits(payload?.new?.credits ?? payload?.old?.credits ?? 0);
-            })
-            .subscribe();
-        } catch (e) { console.warn('credits live sub failed', e); }
-
-        // Optional: re-check just before run (wrap if exists)
-        if (typeof window.__run === 'function') {
-          const __orig = window.__run;
-          window.__run = async function() {
-            try {
-              const { data: prof2 } = await supabase.from('profiles')
-                .select('credits').eq('user_id', user.id).maybeSingle();
-              const c = prof2?.credits ?? 0;
-              if (c <= 0) { alert('No credits left.'); return; }
-              // optimistic UI: show soon-to-be-decremented state (optional; comment out if undesired)
-              renderCredits(c);
-            } catch(_) { /* ignore */ }
-            return __orig();
-          };
+        async function loadCreditsOnce(){ 
+          try {
+            const { data: prof } = await supabase.from('profiles')
+              .select('credits').eq('user_id', user.id).maybeSingle();
+            const c = prof?.credits ?? 0;
+            R(c);
+            return c;
+          } catch(e) { console.warn('credits poll read failed', e); return null; }
         }
-      } catch (e) { console.warn('live credits patch error', e); }
+
+        // POLLING fallback (fires regardless of Realtime)
+        function startCreditsPolling(durationMs=60000, intervalMs=2000){
+          if (window.__creditsPoll) clearInterval(window.__creditsPoll);
+          const t0 = Date.now();
+          window.__creditsPoll = setInterval(async ()=>{
+            await loadCreditsOnce();
+            if (Date.now() - t0 > durationMs) clearInterval(window.__creditsPoll);
+          }, intervalMs);
+        }
+
+        // Start a short polling burst at page load (keeps light)
+        startCreditsPolling(15000, 2000);
+
+        // If __run exists, wrap it so we poll right after user clicks Run
+        if (typeof window.__run === 'function') {
+          const __origRun = window.__run;
+          window.__run = async function(){ 
+            // sanity check before run (optional)
+            const c = await loadCreditsOnce();
+            if ((c ?? 0) <= 0) { alert('No credits left.'); return; }
+            // kick polling so UI reflects debit promptly after submit
+            startCreditsPolling(60000, 2000);
+            return __origRun();
+          }
+        }
+      } catch(e){ console.warn('credits polling patch error', e); }
     });
   })();
   </script>
