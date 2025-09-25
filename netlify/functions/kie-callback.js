@@ -178,7 +178,7 @@ function isAllowedFinal(u){
   const h = host(u);
   if (!ALLOWED_HOSTS.has(h)) return false;
   // Generated images come from workers (avoid user-uploads echoes)
-  if (!/\/(workers|f)\//i.test(u)) return false;
+  if (!/\/(workers|f|m)\//i.test(u)) return false;
   return true;
 }
 
@@ -194,7 +194,7 @@ function pickResultUrl(obj){
   ];
 
   for (const u of prefer) {
-    if (isUrl(u) && /\/(workers|f)\//i.test(u)) return u; // only accept worker paths here
+    if (isUrl(u) && /\/(workers|f|m)\//i.test(u)) return u; // only accept worker paths here
   }
 
   // Deep scan last, but still require workers in path
@@ -203,7 +203,7 @@ function pickResultUrl(obj){
     if (found || !x) return;
     if (typeof x === 'string'){
       const m = x.match(/https?:\/\/[^\s"']+/i);
-      if (m && isUrl(m[0]) && /\/(workers|f)\//i.test(m[0])) { found = m[0]; return; }
+      if (m && isUrl(m[0]) && /\/(workers|f|m)\//i.test(m[0])) { found = m[0]; return; }
     } else if (Array.isArray(x)){
       for (const v of x) walk(v);
     } else if (typeof x === 'object'){
