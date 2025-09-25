@@ -310,19 +310,31 @@ function onResult(url){
 // Credits + URL extraction helpers
 async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 0.5)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
 
+
 async function tryExtractImageUrl(o){
-  if(!o) return null;
-  if(typeof o==='string'&&/^https?:\/\//.test(o)) return o;
-  // NEW: handle array of string URLs (e.g., 4 MJ URLs)
-  if(Array.isArray(o) && typeof o[0]==='string' && /^https?:\/\//.test(o[0])) return o[0];
-  if(o.imageUrl) return o.imageUrl;
-  if(o.outputUrl) return o.outputUrl;
-  if(o.url) return o.url;
-  if(o.data) { const x=await tryExtractImageUrl(o.data); if(x) return x; }
-  if(o.result) { const x=await tryExtractImageUrl(o.result); if(x) return x; }
-  if(Array.isArray(o.images)&&o.images[0]?.url) return o.images[0].url;
-  if(Array.isArray(o.output)&&o.output[0]?.url) return o.output[0].url;
-  return null;
+  // Robust: find the first http(s) URL anywhere (strings in nested objects/arrays)
+  function firstUrl(x){
+    if (!x) return null;
+    if (typeof x === 'string'){
+      const m = x.match(/https?:\/\/[^\s"']+/i);
+      return m ? m[0] : null;
+    }
+    if (Array.isArray(x)){
+      if (typeof x[0] === 'string'){
+        const m = String(x[0]).match(/https?:\/\/[^\s"']+/i);
+        if (m) return m[0];
+      }
+      for (const v of x){ const u = firstUrl(v); if (u) return u; }
+      return null;
+    }
+    if (typeof x === 'object'){
+      for (const v of Object.values(x)){ const u = firstUrl(v); if (u) return u; }
+      return null;
+    }
+    return null;
+  }
+  return firstUrl(o);
+}
 }
 
 // ADDED: make sure DB gets a row even if webhook is late/blocked
