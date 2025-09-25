@@ -40,7 +40,7 @@ exports.handler = async (event) => {
     if (!url) return json(200, { done:false, status:'success', note:'no url in payload' });
 
     const host = safeHost(url);
-    const looksFinal = host && ALLOWED_HOSTS.has(host) && /\/workers\//i.test(url);
+    const looksFinal = host && ALLOWED_HOSTS.has(host) && /\/(workers|m)\/i.test(url);
     if (!looksFinal) {
       return json(200, { done:false, status:'success', note:'final url not allowed', url });
     }
