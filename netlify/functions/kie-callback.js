@@ -47,6 +47,33 @@ exports.handler = async (event) => {
     const taskId = qs.taskId || qs.task_id || get(data,'taskId') || get(data,'id') ||
                    get(data,'data.taskId') || get(data,'result.taskId') || null;
 
+
+  // --- uid fallback: resolve from placeholder if missing ---
+  if (!uid && (run_id || taskId)) {
+    try {
+      const base = process.env.SUPABASE_URL;
+      const svc  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (base && svc) {
+        const ug = `${base}/rest/v1/user_generations`;
+        // Try by run_id first
+        let q = `${ug}?select=user_id&meta->>run_id=eq.${encodeURIComponent(run_id||'')}&limit=1`;
+        let r = await fetch(q, { headers: { 'apikey': svc, 'Authorization': `Bearer ${svc}` } });
+        let arr = await r.json().catch(()=>[]);
+        if (Array.isArray(arr) && arr[0]?.user_id) {
+          uid = arr[0].user_id;
+        } else if (taskId) {
+          // Fallback by taskId if run_id lookup failed
+          q = `${ug}?select=user_id&meta->>task_id=eq.${encodeURIComponent(taskId)}&limit=1`;
+          r = await fetch(q, { headers: { 'apikey': svc, 'Authorization': `Bearer ${svc}` } });
+          arr = await r.json().catch(()=>[]);
+          if (Array.isArray(arr) && arr[0]?.user_id) {
+            uid = arr[0].user_id;
+          }
+        }
+      }
+    } catch (_) { /* keep uid as-is if lookup fails */ }
+  }
+  // --- end uid fallback ---
     const statusStr = String(
       get(data,'status') || get(data,'state') ||
       get(data,'data.status') || get(data,'data.state') || ''
