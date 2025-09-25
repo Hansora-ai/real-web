@@ -4,6 +4,7 @@
 const SUPABASE_URL  = process.env.SUPABASE_URL;
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY; // service role key (NOT anon)
 const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
+const UG_URL        = `${SUPABASE_URL}/rest/v1/user_generations`;
 
 const KIE_BASE = process.env.KIE_BASE_URL || 'https://api.kie.ai';
 const KIE_KEY  = process.env.KIE_API_KEY;
@@ -93,6 +94,31 @@ exports.handler = async (event) => {
       task_id: taskId || null,
       image_url: url
     };
+
+    // --- update existing placeholder in user_generations (by user_id + meta->>run_id) ---
+    try {
+      if (UG_URL && SERVICE_KEY && uid) {
+        const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id || '')}`;
+        await fetch(UG_URL + q, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SERVICE_KEY,
+            'Authorization': `Bearer ${SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({
+            result_url: url,
+            provider: 'Nano Banana',
+            kind: 'image',
+            meta: { run_id, task_id: taskId, status: 'done' }
+          })
+        });
+      }
+    } catch (e) {
+      console.warn('[callback] usage patch failed', e);
+    }
+
 
     const resp = await fetch(TABLE_URL, {
       method: 'POST',
