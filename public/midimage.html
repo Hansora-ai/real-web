@@ -313,6 +313,8 @@ async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!
 async function tryExtractImageUrl(o){
   if(!o) return null;
   if(typeof o==='string'&&/^https?:\/\//.test(o)) return o;
+  // NEW: handle array of string URLs (e.g., 4 MJ URLs)
+  if(Array.isArray(o) && typeof o[0]==='string' && /^https?:\/\//.test(o[0])) return o[0];
   if(o.imageUrl) return o.imageUrl;
   if(o.outputUrl) return o.outputUrl;
   if(o.url) return o.url;
@@ -346,7 +348,7 @@ async function nbCheckPoll(taskId, uid, rid){
   const start = Date.now();
   while(!__done && Date.now() - start < 180000){ // up to 3 min
     try{
-      const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId), {
+      const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId)+'&run_id='+encodeURIComponent(rid), {
         headers: { 'X-USER-ID': uid }
       });
 
