@@ -82,7 +82,7 @@ exports.handler = async (event) => {
       js.taskId || js.id || js.data?.taskId || js.data?.id || null;
     // --- debit credits immediately on accepted submit (server-side) ---
     try {
-      const COST = 1; // adjust if Nano Banana uses a different cost
+      const COST = 0.5; // adjust if Nano Banana uses a different cost
       if (SUPABASE_URL && SERVICE_KEY && uid && uid !== 'anon') {
         // re-check current credits and subtract one
         const base = SUPABASE_URL;
