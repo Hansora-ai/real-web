@@ -535,7 +535,7 @@
   </div>
 
 
-  <!-- HANSORA: credits polling patch -->
+  <!-- HANSORA: credits polling patch v2 -->
   <script>
   (function(){ 
     function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
@@ -568,8 +568,8 @@
           } catch(e) { console.warn('credits poll read failed', e); return null; }
         }
 
-        // POLLING fallback (fires regardless of Realtime)
-        function startCreditsPolling(durationMs=60000, intervalMs=2000){
+        // Long polling burst (3 minutes) every 2s
+        function startCreditsPolling(durationMs=180000, intervalMs=2000){
           if (window.__creditsPoll) clearInterval(window.__creditsPoll);
           const t0 = Date.now();
           window.__creditsPoll = setInterval(async ()=>{
@@ -578,22 +578,20 @@
           }, intervalMs);
         }
 
-        // Start a short polling burst at page load (keeps light)
-        startCreditsPolling(15000, 2000);
+        // Initial load -> reflect current value
+        await loadCreditsOnce();
 
-        // If __run exists, wrap it so we poll right after user clicks Run
+        // If __run exists, wrap it so we start long polling right after Run
         if (typeof window.__run === 'function') {
           const __origRun = window.__run;
           window.__run = async function(){ 
-            // sanity check before run (optional)
             const c = await loadCreditsOnce();
             if ((c ?? 0) <= 0) { alert('No credits left.'); return; }
-            // kick polling so UI reflects debit promptly after submit
-            startCreditsPolling(60000, 2000);
+            startCreditsPolling(180000, 2000); // 3 minutes polling
             return __origRun();
           }
         }
-      } catch(e){ console.warn('credits polling patch error', e); }
+      } catch(e){ console.warn('credits polling v2 error', e); }
     });
   })();
   </script>
