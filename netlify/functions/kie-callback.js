@@ -59,7 +59,6 @@ exports.handler = async (event) => {
     const looksFinal = isAllowedFinal(url);
     const isSuccess = ['success','succeeded','completed','done'].includes(statusStr);
 
-    let verifiedFinal = false;
     if ((!isSuccess || !looksFinal) && taskId && KIE_KEY) {
       try {
         const r = await fetch(
@@ -68,7 +67,7 @@ exports.handler = async (event) => {
         );
         const j = await r.json();
         const s = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
-        if (['success','succeeded','completed','done'].includes(s)) { verifiedFinal = true;
+        if (['success','succeeded','completed','done'].includes(s)) {
           url =
             j?.data?.result?.images?.[0]?.url ||
             j?.data?.result_url ||
@@ -81,7 +80,7 @@ exports.handler = async (event) => {
       } catch {}
     }
 
-    if (!(isAllowedFinal(url) || (verifiedFinal && typeof url==='string' && /^https?:\/\//i.test(url)))) {
+    if (!isAllowedFinal(url)) {
       return reply(200, {
         ok:true, saved:false,
         note:'no allowed final image_url; not inserting',
@@ -100,52 +99,25 @@ exports.handler = async (event) => {
     try {
       if (UG_URL && SERVICE_KEY && uid) {
         const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id || '')}`;
-        // First, check if a placeholder exists
-        try {
-          const chk = await fetch(UG_URL + q + '&select=id,meta', {
-            headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
-          });
-          const arr = await chk.json();
-          const hasRow = Array.isArray(arr) && arr.length > 0;
-          if (hasRow) {
-            await fetch(UG_URL + q, {
-              method: 'PATCH',
-              headers: {
-                'apikey': SERVICE_KEY,
-                'Authorization': `Bearer ${SERVICE_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=minimal'
-              },
-              body: JSON.stringify({
-                result_url: url,
-                provider: 'Nano Banana',
-                kind: 'image',
-                meta: { run_id, task_id: taskId, status: 'done' }
-              })
-            });
-          } else {
-            // No placeholder → create a new usage row so the result appears in Usage
-            await fetch(UG_URL, {
-              method: 'POST',
-              headers: {
-                'apikey': SERVICE_KEY,
-                'Authorization': `Bearer ${SERVICE_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=minimal'
-              },
-              body: JSON.stringify({
-                user_id: uid,
-                result_url: url,
-                provider: 'Nano Banana',
-                kind: 'image',
-                meta: { run_id, task_id: taskId, status: 'done' }
-              })
-            });
-          }
-        } catch (e) {
-          console.warn('[callback] usage upsert failed', e);
-        }
+        await fetch(UG_URL + q, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SERVICE_KEY,
+            'Authorization': `Bearer ${SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({
+            result_url: url,
+            provider: 'Nano Banana',
+            kind: 'image',
+            meta: { run_id, task_id: taskId, status: 'done' }
+          })
+        });
       }
+    } catch (e) {
+      console.warn('[callback] usage patch failed', e);
+    }
 
 
     const resp = await fetch(TABLE_URL, {
