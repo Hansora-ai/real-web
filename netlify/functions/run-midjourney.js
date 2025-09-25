@@ -73,13 +73,13 @@ exports.handler = async (event) => {
       meta: { uid, run_id, provider: "MidJourney", version: VERSION_TAG }
     };
 
-    // ****** Minimal additions to match Nano Banana behavior ******
+    // ****** Add all callback/webhook aliases + metadata (to mirror Nano Banana) ******
     payload.callbackUrl = cb;   // alias (lower camel)
     payload.webhook_url = cb;   // alias (snake)
     payload.webhookUrl  = cb;   // alias (camel)
     payload.notify_url  = cb;   // alias (notify)
     payload.metadata    = { ...(payload.metadata||{}), uid, run_id, cb, version: VERSION_TAG };
-    // *************************************************************
+    // ********************************************************************************
 
     // Create the job
     const create = await fetch(KIE_URL, {
