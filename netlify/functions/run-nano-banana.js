@@ -6,10 +6,9 @@ const CREATE_URL = process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/jobs
 const API_KEY = process.env.KIE_API_KEY;
 
 if (!API_KEY) console.warn("[run-nano-banana] Missing KIE_API_KEY env!");
-
 const SUPABASE_URL  = process.env.SUPABASE_URL;
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : null;
+
 
 // Base Netlify Functions callback (WITH DOT)
 const CALLBACK_URL = "https://webhansora.netlify.app/.netlify/functions/kie-callback";
@@ -47,6 +46,27 @@ exports.handler = async (event) => {
     const cb = `${CALLBACK_URL}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
 
     // Build KIE payload
+
+    // --- CREDITS GUARD (server-side): block KIE if credits <= 0 ---
+    try {
+      if (SUPABASE_URL && SERVICE_KEY && uid && uid !== 'anon') {
+        const profUrl = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
+        const profRes = await fetch(profUrl, {
+          method: 'GET',
+          headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+        });
+        const profJson = await profRes.json();
+        const credits = (Array.isArray(profJson) && profJson[0] && profJson[0].credits) || 0;
+        if (!credits || credits <= 0) {
+          return ok({ submitted: false, reason: 'no_credits' });
+        }
+      }
+    } catch (e) {
+      // If the guard fails, we do NOT create the job
+      return ok({ submitted: false, reason: 'credits_guard_error', message: String(e || '') });
+    }
+
+
     const payload = {
       model: "google/nano-banana-edit",
       input: { prompt, image_urls, output_format: format, image_size: size },
@@ -81,32 +101,6 @@ exports.handler = async (event) => {
     // Best-effort taskId extraction
     const taskId =
       js.taskId || js.id || js.data?.taskId || js.data?.id || null;
-    // --- server-side placeholder so /usage shows "processing" even if user leaves ---
-    try {
-      if (UG_URL && SERVICE_KEY && uid && uid !== 'anon') {
-        await fetch(UG_URL, {
-          method: 'POST',
-          headers: {
-            'apikey': SERVICE_KEY,
-            'Authorization': `Bearer ${SERVICE_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify([{
-            user_id: uid,
-            provider: 'Nano Banana',
-            kind: 'image',
-            prompt,
-            result_url: null,
-            meta: { run_id, task_id: taskId, size }
-          }])
-        });
-      }
-    } catch (e) {
-      console.warn('[nb] placeholder insert failed', e);
-    }
-
-
 
     // Always return 200 submitted (let callback deliver final result)
     return ok({
