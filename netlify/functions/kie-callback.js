@@ -197,7 +197,18 @@ function pickResultUrl(obj){
     if (isUrl(u) && /\/(workers|f|m)\//i.test(u)) return u; // only accept worker paths here
   }
 
-  // Deep scan last, but still require workers in path
+  
+  // Also handle arrays of plain strings (e.g., MidJourney returns [ "https://...0.jpeg", ... ])
+  const arrStrings = Array.isArray(get(obj,'result.images')) ? get(obj,'result.images')
+                    : Array.isArray(get(obj,'data.result.images')) ? get(obj,'data.result.images')
+                    : null;
+  if (arrStrings && arrStrings.length) {
+    for (const s of arrStrings) {
+      if (typeof s === 'string' && isUrl(s) && /\/(workers|f|m)\//i.test(s)) return s;
+      if (s && typeof s === 'object' && isUrl(s.url) && /\/(workers|f|m)\//i.test(s.url)) return s.url;
+    }
+  }
+// Deep scan last, but still require workers in path
   let found=null;
   (function walk(x){
     if (found || !x) return;
