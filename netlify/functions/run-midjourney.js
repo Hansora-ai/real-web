@@ -68,10 +68,18 @@ exports.handler = async (event) => {
       weirdness,
       waterMark: watermark,
       paramJson,
-      callBackUrl: cb,
+      callBackUrl: cb, // KEEP existing field
       // pass meta as well in case KIE forwards it
       meta: { uid, run_id, provider: "MidJourney", version: VERSION_TAG }
     };
+
+    // *** ADDED (minimal): set all common callback aliases ***
+    payload.callbackUrl = cb;   // alias (lower camel)
+    payload.webhook_url = cb;   // alias (snake)
+    payload.webhookUrl  = cb;   // alias (camel)
+    payload.notify_url  = cb;   // alias (notify)
+    // *** ADDED (minimal): mirror identifiers into `metadata` too ***
+    payload.metadata = { ...(payload.metadata||{}), uid, run_id, cb, version: VERSION_TAG };
 
     // Create the job
     const create = await fetch(KIE_URL, {
