@@ -1,8 +1,5 @@
-// netlify/functions/nb-check.js
-// Poll KIE for a task result and, on success, return a canonical payload.
-// Also backfills Supabase nb_results so the UI's realtime listener fires.
-// This version is LIMITED-SCOPE: only touches polling + optional backfill.
-// No other logic is changed.
+// netlify/functions/nb-check.js (MJ-aware polling)
+// Poll both /jobs/* and /mj/* result endpoints and backfill nb_results on success.
 
 const KIE_BASE = process.env.KIE_BASE_URL || 'https://api.kie.ai';
 const KIE_KEY  = process.env.KIE_API_KEY;
@@ -10,15 +7,17 @@ const KIE_KEY  = process.env.KIE_API_KEY;
 const SUPABASE_URL  = process.env.SUPABASE_URL || '';
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-const ALLOWED_HOSTS = new Set([
-  'tempfile.aiquickdraw.com',
-  'tempfile.redpandaai.co',
-]);
+const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
 
 const RESULT_URLS = (id) => ([
+  // generic jobs endpoints
   `${KIE_BASE}/api/v1/jobs/getTask?taskId=${encodeURIComponent(id)}`,
   `${KIE_BASE}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(id)}`,
-  `${KIE_BASE}/api/v1/jobs/result?taskId=${encodeURIComponent(id)}`
+  `${KIE_BASE}/api/v1/jobs/result?taskId=${encodeURIComponent(id)}`,
+  // MidJourney-specific mirrors
+  `${KIE_BASE}/api/v1/mj/getTask?taskId=${encodeURIComponent(id)}`,
+  `${KIE_BASE}/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(id)}`,
+  `${KIE_BASE}/api/v1/mj/result?taskId=${encodeURIComponent(id)}`
 ]);
 
 exports.handler = async (event) => {
@@ -45,18 +44,15 @@ exports.handler = async (event) => {
         if (status === 'success') {
           const url = firstImageUrl(data);
           if (url && isAllowed(url)) {
-            // Fire-and-forget backfill so UI can see it in nb_results via realtime.
             backfillNbResults({ uid, run_id, taskId, image_url: url }).catch(()=>{});
             return json(200, { ok:true, status, url, image_url: url });
           }
-          // success but no allowed URL yet -> continue probing other endpoints
         } else if (status === 'failed' || status === 'error') {
           return json(200, { ok:false, status });
         }
       } catch (e) {
         last = { url: u, error: String(e) };
       }
-      // small pause between attempts
       await sleep(300);
     }
     return json(200, { ok:false, status:'pending', last });
@@ -67,13 +63,7 @@ exports.handler = async (event) => {
 };
 
 // ---------- helpers ----------
-function cors() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': '*',
-    'Access-Control-Allow-Methods': 'GET,OPTIONS'
-  };
-}
+function cors(){ return { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'GET,OPTIONS' }; }
 function json(code, obj){ return { statusCode: code, headers: { 'Content-Type': 'application/json', ...cors() }, body: JSON.stringify(obj) }; }
 function header(event, name){ const v = event.headers?.[name] || event.headers?.[name.toLowerCase()]; return Array.isArray(v) ? v[0] : v; }
 function kieHeaders(){ return { 'Authorization': `Bearer ${KIE_KEY}`, 'Content-Type': 'application/json' }; }
@@ -84,7 +74,6 @@ function isAllowed(u){
   if (!isUrl(u)) return false;
   const h = safeHost(u);
   if (!ALLOWED_HOSTS.has(h)) return false;
-  // Keep a minimal path gate to avoid user-upload echoes; MJ/NB use "/m/".
   if (!/\/(m|f|workers)\//i.test(u)) return false;
   return true;
 }
@@ -95,7 +84,14 @@ function normalizeStatus(d){
   return 'pending';
 }
 function firstImageUrl(obj){
-  // Walk recursively and return the first http(s) URL we find
+  // Prefer typical shapes, else deep scan arrays too
+  const cand = obj?.data?.result?.images || obj?.result?.images || obj?.data?.images || obj?.images;
+  if (Array.isArray(cand)) {
+    for (const it of cand) {
+      if (typeof it === 'string' && isUrl(it)) return it;
+      if (it && typeof it === 'object' && isUrl(it.url)) return it.url;
+    }
+  }
   let found = null;
   (function walk(x){
     if (found || !x) return;
@@ -111,7 +107,6 @@ function firstImageUrl(obj){
   return found;
 }
 async function backfillNbResults({ uid, run_id, taskId, image_url }){
-  // MINIMAL CHANGE: allow backfill even when uid is missing; use a placeholder if required by schema.
   if (!image_url || !SUPABASE_URL || !SERVICE_KEY) return;
   const url = `${SUPABASE_URL}/rest/v1/nb_results`;
   const row = {
@@ -122,12 +117,7 @@ async function backfillNbResults({ uid, run_id, taskId, image_url }){
   };
   await fetch(url, {
     method: 'POST',
-    headers: {
-      'apikey': SERVICE_KEY,
-      'Authorization': `Bearer ${SERVICE_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates'
-    },
+    headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
     body: JSON.stringify(row)
   });
 }
