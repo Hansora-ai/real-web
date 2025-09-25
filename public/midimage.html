@@ -3,10 +3,120 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HANSORA AI — Create Images & Video</title>
-  <meta name="description" content="Simple, beautiful AI generation for images & video." />
+  <title>HANSORA • MIDIMAGE (MidJourney)</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// === Live credits (Supabase Realtime) + pre-run check ===
+(async function HANSORA_LIVE_CREDITS(){
+  try{
+    const navCreditsEl = document.getElementById('navCredits');
+    const runBtn = document.getElementById('runBtn');
+    function renderCredits(c){
+      if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+      if (runBtn) {
+        const ok = true;
+        runBtn.disabled=false;
+        runBtn.classList.toggle('opacity-50', !ok);
+        runBtn.classList.toggle('cursor-not-allowed', !ok);
+      }
+    }
+
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if(!user) return;
+
+    // initial fetch
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    renderCredits(prof?.credits ?? 0);
+
+    // subscribe to updates
+    supabase.channel('credits_live_' + user.id)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
+        (payload) => { renderCredits(payload.new?.credits ?? 0); }
+      )
+      .subscribe();
+
+    // patch __run to guard when credits are 0 (without changing its internals)
+    const __origRun = window.__run;
+    window.__run = async function(){
+      try{
+        const { data: prof2 } = await supabase
+          .from('profiles')
+          .select('credits')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        const c = prof2?.credits ?? 0;
+        if (c < 0.5) {
+          console.warn('No credits left.');
+          alert('Not enough credits (need 1).'); 
+          return;
+        }
+      }catch{}
+      return __origRun ? __origRun() : undefined;
+    };
+  }catch(e){ console.warn('credits live failed', e); }
+})();
+</script>
+
+<script>
+(function(){
+  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  ready(async function(){
+    try{
+      if (typeof supabase === 'undefined' || !supabase.auth) return;
+
+      async function __refreshCredits(){
+        try{
+          const ures = await supabase.auth.getUser();
+          const user = ures?.data?.user; if(!user) return null;
+          const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+          const c = prof?.credits ?? 0;
+          const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
+          const runBtn = document.getElementById('runBtn'); if (runBtn){
+            const zero = false;
+            runBtn.disabled = zero;
+            runBtn.classList.toggle('opacity-50', zero);
+            runBtn.classList.toggle('cursor-not-allowed', zero);
+          }
+          return c;
+        }catch(e){ console.warn('refreshCredits failed', e); return null; }
+      }
+
+      // On load
+      await __refreshCredits();
+
+      // Wrap chargeOneCredit (client debit) to repaint after debit
+      if (typeof window.chargeOneCredit === 'function'){
+        const __origCharge = window.chargeOneCredit;
+        window.chargeOneCredit = async function(){
+          const out = await __origCharge();
+          await __refreshCredits();
+          return out;
+        };
+      }
+
+      // Also poll briefly after Run to catch server-side debit
+      if (typeof window.__run === 'function'){
+        const __origRun = window.__run;
+        window.__run = async function(){
+          const ret = await __origRun();
+          // poll for 15s every 1.5s
+          const id = setInterval(__refreshCredits, 1500);
+          setTimeout(()=>clearInterval(id), 15000);
+          return ret;
+        };
+      }
+    }catch(e){ console.warn('live credits wrapper error', e); }
+  });
+})();
+</script>
+
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
@@ -14,291 +124,91 @@
                        var(--base-bg); color:#e5e7eb}
     .bg-base-bg{background:var(--base-bg)}
     .border-base-line{border-color:var(--base-line)}
-    .brand{color:var(--brand)}
-    .glass{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));}
-    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
-    .hero-glow{position:absolute; inset:-20%; background:
-      radial-gradient(800px 400px at 0% 0%, rgba(99,102,241,.25), transparent 60%),
-      radial-gradient(800px 400px at 100% 100%, rgba(56,189,248,.18), transparent 60%);
-      filter: blur(40px); opacity:.6; pointer-events:none}
-    a{transition:all .15s}
     .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
     .btn:hover{background:rgba(255,255,255,.1)}
     .btn-brand{background:var(--brand); border-color:transparent; color:white}
     .btn-brand:hover{background:#7c7ff6}
-    #authCard{ background: var(--base-bg); }
-    .menu{ display:none; }
-    .menu.show{ display:block; }
-  #navAvatar{background-image:url('data:image/png;base64,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');background-size:cover;background-position:center;}
-</style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    #navAvatar{background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%25%22 stop-color=%2291c1ff%22/><stop offset=%22100%25%22 stop-color=%225a8cff%22/></linearGradient></defs><circle cx=%2264%22 cy=%2264%22 r=%2264%22 fill=%22url(%23g)%22/><circle cx=%2264%22 cy=%2250%22 r=%2222%22 fill=%22white%22 fill-opacity=%22.9%22/><path d=%22M20 108a44 30 0 0 1 88 0%22 fill=%22white%22 fill-opacity=%22.9%22/></svg>');background-size:cover;background-position:center;}
+  </style>
+
+  <style id="dark-inputs-patch">
+    .input-dark{background:rgba(255,255,255,.05)!important;color:#e5e7eb!important;border:1px solid rgba(255,255,255,.12)!important}
+    .input-dark::placeholder{color:#9ca3af}
+    select.input-dark option{background:#0b0d13;color:#e5e7eb}
+  </style>
+
 </head>
 <body class="min-h-screen">
-  <!-- HEADER -->
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+      <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
         <div class="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center font-bold">H</div>
         <span class="font-semibold tracking-wide">HANSORA AI</span>
       </a>
-      </div>
       <nav class="hidden md:flex items-center gap-8 text-sm">
-        <a href="#models" class="hover:text-white/90">Models</a>
-        <a href="#templates" class="hover:text-white/90">Templates</a>
-        <a href="#pricing" class="hover:text-white/90">Pricing</a>
-        <a href="#faq" class="hover:text-white/90">FAQ</a>
+        <a href="index.html#models" class="hover:text-white/90">Models</a>
+        <a href="index.html#templates" class="hover:text-white/90">Templates</a>
+        <a href="index.html#pricing" class="hover:text-white/90">Pricing</a>
+        <a href="index.html#faq" class="hover:text-white/90">FAQ</a>
       </nav>
       <div class="flex items-center gap-3">
         <a href="#" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
-
-        <!-- pre-login -->
-        <a id="btnLoginNav" href="#" class="rounded-xl btn px-3 py-2 text-sm">Log in</a>
-        <a id="btnGetStarted" href="#" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Get Started</a>
-
-        <!-- after login -->
+        <a id="btnLoginNav" href="index.html#login" class="rounded-xl btn px-3 py-2 text-sm">Log in</a>
+        <a id="btnGetStarted" href="index.html#login" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Get Started</a>
         <div id="navUser" class="hidden items-center gap-2">
           <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
           <div class="relative">
             <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
               <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
             </button>
-            <div id="navMenu" class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm">
-              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a>
-              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Edit profile</a>
-              <a href="#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a>
-              <a href="#" href="/usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a>
-              <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
-            </div>
+            <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden"><a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a><a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a><a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a><button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button></div>
           </div>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- HERO -->
-  <section class="relative overflow-hidden">
-    <div class="hero-glow"></div>
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-      <div class="grid md:grid-cols-2 gap-10 items-center">
-        <div>
-          <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80 mb-4">
-            <span class="inline-flex size-1.5 rounded-full bg-emerald-400"></span>
-            Live models: Veo 3 • Kling • Runway
+  <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+    <div class="grid md:grid-cols-2 gap-6 items-start">
+      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+        <h1 class="text-2xl font-bold">MidJourney — Text to Image / Image to Image</h1>
+        <p class="mt-1 text-sm text-zinc-400">Upload 1–4 images and describe the edit you want.</p>
+        <div class="mt-4 space-y-3">
+          <div>
+            <label class="text-xs text-zinc-400">Select 1–4 images (jpeg/png/webp, ≤10MB each)</label>
+            <input id="files" type="file" accept="image/*" multiple class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
+            <div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div>
           </div>
-          <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight">
-            Create stunning <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-blue-400 to-sky-300">AI video & images</span> in seconds.
-          </h1>
-          <p class="mt-5 text-zinc-400 max-w-xl">Simple, beautiful, and fast. Pick a model, paste a prompt or upload an image, and generate. Clean UI inspired by the best—tuned for real work.</p>
-          <div class="mt-8 flex flex-wrap items-center gap-3">
-            <a href="#models" class="rounded-xl btn-brand px-5 py-3 text-sm font-semibold shadow-soft">Explore Models</a>
-            <a href="#templates" class="rounded-xl btn px-5 py-3 text-sm">See Templates</a>
-            <button id="btnLogin" class="rounded-xl btn px-5 py-3 text-sm">Log in / Sign up</button>
+          <div>
+            <label class="text-xs text-zinc-400">Image size</label>
+            <select id="size" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
+              <option value="auto" selected>Auto</option>
+              <option value="square">Square</option>
+              <option value="portrait_3_4">Portrait 3:4</option>
+              <option value="portrait_9_16">Portrait 9:16</option>
+              <option value="landscape_4_3">Landscape 4:3</option>
+              <option value="landscape_16_9">Landscape 16:9</option>
+            </select>
           </div>
-          <p class="mt-3 text-xs text-zinc-400">New users automatically receive <b>3 credits</b>.</p>
-          <div class="mt-6 flex items-center gap-6 text-xs text-zinc-400">
-            <div class="flex items-center gap-2"><span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>Online 24/7</div>
-            <div>Credits • RU / EN</div>
+
+          
+          <div>
+            <label class="text-xs text-zinc-400">Prompt</label>
+            <textarea id="prompt" placeholder="Describe the edit or style…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark"></textarea>
           </div>
-        </div>
-        <div>
-          <div class="glass relative rounded-2xl p-3 md:p-4 shadow-soft">
-            <div class="aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60">
-              <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop" alt="Showcase" class="h-full w-full object-cover opacity-90">
-            </div>
-            <div class="mt-3 flex items-center justify-between text-xs text-zinc-400">
-              <span>Veo 3 • 1080p • 8s</span>
-              <span>Prompt → Video with sound</span>
-            </div>
-          </div>
+          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()">Run (cost: 1⚡)</button>
+          <div id="status" class="mt-2 text-sm"></div>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- Models / Pricing / FAQ / Footer identical to v2 (omitted here for brevity in this comment)—they are included in the file. -->
-  <section id="models" class="border-t border-base-line/60 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,.07),transparent_60%)]">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-      <div class="mb-8 flex items-end justify-between gap-4">
-        <div>
-          <h2 class="text-2xl sm:text-3xl font-bold">Models</h2>
-          <p class="mt-2 text-zinc-400">Pick the engine that fits your goal. Add prompts later — today we focus on the UI.</p>
+      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+        <h3 class="text-lg font-semibold">Result</h3>
+        <p class="text-xs text-zinc-400">Generated image will appear below.</p>
+        <div id="resultBox" class="mt-3 aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
+          <span class="text-xs text-zinc-500">No result yet</span>
         </div>
-        <a href="#" class="hidden sm:inline rounded-xl btn px-4 py-2 text-sm">View docs</a>
-      </div>
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        <!-- Cards identical to v2 -->
-        <a href="#" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-            <img src="https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Veo 3">
-          </div>
-          <div class="mt-3 flex items-center justify-between">
-            <h3 class="font-semibold">Veo 3</h3>
-            <span class="text-xs text-emerald-300">Video</span>
-          </div>
-          <p class="mt-1 text-sm text-zinc-400">Text → video with sound. Fast or high-quality modes.</p>
-        </a>
-        <a href="#" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-            <img src="https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Kling">
-          </div>
-          <div class="mt-3 flex items-center justify-between">
-            <h3 class="font-semibold">Kling</h3>
-            <span class="text-xs text-emerald-300">Video</span>
-          </div>
-          <p class="mt-1 text-sm text-zinc-400">High-motion, cinematic video. 9:16 • 16:9 • 1:1.</p>
-        </a>
-        <a href="#" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-            <img src="https://images.unsplash.com/photo-1496302662116-35cc4f36df92?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Runway">
-          </div>
-          <div class="mt-3 flex items-center justify-between">
-            <h3 class="font-semibold">Runway</h3>
-            <span class="text-xs text-indigo-300">Image → Video</span>
-          </div>
-          <p class="mt-1 text-sm text-zinc-400">Image-to-video & v2v. Polish your edits with control.</p>
-        </a>
-        <a href="#" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-            <img src="https://images.unsplash.com/photo-1517816428104-797678c7cf0e?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Imagen">
-          </div>
-          <div class="mt-3 flex items-center justify-between">
-            <h3 class="font-semibold">Imagen</h3>
-            <span class="text-xs text-sky-300">Image</span>
-          </div>
-          <p class="mt-1 text-sm text-zinc-400">Photoreal image generation & upscale pipelines.</p>
-        </a>
-        <a href="midimage.html" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-            <img src="https://images.unsplash.com/photo-1495567720989-cebdbdd97913?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Midjourney">
-          </div>
-          <div class="mt-3 flex items-center justify-between">
-            <h3 class="font-semibold">Midjourney</h3>
-            <span class="text-xs text-sky-300">Image</span>
-          </div>
-          <p class="mt-1 text-sm text-zinc-400">Consistent style systems for ad creatives.</p>
-        </a>
-        <a href="#" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-            <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="GPT-Image">
-          </div>
-          <div class="mt-3 flex items-center justify-between">
-            <h3 class="font-semibold">GPT-Image</h3>
-            <span class="text-xs text-violet-300">Image</span>
-          </div>
-          <p class="mt-1 text-sm text-zinc-400">Prompt-to-image with strong text understanding.</p>
-        </a>
-
-        <a href="nano-banana.html" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-          <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-            <img src="https://images.unsplash.com/photo-1518779578993-ec3579fee39f?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Nano Banana">
-          </div>
-          <div class="mt-3 flex items-center justify-between">
-            <h3 class="font-semibold">Nano Banana</h3>
-            <span class="text-xs text-violet-300">Image→Image</span>
-          </div>
-          <p class="mt-1 text-sm text-zinc-400">Refine images by prompt. Opens a dedicated generator page.</p>
-        </a>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- TEMPLATES -->
-  <section id="templates" class="border-t border-base-line/60">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-      <h2 class="text-2xl sm:text-3xl font-bold">Templates</h2>
-      <p class="mt-2 text-zinc-400 max-w-2xl">Upload your own examples later. For now, these are placeholders using Unsplash so the page looks complete after deploy.</p>
-      <div class="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        <article class="glass rounded-2xl overflow-hidden border border-white/10">
-          <img src="https://images.unsplash.com/photo-1542228262-3d663b306a55?q=80&w=1600&auto=format&fit=crop" class="h-44 w-full object-cover" alt="Template 1">
-          <div class="p-4">
-            <h3 class="font-semibold">Perfume Macro</h3>
-            <p class="mt-1 text-sm text-zinc-400 line-clamp-2">Soft studio macro with droplets, cinematic camera, glossy glass textures.</p>
-            <div class="mt-3 flex items-center gap-3 text-xs text-zinc-400">
-              <span class="rounded-full bg-white/5 px-2 py-1 border border-white/10">Veo 3</span>
-              <button class="rounded-full bg-brand/10 text-brand border border-brand/30 px-3 py-1 hover:bg-brand/20">Use</button>
-            </div>
-          </div>
-        </article>
-        <article class="glass rounded-2xl overflow-hidden border border-white/10">
-          <img src="https://images.unsplash.com/photo-1460355976672-71c3f0a4bdac?q=80&w=1600&auto=format&fit=crop" class="h-44 w-full object-cover" alt="Template 2">
-          <div class="p-4">
-            <h3 class="font-semibold">Sneaker Spin</h3>
-            <p class="mt-1 text-sm text-zinc-400 line-clamp-2">Product turntable, clean white cyclorama, shadow catcher, 24fps.</p>
-            <div class="mt-3 flex items-center gap-3 text-xs text-zinc-400">
-              <span class="rounded-full bg-white/5 px-2 py-1 border border-white/10">Kling</span>
-              <button class="rounded-full bg-brand/10 text-brand border border-brand/30 px-3 py-1 hover:bg-brand/20">Use</button>
-            </div>
-          </div>
-        </article>
-        <article class="glass rounded-2xl overflow-hidden border border-white/10">
-          <img src="https://images.unsplash.com/photo-1499955085172-a104c9463ece?q=80&w=1600&auto=format&fit=crop" class="h-44 w-full object-cover" alt="Template 3">
-          <div class="p-4">
-            <h3 class="font-semibold">Cosmic Type</h3>
-            <p class="mt-1 text-sm text-zinc-400 line-clamp-2">Crystal letters over mirror lake, volumetric fog, reflective highlights.</p>
-            <div class="mt-3 flex items-center gap-3 text-xs text-zinc-400">
-              <span class="rounded-full bg-white/5 px-2 py-1 border border-white/10">Imagen</span>
-              <button class="rounded-full bg-brand/10 text-brand border border-brand/30 px-3 py-1 hover:bg-brand/20">Use</button>
-            </div>
-          </div>
-        </article>
-      </div>
-      <div class="mt-8">
-        <a href="#" class="rounded-xl btn px-4 py-2 text-sm">Open templates gallery</a>
-      </div>
-    </div>
-  </section>
-
-
-  <section id="pricing" class="border-t border-base-line/60 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,.07),transparent_60%)]">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-      <h2 class="text-2xl sm:text-3xl font-bold">Pricing</h2>
-      <p class="mt-2 text-zinc-400">Credits-based. Hook up your payments later. UI only for now.</p>
-      <div class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="glass rounded-2xl p-6 border border-white/10">
-          <h3 class="text-lg font-semibold">Starter</h3>
-          <div class="mt-3 text-3xl font-extrabold">$9<span class="text-base font-medium text-zinc-400"> / 50⚡</span></div>
-          <ul class="mt-4 space-y-2 text-sm text-zinc-400">
-            <li>• Veo 3 Fast, Kling short clips</li>
-            <li>• Basic templates</li>
-          </ul>
-          <button class="mt-6 w-full rounded-xl btn-brand px-4 py-2 font-semibold">Buy</button>
-        </div>
-        <div class="glass rounded-2xl p-6 border border-white/10 ring-2 ring-indigo-400/60">
-          <h3 class="text-lg font-semibold">Pro</h3>
-          <div class="mt-3 text-3xl font-extrabold">$29<span class="text-base font-medium text-zinc-400"> / 250⚡</span></div>
-          <ul class="mt-4 space-y-2 text-sm text-zinc-400">
-            <li>• Veo 3 HQ, Kling 16:9/9:16</li>
-            <li>• Priority queue</li>
-          </ul>
-          <button class="mt-6 w-full rounded-xl btn-brand px-4 py-2 font-semibold">Buy</button>
-        </div>
-        <div class="glass rounded-2xl p-6 border border-white/10">
-          <h3 class="text-lg font-semibold">Studio</h3>
-          <div class="mt-3 text-3xl font-extrabold">$79<span class="text-base font-medium text-zinc-400"> / 1000⚡</span></div>
-          <ul class="mt-4 space-y-2 text-sm text-zinc-400">
-            <li>• All models + API</li>
-            <li>• Team seats</li>
-          </ul>
-          <button class="mt-6 w-full rounded-xl btn-brand px-4 py-2 font-semibold">Buy</button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="faq" class="border-t border-base-line/60">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-      <h2 class="text-2xl sm:text-3xl font-bold">FAQ</h2>
-      <div class="mt-6 grid gap-4">
-        <details class="glass rounded-xl p-4 border border-white/10">
-          <summary class="cursor-pointer font-medium">Is login required?</summary>
-          <p class="mt-2 text-zinc-400">Only for saving credits and using generators. Guests can browse the UI.</p>
-        </details>
-        <details class="glass rounded-xl p-4 border border-white/10">
-          <summary class="cursor-pointer font-medium">Do new users get 3 credits?</summary>
-          <p class="mt-2 text-zinc-400">Yes. When you sign up, we set <code>credits = 3</code> in your profile.</p>
-        </details>
+        <a id="downloadLink" href="#" class="hidden mt-3 inline-block rounded-xl btn px-4 py-2 text-sm">Download</a>
       </div>
     </div>
   </section>
@@ -307,294 +217,251 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
       <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
       <nav class="flex items-center gap-5">
-        <a href="#" class="hover:text-white/80">Terms</a>
-        <a href="#" class="hover:text-white/80">Privacy</a>
-        <a href="#" class="hover:text-white/80">Contact</a>
+        <a href="index.html#terms" class="hover:text-white/80">Terms</a>
+        <a href="index.html#privacy" class="hover:text-white/80">Privacy</a>
+        <a href="index.html#contact" class="hover:text-white/80">Contact</a>
       </nav>
     </div>
   </footer>
 
-  <!-- AUTH MODAL -->
-  <div id="authModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4">
-    <div id="authCard" class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft">
-      <div class="mb-4 flex items-center justify-between">
-        <h3 id="authTitle" class="text-lg font-semibold">Log in</h3>
-        <button id="authClose" class="rounded-lg btn px-2 py-1 text-sm">✕</button>
-      </div>
-      <form id="authForm" class="space-y-3">
-        <input id="authEmail" type="email" placeholder="Email" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
-        <input id="authPass" type="password" placeholder="Password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
-        <input id="authPass2" type="password" placeholder="Repeat password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden">
-        <div class="flex gap-2">
-          <button id="btnDoLogin" type="button" class="w-1/2 rounded-lg btn px-3 py-2 font-semibold">Log in</button>
-          <button id="btnDoSignup" type="button" class="w-1/2 rounded-lg btn px-3 py-2">Sign up</button>
-        </div>
-        <p id="authMsg" class="text-xs text-zinc-400"></p>
-      </form>
-    </div>
-  </div>
+<script>
+document.getElementById('y').textContent = new Date().getFullYear();
 
-  <script>
-    document.getElementById('y').textContent = new Date().getFullYear();
+// Supabase init
+const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Header UI
+const $btnLoginNav = document.getElementById('btnLoginNav');
+const $btnGetStarted = document.getElementById('btnGetStarted');
+const $navUser = document.getElementById('navUser');
+const $navCredits = document.getElementById('navCredits');
+const $navAvatar = document.getElementById('navAvatar');
+const $navMenu = document.getElementById('navMenu');
+const $btnLogout = document.getElementById('btnLogout');
+const $navAvatarImg = document.getElementById('navAvatarImg');
+function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
+function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
+$navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
+document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
+$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
+async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
 
-    // Header elements
-    const $btnLoginNav = document.getElementById('btnLoginNav');
-    const $btnGetStarted = document.getElementById('btnGetStarted');
-    const $navUser = document.getElementById('navUser');
-    const $navCredits = document.getElementById('navCredits');
-    const $navAvatar = document.getElementById('navAvatar');
-    const $navMenu = document.getElementById('navMenu');
-    const $btnLogout = document.getElementById('btnLogout');
-    const $navAvatarImg = document.getElementById('navAvatarImg');
+// Elements
+const filesEl=document.getElementById('files');
+const thumbsEl=document.getElementById('thumbs');
+const promptEl=document.getElementById('prompt');
+const runBtn=document.getElementById('runBtn');
+const statusEl=document.getElementById('status');
+const resultBox=document.getElementById('resultBox');
+const downloadLink=document.getElementById('downloadLink');
 
-    // Hero button
-    const $btnLogin = document.getElementById('btnLogin');
+filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,4).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
 
-    // Modal elements
-    const $modal = document.getElementById('authModal');
-    const $close = document.getElementById('authClose');
-    const $title = document.getElementById('authTitle');
-    const $emailIn = document.getElementById('authEmail');
-    const $passIn = document.getElementById('authPass');
-    const $pass2In = document.getElementById('authPass2');
-    const $msg = document.getElementById('authMsg');
-    const $doLogin = document.getElementById('btnDoLogin');
-    const $doSignup = document.getElementById('btnDoSignup');
+function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
-    let authMode = 'login';
-    function openAuth(){ $modal.classList.remove('hidden'); $msg.textContent=''; }
-    function closeAuth(){ $modal.classList.add('hidden'); $msg.textContent=''; }
-    function setAuthMode(mode){
-      authMode = mode;
-      if(mode==='signup'){
-        $title.textContent = 'Sign up';
-        $pass2In.classList.remove('hidden');
-        $doSignup.classList.add('btn-brand'); $doLogin.classList.remove('btn-brand');
-      }else{
-        $title.textContent = 'Log in';
-        $pass2In.classList.add('hidden');
-        $doLogin.classList.add('btn-brand'); $doSignup.classList.remove('btn-brand');
-      }
-    }
-    function showLoggedInUI(profile, user){
-      $btnLoginNav.classList.add('hidden');
-      $btnGetStarted.classList.add('hidden');
-      $navUser.classList.remove('hidden');
-      $navUser.classList.add('flex');
-      $navCredits.textContent = (profile?.credits ?? 0) + '⚡';
-      if(user?.user_metadata?.avatar_url){
-        $navAvatarImg.src = user.user_metadata.avatar_url;
-        $navAvatarImg.classList.remove('hidden');
-      } else {
-        $navAvatarImg.classList.add('hidden');
-      }
-    }
-    function showLoggedOutUI(){
-      $btnLoginNav.classList.remove('hidden');
-      $btnGetStarted.classList.remove('hidden');
-      $navUser.classList.add('hidden');
-      $navUser.classList.remove('flex');
-    }
-    // Dropdown
-    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
-    document.addEventListener('click', (e)=>{
-      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
-    });
-    // Openers
-    $btnLogin.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
-    $btnLoginNav.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
-    $btnGetStarted.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
-    $close.addEventListener('click', closeAuth);
+// Guarded renderer
+let __done=false; let channel=null;
+function onResult(url){
+  if(__done || !url) return;
+  __done = true;
+  const img=new Image();
+  img.onload=()=>{
+    resultBox.innerHTML='';
+    img.className='w-full h-full object-contain';
+    resultBox.appendChild(img);
+        const __name = (url.split('/').pop()||'generation');
+    downloadLink.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(url)+'&name='+encodeURIComponent(__name);
+    downloadLink.setAttribute('download', __name);
+    downloadLink.classList.remove('hidden');
+    downloadLink.textContent='Download';
 
-    async function getOrCreateProfile(user){
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id,email,credits')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if(error){ throw error; }
-      if(!data){
-        const ins = await supabase.from('profiles').insert({
-          user_id: user.id, email: user.email, credits: 3
-        }).select().single();
-        if(ins.error){ throw ins.error; }
-        return ins.data;
-      }
-      return data;
-    }
-    async function refreshCredits(){
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
-      if(!user) return;
-      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-      if(prof?.data?.credits != null){ $navCredits.textContent = prof.data.credits + '⚡'; }
-    }
-    window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
-
-    // Sign up
-    $doSignup.addEventListener('click', async ()=>{
-      if(authMode!=='signup'){ setAuthMode('signup'); $msg.textContent=''; return; }
-      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
-      if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
-      $msg.textContent = 'Creating account…';
-      const { data, error } = await supabase.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
-      if(error){ $msg.textContent = error.message; return; }
-      $msg.textContent = 'Check your email to confirm, then Log in.';
-      setAuthMode('login');
-    });
-    // Log in
-    $doLogin.addEventListener('click', async ()=>{
-      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
-      $msg.textContent = 'Signing in…';
-      try{
-        const { data, error } = await supabase.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
-        if(error){ $msg.textContent = error.message; return; }
-        const user = data.user;
-        const prof = await getOrCreateProfile(user);
-        showLoggedInUI(prof, user);
-        closeAuth();
-      }catch(e){ $msg.textContent = e.message || 'Login failed.'; }
-    });
-    // Logout
-    document.getElementById('btnLogout').addEventListener('click', async ()=>{
-      await supabase.auth.signOut();
-      showLoggedOutUI();
-    });
-    
-    // === Credit helpers (pure Supabase; no Make.com) ===
-    async function getUserId() {
-      const { data } = await supabase.auth.getUser();
-      return data.user?.id || null;
-    }
-    async function setCredits(value) {
-      const uid = await getUserId();
-      if (!uid) throw new Error('Not logged in');
-      const { error } = await supabase
-        .from('profiles')
-        .update({ credits: value })
-        .eq('user_id', uid);
-      if (error) throw error;
-      await window.refreshCredits();
-    }
-    async function addCredits(delta) {
-      const uid = await getUserId();
-      if (!uid) throw new Error('Not logged in');
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('user_id', uid)
-        .maybeSingle();
-      if (error) throw error;
-      const next = (data?.credits ?? 0) + delta;
-      await setCredits(next);
-    }
-    async function useCredits(cost) {
-      const uid = await getUserId();
-      if (!uid) throw new Error('Not logged in');
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('user_id', uid)
-        .maybeSingle();
-      if (error) throw error;
-      const current = data?.credits ?? 0;
-      if (current < cost) throw new Error('Not enough credits');
-      await setCredits(current - cost);
-    }
-    window.hansoraCredits = { addCredits, useCredits, setCredits };
-
-    // Restore session
-    (async ()=>{
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
-      if(user){
-        try{
-          const prof = await getOrCreateProfile(user);
-          showLoggedInUI(prof, user);
-        }catch{ showLoggedOutUI(); }
-      }else{
-        showLoggedOutUI();
+    showStatus('✅ Done.','text-emerald-300');
+  };
+  
+  img.src=url;
+  // === Usage log: save to Supabase (non-blocking) ===
+  try {
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (user && url) {
+        await supabase.from('user_generations').insert({
+          user_id: user.id,
+          provider: 'MidJourney',
+          kind: 'image',
+          prompt: (typeof promptEl !== 'undefined' && promptEl?.value) ? promptEl.value : null,
+          result_url: url,
+          meta: { run: 'nano-banana' }
+        });
       }
     })();
-  </script>
+  } catch (e) { console.warn('usage log failed', e); }
 
-  <!-- USAGE MODAL -->
-  <div id="usageModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-4">
-    <div class="w-full max-w-4xl rounded-2xl border border-white/10 p-6 shadow-soft bg-[color:var(--base-bg)]">
-      <div class="mb-4 flex items-center justify-between">
-        <h3 class="text-lg font-semibold">Your Generations (last 30 days)</h3>
-        <button id="usageClose" class="rounded-lg btn px-2 py-1 text-sm">✕</button>
-      </div>
-      <div id="usageEmpty" class="text-sm text-zinc-400 hidden">No generations yet.</div>
-      <div id="usageList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-    </div>
-  </div>
+  try{ channel?.unsubscribe?.(); }catch{}
+}
 
+// Credits + URL extraction helpers
+async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 0.5)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
 
-  <!-- HANSORA: credits polling patch v2 -->
-  <script>
-  (function(){ 
-    function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-    ready(async function(){ 
-      try {
-        if (typeof supabase === 'undefined' || !supabase.auth) return;
-        const navCreditsEl = document.getElementById('navCredits');
-        const runBtn = document.getElementById('runBtn');
-        const R = (c)=>{ 
-          if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-          if (runBtn) {
-            const ok = (c ?? 0) > 0;
-            runBtn.disabled = !ok;
-            runBtn.classList.toggle('opacity-50', !ok);
-            runBtn.classList.toggle('cursor-not-allowed', !ok);
-          }
-        };
+async function tryExtractImageUrl(o){
+  if(!o) return null;
+  if(typeof o==='string'&&/^https?:\/\//.test(o)) return o;
+  if(o.imageUrl) return o.imageUrl;
+  if(o.outputUrl) return o.outputUrl;
+  if(o.url) return o.url;
+  if(o.data) { const x=await tryExtractImageUrl(o.data); if(x) return x; }
+  if(o.result) { const x=await tryExtractImageUrl(o.result); if(x) return x; }
+  if(Array.isArray(o.images)&&o.images[0]?.url) return o.images[0].url;
+  if(Array.isArray(o.output)&&o.output[0]?.url) return o.output[0].url;
+  return null;
+}
 
-        const ures = await supabase.auth.getUser();
-        const user = ures?.data?.user;
-        if(!user) return;
+// ADDED: make sure DB gets a row even if webhook is late/blocked
+async function backfillRow(uid, rid, taskId, url){
+  try{
+    await fetch(
+      '/.netlify/functions/kie-callback?uid='+encodeURIComponent(uid)+'&run_id='+encodeURIComponent(rid)+'&taskId='+encodeURIComponent(taskId),
+      {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          status:'success',
+          result:{ images:[{ url }] }
+        })
+      }
+    );
+  }catch{}
+}
 
-        async function loadCreditsOnce(){ 
-          try {
-            const { data: prof } = await supabase.from('profiles')
-              .select('credits').eq('user_id', user.id).maybeSingle();
-            const c = prof?.credits ?? 0;
-            R(c);
-            return c;
-          } catch(e) { console.warn('credits poll read failed', e); return null; }
+// Option A: poll nb-check (does NOT rely on webhook)
+async function nbCheckPoll(taskId, uid, rid){
+  if(!taskId) return;
+  const start = Date.now();
+  while(!__done && Date.now() - start < 180000){ // up to 3 min
+    try{
+      const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId), {
+        headers: { 'X-USER-ID': uid }
+      });
+
+      let j;
+      try { j = await r.json(); }
+      catch {
+        const txt = await r.text();
+        try { j = JSON.parse(txt); } catch { j = { raw: txt }; }
+      }
+
+      const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
+      if(['success','succeeded','completed','done'].includes(status)){
+        const url = await tryExtractImageUrl(j);
+        if(url){
+          onResult(url);               // show immediately
+          backfillRow(uid, rid, taskId, url); // ensure Supabase row exists
         }
+        break;
+      }
+      if(['failed','error'].includes(status)){
+        showStatus('❌ Generation failed.','text-rose-300');
+        break;
+      }
+    }catch{}
+    await new Promise(r=>setTimeout(r,1500));
+  }
+}
 
-        // Long polling burst (3 minutes) every 2s
-        function startCreditsPolling(durationMs=180000, intervalMs=2000){
-          if (window.__creditsPoll) clearInterval(window.__creditsPoll);
-          const t0 = Date.now();
-          window.__creditsPoll = setInterval(async ()=>{
-            await loadCreditsOnce();
-            if (Date.now() - t0 > durationMs) clearInterval(window.__creditsPoll);
-          }, intervalMs);
-        }
+// Main run
+window.__run=async function(){
+  const {data:authData}=await supabase.auth.getUser();
+  if(!authData.user){ alert('Please log in or register first.'); return; }
 
-        // Initial load -> reflect current value
-        await loadCreditsOnce();
+  __done=false;
+  const files=[...filesEl.files];
+  if(!files.length){alert('Choose at least one image.');return;}
+  if(files.length>4){alert('Max 4 images.');return;}
+  for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}
 
-        // If __run exists, wrap it so we start long polling right after Run
-        if (typeof window.__run === 'function') {
-          const __origRun = window.__run;
-          window.__run = async function(){ 
-            const c = await loadCreditsOnce();
-            if ((c ?? 0) <= 0) { alert('No credits left.'); return; }
-            startCreditsPolling(180000, 2000); // 3 minutes polling
-            return __origRun();
-          }
-        }
-      } catch(e){ console.warn('credits polling v2 error', e); }
+  runBtn.disabled=true;runBtn.textContent='Working…';
+  showStatus('Submitting…','text-zinc-400');
+  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
+
+  try{
+    const uid=authData.user.id;
+    const rid=uid+'-'+Date.now();
+    const urls=[];
+
+    // upload images
+    for(let i=0;i<files.length;i++){
+      const fd=new FormData();
+      fd.append('file',files[i],files[i].name||('image-'+i+'.png'));
+      fd.append('run_id',rid);
+      const r=await fetch('/.netlify/functions/kie-upload',{method:'POST',headers:{'X-USER-ID':uid},body:fd});
+      const j=await r.json().catch(()=>null);
+      if(!r.ok||!j||!j.downloadUrl)throw new Error(j?.error||'Upload failed');
+      urls.push(j.downloadUrl);
+    }
+
+    // create job
+    const res=await fetch('/.netlify/functions/run-midimage',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-USER-ID':uid},
+      body:JSON.stringify({urls, prompt: promptEl.value||'.', format:'png', size:(document.getElementById('size')?.value||'auto'), run_id: rid})
     });
-  })();
-  </script>
 
+    if (res.status === 202 || res.ok) {
+      await chargeOneCredit();
+    } else {
+      const errT = await res.text().catch(()=> '');
+      throw new Error('Create failed: ' + errT);
+    }
+
+    const resJson = await res.json().catch(()=> ({}));
+    const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
+
+    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+
+    // subscribe to Supabase (if webhook inserts there)
+    channel = supabase.channel('nb_results_' + rid)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'nb_results', filter: 'run_id=eq.' + rid },
+        (payload) => {
+          const url = payload?.new?.image_url;
+          if (url) onResult(url);
+        }
+      )
+      .subscribe();
+
+    // start polling taskId (and backfill DB when done)
+    nbCheckPoll(taskId, uid, rid);
+
+    // fallback: poll table directly in case realtime is blocked
+    const started = Date.now();
+    while (!__done && Date.now() - started < 120000) { // up to 120s
+      await new Promise(r => setTimeout(r, 1500));
+      const { data: row } = await supabase
+        .from('nb_results')
+        .select('image_url')
+        .eq('user_id', uid)
+        .eq('run_id', rid)
+        .limit(1)
+        .maybeSingle();
+
+      const url = row?.image_url || null;
+      if (url) { onResult(url); break; }
+    }
+
+    if (!__done) {
+      showStatus('Still processing… you can wait or try again.','text-yellow-300');
+    }
+
+  }catch(e){
+    showStatus('❌ '+(e.message||String(e)),'text-rose-300')
+  }finally{
+    runBtn.disabled=false;runBtn.textContent='Run (cost: 1⚡)';
+  }
+};
+</script>
 </body>
 </html>
