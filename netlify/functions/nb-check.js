@@ -111,10 +111,11 @@ function firstImageUrl(obj){
   return found;
 }
 async function backfillNbResults({ uid, run_id, taskId, image_url }){
-  if (!uid || !image_url || !SUPABASE_URL || !SERVICE_KEY) return;
+  // MINIMAL CHANGE: allow backfill even when uid is missing; use a placeholder if required by schema.
+  if (!image_url || !SUPABASE_URL || !SERVICE_KEY) return;
   const url = `${SUPABASE_URL}/rest/v1/nb_results`;
   const row = {
-    user_id: uid,
+    user_id: uid || '00000000-0000-0000-0000-000000000000',
     run_id:  run_id || null,
     task_id: taskId || null,
     image_url
