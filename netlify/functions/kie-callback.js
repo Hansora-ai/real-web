@@ -1,3 +1,4 @@
+// netlify/functions/kie-callback.js
 // Handles KIE -> webhook callback and stores the result in Supabase nb_results
 // Expects query params ?uid=...&run_id=...
 
@@ -16,7 +17,8 @@ const ALLOWED_HOSTS = new Set([
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
-  if (event.httpMethod !== 'POST')   return { statusCode: 405, headers: cors(), body: 'Use POST' };
+  // MINIMAL CHANGE: accept GET as well as POST
+  if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET')   return { statusCode: 405, headers: cors(), body: 'Use POST or GET' };
 
   try {
     const qs = event.queryStringParameters || {};
@@ -27,10 +29,10 @@ exports.handler = async (event) => {
     if (event.isBase64Encoded) bodyRaw = Buffer.from(bodyRaw, 'base64').toString('utf8');
 
     let data = null;
-    if (ctype.includes('application/json')) {
+    if (event.httpMethod === 'POST' && ctype.includes('application/json')) {
       try { data = JSON.parse(bodyRaw); } catch {}
     }
-    if (!data && (ctype.includes('application/x-www-form-urlencoded') || ctype.includes('text/plain'))) {
+    if (!data && event.httpMethod === 'POST' && (ctype.includes('application/x-www-form-urlencoded') || ctype.includes('text/plain'))) {
       data = parseFormLike(bodyRaw);
       for (const k of ['data','result','payload']) {
         if (typeof data[k] === 'string') {
@@ -38,7 +40,7 @@ exports.handler = async (event) => {
         }
       }
     }
-    if (!data) {
+    if (!data && event.httpMethod === 'POST') {
       try { data = JSON.parse(bodyRaw); } catch { data = { raw: bodyRaw }; }
     }
 
@@ -55,7 +57,7 @@ exports.handler = async (event) => {
         if (base && svc) {
           const ug = `${base}/rest/v1/user_generations`;
           // Try by run_id first
-          let q = `${ug}?select=user_id&meta->>run_id=eq.${encodeURIComponent(run_id||'')}&limit=1`;
+          let q = `${ug}?select=user_id&meta->>run_id=eq.${encodeURIComponent(run_id||'')}&limit=1`
           let r = await fetch(q, { headers: { 'apikey': svc, 'Authorization': `Bearer ${svc}` } });
           let arr = await r.json().catch(()=>[]);
           if (Array.isArray(arr) && arr[0]?.user_id) {
@@ -80,7 +82,7 @@ exports.handler = async (event) => {
     ).toLowerCase();
 
     // Prefer URLs inside result fields to avoid user-upload echoes
-    let url = pickResultUrl(data);
+    let url = pickResultUrl(data) || firstUrlFromQuery(qs);
 
     // If status isn't clearly success or URL doesn't look final, verify with KIE
     const looksFinal = isAllowedFinal(url);
@@ -118,7 +120,6 @@ exports.handler = async (event) => {
 
     const row = {
       user_id: uid || '00000000-0000-0000-0000-000000000000',
-      // 🔧 FIX #1: DO NOT write 'unknown' here; keep null if missing so the UI filter by run_id is not broken
       run_id:  run_id || null,
       task_id: taskId || null,
       image_url: url
@@ -136,7 +137,6 @@ exports.handler = async (event) => {
           const hasRow = Array.isArray(arr) && arr.length > 0;
           const bodyJson = {
             result_url: url,
-            // 🔧 FIX #2: label as MidJourney (this does NOT affect your page logic; it’s just for usage labeling)
             provider: 'MidJourney',
             kind: 'image',
             meta: { run_id, task_id: taskId, status: 'done' }
@@ -195,7 +195,7 @@ exports.handler = async (event) => {
 function reply(statusCode, body) {
   return { statusCode, headers: { ...cors(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
 }
-function cors(){ return {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization'}; }
+function cors(){ return {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST, GET, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization'}; }
 function lowerKeys(obj){const out={}; for(const k in obj) out[k.toLowerCase()]=obj[k]; return out;}
 function parseFormLike(s){const out={}; try{ for(const part of s.split('&')){ const [k,v]=part.split('='); if(!k) continue; out[decodeURIComponent(k)]=decodeURIComponent(v||''); } }catch{} return out;}
 function get(o,p){ try{ return p.split('.').reduce((a,k)=> (a && k in a ? a[k] : undefined), o); } catch { return undefined; } }
@@ -250,4 +250,11 @@ function pickResultUrl(obj){
     }
   })(obj);
   return found;
+}
+function firstUrlFromQuery(qs){
+  if (!qs) return null;
+  for (const v of Object.values(qs)){
+    if (typeof v === 'string' && /^https?:\/\//i.test(v)) return v;
+  }
+  return null;
 }
