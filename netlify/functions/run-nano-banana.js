@@ -1,467 +1,165 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HANSORA • Nano Banana</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-// === Live credits (Supabase Realtime) + pre-run check ===
-(async function HANSORA_LIVE_CREDITS(){
-  try{
-    const navCreditsEl = document.getElementById('navCredits');
-    const runBtn = document.getElementById('runBtn');
-    function renderCredits(c){
-      if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-      if (runBtn) {
-        const ok = (c ?? 0) > 0;
-        runBtn.disabled = !ok;
-        runBtn.classList.toggle('opacity-50', !ok);
-        runBtn.classList.toggle('cursor-not-allowed', !ok);
-      }
-    }
+// netlify/functions/run-nano-banana.js
+// Create Nano Banana job and immediately return "submitted".
+// KIE will POST the final result to our callback; UI should watch Supabase by run_id.
 
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if(!user) return;
+const CREATE_URL = process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/jobs/createTask";
+const API_KEY = process.env.KIE_API_KEY;
 
-    // initial fetch
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    renderCredits(prof?.credits ?? 0);
+if (!API_KEY) console.warn("[run-nano-banana] Missing KIE_API_KEY env!");
+const SUPABASE_URL  = process.env.SUPABASE_URL;
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    // subscribe to updates
-    supabase.channel('credits_live_' + user.id)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
-        (payload) => { renderCredits(payload.new?.credits ?? 0); }
-      )
-      .subscribe();
 
-    // patch __run to guard when credits are 0 (without changing its internals)
-    const __origRun = window.__run;
-    window.__run = async function(){
-      try{
-        const { data: prof2 } = await supabase
-          .from('profiles')
-          .select('credits')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        const c = prof2?.credits ?? 0;
-        if (c <= 0) {
-          console.warn('No credits left.');
-          alert('No credits left.'); 
-          return;
-        }
-      }catch{}
-      return __origRun ? __origRun() : undefined;
-    };
-  }catch(e){ console.warn('credits live failed', e); }
-})();
-</script>
+// Base Netlify Functions callback (WITH DOT)
+const CALLBACK_URL = "https://webhansora.netlify.app/.netlify/functions/kie-callback";
+const VERSION_TAG  = "nb_fn_final_submit_only_qs";
 
-<script>
-(function(){
-  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-  ready(async function(){
-    try{
-      if (typeof supabase === 'undefined' || !supabase.auth) return;
-
-      async function __refreshCredits(){
-        try{
-          const ures = await supabase.auth.getUser();
-          const user = ures?.data?.user; if(!user) return null;
-          const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-          const c = prof?.credits ?? 0;
-          const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
-          const runBtn = document.getElementById('runBtn'); if (runBtn){
-            const zero = (c ?? 0) <= 0;
-            runBtn.disabled = zero;
-            runBtn.classList.toggle('opacity-50', zero);
-            runBtn.classList.toggle('cursor-not-allowed', zero);
-          }
-          return c;
-        }catch(e){ console.warn('refreshCredits failed', e); return null; }
-      }
-
-      // On load
-      await __refreshCredits();
-
-      // Wrap chargeOneCredit (client debit) to repaint after debit
-      if (typeof window.chargeOneCredit === 'function'){
-        const __origCharge = window.chargeOneCredit;
-        window.chargeOneCredit = async function(){
-          const out = await __origCharge();
-          await __refreshCredits();
-          return out;
-        };
-      }
-
-      // Also poll briefly after Run to catch server-side debit
-      if (typeof window.__run === 'function'){
-        const __origRun = window.__run;
-        window.__run = async function(){
-          const ret = await __origRun();
-          // poll for 15s every 1.5s
-          const id = setInterval(__refreshCredits, 1500);
-          setTimeout(()=>clearInterval(id), 15000);
-          return ret;
-        };
-      }
-    }catch(e){ console.warn('live credits wrapper error', e); }
-  });
-})();
-</script>
-
-  <style>
-    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
-    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
-                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
-                       var(--base-bg); color:#e5e7eb}
-    .bg-base-bg{background:var(--base-bg)}
-    .border-base-line{border-color:var(--base-line)}
-    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
-    .btn:hover{background:rgba(255,255,255,.1)}
-    .btn-brand{background:var(--brand); border-color:transparent; color:white}
-    .btn-brand:hover{background:#7c7ff6}
-    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
-    #navAvatar{background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%25%22 stop-color=%2291c1ff%22/><stop offset=%22100%25%22 stop-color=%225a8cff%22/></linearGradient></defs><circle cx=%2264%22 cy=%2264%22 r=%2264%22 fill=%22url(%23g)%22/><circle cx=%2264%22 cy=%2250%22 r=%2222%22 fill=%22white%22 fill-opacity=%22.9%22/><path d=%22M20 108a44 30 0 0 1 88 0%22 fill=%22white%22 fill-opacity=%22.9%22/></svg>');background-size:cover;background-position:center;}
-  </style>
-
-  <style id="dark-inputs-patch">
-    .input-dark{background:rgba(255,255,255,.05)!important;color:#e5e7eb!important;border:1px solid rgba(255,255,255,.12)!important}
-    .input-dark::placeholder{color:#9ca3af}
-    select.input-dark option{background:#0b0d13;color:#e5e7eb}
-  </style>
-
-</head>
-<body class="min-h-screen">
-  <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
-        <div class="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center font-bold">H</div>
-        <span class="font-semibold tracking-wide">HANSORA AI</span>
-      </a>
-      <nav class="hidden md:flex items-center gap-8 text-sm">
-        <a href="index.html#models" class="hover:text-white/90">Models</a>
-        <a href="index.html#templates" class="hover:text-white/90">Templates</a>
-        <a href="index.html#pricing" class="hover:text-white/90">Pricing</a>
-        <a href="index.html#faq" class="hover:text-white/90">FAQ</a>
-      </nav>
-      <div class="flex items-center gap-3">
-        <a href="#" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
-        <a id="btnLoginNav" href="index.html#login" class="rounded-xl btn px-3 py-2 text-sm">Log in</a>
-        <a id="btnGetStarted" href="index.html#login" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Get Started</a>
-        <div id="navUser" class="hidden items-center gap-2">
-          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
-          <div class="relative">
-            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
-              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
-            </button>
-            <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden"><a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a><a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a><a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a><button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-    <div class="grid md:grid-cols-2 gap-6 items-start">
-      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-        <h1 class="text-2xl font-bold">Nano Banana — Image to Image</h1>
-        <p class="mt-1 text-sm text-zinc-400">Upload 1–4 images and describe the edit you want.</p>
-        <div class="mt-4 space-y-3">
-          <div>
-            <label class="text-xs text-zinc-400">Select 1–4 images (jpeg/png/webp, ≤10MB each)</label>
-            <input id="files" type="file" accept="image/*" multiple class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
-            <div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div>
-          </div>
-          <div>
-            <label class="text-xs text-zinc-400">Image size</label>
-            <select id="size" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
-              <option value="auto" selected>Auto</option>
-              <option value="square">Square</option>
-              <option value="portrait_3_4">Portrait 3:4</option>
-              <option value="portrait_9_16">Portrait 9:16</option>
-              <option value="landscape_4_3">Landscape 4:3</option>
-              <option value="landscape_16_9">Landscape 16:9</option>
-            </select>
-          </div>
-
-          
-          <div>
-            <label class="text-xs text-zinc-400">Prompt</label>
-            <textarea id="prompt" placeholder="Describe the edit or style…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark"></textarea>
-          </div>
-          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()">Run (cost: 1⚡)</button>
-          <div id="status" class="mt-2 text-sm"></div>
-        </div>
-      </div>
-
-      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-        <h3 class="text-lg font-semibold">Result</h3>
-        <p class="text-xs text-zinc-400">Generated image will appear below.</p>
-        <div id="resultBox" class="mt-3 aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
-          <span class="text-xs text-zinc-500">No result yet</span>
-        </div>
-        <a id="downloadLink" href="#" class="hidden mt-3 inline-block rounded-xl btn px-4 py-2 text-sm">Download</a>
-      </div>
-    </div>
-  </section>
-
-  <footer class="border-t border-base-line/60">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
-      <nav class="flex items-center gap-5">
-        <a href="index.html#terms" class="hover:text-white/80">Terms</a>
-        <a href="index.html#privacy" class="hover:text-white/80">Privacy</a>
-        <a href="index.html#contact" class="hover:text-white/80">Contact</a>
-      </nav>
-    </div>
-  </footer>
-
-<script>
-document.getElementById('y').textContent = new Date().getFullYear();
-
-// Supabase init
-const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// Header UI
-const $btnLoginNav = document.getElementById('btnLoginNav');
-const $btnGetStarted = document.getElementById('btnGetStarted');
-const $navUser = document.getElementById('navUser');
-const $navCredits = document.getElementById('navCredits');
-const $navAvatar = document.getElementById('navAvatar');
-const $navMenu = document.getElementById('navMenu');
-const $btnLogout = document.getElementById('btnLogout');
-const $navAvatarImg = document.getElementById('navAvatarImg');
-function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
-function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
-$navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
-document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
-$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
-async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
-
-// Elements
-const filesEl=document.getElementById('files');
-const thumbsEl=document.getElementById('thumbs');
-const promptEl=document.getElementById('prompt');
-const runBtn=document.getElementById('runBtn');
-const statusEl=document.getElementById('status');
-const resultBox=document.getElementById('resultBox');
-const downloadLink=document.getElementById('downloadLink');
-
-filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,4).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
-
-function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
-
-// Guarded renderer
-let __done=false; let channel=null;
-function onResult(url){
-  if(__done || !url) return;
-  __done = true;
-  const img=new Image();
-  img.onload=()=>{
-    resultBox.innerHTML='';
-    img.className='w-full h-full object-contain';
-    resultBox.appendChild(img);
-        const __name = (url.split('/').pop()||'generation');
-    downloadLink.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(url)+'&name='+encodeURIComponent(__name);
-    downloadLink.setAttribute('download', __name);
-    downloadLink.classList.remove('hidden');
-    downloadLink.textContent='Download';
-
-    showStatus('✅ Done.','text-emerald-300');
-  };
-  
-  img.src=url;
-  // === Usage log: save to Supabase (non-blocking) ===
-  try {
-    (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData?.user;
-      if (user && url) {
-        await supabase.from('user_generations').insert({
-          user_id: user.id,
-          provider: 'Nano Banana',
-          kind: 'image',
-          prompt: (typeof promptEl !== 'undefined' && promptEl?.value) ? promptEl.value : null,
-          result_url: url,
-          meta: { run: 'nano-banana' }
-        });
-      }
-    })();
-  } catch (e) { console.warn('usage log failed', e); }
-
-  try{ channel?.unsubscribe?.(); }catch{}
-}
-
-// Credits + URL extraction helpers
-async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur<=0)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
-
-async function tryExtractImageUrl(o){
-  if(!o) return null;
-  if(typeof o==='string'&&/^https?:\/\//.test(o)) return o;
-  if(o.imageUrl) return o.imageUrl;
-  if(o.outputUrl) return o.outputUrl;
-  if(o.url) return o.url;
-  if(o.data) { const x=await tryExtractImageUrl(o.data); if(x) return x; }
-  if(o.result) { const x=await tryExtractImageUrl(o.result); if(x) return x; }
-  if(Array.isArray(o.images)&&o.images[0]?.url) return o.images[0].url;
-  if(Array.isArray(o.output)&&o.output[0]?.url) return o.output[0].url;
-  return null;
-}
-
-// ADDED: make sure DB gets a row even if webhook is late/blocked
-async function backfillRow(uid, rid, taskId, url){
-  try{
-    await fetch(
-      '/.netlify/functions/kie-callback?uid='+encodeURIComponent(uid)+'&run_id='+encodeURIComponent(rid)+'&taskId='+encodeURIComponent(taskId),
-      {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          status:'success',
-          result:{ images:[{ url }] }
-        })
-      }
-    );
-  }catch{}
-}
-
-// Option A: poll nb-check (does NOT rely on webhook)
-async function nbCheckPoll(taskId, uid, rid){
-  if(!taskId) return;
-  const start = Date.now();
-  while(!__done && Date.now() - start < 180000){ // up to 3 min
-    try{
-      const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId), {
-        headers: { 'X-USER-ID': uid }
-      });
-
-      let j;
-      try { j = await r.json(); }
-      catch {
-        const txt = await r.text();
-        try { j = JSON.parse(txt); } catch { j = { raw: txt }; }
-      }
-
-      const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
-      if(['success','succeeded','completed','done'].includes(status)){
-        const url = await tryExtractImageUrl(j);
-        if(url){
-          onResult(url);               // show immediately
-          backfillRow(uid, rid, taskId, url); // ensure Supabase row exists
-        }
-        break;
-      }
-      if(['failed','error'].includes(status)){
-        showStatus('❌ Generation failed.','text-rose-300');
-        break;
-      }
-    }catch{}
-    await new Promise(r=>setTimeout(r,1500));
+exports.handler = async (event) => {
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 204, headers: cors(), body: "" };
   }
-}
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, headers: cors(), body: "Use POST" };
+  }
 
-// Main run
-window.__run=async function(){
-  const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ alert('Please log in or register first.'); return; }
+  try {
+    const body = JSON.parse(event.body || "{}");
 
-  __done=false;
-  const files=[...filesEl.files];
-  if(!files.length){alert('Choose at least one image.');return;}
-  if(files.length>4){alert('Max 4 images.');return;}
-  for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}
-
-  runBtn.disabled=true;runBtn.textContent='Working…';
-  showStatus('Submitting…','text-zinc-400');
-  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
-
-  try{
-    const uid=authData.user.id;
-    const rid=uid+'-'+Date.now();
-    const urls=[];
-
-    // upload images
-    for(let i=0;i<files.length;i++){
-      const fd=new FormData();
-      fd.append('file',files[i],files[i].name||('image-'+i+'.png'));
-      fd.append('run_id',rid);
-      const r=await fetch('/.netlify/functions/kie-upload',{method:'POST',headers:{'X-USER-ID':uid},body:fd});
-      const j=await r.json().catch(()=>null);
-      if(!r.ok||!j||!j.downloadUrl)throw new Error(j?.error||'Upload failed');
-      urls.push(j.downloadUrl);
+    // Required inputs
+    const rawUrls = Array.isArray(body.urls) ? body.urls : [];
+    if (!rawUrls.length) {
+      return ok({ submitted: false, note: "urls_required", version: VERSION_TAG });
     }
 
-    // create job
-    const res=await fetch('/.netlify/functions/run-nano-banana',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-USER-ID':uid},
-      body:JSON.stringify({urls, prompt: promptEl.value||'.', format:'png', size:(document.getElementById('size')?.value||'auto'), run_id: rid})
+    // Normalize/encode URLs (handles spaces/commas)
+    const image_urls = rawUrls.map(u => encodeURI(String(u)));
+
+    const prompt  = body.prompt || "";
+    const format  = (body.format || "png").toLowerCase();
+    const size    = normalizeImageSize(body.size);
+
+    // Identify the user/run to bind result
+    const uid    = event.headers["x-user-id"] || event.headers["X-USER-ID"] || "anon";
+    const run_id = body.run_id || `${uid}-${Date.now()}`;
+
+    // include uid & run_id in the callback URL (works even if KIE posts non-JSON)
+    const cb = `${CALLBACK_URL}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
+
+    // Build KIE payload
+    const payload = {
+      model: "google/nano-banana-edit",
+      input: { prompt, image_urls, output_format: format, image_size: size },
+
+      // Callbacks (add all variants)
+      webhook_url: cb,
+      webhookUrl:  cb, // ← added line (minimal change)
+      callbackUrl: cb,
+      callBackUrl: cb,
+      notify_url:  cb,
+
+      // meta used by kie-callback.js
+      meta:      { uid, run_id, version: VERSION_TAG, cb },
+      metadata:  { uid, run_id, version: VERSION_TAG, cb }
+    };
+
+    // Create the job
+    const create = await fetch(CREATE_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type":  "application/json",
+        "Accept":        "application/json"
+      },
+      body: JSON.stringify(payload)
     });
 
-    if (res.status === 202 || res.ok) {
-      await chargeOneCredit();
-    } else {
-      const errT = await res.text().catch(()=> '');
-      throw new Error('Create failed: ' + errT);
-    }
+    // Parse response (even if not 200)
+    const text = await create.text();
+    let js; try { js = JSON.parse(text); } catch { js = { raw: text }; }
 
-    const resJson = await res.json().catch(()=> ({}));
-    const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
-
-    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-
-    // subscribe to Supabase (if webhook inserts there)
-    channel = supabase.channel('nb_results_' + rid)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'nb_results', filter: 'run_id=eq.' + rid },
-        (payload) => {
-          const url = payload?.new?.image_url;
-          if (url) onResult(url);
+    // Best-effort taskId extraction
+    const taskId =
+      js.taskId || js.id || js.data?.taskId || js.data?.id || null;
+    // --- debit credits immediately on accepted submit (server-side) ---
+    try {
+      const COST = 1; // adjust if Nano Banana uses a different cost
+      if (SUPABASE_URL && SERVICE_KEY && uid && uid !== 'anon') {
+        // re-check current credits and subtract one
+        const base = SUPABASE_URL;
+        const profGet = `${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
+        const r0 = await fetch(profGet, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+        const j0 = await r0.json();
+        const c0 = (Array.isArray(j0) && j0[0] && j0[0].credits) || 0;
+        if (c0 > 0) {
+          await fetch(`${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
+            method: 'PATCH',
+            headers: {
+              'apikey': SERVICE_KEY,
+              'Authorization': `Bearer ${SERVICE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ credits: c0 - COST })
+          });
         }
-      )
-      .subscribe();
-
-    // start polling taskId (and backfill DB when done)
-    nbCheckPoll(taskId, uid, rid);
-
-    // fallback: poll table directly in case realtime is blocked
-    const started = Date.now();
-    while (!__done && Date.now() - started < 120000) { // up to 120s
-      await new Promise(r => setTimeout(r, 1500));
-      const { data: row } = await supabase
-        .from('nb_results')
-        .select('image_url')
-        .eq('user_id', uid)
-        .eq('run_id', rid)
-        .limit(1)
-        .maybeSingle();
-
-      const url = row?.image_url || null;
-      if (url) { onResult(url); break; }
+      }
+    } catch (e) {
+      console.warn('[nb] debit credits failed', e);
     }
 
-    if (!__done) {
-      showStatus('Still processing… you can wait or try again.','text-yellow-300');
-    }
 
-  }catch(e){
-    showStatus('❌ '+(e.message||String(e)),'text-rose-300')
-  }finally{
-    runBtn.disabled=false;runBtn.textContent='Run (cost: 1⚡)';
+
+    // Always return 200 submitted (let callback deliver final result)
+    return ok({
+      submitted: true,
+      taskId,
+      run_id,
+      version: VERSION_TAG,
+      used_callback: cb
+    });
+
+  } catch (e) {
+    // Still 200 so the UI stays in "submitted" and waits for callback
+    return ok({ submitted: true, note: "exception", message: String(e), version: VERSION_TAG });
   }
 };
-</script>
-</body>
-</html>
+
+// ───────────────────────────────── helpers
+
+function normalizeImageSize(v) {
+  if (!v) return "auto";
+  const s = String(v).trim().toLowerCase();
+
+  // Pass through if already valid ratio or auto
+  const direct = new Set(["auto", "1:1", "3:4", "4:3", "9:16", "16:9"]);
+  if (direct.has(s)) return s;
+
+  // Map named tokens to ratio strings (KIE-accepted)
+  if (s === "square") return "1:1";
+  if (s === "portrait_3_4") return "3:4";
+  if (s === "portrait_9_16") return "9:16";
+  if (s === "landscape_4_3") return "4:3";
+  if (s === "landscape_16_9") return "16:9";
+
+  // Coerce variants like "16_9", "16-9" → "16:9"
+  const coerced = s.replace(/(\d)[_\-:](\d)/g, "$1:$2");
+  if (direct.has(coerced)) return coerced;
+
+  return "auto";
+}
+
+function ok(json) {
+  return {
+    statusCode: 200,
+    headers: { ...cors(), "X-NB-Version": VERSION_TAG },
+    body: JSON.stringify(json)
+  };
+}
+
+function cors() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-USER-ID, x-user-id"
+  };
+}
