@@ -46,27 +46,6 @@ exports.handler = async (event) => {
     const cb = `${CALLBACK_URL}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
 
     // Build KIE payload
-
-    // --- CREDITS GUARD (server-side): block KIE if credits <= 0 ---
-    try {
-      if (SUPABASE_URL && SERVICE_KEY && uid && uid !== 'anon') {
-        const profUrl = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
-        const profRes = await fetch(profUrl, {
-          method: 'GET',
-          headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
-        });
-        const profJson = await profRes.json();
-        const credits = (Array.isArray(profJson) && profJson[0] && profJson[0].credits) || 0;
-        if (!credits || credits <= 0) {
-          return ok({ submitted: false, reason: 'no_credits' });
-        }
-      }
-    } catch (e) {
-      // If the guard fails, we do NOT create the job
-      return ok({ submitted: false, reason: 'credits_guard_error', message: String(e || '') });
-    }
-
-
     const payload = {
       model: "google/nano-banana-edit",
       input: { prompt, image_urls, output_format: format, image_size: size },
@@ -101,6 +80,34 @@ exports.handler = async (event) => {
     // Best-effort taskId extraction
     const taskId =
       js.taskId || js.id || js.data?.taskId || js.data?.id || null;
+    // --- debit credits immediately on accepted submit (server-side) ---
+    try {
+      const COST = 1; // adjust if Nano Banana uses a different cost
+      if (SUPABASE_URL && SERVICE_KEY && uid && uid !== 'anon') {
+        // re-check current credits and subtract one
+        const base = SUPABASE_URL;
+        const profGet = `${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
+        const r0 = await fetch(profGet, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+        const j0 = await r0.json();
+        const c0 = (Array.isArray(j0) && j0[0] && j0[0].credits) || 0;
+        if (c0 > 0) {
+          await fetch(`${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
+            method: 'PATCH',
+            headers: {
+              'apikey': SERVICE_KEY,
+              'Authorization': `Bearer ${SERVICE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({ credits: c0 - COST })
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('[nb] debit credits failed', e);
+    }
+
+
 
     // Always return 200 submitted (let callback deliver final result)
     return ok({
