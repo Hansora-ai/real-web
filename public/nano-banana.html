@@ -16,7 +16,7 @@
     function renderCredits(c){
       if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
       if (runBtn) {
-        const ok = (c ?? 0) > 0;
+        const ok = (c ?? 0) >= 0.5;
         runBtn.disabled = !ok;
         runBtn.classList.toggle('opacity-50', !ok);
         runBtn.classList.toggle('cursor-not-allowed', !ok);
@@ -52,9 +52,9 @@
           .eq('user_id', user.id)
           .maybeSingle();
         const c = prof2?.credits ?? 0;
-        if (c <= 0) {
+        if (c < 0.5) {
           console.warn('No credits left.');
-          alert('No credits left.'); 
+          alert('Not enough credits (need 0.5).'); 
           return;
         }
       }catch{}
@@ -79,7 +79,7 @@
           const c = prof?.credits ?? 0;
           const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
           const runBtn = document.getElementById('runBtn'); if (runBtn){
-            const zero = (c ?? 0) <= 0;
+            const zero = (c ?? 0) < 0.5;
             runBtn.disabled = zero;
             runBtn.classList.toggle('opacity-50', zero);
             runBtn.classList.toggle('cursor-not-allowed', zero);
@@ -197,7 +197,7 @@
             <label class="text-xs text-zinc-400">Prompt</label>
             <textarea id="prompt" placeholder="Describe the edit or style…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark"></textarea>
           </div>
-          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()">Run (cost: 1⚡)</button>
+          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()">Run (cost: 0.5⚡)</button>
           <div id="status" class="mt-2 text-sm"></div>
         </div>
       </div>
@@ -304,7 +304,7 @@ function onResult(url){
 }
 
 // Credits + URL extraction helpers
-async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur<=0)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
+async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 0.5)throw new Error('Not enough credits (need 0.5).');await supabase.from('profiles').update({credits:cur-0.5}).eq('user_id',data.user.id);}
 
 async function tryExtractImageUrl(o){
   if(!o) return null;
@@ -459,7 +459,7 @@ window.__run=async function(){
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300')
   }finally{
-    runBtn.disabled=false;runBtn.textContent='Run (cost: 1⚡)';
+    runBtn.disabled=false;runBtn.textContent='Run (cost: 0.5⚡)';
   }
 };
 </script>
