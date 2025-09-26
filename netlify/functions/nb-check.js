@@ -1,6 +1,7 @@
 // netlify/functions/nb-check.js
-// Surgical fix: probe both /jobs/* and /mj/*, return ALL images, and backfill ALL rows.
-// No interface changes. Adds "images" array while keeping "image_url".
+// Surgical fix: probe both /api/v1/mj/* and /api/v1/jobs/*, MERGE images from all
+// success endpoints, return original fields plus images[], and backfill ALL rows.
+// Compatible with Nano Banana + MidJourney. No interface changes.
 
 const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,'');
 const KIE_KEY  = process.env.KIE_API_KEY;
@@ -24,6 +25,7 @@ exports.handler = async (event) => {
 
     // Fetch once across endpoints (the page will poll repeatedly)
     const probe = await fetchAll(taskId);
+
     if (!probe.ok) {
       return json(200, { ok:false, status: probe.status || 'pending' });
     }
@@ -49,27 +51,43 @@ function json(code, obj){ return { statusCode: code, headers: { 'Content-Type': 
 function header(event, name){ const v = event.headers?.[name] || event.headers?.[name.toLowerCase()]; return Array.isArray(v) ? v[0] : v; }
 function kieHeaders(){ return { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' }; }
 
+// === THE ONLY BEHAVIORAL CHANGE ===
+// Merge images from *all* success endpoints instead of returning at the first success.
 async function fetchAll(taskId){
   const endpoints = [
-    // Prefer MJ endpoints first
+    // MJ endpoints first (usually contain full set for MidJourney)
     `${KIE_BASE}/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
     `${KIE_BASE}/api/v1/mj/result?taskId=${encodeURIComponent(taskId)}`,
     `${KIE_BASE}/api/v1/mj/getTask?taskId=${encodeURIComponent(taskId)}`,
-    // Jobs fallbacks
+    // Generic jobs fallbacks (used by Nano Banana and some providers)
     `${KIE_BASE}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
     `${KIE_BASE}/api/v1/jobs/result?taskId=${encodeURIComponent(taskId)}`
   ];
+
+  let merged = [];         // merged image urls
+  let sawSuccess = false;  // did any endpoint report success?
+
   for (const url of endpoints) {
     try {
       const r = await fetch(url, { headers: kieHeaders() });
       const txt = await r.text();
       let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
-      const status = normalizeStatus(data);
-      if (status === 'success') return { ok:true, data, status };
-      if (status === 'failed' || status === 'error') return { ok:false, status };
+
+      if (normalizeStatus(data) === 'success') {
+        sawSuccess = true;
+        const imgs = firstImageUrls(data, 4);
+        for (const u of imgs) if (!merged.includes(u)) merged.push(u);
+        if (merged.length >= 4) break; // got all 4, stop early
+      }
+      // do not early-return on pending/failed; try other endpoints
     } catch {}
   }
-  return { ok:false, status:'pending' };
+
+  if (sawSuccess && merged.length) {
+    // Return a data shape that downstream understands (contains images array)
+    return { ok: true, status: 'success', data: { images: merged } };
+  }
+  return { ok: false, status: 'pending' };
 }
 
 function normalizeStatus(d){
