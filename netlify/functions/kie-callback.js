@@ -1,22 +1,29 @@
 // netlify/functions/kie-callback.js
-// Inserts up to 4 image rows (one per URL) for MidJourney results.
-// IMPORTANT CHANGE: even if the webhook contains 1 URL, we still verify via KIE
-// (/api/v1/mj/* and /api/v1/jobs/*) to collect the full set of images.
+// Surgical fix: ALWAYS gather up to 4 MidJourney image URLs and insert them.
+// - Accepts GET/POST webhooks (no interface change)
+// - Resolves uid/run_id from query/body; resolves taskId & uid from Supabase if missing
+// - Verifies via /api/v1/mj/* (and /jobs/* as fallback) to retrieve ALL images
+// - Inserts ALL (1..4) urls into nb_results (same user_id + run_id)
+// - Updates user_generations (first url) like before
+//
+// Do not modify other files/routes. Env vars required:
+// SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, KIE_API_KEY, (optional) KIE_BASE_URL
 
 const SUPABASE_URL  = process.env.SUPABASE_URL;
-const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY; // service role key (NOT anon)
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
 const UG_URL        = `${SUPABASE_URL}/rest/v1/user_generations`;
 
-const KIE_BASE = process.env.KIE_BASE_URL || 'https://api.kie.ai';
+const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,''); // no trailing slash
 const KIE_KEY  = process.env.KIE_API_KEY;
 
 const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
-  if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET')
+  if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') {
     return { statusCode: 405, headers: cors(), body: 'Use POST or GET' };
+  }
 
   try {
     const qs = event.queryStringParameters || {};
@@ -27,9 +34,11 @@ exports.handler = async (event) => {
     if (event.isBase64Encoded) bodyRaw = Buffer.from(bodyRaw, 'base64').toString('utf8');
 
     let data = null;
+    // JSON
     if (event.httpMethod === 'POST' && ctype.includes('application/json')) {
       try { data = JSON.parse(bodyRaw); } catch {}
     }
+    // Form / text
     if (!data && event.httpMethod === 'POST' && (ctype.includes('application/x-www-form-urlencoded') || ctype.includes('text/plain'))) {
       data = parseFormLike(bodyRaw);
       for (const k of ['data','result','payload']) {
@@ -38,38 +47,49 @@ exports.handler = async (event) => {
         }
       }
     }
+    // Fallback raw → JSON
     if (!data && event.httpMethod === 'POST') {
       try { data = JSON.parse(bodyRaw); } catch { data = { raw: bodyRaw }; }
     }
 
+    // Identify user/run/task
     let uid     = qs.uid     || get(data, 'meta.uid')      || get(data, 'metadata.uid')      || null;
-    const run_id= qs.run_id  || get(data, 'meta.run_id')   || get(data, 'metadata.run_id')   || null;
-    const taskId= qs.taskId  || qs.task_id || get(data,'taskId') || get(data,'id') ||
+    let run_id  = qs.run_id  || get(data, 'meta.run_id')   || get(data, 'metadata.run_id')   || null;
+    let taskId  = qs.taskId  || qs.task_id || get(data,'taskId') || get(data,'id') ||
                   get(data,'data.taskId') || get(data,'result.taskId') || null;
 
-    // Fallback uid via user_generations placeholder
-    if (!uid && (run_id || taskId)) {
+    // Fallbacks from Supabase (ensure we can verify and write rows visible to user)
+    // 1) If uid missing, try to look it up by run_id/taskId in user_generations
+    if ((!uid) && (run_id || taskId)) {
       try {
-        const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-        // Try by run_id first
-        let q = `${ug}?select=user_id&meta->>run_id=eq.${encodeURIComponent(run_id||'')}&limit=1`;
-        let r = await fetch(q, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
-        let arr = await r.json().catch(()=>[]);
+        const q = run_id
+          ? `${UG_URL}?select=user_id,meta&meta->>run_id=eq.${encodeURIComponent(run_id)}&limit=1`
+          : `${UG_URL}?select=user_id,meta&meta->>task_id=eq.${encodeURIComponent(taskId)}&limit=1`;
+        const r = await fetch(q, { headers: sb() });
+        const arr = await r.json().catch(()=>[]);
         if (Array.isArray(arr) && arr[0]?.user_id) {
           uid = arr[0].user_id;
-        } else if (taskId) {
-          q = `${ug}?select=user_id&meta->>task_id=eq.${encodeURIComponent(taskId)}&limit=1`;
-          r = await fetch(q, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
-          arr = await r.json().catch(()=>[]);
-          if (Array.isArray(arr) && arr[0]?.user_id) uid = arr[0].user_id;
+          if (!taskId) taskId = arr[0]?.meta?.task_id || taskId;
+          if (!run_id) run_id = arr[0]?.meta?.run_id || run_id;
+        }
+      } catch {}
+    }
+    // 2) If taskId missing but run_id present, try to fetch from user_generations
+    if ((!taskId) && run_id) {
+      try {
+        const q = `${UG_URL}?select=meta&meta->>run_id=eq.${encodeURIComponent(run_id)}&limit=1`;
+        const r = await fetch(q, { headers: sb() });
+        const arr = await r.json().catch(()=>[]);
+        if (Array.isArray(arr) && arr[0]?.meta?.task_id) {
+          taskId = arr[0].meta.task_id;
         }
       } catch {}
     }
 
-    // 1) Collect from webhook body (maybe 0 or 1 or 4)
+    // Collect URLs from webhook body
     let urls = pickResultUrls(data, 4);
 
-    // 2) ALWAYS verify via KIE if we have a taskId (to try to get the full 4)
+    // ALWAYS verify via KIE when we have a taskId, to get all 4
     if (taskId && KIE_KEY) {
       try {
         const verified = await fetchMJorJobsAll(taskId, 4);
@@ -80,29 +100,32 @@ exports.handler = async (event) => {
       } catch {}
     }
 
-    // Filter to allowed final URLs
+    // Filter allowed, cap 4
     const finalUrls = urls.filter(isAllowedFinal).slice(0,4);
     if (!finalUrls.length) {
-      return reply(200, { ok:true, saved:false, note:'no allowed final image_url; not inserting', debug:{ taskId: !!taskId, gotFromWebhook: urls.length } });
+      return reply(200, { ok:true, saved:false, note:'no allowed final image_url; not inserting' });
     }
 
-    // Update user_generations placeholder (first URL + done)
+    // Update user_generations (store first url + done)
     try {
-      if (UG_URL && SERVICE_KEY && uid) {
-        const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id || '')}`;
+      if (UG_URL && SERVICE_KEY && (uid || run_id)) {
+        // try patch existing by (user_id, run_id); else insert
+        const q = (uid && run_id)
+          ? `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`
+          : `?meta->>run_id=eq.${encodeURIComponent(run_id||'')}`;
         const bodyJson = { result_url: finalUrls[0], provider: 'MidJourney', kind: 'image', meta: { run_id, task_id: taskId, status: 'done' } };
-        const chk = await fetch(UG_URL + q + '&select=id', { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
-        const arr = await chk.json();
-        const hasRow = Array.isArray(arr) && arr.length > 0;
+        const chk = await fetch(UG_URL + q + '&select=id', { headers: sb() });
+        let hasRow = false;
+        try { const arr = await chk.json(); hasRow = Array.isArray(arr) && arr.length > 0; } catch {}
         await fetch(UG_URL + (hasRow ? q : ''), {
           method: hasRow ? 'PATCH' : 'POST',
-          headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
           body: JSON.stringify(hasRow ? bodyJson : { user_id: uid, ...bodyJson })
         });
       }
-    } catch (e) { console.warn('[callback] usage upsert failed', e); }
+    } catch {}
 
-    // Insert ALL images (1..4)
+    // Insert ALL image rows (merge-duplicates avoids dup rows)
     const rows = finalUrls.map(u => ({
       user_id: uid || '00000000-0000-0000-0000-000000000000',
       run_id:  run_id || null,
@@ -112,12 +135,7 @@ exports.handler = async (event) => {
 
     const resp = await fetch(TABLE_URL, {
       method: 'POST',
-      headers: {
-        'apikey': SERVICE_KEY,
-        'Authorization': `Bearer ${SERVICE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates,return=representation'
-      },
+      headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=representation' },
       body: JSON.stringify(rows)
     });
 
@@ -132,11 +150,11 @@ exports.handler = async (event) => {
 
 async function fetchMJorJobsAll(id, limit=4){
   const endpoints = [
-    `/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(id)}`,
-    `/api/v1/jobs/result?taskId=${encodeURIComponent(id)}`,
     `/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(id)}`,
     `/api/v1/mj/result?taskId=${encodeURIComponent(id)}`,
-    `/api/v1/mj/getTask?taskId=${encodeURIComponent(id)}`
+    `/api/v1/mj/getTask?taskId=${encodeURIComponent(id)}`,
+    `/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(id)}`,
+    `/api/v1/jobs/result?taskId=${encodeURIComponent(id)}`
   ];
   for (const path of endpoints){
     try{
@@ -151,6 +169,8 @@ async function fetchMJorJobsAll(id, limit=4){
   }
   return [];
 }
+
+function sb(){ return { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }; }
 
 function reply(statusCode, body) {
   return { statusCode, headers: { ...cors(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
