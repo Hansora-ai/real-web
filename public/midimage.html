@@ -270,6 +270,7 @@ function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text
 let __done=false; let channel=null;
 
 function onResult(url){
+  try { if (typeof urls === 'undefined') window.urls = new Set(urls); } catch {}
   if (!url) return;
   // Dedup
   urls.add(url);
@@ -305,7 +306,7 @@ function onResult(url){
   // Hide the single download link; we render per-image
   downloadLink.classList.add('hidden');
 
-  showStatus('✅ Done.','text-emerald-300');
+  if (urls.size >= 4) { __done = true; showStatus('✅ Done.','text-emerald-300'); }
 }
 
 
@@ -396,13 +397,33 @@ async function backfillRow(uid, rid, taskId, url){
 }
 
 // Option A: poll nb-check (does NOT rely on webhook)
+
 async function nbCheckPoll(taskId, uid, rid){
   if(!taskId) return;
   const start = Date.now();
-  while(!__done && Date.now() - start < 180000){ // up to 3 min
+  while(!__done && Date.now() - start < 180000){
     try{
       const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId)+'&run_id='+encodeURIComponent(rid), {
         headers: { 'X-USER-ID': uid }
+      });
+      let j; try { j = await r.json(); } catch { const txt = await r.text(); try { j = JSON.parse(txt); } catch { j = { raw: txt }; } }
+      const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
+      if(['success','succeeded','completed','done'].includes(status)){
+        const arr = Array.isArray(j.images) ? j.images : [];
+        arr.slice(0,4).forEach(u => onResult(u));
+        try {
+          if (arr[0]) await backfillRow(uid, rid, taskId, arr[0]);
+        } catch {}
+        if (urls.size >= 4) { __done = true; showStatus('✅ Done.','text-emerald-300'); }
+        break;
+      }
+      if(['failed','error'].includes(status)){
+        showStatus('❌ Generation failed.','text-rose-300'); break;
+      }
+    }catch{}
+    await new Promise(r=>setTimeout(r,1500));
+  }
+}
       });
 
       let j;
@@ -501,21 +522,21 @@ window.__run=async function(){
     nbCheckPoll(taskId, uid, rid);
 
     // fallback: poll table directly in case realtime is blocked
-    const started = Date.now();
-    while (!__done && Date.now() - started < 120000) { // up to 120s
-      await new Promise(r => setTimeout(r, 1500));
-      const { data: row } = await supabase
-        .from('nb_results')
-        .select('image_url')
-        .eq('user_id', uid)
-        .eq('run_id', rid)
-        .limit(1)
-        .maybeSingle();
-
-      const url = row?.image_url || null;
-      if (url) { onResult(url); break; }
-    }
-
+const started = Date.now();
+while (!__done && Date.now() - started < 120000) {
+  await new Promise(r => setTimeout(r, 1500));
+  try{
+    const { data: rows } = await supabase
+      .from('nb_results')
+      .select('image_url')
+      .eq('user_id', uid)
+      .eq('run_id', rid)
+      .order('created_at', { ascending: true })
+      .limit(4);
+    (rows || []).forEach(r => onResult(r.image_url));
+    if (urls.size >= 4) { __done = true; showStatus('✅ Done.','text-emerald-300'); break; }
+  }catch{}
+}
     if (!__done) {
       showStatus('Still processing… you can wait or try again.','text-yellow-300');
     }
