@@ -1,13 +1,11 @@
 // netlify/functions/kie-callback.js
-// Surgical fix: ALWAYS gather up to 4 MidJourney image URLs and insert them.
-// - Accepts GET/POST webhooks (no interface change)
-// - Resolves uid/run_id from query/body; resolves taskId & uid from Supabase if missing
-// - Verifies via /api/v1/mj/* (and /jobs/* as fallback) to retrieve ALL images
-// - Inserts ALL (1..4) urls into nb_results (same user_id + run_id)
-// - Updates user_generations (first url) like before
+// FINAL drop-in: always inserts up to 4 MidJourney image URLs.
+// - Verifies via KIE when taskId is known
+// - If verification/webhook only yields one URL ending with _0_0, deduce _0_1/_0_2/_0_3
+// - Inserts ALL urls into nb_results with merge-duplicates
+// - Updates user_generations with the first URL
 //
-// Do not modify other files/routes. Env vars required:
-// SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, KIE_API_KEY, (optional) KIE_BASE_URL
+// Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, KIE_API_KEY, (optional) KIE_BASE_URL
 
 const SUPABASE_URL  = process.env.SUPABASE_URL;
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -59,57 +57,48 @@ exports.handler = async (event) => {
                   get(data,'data.taskId') || get(data,'result.taskId') || null;
 
     // Fallbacks from Supabase (ensure we can verify and write rows visible to user)
-    // 1) If uid missing, try to look it up by run_id/taskId in user_generations
-    if ((!uid) && (run_id || taskId)) {
+    if ((!uid || !taskId) && (run_id || taskId)) {
       try {
         const q = run_id
           ? `${UG_URL}?select=user_id,meta&meta->>run_id=eq.${encodeURIComponent(run_id)}&limit=1`
           : `${UG_URL}?select=user_id,meta&meta->>task_id=eq.${encodeURIComponent(taskId)}&limit=1`;
         const r = await fetch(q, { headers: sb() });
         const arr = await r.json().catch(()=>[]);
-        if (Array.isArray(arr) && arr[0]?.user_id) {
-          uid = arr[0].user_id;
-          if (!taskId) taskId = arr[0]?.meta?.task_id || taskId;
-          if (!run_id) run_id = arr[0]?.meta?.run_id || run_id;
-        }
-      } catch {}
-    }
-    // 2) If taskId missing but run_id present, try to fetch from user_generations
-    if ((!taskId) && run_id) {
-      try {
-        const q = `${UG_URL}?select=meta&meta->>run_id=eq.${encodeURIComponent(run_id)}&limit=1`;
-        const r = await fetch(q, { headers: sb() });
-        const arr = await r.json().catch(()=>[]);
-        if (Array.isArray(arr) && arr[0]?.meta?.task_id) {
-          taskId = arr[0].meta.task_id;
+        if (Array.isArray(arr) && arr[0]) {
+          if (!uid && arr[0].user_id) uid = arr[0].user_id;
+          if (!taskId && arr[0]?.meta?.task_id) taskId = arr[0].meta.task_id;
+          if (!run_id && arr[0]?.meta?.run_id) run_id = arr[0].meta.run_id;
         }
       } catch {}
     }
 
-    // Collect URLs from webhook body
+    // 1) Collect URLs from webhook body
     let urls = pickResultUrls(data, 4);
 
-    // ALWAYS verify via KIE when we have a taskId, to get all 4
+    // 2) Verify via KIE to get full set when taskId is known
     if (taskId && KIE_KEY) {
       try {
         const verified = await fetchMJorJobsAll(taskId, 4);
-        if (verified.length) {
-          const merged = new Set([...urls, ...verified]);
-          urls = Array.from(merged).slice(0,4);
-        }
+        if (verified.length) urls = Array.from(new Set([...urls, ...verified])).slice(0,4);
       } catch {}
     }
 
-    // Filter allowed, cap 4
-    const finalUrls = urls.filter(isAllowedFinal).slice(0,4);
+    // 3) Filter allowed
+    let finalUrls = urls.filter(isAllowedFinal).slice(0,4);
+
+    // 4) Fallback: if only one allowed URL and it ends with _0_0, deduce _1/_2/_3
+    if (finalUrls.length === 1) {
+      const derived = deduceMJ4(finalUrls[0]);
+      if (derived.length > 1) finalUrls = derived;
+    }
+
     if (!finalUrls.length) {
       return reply(200, { ok:true, saved:false, note:'no allowed final image_url; not inserting' });
     }
 
-    // Update user_generations (store first url + done)
+    // Update user_generations with the first URL
     try {
       if (UG_URL && SERVICE_KEY && (uid || run_id)) {
-        // try patch existing by (user_id, run_id); else insert
         const q = (uid && run_id)
           ? `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`
           : `?meta->>run_id=eq.${encodeURIComponent(run_id||'')}`;
@@ -135,11 +124,11 @@ exports.handler = async (event) => {
 
     const resp = await fetch(TABLE_URL, {
       method: 'POST',
-      headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=representation' },
+      headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify(rows)
     });
 
-    return reply(200, { ok: resp.ok, saved:true, count: rows.length });
+    return reply(200, { ok: resp.ok, saved:true, count: rows.length, urls: finalUrls });
 
   } catch (e) {
     return reply(200, { ok:false, error:String(e) });
@@ -168,6 +157,14 @@ async function fetchMJorJobsAll(id, limit=4){
     }catch{}
   }
   return [];
+}
+
+function deduceMJ4(u){
+  if (typeof u !== 'string') return [u].filter(Boolean);
+  // ..._0_0.jpeg|png|webp → derive siblings
+  const m = u.match(/^(.*_0_)(0)(\.(?:jpe?g|png|webp))$/i);
+  if (m) return [0,1,2,3].map(i => `${m[1]}${i}${m[3]}`);
+  return [u]; // fallback
 }
 
 function sb(){ return { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }; }
