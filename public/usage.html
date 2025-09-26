@@ -302,5 +302,26 @@ function renderRows(rows){
 }
 
 </script>
+
+<script>
+// Redirect login buttons to homepage login (like MidJourney page). Nothing else changed.
+(function(){
+  var a = document.getElementById('btnLoginNav');
+  var g = document.getElementById('btnGetStarted');
+  function overrideLink(el){
+    if(!el) return;
+    el.setAttribute('href','index.html#login');
+    // Capture-phase handler to cancel any previously attached modal openers
+    el.addEventListener('click', function(e){
+      // allow default navigation, just stop other JS handlers
+      e.stopImmediatePropagation();
+      // Do not preventDefault: anchor will navigate to index.html#login
+    }, true);
+  }
+  overrideLink(a);
+  overrideLink(g);
+})();
+</script>
+
 </body>
 </html>
