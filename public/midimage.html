@@ -277,6 +277,14 @@ function onResult(url){
   // Render gallery (up to 4)
   const list = Array.from(urls).slice(0,4);
   resultBox.innerHTML = '';
+// Allow the results area to expand for 2 rows with footers
+resultBox.classList.remove('aspect-square','overflow-hidden');
+resultBox.style.height = 'auto';
+resultBox.style.minHeight = '0px';
+resultBox.style.overflow = 'visible';
+const cardWrap = resultBox.closest('.glass');
+if (cardWrap) { cardWrap.style.overflow = 'visible'; }
+
 
   const grid = document.createElement('div');
   grid.className = 'grid grid-cols-2 gap-3 w-full';
