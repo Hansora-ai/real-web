@@ -1,6 +1,5 @@
-
-// netlify/functions/nb-check.js
-// Backward‑compatible: returns { ok, status, image_url } AND, when possible, { images: [...] } (up to 4).
+// netlify/functions/nb-check.js (MJ-aware polling)
+// Poll both /jobs/* and /mj/* result endpoints and backfill nb_results on success.
 
 const KIE_BASE = process.env.KIE_BASE_URL || 'https://api.kie.ai';
 const KIE_KEY  = process.env.KIE_API_KEY;
@@ -39,24 +38,22 @@ exports.handler = async (event) => {
         const r = await fetch(u, { headers: kieHeaders() });
         const txt = await r.text();
         let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
-        last = { url: u, status: r.status, ok: r.ok };
+        last = { url: u, status: r.status, ok: r.ok, data };
 
         const status = normalizeStatus(data);
         if (status === 'success') {
-          const all = firstImageUrls(data, 4);
-          if (all.length) {
-            // backfill at least one row so realtime fires
-            backfillNbResults({ uid, run_id, taskId, image_url: all[0] }).catch(()=>{});
-            return json(200, { ok:true, status, image_url: all[0], images: all });
+          const url = firstImageUrl(data);
+          if (url && isAllowed(url)) {
+            backfillNbResults({ uid, run_id, taskId, image_url: url }).catch(()=>{});
+            return json(200, { ok:true, status, url, image_url: url });
           }
-          return json(200, { ok:true, status, image_url: null, images: [] });
         } else if (status === 'failed' || status === 'error') {
           return json(200, { ok:false, status });
         }
       } catch (e) {
         last = { url: u, error: String(e) };
       }
-      await sleep(250);
+      await sleep(300);
     }
     return json(200, { ok:false, status:'pending', last });
 
@@ -86,40 +83,28 @@ function normalizeStatus(d){
   if (['failed','error'].includes(s)) return 'failed';
   return 'pending';
 }
-function firstImageUrls(obj, limit=4){
+function firstImageUrl(obj){
   // Prefer typical shapes, else deep scan arrays too
-  let acc = [];
   const cand = obj?.data?.result?.images || obj?.result?.images || obj?.data?.images || obj?.images;
-  if (Array.isArray(cand)) acc = acc.concat(cand);
-
-  // Deep scan fallbacks
+  if (Array.isArray(cand)) {
+    for (const it of cand) {
+      if (typeof it === 'string' && isUrl(it)) return it;
+      if (it && typeof it === 'object' && isUrl(it.url)) return it.url;
+    }
+  }
+  let found = null;
   (function walk(x){
-    if (!x) return;
+    if (found || !x) return;
     if (typeof x === 'string'){
       const m = x.match(/https?:\/\/[^\s"']+/i);
-      if (m) acc.push(m[0]);
+      if (m && isUrl(m[0])) { found = m[0]; return; }
     } else if (Array.isArray(x)) {
       for (const v of x) walk(v);
     } else if (typeof x === 'object') {
       for (const v of Object.values(x)) walk(v);
     }
   })(obj);
-
-  // Dedup, filter, cap
-  const seen = new Set();
-  const out = [];
-  for (const u of acc){
-    if (typeof u === 'string' && isAllowed(u) && !seen.has(u)){
-      seen.add(u);
-      out.push(u);
-      if (out.length >= limit) break;
-    } else if (u && typeof u === 'object' && isAllowed(u.url) && !seen.has(u.url)){
-      seen.add(u.url);
-      out.push(u.url);
-      if (out.length >= limit) break;
-    }
-  }
-  return out;
+  return found;
 }
 async function backfillNbResults({ uid, run_id, taskId, image_url }){
   if (!image_url || !SUPABASE_URL || !SERVICE_KEY) return;
