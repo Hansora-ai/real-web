@@ -268,46 +268,49 @@ function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text
 
 // Guarded renderer
 let __done=false; let channel=null;
+
 function onResult(url){
-  if(__done || !url) return;
-  __done = true;
-  const img=new Image();
-  img.onload=()=>{
-    resultBox.innerHTML='';
-    img.className='w-full h-full object-contain';
-    resultBox.appendChild(img);
-        const __name = (url.split('/').pop()||'generation');
-    downloadLink.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(url)+'&name='+encodeURIComponent(__name);
-    downloadLink.setAttribute('download', __name);
-    downloadLink.classList.remove('hidden');
-    downloadLink.textContent='Download';
+  if (!url) return;
+  // Dedup
+  urls.add(url);
 
-    showStatus('✅ Done.','text-emerald-300');
-  };
-  
-  img.src=url;
-  // === Usage log: save to Supabase (non-blocking) ===
-  try {
-    (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData?.user;
-      if (user && url) {
-        await supabase.from('user_generations').insert({
-          user_id: user.id,
-          provider: 'MidJourney',
-          kind: 'image',
-          prompt: (typeof promptEl !== 'undefined' && promptEl?.value) ? promptEl.value : null,
-          result_url: url,
-          meta: { run: 'nano-banana' }
-        });
-      }
-    })();
-  } catch (e) { console.warn('usage log failed', e); }
+  // Render gallery (up to 4)
+  const list = Array.from(urls).slice(0,4);
+  resultBox.innerHTML = '';
 
-  try{ channel?.unsubscribe?.(); }catch{}
+  const grid = document.createElement('div');
+  grid.className = 'grid grid-cols-2 gap-3 w-full';
+  resultBox.appendChild(grid);
+
+  for (const u of list){
+    const wrap = document.createElement('div');
+    wrap.className = 'relative rounded-lg overflow-hidden border border-white/10 bg-black/20';
+
+    const img = new Image();
+    img.src = u;
+    img.className = 'w-full h-full object-cover';
+    wrap.appendChild(img);
+
+    const name = (u.split('/').pop()||'generation');
+    const a = document.createElement('a');
+    a.href = '/.netlify/functions/download-proxy?url='+encodeURIComponent(u)+'&name='+encodeURIComponent(name);
+    a.setAttribute('download', name);
+    a.textContent = 'Download';
+    a.className = 'absolute bottom-2 right-2 rounded-md btn px-3 py-1 text-xs bg-white/10 backdrop-blur border-white/20';
+    wrap.appendChild(a);
+
+    grid.appendChild(wrap);
+  }
+
+  // Hide the single download link; we render per-image
+  downloadLink.classList.add('hidden');
+
+  showStatus('✅ Done.','text-emerald-300');
 }
 
+
 // Credits + URL extraction helpers
+
 async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 0.5)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
 
 async function tryExtractImageUrl(o){
