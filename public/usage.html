@@ -4,7 +4,45 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Usage — HANSORA AI</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com">
+// Minimal auth wiring for Usage modal
+function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); document.getElementById('authMsg').textContent=''; }
+function closeAuth(){ document.getElementById('authModal')?.classList.add('hidden'); document.getElementById('authMsg').textContent=''; }
+function setAuthMode(mode){
+  const $title = document.getElementById('authTitle');
+  const $pass2 = document.getElementById('authPass2');
+  const $bLogin = document.getElementById('btnDoLogin');
+  const $bSignup = document.getElementById('btnDoSignup');
+  if(mode==='signup'){ $title.textContent='Sign up'; $pass2?.classList.remove('hidden'); $bSignup?.classList.add('btn-brand'); $bLogin?.classList.remove('btn-brand'); }
+  else { $title.textContent='Log in'; $pass2?.classList.add('hidden'); $bLogin?.classList.add('btn-brand'); $bSignup?.classList.remove('btn-brand'); }
+}
+document.getElementById('btnLoginNav')?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+document.getElementById('btnGetStarted')?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
+document.getElementById('authClose')?.addEventListener('click', closeAuth);
+document.getElementById('btnDoLogin')?.addEventListener('click', async ()=>{
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPass').value;
+  const m = document.getElementById('authMsg');
+  try{
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if(error){ m.textContent = error.message; return; }
+    m.textContent = 'Logged in'; setTimeout(()=>location.reload(), 300);
+  }catch(e){ m.textContent = String(e||'Login failed'); }
+});
+document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPass').value;
+  const password2 = document.getElementById('authPass2').value;
+  const m = document.getElementById('authMsg');
+  if(password !== password2){ m.textContent='Passwords do not match'; return; }
+  try{
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if(error){ m.textContent = error.message; return; }
+    m.textContent = 'Check your email to confirm';
+  }catch(e){ m.textContent = String(e||'Signup failed'); }
+});
+
+</script>
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
@@ -45,10 +83,7 @@
             <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
               <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
             </button>
-            <div id="navMenu" class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm">
-              <a href="/usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a>
-              <a href="#" id="btnLogout" class="block rounded-lg px-3 py-2 hover:bg-white/5">Log out</a>
-            </div>
+            <div id="navMenu" class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm"><a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a><a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Edit profile</a><a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a><a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a><button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button></div>
           </div>
         </div>
       </div>
@@ -226,5 +261,46 @@
 
     loadUsage();
   </script>
+<script>
+
+// Patched helpers: normalize images for a row (supports meta.images or result_url)
+function _toArrayMaybe(v){
+  if(!v) return [];
+  if(Array.isArray(v)) return v;
+  if(typeof v === 'string'){
+    try { const j = JSON.parse(v); if(Array.isArray(j)) return j; if(j && Array.isArray(j.images)) return j.images; } catch {}
+    const parts = v.split(/\s*,\s*|\s+/).filter(Boolean);
+    if(parts.length) return parts;
+    return [];
+  }
+  if(v && Array.isArray(v.images)) return v.images;
+  return [];
+}
+function renderRows(rows){
+  const el = document.getElementById('usageList');
+  if(!el) return;
+  const out = [];
+  for(const row of rows){
+    const meta = (typeof row.meta === 'string') ? (()=>{ try{return JSON.parse(row.meta)}catch{return {}} })() : (row.meta || {});
+    let imgs = [];
+    if (meta && Array.isArray(meta.images) && meta.images.length) imgs = meta.images.slice(0,4);
+    else if (Array.isArray(row.images)) imgs = row.images.slice(0,4);
+    else if (meta && meta.result && Array.isArray(meta.result.images)) imgs = meta.result.images.slice(0,4);
+    else if (row.result_url) imgs = [row.result_url];
+
+    const group = imgs.map((u,i)=>(
+      `<div class="rounded-xl border border-white/10 overflow-hidden bg-base-bg/60">
+         <img src="${u}" alt="result ${i+1}" class="w-full h-52 object-cover">
+         <div class="p-2 border-t border-white/10 flex justify-end">
+           <a href="${u}" download class="btn text-xs px-3 py-1">Download</a>
+         </div>
+       </div>`
+    )).join('');
+    out.push(`<div class="grid grid-cols-2 gap-3">${group}</div>`);
+  }
+  el.innerHTML = out.join('');
+}
+
+</script>
 </body>
 </html>
