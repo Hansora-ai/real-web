@@ -36,14 +36,12 @@
     renderCredits(prof?.credits ?? 0);
 
     // subscribe to updates
-    supabase.channel('credits_live_' + user.id)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
-        (payload) => { 
-            const u = payload?.new?.image_url;
-            if (u) { urls.add(u); render(Array.from(urls)); }
-        }
-      )
-      .subscribe();
+    /* credits live: keep for credits only; no image rendering */
+supabase.channel('credits_live_' + user.id)
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
+    () => { /* update credits elsewhere; do not touch results */ }
+  )
+  .subscribe();
 
     // patch __run to guard when credits are 0 (without changing its internals)
     const __origRun = window.__run;
@@ -262,7 +260,7 @@ const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
   const urls = new Set();
 
-filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,1).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='block border border-white/10 flex-grow h-24 object-cover rounded-lg w-24';thumbsEl.appendChild(img);});});
+filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,1).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
@@ -277,14 +275,6 @@ function onResult(url){
   // Render gallery (up to 4)
   const list = Array.from(urls).slice(0,4);
   resultBox.innerHTML = '';
-// Allow the results area to expand for 2 rows with footers
-resultBox.classList.remove('aspect-square','overflow-hidden');
-resultBox.style.height = 'auto';
-resultBox.style.minHeight = '0px';
-resultBox.style.overflow = 'visible';
-const cardWrap = resultBox.closest('.glass');
-if (cardWrap) { cardWrap.style.overflow = 'visible'; }
-
 
   const grid = document.createElement('div');
   grid.className = 'grid grid-cols-2 gap-3 w-full';
@@ -292,11 +282,11 @@ if (cardWrap) { cardWrap.style.overflow = 'visible'; }
 
   for (const u of list){
     const wrap = document.createElement('div');
-    wrap.className = 'relative rounded-lg border border-white/10 bg-black/20 flex flex-col';
+    wrap.className = 'relative rounded-lg overflow-hidden border border-white/10 bg-black/20';
 
     const img = new Image();
     img.src = u;
-    img.className = 'w-full h-auto object-cover';
+    img.className = 'w-full h-full object-cover';
     wrap.appendChild(img);
 
     const name = (u.split('/').pop()||'generation');
@@ -317,7 +307,7 @@ grid.appendChild(wrap);
   // Hide the single download link; we render per-image
   downloadLink.classList.add('hidden');
 
-  showStatus('✅ Done.','text-emerald-300');
+  showStatus('✅ Done.','text-emerald-300'); runBtn.disabled=false; runBtn.textContent='Run (cost: 1⚡)';
 }
 
 
@@ -457,7 +447,9 @@ window.__run=async function(){
   if(files.length>1){alert('Select at most 1 image.');return;}
   for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}
 
-  runBtn.disabled=true;runBtn.textContent='Working…';
+  urls = new Set();
+runBtn.disabled=true;runBtn.textContent='Working…';
+resultBox.innerHTML='';
   showStatus('Submitting…','text-zinc-400');
   resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
 
@@ -535,7 +527,7 @@ window.__run=async function(){
         .order('created_at', { ascending: true })
         .limit(4);
       (rows || []).forEach(r => onResult(r.image_url));
-      if (urls.size >= 4) { __done = true; showStatus('✅ Done.','text-emerald-300'); break; }
+      if (urls.size >= 4) { __done = true; showStatus('✅ Done.','text-emerald-300'); runBtn.disabled=false; runBtn.textContent='Run (cost: 1⚡)'; break; }
     }
 
     if (!__done) {
@@ -545,6 +537,7 @@ window.__run=async function(){
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300')
   }finally{
+    try{ if (channel && typeof channel.unsubscribe==='function') channel.unsubscribe(); }catch{}
     runBtn.disabled=false;runBtn.textContent='Run (cost: 1⚡)';
   }
 };
