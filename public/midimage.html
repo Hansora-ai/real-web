@@ -269,13 +269,24 @@ function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text
 // Guarded renderer
 let __done=false; let channel=null;
 function onResult(url){
-  if(!url) return;
-  if (urls.has(url) || urls.size >= 4) return; // cap at 4
-  urls.add(url);
-  render(Array.from(urls));
-  showStatus('✅ Received '+urls.size+' image'+(urls.size>1?'s':'' )+'.','text-emerald-300');
+  if(__done || !url) return;
+  __done = true;
+  const img=new Image();
+  img.onload=()=>{
+    resultBox.innerHTML='';
+    img.className='w-full h-full object-contain';
+    resultBox.appendChild(img);
+        const __name = (url.split('/').pop()||'generation');
+    downloadLink.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(url)+'&name='+encodeURIComponent(__name);
+    downloadLink.setAttribute('download', __name);
+    downloadLink.classList.remove('hidden');
+    downloadLink.textContent='Download';
 
-  // === Usage log (non-blocking) ===
+    showStatus('✅ Done.','text-emerald-300');
+  };
+  
+  img.src=url;
+  // === Usage log: save to Supabase (non-blocking) ===
   try {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
@@ -292,55 +303,41 @@ function onResult(url){
       }
     })();
   } catch (e) { console.warn('usage log failed', e); }
+
+  try{ channel?.unsubscribe?.(); }catch{}
 }
 
-// Render up to 4 images with per-image download links
-function render(list){
-  const arr = Array.isArray(list) ? list.slice(0,4) : [];
-  if (arr.length === 0){
-    resultBox.innerHTML = '<span class="text-xs text-zinc-500">No result yet</span>';
-    return;
-  }
-  const wrap = document.createElement('div');
-  wrap.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3 w-full';
-  for (const u of arr){
-    const card = document.createElement('div');
-    card.className = 'rounded-xl overflow-hidden border border-white/10 bg-base-bg/60';
-    const img = new Image();
-    img.src = u;
-    img.className = 'w-full aspect-square object-cover block';
-    const bar = document.createElement('div');
-    bar.className = 'p-2 flex items-center justify-between text-xs';
-    const name = (u.split('/').pop()||'generation');
-    const a = document.createElement('a');
-    a.href = '/.netlify/functions/download-proxy?url='+encodeURIComponent(u)+'&name='+encodeURIComponent(name);
-    a.setAttribute('download', name);
-    a.className = 'rounded-lg btn px-3 py-1';
-    a.textContent = 'Download';
-    bar.appendChild(document.createElement('span')).textContent = name.slice(0,24);
-    bar.appendChild(a);
-    card.appendChild(img);
-    card.appendChild(bar);
-    wrap.appendChild(card);
-  }
-  resultBox.innerHTML = '';
-  resultBox.appendChild(wrap);
-}
-    // Credits + URL extraction helpers
+// Credits + URL extraction helpers
 async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 0.5)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
 
 async function tryExtractImageUrl(o){
-  // Return the first http(s) URL found anywhere (strings in nested objects/arrays).
   function firstUrl(x){
     if (!x) return null;
     if (typeof x === 'string'){
-      const m = x.match(/https?:\/\/[^\"'\s]+/i);
+      const m = x.match(/https?:\/\/[^"'\s]+/i);
       return m ? m[0] : null;
     }
-    
+    if (Array.isArray(x)){
+      if (typeof x[0] === 'string'){
+        const m = String(x[0]).match(/https?:\/\/[^"'\s]+/i);
+        if (m) return m[0];
+      }
+      for (const v of x){ const u = firstUrl(v); if (u) return u; }
+      return null;
+    }
+    if (typeof x === 'object'){
+      if (x.images && Array.isArray(x.images)){ const u = firstUrl(x.images); if (u) return u; }
+      if (x.result && x.result.images){ const u = firstUrl(x.result.images); if (u) return u; }
+      if (x.data && x.data.result && x.data.result.images){ const u = firstUrl(x.data.result.images); if (u) return u; }
+      for (const v of Object.values(x)){ const u = firstUrl(v); if (u) return u; }
+      return null;
+    }
+    return null;
+  }
+  return firstUrl(o);
+}
 
 async function tryExtractAllImageUrls(o){
-  // Return up to 4 distinct image URLs, scanning typical MJ shapes first.
   function collect(x, out){
     if (!x) return;
     if (typeof x === 'string'){
@@ -353,18 +350,15 @@ async function tryExtractAllImageUrls(o){
       return;
     }
     if (typeof x === 'object'){
-      // Prefer common fields
       if (x.images) collect(x.images, out);
       if (x.result && x.result.images) collect(x.result.images, out);
       if (x.data && x.data.result && x.data.result.images) collect(x.data.result.images, out);
-      // Deep scan
       for (const v of Object.values(x)) collect(v, out);
       return;
     }
   }
   const acc = [];
   collect(o, acc);
-  // Dedup & cap
   const seen = new Set();
   const out = [];
   for (const u of acc){
@@ -372,37 +366,13 @@ async function tryExtractAllImageUrls(o){
       seen.add(u);
       out.push(u);
       if (out.length >= 4) break;
+    } else if (u && typeof u === 'object' && u.url && /^https?:\/\//i.test(u.url) && !seen.has(u.url)){
+      seen.add(u.url);
+      out.push(u.url);
+      if (out.length >= 4) break;
     }
   }
   return out;
-}
-if (Array.isArray(x)){
-      // If array of strings, use the first URL string; otherwise scan elements
-      if (typeof x[0] === 'string'){
-        const m = String(x[0]).match(/https?:\/\/[^\"'\s]+/i);
-        if (m) return m[0];
-      }
-      for (const v of x){ const u = firstUrl(v); if (u) return u; }
-      return null;
-    }
-    if (typeof x === 'object'){
-      // Prefer typical result fields if present
-      if (x.images && Array.isArray(x.images)){
-        const u = firstUrl(x.images); if (u) return u;
-      }
-      if (x.result && x.result.images){
-        const u = firstUrl(x.result.images); if (u) return u;
-      }
-      if (x.data && x.data.result && x.data.result.images){
-        const u = firstUrl(x.data.result.images); if (u) return u;
-      }
-      // Generic deep scan
-      for (const v of Object.values(x)){ const u = firstUrl(v); if (u) return u; }
-      return null;
-    }
-    return null;
-  }
-  return firstUrl(o);
 }
 
 // ADDED: make sure DB gets a row even if webhook is late/blocked
@@ -426,7 +396,7 @@ async function backfillRow(uid, rid, taskId, url){
 async function nbCheckPoll(taskId, uid, rid){
   if(!taskId) return;
   const start = Date.now();
-  while(urls.size < 4 && Date.now() - start < 180000){ // up to 3 min or until 4 images
+  while(!__done && Date.now() - start < 180000){ // up to 3 min
     try{
       const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId)+'&run_id='+encodeURIComponent(rid), {
         headers: { 'X-USER-ID': uid }
@@ -440,15 +410,18 @@ async function nbCheckPoll(taskId, uid, rid){
       }
 
       const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
-      if(['success','succeeded','completed','done'].includes(status)){
+    if(['success','succeeded','completed','done'].includes(status)){
+      if (Array.isArray(j.images) && j.images.length){
+        for (const u of j.images.slice(0,4)) onResult(u);
+      } else {
         const all = await tryExtractAllImageUrls(j);
         if (all && all.length){
           for (const u of all.slice(0,4)) onResult(u);
-          // Ensure there is at least one DB row for realtime/fallback
           await backfillRow(uid, rid, taskId, all[0]).catch(()=>{});
         }
-        break;
       }
+      break;
+    }
       if(['failed','error'].includes(status)){
         showStatus('❌ Generation failed.','text-rose-300');
         break;
@@ -457,6 +430,7 @@ async function nbCheckPoll(taskId, uid, rid){
     await new Promise(r=>setTimeout(r,1500));
   }
 }
+
 // Main run
 window.__run=async function(){
   const {data:authData}=await supabase.auth.getUser();
