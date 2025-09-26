@@ -292,14 +292,18 @@ function onResult(url){
     wrap.appendChild(img);
 
     const name = (u.split('/').pop()||'generation');
-    const a = document.createElement('a');
-    a.href = '/.netlify/functions/download-proxy?url='+encodeURIComponent(u)+'&name='+encodeURIComponent(name);
-    a.setAttribute('download', name);
-    a.textContent = 'Download';
-    a.className = 'absolute bottom-2 right-2 rounded-md btn px-3 py-1 text-xs bg-white/10 backdrop-blur border-white/20';
-    wrap.appendChild(a);
+const footer = document.createElement('div');
+footer.className = 'p-2 border-t border-white/10 bg-white/5 flex justify-end';
 
-    grid.appendChild(wrap);
+const a = document.createElement('a');
+a.href = '/.netlify/functions/download-proxy?url=' + encodeURIComponent(u) + '&name=' + encodeURIComponent(name);
+a.setAttribute('download', name);
+a.textContent = 'Download';
+a.className = 'rounded-md btn px-3 py-1 text-xs';
+
+footer.appendChild(a);
+wrap.appendChild(footer);
+grid.appendChild(wrap);
   }
 
   // Hide the single download link; we render per-image
