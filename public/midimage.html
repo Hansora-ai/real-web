@@ -262,7 +262,7 @@ const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
   const urls = new Set();
 
-filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,1).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
+filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,1).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='block border border-white/10 flex-grow h-24 object-cover rounded-lg w-24';thumbsEl.appendChild(img);});});
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
@@ -284,11 +284,11 @@ function onResult(url){
 
   for (const u of list){
     const wrap = document.createElement('div');
-    wrap.className = 'relative rounded-lg border border-white/10 bg-black/20';
+    wrap.className = 'relative rounded-lg border border-white/10 bg-black/20 flex flex-col';
 
     const img = new Image();
     img.src = u;
-    img.className = 'w-full h-full object-cover';
+    img.className = 'w-full h-auto object-cover';
     wrap.appendChild(img);
 
     const name = (u.split('/').pop()||'generation');
