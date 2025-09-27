@@ -109,6 +109,24 @@ if (imageUrl) {
 
     // Extract taskId robustly from KIE response
     const taskId = extractTaskId(data);
+  // Immediately store taskId into the placeholder meta so downstream tools can re-poll later
+  try {
+    if (UG_URL && SERVICE_KEY && taskId) {
+      const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id`;
+      const chk = await fetch(UG_URL + q, { headers: sb() });
+      const arr = await chk.json().catch(()=>[]);
+      if (Array.isArray(arr) && arr.length) {
+        await fetch(`${UG_URL}?id=eq.${encodeURIComponent(arr[0].id)}`, {
+          method: "PATCH",
+          headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
+          body: JSON.stringify({
+            meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality: "1080p", duration: 5, task_id: taskId }
+          })
+        });
+      }
+    }
+  } catch {}
+
 
     return ok({ submitted: true, run_id, taskId, status: resp.status, data });
 
