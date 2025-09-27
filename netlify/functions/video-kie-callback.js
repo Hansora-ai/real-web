@@ -63,7 +63,7 @@ exports.handler = async (event) => {
     const bodyJson = {
       user_id: uid,
       provider: "runway",
-      type: "video",
+      kind: "video",
       result_url: video_url,
       thumb_url: thumb_url || null,
       meta: { run_id, status: "done" }
