@@ -54,7 +54,7 @@
           .eq('user_id', user.id)
           .maybeSingle();
         const c = prof2?.credits ?? 0;
-        if (c < 4) { console.warn('Not enough credits.'); alert('Not enough credits (need 4).'); /* proceed, server will enforce */ }
+        if (c < 4) { console.warn('Not enough credits.'); alert('Not enough credits (need 4).'); return; }
       }catch{}
       return __origRun ? __origRun() : undefined;
     };
@@ -323,7 +323,7 @@ async function rvCheckPoll(taskId, uid, rid){
       if (j && j.ok && j.video_url){
         showVideo(j.video_url, j.thumb_url || '');
         showStatus('✅ Done.','text-emerald-300');
-        try { const btn=document.getElementById('runBtn'); if(btn){ btn.disabled=false; btn.textContent='Run again (cost: 4⚡)'; } } catch{}
+        try { const btn=document.getElementById('runBtn'); if(btn){ btn.disabled=false; btn.textContent='Run (cost: 4⚡)'; } } catch{}
         return;
       }
     }catch{}
@@ -342,7 +342,7 @@ window.__run = async function(){
   try{
     const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
     const cur = prof?.credits ?? 0;
-    if (cur < 4){ showStatus('Not enough credits (need 4). Attempting…','text-amber-300'); }
+    if (cur < 4){ showStatus('Not enough credits (need 4).','text-rose-300'); runBtn.disabled = false; runBtn.textContent='Run (cost: 4⚡)'; return; }
   }catch{}
 
   // Validate image (optional, ≤10MB)
