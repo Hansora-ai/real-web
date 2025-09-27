@@ -240,11 +240,12 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
 
       for(const row of data){
         const pretty = new Date(row.created_at).toLocaleString();
-        const isVideo = /(\.mp4|\.webm|\.mov)(\?|$)/i.test(row.result_url || "");
-        const media = row.result_url
+        const url = row.result_url || row.image_url || row.thumb_url || "";
+        const isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(url);
+        const media = url
           ? (isVideo
-             ? `<video src="${row.result_url}" controls class="h-40 w-full object-contain rounded-lg border border-white/10"></video>`
-             : `<img src="${row.result_url}" alt="" class="h-40 w-full object-cover rounded-lg border border-white/10"/>`)
+             ? `<video src="${url}" controls class="h-40 w-full object-contain rounded-lg border border-white/10"></video>`
+             : `<img src="${url}" alt="" class="h-40 w-full object-cover rounded-lg border border-white/10"/>`)
           : '<div class="text-xs text-zinc-400 p-3">No preview</div>';
         const card = document.createElement('article');
         card.className = 'glass rounded-2xl p-3 border border-white/10';
