@@ -87,7 +87,17 @@ exports.handler = async (event) => {
     if (kiePayload.duration === undefined) kiePayload.duration = 5;
     if (kiePayload.quality === undefined)  kiePayload.quality  = "1080p";
 
-    if (imageUrl) { kiePayload.imageUrl = imageUrl; kiePayload.fileUrl = imageUrl; }
+    // Image handling: send imageUrl only when a file is chosen; otherwise send no image fields.
+if (imageUrl) {
+  kiePayload.imageUrl = imageUrl;
+  // do NOT send fileUrl to avoid API confusion
+} else {
+  // remove any empty image fields that might have come from the client
+  delete kiePayload.imageUrl;
+  delete kiePayload.fileUrl;
+  delete kiePayload.image_url;
+  delete kiePayload.frameImage;
+}
 
     // Call KIE
     const resp = await fetch(KIE_URL, {
