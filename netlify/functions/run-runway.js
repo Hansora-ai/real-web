@@ -84,7 +84,10 @@ exports.handler = async (event) => {
       aspectRatio,
       callBackUrl,
     };
-    if (imageUrl) kiePayload.fileUrl = imageUrl;
+    if (kiePayload.duration === undefined) kiePayload.duration = 5;
+    if (kiePayload.quality === undefined)  kiePayload.quality  = "1080p";
+
+    if (imageUrl) { kiePayload.imageUrl = imageUrl; kiePayload.fileUrl = imageUrl; }
 
     // Call KIE
     const resp = await fetch(KIE_URL, {
