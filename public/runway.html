@@ -350,6 +350,20 @@ window.__run = async function(){
   const files=[...imageEl.files].slice(0,1);
   for(const f of files){ if(f.size>10*1024*1024){ alert('File too large: '+f.name); return; } }
 
+  // ---- Strict validation (do NOT trigger KIE when missing required input) ----
+  const hasImage = files.length === 1;
+  const _prompt = (promptEl.value || '').trim();
+  if (!hasImage && !_prompt){
+    showStatus('Please enter a prompt (or upload an image with a prompt).', 'text-rose-300');
+    runBtn.disabled = false; runBtn.textContent = 'Run (cost: 4⚡)';
+    return;
+  }
+  if (hasImage && !_prompt){
+    showStatus('A prompt is required when uploading an image.', 'text-rose-300');
+    runBtn.disabled = false; runBtn.textContent = 'Run (cost: 4⚡)';
+    return;
+  }
+  // ---------------------------------------------------------------------------
   window.__RUNWAY_BUSY = true; runBtn.disabled=true; runBtn.textContent='Working…';
   showStatus('Submitting…','text-zinc-400');
   resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
@@ -376,7 +390,7 @@ window.__run = async function(){
       body: JSON.stringify({
 uid,
 
-        prompt: (promptEl.value || '').trim() || '.',
+        prompt: _prompt,
         imageUrl,
         aspectRatio
       })
