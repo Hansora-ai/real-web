@@ -282,24 +282,6 @@ function onResult(url){
   };
   
   img.src=url;
-  // === Usage log: save to Supabase (non-blocking) ===
-  try {
-    (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData?.user;
-      if (user && url) {
-        await supabase.from('user_generations').insert({
-          user_id: user.id,
-          provider: 'Nano Banana',
-          kind: 'image',
-          prompt: (typeof promptEl !== 'undefined' && promptEl?.value) ? promptEl.value : null,
-          result_url: url,
-          meta: { run: 'nano-banana' }
-        });
-      }
-    })();
-  } catch (e) { console.warn('usage log failed', e); }
-
   try{ channel?.unsubscribe?.(); }catch{}
 }
 
