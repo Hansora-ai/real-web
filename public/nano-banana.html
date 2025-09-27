@@ -376,7 +376,18 @@ window.__run=async function(){
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
-  __done=false;
+  
+  // HARD CREDIT CHECK (surgical): prevent run if credits insufficient
+  try{
+    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
+    const cur = prof?.credits ?? 0;
+    if (cur < 0.5) {
+      showStatus('Not enough credits (need 0.5).','text-rose-300');
+      runBtn.disabled = false; runBtn.textContent = "Run (cost: 0.5⚡)";
+      return;
+    }
+  }catch(_){ /* ignore, but don't proceed if unknown? proceed cautiously */ }
+__done=false;
   const files=[...filesEl.files];
   if(!files.length){alert('Choose at least one image.');return;}
   if(files.length>4){alert('Max 4 images.');return;}
