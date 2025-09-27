@@ -9,6 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
+window.__RUNWAY_BUSY = false;
+
 // === Live credits (Supabase Realtime) + pre-run check (adapted for 4⚡) ===
 (async function HANSORA_LIVE_CREDITS(){
   try{
@@ -18,7 +20,7 @@
       if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
       if (runBtn) {
         const ok = true;
-        runBtn.disabled = false;
+        if (!window.__RUNWAY_BUSY) runBtn.disabled = false;
         runBtn.classList.toggle('opacity-50', !ok);
         runBtn.classList.toggle('cursor-not-allowed', !ok);
       }
@@ -54,11 +56,7 @@
           .eq('user_id', user.id)
           .maybeSingle();
         const c = prof2?.credits ?? 0;
-        if (c < 4) {
-          console.warn('Not enough credits.');
-          alert('Not enough credits (need 4).'); 
-          return;
-        }
+        if (c < 4) { console.warn('Not enough credits.'); alert('Not enough credits (need 4).'); return; }
       }catch{}
       return __origRun ? __origRun() : undefined;
     };
@@ -81,12 +79,10 @@
           const c = prof?.credits ?? 0;
           const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
           const runBtn = document.getElementById('runBtn'); if (runBtn){
-            const disabled = (window.__RUNWAY_BUSY === true) || (typeof c === 'number' ? c < 4 : false);
-            runBtn.disabled = disabled;
-            runBtn.classList.toggle('opacity-50', disabled);
-            runBtn.classList.toggle('cursor-not-allowed', disabled);
-            if (!disabled && !window.__RUNWAY_BUSY) { try { runBtn.textContent = 'Run (cost: 4⚡)'; } catch {} }
-            }
+            if (!window.__RUNWAY_BUSY) { const zero = false; runBtn.disabled = zero; }
+            runBtn.classList.toggle('opacity-50', zero);
+            runBtn.classList.toggle('cursor-not-allowed', zero);
+          }
           return c;
         }catch(e){ console.warn('refreshCredits failed', e); return null; }
       }
@@ -327,13 +323,15 @@ async function rvCheckPoll(taskId, uid, rid){
       const j = await r.json().catch(()=>({}));
       if (j && j.ok && j.video_url){
         showVideo(j.video_url, j.thumb_url || '');
-        showStatus('✅ Done.','text-emerald-300');
+        showStatus('✅ Done.','text-emerald-300'); window.__RUNWAY_BUSY = false;
+        try { const btn=document.getElementById('runBtn'); if(btn){ btn.disabled=false; btn.textContent='Run (cost: 4⚡)'; } } catch{}
         return;
       }
     }catch{}
     await new Promise(r=>setTimeout(r,1500));
   }
-  showStatus('Still processing… try refreshing later','text-yellow-300');
+  showStatus('Still processing… try refreshing later','text-yellow-300'); window.__RUNWAY_BUSY = false; try{ const btn=document.getElementById('runBtn'); if(btn){ btn.disabled=false; btn.textContent='Run (cost: 4⚡)'; } }catch{}
+  try{ const btn=document.getElementById('runBtn'); if(btn){ btn.disabled=false; btn.textContent='Run (cost: 4⚡)'; } }catch{}
 }
 
 // Main run
@@ -345,14 +343,14 @@ window.__run = async function(){
   try{
     const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
     const cur = prof?.credits ?? 0;
-    if (cur < 4){ showStatus('Not enough credits (need 4).','text-rose-300'); return; }
+    if (cur < 4){ showStatus('Not enough credits (need 4).','text-rose-300'); runBtn.disabled = false; runBtn.textContent='Run (cost: 4⚡)'; return; }
   }catch{}
 
   // Validate image (optional, ≤10MB)
   const files=[...imageEl.files].slice(0,1);
   for(const f of files){ if(f.size>10*1024*1024){ alert('File too large: '+f.name); return; } }
 
-  runBtn.disabled=true; runBtn.textContent='Working…';
+  window.__RUNWAY_BUSY = true; runBtn.disabled=true; runBtn.textContent='Working…';
   showStatus('Submitting…','text-zinc-400');
   resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
 
@@ -400,9 +398,9 @@ window.__run = async function(){
     if (taskId && run_id) rvCheckPoll(taskId, uid, run_id);
 
   }catch(e){
-    showStatus('❌ '+(e.message||String(e)),'text-rose-300');
+    showStatus('❌ '+(e.message||String(e)),'text-rose-300'); window.__RUNWAY_BUSY = false;
   }finally{
-    runBtn.disabled=false; runBtn.textContent='Run (cost: 4⚡)';
+    if (!window.__RUNWAY_BUSY) { runBtn.disabled=false; runBtn.textContent='Run (cost: 4⚡)'; }
   }
 };
 </script>
