@@ -179,10 +179,11 @@ window.__RUNWAY_BUSY = false;
           <div>
             <label class="text-xs text-zinc-400">Select 0–1 image (jpeg/png/webp, ≤10MB)</label>
             <input id="image" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
+            <div id="ratioHint" class="hidden mt-2 text-xs text-amber-300">Aspect ratio is for <b>text → video</b>. When an image is uploaded, the output follows the image’s aspect ratio.</div>
             <div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div>
           </div>
 
-          <div>
+          <div id="ratioWrap">
             <label class="text-xs text-zinc-400">Video aspect ratio</label>
             <select id="ratio" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
               <option value="3:4" selected>3:4 (default)</option>
@@ -271,6 +272,55 @@ imageEl.addEventListener('change',()=>{
   img.className='block w-full max-h-56 object-contain rounded-lg border border-white/10 bg-black/20';
   thumbsEl.appendChild(img);
 });
+
+// --- Aspect ratio toggle + image delete button ---
+let __lastObjURL = null;
+function showRatioSection(show){
+  const wrap = document.getElementById('ratioWrap');
+  const hint = document.getElementById('ratioHint');
+  if (wrap) wrap.classList.toggle('hidden', !show);
+  if (hint) hint.classList.toggle('hidden', show); // show hint when ratio is hidden
+}
+function clearImageSelection(){
+  try { if (__lastObjURL) { URL.revokeObjectURL(__lastObjURL); __lastObjURL = null; } } catch {}
+  imageEl.value = '';
+  thumbsEl.innerHTML = '';
+  showRatioSection(true);
+}
+
+imageEl.addEventListener('change',()=>{
+  thumbsEl.innerHTML='';
+  try { if (__lastObjURL) { URL.revokeObjectURL(__lastObjURL); __lastObjURL = null; } } catch {}
+
+  const f=imageEl.files[0];
+  if(!f){ showRatioSection(true); return; }
+
+  const u=URL.createObjectURL(f);
+  __lastObjURL = u;
+
+  // preview wrapper with delete "X"
+  const wrap = document.createElement('div');
+  wrap.className = 'relative inline-block';
+
+  const img=new Image();
+  img.src=u;
+  img.className='block w-full max-h-56 object-contain rounded-lg border border-white/10 bg-black/20';
+
+  const del=document.createElement('button');
+  del.type='button';
+  del.className='absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center';
+  del.setAttribute('aria-label','Remove image');
+  del.innerHTML='&times;';
+  del.onclick = clearImageSelection;
+
+  wrap.appendChild(img);
+  wrap.appendChild(del);
+  thumbsEl.appendChild(wrap);
+
+  // Hide ratio, show hint
+  showRatioSection(false);
+});
+
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
