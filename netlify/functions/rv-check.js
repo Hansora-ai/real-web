@@ -64,7 +64,7 @@ async function backfill(uid, run_id, taskId, video_url, thumb_url){
     const body = {
       user_id: uid || '00000000-0000-0000-0000-000000000000',
       provider: 'runway',
-      type: 'video',
+      kind: "video",
       result_url: video_url,
       thumb_url: thumb_url || null,
       meta: { run_id, task_id: taskId, status: 'done' }
