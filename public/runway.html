@@ -8,6 +8,117 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<script>
+// === Live credits (Supabase Realtime) + pre-run check (adapted for 4⚡) ===
+(async function HANSORA_LIVE_CREDITS(){
+  try{
+    const navCreditsEl = document.getElementById('navCredits');
+    const runBtn = document.getElementById('runBtn');
+    function renderCredits(c){
+      if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+      if (runBtn) {
+        const ok = true;
+        runBtn.disabled = false;
+        runBtn.classList.toggle('opacity-50', !ok);
+        runBtn.classList.toggle('cursor-not-allowed', !ok);
+      }
+    }
+
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if(!user) return;
+
+    // initial fetch
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    renderCredits(prof?.credits ?? 0);
+
+    // subscribe to updates (UI refreshed elsewhere)
+    supabase
+      .channel('credits_live_' + user.id)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
+        () => { /* noop: UI refresh handled by wrapper below */ }
+      )
+      .subscribe();
+
+    // patch __run to guard when credits are low (need 4)
+    const __origRun = window.__run;
+    window.__run = async function(){
+      try{
+        const { data: prof2 } = await supabase
+          .from('profiles')
+          .select('credits')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        const c = prof2?.credits ?? 0;
+        if (c < 4) {
+          console.warn('Not enough credits.');
+          alert('Not enough credits (need 4).'); 
+          return;
+        }
+      }catch{}
+      return __origRun ? __origRun() : undefined;
+    };
+  }catch(e){ console.warn('credits live failed', e); }
+})();
+</script>
+
+<script>
+(function(){
+  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  ready(async function(){
+    try{
+      if (typeof supabase === 'undefined' || !supabase.auth) return;
+
+      async function __refreshCredits(){
+        try{
+          const ures = await supabase.auth.getUser();
+          const user = ures?.data?.user; if(!user) return null;
+          const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+          const c = prof?.credits ?? 0;
+          const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
+          const runBtn = document.getElementById('runBtn'); if (runBtn){
+            const zero = false;
+            runBtn.disabled = zero;
+            runBtn.classList.toggle('opacity-50', zero);
+            runBtn.classList.toggle('cursor-not-allowed', zero);
+          }
+          return c;
+        }catch(e){ console.warn('refreshCredits failed', e); return null; }
+      }
+
+      // On load
+      await __refreshCredits();
+
+      // Wrap chargeFourCredits (client debit) to repaint after debit
+      if (typeof window.chargeFourCredits === 'function'){
+        const __origCharge = window.chargeFourCredits;
+        window.chargeFourCredits = async function(){
+          const out = await __origCharge();
+          await __refreshCredits();
+          return out;
+        };
+      }
+
+      // Also poll briefly after Run to catch server-side debit
+      if (typeof window.__run === 'function'){
+        const __origRun = window.__run;
+        window.__run = async function(){
+          const ret = await __origRun();
+          // poll for 15s every 1.5s
+          const id = setInterval(__refreshCredits, 1500);
+          setTimeout(()=>clearInterval(id), 15000);
+          return ret;
+        };
+      }
+    }catch(e){ console.warn('live credits wrapper error', e); }
+  });
+})();
+</script>
+
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
@@ -196,67 +307,7 @@ function showVideo(url, poster){
 }
 
 // Live credits + pre-run guard (need >= 4⚡)
-(async function HANSORA_LIVE_CREDITS(){
-  try{
-    function renderCredits(c){
-      $navCredits.textContent = (c ?? 0) + '⚡';
-      runBtn.disabled = false;
-      runBtn.classList.toggle('opacity-50', false);
-      runBtn.classList.toggle('cursor-not-allowed', false);
-    }
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if(!user) return;
-
-    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-    renderCredits(prof?.credits ?? 0);
-
-    // Realtime: update credits instantly when profile row changes
-    try {
-      supabase
-        .channel('credits_live_' + user.id)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id }, (payload) => {
-          const c = (payload && payload.new && typeof payload.new.credits === 'number') ? payload.new.credits : null;
-          if (c !== null) renderCredits(c);
-        })
-        .subscribe();
-    } catch {}
-
-    // Patch __run to block when < 4 credits
-    const __origRun = window.__run;
-    window.__run = async function(){
-      try{
-        const { data: p2 } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-        const c = p2?.credits ?? 0;
-        if (c < 4) { alert('Not enough credits (need 4).'); return; }
-      }catch{}
-      return __origRun ? __origRun() : undefined;
-    };
-  }catch(e){ console.warn('credits guard failed', e); }
-})();
-
 // Refresh credits after run (if your backend debits)
-(async function creditsAfterRun(){
-  try{
-    if (typeof window.__run !== 'function') return;
-    const __origRun = window.__run;
-    window.__run = async function(){
-      const ret = await __origRun();
-      // poll profile a few times to catch server-side debit
-      for (let i=0;i<14;i++){
-        try{
-          const { data: u } = await supabase.auth.getUser();
-          const user = u?.user; if (!user) break;
-          const { data: p } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-          $navCredits.textContent = (p?.credits ?? 0) + '⚡';
-        }catch{}
-        await new Promise(r=>setTimeout(r,1200));
-      }
-      return ret;
-    };
-  }catch(e){ console.warn('credits repaint hook failed', e); }
-})();
-
 // Helper: deduct 4 credits client‑side (ONLY if your current flow does this client‑side; otherwise remove)
 async function chargeFourCredits(){
   const { data } = await supabase.auth.getUser();
