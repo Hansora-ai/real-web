@@ -99,10 +99,10 @@
       <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
         <h3 class="text-lg font-semibold">Result</h3>
         <p class="text-xs text-zinc-400">Generated video will appear below.</p>
-        <div id="resultBox" class="mt-3 aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
+        <div id="resultBox" class="mt-3  w-full  rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
           <span class="text-xs text-zinc-500">No result yet</span>
         </div>
-        <a id="downloadLink" href="#" class="hidden mt-3 inline-block rounded-xl btn px-4 py-2 text-sm">Download</a>
+        <div class="mt-3 flex items-center gap-3"><button id="playBtn" class="hidden rounded-xl btn px-4 py-2 text-sm">Play</button><a id="downloadLink" href="#" class="hidden rounded-xl btn px-4 py-2 text-sm">Download</a></div>
       </div>
     </div>
   </section>
@@ -167,8 +167,11 @@ imageEl.addEventListener('change',()=>{
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
 function showVideo(url, poster){
+  // reset result box and render video with native controls + visible Play button
+
   resultBox.innerHTML = '';
   const v = document.createElement('video');
+  v.style.objectFit = 'contain';
   v.controls = true;
   if (poster) v.setAttribute('poster', poster);
   v.src = url;
@@ -177,6 +180,19 @@ function showVideo(url, poster){
 
   downloadLink.href = '/.netlify/functions/download-proxy?url=' + encodeURIComponent(url) + '&name=' + encodeURIComponent('runway-video.mp4');
   downloadLink.classList.remove('hidden');
+
+  const playBtn = document.getElementById('playBtn');
+  if (playBtn) {
+    playBtn.classList.remove('hidden');
+    playBtn.textContent = 'Play';
+    playBtn.onclick = () => {
+      try {
+        if (v.paused) { v.play(); playBtn.textContent = 'Pause'; }
+        else { v.pause(); playBtn.textContent = 'Play'; }
+      } catch {}
+    };
+  }
+  window.__lastVideoEl = v;
 }
 
 // Live credits + pre-run guard (need >= 4⚡)
@@ -194,6 +210,17 @@ function showVideo(url, poster){
 
     const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
     renderCredits(prof?.credits ?? 0);
+
+    // Realtime: update credits instantly when profile row changes
+    try {
+      supabase
+        .channel('credits_live_' + user.id)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id }, (payload) => {
+          const c = (payload && payload.new && typeof payload.new.credits === 'number') ? payload.new.credits : null;
+          if (c !== null) renderCredits(c);
+        })
+        .subscribe();
+    } catch {}
 
     // Patch __run to block when < 4 credits
     const __origRun = window.__run;
@@ -216,7 +243,7 @@ function showVideo(url, poster){
     window.__run = async function(){
       const ret = await __origRun();
       // poll profile a few times to catch server-side debit
-      for (let i=0;i<8;i++){
+      for (let i=0;i<14;i++){
         try{
           const { data: u } = await supabase.auth.getUser();
           const user = u?.user; if (!user) break;
