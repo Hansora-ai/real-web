@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA • RUNWAY (Video)</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+                       var(--base-bg); color:#e5e7eb}
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    #navAvatar{background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%25%22 stop-color=%2291c1ff%22/><stop offset=%22100%25%22 stop-color=%225a8cff%22/></linearGradient></defs><circle cx=%2264%22 cy=%2264%22 r=%2264%22 fill=%22url(%23g)%22/><circle cx=%2264%22 cy=%2250%22 r=%2222%22 fill=%22white%22 fill-opacity=%22.9%22/><path d=%22M20 108a44 30 0 0 1 88 0%22 fill=%22white%22 fill-opacity=%22.9%22/></svg>');background-size:cover;background-position:center;}
+  </style>
+
+  <style id="dark-inputs-patch">
+    .input-dark{background:rgba(255,255,255,.05)!important;color:#e5e7eb!important;border:1px solid rgba(255,255,255,.12)!important}
+    .input-dark::placeholder{color:#9ca3af}
+    select.input-dark option{background:#0b0d13;color:#e5e7eb}
+  </style>
+</head>
+<body class="min-h-screen">
+  <!-- Header copied to match MidImage look/feel -->
+  <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+        <div class="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center font-bold">H</div>
+        <span class="font-semibold tracking-wide">HANSORA AI</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-8 text-sm">
+        <a href="index.html#models" class="hover:text-white/90">Models</a>
+        <a href="index.html#templates" class="hover:text-white/90">Templates</a>
+        <a href="index.html#pricing" class="hover:text-white/90">Pricing</a>
+        <a href="index.html#faq" class="hover:text-white/90">FAQ</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="#" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
+        <a id="btnLoginNav" href="index.html#login" class="rounded-xl btn px-3 py-2 text-sm">Log in</a>
+        <a id="btnGetStarted" href="index.html#login" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Get Started</a>
+        <div id="navUser" class="hidden items-center gap-2">
+          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
+          <div class="relative">
+            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
+              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
+            </button>
+            <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden"><a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a><a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a><a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a><button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+    <div class="grid md:grid-cols-2 gap-6 items-start">
+      <!-- Left card: form -->
+      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+        <h1 class="text-2xl font-bold">Runway — Text to Video / Image to Video</h1>
+        <p class="mt-1 text-sm text-zinc-400">Upload 0–1 image and describe your video. <span class="ml-2 inline-flex items-center gap-2"><span class="text-xs text-zinc-300 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">1080p</span><span class="text-xs text-zinc-300 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">5s</span></span></p>
+
+        <div class="mt-4 space-y-3">
+          <div>
+            <label class="text-xs text-zinc-400">Select 0–1 image (jpeg/png/webp, ≤10MB)</label>
+            <input id="image" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
+            <div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div>
+          </div>
+
+          <div>
+            <label class="text-xs text-zinc-400">Video aspect ratio</label>
+            <select id="ratio" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
+              <option value="3:4" selected>3:4 (default)</option>
+              <option value="1:1">1:1</option>
+              <option value="4:3">4:3</option>
+              <option value="16:9">16:9</option>
+              <option value="9:16">9:16</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs text-zinc-400">Prompt</label>
+            <textarea id="prompt" placeholder="Describe your video…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark"></textarea>
+          </div>
+
+          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()" disabled>Run (cost: 4⚡)</button>
+          <div id="status" class="mt-2 text-sm"></div>
+        </div>
+      </div>
+
+      <!-- Right card: result -->
+      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+        <h3 class="text-lg font-semibold">Result</h3>
+        <p class="text-xs text-zinc-400">Generated video will appear below.</p>
+        <div id="resultBox" class="mt-3 aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
+          <span class="text-xs text-zinc-500">No result yet</span>
+        </div>
+        <a id="downloadLink" href="#" class="hidden mt-3 inline-block rounded-xl btn px-4 py-2 text-sm">Download</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="border-t border-base-line/60">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
+      <nav class="flex items-center gap-5">
+        <a href="index.html#terms" class="hover:text-white/80">Terms</a>
+        <a href="index.html#privacy" class="hover:text-white/80">Privacy</a>
+        <a href="index.html#contact" class="hover:text-white/80">Contact</a>
+      </nav>
+    </div>
+  </footer>
+
+<script>
+document.getElementById('y').textContent = new Date().getFullYear();
+
+// Supabase init — matching your MidImage page
+const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Header UI (copied style, minimal logic)
+const $btnLoginNav = document.getElementById('btnLoginNav');
+const $btnGetStarted = document.getElementById('btnGetStarted');
+const $navUser = document.getElementById('navUser');
+const $navCredits = document.getElementById('navCredits');
+const $navAvatar = document.getElementById('navAvatar');
+const $navMenu = document.getElementById('navMenu');
+const $btnLogout = document.getElementById('btnLogout');
+const $navAvatarImg = document.getElementById('navAvatarImg');
+function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
+function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
+$navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
+document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
+$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
+async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}})();
+
+// Elements
+const imageEl=document.getElementById('image');
+const thumbsEl=document.getElementById('thumbs');
+const ratioEl=document.getElementById('ratio');
+const promptEl=document.getElementById('prompt');
+const runBtn=document.getElementById('runBtn');
+const statusEl=document.getElementById('status');
+const resultBox=document.getElementById('resultBox');
+const downloadLink=document.getElementById('downloadLink');
+
+imageEl.addEventListener('change',()=>{
+  thumbsEl.innerHTML='';
+  const f=imageEl.files[0];
+  if(!f) return;
+  const u=URL.createObjectURL(f);
+  const img=new Image();
+  img.src=u;
+  img.className='block w-full max-h-56 object-contain rounded-lg border border-white/10 bg-black/20';
+  thumbsEl.appendChild(img);
+});
+
+function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
+
+function showVideo(url, poster){
+  resultBox.innerHTML = '';
+  const v = document.createElement('video');
+  v.controls = true;
+  if (poster) v.setAttribute('poster', poster);
+  v.src = url;
+  v.className = 'block w-full max-h-[70vh] rounded-lg border border-white/10 bg-black/20';
+  resultBox.appendChild(v);
+
+  downloadLink.href = '/.netlify/functions/download-proxy?url=' + encodeURIComponent(url) + '&name=' + encodeURIComponent('runway-video.mp4');
+  downloadLink.classList.remove('hidden');
+}
+
+// Live credits + pre-run guard (need >= 4⚡)
+(async function HANSORA_LIVE_CREDITS(){
+  try{
+    function renderCredits(c){
+      $navCredits.textContent = (c ?? 0) + '⚡';
+      runBtn.disabled = false;
+      runBtn.classList.toggle('opacity-50', false);
+      runBtn.classList.toggle('cursor-not-allowed', false);
+    }
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if(!user) return;
+
+    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+    renderCredits(prof?.credits ?? 0);
+
+    // Patch __run to block when < 4 credits
+    const __origRun = window.__run;
+    window.__run = async function(){
+      try{
+        const { data: p2 } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+        const c = p2?.credits ?? 0;
+        if (c < 4) { alert('Not enough credits (need 4).'); return; }
+      }catch{}
+      return __origRun ? __origRun() : undefined;
+    };
+  }catch(e){ console.warn('credits guard failed', e); }
+})();
+
+// Refresh credits after run (if your backend debits)
+(async function creditsAfterRun(){
+  try{
+    if (typeof window.__run !== 'function') return;
+    const __origRun = window.__run;
+    window.__run = async function(){
+      const ret = await __origRun();
+      // poll profile a few times to catch server-side debit
+      for (let i=0;i<8;i++){
+        try{
+          const { data: u } = await supabase.auth.getUser();
+          const user = u?.user; if (!user) break;
+          const { data: p } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+          $navCredits.textContent = (p?.credits ?? 0) + '⚡';
+        }catch{}
+        await new Promise(r=>setTimeout(r,1200));
+      }
+      return ret;
+    };
+  }catch(e){ console.warn('credits repaint hook failed', e); }
+})();
+
+// Helper: deduct 4 credits client‑side (ONLY if your current flow does this client‑side; otherwise remove)
+async function chargeFourCredits(){
+  const { data } = await supabase.auth.getUser();
+  const user = data?.user; if(!user) return;
+  const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+  const cur = prof?.credits ?? 0;
+  if (cur < 4) throw new Error('Not enough credits (need 4).');
+  await supabase.from('profiles').update({ credits: cur - 4 }).eq('user_id', user.id);
+}
+
+// Poll rv-check until we get an mp4
+async function rvCheckPoll(taskId, uid, rid){
+  for (let i=0;i<120;i++){ // ~3 minutes
+    try{
+      const r = await fetch('/.netlify/functions/rv-check?taskId=' + encodeURIComponent(taskId) + '&uid=' + encodeURIComponent(uid) + '&run_id=' + encodeURIComponent(rid));
+      const j = await r.json().catch(()=>({}));
+      if (j && j.ok && j.video_url){
+        showVideo(j.video_url, j.thumb_url || '');
+        showStatus('✅ Done.','text-emerald-300');
+        return;
+      }
+    }catch{}
+    await new Promise(r=>setTimeout(r,1500));
+  }
+  showStatus('Still processing… try refreshing later','text-yellow-300');
+}
+
+// Main run
+window.__run = async function(){
+  const {data:authData}=await supabase.auth.getUser();
+  if(!authData.user){ alert('Please log in or register first.'); return; }
+
+  // Minimal client-side guard for 4 credits (does not alter your backend logic)
+  try{
+    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
+    const cur = prof?.credits ?? 0;
+    if (cur < 4){ showStatus('Not enough credits (need 4).','text-rose-300'); return; }
+  }catch{}
+
+  // Validate image (optional, ≤10MB)
+  const files=[...imageEl.files].slice(0,1);
+  for(const f of files){ if(f.size>10*1024*1024){ alert('File too large: '+f.name); return; } }
+
+  runBtn.disabled=true; runBtn.textContent='Working…';
+  showStatus('Submitting…','text-zinc-400');
+  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
+
+  try{
+    const uid = authData.user.id;
+    const aspectRatio = ratioEl.value || '3:4';
+
+    // If image→video, upload first using your existing kie-upload
+    let imageUrl = '';
+    if (files.length === 1){
+      const fd = new FormData();
+      fd.append('file', files[0], files[0].name || 'image-0.png');
+      const ur = await fetch('/.netlify/functions/kie-upload',{ method:'POST', headers:{'X-USER-ID': uid}, body: fd });
+      const uj = await ur.json().catch(()=>null);
+      if (!ur.ok || !uj || !uj.downloadUrl) throw new Error(uj?.error || 'Upload failed');
+      imageUrl = uj.downloadUrl;
+    }
+
+    // Create job (server will return authoritative run_id)
+    const resp = await fetch('/.netlify/functions/run-runway',{
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'X-USER-ID': uid },
+      body: JSON.stringify({
+        prompt: (promptEl.value || '').trim() || '.',
+        imageUrl,
+        aspectRatio
+      })
+    });
+    const j = await resp.json().catch(()=>({}));
+    if (!resp.ok || !j.submitted){
+      showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
+      runBtn.disabled = false; runBtn.textContent='Run (cost: 4⚡)';
+      return;
+    }
+
+    // Optional: client-side debit if this is your current pattern
+    try{ await chargeFourCredits(); }catch{}
+
+    const taskId = j.taskId || '';
+    const run_id = j.run_id || '';
+
+    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+
+    // Start polling until callback is processed
+    if (taskId && run_id) rvCheckPoll(taskId, uid, run_id);
+
+  }catch(e){
+    showStatus('❌ '+(e.message||String(e)),'text-rose-300');
+  }finally{
+    runBtn.disabled=false; runBtn.textContent='Run (cost: 4⚡)';
+  }
+};
+</script>
+</body>
+</html>
