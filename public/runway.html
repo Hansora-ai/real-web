@@ -374,6 +374,8 @@ window.__run = async function(){
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'X-USER-ID': uid },
       body: JSON.stringify({
+uid,
+
         prompt: (promptEl.value || '').trim() || '.',
         imageUrl,
         aspectRatio
