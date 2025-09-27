@@ -449,7 +449,18 @@ window.__run=async function(){
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
-  __done=false; urls.clear();
+  
+  // HARD CREDIT CHECK (surgical): prevent run if credits insufficient
+  try{
+    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
+    const cur = prof?.credits ?? 0;
+    if (cur < 1) {
+      showStatus('Not enough credits (need 1).','text-rose-300');
+      runBtn.disabled = false; runBtn.textContent = "Run (cost: 1⚡)";
+      return;
+    }
+  }catch(_){ /* ignore, but don't proceed if unknown? proceed cautiously */ }
+__done=false; urls.clear();
   const files=[...filesEl.files];
   // 0 images allowed for text-to-image
   if(files.length>1){alert('Select at most 1 image.');return;}
