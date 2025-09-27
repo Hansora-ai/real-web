@@ -240,7 +240,7 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
 
       for(const row of data){
         const pretty = new Date(row.created_at).toLocaleString();
-        const isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(row.result_url || "");
+        const isVideo = /(\.mp4|\.webm|\.mov)(\?|$)/i.test(row.result_url || "");
         const media = row.result_url
           ? (isVideo
              ? `<video src="${row.result_url}" controls class="h-40 w-full object-contain rounded-lg border border-white/10"></video>`
