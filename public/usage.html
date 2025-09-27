@@ -304,22 +304,23 @@ function renderRows(rows){
 </script>
 
 <script>
-// Redirect login buttons to homepage login (like MidJourney page). Nothing else changed.
+// Add missing listeners so the login modal opens (no other changes)
 (function(){
-  var a = document.getElementById('btnLoginNav');
-  var g = document.getElementById('btnGetStarted');
-  function overrideLink(el){
-    if(!el) return;
-    el.setAttribute('href','index.html#login');
-    // Capture-phase handler to cancel any previously attached modal openers
-    el.addEventListener('click', function(e){
-      // allow default navigation, just stop other JS handlers
-      e.stopImmediatePropagation();
-      // Do not preventDefault: anchor will navigate to index.html#login
-    }, true);
+  function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); document.getElementById('authMsg')?.textContent=''; }
+  function setAuthMode(mode){
+    const $title = document.getElementById('authTitle');
+    const $pass2 = document.getElementById('authPass2');
+    const $bLogin = document.getElementById('btnDoLogin');
+    const $bSignup = document.getElementById('btnDoSignup');
+    if(mode==='signup'){ $title && ($title.textContent='Sign up'); $pass2?.classList.remove('hidden'); $bSignup?.classList.add('btn-brand'); $bLogin?.classList.remove('btn-brand'); }
+    else { $title && ($title.textContent='Log in'); $pass2?.classList.add('hidden'); $bLogin?.classList.add('btn-brand'); $bSignup?.classList.remove('btn-brand'); }
   }
-  overrideLink(a);
-  overrideLink(g);
+  const navLogin = document.getElementById('btnLoginNav');
+  const navGetStarted = document.getElementById('btnGetStarted');
+  const cardCTA = document.getElementById('openLogin');
+  navLogin?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+  navGetStarted?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
+  cardCTA?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
 })();
 </script>
 
