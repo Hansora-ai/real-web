@@ -74,7 +74,7 @@
         <p class="mt-1 text-sm text-zinc-400">Upload 0–1 image and describe your video.
           <span class="ml-2 inline-flex items-center gap-2">
             <span class="text-xs text-zinc-300 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">1080p</span>
-            <span class="text-xs text-zinc-300 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">~5s</span>
+            <span class="text-xs text-zinc-300 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">8s</span>
           </span>
         </p>
 
@@ -206,8 +206,8 @@ setModel('veo3_fast');
 // Image preview + ratio hint visibility
 let __lastObjURL = null;
 function showRatioSection(show){
-  if (ratioWrap) ratioWrap.classList.toggle('hidden', !show);
-  if (ratioHint) ratioHint.classList.toggle('hidden', show);
+  if (ratioWrap) ratioWrap.classList.toggle('hidden', false);
+  if (ratioHint) ratioHint.classList.add('hidden');
 }
 function clearImageSelection(){
   try { if (__lastObjURL) { URL.revokeObjectURL(__lastObjURL); __lastObjURL = null; } } catch {}
@@ -342,7 +342,7 @@ window.__run = async function(){
 
   window.__VEO_BUSY = true; runBtn.disabled=true; runBtn.textContent='Working…';
   showStatus('Submitting…','text-zinc-400');
-  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–90s</span>';
+  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take 2–5 minutes. You can leave this page; the result will appear in the Usage section.</span>';
 
   try{
     const uid = authData.user.id;
@@ -394,5 +394,73 @@ window.__run = async function(){
   }
 };
 </script>
+
+<script>
+// === Live credits (dynamic 7⚡/20⚡) + pre-run guard ===
+(function(){
+  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  ready(async function(){
+    try{
+      if (typeof supabase === 'undefined' || !supabase.auth) return;
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if(!user) return;
+
+      async function __refreshCredits(){
+        try{
+          const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+          const c = prof?.credits ?? 0;
+          const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
+          if (!window.__VEO_BUSY && typeof runBtn !== 'undefined') runBtn.disabled = false;
+          if (typeof runBtn !== 'undefined') {
+            runBtn.classList.toggle('opacity-50', false);
+            runBtn.classList.toggle('cursor-not-allowed', false);
+          }
+          return c;
+        }catch(e){ return null; }
+      }
+
+      // Initial paint
+      await __refreshCredits();
+
+      // Realtime listen
+      supabase
+        .channel('credits_live_' + user.id)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id }, __refreshCredits)
+        .subscribe();
+
+      // Guard __run to check dynamic currentCost() before submitting
+      if (typeof window.__run === 'function'){
+        const __origRun = window.__run;
+        window.__run = async function(){
+          try{
+            const c = await __refreshCredits();
+            if (c !== null && typeof currentCost === 'function' && c < currentCost()){
+              showStatus('Not enough credits (need ' + currentCost() + ').','text-rose-300');
+              return;
+            }
+          }catch{}
+          const ret = await __origRun();
+          // Short polling to repaint after debit (in case of server-side changes)
+          const id = setInterval(__refreshCredits, 1500);
+          setTimeout(()=>clearInterval(id), 15000);
+          return ret;
+        };
+      }
+
+      // Wrap chargeCredits(cost) to refresh UI immediately after debit
+      if (typeof window.chargeCredits === 'function'){
+        const __origCharge = window.chargeCredits;
+        window.chargeCredits = async function(cost){
+          const out = await __origCharge(cost);
+          try{ await __refreshCredits(); }catch{}
+          return out;
+        };
+      }
+    }catch(e){ /* silent */ }
+  });
+})();
+</script>
+
 </body>
 </html>
