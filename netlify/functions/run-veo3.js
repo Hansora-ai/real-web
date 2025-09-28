@@ -118,6 +118,14 @@ exports.handler = async (event) => {
 
     const taskId = extractTaskId(data);
 
+    // Guard: if KIE didn't accept or no taskId, report as not submitted
+    if (!resp.ok) {
+      return ok({ submitted:false, error:`kie_${resp.status}`, data });
+    }
+    if (!taskId) {
+      return ok({ submitted:false, error:'missing_taskId', data });
+    }
+
     // Persist taskId into meta for easier tracing
     try {
       if (UG_URL && SERVICE_KEY && taskId) {
