@@ -61,7 +61,7 @@ exports.handler = async (event) => {
           kind: "video",
           prompt,
           result_url: null,
-          meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality: "1080p", duration: 5, model }
+          meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality: "1080p", duration: 8, model }
         };
 
         if (idToPatch) {
@@ -105,7 +105,7 @@ exports.handler = async (event) => {
       delete kiePayload.frameImage;
     }
 
-    if (kiePayload.duration === undefined) kiePayload.duration = 5;
+    if (kiePayload.duration === undefined) kiePayload.duration = 8;
     if (kiePayload.quality  === undefined) kiePayload.quality  = "1080p";
 
     // Call KIE
@@ -136,7 +136,7 @@ exports.handler = async (event) => {
           await fetch(`${UG_URL}?id=eq.${encodeURIComponent(arr[0].id)}`, {
             method: "PATCH",
             headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
-            body: JSON.stringify({ meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality: "1080p", duration: 5, task_id: taskId, model } })
+            body: JSON.stringify({ meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality: "1080p", duration: 8, task_id: taskId, model } })
           });
         }
       }
@@ -164,13 +164,17 @@ function extractTaskId(data){
   if (data?.data?.taskId) return String(data.data.taskId);
   if (data?.taskId) return String(data.taskId);
   if (data?.result?.taskId) return String(data.result.taskId);
+  // snake_case fast paths
+  if (data?.data?.task_id) return String(data.data.task_id);
+  if (data?.task_id) return String(data.task_id);
+  if (data?.result?.task_id) return String(data.result.task_id);
   if (data?.id && String(data.id).length > 8) return String(data.id);
   const seen = new Set();
   function scan(x){
     if (!x || typeof x !== "object" || seen.has(x)) return "";
     seen.add(x);
     for (const [k,v] of Object.entries(x)){
-      if (k === "taskId" && (typeof v === "string" || typeof v === "number")) return String(v);
+      if ((/task[_-]?id/i).test(k) && (typeof v === "string" || typeof v === "number")) return String(v);
       const inner = scan(v);
       if (inner) return inner;
     }
