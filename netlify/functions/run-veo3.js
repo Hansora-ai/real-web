@@ -82,15 +82,28 @@ exports.handler = async (event) => {
       }
     }
 
-    // Build KIE payload
-    const kiePayload = {
-      ...body,
-      model,
-      aspectRatio,
-      callBackUrl
-    };
+    
+// Build KIE payload (whitelist fields per KIE docs)
+const kiePayload = {
+  prompt,
+  model,
+  aspectRatio,
+  callBackUrl
+};
 
-    // Ensure only imageUrls is sent (remove other variants)
+// Optional spec fields
+if (Number.isInteger(body.seeds)) kiePayload.seeds = body.seeds;
+if (typeof body.enableFallback === 'boolean') kiePayload.enableFallback = body.enableFallback;
+if (typeof body.enableTranslation === 'boolean') kiePayload.enableTranslation = body.enableTranslation;
+if (typeof body.watermark === 'string' && body.watermark.length) kiePayload.watermark = body.watermark;
+
+// Image handling (imageUrls array 0–1)
+if (imageUrls.length) {
+  kiePayload.imageUrls = imageUrls;
+}
+
+// Ensure we do NOT send non-spec/unknown keys (no ...body, no duration/quality here)
+
     if (imageUrls.length) {
       kiePayload.imageUrls = imageUrls;
       delete kiePayload.imageUrl;
@@ -104,11 +117,7 @@ exports.handler = async (event) => {
       delete kiePayload.image_url;
       delete kiePayload.frameImage;
     }
-
-    if (kiePayload.duration === undefined) kiePayload.duration = 8;
-    if (kiePayload.quality  === undefined) kiePayload.quality  = "1080p";
-
-    // Call KIE
+// Call KIE
     const resp = await fetch(KIE_URL, {
       method: "POST",
       headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
