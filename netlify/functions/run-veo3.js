@@ -161,23 +161,37 @@ function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVIC
 // Searches the JSON object for common taskId locations or any property named "taskId".
 function extractTaskId(data){
   if (!data || typeof data !== "object") return "";
-  if (data?.data?.taskId) return String(data.data.taskId);
-  if (data?.taskId) return String(data.taskId);
-  if (data?.result?.taskId) return String(data.result.taskId);
-  // snake_case fast paths
-  if (data?.data?.task_id) return String(data.data.task_id);
-  if (data?.task_id) return String(data.task_id);
+  // Fast paths (common shapes)
+  if (data?.data?.taskId)    return String(data.data.taskId);
+  if (data?.taskId)          return String(data.taskId);
+  if (data?.result?.taskId)  return String(data.result.taskId);
+  if (data?.data?.task_id)   return String(data.data.task_id);
+  if (data?.task_id)         return String(data.task_id);
   if (data?.result?.task_id) return String(data.result.task_id);
+  // Sometimes requestId is used
+  if (data?.data?.requestId)    return String(data.data.requestId);
+  if (data?.requestId)          return String(data.requestId);
+  if (data?.result?.requestId)  return String(data.result.requestId);
+  if (data?.data?.request_id)   return String(data.data.request_id);
+  if (data?.request_id)         return String(data.request_id);
+  if (data?.result?.request_id) return String(data.result.request_id);
+  // Generic id fallback (len > 8 to avoid tiny numbers)
   if (data?.id && String(data.id).length > 8) return String(data.id);
   const seen = new Set();
   function scan(x){
     if (!x || typeof x !== "object" || seen.has(x)) return "";
     seen.add(x);
     for (const [k,v] of Object.entries(x)){
-      if ((/task[_-]?id/i).test(k) && (typeof v === "string" || typeof v === "number")) return String(v);
+      if (/^(task[_-]?id|request[_-]?id)$/i.test(k) && (typeof v === "string" || typeof v === "number")) {
+        const s = String(v); if (s.length > 3) return s;
+      }
       const inner = scan(v);
       if (inner) return inner;
     }
+    return "";
+  }
+  return scan(data) || "";
+}
     return "";
   }
   return scan(data) || "";
