@@ -316,6 +316,8 @@ async function vvCheckPoll(taskId, uid, rid){
 
 // Main run
 window.__run = async function(){
+  try{ document.getElementById('playBtn')?.classList.add('hidden'); }catch{}
+  try{ document.getElementById('downloadLink')?.classList.add('hidden'); }catch{}
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
