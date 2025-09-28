@@ -82,33 +82,29 @@ exports.handler = async (event) => {
       }
     }
 
-    // Build KIE payload
-    const kiePayload = {
-      ...body,
-      model,
-      aspectRatio,
-      callBackUrl
-    };
+    
+// Build KIE payload (spec-only fields)
+// (Do NOT spread the entire body to KIE; avoid non-spec keys)
+const kiePayload = {
+  prompt,
+  model,
+  aspectRatio,
+  callBackUrl
+};
 
-    // Ensure only imageUrls is sent (remove other variants)
-    if (imageUrls.length) {
-      kiePayload.imageUrls = imageUrls;
-      delete kiePayload.imageUrl;
-      delete kiePayload.fileUrl;
-      delete kiePayload.image_url;
-      delete kiePayload.frameImage;
-    } else {
-      delete kiePayload.imageUrls;
-      delete kiePayload.imageUrl;
-      delete kiePayload.fileUrl;
-      delete kiePayload.image_url;
-      delete kiePayload.frameImage;
-    }
+// Optional spec keys
+if (Number.isInteger(body.seeds)) kiePayload.seeds = body.seeds;
+if (typeof body.enableFallback === 'boolean') kiePayload.enableFallback = body.enableFallback;
+if (typeof body.enableTranslation === 'boolean') kiePayload.enableTranslation = body.enableTranslation;
+if (typeof body.watermark === 'string' && body.watermark.length) kiePayload.watermark = body.watermark;
 
-    if (kiePayload.duration === undefined) kiePayload.duration = 5;
-    if (kiePayload.quality  === undefined) kiePayload.quality  = "1080p";
+// Image handling: array 0–1
+if (imageUrls.length) {
+  kiePayload.imageUrls = imageUrls;
+}
 
-    // Call KIE
+// Call KIE
+
     const resp = await fetch(KIE_URL, {
       method: "POST",
       headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
@@ -168,19 +164,37 @@ function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVIC
 // Searches the JSON object for common taskId locations or any property named "taskId".
 function extractTaskId(data){
   if (!data || typeof data !== "object") return "";
-  if (data?.data?.taskId) return String(data.data.taskId);
-  if (data?.taskId) return String(data.taskId);
-  if (data?.result?.taskId) return String(data.result.taskId);
+  // Common fast paths
+  if (data?.data?.taskId)    return String(data.data.taskId);
+  if (data?.taskId)          return String(data.taskId);
+  if (data?.result?.taskId)  return String(data.result.taskId);
+  // snake/request variants
+  if (data?.data?.task_id)   return String(data.data.task_id);
+  if (data?.task_id)         return String(data.task_id);
+  if (data?.result?.task_id) return String(data.result.task_id);
+  if (data?.data?.requestId)    return String(data.data.requestId);
+  if (data?.requestId)          return String(data.requestId);
+  if (data?.result?.requestId)  return String(data.result.requestId);
+  if (data?.data?.request_id)   return String(data.data.request_id);
+  if (data?.request_id)         return String(data.request_id);
+  if (data?.result?.request_id) return String(data.result.request_id);
+  // Generic id fallback
   if (data?.id && String(data.id).length > 8) return String(data.id);
   const seen = new Set();
   function scan(x){
     if (!x || typeof x !== "object" || seen.has(x)) return "";
     seen.add(x);
     for (const [k,v] of Object.entries(x)){
-      if (k === "taskId" && (typeof v === "string" || typeof v === "number")) return String(v);
+      if (/^(task[_-]?id|request[_-]?id)$/i.test(k) && (typeof v === "string" || typeof v === "number")) {
+        const s = String(v); if (s.length > 3) return s;
+      }
       const inner = scan(v);
       if (inner) return inner;
     }
+    return "";
+  }
+  return scan(data) || "";
+}
     return "";
   }
   return scan(data) || "";
