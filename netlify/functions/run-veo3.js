@@ -61,7 +61,7 @@ exports.handler = async (event) => {
           kind: "video",
           prompt,
           result_url: null,
-          meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality: "1080p", duration: 8, model }
+          meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality: "1080p", duration: 5, model }
         };
 
         if (idToPatch) {
@@ -82,28 +82,15 @@ exports.handler = async (event) => {
       }
     }
 
-    
-// Build KIE payload (whitelist fields per KIE docs)
-const kiePayload = {
-  prompt,
-  model,
-  aspectRatio,
-  callBackUrl
-};
+    // Build KIE payload
+    const kiePayload = {
+      ...body,
+      model,
+      aspectRatio,
+      callBackUrl
+    };
 
-// Optional spec fields
-if (Number.isInteger(body.seeds)) kiePayload.seeds = body.seeds;
-if (typeof body.enableFallback === 'boolean') kiePayload.enableFallback = body.enableFallback;
-if (typeof body.enableTranslation === 'boolean') kiePayload.enableTranslation = body.enableTranslation;
-if (typeof body.watermark === 'string' && body.watermark.length) kiePayload.watermark = body.watermark;
-
-// Image handling (imageUrls array 0–1)
-if (imageUrls.length) {
-  kiePayload.imageUrls = imageUrls;
-}
-
-// Ensure we do NOT send non-spec/unknown keys (no ...body, no duration/quality here)
-
+    // Ensure only imageUrls is sent (remove other variants)
     if (imageUrls.length) {
       kiePayload.imageUrls = imageUrls;
       delete kiePayload.imageUrl;
@@ -117,7 +104,11 @@ if (imageUrls.length) {
       delete kiePayload.image_url;
       delete kiePayload.frameImage;
     }
-// Call KIE
+
+    if (kiePayload.duration === undefined) kiePayload.duration = 5;
+    if (kiePayload.quality  === undefined) kiePayload.quality  = "1080p";
+
+    // Call KIE
     const resp = await fetch(KIE_URL, {
       method: "POST",
       headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
@@ -145,7 +136,7 @@ if (imageUrls.length) {
           await fetch(`${UG_URL}?id=eq.${encodeURIComponent(arr[0].id)}`, {
             method: "PATCH",
             headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
-            body: JSON.stringify({ meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality: "1080p", duration: 8, task_id: taskId, model } })
+            body: JSON.stringify({ meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality: "1080p", duration: 5, task_id: taskId, model } })
           });
         }
       }
@@ -162,7 +153,14 @@ function err(code, message){ return { statusCode: code, headers: cors(), body: J
 function cors(){ return { "Access-Control-Allow-Origin":"*", "Access-Control-Allow-Methods":"POST,OPTIONS", "Access-Control-Allow-Headers":"Content-Type, Authorization, X-USER-ID" }; }
 function safeJson(s){ try{ return JSON.parse(s||"{}"); } catch { return {}; } }
 function lowerKeys(h){ const o={}; for (const k in h) o[k.toLowerCase()] = h[k]; return o; }
-function normalizeModel(m){ m=String(m||"").toLowerCase(); return (m==="veo3"||m==="veo3_fast")?m:"veo3_fast"; }
+function normalizeModel(m){
+  const raw = String(m||"");
+  const s = raw.toLowerCase().replace(/\s+/g,"").replace(/-/g,"");
+  if (s === "veo3" || s === "veo3standard") return "veo3";
+  if (s === "veo3fast" || s === "veo3_fast") return "veo3_fast";
+  // default to fast so existing "fast" behavior remains
+  return "veo3_fast";
+}
 function normalizeAspect(a){ a=String(a||"").trim(); return /^(16:9|9:16)$/.test(a)?a:"16:9"; }
 function normalizeUrl(u){ try{ const url=new URL(String(u||"")); return url.href; } catch { return ""; } }
 function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` }; }
@@ -170,37 +168,19 @@ function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVIC
 // Searches the JSON object for common taskId locations or any property named "taskId".
 function extractTaskId(data){
   if (!data || typeof data !== "object") return "";
-  // Fast paths (common shapes)
-  if (data?.data?.taskId)    return String(data.data.taskId);
-  if (data?.taskId)          return String(data.taskId);
-  if (data?.result?.taskId)  return String(data.result.taskId);
-  if (data?.data?.task_id)   return String(data.data.task_id);
-  if (data?.task_id)         return String(data.task_id);
-  if (data?.result?.task_id) return String(data.result.task_id);
-  // Sometimes requestId is used
-  if (data?.data?.requestId)    return String(data.data.requestId);
-  if (data?.requestId)          return String(data.requestId);
-  if (data?.result?.requestId)  return String(data.result.requestId);
-  if (data?.data?.request_id)   return String(data.data.request_id);
-  if (data?.request_id)         return String(data.request_id);
-  if (data?.result?.request_id) return String(data.result.request_id);
-  // Generic id fallback (len > 8 to avoid tiny numbers)
+  if (data?.data?.taskId) return String(data.data.taskId);
+  if (data?.taskId) return String(data.taskId);
+  if (data?.result?.taskId) return String(data.result.taskId);
   if (data?.id && String(data.id).length > 8) return String(data.id);
   const seen = new Set();
   function scan(x){
     if (!x || typeof x !== "object" || seen.has(x)) return "";
     seen.add(x);
     for (const [k,v] of Object.entries(x)){
-      if (/^(task[_-]?id|request[_-]?id)$/i.test(k) && (typeof v === "string" || typeof v === "number")) {
-        const s = String(v); if (s.length > 3) return s;
-      }
+      if (k === "taskId" && (typeof v === "string" || typeof v === "number")) return String(v);
       const inner = scan(v);
       if (inner) return inner;
     }
-    return "";
-  }
-  return scan(data) || "";
-}
     return "";
   }
   return scan(data) || "";
