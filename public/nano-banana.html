@@ -456,5 +456,79 @@ __done=false;
   }
 };
 </script>
+
+<!-- Delete buttons + safe validation (additive, non-destructive) -->
+<script>
+(function(){
+  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+
+  ready(function(){
+    var filesEl = document.getElementById('files') || document.querySelector('input[type=file][id*="file"]');
+    var thumbsEl = document.getElementById('thumbs') || document.querySelector('#thumbs, .thumbs, [data-role="thumbs"]');
+    var promptEl = document.getElementById('prompt') || document.querySelector('textarea[name="prompt"], #promptEl');
+
+    if (!filesEl || !thumbsEl) return;
+
+    function enhanceThumbs(){
+      // Wrap plain IMG nodes with a relative container + delete button.
+      var imgs = Array.from(thumbsEl.querySelectorAll('img'));
+      imgs.forEach(function(img, idx){
+        if (img.closest('.nb-thumb-wrap')) return; // already wrapped
+
+        var wrap = document.createElement('span');
+        wrap.className = 'nb-thumb-wrap relative inline-block';
+        img.parentNode.insertBefore(wrap, img);
+        wrap.appendChild(img);
+
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center';
+        del.setAttribute('aria-label','Remove image');
+        del.innerHTML = '&times;';
+
+        del.addEventListener('click', function(){
+          try {
+            var dt = new DataTransfer();
+            Array.from(filesEl.files).forEach(function(f, i){
+              if (i !== idx) dt.items.add(f);
+            });
+            filesEl.files = dt.files;
+          } catch(e){ /* ignore */ }
+
+          // Remove UI thumb and re-index remaining
+          wrap.remove();
+          // Re-run to re-bind indexes
+          setTimeout(enhanceThumbs, 0);
+        });
+
+        wrap.appendChild(del);
+      });
+    }
+
+    // After the built-in change handler updates the thumbs, enhance them.
+    filesEl.addEventListener('change', function(){ setTimeout(enhanceThumbs, 0); });
+
+    // Run once in case thumbs already exist on load (hot re-render etc.)
+    setTimeout(enhanceThumbs, 0);
+
+    // Safe validation without touching original __run
+    if (typeof window.__run === 'function'){
+      var __origRun = window.__run;
+      window.__run = async function(){
+        try{
+          var hasImg = filesEl && filesEl.files && filesEl.files.length > 0;
+          var promptVal = (promptEl && promptEl.value ? promptEl.value : '').trim();
+          if (!hasImg || !promptVal){
+            alert('Please upload at least one image and enter a prompt.');
+            return;
+          }
+        }catch(e){ /* ignore */ }
+        return __origRun();
+      };
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
