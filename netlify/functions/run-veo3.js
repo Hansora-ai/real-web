@@ -195,7 +195,3 @@ function extractTaskId(data){
   }
   return scan(data) || "";
 }
-    return "";
-  }
-  return scan(data) || "";
-}
