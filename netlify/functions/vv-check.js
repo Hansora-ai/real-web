@@ -30,7 +30,7 @@ exports.handler = async (event) => {
     if (!taskId) return json(400, { ok:false, error:"missing taskId", version: VERSION_TAG });
 
     // Query KIE (Veo 3 record detail)
-    const url = `${KIE_BASE}/api/v1/veo/record-detail?taskId=${encodeURIComponent(taskId)}`;
+    const url = `${KIE_BASE}/api/v1/veo/record-info?taskId=${encodeURIComponent(taskId)}`;
     const r   = await fetch(url, { headers: kieHeaders() });
     const txt = await r.text();
     let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
