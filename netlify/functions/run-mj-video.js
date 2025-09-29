@@ -5,7 +5,7 @@
 const API_KEY = process.env.KIE_API_KEY;
 
 // KIE Jobs endpoint (Midjourney uses taskType-based createTask)
-const KIE_CREATE = (process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/jobs/createTask").replace(/\/+$/,'');
+const KIE_CREATE = (process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/mj/generate").replace(/\/+$/,'');
 
 // Supabase (service role) for server-side insert/patch
 const SUPABASE_URL  = process.env.SUPABASE_URL || "";
