@@ -22,7 +22,8 @@
     .input-dark{background:rgba(255,255,255,.05)!important;color:#e5e7eb!important;border:1px solid rgba(255,255,255,.12)!important}
     .input-dark::placeholder{color:#9ca3af}
     select.input-dark option{background:#0b0d13;color:#e5e7eb}
-  </style>
+  #navAvatar{background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%25%22 stop-color=%2291c1ff%22/><stop offset=%22100%25%22 stop-color=%225a8cff%22/></linearGradient></defs><circle cx=%2264%22 cy=%2264%22 r=%2264%22 fill=%22url(%23g)%22/><circle cx=%2264%22 cy=%2250%22 r=%2222%22 fill=%22white%22 fill-opacity=%22.9%22/><path d=%22M20 108a44 30 0 0 1 88 0%22 fill=%22white%22 fill-opacity=%22.9%22/></svg>');background-size:cover;background-position:center;}
+</style>
 </head>
 <body class="min-h-screen">
   <!-- Header -->
@@ -39,15 +40,17 @@
         <a href="index.html#faq" class="hover:text-white/90">FAQ</a>
       </nav>
       <div class="flex items-center gap-3">
+        <a href="#" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
         <a id="btnLoginNav" href="index.html#login" class="rounded-xl btn px-3 py-2 text-sm">Log in</a>
         <a id="btnGetStarted" href="index.html#login" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Get Started</a>
         <div id="navUser" class="hidden items-center gap-2">
           <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
           <div class="relative">
-            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden"></button>
+            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden"><img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden"></button>
             <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden">
-              <a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a>
+              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a>
               <a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a>
+              <a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a>
               <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
             </div>
           </div>
@@ -135,7 +138,7 @@ const $navAvatar = document.getElementById('navAvatar');
 const $navMenu = document.getElementById('navMenu');
 const $btnLogout = document.getElementById('btnLogout');
 const $navAvatarImg = document.getElementById('navAvatarImg');
-function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
+function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url && $navAvatarImg){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
 function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
 $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
