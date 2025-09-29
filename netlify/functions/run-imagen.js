@@ -19,6 +19,10 @@ exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return { statusCode: 405, headers: cors(), body: "Use POST" };
 
   try{
+    // derive absolute base for webhook
+    const proto = (event.headers['x-forwarded-proto'] || 'https').replace(/[^a-z]+/ig,'');
+    const host  = (event.headers['x-forwarded-host'] || event.headers['host'] || '').replace(/\/$/,'');
+
     if (!TOKEN) return { statusCode: 500, headers: cors(), body: "Missing REPLICATE_API_KEY" };
 
     const body = JSON.parse(event.body || "{}");
@@ -38,7 +42,9 @@ exports.handler = async (event) => {
       input: {
         prompt,
         aspect_ratio
-      }
+      },
+      webhook: `${proto}://${host}/.netlify/functions/imagen-check?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`,
+      webhook_events_filter: ["completed"]
     };
 
     const r = await fetch(endpoint, {
