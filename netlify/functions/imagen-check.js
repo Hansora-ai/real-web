@@ -18,7 +18,7 @@ function cors(){ return {
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: cors(), body: "" };
-  if (event.httpMethod !== "GET") return { statusCode: 405, headers: cors(), body: "Use GET" };
+  if (event.httpMethod !== "GET" && event.httpMethod !== "POST") return { statusCode: 405, headers: cors(), body: "Use GET or POST" };
 
   try{
     const qs = event.queryStringParameters || {};
