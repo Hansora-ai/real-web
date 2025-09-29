@@ -158,6 +158,7 @@ const runBtn=document.getElementById('runBtn');
 const statusEl=document.getElementById('status');
 const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
+const playBtn=document.getElementById('playBtn');
 
 // Cost fixed at 2⚡
 function currentCost(){ return 2; }
@@ -193,6 +194,19 @@ function showVideo(url, poster){
   if(poster) v.setAttribute('poster',poster);
   v.className='block w-full max-h-[70vh] rounded-lg border border-white/10 bg-black/20';
   resultBox.appendChild(v);
+  // Show & wire Play button
+  if (playBtn) {
+    playBtn.classList.remove('hidden');
+    playBtn.textContent = 'Play';
+    playBtn.onclick = () => {
+      if (v.paused) { v.play(); playBtn.textContent = 'Pause'; }
+      else { v.pause(); playBtn.textContent = 'Play'; }
+    };
+    v.onplay = () => (playBtn.textContent = 'Pause');
+    v.onpause = () => (playBtn.textContent = 'Play');
+    v.onended = () => (playBtn.textContent = 'Play');
+  }
+
   downloadLink.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(url)+'&name='+encodeURIComponent('mj-video.mp4');
   downloadLink.classList.remove('hidden');
 }
@@ -241,6 +255,10 @@ async function mjvCheckPoll(taskId, uid, rid){
 // Main run
 window.__run = async function(){
   const {data:authData}=await supabase.auth.getUser();
+  // Reset previous result actions (hide Download & Play)
+  try { downloadLink.classList.add('hidden'); downloadLink.removeAttribute('href'); } catch {}
+  try { if (playBtn) { playBtn.classList.add('hidden'); playBtn.onclick = null; } } catch {}
+
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
   // Validate: MUST have both image AND prompt (your rule)
