@@ -121,50 +121,32 @@
 document.getElementById('y').textContent = new Date().getFullYear();
 window.__MJ_BUSY = false;
 
-// Supabase init
-// BOOTSTRAP_AUTH (mirrors Veo)
-(async()=>{
-  try{
-    const { data } = await supabase.auth.getUser();
-    const user = data?.user;
-    if (user){
-      const prof = await getOrCreateProfile(supabase, user.id);
-      const nav=document.getElementById('navCredits');
-      if(nav) nav.textContent=((prof?.credits??0)+'⚡');
-      showLoggedInUI();
-    } else {
-      showLoggedOutUI();
-    }
-  }catch(e){ showLoggedOutUI(); }
-})();
-// (same as Veo page)
+// Supabase init (1:1 with Veo)
 const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-
-function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}
-// Header: basic auth UI
+// Header UI (same minimal logic)
 const $btnLoginNav = document.getElementById('btnLoginNav');
 const $btnGetStarted = document.getElementById('btnGetStarted');
 const $navUser = document.getElementById('navUser');
 const $navCredits = document.getElementById('navCredits');
+const $navAvatar = document.getElementById('navAvatar');
+const $navMenu = document.getElementById('navMenu');
 const $btnLogout = document.getElementById('btnLogout');
-function showLoggedInUI(){ $btnLoginNav.classList.add('hidden'); $btnGetStarted.classList.add('hidden'); $navUser.classList.remove('hidden'); $navUser.classList.add('flex'); }
-function showLoggedOutUI(){ $btnLoginNav.classList.remove('hidden'); $btnGetStarted.classList.remove('hidden'); $navUser.classList.add('hidden'); $navUser.classList.remove('flex'); }
-$btnLogout?.addEventListener('click', async ()=>{ await supabase.auth.signOut(); showLoggedOutUI(); });
-(async()=>{
-  const {data}=await supabase.auth.getUser(); const user=data.user;
-  if (user) {
-    try{
-      const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();
-      $navCredits.textContent=(r.data?.credits??0)+'⚡';
-      showLoggedInUI();
-    }catch{ showLoggedInUI(); }
-  } else showLoggedOutUI();
-})();
+const $navAvatarImg = document.getElementById('navAvatarImg');
+function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
+function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
+$navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
+document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
+$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
+async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}})();
 
-// Elements
+async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}})();
+
+// Elements// Elements
 const imageEl=document.getElementById('image');
 const thumbsEl=document.getElementById('thumbs');
 const ratioEl=document.getElementById('ratio');
