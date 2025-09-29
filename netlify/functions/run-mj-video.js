@@ -5,7 +5,7 @@
 const API_KEY = process.env.KIE_API_KEY;
 
 // KIE Jobs endpoint (Midjourney uses taskType-based createTask)
-const KIE_CREATE = (process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/mj/generate").replace(/\/+$/,'');
+const KIE_URL = "https://api.kie.ai/api/v1/mj/generate";
 
 // Supabase (service role) for server-side insert/patch
 const SUPABASE_URL  = process.env.SUPABASE_URL || "";
@@ -88,14 +88,19 @@ exports.handler = async (event) => {
       callBackUrl
     };
 
-    const resp = await fetch(KIE_CREATE, {
+    const resp = await fetch(KIE_URL, {
       method: "POST",
       headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify(kiePayload)
     });
-    const data = await resp.json().catch(()=>({}));
+    const RAW_KIE_TEXT = await resp.text();
+    let data; try { data = JSON.parse(RAW_KIE_TEXT); } catch { data = { _raw: RAW_KIE_TEXT }; }
 
-    const taskId = extractTaskId(data);
+    let taskId = extractTaskId(data);
+    if (!taskId && data && typeof data._raw === "string") {
+      const m = data._raw.match(/[0-9a-f]{20,}/i);
+      if (m) taskId = m[0];
+    }
     if (!resp.ok) return ok({ submitted:false, error:`kie_${resp.status}`, data });
     if (!taskId)  return ok({ submitted:false, error:"missing_taskId", data });
 
