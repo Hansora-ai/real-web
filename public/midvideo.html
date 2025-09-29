@@ -121,11 +121,29 @@
 document.getElementById('y').textContent = new Date().getFullYear();
 window.__MJ_BUSY = false;
 
-// Supabase init (same as Veo page)
+// Supabase init
+// BOOTSTRAP_AUTH (mirrors Veo)
+(async()=>{
+  try{
+    const { data } = await supabase.auth.getUser();
+    const user = data?.user;
+    if (user){
+      const prof = await getOrCreateProfile(supabase, user.id);
+      const nav=document.getElementById('navCredits');
+      if(nav) nav.textContent=((prof?.credits??0)+'⚡');
+      showLoggedInUI();
+    } else {
+      showLoggedOutUI();
+    }
+  }catch(e){ showLoggedOutUI(); }
+})();
+// (same as Veo page)
 const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+
+function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}
 // Header: basic auth UI
 const $btnLoginNav = document.getElementById('btnLoginNav');
 const $btnGetStarted = document.getElementById('btnGetStarted');
