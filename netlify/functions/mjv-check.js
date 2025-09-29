@@ -54,7 +54,18 @@ exports.handler = async (event) => {
     }
 
     const out = { ok: !!video_url, status: video_url ? "success" : "pending", video_url, version: VERSION_TAG };
-    if (!video_url) return json(200, out);
+    if (!video_url) {
+      try {
+        if (uid && run_id && SUPABASE_URL && SERVICE_KEY) {
+          const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=result_url`;
+          const r2 = await fetch(UG_URL + q, { headers: sb() });
+          const a2 = await r2.json().catch(()=>[]);
+          const ready = Array.isArray(a2) && a2.length && a2[0].result_url;
+          if (ready) return json(200, { ok:true, status:"done", video_url: ready, version: VERSION_TAG });
+        }
+      } catch {}
+      return json(200, out);
+    }
 
     // Backfill Supabase (user_generations)
     let idToPatch = null, patched = false, patchError = null;
