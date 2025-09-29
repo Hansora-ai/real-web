@@ -316,12 +316,12 @@ async function chargeCost(cost){
 }
 
 // Poller
-async function imagenCheckPoll(id){
+async function imagenCheckPoll(id, uid, rid){
   if(!id) return;
   const start = Date.now();
   while(!__done && Date.now() - start < 180000){
     try{
-      const r = await fetch('/.netlify/functions/imagen-check?id='+encodeURIComponent(id));
+      const r = await fetch('/.netlify/functions/imagen-check?id='+encodeURIComponent(id)+'&uid='+encodeURIComponent(uid||'')+'&run_id='+encodeURIComponent(rid||''));
       const j = await r.json().catch(()=>({}));
       const status = String(j.status || '').toLowerCase();
       if(status === 'succeeded' || j.ok){
@@ -396,7 +396,7 @@ window.__run=async function(){
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
 
     // Start polling prediction
-    imagenCheckPoll(id);
+    imagenCheckPoll(id, uid, rid);
 
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
