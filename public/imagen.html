@@ -303,10 +303,16 @@ function onResult(url){
     downloadLink.classList.remove('hidden');
     downloadLink.textContent='Download';
     showStatus('✅ Done.','text-emerald-300');
+    // Re-enable Run only when image is done
+    try {
+      runBtn.disabled = false  # will fix case in next step
+    except NameError:
+      pass
+    runBtn.disabled = false;
+    runBtn.textContent = (modelChoice.value==='ultra' ? 'Run (cost: 1⚡)' : 'Run (cost: 0.5⚡)');
   };
   img.src=url;
 }
-
 async function chargeCost(cost){
   const {data}=await supabase.auth.getUser(); if(!data.user) return;
   const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();
@@ -329,13 +335,16 @@ async function imagenCheckPoll(id, uid, rid){
         if(url){ onResult(url); break; }
       }
       if(status === 'failed' || status === 'canceled'){
-        showStatus('❌ Generation failed.','text-rose-300'); break;
+        showStatus('❌ Generation failed.','text-rose-300');
+        try { runBtn.disabled = false; runBtn.textContent = (modelChoice.value==='ultra' ? 'Run (cost: 1⚡)' : 'Run (cost: 0.5⚡)'); } catch(e) {}
+        break;
       }
     }catch{}
     await new Promise(r=>setTimeout(r,1500));
   }
   if(!__done){
     showStatus('Still processing… you can wait or try again.','text-yellow-300');
+    try { runBtn.disabled = false; runBtn.textContent = (modelChoice.value==='ultra' ? 'Run (cost: 1⚡)' : 'Run (cost: 0.5⚡)'); } catch(e) {}
   }
 }
 
@@ -383,8 +392,7 @@ window.__run=async function(){
     });
 
     if (res.status === 201 || res.status === 200 || res.status === 202) {
-      // client-side debit mirrors server-side (keeps header live)
-      await chargeCost(cost);
+      // server-side debit only; header updates via Realtime
     } else {
       const errT = await res.text().catch(()=> '');
       throw new Error('Create failed: ' + errT);
