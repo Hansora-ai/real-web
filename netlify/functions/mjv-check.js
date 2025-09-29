@@ -20,11 +20,24 @@ exports.handler = async (event) => {
   if (event.httpMethod !== "GET") return json(405, { ok:false, error:"Use GET", version: VERSION_TAG });
 
   const qs = event.queryStringParameters || {};
+  const byRunId = (qs.byRunId === '1' || qs.byRunId === 'true');
   const debug = qs.debug === "1" || qs.debug === "true";
 
   try {
     const taskId = (qs.taskId || qs.taskid || "").toString().trim();
     const uid    = (qs.uid || "").toString().trim();
+    const run_id = (qs.run_id || qs.runId || "").toString().trim();
+
+    if (byRunId && uid && run_id) {
+      if (!SUPABASE_URL || !SERVICE_KEY) return json(200, { ok:false, error:"no_supabase_for_byRunId", version: VERSION_TAG });
+      const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=result_url`;
+      const r0 = await fetch(UG_URL + q, { headers: sb() });
+      const arr0 = await r0.json().catch(()=>[]);
+      const result_url = Array.isArray(arr0) && arr0.length ? arr0[0].result_url : null;
+      if (result_url) return json(200, { ok:true, status:"done", video_url: result_url, version: VERSION_TAG });
+      return json(200, { ok:false, status:"pending", version: VERSION_TAG });
+    }
+const uid    = (qs.uid || "").toString().trim();
     const run_id = (qs.run_id || qs.runId || "").toString().trim();
     if (!taskId) return json(400, { ok:false, error:"missing taskId", version: VERSION_TAG });
 
