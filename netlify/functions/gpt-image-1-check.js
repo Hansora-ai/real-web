@@ -45,7 +45,7 @@ const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'downloads';
  * Fetches the sourceUrl image and stores it into Supabase Storage public bucket.
  * Returns the permanent public URL, or null if caching failed or envs missing.
  */
-async function __cacheToSupabase(sourceUrl, nameHint){
+async function __cacheToSupabase(sourceUrl, nameHint, stableKey){
   try{
     if (!(SUPABASE_URL && SERVICE_KEY && sourceUrl)) return null;
 
@@ -55,7 +55,7 @@ async function __cacheToSupabase(sourceUrl, nameHint){
     const ct = getRes.headers.get('content-type') || 'application/octet-stream';
     const buf = Buffer.from(await getRes.arrayBuffer());
 
-    const path = __buildPath(nameHint);
+    const path = __buildPath(nameHint, stableKey);
     const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`;
 
     const up = await fetch(uploadUrl, {
@@ -78,13 +78,14 @@ async function __cacheToSupabase(sourceUrl, nameHint){
   }
 }
 
-function __buildPath(nameHint){
+function __buildPath(nameHint, stableKey){
   const d = new Date();
   const y = String(d.getUTCFullYear());
   const m = String(d.getUTCMonth()+1).padStart(2,'0');
   const day = String(d.getUTCDate()).padStart(2,'0');
-  const rand = Math.random().toString(36).slice(2,10);
   const safe = String(nameHint || 'gpt-image-1.png').replace(/[^\w.\- ]+/g,'_').slice(0,150);
+  if (deterministic) return `${y}/${m}/${day}/${safe}`;
+  const rand = Math.random().toString(36).slice(2,10);
   return `${y}/${m}/${day}/${rand}-${safe}`;
 }
 
@@ -97,7 +98,8 @@ async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
   // Try to cache to Supabase; if it works, prefer the cached URL.
   try{
     const hint = (input && (input.filename || input.name)) || `gpt-image-1-${id||run_id||Date.now()}.png`;
-    const cached = await __cacheToSupabase(image_url, hint);
+    const stableKey = row_id || id || run_id || Date.now().toString(36);
+    const cached = await __cacheToSupabase(image_url, hint, stableKey);
     if (cached) finalUrl = cached;
   }catch{/* ignore */}
 
