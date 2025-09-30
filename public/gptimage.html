@@ -277,7 +277,6 @@ async function readFileAsDataUrl(file){
       fr.readAsDataURL(file);
     }catch(e){ resolve(null); }
   });
-`;
 }
 
 // Guarded renderer
@@ -410,13 +409,17 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
   const clearBtn = document.getElementById('imgClear');
 
   async function __read(file){
-    if (typeof readFileAsDataUrl === 'function') return await readFileAsDataUrl(file);
-    if(!file) return null;
-    const buf = await file.arrayBuffer();
-    const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-    const mime = file.type || 'image/png';
-    return `data:${mime`;
-  }
+  if (typeof readFileAsDataUrl === 'function') return await readFileAsDataUrl(file);
+  if(!file) return null;
+  return await new Promise((resolve)=>{
+    try{
+      const fr = new FileReader();
+      fr.onload = ()=> resolve(fr.result);
+      fr.onerror = ()=> resolve(null);
+      fr.readAsDataURL(file);
+    }catch(e){ resolve(null); }
+  });
+}
 
   async function showPreview(){
     if(!fileEl || !fileEl.files || !fileEl.files[0]){
