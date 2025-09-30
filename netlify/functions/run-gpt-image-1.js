@@ -36,6 +36,7 @@ exports.handler = async (event) => {
     const aspect_ratio = (body.aspect_ratio || '1:1').trim();
     const run_id = (body.run_id && String(body.run_id).trim()) || `${uid}-${Date.now()}`;
     const image_data_url = body.image_data_url || null;
+    const image_data_urls = Array.isArray(body.image_data_urls) ? body.image_data_urls.filter(Boolean) : null;
 
     if (!prompt) return json(400, { ok:false, error:'missing_prompt' });
 
@@ -51,7 +52,10 @@ exports.handler = async (event) => {
       aspect_ratio,
       output_format: "png"
     };
-    if (image_data_url) {
+    if (image_data_urls && image_data_urls.length){
+      input.input_images = image_data_urls;
+      input.input_fidelity = "high";
+    } else if (image_data_url){
       input.input_images = [ image_data_url ];
       input.input_fidelity = "high";
     }
