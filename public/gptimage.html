@@ -13,7 +13,6 @@
   // === Live credits (Supabase Realtime) + pre-run check ===
   (async function HANSORA_LIVE_CREDITS(){
     try{
-      if (typeof supabase === 'undefined' || !supabase?.auth) { /* wait until supabase init script runs */ return; }
       const navCreditsEl = document.getElementById('navCredits');
       const runBtn = document.getElementById('runBtn');
       function renderCredits(c){
@@ -178,9 +177,8 @@
           <!-- Optional image upload -->
           <div>
             <label class="text-xs text-zinc-400">Optional image (guidance)</label>
-            <input id="imageFile" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
-<div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div>
-
+            <input id="imageFile" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark" multiple>
+            <div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div>
             <p class="text-xs text-zinc-500 mt-1">Not required — leave empty to generate from text only.</p>
         <div id="imgPreview" class="hidden relative mt-3 aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
           <img id="imgPreviewImg" alt="preview" class="hidden w-full h-full object-contain"/>
@@ -271,8 +269,7 @@ function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text
 
 async function readFileAsDataUrl(file){
   if(!file) return null;
-  // Use FileReader to avoid large argument spreads (prevents call stack overflow).
-  return await new Promise((resolve, reject)=>{
+  return await new Promise((resolve) => {
     try{
       const fr = new FileReader();
       fr.onload = () => resolve(fr.result);
@@ -280,7 +277,7 @@ async function readFileAsDataUrl(file){
       fr.readAsDataURL(file);
     }catch(e){ resolve(null); }
   });
-};
+`;
 }
 
 // Guarded renderer
@@ -415,15 +412,10 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
   async function __read(file){
     if (typeof readFileAsDataUrl === 'function') return await readFileAsDataUrl(file);
     if(!file) return null;
-    return await new Promise((resolve)=>{
-      try{
-        const fr = new FileReader();
-        fr.onload = () => resolve(fr.result);
-        fr.onerror = () => resolve(null);
-        fr.readAsDataURL(file);
-      }catch(e){ resolve(null); }
-    });
-  };
+    const buf = await file.arrayBuffer();
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+    const mime = file.type || 'image/png';
+    return `data:${mime`;
   }
 
   async function showPreview(){
