@@ -179,19 +179,14 @@
             <label class="text-xs text-zinc-400">Optional image (guidance)</label>
             <input id="imageFile" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark"/>
             <p class="text-xs text-zinc-500 mt-1">Not required — leave empty to generate from text only.</p>
-        <div id="imgPreview" class="hidden relative mt-3 aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
-          <img id="imgPreviewImg" alt="preview" class="hidden w-full h-full object-contain"/>
-          <button id="imgClear" type="button" class="absolute top-2 right-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-2 py-1 text-xs">✕</button>
-          <span id="imgPreviewPlaceholder" class="text-xs text-zinc-500">No image selected</span>
         </div>
-          </div>
           </div>
 
           <!-- Aspect ratio -->
           <div>
             <label class="text-xs text-zinc-400">Aspect ratio</label>
             <select id="ratio" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
-      <option value="1:1" selected>1:1</option>
+      <option value="1:1">1:1</option>
       <option value="3:2">3:2</option>
       <option value="2:3">2:3</option>
     </select>
@@ -268,10 +263,15 @@ function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text
 
 async function readFileAsDataUrl(file){
   if(!file) return null;
-  const buf = await file.arrayBuffer();
-  const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-  const mime = file.type || 'image/png';
-  return `data:${mime};base64,${b64}`;
+  return await new Promise((resolve,reject)=>{
+    try{
+      const fr = new FileReader();
+      fr.onload = ()=> resolve(fr.result);
+      fr.onerror = ()=> reject(fr.error || new Error('file_read_failed'));
+      fr.readAsDataURL(file);
+    }catch(e){ reject(e); }
+  });
+};base64,${b64}`;
 }
 
 // Guarded renderer
@@ -490,6 +490,67 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
   }
 
   fileEl.addEventListener('change', renderThumbs);
+})();
+</script>
+
+
+<script>
+// 1:1 with Nano-Banana thumbs + delete logic (adapted to #imageFile)
+(function(){
+  var filesEl = document.getElementById('imageFile');
+  var thumbsEl = document.getElementById('thumbs');
+  if(!filesEl || !thumbsEl) return;
+
+  // Base change handler: render thumbnails (max 4)
+  filesEl.addEventListener('change', function(){
+    thumbsEl.innerHTML = '';
+    Array.from(filesEl.files).slice(0,4).forEach(function(f){
+      var u = URL.createObjectURL(f);
+      var img = new Image();
+      img.src = u;
+      img.className = 'h-24 w-24 object-cover rounded-lg border border-white/10';
+      thumbsEl.appendChild(img);
+    });
+    // After drawing, enhance to add delete buttons
+    setTimeout(enhanceThumbs, 0);
+  });
+
+  // Enhancement: wrap imgs with delete buttons that rebuild FileList via DataTransfer
+  function enhanceThumbs(){
+    var imgs = Array.from(thumbsEl.querySelectorAll('img'));
+    imgs.forEach(function(img, idx){
+      if (img.closest('.nb-thumb-wrap')) return;
+
+      var wrap = document.createElement('span');
+      wrap.className = 'nb-thumb-wrap relative inline-block';
+      img.parentNode.insertBefore(wrap, img);
+      wrap.appendChild(img);
+
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center';
+      del.setAttribute('aria-label','Remove image');
+      del.innerHTML = '&times;';
+
+      del.addEventListener('click', function(){
+        try{
+          var dt = new DataTransfer();
+          Array.from(filesEl.files).forEach(function(f, i){
+            if (i !== idx) dt.items.add(f);
+          });
+          filesEl.files = dt.files;
+        }catch(e){ /* ignore */ }
+
+        wrap.remove();
+        setTimeout(enhanceThumbs, 0);
+      });
+
+      wrap.appendChild(del);
+    });
+  }
+
+  // In case browser restores file input state, run once.
+  setTimeout(function(){ if (filesEl.files && filesEl.files.length) { filesEl.dispatchEvent(new Event('change')); } }, 0);
 })();
 </script>
 
