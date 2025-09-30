@@ -177,8 +177,8 @@
           <!-- Optional image upload -->
           <div>
             <label class="text-xs text-zinc-400">Optional image (guidance)</label>
-            <input id="imageFile" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark"/ multiple>
-            <div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div><p class="text-xs text-zinc-500 mt-1">Not required — leave empty to generate from text only.</p>
+            <input id="imageFile" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark"/>
+            <p class="text-xs text-zinc-500 mt-1">Not required — leave empty to generate from text only.</p>
         <div id="imgPreview" class="hidden relative mt-3 aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
           <img id="imgPreviewImg" alt="preview" class="hidden w-full h-full object-contain"/>
           <button id="imgClear" type="button" class="absolute top-2 right-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-2 py-1 text-xs">✕</button>
@@ -191,7 +191,7 @@
           <div>
             <label class="text-xs text-zinc-400">Aspect ratio</label>
             <select id="ratio" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
-      <option value="1:1" selected>1:1</option>
+      <option value="1:1">1:1</option>
       <option value="3:2">3:2</option>
       <option value="2:3">2:3</option>
     </select>
@@ -268,16 +268,10 @@ function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text
 
 async function readFileAsDataUrl(file){
   if(!file) return null;
-  // Use FileReader to avoid large spread -> call stack overflow on big files
-  return await new Promise((resolve, reject)=>{
-    try{
-      const fr = new FileReader();
-      fr.onload = () => resolve(fr.result);
-      fr.onerror = (e) => reject(e);
-      fr.readAsDataURL(file);
-    }catch(err){ reject(err); }
-  });
-};base64,${b64}`;
+  const buf = await file.arrayBuffer();
+  const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const mime = file.type || 'image/png';
+  return `data:${mime};base64,${b64}`;
 }
 
 // Guarded renderer
@@ -400,77 +394,49 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
   } finally{ /* keep disabled while polling; re-enabled on success/fail/timeout */ }
 };
 </script>
-
 <script>
-// === Multi-image preview (Nano Banana-style) while preserving original UI text ===
-(() => {
-  const fileInput = document.getElementById('imageFile');
-  const thumbs = document.getElementById('thumbs');
-  const singlePreview = document.getElementById('imgPreview'); // keep hidden
-  const singleImg = document.getElementById('imgPreviewImg');
-  const singleClear = document.getElementById('imgClear');
-  const placeholder = document.getElementById('imgPreviewPlaceholder');
+// === Image preview & clear ===
+(function(){
+  const fileEl = document.getElementById('imageFile');
+  const box = document.getElementById('imgPreview');
+  const img = document.getElementById('imgPreviewImg');
+  const ph = document.getElementById('imgPreviewPlaceholder');
+  const clearBtn = document.getElementById('imgClear');
 
-  if (!fileInput) return;
-
-  let filesState = [];
-
-  function renderThumbs() {
-    if (!thumbs) return;
-    thumbs.innerHTML = '';
-    filesState.forEach((f, idx) => {
-      const url = URL.createObjectURL(f);
-      const wrap = document.createElement('div');
-      wrap.className = 'relative w-20 h-20 rounded-lg overflow-hidden border border-white/10';
-      const img = document.createElement('img');
-      img.src = url;
-      img.alt = 'thumb';
-      img.className = 'w-full h-full object-cover';
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = '✕';
-      btn.className = 'absolute top-1 right-1 bg-black/50 text-white/90 rounded px-1 text-xs';
-      btn.addEventListener('click', () => {
-        filesState.splice(idx, 1);
-        renderThumbs();
-        // reflect back to input's FileList (create a new DataTransfer)
-        const dt = new DataTransfer();
-        filesState.forEach(ff => dt.items.add(ff));
-        fileInput.files = dt.files;
-      });
-      wrap.appendChild(img);
-      wrap.appendChild(btn);
-      thumbs.appendChild(wrap);
-      // Revoke URL when image loads to avoid leaks
-      img.onload = () => URL.revokeObjectURL(url);
-    });
+  async function __read(file){
+    if (typeof readFileAsDataUrl === 'function') return await readFileAsDataUrl(file);
+    if(!file) return null;
+    const buf = await file.arrayBuffer();
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+    const mime = file.type || 'image/png';
+    return `data:${mime};base64,${b64}`;
   }
 
-  fileInput.addEventListener('change', () => {
-    // Keep up to 4 images
-    const arr = Array.from(fileInput.files || []).slice(0, 4);
-    filesState = arr;
-    renderThumbs();
-
-    // Always hide single preview block to preserve layout
-    if (singlePreview) {
-      singlePreview.classList.add('hidden');
-      if (singleImg) singleImg.classList.add('hidden');
-      if (placeholder) placeholder.classList.remove('hidden');
+  async function showPreview(){
+    if(!fileEl || !fileEl.files || !fileEl.files[0]){
+      box?.classList.add('hidden');
+      if (img) { img.classList.add('hidden'); img.removeAttribute('src'); }
+      ph?.classList.remove('hidden');
+      return;
     }
-  });
-
-  // If there is an old clear button, make it clear all (for safety)
-  if (singleClear) {
-    singleClear.addEventListener('click', () => {
-      filesState = [];
-      renderThumbs();
-      if (fileInput) fileInput.value = '';
-    });
+    const url = await __read(fileEl.files[0]);
+    if(!url) return;
+    box?.classList.remove('hidden');
+    ph?.classList.add('hidden');
+    img?.classList.remove('hidden');
+    img.src = url;
   }
-})();
-</script>
 
+  fileEl?.addEventListener('change', showPreview);
+  clearBtn?.addEventListener('click', ()=>{
+    if (fileEl) fileEl.value='';
+    if (img){ img.classList.add('hidden'); img.removeAttribute('src'); }
+    if (ph) ph.classList.remove('hidden');
+    box?.classList.add('hidden');
+  });
+})();
+
+</script>
 
 <script>
 // Multi-image preview & delete (matching Nano Banana behavior)
@@ -525,6 +491,102 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
 
   fileEl.addEventListener('change', renderThumbs);
 })();
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  try {
+    var fileEl = document.getElementById('imageFile');
+    var thumbs = document.getElementById('thumbs');
+
+    // --- Nano-Banana style thumbs + delete (no globals) ---
+    function renderThumbs(){
+      if (!thumbs || !fileEl) return;
+      thumbs.innerHTML = '';
+      var files = (fileEl.files || []);
+      for (var i=0; i<files.length && i<4; i++){
+        (function(i){
+          var f = files[i];
+          var url = URL.createObjectURL(f);
+          var wrap = document.createElement('span');
+          wrap.className = 'nb-thumb relative inline-block';
+          var img = new Image();
+          img.src = url;
+          img.className = 'h-24 w-24 object-cover rounded-lg border border-white/10';
+          img.onload = function(){ try{ URL.revokeObjectURL(url); }catch(e){} };
+
+          var del = document.createElement('button');
+          del.type = 'button';
+          del.className = 'absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center';
+          del.setAttribute('aria-label','Remove image');
+          del.innerHTML = '×';
+          del.addEventListener('click', function(){
+            try {
+              var dt = new DataTransfer();
+              var fs = fileEl.files;
+              for (var j=0;j<fs.length;j++){ if (j!==i) dt.items.add(fs[j]); }
+              fileEl.files = dt.files;
+            } catch(e) { fileEl.value=''; }
+            renderThumbs();
+          });
+
+          wrap.appendChild(img);
+          wrap.appendChild(del);
+          thumbs.appendChild(wrap);
+        })(i);
+      }
+    }
+    if (fileEl) fileEl.addEventListener('change', renderThumbs);
+
+    // --- Inject image_data_urls into ONLY the GPT-Image-1 request ---
+    var __origFetch = window.fetch;
+    window.fetch = async function(input, init){
+      try {
+        var isTarget = (typeof input === 'string') && input.indexOf('/.netlify/functions/run-gpt-image-1') !== -1;
+        if (isTarget && init && init.body && typeof init.body === 'string') {
+          try {
+            var body = JSON.parse(init.body);
+            if (!body.image_data_urls) {
+              // Build data URLs for up to 4 files with FileReader (no stack overflow)
+              var urls = [];
+              if (fileEl && fileEl.files && fileEl.files.length){
+                var limit = Math.min(4, fileEl.files.length);
+                for (var k=0;k<limit;k++){
+                  var u = await new Promise(function(resolve){
+                    try{
+                      var fr = new FileReader();
+                      fr.onload = function(){ resolve(fr.result); };
+                      fr.onerror = function(){ resolve(null); };
+                      fr.readAsDataURL(fileEl.files[k]);
+                    }catch(e){ resolve(null); }
+                  });
+                  if (u) urls.push(u);
+                }
+              }
+              body.image_data_urls = urls;
+              init.body = JSON.stringify(body);
+            }
+          } catch(e) {
+            // ignore if body isn't JSON
+          }
+        }
+      } catch(e) {
+        // never block login or other scripts
+      }
+      return __origFetch.apply(this, arguments);
+    };
+
+    // If browser restores file input after reload, draw thumbs
+    setTimeout(function(){
+      if (fileEl && fileEl.files && fileEl.files.length){ renderThumbs(); }
+    }, 0);
+
+  } catch(e) {
+    // Do not let any error break header/auth
+    console.warn('thumbs/init error', e);
+  }
+});
 </script>
 
 </body>
