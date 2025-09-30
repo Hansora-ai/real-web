@@ -161,6 +161,38 @@ async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
   }catch(e){
     // swallow errors to avoid breaking the HTTP response
   }
+    // Final fallback: if we still didn't update anything but we know uid,
+    // patch the most recent NULL-result row for this user (created_at desc limit 1).
+    try{
+      if (uid){
+        const urlSel = `${SUPABASE_URL}/rest/v1/user_generations?user_id=eq.${encodeURIComponent(uid)}&result_url=is.null&order=created_at.desc&limit=1`;
+        const s = await fetch(urlSel, {
+          headers: {
+            'apikey': SERVICE_KEY,
+            'Authorization': `Bearer ${SERVICE_KEY}`,
+            'Accept': 'application/json'
+          }
+        });
+        if (s.ok){
+          const rows = await s.json().catch(()=>[]);
+          if (Array.isArray(rows) && rows.length > 0){
+            const targetId = rows[0].id;
+            const urlUpd = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(targetId)}`;
+            await fetch(urlUpd, {
+              method: 'PATCH',
+              headers: {
+                'apikey': SERVICE_KEY,
+                'Authorization': `Bearer ${SERVICE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+              },
+              body: JSON.stringify({ result_url: finalUrl, prompt, meta })
+            });
+          }
+        }
+      }
+    }catch{/* ignore */}
+
 }
 
 // ---------- Handler ----------
