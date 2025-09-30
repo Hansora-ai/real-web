@@ -1,19 +1,16 @@
-// netlify/functions/run-gpt-image-1.js
-// Creates a GPT-Image-1 prediction on Replicate, writes a placeholder Usage row,
-// sets a webhook so completion backfills even if the page is closed, and debits 4⚡.
+// netlify/functions/run-gpt-image-1.js (SAFE)
+// Uses env OPENAI_API_KEY (no hardcoded secrets).
+// Creates Replicate prediction, debits 4⚡, writes placeholder Usage, sets webhook.
 //
-// Inputs (JSON): { prompt, aspect_ratio, run_id?, image_data_url? }
-// Header: X-USER-ID
-//
-// Env:
-//   REPLICATE_API_KEY (required)
-//   OPENAI_API_KEY (preferred)  -- OpenAI key used by Replicate model
-//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (for Usage + debit)
-//
+// Env required:
+//   REPLICATE_API_KEY
+//   OPENAI_API_KEY
+//   SUPABASE_URL
+//   SUPABASE_SERVICE_ROLE_KEY
+
 const BASE = (process.env.REPLICATE_BASE_URL || 'https://api.replicate.com/v1').replace(/\/+$/,'');
 const TOKEN = process.env.REPLICATE_API_KEY;
-// Use env OPENAI_API_KEY if present; otherwise fall back to the key the user provided.
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "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";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 const SUPABASE_URL  = process.env.SUPABASE_URL || '';
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -31,6 +28,7 @@ exports.handler = async (event) => {
 
   try{
     if (!TOKEN) return json(500, { ok:false, error:'missing_replicate_key' });
+    if (!OPENAI_API_KEY) return json(500, { ok:false, error:'missing_openai_key' });
 
     const uid = event.headers['x-user-id'] || event.headers['X-USER-ID'] || 'anon';
     const body = JSON.parse(event.body || '{}');
@@ -69,7 +67,7 @@ exports.handler = async (event) => {
       body: JSON.stringify(payload),
     });
     if (!res.ok){
-      const t = await res.text().catch(()=>''); 
+      const t = await res.text().catch(()=>'');
       return json(res.status, { ok:false, error:'replicate_create_failed', details:t });
     }
 
