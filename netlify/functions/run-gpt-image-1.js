@@ -20,15 +20,15 @@ function cors(){ return {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-USER-ID, x-user-id',
 }; }
-const json = (c,o)=>({ statusCode:c, headers:{ 'Content-Type':'application/json', ...cors() }, body:JSON.stringify(o) });
+const json = (c,o)=>({ statusCode:c, headers:{ 'Content-Type':'application/json', ...cors() }, body:JSON.stringify(o) }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
-  if (event.httpMethod !== 'POST') return json(405, { ok:false, error:'method_not_allowed' });
+  if (event.httpMethod !== 'POST') return json(405, { ok:false, error:'method_not_allowed' }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
 
   try{
-    if (!TOKEN) return json(500, { ok:false, error:'missing_replicate_key' });
-    if (!OPENAI_API_KEY) return json(500, { ok:false, error:'missing_openai_key' });
+    if (!TOKEN) return json(500, { ok:false, error:'missing_replicate_key' }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
+    if (!OPENAI_API_KEY) return json(500, { ok:false, error:'missing_openai_key' }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
 
     const uid = event.headers['x-user-id'] || event.headers['X-USER-ID'] || 'anon';
     const body = JSON.parse(event.body || '{}');
@@ -38,11 +38,11 @@ exports.handler = async (event) => {
     const image_data_url = body.image_data_url || null;
     const image_data_urls = Array.isArray(body.image_data_urls) ? body.image_data_urls.filter(Boolean) : null;
 
-    if (!prompt) return json(400, { ok:false, error:'missing_prompt' });
+    if (!prompt) return json(400, { ok:false, error:'missing_prompt' }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
 
     const proto = (event.headers['x-forwarded-proto'] || 'https').replace(/[^a-z]+/ig,'');
     const host  = (event.headers['x-forwarded-host'] || event.headers['host'] || '').replace(/\/+$/,'');
-    const webhook = `${proto}://${host}/.netlify/functions/gpt-image-1-check?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
+    let webhook = `${proto}://${host}/.netlify/functions/gpt-image-1-check?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
 
     const endpoint = `${BASE}/models/openai/gpt-image-1/predictions`;
 
@@ -78,21 +78,21 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
-    });
+    }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
     if (!res.ok){
       const t = await res.text().catch(()=>'');
-      return json(res.status, { ok:false, error:'replicate_create_failed', details:t });
+      return json(res.status, { ok:false, error:'replicate_create_failed', details:t }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
     }
 
     const data = await res.json();
     const id = data && data.id;
-    if (!id) return json(500, { ok:false, error:'missing_prediction_id' });
+    if (!id) return json(500, { ok:false, error:'missing_prediction_id' }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
 
     // --- Debit 4⚡ ---
     try{
       if (SUPABASE_URL && SERVICE_KEY && uid && uid !== 'anon') {
         const profGet = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
-        const r0 = await fetch(profGet, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+        const r0 = await fetch(profGet, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
         const j0 = await r0.json();
         const c0 = (Array.isArray(j0) && j0[0] && j0[0].credits) || 0;
         const next = Math.max(0, c0 - 4);
@@ -105,7 +105,7 @@ exports.handler = async (event) => {
             'Prefer': 'return=minimal',
           },
           body: JSON.stringify({ credits: next }),
-        });
+        }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
       }
     }catch(e){ console.warn('[run-gpt-image-1] debit failed', e); }
 
@@ -130,7 +130,7 @@ exports.handler = async (event) => {
             result_url: null,
             meta,
           }),
-        });
+        }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
       }
     }catch(e){ console.warn('[run-gpt-image-1] placeholder insert failed', e); }
 
