@@ -83,8 +83,12 @@ function __buildPath(nameHint, stableKey){
   const y = String(d.getUTCFullYear());
   const m = String(d.getUTCMonth()+1).padStart(2,'0');
   const day = String(d.getUTCDate()).padStart(2,'0');
-  const safe = String(nameHint || 'gpt-image-1.png').replace(/[^\w.\- ]+/g,'_').slice(0,150);
-  if (deterministic) return `${y}/${m}/${day}/${safe}`;
+  const safe = String(nameHint || 'gpt-image-1.png')
+    .replace(/[^\w.\- ]+/g,'_')
+    .slice(0,150);
+  const key = (stableKey ? String(stableKey).replace(/[^\w.\-]+/g,'_').slice(0,48)+'-' : '');
+  return `${y}/${m}/${day}/${key}${safe}`;
+}/${m}/${day}/${safe}`;
   const rand = Math.random().toString(36).slice(2,10);
   return `${y}/${m}/${day}/${rand}-${safe}`;
 }
@@ -170,6 +174,7 @@ async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
         const urlSel = `${SUPABASE_URL}/rest/v1/user_generations?user_id=eq.${encodeURIComponent(uid)}&result_url=is.null&order=created_at.desc&limit=1`;
         const s = await fetch(urlSel, {
           headers: {
+            'apikey': SERVICE_KEY,
             'apikey': SERVICE_KEY,
             'Authorization': `Bearer ${SERVICE_KEY}`,
             'Accept': 'application/json'
