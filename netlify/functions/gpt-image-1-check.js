@@ -126,20 +126,6 @@ async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
     }
 
 const ug = `${SUPABASE_URL.replace(/\/+$/,'')}/rest/v1/user_generations`;
-    // First try: update by explicit row id, if provided
-    if (row_id) {
-      const patchById = await fetch(`${ug}?id=eq.${encodeURIComponent(row_id)}`, {
-        method: 'PATCH',
-        headers: {
-          'apikey': SERVICE_KEY,
-          'Authorization': `Bearer ${SERVICE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({ result_url, provider: 'GPT-Image-1', kind: 'image', prompt, meta })
-      });
-      if (patchById.ok) return;
-    }
 
     const prompt = input?.prompt || null;
     const meta = {
@@ -152,6 +138,21 @@ const ug = `${SUPABASE_URL.replace(/\/+$/,'')}/rest/v1/user_generations`;
       status: 'succeeded',
       input_fidelity: input?.input_fidelity || null
     };
+    // First try: update by explicit row id, if provided
+    if (row_id) {
+      const patchById = await fetch(`${ug}?id=eq.${encodeURIComponent(row_id)}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SERVICE_KEY,
+          'Authorization': `Bearer ${SERVICE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ result_url: result_url, provider: 'GPT-Image-1', kind: 'image', prompt, meta })
+      });
+      if (patchById.ok) return;
+    }
+
 
     let updated = false;
     if (run_id){
