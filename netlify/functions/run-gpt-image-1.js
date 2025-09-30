@@ -44,7 +44,8 @@ exports.handler = async (event) => {
     const host  = (event.headers['x-forwarded-host'] || event.headers['host'] || '').replace(/\/+$/,'');
     let webhook = `${proto}://${host}/.netlify/functions/gpt-image-1-check?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
 
-    const endpoint = `${BASE}/models/openai/gpt-image-1/predictions`;
+    if (row_id) webhook += `&row_id=${encodeURIComponent(row_id)}`;
+const endpoint = `${BASE}/models/openai/gpt-image-1/predictions`;
 
     const input = {
       openai_api_key: OPENAI_API_KEY,
