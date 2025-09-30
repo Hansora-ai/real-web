@@ -177,8 +177,9 @@
           <!-- Optional image upload -->
           <div>
             <label class="text-xs text-zinc-400">Optional image (guidance)</label>
-            <input id="imageFile" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark"/>
+            <input id="imageFile" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark"/ multiple>
             <p class="text-xs text-zinc-500 mt-1">Not required — leave empty to generate from text only.</p>
+        <div id="thumbs" class="mt-2 flex flex-wrap gap-2"></div>
         <div id="imgPreview" class="hidden relative mt-3 aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
           <img id="imgPreviewImg" alt="preview" class="hidden w-full h-full object-contain"/>
           <button id="imgClear" type="button" class="absolute top-2 right-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-2 py-1 text-xs">✕</button>
@@ -191,12 +192,10 @@
           <div>
             <label class="text-xs text-zinc-400">Aspect ratio</label>
             <select id="ratio" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
-              <option value="1:1" selected>1:1</option>
-              <option value="9:16">9:16</option>
-              <option value="16:9">16:9</option>
-              <option value="3:4">3:4</option>
-              <option value="4:3">4:3</option>
-            </select>
+      <option value="1:1">1:1</option>
+      <option value="3:2">3:2</option>
+      <option value="2:3">2:3</option>
+    </select>
           </div>
 
           <!-- Prompt -->
@@ -369,10 +368,14 @@ window.__run=async function(){
     if (fileEl && fileEl.files && fileEl.files[0]) {
       image_data_url = await readFileAsDataUrl(fileEl.files[0]);
     }
-    const res=await fetch('/.netlify/functions/run-gpt-image-1',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-USER-ID':uid},
-      body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_data_url })
+    const files = (document.getElementById('imageFile')?.files)||[];
+      let image_data_urls = [];
+      for (let i=0;i<files.length;i++){ image_data_urls.push(await readFileAsDataUrl(files[i])); }
+      const res = await fetch('/.netlify/functions/run-gpt-image-1', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-USER-ID':uid},
+        body: JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_data_url , image_data_urls })
+      }
     });
 if (res.status === 201 || res.status === 200 || res.status === 202) {
       /* client-side debit removed */
@@ -434,6 +437,61 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
     if (ph) ph.classList.remove('hidden');
     box?.classList.add('hidden');
   });
+})();
+
+</script>
+<script>
+// === Multi-image preview & delete (Nano Banana 1:1 logic) ===
+(function(){
+  const fileEl = document.getElementById('imageFile');
+  const thumbs = document.getElementById('thumbs');
+  if(!fileEl || !thumbs) return;
+
+  function rebuildFileList(keepIndexes){
+    const dt = new DataTransfer();
+    const files = fileEl.files;
+    for (let i = 0; i < files.length; i++){
+      if (keepIndexes.has(i)) dt.items.add(files[i]);
+    }
+    fileEl.files = dt.files;
+  }
+
+  function renderThumbs(){
+    thumbs.innerHTML = '';
+    const files = fileEl.files;
+    if (!files || !files.length) return;
+
+    for (let i = 0; i < files.length; i++){
+      const f = files[i];
+      const url = URL.createObjectURL(f);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'relative inline-block';
+
+      const img = new Image();
+      img.className = 'h-24 w-24 object-cover rounded-lg border border-white/10';
+      img.src = url;
+      img.onload = () => { try{ URL.revokeObjectURL(url); }catch{} };
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center';
+      btn.setAttribute('aria-label','Remove image');
+      btn.innerHTML = '&times;';
+      btn.addEventListener('click', ()=>{
+        const keep = new Set();
+        for (let j = 0; j < files.length; j++) if (j !== i) keep.add(j);
+        rebuildFileList(keep);
+        renderThumbs();
+      });
+
+      wrap.appendChild(img);
+      wrap.appendChild(btn);
+      thumbs.appendChild(wrap);
+    }
+  }
+
+  fileEl.addEventListener('change', renderThumbs);
 })();
 
 </script>
