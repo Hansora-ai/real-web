@@ -69,13 +69,62 @@ function extractImageUrl(out){
     const first = out[0];
     return (typeof first === 'string') ? first : (first && first.url) || null;
   }
-  return (typeof out === 'string') ? out : (out && out.url) || null;
+  
+// === Minimal additions: cache temp CDN asset to Supabase Storage and return permanent URL ===
+const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'downloads';
+
+async function __cacheToSupabase(sourceUrl, name){
+  if (!(SUPABASE_URL && SERVICE_KEY && sourceUrl)) return null;
+  try{
+    const getRes = await fetch(sourceUrl);
+    if (!getRes.ok) return null;
+    const ct = getRes.headers.get('content-type') || 'application/octet-stream';
+    const buf = Buffer.from(await getRes.arrayBuffer());
+
+    const path = __buildPath(name);
+    const base = SUPABASE_URL.replace(/\/+$/,'');
+    const up = await fetch(`${base}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SERVICE_KEY}`,
+        'Content-Type': ct,
+        'x-upsert': 'true',
+      },
+      body: buf,
+    });
+    if (!up.ok) return null;
+
+    // Public URL (requires bucket to be public). If private, you can sign instead.
+    return `${base}/storage/v1/object/public/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`;
+  }catch{
+    return null;
+  }
+}
+
+function __buildPath(name){
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth()+1).padStart(2,'0');
+  const day = String(d.getUTCDate()).padStart(2,'0');
+  const rand = Math.random().toString(36).slice(2,10);
+  const safe = String(name || 'file.png').replace(/[^\w.\- ]+/g,'_').slice(0,150);
+  return `${y}/${m}/${day}/${rand}-${safe}`;
+}
+
+return (typeof out === 'string') ? out : (out && out.url) || null;
 }
 
 async function backfillUsage({ uid, run_id, id, image_url, input }){
   if (!(SUPABASE_URL && SERVICE_KEY && uid)) return;
   try{
-    const ug = `${SUPABASE_URL.replace(/\/+$/,'')}/rest/v1/user_generations`;
+        // New: cache temp provider URL to Supabase to make it permanent
+    let result_url = image_url;
+    if (image_url) {
+      const cached = await __cacheToSupabase(image_url, `gpt-image-1-${id || run_id || Date.now()}.png`);
+      if (cached) result_url = cached; // fallback to temp if caching failed
+    }
+
+const ug = `${SUPABASE_URL.replace(/\/+$/,'')}/rest/v1/user_generations`;
     const prompt = input?.prompt || null;
     const meta = {
       provider: 'gpt-image-1',
@@ -98,7 +147,7 @@ async function backfillUsage({ uid, run_id, id, image_url, input }){
           'Content-Type': 'application/json',
           'Prefer': 'return=representation'
         },
-        body: JSON.stringify({ result_url: image_url, provider: 'GPT-Image-1', kind: 'image', prompt, meta })
+        body: JSON.stringify({ result_url: result_url, provider: 'GPT-Image-1', kind: 'image', prompt, meta })
       });
       if (patch.ok){
         const arr = await patch.json().catch(()=>[]);
@@ -114,7 +163,7 @@ async function backfillUsage({ uid, run_id, id, image_url, input }){
           'Content-Type': 'application/json',
           'Prefer': 'return=representation'
         },
-        body: JSON.stringify({ result_url: image_url, provider: 'GPT-Image-1', kind: 'image', prompt, meta })
+        body: JSON.stringify({ result_url: result_url, provider: 'GPT-Image-1', kind: 'image', prompt, meta })
       });
       if (patch2.ok){
         const arr = await patch2.json().catch(()=>[]);
