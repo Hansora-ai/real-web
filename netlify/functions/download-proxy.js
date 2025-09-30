@@ -1,11 +1,15 @@
 // netlify/functions/download-proxy.js
-// Hybrid download proxy:
-//   • Supabase: 302 redirect with ?download=<name> (no size limit, full quality)
-//   • Other allowed hosts: try to STREAM (force Content-Disposition) if <= 9MB;
-//     otherwise 302 redirect (can't force attachment, but avoids lambda size limits).
-//   • Unwraps double-proxied URLs, fixes hhttps:// typos, basic domain allowlist.
+// Redirect + cache proxy (no response size limits to client):
+//   • Supabase URL  -> 302 redirect with ?download=<name>
+//   • Other allowed -> server-side fetch -> upload to Supabase Storage (x-upsert) -> 302 to Supabase public URL (?download=<name>)
+// Notes:
+//   - Guarantees "attachment" via Supabase download param for any origin
+//   - Never streams big payloads to the client (avoids Netlify 6–10MB response cap)
+//   - Unwraps nested proxies, fixes hhttps:// typos, has a small allowlist
 
-const MAX_STREAM_BYTES = 9_000_000; // ~9 MB safety for base64 response
+const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/,'');
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const BUCKET        = process.env.SUPABASE_BUCKET || 'downloads';
 
 export const handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -21,14 +25,14 @@ export const handler = async (event) => {
 
   if (!raw) return json(400, { ok:false, error:'missing_url' });
 
-  // Unwrap nested proxy & fix common typos
+  // unwrap nested/double-proxy & fix common typos
   raw = unwrap(raw).replace(/^hhttps:\/\//i, 'https://').replace(/^hhttp:\/\//i, 'http://');
 
   let target;
   try { target = new URL(raw); }
   catch { return json(400, { ok:false, error:'bad_url', url: raw }); }
 
-  // Allowlist
+  // allowlist (adjust as needed)
   const ALLOW = [
     'supabase.co',
     'supabase.in',
@@ -38,69 +42,72 @@ export const handler = async (event) => {
     'tempfile.aiquickdraw.com',
   ];
   const allowed = ALLOW.some((d) => target.hostname === d || target.hostname.endsWith(`.${d}`));
-  if (!allowed) {
-    return json(400, { ok:false, error:'blocked_host', host: target.hostname });
-  }
+  if (!allowed) return json(400, { ok:false, error:'blocked_host', host: target.hostname });
 
-  // Derive filename
+  // filename
   if (!name) {
-    try {
-      name = decodeURIComponent((target.pathname.split('/').pop() || 'download').split('?')[0]);
-    } catch { name = target.pathname.split('/').pop() || 'download'; }
+    try { name = decodeURIComponent((target.pathname.split('/').pop() || 'download').split('?')[0]); }
+    catch { name = target.pathname.split('/').pop() || 'download'; }
   }
   name = name.replace(/[^\w.\- ]+/g, '_').slice(0, 150);
 
-  // Supabase -> 302 with ?download=
+  // Supabase URL? just redirect with download param
   if (/\b(supabase\.co|supabase\.in|storage\.supabase\.com)\b/.test(target.hostname)) {
     target.searchParams.set('download', name);
-    return redirect(target);
+    return redirect(target.toString());
   }
 
-  // Other allowed hosts: try HEAD for size
-  let size = 0, type = 'application/octet-stream';
+  // Otherwise: cache to Supabase then redirect to the cached object
+  if (!(SUPABASE_URL && SERVICE_KEY)) {
+    // if we can't cache, best effort redirect to original
+    return redirect(target.toString());
+  }
+
   try {
-    const head = await fetch(target.toString(), { method: 'HEAD' });
-    if (head.ok) {
-      size = Number(head.headers.get('content-length') || 0) || 0;
-      type = head.headers.get('content-type') || type;
+    const upstream = await fetch(target.toString(), { redirect: 'follow' });
+    if (!upstream.ok) {
+      const text = await upstream.text().catch(()=>'');
+      return json(upstream.status, { ok:false, error:'upstream_error', details: text.slice(0,1000) });
     }
-  } catch {}
+    const ct = upstream.headers.get('content-type') || 'application/octet-stream';
+    const buf = Buffer.from(await upstream.arrayBuffer());
 
-  // Stream if small enough; else redirect
-  if (size > 0 && size <= MAX_STREAM_BYTES) {
-    try {
-      const upstream = await fetch(target.toString(), { redirect: 'follow' });
-      if (!upstream.ok) {
-        const text = await upstream.text().catch(()=>'');
-        return json(upstream.status, { ok:false, error:'upstream_error', details: text.slice(0,1000) });
-      }
-      const buf = Buffer.from(await upstream.arrayBuffer());
-      const ctype = upstream.headers.get('content-type') || type || 'application/octet-stream';
-      return {
-        statusCode: 200,
-        headers: {
-          ...cors(),
-          'Content-Type': ctype,
-          'Content-Disposition': `attachment; filename="${name}"`,
-          'Cache-Control': 'no-store'
-        },
-        body: buf.toString('base64'),
-        isBase64Encoded: true
-      };
-    } catch(e) {
-      // if streaming fails, fall back to redirect
-      return redirect(target);
+    // build deterministic path using date + stable hash of URL
+    const path = buildPath(name, stableHash(target.toString()));
+
+    // upload to Supabase Storage (upsert)
+    const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(BUCKET)}/${path}`;
+    const up = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'apikey': SERVICE_KEY,
+        'Authorization': `Bearer ${SERVICE_KEY}`,
+        'Content-Type': ct,
+        'x-upsert': 'true',
+      },
+      body: buf,
+    });
+
+    if (!up.ok) {
+      const t = await up.text().catch(()=>'');
+      // fallback to direct redirect if upload failed
+      return redirect(target.toString());
     }
+
+    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(BUCKET)}/${path}`;
+    const redir = new URL(publicUrl);
+    redir.searchParams.set('download', name);
+    return redirect(redir.toString());
+  } catch (e) {
+    // on any error, best effort redirect
+    return redirect(target.toString());
   }
-
-  // No size info or too large -> redirect (no buffer limits)
-  return redirect(target);
 };
 
-function redirect(urlObj){
+function redirect(url){
   return {
     statusCode: 302,
-    headers: { ...cors(), Location: urlObj.toString(), 'Cache-Control': 'no-store' },
+    headers: { ...cors(), Location: url, 'Cache-Control': 'no-store' },
     body: ''
   };
 }
@@ -124,4 +131,21 @@ function unwrap(v){
     } catch { break; }
   }
   return s;
+}
+
+// simple stable hash (djb2)
+function stableHash(s){
+  let h = 5381;
+  for (let i=0;i<s.length;i++) h = ((h<<5)+h) + s.charCodeAt(i);
+  return (h>>>0).toString(16);
+}
+
+function buildPath(name, key){
+  const d = new Date();
+  const y = String(d.getUTCFullYear());
+  const m = String(d.getUTCMonth()+1).padStart(2,'0');
+  const day = String(d.getUTCDate()).padStart(2,'0');
+  const safe = String(name || 'file.bin').replace(/[^\w.\- ]+/g,'_').slice(0,150);
+  const prefix = key ? `${key}-` : '';
+  return `${y}/${m}/${day}/${prefix}${safe}`;
 }
