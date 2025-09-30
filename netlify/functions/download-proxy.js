@@ -1,93 +1,150 @@
 // netlify/functions/download-proxy.js
-// Redirect-based proxy: no buffering, no base64. Handles huge files (12MB, 1GB+).
-// - Unwraps double-proxied URLs
-// - Fixes common typos (hhttps://)
-// - Adds filename via Supabase ?download=
-// - Simple domain allowlist
-// - Console logs for diagnostics (view in Netlify function logs)
+// Smart downloader for Usage page.
+// - Small files (<~5.5MB): proxy with Content-Disposition: attachment (works on iOS/Android/desktop)
+// - Large or unknown-size files: cache to Supabase Storage, then 302 redirect to a signed URL with ?download=<name>
+// Query: /.netlify/functions/download-proxy?url=<encoded>&name=<optional filename.ext>
+//
+// Env (for large files):
+//   SUPABASE_URL            (required to cache)
+//   SUPABASE_SERVICE_ROLE   (required to cache)
+//   SUPABASE_BUCKET         (optional; defaults to 'downloads')
+//
+// If Supabase env is missing, we fallback to a 302 redirect to the original URL (no guaranteed download).
 
-export const handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: cors(), body: '' };
-  }
-  if (event.httpMethod !== 'GET') {
-    return json(405, { ok:false, error:'method_not_allowed' });
-  }
+export async function handler(event) {
+  try {
+    const url = event.queryStringParameters?.url;
+    const name = event.queryStringParameters?.name || 'file';
+    if (!url) return { statusCode: 400, body: 'Missing ?url=' };
 
-  const sp = new URLSearchParams(event.queryStringParameters || {});
-  let raw = sp.get('url') || '';
-  let name = (sp.get('name') || '').trim();
+    // HEAD (or tiny range GET) to inspect size
+    const head = await tryHeadOrRange(url);
+    const length = parseContentLength(head);
+    const contentType = head?.headers?.get('content-type') || 'application/octet-stream';
 
-  if (!raw) return json(400, { ok:false, error:'missing_url' });
+    const LIMIT = 5_500_000; // ~5.5MB raw -> stays under ~6MB base64 response cap
 
-  // unwrap nested/double-proxy up to 3 times & fix common typos
-  raw = unwrap(raw).replace(/^hhttps:\/\//i, 'https://').replace(/^hhttp:\/\//i, 'http://');
+    // === Path A: Small file -> proxy with attachment ===
+    if (Number.isFinite(length) && length > 0 && length <= LIMIT) {
+      const res = await fetch(url);
+      if (!res.ok) return upstreamError(res);
 
-  let target;
-  try { target = new URL(raw); }
-  catch { return json(400, { ok:false, error:'bad_url', url: raw }); }
-
-  // Basic allowlist to avoid open redirects (adjust as needed)
-  const ALLOW = [
-    'supabase.co',
-    'supabase.in',
-    'storage.supabase.com', // in case of CDN fronts
-    'replicate.delivery'
-  ];
-  const allowed = ALLOW.some((d) => target.hostname === d || target.hostname.endsWith(`.${d}`));
-  if (!allowed) {
-    console.warn('[download-proxy] blocked host:', target.hostname, 'url:', target.toString());
-    return json(400, { ok:false, error:'blocked_host', host: target.hostname });
-  }
-
-  // Derive a friendly filename if not given
-  if (!name) {
-    try {
-      name = decodeURIComponent((target.pathname.split('/').pop() || 'download').split('?')[0]);
-    } catch { name = target.pathname.split('/').pop() || 'download'; }
-  }
-  name = name.replace(/[^\w.\- ]+/g, '_').slice(0, 150);
-
-  // Supabase Storage: force download with the desired file name
-  if (/\b(supabase\.co|supabase\.in|storage\.supabase\.com)\b/.test(target.hostname)) {
-    target.searchParams.set('download', name);
-  }
-
-  // Minimal structured logging for troubleshooting
-  console.log('[download-proxy] redirecting', {
-    host: target.hostname,
-    path: target.pathname,
-    size_limit: 'N/A (redirect)',
-    filename: name
-  });
-
-  // 302 redirect: browser pulls bytes directly from origin/CDN (no size limit)
-  return {
-    statusCode: 302,
-    headers: { ...cors(), Location: target.toString(), 'Cache-Control': 'no-store' },
-    body: ''
-  };
-};
-
-function cors(){ return {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': '*',
-}; }
-const json = (c,o)=>({ statusCode:c, headers:{ 'Content-Type':'application/json', ...cors() }, body:JSON.stringify(o) });
-
-function unwrap(v){
-  let s = String(v || '');
-  for (let i=0;i<3;i++){
-    try {
-      const once = decodeURIComponent(s);
-      const m = once.match(/\/\.netlify\/functions\/download-proxy\?url=([^&]+)/i);
-      if (m && m[1]) { s = m[1]; continue; }
-      s = once;
-      break;
-    } catch {
-      break;
+      const buf = Buffer.from(await res.arrayBuffer());
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': contentType,
+          'Content-Disposition': `attachment; filename="${sanitize(name)}"`,
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+        body: buf.toString('base64'),
+        isBase64Encoded: true,
+      };
     }
+
+    // === Path B: Large/unknown -> cache to Supabase Storage, return signed download URL ===
+    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE;
+    const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'downloads';
+
+    // If we can't cache, fall back to redirect to the source.
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
+      return {
+        statusCode: 302,
+        headers: { Location: url, 'Cache-Control': 'private, max-age=0, no-cache' },
+        body: '',
+      };
+    }
+
+    // Download the file server-side
+    const getRes = await fetch(url);
+    if (!getRes.ok) return upstreamError(getRes);
+    const fileBuf = Buffer.from(await getRes.arrayBuffer());
+
+    // Upload to Supabase Storage via REST
+    const path = buildPath(name);
+    const upRes = await fetch(`${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE}`,
+        'Content-Type': contentType,
+        'x-upsert': 'true',
+      },
+      body: fileBuf,
+    });
+
+    if (!upRes.ok) {
+      const txt = await upRes.text().catch(() => '');
+      return { statusCode: 502, body: `Upload failed: ${txt || upRes.status}` };
+    }
+
+    // Create a signed URL (1h) and append ?download=<name> to force attachment
+    const signRes = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expiresIn: 3600 }),
+    });
+
+    if (!signRes.ok) {
+      const txt = await signRes.text().catch(() => '');
+      return { statusCode: 502, body: `Sign failed: ${txt || signRes.status}` };
+    }
+
+    const { signedURL } = await signRes.json();
+    const downloadURL = `${SUPABASE_URL}${signedURL}&download=${encodeURIComponent(name)}`;
+
+    return {
+      statusCode: 302,
+      headers: { Location: downloadURL, 'Cache-Control': 'private, max-age=0, no-cache' },
+      body: '',
+    };
+
+  } catch (e) {
+    return { statusCode: 500, body: String(e && e.message || e) };
   }
-  return s;
+}
+
+async function tryHeadOrRange(url) {
+  try {
+    const h = await fetch(url, { method: 'HEAD' });
+    if (h.ok) return h;
+  } catch {}
+  try {
+    return await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' } });
+  } catch {
+    return null;
+  }
+}
+
+function parseContentLength(res) {
+  if (!res) return 0;
+  const cl = res.headers?.get('content-length');
+  const n = cl ? parseInt(cl, 10) : 0;
+  return Number.isFinite(n) ? n : 0;
+}
+
+function sanitize(n) {
+  return String(n).replace(/[^\w.\- ]+/g, '_').slice(0, 150) || 'file';
+}
+
+function buildPath(name) {
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `${y}/${m}/${day}/${rand}-${sanitize(name)}`;
+}
+
+async function upstreamError(res) {
+  let detail = '';
+  try {
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('application/json')) detail = await res.text();
+  } catch {}
+  return {
+    statusCode: res.status,
+    headers: { 'Content-Type': 'application/json' },
+    body: detail || JSON.stringify({ error: 'Upstream fetch failed' }),
+  };
 }
