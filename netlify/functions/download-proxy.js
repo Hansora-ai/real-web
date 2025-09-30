@@ -1,11 +1,8 @@
 // netlify/functions/download-proxy.js
-// Redirect + cache proxy (no response size limits to client):
-//   • Supabase URL  -> 302 redirect with ?download=<name>
-//   • Other allowed -> server-side fetch -> upload to Supabase Storage (x-upsert) -> 302 to Supabase public URL (?download=<name>)
-// Notes:
-//   - Guarantees "attachment" via Supabase download param for any origin
-//   - Never streams big payloads to the client (avoids Netlify 6–10MB response cap)
-//   - Unwraps nested proxies, fixes hhttps:// typos, has a small allowlist
+// Redirect + cache proxy with extension-fix for filenames:
+//   • Supabase URL  -> 302 redirect with ?download=<fixedName>
+//   • Other allowed -> server-side fetch -> upload to Supabase Storage (x-upsert) -> 302 to Supabase public URL (?download=<fixedName>)
+// Ensures the filename has the correct extension (derived from URL or Content-Type).
 
 const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/,'');
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -21,7 +18,7 @@ export const handler = async (event) => {
 
   const sp = new URLSearchParams(event.queryStringParameters || {});
   let raw = sp.get('url') || '';
-  let name = (sp.get('name') || '').trim();
+  let providedName = (sp.get('name') || '').trim();
 
   if (!raw) return json(400, { ok:false, error:'missing_url' });
 
@@ -44,15 +41,13 @@ export const handler = async (event) => {
   const allowed = ALLOW.some((d) => target.hostname === d || target.hostname.endsWith(`.${d}`));
   if (!allowed) return json(400, { ok:false, error:'blocked_host', host: target.hostname });
 
-  // filename
-  if (!name) {
-    try { name = decodeURIComponent((target.pathname.split('/').pop() || 'download').split('?')[0]); }
-    catch { name = target.pathname.split('/').pop() || 'download'; }
-  }
-  name = name.replace(/[^\w.\- ]+/g, '_').slice(0, 150);
+  // initial name guess from URL if none provided
+  let nameFromUrl = safeFileName(decodePath(target.pathname.split('/').pop() || 'download'));
+  let name = providedName ? safeFileName(providedName) : nameFromUrl;
 
-  // Supabase URL? just redirect with download param
+  // Supabase URL? just redirect with download param (derive ext from URL path)
   if (/\b(supabase\.co|supabase\.in|storage\.supabase\.com)\b/.test(target.hostname)) {
+    name = ensureExt(name, nameFromUrl, null);
     target.searchParams.set('download', name);
     return redirect(target.toString());
   }
@@ -70,6 +65,10 @@ export const handler = async (event) => {
       return json(upstream.status, { ok:false, error:'upstream_error', details: text.slice(0,1000) });
     }
     const ct = upstream.headers.get('content-type') || 'application/octet-stream';
+
+    // fix/append extension using content-type when needed
+    name = ensureExt(name, nameFromUrl, ct);
+
     const buf = Buffer.from(await upstream.arrayBuffer());
 
     // build deterministic path using date + stable hash of URL
@@ -89,7 +88,6 @@ export const handler = async (event) => {
     });
 
     if (!up.ok) {
-      const t = await up.text().catch(()=>'');
       // fallback to direct redirect if upload failed
       return redirect(target.toString());
     }
@@ -133,6 +131,47 @@ function unwrap(v){
   return s;
 }
 
+function decodePath(p){
+  try { return decodeURIComponent(p); } catch { return p; }
+}
+
+function safeFileName(n){
+  return String(n || 'download').replace(/[^\w.\- ]+/g, '_').slice(0,150);
+}
+
+// ensure filename has extension; prefer URL ext, then content-type mapping
+function ensureExt(name, urlName, contentType){
+  const hasDot = /\.[A-Za-z0-9]{2,5}$/.test(name);
+  if (hasDot) return name;
+
+  // try ext from URL
+  const m = (urlName || '').match(/\.([A-Za-z0-9]{2,5})$/);
+  let ext = m ? m[1].toLowerCase() : '';
+
+  // fallback to content-type
+  if (!ext && contentType){
+    ext = ctToExt(contentType);
+  }
+
+  if (!ext) ext = 'bin';
+  return `${name}.${ext}`;
+}
+
+function ctToExt(ct){
+  const t = String(ct).toLowerCase();
+  if (t.includes('image/png')) return 'png';
+  if (t.includes('image/jpeg')) return 'jpg';
+  if (t.includes('image/webp')) return 'webp';
+  if (t.includes('image/gif')) return 'gif';
+  if (t.includes('image/svg')) return 'svg';
+  if (t.includes('video/mp4')) return 'mp4';
+  if (t.includes('video/webm')) return 'webm';
+  if (t.includes('video/quicktime')) return 'mov';
+  if (t.includes('application/pdf')) return 'pdf';
+  if (t.includes('application/zip')) return 'zip';
+  return '';
+}
+
 // simple stable hash (djb2)
 function stableHash(s){
   let h = 5381;
@@ -145,7 +184,7 @@ function buildPath(name, key){
   const y = String(d.getUTCFullYear());
   const m = String(d.getUTCMonth()+1).padStart(2,'0');
   const day = String(d.getUTCDate()).padStart(2,'0');
-  const safe = String(name || 'file.bin').replace(/[^\w.\- ]+/g,'_').slice(0,150);
+  const safe = safeFileName(name);
   const prefix = key ? `${key}-` : '';
   return `${y}/${m}/${day}/${prefix}${safe}`;
 }
