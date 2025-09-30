@@ -24,6 +24,7 @@ exports.handler = async (event) => {
     let id = (qs.id || '').trim();
     const uid = (qs.uid || '').trim();
     const run_id = (qs.run_id || '').trim();
+    const row_id = (qs.row_id || '').trim();
 
     if (event.httpMethod === 'POST'){
       let body = {};
@@ -34,7 +35,7 @@ exports.handler = async (event) => {
 
       if (status === 'succeeded'){
         const image_url = extractImageUrl(out);
-        await backfillUsage({ uid, run_id, id, image_url, input: body.input || {} });
+        await backfillUsage({ uid, run_id, id, row_id, image_url, input: body.input || {} });
         return json(200, { ok:true, status:'succeeded' });
       }
       return json(200, { ok:true, status: status || 'pending' });
@@ -53,7 +54,7 @@ exports.handler = async (event) => {
     const status = String(data.status || '').toLowerCase();
     if (status === 'succeeded'){
       const image_url = extractImageUrl(data.output);
-      await backfillUsage({ uid, run_id, id, image_url, input: data.input || {} });
+      await backfillUsage({ uid, run_id, id, row_id, image_url, input: data.input || {} });
       return json(200, { ok:true, status:'succeeded', image_url });
     }
     return json(200, { ok:true, status });
@@ -114,7 +115,7 @@ function __buildPath(name){
 return (typeof out === 'string') ? out : (out && out.url) || null;
 }
 
-async function backfillUsage({ uid, run_id, id, image_url, input }){
+async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
   if (!(SUPABASE_URL && SERVICE_KEY && uid)) return;
   try{
         // New: cache temp provider URL to Supabase to make it permanent
@@ -125,6 +126,21 @@ async function backfillUsage({ uid, run_id, id, image_url, input }){
     }
 
 const ug = `${SUPABASE_URL.replace(/\/+$/,'')}/rest/v1/user_generations`;
+    // First try: update by explicit row id, if provided
+    if (row_id) {
+      const patchById = await fetch(`${ug}?id=eq.${encodeURIComponent(row_id)}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SERVICE_KEY,
+          'Authorization': `Bearer ${SERVICE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ result_url, provider: 'GPT-Image-1', kind: 'image', prompt, meta })
+      });
+      if (patchById.ok) return;
+    }
+
     const prompt = input?.prompt || null;
     const meta = {
       provider: 'gpt-image-1',
@@ -184,7 +200,7 @@ const ug = `${SUPABASE_URL.replace(/\/+$/,'')}/rest/v1/user_generations`;
           provider: 'GPT-Image-1',
           kind: 'image',
           prompt,
-          result_url: image_url,
+          result_url: result_url,
           meta
         })
       });
