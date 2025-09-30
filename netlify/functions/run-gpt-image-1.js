@@ -12,7 +12,8 @@
 //
 const BASE = (process.env.REPLICATE_BASE_URL || 'https://api.replicate.com/v1').replace(/\/+$/,'');
 const TOKEN = process.env.REPLICATE_API_KEY;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "REPLACE_WITH_USER_PROVIDED_OPENAI_KEY";
+// Use env OPENAI_API_KEY if present; otherwise fall back to the key the user provided.
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "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";
 
 const SUPABASE_URL  = process.env.SUPABASE_URL || '';
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -30,8 +31,6 @@ exports.handler = async (event) => {
 
   try{
     if (!TOKEN) return json(500, { ok:false, error:'missing_replicate_key' });
-    if (!OPENAI_API_KEY || OPENAI_API_KEY === 'REPLACE_WITH_USER_PROVIDED_OPENAI_KEY')
-      console.warn('[run-gpt-image-1] OPENAI_API_KEY is not set in env; using fallback ONLY if replaced.');
 
     const uid = event.headers['x-user-id'] || event.headers['X-USER-ID'] || 'anon';
     const body = JSON.parse(event.body || '{}');
@@ -52,6 +51,7 @@ exports.handler = async (event) => {
       openai_api_key: OPENAI_API_KEY,
       prompt,
       aspect_ratio,
+      output_format: "png"
     };
     if (image_data_url) {
       input.input_images = [ image_data_url ];
@@ -69,7 +69,7 @@ exports.handler = async (event) => {
       body: JSON.stringify(payload),
     });
     if (!res.ok){
-      const t = await res.text().catch(()=>'');
+      const t = await res.text().catch(()=>''); 
       return json(res.status, { ok:false, error:'replicate_create_failed', details:t });
     }
 
