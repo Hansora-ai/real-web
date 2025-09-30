@@ -180,12 +180,7 @@
             <input id="imageFile" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark" multiple>
             <div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div>
             <p class="text-xs text-zinc-500 mt-1">Not required — leave empty to generate from text only.</p>
-        <div id="imgPreview" class="hidden relative mt-3 aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
-          <img id="imgPreviewImg" alt="preview" class="hidden w-full h-full object-contain"/>
-          <button id="imgClear" type="button" class="absolute top-2 right-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-2 py-1 text-xs">✕</button>
-          <span id="imgPreviewPlaceholder" class="text-xs text-zinc-500">No image selected</span>
-        </div>
-          </div>
+</div>
           </div>
 
           <!-- Aspect ratio -->
@@ -398,53 +393,6 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
   } finally{ /* keep disabled while polling; re-enabled on success/fail/timeout */ }
 };
-</script>
-<script>
-// === Image preview & clear ===
-(function(){
-  const fileEl = document.getElementById('imageFile');
-  const box = document.getElementById('imgPreview');
-  const img = document.getElementById('imgPreviewImg');
-  const ph = document.getElementById('imgPreviewPlaceholder');
-  const clearBtn = document.getElementById('imgClear');
-
-  async function __read(file){
-  if (typeof readFileAsDataUrl === 'function') return await readFileAsDataUrl(file);
-  if(!file) return null;
-  return await new Promise((resolve)=>{
-    try{
-      const fr = new FileReader();
-      fr.onload = ()=> resolve(fr.result);
-      fr.onerror = ()=> resolve(null);
-      fr.readAsDataURL(file);
-    }catch(e){ resolve(null); }
-  });
-}
-
-  async function showPreview(){
-    if(!fileEl || !fileEl.files || !fileEl.files[0]){
-      box?.classList.add('hidden');
-      if (img) { img.classList.add('hidden'); img.removeAttribute('src'); }
-      ph?.classList.remove('hidden');
-      return;
-    }
-    const url = await __read(fileEl.files[0]);
-    if(!url) return;
-    box?.classList.remove('hidden');
-    ph?.classList.add('hidden');
-    img?.classList.remove('hidden');
-    img.src = url;
-  }
-
-  fileEl?.addEventListener('change', showPreview);
-  clearBtn?.addEventListener('click', ()=>{
-    if (fileEl) fileEl.value='';
-    if (img){ img.classList.add('hidden'); img.removeAttribute('src'); }
-    if (ph) ph.classList.remove('hidden');
-    box?.classList.add('hidden');
-  });
-})();
-
 </script>
 
 <script>
