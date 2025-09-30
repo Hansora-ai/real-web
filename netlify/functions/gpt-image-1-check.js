@@ -2,12 +2,15 @@
 // GET: poll Replicate for prediction id and backfill Usage on success
 // POST: Replicate webhook calls here on completion; backfill immediately
 //
-// Env: REPLICATE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// Env required: REPLICATE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// Optional: SUPABASE_BUCKET (defaults to 'downloads'), REPLICATE_BASE_URL
+
 const BASE = (process.env.REPLICATE_BASE_URL || 'https://api.replicate.com/v1').replace(/\/+$/,'');
-const TOKEN = process.env.REPLICATE_API_KEY;
-const SUPABASE_URL  = process.env.SUPABASE_URL || '';
+const TOKEN = process.env.REPLICATE_API_KEY || '';
+const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/,'');
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
+// ---------- CORS / helpers ----------
 function cors(){ return {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -15,76 +18,47 @@ function cors(){ return {
 }; }
 const json = (c,o)=>({ statusCode:c, headers:{ 'Content-Type':'application/json', ...cors() }, body:JSON.stringify(o) });
 
-exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
-  if (event.httpMethod !== 'GET' && event.httpMethod !== 'POST') return json(405, { ok:false, error:'method_not_allowed' });
+function getParam(searchParams, name){
+  const v = searchParams.get(name);
+  return (v === null || v === undefined || v === '') ? null : v;
+}
 
-  try{
-    const qs = event.queryStringParameters || {};
-    let id = (qs.id || '').trim();
-    const uid = (qs.uid || '').trim();
-    const run_id = (qs.run_id || '').trim();
-    const row_id = (qs.row_id || '').trim();
-
-    if (event.httpMethod === 'POST'){
-      let body = {};
-      try { body = JSON.parse(event.body || '{}'); } catch {}
-      const status = String(body.status || '').toLowerCase();
-      const out = body.output;
-      if (!id) id = body.id || (body.prediction && body.prediction.id) || null;
-
-      if (status === 'succeeded'){
-        const image_url = extractImageUrl(out);
-        await backfillUsage({ uid, run_id, id, row_id, image_url, input: body.input || {} });
-        return json(200, { ok:true, status:'succeeded' });
-      }
-      return json(200, { ok:true, status: status || 'pending' });
-    }
-
-    // GET polling
-    if (!id) return json(400, { ok:false, error:'missing_id' });
-    const res = await fetch(`${BASE}/predictions/${encodeURIComponent(id)}`, {
-      headers: { 'Authorization': `Bearer ${TOKEN}` }
-    });
-    if(!res.ok){
-      const t = await res.text().catch(()=>'');
-      return json(res.status, { ok:false, error:'replicate_get_failed', details:t });
-    }
-    const data = await res.json();
-    const status = String(data.status || '').toLowerCase();
-    if (status === 'succeeded'){
-      const image_url = extractImageUrl(data.output);
-      await backfillUsage({ uid, run_id, id, row_id, image_url, input: data.input || {} });
-      return json(200, { ok:true, status:'succeeded', image_url });
-    }
-    return json(200, { ok:true, status });
-  }catch(e){
-    console.error('[gpt-image-1-check] error', e);
-    return json(500, { ok:false, error:'server_error' });
-  }
-};
-
+// ---------- URL extraction (string | {url} | string[] | {url}[]) ----------
 function extractImageUrl(out){
   if (!out) return null;
-  if (Array.isArray(out)) {
+  if (typeof out === 'string') return out;
+  if (Array.isArray(out)){
+    if (out.length === 0) return null;
     const first = out[0];
     return (typeof first === 'string') ? first : (first && first.url) || null;
   }
-  
-// === Minimal additions: cache temp CDN asset to Supabase Storage and return permanent URL ===
+  if (typeof out === 'object'){
+    return out.url || null;
+  }
+  return null;
+}
+
+// ---------- Supabase caching (moved to top-level scope) ----------
 const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'downloads';
 
-async function __cacheToSupabase(sourceUrl, name){
-  if (!(SUPABASE_URL && SERVICE_KEY && sourceUrl)) return null;
+/**
+ * Fetches the sourceUrl image and stores it into Supabase Storage public bucket.
+ * Returns the permanent public URL, or null if caching failed or envs missing.
+ */
+async function __cacheToSupabase(sourceUrl, nameHint){
   try{
+    if (!(SUPABASE_URL && SERVICE_KEY && sourceUrl)) return null;
+
     const getRes = await fetch(sourceUrl);
     if (!getRes.ok) return null;
+
     const ct = getRes.headers.get('content-type') || 'application/octet-stream';
     const buf = Buffer.from(await getRes.arrayBuffer());
 
-    const path = __buildPath(name);
-    const base = SUPABASE_URL.replace(/\/+$/,'');
-    const up = await fetch(`${base}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`, {
+    const path = __buildPath(nameHint);
+    const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`;
+
+    const up = await fetch(uploadUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${SERVICE_KEY}`,
@@ -93,120 +67,151 @@ async function __cacheToSupabase(sourceUrl, name){
       },
       body: buf,
     });
-    if (!up.ok) return null;
-
-    // Public URL (requires bucket to be public). If private, you can sign instead.
-    return `${base}/storage/v1/object/public/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`;
-  }catch{
+    if (!up.ok) {
+      // console.warn('[gpt-image-1-check] upload failed', await up.text());
+      return null;
+    }
+    return `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`;
+  }catch(e){
+    // console.warn('[gpt-image-1-check] cache error', e);
     return null;
   }
 }
 
-function __buildPath(name){
+function __buildPath(nameHint){
   const d = new Date();
-  const y = d.getUTCFullYear();
+  const y = String(d.getUTCFullYear());
   const m = String(d.getUTCMonth()+1).padStart(2,'0');
   const day = String(d.getUTCDate()).padStart(2,'0');
   const rand = Math.random().toString(36).slice(2,10);
-  const safe = String(name || 'file.png').replace(/[^\w.\- ]+/g,'_').slice(0,150);
+  const safe = String(nameHint || 'gpt-image-1.png').replace(/[^\w.\- ]+/g,'_').slice(0,150);
   return `${y}/${m}/${day}/${rand}-${safe}`;
 }
 
-return (typeof out === 'string') ? out : (out && out.url) || null;
-}
-
+// ---------- DB backfill ----------
 async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
-  if (!(SUPABASE_URL && SERVICE_KEY && uid)) return;
+  // If no DB envs or no image URL, nothing to patch.
+  if (!(SUPABASE_URL && SERVICE_KEY)) return;
+  if (!uid) return;
+
+  let finalUrl = image_url;
+  // Try to cache to Supabase; if it works, prefer the cached URL.
   try{
-        // New: cache temp provider URL to Supabase to make it permanent
-    let result_url = image_url;
-    if (image_url) {
-      const cached = await __cacheToSupabase(image_url, `gpt-image-1-${id || run_id || Date.now()}.png`);
-      if (cached) result_url = cached; // fallback to temp if caching failed
-    }
+    const hint = (input && (input.filename || input.name)) || `gpt-image-1-${id||run_id||Date.now()}.png`;
+    const cached = await __cacheToSupabase(image_url, hint);
+    if (cached) finalUrl = cached;
+  }catch{/* ignore */}
 
-const ug = `${SUPABASE_URL.replace(/\/+$/,'')}/rest/v1/user_generations`;
+  // Minimal metadata we already have
+  const prompt = (input && (input.prompt || input.caption)) || null;
+  const meta = {
+    run_id: run_id || null,
+    prediction_id: id || null,
+    provider: 'replicate',
+    input: input || {}
+  };
 
-    const prompt = input?.prompt || null;
-    const meta = {
-      provider: 'gpt-image-1',
-      source: 'gpt-image-1',
-      run_id: run_id || null,
-      prediction_id: id || null,
-      model: 'gpt-image-1',
-      aspect_ratio: input?.aspect_ratio || null,
-      status: 'succeeded',
-      input_fidelity: input?.input_fidelity || null
+  // PATCH by row_id if we have it; otherwise try run_id; finally, insert as fallback
+  try{
+    const headers = {
+      'Authorization': `Bearer ${SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Prefer': 'return=representation'
     };
-    // First try: update by explicit row id, if provided
-    if (row_id) {
-      const patchById = await fetch(`${ug}?id=eq.${encodeURIComponent(row_id)}`, {
+
+    // Prefer updating existing row when we can
+    if (row_id){
+      const url = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(row_id)}`;
+      const r = await fetch(url, {
         method: 'PATCH',
-        headers: {
-          'apikey': SERVICE_KEY,
-          'Authorization': `Bearer ${SERVICE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({ result_url: result_url, provider: 'GPT-Image-1', kind: 'image', prompt, meta })
+        headers,
+        body: JSON.stringify({ result_url: finalUrl, prompt, meta })
       });
-      if (patchById.ok) return;
+      if (r.ok) return;
     }
-
-
-    let updated = false;
     if (run_id){
-      const patch = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`, {
+      const url = `${SUPABASE_URL}/rest/v1/user_generations?meta->>run_id=eq.${encodeURIComponent(run_id)}`;
+      const r = await fetch(url, {
         method: 'PATCH',
-        headers: {
-          'apikey': SERVICE_KEY,
-          'Authorization': `Bearer ${SERVICE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({ result_url: result_url, provider: 'GPT-Image-1', kind: 'image', prompt, meta })
+        headers,
+        body: JSON.stringify({ result_url: finalUrl, prompt, meta })
       });
-      if (patch.ok){
-        const arr = await patch.json().catch(()=>[]);
-        updated = Array.isArray(arr) && arr.length > 0;
-      }
+      if (r.ok) return;
     }
-    if (!updated && id){
-      const patch2 = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>prediction_id=eq.${encodeURIComponent(id)}`, {
-        method: 'PATCH',
-        headers: {
-          'apikey': SERVICE_KEY,
-          'Authorization': `Bearer ${SERVICE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({ result_url: result_url, provider: 'GPT-Image-1', kind: 'image', prompt, meta })
-      });
-      if (patch2.ok){
-        const arr = await patch2.json().catch(()=>[]);
-        updated = Array.isArray(arr) && arr.length > 0;
-      }
-    }
-    if (!updated){
-      await fetch(ug, {
-        method: 'POST',
-        headers: {
-          'apikey': SERVICE_KEY,
-          'Authorization': `Bearer ${SERVICE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({
-          user_id: uid,
-          provider: 'GPT-Image-1',
-          kind: 'image',
-          prompt,
-          result_url: result_url,
-          meta
-        })
-      });
-    }
+
+    // Fallback: insert a new row so we never lose the result
+    const ins = await fetch(`${SUPABASE_URL}/rest/v1/user_generations`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        user_id: uid,
+        provider: 'GPT-Image-1',
+        kind: 'image',
+        prompt,
+        result_url: finalUrl,
+        meta
+      })
+    });
+    // ignore insert failures silently
   }catch(e){
-    console.warn('[gpt-image-1-check] backfill failed', e);
+    // swallow errors to avoid breaking the HTTP response
   }
 }
+
+// ---------- Handler ----------
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
+
+  try{
+    if (event.httpMethod === 'POST'){
+      // Webhook path
+      const body = JSON.parse(event.body || '{}');
+
+      // The UI usually appends uid/run_id/row_id to the webhook URL query
+      const sp = new URLSearchParams(event.queryStringParameters || {});
+      const uid = getParam(sp, 'uid');
+      const run_id = getParam(sp, 'run_id');
+      const row_id = getParam(sp, 'row_id');
+
+      const status = String(body.status || '').toLowerCase();
+      let id = body.id || (body.prediction && body.prediction.id) || null;
+
+      if (status === 'succeeded'){
+        const image_url = extractImageUrl(body.output);
+        await backfillUsage({ uid, run_id, id, row_id, image_url, input: body.input || {} });
+        return json(200, { ok:true, status:'succeeded' });
+      }
+      return json(200, { ok:true, status: status || 'pending' });
+    }
+
+    // GET polling path
+    const sp = new URLSearchParams(event.queryStringParameters || {});
+    const id = getParam(sp, 'id') || getParam(sp, 'prediction_id');
+    const uid = getParam(sp, 'uid');
+    const run_id = getParam(sp, 'run_id');
+    const row_id = getParam(sp, 'row_id');
+    if (!id) return json(400, { ok:false, error:'missing_id' });
+
+    if (!TOKEN) return json(500, { ok:false, error:'missing_replicate_token' });
+
+    const res = await fetch(`${BASE}/predictions/${encodeURIComponent(id)}`, {
+      headers: { 'Authorization': `Token ${TOKEN}`, 'Content-Type': 'application/json' }
+    });
+    if (!res.ok){
+      const txt = await res.text();
+      return json(502, { ok:false, error:'replicate_error', details: txt });
+    }
+    const data = await res.json();
+    const status = String(data.status || '').toLowerCase();
+
+    if (status === 'succeeded'){
+      const image_url = extractImageUrl(data.output);
+      await backfillUsage({ uid, run_id, id, row_id, image_url, input: data.input || {} });
+      return json(200, { ok:true, status:'succeeded', image_url });
+    }
+    return json(200, { ok:true, status: status || 'pending' });
+  }catch(e){
+    return json(500, { ok:false, error:'server_error', details: String(e && e.message || e) });
+  }
+};
