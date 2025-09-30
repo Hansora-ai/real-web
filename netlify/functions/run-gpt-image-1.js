@@ -53,10 +53,19 @@ exports.handler = async (event) => {
       output_format: "png"
     };
     if (image_data_urls && image_data_urls.length){
+      // Provide multiple aliases so the Replicate wrapper accepts one of them
+      input.image = image_data_urls[0];
+      input.images = image_data_urls;
+      input.input_image = image_data_urls[0];
       input.input_images = image_data_urls;
+      input.reference_images = image_data_urls;
       input.input_fidelity = "high";
     } else if (image_data_url){
-      input.input_images = [ image_data_url ];
+      input.image = image_data_url;
+      input.images = [image_data_url];
+      input.input_image = image_data_url;
+      input.input_images = [image_data_url];
+      input.reference_images = [image_data_url];
       input.input_fidelity = "high";
     }
 
