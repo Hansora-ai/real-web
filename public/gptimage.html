@@ -191,7 +191,7 @@
           <div>
             <label class="text-xs text-zinc-400">Aspect ratio</label>
             <select id="ratio" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
-      <option value="1:1">1:1</option>
+      <option value="1:1" selected>1:1</option>
       <option value="3:2">3:2</option>
       <option value="2:3">2:3</option>
     </select>
@@ -362,31 +362,18 @@ window.__run=async function(){
     const uid=authData.user.id;
     const rid=uid+'-'+Date.now();
 
-    let image_data_url = null;
     const fileEl = document.getElementById('imageFile');
-    if (fileEl && fileEl.files && fileEl.files[0]) {
-      image_data_url = await readFileAsDataUrl(fileEl.files[0]);
-    }
-
-    // Collect multiple images as data URLs (like Nano Banana)
-    const _fileEl = document.getElementById('imageFile');
-    let image_data_urls = [];
-    if (_fileEl && _fileEl.filprompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_data_url, image_data_urls){
-        const _f = _fileEl.files[i];
-        const _url = await new Promise((resolve)=>{
-          const fr = new FileReader();
-          fr.onload = ()=> resolve(fr.result);
-          fr.onerror = ()=> resolve(null);
-          fr.readAsDataURL(_f);
-        });
-        if (_url) image_data_urls.push(_url);
-      }
-    }
-        const res=await fetch('/.netlify/functions/run-gpt-image-1',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-USER-ID':uid},
-      body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_data_url })
-    });
+let image_data_urls = [];
+if (fileEl && fileEl.files && fileEl.files.length){
+  for (let i=0;i<fileEl.files.length;i++){
+    image_data_urls.push(await readFileAsDataUrl(fileEl.files[i]));
+  }
+}
+const res = await fetch('/.netlify/functions/run-gpt-image-1',{
+  method:'POST',
+  headers:{'Content-Type':'application/json','X-USER-ID':uid},
+  body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_data_urls })
+});
 if (res.status === 201 || res.status === 200 || res.status === 202) {
       /* client-side debit removed */
     } else {
@@ -452,7 +439,7 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
 </script>
 
 <script>
-// Multi-image preview & delete (1:1 with Nano Banana behavior)
+// Multi-image preview & delete (matching Nano Banana behavior)
 (function(){
   const fileEl = document.getElementById('imageFile');
   const thumbs = document.getElementById('thumbs');
