@@ -330,5 +330,59 @@ function renderRows(rows){
 })();
 </script>
 
+
+<script>
+// Lightweight, non-invasive download handler (does not touch auth/login)
+(function(){
+  try{
+    // Only attach once
+    if (window.__forceDownloadBound) return;
+    window.__forceDownloadBound = true;
+
+    function shouldIntercept(url){
+      if(!url) return false;
+      // Ignore non-http(s) and internal anchors
+      if(!/^https?:/i.test(url) && !url.startsWith('/')) return false;
+      // File-like extensions we want to download rather than open fullscreen
+      return /\.(mp4|mov|webm|png|jpe?g|gif|webp|svg|mp3|wav|m4a|pdf)(?:[?#]|$)/i.test(url);
+    }
+
+    function filenameFrom(url){
+      try{
+        var u = new URL(url, location.href);
+        var n = (u.pathname.split('/').pop() || 'file').split('?')[0];
+        return n || 'file';
+      }catch(_){ return 'file'; }
+    }
+
+    document.addEventListener('click', function(ev){
+      // Delegate only for <a> clicks, never for buttons or auth items.
+      var a = ev.target && ev.target.closest && ev.target.closest('a');
+      if(!a) return;
+      // opt-out hook if some link must keep default behavior
+      if (a.hasAttribute('data-no-download-proxy')) return;
+
+      var href = a.getAttribute('href') || '';
+      if (!shouldIntercept(href)) return;
+
+      // Route through Netlify function to force "attachment" across iOS/Android/desktop
+      ev.preventDefault();
+      var name = a.getAttribute('download') || filenameFrom(href);
+      var prox = '/.netlify/functions/download-proxy?url=' + encodeURIComponent(href) + '&name=' + encodeURIComponent(name);
+
+      // Prefer same-tab navigation for a clean download UX; fallback opens new tab on iOS
+      try{
+        window.location.href = prox;
+      }catch(_){
+        try{ window.open(prox, '_blank', 'noopener'); }catch(__){}
+      }
+    }, true);
+  }catch(e){
+    // never block login or other page logic
+    console.warn('download-proxy hook error', e);
+  }
+})();
+</script>
+
 </body>
 </html>
