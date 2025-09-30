@@ -175,7 +175,7 @@ exports.handler = async (event) => {
       // The UI usually appends uid/run_id/row_id to the webhook URL query
       const sp = new URLSearchParams(event.queryStringParameters || {});
       const uid = getParam(sp, 'uid');
-      const run_id = getParam(sp, 'run_id');
+      const run_id = getParam(sp, 'run_id') || getParam(sp, 'rid');
       const row_id = getParam(sp, 'row_id');
 
       const status = String(body.status || '').toLowerCase();
@@ -193,7 +193,7 @@ exports.handler = async (event) => {
     const sp = new URLSearchParams(event.queryStringParameters || {});
     const id = getParam(sp, 'id') || getParam(sp, 'prediction_id');
     const uid = getParam(sp, 'uid');
-    const run_id = getParam(sp, 'run_id');
+    const run_id = getParam(sp, 'run_id') || getParam(sp, 'rid');
     const row_id = getParam(sp, 'row_id');
     if (!id) return json(400, { ok:false, error:'missing_id' });
 
