@@ -92,7 +92,6 @@ function __buildPath(nameHint){
 async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
   // If no DB envs or no image URL, nothing to patch.
   if (!(SUPABASE_URL && SERVICE_KEY)) return;
-  if (!uid) return;
 
   let finalUrl = image_url;
   // Try to cache to Supabase; if it works, prefer the cached URL.
@@ -144,7 +143,8 @@ async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
       }
     }
 
-    // Fallback: insert a new row so we never lose the result
+    // Fallback: insert a new row so we never lose the result (only if we know uid)
+    if (!uid) return; // cannot insert without user_id (NOT NULL)
     const ins = await fetch(`${SUPABASE_URL}/rest/v1/user_generations`, {
       method: 'POST',
       headers,
