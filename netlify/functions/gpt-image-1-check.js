@@ -128,16 +128,20 @@ async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
         headers,
         body: JSON.stringify({ result_url: finalUrl, prompt, meta })
       });
-      if (r.ok) return;
+      if (r.ok){
+        try { const rows = await r.json(); if (Array.isArray(rows) && rows.length > 0) return; } catch {}
+      }
     }
     if (run_id){
-      const url = `${SUPABASE_URL}/rest/v1/user_generations?meta->>run_id=eq.${encodeURIComponent(run_id)}`;
+      const url = `${SUPABASE_URL}/rest/v1/user_generations?${encodeURIComponent('meta->>run_id')}=eq.${encodeURIComponent(run_id)}`;
       const r = await fetch(url, {
         method: 'PATCH',
         headers,
         body: JSON.stringify({ result_url: finalUrl, prompt, meta })
       });
-      if (r.ok) return;
+      if (r.ok){
+        try { const rows = await r.json(); if (Array.isArray(rows) && rows.length > 0) return; } catch {}
+      }
     }
 
     // Fallback: insert a new row so we never lose the result
