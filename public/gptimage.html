@@ -177,9 +177,8 @@
           <!-- Optional image upload -->
           <div>
             <label class="text-xs text-zinc-400">Optional image (guidance)</label>
-            <input id="imageFile" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark"/ multiple>
+            <input id="imageFile" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark"/>
             <p class="text-xs text-zinc-500 mt-1">Not required — leave empty to generate from text only.</p>
-        <div id="thumbs" class="mt-2 flex flex-wrap gap-2"></div>
         <div id="imgPreview" class="hidden relative mt-3 aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
           <img id="imgPreviewImg" alt="preview" class="hidden w-full h-full object-contain"/>
           <button id="imgClear" type="button" class="absolute top-2 right-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 px-2 py-1 text-xs">✕</button>
@@ -368,14 +367,25 @@ window.__run=async function(){
     if (fileEl && fileEl.files && fileEl.files[0]) {
       image_data_url = await readFileAsDataUrl(fileEl.files[0]);
     }
-    const files = (document.getElementById('imageFile')?.files)||[];
-      let image_data_urls = [];
-      for (let i=0;i<files.length;i++){ image_data_urls.push(await readFileAsDataUrl(files[i])); }
-      const res = await fetch('/.netlify/functions/run-gpt-image-1', {
-        method:'POST',
-        headers:{'Content-Type':'application/json','X-USER-ID':uid},
-        body: JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_data_url , image_data_urls })
+
+    // Collect multiple images as data URLs (like Nano Banana)
+    const _fileEl = document.getElementById('imageFile');
+    let image_data_urls = [];
+    if (_fileEl && _fileEl.filprompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_data_url, image_data_urls){
+        const _f = _fileEl.files[i];
+        const _url = await new Promise((resolve)=>{
+          const fr = new FileReader();
+          fr.onload = ()=> resolve(fr.result);
+          fr.onerror = ()=> resolve(null);
+          fr.readAsDataURL(_f);
+        });
+        if (_url) image_data_urls.push(_url);
       }
+    }
+        const res=await fetch('/.netlify/functions/run-gpt-image-1',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-USER-ID':uid},
+      body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_data_url })
     });
 if (res.status === 201 || res.status === 200 || res.status === 202) {
       /* client-side debit removed */
@@ -440,8 +450,9 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
 })();
 
 </script>
+
 <script>
-// === Multi-image preview & delete (Nano Banana 1:1 logic) ===
+// Multi-image preview & delete (1:1 with Nano Banana behavior)
 (function(){
   const fileEl = document.getElementById('imageFile');
   const thumbs = document.getElementById('thumbs');
@@ -493,7 +504,7 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
 
   fileEl.addEventListener('change', renderThumbs);
 })();
-
 </script>
+
 </body>
 </html>
