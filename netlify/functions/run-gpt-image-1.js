@@ -1,6 +1,6 @@
-// netlify/functions/run-gpt-image-1.js (SAFE)
+// netlify/functions/run-gpt-image-1.js (FIXED MINIMAL PATCH)
 // Uses env OPENAI_API_KEY (no hardcoded secrets).
-// Creates Replicate prediction, debits 4⚡, writes placeholder Usage, sets webhook.
+// Creates Replicate prediction, debits 4⚡, writes placeholder Usage, sets webhook (+row_id).
 //
 // Env required:
 //   REPLICATE_API_KEY
@@ -20,15 +20,15 @@ function cors(){ return {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-USER-ID, x-user-id',
 }; }
-const json = (c,o)=>({ statusCode:c, headers:{ 'Content-Type':'application/json', ...cors() }, body:JSON.stringify(o) }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
+const json = (c,o)=>({ statusCode:c, headers:{ 'Content-Type':'application/json', ...cors() }, body:JSON.stringify(o) });
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
-  if (event.httpMethod !== 'POST') return json(405, { ok:false, error:'method_not_allowed' }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
+  if (event.httpMethod !== 'POST') return json(405, { ok:false, error:'method_not_allowed' });
 
   try{
-    if (!TOKEN) return json(500, { ok:false, error:'missing_replicate_key' }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
-    if (!OPENAI_API_KEY) return json(500, { ok:false, error:'missing_openai_key' }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
+    if (!TOKEN) return json(500, { ok:false, error:'missing_replicate_key' });
+    if (!OPENAI_API_KEY) return json(500, { ok:false, error:'missing_openai_key' });
 
     const uid = event.headers['x-user-id'] || event.headers['X-USER-ID'] || 'anon';
     const body = JSON.parse(event.body || '{}');
@@ -38,7 +38,7 @@ exports.handler = async (event) => {
     const image_data_url = body.image_data_url || null;
     const image_data_urls = Array.isArray(body.image_data_urls) ? body.image_data_urls.filter(Boolean) : null;
 
-    if (!prompt) return json(400, { ok:false, error:'missing_prompt' }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
+    if (!prompt) return json(400, { ok:false, error:'missing_prompt' });
 
     const proto = (event.headers['x-forwarded-proto'] || 'https').replace(/[^a-z]+/ig,'');
     const host  = (event.headers['x-forwarded-host'] || event.headers['host'] || '').replace(/\/+$/,'');
@@ -53,7 +53,6 @@ exports.handler = async (event) => {
       output_format: "png"
     };
     if (image_data_urls && image_data_urls.length){
-      // Provide multiple aliases so the Replicate wrapper accepts one of them
       input.image = image_data_urls[0];
       input.images = image_data_urls;
       input.input_image = image_data_urls[0];
@@ -71,6 +70,7 @@ exports.handler = async (event) => {
 
     const payload = { input, webhook, webhook_events_filter: ['completed'] };
 
+    // Create prediction
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -78,21 +78,20 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
-    }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
+    });
     if (!res.ok){
       const t = await res.text().catch(()=>'');
-      return json(res.status, { ok:false, error:'replicate_create_failed', details:t }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
+      return json(res.status, { ok:false, error:'replicate_create_failed', details:t });
     }
-
     const data = await res.json();
     const id = data && data.id;
-    if (!id) return json(500, { ok:false, error:'missing_prediction_id' }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
+    if (!id) return json(500, { ok:false, error:'missing_prediction_id' });
 
     // --- Debit 4⚡ ---
     try{
       if (SUPABASE_URL && SERVICE_KEY && uid && uid !== 'anon') {
         const profGet = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
-        const r0 = await fetch(profGet, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
+        const r0 = await fetch(profGet, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
         const j0 = await r0.json();
         const c0 = (Array.isArray(j0) && j0[0] && j0[0].credits) || 0;
         const next = Math.max(0, c0 - 4);
@@ -105,7 +104,7 @@ exports.handler = async (event) => {
             'Prefer': 'return=minimal',
           },
           body: JSON.stringify({ credits: next }),
-        }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
+        });
       }
     }catch(e){ console.warn('[run-gpt-image-1] debit failed', e); }
 
@@ -114,13 +113,13 @@ exports.handler = async (event) => {
       if (SUPABASE_URL && SERVICE_KEY && uid && uid !== 'anon') {
         const ug = `${SUPABASE_URL.replace(/\/+$/,'')}/rest/v1/user_generations`;
         const meta = { source:'gpt-image-1', run_id, prediction_id: id, model:'gpt-image-1', status:'pending' };
-        await fetch(ug, {
+        const rIns = await fetch(ug, {
           method: 'POST',
           headers: {
             'apikey': SERVICE_KEY,
             'Authorization': `Bearer ${SERVICE_KEY}`,
             'Content-Type': 'application/json',
-            'Prefer': 'return=minimal',
+            'Prefer': 'return=representation',   // so we get the inserted row id
           },
           body: JSON.stringify({
             user_id: uid,
@@ -130,7 +129,13 @@ exports.handler = async (event) => {
             result_url: null,
             meta,
           }),
-        }).then(r=>r.json()).then(j=>{ try{ if(Array.isArray(j)&&j[0]&&j[0].id){ webhook += `&row_id=${encodeURIComponent(j[0].id)}`; } }catch(_){} });
+        });
+        if (rIns.ok){
+          const arr = await rIns.json().catch(()=>null);
+          if (Array.isArray(arr) && arr[0] && arr[0].id){
+            webhook += `&row_id=${encodeURIComponent(arr[0].id)}`; // append row_id for the webhook
+          }
+        }
       }
     }catch(e){ console.warn('[run-gpt-image-1] placeholder insert failed', e); }
 
