@@ -268,10 +268,16 @@ function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text
 
 async function readFileAsDataUrl(file){
   if(!file) return null;
-  const buf = await file.arrayBuffer();
-  const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-  const mime = file.type || 'image/png';
-  return `data:${mime};base64,${b64}`;
+  // Use FileReader to avoid large spread -> call stack overflow on big files
+  return await new Promise((resolve, reject)=>{
+    try{
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result);
+      fr.onerror = (e) => reject(e);
+      fr.readAsDataURL(file);
+    }catch(err){ reject(err); }
+  });
+};base64,${b64}`;
 }
 
 // Guarded renderer
