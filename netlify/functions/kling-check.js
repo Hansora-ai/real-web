@@ -25,6 +25,20 @@ function getParam(searchParams, name){
 
 // ---------- URL extraction (string | {url} | string[] | {url}[]) ----------
 function extractImageUrl(out){
+  // Prefer video URLs for Kling; fallback to images
+  try{
+    var _arr = Array.isArray(output) ? output : [output];
+    var _flat = [];
+    for (var _i=0; _i<_arr.length; _i++){
+      var it = _arr[_i];
+      if (!it) continue;
+      if (typeof it === 'string') _flat.push(it);
+      else if (it.url) _flat.push(it.url);
+      else if (it.path) _flat.push(it.path);
+    }
+    for (var j=0;j<_flat.length;j++){ if (/\.(mp4|mov|webm|gif)(\?|$)/i.test(_flat[j])) return _flat[j]; }
+  }catch(_e){} 
+
   if (!out) return null;
   if (typeof out === 'string') return out;
   if (Array.isArray(out)){
@@ -200,22 +214,17 @@ async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
 
 // ---------- Handler ----------
 
-async function backfillOnce({ uid, run_id, id, row_id, image_url, input }){
+async function backfillOnce(args){
   try{
-    if (!row_id) return await backfillUsage({ uid, run_id, id, row_id, image_url, input });
-    const ug = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(row_id)}&select=result_url`;
-    const r0 = await fetch(ug, {
-      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
-    });
+    if (!args || !args.row_id) return await backfillUsage(args);
+    const ug = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(args.row_id)}&select=result_url`;
+    const r0 = await fetch(ug, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
     if (r0.ok){
       const arr = await r0.json().catch(()=>null);
-      if (Array.isArray(arr) && arr[0] && arr[0].result_url){
-        // Already backfilled
-        return true;
-      }
+      if (Array.isArray(arr) && arr[0] && arr[0].result_url) return true;
     }
   }catch(_e){}
-  return await backfillUsage({ uid, run_id, id, row_id, image_url, input });
+  return await backfillUsage(args);
 }
 
 exports.handler = async (event) => {
@@ -237,7 +246,7 @@ exports.handler = async (event) => {
 
       if (status === 'succeeded'){
         const image_url = extractImageUrl(body.output);
-        await backfillUsage({ uid, run_id, id, row_id, image_url, input: body.input || {} });
+        await backfillOnce({ uid, run_id, id, row_id, image_url, input: body.input || {} });
         return json(200, { ok:true, status:'succeeded' });
       }
       return json(200, { ok:true, status: status || 'pending' });
