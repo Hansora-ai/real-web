@@ -321,7 +321,7 @@ window.__run = async function(){
     // Upload video via kie-upload
     const vfd = new FormData();
     vfd.append('file', vid, vid.name || 'video.mp4');
-    const vur = await fetch('/.netlify/functions/kie-upload',{ method:'POST', headers:{'X-USER-ID': uid}, body: vfd });
+    const vur = await fetch('/.netlify/functions/kie-upload-video',{ method:'POST', headers:{'X-USER-ID': uid}, body: vfd });
     const vj  = await vur.json().catch(()=>null);
     if (!vur.ok || !vj || !vj.downloadUrl) throw new Error(vj?.error || 'Video upload failed');
     const videoUrl = vj.downloadUrl;
