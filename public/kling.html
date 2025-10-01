@@ -266,7 +266,7 @@ const runBtn=document.getElementById('runBtn');
 const statusEl=document.getElementById('status');
 const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
-const COST = 4;
+/* dynamic cost: 5s=7⚡, 10s=13⚡ via __klingComputeCost() */
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
@@ -330,7 +330,7 @@ async function chargeCost(cost){
 async function imagenCheckPoll(id, uid, rid){
   if(!id) return;
   const start = Date.now();
-  while(!__done && Date.now() - start < 180000){
+  while(!__done && Date.now() - start < 480000){
     try{
       const r = await fetch('/.netlify/functions/kling-check?id='+encodeURIComponent(id)+'&uid='+encodeURIComponent(uid||'')+'&run_id='+encodeURIComponent(rid||''));
       const j = await r.json().catch(()=>({}));
@@ -348,7 +348,7 @@ async function imagenCheckPoll(id, uid, rid){
     await new Promise(r=>setTimeout(r,1500));
   }
   if(!__done){
-    showStatus('Still processing… you can wait or try again.','text-yellow-300');
+    showStatus('Still processing… large 10s videos can take up to ~8 minutes. I will keep waiting automatically.','text-yellow-300');
     runBtn.disabled=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
   }
 }
@@ -365,14 +365,14 @@ window.__run=async function(){
   const prompt=(promptEl.value||'').trim();
   if(!prompt){ alert('Please enter a prompt.'); return; }
 
-  const cost = COST;
+  const cost = (typeof window.__klingComputeCost==='function' ? window.__klingComputeCost() : 7);
 // HARD CREDIT CHECK
   try{
     const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
     const cur = prof?.credits ?? 0;
     if (cur < cost) {
       showStatus('Not enough credits (need '+cost+').','text-rose-300');
-      runBtn.disabled = false; runBtn.textContent = (model==='ultra'?'Run (cost: 4⚡)':'Run (cost: 4⚡)');
+      runBtn.disabled = false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
       return;
     }
   }catch(_){}
