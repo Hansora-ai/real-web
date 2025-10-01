@@ -1,10 +1,9 @@
 // netlify/functions/kie-upload.js
-// Zero-dependency multipart parser for Netlify Functions.
-// Accepts images and videos (<=10 MB). Returns { downloadUrl }.
-// Compatible with Veo 3, Aleph, and any page that POSTs FormData('file', ...).
+// Handles image and video uploads (<=10 MB raw).
+// Returns { downloadUrl } on success, or { error, detail } on failure.
 
 const UPLOAD_BASE64_URL = 'https://kieai.redpandaai.co/api/file-base64-upload';
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_BYTES = 10 * 1024 * 1024; // 10 MB raw
 
 exports.handler = async (event) => {
   try {
@@ -12,50 +11,46 @@ exports.handler = async (event) => {
       return { statusCode: 204, headers: cors(), body: '' };
     }
     if (event.httpMethod !== 'POST') {
-      return { statusCode: 405, headers: cors(), body: 'Method Not Allowed' };
+      return { statusCode: 405, headers: cors(), body: JSON.stringify({ error: 'method_not_allowed' }) };
     }
 
     const KIE_API_KEY = process.env.KIE_API_KEY;
     if (!KIE_API_KEY) {
-      return { statusCode: 500, headers: cors(), body: 'Missing KIE_API_KEY' };
+      return { statusCode: 500, headers: cors(), body: JSON.stringify({ error: 'missing_api_key' }) };
     }
 
     const ct = event.headers['content-type'] || event.headers['Content-Type'] || '';
     if (!ct.includes('multipart/form-data')) {
-      return { statusCode: 400, headers: cors(), body: 'Expected multipart/form-data' };
+      return { statusCode: 400, headers: cors(), body: JSON.stringify({ error: 'expected_multipart' }) };
     }
 
     const boundary = getBoundary(ct);
     if (!boundary) {
-      return { statusCode: 400, headers: cors(), body: 'Missing boundary' };
+      return { statusCode: 400, headers: cors(), body: JSON.stringify({ error: 'missing_boundary' }) };
     }
 
-    // Body buffer
     const bodyBuf = event.isBase64Encoded
       ? Buffer.from(event.body || '', 'base64')
       : Buffer.from(event.body || '', 'utf8');
 
-    // Parse the first file part named "file"
     const part = findFirstFilePart(bodyBuf, boundary);
-    if (!part) return { statusCode: 400, headers: cors(), body: 'No file provided' };
+    if (!part) return { statusCode: 400, headers: cors(), body: JSON.stringify({ error: 'no_file' }) };
 
     const { filename, mimeType, content } = part;
     if (!content || !content.length) {
-      return { statusCode: 400, headers: cors(), body: 'Empty file' };
+      return { statusCode: 400, headers: cors(), body: JSON.stringify({ error: 'empty_file' }) };
     }
     if (content.length > MAX_BYTES) {
-      return { statusCode: 413, headers: cors(), body: 'File too large (max 10MB)' };
+      return { statusCode: 413, headers: cors(), body: JSON.stringify({ error: 'file_too_large', max: MAX_BYTES }) };
     }
 
-    // Validate/normalize MIME (allow both image/* and video/*)
     const finalMime = normalizeMime(mimeType, content);
     const isImage = finalMime.startsWith('image/');
     const isVideo = finalMime.startsWith('video/');
     if (!isImage && !isVideo) {
-      return { statusCode: 415, headers: cors(), body: 'Unsupported file type' };
+      return { statusCode: 415, headers: cors(), body: JSON.stringify({ error: 'unsupported_type', type: finalMime }) };
     }
 
-    // Build a safe filename + data URL
     const baseName = (filename || (isVideo ? 'video' : 'image')).replace(/\.[^.]+$/, '');
     const ext = isVideo ? extForVideoMime(finalMime) : extForImageMime(finalMime);
     const safeName = `${baseName}.${ext}`;
@@ -63,7 +58,6 @@ exports.handler = async (event) => {
     const dataUrl = `data:${finalMime};base64,${content.toString('base64')}`;
     const uploadPath = isVideo ? 'videos/user-uploads' : 'images/user-uploads';
 
-    // Upload to KIE temp storage
     const up = await fetch(UPLOAD_BASE64_URL, {
       method: 'POST',
       headers: {
@@ -96,11 +90,10 @@ exports.handler = async (event) => {
       body: JSON.stringify({ downloadUrl: dl })
     };
   } catch (e) {
-    return { statusCode: 502, headers: cors(), body: `Server error: ${e && e.message ? e.message : e}` };
+    return { statusCode: 502, headers: cors(), body: JSON.stringify({ error: 'server_error', detail: e && e.message ? e.message : e }) };
   }
 };
 
-// ---------- CORS ----------
 function cors() {
   return {
     'Access-Control-Allow-Origin': '*',
@@ -109,7 +102,6 @@ function cors() {
   };
 }
 
-// ---------- Multipart helpers ----------
 function getBoundary(ct) {
   const m = /boundary=([^;]+)/i.exec(ct);
   return m ? '--' + m[1] : '';
@@ -118,7 +110,7 @@ function getBoundary(ct) {
 function findFirstFilePart(buf, boundary) {
   const parts = splitBuffer(buf, Buffer.from(boundary));
   for (const p of parts) {
-    const sep = indexOfSub(p, Buffer.from('\\r\\n\\r\\n')); // headers/body separator
+    const sep = indexOfSub(p, Buffer.from('\\r\\n\\r\\n'));
     if (sep < 0) continue;
     const head = p.slice(0, sep).toString('utf8');
     const body = p.slice(sep + 4);
@@ -129,7 +121,6 @@ function findFirstFilePart(buf, boundary) {
     const filename = filenameMatch ? filenameMatch[1] : 'upload.bin';
     const mimeType = typeMatch ? typeMatch[1].trim() : '';
 
-    // Trim final \\r\\n
     const trimmed = trimTrailing(body, Buffer.from('\\r\\n'));
     return { filename, mimeType, content: trimmed };
   }
@@ -175,20 +166,16 @@ function trimTrailing(buf, trail) {
   return buf.slice(0, end);
 }
 
-// ---------- MIME helpers ----------
 function normalizeMime(mime, content) {
   let m = (mime || '').toLowerCase();
-
-  // If missing/unknown, sniff by magic numbers
   if (!m || (!m.startsWith('image/') && !m.startsWith('video/'))) {
-    if (content.length > 12 && content[0] === 0xFF && content[1] === 0xD8 && content[2] === 0xFF) m = 'image/jpeg'; // JPEG
-    else if (content.length > 8 && content[0]===0x89 && content[1]===0x50 && content[2]===0x4E && content[3]===0x47) m = 'image/png'; // PNG
-    else if (content.length > 12 && content[0]===0x52 && content[1]===0x49 && content[2]===0x46 && content[3]===0x46 && content[8]===0x57 && content[9]===0x45 && content[10]===0x42 && content[11]===0x50) m = 'image/webp'; // WEBP
-    else if (content.length > 6 && content[0]===0x47 && content[1]===0x49 && content[2]===0x46 && content[3]===0x38) m = 'image/gif'; // GIF
-    else if (content.length > 8 && content[4]===0x66 && content[5]===0x74 && content[6]===0x79 && content[7]===0x70) m = 'video/mp4'; // MP4/MOV family (ftyp)
-    else if (content.length > 4 && content[0]===0x1A && content[1]===0x45 && content[2]===0xDF && content[3]===0xA3) m = 'video/webm'; // WebM
+    if (content.length > 12 && content[0] === 0xFF && content[1] === 0xD8 && content[2] === 0xFF) m = 'image/jpeg';
+    else if (content.length > 8 && content[0]===0x89 && content[1]===0x50 && content[2]===0x4E && content[3]===0x47) m = 'image/png';
+    else if (content.length > 12 && content[0]===0x52 && content[1]===0x49 && content[2]===0x46 && content[3]===0x46 && content[8]===0x57 && content[9]===0x45 && content[10]===0x42 && content[11]===0x50) m = 'image/webp';
+    else if (content.length > 6 && content[0]===0x47 && content[1]===0x49 && content[2]===0x46 && content[3]===0x38) m = 'image/gif';
+    else if (content.length > 8 && content[4]===0x66 && content[5]===0x74 && content[6]===0x79 && content[7]===0x70) m = 'video/mp4';
+    else if (content.length > 4 && content[0]===0x1A && content[1]===0x45 && content[2]===0xDF && content[3]===0xA3) m = 'video/webm';
   }
-
   return m || 'application/octet-stream';
 }
 
