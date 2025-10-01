@@ -1,9 +1,9 @@
 // netlify/functions/kie-upload-video.js
 // Dedicated uploader for videos (<=10 MB).
-// Accepts first file part regardless of field name.
+// Returns { downloadUrl } on success, or { error } on failure.
 
 const UPLOAD_BASE64_URL = 'https://kieai.redpandaai.co/api/file-base64-upload';
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MB raw
+J * 1024 * 1024; // headroom // 10 MB raw
 
 exports.handler = async (event) => {
   try {
@@ -21,7 +21,7 @@ exports.handler = async (event) => {
 
     const ct = event.headers['content-type'] || event.headers['Content-Type'] || '';
     if (!ct.includes('multipart/form-data')) {
-      return { statusCode: 400, headers: cors(), body: JSON.stringify({ error: 'expected_multipart', got: ct }) };
+      return { statusCode: 400, headers: cors(), body: JSON.stringify({ error: 'expected_multipart' }) };
     }
 
     const boundary = getBoundary(ct);
@@ -34,14 +34,14 @@ exports.handler = async (event) => {
       : Buffer.from(event.body || '', 'utf8');
 
     const part = findFirstFilePart(bodyBuf, boundary);
-    if (!part) return { statusCode: 400, headers: cors(), body: JSON.stringify({ error: 'no_file_found' }) };
+    if (!part) return { statusCode: 400, headers: cors(), body: JSON.stringify({ error: 'no_file' }) };
 
     const { filename, mimeType, content } = part;
     if (!content || !content.length) {
       return { statusCode: 400, headers: cors(), body: JSON.stringify({ error: 'empty_file' }) };
     }
     if (content.length > MAX_BYTES) {
-      return { statusCode: 413, headers: cors(), body: JSON.stringify({ error: 'file_too_large', max: MAX_BYTES, got: content.length }) };
+      return { statusCode: 413, headers: cors(), body: JSON.stringify({ error: 'file_too_large', max: MAX_BYTES }) };
     }
 
     const finalMime = normalizeMime(mimeType, content);
@@ -56,42 +56,34 @@ exports.handler = async (event) => {
     const dataUrl = `data:${finalMime};base64,${content.toString('base64')}`;
     const uploadPath = 'videos/user-uploads';
 
-    let uj;
-    let status = 0;
-    try {
-      const up = await fetch(UPLOAD_BASE64_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${KIE_API_KEY}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ base64Data: dataUrl, uploadPath, fileName: safeName })
-      });
-      status = up.status;
-      uj = await up.json().catch(() => ({}));
-      const dl = uj?.data?.downloadUrl || uj?.downloadUrl || uj?.url || uj?.data?.url || '';
-      if (!up.ok || !dl) {
-        return {
-          statusCode: 502,
-          headers: { ...cors(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ error: 'upload_failed', status, response: uj })
-        };
-      }
-      return {
-        statusCode: 200,
-        headers: { ...cors(), 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-        body: JSON.stringify({ downloadUrl: dl, status, response: uj })
-      };
-    } catch (inner) {
+    const up = await fetch(UPLOAD_BASE64_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${KIE_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ base64Data: dataUrl, uploadPath, fileName: safeName })
+    });
+
+    const uj = await up.json().catch(() => ({}));
+    const dl = uj?.data?.downloadUrl || uj?.downloadUrl || uj?.url || uj?.data?.url || '';
+
+    if (!up.ok || !dl) {
       return {
         statusCode: 502,
-        headers: cors(),
-        body: JSON.stringify({ error: 'fetch_crash', detail: inner.message || inner })
+        headers: { ...cors(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'upload_failed', status: up.status, detail: uj })
       };
     }
+
+    return {
+      statusCode: 200,
+      headers: { ...cors(), 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      body: JSON.stringify({ downloadUrl: dl })
+    };
   } catch (e) {
-    return { statusCode: 500, headers: cors(), body: JSON.stringify({ error: 'server_error', detail: e && e.message ? e.message : e }) };
+    return { statusCode: 502, headers: cors(), body: JSON.stringify({ error: 'server_error', detail: e && e.message ? e.message : e }) };
   }
 };
 
@@ -115,11 +107,10 @@ function findFirstFilePart(buf, boundary) {
     if (sep < 0) continue;
     const head = p.slice(0, sep).toString('utf8');
     const body = p.slice(sep + 4);
-
-    if (!/filename=/i.test(head)) continue; // accept any filename field
+    if (!/filename="/i.test(head)) continue;
 
     const filenameMatch = /filename="([^"]*)"/i.exec(head);
-    const typeMatch = /Content-Type:\s*([^\r\n]+)/i.exec(head);
+    const typeMatch = /Content-Type:\\s*([^\\r\\n]+)/i.exec(head);
     const filename = filenameMatch ? filenameMatch[1] : 'upload.bin';
     const mimeType = typeMatch ? typeMatch[1].trim() : '';
 
