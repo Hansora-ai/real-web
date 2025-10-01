@@ -1,9 +1,9 @@
 // netlify/functions/kie-upload-video.js
-// Robust video uploader (<=10 MB raw) without relying on global fetch.
-// Uses Node's https to POST JSON to KIE (works on older Netlify runtimes).
+// Robust video uploader (<=10 MB raw) compatible with Netlify Node runtimes.
+// Uses Node's 'https' (not 'node:https') to avoid top-level import crashes.
 
-const https = require('node:https');
-const { URL } = require('node:url');
+const https = require('https');
+const { URL } = require('url');
 
 const UPLOAD_BASE64_URL = 'https://kieai.redpandaai.co/api/file-base64-upload';
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -48,7 +48,6 @@ exports.handler = async (event) => {
     const dataUrl = `data:${finalMime};base64,${content.toString('base64')}`;
     const uploadPath = 'videos/user-uploads';
 
-    // Build request
     const url = new URL(UPLOAD_BASE64_URL);
     const payload = JSON.stringify({ fileBase64: dataUrl, uploadPath, fileName: safeName });
     const options = {
@@ -63,15 +62,13 @@ exports.handler = async (event) => {
       }
     };
 
-    let status = 0;
-    const resJson = await httpsRequestJson(options, payload).then(({ statusCode, body }) => {
-      status = statusCode;
-      try { return JSON.parse(body || '{}'); } catch { return {}; }
-    }).catch(err => ({ error: 'https_error', detail: String(err && err.message || err) }));
+    const { statusCode, body } = await httpsRequest(options, payload);
+    let uj = {};
+    try { uj = JSON.parse(body || '{}'); } catch {}
 
-    const dl = resJson?.data?.downloadUrl || resJson?.downloadUrl || resJson?.url || resJson?.data?.url || '';
-    if (status < 200 || status >= 300 || !dl) {
-      return respond(502, { error: 'upload_failed', status, response: resJson });
+    const dl = uj?.data?.downloadUrl || uj?.downloadUrl || uj?.url || uj?.data?.url || '';
+    if ((statusCode < 200 || statusCode >= 300) || !dl) {
+      return respond(502, { error: 'upload_failed', status: statusCode, response: uj });
     }
 
     return respond(200, { downloadUrl: dl });
@@ -80,7 +77,7 @@ exports.handler = async (event) => {
   }
 };
 
-function httpsRequestJson(options, payload) {
+function httpsRequest(options, payload) {
   return new Promise((resolve, reject) => {
     const req = https.request(options, (res) => {
       const chunks = [];
@@ -105,17 +102,16 @@ function respond(code, obj) {
   return { statusCode: code, headers: { ...cors(), 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(obj) };
 }
 
-// -------- Multipart parsing using Buffer.indexOf --------
+// -------- Multipart parsing --------
 function parseFirstFilePart(buf, boundaryToken) {
   const dashBoundary = Buffer.from('--' + boundaryToken);
-  const headerSep = Buffer.from('\r\n\r\n');
+  const headerSep = Buffer.from('\\r\\n\\r\\n');
 
   let pos = 0;
   while (true) {
     const partStart = buf.indexOf(dashBoundary, pos);
     if (partStart === -1) break;
     const pStart = partStart + dashBoundary.length + 2; // skip CRLF
-    // find end boundary
     const next = buf.indexOf(dashBoundary, pStart);
     const finalEnd = buf.indexOf(Buffer.from('--' + boundaryToken + '--'), pStart);
     const endIdx = next !== -1 ? next - 2 : (finalEnd !== -1 ? finalEnd - 2 : buf.length);
@@ -130,7 +126,7 @@ function parseFirstFilePart(buf, boundaryToken) {
     if (!/filename=/i.test(head)) { pos = pStart; continue; }
 
     const filenameMatch = /filename="([^"]*)"/i.exec(head);
-    const typeMatch = /Content-Type:\s*([^\r\n]+)/i.exec(head);
+    const typeMatch = /Content-Type:\\s*([^\\r\\n]+)/i.exec(head);
     const filename = filenameMatch ? filenameMatch[1] : 'upload.bin';
     const mimeType = typeMatch ? (typeMatch[1] || '').trim() : '';
 
