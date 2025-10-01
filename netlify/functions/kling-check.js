@@ -112,7 +112,9 @@ async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
   let finalUrl = image_url;
   // Try to cache to Supabase; if it works, prefer the cached URL.
   try{
-    const hint = (input && (input.filename || input.name)) || `kling-${id||run_id||Date.now()}.png`;
+    const _extMatch = (image_url && image_url.match(/\.(mp4|mov|webm|gif|png|jpg|jpeg)(?:\?|$)/i));
+const _ext = _extMatch ? _extMatch[1].toLowerCase() : 'mp4';
+const hint = (input && (input.filename || input.name)) || `kling-${id||run_id||Date.now()}.${_ext}`;
     const stableKey = row_id || id || run_id || Date.now().toString(36);
     const cached = await __cacheToSupabase(image_url, hint, stableKey);
     if (cached) finalUrl = cached;
@@ -168,7 +170,7 @@ async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
       body: JSON.stringify({
         user_id: uid,
         provider: 'Kling',
-        kind: 'image',
+        kind: 'video',
         prompt,
         result_url: finalUrl,
         meta
@@ -247,7 +249,7 @@ exports.handler = async (event) => {
       if (status === 'succeeded'){
         const image_url = extractImageUrl(body.output);
         await backfillOnce({ uid, run_id, id, row_id, image_url, input: body.input || {} });
-        return json(200, { ok:true, status:'succeeded' });
+        return json(200, { ok:true, status:'succeeded', result_url: image_url });
       }
       return json(200, { ok:true, status: status || 'pending' });
     }
