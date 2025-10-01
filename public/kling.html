@@ -288,20 +288,34 @@ let __done=false;
 function onResult(url){
   if(__done || !url) return;
   __done = true;
-  const img=new Image();
-  img.onload=()=>{
-    resultBox.innerHTML='';
-    img.className='w-full h-full object-contain';
-    resultBox.appendChild(img);
-    const __name = (url.split('/').pop()||'imagen');
+  const isVideo = /\.(mp4|mov|webm|gif)(\?|$)/i.test(url);
+  resultBox.innerHTML='';
+
+  function finalize(){
+    const __name = (url.split('/').pop()||'kling-result');
     downloadLink.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(url)+'&name='+encodeURIComponent(__name);
     downloadLink.setAttribute('download', __name);
     downloadLink.classList.remove('hidden');
     downloadLink.textContent='Download';
     showStatus('✅ Done.','text-emerald-300');
-  runBtn.disabled=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
-    };
-  img.src=url;
+    runBtn.disabled=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+  }
+
+  if (isVideo){
+    const v = document.createElement('video');
+    v.controls = true; v.playsInline = true; v.autoplay = false; v.muted = false;
+    v.className = 'w-full h-full object-contain';
+    v.src = url;
+    resultBox.appendChild(v);
+    v.addEventListener('loadedmetadata', finalize, { once:true });
+    setTimeout(finalize, 300);
+  } else {
+    const img = new Image();
+    img.onload = finalize;
+    img.className='w-full h-full object-contain';
+    img.src=url;
+    resultBox.appendChild(img);
+  }
 }
 
 async function chargeCost(cost){
@@ -322,7 +336,7 @@ async function imagenCheckPoll(id, uid, rid){
       const j = await r.json().catch(()=>({}));
       const status = String(j.status || '').toLowerCase();
       if(status === 'succeeded' || j.ok){
-        const url = j.image_url || (Array.isArray(j.output) ? j.output[0] : null);
+        const url = j.result_url || j.image_url || (Array.isArray(j.output) ? j.output[0] : null);
         if(url){ onResult(url); break; }
       }
       if(status === 'failed' || status === 'canceled'){
