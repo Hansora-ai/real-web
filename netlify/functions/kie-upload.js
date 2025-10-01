@@ -1,7 +1,11 @@
 // netlify/functions/kie-upload.js (CommonJS)
+// Backward compatible: supports both images and videos, returns { downloadUrl }.
+// Works for Veo 3, Aleph, Nano Banana, etc.
+
 const Busboy = require('busboy');
 
 const UPLOAD_BASE64_URL = 'https://kieai.redpandaai.co/api/file-base64-upload';
+const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 
 exports.handler = async (event) => {
   try {
@@ -18,32 +22,46 @@ exports.handler = async (event) => {
 
     const { file, filename, mimeType: mimeFromForm, run_id } = await parseMultipart(event, ct);
     if (!file || !file.length) return { statusCode: 400, headers: cors(), body: 'No file provided' };
+    if (file.length > MAX_BYTES) {
+      return { statusCode: 413, headers: cors(), body: 'File too large (max 10MB)' };
+    }
 
-    // --- MIME sniffing from bytes (JPEG/PNG/WebP/GIF only) ---
-    const sniffed = sniffImageMime(file); // returns 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' | ''
+    // ---- MIME detection ----
     let finalMime = (mimeFromForm || '').toLowerCase();
-    if (!finalMime.startsWith('image/')) finalMime = ''; // ignore bogus types
-    if (!finalMime) finalMime = sniffed;                 // trust bytes if header was missing/bad
+    if (!finalMime.startsWith('image/') && !finalMime.startsWith('video/')) finalMime = '';
 
-    // If still not a supported image, hard-stop (avoid prompt-only runs later)
-    if (!isSupportedImage(finalMime)) {
+    // If form mime missing or suspicious, sniff from bytes
+    if (!finalMime) {
+      const img = sniffImageMime(file);
+      if (img) finalMime = img;
+      else {
+        const vid = sniffVideoMime(file);
+        if (vid) finalMime = vid;
+      }
+    }
+
+    // Validate
+    const isImage = isSupportedImage(finalMime);
+    const isVideo = isSupportedVideo(finalMime);
+    if (!isImage && !isVideo) {
       return {
         statusCode: 415,
         headers: cors(),
-        body: 'Unsupported image type. Use JPEG/PNG/WebP/GIF.'
+        body: 'Unsupported file type. Use JPEG/PNG/WebP/GIF or MP4/MOV/WebM.'
       };
     }
 
-    // --- Ensure filename has the right extension for the MIME ---
-    const base = (filename || (run_id ? `${run_id}-image` : 'image')).replace(/\.[^.]+$/, '');
-    const ext = extForMime(finalMime); // 'jpg'|'png'|'webp'|'gif'
+    // ---- Build filename + base64 data URL ----
+    const base = (filename || (run_id ? `${run_id}-${isVideo ? 'video' : 'image'}` : (isVideo ? 'video' : 'image'))).replace(/\.[^.]+$/, '');
+    const ext = isImage ? extForImageMime(finalMime) : extForVideoMime(finalMime);
     const safeName = `${base}.${ext}`;
 
-    // Build data URL with the corrected MIME
     const base64 = Buffer.from(file).toString('base64');
     const dataUrl = `data:${finalMime};base64,${base64}`;
 
-    // Upload to KIE
+    // ---- Upload to KIE public storage ----
+    const uploadPath = isVideo ? 'videos/user-uploads' : 'images/user-uploads';
+
     const up = await fetch(UPLOAD_BASE64_URL, {
       method: 'POST',
       headers: {
@@ -53,7 +71,7 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify({
         base64Data: dataUrl,
-        uploadPath: 'images/user-uploads',
+        uploadPath,
         fileName: safeName
       })
     });
@@ -105,6 +123,7 @@ function parseMultipart(event, contentType) {
   });
 }
 
+// -------- image sniffers --------
 function sniffImageMime(buf) {
   if (!buf || buf.length < 12) return '';
   // JPEG: FF D8 FF
@@ -122,15 +141,37 @@ function sniffImageMime(buf) {
       buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38) return 'image/gif';
   return '';
 }
-
 function isSupportedImage(m) {
   return m === 'image/jpeg' || m === 'image/png' || m === 'image/webp' || m === 'image/gif';
 }
-
-function extForMime(m) {
+function extForImageMime(m) {
   if (m === 'image/jpeg') return 'jpg';
   if (m === 'image/png')  return 'png';
   if (m === 'image/webp') return 'webp';
   if (m === 'image/gif')  return 'gif';
+  return 'bin';
+}
+
+// -------- video sniffers --------
+function sniffVideoMime(buf){
+  if (!buf || buf.length < 12) return '';
+  // MP4/MOV family: look for "ftyp" at offset 4
+  if (buf.length > 8 && buf[4] === 0x66 && buf[5] === 0x74 && buf[6] === 0x79 && buf[7] === 0x70) {
+    // crude: treat anything with ftyp as MP4 container
+    return 'video/mp4';
+  }
+  // WebM / Matroska: EBML header 1A 45 DF A3
+  if (buf[0] === 0x1A && buf[1] === 0x45 && buf[2] === 0xDF && buf[3] === 0xA3) {
+    return 'video/webm';
+  }
+  return '';
+}
+function isSupportedVideo(m){
+  return m === 'video/mp4' || m === 'video/quicktime' || m === 'video/webm';
+}
+function extForVideoMime(m){
+  if (m === 'video/mp4') return 'mp4';
+  if (m === 'video/quicktime') return 'mov';
+  if (m === 'video/webm') return 'webm';
   return 'bin';
 }
