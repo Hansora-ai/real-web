@@ -199,6 +199,25 @@ async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
 }
 
 // ---------- Handler ----------
+
+async function backfillOnce({ uid, run_id, id, row_id, image_url, input }){
+  try{
+    if (!row_id) return await backfillUsage({ uid, run_id, id, row_id, image_url, input });
+    const ug = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(row_id)}&select=result_url`;
+    const r0 = await fetch(ug, {
+      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+    });
+    if (r0.ok){
+      const arr = await r0.json().catch(()=>null);
+      if (Array.isArray(arr) && arr[0] && arr[0].result_url){
+        // Already backfilled
+        return true;
+      }
+    }
+  }catch(_e){}
+  return await backfillUsage({ uid, run_id, id, row_id, image_url, input });
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
 
@@ -246,8 +265,8 @@ exports.handler = async (event) => {
 
     if (status === 'succeeded'){
       const image_url = extractImageUrl(data.output);
-      await backfillUsage({ uid, run_id, id, row_id, image_url, input: data.input || {} });
-      return json(200, { ok:true, status:'succeeded', image_url });
+      await backfillOnce({ uid, run_id, id, row_id, image_url, input: data.input || {} });
+      return json(200, { ok:true, status:'succeeded', image_url, result_url: image_url });
     }
     return json(200, { ok:true, status: status || 'pending' });
   }catch(e){
