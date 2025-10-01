@@ -60,8 +60,7 @@ async function __cacheToSupabase(sourceUrl, nameHint, stableKey){
 
     const up = await fetch(uploadUrl, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SERVICE_KEY}`,
+      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`,
         'Content-Type': ct,
         'x-upsert': 'true',
       },
@@ -83,8 +82,10 @@ function __buildPath(nameHint, stableKey){
   const y = String(d.getUTCFullYear());
   const m = String(d.getUTCMonth()+1).padStart(2,'0');
   const day = String(d.getUTCDate()).padStart(2,'0');
-  const safe = String(nameHint || 'gpt-image-1.png').replace(/[^\w.\- ]+/g,'_').slice(0,150);
-  if (deterministic) return `${y}/${m}/${day}/${safe}`;
+  const safe = String(nameHint || 'gpt-image-1.png')
+    .replace(/[^\w.\- ]+/g,'_')
+    .slice(0,150);
+  if (stableKey) return `${y}/${m}/${day}/${String(stableKey).replace(/[^\w.\-]+/g,'_').slice(0,48)}-${safe}`;
   const rand = Math.random().toString(36).slice(2,10);
   return `${y}/${m}/${day}/${rand}-${safe}`;
 }
