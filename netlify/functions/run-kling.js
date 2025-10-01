@@ -107,21 +107,41 @@ if (image_data_urls && image_data_urls.length){
     }
 
     // Create prediction
-    const endpoint = `${BASE}/models/openai/kling/predictions`;
-    const payload = { input, webhook, webhook_events_filter: ['completed'] };
+    
+    // Try model predictions endpoint first
+    let endpoint = `${BASE}/models/kwaivgi/kling-v2.5-turbo-pro/predictions`;
+    let payload = { input, webhook, webhook_events_filter: ['completed'] };
 
-    const res = await fetch(endpoint, {
+    let res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-    if (!res.ok){
-      const t = await res.text().catch(()=>'');
-      return json(res.status, { ok:false, error:'replicate_create_failed', details:t });
+    // If the model route is not found, fall back to /predictions using the latest version id
+    if (res.status === 404) {
+      try{
+        const metaRes = await fetch(`${BASE}/models/kwaivgi/kling-v2.5-turbo-pro`, {
+          headers: { 'Authorization': `Bearer ${TOKEN}` }
+        });
+        if (metaRes.ok){
+          const meta = await metaRes.json().catch(()=>null);
+          const ver = meta && meta.latest_version && meta.latest_version.id;
+          if (ver){
+            const p2 = { version: ver, input, webhook, webhook_events_filter: ['completed'] };
+            const res2 = await fetch(`${BASE}/predictions`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(p2),
+            });
+            if (res2.ok){
+              res = res2;
+            }
+          }
+        }
+      }catch(_e){}
     }
-
-    const data = await res.json().catch(()=>null);
+const data = await res.json().catch(()=>null);
     const id = data && data.id;
     if (!id) return json(502, { ok:false, error:'missing_prediction_id' });
 
