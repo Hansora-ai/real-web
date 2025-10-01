@@ -1,4 +1,3 @@
-
 // netlify/functions/kie-upload.js
 // Zero-dependency multipart parser for Netlify Functions.
 // Accepts images and videos (<=10 MB). Returns { downloadUrl }.
@@ -119,19 +118,19 @@ function getBoundary(ct) {
 function findFirstFilePart(buf, boundary) {
   const parts = splitBuffer(buf, Buffer.from(boundary));
   for (const p of parts) {
-    const sep = indexOfSub(p, Buffer.from('\r\n\r\n')); // headers/body separator
+    const sep = indexOfSub(p, Buffer.from('\\r\\n\\r\\n')); // headers/body separator
     if (sep < 0) continue;
     const head = p.slice(0, sep).toString('utf8');
     const body = p.slice(sep + 4);
     if (!/name="file"/i.test(head)) continue;
 
     const filenameMatch = /filename="([^"]*)"/i.exec(head);
-    const typeMatch = /Content-Type:\s*([^\r\n]+)/i.exec(head);
+    const typeMatch = /Content-Type:\\s*([^\\r\\n]+)/i.exec(head);
     const filename = filenameMatch ? filenameMatch[1] : 'upload.bin';
     const mimeType = typeMatch ? typeMatch[1].trim() : '';
 
-    // Trim final \r\n
-    const trimmed = trimTrailing(body, Buffer.from('\r\n'));
+    // Trim final \\r\\n
+    const trimmed = trimTrailing(body, Buffer.from('\\r\\n'));
     return { filename, mimeType, content: trimmed };
   }
   return null;
