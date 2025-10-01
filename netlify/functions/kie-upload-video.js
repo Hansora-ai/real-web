@@ -1,6 +1,6 @@
 // netlify/functions/kie-upload-video.js
 // Dedicated uploader for videos (<=10 MB).
-// Returns { downloadUrl } on success, or { error } on failure with detailed info.
+// Accepts first file part regardless of field name.
 
 const UPLOAD_BASE64_URL = 'https://kieai.redpandaai.co/api/file-base64-upload';
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB raw
@@ -111,18 +111,19 @@ function getBoundary(ct) {
 function findFirstFilePart(buf, boundary) {
   const parts = splitBuffer(buf, Buffer.from(boundary));
   for (const p of parts) {
-    const sep = indexOfSub(p, Buffer.from('\\r\\n\\r\\n'));
+    const sep = indexOfSub(p, Buffer.from('\r\n\r\n'));
     if (sep < 0) continue;
     const head = p.slice(0, sep).toString('utf8');
     const body = p.slice(sep + 4);
-    if (!/name="file"/i.test(head)) continue;
+
+    if (!/filename=/i.test(head)) continue; // accept any filename field
 
     const filenameMatch = /filename="([^"]*)"/i.exec(head);
-    const typeMatch = /Content-Type:\\s*([^\\r\\n]+)/i.exec(head);
+    const typeMatch = /Content-Type:\s*([^\r\n]+)/i.exec(head);
     const filename = filenameMatch ? filenameMatch[1] : 'upload.bin';
     const mimeType = typeMatch ? typeMatch[1].trim() : '';
 
-    const trimmed = trimTrailing(body, Buffer.from('\\r\\n'));
+    const trimmed = trimTrailing(body, Buffer.from('\r\n'));
     return { filename, mimeType, content: trimmed };
   }
   return null;
