@@ -273,14 +273,15 @@ function showVideo(url){
 }
 
 // Poll aleph-check until mp4
-async function alephCheckPoll(taskId, uid, rid){
+async function alephCheckPoll(taskId, uid, rid, uploadedUrl){
   for (let i=0;i<320;i++){ // up to ~8 min (1.5s step)
     try{
       const r = await fetch('/.netlify/functions/aleph-check?taskId=' + encodeURIComponent(taskId) + '&uid=' + encodeURIComponent(uid) + '&run_id=' + encodeURIComponent(rid));
       const j = await r.json().catch(()=>({}));
-      if (j && j.ok && j.video_url){
-        showVideo(j.video_url);
-        showStatus('✅ Done.','text-emerald-300');
+      if (j && j.ok && j.video_url) {
+        if (!uploadedUrl || j.video_url !== uploadedUrl) {
+          showVideo(j.video_url);
+          showStatus('✅ Done.','text-emerald-300');
         runBtn.disabled=false; return;
       }
     }catch{}
@@ -357,7 +358,7 @@ window.__run = async function(){
     const run_id = j.run_id || '';
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-    if (taskId && run_id) alephCheckPoll(taskId, uid, run_id);
+    if (taskId && run_id) alephCheckPoll(taskId, uid, run_id, videoUrl);
 
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
