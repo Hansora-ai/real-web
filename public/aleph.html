@@ -200,6 +200,7 @@ videoEl.addEventListener('change',()=>{
   p.textContent='Selected: '+(f.name||'video.mp4')+' ('+Math.round(f.size/1024/1024*10)/10+'MB)';
   videoThumb.appendChild(p);
 
+
   // Create a non-playable thumbnail from the first frame
   try{
     const v=document.createElement('video');
@@ -221,7 +222,22 @@ videoEl.addEventListener('change',()=>{
         const img=document.createElement('img');
         img.src=canvas.toDataURL('image/jpeg', 0.85);
         img.className='mt-2 block rounded-lg border border-white/10 max-w-full shadow-soft';
-        videoThumb.appendChild(img);
+        const wrap=document.createElement('div');
+        wrap.className='relative inline-block';
+        const del=document.createElement('button'); 
+        del.type='button';
+        del.className='absolute -top-2 -right-2 h-6 w-6 rounded-full bg-black/60 hover:bg-black/90 text-white/90 border border-white/10 flex items-center justify-center';
+        del.innerHTML='&times;';
+        del.title='Remove selected video';
+        del.onclick=()=>{
+          const vEl=document.getElementById('video');
+          if(vEl){ vEl.value=''; }
+          while(videoThumb.firstChild){ videoThumb.removeChild(videoThumb.firstChild); }
+          try{ if(__vidObjURL){ URL.revokeObjectURL(__vidObjURL); __vidObjURL=null; } }catch{};
+        };
+        wrap.appendChild(img);
+        wrap.appendChild(del);
+        videoThumb.appendChild(wrap);
       }catch{ /* ignore thumbnail errors */ }
     }, { once:true });
   }catch{ /* ignore thumbnail errors */ }
@@ -283,6 +299,8 @@ async function alephCheckPoll(taskId, uid, rid, uploadedUrl){
           showVideo(j.video_url);
           showStatus('✅ Done.','text-emerald-300');
           runBtn.disabled = false;
+          try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
+          try{ await refreshCreditsUI(); }catch{}
           return;
         }
         // same as uploaded; keep polling
@@ -292,6 +310,7 @@ async function alephCheckPoll(taskId, uid, rid, uploadedUrl){
   }
   showStatus('Still processing… try refreshing later','text-yellow-300');
   runBtn.disabled=false;
+  try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
 }
 
 window.__run = async function(){
@@ -308,6 +327,8 @@ window.__run = async function(){
 
   const _prompt=(promptEl.value||'').trim();
   if(!_prompt){ showStatus('Prompt is required.','text-rose-300'); document.getElementById('guardMsg').classList.remove('hidden'); return; }
+  // Inputs valid — hide guard
+  document.getElementById('guardMsg').classList.add('hidden');
 
   // Credits guard (fixed 9⚡)
   try{
@@ -317,6 +338,9 @@ window.__run = async function(){
 
   runBtn.disabled = true; runBtn.textContent = 'Working…';
   showStatus('Submitting…','text-zinc-400');
+  // Hide old play/download and reset result box
+  try{ document.getElementById('playBtn')?.classList.add('hidden'); }catch{}
+  try{ downloadLink?.classList.add('hidden'); downloadLink.href='#'; }catch{}
   resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… (up to ~8 min)</span>';
 
   try{
@@ -381,8 +405,7 @@ let imageUrl = supaUpload.imageUrl || "";
       runBtn.disabled = false; runBtn.textContent='Run (cost: 9⚡)'; return;
     }
 
-    // Client-side debit (fixed 9⚡)
-    try{ await chargeCredits(9); await refreshCreditsUI(); }catch{}
+    // Server handles debit; keep pre-check only to block before submit
 
     const taskId = j.taskId || '';
     const run_id = j.run_id || '';
@@ -393,7 +416,6 @@ let imageUrl = supaUpload.imageUrl || "";
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
     runBtn.disabled=false;
-  }finally{
     runBtn.textContent='Run (cost: 9⚡)';
   }
 };
