@@ -1,33 +1,391 @@
-// netlify/functions/kie-upload-video.js
-// DIAGNOSTIC: returns 200 and echoes what Netlify actually passes to the function.
-// No external calls. Helps isolate whether the 500 is coming from platform/runtime.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA • Runway Aleph (Video)</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-exports.handler = async function handler(event, context) {
-  try {
-    const info = {
-      ok: true,
-      method: event.httpMethod,
-      isBase64Encoded: !!event.isBase64Encoded,
-      contentType: String(event.headers['content-type'] || event.headers['Content-Type'] || ''),
-      bodyLength: (event.body || '').length,
-      sampleBodyStart: (event.body || '').slice(0, 80),
-      sampleBodyEnd: (event.body || '').slice(-80),
-      headers: Object.fromEntries(Object.entries(event.headers || {}).slice(0, 20)),
-    };
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-      },
-      body: JSON.stringify(info)
-    };
-  } catch (e) {
-    return {
-      statusCode: 200,
-      headers: { 'Access-Control-Allow-Origin': '*'},
-      body: JSON.stringify({ ok: false, error: 'server_error', detail: String(e && e.stack || e) })
-    };
+  <style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+                       var(--base-bg); color:#e5e7eb}
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .input-dark{background:rgba(255,255,255,.05)!important;color:#e5e7eb!important;border:1px solid rgba(255,255,255,.12)!important}
+    .input-dark::placeholder{color:#9ca3af}
+    select.input-dark option{background:#0b0d13;color:#e5e7eb}
+  </style>
+</head>
+<body class="min-h-screen">
+  <!-- Header (kept identical style from Veo 3) -->
+  <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+        <div class="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center font-bold">H</div>
+        <span class="font-semibold tracking-wide">HANSORA AI</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-8 text-sm">
+        <a href="index.html#models" class="hover:text-white/90">Models</a>
+        <a href="index.html#templates" class="hover:text-white/90">Templates</a>
+        <a href="index.html#pricing" class="hover:text-white/90">Pricing</a>
+        <a href="index.html#faq" class="hover:text-white/90">FAQ</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="#" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
+        <a id="btnLoginNav" href="index.html#login" class="rounded-xl btn px-3 py-2 text-sm">Log in</a>
+        <a id="btnGetStarted" href="index.html#login" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Get Started</a>
+        <div id="navUser" class="hidden items-center gap-2">
+          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
+          <div class="relative">
+            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden"></button>
+            <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden">
+              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a>
+              <a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a>
+              <a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a>
+              <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+    <div class="grid md:grid-cols-2 gap-6 items-start">
+      <!-- Left card: form -->
+      <div class="rounded-2xl p-5 border border-white/10 shadow-soft bg-base-bg/60">
+        <h1 class="text-2xl font-bold">Runway Aleph — Video</h1>
+        <p class="mt-1 text-sm text-zinc-400">Upload a short video (≤10MB) and describe your transformation. 
+          <span class="ml-2 inline-flex items-center gap-2">
+            <span class="text-xs text-zinc-300 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">5s</span>
+          </span>
+        </p>
+
+        <div class="mt-4 space-y-3">
+          <!-- Video -->
+          <div>
+            <label class="text-sm font-semibold text-zinc-300">Video (required, ≤10MB)</label>
+            <input id="video" type="file" accept="video/*" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
+            <div id="videoThumb" class="mt-2 text-xs text-zinc-400"></div>
+          </div>
+
+          <!-- Optional Reference Image -->
+          <div>
+            <label class="text-sm font-semibold text-zinc-300">Reference image (optional, ≤10MB)</label>
+            <input id="image" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
+            <div id="imageThumbs" class="mt-2 flex gap-2 flex-wrap"></div>
+          </div>
+
+          <!-- Ratio -->
+          <div id="ratioWrap">
+            <label class="text-xs text-zinc-400">Aspect ratio</label>
+            <select id="ratio" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
+              <option value="16:9" selected>16:9 (default)</option>
+              <option value="9:16">9:16</option>
+              <option value="4:3">4:3</option>
+              <option value="3:4">3:4</option>
+              <option value="1:1">1:1</option>
+              <option value="21:9">21:9</option>
+            </select>
+          </div>
+
+          <!-- Prompt -->
+          <div>
+            <label class="text-xs text-zinc-400">Prompt (required)</label>
+            <textarea id="prompt" placeholder="Describe the transformation…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark"></textarea>
+          </div>
+
+          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()" disabled>Run (cost: 9⚡)</button>
+          <div id="status" class="mt-2 text-sm"></div>
+          <p id="guardMsg" class="hidden text-xs text-rose-300">Prompt + Video are required. Add an optional image if you want style guidance.</p>
+        </div>
+      </div>
+
+      <!-- Right card: result -->
+      <div class="rounded-2xl p-5 border border-white/10 shadow-soft bg-base-bg/60">
+        <h3 class="text-lg font-semibold">Result</h3>
+        <p class="text-xs text-zinc-400">Generated video will appear below.</p>
+        <div id="resultBox" class="mt-3 w-full rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
+          <span class="text-xs text-zinc-500">No result yet</span>
+        </div>
+        <div class="mt-3 flex items-center gap-3">
+          <button id="playBtn" class="hidden rounded-xl btn px-4 py-2 text-sm">Play</button>
+          <a id="downloadLink" href="#" class="hidden rounded-xl btn px-4 py-2 text-sm">Download</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="border-t border-base-line/60">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
+      <nav class="flex items-center gap-5">
+        <a href="index.html#terms" class="hover:text-white/80">Terms</a>
+        <a href="index.html#privacy" class="hover:text-white/80">Privacy</a>
+        <a href="index.html#contact" class="hover:text-white/80">Contact</a>
+      </nav>
+    </div>
+  </footer>
+
+<script>
+document.getElementById('y').textContent = new Date().getFullYear();
+
+// Supabase init (same as other pages)
+const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Header UI (untouched login flow)
+const $btnLoginNav = document.getElementById('btnLoginNav');
+const $btnGetStarted = document.getElementById('btnGetStarted');
+const $navUser = document.getElementById('navUser');
+const $navCredits = document.getElementById('navCredits');
+const $navAvatar = document.getElementById('navAvatar');
+const $navMenu = document.getElementById('navMenu');
+const $btnLogout = document.getElementById('btnLogout');
+
+function showLoggedInUI(profile){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';}
+function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
+$navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
+document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
+$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
+async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}})();
+
+// Elements
+const videoEl=document.getElementById('video');
+const imageEl=document.getElementById('image');
+const imageThumbs=document.getElementById('imageThumbs');
+const videoThumb=document.getElementById('videoThumb');
+const ratioEl=document.getElementById('ratio');
+const promptEl=document.getElementById('prompt');
+const runBtn=document.getElementById('runBtn');
+const statusEl=document.getElementById('status');
+const resultBox=document.getElementById('resultBox');
+const downloadLink=document.getElementById('downloadLink');
+const guardMsg=document.getElementById('guardMsg');
+
+function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
+function clearChilds(el){while(el.firstChild)el.removeChild(el.firstChild)}
+
+let __imgObjURL=null; let __vidObjURL=null;
+imageEl.addEventListener('change',()=>{
+  clearChilds(imageThumbs);
+  if(__imgObjURL){try{URL.revokeObjectURL(__imgObjURL)}catch{} __imgObjURL=null;}
+  const f=imageEl.files[0]; if(!f) return;
+  const u=URL.createObjectURL(f); __imgObjURL=u;
+  const img=new Image(); img.src=u; img.className='block w-full max-h-56 object-contain rounded-lg border border-white/10 bg-black/20';
+  const wrap=document.createElement('div'); wrap.className='relative inline-block';
+  const del=document.createElement('button'); del.type='button'; del.className='absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center'; del.innerHTML='&times;';
+  del.onclick=()=>{imageEl.value=''; clearChilds(imageThumbs); try{URL.revokeObjectURL(u)}catch{} __imgObjURL=null; };
+  wrap.appendChild(img); wrap.appendChild(del); imageThumbs.appendChild(wrap);
+});
+
+videoEl.addEventListener('change',()=>{
+  videoThumb.textContent='';
+  if(__vidObjURL){try{URL.revokeObjectURL(__vidObjURL)}catch{} __vidObjURL=null;}
+  const f=videoEl.files[0]; if(!f) return;
+  const u=URL.createObjectURL(f); __vidObjURL=u;
+
+  const p=document.createElement('p'); 
+  p.textContent='Selected: '+(f.name||'video.mp4')+' ('+Math.round(f.size/1024/1024*10)/10+'MB)';
+  videoThumb.appendChild(p);
+
+  // Create a non-playable thumbnail from the first frame
+  try{
+    const v=document.createElement('video');
+    v.muted=true; v.playsInline=true; v.src=u;
+    v.addEventListener('loadedmetadata',()=>{
+      // Seek a tiny bit into the video to ensure data is available
+      const targetTime = Math.min(0.15, (v.duration||1)/10);
+      v.currentTime = targetTime;
+    }, { once:true });
+    v.addEventListener('seeked',()=>{
+      try{
+        const canvas=document.createElement('canvas');
+        const w = 360; // target width for thumbnail
+        const ratio = v.videoWidth ? (v.videoHeight / v.videoWidth) : (9/16);
+        canvas.width = w;
+        canvas.height = Math.max(1, Math.round(w*ratio));
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+        const img=document.createElement('img');
+        img.src=canvas.toDataURL('image/jpeg', 0.85);
+        img.className='mt-2 block rounded-lg border border-white/10 max-w-full shadow-soft';
+        videoThumb.appendChild(img);
+      }catch{ /* ignore thumbnail errors */ }
+    }, { once:true });
+  }catch{ /* ignore thumbnail errors */ }
+});
+
+async function getCredits(){
+  try{
+    const ures = await supabase.auth.getUser(); const user = ures?.data?.user; if(!user) return 0;
+    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+    return prof?.credits ?? 0;
+  }catch{return 0;}
+}
+async function chargeCredits(cost){
+  const { data } = await supabase.auth.getUser();
+  const user = data?.user; if(!user) return;
+  const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+  const cur = prof?.credits ?? 0;
+  if (cur < cost) throw new Error('Not enough credits (need ' + cost + ').');
+  await supabase.from('profiles').update({ credits: cur - cost }).eq('user_id', user.id);
+}
+async function refreshCreditsUI(){
+  try{
+    const c = await getCredits();
+    const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
+    runBtn.disabled = false; runBtn.classList.remove('opacity-50','cursor-not-allowed');
+  }catch{}
+}
+refreshCreditsUI();
+
+function showVideo(url){
+  resultBox.innerHTML = '';
+  const v = document.createElement('video');
+  v.style.objectFit = 'contain';
+  v.controls = true;
+  v.src = url;
+  v.className = 'block w-full max-h-[70vh] rounded-lg border border-white/10 bg-black/20';
+  resultBox.appendChild(v);
+
+  downloadLink.href = url;
+  try{downloadLink.download='aleph-video.mp4';}catch(e){};
+  downloadLink.classList.remove('hidden');
+
+  const playBtn = document.getElementById('playBtn');
+  if (playBtn) {
+    playBtn.classList.remove('hidden');
+    playBtn.textContent = 'Play';
+    playBtn.onclick = () => { try { if (v.paused) { v.play(); playBtn.textContent = 'Pause'; } else { v.pause(); playBtn.textContent = 'Play'; } } catch {} };
+  }
+}
+
+// Poll aleph-check until mp4
+async function alephCheckPoll(taskId, uid, rid, uploadedUrl){
+  for (let i=0;i<320;i++){ // up to ~8 min (1.5s step)
+    try{
+      const r = await fetch('/.netlify/functions/aleph-check?taskId=' + encodeURIComponent(taskId) + '&uid=' + encodeURIComponent(uid) + '&run_id=' + encodeURIComponent(rid));
+      const j = await r.json().catch(()=>({}));
+      if (j && j.ok && j.video_url) {
+        if (!uploadedUrl || j.video_url !== uploadedUrl) {
+          showVideo(j.video_url);
+          showStatus('✅ Done.','text-emerald-300');
+          runBtn.disabled = false;
+          return;
+        }
+        // same as uploaded; keep polling
+      }
+    } catch {}
+    await new Promise(r=>setTimeout(r,1500));
+  }
+  showStatus('Still processing… try refreshing later','text-yellow-300');
+  runBtn.disabled=false;
+}
+
+window.__run = async function(){
+  const {data:authData}=await supabase.auth.getUser();
+  if(!authData.user){ alert('Please log in or register first.'); return; }
+
+  // Validate sizes
+  const vid=videoEl.files[0];
+  if(!vid){ showStatus('Video is required (≤10MB).','text-rose-300'); document.getElementById('guardMsg').classList.remove('hidden'); return; }
+  if(vid.size>10*1024*1024){ showStatus('Video is too large (>10MB).','text-rose-300'); return; }
+
+  const img=imageEl.files[0];
+  if(img && img.size>10*1024*1024){ showStatus('Image is too large (>10MB).','text-rose-300'); return; }
+
+  const _prompt=(promptEl.value||'').trim();
+  if(!_prompt){ showStatus('Prompt is required.','text-rose-300'); document.getElementById('guardMsg').classList.remove('hidden'); return; }
+
+  // Credits guard (fixed 9⚡)
+  try{
+    const c = await getCredits();
+    if (c < 9){ showStatus('Not enough credits (need 9).','text-rose-300'); return; }
+  }catch{}
+
+  runBtn.disabled = true; runBtn.textContent = 'Working…';
+  showStatus('Submitting…','text-zinc-400');
+  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… (up to ~8 min)</span>';
+
+  try{
+    const uid = authData.user.id;
+    const aspectRatio = ratioEl.value || '16:9';
+
+    // Upload video via kie-upload
+    const vfd = new FormData();
+    vfd.append('file', vid, vid.name || 'video.mp4');
+    const vur = await fetch('/.netlify/functions/kie-upload-video',{ method:'POST', headers:{'X-USER-ID': uid}, body: vfd });
+    const vj  = await vur.json().catch(()=>null);
+    if (!vur.ok || !vj || !vj.downloadUrl) throw new Error(vj?.error || 'Video upload failed');
+    const videoUrl = vj.downloadUrl;
+
+    // Optional image upload
+    let imageUrl = '';
+    if (img){
+      const ifd = new FormData();
+      ifd.append('file', img, img.name || 'image.png');
+      const iur = await fetch('/.netlify/functions/kie-upload',{ method:'POST', headers:{'X-USER-ID': uid}, body: ifd });
+      const ij  = await iur.json().catch(()=>null);
+      if (!iur.ok || !ij || !ij.downloadUrl) throw new Error(ij?.error || 'Image upload failed');
+      imageUrl = ij.downloadUrl;
+    }
+
+    // Create job
+    const resp = await fetch('/.netlify/functions/run-aleph',{
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'X-USER-ID': uid },
+      body: JSON.stringify({ uid, prompt: _prompt, aspectRatio, videoUrl, imageUrl })
+    });
+    const j = await resp.json().catch(()=>({}));
+    if (!resp.ok || !j.submitted){
+      showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
+      runBtn.disabled = false; runBtn.textContent='Run (cost: 9⚡)'; return;
+    }
+
+    // Client-side debit (fixed 9⚡)
+    try{ await chargeCredits(9); await refreshCreditsUI(); }catch{}
+
+    const taskId = j.taskId || '';
+    const run_id = j.run_id || '';
+
+    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+    if (taskId && run_id) alephCheckPoll(taskId, uid, run_id, videoUrl);
+
+  }catch(e){
+    showStatus('❌ '+(e.message||String(e)),'text-rose-300');
+    runBtn.disabled=false;
+  }finally{
+    runBtn.textContent='Run (cost: 9⚡)';
   }
 };
+</script>
+
+<script>
+// ---- Direct large-file upload helper (bypasses Netlify Functions body limit) ----
+async function directUploadLargeFile(file){
+  const resp = await fetch('https://transfer.sh/' + encodeURIComponent(file.name), {
+    method: 'PUT',
+    body: file
+  });
+  const text = await resp.text();
+  if(!resp.ok || !String(text).trim().startsWith('https://')){
+    throw new Error('direct_upload_failed: ' + text.slice(0,200));
+  }
+  return String(text).trim();
+}
+</script>
+
+</body>
+</html>
