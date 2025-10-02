@@ -139,7 +139,7 @@ const $navAvatar = document.getElementById('navAvatar');
 const $navMenu = document.getElementById('navMenu');
 const $btnLogout = document.getElementById('btnLogout');
 
-function showLoggedInUI(profile){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';
+function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';
   try{
     const u = (window.__user && window.__user.user_metadata && window.__user.user_metadata.avatar_url) || (profile && profile.avatar_url);
     if (u && $navAvatarImg){ $navAvatarImg.src = u; $navAvatarImg.classList.remove('hidden'); }
@@ -152,7 +152,7 @@ $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMe
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
 async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}})();
+(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p, user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}})();
 
 // Elements
 const videoEl=document.getElementById('video');
