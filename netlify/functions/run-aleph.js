@@ -95,6 +95,7 @@ exports.handler = async (event) => {
     if (imageUrl) {
       kiePayload.imageUrl = imageUrl;
       kiePayload.referenceImageUrl = imageUrl; // harmless if provider ignores
+      kiePayload.referenceImage = imageUrl; // KIE expects `referenceImage` (playground)
     }
 
     const resp = await fetch(KIE_URL, {
