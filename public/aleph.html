@@ -391,7 +391,8 @@ let imageUrl = supaUpload.imageUrl || "";
       runBtn.disabled = false; runBtn.textContent='Run (cost: 9⚡)'; return;
     }
 
-    // Server handles debit; keep pre-check only to block before submit
+    // Client-side debit (fixed 9⚡)
+    try{ await chargeCredits(9); await refreshCreditsUI(); }catch{}
 
     const taskId = j.taskId || '';
     const run_id = j.run_id || '';
