@@ -46,7 +46,7 @@
         <div id="navUser" class="hidden items-center gap-2">
           <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
           <div class="relative">
-            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden"></button>
+            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden"><img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden"></button>
             <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden">
               <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a>
               <a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a>
@@ -139,8 +139,15 @@ const $navAvatar = document.getElementById('navAvatar');
 const $navMenu = document.getElementById('navMenu');
 const $btnLogout = document.getElementById('btnLogout');
 
-function showLoggedInUI(profile){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';}
-function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
+function showLoggedInUI(profile){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';
+  try{
+    const u = (window.__user && window.__user.user_metadata && window.__user.user_metadata.avatar_url) || (profile && profile.avatar_url);
+    if (u && $navAvatarImg){ $navAvatarImg.src = u; $navAvatarImg.classList.remove('hidden'); }
+  }catch{}
+}
+function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');
+  try{ if($navAvatarImg){ $navAvatarImg.classList.add('hidden'); $navAvatarImg.removeAttribute('src'); } }catch{}
+}
 $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
@@ -159,6 +166,7 @@ const statusEl=document.getElementById('status');
 const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
 const guardMsg=document.getElementById('guardMsg');
+const $navAvatarImg=document.getElementById('navAvatarImg');
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 function clearChilds(el){while(el.firstChild)el.removeChild(el.firstChild)}
