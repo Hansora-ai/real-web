@@ -326,85 +326,40 @@ window.__run = async function(){
     // Upload video via kie-upload
     const vfd = new FormData();
     vfd.append('file', vid, vid.name || 'video.mp4');
-    const vur = await 
-(async () => {
-  const supabaseClient = supabase; // already initialized elsewhere in your app
-
+    // Upload to Supabase (video + optional reference image) and get public URLs
+const supaUpload = await (async () => {
+  const supabaseClient = supabase; // already initialized
   let videoUrl = "";
   let imageUrl = "";
 
   const fileInput = document.querySelector('input[type="file"][accept^="video"], input#referenceVideo');
   const vid = fileInput && fileInput.files && fileInput.files[0];
   if (vid) {
-    const { data, error } = await supabaseClient.storage
-      .from("video")
-      .upload(`uploads/${uid}-${Date.now()}-${vid.name}`, vid);
+    const key = `uploads/${uid}-${Date.now()}-${vid.name}`;
+    const { error } = await supabaseClient.storage.from("video").upload(key, vid);
     if (error) throw error;
-    const { data: { publicUrl } } = supabaseClient
-      .storage
-      .from("video")
-      .getPublicUrl(`uploads/${uid}-${Date.now()}-${vid.name}`);
+    const { data: { publicUrl } } = supabaseClient.storage.from("video").getPublicUrl(key);
     videoUrl = publicUrl;
   }
 
   const imageInput = document.querySelector('input[type="file"][accept^="image"], input#referenceImage');
-  const img = imageInput && imageInput.files && imageInput.files[0];
-  if (img) {
-    const { data, error } = await supabaseClient.storage
-      .from("video")
-      .upload(`uploads/${uid}-${Date.now()}-${img.name}`, img);
+  const img2 = imageInput && imageInput.files && imageInput.files[0];
+  if (img2) {
+    const key2 = `uploads/${uid}-${Date.now()}-${img2.name}`;
+    const { error } = await supabaseClient.storage.from("video").upload(key2, img2);
     if (error) throw error;
-    const { data: { publicUrl } } = supabaseClient
-      .storage
-      .from("video")
-      .getPublicUrl(`uploads/${uid}-${Date.now()}-${img.name}`);
+    const { data: { publicUrl } } = supabaseClient.storage.from("video").getPublicUrl(key2);
     imageUrl = publicUrl;
   }
 
   return { videoUrl, imageUrl };
-})()
-;
-    
-    const { videoUrl, imageUrl } = await (async () => {
-      const supabaseClient = supabase;
-      let videoUrl = "";
-      let imageUrl = "";
+})(); 
 
-      const fileInput = document.querySelector('input[type="file"][accept^="video"], input#referenceVideo');
-      const vid = fileInput && fileInput.files && fileInput.files[0];
-      if (vid) {
-        const { error } = await supabaseClient.storage
-          .from("video")
-          .upload(`uploads/${uid}-${Date.now()}-${vid.name}`, vid);
-        if (error) throw error;
-        const { data: { publicUrl } } = supabaseClient
-          .storage
-          .from("video")
-          .getPublicUrl(`uploads/${uid}-${Date.now()}-${vid.name}`);
-        videoUrl = publicUrl;
-      }
-
-      const imageInput = document.querySelector('input[type="file"][accept^="image"], input#referenceImage');
-      const img = imageInput && imageInput.files && imageInput.files[0];
-      if (img) {
-        const { error } = await supabaseClient.storage
-          .from("video")
-          .upload(`uploads/${uid}-${Date.now()}-${img.name}`, img);
-        if (error) throw error;
-        const { data: { publicUrl } } = supabaseClient
-          .storage
-          .from("video")
-          .getPublicUrl(`uploads/${uid}-${Date.now()}-${img.name}`);
-        imageUrl = publicUrl;
-      }
-
-      return { videoUrl, imageUrl };
-    })();
-    if (!videoUrl) throw new Error("Video upload failed");
-    
-
-    // Optional image upload
-    let imageUrl = '';
+// Use Supabase URLs directly (no .json(), not a fetch response)
+let videoUrl = supaUpload.videoUrl || "";
+let imageUrl = supaUpload.imageUrl || "";
+// Optional image upload
+    imageUrl = imageUrl || '';
     if (img){
       const ifd = new FormData();
       ifd.append('file', img, img.name || 'image.png');
