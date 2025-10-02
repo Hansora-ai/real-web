@@ -260,7 +260,8 @@ function showVideo(url){
   v.className = 'block w-full max-h-[70vh] rounded-lg border border-white/10 bg-black/20';
   resultBox.appendChild(v);
 
-  downloadLink.href = '/.netlify/functions/download-proxy?url=' + encodeURIComponent(url) + '&name=' + encodeURIComponent('aleph-video.mp4');
+  downloadLink.href = url;
+  try{downloadLink.download='aleph-video.mp4';}catch(e){};
   downloadLink.classList.remove('hidden');
 
   const playBtn = document.getElementById('playBtn');
