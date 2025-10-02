@@ -364,9 +364,44 @@ window.__run = async function(){
   return { videoUrl, imageUrl };
 })()
 ;
-    const vj  = await vur.json().catch(()=>null);
-    if (!vur.ok || !vj || !vj.downloadUrl) throw new Error(vj?.error || 'Video upload failed');
-    const videoUrl = vj.downloadUrl;
+    
+    const { videoUrl, imageUrl } = await (async () => {
+      const supabaseClient = supabase;
+      let videoUrl = "";
+      let imageUrl = "";
+
+      const fileInput = document.querySelector('input[type="file"][accept^="video"], input#referenceVideo');
+      const vid = fileInput && fileInput.files && fileInput.files[0];
+      if (vid) {
+        const { error } = await supabaseClient.storage
+          .from("video")
+          .upload(`uploads/${uid}-${Date.now()}-${vid.name}`, vid);
+        if (error) throw error;
+        const { data: { publicUrl } } = supabaseClient
+          .storage
+          .from("video")
+          .getPublicUrl(`uploads/${uid}-${Date.now()}-${vid.name}`);
+        videoUrl = publicUrl;
+      }
+
+      const imageInput = document.querySelector('input[type="file"][accept^="image"], input#referenceImage');
+      const img = imageInput && imageInput.files && imageInput.files[0];
+      if (img) {
+        const { error } = await supabaseClient.storage
+          .from("video")
+          .upload(`uploads/${uid}-${Date.now()}-${img.name}`, img);
+        if (error) throw error;
+        const { data: { publicUrl } } = supabaseClient
+          .storage
+          .from("video")
+          .getPublicUrl(`uploads/${uid}-${Date.now()}-${img.name}`);
+        imageUrl = publicUrl;
+      }
+
+      return { videoUrl, imageUrl };
+    })();
+    if (!videoUrl) throw new Error("Video upload failed");
+    
 
     // Optional image upload
     let imageUrl = '';
