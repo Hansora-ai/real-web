@@ -46,7 +46,7 @@
         <div id="navUser" class="hidden items-center gap-2">
           <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
           <div class="relative">
-            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden"><img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden"></button>
+            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden relative"><img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden"><svg id="navAvatarFallback" viewBox="0 0 24 24" class="absolute inset-0 m-auto h-6 w-6 text-white/80"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4Z"/></svg></button>
             <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden">
               <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a>
               <a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a>
@@ -142,11 +142,11 @@ const $btnLogout = document.getElementById('btnLogout');
 function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';
   try{
     const u = (window.__user && window.__user.user_metadata && window.__user.user_metadata.avatar_url) || (profile && profile.avatar_url);
-    if (u && $navAvatarImg){ $navAvatarImg.src = u; $navAvatarImg.classList.remove('hidden'); }
+    if (u && $navAvatarImg){ $navAvatarImg.src = u; $navAvatarImg.classList.remove('hidden'); if($navAvatarFallback){$navAvatarFallback.classList.add('hidden');} } else { if($navAvatarImg){ $navAvatarImg.classList.add('hidden'); $navAvatarImg.removeAttribute('src'); } if($navAvatarFallback){$navAvatarFallback.classList.remove('hidden');} }
   }catch{}
 }
 function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');
-  try{ if($navAvatarImg){ $navAvatarImg.classList.add('hidden'); $navAvatarImg.removeAttribute('src'); } }catch{}
+  try{ if($navAvatarImg){ $navAvatarImg.classList.add('hidden'); $navAvatarImg.removeAttribute('src'); } if($navAvatarFallback){$navAvatarFallback.classList.remove('hidden');} }catch{}
 }
 $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
@@ -167,6 +167,7 @@ const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
 const guardMsg=document.getElementById('guardMsg');
 const $navAvatarImg=document.getElementById('navAvatarImg');
+const $navAvatarFallback=document.getElementById('navAvatarFallback');
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 function clearChilds(el){while(el.firstChild)el.removeChild(el.firstChild)}
