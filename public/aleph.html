@@ -282,16 +282,19 @@ async function alephCheckPoll(taskId, uid, rid, uploadedUrl){
         if (!uploadedUrl || j.video_url !== uploadedUrl) {
           showVideo(j.video_url);
           showStatus('✅ Done.','text-emerald-300');
-        runBtn.disabled=false; return;
+          runBtn.disabled = false;
+          return;
+        }
+        // same as uploaded; keep polling
       }
-    }catch{}
+    } catch {}
     await new Promise(r=>setTimeout(r,1500));
   }
   showStatus('Still processing… try refreshing later','text-yellow-300');
   runBtn.disabled=false;
 }
 
-window.__run = async function(){
+window.__runwindow.__run = async function(){
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
