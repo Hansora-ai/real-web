@@ -294,7 +294,7 @@ async function alephCheckPoll(taskId, uid, rid, uploadedUrl){
   runBtn.disabled=false;
 }
 
-window.__runwindow.__run = async function(){
+window.__run = async function(){
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
