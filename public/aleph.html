@@ -84,21 +84,7 @@
             <input id="image" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
             <div id="imageThumbs" class="mt-2 flex gap-2 flex-wrap"></div>
           </div>
-
-          <!-- Ratio -->
-          <div id="ratioWrap">
-            <label class="text-xs text-zinc-400">Aspect ratio</label>
-            <select id="ratio" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
-              <option value="16:9" selected>16:9 (default)</option>
-              <option value="9:16">9:16</option>
-              <option value="4:3">4:3</option>
-              <option value="3:4">3:4</option>
-              <option value="1:1">1:1</option>
-              <option value="21:9">21:9</option>
-            </select>
-          </div>
-
-          <!-- Prompt -->
+<!-- Prompt -->
           <div>
             <label class="text-xs text-zinc-400">Prompt (required)</label>
             <textarea id="prompt" placeholder="Describe the transformation…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark"></textarea>
@@ -166,7 +152,7 @@ const videoEl=document.getElementById('video');
 const imageEl=document.getElementById('image');
 const imageThumbs=document.getElementById('imageThumbs');
 const videoThumb=document.getElementById('videoThumb');
-const ratioEl=document.getElementById('ratio');
+const ASPECT_RATIO_DEFAULT='16:9';
 const promptEl=document.getElementById('prompt');
 const runBtn=document.getElementById('runBtn');
 const statusEl=document.getElementById('status');
@@ -345,7 +331,7 @@ window.__run = async function(){
 
   try{
     const uid = authData.user.id;
-    const aspectRatio = ratioEl.value || '16:9';
+    const aspectRatio = ASPECT_RATIO_DEFAULT || '16:9';
 
     // Upload video via kie-upload
     const vfd = new FormData();
