@@ -46,7 +46,7 @@ exports.handler = async (event) => {
     // Build data URL (no size limit here; KIE may still enforce its own limit)
     const dataUrl = `data:${mimeType};base64,${content.toString('base64')}`;
     const payload = JSON.stringify({
-      fileBase64: dataUrl,
+      base64Data: dataUrl,
       uploadPath: 'videos/user-uploads',
       fileName: safeName
     });
