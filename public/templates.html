@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Templates — HANSORA AI (debug)</title>
+  <title>Templates — HANSORA AI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -25,9 +25,6 @@
     @media (max-width: 900px){ .modal .body { grid-template-columns: 1fr; } }
     .poster { background: #0b0c10; border-radius: 12px; border:1px solid var(--base-line); overflow:hidden }
     .poster video { width:100%; height:auto; display:block; }
-    /* tiny debug badge */
-    .dbg { position: fixed; right: 10px; bottom: 10px; font-size: 12px; background: #111827; border: 1px solid rgba(255,255,255,.12); padding: 8px 10px; border-radius: 10px; z-index: 100; color:#d1d5db; max-width: 60vw; }
-    .dbg code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; color:#93c5fd; }
   </style>
 </head>
 <body class="min-h-full flex flex-col">
@@ -50,6 +47,7 @@
     </section>
   </main>
 
+  <!-- modal -->
   <div id="mask" class="modal-mask">
     <div class="modal">
       <div class="body">
@@ -67,8 +65,6 @@
     </div>
   </div>
 
-  <div class="dbg" id="dbg">loading…</div>
-
   <script>
     const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
@@ -80,7 +76,6 @@
     const mGen   = document.getElementById('mGenerate');
     const mClose = document.getElementById('mClose');
     const $err   = document.getElementById('err');
-    const $dbg   = document.getElementById('dbg');
 
     mClose.onclick = () => { try { mVideo.pause(); } catch {} mask.style.display = 'none'; mVideo.removeAttribute('src'); mVideo.load(); };
     mask.addEventListener('click', e => { if (e.target === mask) mClose.click(); });
@@ -88,49 +83,68 @@
     function makeCard(row){
       const card = document.createElement('article');
       card.className = 'card glass hover:border-white/20 transition cursor-pointer';
+
       const media = document.createElement('div');
       media.className = 'media';
 
       const v = document.createElement('video');
-      v.autoplay = true; v.muted = true; v.playsInline = true;
-      v.setAttribute('loop',''); v.setAttribute('preload','auto');
+      v.autoplay = true;          // property set before src
+      v.muted = true;             // critical for autoplay
+      v.playsInline = true;       // Safari/iOS
+      v.setAttribute('loop','');
+      v.setAttribute('preload','auto');
       if (row.poster_url) v.setAttribute('poster', row.poster_url);
-      v.src = row.preview_url || '';
-      Promise.resolve().then(()=>v.play().catch(()=>{}));
+      media.appendChild(v);
+      card.appendChild(media);
 
-      media.appendChild(v); card.appendChild(media);
       const meta = document.createElement('div');
       meta.className = 'p-4 flex items-center justify-between';
       meta.innerHTML = '<h3 class="font-semibold">'+(row.name || 'Template')+'</h3><span class="text-xs text-violet-300">Motion</span>';
       card.appendChild(meta);
 
+      const begin = () => {
+        if (!v.src && row.preview_url){
+          v.src = row.preview_url;
+          // force a play tick after src assignment
+          Promise.resolve().then(() => v.play().catch(()=>{}));
+        }
+      };
+
+      // start immediately (no hover)
+      begin();
+
+      // in case browser delays, try again when we get metadata
+      v.addEventListener('loadedmetadata', () => v.play().catch(()=>{}));
+      v.addEventListener('canplay', () => v.play().catch(()=>{}));
+
+      // Click -> open modal
       card.addEventListener('click', () => {
         mName.textContent = row.name || 'Template';
         try { mVideo.pause(); } catch {}
-        mVideo.src = row.preview_url || ''; mVideo.load(); mVideo.play().catch(()=>{});
+        mVideo.src = row.preview_url || '';
+        mVideo.load();
+        mVideo.play().catch(()=>{});
         mask.style.display = 'flex';
+
         const url = new URL(window.location.origin + '/higgsfield.html');
         url.searchParams.set('motion_id', row.motion_id);
         url.searchParams.set('preview', row.preview_url);
         url.searchParams.set('name', row.name);
         mGen.setAttribute('href', url.toString());
       });
+
       return card;
     }
 
     async function loadTemplates(){
-      const dbg = (lines) => { $dbg.innerHTML = lines.join('<br/>'); console.log('[templates-debug]', ...lines); };
       try{
-        dbg(['Project: <code>'+SUPABASE_URL+'</code>','Query: <code>motion_templates</code>']);
         const { data, error } = await supabase
           .from('motion_templates')
           .select('name,motion_id,preview_url,poster_url,sort_order')
           .order('sort_order', { ascending: true });
 
-        if (error){ console.error(error); $err.textContent = error.message || 'Failed to load templates.'; dbg(['Error: <code>'+ (error.message||'unknown') +'</code>']); return; }
-        dbg(['Rows: <code>'+(data ? data.length : 0)+'</code>', data && data[0] ? ('First row name: <code>'+data[0].name+'</code>') : '']);
-
         const grid = document.getElementById('grid');
+        if (error){ console.error(error); $err.textContent = error.message || 'Failed to load templates.'; return; }
         if (!data || data.length === 0){ grid.innerHTML = '<p class="text-zinc-400">No templates yet.</p>'; return; }
 
         grid.innerHTML = '';
