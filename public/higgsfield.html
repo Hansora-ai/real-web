@@ -7,7 +7,6 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
@@ -27,7 +26,7 @@
   </style>
 </head>
 <body class="min-h-screen">
-  <!-- Header (identical style) -->
+  <!-- Header -->
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <a href="templates.html" class="flex items-center gap-3 hover:opacity-90">
@@ -64,7 +63,7 @@
 
   <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
     <div class="grid md:grid-cols-2 gap-6 items-start">
-      <!-- Left card: preview -->
+      <!-- Left card: preview/result (reused) -->
       <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
         <h1 class="text-2xl font-bold">Higgsfield — Use Selected Motion</h1>
         <p class="mt-1 text-sm text-zinc-400">
@@ -73,8 +72,10 @@
             <span class="text-xs text-zinc-300 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">Cost 5⚡</span>
           </span>
         </p>
-        <div class="mt-3 rounded-xl border border-white/10 overflow-hidden">
-          <video id="previewVideo" controls playsinline class="block w-full bg-black/30 min-h-[220px]"></video>
+        <div id="displayBox" class="mt-3 rounded-xl border border-white/10 overflow-hidden min-h-[220px] bg-black/30 flex items-center justify-center">
+          <!-- The template preview video goes here; replaced by result after Run -->
+          <video id="previewVideo" class="hidden w-full h-auto" muted playsinline></video>
+          <span id="emptyHint" class="text-xs text-zinc-500">No preview</span>
         </div>
         <div id="tplName" class="mt-2 text-xs text-zinc-400"></div>
       </div>
@@ -101,19 +102,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Result -->
-    <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft mt-6">
-      <h3 class="text-lg font-semibold">Result</h3>
-      <p class="text-xs text-zinc-400">Generated video will appear below.</p>
-      <div id="resultBox" class="mt-3 w-full rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
-        <span class="text-xs text-zinc-500">No result yet</span>
-      </div>
-      <div class="mt-3 flex items-center gap-3">
-        <button id="playBtn" class="hidden rounded-xl btn px-4 py-2 text-sm">Play</button>
-        <a id="downloadLink" href="#" class="hidden rounded-xl btn px-4 py-2 text-sm">Download</a>
-      </div>
-    </div>
   </section>
 
   <footer class="border-t border-base-line/60">
@@ -130,12 +118,12 @@
 <script>
 document.getElementById('y').textContent = new Date().getFullYear();
 
-// Supabase init (same pattern as Veo page; replace with your values if needed)
+// === Supabase init (same as your Veo page, to avoid auth syntax issues) ===
 const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-const SUPABASE_ANON_KEY = ''; // keep empty here to avoid leaking; inject at build if your header UI needs it
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Header UI (kept minimal to avoid altering your existing auth logic)
+// === Header auth UI (non-invasive) ===
 const $btnLoginNav = document.getElementById('btnLoginNav');
 const $btnGetStarted = document.getElementById('btnGetStarted');
 const $navUser = document.getElementById('navUser');
@@ -152,24 +140,37 @@ $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();sho
 async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
 (async()=>{try{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}}catch{}})();
 
-// Elements
+// === Elements ===
 const imageEl=document.getElementById('image');
 const thumbsEl=document.getElementById('thumbs');
 const runBtn=document.getElementById('runBtn');
 const statusEl=document.getElementById('status');
-const resultBox=document.getElementById('resultBox');
-const downloadLink=document.getElementById('downloadLink');
+const displayBox=document.getElementById('displayBox');
+const previewVideo=document.getElementById('previewVideo');
+const emptyHint=document.getElementById('emptyHint');
 
-// Query params
+// === Query params (from Templates page) ===
 const qp = new URLSearchParams(location.search);
 const MOTION_ID = qp.get('motion_id') || '';
 const PREVIEW   = qp.get('preview')   || '';
 const NAME      = qp.get('name')      || '';
 document.getElementById('tplName').textContent = NAME ? ('Template: ' + NAME) : '';
-const previewVideo = document.getElementById('previewVideo');
-if (PREVIEW){ previewVideo.src = PREVIEW; previewVideo.load(); }
 
-// Image preview
+// Inject preview video if provided
+(function(){
+  if (!PREVIEW) return;
+  emptyHint.classList.add('hidden');
+  previewVideo.classList.remove('hidden');
+  previewVideo.setAttribute('muted','');
+  previewVideo.setAttribute('playsinline','');
+  previewVideo.setAttribute('autoplay','');
+  previewVideo.setAttribute('loop','');
+  previewVideo.src = PREVIEW;
+  previewVideo.load();
+  Promise.resolve().then(()=>previewVideo.play().catch(()=>{}));
+})();
+
+// === Image preview with X ===
 let __lastObjURL = null;
 function clearImageSelection(){
   try { if (__lastObjURL) { URL.revokeObjectURL(__lastObjURL); __lastObjURL = null; } } catch {}
@@ -201,33 +202,18 @@ imageEl.addEventListener('change',()=>{
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
-function showVideo(url, poster){
-  resultBox.innerHTML = '';
+// Replace the left preview box with the result video
+function showResultVideo(url, poster){
+  displayBox.innerHTML='';
   const v = document.createElement('video');
-  v.style.objectFit = 'contain';
-  v.controls = true;
+  v.controls = true; v.playsInline = true; v.style.objectFit='contain';
   if (poster) v.setAttribute('poster', poster);
   v.src = url;
   v.className = 'block w-full max-h-[70vh] rounded-lg border border-white/10 bg-black/20';
-  resultBox.appendChild(v);
-
-  downloadLink.href = url;
-  downloadLink.classList.remove('hidden');
-
-  const playBtn = document.getElementById('playBtn');
-  if (playBtn) {
-    playBtn.classList.remove('hidden');
-    playBtn.textContent = 'Play';
-    playBtn.onclick = () => {
-      try {
-        if (v.paused) { v.play(); playBtn.textContent = 'Pause'; }
-        else { v.pause(); playBtn.textContent = 'Play'; }
-      } catch {}
-    };
-  }
+  displayBox.appendChild(v);
 }
 
-// Simple credits helpers (client-side view only)
+// === Credits quick helpers ===
 async function getCredits(){
   try{
     const ures = await supabase.auth.getUser(); const user = ures?.data?.user; if(!user) return 0;
@@ -236,6 +222,7 @@ async function getCredits(){
   }catch{return 0;}
 }
 
+// === Run job ===
 async function runJob(){
   try{
     const { data: authData } = await supabase.auth.getUser();
@@ -249,9 +236,9 @@ async function runJob(){
     if (!f){ showStatus('Please select one image.','text-rose-300'); return; }
     if (!MOTION_ID){ showStatus('Missing motion_id','text-rose-300'); return; }
 
+    displayBox.innerHTML = '<span class="text-xs text-zinc-500 animate-pulse py-16">Generating… this can take up to 2–5 minutes.</span>';
     showStatus('Uploading image…','text-zinc-400');
 
-    // Upload image via your existing Netlify uploader (adjust to your setup)
     const uid = authData.user.id;
     const fd = new FormData();
     fd.append('file', f, f.name || 'image.png');
@@ -292,7 +279,7 @@ async function pollResult(taskId, uid){
       const r = await fetch('/.netlify/functions/hf-check?taskId=' + encodeURIComponent(taskId) + '&uid=' + encodeURIComponent(uid));
       const j = await r.json().catch(()=>({}));
       if (j && j.ok && j.video_url){
-        showVideo(j.video_url, j.thumb_url || '');
+        showResultVideo(j.video_url, j.thumb_url || '');
         showStatus('Done.','text-emerald-300');
         return;
       }
