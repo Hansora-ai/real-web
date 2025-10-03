@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Templates — HANSORA AI</</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --base-line: rgba(255,255,255,0.08); }
+    body { background: #0b0b0f; color: #e5e7eb; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .glass { background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); backdrop-filter: blur(8px); }
+    .border-line { border-color: var(--base-line); }
+    .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items:center; justify-content:center; z-index: 50; }
+    .modal { width: min(980px, 92vw); background: #0e0f14; border: 1px solid var(--base-line); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+    .modal .body { display: grid; grid-template-columns: 1.2fr .8fr; gap: 18px; padding: 18px; }
+    @media (max-width: 900px){ .modal .body { grid-template-columns: 1fr; } }
+    .poster { aspect-ratio: 16/9; background: #0b0c10; border-radius: 12px; border:1px solid var(--base-line); overflow:hidden }
+    .poster img, .poster video { width:100%; height:100%; object-fit:cover; display:block; }
+    .btn { background: #1c1e2a; border:1px solid #2a2d3e; color:#eaeafa; border-radius:12px; padding:10px 14px; font-size:14px; }
+    .btn:hover { background:#242844; }
+  </style>
+</head>
+<body class="min-h-full flex flex-col">
+  <header class="border-b border-line">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+      <a href="index.html" class="font-semibold">HANSORA AI</a>
+      <div class="text-sm text-zinc-300">Templates</div>
+    </div>
+  </header>
+
+  <main class="flex-1">
+    <section>
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <h1 class="text-2xl sm:text-3xl font-bold">Motion Templates</h1>
+        <p class="mt-2 text-zinc-400 max-w-2xl">Click a template to preview. Press <em>Generate</em> to open the Higgsfield page with this motion preselected.</p>
+
+        <!-- grid -->
+        <div id="grid" class="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- modal -->
+  <div id="mask" class="modal-mask">
+    <div class="modal">
+      <div class="body">
+        <div class="poster"><video id="mVideo" controls playsinline></video></div>
+        <div>
+          <h3 id="mName" class="text-lg font-semibold"></h3>
+          <p class="text-sm text-zinc-400 mt-1">Preview of this motion. Click Generate to continue.</p>
+          <div class="mt-4 flex flex-col gap-3">
+            <a id="mGenerate" class="btn text-center">Generate</a>
+            <button id="mClose" class="btn">Close</button>
+          </div>
+          <p class="text-xs text-zinc-500 mt-3">You’ll be taken to the Higgsfield page with this motion ID. There you can upload your image and run the job (5⚡).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== CONFIG (replace with your values or inject via <script> before this file) ======
+    const SUPABASE_URL  = window.SUPABASE_URL  || "https://qmaealblegvcwodlmeht.supabase.co";
+    const SUPABASE_ANON = window.SUPABASE_ANON || ""; // fill with your anon key
+
+    if (!SUPABASE_ANON) {
+      console.warn("Supabase anon key is empty. Set window.SUPABASE_ANON before this script, or hardcode it here.");
+    }
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    // modal wiring
+    const mask = document.getElementById('mask');
+    const mVideo = document.getElementById('mVideo');
+    const mName  = document.getElementById('mName');
+    const mGen   = document.getElementById('mGenerate');
+    const mClose = document.getElementById('mClose');
+    mClose.onclick = () => { try { mVideo.pause(); } catch {} mask.style.display = 'none'; mVideo.removeAttribute('src'); mVideo.load(); };
+    mask.addEventListener('click', e => { if (e.target === mask) mClose.click(); });
+
+    async function loadTemplates(){
+      const { data, error } = await supabase
+        .from('motion_templates')
+        .select('name,motion_id,preview_url,poster_url,sort_order,is_active')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error(error);
+        document.getElementById('grid').innerHTML = '<p class="text-red-300">Failed to load templates.</p>';
+        return;
+      }
+
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      (data || []).forEach(row => {
+        const card = document.createElement('article');
+        card.className = 'glass rounded-2xl overflow-hidden border border-white/10 hover:border-white/20 transition';
+        card.innerHTML = `
+          <div class="aspect-video overflow-hidden bg-black/30 border-b border-white/10">
+            <img src="${row.poster_url || ''}" class="h-full w-full object-cover" alt="${row.name}">
+          </div>
+          <div class="p-4 flex items-center justify-between">
+            <h3 class="font-semibold">${row.name}</h3>
+            <span class="text-xs text-violet-300">Motion</span>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          mName.textContent = row.name || 'Template';
+          try { mVideo.pause(); } catch {}
+          mVideo.src = row.preview_url || '';
+          mVideo.load();
+          mask.style.display = 'flex';
+
+          const url = new URL(window.location.origin + '/higgsfield.html');
+          url.searchParams.set('motion_id', row.motion_id);
+          url.searchParams.set('preview', row.preview_url);
+          url.searchParams.set('name', row.name);
+          mGen.setAttribute('href', url.toString());
+        });
+        grid.appendChild(card);
+      });
+    }
+
+    loadTemplates();
+  </script>
+</body>
+</html>
