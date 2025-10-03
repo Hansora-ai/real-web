@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Templates — HANSORA AI</</title>
+  <title>Templates — HANSORA AI</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -63,13 +63,9 @@
   </div>
 
   <script>
-    // ====== CONFIG (replace with your values or inject via <script> before this file) ======
-    const SUPABASE_URL  = window.SUPABASE_URL  || "https://qmaealblegvcwodlmeht.supabase.co";
-    const SUPABASE_ANON = window.SUPABASE_ANON || ""; // fill with your anon key
-
-    if (!SUPABASE_ANON) {
-      console.warn("Supabase anon key is empty. Set window.SUPABASE_ANON before this script, or hardcode it here.");
-    }
+    // ====== CONFIG (hardcoded URL; anon key placeholder — you can inject via separate script if preferred) ======
+    const SUPABASE_URL  = "https://qmaealblegvcwodlmeht.supabase.co";
+    const SUPABASE_ANON = "REPLACE_WITH_YOUR_SUPABASE_ANON_KEY";
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
@@ -85,22 +81,27 @@
     async function loadTemplates(){
       const { data, error } = await supabase
         .from('motion_templates')
-        .select('name,motion_id,preview_url,poster_url,sort_order,is_active')
-        .eq('is_active', true)
+        .select('name,motion_id,preview_url,poster_url,sort_order')
         .order('sort_order', { ascending: true });
+
+      const grid = document.getElementById('grid');
 
       if (error) {
         console.error(error);
-        document.getElementById('grid').innerHTML = '<p class="text-red-300">Failed to load templates.</p>';
+        grid.innerHTML = '<p class="text-red-300">Failed to load templates.</p>';
         return;
       }
 
-      const grid = document.getElementById('grid');
+      if (!data || data.length === 0){
+        grid.innerHTML = '<p class="text-zinc-400">No templates yet.</p>';
+        return;
+      }
+
       grid.innerHTML = '';
 
-      (data || []).forEach(row => {
+      data.forEach(row => {
         const card = document.createElement('article');
-        card.className = 'glass rounded-2xl overflow-hidden border border-white/10 hover:border-white/20 transition';
+        card.className = 'glass rounded-2xl overflow-hidden border border-white/10 hover:border-white/20 transition cursor-pointer';
         card.innerHTML = `
           <div class="aspect-video overflow-hidden bg-black/30 border-b border-white/10">
             <img src="${row.poster_url || ''}" class="h-full w-full object-cover" alt="${row.name}">
