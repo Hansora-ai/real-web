@@ -1,4 +1,15 @@
 // netlify/functions/run-higgsfield.js
+// Payload aligned to Higgsfield Playground example:
+// {
+//   "params": {
+//     "model": "dop-turbo",
+//     "motions": [{ "id": "<MOTION_ID>" }],
+//     "input_images": [{ "type": "image_url", "image_url": "<PUBLIC_URL>" }],
+//     "enhance_prompt": true,
+//     "input_images_end": []
+//   }
+// }
+
 const HF_URL = "https://platform.higgsfield.ai/v1/image2video/dop";
 const HF_KEY = process.env.HF_API_KEY || "";
 const HF_SECRET = process.env.HF_SECRET || "";
@@ -9,31 +20,31 @@ const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` 
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return ok({});
-  if (event.httpMethod !== "POST") return err(405, "Use POST");
+  if (event.httpMethod !== "POST")   return err(405, "Use POST");
 
   try {
     const body = safeJson(event.body);
-    const uid = String(body.uid || body.user_id || "").trim();
-    const motion_id = String(body.motion_id || "").trim();
-    const imageUrl = normalizeUrl(body.imageUrl || body.fileUrl || "");
-    const prompt = String(body.prompt || "").trim();
-    const strength = typeof body.strength === "number" ? body.strength : 0.5;
+    const uid       = (body.uid || body.user_id || "").toString().trim();
+    const motion_id = (body.motion_id || "").toString().trim();
+    const imageUrl  = normalizeUrl(body.imageUrl || body.fileUrl || "");
+    const prompt    = (body.prompt || "").toString().trim();
 
     if (!uid)       return ok({ submitted:false, error:"missing_user_id" });
     if (!motion_id) return ok({ submitted:false, error:"missing_motion_id" });
     if (!imageUrl)  return ok({ submitted:false, error:"missing_image_url" });
 
-    const run_id = String(body.run_id || `${uid}-${Date.now()}`);
+    const run_id = (body.run_id || `${uid}-${Date.now()}`).toString();
 
-    await upsertGen(uid, { run_id, status:"processing", model:"dop-turbo", motion_id });
+    // seed/patch user_generations (processing)
+    await upsertGen(uid, { run_id, status:"processing", provider:"higgsfield", model:"dop-turbo", motion_id });
 
     const hfPayload = {
       params: {
         model: "dop-turbo",
         prompt,
-        seed: 500000,
-        motions: [{ id: motion_id, strength }],
-        input_images: [{ type: "image", image_url: imageUrl }],
+        motions: [{ id: motion_id }],
+        input_images: [{ type: "image_url", image_url: imageUrl }],
+        input_images_end: [],
         enhance_prompt: true
       }
     };
@@ -51,17 +62,17 @@ exports.handler = async (event) => {
     const text = await resp.text();
     let data; try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
-    const jobSetId = extractJobSetId(data);
-
     if (!resp.ok) {
       const reason = data?.message || data?.error || data?.detail || text || `hf_${resp.status}`;
-      return ok({ submitted:false, error:`hf_${resp.status}`, reason, data });
-    }
-    if (!jobSetId) {
-      return ok({ submitted:false, error:"missing_job_set_id", data });
+      return ok({ submitted:false, error:`hf_${resp.status}`, reason, data, sent: hfPayload });
     }
 
-    await upsertGen(uid, { run_id, status:"processing", model:"dop-turbo", motion_id, job_set_id: jobSetId });
+    const jobSetId = extractJobSetId(data);
+    if (!jobSetId) {
+      return ok({ submitted:false, error:"missing_job_set_id", data, sent: hfPayload });
+    }
+
+    await upsertGen(uid, { run_id, status:"processing", provider:"higgsfield", model:"dop-turbo", motion_id, job_set_id: jobSetId });
     return ok({ submitted:true, run_id, job_set_id: jobSetId, data });
   } catch (e) {
     return ok({ submitted:false, error:String(e) });
