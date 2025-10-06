@@ -3,9 +3,9 @@
  * GET poller for Sora 2 tasks. Collects any URLs in provider JSON, picks an mp4,
  * and backfills Supabase like vv-check.
  */
-const VERSION = "sora2-check-GET-2025-10-06+v2-kie";
+const VERSION = "sora2-check-GET-2025-10-06+v3-kie-envfix";
 
-const KIE_BASE = (process.env.KIE_BASE || "").replace(/\/+$/,"");
+const KIE_BASE = (process.env.KIE_BASE_URL || "").replace(/\/+$/,"");
 const KIE_API_KEY  = process.env.KIE_API_KEY || "";
 
 const SUPABASE_URL  = process.env.SUPABASE_URL || "";
@@ -29,7 +29,7 @@ exports.handler = async (event) => {
     const run_id = (qs.run_id || "").toString().trim();
     if (!taskId) return json(400, { ok:false, error:"missing taskId", version: VERSION });
 
-    if (!KIE_BASE || !SORA_KEY) return json(200, { ok:false, error:"missing_kie_config", version: VERSION });
+    if (!KIE_BASE || !KIE_API_KEY) return json(200, { ok:false, error:"missing_kie_config", version: VERSION });
 
     // Provider status endpoint (assumed):
     const url = `${KIE_BASE}/api/v1/jobs/${encodeURIComponent(taskId)}`;
