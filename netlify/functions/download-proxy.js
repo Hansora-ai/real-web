@@ -30,13 +30,17 @@ export const handler = async (event) => {
   catch { return json(400, { ok:false, error:'bad_url', url: raw }); }
 
   // allowlist (adjust as needed)
-  const ALLOW = [
+    const ALLOW = [
     'supabase.co',
     'supabase.in',
     'storage.supabase.com',
     'replicate.delivery',
     'aiquickdraw.com',
     'tempfile.aiquickdraw.com',
+    // NEW: allow Higgsfield asset hosts
+    'higgsfield.ai',              // allow any *.higgsfield.ai (e.g., cloud-cdn.higgsfield.ai, platform.higgsfield.ai)
+    'cloud-cdn.higgsfield.ai',
+    'platform.higgsfield.ai'
   ];
   const allowed = ALLOW.some((d) => target.hostname === d || target.hostname.endsWith(`.${d}`));
   if (!allowed) return json(400, { ok:false, error:'blocked_host', host: target.hostname });
