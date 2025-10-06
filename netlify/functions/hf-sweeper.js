@@ -87,13 +87,37 @@ function nextCheck(attempts){
   const idx = Math.min(attempts, steps.length-1);
   return nowSec() + steps[idx];
 }
-function pickUrls(j){
-  const v = j?.video_url || j?.data?.video_url || j?.output?.video_url || j?.output?.url || null;
-  const t = j?.thumb_url || j?.data?.thumb_url || j?.output?.thumb_url || null;
-  let status = j?.status || j?.data?.status || j?.state || (v ? "succeeded" : "processing");
-  const s = String(status || "").toLowerCase();
-  if (["done","completed","complete"].includes(s)) status = "succeeded";
-  return { video_url: v, thumb_url: t, status };
+function pickUrls(js){
+  const j = js || {};
+
+  // 0) direct fallbacks (keep compatibility with any rare top-level shapes)
+  const directV = j?.video_url || j?.data?.video_url || j?.output?.video_url || j?.output?.url || null;
+  const directT = j?.thumb_url || j?.data?.thumb_url || j?.output?.thumb_url || null;
+  let status = (j?.status || j?.data?.status || j?.state || (directV ? "succeeded" : "processing")) || "processing";
+
+  // If direct video exists, return immediately
+  if (directV) return { video_url: directV, thumb_url: directT, status };
+
+  // 1) Higgsfield canonical shape: a JobSet with jobs[] containing results.{min|raw}.url
+  const jobs = Array.isArray(j.jobs) ? j.jobs : (Array.isArray(j.items) ? j.items : []);
+  for (const it of jobs){
+    const s = String(it?.status || it?.state || it?.data?.status || "").toLowerCase();
+    const raw = it?.results?.raw?.url || null;
+    const min = it?.results?.min?.url || null;
+    const v = raw || min || null;
+
+    if (v) {
+      // prefer any concrete URL immediately
+      return { video_url: v, thumb_url: it?.results?.min?.thumb_url || null, status: "succeeded" };
+    }
+
+    // If job signals completion without exposing URL yet, respect it
+    if (["done","completed","complete","succeeded","success"].includes(s)) status = "succeeded";
+    if (s === "failed" || s === "error") return { video_url: null, thumb_url: null, status: "failed" };
+  }
+
+  // 2) nothing conclusive yet
+  return { video_url: null, thumb_url: directT || null, status };
 }
 async function getJob(job_set_id){
   const url = `${HF_BASE}/v1/job-sets/${encodeURIComponent(job_set_id)}`;
