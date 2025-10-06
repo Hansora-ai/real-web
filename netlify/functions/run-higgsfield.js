@@ -1,7 +1,7 @@
 
-// netlify/functions/run-higgsfield.js
-// Node16-safe submitter for Higgsfield DoP (Image→Video) with WEBHOOK (no query params appended).
-// Minimal, robust, and aligned with your existing frontend (higgsfield.html).
+// netlify/functions/run-higgsfield.params.js
+// Version that matches Higgsfield's documented schema with `params`,
+// `motions`, and `input_images` arrays.
 
 const https = require("https");
 const { URL } = require("url");
@@ -12,7 +12,7 @@ const HF_KEY = process.env.HF_API_KEY || "";
 const HF_SECRET = process.env.HF_SECRET || "";
 
 const HF_WEBHOOK_URL    = process.env.HF_WEBHOOK_URL    || "";
-const HF_WEBHOOK_SECRET = process.env.HF_WEBHOOK_SECRET || ""; // OPTIONAL
+const HF_WEBHOOK_SECRET = process.env.HF_WEBHOOK_SECRET || ""; // optional
 
 const SUPABASE_URL  = process.env.SUPABASE_URL || "";
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -30,7 +30,7 @@ function ok(obj) { return { statusCode: 200, headers: cors(), body: JSON.stringi
 function err(code, message, extra) {
   return { statusCode: code, headers: cors(), body: JSON.stringify({ submitted:false, error: message, ...(extra||{}) }) };
 }
-function safeJson(s){ try { return JSON.parse(s || "{}"); } catch { return {}; } } // <- FIX: never return null
+function safeJson(s){ try { return JSON.parse(s || "{}"); } catch { return {}; } }
 function normalizeHttpsUrl(u){
   try {
     const url = new URL(String(u||""));
@@ -112,7 +112,6 @@ exports.handler = async (event) => {
   if (!HF_KEY || !HF_SECRET) return err(500, "missing_hf_credentials");
   if (!HF_WEBHOOK_URL) return err(500, "missing_webhook_url");
 
-  // Body & headers
   const body = safeJson(event.body);
   if (!body || typeof body !== "object") return ok({ submitted:false, error:"invalid_json_body" });
 
@@ -126,37 +125,44 @@ exports.handler = async (event) => {
   if (!motion_id) return ok({ submitted:false, error:"missing_motion_id" });
   if (!imageUrl)  return ok({ submitted:false, error:"missing_image_url_https" });
 
-  // Build HF payload
+  // Build payload exactly like the cURL you pasted
   const run_id = randomRunId();
-  const hfPayload = {
-    motion_id,
-    image_url: imageUrl,
-    prompt,
-    strength,
-    // DO NOT append query params to webhook URL
+  const payload = {
     webhook: HF_WEBHOOK_SECRET ? { url: HF_WEBHOOK_URL, secret: HF_WEBHOOK_SECRET } : { url: HF_WEBHOOK_URL },
+    params: {
+      model: "dop-turbo",
+      prompt,
+      // seed is optional – include a deterministic default for debug
+      seed: 500000,
+      motions: [{ id: motion_id, strength }],
+      input_images: [{ type: "image_url", image_url: imageUrl }],
+      // input_images_end: [] // not needed for single image
+      enhance_prompt: true
+    },
+    // keep your run id in metadata if HF echoes it back in callbacks (some APIs do)
     metadata: { uid, run_id }
   };
 
-  // Submit
-  const hfRes = await reqJson("POST", HF_URL, {
+  const res = await reqJson("POST", HF_URL, {
     "hf-api-key": HF_KEY,
     "hf-secret": HF_SECRET
-  }, hfPayload);
+  }, payload);
 
-  if (hfRes.status < 200 || hfRes.status >= 300) {
+  if (res.status < 200 || res.status >= 300) {
     return ok({
       submitted:false,
-      error: "hf_submit_failed",
-      status: hfRes.status,
-      reason: (hfRes.json && (hfRes.json.message || hfRes.json.error)) || hfRes.text || "unknown",
-      sent: { motion_id, image_url: imageUrl, has_prompt: !!prompt, strength }
+      error:"hf_submit_failed",
+      status: res.status,
+      reason: (res.json && (res.json.message || res.json.error)) || res.text || "unknown",
+      sent_shape: "curl_params_schema",
+      sent_preview: {
+        webhook: { url: HF_WEBHOOK_URL, with_secret: !!HF_WEBHOOK_SECRET },
+        params: { model: "dop-turbo", prompt: prompt ? "[non-empty]" : "", motions_len: 1, input_images_len: 1 }
+      }
     });
   }
 
-  const job_set_id = extractJobSetId(hfRes.json) || "";
-  // Seed a row so the callback can update later
+  const job_set_id = extractJobSetId(res.json) || "";
   await seedUserGenerations(uid, run_id, job_set_id, motion_id, imageUrl, prompt).catch(()=>{});
-
   return ok({ submitted:true, job_set_id, run_id });
 };
