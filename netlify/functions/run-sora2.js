@@ -2,17 +2,17 @@
  * netlify/functions/run-sora2.js
  * Submit a Sora 2 task and seed user_generations.
  * 1:1 with run-veo3, adapted to:
- *  - endpoint: POST {SORA_BASE}/api/v1/jobs/createTask
+ *  - endpoint: POST {KIE_BASE}/api/v1/jobs/createTask
  *  - models: "sora-2-text-to-video" or "sora-2-image-to-video"
  *  - duration: 10, quality: "hd"
  *  - image_urls: [url]
  *  - orientation: "landscape"/"portrait" mapped from aspect ratio
  *  - live debit handled on client (3⚡)
  */
-const VERSION = "run-sora2-2025-10-06+v1";
+const VERSION = "run-sora2-2025-10-06+v2-kie";
 
-const SORA_BASE = (process.env.SORA_BASE || "").replace(/\/+$/,"");
-const SORA_KEY  = process.env.SORA_API_KEY || "";
+const KIE_BASE = (process.env.KIE_BASE || "").replace(/\/+$/,"");
+const KIE_API_KEY  = process.env.KIE_API_KEY || "";
 
 const SUPABASE_URL  = process.env.SUPABASE_URL || "";
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -44,8 +44,8 @@ exports.handler = async (event) => {
       });
     }
 
-    if (!SORA_BASE || !SORA_KEY) {
-      return ok({ submitted:false, error:"missing_sora_config" });
+    if (!KIE_BASE || !SORA_KEY) {
+      return ok({ submitted:false, error:"missing_kie_config" });
     }
 
     // Build payload for Sora
@@ -58,17 +58,17 @@ exports.handler = async (event) => {
     };
     if (image_urls.length) payload.image_urls = image_urls;
 
-    const url = `${SORA_BASE}/api/v1/jobs/createTask`;
+    const url = `${KIE_BASE}/api/v1/jobs/createTask`;
     const r = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SORA_KEY}` },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${KIE_API_KEY}` },
       body: JSON.stringify(payload)
     });
     const data = await r.json().catch(()=>({}));
 
     const taskId = pickTaskId(data);
     if (!r.ok || !taskId) {
-      return ok({ submitted:false, error: `sora_${r.status||"error"}`, data, version: VERSION });
+      return ok({ submitted:false, error: `kie_${r.status||"error"}`, data, version: VERSION });
     }
 
     // Persist task id
