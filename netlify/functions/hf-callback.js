@@ -84,7 +84,15 @@ exports.handler = async (event)=>{
 
     const body = safeJson(event.body);
     const { video_url, thumb_url } = extractUrls(body);
-    const { run_id, job_set_id } = extractIds(body);
+    let { run_id, job_set_id } = extractIds(body);
+    // Fallback to query params if metadata did not include IDs (some submitters append them)
+    const qs = event.queryStringParameters || {};
+    const qs_run = (qs.run_id || qs.runId || "").trim();
+    const qs_job = (qs.job_set_id || qs.jobSetId || "").trim();
+    const qs_uid = (qs.uid || qs.user_id || "").trim();
+    if (!run_id && qs_run) { run_id = qs_run; }
+    if (!job_set_id && qs_job) { job_set_id = qs_job; }
+
     const status = body?.status || body?.state || body?.data?.status || "succeeded";
 
     const patch = {
