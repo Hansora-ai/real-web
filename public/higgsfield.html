@@ -84,7 +84,7 @@
       </div>
 
       <!-- Right card: form -->
-      <div class="glass rounded-2xl p-5 border border_white/10 shadow-soft">
+      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
         <h3 class="text-lg font-semibold">Generate with this motion</h3>
         <p class="text-xs text-zinc-400">Upload one image and (optionally) enter a prompt. Cost: <b>7⚡</b></p>
 
@@ -193,7 +193,7 @@ imageEl.addEventListener('change',()=>{
   wrap.className = 'relative inline-block';
   const img=new Image();
   img.src=u;
-  img.className='block w-full max-h-56 object-contain rounded-lg border border-white/10 bg_black/20';
+  img.className='block w-full max-h-56 object-contain rounded-lg border border-white/10 bg-black/20';
   const del=document.createElement('button');
   del.type='button';
   del.className='absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center';
@@ -260,7 +260,6 @@ async function refreshCreditsUI(){
     }catch{}
   })();
 })();
-}
 
 // === Run job ===
 async function runJob(){
