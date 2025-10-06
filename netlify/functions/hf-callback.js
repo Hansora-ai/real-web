@@ -1,10 +1,8 @@
 // netlify/functions/hf-callback.js
-// Tolerant Higgsfield webhook receiver (no secret required).
-// - Accepts POSTs without signature/secret (dev-friendly).
-// - Extracts run_id / job_set_id from body.metadata or body directly.
-// - Extracts video/thumb urls from multiple possible shapes.
-// - Updates Supabase `user_generations` by meta->>run_id (preferred) or meta->>job_set_id.
-// Node 16 compatible.
+// Tolerant Higgsfield webhook receiver (PING-friendly)
+// - Returns 200 OK for GET/HEAD/OPTIONS health checks (some providers ping the URL)
+// - Processes POSTs to update Supabase rows by meta->>run_id (fallback job_set_id)
+// - No secret required
 
 const https = require("https");
 const { URL } = require("url");
@@ -15,7 +13,7 @@ const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` 
 
 function cors(){ return {
   "Access-Control-Allow-Origin":"*",
-  "Access-Control-Allow-Methods":"POST,OPTIONS",
+  "Access-Control-Allow-Methods":"GET,HEAD,POST,OPTIONS",
   "Access-Control-Allow-Headers":"Content-Type, Authorization"
 };}
 function ok(obj){ return { statusCode:200, headers:cors(), body: JSON.stringify(obj) }; }
@@ -53,10 +51,7 @@ function reqJson(method, rawUrl, headers, bodyObj){
   });
 }
 
-function pick(o, ...keys){ const r={}; for(const k of keys){ if(o && Object.prototype.hasOwnProperty.call(o,k)) r[k]=o[k]; } return r; }
-
 function extractUrls(body){
-  // Try common shapes HF might send
   const v = body?.video_url || body?.data?.video_url || body?.output?.video_url || body?.output?.url || body?.result_url || "";
   const t = body?.thumb_url || body?.data?.thumb_url || body?.output?.thumb_url || body?.thumbnail_url || "";
   return { video_url: v || "", thumb_url: t || "" };
@@ -79,7 +74,10 @@ async function updateByMeta(field, value, patch){
 
 exports.handler = async (event)=>{
   try{
-    if (event.httpMethod === "OPTIONS") return ok({});
+    // Accept health-checks without error (prevents submit-time 422s if provider pings webhook)
+    if (event.httpMethod === "OPTIONS" || event.httpMethod === "GET" || event.httpMethod === "HEAD") {
+      return ok({ ok:true, ping:true });
+    }
     if (event.httpMethod !== "POST") return err(405,"method_not_allowed");
 
     const body = safeJson(event.body);
