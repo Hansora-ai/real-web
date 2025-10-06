@@ -25,6 +25,16 @@ exports.handler = async (event) => {
     }
 
     const body = safeJson(event.body);
+
+    // Read query params: ?uid=...&run_id=...
+    const rawQS = event.rawQuery || event.rawQueryString || '';
+    let qp_run_id = '', qp_uid = '';
+    try {
+      const qs = new URLSearchParams(rawQS);
+      qp_run_id = (qs.get('run_id') || '').trim();
+      qp_uid    = (qs.get('uid') || '').trim();
+    } catch {}
+
     // Expected provider payload shape (tolerant parsing)
     const job_id     = String(body?.id || body?.job_id || body?.data?.id || "").trim();
     const run_id     = String(body?.metadata?.run_id || body?.run_id || "").trim(); // optional
