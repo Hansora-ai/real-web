@@ -147,7 +147,8 @@ $navAvatar?.addEventListener('click',()=>{document.getElementById('navMenu').cla
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
 async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}})();
+(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);
+      try{ const rb=document.getElementById('runBtn'); if(rb){ rb.disabled=false; rb.style.pointerEvents=''; rb.classList.remove('opacity-50','cursor-not-allowed'); } }catch{}}catch{showLoggedOutUI();}}else{showLoggedOutUI();}})();
 
 // Elements
 const imageEl=document.getElementById('image');
