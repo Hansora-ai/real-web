@@ -1,16 +1,12 @@
 /**
  * netlify/functions/hf-sweeper-cron.js
- * Purpose: Trigger your existing hf-sweeper on a schedule so results update automatically.
- * No changes to your current hf-sweeper logic; this just calls it.
- *
- * Setup:
- *  - Set env var SWEEPER_URL to your deployed sweeper endpoint, e.g.
- *      https://webhansora.netlify.app/.netlify/functions/hf-sweeper
- *    (If not set, it falls back to SITE_URL + '/.netlify/functions/hf-sweeper'.)
+ * Same logic, but uses `exports.schedule` instead of `exports.config`
+ * (some CommonJS builds ignore `exports.config` for scheduled functions).
  */
-const VERSION = "hf-sweeper-cron+v1";
+const VERSION = "hf-sweeper-cron+v2-schedule";
 
-exports.config = { schedule: "*/1 * * * *" }; // run every minute
+// IMPORTANT: Scheduled config for CommonJS
+exports.schedule = "*/1 * * * *"; // every minute
 
 exports.handler = async () => {
   const base = process.env.SWEEPER_URL || (process.env.SITE_URL ? (process.env.SITE_URL.replace(/\/$/,'') + '/.netlify/functions/hf-sweeper') : null);
