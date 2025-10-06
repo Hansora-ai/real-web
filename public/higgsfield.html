@@ -51,7 +51,7 @@
             </button>
             <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden">
               <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a>
-              <a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a>
+              <a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg_white/5">Subscriptions</a>
               <a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a>
               <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
             </div>
@@ -81,7 +81,7 @@
       </div>
 
       <!-- Right card: form -->
-      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+      <div class="glass rounded-2xl p-5 border border_white/10 shadow-soft">
         <h3 class="text-lg font-semibold">Generate with this motion</h3>
         <p class="text-xs text-zinc-400">Upload one image and (optionally) enter a prompt. Cost: <b>5⚡</b></p>
 
@@ -123,7 +123,7 @@ const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// === Header auth UI (non-invasive) ===
+// === Header auth UI (unchanged) ===
 const $btnLoginNav = document.getElementById('btnLoginNav');
 const $btnGetStarted = document.getElementById('btnGetStarted');
 const $navUser = document.getElementById('navUser');
@@ -149,14 +149,14 @@ const displayBox=document.getElementById('displayBox');
 const previewVideo=document.getElementById('previewVideo');
 const emptyHint=document.getElementById('emptyHint');
 
-// === Query params (from Templates page) ===
+// === Query params ===
 const qp = new URLSearchParams(location.search);
 const MOTION_ID = qp.get('motion_id') || '';
 const PREVIEW   = qp.get('preview')   || '';
 const NAME      = qp.get('name')      || '';
 document.getElementById('tplName').textContent = NAME ? ('Template: ' + NAME) : '';
 
-// Inject preview video if provided
+// Inject preview video
 (function(){
   if (!PREVIEW) return;
   emptyHint.classList.add('hidden');
@@ -170,7 +170,7 @@ document.getElementById('tplName').textContent = NAME ? ('Template: ' + NAME) : 
   Promise.resolve().then(()=>previewVideo.play().catch(()=>{}));
 })();
 
-// === Image preview with X ===
+// Image preview with X
 let __lastObjURL = null;
 function clearImageSelection(){
   try { if (__lastObjURL) { URL.revokeObjectURL(__lastObjURL); __lastObjURL = null; } } catch {}
@@ -189,7 +189,7 @@ imageEl.addEventListener('change',()=>{
   wrap.className = 'relative inline-block';
   const img=new Image();
   img.src=u;
-  img.className='block w-full max-h-56 object-contain rounded-lg border border-white/10 bg-black/20';
+  img.className='block w-full max-h-56 object-contain rounded-lg border border-white/10 bg_black/20';
   const del=document.createElement('button');
   del.type='button';
   del.className='absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center';
@@ -267,16 +267,18 @@ async function runJob(){
     }
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-    await pollResult(j.taskId || j.run_id || j.requestId, uid);
+    // CHANGE: pass job_set_id + run_id (NOT taskId)
+    await pollResult(j.job_set_id, uid, j.run_id);
   } catch (e){
     showStatus('❌ ' + (e.message || String(e)), 'text-rose-300');
   }
 }
 
-async function pollResult(taskId, uid){
+// Poll hf-check until video URL is available
+async function pollResult(jobSetId, uid, runId){
   for (let i=0;i<180;i++){
     try{
-      const r = await fetch('/.netlify/functions/hf-check?taskId=' + encodeURIComponent(taskId) + '&uid=' + encodeURIComponent(uid));
+      const r = await fetch('/.netlify/functions/hf-check?job_set_id=' + encodeURIComponent(jobSetId) + '&uid=' + encodeURIComponent(uid) + '&run_id=' + encodeURIComponent(runId));
       const j = await r.json().catch(()=>({}));
       if (j && j.ok && j.video_url){
         showResultVideo(j.video_url, j.thumb_url || '');
