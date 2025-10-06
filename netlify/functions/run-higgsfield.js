@@ -19,6 +19,17 @@ const SUPABASE_URL  = process.env.SUPABASE_URL || "";
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
 
+
+function appendQuery(u, q){
+  try{
+    const base = new URL(u);
+    const qs = new URLSearchParams(base.search || '');
+    for (const [k,v] of Object.entries(q||{})){ if (v!==undefined && v!==null && v!=='') qs.set(k, String(v)); }
+    base.search = '?' + qs.toString();
+    return base.toString();
+  }catch{ return u; }
+}
+
 exports.handler = async (event) => {
   try {
     if (event.httpMethod === "OPTIONS") return ok({});
@@ -48,7 +59,7 @@ exports.handler = async (event) => {
     await upsertGen(uid, { run_id, status:"processing", provider:"higgsfield", model:"dop-turbo", motion_id });
 
     const payload = {
-      ...(HF_WEBHOOK_URL ? { webhook: { url: HF_WEBHOOK_URL, ...(HF_WEBHOOK_SECRET ? { secret: HF_WEBHOOK_SECRET } : {}) } } : {}),
+      ...(HF_WEBHOOK_URL ? { webhook: { url: appendQuery(HF_WEBHOOK_URL, { uid, run_id }), ...(HF_WEBHOOK_SECRET ? { secret: HF_WEBHOOK_SECRET } : {}) } } : {}),
       params: {
         model: "dop-turbo",
         prompt,
