@@ -3,10 +3,10 @@
  * GET poller for Sora 2 tasks. Collects any URLs in provider JSON, picks an mp4,
  * and backfills Supabase like vv-check.
  */
-const VERSION = "sora2-check-GET-2025-10-06+v1";
+const VERSION = "sora2-check-GET-2025-10-06+v2-kie";
 
-const SORA_BASE = (process.env.SORA_BASE || "").replace(/\/+$/,"");
-const SORA_KEY  = process.env.SORA_API_KEY || "";
+const KIE_BASE = (process.env.KIE_BASE || "").replace(/\/+$/,"");
+const KIE_API_KEY  = process.env.KIE_API_KEY || "";
 
 const SUPABASE_URL  = process.env.SUPABASE_URL || "";
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -29,11 +29,11 @@ exports.handler = async (event) => {
     const run_id = (qs.run_id || "").toString().trim();
     if (!taskId) return json(400, { ok:false, error:"missing taskId", version: VERSION });
 
-    if (!SORA_BASE || !SORA_KEY) return json(200, { ok:false, error:"missing_sora_config", version: VERSION });
+    if (!KIE_BASE || !SORA_KEY) return json(200, { ok:false, error:"missing_kie_config", version: VERSION });
 
     // Provider status endpoint (assumed):
-    const url = `${SORA_BASE}/api/v1/jobs/${encodeURIComponent(taskId)}`;
-    const r = await fetch(url, { headers: { "Authorization": `Bearer ${SORA_KEY}`, "Accept": "application/json" } });
+    const url = `${KIE_BASE}/api/v1/jobs/${encodeURIComponent(taskId)}`;
+    const r = await fetch(url, { headers: { "Authorization": `Bearer ${KIE_API_KEY}`, "Accept": "application/json" } });
     const txt = await r.text();
     let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
 
