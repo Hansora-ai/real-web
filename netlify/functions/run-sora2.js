@@ -9,9 +9,9 @@
  *  - orientation: "landscape"/"portrait" mapped from aspect ratio
  *  - live debit handled on client (3⚡)
  */
-const VERSION = "run-sora2-2025-10-06+v2-kie";
+const VERSION = "run-sora2-2025-10-06+v3-kie-envfix";
 
-const KIE_BASE = (process.env.KIE_BASE || "").replace(/\/+$/,"");
+const KIE_BASE = (process.env.KIE_BASE_URL || "").replace(/\/+$/,"");
 const KIE_API_KEY  = process.env.KIE_API_KEY || "";
 
 const SUPABASE_URL  = process.env.SUPABASE_URL || "";
@@ -44,7 +44,7 @@ exports.handler = async (event) => {
       });
     }
 
-    if (!KIE_BASE || !SORA_KEY) {
+    if (!KIE_BASE || !KIE_API_KEY) {
       return ok({ submitted:false, error:"missing_kie_config" });
     }
 
