@@ -1,4 +1,3 @@
-
 // netlify/functions/run-higgsfield.js
 // Node16-safe (no global fetch needed). Uses https requests internally.
 // Only targeted change vs your original: ensure params.prompt and motions[*].strength are present.
