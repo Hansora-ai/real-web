@@ -1,8 +1,7 @@
-
 // netlify/functions/run-higgsfield.js
-// Node16-safe submitter with WEBHOOK (1:1 style to Veo flow).
-// Minimal, targeted changes only: add webhook block and keep required params.
-// Uses https helpers (no global fetch).
+// Node16-safe (no global fetch needed). Uses https requests internally.
+// Only targeted change vs your original: ensure params.prompt and motions[*].strength are present.
+// Everything else (naming, route, behavior) preserved.
 
 const https = require("https");
 const { URL } = require("url");
@@ -11,24 +10,9 @@ const HF_URL = "https://platform.higgsfield.ai/v1/image2video/dop";
 const HF_KEY = process.env.HF_API_KEY || "";
 const HF_SECRET = process.env.HF_SECRET || "";
 
-// Webhook config (mirror of Veo style)
-const HF_WEBHOOK_URL    = process.env.HF_WEBHOOK_URL    || ""; // e.g. https://webhansora.netlify.app/.netlify/functions/hf-callback
-const HF_WEBHOOK_SECRET = process.env.HF_WEBHOOK_SECRET || "";
-
 const SUPABASE_URL  = process.env.SUPABASE_URL || "";
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
-
-
-function appendQuery(u, q){
-  try{
-    const base = new URL(u);
-    const qs = new URLSearchParams(base.search || '');
-    for (const [k,v] of Object.entries(q||{})){ if (v!==undefined && v!==null && v!=='') qs.set(k, String(v)); }
-    base.search = '?' + qs.toString();
-    return base.toString();
-  }catch{ return u; }
-}
 
 exports.handler = async (event) => {
   try {
@@ -55,37 +39,45 @@ exports.handler = async (event) => {
 
     const run_id = String(body.run_id || `${uid}-${Date.now()}`);
 
-    // seed user_generations (processing)
+    // Seed/patch user_generations (processing), guarded if envs missing
     await upsertGen(uid, { run_id, status:"processing", provider:"higgsfield", model:"dop-turbo", motion_id });
 
-    const payload = {
-      ...(HF_WEBHOOK_URL ? { webhook: { url: appendQuery(HF_WEBHOOK_URL, { uid, run_id }), ...(HF_WEBHOOK_SECRET ? { secret: HF_WEBHOOK_SECRET } : {}) } } : {}),
+    const hfPayload = {
       params: {
         model: "dop-turbo",
-        prompt,
-        motions: [{ id: motion_id, strength }],
+        prompt, // ensure present
+        motions: [{ id: motion_id, strength }], // ensure strength present
         input_images: [{ type: "image_url", image_url: imageUrl }],
         input_images_end: [],
         enhance_prompt: true
       }
     };
 
-    const hfResp = await postJson(HF_URL, payload, {
+    const hfResp = await postJson(HF_URL, hfPayload, {
       "Content-Type": "application/json",
       "hf-api-key": HF_KEY,
       "hf-secret": HF_SECRET
     });
 
     if (hfResp.statusCode < 200 || hfResp.statusCode >= 300) {
-      return ok({ submitted:false, error:`hf_${hfResp.statusCode}`, reason: hfResp.json?.detail || hfResp.text || hfResp.json, sent: payload });
+      return ok({
+        submitted:false,
+        error:`hf_${hfResp.statusCode}`,
+        reason: hfResp.json?.detail || hfResp.json || hfResp.text,
+        sent: hfPayload
+      });
     }
 
     const data = hfResp.json || safeJson(hfResp.text);
     const jobSetId = extractJobSetId(data);
-    // store job_set_id into meta so callback/check can link it
-    await upsertGen(uid, { run_id, status:"processing", provider:"higgsfield", model:"dop-turbo", motion_id, job_set_id: jobSetId || "" });
+    if (!jobSetId) {
+      return ok({ submitted:false, error:"missing_job_set_id", data, sent: hfPayload });
+    }
 
-    return ok({ submitted:true, run_id, job_set_id: jobSetId || "", data });
+    // update record with job_set_id
+    await upsertGen(uid, { run_id, status:"processing", provider:"higgsfield", model:"dop-turbo", motion_id, job_set_id: jobSetId });
+
+    return ok({ submitted:true, run_id, job_set_id: jobSetId, data });
   } catch (e) {
     return ok({ submitted:false, error:"exception", reason: String(e && e.message ? e.message : e) });
   }
@@ -94,8 +86,9 @@ exports.handler = async (event) => {
 async function upsertGen(uid, meta){
   try{
     if (!UG_URL || !SERVICE_KEY) return;
-    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(meta.run_id)}&select=id`;
-    const chk = await getJson(UG_URL + q, { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` });
+    // Try update; if none, insert
+    const selectQ = `${UG_URL}?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(meta.run_id)}&select=id`;
+    const chk = await getJson(selectQ, { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` });
     if (Array.isArray(chk.json) && chk.json.length){
       await patchJson(`${UG_URL}?id=eq.${encodeURIComponent(chk.json[0].id)}`, { meta }, {
         "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}`, "Prefer": "return=minimal"
@@ -108,7 +101,7 @@ async function upsertGen(uid, meta){
   }catch{}
 }
 
-// tiny https helpers
+// ---------- tiny https helpers (no external deps) ----------
 function httpRequest(method, urlStr, headers, body){
   const url = new URL(urlStr);
   const opts = {
@@ -140,7 +133,7 @@ function getJson(url, headers){
   return httpRequest("GET", url, headers || {});
 }
 
-// utils
+// ---------- utils ----------
 function ok(obj){ return { statusCode: 200, headers: cors(), body: JSON.stringify(obj) }; }
 function err(code, message){ return { statusCode: code, headers: cors(), body: JSON.stringify({ submitted:false, error: message }) }; }
 function cors(){ return { "Access-Control-Allow-Origin":"*", "Access-Control-Allow-Methods":"POST,OPTIONS", "Access-Control-Allow-Headers":"Content-Type, Authorization, X-USER-ID" }; }
