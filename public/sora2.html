@@ -161,6 +161,7 @@ const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
 
 // Helpers
+function uuidv4(){return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));}
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
 let __busy=false, __lastObjURL=null;
@@ -210,12 +211,29 @@ async function runSora(){
   const orientation = arToSoraMode(aspectRatio);
 
   showStatus('Submitting… (deducting 3⚡)','text-zinc-400');
+  // Create a run id and seed a pending row (1:1 with Veo)
+  const runId = uuidv4();
+  let genId = null;
+  try{
+    const ins = await supabase.from('user_generations').insert({
+      user_id: auth.user.id,
+      provider: 'kie',
+      kind: 'video',
+      prompt,
+      result_url: null,
+      meta: { run_id: runId, status: 'processing', engine: 'sora2' }
+    }).select('id').single();
+    if(!ins.error) genId = ins.data.id;
+  }catch{}
+
 
   const resp = await fetch('/.netlify/functions/run-sora2', {
     method:'POST',
     headers:{'Content-Type':'application/json','X-USER-ID':auth.user.id},
     body: JSON.stringify({
       uid: auth.user.id,
+      run_id: runId,
+      id: genId,
       model: hasImage ? 'sora-2-image-to-video' : 'sora-2-text-to-video',
       prompt,
       image_urls: imageUrl ? [imageUrl] : [],
@@ -236,7 +254,7 @@ async function runSora(){
   showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
   resultBox.innerHTML = '<div class="py-6 text-center space-y-2"><div class="text-xs text-zinc-400">Generating…</div><div class="text-[15px] font-semibold text-zinc-100">Sometimes during high demand it takes a little longer.<br/>You can leave this page — your result will appear in <a class="underline hover:no-underline" href="usage.html">Usage</a> when it’s done.</div></div>';
 
-  await soraPoll(j.taskId, auth.user.id, j.run_id);
+  await soraPoll(j.taskId, auth.user.id, runId);
 }
 
 async function soraPoll(taskId, uid, rid){
