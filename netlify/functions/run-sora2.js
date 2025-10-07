@@ -57,7 +57,7 @@ exports.handler = async (event) => {
       id: body.id,
       payload: {
         user_id: uid,
-        provider: "kie",
+        provider: "Sora 2",
         kind: "video",
         prompt,
         result_url: null,
