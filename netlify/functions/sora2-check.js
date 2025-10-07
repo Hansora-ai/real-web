@@ -1,10 +1,11 @@
 // netlify/functions/sora2-check.js
 // GET poller for Sora 2 (KIE) tasks created via /api/v1/jobs/createTask.
-// Mirrors vv-check.js 1:1 in behavior: query KIE, pick an mp4 from allowed hosts,
-// then backfill Supabase user_generations by (user_id, meta->>run_id).
-// No unrelated changes.
+// 1) Allow ALL HTTPS hosts for result URLs (Sora can return different CDNs).
+// 2) Supabase fallback: if KIE JSON doesn't expose the MP4 yet, return result_url from your row.
+//
+// Mirrors vv-check.js behavior otherwise (status JSON, patching same row by user_id + run_id).
 
-const VERSION_TAG = "sora2-check-GET-2025-10-07+v1-jobs";
+const VERSION_TAG = "sora2-check-GET-2025-10-07+v2-jobs-allowAll+sbFallback";
 
 const KIE_BASE = (process.env.KIE_BASE_URL || "https://api.kie.ai").replace(/\/+$/,'');
 const KIE_KEY  = process.env.KIE_API_KEY || "";
@@ -14,8 +15,8 @@ const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
 const TABLE_URL     = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/nb_results` : "";
 
-// Only accept result URLs hosted on these domains (same as vv-check)
-const ALLOWED = new Set(["tempfile.aiquickdraw.com","tempfile.redpandaai.co"]);
+// Allow ALL hosts
+const ALLOWED = null;
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors(), body: "" };
@@ -31,7 +32,7 @@ exports.handler = async (event) => {
 
     if (!taskId) return json(400, { ok:false, error:"missing taskId", version: VERSION_TAG });
 
-    // Query KIE (Jobs record info for Sora 2)
+    // Query KIE (jobs record info)
     const url = `${KIE_BASE}/api/v1/jobs/record-info?taskId=${encodeURIComponent(taskId)}`;
     const r   = await fetch(url, { headers: kieHeaders() });
     const txt = await r.text();
@@ -45,22 +46,33 @@ exports.handler = async (event) => {
       if (/\.mp4(\?|#|$)/i.test(u)) { video_url = u; break; }
     }
 
+    // Supabase fallback if no mp4 yet
+    if (!video_url && SUPABASE_URL && SERVICE_KEY && uid && run_id) {
+      try {
+        const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=result_url`;
+        const chk = await fetch(UG_URL + q, { headers: sb() });
+        const arr = await chk.json().catch(()=>[]);
+        const row = Array.isArray(arr) && arr.length ? arr[0] : null;
+        if (row && row.result_url && isUrl(row.result_url)) video_url = row.result_url;
+      } catch {}
+    }
+
     const out = { ok: !!video_url, status: video_url ? "success" : "pending", video_url, version: VERSION_TAG };
     if (!video_url) {
-      if (debug) out.debug = { urls, host: tryHost(video_url), response_status: r.status };
+      if (debug) out.debug = { urls, response_status: r.status };
       return json(200, out);
     }
 
-    // Backfill Supabase
-    let idToPatch = null, patched = false, patchError = null;
+    // Backfill Supabase with mp4 + done
+    let patched = false, patchError = null;
     try {
-      if (SUPABASE_URL && SERVICE_KEY) {
+      if (SUPABASE_URL && SERVICE_KEY && uid && run_id) {
         const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id`;
         const chk = await fetch(UG_URL + q, { headers: sb() });
         const arr = await chk.json().catch(()=>[]);
-        idToPatch = Array.isArray(arr) && arr.length ? arr[0].id : null;
+        const idToPatch = Array.isArray(arr) && arr.length ? arr[0].id : null;
 
-        const payload = { result_url: video_url, meta: { run_id, task_id: taskId, status: "done" } };
+        const payload = { result_url: video_url, meta: { run_id, task_id: taskId, status: "done", engine: "sora2" } };
 
         if (idToPatch) {
           const pr = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(idToPatch)}`, {
@@ -71,7 +83,6 @@ exports.handler = async (event) => {
           patched = pr.ok;
           if (!patched) patchError = `PATCH ${pr.status}`;
         } else {
-          // Fallback insert if no row yet
           const ir = await fetch(UG_URL, {
             method: "POST",
             headers: { ...sb(), "Content-Type": "application/json" },
@@ -87,23 +98,6 @@ exports.handler = async (event) => {
           patched = ir.ok;
           if (!patched) patchError = `INSERT ${ir.status}`;
         }
-
-        // Optional: also write to nb_results like vv-check (keeping shape minimal)
-        try {
-          if (TABLE_URL) {
-            await fetch(TABLE_URL, {
-              method: "POST",
-              headers: { ...sb(), "Content-Type": "application/json" },
-              body: JSON.stringify({
-                user_id: uid,
-                run_id,
-                provider: "kie",
-                engine: "sora2",
-                url: video_url
-              })
-            });
-          }
-        } catch {}
       }
     } catch (e) {
       patchError = String(e && e.message ? e.message : e);
@@ -111,8 +105,6 @@ exports.handler = async (event) => {
 
     out.patched = patched;
     if (patchError) out.patchError = patchError;
-    if (debug) out.debug = { supabase_url_host: tryHost(SUPABASE_URL), has_service_key: !!SERVICE_KEY };
-
     return json(200, out);
 
   } catch (e) {
@@ -138,7 +130,7 @@ function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVIC
 function isUrl(u){ return typeof u === "string" && /^https?:\/\//i.test(u); }
 function host(u){ try { return new URL(u).hostname; } catch { return ""; } }
 function tryHost(u){ try { return new URL(u).hostname; } catch { return ""; } }
-function isAllowed(u){ if (!isUrl(u)) return false; const h = host(u); return ALLOWED ? ALLOWED.has(h) : true; }
+function isAllowed(u){ if (!isUrl(u)) return false; if (!ALLOWED) return true; const h = host(u); return ALLOWED.has(h); }
 
 function collect(x, out){
   if (!x) return;
@@ -152,6 +144,6 @@ function collect(x, out){
 function collectUrls(x){
   const a=[]; collect(x,a);
   const seen=new Set(), out=[];
-  for (const u of a){ if(isUrl(u)){ const h=host(u); if(!ALLOWED || ALLOWED.has(h)){ if(!seen.has(u)){ seen.add(u); out.push(u); } } } }
+  for (const u of a){ if(isUrl(u)){ if(!seen.has(u)){ seen.add(u); out.push(u); } } }
   return out;
 }
