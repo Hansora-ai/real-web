@@ -1,11 +1,12 @@
 // netlify/functions/run-sora2.js
-// Submit a KIE Sora 2 job and seed/patch user_generations.
-// Mirrors your working Veo 3 flow 1:1 (endpoint + payload style + callback).
+// Submit a KIE Sora 2 job (text->video or image->video) using the jobs/createTask schema
+// Mirrors your Veo 3 flow for Supabase + callback; ONLY the KIE request shape/endpoint changed
+//
 // Behavior:
 //   - No image  -> model "sora-2-text-to-video"
 //   - With image -> model "sora-2-image-to-video"
 
-const KIE_URL = "https://api.kie.ai/api/v1/sora/generate";
+const KIE_URL = "https://api.kie.ai/api/v1/jobs/createTask";
 const API_KEY = process.env.KIE_API_KEY;
 
 // Supabase (service role for server-side insert/patch)
@@ -31,23 +32,24 @@ exports.handler = async (event) => {
     const runId = String(body.run_id || body.runId || "").trim();
     const prompt = (body.prompt ?? "").toString().trim();
 
-    // aspect ratio normalization (accept various keys; keep "16:9"/"9:16" text)
-    const aspectRatio = String(
+    // aspect ratio normalization (accept various keys)
+    const aspectRaw = String(
       body.aspectRatio ?? body.aspect_ratio ?? body.aspect ?? "16:9"
     ).trim();
+    const aspect_ratio = mapAspect(aspectRaw);
 
     // image url(s)
     const oneImage = (body.image_url || "").toString().trim();
-    const imageUrls = Array.isArray(body.imageUrls) ? body.imageUrls
+    const image_urls = Array.isArray(body.imageUrls) ? body.imageUrls
                       : Array.isArray(body.image_urls) ? body.image_urls
                       : (oneImage ? [oneImage] : []);
 
     if (!uid)   return err(400, "missing_user_id");
-    if (!prompt && !imageUrls.length) return err(400, "missing_prompt_or_image");
+    if (!prompt && !image_urls.length) return err(400, "missing_prompt_or_image");
     if (!SUPABASE_URL || !SERVICE_KEY) return err(500, "missing_supabase_config");
     if (!API_KEY) return err(500, "missing_kie_api_key");
 
-    const model = imageUrls.length ? "sora-2-image-to-video" : "sora-2-text-to-video";
+    const model = image_urls.length ? "sora-2-image-to-video" : "sora-2-text-to-video";
 
     // seed/patch "processing" row
     const metaBase = { status: "processing", run_id: runId, provider: "kie", engine: "sora2" };
@@ -59,7 +61,7 @@ exports.handler = async (event) => {
         kind: "video",
         prompt,
         result_url: null,
-        meta: { ...metaBase, aspectRatio, model }
+        meta: { ...metaBase, aspect_ratio, model }
       }
     });
 
@@ -68,22 +70,21 @@ exports.handler = async (event) => {
       ? `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}&provider=sora2`
       : "";
 
-    // Build KIE payload in camelCase (match Veo style)
+    // Build KIE payload per screenshot docs
     const kiePayload = {
-      prompt,
       model,
-      aspectRatio,
-      callBackUrl
+      callBackUrl,
+      input: {
+        prompt,
+        aspect_ratio
+      }
     };
+    if (image_urls.length) kiePayload.input.image_urls = image_urls;
 
-    // Optional knobs passthrough
-    if (Number.isInteger(body.seeds)) kiePayload.seeds = body.seeds;
-    if (typeof body.enableFallback === 'boolean') kiePayload.enableFallback = body.enableFallback;
-    if (typeof body.enableTranslation === 'boolean') kiePayload.enableTranslation = body.enableTranslation;
-    if (typeof body.watermark === 'string' && body.watermark.length) kiePayload.watermark = body.watermark;
-
-    // imageUrls array (0–1)
-    if (imageUrls.length) kiePayload.imageUrls = imageUrls;
+    // Optional passthroughs placed under input if KIE expects them there (safe no-op otherwise)
+    for (const k of ["duration","quality","seed"]) {
+      if (body[k] !== undefined) kiePayload.input[k] = body[k];
+    }
 
     // Call KIE
     const resp = await fetch(KIE_URL, {
@@ -92,7 +93,7 @@ exports.handler = async (event) => {
       body: JSON.stringify(kiePayload)
     });
 
-    const data = await resp.json().catch(()=>({}));
+    const data = await resp.json().catch(async () => ({ status: resp.status, text: await resp.text().catch(()=> "") }));
     const taskId = extractTaskId(data);
 
     if (!resp.ok) {
@@ -161,4 +162,12 @@ function extractTaskId(data){
     return "";
   }
   return scan(data) || "";
+}
+
+// Map "16:9"/"9:16" to words expected by docs; pass through other values
+function mapAspect(v){
+  const s = String(v || "").trim();
+  if (s === "16:9" || /^landscape$/i.test(s)) return "landscape";
+  if (s === "9:16"  || /^portrait$/i.test(s))  return "portrait";
+  return s || "landscape";
 }
