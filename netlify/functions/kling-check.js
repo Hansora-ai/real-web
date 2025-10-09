@@ -3,7 +3,7 @@
 // and extracts mp4 URLs from any shape (resultUrls/jsonUrl/resultJson/nested).
 // Public contract preserved: GET ?id=<taskId>&uid=<uid>&run_id=<run_id>[&debug=1]
 
-const VERSION_TAG = "kling-check-robust-2025-10-09+v4";
+const VERSION_TAG = "kling-check-robust-2025-10-09+v5-meta-run_id-fallback";
 
 const KIE_BASE = (process.env.KIE_BASE_URL || "https://api.kie.ai").replace(/\/+$/,'');
 const KIE_KEY  = process.env.KIE_API_KEY || "";
@@ -163,20 +163,32 @@ exports.handler = async (event) => {
       };
     }
 
-    // If still nothing, try a Supabase fallback (if your row already stored the result_url)
+    // ---------- Supabase fallback (UPDATED) ----------
+    // Try BOTH shapes:
+    //  A) by explicit columns: user_id & run_id
+    //  B) by JSON meta->>run_id (this matches your Sora flow)
     if (!video_url && SUPABASE_URL && SERVICE_KEY && uid && run_id) {
       try{
-        const ugUrl = `${SUPABASE_URL}/rest/v1/user_generations?user_id=eq.${encodeURIComponent(uid)}&run_id=eq.${encodeURIComponent(run_id)}&select=result_url,meta`;
-        const r = await fetch(ugUrl, { headers: sb() });
-        if (r.ok){
-          const arr = await r.json();
-          if (Array.isArray(arr) && arr[0] && typeof arr[0].result_url === "string" && arr[0].result_url){
-            out.ok = true;
-            out.status = "succeeded";
-            out.state = "succeeded";
-            out.video_url = arr[0].result_url;
-            out.result_url = arr[0].result_url;
-          }
+        // A) direct columns
+        const ugA = `${SUPABASE_URL}/rest/v1/user_generations?user_id=eq.${encodeURIComponent(uid)}&run_id=eq.${encodeURIComponent(run_id)}&select=result_url,meta`;
+        let rA = await fetch(ugA, { headers: sb() });
+        let arrA = rA.ok ? await rA.json() : [];
+
+        // B) JSON meta->>run_id
+        let arrB = [];
+        if (!arrA || !arrA.length) {
+          const ugB = `${SUPABASE_URL}/rest/v1/user_generations?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=result_url,meta`;
+          const rB = await fetch(ugB, { headers: sb() });
+          arrB = rB.ok ? await rB.json() : [];
+        }
+
+        const candidate = (arrA && arrA[0]) || (arrB && arrB[0]) || null;
+        if (candidate && typeof candidate.result_url === "string" && candidate.result_url){
+          out.ok = true;
+          out.status = "succeeded";
+          out.state  = "succeeded";
+          out.video_url = candidate.result_url;
+          out.result_url = candidate.result_url;
         }
       }catch{}
     }
@@ -184,15 +196,27 @@ exports.handler = async (event) => {
     // If we got a URL, backfill Supabase result_url/status
     if (out.ok && SUPABASE_URL && SERVICE_KEY) {
       try{
-        // find row id by uid + run_id
-        const q = `${SUPABASE_URL}/rest/v1/user_generations?user_id=eq.${encodeURIComponent(uid)}&run_id=eq.${encodeURIComponent(run_id)}&select=id`;
-        const rr = await fetch(q, { headers: sb() });
+        // find row id by uid + (run_id column) OR meta->>run_id
         let idToPatch = null;
-        if (rr.ok){
-          const rows = await rr.json();
+
+        // 1) columns
+        const q1 = `${SUPABASE_URL}/rest/v1/user_generations?user_id=eq.${encodeURIComponent(uid)}&run_id=eq.${encodeURIComponent(run_id)}&select=id`;
+        const r1 = await fetch(q1, { headers: sb() });
+        if (r1.ok){
+          const rows = await r1.json();
           if (Array.isArray(rows) && rows[0] && rows[0].id) idToPatch = rows[0].id;
         }
-        const payload = { result_url: out.video_url, meta: { status: "done", task_id: taskId, engine: "kling" } };
+        // 2) json meta->>run_id
+        if (!idToPatch) {
+          const q2 = `${SUPABASE_URL}/rest/v1/user_generations?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id`;
+          const r2 = await fetch(q2, { headers: sb() });
+          if (r2.ok){
+            const rows2 = await r2.json();
+            if (Array.isArray(rows2) && rows2[0] && rows2[0].id) idToPatch = rows2[0].id;
+          }
+        }
+
+        const payload = { result_url: out.video_url, meta: { status: "done", task_id: taskId, engine: "kling", run_id } };
         if (idToPatch){
           await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(idToPatch)}`, {
             method: "PATCH",
