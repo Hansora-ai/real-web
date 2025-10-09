@@ -45,7 +45,7 @@ exports.handler = async (event) => {
       if (/\.mp4(\?|#|$)/i.test(u)) { video_url = u; break; }
     }
 
-    const out = { ok: !!video_url, status: video_url ? "success" : "pending", video_url, version: VERSION_TAG };
+    const out = { ok: !!video_url, status: video_url ? "succeeded" : "pending", state: video_url ? "succeeded" : "pending", video_url, result_url: video_url || "", version: VERSION_TAG };
     if (!video_url) return json(200, out);
 
     // Backfill Supabase
