@@ -200,7 +200,7 @@
     <option value="5" selected>5s</option>
     <option value="10">10s</option>
   </select>
-  <span id="costBadge" class="ml-2 text-sm text-white/80 hidden">Cost: 7⚡</span>
+  <span id="costBadge" class="ml-2 text-sm text-white/80 hidden">Cost: 4⚡</span>
 </div>
           <!-- Prompt -->
           <div>
@@ -208,7 +208,7 @@
             <textarea id="prompt" placeholder="Describe your image…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark"></textarea>
           </div>
 
-          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()">Run (cost: 7⚡)</button>
+          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()">Run (cost: 4⚡)</button>
           <div id="status" class="mt-2 text-sm"></div>
       </div>
 
@@ -577,7 +577,7 @@ document.addEventListener('DOMContentLoaded', function(){
   if (dur && cost){
     function updateCost(){
       const v = String(dur.value||'5');
-      cost.textContent = 'Cost: ' + (v === '10' ? '13⚡' : '7⚡');
+      cost.textContent = 'Cost: ' + (v === '10' ? '8⚡' : '4⚡');
     }
     dur.addEventListener('change', updateCost);
     updateCost();
@@ -636,7 +636,7 @@ document.addEventListener('DOMContentLoaded', function(){
     var ratioSel = document.getElementById('ratio');
 
     function computeCost(){
-      return (durSel && String(durSel.value) === '10') ? 13 : 7;
+      return (durSel && String(durSel.value) === '10') ? 8 : 4;
     }
     function renderRunCost(){
       if (!runBtn) return;
