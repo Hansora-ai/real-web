@@ -1,286 +1,130 @@
 // netlify/functions/kling-check.js
-// GET: poll Replicate for prediction id and backfill Usage on success
-// POST: Replicate webhook calls here on completion; backfill immediately
+// GET poller for Kling (KIE) jobs. Finds result mp4 and backfills Supabase.
 //
-// Env required: REPLICATE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-// Optional: SUPABASE_BUCKET (defaults to 'downloads'), REPLICATE_BASE_URL
+// Required env: KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// Optional: KIE_BASE_URL (default https://api.kie.ai)
+//
+const VERSION_TAG = "kling-check-GET-2025-10-09+v1";
+const KIE_BASE = (process.env.KIE_BASE_URL || "https://api.kie.ai").replace(/\/+$/,'');
+const KIE_KEY  = process.env.KIE_API_KEY || "";
 
-const BASE = (process.env.REPLICATE_BASE_URL || 'https://api.replicate.com/v1').replace(/\/+$/,'');
-const TOKEN = process.env.REPLICATE_API_KEY || '';
-const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/,'');
-const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_URL  = process.env.SUPABASE_URL || "";
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
+const TABLE_URL     = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/nb_results` : "";
 
-// ---------- CORS / helpers ----------
-function cors(){ return {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': '*',
-}; }
-const json = (c,o)=>({ statusCode:c, headers:{ 'Content-Type':'application/json', ...cors() }, body:JSON.stringify(o) });
-
-function getParam(searchParams, name){
-  const v = searchParams.get(name);
-  return (v === null || v === undefined || v === '') ? null : v;
-}
-
-// ---------- URL extraction (string | {url} | string[] | {url}[]) ----------
-function extractImageUrl(out){
-  // Prefer video URLs for Kling; fallback to images
-  try{
-    var _arr = Array.isArray(output) ? output : [output];
-    var _flat = [];
-    for (var _i=0; _i<_arr.length; _i++){
-      var it = _arr[_i];
-      if (!it) continue;
-      if (typeof it === 'string') _flat.push(it);
-      else if (it.url) _flat.push(it.url);
-      else if (it.path) _flat.push(it.path);
-    }
-    for (var j=0;j<_flat.length;j++){ if (/\.(mp4|mov|webm|gif)(\?|$)/i.test(_flat[j])) return _flat[j]; }
-  }catch(_e){} 
-
-  if (!out) return null;
-  if (typeof out === 'string') return out;
-  if (Array.isArray(out)){
-    if (out.length === 0) return null;
-    const first = out[0];
-    return (typeof first === 'string') ? first : (first && first.url) || null;
-  }
-  if (typeof out === 'object'){
-    return out.url || null;
-  }
-  return null;
-}
-
-// ---------- Supabase caching (moved to top-level scope) ----------
-const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'downloads';
-
-/**
- * Fetches the sourceUrl image and stores it into Supabase Storage public bucket.
- * Returns the permanent public URL, or null if caching failed or envs missing.
- */
-async function __cacheToSupabase(sourceUrl, nameHint, stableKey){
-  try{
-    if (!(SUPABASE_URL && SERVICE_KEY && sourceUrl)) return null;
-
-    const getRes = await fetch(sourceUrl);
-    if (!getRes.ok) return null;
-
-    const ct = getRes.headers.get('content-type') || 'application/octet-stream';
-    const buf = Buffer.from(await getRes.arrayBuffer());
-
-    const path = __buildPath(nameHint, stableKey);
-    const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`;
-
-    const up = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`,
-        'Content-Type': ct,
-        'x-upsert': 'true',
-      },
-      body: buf,
-    });
-    if (!up.ok) {
-      // console.warn('[kling-check] upload failed', await up.text());
-      return null;
-    }
-    return `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`;
-  }catch(e){
-    // console.warn('[kling-check] cache error', e);
-    return null;
-  }
-}
-
-function __buildPath(nameHint, stableKey){
-  const d = new Date();
-  const y = String(d.getUTCFullYear());
-  const m = String(d.getUTCMonth()+1).padStart(2,'0');
-  const day = String(d.getUTCDate()).padStart(2,'0');
-  const safe = String(nameHint || 'kling.png')
-    .replace(/[^\w.\- ]+/g,'_')
-    .slice(0,150);
-  if (stableKey) return `${y}/${m}/${day}/${String(stableKey).replace(/[^\w.\-]+/g,'_').slice(0,48)}-${safe}`;
-  const rand = Math.random().toString(36).slice(2,10);
-  return `${y}/${m}/${day}/${rand}-${safe}`;
-}
-
-// ---------- DB backfill ----------
-async function backfillUsage({ uid, run_id, id, row_id, image_url, input }){
-  // If no DB envs or no image URL, nothing to patch.
-  if (!(SUPABASE_URL && SERVICE_KEY)) return;
-
-  let finalUrl = image_url;
-  // Try to cache to Supabase; if it works, prefer the cached URL.
-  try{
-    const _extMatch = (image_url && image_url.match(/\.(mp4|mov|webm|gif|png|jpg|jpeg)(?:\?|$)/i));
-const _ext = _extMatch ? _extMatch[1].toLowerCase() : 'mp4';
-const hint = (input && (input.filename || input.name)) || `kling-${id||run_id||Date.now()}.${_ext}`;
-    const stableKey = row_id || id || run_id || Date.now().toString(36);
-    const cached = await __cacheToSupabase(image_url, hint, stableKey);
-    if (cached) finalUrl = cached;
-  }catch{/* ignore */}
-
-  // Minimal metadata we already have
-  const prompt = (input && (input.prompt || input.caption)) || null;
-  const meta = {
-    run_id: run_id || null,
-    prediction_id: id || null,
-    provider: 'replicate',
-    input: input || {}
-  };
-
-  // PATCH by row_id if we have it; otherwise try run_id; finally, insert as fallback
-  try{
-    const headers = {
-      'Authorization': `Bearer ${SERVICE_KEY}`,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Prefer': 'return=representation'
-    };
-
-    // Prefer updating existing row when we can
-    if (row_id){
-      const url = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(row_id)}`;
-      const r = await fetch(url, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ result_url: finalUrl, prompt, meta })
-      });
-      if (r.ok){
-        try { const rows = await r.json(); if (Array.isArray(rows) && rows.length > 0) return; } catch {}
-      }
-    }
-    if (run_id){
-      const url = `${SUPABASE_URL}/rest/v1/user_generations?${encodeURIComponent('meta->>run_id')}=eq.${encodeURIComponent(run_id)}`;
-      const r = await fetch(url, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ result_url: finalUrl, prompt, meta })
-      });
-      if (r.ok){
-        try { const rows = await r.json(); if (Array.isArray(rows) && rows.length > 0) return; } catch {}
-      }
-    }
-
-    // Fallback: insert a new row so we never lose the result (only if we know uid)
-    if (!uid) return; // cannot insert without user_id (NOT NULL)
-    const ins = await fetch(`${SUPABASE_URL}/rest/v1/user_generations`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        user_id: uid,
-        provider: 'Kling',
-        kind: 'video',
-        prompt,
-        result_url: finalUrl,
-        meta
-      })
-    });
-    // ignore insert failures silently
-  }catch(e){
-    // swallow errors to avoid breaking the HTTP response
-  }
-    // Final fallback: if we still didn't update anything but we know uid,
-    // patch the most recent NULL-result row for this user (created_at desc limit 1).
-    try{
-      if (uid){
-        const urlSel = `${SUPABASE_URL}/rest/v1/user_generations?user_id=eq.${encodeURIComponent(uid)}&result_url=is.null&order=created_at.desc&limit=1`;
-        const s = await fetch(urlSel, {
-          headers: {
-            'apikey': SERVICE_KEY,
-            'Authorization': `Bearer ${SERVICE_KEY}`,
-            'Accept': 'application/json'
-          }
-        });
-        if (s.ok){
-          const rows = await s.json().catch(()=>[]);
-          if (Array.isArray(rows) && rows.length > 0){
-            const targetId = rows[0].id;
-            const urlUpd = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(targetId)}`;
-            await fetch(urlUpd, {
-              method: 'PATCH',
-              headers: {
-                'apikey': SERVICE_KEY,
-                'Authorization': `Bearer ${SERVICE_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=minimal'
-              },
-              body: JSON.stringify({ result_url: finalUrl, prompt, meta })
-            });
-          }
-        }
-      }
-    }catch{/* ignore */}
-
-}
-
-// ---------- Handler ----------
-
-async function backfillOnce(args){
-  try{
-    if (!args || !args.row_id) return await backfillUsage(args);
-    const ug = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(args.row_id)}&select=result_url`;
-    const r0 = await fetch(ug, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
-    if (r0.ok){
-      const arr = await r0.json().catch(()=>null);
-      if (Array.isArray(arr) && arr[0] && arr[0].result_url) return true;
-    }
-  }catch(_e){}
-  return await backfillUsage(args);
-}
+// Only accept result URLs hosted on these domains
+const ALLOWED = new Set(["tempfile.aiquickdraw.com","tempfile.redpandaai.co"]);
 
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
+  if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors(), body: "" };
+  if (event.httpMethod !== "GET") return json(405, { ok:false, error:"Use GET", version: VERSION_TAG });
 
-  try{
-    if (event.httpMethod === 'POST'){
-      // Webhook path
-      const body = JSON.parse(event.body || '{}');
+  const qs = event.queryStringParameters || {};
+  const debug = qs.debug === "1" || qs.debug === "true";
 
-      // The UI usually appends uid/run_id/row_id to the webhook URL query
-      const sp = new URLSearchParams(event.queryStringParameters || {});
-      const uid = getParam(sp, 'uid');
-      const run_id = getParam(sp, 'run_id') || getParam(sp, 'rid');
-      const row_id = getParam(sp, 'row_id');
+  try {
+    const taskId = (qs.id || qs.taskId || qs.taskid || "").toString().trim();
+    const uid    = (qs.uid || "").toString().trim();
+    const run_id = (qs.run_id || qs.runId || "").toString().trim();
+    const row_id = (qs.row_id || "").toString().trim();
 
-      const status = String(body.status || '').toLowerCase();
-      let id = body.id || (body.prediction && body.prediction.id) || null;
+    if (!taskId) return json(400, { ok:false, error:"missing taskId", version: VERSION_TAG });
 
-      if (status === 'succeeded'){
-        const image_url = extractImageUrl(body.output);
-        await backfillOnce({ uid, run_id, id, row_id, image_url, input: body.input || {} });
-        return json(200, { ok:true, status:'succeeded', result_url: image_url });
+    // Query KIE Jobs getTask
+    const url = `${KIE_BASE}/api/v1/jobs/getTask?taskId=${encodeURIComponent(taskId)}`;
+    const r   = await fetch(url, { headers: kieHeaders() });
+    const txt = await r.text();
+    let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+
+    // Collect URLs and choose mp4
+    const urls = collectUrls(data);
+    let video_url = "";
+    for (const u of urls) {
+      if (!isAllowed(u)) continue;
+      if (/\.mp4(\?|#|$)/i.test(u)) { video_url = u; break; }
+    }
+
+    const out = { ok: !!video_url, status: video_url ? "success" : "pending", video_url, version: VERSION_TAG };
+    if (!video_url) return json(200, out);
+
+    // Backfill Supabase
+    let idToPatch = null, patched = false, patchError = null;
+    try {
+      if (SUPABASE_URL && SERVICE_KEY) {
+        const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id`;
+        const chk = await fetch(UG_URL + q, { headers: sb() });
+        const arr = await chk.json().catch(()=>[]);
+        idToPatch = Array.isArray(arr) && arr.length ? arr[0].id : null;
+
+        const payload = { result_url: video_url, meta: { run_id, task_id: taskId, status: "done" } };
+
+        if (idToPatch) {
+          const pr = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(idToPatch)}`, {
+            method: "PATCH",
+            headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
+            body: JSON.stringify(payload)
+          });
+          patched = pr.ok;
+          if (!patched) patchError = `PATCH ${pr.status}`;
+        } else {
+          const ir = await fetch(UG_URL, {
+            method: "POST",
+            headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
+            body: JSON.stringify({ user_id: uid || "00000000-0000-0000-0000-000000000000", provider:"kling", kind:"video", prompt:null, result_url: video_url, meta: { run_id, task_id: taskId, status: "done" } })
+          });
+          patched = ir.ok;
+          if (!patched) patchError = `POST ${ir.status}`;
+        }
       }
-      return json(200, { ok:true, status: status || 'pending' });
+    } catch (e) {
+      patchError = (e && e.message) ? e.message : String(e);
     }
 
-    // GET polling path
-    const sp = new URLSearchParams(event.queryStringParameters || {});
-    const id = getParam(sp, 'id') || getParam(sp, 'prediction_id');
-    const uid = getParam(sp, 'uid');
-    const run_id = getParam(sp, 'run_id') || getParam(sp, 'rid');
-    const row_id = getParam(sp, 'row_id');
-    if (!id) return json(400, { ok:false, error:'missing_id' });
+    // Mirror nb_results (best-effort)
+    try {
+      if (TABLE_URL) {
+        await fetch(TABLE_URL, {
+          method: "POST",
+          headers: { ...sb(), "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify([{ user_id: uid || "00000000-0000-0000-0000-000000000000", run_id, task_id: taskId, image_url: video_url }])
+        });
+      }
+    } catch {}
 
-    if (!TOKEN) return json(500, { ok:false, error:'missing_replicate_token' });
-
-    const res = await fetch(`${BASE}/predictions/${encodeURIComponent(id)}`, {
-      headers: { 'Authorization': `Token ${TOKEN}`, 'Content-Type': 'application/json' }
-    });
-    if (!res.ok){
-      const txt = await res.text();
-      return json(502, { ok:false, error:'replicate_error', details: txt });
+    if (debug) {
+      out.debug = {
+        supabase_url_host: tryHost(SUPABASE_URL),
+        has_service_key: !!SERVICE_KEY,
+        idToPatch, patched, patchError
+      };
     }
-    const data = await res.json();
-    const status = String(data.status || '').toLowerCase();
 
-    if (status === 'succeeded'){
-      const image_url = extractImageUrl(data.output);
-      await backfillOnce({ uid, run_id, id, row_id, image_url, input: data.input || {} });
-      return json(200, { ok:true, status:'succeeded', image_url, result_url: image_url });
-    }
-    return json(200, { ok:true, status: status || 'pending' });
-  }catch(e){
-    return json(500, { ok:false, error:'server_error', details: String(e && e.message || e) });
+    return json(200, out);
+
+  } catch (e) {
+    const res = { ok:false, error: String(e && e.message ? e.message : e), version: VERSION_TAG };
+    if (qs.debug) res.debug = { supabase_url_host: tryHost(SUPABASE_URL), has_service_key: !!SERVICE_KEY };
+    return json(200, res);
   }
 };
+
+// ---- helpers ----
+function cors(){
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-USER-ID"
+  };
+}
+function json(code, obj){
+  return { statusCode: code, headers: { ...cors(), "Content-Type": "application/json" }, body: JSON.stringify(obj) };
+}
+function kieHeaders(){ const h = { "Accept": "application/json" }; if (KIE_KEY) h["Authorization"] = `Bearer ${KIE_KEY}`; return h; }
+function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` }; }
+function isUrl(u){ return typeof u === "string" && /^https?:\/\//i.test(u); }
+function host(u){ try { return new URL(u).hostname; } catch { return ""; } }
+function tryHost(u){ try { return new URL(u).hostname; } catch { return ""; } }
+function isAllowed(u){ if (!isUrl(u)) return false; const h = host(u); return ALLOWED.has(h); }
+function collect(x, out){ if (!x) return; if (typeof x === "string"){ const m=x.match(/https?:\/\/[^\"\'\s]+/ig); if (m) for (const u of m) out.push(u); return; } if (Array.isArray(x)){ for (const v of x) collect(v,out); return; } if (typeof x === "object"){ for (const v of Object.values(x)) collect(v,out); return; } }
+function collectUrls(x){ const a=[]; collect(x,a); const seen=new Set(); const out=[]; for (const u of a){ if(!seen.has(u)){ seen.add(u); out.push(u); } } return out; }
