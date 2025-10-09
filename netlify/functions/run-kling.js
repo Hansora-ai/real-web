@@ -162,7 +162,7 @@ exports.handler = async (event) => {
       input: {
         prompt,
         aspect_ratio,
-        duration,
+        duration: (duration === 10 ? '10' : '5'),
         ...(image_url ? { image_url } : {})
       }
     };
