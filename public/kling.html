@@ -178,7 +178,7 @@
           <!-- Optional image upload -->
           <div>
             <label class="text-xs text-zinc-400">Optional image (guidance)</label>
-            <input id="imageFile" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark" multiple>
+            <input id="imageFile" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
             <div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div>
             <p class="text-xs text-zinc-500 mt-1">Not required — leave empty to generate from text only.</p>
 </div>
@@ -386,16 +386,14 @@ window.__run=async function(){
     const rid=uid+'-'+Date.now();
 
     const fileEl = document.getElementById('imageFile');
-let image_data_urls = [];
+let image_data_url = null;
 if (fileEl && fileEl.files && fileEl.files.length){
-  for (let i=0;i<fileEl.files.length;i++){
-    image_data_urls.push(await readFileAsDataUrl(fileEl.files[i]));
-  }
+  image_data_url = await readFileAsDataUrl(fileEl.files[0]);
 }
 const res = await fetch('/.netlify/functions/run-kling',{
   method:'POST',
   headers:{'Content-Type':'application/json','X-USER-ID':uid},
-  body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_data_urls })
+  body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_data_url })
 });
 if (res.status === 201 || res.status === 200 || res.status === 202) {
       /* client-side debit removed */
@@ -527,26 +525,15 @@ document.addEventListener('DOMContentLoaded', function(){
         if (isTarget && init && init.body && typeof init.body === 'string') {
           try {
             var body = JSON.parse(init.body);
-            if (!body.image_data_urls) {
-              // Build data URLs for up to 4 files with FileReader (no stack overflow)
-              var urls = [];
-              if (fileEl && fileEl.files && fileEl.files.length){
-                var limit = Math.min(4, fileEl.files.length);
-                for (var k=0;k<limit;k++){
-                  var u = await new Promise(function(resolve){
-                    try{
-                      var fr = new FileReader();
-                      fr.onload = function(){ resolve(fr.result); };
-                      fr.onerror = function(){ resolve(null); };
-                      fr.readAsDataURL(fileEl.files[k]);
-                    }catch(e){ resolve(null); }
-                  });
-                  if (u) urls.push(u);
-                }
-              }
-              body.image_data_urls = urls;
-              init.body = JSON.stringify(body);
-            }
+            if (!body.image_data_url) {
+  var first = null;
+  if (fileEl && fileEl.files && fileEl.files.length){
+    first = await new Promise(function(resolve){
+      try{ var fr = new FileReader(); fr.onload = function(){ resolve(fr.result); }; fr.onerror = function(){ resolve(null); }; fr.readAsDataURL(fileEl.files[0]); }catch(e){ resolve(null); }
+    });
+  }
+  if (first) { body.image_data_url = first; init.body = JSON.stringify(body); }
+}
           } catch(e) {
             // ignore if body isn't JSON
           }
@@ -654,6 +641,25 @@ document.addEventListener('DOMContentLoaded', function(){
     window.__klingComputeCost = computeCost;
     window.__klingRenderRunCost = renderRunCost;
   } catch(e) { /* do nothing */ }
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    var fileEl = document.getElementById('imageFile');
+    if (!fileEl) return;
+    fileEl.addEventListener('change', function(){
+      try{
+        if (fileEl.files && fileEl.files.length > 1){
+          var dt = new DataTransfer();
+          dt.items.add(fileEl.files[0]);
+          fileEl.files = dt.files;
+        }
+      }catch(_){ /* ignore */ }
+    });
+  }catch(_){}
 });
 </script>
 
