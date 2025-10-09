@@ -14,7 +14,7 @@ const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` 
 const TABLE_URL     = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/nb_results` : "";
 
 // Only accept result URLs hosted on these domains
-const ALLOWED = new Set(["tempfile.aiquickdraw.com","tempfile.redpandaai.co"]);
+const ALLOWED = null; // accept any https host
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors(), body: "" };
@@ -44,6 +44,24 @@ exports.handler = async (event) => {
       if (!isAllowed(u)) continue;
       if (/\.mp4(\?|#|$)/i.test(u)) { video_url = u; break; }
     }
+
+    // Fallback: jsonurl string like '["https://...mp4"]'
+    if (!video_url) {
+      const candKeys = ['jsonurl','jsonUrl','json_url'];
+      try{
+        for (const k of candKeys){
+          const v = (data && typeof data==='object') ? (data[k] || (data.data && data.data[k]) || (data.result && data.result[k])) : null;
+          const hit = firstMp4FromJsonish(typeof v === 'string' ? v : (typeof v === 'object' ? JSON.stringify(v) : ''));
+          if (hit){ video_url = hit; break; }
+        }
+      }catch(_){}
+    }
+    // Fallback #2: resultJson with resultUrls
+    if (!video_url) {
+      const v2 = (data && (data.resultJson || (data.data && data.data.resultJson) || (data.result && data.result.resultJson))) || null;
+      try{ const hit2 = firstMp4FromResultJson(v2); if (hit2) video_url = hit2; }catch(_){}
+    }
+
 
     const out = { ok: !!video_url, status: video_url ? "succeeded" : "pending", state: video_url ? "succeeded" : "pending", video_url, result_url: video_url || "", version: VERSION_TAG };
     if (!video_url) return json(200, out);
@@ -125,6 +143,44 @@ function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVIC
 function isUrl(u){ return typeof u === "string" && /^https?:\/\//i.test(u); }
 function host(u){ try { return new URL(u).hostname; } catch { return ""; } }
 function tryHost(u){ try { return new URL(u).hostname; } catch { return ""; } }
-function isAllowed(u){ if (!isUrl(u)) return false; const h = host(u); return ALLOWED.has(h); }
+function isAllowed(u){ return isUrl(u); }
 function collect(x, out){ if (!x) return; if (typeof x === "string"){ const m=x.match(/https?:\/\/[^\"\'\s]+/ig); if (m) for (const u of m) out.push(u); return; } if (Array.isArray(x)){ for (const v of x) collect(v,out); return; } if (typeof x === "object"){ for (const v of Object.values(x)) collect(v,out); return; } }
 function collectUrls(x){ const a=[]; collect(x,a); const seen=new Set(); const out=[]; for (const u of a){ if(!seen.has(u)){ seen.add(u); out.push(u); } } return out; }
+
+function firstMp4FromJsonish(x){
+  try{
+    if (typeof x !== 'string') return '';
+    const s = x.trim();
+    if (/^https?:\/\//i.test(s) && /\.mp4(\?|#|$)/i.test(s)) return s;
+    const parsed = JSON.parse(s);
+    if (Array.isArray(parsed)){
+      for (const u of parsed){ if (typeof u === 'string' && /^https?:\/\//i.test(u) && /\.mp4(\?|#|$)/i.test(u)) return u; }
+    } else if (typeof parsed === 'string'){
+      if (/^https?:\/\//i.test(parsed) && /\.mp4(\?|#|$)/i.test(parsed)) return parsed;
+    }
+  }catch(_){}
+  return '';
+}
+function firstMp4FromResultJson(objOrStr){
+  try{
+    let o = objOrStr;
+    if (typeof o === 'string'){ try { o = JSON.parse(o); } catch(e){} }
+    if (typeof o === 'string'){
+      const m = o.match(/https?:\/\/[^\s'"]+\.mp4(?:\?[^\s'"]*)?/i);
+      if (m) return m[0];
+      return '';
+    }
+    if (o && typeof o === 'object'){
+      const arr = o.resultUrls || o.result_urls || o.urls || o.url || null;
+      if (Array.isArray(arr)){ for (const u of arr){ if (typeof u === 'string' && /^https?:\/\//i.test(u) && /\.mp4(\?|#|$)/i.test(u)) return u; } }
+      else if (typeof arr === 'string' && /^https?:\/\//i.test(arr) && /\.mp4(\?|#|$)/i.test(arr)) return arr;
+      for (const v of Object.values(o)){
+        if (typeof v === 'string' && /^https?:\/\//i.test(v) && /\.mp4(\?|#|$)/i.test(v)) return v;
+        if (Array.isArray(v)) for (const x of v){ if (typeof x === 'string' && /^https?:\/\//i.test(x) && /\.mp4(\?|#|$)/i.test(x)) return x; }
+        if (v && typeof v === 'object'){ const inner = firstMp4FromResultJson(v); if (inner) return inner; }
+      }
+    }
+  }catch(_){}
+  return '';
+}
+
