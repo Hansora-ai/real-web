@@ -168,6 +168,8 @@ exports.handler = async (event) => {
         duration: (duration === 10 ? '10' : '5'),
         ...(image_url ? { image_url } : {})
       }
+    ,
+      callBackUrl: `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`
     };
 
     // Create task (no webhook required; we poll)
