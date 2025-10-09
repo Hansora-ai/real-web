@@ -1,10 +1,9 @@
+
 // netlify/functions/kling-check.js
-// GET poller for Kling (KIE) jobs. Finds result mp4 and backfills Supabase.
-//
-// Required env: KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-// Optional: KIE_BASE_URL (default https://api.kie.ai)
-//
-const VERSION_TAG = "kling-check-GET-2025-10-09+v1";
+// Robust poller for KIE/Kling jobs. Ultra-tolerant URL extraction + normalized output.
+// Minimal public contract (kept same): GET with ?id=<taskId>&uid=<uid>&run_id=<run_id>[&debug=1]
+
+const VERSION_TAG = "kling-check-robust-2025-10-09+v3";
 const KIE_BASE = (process.env.KIE_BASE_URL || "https://api.kie.ai").replace(/\/+$/,'');
 const KIE_KEY  = process.env.KIE_API_KEY || "";
 
@@ -13,8 +12,65 @@ const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
 const TABLE_URL     = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/nb_results` : "";
 
-// Only accept result URLs hosted on these domains
-const ALLOWED = null; // accept any https host
+// ---- helpers ----
+function cors(){
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-USER-ID"
+  };
+}
+function json(code, obj){
+  return { statusCode: code, headers: { ...cors(), "Content-Type": "application/json" }, body: JSON.stringify(obj) };
+}
+function kieHeaders(){ const h = { "Accept": "application/json" }; if (KIE_KEY) h["Authorization"] = `Bearer ${KIE_KEY}`; return h; }
+function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` }; }
+function isUrl(u){ return typeof u === "string" && /^https?:\/\//i.test(u); }
+function host(u){ try { return new URL(u).hostname; } catch { return ""; } }
+function isAllowed(u){ return isUrl(u); } // accept any https host
+
+// Collect ANY urls from JSON-like data (recursively)
+function collect(x, out){ 
+  if (x == null) return;
+  if (typeof x === "string"){
+    // extract URLs from string
+    const m = x.match(/https?:\/\/[^\s"'<>]+/ig);
+    if (m) for (const u of m) out.push(u);
+    return;
+  }
+  if (Array.isArray(x)){ for (const v of x) collect(v,out); return; }
+  if (typeof x === "object"){ for (const v of Object.values(x)) collect(v,out); return; }
+}
+function collectUrls(x){ const a=[]; collect(x,a); const seen=new Set(); const out=[]; for (const u of a){ if(!seen.has(u)){ seen.add(u); out.push(u); } } return out; }
+
+// Parse json-ish strings like '["https://...mp4"]' or nested objects
+function firstMp4FromJsonish(x){
+  try{
+    if (typeof x === "string"){
+      const s = x.trim();
+      // if it's a plain URL string
+      if (/^https?:\/\//i.test(s) && /\.mp4(\?|#|$)/i.test(s)) return s;
+      // try to JSON.parse
+      try { x = JSON.parse(s); } catch(e){ /* not JSON */ }
+    }
+    if (Array.isArray(x)){
+      for (const u of x){ if (typeof u === "string" && /^https?:\/\//i.test(u) && /\.mp4(\?|#|$)/i.test(u)) return u; }
+    } else if (typeof x === "object" && x){
+      // common keys
+      const candidates = [x.resultUrls, x.result_urls, x.urls, x.url, x.output, x.outputs];
+      for (const c of candidates){
+        const hit = firstMp4FromJsonish(c);
+        if (hit) return hit;
+      }
+      // deep scan
+      for (const v of Object.values(x)){
+        const hit = firstMp4FromJsonish(v);
+        if (hit) return hit;
+      }
+    }
+  }catch(_){}
+  return "";
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors(), body: "" };
@@ -27,7 +83,6 @@ exports.handler = async (event) => {
     const taskId = (qs.id || qs.taskId || qs.taskid || "").toString().trim();
     const uid    = (qs.uid || "").toString().trim();
     const run_id = (qs.run_id || qs.runId || "").toString().trim();
-    const row_id = (qs.row_id || "").toString().trim();
 
     if (!taskId) return json(400, { ok:false, error:"missing taskId", version: VERSION_TAG });
 
@@ -45,26 +100,34 @@ exports.handler = async (event) => {
       if (/\.mp4(\?|#|$)/i.test(u)) { video_url = u; break; }
     }
 
-    // Fallback: jsonurl string like '["https://...mp4"]'
+    // Fallback A: jsonurl / jsonUrl / json_url possibly as JSON string
     if (!video_url) {
-      const candKeys = ['jsonurl','jsonUrl','json_url'];
-      try{
-        for (const k of candKeys){
-          const v = (data && typeof data==='object') ? (data[k] || (data.data && data.data[k]) || (data.result && data.result[k])) : null;
-          const hit = firstMp4FromJsonish(typeof v === 'string' ? v : (typeof v === 'object' ? JSON.stringify(v) : ''));
-          if (hit){ video_url = hit; break; }
-        }
-      }catch(_){}
-    }
-    // Fallback #2: resultJson with resultUrls
-    if (!video_url) {
-      const v2 = (data && (data.resultJson || (data.data && data.data.resultJson) || (data.result && data.result.resultJson))) || null;
-      try{ const hit2 = firstMp4FromResultJson(v2); if (hit2) video_url = hit2; }catch(_){}
+      const k1 = (data && (data.jsonurl || data.jsonUrl || data.json_url || (data.data && (data.data.jsonurl || data.data.jsonUrl)) || (data.result && (data.result.jsonurl || data.result.jsonUrl)))) || null;
+      const hit1 = firstMp4FromJsonish(k1);
+      if (hit1) video_url = hit1;
     }
 
+    // Fallback B: resultJson object/string containing resultUrls
+    if (!video_url) {
+      const k2 = (data && (data.resultJson || (data.data && data.data.resultJson) || (data.result && data.result.resultJson))) || null;
+      const hit2 = firstMp4FromJsonish(k2);
+      if (hit2) video_url = hit2;
+    }
 
-    const out = { ok: !!video_url, status: video_url ? "succeeded" : "pending", state: video_url ? "succeeded" : "pending", video_url, result_url: video_url || "", version: VERSION_TAG };
-    if (!video_url) return json(200, out);
+    const out = { 
+      ok: !!video_url,
+      status: video_url ? "succeeded" : "pending",
+      state: video_url ? "succeeded" : "pending",
+      video_url,
+      result_url: video_url || "",
+      version: VERSION_TAG
+    };
+
+    if (!video_url) {
+      // Not ready yet
+      if (debug) out.debug = { urlsSample: urls.slice(0,6), rawState: (data && (data.state || data.status)) || null };
+      return json(200, out);
+    }
 
     // Backfill Supabase
     let idToPatch = null, patched = false, patchError = null;
@@ -111,75 +174,14 @@ exports.handler = async (event) => {
     } catch {}
 
     if (debug) {
-      out.debug = {
-        supabase_url_host: tryHost(SUPABASE_URL),
-        has_service_key: !!SERVICE_KEY,
-        idToPatch, patched, patchError
-      };
+      out.debug = { supabase_url_host: tryHost(SUPABASE_URL), patched, patchError };
     }
 
     return json(200, out);
 
   } catch (e) {
-    const res = { ok:false, error: String(e && e.message ? e.message : e), version: VERSION_TAG };
-    if (qs.debug) res.debug = { supabase_url_host: tryHost(SUPABASE_URL), has_service_key: !!SERVICE_KEY };
-    return json(200, res);
+    return json(200, { ok:false, error: String(e && e.message ? e.message : e), version: VERSION_TAG });
   }
 };
 
-// ---- helpers ----
-function cors(){
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-USER-ID"
-  };
-}
-function json(code, obj){
-  return { statusCode: code, headers: { ...cors(), "Content-Type": "application/json" }, body: JSON.stringify(obj) };
-}
-function kieHeaders(){ const h = { "Accept": "application/json" }; if (KIE_KEY) h["Authorization"] = `Bearer ${KIE_KEY}`; return h; }
-function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` }; }
-function isUrl(u){ return typeof u === "string" && /^https?:\/\//i.test(u); }
-function host(u){ try { return new URL(u).hostname; } catch { return ""; } }
 function tryHost(u){ try { return new URL(u).hostname; } catch { return ""; } }
-function isAllowed(u){ return isUrl(u); }
-function collect(x, out){ if (!x) return; if (typeof x === "string"){ const m=x.match(/https?:\/\/[^\"\'\s]+/ig); if (m) for (const u of m) out.push(u); return; } if (Array.isArray(x)){ for (const v of x) collect(v,out); return; } if (typeof x === "object"){ for (const v of Object.values(x)) collect(v,out); return; } }
-function collectUrls(x){ const a=[]; collect(x,a); const seen=new Set(); const out=[]; for (const u of a){ if(!seen.has(u)){ seen.add(u); out.push(u); } } return out; }
-
-function firstMp4FromJsonish(x){
-  try{
-    if (typeof x !== 'string') return '';
-    const s = x.trim();
-    if (/^https?:\/\//i.test(s) && /\.mp4(\?|#|$)/i.test(s)) return s;
-    const parsed = JSON.parse(s);
-    if (Array.isArray(parsed)){
-      for (const u of parsed){ if (typeof u === 'string' && /^https?:\/\//i.test(u) && /\.mp4(\?|#|$)/i.test(u)) return u; }
-    } else if (typeof parsed === 'string'){
-      if (/^https?:\/\//i.test(parsed) && /\.mp4(\?|#|$)/i.test(parsed)) return parsed;
-    }
-  }catch(_){}
-  return '';
-}
-function firstMp4FromResultJson(objOrStr){
-  try{
-    let o = objOrStr;
-    if (typeof o === 'string'){ try { o = JSON.parse(o); } catch(e){} }
-    if (typeof o === 'string'){
-      const m = o.match(/https?:\/\/[^\s'"]+\.mp4(?:\?[^\s'"]*)?/i);
-      if (m) return m[0];
-      return '';
-    }
-    if (o && typeof o === 'object'){
-      const arr = o.resultUrls || o.result_urls || o.urls || o.url || null;
-      if (Array.isArray(arr)){ for (const u of arr){ if (typeof u === 'string' && /^https?:\/\//i.test(u) && /\.mp4(\?|#|$)/i.test(u)) return u; } }
-      else if (typeof arr === 'string' && /^https?:\/\//i.test(arr) && /\.mp4(\?|#|$)/i.test(arr)) return arr;
-      for (const v of Object.values(o)){
-        if (typeof v === 'string' && /^https?:\/\//i.test(v) && /\.mp4(\?|#|$)/i.test(v)) return v;
-        if (Array.isArray(v)) for (const x of v){ if (typeof x === 'string' && /^https?:\/\//i.test(x) && /\.mp4(\?|#|$)/i.test(x)) return x; }
-        if (v && typeof v === 'object'){ const inner = firstMp4FromResultJson(v); if (inner) return inner; }
-      }
-    }
-  }catch(_){}
-  return '';
-}
