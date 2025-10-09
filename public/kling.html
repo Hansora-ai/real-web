@@ -336,7 +336,7 @@ async function imagenCheckPoll(id, uid, rid){
       const j = await r.json().catch(()=>({}));
       const status = String(j.status || '').toLowerCase();
       if(status === 'succeeded' || j.ok){
-        const url = j.result_url || j.image_url || (Array.isArray(j.output) ? j.output[0] : null);
+        const url = j.result_url || j.image_url || j.video_url || (Array.isArray(j.output) ? j.output[0] : null);
         if(url){ onResult(url); break; }
       }
       if(status === 'failed' || status === 'canceled'){
