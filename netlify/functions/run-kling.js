@@ -10,6 +10,9 @@ const KIE_KEY  = process.env.KIE_API_KEY || '';
 const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'downloads';
+const SITE_BASE = (process.env.SITE_BASE || 'https://webhansora.netlify.app').replace(/\/+$/,'');
+const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/video-kie-callback`;
+
 
 function cors(){ return {
   'Access-Control-Allow-Origin': '*',
@@ -178,6 +181,24 @@ exports.handler = async (event) => {
 
     const taskId = extractTaskId(data);
     if (!taskId) return json(502, { ok:false, error:'missing_task_id', details:data });
+
+    // Persist taskId into meta for tracing (status: processing)
+    try {
+      if (SUPABASE_URL && SERVICE_KEY && taskId) {
+        const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
+        const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id`;
+        const chk = await fetch(ug + q, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+        const arr = await chk.json().catch(()=>[]);
+        if (Array.isArray(arr) && arr.length) {
+          await fetch(`${ug}?id=eq.${encodeURIComponent(arr[0].id)}`, {
+            method: 'PATCH',
+            headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ meta: { source:'kling', run_id, model, status:'processing', task_id: taskId } })
+          });
+        }
+      }
+    } catch {}
+
 
     // Debit credits AFTER task was accepted
     const debit = await debitCredits(uid, cost);
