@@ -126,5 +126,95 @@
     © 2025 HANSORA AI
   </div>
 </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Keep the header login state consistent with the home page
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const $btnLoginNav = document.getElementById('btnLoginNav');
+    const $btnGetStarted = document.getElementById('btnGetStarted');
+    const $navUser = document.getElementById('navUser');
+    const $navCredits = document.getElementById('navCredits');
+    const $navAvatar = document.getElementById('navAvatar');
+    const $navMenu = document.getElementById('navMenu');
+    const $btnLogout = document.getElementById('btnLogout');
+    const $navAvatarImg = document.getElementById('navAvatarImg');
+
+    function showLoggedInUI(profile, user){
+      if($btnLoginNav) $btnLoginNav.classList.add('hidden');
+      if($btnGetStarted) $btnGetStarted.classList.add('hidden');
+      if($navUser){ $navUser.classList.remove('hidden'); $navUser.classList.add('flex'); }
+      if($navCredits) $navCredits.textContent = (profile?.credits ?? 0) + '⚡';
+      if($navAvatarImg){
+        if(user?.user_metadata?.avatar_url){
+          $navAvatarImg.src = user.user_metadata.avatar_url;
+          $navAvatarImg.classList.remove('hidden');
+        } else {
+          // Fallback: show initials circle using data URL if no avatar
+          const initials = (user?.email || 'U').slice(0,1).toUpperCase();
+          const svg = encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'>
+            <rect width='100%' height='100%' fill='#1f2937'/>
+            <text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' fill='#e5e7eb' font-family='Inter,Arial' font-size='28'>${initials}</text>
+          </svg>`);
+          $navAvatarImg.src = 'data:image/svg+xml;charset=utf-8,' + svg;
+          $navAvatarImg.classList.remove('hidden');
+        }
+      }
+    }
+    function showLoggedOutUI(){
+      if($btnLoginNav) $btnLoginNav.classList.remove('hidden');
+      if($btnGetStarted) $btnGetStarted.classList.remove('hidden');
+      if($navUser){ $navUser.classList.add('hidden'); $navUser.classList.remove('flex'); }
+    }
+
+    async function getOrCreateProfile(user){
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id,email,credits')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if(error) throw error;
+      if(!data){
+        const ins = await supabase.from('profiles').insert({
+          user_id: user.id, email: user.email, credits: 3
+        }).select().single();
+        if(ins.error) throw ins.error;
+        return ins.data;
+      }
+      return data;
+    }
+
+    async function refreshCredits(){
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if(!user) return;
+      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      if(prof?.data?.credits != null && $navCredits){ $navCredits.textContent = prof.data.credits + '⚡'; }
+    }
+    window.refreshCredits = refreshCredits;
+
+    if ($navAvatar) $navAvatar.addEventListener('click', ()=>{ if($navMenu) $navMenu.classList.toggle('show'); });
+    document.addEventListener('click', (e)=>{
+      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')){ if($navMenu) $navMenu.classList.remove('show'); }
+    });
+    if ($btnLogout) $btnLogout.addEventListener('click', async ()=>{ await supabase.auth.signOut(); showLoggedOutUI(); });
+
+    (async ()=>{
+      try{
+        const { data } = await supabase.auth.getUser();
+        const user = data.user;
+        if(user){
+          const prof = await getOrCreateProfile(user);
+          showLoggedInUI(prof, user);
+        }else{
+          showLoggedOutUI();
+        }
+      }catch{ showLoggedOutUI(); }
+    })();
+  </script>
+
 </body>
 </html>
