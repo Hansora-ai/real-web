@@ -59,8 +59,8 @@
     <h1 class="text-3xl font-bold mb-2">Contact</h1>
     <p class="text-zinc-400 mb-8">Send us a message and we’ll get back to you. You can also reach us via Telegram or Instagram below.</p>
 
-    <!-- Netlify Forms (posts to this same route; works for /contact or /contact.html) -->
-    <form name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field"
+    <!-- Netlify Forms markup preserved; JS will intercept to avoid redirect -->
+    <form id="contactForm" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field"
           action="?sent=1"
           class="glass shadow-soft rounded-2xl p-5 space-y-4">
       <input type="hidden" name="form-name" value="contact" />
@@ -91,6 +91,7 @@
       </div>
 
       <div id="sentBanner" class="hidden mt-4 text-sm text-emerald-300">✅ Thanks! Your message was sent.</div>
+      <div id="errorBanner" class="hidden mt-4 text-sm text-rose-300">❌ Failed to send. Please try again.</div>
     </form>
   </main>
 
@@ -102,7 +103,7 @@
 
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
 
-  <!-- Success banner on redirect -->
+  <!-- Success banner on redirect (kept; harmless) -->
   <script>
     const params = new URLSearchParams(window.location.search);
     if (params.get('sent') === '1') {
@@ -180,6 +181,31 @@
     // Restore now and on auth state changes (handles cross-page nav)
     restore();
     supabase.auth.onAuthStateChange((_e, _s)=>{ restore(); });
+  </script>
+
+  <!-- Submit handler: calls Netlify Function, no redirect -->
+  <script>
+    const formEl = document.getElementById('contactForm');
+    formEl?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(formEl);
+      const email = fd.get('email');
+      const message = fd.get('message');
+
+      try {
+        const res = await fetch('/.netlify/functions/contact-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, message })
+        });
+        if (!res.ok) throw new Error('Bad status ' + res.status);
+        document.getElementById('errorBanner')?.classList.add('hidden');
+        document.getElementById('sentBanner')?.classList.remove('hidden');
+        formEl.reset();
+      } catch (err) {
+        document.getElementById('errorBanner')?.classList.remove('hidden');
+      }
+    });
   </script>
 </body>
 </html>
