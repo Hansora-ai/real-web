@@ -27,7 +27,7 @@
   </style>
 </head>
 <body>
-  <!-- Header: mirrors index (no extra "Get started" button) -->
+  <!-- Header (match index layout/IDs) -->
   <header class="border-b border-base-line">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
       <a href="/" class="font-semibold text-lg">HANSORA AI</a>
@@ -59,9 +59,9 @@
     <h1 class="text-3xl font-bold mb-2">Contact</h1>
     <p class="text-zinc-400 mb-8">Send us a message and we’ll get back to you. You can also reach us via Telegram or Instagram below.</p>
 
-    <!-- Netlify Forms (no activation page) -->
+    <!-- Netlify Forms (posts to this page; no external activation) -->
     <form name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field"
-          action="/contact?sent=1"
+          action="/contact.html?sent=1"
           class="glass shadow-soft rounded-2xl p-5 space-y-4">
       <input type="hidden" name="form-name" value="contact" />
       <p class="hidden"><label>Don’t fill this out if you're human: <input name="bot-field" /></label></p>
@@ -111,7 +111,7 @@
     }
   </script>
 
-  <!-- Supabase auth header logic (same IDs as index) -->
+  <!-- Supabase auth header logic (same as index) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
@@ -159,24 +159,27 @@
       }
       return data;
     }
+
+    // click outside to close menu
     if ($navAvatar) $navAvatar.addEventListener('click', ()=>{ if($navMenu) $navMenu.classList.toggle('show'); });
     document.addEventListener('click', (e)=>{
       if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')){ if($navMenu) $navMenu.classList.remove('show'); }
     });
     if ($btnLogout) $btnLogout.addEventListener('click', async ()=>{ await supabase.auth.signOut(); showLoggedOutUI(); });
 
-    (async ()=>{
-      try{
-        const { data } = await supabase.auth.getUser();
-        const user = data.user;
-        if(user){
-          const prof = await getOrCreateProfile(user);
-          showLoggedInUI(prof, user);
-        } else {
-          showLoggedOutUI();
-        }
-      }catch{ showLoggedOutUI(); }
-    })();
+    async function restore(){
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if(user){
+        const p = await getOrCreateProfile(user);
+        showLoggedInUI(p, user);
+      } else {
+        showLoggedOutUI();
+      }
+    }
+    // Restore now and on auth state changes (handles cross-page nav)
+    restore();
+    supabase.auth.onAuthStateChange((_e, _s)=>{ restore(); });
   </script>
 </body>
 </html>
