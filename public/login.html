@@ -275,9 +275,9 @@
             options: { emailRedirectTo: `${location.origin}/login.html` }
           });
 
-          // If Supabase says this email already exists (confirmed or not), show a clear inline message
-          if (error && String(error.message).toLowerCase().includes('already registered')) {
-            err.textContent = 'This email is already registered. Log in or use “Forgot password”.';
+          // If user exists already: show inline red error (no resend, no success panel)
+          if (error && (String(error.message).toLowerCase().includes('already registered') || error.status === 400)) {
+            err.textContent = 'Email is already registered.';
             return;
           }
 
