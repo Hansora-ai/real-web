@@ -73,6 +73,8 @@
       </div>
     </div>
   </header>
+
+
 <!-- HERO + FILTERS -->
 <section class="relative">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 md:py-14">
@@ -117,16 +119,7 @@
     <div id="imageGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
   </div>
 </section>
-<footer class="border-t border-base-line/60">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
-      <nav class="flex items-center gap-5">
-        <a href="/Termsofuse" class="hover:text-white/80">Terms</a>
-        <a href="/policy" class="hover:text-white/80">Privacy</a>
-        <a href="/contact" class="hover:text-white/80">Contact</a>
-      </nav>
-    </div>
-  </footer>
+
 <div id="authModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4">
     <div id="authCard" class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft">
       <div class="mb-4 flex items-center justify-between">
@@ -145,6 +138,284 @@
       </form>
     </div>
   </div>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Header elements
+    const $btnLoginNav = document.getElementById('btnLoginNav');
+    const $btnGetStarted = document.getElementById('btnGetStarted');
+    const $navUser = document.getElementById('navUser');
+    const $navCredits = document.getElementById('navCredits');
+    const $navAvatar = document.getElementById('navAvatar');
+    const $navMenu = document.getElementById('navMenu');
+    const $btnLogout = document.getElementById('btnLogout');
+    const $navAvatarImg = document.getElementById('navAvatarImg');
+
+    // Hero button
+    const $btnLogin = document.getElementById('btnLogin');
+
+    // Modal elements
+    const $modal = document.getElementById('authModal');
+    const $close = document.getElementById('authClose');
+    const $title = document.getElementById('authTitle');
+    const $emailIn = document.getElementById('authEmail');
+    const $passIn = document.getElementById('authPass');
+    const $pass2In = document.getElementById('authPass2');
+    const $msg = document.getElementById('authMsg');
+    const $doLogin = document.getElementById('btnDoLogin');
+    const $doSignup = document.getElementById('btnDoSignup');
+
+    let authMode = 'login';
+    function openAuth(){ $modal.classList.remove('hidden'); $msg.textContent=''; }
+    function closeAuth(){ $modal.classList.add('hidden'); $msg.textContent=''; }
+    function setAuthMode(mode){
+      authMode = mode;
+      if(mode==='signup'){
+        $title.textContent = 'Sign up';
+        $pass2In.classList.remove('hidden');
+        $doSignup.classList.add('btn-brand'); $doLogin.classList.remove('btn-brand');
+      }else{
+        $title.textContent = 'Log in';
+        $pass2In.classList.add('hidden');
+        $doLogin.classList.add('btn-brand'); $doSignup.classList.remove('btn-brand');
+      }
+    }
+    function showLoggedInUI(profile, user){
+      $btnLoginNav.classList.add('hidden');
+      $btnGetStarted.classList.add('hidden');
+      $navUser.classList.remove('hidden');
+      $navUser.classList.add('flex');
+      $navCredits.textContent = (profile?.credits ?? 0) + '⚡';
+      if(user?.user_metadata?.avatar_url){
+        $navAvatarImg.src = user.user_metadata.avatar_url;
+        $navAvatarImg.classList.remove('hidden');
+      } else {
+        $navAvatarImg.classList.add('hidden');
+      }
+    }
+    function showLoggedOutUI(){
+      $btnLoginNav.classList.remove('hidden');
+      $btnGetStarted.classList.remove('hidden');
+      $navUser.classList.add('hidden');
+      $navUser.classList.remove('flex');
+    }
+    // Dropdown
+    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
+    document.addEventListener('click', (e)=>{
+      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
+    });
+    // Openers
+    $btnLogin.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+    $btnLoginNav.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+    $btnGetStarted.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
+    $close.addEventListener('click', closeAuth);
+
+    async function getOrCreateProfile(user){
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id,email,credits')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if(error){ throw error; }
+      if(!data){
+        const ins = await supabase.from('profiles').insert({
+          user_id: user.id, email: user.email, credits: 3
+        }).select().single();
+        if(ins.error){ throw ins.error; }
+        return ins.data;
+      }
+      return data;
+    }
+    async function refreshCredits(){
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if(!user) return;
+      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      if(prof?.data?.credits != null){ $navCredits.textContent = prof.data.credits + '⚡'; }
+    }
+    window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
+
+    // Sign up
+    $doSignup.addEventListener('click', async ()=>{
+      if(authMode!=='signup'){ setAuthMode('signup'); $msg.textContent=''; return; }
+      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
+      if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
+      $msg.textContent = 'Creating account…';
+      const { data, error } = await supabase.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+      if(error){ $msg.textContent = error.message; return; }
+      $msg.textContent = 'Check your email to confirm, then Log in.';
+      setAuthMode('login');
+    });
+    // Log in
+    $doLogin.addEventListener('click', async ()=>{
+      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
+      $msg.textContent = 'Signing in…';
+      try{
+        const { data, error } = await supabase.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+        if(error){ $msg.textContent = error.message; return; }
+        const user = data.user;
+        const prof = await getOrCreateProfile(user);
+        showLoggedInUI(prof, user);
+        closeAuth();
+      }catch(e){ $msg.textContent = e.message || 'Login failed.'; }
+    });
+    // Logout
+    document.getElementById('btnLogout').addEventListener('click', async ()=>{
+      await supabase.auth.signOut();
+      showLoggedOutUI();
+    });
+    
+    // === Credit helpers (pure Supabase; no Make.com) ===
+    async function getUserId() {
+      const { data } = await supabase.auth.getUser();
+      return data.user?.id || null;
+    }
+    async function setCredits(value) {
+      const uid = await getUserId();
+      if (!uid) throw new Error('Not logged in');
+      const { error } = await supabase
+        .from('profiles')
+        .update({ credits: value })
+        .eq('user_id', uid);
+      if (error) throw error;
+      await window.refreshCredits();
+    }
+    async function addCredits(delta) {
+      const uid = await getUserId();
+      if (!uid) throw new Error('Not logged in');
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (error) throw error;
+      const next = (data?.credits ?? 0) + delta;
+      await setCredits(next);
+    }
+    async function useCredits(cost) {
+      const uid = await getUserId();
+      if (!uid) throw new Error('Not logged in');
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (error) throw error;
+      const current = data?.credits ?? 0;
+      if (current < cost) throw new Error('Not enough credits');
+      await setCredits(current - cost);
+    }
+    window.hansoraCredits = { addCredits, useCredits, setCredits };
+
+    // Restore session
+    (async ()=>{
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if(user){
+        try{
+          const prof = await getOrCreateProfile(user);
+          showLoggedInUI(prof, user);
+        }catch{ showLoggedOutUI(); }
+      }else{
+        showLoggedOutUI();
+      }
+    })();
+  </script>
+<script>
+  (function(){ 
+    function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+    ready(async function(){ 
+      try {
+        if (typeof supabase === 'undefined' || !supabase.auth) return;
+        const navCreditsEl = document.getElementById('navCredits');
+        const runBtn = document.getElementById('runBtn');
+        const R = (c)=>{ 
+          if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+          if (runBtn) {
+            const ok = (c ?? 0) > 0;
+            runBtn.disabled = !ok;
+            runBtn.classList.toggle('opacity-50', !ok);
+            runBtn.classList.toggle('cursor-not-allowed', !ok);
+          }
+        };
+
+        const ures = await supabase.auth.getUser();
+        const user = ures?.data?.user;
+        if(!user) return;
+
+        async function loadCreditsOnce(){ 
+          try {
+            const { data: prof } = await supabase.from('profiles')
+              .select('credits').eq('user_id', user.id).maybeSingle();
+            const c = prof?.credits ?? 0;
+            R(c);
+            return c;
+          } catch(e) { console.warn('credits poll read failed', e); return null; }
+        }
+
+        // Long polling burst (3 minutes) every 2s
+        function startCreditsPolling(durationMs=180000, intervalMs=2000){
+          if (window.__creditsPoll) clearInterval(window.__creditsPoll);
+          const t0 = Date.now();
+          window.__creditsPoll = setInterval(async ()=>{
+            await loadCreditsOnce();
+            if (Date.now() - t0 > durationMs) clearInterval(window.__creditsPoll);
+          }, intervalMs);
+        }
+
+        // Initial load -> reflect current value
+        await loadCreditsOnce();
+
+        // If __run exists, wrap it so we start long polling right after Run
+        if (typeof window.__run === 'function') {
+          const __origRun = window.__run;
+          window.__run = async function(){ 
+            const c = await loadCreditsOnce();
+            if ((c ?? 0) <= 0) { alert('No credits left.'); return; }
+            startCreditsPolling(180000, 2000); // 3 minutes polling
+            return __origRun();
+          }
+        }
+      } catch(e){ console.warn('credits polling v2 error', e); }
+    });
+  })();
+  </script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const el = document.getElementById('btnLoginSignup');
+  if (!el || !window.supabase) return;
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data && data.session && data.session.user) {
+      el.style.display = 'none';
+    }
+    supabase.auth.onAuthStateChange((_e, session) => {
+      if (session && session.user) {
+        el.style.display = 'none';
+      } else {
+        el.style.display = '';
+      }
+    });
+  } catch (_) { /* silent */ }
+});
+</script>
+
+<footer class="border-t border-base-line/60">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
+      <nav class="flex items-center gap-5">
+        <a href="/Termsofuse" class="hover:text-white/80">Terms</a>
+        <a href="/policy" class="hover:text-white/80">Privacy</a>
+        <a href="/contact" class="hover:text-white/80">Contact</a>
+      </nav>
+    </div>
+  </footer>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
