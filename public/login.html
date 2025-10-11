@@ -55,9 +55,24 @@
         <div class="flex-1 h-px bg-white/10"></div>
       </div>
 
-      <!-- Email / Password -->
+      <!-- Success panel (hidden by default) -->
+      <section id="successPanel" class="hidden rounded-xl border border-white/10 bg-white/5 p-5 mb-5">
+        <div class="flex items-start gap-3">
+          <div class="h-9 w-9 rounded-lg bg-emerald-500/20 grid place-items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2a10 10 0 100 20 10 10 0 000-20Zm4.95 6.95l-6.364 6.364-2.536-2.536-1.414 1.414 3.95 3.95L18.364 10.364 16.95 8.95z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 id="successTitle" class="text-lg font-semibold text-white">Check your email</h3>
+            <p id="successText" class="text-sm text-zinc-300 mt-1">We sent a confirmation link to your inbox. Open it to continue.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Email / Password form -->
       <form id="formAuth" class="space-y-4" autocomplete="on">
-        <div>
+        <div id="rowEmail">
           <label class="block text-sm mb-1" for="email">Email</label>
           <input id="email" name="email" type="email" required class="w-full rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40" placeholder="you@example.com" />
         </div>
@@ -73,10 +88,13 @@
         </div>
 
         <p id="err" class="text-sm text-red-400 min-h-[1.5rem]"></p>
-<p id="okmsg" class="text-sm text-emerald-400 min-h-[1.5rem]"></p>
 
         <button id="btnSubmit" type="submit" class="w-full btn-brand py-2.5 rounded-xl font-semibold">Log in</button>
 
+        <div class="flex justify-between items-center -mt-1 mb-3">
+          <span class="text-xs text-zinc-400">Minimum 6 characters</span>
+          <a id="linkForgot" href="#" class="text-sm text-indigo-300 hover:text-indigo-200">Forgot password?</a>
+        </div>
         <p class="text-sm text-zinc-400 text-center">
           Don’t have an account?
           <a id="linkToggle" href="#" class="underline decoration-dotted underline-offset-4">Sign up</a>
@@ -93,94 +111,186 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Initialize Supabase (same values used on your other pages)
+    // Initialize Supabase (taken from your project)
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const mode = { value: 'login' }; // 'login' | 'signup'
+    // Elements
     const form = document.getElementById('formAuth');
     const linkToggle = document.getElementById('linkToggle');
     const confirmWrap = document.getElementById('confirmWrap');
     const err = document.getElementById('err');
     const btnSubmit = document.getElementById('btnSubmit');
     const btnGoogle = document.getElementById('btnGoogle');
+    const successPanel = document.getElementById('successPanel');
+    const successTitle = document.getElementById('successTitle');
+    const successText  = document.getElementById('successText');
+const rowPassword = document.getElementById('rowPassword');
+const inputPassword = document.getElementById('password');
+const inputConfirm = document.getElementById('confirm');
 
-    function setMode(next) {
-      mode.value = next;
-      err.textContent = '';
-      if (next === 'signup') {
-        confirmWrap.classList.remove('hidden');
-        btnSubmit.textContent = 'Create account';
-        linkToggle.textContent = 'Back to Log in';
-      } else {
-        confirmWrap.classList.add('hidden');
-        btnSubmit.textContent = 'Log in';
-        linkToggle.textContent = 'Sign up';
-      }
-    }
+    const linkForgot = document.getElementById('linkForgot');
+    const rowEmail = document.getElementById('rowEmail');
 
+    // Mode machine
+    const mode = { value: 'login' }; // 'login' | 'signup' | 'reset' | 'set-new-password'
+
+    
+function setMode(next) {
+  mode.value = next;
+  err.textContent = '';
+  successPanel.classList.add('hidden');
+
+  // defaults
+  rowEmail.classList.remove('hidden');
+  rowPassword.classList.remove('hidden');
+  inputPassword.disabled = false;
+  inputConfirm.disabled = false;
+  confirmWrap.classList.add('hidden');
+  linkToggle.classList.remove('hidden');
+  if (linkForgot) linkForgot.classList.remove('hidden');
+
+  if (next === 'signup') {
+    confirmWrap.classList.remove('hidden');
+    btnSubmit.textContent = 'Create account';
+    linkToggle.textContent = 'Back to Log in';
+    if (linkForgot) linkForgot.classList.add('hidden');
+  } else if (next === 'reset') {
+    // email-only
+    rowPassword.classList.add('hidden');
+    inputPassword.disabled = true;
+    inputConfirm.disabled = true;
+    btnSubmit.textContent = 'Send reset link';
+    linkToggle.textContent = 'Back to Log in';
+    if (linkForgot) linkForgot.classList.add('hidden');
+  } else if (next === 'set-new-password') {
+    rowEmail.classList.add('hidden');
+    rowPassword.classList.remove('hidden');
+    confirmWrap.classList.remove('hidden');
+    inputPassword.disabled = false;
+    inputConfirm.disabled = false;
+    linkToggle.classList.add('hidden');
+    if (linkForgot) linkForgot.classList.add('hidden');
+    btnSubmit.textContent = 'Set new password';
+  } else {
+    // login
+    btnSubmit.textContent = 'Log in';
+    linkToggle.textContent = 'Sign up';
+  }
+}
+
+
+    // Toggle login/signup
     linkToggle.addEventListener('click', (e) => {
       e.preventDefault();
       setMode(mode.value === 'login' ? 'signup' : 'login');
     });
 
+    // Forgot password → reset mode
+    if (linkForgot) {
+      linkForgot.addEventListener('click', (e) => {
+        e.preventDefault();
+        setMode('reset');
+      });
+    }
+
+    // Google OAuth
     btnGoogle.addEventListener('click', async () => {
       try {
-        // OAuth sign-in; redirect back to home after success
-        const { data, error } = await supabase.auth.signInWithOAuth({
+        const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: { redirectTo: `${location.origin}/index.html` }
         });
         if (error) throw error;
-        // Supabase will handle redirect; do nothing here
-      } catch (e) {
-        err.textContent = e.message || 'Google sign-in failed.';
-      }
+      } catch (e) { err.textContent = e.message || 'Google sign-in failed.'; }
     });
 
+    // Handle recovery link (#type=recovery)
+    function getHashParams () {
+      const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+      return Object.fromEntries(h.entries());
+    }
+    (async () => {
+      const { type, access_token, refresh_token } = getHashParams();
+      if (type === 'recovery' && access_token && refresh_token) {
+        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+        if (!error) {
+          setMode('set-new-password');
+        } else {
+          err.textContent = 'This reset link is invalid or expired. Please request a new one.';
+        }
+      }
+    })();
+
+    // Form submit
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       err.textContent = '';
+      successPanel.classList.add('hidden');
 
-      const email = /** @type {HTMLInputElement} */(document.getElementById('email')).value.trim();
-      const password = /** @type {HTMLInputElement} */(document.getElementById('password')).value;
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (mode.value === 'reset') {
+        if (!email) { err.textContent = 'Enter your account email.'; return; }
+        try {
+          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${location.origin}/login.html`
+          });
+          if (error) throw error;
+          form.classList.add('hidden');
+          successTitle.textContent = 'Password reset link sent';
+          successText.textContent = 'We sent a secure link to your inbox. Open it to set a new password.';
+          successPanel.classList.remove('hidden');
+        } catch (e) { err.textContent = e.message || 'Could not send reset email. Please try again.'; }
+        return;
+      }
+
+      if (mode.value === 'set-new-password') {
+        const confirm = document.getElementById('confirm').value;
+        if (password.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
+        if (password !== confirm) { err.textContent = 'Passwords do not match.'; return; }
+        try {
+          const { error } = await supabase.auth.updateUser({ password });
+          if (error) throw error;
+          history.replaceState({}, document.title, location.pathname);
+          form.classList.add('hidden');
+          successTitle.textContent = 'Password updated';
+          successText.textContent = 'Your password has been changed. Continue to Hansora.';
+          successPanel.classList.remove('hidden');
+          setTimeout(() => { window.location.href = '/index.html'; }, 800);
+        } catch (e) { err.textContent = e.message || 'Could not update password. Please try again.'; }
+        return;
+      }
 
       if (mode.value === 'signup') {
-        const confirm = /** @type {HTMLInputElement} */(document.getElementById('confirm')).value;
-        if (password !== confirm) {
-          err.textContent = 'Passwords do not match.';
-          return;
-        }
-        if (password.length < 6) {
-          err.textContent = 'Password must be at least 6 characters.';
-          return;
-        }
+        const confirm = document.getElementById('confirm').value;
+        if (password !== confirm) { err.textContent = 'Passwords do not match.'; return; }
+        if (password.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
         try {
           const { data, error } = await supabase.auth.signUp({ email, password }, {
-  emailRedirectTo: `${location.origin}/index.html`
-});
-if (error) throw error;
-// Redirect only if session is created (email confirmation disabled). Otherwise show message.
-if (data && data.session && data.session.user) {
-  window.location.href = '/index.html';
-} else {
-  document.getElementById('okmsg').textContent = 'Check your inbox to confirm your email. After confirming, log in with your credentials.';
-}
-        } catch (e) {
-          err.textContent = e.message || 'Sign up failed. Please try again.';
-        }
-      } else {
-        // login
-        try {
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            emailRedirectTo: `${location.origin}/index.html`
+          });
           if (error) throw error;
-          window.location.href = '/index.html';
-        } catch (e) {
-          // Show red text on wrong email/password
-          err.textContent = 'Incorrect email or password.';
-        }
+          if (data && data.session && data.session.user) {
+            window.location.href = '/index.html';
+          } else {
+            form.classList.add('hidden');
+            successTitle.textContent = 'Check your email to confirm';
+            successText.textContent = 'We sent a confirmation link to your inbox. After confirming, return here to log in.';
+            successPanel.classList.remove('hidden');
+          }
+        } catch (e) { err.textContent = e.message || 'Sign up failed. Please try again.'; }
+        return;
       }
+
+      // login
+      try {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        window.location.href = '/index.html';
+      } catch (e) { err.textContent = 'Incorrect email or password.'; }
     });
   </script>
 </body>
