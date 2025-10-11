@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA AI — Models</title>
+  <meta name="description" content="Browse all HANSORA AI models for video and image generation." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{
+      background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+        radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+        var(--base-bg);
+      color:#e5e7eb
+    }
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .glass{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    a{transition:all .15s}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+    .chip{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12)}
+    .ring-muted{--tw-ring-color: rgba(255,255,255,.2)}
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+        <div class="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center font-bold">H</div>
+        <span class="font-semibold tracking-wide">HANSORA AI</span>
+      </a>
+      </div>
+      <nav class="hidden md:flex items-center gap-8 text-sm">
+        <a href="#models" class="hover:text-white/90">Models</a>
+        <a href="/templates.html" class="hover:text-white/90">Templates</a>
+        <a href="examples-prompts.html" class="hover:opacity-80">Examples/Prompts</a> <a href="#pricing" class="hover:text-white/90">Pricing</a>
+        <a href="#faq" class="hover:text-white/90">FAQ</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="gptimage.html" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
+
+        <!-- pre-login -->
+        <a id="btnLoginSignup" href="/login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a><a id="btnLoginNav" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Log in</a><a id="btnGetStarted" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Get Started</a>
+
+        <!-- after login -->
+        <div id="navUser" class="hidden items-center gap-2">
+          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
+          <div class="relative">
+            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
+              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
+            </button>
+            <div id="navMenu" class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm">
+              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a>
+              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Edit profile</a>
+              <a href="#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a>
+              <a href="#" href="/usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a>
+              <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO + FILTERS -->
+  <section class="relative">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight">
+            Explore <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-blue-400 to-sky-300">all models</span>
+          </h1>
+          <p class="mt-4 text-zinc-400 max-w-xl">
+            Video Generation and Image Generations — filter or browse all at once.
+          </p>
+          <div class="mt-6 flex flex-wrap gap-2">
+            <button data-filter="all" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">All</button>
+            <button data-filter="video" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">Video</button>
+            <button data-filter="image" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">Image</button>
+          </div>
+          <p class="mt-3 text-xs text-zinc-500">Default: <b>All</b>. Header and footer are identical to your index (no auth logic changed).</p>
+        </div>
+        <div>
+          <div class="glass rounded-2xl p-3 shadow-soft border border-white/10">
+            <div class="aspect-video w-full overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+              <img id="heroPreview" src="https://images.unsplash.com/photo-1522199755839-a2bacb67c546?q=80&w=1960&auto=format&fit=crop" alt="Preview" class="w-full h-full object-cover opacity-90" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIDEO SECTION -->
+  <section id="videoSection" class="pb-12">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <h2 class="text-2xl sm:text-3xl font-bold mb-6">Video Generation</h2>
+      <div id="videoGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+  </section>
+
+  <!-- IMAGE SECTION -->
+  <section id="imageSection" class="pb-20">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <h2 class="text-2xl sm:text-3xl font-bold mb-6">Image Generations</h2>
+      <div id="imageGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+  </section>
+
+  <footer class="border-t border-base-line/60">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
+      <nav class="flex items-center gap-5">
+        <a href="/Termsofuse" class="hover:text-white/80">Terms</a>
+        <a href="/policy" class="hover:text-white/80">Privacy</a>
+        <a href="/contact" class="hover:text-white/80">Contact</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script>
+    // ===== Model definitions (update thumbnail/href as needed) =====
+    const VIDEO_MODELS = [
+      // Sora 2 — Text and Image to Video
+      {type:'video', name:'Sora 2', desc:'Text / Image → Video', badges:['Text→Video','Image→Video'], href:'/sora2.html', thumbnail:'https://images.unsplash.com/photo-1523961131990-5ea7c61b2107?q=80&w=1920&auto=format&fit=crop'},
+      // Kling
+      {type:'video', name:'Kling v2.5 Turbo Pro', desc:'Text / Image → Video', badges:['5s','10s','1080p'], href:'/kling.html', thumbnail:'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1920&auto=format&fit=crop'},
+      // Midjourney image to video
+      {type:'video', name:'Midjourney (Image → Video)', desc:'Image → Video', badges:['Image→Video'], href:'/midjourney-itov.html', thumbnail:'https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=1920&auto=format&fit=crop'},
+      // Veo 3
+      {type:'video', name:'Veo 3', desc:'Text / Image → Video', badges:['Text→Video','Image→Video'], href:'/veo3.html', thumbnail:'https://images.unsplash.com/photo-1549880338-65ddcdfd017b?q=80&w=1920&auto=format&fit=crop'},
+      // Runway
+      {type:'video', name:'Runway', desc:'Text / Image → Video', badges:['Text→Video','Image→Video'], href:'/runway.html', thumbnail:'https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?q=80&w=1920&auto=format&fit=crop'},
+      // Runway Aleph
+      {type:'video', name:'Runway Aleph', desc:'Video → Video', badges:['Video→Video'], href:'/runway-aleph.html', thumbnail:'https://images.unsplash.com/photo-1518779578993-ec3579fee39f?q=80&w=1920&auto=format&fit=crop'}
+    ];
+
+    const IMAGE_MODELS = [
+      // Midjourney image — Text to Image & Image to Image
+      {type:'image', name:'Midjourney (Image)', desc:'Text / Image → Image', badges:['Text→Image','Img→Img'], href:'/midjourney.html', thumbnail:'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=1920&auto=format&fit=crop'},
+      // Nano Banana
+      {type:'image', name:'Nano Banana', desc:'Image → Image', badges:['Img→Img'], href:'/nano-banana.html', thumbnail:'https://images.unsplash.com/photo-1586136194012-33c35b0b0f22?q=80&w=1920&auto=format&fit=crop'},
+      // GPT-Image-1 — Text to Image & Image to Image
+      {type:'image', name:'GPT-Image-1', desc:'Text / Image → Image', badges:['Text→Image','Img→Img'], href:'/gpt-image-1.html', thumbnail:'https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?q=80&w=1920&auto=format&fit=crop'},
+      // Imagen Ultra
+      {type:'image', name:'Imagen Ultra', desc:'Photoreal Text → Image', badges:['Text→Image'], href:'/imagen-ultra.html', thumbnail:'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1920&auto=format&fit=crop'}
+    ];
+
+    // ===== Render helpers =====
+    const videoGrid = document.getElementById('videoGrid');
+    const imageGrid = document.getElementById('imageGrid');
+    const heroPreview = document.getElementById('heroPreview');
+
+    function tile(m){
+      return `
+        <a href="${m.href}" class="group glass rounded-2xl overflow-hidden border border-white/10 shadow-soft block focus:outline-none focus:ring-2 ring-muted">
+          <div class="aspect-video w-full overflow-hidden bg-base-bg/60">
+            <img src="${m.thumbnail}" alt="${m.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          </div>
+          <div class="p-4">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="text-base sm:text-lg font-semibold">${m.name}</h3>
+              <div class="hidden sm:flex gap-1.5">
+                ${m.badges.map(b => `<span class="chip px-2 py-0.5 rounded-md text-[10px] uppercase tracking-wide text-zinc-300">${b}</span>`).join('')}
+              </div>
+            </div>
+            <p class="mt-1 text-sm text-zinc-400">${m.desc}</p>
+            <div class="mt-3 flex sm:hidden gap-1.5">
+              ${m.badges.map(b => `<span class="chip px-2 py-0.5 rounded-md text-[10px] uppercase tracking-wide text-zinc-300">${b}</span>`).join('')}
+            </div>
+          </div>
+        </a>`;
+    }
+
+    function renderSections(){      
+      videoGrid.innerHTML = VIDEO_MODELS.map(m => tile(m)).join('');
+      imageGrid.innerHTML = IMAGE_MODELS.map(m => tile(m)).join('');
+    }
+
+    // ===== Filter behavior (All / Video / Image) =====
+    const btns = Array.from(document.querySelectorAll('.filter-btn'));
+    const videoSection = document.getElementById('videoSection');
+    const imageSection = document.getElementById('imageSection');
+
+    function activate(btn){
+      btns.forEach(b => b.classList.remove('btn-brand'));
+      btns.forEach(b => b.classList.add('btn'));
+      btn.classList.remove('btn');
+      btn.classList.add('btn-brand');
+    }
+
+    btns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const f = btn.getAttribute('data-filter');
+        activate(btn);
+        if(f === 'all') {
+          videoSection.style.display = '';
+          imageSection.style.display = '';
+        } else if(f === 'video') {
+          videoSection.style.display = '';
+          imageSection.style.display = 'none';
+        } else if(f === 'image') {
+          videoSection.style.display = 'none';
+          imageSection.style.display = '';
+        }
+      });
+    });
+
+    // Init
+    renderSections();
+    // Default: All
+    activate(btns[0]);
+  </script>
+</body>
+</html>
