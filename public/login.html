@@ -73,6 +73,7 @@
         </div>
 
         <p id="err" class="text-sm text-red-400 min-h-[1.5rem]"></p>
+<p id="okmsg" class="text-sm text-emerald-400 min-h-[1.5rem]"></p>
 
         <button id="btnSubmit" type="submit" class="w-full btn-brand py-2.5 rounded-xl font-semibold">Log in</button>
 
@@ -156,10 +157,16 @@
           return;
         }
         try {
-          const { data, error } = await supabase.auth.signUp({ email, password });
-          if (error) throw error;
-          // Some projects require email confirmation; still redirect to home
-          window.location.href = '/index.html';
+          const { data, error } = await supabase.auth.signUp({ email, password }, {
+  emailRedirectTo: `${location.origin}/index.html`
+});
+if (error) throw error;
+// Redirect only if session is created (email confirmation disabled). Otherwise show message.
+if (data && data.session && data.session.user) {
+  window.location.href = '/index.html';
+} else {
+  document.getElementById('okmsg').textContent = 'Check your inbox to confirm your email. After confirming, log in with your credentials.';
+}
         } catch (e) {
           err.textContent = e.message || 'Sign up failed. Please try again.';
         }
