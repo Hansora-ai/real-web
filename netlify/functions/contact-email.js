@@ -1,34 +1,35 @@
 // /.netlify/functions/contact-email.js
-// Netlify Functions v1-compatible handler. No frontend changes required.
+// CommonJS Netlify Function (v1) — no ESM, no SDK. Calls Resend via REST to avoid bundling issues.
 
-import { Resend } from 'resend';
+/** @typedef {{ statusCode:number, headers?:Record<string,string>, body:string }} LambdaResponse */
 
-/** JSON helper */
-function json(body, status = 200) {
+/** @param {any} body @param {number} [status=200] @returns {LambdaResponse} */
+function json(body, status) {
   return {
-    statusCode: status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8'
-    },
+    statusCode: status || 200,
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify(body)
   };
 }
 
-/** Parse request body safely */
-function parseBody(event) {
-  try {
-    return JSON.parse(event.body || '{}');
-  } catch {
-    return {};
-  }
+/** @param {string} s */
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-export async function handler(event, context) {
+exports.handler = async function handler(event, context) {
   if (event.httpMethod !== 'POST') {
     return json({ error: 'Method not allowed' }, 405);
   }
 
-  const { email, message } = parseBody(event);
+  let email, message;
+  try {
+    const body = JSON.parse(event.body || '{}');
+    email = body.email;
+    message = body.message;
+  } catch (e) {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
 
   if (!email || !message) {
     return json({ error: 'Missing email or message' }, 400);
@@ -36,52 +37,48 @@ export async function handler(event, context) {
 
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
   const CONTACT_TO_EMAIL = process.env.CONTACT_TO_EMAIL;
-  // Optional: allow override of FROM
   const CONTACT_FROM_EMAIL = process.env.CONTACT_FROM_EMAIL || 'HANSORA AI <onboarding@resend.dev>';
 
-  if (!RESEND_API_KEY) {
-    return json({ error: 'RESEND_API_KEY not set' }, 500);
-  }
-  if (!CONTACT_TO_EMAIL) {
-    return json({ error: 'CONTACT_TO_EMAIL not set' }, 500);
-  }
-
-  const resend = new Resend(RESEND_API_KEY);
+  if (!RESEND_API_KEY) return json({ error: 'RESEND_API_KEY not set' }, 500);
+  if (!CONTACT_TO_EMAIL) return json({ error: 'CONTACT_TO_EMAIL not set' }, 500);
 
   const html = `
     <div style="font-family:Inter,system-ui,Arial,sans-serif;color:#111">
       <h2>New contact message</h2>
-      <p><strong>From:</strong> ${email}</p>
+      <p><strong>From:</strong> ${esc(email)}</p>
       <p><strong>Message:</strong></p>
-      <pre style="white-space:pre-wrap;background:#f6f6f8;padding:12px;border-radius:8px">${escapeHtml(message)}</pre>
+      <pre style="white-space:pre-wrap;background:#f6f6f8;padding:12px;border-radius:8px">${esc(message)}</pre>
     </div>
   `;
 
+  // Use native fetch to Resend REST API to avoid SDK/module issues
   try {
-    const { data, error } = await resend.emails.send({
-      from: CONTACT_FROM_EMAIL,      // must be verified in Resend, otherwise use onboarding@resend.dev
-      to: CONTACT_TO_EMAIL,          // can be a string or array
-      subject: 'Contact form message',
-      html,
-      reply_to: email
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: CONTACT_FROM_EMAIL,
+        to: CONTACT_TO_EMAIL,
+        subject: 'Contact form message',
+        html,
+        reply_to: email
+      })
     });
 
-    if (error) {
-      console.error('Resend error:', error);
-      return json({ error: String(error) }, 500);
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = text; }
+
+    if (!resp.ok) {
+      // Surface Resend error back to frontend
+      return json({ error: 'Resend API error', status: resp.status, data }, 502);
     }
 
-    return json({ ok: true }, 200);
+    return json({ ok: true, data }, 200);
   } catch (e) {
-    console.error('Function error:', e);
-    return json({ error: String(e) }, 500);
+    return json({ error: String(e) }, 502);
   }
-}
-
-/** Minimal HTML escaper for the message body */
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
+};
