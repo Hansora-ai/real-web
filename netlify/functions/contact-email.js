@@ -1,9 +1,9 @@
 // /.netlify/functions/contact-email.js
-// CommonJS Netlify Function (v1) — no ESM, no SDK. Calls Resend via REST to avoid bundling issues.
+// CommonJS, dependency-free (uses https.request), compatible with older Netlify runtimes without global fetch.
 
-/** @typedef {{ statusCode:number, headers?:Record<string,string>, body:string }} LambdaResponse */
+const https = require('https');
 
-/** @param {any} body @param {number} [status=200] @returns {LambdaResponse} */
+/** @param {any} body @param {number} [status=200] */
 function json(body, status) {
   return {
     statusCode: status || 200,
@@ -12,73 +12,82 @@ function json(body, status) {
   };
 }
 
-/** @param {string} s */
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/** POST JSON via https, return a Promise<{status:number, body:string}> */
+function postJSON({ hostname, path, headers, data }) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      { hostname, path, method: 'POST', headers },
+      res => {
+        let chunks = '';
+        res.on('data', d => { chunks += d; });
+        res.on('end', () => resolve({ status: res.statusCode || 0, body: chunks }));
+      }
+    );
+    req.on('error', reject);
+    req.write(data);
+    req.end();
+  });
 }
 
-exports.handler = async function handler(event, context) {
-  if (event.httpMethod !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405);
-  }
+exports.handler = async function(event) {
+  if (event.httpMethod !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   let email, message;
   try {
     const body = JSON.parse(event.body || '{}');
     email = body.email;
     message = body.message;
-  } catch (e) {
+  } catch {
     return json({ error: 'Invalid JSON body' }, 400);
   }
-
-  if (!email || !message) {
-    return json({ error: 'Missing email or message' }, 400);
-  }
+  if (!email || !message) return json({ error: 'Missing email or message' }, 400);
 
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
   const CONTACT_TO_EMAIL = process.env.CONTACT_TO_EMAIL;
   const CONTACT_FROM_EMAIL = process.env.CONTACT_FROM_EMAIL || 'HANSORA AI <onboarding@resend.dev>';
-
   if (!RESEND_API_KEY) return json({ error: 'RESEND_API_KEY not set' }, 500);
   if (!CONTACT_TO_EMAIL) return json({ error: 'CONTACT_TO_EMAIL not set' }, 500);
 
-  const html = `
-    <div style="font-family:Inter,system-ui,Arial,sans-serif;color:#111">
-      <h2>New contact message</h2>
-      <p><strong>From:</strong> ${esc(email)}</p>
-      <p><strong>Message:</strong></p>
-      <pre style="white-space:pre-wrap;background:#f6f6f8;padding:12px;border-radius:8px">${esc(message)}</pre>
-    </div>
-  `;
+  const payload = JSON.stringify({
+    from: CONTACT_FROM_EMAIL,
+    to: CONTACT_TO_EMAIL,
+    subject: 'Contact form message',
+    html: `
+      <div style="font-family:Inter,system-ui,Arial,sans-serif;color:#111">
+        <h2>New contact message</h2>
+        <p><strong>From:</strong> ${esc(email)}</p>
+        <p><strong>Message:</strong></p>
+        <pre style="white-space:pre-wrap;background:#f6f6f8;padding:12px;border-radius:8px">${esc(message)}</pre>
+      </div>
+    `,
+    reply_to: email
+  });
 
-  // Use native fetch to Resend REST API to avoid SDK/module issues
   try {
-    const resp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
+    const resp = await postJSON({
+      hostname: 'api.resend.com',
+      path: '/emails',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
       },
-      body: JSON.stringify({
-        from: CONTACT_FROM_EMAIL,
-        to: CONTACT_TO_EMAIL,
-        subject: 'Contact form message',
-        html,
-        reply_to: email
-      })
+      data: payload
     });
 
-    const text = await resp.text();
-    let data;
-    try { data = JSON.parse(text); } catch { data = text; }
+    let parsed;
+    try { parsed = JSON.parse(resp.body); } catch { parsed = resp.body; }
 
-    if (!resp.ok) {
-      // Surface Resend error back to frontend
-      return json({ error: 'Resend API error', status: resp.status, data }, 502);
+    if (resp.status < 200 || resp.status >= 300) {
+      // Return 200 to avoid browser 502 banner; surface error in JSON instead.
+      return json({ ok: false, provider: 'resend', status: resp.status, error: parsed });
     }
 
-    return json({ ok: true, data }, 200);
+    return json({ ok: true, data: parsed });
   } catch (e) {
-    return json({ error: String(e) }, 502);
+    // Return 200 with error payload to avoid generic 502 in browser; frontend can read details if needed.
+    return json({ ok: false, error: String(e) });
   }
 };
