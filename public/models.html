@@ -654,5 +654,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (_) { /* silent */ }
 });
 </script>
+
+  <div id="authModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4">
+    <div id="authCard" class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 id="authTitle" class="text-lg font-semibold">Log in</h3>
+        <button id="authClose" class="rounded-lg btn px-2 py-1 text-sm">✕</button>
+      </div>
+      <form id="authForm" class="space-y-3">
+        <input id="authEmail" type="email" placeholder="Email" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
+        <input id="authPass" type="password" placeholder="Password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
+        <input id="authPass2" type="password" placeholder="Repeat password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden">
+        <div class="flex gap-2">
+          <button id="btnDoLogin" type="button" class="w-1/2 rounded-lg btn px-3 py-2 font-semibold">Log in</button>
+          <button id="btnDoSignup" type="button" class="w-1/2 rounded-lg btn px-3 py-2">Sign up</button>
+        </div>
+        <p id="authMsg" class="text-xs text-zinc-400"></p>
+      </form>
+    </div>
+  </div>
 </body>
 </html>
