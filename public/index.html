@@ -53,7 +53,7 @@
         <a href="gptimage.html" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
 
         <!-- pre-login -->
-        <a href="/login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a><a id="btnLoginNav" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Log in</a><a id="btnGetStarted" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Get Started</a>
+        <a id="btnLoginSignup" href="/login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a><a id="btnLoginNav" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Log in</a><a id="btnGetStarted" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Get Started</a>
 
         <!-- after login -->
         <div id="navUser" class="hidden items-center gap-2">
@@ -626,6 +626,27 @@
     });
   })();
   </script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const el = document.getElementById('btnLoginSignup');
+  if (!el || !window.supabase) return;
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data && data.session && data.session.user) {
+      el.style.display = 'none';
+    }
+    supabase.auth.onAuthStateChange((_e, session) => {
+      if (session && session.user) {
+        el.style.display = 'none';
+      } else {
+        el.style.display = '';
+      }
+    });
+  } catch (_) { /* silent */ }
+});
+</script>
 
 </body>
 </html>
