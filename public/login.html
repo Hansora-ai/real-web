@@ -131,6 +131,7 @@
     const inputConfirm = document.getElementById('confirm');
     const linkForgot = document.getElementById('linkForgot');
     const rowEmail = document.getElementById('rowEmail');
+    const inputEmail = document.getElementById('email');
 
     // Mode machine
     const mode = { value: 'login' }; // 'login' | 'signup' | 'reset' | 'set-new-password'
@@ -142,6 +143,7 @@
 
       // defaults
       rowEmail.classList.remove('hidden');
+      if (inputEmail) inputEmail.disabled = false;
       rowPassword.classList.remove('hidden');
       inputPassword.disabled = false;
       inputConfirm.disabled = false;
@@ -164,6 +166,7 @@
         if (linkForgot) linkForgot.classList.add('hidden');
       } else if (next === 'set-new-password') {
         rowEmail.classList.add('hidden');
+        if (inputEmail) inputEmail.disabled = true;
         rowPassword.classList.remove('hidden');
         confirmWrap.classList.remove('hidden');
         inputPassword.disabled = false;
