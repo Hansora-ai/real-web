@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign in — HANSORA AI</title>
+  <meta name="description" content="Sign in or create your Hansora account." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+                       var(--base-bg); color:#e5e7eb}
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .hero-glow{position:absolute; inset:-20%; background:
+      radial-gradient(800px 400px at 0% 0%, rgba(99,102,241,.25), transparent 60%),
+      radial-gradient(800px 400px at 100% 100%, rgba(56,189,248,.18), transparent 60%);
+      filter: blur(40px); opacity:.6; pointer-events:none}
+    a{transition:all .15s}
+    input{background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08)}
+    label{color:#cbd5e1}
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center relative">
+  <div class="hero-glow"></div>
+
+  <!-- Auth Card -->
+  <main class="w-full max-w-md mx-auto px-4">
+    <div class="rounded-2xl border border-white/10 bg-base-bg shadow-soft p-6 md:p-8">
+      <div class="flex flex-col items-center gap-2 mb-6">
+        <div class="h-12 w-12 rounded-full bg-white/10 grid place-items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20Zm1 5v5.586l3.293 3.293-1.414 1.414L11 13.414V7h2Z"/></svg>
+        </div>
+        <h1 class="text-2xl md:text-3xl font-semibold">Create Without Limits</h1>
+        <p class="text-sm text-zinc-400 -mt-1">Sign in to continue</p>
+      </div>
+
+      <!-- Google -->
+      <button id="btnGoogle" class="w-full btn border-white/10 py-3 rounded-xl flex items-center justify-center gap-3 mb-5">
+        <img alt="G" class="h-5 w-5" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
+        <span class="font-medium">Sign in with Google</span>
+      </button>
+
+      <!-- Divider -->
+      <div class="flex items-center gap-3 my-5">
+        <div class="flex-1 h-px bg-white/10"></div>
+        <span class="text-xs text-zinc-400">or</span>
+        <div class="flex-1 h-px bg-white/10"></div>
+      </div>
+
+      <!-- Email / Password -->
+      <form id="formAuth" class="space-y-4" autocomplete="on">
+        <div>
+          <label class="block text-sm mb-1" for="email">Email</label>
+          <input id="email" name="email" type="email" required class="w-full rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40" placeholder="you@example.com" />
+        </div>
+        <div id="rowPassword" class="grid grid-cols-1 gap-4">
+          <div>
+            <label class="block text-sm mb-1" for="password">Password</label>
+            <input id="password" name="password" type="password" minlength="6" required class="w-full rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40" placeholder="••••••••" />
+          </div>
+          <div id="confirmWrap" class="hidden">
+            <label class="block text-sm mb-1" for="confirm">Repeat password</label>
+            <input id="confirm" name="confirm" type="password" minlength="6" class="w-full rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40" placeholder="••••••••" />
+          </div>
+        </div>
+
+        <p id="err" class="text-sm text-red-400 min-h-[1.5rem]"></p>
+
+        <button id="btnSubmit" type="submit" class="w-full btn-brand py-2.5 rounded-xl font-semibold">Log in</button>
+
+        <p class="text-sm text-zinc-400 text-center">
+          Don’t have an account?
+          <a id="linkToggle" href="#" class="underline decoration-dotted underline-offset-4">Sign up</a>
+        </p>
+      </form>
+
+      <p class="text-xs text-zinc-500 text-center mt-6">
+        By signing in, you agree to our
+        <a href="/terms.html" class="underline">Terms of Use</a> and
+        <a href="/policy.html" class="underline">Privacy Policy</a>.
+      </p>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Initialize Supabase (same values used on your other pages)
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const mode = { value: 'login' }; // 'login' | 'signup'
+    const form = document.getElementById('formAuth');
+    const linkToggle = document.getElementById('linkToggle');
+    const confirmWrap = document.getElementById('confirmWrap');
+    const err = document.getElementById('err');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const btnGoogle = document.getElementById('btnGoogle');
+
+    function setMode(next) {
+      mode.value = next;
+      err.textContent = '';
+      if (next === 'signup') {
+        confirmWrap.classList.remove('hidden');
+        btnSubmit.textContent = 'Create account';
+        linkToggle.textContent = 'Back to Log in';
+      } else {
+        confirmWrap.classList.add('hidden');
+        btnSubmit.textContent = 'Log in';
+        linkToggle.textContent = 'Sign up';
+      }
+    }
+
+    linkToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      setMode(mode.value === 'login' ? 'signup' : 'login');
+    });
+
+    btnGoogle.addEventListener('click', async () => {
+      try {
+        // OAuth sign-in; redirect back to home after success
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: `${location.origin}/index.html` }
+        });
+        if (error) throw error;
+        // Supabase will handle redirect; do nothing here
+      } catch (e) {
+        err.textContent = e.message || 'Google sign-in failed.';
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.textContent = '';
+
+      const email = /** @type {HTMLInputElement} */(document.getElementById('email')).value.trim();
+      const password = /** @type {HTMLInputElement} */(document.getElementById('password')).value;
+
+      if (mode.value === 'signup') {
+        const confirm = /** @type {HTMLInputElement} */(document.getElementById('confirm')).value;
+        if (password !== confirm) {
+          err.textContent = 'Passwords do not match.';
+          return;
+        }
+        if (password.length < 6) {
+          err.textContent = 'Password must be at least 6 characters.';
+          return;
+        }
+        try {
+          const { data, error } = await supabase.auth.signUp({ email, password });
+          if (error) throw error;
+          // Some projects require email confirmation; still redirect to home
+          window.location.href = '/index.html';
+        } catch (e) {
+          err.textContent = e.message || 'Sign up failed. Please try again.';
+        }
+      } else {
+        // login
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          window.location.href = '/index.html';
+        } catch (e) {
+          // Show red text on wrong email/password
+          err.textContent = 'Incorrect email or password.';
+        }
+      }
+    });
+  </script>
+</body>
+</html>
