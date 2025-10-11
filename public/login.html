@@ -272,12 +272,13 @@
         if (password.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
         try {
           // v2 signature with options
-          const { data, error } = await supabase.auth.signUp({
-            email, password,
-            options: { emailRedirectTo: `${location.origin}/login.html` }
-          });
-
-          // If user exists already: show inline red error (no resend, no success panel)
+          \1
+          // Guard: Supabase may return success for already-registered emails (identities===0)
+          if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+            err.textContent = 'Email is already registered.';
+            return;
+          }
+// If user exists already: show inline red error (no resend, no success panel)
           if (error && (String(error.message).toLowerCase().includes('already registered') || error.status === 400)) {
             alreadyRegistered = true;
             err.textContent = 'Email is already registered.';
