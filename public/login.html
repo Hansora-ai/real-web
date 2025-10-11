@@ -275,13 +275,9 @@
             options: { emailRedirectTo: `${location.origin}/login.html` }
           });
 
-          // If user exists already: resend confirmation and show friendly message
-          if (error && (String(error.message).toLowerCase().includes('already registered') || error.status === 400)) {
-            await supabase.auth.resend({ type: 'signup', email }).catch(()=>{});
-            form.classList.add('hidden');
-            successTitle.textContent = 'Email already registered';
-            successText.textContent = 'We re-sent the confirmation link to your inbox. Please confirm to finish creating your account.';
-            successPanel.classList.remove('hidden');
+          // If Supabase says this email already exists (confirmed or not), show a clear inline message
+          if (error && String(error.message).toLowerCase().includes('already registered')) {
+            err.textContent = 'This email is already registered. Log in or use “Forgot password”.';
             return;
           }
 
