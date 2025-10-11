@@ -272,7 +272,11 @@
         if (password.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
         try {
           // v2 signature with options
-          \1
+          const { data, error } = await supabase.auth.signUp({
+            email, password,
+            options: { emailRedirectTo: `${location.origin}/login.html` }
+          });
+
           // Guard: Supabase may return success for already-registered emails (identities===0)
           if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
             err.textContent = 'Email is already registered.';
