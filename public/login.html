@@ -242,7 +242,8 @@
           form.classList.add('hidden');
           successTitle.textContent = 'Password reset link sent';
           successText.textContent = 'We sent a secure link to your inbox. Open it to set a new password.';
-          successPanel.classList.remove('hidden');
+          if (typeof alreadyRegistered !== 'undefined' && alreadyRegistered) { return; }
+            successPanel.classList.remove('hidden');
         } catch (e) { err.textContent = e.message || 'Could not send reset email. Please try again.'; }
         return;
       }
@@ -258,7 +259,8 @@
           form.classList.add('hidden');
           successTitle.textContent = 'Password updated';
           successText.textContent = 'Your password has been changed. Continue to Hansora.';
-          successPanel.classList.remove('hidden');
+          if (typeof alreadyRegistered !== 'undefined' && alreadyRegistered) { return; }
+            successPanel.classList.remove('hidden');
           setTimeout(() => { window.location.href = '/index.html'; }, 800);
         } catch (e) { err.textContent = e.message || 'Could not update password. Please try again.'; }
         return;
@@ -277,9 +279,11 @@
 
           // If user exists already: show inline red error (no resend, no success panel)
           if (error && (String(error.message).toLowerCase().includes('already registered') || error.status === 400)) {
+            alreadyRegistered = true;
             err.textContent = 'Email is already registered.';
             return;
           }
+
 
           if (error) throw error;
 
@@ -290,6 +294,7 @@
             form.classList.add('hidden');
             successTitle.textContent = 'Check your email to confirm';
             successText.textContent = 'We sent a confirmation link to your inbox. After confirming, return here to log in.';
+            if (typeof alreadyRegistered !== 'undefined' && alreadyRegistered) { return; }
             successPanel.classList.remove('hidden');
           }
         } catch (e) {
