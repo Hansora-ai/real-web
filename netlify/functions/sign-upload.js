@@ -17,7 +17,7 @@ function tinyFetch(rawUrl, opts = {}) {
         port: url.port || 443,
         path: url.pathname + (url.search || ''),
         method,
-        headers
+        headers,
       }, (res) => {
         const chunks = [];
         res.on('data', c => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
@@ -28,7 +28,10 @@ function tinyFetch(rawUrl, opts = {}) {
             status: res.statusCode,
             headers: res.headers,
             text: () => Promise.resolve(buf.toString('utf8')),
-            json: () => Promise.resolve().then(() => JSON.parse(buf.toString('utf8') || '{}'))
+            json: () => Promise.resolve().then(() => {
+              const s = buf.toString('utf8') || '{}';
+              try { return JSON.parse(s); } catch { return { raw: s }; }
+            })
           });
         });
       });
@@ -57,9 +60,9 @@ exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return json(405, { error: 'method_not_allowed' });
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
-    const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'video';
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
+    const BUCKET = (process.env.SUPABASE_BUCKET || 'video').trim();
+    if (!SUPABASE_URL || !SERVICE_KEY) {
       return json(500, { error: 'server_config', detail: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY' });
     }
 
@@ -67,7 +70,6 @@ exports.handler = async (event) => {
     const filename = sanitize(body.filename || 'image.jpg');
     const mime = normalizeMime(body.mime || 'image/jpeg');
 
-    // unique object path
     const now = new Date();
     const y = now.getUTCFullYear();
     const m = String(now.getUTCMonth() + 1).padStart(2, '0');
@@ -75,36 +77,51 @@ exports.handler = async (event) => {
     const rand = crypto.randomBytes(8).toString('hex');
     const objectPath = `images/user-uploads/${y}/${m}/${d}/${rand}-${filename}`;
 
-    // Use Supabase "createSignedUploadUrl" (works when object doesn't exist yet).
-    // REST equivalent: POST /storage/v1/object/upload/sign
-    const uploadSignUrl = `${SUPABASE_URL.replace(/\/+$/,'')}/storage/v1/object/upload/sign`;
+    // Primary: createSignedUploadUrl via REST (works for new objects)
+    const signUrl = `${SUPABASE_URL.replace(/\/+$/,'')}/storage/v1/object/upload/sign`;
     const payload = JSON.stringify({
-      bucketName: SUPABASE_BUCKET,
+      bucketId: BUCKET,           // <-- bucketId required by REST
+      bucketName: BUCKET,         // <-- keep for forward-compat
       objectName: objectPath,
-      contentType: mime
+      contentType: mime,
+      expiresIn: 600,
     });
 
-    const res = await tinyFetch(uploadSignUrl, {
+    let res = await tinyFetch(signUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${SERVICE_KEY}`,
+        'apikey': SERVICE_KEY,                 // some gateways require apikey as well
+        'Content-Type': 'application/json',
       },
       body: payload
     });
+
+    // Fallback if API returns 404 "Bucket not found" (older gateway)
+    if (!res.ok && res.status === 404) {
+      const legacyUrl = `${SUPABASE_URL.replace(/\/+$/,'')}/storage/v1/object/sign/${encodeURIComponent(BUCKET)}/${encodePath(objectPath)}`;
+      res = await tinyFetch(legacyUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SERVICE_KEY}`,
+          'apikey': SERVICE_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ expiresIn: 600, method: 'PUT', contentType: mime })
+      });
+    }
 
     if (!res.ok) {
       const txt = await res.text().catch(()=>'');
       return json(502, { error: 'sign_failed', detail: txt || `status ${res.status}` });
     }
 
-    const data = await res.json().catch(()=> ({}));
-    // Supabase returns { signedUrl, token, path }
-    const rel = data.signedUrl || data.signedURL;
+    const data = await res.json();
+    const rel = data.signedUrl || data.signedURL || data.url || '';
     if (!rel) return json(502, { error: 'sign_failed', detail: 'missing signedUrl' });
 
     const uploadUrl = `${SUPABASE_URL.replace(/\/+$/,'')}${rel.startsWith('/') ? '' : '/'}${rel}`;
-    const publicUrl = `${SUPABASE_URL.replace(/\/+$/,'')}/storage/v1/object/public/${encodeURIComponent(SUPABASE_BUCKET)}/${encodePath(objectPath)}`;
+    const publicUrl = `${SUPABASE_URL.replace(/\/+$/,'')}/storage/v1/object/public/${encodeURIComponent(BUCKET)}/${encodePath(objectPath)}`;
 
     return json(200, { uploadUrl, objectPath, publicUrl });
   } catch (e) {
