@@ -1,11 +1,12 @@
 // netlify/functions/sign-upload.js
-// v7: Robust signer — accepts any Supabase signed URL shape, sets upsert:true, and returns both uploadUrl & publicUrl.
-// Minimal surface change vs. earlier versions; only relaxes URL checks and always upserts.
+// v6: Accept Supabase upload signed path with or without `/storage/v1` prefix.
+// Treat returned `signedUrl` as the PUT URL.
 
 const https = require('https');
 const { URL } = require('url');
+const crypto = require('crypto');
 
-const HANDLER_VERSION = 'sign-upload@v7-robust-upsert';
+const HANDLER_VERSION = 'sign-upload@v6-accept-sign-path';
 
 function cors() {
   return {
@@ -14,111 +15,168 @@ function cors() {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 }
-
-function json(status, body, extra = {}) {
-  return {
-    statusCode: status,
-    headers: { 'content-type': 'application/json; charset=utf-8', ...cors(), ...extra, 'x-handler-version': HANDLER_VERSION },
-    body: JSON.stringify(body),
-  };
+function resp(code, body, headers) {
+  return { statusCode: code, headers: { ...cors(), ...(headers || {}) }, body };
+}
+function json(code, obj, headers) {
+  return resp(code, JSON.stringify(obj), { 'Content-Type': 'application/json', ...(headers || {}) });
 }
 
-function absolutize(baseUrl, maybePath) {
-  try {
-    const u = new URL(maybePath);
-    return u.toString(); // already absolute
-  } catch {
-    // relative path from Supabase like /storage/v1/object/upload/sign/...
-    return new URL(maybePath, baseUrl).toString();
-  }
-}
-
-function safeJoinPath(...parts) {
-  return parts
-    .filter(Boolean)
-    .join('/')
-    .replace(/\/{2,}/g, '/')
-    .replace(/^\//, '') // no leading slash
-    .replace(/\/$/, ''); // no trailing slash
-}
-
-function fetchJSON(u, { method='GET', headers={}, body } = {}) {
+function tinyFetch(rawUrl, opts = {}) {
   return new Promise((resolve, reject) => {
-    const urlObj = new URL(u);
-    const req = https.request({
-      method,
-      hostname: urlObj.hostname,
-      path: urlObj.pathname + urlObj.search,
-      headers,
-    }, (res) => {
-      let data = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => data += c);
-      res.on('end', () => {
-        let parsed = {};
-        try { parsed = JSON.parse(data || '{}'); } catch {}
-        resolve({ status: res.statusCode, headers: res.headers, body: parsed });
+    try {
+      const url = new URL(rawUrl);
+      const method = (opts.method || 'GET').toUpperCase();
+      const headers = opts.headers || {};
+      const body = opts.body || null;
+
+      const req = https.request({
+        protocol: url.protocol,
+        hostname: url.hostname,
+        port: url.port || (url.protocol === 'https:' ? 443 : 80),
+        path: url.pathname + (url.search || ''),
+        method,
+        headers,
+      }, (res) => {
+        const chunks = [];
+        res.on('data', (d) => chunks.push(d));
+        res.on('end', () => {
+          const buf = Buffer.concat(chunks);
+          const text = buf.toString('utf8');
+          resolve({
+            ok: res.statusCode >= 200 && res.statusCode < 300,
+            status: res.statusCode,
+            headers: res.headers,
+            text: async () => text,
+            json: async () => { try { return JSON.parse(text); } catch { return {}; } },
+          });
+        });
       });
-    });
-    req.on('error', reject);
-    if (body) req.write(typeof body === 'string' ? body : JSON.stringify(body));
-    req.end();
+      req.on('error', reject);
+      if (body) {
+        if (Buffer.isBuffer(body)) req.write(body);
+        else if (typeof body === 'string') req.write(body, 'utf8');
+        else return reject(new Error('Unsupported body type'));
+      }
+      req.end();
+    } catch (e) { reject(e); }
   });
 }
 
+function sanitize(name) {
+  return String(name || 'file')
+    .replace(/[^\w.\-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+function extForMime(mime) {
+  const m = (mime || '').toLowerCase();
+  if (m === 'image/jpeg' || m === 'image/jpg' || m === 'image/pjpeg') return 'jpg';
+  if (m === 'image/png' || m === 'image/x-png') return 'png';
+  if (m === 'image/webp') return 'webp';
+  if (m === 'video/mp4') return 'mp4';
+  if (m === 'video/quicktime') return 'mov';
+  if (m === 'image/gif') return 'gif';
+  return 'bin';
+}
+function encodePath(p) {
+  return String(p).split('/').map(encodeURIComponent).join('/');
+}
+
+function cfg() {
+  const rawUrl = (process.env.SUPABASE_URL || '').trim();
+  const rawBucket = (process.env.SUPABASE_BUCKET || '').trim();
+  const rawKey = ((process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()) || ((process.env.SUPABASE_SERVICE_KEY || '').trim());
+  if (!rawUrl) throw new Error('Missing SUPABASE_URL');
+  if (!rawBucket) throw new Error('Missing SUPABASE_BUCKET');
+  if (!rawKey) throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY)');
+  const exp = parseInt(String(process.env.SIGN_EXP || '3600'), 10) || 3600;
+  return {
+    url: rawUrl.replace(/\/+$/, ''),
+    bucket: rawBucket,
+    key: rawKey,
+    exp,
+  };
+}
+
+async function signUpload(urlBase, key, bucket, objectPath, mime, exp) {
+  // Request a signed PUT URL
+  const u = `${urlBase}/storage/v1/object/upload/sign/${encodeURIComponent(bucket)}/${encodePath(objectPath)}`;
+  const body = { contentType: mime || 'application/octet-stream', upsert: true, expiresIn: exp };
+  const res = await tinyFetch(u, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const txt = await res.text();
+  let data = {};
+  try { data = JSON.parse(txt); } catch {}
+  return { ok: res.ok, status: res.status, data, raw: txt };
+}
+
+function objectPathFor(filename, mime) {
+  const base = String(filename || 'file').replace(/\.[^.]+$/, '');
+  const ext = extForMime(mime);
+  const safe = `${sanitize(base)}.${ext}`;
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(now.getUTCDate()).padStart(2, '0');
+  const rand = crypto.randomBytes(8).toString('hex');
+  return `images/user-uploads/${y}/${m}/${d}/${rand}-${safe}`;
+}
+
+function absolutize(base, pathOrUrl) {
+  if (!pathOrUrl) return null;
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  // Ensure we include /storage/v1 if missing
+  const needsPrefix = !/^\/storage\/v1\//.test(pathOrUrl);
+  const p = needsPrefix ? `/storage/v1${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}` : pathOrUrl;
+  return `${base}${p}`;
+}
+
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') return json(200, { ok: true });
-  if (event.httpMethod !== 'POST') return json(405, { error: 'method_not_allowed' });
-
-  const headers = cors();
+  const headers = { ...cors(), 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'x-handler-version': HANDLER_VERSION };
   try {
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SERVICE_ROLE_KEY;
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return json(500, { error: 'missing_env', detail: 'SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing' }, headers);
-    }
+    if (event.httpMethod === 'OPTIONS') return resp(204, '', headers);
+    if (event.httpMethod !== 'POST') return json(405, { error: 'method_not_allowed' }, headers);
 
-    let body = {};
-    try { body = JSON.parse(event.body || '{}'); } catch {}
-    const filename = (body.filename || 'upload.bin').replace(/[^A-Za-z0-9._-]/g, '_');
-    const mime = String(body.mime || 'application/octet-stream');
-    const bucket = String(body.bucket || 'video'); // default you used in screenshots
+    const { url, bucket, key, exp } = cfg();
 
-    // object path: images/user-uploads/YYYY/MM/DD/<rand>-<filename>
-    const now = new Date();
-    const y = now.getUTCFullYear();
-    const m = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(now.getUTCDate()).padStart(2, '0');
-    const rand = Math.random().toString(16).slice(2, 10) + Math.random().toString(16).slice(2, 10);
-    const objectPath = safeJoinPath('images/user-uploads', `${y}`, `${m}`, `${d}`, `${rand}-${filename}`);
+    let payload = {};
+    try { payload = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'bad_json' }, headers); }
+    const filename = (payload.filename || '').toString();
+    const mime = (payload.mime || '').toString().toLowerCase();
+    const objectPath = objectPathFor(filename, mime);
 
-    // Request a signed upload URL from Supabase (upsert:true)
-    const signUrl = new URL(`/storage/v1/object/upload/sign/${encodeURIComponent(bucket)}/${encodeURIComponent(objectPath)}`, SUPABASE_URL);
-    const { status, body: signBody } = await fetchJSON(signUrl.toString(), {
-      method: 'POST',
-      headers: {
-        'authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'content-type': 'application/json',
-        'x-client-info': HANDLER_VERSION,
-      },
-      body: { expiresIn: 3600, upsert: true, contentType: mime },
+    // Bucket probe for precise diagnostics
+    const probe = await tinyFetch(`${url}/storage/v1/bucket/${encodeURIComponent(bucket)}`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${key}` },
     });
-
-    if (status < 200 || status >= 300) {
-      return json(500, { error: 'sign_failed', detail: signBody && (signBody.message || signBody.error) || 'unknown', signBody }, headers);
+    if (probe.status === 404) {
+      return json(500, { error: 'bucket_not_found', detail: `Bucket '${bucket}' does not exist on ${new URL(url).host}` },
+        { ...headers, 'x-project-host': new URL(url).host, 'x-bucket': bucket });
     }
 
-    // Supabase returns { signedUrl: "...", path: "..." } — accept any shape
-    const rawSigned = signBody.signedUrl || signBody.url || signBody.signed_url || signBody.signedURL;
-    if (!rawSigned) {
-      return json(500, { error: 'sign_missing_url', detail: signBody }, headers);
+    const signed = await signUpload(url, key, bucket, objectPath, mime, exp);
+    if (!signed.ok) {
+      return json(502, { error: 'sign_failed', detail: signed.raw || signed.data },
+        { ...headers, 'x-project-host': new URL(url).host, 'x-bucket': bucket });
     }
 
-    const uploadUrl = absolutize(SUPABASE_URL, rawSigned);
-    const publicUrl = new URL(`/storage/v1/object/public/${encodeURIComponent(bucket)}/${objectPath.split('/').map(encodeURIComponent).join('/')}`, SUPABASE_URL).toString();
+    const signedUrl = signed.data && (signed.data.signedUrl || signed.data.signedURL || signed.data.url);
+    if (!signedUrl) {
+      return json(500, { error: 'sign_missing_url', detail: signed.data || signed.raw }, { ...headers, 'x-project-host': new URL(url).host, 'x-bucket': bucket });
+    }
+
+    // Accept `/object/upload/sign/...` with or without `/storage/v1` prefix
+
+    const uploadUrl = absolutize(url, signedUrl);
+    const publicUrl = `${url}/storage/v1/object/public/${encodeURIComponent(bucket)}/${encodeURIComponent(objectPath).replace(/%2F/g,'/')}`;
 
     return json(200, { uploadUrl, publicUrl, bucket, objectPath },
-      { ...headers, 'x-project-host': new URL(SUPABASE_URL).host, 'x-bucket': bucket, 'x-object': objectPath });
+      { ...headers, 'x-project-host': new URL(url).host, 'x-bucket': bucket, 'x-object': objectPath });
   } catch (e) {
     return json(500, { error: 'server_error', detail: String(e && e.message ? e.message : e) }, headers);
   }
