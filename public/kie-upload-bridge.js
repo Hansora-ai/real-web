@@ -2,12 +2,19 @@
 (() => {
   const ORIG_FETCH = window.fetch.bind(window);
 
+  function normalizeMime(m) {
+    if (!m) return '';
+    const s = m.toLowerCase();
+    if (s === 'image/jpg' || s === 'image/pjpeg') return 'image/jpeg';
+    if (s === 'image/x-png') return 'image/png';
+    return s;
+  }
+
   async function fdToFiles(fd) {
     const files = [];
     for (const [k, v] of fd.entries()) {
       if (v instanceof File) files.push(v);
       else if (typeof v === 'string' && v.startsWith('data:image/')) {
-        // convert data URL to Blob
         const [head, b64] = v.split(',', 2);
         const mime = (head.match(/^data:([^;]+);base64$/i) || [,'application/octet-stream'])[1];
         const buf = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
@@ -18,16 +25,17 @@
   }
 
   async function signAndPut(file) {
-    // ask the tiny signer for an upload URL
     const signRes = await ORIG_FETCH('/.netlify/functions/sign-upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ filename: file.name, mime: normalizeMime(file.type) }),
     });
-    if (!signRes.ok) throw new Error('sign_failed ' + signRes.status);
+    if (!signRes.ok) {
+      const txt = await signRes.text().catch(()=> '');
+      throw new Error('sign_failed ' + signRes.status + (txt ? (': ' + txt) : ''));
+    }
     const { uploadUrl, publicUrl } = await signRes.json();
 
-    // PUT the raw file bytes to Supabase
     const putRes = await ORIG_FETCH(uploadUrl, {
       method: 'PUT',
       headers: { 'Content-Type': normalizeMime(file.type) || 'application/octet-stream' },
@@ -35,17 +43,9 @@
     });
     if (!putRes.ok) {
       const txt = await putRes.text().catch(()=> '');
-      throw new Error('put_failed ' + putRes.status + ': ' + txt);
+      throw new Error('put_failed ' + putRes.status + (txt ? (': ' + txt) : ''));
     }
-    return publicUrl; // use public URL; if your bucket is private, we can swap to signed reads
-  }
-
-  function normalizeMime(m) {
-    if (!m) return '';
-    const s = m.toLowerCase();
-    if (s === 'image/jpg' || s === 'image/pjpeg') return 'image/jpeg';
-    if (s === 'image/x-png') return 'image/png';
-    return s;
+    return publicUrl;
   }
 
   window.fetch = async (input, init = {}) => {
@@ -53,26 +53,29 @@
       const url = (typeof input === 'string') ? input : (input && input.url) || '';
       const method = (init && init.method) || (typeof input !== 'string' && input && input.method) || 'GET';
 
-      // Only intercept the exact call your page makes
-      if (url.endsWith('/.netlify/functions/kie-upload') && method.toUpperCase() === 'POST' && init && init.body instanceof FormData) {
+      // Intercept ONLY the known upload call
+      if (url.endsWith('/.netlify/functions/kie-upload') &&
+          method.toUpperCase() === 'POST' &&
+          init && init.body instanceof FormData) {
+
         const fd = init.body;
         const files = await fdToFiles(fd);
         if (!files.length) {
-          // no file? behave like original
-          return new Response(JSON.stringify({ error: 'no_file', detail: 'No files in FormData' }), { status: 400, headers: { 'Content-Type': 'application/json' }});
+          return new Response(JSON.stringify({ error: 'no_file', detail: 'No files in FormData' }), {
+            status: 400, headers: { 'Content-Type': 'application/json' }
+          });
         }
 
         const urls = [];
-        // upload sequentially (stable & avoids parallel PUT hiccups)
         for (const f of files) {
-          const url = await signAndPut(f);
-          urls.push(url);
+          const u = await signAndPut(f);
+          urls.push(u);
         }
         const body = JSON.stringify({ downloadUrl: urls[0], urls });
         return new Response(body, { status: 200, headers: { 'Content-Type': 'application/json' }});
       }
 
-      // otherwise, pass-through
+      // Passthrough for everything else
       return ORIG_FETCH(input, init);
     } catch (e) {
       return new Response(JSON.stringify({ error: 'bridge_error', detail: String(e && e.message ? e.message : e) }), {
