@@ -389,25 +389,27 @@ __done=false;
     // upload images (direct to Supabase via signer → no Netlify 500)
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
-      const up = await (window.kieUploadBridge && window.kieUploadBridge.upload)
-        ? window.kieUploadBridge.upload(f)
-        : (async () => { throw new Error('upload_bridge_missing'); })();
-      const dl = up.publicUrl || up.uploadUrl;
       
-if (!dl) {
-  // Minimal fallback: if bridge returned object but no URL, try HEAD on publicUrl or refresh sign.
-  if (up && up.publicUrl) {
-    try {
-      const headOk = await fetch(up.publicUrl, { method: 'HEAD', cache: 'no-store' });
-      if (headOk.ok) dl = up.publicUrl;
-    } catch (_) {}
-  }
-  if (!dl) {
-    throw new Error('Upload failed: no URL returned');
-  }
-}
+const up = await (window.kieUploadBridge && window.kieUploadBridge.upload)
+  ? window.kieUploadBridge.upload(f)
+  : (async () => { throw new Error('upload_bridge_missing'); })();
 
-      urls.push(dl);
+let dl = up && (up.publicUrl || up.uploadUrl);
+if (!dl) {
+  try {
+    if (up && up.bucket && up.objectPath && up.uploadUrl) {
+      const u = new URL(up.uploadUrl);
+      const encPath = up.objectPath.split('/').map(encodeURIComponent).join('/');
+      dl = `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${encPath}`;
+      try { await fetch(dl, { method: 'HEAD', cache: 'no-store' }); } catch (_) {}
+    }
+  } catch (_) {}
+}
+if (!dl && up && up.publicUrl) dl = up.publicUrl;
+if (!dl) { /* avoid hard crash; let user retry */ continue; }
+
+urls.push(dl);
+
     }
 
     // create job
