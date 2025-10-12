@@ -49,21 +49,24 @@ exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return json(405, { error: 'method_not_allowed' });
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    the_key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const SUPABASE_SERVICE_ROLE_KEY = the_key;
     const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'video';
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return json(500, { error: 'server_config', detail: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY' });
     }
 
-    const { filename = 'image.jpg', mime = 'image/jpeg' } = safeJSON(event.body);
-    const safeName = sanitize(filename);
+    const body = safeJSON(event.body);
+    const filename = sanitize(body.filename || 'image.jpg');
+    const mime = normalizeMime(body.mime || 'image/jpeg');
+
     const now = new Date();
     const y = now.getUTCFullYear();
     const m = String(now.getUTCMonth() + 1).padStart(2, '0');
     const d = String(now.getUTCDate()).padStart(2, '0');
     const rand = crypto.randomBytes(8).toString('hex');
-    const objectPath = `images/user-uploads/${y}/${m}/${d}/${rand}-${safeName}`;
+    const objectPath = `images/user-uploads/${y}/${m}/${d}/${rand}-${filename}`;
 
     // Sign an UPLOAD (PUT) URL
     const signUrl = `${SUPABASE_URL.replace(/\/+$/,'')}/storage/v1/object/sign/${encodeURIComponent(SUPABASE_BUCKET)}/${encodePath(objectPath)}`;
@@ -73,7 +76,7 @@ exports.handler = async (event) => {
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ expiresIn: 600, method: 'PUT', contentType: normalizeMime(mime) })
+      body: JSON.stringify({ expiresIn: 600, method: 'PUT', contentType: mime })
     });
 
     if (!res.ok) {
