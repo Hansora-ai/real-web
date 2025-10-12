@@ -386,15 +386,15 @@ __done=false;
     const rid=uid+'-'+Date.now();
     const urls=[];
 
-    // upload images
-    for(let i=0;i<files.length;i++){
-      const fd=new FormData();
-      fd.append('file',files[i],files[i].name||('image-'+i+'.png'));
-      fd.append('run_id',rid);
-      const r=await fetch('/.netlify/functions/kie-upload',{method:'POST',headers:{'X-USER-ID':uid},body:fd});
-      const j=await r.json().catch(()=>null);
-      if(!r.ok||!j||!j.downloadUrl)throw new Error(j?.error||'Upload failed');
-      urls.push(j.downloadUrl);
+    // upload images (direct to Supabase via signer → no Netlify 500)
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const up = await (window.kieUploadBridge && window.kieUploadBridge.upload)
+        ? window.kieUploadBridge.upload(f)
+        : (async () => { throw new Error('upload_bridge_missing'); })();
+      const dl = up.publicUrl || up.uploadUrl;
+      if (!dl) throw new Error('Upload failed: no URL returned');
+      urls.push(dl);
     }
 
     // create job
