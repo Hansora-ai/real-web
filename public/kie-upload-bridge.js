@@ -1,6 +1,6 @@
 // public/js/kie-upload-bridge.js
-// STRICT: only uses `/.netlify/functions/sign-upload`
-// Exposes: window.kieUploadBridge.upload(file, opts?) -> { publicUrl, uploadUrl, objectPath, bucket }
+// STRICT + ROBUST: only uses `/.netlify/functions/sign-upload`
+// If `publicUrl` is missing, builds it from response headers.
 (function (global) {
   'use strict';
 
@@ -16,21 +16,34 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ filename, mime })
     });
+    const hdr = {
+      projectHost: res.headers.get('x-project-host') || '',
+      bucket: res.headers.get('x-bucket') || '',
+      objectPath: res.headers.get('x-object') || '',
+    };
     if (!res.ok) {
       const body = await asJSON(res);
       const err = new Error(`sign_failed ${res.status}`);
       err.status = res.status;
       err.body = body;
+      err.headers = hdr;
       throw err;
     }
     const data = await res.json();
-    const uploadUrl = data.uploadUrl || data.signedUrl || data.url;
+    let uploadUrl = data.uploadUrl || data.signedUrl || data.url || '';
+    let publicUrl = data.publicUrl || '';
+
+    // Fallback: build public URL if missing and we have headers
+    if (!publicUrl && hdr.projectHost && hdr.bucket && hdr.objectPath) {
+      publicUrl = `https://${hdr.projectHost}/storage/v1/object/public/${encodeURIComponent(hdr.bucket)}/${encodeURIComponent(hdr.objectPath).replace(/%2F/g,'/')}`;
+    }
     if (!uploadUrl) {
       const err = new Error('sign_missing_url');
       err.body = data;
+      err.headers = hdr;
       throw err;
     }
-    return { uploadUrl, publicUrl: data.publicUrl, objectPath: data.objectPath, bucket: data.bucket };
+    return { uploadUrl, publicUrl, objectPath: data.objectPath || hdr.objectPath, bucket: data.bucket || hdr.bucket };
   }
 
   async function putUpload(uploadUrl, file, onProgress) {
@@ -65,7 +78,10 @@
 
     const { uploadUrl, publicUrl, objectPath, bucket } = await sign(name, type);
     await putUpload(uploadUrl, file, opts && opts.onProgress);
-    return { publicUrl, uploadUrl, objectPath, bucket };
+
+    // Ensure a URL to return
+    const dl = publicUrl || uploadUrl;
+    return { publicUrl: dl, uploadUrl, objectPath, bucket };
   }
 
   const api = { upload };
