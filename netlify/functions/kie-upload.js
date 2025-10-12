@@ -1,6 +1,7 @@
 // netlify/functions/kie-upload.js
-// Single-file, zero-dependency uploader to Supabase Storage via REST.
-// Robust multipart parsing + correct binary handling to prevent 502s on larger files.
+// Zero-deps uploader to Supabase Storage via REST
+// Accepts EITHER real files (multipart with filename) OR base64 data URLs in fields.
+// Returns { downloadUrl, urls } where downloadUrl is the first uploaded URL.
 
 const crypto = require('crypto');
 
@@ -11,11 +12,11 @@ exports.handler = async (event) => {
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'video';
+    const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'user-uploads';
     const SIGN_EXP = parseInt(process.env.SUPABASE_SIGNED_URL_SECONDS || '3600', 10);
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return resp(500, 'Missing: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY', cors());
+      return json(500, { error: 'server_config', detail: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY' });
     }
 
     const ct = event.headers['content-type'] || event.headers['Content-Type'] || '';
@@ -23,139 +24,75 @@ exports.handler = async (event) => {
       return json(400, { error: 'bad_request', detail: 'Expected multipart/form-data' });
     }
 
-    // Parse boundary
     const m = ct.match(/boundary=([^;]+)/i);
     if (!m) return json(400, { error: 'bad_request', detail: 'Missing multipart boundary' });
     const boundary = '--' + m[1];
 
-    // Decode body buffer safely: use base64 when flagged; otherwise treat as binary
     const bodyBuf = Buffer.from(event.body || '', event.isBase64Encoded ? 'base64' : 'binary');
 
-    // Split into parts
-    const boundaryBuf = Buffer.from('\r\n' + boundary);
-    let startIndex = bodyBuf.indexOf(boundary.startsWith('--') ? boundary : '--' + boundary);
-    if (startIndex === -1) startIndex = 0;
-    const parts = [];
-    let idx = bodyBuf.indexOf(boundary, startIndex);
-    while (idx !== -1) {
-      const next = bodyBuf.indexOf(boundary, idx + boundary.length);
-      if (next === -1) break;
-      parts.push(bodyBuf.slice(idx + boundary.length + 2, next - 2)); // skip \r\n .. part .. \r\n
-      idx = next;
-    }
-
-    // Fallback if loop didn't capture (e.g., trailing --)
-    if (parts.length === 0) {
-      const split = bodyBuf.toString('binary').split(boundary);
-      for (const p of split) {
-        const buf = Buffer.from(p, 'binary');
-        if (buf.length > 4) parts.push(buf);
-      }
-    }
-
+    // Split parts by boundary
+    const parts = splitMultipart(bodyBuf, boundary);
     if (!parts.length) return json(400, { error: 'bad_request', detail: 'No multipart parts found' });
 
-    // Pick the first part with a filename (the uploaded file)
-    let filePart = null;
+    // Collect uploaded images: prefer real files; fall back to data-URL fields
+    const images = [];
+
     for (const p of parts) {
       const headerEnd = p.indexOf('\r\n\r\n');
       if (headerEnd === -1) continue;
       const headersTxt = p.slice(0, headerEnd).toString('utf8');
-      const cd = /content-disposition:[^\n]*name="[^"]+"(?:;\s*filename="([^"]*)")?/i.exec(headersTxt);
-      if (cd && cd[1]) { filePart = p; break; }
-    }
-    if (!filePart) return json(400, { error: 'no_file', detail: 'No file found in form-data' });
+      const body = p.slice(headerEnd + 4);
+      // Trim trailing CRLF
+      const cleanBody = body.slice(-2).toString('binary') === '\r\n' ? body.slice(0, -2) : body;
 
-    const headerEnd = filePart.indexOf('\r\n\r\n');
-    const headersTxt = filePart.slice(0, headerEnd).toString('utf8');
-    const bodyStart = headerEnd + 4;
-    // Trim possible trailing \r\n at the end of the part
-    let fileBuf = filePart.slice(bodyStart);
-    if (fileBuf.slice(-2).toString('binary') === '\r\n') fileBuf = fileBuf.slice(0, -2);
+      const cd = /content-disposition:[^\n]*name="([^"]+)"(?:;\s*filename="([^"]*)")?/i.exec(headersTxt);
+      const ctPart = /content-type:\s*([^\r\n]+)/i.exec(headersTxt);
+      const fieldName = cd ? cd[1] : '';
+      const filename = cd && cd[2] ? cd[2] : '';
 
-    // Extract filename and content-type
-    const cd = /content-disposition:[^\n]*name="[^"]+"(?:;\s*filename="([^"]*)")?/i.exec(headersTxt);
-    const ctPart = /content-type:\s*([^\r\n]+)/i.exec(headersTxt);
-    let filename = (cd && cd[1]) ? cd[1] : 'image';
-    let mime = (ctPart && ctPart[1]) ? ctPart[1].trim().toLowerCase() : sniffImageMime(fileBuf) || 'application/octet-stream';
-
-    // Validate allowed image types
-    if (!isSupportedImage(mime)) {
-      return json(415, { error: 'unsupported_type', detail: 'Use JPEG/PNG/WebP/GIF' });
-    }
-
-    // Build safe storage path
-    const base = filename.replace(/\.[^.]+$/, '');
-    const ext = extForMime(mime);
-    const safeName = `${sanitize(base)}.${ext}`;
-    const now = new Date();
-    const y = now.getUTCFullYear();
-    const mth = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(now.getUTCDate()).padStart(2, '0');
-    const rand = crypto.randomBytes(8).toString('hex');
-    const objectPath = `images/user-uploads/${y}/${mth}/${d}/${rand}-${safeName}`;
-
-    // Upload via Supabase Storage REST
-    const uploadUrl = `${SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodePath(objectPath)}?upsert=true`;
-
-    const upRes = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': mime,
-        'x-upsert': 'true',
-        'cache-control': 'public, max-age=31536000'
-      },
-      body: fileBuf
-    });
-
-    if (!upRes.ok) {
-      const detail = await safeText(upRes);
-      return json(502, { error: 'upload_failed', status: upRes.status, detail });
-    }
-
-    // Public URL try
-    let downloadUrl = `${SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/public/${encodeURIComponent(SUPABASE_BUCKET)}/${encodePath(objectPath)}`;
-    const testHead = await fetch(downloadUrl, { method: 'HEAD' });
-    if (testHead.status === 401 || testHead.status === 404) {
-      // Sign URL via REST
-      const signUrl = `${SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/sign/${encodeURIComponent(SUPABASE_BUCKET)}/${encodePath(objectPath)}`;
-      const signRes = await fetch(signUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ expiresIn: SIGN_EXP })
-      });
-      if (!signRes.ok) {
-        const detail = await safeText(signRes);
-        return json(502, { error: 'url_failed', status: signRes.status, detail });
+      if (filename) {
+        // Real file
+        const mime = (ctPart && ctPart[1]) ? ctPart[1].trim().toLowerCase() : sniffImageMime(cleanBody) || 'application/octet-stream';
+        if (!isSupportedImage(mime)) continue;
+        images.push({ kind: 'file', filename, mime, data: cleanBody });
+        continue;
       }
-      const data = await signRes.json().catch(() => ({}));
-      const rel = data.signedURL || data.signedUrl;
-      if (!rel) return json(502, { error: 'url_failed', detail: 'Missing signed URL in response' });
-      downloadUrl = `${SUPABASE_URL.replace(/\/+$/, '')}${rel.startsWith('/') ? '' : '/'}${rel}`;
+
+      // Possible data URL string
+      const asText = cleanBody.toString('utf8').trim();
+      if (asText.startsWith('data:image/')) {
+        const b = dataUrlToBuffer(asText);
+        if (b && b.buffer && isSupportedImage(b.mime)) {
+          const fname = (fieldName || 'image') + '.' + extForMime(b.mime);
+          images.push({ kind: 'data', filename: fname, mime: b.mime, data: b.buffer });
+        }
+      }
     }
 
-    return json(200, { downloadUrl });
+    if (!images.length) {
+      return json(400, { error: 'no_file', detail: 'No image file or data URL found in form-data' });
+    }
+
+    // Upload all images; return first URL as downloadUrl and full list in urls[]
+    const urls = [];
+    for (const img of images) {
+      const { url, error } = await uploadToSupabase({
+        SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_BUCKET, SIGN_EXP
+      }, img.data, img.mime, img.filename);
+      if (error) {
+        return json(502, { error: 'upload_failed', detail: error });
+      }
+      urls.push(url);
+    }
+
+    return json(200, { downloadUrl: urls[0], urls });
 
   } catch (e) {
     return json(502, { error: 'server_error', detail: String(e && e.message ? e.message : e) });
   }
 };
 
-// ---------- Utils ----------
-function resp(statusCode, body, headers) {
-  return { statusCode, headers, body };
-}
-function json(code, obj) {
-  return {
-    statusCode: code,
-    headers: { ...cors(), 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-    body: JSON.stringify(obj)
-  };
-}
+// ---- helpers ----
 function cors() {
   return {
     'Access-Control-Allow-Origin': '*',
@@ -163,11 +100,37 @@ function cors() {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization'
   };
 }
-function encodePath(p) {
-  return p.split('/').map(encodeURIComponent).join('/');
+function resp(statusCode, body, headers) {
+  return { statusCode, headers, body };
+}
+function json(code, obj) {
+  return {
+    statusCode: code,
+    headers: { ...cors(), 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    body: JSON.stringify(obj),
+  };
 }
 function sanitize(name) {
   return String(name).replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/-+/g, '-').replace(/^[-.]+|[-.]+$/g, '');
+}
+function encodePath(p) {
+  return p.split('/').map(encodeURIComponent).join('/');
+}
+function splitMultipart(buf, boundary) {
+  const out = [];
+  const b = Buffer.from(boundary);
+  let i = buf.indexOf(b);
+  while (i !== -1) {
+    const j = buf.indexOf(b, i + b.length);
+    if (j === -1) break;
+    // Slice between boundaries, trim leading/trailing CRLF
+    let part = buf.slice(i + b.length, j);
+    if (part.slice(0, 2).toString('binary') === '\r\n') part = part.slice(2);
+    if (part.slice(-2).toString('binary') === '\r\n') part = part.slice(0, -2);
+    if (part.length > 0) out.push(part);
+    i = j;
+  }
+  return out;
 }
 function sniffImageMime(buf) {
   if (!buf || buf.length < 12) return '';
@@ -192,6 +155,68 @@ function extForMime(m) {
   if (m === 'image/gif')  return 'gif';
   return 'bin';
 }
-async function safeText(res) {
-  try { return await res.text(); } catch { return ''; }
+function dataUrlToBuffer(s) {
+  // data:image/png;base64,AAAA...
+  const m = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(s.trim());
+  if (!m) return null;
+  try {
+    return { mime: m[1].toLowerCase(), buffer: Buffer.from(m[2], 'base64') };
+  } catch {
+    return null;
+  }
+}
+async function uploadToSupabase(cfg, fileBuf, mime, filename) {
+  const base = filename.replace(/\.[^.]+$/, '');
+  const ext = extForMime(mime);
+  const safeName = `${sanitize(base)}.${ext}`;
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const mth = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(now.getUTCDate()).padStart(2, '0');
+  const rand = crypto.randomBytes(8).toString('hex');
+  const objectPath = `images/user-uploads/${y}/${mth}/${d}/${rand}-${safeName}`;
+
+  const uploadUrl = `${cfg.SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/${encodeURIComponent(cfg.SUPABASE_BUCKET)}/${encodePath(objectPath)}?upsert=true`;
+
+  const upRes = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${cfg.SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': mime,
+      'x-upsert': 'true',
+      'cache-control': 'public, max-age=31536000'
+    },
+    body: fileBuf
+  });
+
+  if (!upRes.ok) {
+    const detail = await upRes.text().catch(() => '');
+    return { error: `status ${upRes.status}: ${detail || 'upload failed'}` };
+  }
+
+  // Build public URL first
+  let url = `${cfg.SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/public/${encodeURIComponent(cfg.SUPABASE_BUCKET)}/${encodePath(objectPath)}`;
+  const head = await fetch(url, { method: 'HEAD' });
+  if (head.status === 401 || head.status === 404) {
+    // Sign
+    const signUrl = `${cfg.SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/sign/${encodeURIComponent(cfg.SUPABASE_BUCKET)}/${encodePath(objectPath)}`;
+    const signRes = await fetch(signUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${cfg.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ expiresIn: cfg.SIGN_EXP || 3600 })
+    });
+    if (!signRes.ok) {
+      const msg = await signRes.text().catch(() => '');
+      return { error: `sign ${signRes.status}: ${msg}` };
+    }
+    const data = await signRes.json().catch(() => ({}));
+    const rel = data.signedURL || data.signedUrl;
+    if (!rel) return { error: 'sign: missing signed URL' };
+    url = `${cfg.SUPABASE_URL.replace(/\/+$/, '')}${rel.startsWith('/') ? '' : '/'}${rel}`;
+  }
+
+  return { url };
 }
