@@ -11,7 +11,7 @@ exports.handler = async (event) => {
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'user-uploads';
+    const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'video';
     const SIGN_EXP = parseInt(process.env.SUPABASE_SIGNED_URL_SECONDS || '3600', 10);
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
