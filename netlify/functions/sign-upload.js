@@ -1,20 +1,12 @@
 // netlify/functions/sign-upload.js
-// Purpose: return a signed PUT URL for Supabase Storage + a public URL
-// Contract (POST JSON): { filename: string, mime?: string }
-// Response (200 JSON): { uploadUrl: string, publicUrl: string, bucket: string, objectPath: string }
-//
-// Notes:
-// - No silent defaults. If SUPABASE_BUCKET/URL/KEY are missing, we fail loudly with a clear message.
-// - Adds debug headers x-bucket / x-project-host / x-object to help verify runtime values.
-// - Robust fallback: tries /object/upload/sign first, then legacy /object/sign if API returns 404
-//   either as HTTP status OR within the JSON body.
-// - CORS preflight supported.
+// v5: Force modern upload signing (PUT). No legacy fallback.
+// If the API does not return an upload URL, we fail loudly.
 
 const https = require('https');
 const { URL } = require('url');
 const crypto = require('crypto');
 
-const HANDLER_VERSION = 'sign-upload@v4-node16';
+const HANDLER_VERSION = 'sign-upload@v5-force-upload';
 
 function cors() {
   return {
@@ -91,31 +83,23 @@ function encodePath(p) {
   return String(p).split('/').map(encodeURIComponent).join('/');
 }
 
-function configFromEnv() {
+function cfg() {
   const rawUrl = (process.env.SUPABASE_URL || '').trim();
   const rawBucket = (process.env.SUPABASE_BUCKET || '').trim();
   const rawKey = ((process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()) || ((process.env.SUPABASE_SERVICE_KEY || '').trim());
-
   if (!rawUrl) throw new Error('Missing SUPABASE_URL');
-  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(rawUrl)) {
-    // Allow custom domains, but strongly hint typical mistake (/rest/v1 etc.)
-    if (/\/rest\/v1/i.test(rawUrl)) throw new Error('SUPABASE_URL must be the project base (no /rest/v1)');
-  }
   if (!rawBucket) throw new Error('Missing SUPABASE_BUCKET');
   if (!rawKey) throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY)');
-
   const exp = parseInt(String(process.env.SIGN_EXP || '3600'), 10) || 3600;
-
   return {
-    SUPABASE_URL: rawUrl.replace(/\/+$/, ''),
-    SUPABASE_BUCKET: rawBucket,
-    SUPABASE_KEY: rawKey,
-    SIGN_EXP: exp,
+    url: rawUrl.replace(/\/+$/, ''),
+    bucket: rawBucket,
+    key: rawKey,
+    exp,
   };
 }
 
-async function trySignNew(urlBase, key, bucket, objectPath, mime, exp) {
-  // Newer endpoint: /storage/v1/object/upload/sign/{bucket}/{path}
+async function signUpload(urlBase, key, bucket, objectPath, mime, exp) {
   const u = `${urlBase}/storage/v1/object/upload/sign/${encodeURIComponent(bucket)}/${encodePath(objectPath)}`;
   const body = { contentType: mime || 'application/octet-stream', upsert: true, expiresIn: exp };
   const res = await tinyFetch(u, {
@@ -126,112 +110,67 @@ async function trySignNew(urlBase, key, bucket, objectPath, mime, exp) {
   const txt = await res.text();
   let data = {};
   try { data = JSON.parse(txt); } catch {}
-  return { httpOk: res.ok, httpStatus: res.status, body: data, rawText: txt };
+  return { ok: res.ok, status: res.status, data, raw: txt };
 }
 
-async function trySignLegacy(urlBase, key, bucket, objectPath, exp) {
-  // Legacy endpoint: /storage/v1/object/sign/{bucket}/{path}
-  const u = `${urlBase}/storage/v1/object/sign/${encodeURIComponent(bucket)}/${encodePath(objectPath)}`;
-  const body = { expiresIn: exp, upsert: true };
-  const res = await tinyFetch(u, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const txt = await res.text();
-  let data = {};
-  try { data = JSON.parse(txt); } catch {}
-  return { httpOk: res.ok, httpStatus: res.status, body: data, rawText: txt };
-}
-
-function buildObjectPath(filename, mime) {
+function objectPathFor(filename, mime) {
   const base = String(filename || 'file').replace(/\.[^.]+$/, '');
   const ext = extForMime(mime);
-  const safeName = `${sanitize(base)}.${ext}`;
+  const safe = `${sanitize(base)}.${ext}`;
   const now = new Date();
   const y = now.getUTCFullYear();
   const m = String(now.getUTCMonth() + 1).padStart(2, '0');
   const d = String(now.getUTCDate()).padStart(2, '0');
   const rand = crypto.randomBytes(8).toString('hex');
-  // Keep generic prefix that matches your existing structure but avoids opinionated changes
-  return `images/user-uploads/${y}/${m}/${d}/${rand}-${safeName}`;
+  return `images/user-uploads/${y}/${m}/${d}/${rand}-${safe}`;
 }
 
 exports.handler = async (event) => {
-  const reqId = (event.headers && (event.headers['x-nf-request-id'] || event.headers['X-NF-Request-ID'])) || '';
-  const baseHeaders = {
-    ...cors(),
-    'Content-Type': 'application/json',
-    'Cache-Control': 'no-store',
-    'x-handler-version': HANDLER_VERSION,
-  };
-  if (reqId) baseHeaders['x-echo-nf-request-id'] = String(reqId);
-
+  const headers = { ...cors(), 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'x-handler-version': HANDLER_VERSION };
   try {
-    if (event.httpMethod === 'OPTIONS') return resp(204, '', baseHeaders);
-    if (event.httpMethod !== 'POST') return json(405, { error: 'method_not_allowed' }, baseHeaders);
+    if (event.httpMethod === 'OPTIONS') return resp(204, '', headers);
+    if (event.httpMethod !== 'POST') return json(405, { error: 'method_not_allowed' }, headers);
 
-    const cfg = configFromEnv();
+    const { url, bucket, key, exp } = cfg();
 
-    // Parse JSON body
     let payload = {};
-    try {
-      payload = JSON.parse(event.body || '{}');
-    } catch {
-      return json(400, { error: 'bad_json' }, { ...baseHeaders, 'x-project-host': new URL(cfg.SUPABASE_URL).host, 'x-bucket': cfg.SUPABASE_BUCKET });
-    }
+    try { payload = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'bad_json' }, headers); }
     const filename = (payload.filename || '').toString();
     const mime = (payload.mime || '').toString().toLowerCase();
+    const objectPath = objectPathFor(filename, mime);
 
-    const objectPath = buildObjectPath(filename, mime);
-
-    // --- Optional pre-flight bucket check for precise diagnostics
-    const bucketProbe = await tinyFetch(`${cfg.SUPABASE_URL}/storage/v1/bucket/${encodeURIComponent(cfg.SUPABASE_BUCKET)}`, {
+    // Verify bucket exists (clear diagnostics)
+    const probe = await tinyFetch(`${url}/storage/v1/bucket/${encodeURIComponent(bucket)}`, {
       method: 'GET',
-      headers: { 'Authorization': `Bearer ${cfg.SUPABASE_KEY}` },
+      headers: { 'Authorization': `Bearer ${key}` },
     });
-    if (bucketProbe.status === 404) {
-      return json(500, { error: 'bucket_not_found', detail: `Bucket '${cfg.SUPABASE_BUCKET}' does not exist on project host ${new URL(cfg.SUPABASE_URL).host}` },
-        { ...baseHeaders, 'x-project-host': new URL(cfg.SUPABASE_URL).host, 'x-bucket': cfg.SUPABASE_BUCKET, 'x-object': objectPath });
+    if (probe.status === 404) {
+      return json(500, { error: 'bucket_not_found', detail: `Bucket '${bucket}' does not exist on ${new URL(url).host}` },
+        { ...headers, 'x-project-host': new URL(url).host, 'x-bucket': bucket });
     }
 
-    // Try new signer first
-    let signed = await trySignNew(cfg.SUPABASE_URL, cfg.SUPABASE_KEY, cfg.SUPABASE_BUCKET, objectPath, mime, cfg.SIGN_EXP);
-
-    // Decide if we need to fallback: either HTTP 404 or body signals 404-ish
-    const body404 = signed.body && (
-      String(signed.body.statusCode || '').includes('404') ||
-      /not[\s_-]?found/i.test(JSON.stringify(signed.body)) ||
-      /bucket.*not.*found/i.test(JSON.stringify(signed.body))
-    );
-
-    if ((!signed.httpOk && signed.httpStatus === 404) || body404) {
-      signed = await trySignLegacy(cfg.SUPABASE_URL, cfg.SUPABASE_KEY, cfg.SUPABASE_BUCKET, objectPath, cfg.SIGN_EXP);
+    const signed = await signUpload(url, key, bucket, objectPath, mime, exp);
+    if (!signed.ok) {
+      return json(502, { error: 'sign_failed', detail: signed.raw || signed.data },
+        { ...headers, 'x-project-host': new URL(url).host, 'x-bucket': bucket });
     }
 
-    if (!(signed && (signed.httpOk))) {
-      const detail = (signed && (signed.rawText || JSON.stringify(signed.body))) || 'unknown';
-      return json(502, { error: 'sign_failed', detail },
-        { ...baseHeaders, 'x-project-host': new URL(cfg.SUPABASE_URL).host, 'x-bucket': cfg.SUPABASE_BUCKET, 'x-object': objectPath });
-    }
-
-    const signedUrl = signed.body && (signed.body.signedUrl || signed.body.signedURL || signed.body.url);
+    const signedUrl = signed.data && (signed.data.signedUrl || signed.data.signedURL || signed.data.url);
     if (!signedUrl) {
-      return json(500, { error: 'sign_missing_url', detail: signed.body || signed.rawText || null },
-        { ...baseHeaders, 'x-project-host': new URL(cfg.SUPABASE_URL).host, 'x-bucket': cfg.SUPABASE_BUCKET, 'x-object': objectPath });
+      return json(500, { error: 'sign_missing_url', detail: signed.data || signed.raw }, { ...headers, 'x-project-host': new URL(url).host, 'x-bucket': bucket });
+    }
+    // Sanity check: must be an **upload** URL, not a legacy download sign
+    if (!/\/storage\/v1\/object\/upload\//.test(signedUrl)) {
+      return json(500, { error: 'unexpected_signed_url', detail: 'Signer did not return an upload URL', signedUrl },
+        { ...headers, 'x-project-host': new URL(url).host, 'x-bucket': bucket });
     }
 
-    // Construct absolute upload URL
-    const uploadUrl = signedUrl.startsWith('http')
-      ? signedUrl
-      : `${cfg.SUPABASE_URL.replace(/\/+$/, '')}${signedUrl.startsWith('/') ? '' : '/'}${signedUrl}`;
+    const uploadUrl = signedUrl.startsWith('http') ? signedUrl : `${url}${signedUrl.startsWith('/') ? '' : '/'}${signedUrl}`;
+    const publicUrl = `${url}/storage/v1/object/public/${encodeURIComponent(bucket)}/${encodeURIComponent(objectPath).replace(/%2F/g,'/')}`;
 
-    // Public URL (works when bucket is public)
-    const publicUrl = `${cfg.SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(cfg.SUPABASE_BUCKET)}/${encodePath(objectPath)}`;
-
-    return json(200, { uploadUrl, publicUrl, bucket: cfg.SUPABASE_BUCKET, objectPath },
-      { ...baseHeaders, 'x-project-host': new URL(cfg.SUPABASE_URL).host, 'x-bucket': cfg.SUPABASE_BUCKET, 'x-object': objectPath });
+    return json(200, { uploadUrl, publicUrl, bucket, objectPath },
+      { ...headers, 'x-project-host': new URL(url).host, 'x-bucket': bucket, 'x-object': objectPath });
   } catch (e) {
-    return json(500, { error: 'server_error', detail: String(e && e.message ? e.message : e) }, { ...baseHeaders });
+    return json(500, { error: 'server_error', detail: String(e && e.message ? e.message : e) }, headers);
   }
 };
