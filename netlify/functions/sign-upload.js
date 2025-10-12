@@ -1,12 +1,12 @@
 // netlify/functions/sign-upload.js
-// v5: Force modern upload signing (PUT). No legacy fallback.
-// If the API does not return an upload URL, we fail loudly.
+// v6: Accept Supabase upload signed path with or without `/storage/v1` prefix.
+// Treat returned `signedUrl` as the PUT URL.
 
 const https = require('https');
 const { URL } = require('url');
 const crypto = require('crypto');
 
-const HANDLER_VERSION = 'sign-upload@v5-force-upload';
+const HANDLER_VERSION = 'sign-upload@v6-accept-sign-path';
 
 function cors() {
   return {
@@ -100,6 +100,7 @@ function cfg() {
 }
 
 async function signUpload(urlBase, key, bucket, objectPath, mime, exp) {
+  // Request a signed PUT URL
   const u = `${urlBase}/storage/v1/object/upload/sign/${encodeURIComponent(bucket)}/${encodePath(objectPath)}`;
   const body = { contentType: mime || 'application/octet-stream', upsert: true, expiresIn: exp };
   const res = await tinyFetch(u, {
@@ -125,6 +126,15 @@ function objectPathFor(filename, mime) {
   return `images/user-uploads/${y}/${m}/${d}/${rand}-${safe}`;
 }
 
+function absolutize(base, pathOrUrl) {
+  if (!pathOrUrl) return null;
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  // Ensure we include /storage/v1 if missing
+  const needsPrefix = !/^\/storage\/v1\//.test(pathOrUrl);
+  const p = needsPrefix ? `/storage/v1${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}` : pathOrUrl;
+  return `${base}${p}`;
+}
+
 exports.handler = async (event) => {
   const headers = { ...cors(), 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'x-handler-version': HANDLER_VERSION };
   try {
@@ -139,7 +149,7 @@ exports.handler = async (event) => {
     const mime = (payload.mime || '').toString().toLowerCase();
     const objectPath = objectPathFor(filename, mime);
 
-    // Verify bucket exists (clear diagnostics)
+    // Bucket probe for precise diagnostics
     const probe = await tinyFetch(`${url}/storage/v1/bucket/${encodeURIComponent(bucket)}`, {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${key}` },
@@ -159,13 +169,14 @@ exports.handler = async (event) => {
     if (!signedUrl) {
       return json(500, { error: 'sign_missing_url', detail: signed.data || signed.raw }, { ...headers, 'x-project-host': new URL(url).host, 'x-bucket': bucket });
     }
-    // Sanity check: must be an **upload** URL, not a legacy download sign
-    if (!/\/storage\/v1\/object\/upload\//.test(signedUrl)) {
-      return json(500, { error: 'unexpected_signed_url', detail: 'Signer did not return an upload URL', signedUrl },
+
+    // Accept `/object/upload/sign/...` with or without `/storage/v1` prefix
+    if (!/\/object\/upload\/sign\//.test(signedUrl)) {
+      return json(500, { error: 'unexpected_signed_url', detail: 'Signer did not return an upload-signer URL', signedUrl },
         { ...headers, 'x-project-host': new URL(url).host, 'x-bucket': bucket });
     }
 
-    const uploadUrl = signedUrl.startsWith('http') ? signedUrl : `${url}${signedUrl.startsWith('/') ? '' : '/'}${signedUrl}`;
+    const uploadUrl = absolutize(url, signedUrl);
     const publicUrl = `${url}/storage/v1/object/public/${encodeURIComponent(bucket)}/${encodeURIComponent(objectPath).replace(/%2F/g,'/')}`;
 
     return json(200, { uploadUrl, publicUrl, bucket, objectPath },
