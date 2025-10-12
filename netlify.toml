@@ -3,6 +3,10 @@
   functions = "netlify/functions"
   node_version = "18"
 
+# ✅ ADD THIS so the lambda runs on Node 20 (safe even if the site build stays on 18)
+[build.environment]
+  AWS_LAMBDA_JS_RUNTIME = "nodejs20.x"
+
 [functions]
   node_bundler = "esbuild"
 
@@ -16,9 +20,7 @@
   [headers.values]
   Access-Control-Allow-Origin = "*"
 
-# --- Added: Scheduled Function for the no‑webhook finisher ---
-# Path must match: netlify/functions/hf-sweeper.js
+# --- Kept: Scheduled Function for the no-webhook finisher ---
 [[scheduled]]
   path = "/.netlify/functions/hf-sweeper"
-  # Every minute (adjust as needed, e.g., "*/2 * * * *" for every 2 minutes)
   schedule = "*/1 * * * *"
