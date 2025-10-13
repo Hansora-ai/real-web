@@ -20,19 +20,21 @@
     .btn:hover{background:rgba(255,255,255,.1)}
     .btn-brand{background:var(--brand); border-color:transparent; color:white}
     .btn-brand:hover{background:#7c7ff6}
-    .menu{ display:none; } .menu.show{ display:block; }
+    .menu{ display:none; }
+    .menu.show{ display:block; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="min-h-screen">
-  <!-- HEADER -->
+  <!-- HEADER (kept 1:1, surgical edits only for credits placement) -->
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
-        <div class="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center font-bold">H</div>
-        <span class="font-semibold tracking-wide">HANSORA AI</span>
-      </a>
-
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+          <div class="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center font-bold">H</div>
+          <span class="font-semibold tracking-wide">HANSORA AI</span>
+        </a>
+      </div>
       <nav class="hidden md:flex items-center gap-8 text-sm">
         <a href="/models.html" class="hover:text-white/90">Models</a>
         <a href="/templates.html" class="hover:text-white/90">Templates</a>
@@ -40,17 +42,18 @@
         <a href="price.html" class="hover:text-white/90">Pricing</a>
         <a href="#faq" class="hover:text-white/90">FAQ</a>
       </nav>
-
-      <div class="flex items-center gap-3 whitespace-nowrap">
+      <div class="flex items-center gap-3">
         <a href="gptimage.html" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
-        <!-- Pre-login -->
+        <!-- pre-login -->
         <a id="btnLoginSignup" href="/login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a>
-        <a id="btnLoginNav" href="/login.html" class="hidden" aria-hidden="true" tabindex="-1">Log in</a>
-        <a id="btnGetStarted" href="/login.html" class="hidden" aria-hidden="true" tabindex="-1">Get Started</a>
-
-        <!-- Logged-in -->
-        <div id="navUser" class="hidden items-center gap-2">
-          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
+        <a id="btnLoginNav" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Log in</a>
+        <a id="btnGetStarted" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Get Started</a>
+        <!-- after login -->
+        <div id="navUser" class="hidden items-center gap-2 flex-nowrap">
+          <!-- keep credits inline, prevent wrapping -->
+          <div id="navCreditsWrap" class="flex items-center gap-1 text-sm text-white/80 mr-2 whitespace-nowrap">
+            <span id="navCreditsNum">0</span><span class="opacity-90" aria-hidden="true">⚡</span>
+          </div>
           <div class="relative">
             <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
               <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
@@ -68,20 +71,27 @@
     </div>
   </header>
 
-  <!-- BODY -->
+  <!-- PAGE -->
   <main class="mx-auto max-w-6xl px-4 py-10">
     <h1 class="text-3xl md:text-4xl font-semibold mb-8">Your Profile</h1>
     <div class="grid md:grid-cols-3 gap-6">
+      <!-- Left: email, joined, available credits -->
       <section class="md:col-span-1 p-5 rounded-2xl glass border border-base-line shadow-soft">
         <h2 class="text-lg font-medium mb-4">Creator Dashboard</h2>
         <div class="text-sm space-y-4">
           <div class="flex items-center gap-2 opacity-80">
-            <div class="opacity-70">Your Email</div>
-            <div id="userEmail" class="font-medium">—</div>
+            <svg width="16" height="16" fill="currentColor" class="opacity-70"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0-01-2-2V4zm2 0v8h8V4H4z"/></svg>
+            <div>
+              <div class="opacity-70">Your Email</div>
+              <div id="userEmail" class="font-medium">—</div>
+            </div>
           </div>
           <div class="flex items-center gap-2 opacity-80">
-            <div class="opacity-70">With Us Since</div>
-            <div id="joinedDate" class="font-medium">—</div>
+            <svg width="16" height="16" fill="currentColor" class="opacity-70"><path d="M8 3a5 5 0 100 10A5 5 0 008 3zm.5 2.5a.5.5 0 00-1 0V8a.5.5 0 00.146.354l2 2a.5.5 0 10.708-.708L8.5 7.793V5.5z"/></svg>
+            <div>
+              <div class="opacity-70">With Us Since</div>
+              <div id="joinedDate" class="font-medium">—</div>
+            </div>
           </div>
           <div class="p-4 rounded-xl bg-white/5 border border-white/10">
             <div class="text-xs opacity-70 mb-1">Available Credits</div>
@@ -89,7 +99,8 @@
           </div>
         </div>
       </section>
-
+      <!-- Right: Buy credits + Reset password -->
+      
       <section class="md:col-span-2 p-5 rounded-2xl glass border border-base-line shadow-soft">
         <h2 class="text-lg font-medium mb-4">Get Creating</h2>
         <div class="grid md:grid-cols-2 gap-6">
@@ -110,80 +121,149 @@
           </div>
         </div>
       </section>
+    
     </div>
   </main>
   <div class="h-10"></div>
 
   <script>
-    // Supabase (same as index)
+    // === Supabase client (same project constants as index) ===
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Helpers
+    // === Helpers ===
     const $ = (id) => document.getElementById(id);
     const setText = (id, v) => { const el = $(id); if (el) el.textContent = v ?? '—'; };
-    const fmt = (iso) => new Date(iso).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+    const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}); } catch { return '—'; } };
 
-    // Header menu
-    $('#navAvatar')?.addEventListener('click', ()=> $('#navMenu').classList.toggle('show'));
-    document.addEventListener('click', (e)=>{
-      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $('#navMenu')?.classList.remove('show');
-    });
+    function toggleMenu() {
+      const m = $('navMenu');
+      if (!m) return;
+      m.classList.toggle('show');
+      document.addEventListener('click', (e) => {
+        if (!m.contains(e.target) && !$('navAvatar').contains(e.target)) m.classList.remove('show');
+      }, { once:true });
+    }
 
-    function showLoggedInUI(credits, user){
-      $('#btnLoginSignup')?.classList.add('hidden');
-      $('#btnLoginNav')?.classList.add('hidden');
-      $('#btnGetStarted')?.classList.add('hidden');
-      const wrap = $('#navUser');
-      wrap?.classList.remove('hidden');
-      wrap?.classList.add('flex');               // << keep inline next to avatar
-      $('#navCredits').textContent = String(credits) + '⚡'; // single source of truth
-      const card = $('#totalCredits'); if(card) card.textContent = String(credits); // mirror to card
-      if (user?.user_metadata?.avatar_url) {
-        const img = $('#navAvatarImg'); img.src = user.user_metadata.avatar_url; img.classList.remove('hidden');
+    // === Header reflect (kept; profile will also set credits) ===
+    async function reflectHeader() {
+      const { data: { user } } = await supabase.auth.getUser();
+      const pre = $('btnLoginSignup');
+      const navUser = $('navUser');
+
+      if (!user) {
+        pre?.classList.remove('hidden');
+        navUser?.classList.add('hidden');
+        return;
       }
-    }
-    function showLoggedOutUI(){
-      $('#btnLoginSignup')?.classList.remove('hidden');
-      $('#navUser')?.classList.add('hidden');
-      $('#navUser')?.classList.remove('flex');
+      pre?.classList.add('hidden');
+      navUser?.classList.remove('hidden');
+
+      // avatar
+      const img = $('navAvatarImg');
+      const url = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+      if (url) { img.src = url; img.classList.remove('hidden'); }
     }
 
-    async function loadHeaderAndCard(){
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
-      if(!user){ showLoggedOutUI(); return; }
+    async function ensureAuth() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { return null; }
+      return user;
+    }
 
-      // email/joined
+    async function loadProfile() {
+      const user = await ensureAuth();
+      if (!user) return;
       setText('userEmail', user.email || '—');
-      setText('joinedDate', fmt(user.created_at));
+      setText('joinedDate', fmtDate(user.created_at));
 
-      // credits from profiles (user_id) -> same value for header & card
-      const { data: prof, error } = await supabase
-        .from('profiles')
-        .select('credits, subscription_credits, onetime_credits, created_at')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('credits, subscription_credits, onetime_credits, created_at')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-      let credits = 0;
-      if (prof && typeof prof.credits === 'number') {
-        credits = prof.credits;
-      } else {
-        credits = (prof?.subscription_credits ?? 0) + (prof?.onetime_credits ?? 0);
-      }
-      if (prof?.created_at) setText('joinedDate', fmt(prof.created_at));
+        const creditsFromProfile = (profile && typeof profile.credits === 'number') ? profile.credits : null;
+        const total = (creditsFromProfile !== null)
+          ? creditsFromProfile
+          : ((profile?.subscription_credits ?? 0) + (profile?.onetime_credits ?? 0));
 
-      showLoggedInUI(credits, user);
+        // Always set both displays so it never sticks at "0"
+        setText('totalCredits', total);
+        const navNum = document.getElementById('navCreditsNum');
+        if (navNum) navNum.textContent = String(total);
+
+        if (profile?.created_at) setText('joinedDate', fmtDate(profile.created_at));
+      } catch (e) { console.error(e); }
     }
 
-    // CTAs
-    $('#btnCreateNow')?.addEventListener('click', ()=> location.href='models.html');
-    $('#btnBuyCredits')?.addEventListener('click', ()=> location.href='price.html');
-    $('#btnLogout')?.addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.href='index.html'; });
+    function initHeaderMenu() {
+      $('navAvatar')?.addEventListener('click', toggleMenu);
+      $('btnLogout')?.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = 'index.html';
+      });
+    }
 
-    // Boot
-    loadHeaderAndCard();
+    function initActions() {
+      document.getElementById('btnCreateNow')?.addEventListener('click', () => { window.location.href = 'models.html'; });
+      document.getElementById('btnBuyCredits')?.addEventListener('click', () => { window.location.href = 'price.html'; });
+
+      function showPwdModal(show){ const m=document.getElementById('pwdModal'); if(!m) return;
+        if(show){ m.classList.remove('hidden'); m.classList.add('flex'); }
+        else { m.classList.add('hidden'); m.classList.remove('flex'); }
+      }
+
+      function initPasswordChange(){
+        const btn = document.getElementById('btnResetPassword'); // renamed to Change Password earlier
+        const cancel = document.getElementById('btnPwdCancel');
+        const save = document.getElementById('btnPwdSave');
+        const err = document.getElementById('pwdError');
+        btn?.addEventListener('click', ()=>{ err?.classList.add('hidden'); if(err) err.textContent=''; showPwdModal(true); });
+        cancel?.addEventListener('click', ()=> showPwdModal(false));
+        save?.addEventListener('click', async ()=>{
+          if(!err) return;
+          err.classList.add('hidden'); err.textContent='';
+          const a = document.getElementById('newPwd')?.value?.trim?.() || '';
+          const b = document.getElementById('confirmPwd')?.value?.trim?.() || '';
+          if(a.length < 6){ err.textContent='Password must be at least 6 characters.'; err.classList.remove('hidden'); return; }
+          if(a !== b){ err.textContent='Passwords do not match.'; err.classList.remove('hidden'); return; }
+          try{
+            const { data: { user } } = await supabase.auth.getUser();
+            if(!user){ err.textContent='Not signed in.'; err.classList.remove('hidden'); return; }
+            const { error } = await supabase.auth.updateUser({ password: a });
+            if(error){ console.error(error); err.textContent='Could not change password.'; err.classList.remove('hidden'); return; }
+            showPwdModal(false);
+            alert('Password updated.');
+            const np=document.getElementById('newPwd'); if(np) np.value='';
+            const cp=document.getElementById('confirmPwd'); if(cp) cp.value='';
+          }catch(e){ console.error(e); err.textContent='Unexpected error.'; err.classList.remove('hidden'); }
+        });
+      }
+
+      document.getElementById('btnBuyCredits')?.addEventListener('click', () => { window.location.href = 'price.html'; });
+      document.getElementById('btnResetPassword')?.addEventListener('click', async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.email) return alert('Not signed in.');
+        const redirectTo = window.location.origin;
+        const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo });
+        if (error) { alert('Could not send reset email.'); return; }
+        alert('Password reset email sent.');
+      });
+
+      // initialize the inner password change listeners
+      initPasswordChange();
+    }
+
+    (async () => {
+      await reflectHeader();
+      initHeaderMenu();
+      await loadProfile();
+      initActions();
+    })();
   </script>
-</body>
+
+  </body>
 </html>
