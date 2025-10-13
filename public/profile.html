@@ -26,7 +26,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="min-h-screen">
-  <!-- HEADER (kept 1:1; tiny edits for credits chip + no-wrap) -->
+  <!-- HEADER -->
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -50,7 +50,6 @@
         <a id="btnGetStarted" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Get Started</a>
         <!-- after login -->
         <div id="navUser" class="hidden items-center gap-2 flex-nowrap">
-          <!-- Credits chip (same id as index) -->
           <span id="navCredits" class="text-sm text-white/80 mr-2 whitespace-nowrap inline-flex items-center">0⚡</span>
           <div class="relative">
             <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
@@ -125,7 +124,7 @@
   <div class="h-10"></div>
 
   <script>
-    // === Supabase client (same project constants as index) ===
+    // === Supabase client ===
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -144,7 +143,7 @@
       }, { once:true });
     }
 
-    // === Header reflect (kept; credits and avatar) ===
+    // === Header auth/visibility ===
     async function reflectHeader() {
       const { data: { user } } = await supabase.auth.getUser();
       const pre = $('btnLoginSignup');
@@ -158,7 +157,6 @@
       pre?.classList.add('hidden');
       navUser?.classList.remove('hidden');
 
-      // avatar
       const img = $('navAvatarImg');
       const url = user.user_metadata?.avatar_url || user.user_metadata?.picture;
       if (url) { img.src = url; img.classList.remove('hidden'); }
@@ -166,15 +164,14 @@
 
     async function ensureAuth() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { return null; }
+      if (!user) return null;
       return user;
     }
 
-    async function loadProfile() {
+    // === Credits (header + card) ===
+    async function loadAndRenderCredits() {
       const user = await ensureAuth();
       if (!user) return;
-      setText('userEmail', user.email || '—');
-      setText('joinedDate', fmtDate(user.created_at));
 
       try {
         const { data: profile } = await supabase
@@ -186,15 +183,18 @@
         const credits = Number(profile?.credits ?? 0);
         const sub = Number(profile?.subscription_credits ?? 0);
         const one = Number(profile?.onetime_credits ?? 0);
-        const total = credits || (sub + one);
+        const total = (credits || (sub + one)) || 0;
 
-        // Always set both displays so it never sticks at "0"
-        setText('totalCredits', total);
         const nav = document.getElementById('navCredits');
         if (nav) nav.textContent = String(total) + '⚡';
+        const tc = document.getElementById('totalCredits');
+        if (tc) tc.textContent = String(total);
 
-        if (profile?.created_at) setText('joinedDate', fmtDate(profile.created_at));
-      } catch (e) { console.error(e); }
+        setText('userEmail', user.email || '—');
+        setText('joinedDate', fmtDate(profile?.created_at || user.created_at));
+      } catch (e) {
+        console.error(e);
+      }
     }
 
     function initHeaderMenu() {
@@ -206,94 +206,18 @@
     }
 
     function initActions() {
-      document.getElementById('btnCreateNow')?.addEventListener('click', () => { window.location.href = 'models.html'; });
-      document.getElementById('btnBuyCredits')?.addEventListener('click', () => { window.location.href = 'price.html'; });
-
-      function showPwdModal(show){ const m=document.getElementById('pwdModal'); if(!m) return;
-        if(show){ m.classList.remove('hidden'); m.classList.add('flex'); }
-        else { m.classList.add('hidden'); m.classList.remove('flex'); }
-      }
-
-      function initPasswordChange(){
-        const btn = document.getElementById('btnResetPassword'); // renamed to Change Password earlier
-        const cancel = document.getElementById('btnPwdCancel');
-        const save = document.getElementById('btnPwdSave');
-        const err = document.getElementById('pwdError');
-        btn?.addEventListener('click', ()=>{ err?.classList.add('hidden'); if(err) err.textContent=''; showPwdModal(true); });
-        cancel?.addEventListener('click', ()=> showPwdModal(false));
-        save?.addEventListener('click', async ()=>{
-          if(!err) return;
-          err.classList.add('hidden'); err.textContent='';
-          const a = document.getElementById('newPwd')?.value?.trim?.() || '';
-          const b = document.getElementById('confirmPwd')?.value?.trim?.() || '';
-          if(a.length < 6){ err.textContent='Password must be at least 6 characters.'; err.classList.remove('hidden'); return; }
-          if(a !== b){ err.textContent='Passwords do not match.'; err.classList.remove('hidden'); return; }
-          try{
-            const { data: { user } } = await supabase.auth.getUser();
-            if(!user){ err.textContent='Not signed in.'; err.classList.remove('hidden'); return; }
-            const { error } = await supabase.auth.updateUser({ password: a });
-            if(error){ console.error(error); err.textContent='Could not change password.'; err.classList.remove('hidden'); return; }
-            showPwdModal(false);
-            alert('Password updated.');
-            const np=document.getElementById('newPwd'); if(np) np.value='';
-            const cp=document.getElementById('confirmPwd'); if(cp) cp.value='';
-          }catch(e){ console.error(e); err.textContent='Unexpected error.'; err.classList.remove('hidden'); }
-        });
-      }
-
-      document.getElementById('btnBuyCredits')?.addEventListener('click', () => { window.location.href = 'price.html'; });
-      document.getElementById('btnResetPassword')?.addEventListener('click', async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user?.email) return alert('Not signed in.');
-        const redirectTo = window.location.origin;
-        const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo });
-        if (error) { alert('Could not send reset email.'); return; }
-        alert('Password reset email sent.');
-      });
-
-      // initialize the inner password change listeners
-      initPasswordChange();
+      $('btnCreateNow')?.addEventListener('click', () => { window.location.href = 'models.html'; });
+      $('btnBuyCredits')?.addEventListener('click', () => { window.location.href = 'price.html'; });
     }
 
     (async () => {
       await reflectHeader();
-      // === Credits parity with index ===
-      const navCreditsEl = document.getElementById('navCredits');
-        const runBtn = document.getElementById('runBtn');
-        const R = (c)=>{ 
-          if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-          const tc=document.getElementById('totalCredits'); if(tc) tc.textContent=String(c ?? 0);
-          if (runBtn) {
-            const ok = (c ?? 0) > 0;
-            runBtn.disabled = !ok;
-            runBtn.classList.toggle('opacity-50', !ok);
-            runBtn.classList.toggle('cursor-not-allowed', !ok);
-          }
-        };
-
-        const ures = await supabase.auth.getUser();
-        const user = ures?.data?.user;
-        if(!user) return;
-
-        async function loadCreditsOnce(){ 
-          try {
-            const { data: prof } = await supabase.from('profiles')
-              .select('credits').eq('user_id', user.id).maybeSingle();
-            const c = prof?.credits ?? 0;
-            R(c);
-            return c;
-          } catch(e) { console.warn('credits poll read failed', e); return null; }
-        }
-
-        // Long polling burst (3 minutes) every 2s
-        function startCreditsPolling(durationMs=180000, intervalMs=2000){
-          if (window.__creditsPoll) clearInterval(window.__creditsPoll);
-          const t0 = Date.now();
-          window.__creditsPoll = setInterval(async ()=>{
-            await loadCreditsOnce();
+      await loadAndRenderCredits();
       initHeaderMenu();
-      await loadProfile();
       initActions();
+
+      // Optional light polling (kept minimal)
+      setTimeout(() => { loadAndRenderCredits().catch(()=>{}); }, 2000);
     })();
   </script>
 
