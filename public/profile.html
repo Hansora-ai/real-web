@@ -97,27 +97,28 @@
         </div>
       </section>
       <!-- Right: Buy credits + Reset password -->
+      
       <section class="md:col-span-2 p-5 rounded-2xl glass border border-base-line shadow-soft">
-        <h2 class="text-lg font-medium mb-4">Account</h2>
+        <h2 class="text-lg font-medium mb-4">Get Creating</h2>
         <div class="grid md:grid-cols-2 gap-6">
           <div class="p-5 rounded-2xl bg-white/5 border border-white/10">
-            <h3 class="font-medium mb-2">Unlock Your Full Creative Potential</h3>
-            <ul class="text-sm space-y-2 opacity-90">
-              <li>• Expanded creation allowance</li>
-              <li>• High-definition exports</li>
-              <li>• Exclusive private projects</li>
-              <li>• Fast-track processing</li>
-              <li>• Permanent access to your creations</li>
+            <h3 class="font-medium mb-2">Have you seen the latest features?</h3>
+            <p class="text-sm opacity-90">Try our newest models and bring your ideas to life — create stunning videos or images in seconds.</p>
+            <ul class="text-sm space-y-2 opacity-90 mt-3">
+              <li>• Veo 3 &amp; Veo 3 Fast</li>
+              <li>• Kling v2.5 Turbo Pro</li>
+              <li>• Image-to-Image &amp; Templates</li>
             </ul>
-            <button id="btnBuyCredits" class="mt-4 btn-brand px-4 py-2 rounded-xl text-sm">Buy Credits</button>
+            <button id="btnCreateNow" class="mt-4 btn-brand px-4 py-2 rounded-xl text-sm">Create now</button>
           </div>
           <div class="p-5 rounded-2xl bg-white/5 border border-white/10">
-            <h3 class="font-medium mb-2">Security</h3>
-            <p class="text-sm opacity-90">Reset your password and keep your account secure.</p>
-            <button id="btnResetPassword" class="mt-4 btn px-4 py-2 rounded-xl text-sm">Change Password</button>
+            <h3 class="font-medium mb-2">Boost Your Plan</h3>
+            <p class="text-sm opacity-90">Need more generations? Get extra credits for HD exports and fast-track processing.</p>
+            <button id="btnBuyCredits" class="mt-4 btn-brand px-4 py-2 rounded-xl text-sm">Buy Credits</button>
           </div>
         </div>
       </section>
+    
     </div>
   </main>
   <div class="h-10"></div>
@@ -159,7 +160,7 @@
       // credits
       try {
         const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-        if (prof?.data?.credits != null) document.getElementById('navCreditsNum').textContent = prof.data.credits;
+        if (prof?.data?.credits != null) document.getElementById('navCreditsNum').textContent = (typeof prof.data.credits === 'number') ? prof.data.credits : document.getElementById('navCreditsNum').textContent;
       } catch {}
 
       // avatar
@@ -187,8 +188,12 @@
           .eq('user_id', user.id)
           .maybeSingle();
 
-        const total = (profile?.credits ?? 0) ||
-                      ((profile?.subscription_credits ?? 0) + (profile?.onetime_credits ?? 0));
+        
+        const creditsFromProfile = (profile && typeof profile.credits === 'number') ? profile.credits : null;
+        const total = (creditsFromProfile !== null)
+          ? creditsFromProfile
+          : ((profile?.subscription_credits ?? 0) + (profile?.onetime_credits ?? 0));
+    
         setText('totalCredits', total);
         if (profile?.created_at) setText('joinedDate', fmtDate(profile.created_at));
       } catch (e) { console.error(e); }
@@ -203,6 +208,9 @@
     }
 
     function initActions() {
+      document.getElementById('btnCreateNow')?.addEventListener('click', () => { window.location.href = 'models.html'; });
+      document.getElementById('btnBuyCredits')?.addEventListener('click', () => { window.location.href = 'price.html'; });
+    
 
     function showPwdModal(show){ const m=document.getElementById('pwdModal'); if(!m) return;
       if(show){ m.classList.remove('hidden'); m.classList.add('flex'); }
@@ -255,28 +263,5 @@
     })();
   </script>
 
-  <!-- Change Password Modal -->
-  <div id="pwdModal" class="fixed inset-0 hidden items-center justify-center z-50">
-    <div class="absolute inset-0 bg-black/60"></div>
-    <div class="relative z-10 w-full max-w-md mx-auto rounded-2xl glass border border-white/10 shadow-soft p-6">
-      <h3 class="text-lg font-medium mb-3">Change Password</h3>
-      <div class="space-y-3">
-        <div>
-          <label class="text-sm opacity-80">New password</label>
-          <input id="newPwd" type="password" class="mt-1 w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Enter new password">
-        </div>
-        <div>
-          <label class="text-sm opacity-80">Repeat password</label>
-          <input id="confirmPwd" type="password" class="mt-1 w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Repeat new password">
-        </div>
-        <p id="pwdError" class="text-sm text-red-400 hidden"></p>
-        <div class="flex justify-end gap-2 pt-2">
-          <button id="btnPwdCancel" class="btn px-3 py-2 rounded-lg text-sm">Cancel</button>
-          <button id="btnPwdSave" class="btn-brand px-3 py-2 rounded-lg text-sm">Save</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</body>
+  </body>
 </html>
