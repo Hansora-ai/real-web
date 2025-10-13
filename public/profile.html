@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA AI — Profile</title>
+  <meta name="description" content="Your HANSORA profile, credits, and settings." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+                       var(--base-bg); color:#e5e7eb}
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .glass{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+    .menu{ display:none; }
+    .menu.show{ display:block; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="min-h-screen">
+  <!-- HEADER: copied to match index (login/signup vs avatar+credits) -->
+  <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+          <div class="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center font-bold">H</div>
+          <span class="font-semibold tracking-wide">HANSORA AI</span>
+        </a>
+      </div>
+
+      <nav class="hidden md:flex items-center gap-8 text-sm">
+        <a href="/models.html" class="hover:text-white/90">Models</a>
+        <a href="/templates.html" class="hover:text-white/90">Templates</a>
+        <a href="examples-prompts.html" class="hover:opacity-80">Examples/Prompts</a>
+        <a href="price.html" class="hover:text-white/90">Pricing</a>
+        <a href="#faq" class="hover:text-white/90">FAQ</a>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <a href="gptimage.html" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
+
+        <!-- pre-login -->
+        <a id="btnLoginSignup" href="/login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a>
+        <a id="btnLoginNav" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Log in</a>
+        <a id="btnGetStarted" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Get Started</a>
+
+        <!-- after login -->
+        <div id="navUser" class="hidden items-center gap-2">
+          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
+          <div class="relative">
+            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
+              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
+            </button>
+            <div id="navMenu" class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm">
+              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a>
+              <a href="profile.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Edit profile</a>
+              <a href="price.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a>
+              <a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a>
+              <button id="btnLogout" class="w-full text-left block rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- PAGE BODY -->
+  <main class="mx-auto max-w-6xl px-4 py-10">
+    <h1 class="text-3xl md:text-4xl font-semibold mb-8">Your Profile</h1>
+
+    <div class="grid md:grid-cols-3 gap-6">
+      <!-- Left: email, joined, available credits -->
+      <section class="md:col-span-1 p-5 rounded-2xl glass border border-base-line shadow-soft">
+        <h2 class="text-lg font-medium mb-4">Creator Dashboard</h2>
+
+        <div class="text-sm space-y-4">
+          <div class="flex items-center gap-2 opacity-80">
+            <svg width="16" height="16" fill="currentColor" class="opacity-70"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4zm2 0v8h8V4H4z"/></svg>
+            <div>
+              <div class="opacity-70">Your Email</div>
+              <div id="userEmail" class="font-medium">—</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 opacity-80">
+            <svg width="16" height="16" fill="currentColor" class="opacity-70"><path d="M8 3a5 5 0 100 10A5 5 0 008 3zm.5 2.5a.5.5 0 00-1 0V8a.5.5 0 00.146.354l2 2a.5.5 0 10.708-.708L8.5 7.793V5.5z"/></svg>
+            <div>
+              <div class="opacity-70">With Us Since</div>
+              <div id="joinedDate" class="font-medium">—</div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+            <div class="text-xs opacity-70 mb-1">Available Credits</div>
+            <div class="text-2xl font-semibold leading-none" id="totalCredits">—</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Buy credits + Reset password -->
+      <section class="md:col-span-2 p-5 rounded-2xl glass border border-base-line shadow-soft">
+        <h2 class="text-lg font-medium mb-4">Account</h2>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="p-5 rounded-2xl bg-white/5 border border-white/10">
+            <h3 class="font-medium mb-2">Unlock Your Full Creative Potential</h3>
+            <ul class="text-sm space-y-2 opacity-90">
+              <li>• Expanded creation allowance</li>
+              <li>• High-definition exports</li>
+              <li>• Exclusive private projects</li>
+              <li>• Fast-track processing</li>
+              <li>• Permanent access to your creations</li>
+            </ul>
+            <button id="btnBuyCredits" class="mt-4 btn-brand px-4 py-2 rounded-xl text-sm">Buy Credits</button>
+          </div>
+
+          <div class="p-5 rounded-2xl bg-white/5 border border-white/10">
+            <h3 class="font-medium mb-2">Security</h3>
+            <p class="text-sm opacity-90">Reset your password and keep your account secure.</p>
+            <button id="btnResetPassword" class="mt-4 btn px-4 py-2 rounded-xl text-sm">Reset Password</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="h-10"></div>
+
+  <script>
+    // Supabase client init from existing globals or inline
+    const SUPABASE_URL = window.SUPABASE_URL || window._SUPABASE_URL || window.SUPABASE_PROJECT_URL;
+    const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window._SUPABASE_ANON_KEY || window.SUPABASE_PUBLIC_ANON_KEY;
+    const supabase = window.supabase || (window.supabase = window.createClient ? window.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : window.supabase);
+
+    const $ = (id) => document.getElementById(id);
+    const setText = (id, v) => { const el = $(id); if (el) el.textContent = v ?? '—'; };
+    const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}); } catch { return '—'; } };
+
+    function toggleMenu() {
+      const menu = document.getElementById('navMenu');
+      if (!menu) return;
+      menu.classList.toggle('show');
+      document.addEventListener('click', (e) => {
+        if (!menu.contains(e.target) && !document.getElementById('navAvatar').contains(e.target)) {
+          menu.classList.remove('show');
+        }
+      }, { once:true });
+    }
+
+    async function reflectHeader() {
+      const { data: { user } } = await supabase.auth.getUser();
+      const pre = document.getElementById('btnLoginSignup');
+      const navUser = document.getElementById('navUser');
+      if (!user) {
+        pre.classList.remove('hidden');
+        navUser.classList.add('hidden');
+        return;
+      }
+      pre.classList.add('hidden');
+      navUser.classList.remove('hidden');
+
+      // Credits
+      try {
+        const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+        if (prof?.data?.credits != null) setText('navCredits', prof.data.credits + '⚡');
+      } catch {}
+
+      // Avatar image if provided
+      const img = document.getElementById('navAvatarImg');
+      const url = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+      if (url) {
+        img.src = url;
+        img.classList.remove('hidden');
+      }
+    }
+
+    async function ensureAuth() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { window.location.href = 'index.html'; return null; }
+      return user;
+    }
+
+    async function loadProfile() {
+      const user = await ensureAuth();
+      if (!user) return;
+      setText('userEmail', user.email || '—');
+      setText('joinedDate', fmtDate(user.created_at));
+
+      try {
+        const { data: profile } = await supabase
+          .from('profiles').select('credits, subscription_credits, onetime_credits, created_at')
+          .eq('user_id', user.id).maybeSingle();
+
+        const total = (profile?.credits ?? 0) ||
+                      ((profile?.subscription_credits ?? 0) + (profile?.onetime_credits ?? 0));
+        setText('totalCredits', total);
+        if (profile?.created_at) setText('joinedDate', fmtDate(profile.created_at));
+      } catch (e) { console.error(e); }
+    }
+
+    function initHeaderMenu() {
+      document.getElementById('navAvatar')?.addEventListener('click', toggleMenu);
+      document.getElementById('btnLogout')?.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        window.location.href = 'index.html';
+      });
+    }
+
+    function initActions() {
+      document.getElementById('btnBuyCredits')?.addEventListener('click', () => {
+        window.location.href = 'price.html';
+      });
+      document.getElementById('btnResetPassword')?.addEventListener('click', async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.email) return alert('Not signed in.');
+        const redirectTo = window.location.origin;
+        const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo });
+        if (error) { alert('Could not send reset email.'); return; }
+        alert('Password reset email sent.');
+      });
+    }
+
+    (async () => {
+      await reflectHeader();
+      initHeaderMenu();
+      await loadProfile();
+      initActions();
+    })();
+  </script>
+</body>
+</html>
