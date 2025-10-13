@@ -135,11 +135,14 @@
   <div class="h-10"></div>
 
   <script>
-    // Supabase client init from existing globals or inline
+    // Supabase client init (CDN v2 UMD: window.supabase.createClient)
     const SUPABASE_URL = window.SUPABASE_URL || window._SUPABASE_URL || window.SUPABASE_PROJECT_URL;
     const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window._SUPABASE_ANON_KEY || window.SUPABASE_PUBLIC_ANON_KEY;
-    const supabase = window.supabase || (window.supabase = window.createClient ? window.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : window.supabase);
-
+    const supabase = window.__sb || (window.__sb = window.supabase && window.supabase.createClient
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null);
+    if(!supabase){ console.error('Supabase client not initialized. Check global SUPABASE_URL/ANON.'); }
+    
     const $ = (id) => document.getElementById(id);
     const setText = (id, v) => { const el = $(id); if (el) el.textContent = v ?? '—'; };
     const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}); } catch { return '—'; } };
