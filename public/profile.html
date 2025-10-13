@@ -198,6 +198,12 @@
       }
     }
 
+    
+    function initActions() {
+      document.getElementById('btnCreateNow')?.addEventListener('click', ()=>{ window.location.href = 'models.html'; });
+      document.getElementById('btnBuyCredits')?.addEventListener('click', ()=>{ window.location.href = 'price.html'; });
+    }
+
     function initHeaderMenu() {
       $('navAvatar')?.addEventListener('click', toggleMenu);
       $('btnLogout')?.addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = 'index.html'; });
@@ -212,6 +218,7 @@
       }
       await startCreditsParity();
       initHeaderMenu();
+      initActions();
     })();
   </script>
 
