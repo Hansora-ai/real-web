@@ -320,6 +320,17 @@ async function backfillRow(uid, rid, taskId, url){
   }catch{}
 }
 
+// Best-effort: create a submitted row immediately so Usage shows even if user leaves.
+async function backfillSubmitted(uid, rid, taskId){
+  try{
+    await fetch('/.netlify/functions/kie-callback?uid='+encodeURIComponent(uid)+'&run_id='+encodeURIComponent(rid)+'&taskId='+encodeURIComponent(taskId||''),{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ status:'submitted', result:{ images:[] } })
+    });
+  }catch{}
+}
+
 // Option A: poll nb-check (does NOT rely on webhook)
 async function nbCheckPoll(taskId, uid, rid){
   if(!taskId) return;
@@ -348,6 +359,7 @@ async function nbCheckPoll(taskId, uid, rid){
           if(o.data) { const x=await tryExtractImageUrl(o.data); if(x) return x; }
           if(o.result) { const x=await tryExtractImageUrl(o.result); if(x) return x; }
           if(Array.isArray(o.images)&&o.images[0]?.url) return o.images[0].url;
+          if(Array.isArray(o.resultUrls) && o.resultUrls[0]) return o.resultUrls[0];
           if(Array.isArray(o.output)&&o.output[0]?.url) return o.output[0].url;
           return null;
         })(j);
@@ -440,6 +452,9 @@ window.__run=async function(){
     const resJson = await res.json().catch(()=> ({}));
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
 
+    // ensure Usage shows even if user navigates away
+    backfillSubmitted(uid, rid, taskId);
+
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
     runBtn.textContent='Processing…';
 
@@ -460,7 +475,7 @@ window.__run=async function(){
 
     // fallback: poll table directly in case realtime is blocked
     const started = Date.now();
-    while (!__done && Date.now() - started < 120000) { // up to 120s
+    while (!__done && Date.now() - started < 500000) { // up to 120s
       await new Promise(r => setTimeout(r, 1500));
       const { data: row } = await supabase
         .from('nb_results')
