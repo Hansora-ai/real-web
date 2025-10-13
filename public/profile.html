@@ -50,7 +50,7 @@
         <a id="btnGetStarted" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Get Started</a>
         <!-- after login -->
         <div id="navUser" class="hidden items-center gap-2">
-          <div class="flex items-center gap-1 text-sm text-white/80 mr-2" id="navCreditsWrap"><span id="navCreditsNum">0</span><span class="opacity-90" aria-hidden="true">⚡</span></div>
+          <div class="flex items-center gap-1 text-sm text-white/80 mr-2" id="navCreditsWrap" class="flex items-center gap-1 text-sm text-white/80 mr-2 whitespace-nowrap"><span id="navCreditsNum">0</span><span class="opacity-90" aria-hidden="true">⚡</span></div>
           <div class="relative">
             <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
               <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
@@ -160,7 +160,11 @@
       // credits
       try {
         const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-        if (prof?.data?.credits != null) document.getElementById('navCreditsNum').textContent = (typeof prof.data.credits === 'number') ? prof.data.credits : document.getElementById('navCreditsNum').textContent;
+        if (prof?.data?.credits != null) \
+document.getElementById('navCreditsNum').textContent = (typeof prof.data.credits === 'number') ? prof.data.credits : document.getElementById('navCreditsNum').textContent;
+        // Mirror the same credits into the card to ensure consistency
+        const card = document.getElementById('totalCredits');
+        if (card) { card.textContent = document.getElementById('navCreditsNum').textContent; }
       } catch {}
 
       // avatar
@@ -195,7 +199,10 @@
           : ((profile?.subscription_credits ?? 0) + (profile?.onetime_credits ?? 0));
     
         setText('totalCredits', total);
-        if (profile?.created_at) setText('joinedDate', fmtDate(profile.created_at));
+        
+        if (!document.getElementById('navCreditsNum').textContent || document.getElementById('navCreditsNum').textContent === '0') {
+          document.getElementById('navCreditsNum').textContent = total;
+        }if (profile?.created_at) setText('joinedDate', fmtDate(profile.created_at));
       } catch (e) { console.error(e); }
     }
 
