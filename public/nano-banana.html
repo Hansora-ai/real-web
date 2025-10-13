@@ -290,16 +290,16 @@ function onResult(url){
 // Credits + URL extraction helpers
 async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 0.5)throw new Error('Not enough credits (need 0.5).');await supabase.from('profiles').update({credits:cur-0.5}).eq('user_id',data.user.id);}
 
-async function tryExtractImageUrl(o){
-  if(!o) return null;
-  if(typeof o==='string'&&/^https?:\/\//.test(o)) return o;
-  if(o.imageUrl) return o.imageUrl;
-  if(o.outputUrl) return o.outputUrl;
-  if(o.url) return o.url;
-  if(o.data) { const x=await tryExtractImageUrl(o.data); if(x) return x; }
-  if(o.result) { const x=await tryExtractImageUrl(o.result); if(x) return x; }
-  if(Array.isArray(o.images)&&o.images[0]?.url) return o.images[0].url;
-  if(Array.isArray(o.output)&&o.output[0]?.url) return o.output[0].url;
+function derivePublicUrl(up){
+  if (!up) return null;
+  if (up.publicUrl) return up.publicUrl;
+  try{
+    if (up.bucket && up.objectPath && up.uploadUrl){
+      const u = new URL(up.uploadUrl);
+      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
+      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+    }
+  }catch(e){}
   return null;
 }
 
@@ -339,7 +339,18 @@ async function nbCheckPoll(taskId, uid, rid){
 
       const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
       if(['success','succeeded','completed','done'].includes(status)){
-        const url = await tryExtractImageUrl(j);
+        const url = await (async function tryExtractImageUrl(o){
+          if(!o) return null;
+          if(typeof o==='string'&&/^https?:\/\//.test(o)) return o;
+          if(o.imageUrl) return o.imageUrl;
+          if(o.outputUrl) return o.outputUrl;
+          if(o.url) return o.url;
+          if(o.data) { const x=await tryExtractImageUrl(o.data); if(x) return x; }
+          if(o.result) { const x=await tryExtractImageUrl(o.result); if(x) return x; }
+          if(Array.isArray(o.images)&&o.images[0]?.url) return o.images[0].url;
+          if(Array.isArray(o.output)&&o.output[0]?.url) return o.output[0].url;
+          return null;
+        })(j);
         if(url){
           onResult(url);               // show immediately
           backfillRow(uid, rid, taskId, url); // ensure Supabase row exists
@@ -360,7 +371,6 @@ window.__run=async function(){
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
-  
   // HARD CREDIT CHECK (surgical): prevent run if credits insufficient
   try{
     const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
@@ -371,59 +381,53 @@ window.__run=async function(){
       return;
     }
   }catch(_){ /* ignore, but don't proceed if unknown? proceed cautiously */ }
-__done=false;
+
+  __done=false;
   const files=[...filesEl.files];
   if(!files.length){alert('Choose at least one image.');return;}
   if(files.length>4){alert('Max 4 images.');return;}
   for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}
 
-  runBtn.disabled=true;runBtn.textContent='Working…';
-  showStatus('Submitting…','text-zinc-400');
+  runBtn.disabled=true;runBtn.textContent='Uploading…';
+  showStatus('Uploading images…','text-zinc-400');
   resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
 
   try{
     const uid=authData.user.id;
     const rid=uid+'-'+Date.now();
-    const urls=[];
 
-    // upload images (direct to Supabase via signer → no Netlify 500)
-    for (let i = 0; i < files.length; i++) {
-      const f = files[i];
-      
-const up = await (window.kieUploadBridge && window.kieUploadBridge.upload)
-  ? window.kieUploadBridge.upload(f)
-  : (async () => { throw new Error('upload_bridge_missing'); })();
-
-let dl = up && (up.publicUrl || up.uploadUrl);
-if (!dl) {
-  try {
-    if (up && up.bucket && up.objectPath && up.uploadUrl) {
-      const u = new URL(up.uploadUrl);
-      const encPath = up.objectPath.split('/').map(encodeURIComponent).join('/');
-      dl = `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${encPath}`;
-      try { await fetch(dl, { method: 'HEAD', cache: 'no-store' }); } catch (_) {}
-    }
-  } catch (_) {}
-}
-if (!dl && up && up.publicUrl) dl = up.publicUrl;
-if (!dl) { /* avoid hard crash; let user retry */ continue; }
-
-urls.push(dl);
-
+    // ==== FIX: await all uploads, then proceed ====
+    if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
+      throw new Error('upload_bridge_missing');
     }
 
-    // guard: if no URLs were produced, stop here (avoids false "Submitted")
+    const uploadOne = async (f) => {
+      const up = await window.kieUploadBridge.upload(f);
+      const url = derivePublicUrl(up);
+      if (!url) throw new Error('no_public_url');
+      // Best effort warm HEAD to reduce signed-url cache lag
+      try { await fetch(url, { method: 'HEAD', cache: 'no-store' }); } catch {}
+      return url;
+    };
+
+    const settled = await Promise.allSettled(files.map(uploadOne));
+    const urls = settled.filter(x => x.status === 'fulfilled' && x.value).map(x => x.value);
+
+    // guard: if no URLs were produced, stop here
     if (urls.length === 0) {
       showStatus('Upload failed: no image URLs to send','text-rose-300');
       runBtn.disabled = false; runBtn.textContent = 'Run (cost: 0.5⚡)';
       return;
     }
 
+    runBtn.textContent='Submitting…';
+    showStatus('Submitting…','text-zinc-400');
+
     // create job
     const res=await fetch('/.netlify/functions/run-nano-banana',{
       method:'POST',
       headers:{'Content-Type':'application/json','X-USER-ID':uid},
-      body:JSON.stringify({urls, prompt: promptEl.value||'.', format:'png', size:(document.getElementById('size')?.value||'auto'), run_id: rid})
+      body:JSON.stringify({urls, prompt: (promptEl.value||'.'), format:'png', size:(document.getElementById('size')?.value||'auto'), run_id: rid})
     });
 
     if (res.status === 202 || res.ok) {
@@ -437,6 +441,7 @@ urls.push(dl);
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+    runBtn.textContent='Processing…';
 
     // subscribe to Supabase (if webhook inserts there)
     channel = supabase.channel('nb_results_' + rid)
