@@ -26,15 +26,14 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="min-h-screen">
-  <!-- HEADER (1:1 with index) -->
+  <!-- HEADER (verbatim structure) -->
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
-          <div class="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center font-bold">H</div>
-          <span class="font-semibold tracking-wide">HANSORA AI</span>
-        </a>
-      </div>
+      <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+        <div class="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center font-bold">H</div>
+        <span class="font-semibold tracking-wide">HANSORA AI</span>
+      </a>
+
       <nav class="hidden md:flex items-center gap-8 text-sm">
         <a href="/models.html" class="hover:text-white/90">Models</a>
         <a href="/templates.html" class="hover:text-white/90">Templates</a>
@@ -42,17 +41,15 @@
         <a href="price.html" class="hover:text-white/90">Pricing</a>
         <a href="#faq" class="hover:text-white/90">FAQ</a>
       </nav>
-      <div class="flex items-center gap-3">
+
+      <div class="flex items-center gap-3 whitespace-nowrap">
         <a href="gptimage.html" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
-        <!-- pre-login -->
         <a id="btnLoginSignup" href="/login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a>
-        <a id="btnLoginNav" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Log in</a>
-        <a id="btnGetStarted" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Get Started</a>
-        <!-- after login -->
+        <a id="btnLoginNav" href="/login.html" class="hidden" aria-hidden="true" tabindex="-1">Log in</a>
+        <a id="btnGetStarted" href="/login.html" class="hidden" aria-hidden="true" tabindex="-1">Get Started</a>
+
         <div id="navUser" class="hidden items-center gap-2">
-          <div id="navCreditsWrap" class="flex items-center gap-1 text-sm text-white/80 mr-2 whitespace-nowrap">
-            <span id="navCreditsNum">0</span><span class="opacity-90" aria-hidden="true">⚡</span>
-          </div>
+          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
           <div class="relative">
             <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
               <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
@@ -74,23 +71,16 @@
   <main class="mx-auto max-w-6xl px-4 py-10">
     <h1 class="text-3xl md:text-4xl font-semibold mb-8">Your Profile</h1>
     <div class="grid md:grid-cols-3 gap-6">
-      <!-- Left: email, joined, available credits -->
       <section class="md:col-span-1 p-5 rounded-2xl glass border border-base-line shadow-soft">
         <h2 class="text-lg font-medium mb-4">Creator Dashboard</h2>
         <div class="text-sm space-y-4">
           <div class="flex items-center gap-2 opacity-80">
-            <svg width="16" height="16" fill="currentColor" class="opacity-70"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4zm2 0v8h8V4H4z"/></svg>
-            <div>
-              <div class="opacity-70">Your Email</div>
-              <div id="userEmail" class="font-medium">—</div>
-            </div>
+            <div class="opacity-70">Your Email</div>
+            <div id="userEmail" class="font-medium">—</div>
           </div>
           <div class="flex items-center gap-2 opacity-80">
-            <svg width="16" height="16" fill="currentColor" class="opacity-70"><path d="M8 3a5 5 0 100 10A5 5 0 008 3zm.5 2.5a.5.5 0 00-1 0V8a.5.5 0 00.146.354l2 2a.5.5 0 10.708-.708L8.5 7.793V5.5z"/></svg>
-            <div>
-              <div class="opacity-70">With Us Since</div>
-              <div id="joinedDate" class="font-medium">—</div>
-            </div>
+            <div class="opacity-70">With Us Since</div>
+            <div id="joinedDate" class="font-medium">—</div>
           </div>
           <div class="p-4 rounded-xl bg-white/5 border border-white/10">
             <div class="text-xs opacity-70 mb-1">Available Credits</div>
@@ -99,7 +89,6 @@
         </div>
       </section>
 
-      <!-- Right: Calls to action -->
       <section class="md:col-span-2 p-5 rounded-2xl glass border border-base-line shadow-soft">
         <h2 class="text-lg font-medium mb-4">Get Creating</h2>
         <div class="grid md:grid-cols-2 gap-6">
@@ -125,110 +114,97 @@
   <div class="h-10"></div>
 
   <script>
-    // === Supabase client (same project constants as index) ===
+    // Supabase project constants (same as index)
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // === Helpers ===
-    const $ = (id) => document.getElementById(id);
-    const setText = (id, v) => { const el = $(id); if (el) el.textContent = v ?? '—'; };
-    const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}); } catch { return '—'; } };
+    // Grab refs like index
+    const $btnLoginSignup = document.getElementById('btnLoginSignup');
+    const $btnLoginNav = document.getElementById('btnLoginNav');
+    const $btnGetStarted = document.getElementById('btnGetStarted');
+    const $navUser = document.getElementById('navUser');
+    const $navCredits = document.getElementById('navCredits');
+    const $navAvatar = document.getElementById('navAvatar');
+    const $navAvatarImg = document.getElementById('navAvatarImg');
+    const $navMenu = document.getElementById('navMenu');
 
-    function toggleMenu() {
-      const m = $('navMenu');
-      if (!m) return;
-      m.classList.toggle('show');
-      document.addEventListener('click', (e) => {
-        if (!m.contains(e.target) && !$('navAvatar').contains(e.target)) m.classList.remove('show');
-      }, { once:true });
-    }
-
-    // === Header reflect (1:1 behavior) ===
-    async function reflectHeader() {
-      const { data: { user } } = await supabase.auth.getUser();
-      const pre = $('btnLoginSignup');
-      const navUser = $('navUser');
-
-      if (!user) {
-        pre?.classList.remove('hidden');
-        navUser?.classList.add('hidden');
-        return;
+    function showLoggedInUI(profile, user){
+      if($btnLoginNav) $btnLoginNav.classList.add('hidden');
+      if($btnGetStarted) $btnGetStarted.classList.add('hidden');
+      if($btnLoginSignup) $btnLoginSignup.classList.add('hidden');
+      $navUser.classList.remove('hidden');
+      $navUser.classList.add('flex');
+      $navCredits.textContent = (profile?.credits ?? 0) + '⚡';
+      if(user?.user_metadata?.avatar_url){
+        $navAvatarImg.src = user.user_metadata.avatar_url;
+        $navAvatarImg.classList.remove('hidden');
+      } else {
+        $navAvatarImg.classList.add('hidden');
       }
-      pre?.classList.add('hidden');
-      navUser?.classList.remove('hidden');
-
-      // credits
-      try {
-        const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-        if (prof?.data?.credits != null) {
-          document.getElementById('navCreditsNum').textContent = prof.data.credits;
-          const card = document.getElementById('totalCredits');
-          if (card) card.textContent = String(prof.data.credits);
-        }
-      } catch (e) { console.error(e); }
-
-      // avatar
-      const img = $('navAvatarImg');
-      const url = user.user_metadata?.avatar_url || user.user_metadata?.picture;
-      if (url) { img.src = url; img.classList.remove('hidden'); }
+      // Mirror into card
+      const num = (profile?.credits ?? 0);
+      const card = document.getElementById('totalCredits');
+      if (card) card.textContent = String(num);
+    }
+    function showLoggedOutUI(){
+      if($btnLoginNav) $btnLoginNav.classList.remove('hidden');
+      if($btnGetStarted) $btnGetStarted.classList.remove('hidden');
+      if($btnLoginSignup) $btnLoginSignup.classList.remove('hidden');
+      $navUser.classList.add('hidden');
+      $navUser.classList.remove('flex');
     }
 
-    async function ensureAuth() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { return null; }
-      return user;
+    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
+    document.addEventListener('click', (e)=>{
+      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
+    });
+
+    async function getOrCreateProfile(user){
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id,email,credits,created_at')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if(error){ throw error; }
+      if(!data){
+        const ins = await supabase.from('profiles').insert({ user_id: user.id, email: user.email, credits: 3 }).select().single();
+        if(ins.error){ throw ins.error; }
+        return ins.data;
+      }
+      return data;
     }
-
-    async function loadProfile() {
-      const user = await ensureAuth();
-      if (!user) return;
-      setText('userEmail', user.email || '—');
-      setText('joinedDate', fmtDate(user.created_at));
-
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('credits, subscription_credits, onetime_credits, created_at')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        const creditsFromProfile = (profile && typeof profile.credits === 'number') ? profile.credits : null;
-        const total = (creditsFromProfile !== null)
-          ? creditsFromProfile
-          : ((profile?.subscription_credits ?? 0) + (profile?.onetime_credits ?? 0));
-
-        setText('totalCredits', total);
-
-        // If header hasn't been set yet, set it from here too
-        const creditsNum = document.getElementById('navCreditsNum');
-        if (creditsNum && (!creditsNum.textContent || creditsNum.textContent === '0')) {
-          creditsNum.textContent = String(total);
-        }
-
-        if (profile?.created_at) setText('joinedDate', fmtDate(profile.created_at));
-      } catch (e) { console.error(e); }
+    async function refreshCredits(){
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if(!user) return;
+      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      if(prof?.data?.credits != null){
+        $navCredits.textContent = prof.data.credits + '⚡';
+        const card = document.getElementById('totalCredits'); if(card) card.textContent = String(prof.data.credits);
+      }
     }
+    window.refreshCredits = refreshCredits;
 
-    function initHeaderMenu() {
-      $('navAvatar')?.addEventListener('click', toggleMenu);
-      $('btnLogout')?.addEventListener('click', async () => {
-        await supabase.auth.signOut();
-        window.location.href = 'index.html';
-      });
-    }
-
-    function initActions() {
-      $('btnCreateNow')?.addEventListener('click', () => { window.location.href = 'models.html'; });
-      $('btnBuyCredits')?.addEventListener('click', () => { window.location.href = 'price.html'; });
-    }
-
-    (async () => {
-      await reflectHeader();
-      initHeaderMenu();
-      await loadProfile();
-      initActions();
+    (async ()=>{
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if(user){
+        try{
+          const prof = await getOrCreateProfile(user);
+          document.getElementById('userEmail').textContent = user.email || '—';
+          document.getElementById('joinedDate').textContent = new Date(user.created_at).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+          showLoggedInUI(prof, user);
+        }catch{ showLoggedOutUI(); }
+      }else{
+        showLoggedOutUI();
+      }
     })();
+
+    // CTAs
+    document.getElementById('btnCreateNow')?.addEventListener('click', ()=>{ window.location.href = 'models.html'; });
+    document.getElementById('btnBuyCredits')?.addEventListener('click', ()=>{ window.location.href = 'price.html'; });
+    document.getElementById('btnLogout')?.addEventListener('click', async ()=>{ await supabase.auth.signOut(); showLoggedOutUI(); window.location.href='index.html'; });
   </script>
 </body>
 </html>
