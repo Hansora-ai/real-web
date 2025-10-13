@@ -412,6 +412,13 @@ urls.push(dl);
 
     }
 
+    // guard: if no URLs were produced, stop here (avoids false "Submitted")
+    if (urls.length === 0) {
+      showStatus('Upload failed: no image URLs to send','text-rose-300');
+      runBtn.disabled = false; runBtn.textContent = 'Run (cost: 0.5⚡)';
+      return;
+    }
+
     // create job
     const res=await fetch('/.netlify/functions/run-nano-banana',{
       method:'POST',
