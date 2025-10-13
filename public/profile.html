@@ -20,13 +20,12 @@
     .btn:hover{background:rgba(255,255,255,.1)}
     .btn-brand{background:var(--brand); border-color:transparent; color:white}
     .btn-brand:hover{background:#7c7ff6}
-    .menu{ display:none; }
-    .menu.show{ display:block; }
+    .menu{ display:none; } .menu.show{ display:block; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="min-h-screen">
-  <!-- HEADER (verbatim structure) -->
+  <!-- HEADER -->
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
@@ -44,10 +43,12 @@
 
       <div class="flex items-center gap-3 whitespace-nowrap">
         <a href="gptimage.html" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
+        <!-- Pre-login -->
         <a id="btnLoginSignup" href="/login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a>
         <a id="btnLoginNav" href="/login.html" class="hidden" aria-hidden="true" tabindex="-1">Log in</a>
         <a id="btnGetStarted" href="/login.html" class="hidden" aria-hidden="true" tabindex="-1">Get Started</a>
 
+        <!-- Logged-in -->
         <div id="navUser" class="hidden items-center gap-2">
           <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
           <div class="relative">
@@ -67,7 +68,7 @@
     </div>
   </header>
 
-  <!-- PAGE -->
+  <!-- BODY -->
   <main class="mx-auto max-w-6xl px-4 py-10">
     <h1 class="text-3xl md:text-4xl font-semibold mb-8">Your Profile</h1>
     <div class="grid md:grid-cols-3 gap-6">
@@ -114,97 +115,75 @@
   <div class="h-10"></div>
 
   <script>
-    // Supabase project constants (same as index)
+    // Supabase (same as index)
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Grab refs like index
-    const $btnLoginSignup = document.getElementById('btnLoginSignup');
-    const $btnLoginNav = document.getElementById('btnLoginNav');
-    const $btnGetStarted = document.getElementById('btnGetStarted');
-    const $navUser = document.getElementById('navUser');
-    const $navCredits = document.getElementById('navCredits');
-    const $navAvatar = document.getElementById('navAvatar');
-    const $navAvatarImg = document.getElementById('navAvatarImg');
-    const $navMenu = document.getElementById('navMenu');
+    // Helpers
+    const $ = (id) => document.getElementById(id);
+    const setText = (id, v) => { const el = $(id); if (el) el.textContent = v ?? '—'; };
+    const fmt = (iso) => new Date(iso).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
 
-    function showLoggedInUI(profile, user){
-      if($btnLoginNav) $btnLoginNav.classList.add('hidden');
-      if($btnGetStarted) $btnGetStarted.classList.add('hidden');
-      if($btnLoginSignup) $btnLoginSignup.classList.add('hidden');
-      $navUser.classList.remove('hidden');
-      $navUser.classList.add('flex');
-      $navCredits.textContent = (profile?.credits ?? 0) + '⚡';
-      if(user?.user_metadata?.avatar_url){
-        $navAvatarImg.src = user.user_metadata.avatar_url;
-        $navAvatarImg.classList.remove('hidden');
-      } else {
-        $navAvatarImg.classList.add('hidden');
-      }
-      // Mirror into card
-      const num = (profile?.credits ?? 0);
-      const card = document.getElementById('totalCredits');
-      if (card) card.textContent = String(num);
-    }
-    function showLoggedOutUI(){
-      if($btnLoginNav) $btnLoginNav.classList.remove('hidden');
-      if($btnGetStarted) $btnGetStarted.classList.remove('hidden');
-      if($btnLoginSignup) $btnLoginSignup.classList.remove('hidden');
-      $navUser.classList.add('hidden');
-      $navUser.classList.remove('flex');
-    }
-
-    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
+    // Header menu
+    $('#navAvatar')?.addEventListener('click', ()=> $('#navMenu').classList.toggle('show'));
     document.addEventListener('click', (e)=>{
-      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
+      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $('#navMenu')?.classList.remove('show');
     });
 
-    async function getOrCreateProfile(user){
-      const { data, error } = await supabase
+    function showLoggedInUI(credits, user){
+      $('#btnLoginSignup')?.classList.add('hidden');
+      $('#btnLoginNav')?.classList.add('hidden');
+      $('#btnGetStarted')?.classList.add('hidden');
+      const wrap = $('#navUser');
+      wrap?.classList.remove('hidden');
+      wrap?.classList.add('flex');               // << keep inline next to avatar
+      $('#navCredits').textContent = String(credits) + '⚡'; // single source of truth
+      const card = $('#totalCredits'); if(card) card.textContent = String(credits); // mirror to card
+      if (user?.user_metadata?.avatar_url) {
+        const img = $('#navAvatarImg'); img.src = user.user_metadata.avatar_url; img.classList.remove('hidden');
+      }
+    }
+    function showLoggedOutUI(){
+      $('#btnLoginSignup')?.classList.remove('hidden');
+      $('#navUser')?.classList.add('hidden');
+      $('#navUser')?.classList.remove('flex');
+    }
+
+    async function loadHeaderAndCard(){
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if(!user){ showLoggedOutUI(); return; }
+
+      // email/joined
+      setText('userEmail', user.email || '—');
+      setText('joinedDate', fmt(user.created_at));
+
+      // credits from profiles (user_id) -> same value for header & card
+      const { data: prof, error } = await supabase
         .from('profiles')
-        .select('user_id,email,credits,created_at')
+        .select('credits, subscription_credits, onetime_credits, created_at')
         .eq('user_id', user.id)
         .maybeSingle();
-      if(error){ throw error; }
-      if(!data){
-        const ins = await supabase.from('profiles').insert({ user_id: user.id, email: user.email, credits: 3 }).select().single();
-        if(ins.error){ throw ins.error; }
-        return ins.data;
-      }
-      return data;
-    }
-    async function refreshCredits(){
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
-      if(!user) return;
-      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-      if(prof?.data?.credits != null){
-        $navCredits.textContent = prof.data.credits + '⚡';
-        const card = document.getElementById('totalCredits'); if(card) card.textContent = String(prof.data.credits);
-      }
-    }
-    window.refreshCredits = refreshCredits;
 
-    (async ()=>{
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
-      if(user){
-        try{
-          const prof = await getOrCreateProfile(user);
-          document.getElementById('userEmail').textContent = user.email || '—';
-          document.getElementById('joinedDate').textContent = new Date(user.created_at).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
-          showLoggedInUI(prof, user);
-        }catch{ showLoggedOutUI(); }
-      }else{
-        showLoggedOutUI();
+      let credits = 0;
+      if (prof && typeof prof.credits === 'number') {
+        credits = prof.credits;
+      } else {
+        credits = (prof?.subscription_credits ?? 0) + (prof?.onetime_credits ?? 0);
       }
-    })();
+      if (prof?.created_at) setText('joinedDate', fmt(prof.created_at));
+
+      showLoggedInUI(credits, user);
+    }
 
     // CTAs
-    document.getElementById('btnCreateNow')?.addEventListener('click', ()=>{ window.location.href = 'models.html'; });
-    document.getElementById('btnBuyCredits')?.addEventListener('click', ()=>{ window.location.href = 'price.html'; });
-    document.getElementById('btnLogout')?.addEventListener('click', async ()=>{ await supabase.auth.signOut(); showLoggedOutUI(); window.location.href='index.html'; });
+    $('#btnCreateNow')?.addEventListener('click', ()=> location.href='models.html');
+    $('#btnBuyCredits')?.addEventListener('click', ()=> location.href='price.html');
+    $('#btnLogout')?.addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.href='index.html'; });
+
+    // Boot
+    loadHeaderAndCard();
   </script>
 </body>
 </html>
