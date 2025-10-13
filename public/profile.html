@@ -257,6 +257,40 @@
 
     (async () => {
       await reflectHeader();
+      // === Credits parity with index ===
+      const navCreditsEl = document.getElementById('navCredits');
+        const runBtn = document.getElementById('runBtn');
+        const R = (c)=>{ 
+          if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+          const tc=document.getElementById('totalCredits'); if(tc) tc.textContent=String(c ?? 0);
+          if (runBtn) {
+            const ok = (c ?? 0) > 0;
+            runBtn.disabled = !ok;
+            runBtn.classList.toggle('opacity-50', !ok);
+            runBtn.classList.toggle('cursor-not-allowed', !ok);
+          }
+        };
+
+        const ures = await supabase.auth.getUser();
+        const user = ures?.data?.user;
+        if(!user) return;
+
+        async function loadCreditsOnce(){ 
+          try {
+            const { data: prof } = await supabase.from('profiles')
+              .select('credits').eq('user_id', user.id).maybeSingle();
+            const c = prof?.credits ?? 0;
+            R(c);
+            return c;
+          } catch(e) { console.warn('credits poll read failed', e); return null; }
+        }
+
+        // Long polling burst (3 minutes) every 2s
+        function startCreditsPolling(durationMs=180000, intervalMs=2000){
+          if (window.__creditsPoll) clearInterval(window.__creditsPoll);
+          const t0 = Date.now();
+          window.__creditsPoll = setInterval(async ()=>{
+            await loadCreditsOnce();
       initHeaderMenu();
       await loadProfile();
       initActions();
