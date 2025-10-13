@@ -26,7 +26,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="min-h-screen">
-  <!-- HEADER (kept 1:1, surgical edits only for credits placement) -->
+  <!-- HEADER (kept 1:1; tiny edits for credits chip + no-wrap) -->
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -50,10 +50,8 @@
         <a id="btnGetStarted" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Get Started</a>
         <!-- after login -->
         <div id="navUser" class="hidden items-center gap-2 flex-nowrap">
-          <!-- keep credits inline, prevent wrapping -->
-          <div id="navCreditsWrap" class="flex items-center gap-1 text-sm text-white/80 mr-2 whitespace-nowrap">
-            <span id="navCreditsNum">0</span><span class="opacity-90" aria-hidden="true">⚡</span>
-          </div>
+          <!-- Credits chip (same id as index) -->
+          <span id="navCredits" class="text-sm text-white/80 mr-2 whitespace-nowrap inline-flex items-center">0⚡</span>
           <div class="relative">
             <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
               <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
@@ -80,7 +78,7 @@
         <h2 class="text-lg font-medium mb-4">Creator Dashboard</h2>
         <div class="text-sm space-y-4">
           <div class="flex items-center gap-2 opacity-80">
-            <svg width="16" height="16" fill="currentColor" class="opacity-70"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0-01-2-2V4zm2 0v8h8V4H4z"/></svg>
+            <svg width="16" height="16" fill="currentColor" class="opacity-70"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4zm2 0v8h8V4H4z"/></svg>
             <div>
               <div class="opacity-70">Your Email</div>
               <div id="userEmail" class="font-medium">—</div>
@@ -146,7 +144,7 @@
       }, { once:true });
     }
 
-    // === Header reflect (kept; profile will also set credits) ===
+    // === Header reflect (kept; credits and avatar) ===
     async function reflectHeader() {
       const { data: { user } } = await supabase.auth.getUser();
       const pre = $('btnLoginSignup');
@@ -185,15 +183,15 @@
           .eq('user_id', user.id)
           .maybeSingle();
 
-        const creditsFromProfile = (profile && typeof profile.credits === 'number') ? profile.credits : null;
-        const total = (creditsFromProfile !== null)
-          ? creditsFromProfile
-          : ((profile?.subscription_credits ?? 0) + (profile?.onetime_credits ?? 0));
+        const credits = Number(profile?.credits ?? 0);
+        const sub = Number(profile?.subscription_credits ?? 0);
+        const one = Number(profile?.onetime_credits ?? 0);
+        const total = credits || (sub + one);
 
         // Always set both displays so it never sticks at "0"
         setText('totalCredits', total);
-        const navNum = document.getElementById('navCreditsNum');
-        if (navNum) navNum.textContent = String(total);
+        const nav = document.getElementById('navCredits');
+        if (nav) nav.textContent = String(total) + '⚡';
 
         if (profile?.created_at) setText('joinedDate', fmtDate(profile.created_at));
       } catch (e) { console.error(e); }
