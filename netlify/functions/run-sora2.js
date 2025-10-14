@@ -90,7 +90,7 @@ exports.handler = async (event) => {
     if (body.n_frames !== undefined) kiePayload.input.n_frames = String(body.n_frames); // '10' | '15'
     // Back-compat mapping if callers still send legacy keys
     if (body.quality && !kiePayload.input.size) {
-      kiePayload.input.size = String(body.quality).toLowerCase() === "hd" ? "high" : "standard";
+      kiePayload.input.size = /^(hd|high)$/i.test(String(body.quality)) ? "high" : "standard";
     }
     if (body.duration && !kiePayload.input.n_frames) {
       const d = parseInt(body.duration, 10); kiePayload.input.n_frames = String(d === 15 ? 15 : 10);
