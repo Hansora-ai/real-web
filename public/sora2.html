@@ -269,7 +269,8 @@ async function runSora(){
   const hasImage = files.length===1;
   const prompt=(promptEl.value||'').trim();
 
-  const credits=await getCredits(); if(credits<3){ showStatus('Not enough credits (need 3).','text-rose-300'); runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
+  const needed = currentCost();
+  const credits=await getCredits(); if(credits<needed){ showStatus('Not enough credits (need '+needed+').','text-rose-300'); runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
 
   let imageUrl='';
   if(hasImage){
@@ -282,7 +283,7 @@ async function runSora(){
   const aspectRatio = (ratioEl.value||'16:9');
   const orientation = arToSoraMode(aspectRatio);
 
-  showStatus('Submitting… (deducting 3⚡)','text-zinc-400');
+  showStatus('Submitting… (deducting '+needed+'⚡)','text-zinc-400');
   // Create a run id and seed a pending row (1:1 with Veo)
   const runId = uuidv4();
   let genId = null;
@@ -306,22 +307,19 @@ async function runSora(){
       uid: auth.user.id,
       run_id: runId,
       id: genId,
-      model: hasImage ? 'sora-2-image-to-video' : 'sora-2-text-to-video',
+      tier: (typeof tierEl!=='undefined' && tierEl && tierEl.value) ? tierEl.value : 'pro',
       prompt,
       image_urls: imageUrl ? [imageUrl] : [],
-      orientation,
       aspectRatio,
-      duration: 10,
-      quality: 'hd'
-    })
-  });
-  const j = await resp.json().catch(()=>({}));
+      size: (typeof sizeSel!=='undefined' && sizeSel && sizeSel.value) ? sizeSel.value : 'high',
+      n_frames: (typeof framesSel!=='undefined' && framesSel && framesSel.value) ? parseInt(framesSel.value,10) : 10
+    });
   if(!resp.ok || !j.submitted){
     showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
     runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
   }
 
-  try{ await chargeCredits(3); await refreshCreditsUI(); }catch{}
+  try{ await chargeCredits(needed); await refreshCreditsUI(); }catch{}
 
   showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
   resultBox.innerHTML = '<div class="py-6 text-center space-y-2"><div class="text-xs text-zinc-400">Generating…</div><div class="text-[15px] font-semibold text-zinc-100">Sometimes during high demand it takes a little longer.<br/>You can leave this page — your result will appear in <a class="underline hover:no-underline" href="usage.html">Usage</a> when it’s done.</div></div>';
