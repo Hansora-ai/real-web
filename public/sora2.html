@@ -262,28 +262,27 @@ async function runSora(){
   if(__busy) return;
   __busy=true; runBtn.disabled=true; runBtn.textContent='Working…'; runBtn.classList.add('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents='none';
   try{ downloadLink.classList.add('hidden'); }catch{}
-  const {data:auth}=await supabase.auth.getUser(); if(!auth.user){ alert('Please log in or register first.'); runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
+  const {data:auth}=await supabase.auth.getUser(); if(!auth.user){ alert('Please log in or register first.'); runBtn.disabled=false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
 
   const files=[...imageEl.files].slice(0,1);
-  for(const f of files){ if(f.size>10*1024*1024){ alert('File too large: '+f.name); runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; } }
+  for(const f of files){ if(f.size>10*1024*1024){ alert('File too large: '+f.name); runBtn.disabled=false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; } }
   const hasImage = files.length===1;
   const prompt=(promptEl.value||'').trim();
 
-  const needed = currentCost();
-  const credits=await getCredits(); if(credits<needed){ showStatus('Not enough credits (need '+needed+').','text-rose-300'); runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
+  const cost = currentCost(); const credits=await getCredits(); if(credits<cost){ showStatus('Not enough credits (need '+cost+').','text-rose-300'); runBtn.disabled=false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
 
   let imageUrl='';
   if(hasImage){
     const fd=new FormData(); fd.append('file', files[0], files[0].name||'image-0.png');
     const ur=await fetch('/.netlify/functions/kie-upload',{method:'POST',headers:{'X-USER-ID':auth.user.id},body:fd});
-    const uj=await ur.json().catch(()=>null); if(!ur.ok||!uj||!uj.downloadUrl){ showStatus('Upload failed','text-rose-300'); runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
+    const uj=await ur.json().catch(()=>null); if(!ur.ok||!uj||!uj.downloadUrl){ showStatus('Upload failed','text-rose-300'); runBtn.disabled=false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
     imageUrl=uj.downloadUrl;
   }
 
   const aspectRatio = (ratioEl.value||'16:9');
   const orientation = arToSoraMode(aspectRatio);
 
-  showStatus('Submitting… (deducting '+needed+'⚡)','text-zinc-400');
+  showStatus('Submitting… (deducting '+cost+'⚡)','text-zinc-400');
   // Create a run id and seed a pending row (1:1 with Veo)
   const runId = uuidv4();
   let genId = null;
@@ -307,19 +306,22 @@ async function runSora(){
       uid: auth.user.id,
       run_id: runId,
       id: genId,
-      tier: (typeof tierEl!=='undefined' && tierEl && tierEl.value) ? tierEl.value : 'pro',
+      tier: tierEl.value,
       prompt,
       image_urls: imageUrl ? [imageUrl] : [],
+      orientation,
       aspectRatio,
-      size: (typeof sizeSel!=='undefined' && sizeSel && sizeSel.value) ? sizeSel.value : 'high',
-      n_frames: (typeof framesSel!=='undefined' && framesSel && framesSel.value) ? parseInt(framesSel.value,10) : 10
-    });
+      duration: parseInt(framesSel.value||'10',10),
+      quality: sizeSel.value
+    })
+  });
+  const j = await resp.json().catch(()=>({}));
   if(!resp.ok || !j.submitted){
     showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
-    runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
+    runBtn.disabled=false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
   }
 
-  try{ await chargeCredits(needed); await refreshCreditsUI(); }catch{}
+  try{ await chargeCredits(cost); await refreshCreditsUI(); }catch{}
 
   showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
   resultBox.innerHTML = '<div class="py-6 text-center space-y-2"><div class="text-xs text-zinc-400">Generating…</div><div class="text-[15px] font-semibold text-zinc-100">Sometimes during high demand it takes a little longer.<br/>You can leave this page — your result will appear in <a class="underline hover:no-underline" href="usage.html">Usage</a> when it’s done.</div></div>';
@@ -336,13 +338,13 @@ async function soraPoll(taskId, uid, rid){
       if(j && j.ok && j.video_url){
         showVideo(j.video_url, j.thumb_url||'');
         showStatus('✅ Done.','text-emerald-300');
-        runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
+        runBtn.disabled=false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
       }
     }catch{}
     await new Promise(res=>setTimeout(res,1500));
   }
   showStatus('Still processing… try refreshing later','text-yellow-300');
-  runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false;
+  runBtn.disabled=false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false;
 }
 </script>
 
