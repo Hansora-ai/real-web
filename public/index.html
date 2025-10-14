@@ -1,13 +1,14 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HANSORA AI — Create Images & Video</title>
-  <meta name="description" content="Simple, beautiful AI generation for images & video." />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>HANSORA AI — Create Images &amp; Video</title>
+<meta content="Simple, beautiful AI generation for images &amp; video." name="description"/>
+<link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" rel="icon"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
                        radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
@@ -52,9 +53,11 @@ hr, hr.section-line { border-color: var(--base-bg) !important; opacity:.2 }
 section { border-top-color: var(--base-bg) !important; border-bottom-color: var(--base-bg) !important; }
 hr, .section-line { border-color: var(--base-bg) !important; opacity:.12 }
 
-</style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+/* Prevent body scroll when mobile menu is open */
+.no-scroll { overflow: hidden; height: 100vh; touch-action: none; overscroll-behavior: none; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- HS FINAL STEP1-2 START -->
 <style>
 /* Hide only the three hero CTAs by text; keep layout intact */
@@ -62,589 +65,568 @@ hr, .section-line { border-color: var(--base-bg) !important; opacity:.12 }
 .hs-hero-video{ width:100%; height:auto; display:block; border-radius:16px; }
 </style>
 <!-- HS FINAL STEP1-2 END -->
-
+<style>
+/* FORCE VISIBLE WHITE X ICON & CLICKABLE AREA */
+@media (max-width: 768px){
+  .hs-overlay .panel header button#hs-close svg,
+  #mobileMenuClose svg{
+    width: 22px; height: 22px; display: block;
+  }
+  .hs-overlay .panel header button#hs-close svg path,
+  #mobileMenuClose svg path{
+    stroke: #ffffff !important; stroke-width: 2 !important;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+}
+</style>
+<style>
+/* Center the X icon perfectly inside the close button */
+@media (max-width: 768px){
+  .hs-overlay .panel header{ position: relative; }
+  .hs-overlay .panel header button#hs-close{
+    display:flex; align-items:center; justify-content:center;
+    padding:0; line-height:0;
+  }
+  .hs-overlay .panel header button#hs-close svg{
+    width:20px; height:20px; margin:0;
+    display:block;
+  }
+}
+</style>
 </head>
 <body class="min-h-screen">
-  <!-- HEADER -->
-  <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
-        <img src="hansora-logo.png" alt="Hansora AI" class="h-10 w-10 rounded-lg object-contain" />
-        <span class="font-semibold tracking-wide">HANSORA AI</span>
-      </a>
-      </div>
-      <nav class="hidden md:flex items-center gap-8 text-sm">
-        <a href="/models.html" class="hover:text-white/90">Models</a>
-        <a href="/templates.html" class="hover:text-white/90">Templates</a>
-        <a href="examples-prompts.html" class="hover:opacity-80">Examples/Prompts</a> <a href="#pricing" class="hover:text-white/90">Pricing</a>
-        <a href="#faq" class="hover:text-white/90">FAQ</a>
-      </nav>
-      <div class="flex items-center gap-3">
-        <a href="gptimage.html" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
-
-        <!-- pre-login -->
-        <a id="btnLoginSignup" href="/login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a><a id="btnLoginNav" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Log in</a><a id="btnGetStarted" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Get Started</a>
-
-        <!-- after login -->
-        <div id="navUser" class="hidden items-center gap-2">
-          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
-          <div class="relative">
-            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
-              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
-            </button>
-            <div id="navMenu" class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm">
-              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a>
-              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Edit profile</a>
-              <a href="#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a>
-              <a href="#" href="/usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a>
-              <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- HERO -->
-  <section class="relative overflow-hidden">
-    <div class="hero-glow"></div>
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-      <div class="grid md:grid-cols-2 gap-10 items-center">
-        <div>
-          <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80 mb-4">
-            <span class="inline-flex size-1.5 rounded-full bg-emerald-400"></span>
+<!-- HEADER -->
+<header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<a class="flex items-center gap-3 hover:opacity-90" href="index.html">
+<img alt="Hansora AI" class="h-10 w-10 rounded-lg object-contain" src="hansora-logo.png"/>
+<span class="font-semibold tracking-wide">HANSORA AI</span>
+</a>
+</div>
+<nav class="hidden md:flex items-center gap-8 text-sm">
+<a class="hover:text-white/90" href="/models.html">Models</a>
+<a class="hover:text-white/90" href="/templates.html">Templates</a>
+<a class="hover:opacity-80" href="examples-prompts.html">Examples/Prompts</a> <a class="hover:text-white/90" href="#pricing">Pricing</a>
+<a class="hover:text-white/90" href="#faq">FAQ</a>
+</nav>
+<div class="flex items-center gap-3">
+<a class="text-sm hover:text-white/90 hidden sm:inline" href="gptimage.html">EN / RU</a>
+<!-- pre-login -->
+<a class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft" href="/login.html" id="btnLoginSignup">Login / Signup</a><a aria-hidden="true" class="hidden" href="/login.html" id="btnLoginNav" style="display:none!important;visibility:hidden" tabindex="-1">Log in</a><a aria-hidden="true" class="hidden" href="/login.html" id="btnGetStarted" style="display:none!important;visibility:hidden" tabindex="-1">Get Started</a>
+<!-- after login -->
+<div class="hidden items-center gap-2" id="navUser">
+<span class="text-sm text-white/80 mr-2" id="navCredits">0⚡</span>
+<div class="relative">
+<button class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden" id="navAvatar">
+<img alt="profile" class="h-full w-full object-cover hidden" id="navAvatarImg"/>
+</button>
+<div class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm" id="navMenu">
+<a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="#">Settings</a>
+<a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="#">Edit profile</a>
+<a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="#pricing">Subscriptions</a>
+<a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/usage.html">Usage</a>
+<button class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5" id="btnLogout">Log out</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- HERO -->
+<section class="relative overflow-hidden">
+<div class="hero-glow"></div>
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 md:py-28">
+<div class="grid md:grid-cols-2 gap-10 items-center">
+<div>
+<div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80 mb-4">
+<span class="inline-flex size-1.5 rounded-full bg-emerald-400"></span>
             Live models: Veo 3 • Kling • Runway
           </div>
-          <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight">
-            Create stunning <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-blue-400 to-sky-300">AI video & images</span> in seconds.
+<h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight">
+            Create stunning <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-blue-400 to-sky-300">AI video &amp; images</span> in seconds.
           </h1>
-          <p class="mt-5 text-zinc-400 max-w-xl">Simple, beautiful, and fast. Pick a model, paste a prompt or upload an image, and generate. Clean UI inspired by the best—tuned for real work.</p>
-          <div class="mt-8 flex flex-wrap items-center gap-3">
-            <a href="/models.html" class="rounded-xl btn-brand px-5 py-3 text-sm font-semibold shadow-soft">Explore Models</a><a href="#templates" class="rounded-xl btn px-5 py-3 text-sm">See Templates</a>
-            <button id="btnLogin" class="rounded-xl btn px-5 py-3 text-sm">Log in / Sign up</button>
-          </div>
-          <p class="mt-3 text-xs text-zinc-400">New users automatically receive <b>3 credits</b>.</p>
-          <div class="mt-6 flex items-center gap-6 text-xs text-zinc-400">
-            <div class="flex items-center gap-2"><span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>Online 24/7</div>
-            <div>Credits • RU / EN</div>
-          </div>
-        </div>
-        <div>
-          <div class="glass relative rounded-2xl p-3 md:p-4 shadow-soft">
-            <div class="aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60">
-              <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop" alt="Showcase" class="h-full w-full object-cover opacity-90">
-            </div>
-            <div class="mt-3 flex items-center justify-between text-xs text-zinc-400">
-              <span>Veo 3 • 1080p • 8s</span>
-              <span>Prompt → Video with sound</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+<p class="mt-5 text-zinc-400 max-w-xl">Simple, beautiful, and fast. Pick a model, paste a prompt or upload an image, and generate. Clean UI inspired by the best—tuned for real work.</p>
+<div class="mt-8 flex flex-wrap items-center gap-3">
+<a class="rounded-xl btn-brand px-5 py-3 text-sm font-semibold shadow-soft" href="/models.html">Explore Models</a><a class="rounded-xl btn px-5 py-3 text-sm" href="#templates">See Templates</a>
+<button class="rounded-xl btn px-5 py-3 text-sm" id="btnLogin">Log in / Sign up</button>
+</div>
+<p class="mt-3 text-xs text-zinc-400">New users automatically receive <b>3 credits</b>.</p>
+<div class="mt-6 flex items-center gap-6 text-xs text-zinc-400">
+<div class="flex items-center gap-2"><span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>Online 24/7</div>
+<div>Credits • RU / EN</div>
+</div>
+</div>
+<div>
+<div class="glass relative rounded-2xl p-3 md:p-4 shadow-soft">
+<div class="aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60">
+<img alt="Showcase" class="h-full w-full object-cover opacity-90" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&amp;w=1600&amp;auto=format&amp;fit=crop"/>
+</div>
+<div class="mt-3 flex items-center justify-between text-xs text-zinc-400">
+<span>Veo 3 • 1080p • 8s</span>
+<span>Prompt → Video with sound</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
 <!-- ===== Hansora: Feature Sections After Models ===== -->
-
-
-
-
-
-
-
 <!-- ===== End Feature Sections ===== -->
-
-
-  <!-- Models / Pricing / FAQ / Footer identical to v2 (omitted here for brevity in this comment)—they are included in the file. -->
-  <section id="models" class="border-t border-base-line/60 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,.07),transparent_60%)]">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-      <div class="mb-8 flex flex-col items-center justify-center gap-3">
-        <div>
-          <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Models</h2>
-          <p class="mt-2 text-zinc-400 text-center max-w-2xl">Pick the engine that fits your goal. Add prompts later — today we focus on the UI.</p>
-        </div>
-      </div>
-      
-        <!-- Video models (1 row, 4 columns) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-6">
-          <a href="veo3.html" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-            <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Veo 3">
-            </div>
-            <div class="mt-3 flex items-center justify-between">
-              <h3 class="font-semibold">Veo 3</h3>
-              <span class="text-xs text-emerald-300">Video</span>
-            </div>
-            <p class="mt-1 text-sm text-zinc-400">Text → video with sound. Fast or high-quality modes.</p>
-          </a>
-
-          <a href="kling.html" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-            <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Kling">
-            </div>
-            <div class="mt-3 flex items-center justify-between">
-              <h3 class="font-semibold">Kling</h3>
-              <span class="text-xs text-emerald-300">Video</span>
-            </div>
-            <p class="mt-1 text-sm text-zinc-400">High-motion, cinematic video. 9:16 • 16:9 • 1:1.</p>
-          </a>
-
-          <a href="runway.html" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-            <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1496302662116-35cc4f36df92?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Runway">
-            </div>
-            <div class="mt-3 flex items-center justify-between">
-              <h3 class="font-semibold">Runway</h3>
-              <span class="text-xs text-indigo-300">Image → Video</span>
-            </div>
-            <p class="mt-1 text-sm text-zinc-400">Image-to-video & v2v. Polish your edits with control.</p>
-          </a>
-
-          <a href="midvideo.html" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-            <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1495567720989-cebdbdd97913?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Midjourney Image → Video">
-            </div>
-            <div class="mt-3 flex items-center justify-between">
-              <h3 class="font-semibold">Midjourney</h3>
-              <span class="text-xs text-indigo-300">Image → Video</span>
-            </div>
-            <p class="mt-1 text-sm text-zinc-400">Image → video (5s). Optimized for consistent style.</p>
-          </a>
-          
-          <a href="/aleph.html" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-            <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Runway Aleph">
-            </div>
-            <div class="mt-3 flex items-center justify-between">
-              <h3 class="font-semibold">Runway Aleph</h3>
-              <span class="text-xs text-emerald-300">Video</span>
-            </div>
-            <p class="mt-1 text-sm text-zinc-400">Video transform (5s). Uses your video + optional image.</p>
-          </a>
-        </div>
-
-        <!-- Image models (1 row, 4 columns) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-          <a href="imagen.html" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-            <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1517816428104-797678c7cf0e?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Imagen">
-            </div>
-            <div class="mt-3 flex items-center justify-between">
-              <h3 class="font-semibold">Imagen</h3>
-              <span class="text-xs text-sky-300">Image</span>
-            </div>
-            <p class="mt-1 text-sm text-zinc-400">Photoreal image generation & upscale pipelines.</p>
-          </a>
-
-          <a href="midimage.html" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-            <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1495567720989-cebdbdd97913?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Midjourney">
-            </div>
-            <div class="mt-3 flex items-center justify-between">
-              <h3 class="font-semibold">Midjourney</h3>
-              <span class="text-xs text-sky-300">Image</span>
-            </div>
-            <p class="mt-1 text-sm text-zinc-400">Consistent style systems for ad creatives.</p>
-          </a>
-
-          <a href="gptimage.html" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-            <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="GPT-Image">
-            </div>
-            <div class="mt-3 flex items-center justify-between">
-              <h3 class="font-semibold">GPT-Image</h3>
-              <span class="text-xs text-violet-300">Image</span>
-            </div>
-            <p class="mt-1 text-sm text-zinc-400">Prompt-to-image with strong text understanding.</p>
-          </a>
-
-          <a href="nano-banana.html" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-            <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1518779578993-ec3579fee39f?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Nano Banana">
-            </div>
-            <div class="mt-3 flex items-center justify-between">
-              <h3 class="font-semibold">Nano Banana</h3>
-              <span class="text-xs text-violet-300">Image→Image</span>
-            </div>
-            <p class="mt-1 text-sm text-zinc-400">Refine images by prompt. Opens a dedicated generator page.</p>
-          
-          <a href="sora2.html" class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition">
-            <div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-              <img src="https://images.unsplash.com/photo-1719939260970-a4f2a5c1b62b?q=80&w=1600&auto=format&fit=crop" class="h-full w-full object-cover group-hover:opacity-95" alt="Sora">
-            </div>
-            <div class="mt-3 flex items-center justify-between">
-              <h3 class="font-semibold">Sora</h3>
-              <span class="text-xs text-emerald-300">Video</span>
-            </div>
-            <p class="mt-1 text-sm text-zinc-400">Video generation. Opens the Sora 2 page.</p>
-          </a>
+<!-- Models / Pricing / FAQ / Footer identical to v2 (omitted here for brevity in this comment)—they are included in the file. -->
+<section class="border-t border-base-line/60 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,.07),transparent_60%)]" id="models">
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+<div class="mb-8 flex flex-col items-center justify-center gap-3">
+<div>
+<h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Models</h2>
+<p class="mt-2 text-zinc-400 text-center max-w-2xl">Pick the engine that fits your goal. Add prompts later — today we focus on the UI.</p>
+</div>
+</div>
+<!-- Video models (1 row, 4 columns) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-6">
+<a class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition" href="veo3.html">
+<div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+<img alt="Veo 3" class="h-full w-full object-cover group-hover:opacity-95" src="https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&amp;w=1600&amp;auto=format&amp;fit=crop"/>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<h3 class="font-semibold">Veo 3</h3>
+<span class="text-xs text-emerald-300">Video</span>
+</div>
+<p class="mt-1 text-sm text-zinc-400">Text → video with sound. Fast or high-quality modes.</p>
 </a>
-        </div>
+<a class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition" href="kling.html">
+<div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+<img alt="Kling" class="h-full w-full object-cover group-hover:opacity-95" src="https://images.unsplash.com/photo-1502082553048-f009c37129b9?q=80&amp;w=1600&amp;auto=format&amp;fit=crop"/>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<h3 class="font-semibold">Kling</h3>
+<span class="text-xs text-emerald-300">Video</span>
+</div>
+<p class="mt-1 text-sm text-zinc-400">High-motion, cinematic video. 9:16 • 16:9 • 1:1.</p>
+</a>
+<a class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition" href="runway.html">
+<div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+<img alt="Runway" class="h-full w-full object-cover group-hover:opacity-95" src="https://images.unsplash.com/photo-1496302662116-35cc4f36df92?q=80&amp;w=1600&amp;auto=format&amp;fit=crop"/>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<h3 class="font-semibold">Runway</h3>
+<span class="text-xs text-indigo-300">Image → Video</span>
+</div>
+<p class="mt-1 text-sm text-zinc-400">Image-to-video &amp; v2v. Polish your edits with control.</p>
+</a>
+<a class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition" href="midvideo.html">
+<div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+<img alt="Midjourney Image → Video" class="h-full w-full object-cover group-hover:opacity-95" src="https://images.unsplash.com/photo-1495567720989-cebdbdd97913?q=80&amp;w=1600&amp;auto=format&amp;fit=crop"/>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<h3 class="font-semibold">Midjourney</h3>
+<span class="text-xs text-indigo-300">Image → Video</span>
+</div>
+<p class="mt-1 text-sm text-zinc-400">Image → video (5s). Optimized for consistent style.</p>
+</a>
+<a class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition" href="/aleph.html">
+<div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+<img alt="Runway Aleph" class="h-full w-full object-cover group-hover:opacity-95" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&amp;w=1600&amp;auto=format&amp;fit=crop"/>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<h3 class="font-semibold">Runway Aleph</h3>
+<span class="text-xs text-emerald-300">Video</span>
+</div>
+<p class="mt-1 text-sm text-zinc-400">Video transform (5s). Uses your video + optional image.</p>
+</a>
+</div>
+<!-- Image models (1 row, 4 columns) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+<a class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition" href="imagen.html">
+<div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+<img alt="Imagen" class="h-full w-full object-cover group-hover:opacity-95" src="https://images.unsplash.com/photo-1517816428104-797678c7cf0e?q=80&amp;w=1600&amp;auto=format&amp;fit=crop"/>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<h3 class="font-semibold">Imagen</h3>
+<span class="text-xs text-sky-300">Image</span>
+</div>
+<p class="mt-1 text-sm text-zinc-400">Photoreal image generation &amp; upscale pipelines.</p>
+</a>
+<a class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition" href="midimage.html">
+<div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+<img alt="Midjourney" class="h-full w-full object-cover group-hover:opacity-95" src="https://images.unsplash.com/photo-1495567720989-cebdbdd97913?q=80&amp;w=1600&amp;auto=format&amp;fit=crop"/>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<h3 class="font-semibold">Midjourney</h3>
+<span class="text-xs text-sky-300">Image</span>
+</div>
+<p class="mt-1 text-sm text-zinc-400">Consistent style systems for ad creatives.</p>
+</a>
+<a class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition" href="gptimage.html">
+<div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+<img alt="GPT-Image" class="h-full w-full object-cover group-hover:opacity-95" src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&amp;w=1600&amp;auto=format&amp;fit=crop"/>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<h3 class="font-semibold">GPT-Image</h3>
+<span class="text-xs text-violet-300">Image</span>
+</div>
+<p class="mt-1 text-sm text-zinc-400">Prompt-to-image with strong text understanding.</p>
+</a>
+<a class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition" href="nano-banana.html">
+<div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+<img alt="Nano Banana" class="h-full w-full object-cover group-hover:opacity-95" src="https://images.unsplash.com/photo-1518779578993-ec3579fee39f?q=80&amp;w=1600&amp;auto=format&amp;fit=crop"/>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<h3 class="font-semibold">Nano Banana</h3>
+<span class="text-xs text-violet-300">Image→Image</span>
+</div>
+<p class="mt-1 text-sm text-zinc-400">Refine images by prompt. Opens a dedicated generator page.</p>
+<a class="group glass rounded-2xl p-4 border border-white/10 hover:border-white/20 transition" href="sora2.html">
+<div class="aspect-video overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+<img alt="Sora" class="h-full w-full object-cover group-hover:opacity-95" src="https://images.unsplash.com/photo-1719939260970-a4f2a5c1b62b?q=80&amp;w=1600&amp;auto=format&amp;fit=crop"/>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<h3 class="font-semibold">Sora</h3>
+<span class="text-xs text-emerald-300">Video</span>
+</div>
+<p class="mt-1 text-sm text-zinc-400">Video generation. Opens the Sora 2 page.</p>
+</a>
+</a>
+</div>
+</div>
 
-      </div>
-    </div>
-  </section>
-<section id="video-section" class="relative py-20 sm:py-24">
-  <div class="max-w-6xl mx-auto px-4">
-    <div class="grid lg:grid-cols-2 gap-10 items-start">
-      <div class="space-y-6">
-        <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Text to Video</h2>
-        <p class="text-white/70 max-w-xl">Turn ideas into cinematic clips using our high‑quality engines. Describe your scene — we handle pacing, motion, and detail.</p>
-        <div class="grid sm:grid-cols-2 gap-6 pt-4">
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Natural Language Prompting</h3>
-            <p class="text-sm text-white/70">Describe scenes in plain words. Our models handle shot design and animation.</p>
-          </div>
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Style Control</h3>
-            <p class="text-sm text-white/70">Pick moods and looks that fit your brand or concept.</p>
-          </div>
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">High‑Quality Output</h3>
-            <p class="text-sm text-white/70">Profession‑ready results for social, ads, and creative work.</p>
-          </div>
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Creative Control</h3>
-            <p class="text-sm text-white/70">Fine‑tune motion, framing, transitions, and duration.</p>
-          </div>
-        </div>
-        <div class="pt-4">
-          <a href="/models.html" class="btn btn-brand px-5 py-3 rounded-xl inline-flex items-center gap-2">Create Videos Now</a>
-        </div>
-      </div>
-      <div class="relative rounded-2xl overflow-hidden border border-white/10 glass shadow-soft min-h-[320px]">
-        <div class="absolute inset-0 flex items-center justify-center text-white/40 text-sm">Preview</div>
-        <!-- Placeholder keeps layout; no external assets needed -->
-        <div class="hero-glow"></div>
-        <div class="pb-[56.25%]"></div>
-      </div>
-    </div>
-  </div>
-</section><section id="image-section" class="relative py-20 sm:py-24">
-  <div class="max-w-6xl mx-auto px-4">
-    <div class="grid lg:grid-cols-2 gap-10 items-start">
-      <div class="relative order-last lg:order-first rounded-2xl overflow-hidden border border-white/10 glass shadow-soft min-h-[320px]">
-        <div class="absolute inset-0 flex items-center justify-center text-white/40 text-sm">Preview</div>
-        <div class="hero-glow"></div>
-        <div class="pb-[56.25%]"></div>
-      </div>
-      <div class="space-y-6">
-        <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Image to Video</h2>
-        <p class="text-white/70 max-w-xl">Animate any picture with natural motion and subtle effects. Control camera movement, pacing, and length.</p>
-        <div class="grid sm:grid-cols-2 gap-6 pt-4">
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Smart Animation</h3>
-            <p class="text-sm text-white/70">Adds life‑like motion to still frames.</p>
-          </div>
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Motion Control</h3>
-            <p class="text-sm text-white/70">Dial in camera paths and speed.</p>
-          </div>
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Background Enhancement</h3>
-            <p class="text-sm text-white/70">Depth‑aware parallax and ambient effects.</p>
-          </div>
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Extended Duration</h3>
-            <p class="text-sm text-white/70">Longer, smoother sequences when needed.</p>
-          </div>
-        </div>
-        <div class="pt-4">
-          <a href="/models.html" class="btn btn-brand px-5 py-3 rounded-xl inline-flex items-center gap-2">Animate Images Now</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</section><section id="templates-section" class="relative py-20 sm:py-24">
-  <div class="max-w-6xl mx-auto px-4">
-    <div class="grid lg:grid-cols-2 gap-10 items-start">
-      <div class="space-y-6">
-        <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Templates</h2>
-        <p class="text-white/70 max-w-xl">Ready‑made setups for ads, social posts, intros, and more. Pick a template and customize the prompt — fast and consistent.</p>
-        <div class="grid sm:grid-cols-2 gap-6 pt-4">
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Curated Styles</h3>
-            <p class="text-sm text-white/70">Hand‑picked looks with proven results.</p>
-          </div>
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">One‑Click Setup</h3>
-            <p class="text-sm text-white/70">Load defaults and go — no guesswork.</p>
-          </div>
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Editable Parameters</h3>
-            <p class="text-sm text-white/70">Adjust ratio, duration, quality, and SFX.</p>
-          </div>
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Team‑Friendly</h3>
-            <p class="text-sm text-white/70">Share, reuse, and iterate with your crew.</p>
-          </div>
-        </div>
-        <div class="pt-4">
-          <a href="/templates.html" class="btn btn-brand px-5 py-3 rounded-xl inline-flex items-center gap-2">Browse Templates</a>
-        </div>
-      </div>
-      <div class="relative rounded-2xl overflow-hidden border border-white/10 glass shadow-soft min-h-[320px]">
-        <div class="absolute inset-0 flex items-center justify-center text-white/40 text-sm">Preview</div>
-        <div class="hero-glow"></div>
-        <div class="pb-[56.25%]"></div>
-      </div>
-    </div>
-  </div>
-</section><section id="examples-section" class="relative py-20 sm:py-24">
-  <div class="max-w-6xl mx-auto px-4">
-    <div class="grid lg:grid-cols-2 gap-10 items-start">
-      <div class="relative order-last lg:order-first rounded-2xl overflow-hidden border border-white/10 glass shadow-soft min-h-[320px]">
-        <div class="absolute inset-0 flex items-center justify-center text-white/40 text-sm">Preview</div>
-        <div class="hero-glow"></div>
-        <div class="pb-[56.25%]"></div>
-      </div>
-      <div class="space-y-6">
-        <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Examples & Prompts</h2>
-        <p class="text-white/70 max-w-xl">See what’s possible with real‑world showcases. Copy prompts, tweak, and make them yours.</p>
-        <div class="grid sm:grid-cols-2 gap-6 pt-4">
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Real Results</h3>
-            <p class="text-sm text-white/70">Short clips, stills, and side‑by‑sides.</p>
-          </div>
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Prompt Recipes</h3>
-            <p class="text-sm text-white/70">Ready to paste into your next run.</p>
-          </div>
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Best Practices</h3>
-            <p class="text-sm text-white/70">Learn structure that consistently works.</p>
-          </div>
-          <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-            <h3 class="font-semibold mb-1">Community Picks</h3>
-            <p class="text-sm text-white/70">Popular looks from Hansora creators.</p>
-          </div>
-        </div>
-        <div class="pt-4">
-          <a href="examples-prompts.html" class="btn btn-brand px-5 py-3 rounded-xl inline-flex items-center gap-2">Explore Examples</a>
-        </div>
-      </div>
-    </div>
-  </div>
+</section>
+<section class="relative py-20 sm:py-24" id="video-section">
+<div class="max-w-6xl mx-auto px-4">
+<div class="grid lg:grid-cols-2 gap-10 items-start">
+<div class="space-y-6">
+<h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Text to Video</h2>
+<p class="text-white/70 max-w-xl">Turn ideas into cinematic clips using our high‑quality engines. Describe your scene — we handle pacing, motion, and detail.</p>
+<div class="grid sm:grid-cols-2 gap-6 pt-4">
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Natural Language Prompting</h3>
+<p class="text-sm text-white/70">Describe scenes in plain words. Our models handle shot design and animation.</p>
+</div>
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Style Control</h3>
+<p class="text-sm text-white/70">Pick moods and looks that fit your brand or concept.</p>
+</div>
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">High‑Quality Output</h3>
+<p class="text-sm text-white/70">Profession‑ready results for social, ads, and creative work.</p>
+</div>
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Creative Control</h3>
+<p class="text-sm text-white/70">Fine‑tune motion, framing, transitions, and duration.</p>
+</div>
+</div>
+<div class="pt-4">
+<a class="btn btn-brand px-5 py-3 rounded-xl inline-flex items-center gap-2" href="/models.html">Create Videos Now</a>
+</div>
+</div>
+<div class="relative rounded-2xl overflow-hidden border border-white/10 glass shadow-soft min-h-[320px]">
+<div class="absolute inset-0 flex items-center justify-center text-white/40 text-sm">Preview</div>
+<!-- Placeholder keeps layout; no external assets needed -->
+<div class="hero-glow"></div>
+<div class="pb-[56.25%]"></div>
+</div>
+</div>
+</div>
+</section><section class="relative py-20 sm:py-24" id="image-section">
+<div class="max-w-6xl mx-auto px-4">
+<div class="grid lg:grid-cols-2 gap-10 items-start">
+<div class="relative order-last lg:order-first rounded-2xl overflow-hidden border border-white/10 glass shadow-soft min-h-[320px]">
+<div class="absolute inset-0 flex items-center justify-center text-white/40 text-sm">Preview</div>
+<div class="hero-glow"></div>
+<div class="pb-[56.25%]"></div>
+</div>
+<div class="space-y-6">
+<h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Image to Video</h2>
+<p class="text-white/70 max-w-xl">Animate any picture with natural motion and subtle effects. Control camera movement, pacing, and length.</p>
+<div class="grid sm:grid-cols-2 gap-6 pt-4">
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Smart Animation</h3>
+<p class="text-sm text-white/70">Adds life‑like motion to still frames.</p>
+</div>
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Motion Control</h3>
+<p class="text-sm text-white/70">Dial in camera paths and speed.</p>
+</div>
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Background Enhancement</h3>
+<p class="text-sm text-white/70">Depth‑aware parallax and ambient effects.</p>
+</div>
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Extended Duration</h3>
+<p class="text-sm text-white/70">Longer, smoother sequences when needed.</p>
+</div>
+</div>
+<div class="pt-4">
+<a class="btn btn-brand px-5 py-3 rounded-xl inline-flex items-center gap-2" href="/models.html">Animate Images Now</a>
+</div>
+</div>
+</div>
+</div>
+</section><section class="relative py-20 sm:py-24" id="templates-section">
+<div class="max-w-6xl mx-auto px-4">
+<div class="grid lg:grid-cols-2 gap-10 items-start">
+<div class="space-y-6">
+<h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Templates</h2>
+<p class="text-white/70 max-w-xl">Ready‑made setups for ads, social posts, intros, and more. Pick a template and customize the prompt — fast and consistent.</p>
+<div class="grid sm:grid-cols-2 gap-6 pt-4">
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Curated Styles</h3>
+<p class="text-sm text-white/70">Hand‑picked looks with proven results.</p>
+</div>
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">One‑Click Setup</h3>
+<p class="text-sm text-white/70">Load defaults and go — no guesswork.</p>
+</div>
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Editable Parameters</h3>
+<p class="text-sm text-white/70">Adjust ratio, duration, quality, and SFX.</p>
+</div>
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Team‑Friendly</h3>
+<p class="text-sm text-white/70">Share, reuse, and iterate with your crew.</p>
+</div>
+</div>
+<div class="pt-4">
+<a class="btn btn-brand px-5 py-3 rounded-xl inline-flex items-center gap-2" href="/templates.html">Browse Templates</a>
+</div>
+</div>
+<div class="relative rounded-2xl overflow-hidden border border-white/10 glass shadow-soft min-h-[320px]">
+<div class="absolute inset-0 flex items-center justify-center text-white/40 text-sm">Preview</div>
+<div class="hero-glow"></div>
+<div class="pb-[56.25%]"></div>
+</div>
+</div>
+</div>
+</section><section class="relative py-20 sm:py-24" id="examples-section">
+<div class="max-w-6xl mx-auto px-4">
+<div class="grid lg:grid-cols-2 gap-10 items-start">
+<div class="relative order-last lg:order-first rounded-2xl overflow-hidden border border-white/10 glass shadow-soft min-h-[320px]">
+<div class="absolute inset-0 flex items-center justify-center text-white/40 text-sm">Preview</div>
+<div class="hero-glow"></div>
+<div class="pb-[56.25%]"></div>
+</div>
+<div class="space-y-6">
+<h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Examples &amp; Prompts</h2>
+<p class="text-white/70 max-w-xl">See what’s possible with real‑world showcases. Copy prompts, tweak, and make them yours.</p>
+<div class="grid sm:grid-cols-2 gap-6 pt-4">
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Real Results</h3>
+<p class="text-sm text-white/70">Short clips, stills, and side‑by‑sides.</p>
+</div>
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Prompt Recipes</h3>
+<p class="text-sm text-white/70">Ready to paste into your next run.</p>
+</div>
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Best Practices</h3>
+<p class="text-sm text-white/70">Learn structure that consistently works.</p>
+</div>
+<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+<h3 class="font-semibold mb-1">Community Picks</h3>
+<p class="text-sm text-white/70">Popular looks from Hansora creators.</p>
+</div>
+</div>
+<div class="pt-4">
+<a class="btn btn-brand px-5 py-3 rounded-xl inline-flex items-center gap-2" href="examples-prompts.html">Explore Examples</a>
+</div>
+</div>
+</div>
+</div>
 </section>
 <!-- ===== Hansora: Create Content grid (after four sections) ===== -->
-<section id="content-purpose" class="relative py-20 sm:py-24">
-  <div class="max-w-6xl mx-auto px-4">
-    <div class="text-center mb-12">
-      <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Create Content for<br class='hidden sm:block'/> Any Purpose</h2>
-      <p class="mt-4 text-white/70 max-w-3xl mx-auto">Hansora adapts to your needs so you stand out in today’s content‑driven world.</p>
-    </div>
-    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-      <div class="rounded-2xl p-6 glass border border-white/10 shadow-soft">
-        <div class="mb-4 text-3xl icon-gradient">📱</div>
-        <h3 class="font-semibold mb-2">Social Media Content</h3>
-        <p class="text-white/70 text-sm">Create scroll‑stopping videos, images, and branded music for TikTok, Instagram, and YouTube in minutes.</p>
-      </div>
-      <div class="rounded-2xl p-6 glass border border-white/10 shadow-soft">
-        <div class="mb-4 text-3xl icon-gradient">🎮</div>
-        <h3 class="font-semibold mb-2">Gaming & App Development</h3>
-        <p class="text-white/70 text-sm">Generate assets, UI mockups, promo videos, and background music to ship faster.</p>
-      </div>
-      <div class="rounded-2xl p-6 glass border border-white/10 shadow-soft">
-        <div class="mb-4 text-3xl icon-gradient">🎬</div>
-        <h3 class="font-semibold mb-2">Video Production</h3>
-        <p class="text-white/70 text-sm">B‑roll, transitions, thumbnails, and original soundtracks. Speed up production without losing quality.</p>
-      </div>
-      <div class="rounded-2xl p-6 glass border border-white/10 shadow-soft">
-        <div class="mb-4 text-3xl icon-gradient">📣</div>
-        <h3 class="font-semibold mb-2">Marketing & Advertising</h3>
-        <p class="text-white/70 text-sm">Design on‑brand campaigns with matching visuals, videos, and audio across channels.</p>
-      </div>
-      <div class="rounded-2xl p-6 glass border border-white/10 shadow-soft">
-        <div class="mb-4 text-3xl icon-gradient">🏢</div>
-        <h3 class="font-semibold mb-2">Business & Presentations</h3>
-        <p class="text-white/70 text-sm">Polished graphics, animated slides, and soundtrack beds that fit your brand identity.</p>
-      </div>
-      <div class="rounded-2xl p-6 glass border border-white/10 shadow-soft">
-        <div class="mb-4 text-3xl icon-gradient">🎨</div>
-        <h3 class="font-semibold mb-2">Creative Projects</h3>
-        <p class="text-white/70 text-sm">Explore artistic directions with prompts, videos, and music that spark your next idea.</p>
-      </div>
-    </div>
-  </div>
+<section class="relative py-20 sm:py-24" id="content-purpose">
+<div class="max-w-6xl mx-auto px-4">
+<div class="text-center mb-12">
+<h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Create Content for<br class="hidden sm:block"/> Any Purpose</h2>
+<p class="mt-4 text-white/70 max-w-3xl mx-auto">Hansora adapts to your needs so you stand out in today’s content‑driven world.</p>
+</div>
+<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+<div class="rounded-2xl p-6 glass border border-white/10 shadow-soft">
+<div class="mb-4 text-3xl icon-gradient">📱</div>
+<h3 class="font-semibold mb-2">Social Media Content</h3>
+<p class="text-white/70 text-sm">Create scroll‑stopping videos, images, and branded music for TikTok, Instagram, and YouTube in minutes.</p>
+</div>
+<div class="rounded-2xl p-6 glass border border-white/10 shadow-soft">
+<div class="mb-4 text-3xl icon-gradient">🎮</div>
+<h3 class="font-semibold mb-2">Gaming &amp; App Development</h3>
+<p class="text-white/70 text-sm">Generate assets, UI mockups, promo videos, and background music to ship faster.</p>
+</div>
+<div class="rounded-2xl p-6 glass border border-white/10 shadow-soft">
+<div class="mb-4 text-3xl icon-gradient">🎬</div>
+<h3 class="font-semibold mb-2">Video Production</h3>
+<p class="text-white/70 text-sm">B‑roll, transitions, thumbnails, and original soundtracks. Speed up production without losing quality.</p>
+</div>
+<div class="rounded-2xl p-6 glass border border-white/10 shadow-soft">
+<div class="mb-4 text-3xl icon-gradient">📣</div>
+<h3 class="font-semibold mb-2">Marketing &amp; Advertising</h3>
+<p class="text-white/70 text-sm">Design on‑brand campaigns with matching visuals, videos, and audio across channels.</p>
+</div>
+<div class="rounded-2xl p-6 glass border border-white/10 shadow-soft">
+<div class="mb-4 text-3xl icon-gradient">🏢</div>
+<h3 class="font-semibold mb-2">Business &amp; Presentations</h3>
+<p class="text-white/70 text-sm">Polished graphics, animated slides, and soundtrack beds that fit your brand identity.</p>
+</div>
+<div class="rounded-2xl p-6 glass border border-white/10 shadow-soft">
+<div class="mb-4 text-3xl icon-gradient">🎨</div>
+<h3 class="font-semibold mb-2">Creative Projects</h3>
+<p class="text-white/70 text-sm">Explore artistic directions with prompts, videos, and music that spark your next idea.</p>
+</div>
+</div>
+</div>
 </section>
-
-
-
-
-  <!-- TEMPLATES -->
-  
-
-<section id="pricing" class="relative py-24">
-  <div class="max-w-6xl mx-auto px-4">
-    <div class="text-center mb-14">
-      <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Fair, One‑Time Pricing</h2>
-      <p class="mt-4 text-white/70 max-w-3xl mx-auto">Buy credits once. No subscription yet — we’ll add plans later if needed.</p>
-    </div>
-
-    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-      <!-- Plan 100 -->
-      <div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/6 to-white/3 shadow-soft p-6 flex flex-col">
-        <div class="text-sm text-white/60">100 + 0 credits</div>
-        <div class="mt-1 text-5xl font-extrabold tracking-tight">100 <span class="text-2xl align-baseline text-white">credits</span></div>
-        <div class="mt-3 text-3xl font-semibold">$9.90</div>
-        <a href="#buy-100" class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white">Buy</a>
-        <ul class="mt-5 space-y-2 text-sm text-white/85">
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>720–1080p high quality (model‑dependent)</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to Templates & Examples/Prompts</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Rights to use our prompts commercially</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Up to 10s generation (per model limits)</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Fast generation</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Email support</li>
-        </ul>
-        
-      </div>
-
-      <!-- Plan 220 -->
-      <div class="rounded-2xl border border-purple-400/30 bg-gradient-to-b from-white/8 to-white/4 shadow-soft p-6 flex flex-col ring-1 ring-purple-400/20 relative">
-        <div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-300 ring-1 ring-purple-400/30">Most Popular</span></div>
-        <div class="text-sm text-white/60">200 + 20 credits</div>
-        <div class="mt-1 text-5xl font-extrabold tracking-tight">220 <span class="text-2xl align-baseline text-white">credits</span></div>
-        <div class="mt-3 text-3xl font-semibold">$19.90</div>
-        <a href="#buy-220" class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white">Buy</a>
-        <ul class="mt-5 space-y-2 text-sm text-white/85">
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>720–1080p high quality (model‑dependent)</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to Templates & Examples/Prompts</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Rights to use our prompts commercially</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Up to 10s generation (per model limits)</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Fast generation</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Email support</li>
-        </ul>
-        
-      </div>
-
-      <!-- Plan 550 -->
-      <div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/6 to-white/3 shadow-soft p-6 flex flex-col">
-        <div class="text-sm text-white/60">500 + 50 credits</div>
-        <div class="mt-1 text-5xl font-extrabold tracking-tight">550 <span class="text-2xl align-baseline text-white">credits</span></div>
-        <div class="mt-3 text-3xl font-semibold">$59.90</div>
-        <a href="#buy-550" class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white">Buy</a>
-        <ul class="mt-5 space-y-2 text-sm text-white/85">
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>720–1080p high quality (model‑dependent)</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to Templates & Examples/Prompts</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Rights to use our prompts commercially</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Up to 10s generation (per model limits)</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Fast generation</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Email support</li>
-        </ul>
-        
-      </div>
-
-      <!-- Plan 1100 -->
-      <div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/6 to-white/3 shadow-soft p-6 flex flex-col">
-        <div class="text-sm text-white/60">1000 + 100 credits</div>
-        <div class="mt-1 text-5xl font-extrabold tracking-tight">1100 <span class="text-2xl align-baseline text-white">credits</span></div>
-        <div class="mt-3 text-3xl font-semibold">$99.90</div>
-        <a href="#buy-1100" class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white">Buy</a>
-        <ul class="mt-5 space-y-2 text-sm text-white/85">
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>720–1080p high quality (model‑dependent)</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to Templates & Examples/Prompts</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Rights to use our prompts commercially</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Up to 10s generation (per model limits)</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Fast generation</li>
-          <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Email support</li>
-        </ul>
-        
-      </div>
-    </div>
-  </div>
+<!-- TEMPLATES -->
+<section class="relative py-24" id="pricing">
+<div class="max-w-6xl mx-auto px-4">
+<div class="text-center mb-14">
+<h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Fair, One‑Time Pricing</h2>
+<p class="mt-4 text-white/70 max-w-3xl mx-auto">Buy credits once. No subscription yet — we’ll add plans later if needed.</p>
+</div>
+<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+<!-- Plan 100 -->
+<div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/6 to-white/3 shadow-soft p-6 flex flex-col">
+<div class="text-sm text-white/60">100 + 0 credits</div>
+<div class="mt-1 text-5xl font-extrabold tracking-tight">100 <span class="text-2xl align-baseline text-white">credits</span></div>
+<div class="mt-3 text-3xl font-semibold">$9.90</div>
+<a class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white" href="#buy-100">Buy</a>
+<ul class="mt-5 space-y-2 text-sm text-white/85">
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>720–1080p high quality (model‑dependent)</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to Templates &amp; Examples/Prompts</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Rights to use our prompts commercially</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Up to 10s generation (per model limits)</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Fast generation</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Email support</li>
+</ul>
+</div>
+<!-- Plan 220 -->
+<div class="rounded-2xl border border-purple-400/30 bg-gradient-to-b from-white/8 to-white/4 shadow-soft p-6 flex flex-col ring-1 ring-purple-400/20 relative">
+<div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-300 ring-1 ring-purple-400/30">Most Popular</span></div>
+<div class="text-sm text-white/60">200 + 20 credits</div>
+<div class="mt-1 text-5xl font-extrabold tracking-tight">220 <span class="text-2xl align-baseline text-white">credits</span></div>
+<div class="mt-3 text-3xl font-semibold">$19.90</div>
+<a class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white" href="#buy-220">Buy</a>
+<ul class="mt-5 space-y-2 text-sm text-white/85">
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>720–1080p high quality (model‑dependent)</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to Templates &amp; Examples/Prompts</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Rights to use our prompts commercially</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Up to 10s generation (per model limits)</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Fast generation</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Email support</li>
+</ul>
+</div>
+<!-- Plan 550 -->
+<div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/6 to-white/3 shadow-soft p-6 flex flex-col">
+<div class="text-sm text-white/60">500 + 50 credits</div>
+<div class="mt-1 text-5xl font-extrabold tracking-tight">550 <span class="text-2xl align-baseline text-white">credits</span></div>
+<div class="mt-3 text-3xl font-semibold">$59.90</div>
+<a class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white" href="#buy-550">Buy</a>
+<ul class="mt-5 space-y-2 text-sm text-white/85">
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>720–1080p high quality (model‑dependent)</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to Templates &amp; Examples/Prompts</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Rights to use our prompts commercially</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Up to 10s generation (per model limits)</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Fast generation</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Email support</li>
+</ul>
+</div>
+<!-- Plan 1100 -->
+<div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/6 to-white/3 shadow-soft p-6 flex flex-col">
+<div class="text-sm text-white/60">1000 + 100 credits</div>
+<div class="mt-1 text-5xl font-extrabold tracking-tight">1100 <span class="text-2xl align-baseline text-white">credits</span></div>
+<div class="mt-3 text-3xl font-semibold">$99.90</div>
+<a class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white" href="#buy-1100">Buy</a>
+<ul class="mt-5 space-y-2 text-sm text-white/85">
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>720–1080p high quality (model‑dependent)</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to Templates &amp; Examples/Prompts</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Rights to use our prompts commercially</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Up to 10s generation (per model limits)</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Fast generation</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Email support</li>
+</ul>
+</div>
+</div>
+</div>
 </section>
-
-
-
-  <section id="faq" class="border-t border-base-line/60">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-      <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Frequently Asked Questions</h2>
-      
-      <div class="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <details class="glass rounded-xl p-5 border border-white/10">
-          <summary class="cursor-pointer font-medium">Is login required?</summary>
-          <p class="mt-2 text-sm text-white/70">No. You can browse and preview without logging in; generation requires sign‑in to track credits and results.</p>
-        </details>
-        <details class="glass rounded-xl p-5 border border-white/10">
-          <summary class="cursor-pointer font-medium">Do new users get 3 credits?</summary>
-          <p class="mt-2 text-sm text-white/70">Yes. New accounts start with 3 free credits so you can try the generators.</p>
-        </details>
-        <details class="glass rounded-xl p-5 border border-white/10">
-          <summary class="cursor-pointer font-medium">Which models are included?</summary>
-          <p class="mt-2 text-sm text-white/70">Kling, Veo 3, Runway Aleph, Midjourney, GPT‑Image, Imagen, Nano Banana, and more—exactly as shown in the Models section.</p>
-        </details>
-        <details class="glass rounded-xl p-5 border border-white/10">
-          <summary class="cursor-pointer font-medium">How are credits charged?</summary>
-          <p class="mt-2 text-sm text-white/70">Each feature shows its credit cost before you run it. Credits deduct only on successful tasks.</p>
-        </details>
-        <details class="glass rounded-xl p-5 border border-white/10">
-          <summary class="cursor-pointer font-medium">Can I use my own images?</summary>
-          <p class="mt-2 text-sm text-white/70">Yes—upload images for image‑to‑image and image‑to‑video features.</p>
-        </details>
-        <details class="glass rounded-xl p-5 border border-white/10">
-          <summary class="cursor-pointer font-medium">Where do results appear?</summary>
-          <p class="mt-2 text-sm text-white/70">Results show on the page and in your Usage/History, so you can re‑download anytime.</p>
-        </details>
-      </div>
-    
-    </div>
-  </section>
-
+<section class="border-t border-base-line/60" id="faq">
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20">
+<h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Frequently Asked Questions</h2>
+<div class="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+<details class="glass rounded-xl p-5 border border-white/10">
+<summary class="cursor-pointer font-medium">Is login required?</summary>
+<p class="mt-2 text-sm text-white/70">No. You can browse and preview without logging in; generation requires sign‑in to track credits and results.</p>
+</details>
+<details class="glass rounded-xl p-5 border border-white/10">
+<summary class="cursor-pointer font-medium">Do new users get 3 credits?</summary>
+<p class="mt-2 text-sm text-white/70">Yes. New accounts start with 3 free credits so you can try the generators.</p>
+</details>
+<details class="glass rounded-xl p-5 border border-white/10">
+<summary class="cursor-pointer font-medium">Which models are included?</summary>
+<p class="mt-2 text-sm text-white/70">Kling, Veo 3, Runway Aleph, Midjourney, GPT‑Image, Imagen, Nano Banana, and more—exactly as shown in the Models section.</p>
+</details>
+<details class="glass rounded-xl p-5 border border-white/10">
+<summary class="cursor-pointer font-medium">How are credits charged?</summary>
+<p class="mt-2 text-sm text-white/70">Each feature shows its credit cost before you run it. Credits deduct only on successful tasks.</p>
+</details>
+<details class="glass rounded-xl p-5 border border-white/10">
+<summary class="cursor-pointer font-medium">Can I use my own images?</summary>
+<p class="mt-2 text-sm text-white/70">Yes—upload images for image‑to‑image and image‑to‑video features.</p>
+</details>
+<details class="glass rounded-xl p-5 border border-white/10">
+<summary class="cursor-pointer font-medium">Where do results appear?</summary>
+<p class="mt-2 text-sm text-white/70">Results show on the page and in your Usage/History, so you can re‑download anytime.</p>
+</details>
+</div>
+</div>
+</section>
 <!-- Final CTA Section (clean) -->
-<section id="final-cta" class="relative py-24 sm:py-28">
-  <div class="relative max-w-4xl mx-auto px-4 text-center">
-    <h2 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-purple-500">
+<section class="relative py-24 sm:py-28" id="final-cta">
+<div class="relative max-w-4xl mx-auto px-4 text-center">
+<h2 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-purple-500">
       Ready to Transform Your Creative Process?
     </h2>
-    <p class="mt-4 text-slate-300/80">
+<p class="mt-4 text-slate-300/80">
       Use Hansora across image &amp; video tools with clean UI and fast generation.
     </p>
-    <div class="mt-8 flex justify-center">
-      <a href="models.html" class="inline-flex items-center justify-center rounded-full px-8 py-4 text-base font-semibold text-white bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 shadow-[0_10px_30px_rgba(168,85,247,0.35)] hover:shadow-[0_12px_36px_rgba(168,85,247,0.45)] transition-transform hover:scale-105">
+<div class="mt-8 flex justify-center">
+<a class="inline-flex items-center justify-center rounded-full px-8 py-4 text-base font-semibold text-white bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 shadow-[0_10px_30px_rgba(168,85,247,0.35)] hover:shadow-[0_12px_36px_rgba(168,85,247,0.45)] transition-transform hover:scale-105" href="models.html">
         Start creating
       </a>
-    </div>
-  </div>
+</div>
+</div>
 </section>
-
-
-
-  <footer class="border-t border-base-line/60">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
-      <nav class="flex items-center gap-5">
-        <a href="/Termsofuse" class="hover:text-white/80">Terms</a>
-        <a href="/policy" class="hover:text-white/80">Privacy</a>
-        <a href="/contact" class="hover:text-white/80">Contact</a>
-      </nav>
-    </div>
-  </footer>
-
-  <!-- AUTH MODAL -->
-  <div id="authModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4">
-    <div id="authCard" class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft">
-      <div class="mb-4 flex items-center justify-between">
-        <h3 id="authTitle" class="text-lg font-semibold">Log in</h3>
-        <button id="authClose" class="rounded-lg btn px-2 py-1 text-sm">✕</button>
-      </div>
-      <form id="authForm" class="space-y-3">
-        <input id="authEmail" type="email" placeholder="Email" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
-        <input id="authPass" type="password" placeholder="Password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
-        <input id="authPass2" type="password" placeholder="Repeat password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden">
-        <div class="flex gap-2">
-          <button id="btnDoLogin" type="button" class="w-1/2 rounded-lg btn px-3 py-2 font-semibold">Log in</button>
-          <button id="btnDoSignup" type="button" class="w-1/2 rounded-lg btn px-3 py-2">Sign up</button>
-        </div>
-        <p id="authMsg" class="text-xs text-zinc-400"></p>
-      </form>
-    </div>
-  </div>
-
-  <script>
+<footer class="border-t border-base-line/60">
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
+<p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
+<nav class="flex items-center gap-5">
+<a class="hover:text-white/80" href="/Termsofuse">Terms</a>
+<a class="hover:text-white/80" href="/policy">Privacy</a>
+<a class="hover:text-white/80" href="/contact">Contact</a>
+</nav>
+</div>
+</footer>
+<!-- AUTH MODAL -->
+<div class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4" id="authModal">
+<div class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft" id="authCard">
+<div class="mb-4 flex items-center justify-between">
+<h3 class="text-lg font-semibold" id="authTitle">Log in</h3>
+<button class="rounded-lg btn px-2 py-1 text-sm" id="authClose">✕</button>
+</div>
+<form class="space-y-3" id="authForm">
+<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" id="authEmail" placeholder="Email" required="" type="email"/>
+<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" id="authPass" placeholder="Password" required="" type="password"/>
+<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden" id="authPass2" placeholder="Repeat password" type="password"/>
+<div class="flex gap-2">
+<button class="w-1/2 rounded-lg btn px-3 py-2 font-semibold" id="btnDoLogin" type="button">Log in</button>
+<button class="w-1/2 rounded-lg btn px-3 py-2" id="btnDoSignup" type="button">Sign up</button>
+</div>
+<p class="text-xs text-zinc-400" id="authMsg"></p>
+</form>
+</div>
+</div>
+<script>
     document.getElementById('y').textContent = new Date().getFullYear();
 
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
@@ -831,22 +813,19 @@ hr, .section-line { border-color: var(--base-bg) !important; opacity:.12 }
       }
     })();
   </script>
-
-  <!-- USAGE MODAL -->
-  <div id="usageModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-4">
-    <div class="w-full max-w-4xl rounded-2xl border border-white/10 p-6 shadow-soft bg-[color:var(--base-bg)]">
-      <div class="mb-4 flex items-center justify-between">
-        <h3 class="text-lg font-semibold">Your Generations (last 30 days)</h3>
-        <button id="usageClose" class="rounded-lg btn px-2 py-1 text-sm">✕</button>
-      </div>
-      <div id="usageEmpty" class="text-sm text-zinc-400 hidden">No generations yet.</div>
-      <div id="usageList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-    </div>
-  </div>
-
-
-  <!-- HANSORA: credits polling patch v2 -->
-  <script>
+<!-- USAGE MODAL -->
+<div class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-4" id="usageModal">
+<div class="w-full max-w-4xl rounded-2xl border border-white/10 p-6 shadow-soft bg-[color:var(--base-bg)]">
+<div class="mb-4 flex items-center justify-between">
+<h3 class="text-lg font-semibold">Your Generations (last 30 days)</h3>
+<button class="rounded-lg btn px-2 py-1 text-sm" id="usageClose">✕</button>
+</div>
+<div class="text-sm text-zinc-400 hidden" id="usageEmpty">No generations yet.</div>
+<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" id="usageList"></div>
+</div>
+</div>
+<!-- HANSORA: credits polling patch v2 -->
+<script>
   (function(){ 
     function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
     ready(async function(){ 
@@ -905,8 +884,6 @@ hr, .section-line { border-color: var(--base-bg) !important; opacity:.12 }
     });
   })();
   </script>
-
-
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
   const el = document.getElementById('btnLoginSignup');
@@ -926,8 +903,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (_) { /* silent */ }
 });
 </script>
-
-
 <!-- HS FINAL STEP1-2 START -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -1020,11 +995,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <!-- HS FINAL STEP1-2 END -->
-
-
-    
-
-
 <!-- ===== Hansora Mobile Bottom Navigation (phones only) ===== -->
 <style>
   .hs-bottom-nav, .hs-overlay { display: none; }
@@ -1081,59 +1051,58 @@ document.addEventListener('DOMContentLoaded', () => {
     .hs-overlay .links svg{ width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
   }
 </style>
-
-<nav class="hs-bottom-nav" aria-label="Mobile bottom navigation">
-  <div class="hs-bottom-rail">
-    <a class="hs-btn" href="index.html" aria-label="Home">
-      <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
-      <span>Home</span>
-    </a>
-    <a class="hs-btn" href="templates.html" aria-label="Templates">
-      <svg viewBox="0 0 24 24">
-        <rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/>
-        <rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>
-      </svg>
-      <span>Templates</span>
-    </a>
-    <div class="hs-fab-wrap">
-      <a class="hs-fab" href="models.html" aria-label="Models">
-        <svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg>
-        <span>Models</span>
-      </a>
-    </div>
-    <a class="hs-btn" href="usage.html" aria-label="History">
-      <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.708"/><path d="M3 3v6h6"/><path d="M12 7v6l4 2"/></svg>
-      <span>History</span>
-    </a>
-    <button class="hs-btn" type="button" id="hs-menu-btn" aria-label="Menu">
-      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-      <span>Menu</span>
-    </button>
-  </div>
-</nav>
-
-<div class="hs-overlay" id="hs-overlay">
-  <div class="backdrop" id="hs-backdrop"></div>
-  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="hs-ol-title">
-    <header>
-      <h3 id="hs-ol-title">Quick Links</h3>
-      <button id="hs-close" aria-label="Close">
-        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M6 18L18 6"/></svg>
-      </button>
-    </header>
-    <div class="links">
-      <a href="models.html"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg> Models</a>
-      <a href="templates.html"><svg viewBox="0 0 24 24">
-        <rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/>
-        <rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>
-      </svg> Templates</a>
-      <a href="examples-prompts.html"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H4z"/><path d="M8 20h8"/></svg> Examples/Prompts</a>
-      <a href="pricing.html"><svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/><path d="M8 10h8M8 14h8"/></svg> Pricing</a>
-      <a href="index.html#faqs"><svg viewBox="0 0 24 24"><path d="M12 18v.01"/><path d="M9.09 9a3 3 0 1 1 5.91 1c0 2-3 2-3 4"/></svg> FAQ</a>
-    </div>
-  </div>
+<nav aria-label="Mobile bottom navigation" class="hs-bottom-nav">
+<div class="hs-bottom-rail">
+<a aria-label="Home" class="hs-btn" href="index.html">
+<svg viewbox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
+<span>Home</span>
+</a>
+<a aria-label="Templates" class="hs-btn" href="templates.html">
+<svg viewbox="0 0 24 24">
+<rect height="7" rx="2" width="7" x="3" y="3"></rect><rect height="7" rx="2" width="7" x="14" y="3"></rect>
+<rect height="7" rx="2" width="7" x="3" y="14"></rect><rect height="7" rx="2" width="7" x="14" y="14"></rect>
+</svg>
+<span>Templates</span>
+</a>
+<div class="hs-fab-wrap">
+<a aria-label="Models" class="hs-fab" href="models.html">
+<svg viewbox="0 0 24 24"><path d="M12 6v12M6 12h12"></path></svg>
+<span>Models</span>
+</a>
 </div>
+<a aria-label="History" class="hs-btn" href="usage.html">
+<svg viewbox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.708"></path><path d="M3 3v6h6"></path><path d="M12 7v6l4 2"></path></svg>
+<span>History</span>
+</a>
+<button aria-label="Menu" class="hs-btn" id="hs-menu-btn" type="button">
+<svg viewbox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+<span>Menu</span>
+</button>
+</div>
+</nav>
+<div class="hs-overlay" id="hs-overlay">
+<div class="backdrop" id="hs-backdrop"></div>
+<div aria-labelledby="hs-ol-title" aria-modal="true" class="panel" role="dialog">
+<header>
+<h3 id="hs-ol-title">Quick Links</h3>
+<button aria-label="Close" id="hs-close">
+<svg viewbox="0 0 24 24"><path d="M6 6l12 12M6 18L18 6"></path></svg>
+</button>
+</header>
+<div class="links">
+<a href="models.html"><svg viewbox="0 0 24 24"><path d="M12 6v12M6 12h12"></path></svg> Models</a>
+<a href="templates.html"><svg viewbox="0 0 24 24">
+<rect height="7" rx="2" width="7" x="3" y="3"></rect><rect height="7" rx="2" width="7" x="14" y="3"></rect>
+<rect height="7" rx="2" width="7" x="3" y="14"></rect><rect height="7" rx="2" width="7" x="14" y="14"></rect>
+</svg> Templates</a>
+<a href="examples-prompts.html"><svg viewbox="0 0 24 24"><path d="M4 4h16v12H4z"></path><path d="M8 20h8"></path></svg> Examples/Prompts</a>
+<a href="pricing.html"><svg viewbox="0 0 24 24"><path d="M6 6h12v12H6z"></path><path d="M8 10h8M8 14h8"></path></svg> Pricing</a>
+<a href="index.html#faq"><svg viewbox="0 0 24 24"><path d="M12 18v.01"></path><path d="M9.09 9a3 3 0 1 1 5.91 1c0 2-3 2-3 4"></path></svg> FAQ</a>
 
+      <a href="contact.html"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 8l8 6 8-6"/></svg> Contact</a>
+</div>
+</div>
+</div>
 <script>
   (function(){
     const openBtn = document.getElementById('hs-menu-btn');
@@ -1149,6 +1118,50 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 </script>
 <!-- ===== /Hansora Mobile Bottom Navigation ===== -->
+<script>
+(function(){
+  function qs(s){return document.querySelector(s);}
+  var menu = qs('#mobileMenu') || qs('#mobile-menu') || qs('.mobile-menu') || qs('.sheet-panel');
+  var fab = qs('#mobileNavFab');
+  var closeBtn = qs('#mobileMenuClose') || qs('button[data-close="mobile-menu"]') || qs('button.close-menu') || qs('#closeMenu');
+  var backdrop = qs('#mobileMenuBackdrop') || qs('#mobile-backdrop') || qs('.mobile-backdrop');
 
+  function showMenu(){
+    if(!menu) return;
+    menu.classList.add('show');
+    if(backdrop){ backdrop.classList.remove('hidden'); backdrop.classList.add('block'); }
+    document.body.classList.add('no-scroll');
+  }
+  function hideMenu(){
+    if(!menu) return;
+    menu.classList.remove('show');
+    if(backdrop){ backdrop.classList.add('hidden'); backdrop.classList.remove('block'); }
+    document.body.classList.remove('no-scroll');
+  }
+
+  if(fab){ fab.addEventListener('click', function(e){ e.preventDefault(); showMenu(); }); }
+  if(closeBtn){ closeBtn.addEventListener('click', function(){ hideMenu(); }); }
+  if(backdrop){ backdrop.addEventListener('click', function(){ hideMenu(); }); }
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ hideMenu(); } });
+})();
+</script><script>
+(function(){
+  var overlay = document.getElementById('hs-overlay');
+  var closeBtn = document.getElementById('hs-close') || document.getElementById('mobileMenuClose');
+  var backdrop = document.getElementById('hs-backdrop') || document.getElementById('mobileMenuBackdrop');
+  function open(){ if(!overlay) return; overlay.classList.add('is-open'); document.body.classList.add('no-scroll'); }
+  function close(){ if(!overlay) return; overlay.classList.remove('is-open'); document.body.classList.remove('no-scroll'); }
+  // Re-bind safely without duplicating listeners
+  if (closeBtn) { closeBtn.onclick = close; }
+  if (backdrop) { backdrop.onclick = close; }
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') close(); });
+  // Also close when any menu link is clicked
+  var menuLinks = overlay ? overlay.querySelectorAll('.links a') : [];
+  menuLinks.forEach(function(a){ a.addEventListener('click', close); });
+  // Expose helpers (not global) if some other code calls open
+  window.__hs_menu_open = open;
+  window.__hs_menu_close = close;
+})();
+</script>
 </body>
 </html>
