@@ -3,8 +3,8 @@
 // Mirrors your Veo 3 flow for Supabase + callback; ONLY the KIE request shape/endpoint changed
 //
 // Behavior:
-//   - No image  -> model "sora-2-text-to-video"
-//   - With image -> model "sora-2-image-to-video"
+//   - No image  -> model "sora-2-text-to-video" (or pro variant)
+//   - With image -> model "sora-2-image-to-video" (or pro variant)
 
 const KIE_URL = "https://api.kie.ai/api/v1/jobs/createTask";
 const API_KEY = process.env.KIE_API_KEY;
@@ -49,7 +49,10 @@ exports.handler = async (event) => {
     if (!SUPABASE_URL || !SERVICE_KEY) return err(500, "missing_supabase_config");
     if (!API_KEY) return err(500, "missing_kie_api_key");
 
-    const model = image_urls.length ? "sora-2-image-to-video" : "sora-2-text-to-video";
+    const tier = String(body.tier || body.model_tier || "").toLowerCase();
+    const model = image_urls.length
+      ? (tier === "pro" ? "sora-2-pro-image-to-video" : "sora-2-image-to-video")
+      : (tier === "pro" ? "sora-2-pro-text-to-video"  : "sora-2-text-to-video");
 
     // seed/patch "processing" row
     const metaBase = { status: "processing", run_id: runId, provider: "kie", engine: "sora2" };
@@ -61,7 +64,7 @@ exports.handler = async (event) => {
         kind: "video",
         prompt,
         result_url: null,
-        meta: { ...metaBase, aspect_ratio, model }
+        meta: { ...metaBase, aspect_ratio, model, tier }
       }
     });
 
@@ -82,9 +85,17 @@ exports.handler = async (event) => {
     if (image_urls.length) kiePayload.input.image_urls = image_urls;
 
     // Optional passthroughs placed under input if KIE expects them there (safe no-op otherwise)
-    for (const k of ["duration","quality","seed"]) {
-      if (body[k] !== undefined) kiePayload.input[k] = body[k];
+    // Explicit KIE fields
+    if (body.size !== undefined) kiePayload.input.size = body.size; // "standard" | "high"
+    if (body.n_frames !== undefined) kiePayload.input.n_frames = body.n_frames; // 10 | 15
+    // Back-compat mapping if callers still send legacy keys
+    if (body.quality && !kiePayload.input.size) {
+      kiePayload.input.size = String(body.quality).toLowerCase() === "hd" ? "high" : "standard";
     }
+    if (body.duration && !kiePayload.input.n_frames) {
+      const d = parseInt(body.duration, 10); kiePayload.input.n_frames = (d === 15 ? 15 : 10);
+    }
+    if (body.seed !== undefined) kiePayload.input.seed = body.seed;
 
     // Call KIE
     const resp = await fetch(KIE_URL, {
