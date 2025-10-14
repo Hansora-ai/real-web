@@ -262,20 +262,20 @@ async function runSora(){
   if(__busy) return;
   __busy=true; runBtn.disabled=true; runBtn.textContent='Working…'; runBtn.classList.add('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents='none';
   try{ downloadLink.classList.add('hidden'); }catch{}
-  const {data:auth}=await supabase.auth.getUser(); if(!auth.user){ alert('Please log in or register first.'); runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
+  const {data:auth}=await supabase.auth.getUser(); if(!auth.user){ alert('Please log in or register first.'); runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
 
   const files=[...imageEl.files].slice(0,1);
-  for(const f of files){ if(f.size>10*1024*1024){ alert('File too large: '+f.name); runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; } }
+  for(const f of files){ if(f.size>10*1024*1024){ alert('File too large: '+f.name); runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; } }
   const hasImage = files.length===1;
   const prompt=(promptEl.value||'').trim();
 
-  const credits=await getCredits(); if(credits<3){ showStatus('Not enough credits (need 3).','text-rose-300'); runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
+  const credits=await getCredits(); if(credits<3){ showStatus('Not enough credits (need 3).','text-rose-300'); runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
 
   let imageUrl='';
   if(hasImage){
     const fd=new FormData(); fd.append('file', files[0], files[0].name||'image-0.png');
     const ur=await fetch('/.netlify/functions/kie-upload',{method:'POST',headers:{'X-USER-ID':auth.user.id},body:fd});
-    const uj=await ur.json().catch(()=>null); if(!ur.ok||!uj||!uj.downloadUrl){ showStatus('Upload failed','text-rose-300'); runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
+    const uj=await ur.json().catch(()=>null); if(!ur.ok||!uj||!uj.downloadUrl){ showStatus('Upload failed','text-rose-300'); runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
     imageUrl=uj.downloadUrl;
   }
 
@@ -318,7 +318,7 @@ async function runSora(){
   const j = await resp.json().catch(()=>({}));
   if(!resp.ok || !j.submitted){
     showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
-    runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
+    runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
   }
 
   try{ await chargeCredits(3); await refreshCreditsUI(); }catch{}
@@ -338,13 +338,13 @@ async function soraPoll(taskId, uid, rid){
       if(j && j.ok && j.video_url){
         showVideo(j.video_url, j.thumb_url||'');
         showStatus('✅ Done.','text-emerald-300');
-        runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
+        runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
       }
     }catch{}
     await new Promise(res=>setTimeout(res,1500));
   }
   showStatus('Still processing… try refreshing later','text-yellow-300');
-  runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false;
+  runBtn.disabled=false; repaintRunBtn(); runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false;
 }
 </script>
 
