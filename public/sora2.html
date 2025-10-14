@@ -74,6 +74,16 @@
         </p>
 
         <div class="mt-4 space-y-3">
+          <!-- Model tier (Veo-style segmented control) -->
+          <div>
+            <label class="text-xs text-zinc-400">Model</label>
+            <div class="mt-1 w-full inline-flex rounded-xl border border-white/10 overflow-hidden">
+              <button type="button" id="btnTierPro" class="flex-1 px-4 py-2.5 text-sm font-medium bg-white/10 text-white">Sora 2 Pro</button>
+              <button type="button" id="btnTierBase" class="flex-1 px-4 py-2.5 text-sm font-medium text-white/70 hover:text-white">Sora 2</button>
+            </div>
+            <input type="hidden" id="tier" value="pro">
+          </div>
+
           <div>
             <label class="text-xs text-zinc-400">Select 0–1 image (jpeg/png/webp, ≤10MB)</label>
             <input id="image" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
@@ -88,13 +98,32 @@
             </select>
           </div>
 
+          <!-- Quality / Size -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-zinc-400">Quality</label>
+              <select id="sizeSel" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
+                <option value="high" selected>HD</option>
+                <option value="standard">Standard</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-xs text-zinc-400">Duration</label>
+              <select id="framesSel" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
+                <option value="10" selected>10s</option>
+                <option value="15">15s</option>
+              </select>
+            </div>
+          </div>
+
           <div>
             <label class="text-sm text-zinc-300 font-medium">Prompt (optional)</label>
             <p class="mt-1 text-[13px] text-zinc-200/90 font-medium">Note: The image is optional. If you include one, match the video’s aspect ratio (16:9 or 9:16) to avoid automatic cropping.</p>
             <textarea id="prompt" placeholder="Describe your video…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[160px] input-dark"></textarea>
           </div>
 
-          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="runSora()" disabled>Run (cost: 3⚡)</button>
+          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="runSora()" disabled>Run (cost: …)</button>
           <div id="status" class="mt-2 text-sm"></div>
         </div>
       </div>
@@ -148,12 +177,35 @@ document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.t
 $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
 async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
 (async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);
-      try{ const rb=document.getElementById('runBtn'); if(rb){ rb.disabled=false; rb.style.pointerEvents=''; rb.classList.remove('opacity-50','cursor-not-allowed'); } }catch{}}catch{showLoggedOutUI();}}else{showLoggedOutUI();}})();
+      try{ const rb=document.getElementById('runBtn'); if(rb){ rb.disabled=false; rb.style.pointerEvents=''; rb.classList.remove('opacity-50','cursor-not-allowed'); try{ repaintRunBtn(); }catch{} } }catch{}}catch{showLoggedOutUI();}}else{showLoggedOutUI();}})();
 
 // Elements
 const imageEl=document.getElementById('image');
 const thumbsEl=document.getElementById('thumbs');
 const ratioEl=document.getElementById('ratio');
+const tierEl=document.getElementById('tier');
+const btnTierPro=document.getElementById('btnTierPro');
+const btnTierBase=document.getElementById('btnTierBase');
+function setTier(v){
+  tierEl.value = v;
+  if(v==='pro'){
+    btnTierPro.classList.add('bg-white/10','text-white');
+    btnTierPro.classList.remove('text-white/70');
+    btnTierBase.classList.remove('bg-white/10');
+    btnTierBase.classList.add('text-white/70');
+  }else{
+    btnTierBase.classList.add('bg-white/10','text-white');
+    btnTierBase.classList.remove('text-white/70');
+    btnTierPro.classList.remove('bg-white/10');
+    btnTierPro.classList.add('text-white/70');
+  }
+  try{ repaintRunBtn(); }catch{}
+}
+btnTierPro?.addEventListener('click',()=>setTier('pro'));
+btnTierBase?.addEventListener('click',()=>setTier('base'));
+setTier(tierEl?.value||'pro');
+const sizeSel=document.getElementById('sizeSel');
+const framesSel=document.getElementById('framesSel');
 const promptEl=document.getElementById('prompt');
 const runBtn=document.getElementById('runBtn');
 const statusEl=document.getElementById('status');
@@ -186,24 +238,44 @@ function showVideo(url,poster){ resultBox.innerHTML=''; const v=document.createE
 
 function arToSoraMode(val){ return (val==='9:16') ? 'portrait' : 'landscape'; }
 
+function currentCost(){
+  // Base Sora 2 (non-pro) uses existing pricing (3⚡)
+  const tier = (tierEl?.value||'pro');
+  const frames = parseInt(framesSel?.value||'10', 10);
+  if (tier === 'pro'){
+    return frames === 15 ? 25 : 15;
+  }
+  return 3;
+}
+function repaintRunBtn(){
+  try{
+    const cost = currentCost();
+    runBtn.textContent = `Run (cost: ${cost}⚡)`;
+    // Enable the button if logged in (kept same enablement logic elsewhere)
+  }catch{}
+}
+[tierEl, sizeSel, framesSel].forEach(el => el && el.addEventListener('change', repaintRunBtn));
+repaintRunBtn();
+
+
 async function runSora(){
   if(__busy) return;
   __busy=true; runBtn.disabled=true; runBtn.textContent='Working…'; runBtn.classList.add('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents='none';
   try{ downloadLink.classList.add('hidden'); }catch{}
-  const {data:auth}=await supabase.auth.getUser(); if(!auth.user){ alert('Please log in or register first.'); runBtn.disabled=false; runBtn.textContent='Run (cost: 3⚡)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
+  const {data:auth}=await supabase.auth.getUser(); if(!auth.user){ alert('Please log in or register first.'); runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
 
   const files=[...imageEl.files].slice(0,1);
-  for(const f of files){ if(f.size>10*1024*1024){ alert('File too large: '+f.name); runBtn.disabled=false; runBtn.textContent='Run (cost: 3⚡)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; } }
+  for(const f of files){ if(f.size>10*1024*1024){ alert('File too large: '+f.name); runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; } }
   const hasImage = files.length===1;
   const prompt=(promptEl.value||'').trim();
 
-  const credits=await getCredits(); if(credits<3){ showStatus('Not enough credits (need 3).','text-rose-300'); runBtn.disabled=false; runBtn.textContent='Run (cost: 3⚡)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
+  const credits=await getCredits(); if(credits<3){ showStatus('Not enough credits (need 3).','text-rose-300'); runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
 
   let imageUrl='';
   if(hasImage){
     const fd=new FormData(); fd.append('file', files[0], files[0].name||'image-0.png');
     const ur=await fetch('/.netlify/functions/kie-upload',{method:'POST',headers:{'X-USER-ID':auth.user.id},body:fd});
-    const uj=await ur.json().catch(()=>null); if(!ur.ok||!uj||!uj.downloadUrl){ showStatus('Upload failed','text-rose-300'); runBtn.disabled=false; runBtn.textContent='Run (cost: 3⚡)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
+    const uj=await ur.json().catch(()=>null); if(!ur.ok||!uj||!uj.downloadUrl){ showStatus('Upload failed','text-rose-300'); runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
     imageUrl=uj.downloadUrl;
   }
 
@@ -246,7 +318,7 @@ async function runSora(){
   const j = await resp.json().catch(()=>({}));
   if(!resp.ok || !j.submitted){
     showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
-    runBtn.disabled=false; runBtn.textContent='Run (cost: 3⚡)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
+    runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
   }
 
   try{ await chargeCredits(3); await refreshCreditsUI(); }catch{}
@@ -266,13 +338,13 @@ async function soraPoll(taskId, uid, rid){
       if(j && j.ok && j.video_url){
         showVideo(j.video_url, j.thumb_url||'');
         showStatus('✅ Done.','text-emerald-300');
-        runBtn.disabled=false; runBtn.textContent='Run (cost: 3⚡)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
+        runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
       }
     }catch{}
     await new Promise(res=>setTimeout(res,1500));
   }
   showStatus('Still processing… try refreshing later','text-yellow-300');
-  runBtn.disabled=false; runBtn.textContent='Run (cost: 3⚡)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false;
+  runBtn.disabled=false; runBtn.textContent='Run (cost: …)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false;
 }
 </script>
 
