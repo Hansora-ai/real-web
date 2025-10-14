@@ -87,13 +87,13 @@ exports.handler = async (event) => {
     // Optional passthroughs placed under input if KIE expects them there (safe no-op otherwise)
     // Explicit KIE fields
     if (body.size !== undefined) kiePayload.input.size = body.size; // "standard" | "high"
-    if (body.n_frames !== undefined) kiePayload.input.n_frames = body.n_frames; // 10 | 15
+    if (body.n_frames !== undefined) kiePayload.input.n_frames = String(body.n_frames); // '10' | '15'
     // Back-compat mapping if callers still send legacy keys
     if (body.quality && !kiePayload.input.size) {
       kiePayload.input.size = String(body.quality).toLowerCase() === "hd" ? "high" : "standard";
     }
     if (body.duration && !kiePayload.input.n_frames) {
-      const d = parseInt(body.duration, 10); kiePayload.input.n_frames = (d === 15 ? 15 : 10);
+      const d = parseInt(body.duration, 10); kiePayload.input.n_frames = String(d === 15 ? 15 : 10);
     }
     if (body.seed !== undefined) kiePayload.input.seed = body.seed;
 
