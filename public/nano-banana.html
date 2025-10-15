@@ -264,19 +264,19 @@ function onResult(url){
     resultBox.innerHTML='';
     img.className='w-full h-full object-contain';
     resultBox.appendChild(img);
-        const __name = (url.split('/').pop()||'generation');
+    const __name = (url.split('/').pop()||'generation');
     downloadLink.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(url)+'&name='+encodeURIComponent(__name);
     downloadLink.setAttribute('download', __name);
     downloadLink.classList.remove('hidden');
     downloadLink.textContent='Download';
-
     showStatus('✅ Done.','text-emerald-300');
-    try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url }));
-    try { localStorage.removeItem('nb_pending'); } catch{};
+    try { 
+      localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url }));
+      localStorage.removeItem('nb_pending');
+    } catch(e){}
   };
-  
   img.src=url;
-  try{ channel?.unsubscribe?.(); }catch{}
+  try{ channel?.unsubscribe?.(); }catch(e){}
 }
 
 // Credits + URL extraction helpers
@@ -415,7 +415,7 @@ window.__run=async function(){
     };
 
     const settled = await Promise.allSettled(files.map(uploadOne));
-    const urls = settled.filter(x => x.status === 'fulfilled' && x.value).map(x => x.value);
+    const urls = settled.filter(x => x === 'fulfilled' && x.value).map(x => x.value);
 
     // guard: if no URLs were produced, stop here
     if (urls.length === 0) {
@@ -445,9 +445,7 @@ window.__run=async function(){
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
 
     // store pending ticket so we can resume after refresh
-    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 }))
-
-    // ensure Usage shows even if user navigates away
+    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 }))// ensure Usage shows even if user navigates away
     backfillSubmitted(uid, rid, taskId);
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
@@ -476,7 +474,7 @@ window.__run=async function(){
     if (!__done) {
       const __MSG='❌ Generation failed. Credits refunded. Try again or contact us.';
       try{ await refundHalfCreditOnce(taskId); }catch{}
-      try{ localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG })); }catch{}
+      try{ localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG })))); }catch{}
       showStatus(__MSG,'text-rose-300');
     }
 
@@ -602,7 +600,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
         onResult(url);
         try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url }));
         try {
-          const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null')));
+          const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
           if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
         } catch {}
       }
@@ -645,8 +643,7 @@ async function refundHalfCreditOnce(taskId){
 
 document.addEventListener('DOMContentLoaded', function restoreLastRun(){
   try{
-    // Skip drawing old cache if a pending ticket exists or server already rendered
-    if (localStorage.getItem('nb_pending')) return;
+    // Always restore from local cache (Imagen-style) — no pending guard
     const raw = localStorage.getItem('nb_last_run');
     if (!raw) return;
     const last = JSON.parse(raw);
@@ -683,7 +680,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
         showStatus(msg, 'text-rose-300');
         try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg }));
-        try { localStorage.removeItem('nb_pending'); } catch{};
+        try { localStorage.removeItem('nb_pending'); } catch(e){}
       })();
       return;
     }
@@ -701,8 +698,8 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
           
           if (url){
             window.onResult(url);
-            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url }));
-            try { localStorage.removeItem('nb_pending'); } catch{};
+            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url }))
+            try { localStorage.removeItem('nb_pending'); } catch(e){}
             break;
           }
         }catch(e){}
@@ -712,7 +709,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
         showStatus(msg, 'text-rose-300');
         try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg }));
-        try { localStorage.removeItem('nb_pending'); } catch{};
+        try { localStorage.removeItem('nb_pending'); } catch(e){}
       }
     })();
   }catch(e){ console.warn('resumeFromPending error', e); }
@@ -723,7 +720,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
 <script>
 // ==== Imagen-style minimal persistence for Nano Banana ====
 (function(){
-  const KEY = 'nb:lastRun';
+  const KEY = 'nb_last_run';
   function __nbSaveState(state){ try{ localStorage.setItem(KEY, JSON.stringify(state||{})); }catch{} }
   function __nbLoadState(){ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch{ return {}; } }
   function __nbClearState(){ try{ localStorage.removeItem(KEY); }catch{} }
@@ -793,55 +790,6 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
   });
 })();
 </script>
-
-
-<!-- ===== Nano Banana: strict provider + pending-only restore guard ===== -->
-<script>
-document.addEventListener('DOMContentLoaded', async function nb_serverFirstGuarded(){
-  try{
-    if (typeof supabase === 'undefined' || !supabase.auth) return;
-    const ures = await supabase.auth.getUser();
-    const user = ures?.data?.user;
-    if (!user) return;
-
-    // Read pending ticket: only restore if we actually have a pending run
-    let pending = null;
-    try { pending = JSON.parse(localStorage.getItem('nb_pending') || 'null'); } catch {}
-    if (!pending || !pending.run_id){
-      // Nothing is actively pending for NB — do not render any old results
-      return;
-    }
-
-    // Provider hard filter: only look at Nano Banana rows
-    const { data: row, error } = await supabase
-      .from('user_generations')
-      .select('id,user_id,provider,result_url,created_at,run_id')
-      .eq('user_id', user.id)
-      .eq('provider', 'Nano Banana')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) { console.warn('NB server-first error', error); return; }
-    if (!row) return;
-
-    // Run guard: only consider if it matches our pending run_id
-    if (row.run_id !== pending.run_id) return;
-
-    const url = row.result_url || null;
-    if (url){
-      // Safe render; mirrors NB flow but guarded
-      if (typeof window.onResult === 'function' && !window.__nbRenderedFromServer){
-        window.__nbRenderedFromServer = true;
-        window.onResult(url);
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch {}
-        try { localStorage.removeItem('nb_pending'); } catch {}
-      }
-    }
-  }catch(e){ console.warn('nb_serverFirstGuarded error', e); }
-});
-</script>
-<!-- ===== /NB guard block ===== -->
 
 </body>
 </html>
