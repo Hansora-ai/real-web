@@ -194,7 +194,7 @@
 <textarea class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark" id="prompt" placeholder="Describe the edit or style…"></textarea>
 </div>
 <button class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" id="runBtn" onclick="__run()" type="button">Run (cost: 0.5⚡)</button>
-<div class="mt-2 text-sm" id="status"></div>
+<div class="mt-2 text-sm" id=></div>
 </div>
 </div>
 <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
@@ -246,7 +246,7 @@ const filesEl=document.getElementById('files');
 const thumbsEl=document.getElementById('thumbs');
 const promptEl=document.getElementById('prompt');
 const runBtn=document.getElementById('runBtn');
-const statusEl=document.getElementById('status');
+const statusEl=document.getElementById();
 const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
 
@@ -474,7 +474,7 @@ window.__run=async function(){
       await new Promise(r => setTimeout(r, 1500));
       const { data: row } = await supabase
         .from('user_generations')
-        .select('image_url')
+        .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
         .eq('user_id', uid)
         .eq('run_id', rid)
         .limit(1)
@@ -573,7 +573,7 @@ window.__run=async function(){
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.querySelector('input[type="file"]');
-  const statusEl = document.getElementById('status') || document.querySelector('.status') || document.querySelector('#status-text');
+  const statusEl = document.getElementById() || document.querySelector('.status') || document.querySelector('#status-text');
   if (fileInput) {
     fileInput.addEventListener('change', () => {
       if (statusEl) statusEl.textContent = '';
@@ -596,7 +596,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
 
     const { data: row } = await supabase
       .from('user_generations')
-      .select('id, user_id, provider, result_url, created_at, status')
+      .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -710,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         try{
           const { data: row } = await supabase
             .from('user_generations')
-            .select('image_url,status')
+            .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
             .eq('run_id', p.run_id)
             .maybeSingle();
           const url = row?.image_url || null;
@@ -816,33 +816,6 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
     }catch{}
   });
 })();
-</script>
-
-
-<!-- Minimal DB-only restore (non-destructive) -->
-<script>
-document.addEventListener('DOMContentLoaded', async () => {
-  try{
-    if (typeof supabase === 'undefined' || !supabase.auth) return;
-    const ures = await supabase.auth.getUser();
-    const user = ures?.data?.user;
-    if (!user) return;
-
-    const { data: row, error } = await supabase
-      .from('user_generations')
-      .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) { console.warn('restore error', error); return; }
-    if (!row || !row.result_url) return;
-    if (typeof window.onResult === 'function') {
-      try { window.onResult(row.result_url); } catch(e){}
-    }
-  }catch(e){ console.warn('restoreFromUserGenerations failed', e); }
-});
 </script>
 
 </body>
