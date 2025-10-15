@@ -271,7 +271,7 @@ function onResult(url){
     downloadLink.textContent='Download';
 
     showStatus('✅ Done.','text-emerald-300');
-    try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url };
+    try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url }));
     try { localStorage.removeItem('nb_pending'); } catch{};
   };
   
@@ -340,7 +340,7 @@ async function nbCheckPoll(taskId, uid, rid){
         try { j = JSON.parse(txt); } catch { j = { raw: txt }; }
       }
 
-      const status = String(j || j.data? || j.result? || j.state || '').toLowerCase();
+      const status = String((j && (j.status || j.state)) || (j && j.data && (j.data.status || j.data.state)) || (j && j.result && (j.result.status || j.result.state)) || '').toLowerCase();
       if(['success','succeeded','completed','done'].includes(status)){
         const url = await (async function tryExtractImageUrl(o){
           if(!o) return null;
@@ -415,7 +415,7 @@ window.__run=async function(){
     };
 
     const settled = await Promise.allSettled(files.map(uploadOne));
-    const urls = settled.filter(x => x === 'fulfilled' && x.value).map(x => x.value);
+    const urls = settled.filter(x => x.status === 'fulfilled' && x.value).map(x => x.value);
 
     // guard: if no URLs were produced, stop here
     if (urls.length === 0) {
@@ -445,10 +445,10 @@ window.__run=async function(){
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
 
     // store pending ticket so we can resume after refresh
-    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 }
+    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 }))
 
     // ensure Usage shows even if user navigates away
-    backfillSubmitted(uid, rid, taskId)));
+    backfillSubmitted(uid, rid, taskId);
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
     runBtn.textContent='Processing…';
@@ -476,7 +476,7 @@ window.__run=async function(){
     if (!__done) {
       const __MSG='❌ Generation failed. Credits refunded. Try again or contact us.';
       try{ await refundHalfCreditOnce(taskId); }catch{}
-      try{ localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG })))); }catch{}
+      try{ localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG })); }catch{}
       showStatus(__MSG,'text-rose-300');
     }
 
@@ -600,7 +600,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
       if (!window.__done) {
         window.__renderedFromServer = true;
         onResult(url);
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url }
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url }));
         try {
           const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null')));
           if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
@@ -621,7 +621,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
     // Otherwise (pending): seed nb_pending to resume auto-poll from server
     try {
       const startedAt = new Date(row.created_at).getTime();
-      localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId:null, run_id: row.run_id, startedAt, ttl:200 }))));
+      localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId:null, run_id: row.run_id, startedAt, ttl:200 }));
     } catch {}
   }catch(e){ console.warn('serverFirstLatest error', e); }
 });
@@ -682,7 +682,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         await refundHalfCreditOnce(p.taskId);
         const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
         showStatus(msg, 'text-rose-300');
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg };
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg }));
         try { localStorage.removeItem('nb_pending'); } catch{};
       })();
       return;
@@ -701,11 +701,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
           
           if (url){
             window.onResult(url);
-            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url };
-            try { localStorage.removeItem('nb_pending'); } catch{};
-            break;
-          }
-          ;
+            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url }));
             try { localStorage.removeItem('nb_pending'); } catch{};
             break;
           }
@@ -715,7 +711,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         await refundHalfCreditOnce(p.taskId);
         const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
         showStatus(msg, 'text-rose-300');
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg };
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg }));
         try { localStorage.removeItem('nb_pending'); } catch{};
       }
     })();
