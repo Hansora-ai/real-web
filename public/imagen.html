@@ -338,7 +338,7 @@ async function imagenCheckPoll(id, uid, rid){
     await new Promise(r=>setTimeout(r,1500));
   }
   if(!__done){
-    showStatus('Still processing… you can wait or try again.','text-yellow-300');
+    showStatus('There was an error while generating, please try again or contact us (your credits is refunded).','text-yellow-300');
     runBtn.disabled=false; runBtn.textContent=(modelChoice.value==='ultra'?'Run (cost: 1⚡)':'Run (cost: 0.5⚡)');
   }
 }
