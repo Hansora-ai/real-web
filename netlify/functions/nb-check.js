@@ -9,8 +9,7 @@ const KIE_KEY  = process.env.KIE_API_KEY;
 const SUPABASE_URL  = process.env.SUPABASE_URL || '';
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
-
+const ALLOWED_HOSTS = null; // accept any https host
 exports.handler = async (event) => {
   try {
     if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
@@ -120,13 +119,9 @@ function isUrl(x){ try { new URL(x); return true; } catch { return false; } }
 function host(u){ try { return new URL(u).hostname; } catch { return ''; } }
 function allowed(u){
   if (!isUrl(u)) return false;
-  const h = host(u);
-  if (!ALLOWED_HOSTS.has(h)) return false;
-  if (!/\/(m|f|workers)\//i.test(u)) return false;
+  try { const url = new URL(u); if (url.protocol !== 'https:') return false; } catch { return false; }
   return true;
 }
-
-
 function valStr(x){ try { return (x??'')+''; } catch { return ''; } }
 function hasFailureHint(d){
   try{
