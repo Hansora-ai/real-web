@@ -271,7 +271,8 @@ function onResult(url){
     downloadLink.textContent='Download';
 
     showStatus('✅ Done.','text-emerald-300');
-    try { localStorage.setItem('nb_last_run', JSON.stringify({ t: Date.now(), ok:true, url })); } catch{}
+    try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{};
+    try { localStorage.removeItem('nb_pending'); } catch{};
   };
   
   img.src=url;
@@ -443,6 +444,9 @@ window.__run=async function(){
     const resJson = await res.json().catch(()=> ({}));
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
 
+    // store pending ticket so we can resume after refresh
+    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 })); } catch{}
+
     // ensure Usage shows even if user navigates away
     backfillSubmitted(uid, rid, taskId);
 
@@ -479,12 +483,14 @@ window.__run=async function(){
       const url = row?.image_url || null;
       if (url) { onResult(url); break; }
     }
+
     if (!__done) {
-      await refundHalfCredit();
-      const msg = "❌ Generation failed. Credits refunded. Try again or contact us.";
-      showStatus(msg, "text-rose-300");
-      try { localStorage.setItem("nb_last_run", JSON.stringify({ t: Date.now(), ok:false, msg })); } catch{}
+      const __MSG='❌ Generation failed. Credits refunded. Try again or contact us.';
+      try{ await refundHalfCreditOnce(taskId); }catch{}
+      try{ localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG })); }catch{}
+      showStatus(__MSG,'text-rose-300');
     }
+
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300')
   }finally{
@@ -576,47 +582,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
   }
 });
+</script>
 
 <script>
-async function refundHalfCredit(){
+async function refundHalfCreditOnce(taskId){
   try{
-    const ures = await supabase.auth.getUser();
-    const user = ures?.data?.user;
-    if(!user) return false;
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const key = 'nb_refunded_' + (taskId || 'unknown');
+    if (localStorage.getItem(key)) return false;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
     const cur = prof?.credits ?? 0;
     const next = Math.round((cur + 0.5) * 1000) / 1000;
-    await supabase
-      .from('profiles')
-      .update({ credits: next })
-      .eq('user_id', user.id);
-    try{ const nav = document.getElementById('navCredits'); if (nav) nav.textContent = next + '⚡'; }catch{}
+    await supabase.from('profiles').update({ credits: next }).eq('user_id', user.id);
+    const nav = document.getElementById('navCredits'); if (nav) nav.textContent = next + '⚡';
+    localStorage.setItem(key, '1');
     return true;
-  }catch(e){ console.warn('refund failed', e); return false; }
+  }catch(e){ console.warn('refundHalfCreditOnce failed', e); return false; }
 }
-</script>
-</script>
 
-<script>
 document.addEventListener('DOMContentLoaded', function restoreLastRun(){
   try{
     const raw = localStorage.getItem('nb_last_run');
-    if(!raw) return;
+    if (!raw) return;
     const last = JSON.parse(raw);
     const box = document.getElementById('resultBox');
     const dl  = document.getElementById('downloadLink');
     if (!box) return;
     if (last.ok && last.url){
       const img = new Image();
-      img.onload = function(){
-        box.innerHTML='';
-        img.className = 'w-full h-full object-contain';
-        box.appendChild(img);
-      };
+      img.onload = function(){ box.innerHTML=''; img.className='w-full h-full object-contain'; box.appendChild(img); };
       img.src = last.url;
       if (dl) {
         const __name = (last.url.split('/').pop()||'generation');
@@ -628,9 +623,65 @@ document.addEventListener('DOMContentLoaded', function restoreLastRun(){
     } else if (last.msg){
       box.innerHTML = '<span class="text-xs text-rose-300">'+ last.msg +'</span>';
     }
-  }catch(e){}
+  }catch{}
+});
+
+document.addEventListener('DOMContentLoaded', function resumeFromPending(){
+  try{
+    const raw = localStorage.getItem('nb_pending');
+    if (!raw) return;
+    const p = JSON.parse(raw);
+    const ttlMs = (p.ttl || 200) * 1000;
+    const remaining = ttlMs - (Date.now() - (p.startedAt || 0));
+    if (remaining <= 0){
+      (async () => {
+        await refundHalfCreditOnce(p.taskId);
+        const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
+        showStatus(msg, 'text-rose-300');
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
+        try { localStorage.removeItem('nb_pending'); } catch{};
+      })();
+      return;
+    }
+    (async () => {
+      const started = Date.now();
+      while (!window.__done && Date.now() - started < remaining){
+        await new Promise(r => setTimeout(r, 1500));
+        try{
+          const { data: row } = await supabase
+            .from('nb_results')
+            .select('image_url,status')
+            .eq('run_id', p.run_id)
+            .maybeSingle();
+          const url = row?.image_url || null;
+          const st = (row?.status || '').toLowerCase();
+          if (url){
+            window.onResult(url);
+            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{};
+            try { localStorage.removeItem('nb_pending'); } catch{};
+            break;
+          }
+          if (st === 'failed'){
+            await refundHalfCreditOnce(p.taskId);
+            const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
+            showStatus(msg, 'text-rose-300');
+            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
+            try { localStorage.removeItem('nb_pending'); } catch{};
+            break;
+          }
+        }catch(e){}
+      }
+      if (!window.__done){
+        await refundHalfCreditOnce(p.taskId);
+        const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
+        showStatus(msg, 'text-rose-300');
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
+        try { localStorage.removeItem('nb_pending'); } catch{};
+      }
+    })();
+  }catch(e){ console.warn('resumeFromPending error', e); }
 });
 </script>
-</body>
 
+</body>
 </html>
