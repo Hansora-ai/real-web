@@ -6,7 +6,17 @@
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>HANSORA • Nano Banana</title>
 <link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" rel="icon"/>
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.tailwindcss.com">// RESTORE (Imagen-style)
+try {
+  const s = JSON.parse(localStorage.getItem('nb_last_run')||'null');
+  if (s && s.result_url) {
+    if (typeof window.onResult === 'function') try{ window.onResult(s.result_url); }catch(e){}
+  } else if (s && s.id && s.uid) {
+    try { window.__nbResume && window.__nbResume(s.id, s.uid); } catch(e) {}
+  }
+} catch (e) {}
+// END RESTORE
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
 <script src="/kie-upload-bridge.js"></script>
@@ -271,7 +281,7 @@ function onResult(url){
     downloadLink.textContent='Download';
 
     showStatus('✅ Done.','text-emerald-300');
-    try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{};
+    try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{};
     try { localStorage.removeItem('nb_pending'); } catch{};
   };
   
@@ -472,14 +482,7 @@ window.__run=async function(){
     const started = Date.now();
     while (!__done && Date.now() - started < 200000) { // up to 120s
       await new Promise(r => setTimeout(r, 1500));
-      const { data: row } = await supabase
-        .from('user_generations')
-        .select('result_url')
-        .eq('user_id', uid)
-        .eq('user_id', uid)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data: row } = /* Imagen-style: no DB restore from user_generations */
 
       const url = row?.image_url || null;
       if (url) { onResult(url); break; }
@@ -488,7 +491,7 @@ window.__run=async function(){
     if (!__done) {
       const __MSG='❌ Generation failed. Credits refunded. Try again or contact us.';
       try{ await refundHalfCreditOnce(taskId); }catch{}
-      try{ localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG })); }catch{}
+      try{ localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); }catch{}
       showStatus(__MSG,'text-rose-300');
     }
 
@@ -595,13 +598,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
     const user = ures?.data?.user;
     if (!user) return;
 
-    const { data: row } = await supabase
-      .from('user_generations')
-      .select('id, user_id, provider, result_url, created_at, status')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const { data: row } = /* Imagen-style: no DB restore from user_generations */
 
     if (!row) return;
 
@@ -613,7 +610,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
       if (!window.__done) {
         window.__renderedFromServer = true;
         onResult(url);
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{}
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{}
         try {
           const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
           if (pend && pend.run_id === row && row.created_at) localStorage.removeItem('nb_pending');
@@ -627,7 +624,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
       window.__renderedFromServer = true;
       const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
       showStatus(msg, 'text-rose-300');
-      try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{}
+      try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{}
       try {
         const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
         if (pend && pend.run_id === row && row.created_at) localStorage.removeItem('nb_pending');
@@ -699,7 +696,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         await refundHalfCreditOnce(p.taskId);
         const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
         showStatus(msg, 'text-rose-300');
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{};
         try { localStorage.removeItem('nb_pending'); } catch{};
       })();
       return;
@@ -709,14 +706,12 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
       while (!window.__done && Date.now() - started < remaining){
         await new Promise(r => setTimeout(r, 1500));
         try{
-          const { data: row } = await supabase
-            .from('user_generations')
-            .select('result_url,status').eq('user_id', uid).order('created_at', { ascending: false }).limit(1).maybeSingle();
+          const { data: row } = /* Imagen-style: no DB restore from user_generations */
           const url = row?.image_url || null;
           const st = (row?.status || '').toLowerCase();
           if (url){
             window.onResult(url);
-            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{};
+            try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{};
             try { localStorage.removeItem('nb_pending'); } catch{};
             break;
           }
@@ -724,7 +719,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
             await refundHalfCreditOnce(p.taskId);
             const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
             showStatus(msg, 'text-rose-300');
-            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
+            try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{};
             try { localStorage.removeItem('nb_pending'); } catch{};
             break;
           }
@@ -734,7 +729,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         await refundHalfCreditOnce(p.taskId);
         const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
         showStatus(msg, 'text-rose-300');
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{};
         try { localStorage.removeItem('nb_pending'); } catch{};
       }
     })();
