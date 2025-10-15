@@ -476,7 +476,8 @@ window.__run=async function(){
         .from('user_generations')
         .select('result_url')
         .eq('user_id', uid)
-        .eq('run_id', rid)
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
@@ -596,7 +597,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
 
     const { data: row } = await supabase
       .from('user_generations')
-      .select('id, user_id, provider, result_url, run_id, created_at, status')
+      .select('id, user_id, provider, result_url, created_at, status')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -615,7 +616,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
         try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{}
         try {
           const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
-          if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
+          if (pend && pend.run_id === row && row.created_at) localStorage.removeItem('nb_pending');
         } catch {}
       }
       return;
@@ -629,7 +630,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
       try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{}
       try {
         const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
-        if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
+        if (pend && pend.run_id === row && row.created_at) localStorage.removeItem('nb_pending');
       } catch {}
       return;
     }
@@ -637,7 +638,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
     // Otherwise (pending): seed nb_pending to resume auto-poll from server
     try {
       const startedAt = new Date(row.created_at).getTime();
-      localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId:null, run_id: row.run_id, startedAt, ttl:200 }));
+      localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId:null, run_id: row && row.created_at, startedAt, ttl:200 }));
     } catch {}
   }catch(e){ console.warn('serverFirstLatest error', e); }
 });
@@ -710,9 +711,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         try{
           const { data: row } = await supabase
             .from('user_generations')
-            .select('result_url,status')
-            .eq('run_id', p.run_id)
-            .maybeSingle();
+            .select('result_url,status').eq('user_id', uid).order('created_at', { ascending: false }).limit(1).maybeSingle();
           const url = row?.image_url || null;
           const st = (row?.status || '').toLowerCase();
           if (url){
