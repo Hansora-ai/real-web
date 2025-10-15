@@ -584,6 +584,64 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+
+<script>
+// Server-first: fetch the most recent run from Supabase on load and render it.
+// This guarantees we show the *latest* run (even if user left the page).
+document.addEventListener('DOMContentLoaded', async function serverFirstLatest(){
+  try{
+    const ures = await supabase.auth.getUser();
+    const user = ures?.data?.user;
+    if (!user) return;
+
+    const { data: row } = await supabase
+      .from('nb_results')
+      .select('user_id, run_id, status, image_url, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!row) return;
+
+    const st = String(row.status || '').toLowerCase();
+    const url = row.image_url || null;
+
+    // If terminal success -> render image and persist
+    if (st === 'success' && url){
+      if (!window.__done) {
+        window.__renderedFromServer = true;
+        onResult(url);
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{}
+        try {
+          const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
+          if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
+        } catch {}
+      }
+      return;
+    }
+
+    // If terminal failed -> render failure + persist
+    if (st === 'failed'){
+      window.__renderedFromServer = true;
+      const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
+      showStatus(msg, 'text-rose-300');
+      try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{}
+      try {
+        const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
+        if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
+      } catch {}
+      return;
+    }
+
+    // Otherwise (pending): seed nb_pending to resume auto-poll from server
+    try {
+      const startedAt = new Date(row.created_at).getTime();
+      localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId:null, run_id: row.run_id, startedAt, ttl:200 }));
+    } catch {}
+  }catch(e){ console.warn('serverFirstLatest error', e); }
+});
+</script>
 <script>
 async function refundHalfCreditOnce(taskId){
   try{
@@ -603,6 +661,9 @@ async function refundHalfCreditOnce(taskId){
 
 document.addEventListener('DOMContentLoaded', function restoreLastRun(){
   try{
+    // Skip drawing old cache if a pending ticket exists or server already rendered
+    if (localStorage.getItem('nb_pending')) return;
+    if (window.__renderedFromServer) return;
     const raw = localStorage.getItem('nb_last_run');
     if (!raw) return;
     const last = JSON.parse(raw);
