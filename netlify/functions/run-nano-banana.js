@@ -11,20 +11,8 @@ const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const UG_URL = (process.env.SUPABASE_URL ? process.env.SUPABASE_URL + '/rest/v1/user_generations' : undefined);
 
 
-
-function deriveCallbackUrl(event){
-  if (deriveCallbackUrl(event)) return deriveCallbackUrl(event);
-  try{
-    const host = (event.headers?.host || event.headers?.Host || '').trim();
-    const proto = (event.headers['x-forwarded-proto'] || 'https').split(',')[0].trim() || 'https';
-    if (host) return `${proto}://${host}/.netlify/functions/kie-callback`;
-  }catch{}
-  return 'https://webhansora.netlify.app/.netlify/functions/kie-callback';
-}
 // Base Netlify Functions callback (WITH DOT)
-const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL;
-// Build callback from env or request host at runtime (set later)
-let deriveCallbackUrl(event) = PUBLIC_BASE_URL ? (PUBLIC_BASE_URL.replace(/\/$/, '') + '/.netlify/functions/kie-callback') : null;
+const CALLBACK_URL = "https://webhansora.netlify.app/.netlify/functions/kie-callback";
 const VERSION_TAG  = "nb_fn_final_submit_only_qs";
 
 exports.handler = async (event) => {
@@ -56,7 +44,7 @@ exports.handler = async (event) => {
     const run_id = body.run_id || `${uid}-${Date.now()}`;
 
     // include uid & run_id in the callback URL (works even if KIE posts non-JSON)
-    const cb = `${deriveCallbackUrl(event)}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
+    const cb = `${CALLBACK_URL}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
 
     // Build KIE payload
     const payload = {
