@@ -473,7 +473,7 @@ window.__run=async function(){
     while (!__done && Date.now() - started < 200000) { // up to 120s
       await new Promise(r => setTimeout(r, 1500));
       const { data: row } = await supabase
-        .from('nb_results')
+        .from('user_generations')
         .select('image_url')
         .eq('user_id', uid)
         .eq('run_id', rid)
@@ -595,8 +595,8 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
     if (!user) return;
 
     const { data: row } = await supabase
-      .from('nb_results')
-      .select('user_id, run_id, status, image_url, created_at')
+      .from('user_generations')
+      .select('id, user_id, provider, result_url, created_at, status')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -605,10 +605,10 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
     if (!row) return;
 
     const st = String(row.status || '').toLowerCase();
-    const url = row.image_url || null;
+    const url = row.result_url || null;
 
     // If terminal success -> render image and persist
-    if (st === 'success' && url){
+    if (url){
       if (!window.__done) {
         window.__renderedFromServer = true;
         onResult(url);
@@ -663,7 +663,6 @@ document.addEventListener('DOMContentLoaded', function restoreLastRun(){
   try{
     // Skip drawing old cache if a pending ticket exists or server already rendered
     if (localStorage.getItem('nb_pending')) return;
-    if (window.__renderedFromServer) return;
     const raw = localStorage.getItem('nb_last_run');
     if (!raw) return;
     const last = JSON.parse(raw);
@@ -710,7 +709,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         await new Promise(r => setTimeout(r, 1500));
         try{
           const { data: row } = await supabase
-            .from('nb_results')
+            .from('user_generations')
             .select('image_url,status')
             .eq('run_id', p.run_id)
             .maybeSingle();
@@ -791,7 +790,6 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
       if(!s || !s.uid || s.uid != user.id) return;
 
       // If server-first already rendered something, skip
-      if (window.__renderedFromServer) return;
 
       // If we have a saved result -> restore it
       if (s.result_url && typeof window.onResult === 'function'){
