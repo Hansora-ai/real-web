@@ -1,214 +1,159 @@
-// netlify/functions/kie-callback.js
-// FINAL drop-in: always inserts up to 4 MidJourney image URLs.
-// - Verifies via KIE when taskId is known
-// - If verification/webhook only yields one URL ending with _0_0, deduce _0_1/_0_2/_0_3
-// - Inserts ALL urls into nb_results with merge-duplicates
-// - Updates user_generations with the first URL
-//
-// Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, KIE_API_KEY, (optional) KIE_BASE_URL
+// netlify/functions/nb-check.js
+// Surgical fix: probe both /api/v1/mj/* and /api/v1/jobs/*, MERGE images from all
+// success endpoints, return original fields plus images[], and backfill ALL rows.
+// Compatible with Nano Banana + MidJourney. No interface changes.
 
-const SUPABASE_URL  = process.env.SUPABASE_URL;
-const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
-const UG_URL        = `${SUPABASE_URL}/rest/v1/user_generations`;
-
-const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,''); // no trailing slash
+const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,'');
 const KIE_KEY  = process.env.KIE_API_KEY;
 
-const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
+const SUPABASE_URL  = process.env.SUPABASE_URL || '';
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
+const ALLOWED_HOSTS = null; // accept any https host
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
-  if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') {
-    return { statusCode: 405, headers: cors(), body: 'Use POST or GET' };
-  }
-
   try {
+    if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
+    if (event.httpMethod !== 'GET')     return { statusCode: 405, headers: cors(), body: 'Use GET' };
+
     const qs = event.queryStringParameters || {};
-    const headers = lowerKeys(event.headers || {});
-    const ctype = headers['content-type'] || '';
+    const taskId = (qs.taskId || qs.task_id || '').trim();
+    if (!taskId) return json(400, { ok:false, error:'missing taskId' });
 
-    let bodyRaw = event.body || '';
-    if (event.isBase64Encoded) bodyRaw = Buffer.from(bodyRaw, 'base64').toString('utf8');
+    const uid    = header(event, 'x-user-id') || qs.uid || null;
+    const run_id = (qs.run_id || '').trim() || null;
 
-    let data = null;
-    // JSON
-    if (event.httpMethod === 'POST' && ctype.includes('application/json')) {
-      try { data = JSON.parse(bodyRaw); } catch {}
+    // Fetch once across endpoints (the page will poll repeatedly)
+    const probe = await fetchAll(taskId);
+
+    if (!probe.ok) {
+
+    if (probe.status === 'failed') {
+      // ensure refund + status flip on any detected failure
+      if (uid) { try { await markFailedAndRefundSmart(uid, run_id, taskId); } catch{} }
+      return json(200, { ok:false, status:'failed' });
     }
-    // Form / text
-    if (!data && event.httpMethod === 'POST' && (ctype.includes('application/x-www-form-urlencoded') || ctype.includes('text/plain'))) {
-      data = parseFormLike(bodyRaw);
-      for (const k of ['data','result','payload']) {
-        if (typeof data[k] === 'string') {
-          try { data[k] = JSON.parse(data[k]); } catch {}
-        }
-      }
-    }
-    // Fallback raw → JSON
-    if (!data && event.httpMethod === 'POST') {
-      try { data = JSON.parse(bodyRaw); } catch { data = { raw: bodyRaw }; }
+      return json(200, { ok:false, status: probe.status || 'pending' });
     }
 
-    // Identify user/run/task
-    let uid     = qs.uid     || get(data, 'meta.uid')      || get(data, 'metadata.uid')      || null;
-    let run_id  = qs.run_id  || get(data, 'meta.run_id')   || get(data, 'metadata.run_id')   || null;
-    let taskId  = qs.taskId  || qs.task_id || get(data,'taskId') || get(data,'id') ||
-                  get(data,'data.taskId') || get(data,'result.taskId') || null;
-
-    // Fallbacks from Supabase (ensure we can verify and write rows visible to user)
-    if ((!uid || !taskId) && (run_id || taskId)) {
-      try {
-        const q = run_id
-          ? `${UG_URL}?select=user_id,meta&meta->>run_id=eq.${encodeURIComponent(run_id)}&limit=1`
-          : `${UG_URL}?select=user_id,meta&meta->>task_id=eq.${encodeURIComponent(taskId)}&limit=1`;
-        const r = await fetch(q, { headers: sb() });
-        const arr = await r.json().catch(()=>[]);
-        if (Array.isArray(arr) && arr[0]) {
-          if (!uid && arr[0].user_id) uid = arr[0].user_id;
-          if (!taskId && arr[0]?.meta?.task_id) taskId = arr[0].meta.task_id;
-          if (!run_id && arr[0]?.meta?.run_id) run_id = arr[0].meta.run_id;
-        }
-      } catch {}
+    const images = firstImageUrls(probe.data, 4);
+    if (!images.length) {
+      return json(200, { ok:false, status:'pending' });
     }
 
-    // 1) Collect URLs from webhook body
-    let urls = pickResultUrls(data, 4);
+    // Backfill ALL (up to 4) rows so Realtime/subscribe can render each
+    await backfillAll({ uid, run_id, taskId, images }).catch(()=>{});
 
-    // 2) Verify via KIE to get full set when taskId is known
-    if (taskId && KIE_KEY) {
-      try {
-        const verified = await fetchMJorJobsAll(taskId, 4);
-        if (verified.length) urls = Array.from(new Set([...urls, ...verified])).slice(0,4);
-      } catch {}
-    }
-
-    // 3) Filter allowed
-    let finalUrls = urls.filter(isAllowedFinal).slice(0,4);
-
-    // 4) Fallback: if only one allowed URL and it ends with _0_0, deduce _1/_2/_3
-    if (finalUrls.length === 1) {
-      const derived = deduceMJ4(finalUrls[0]);
-      if (derived.length > 1) finalUrls = derived;
-    }
-
-    if (!finalUrls.length) {
-  const failed = isFailurePayload(data);
-  if (failed && (uid || run_id)) {
-    try { await markFailedAndRefund(uid, run_id, taskId); } catch {}
-    return reply(200, { ok:true, saved:false, failed:true, note:'failure payload: refunded/marked failed' });
-  }
-  return reply(200, { ok:true, saved:false, note:'no allowed final image_url; not inserting' });
-}
-
-    // Update user_generations with the first URL
-    try {
-      if (UG_URL && SERVICE_KEY && (uid || run_id)) {
-        const q = (uid && run_id)
-          ? `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`
-          : `?meta->>run_id=eq.${encodeURIComponent(run_id||'')}`;
-        const bodyJson = { result_url: finalUrls[0], provider: 'MidJourney', kind: 'image', meta: { run_id, task_id: taskId, status: 'done' } };
-        const chk = await fetch(UG_URL + q + '&select=id', { headers: sb() });
-        let hasRow = false;
-        try { const arr = await chk.json(); hasRow = Array.isArray(arr) && arr.length > 0; } catch {}
-        await fetch(UG_URL + (hasRow ? q : ''), {
-          method: hasRow ? 'PATCH' : 'POST',
-          headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify(hasRow ? bodyJson : { user_id: uid, ...bodyJson })
-        });
-      }
-    } catch {}
-
-    // Insert ALL image rows (merge-duplicates avoids dup rows)
-    const rows = finalUrls.map(u => ({
-      user_id: uid || '00000000-0000-0000-0000-000000000000',
-      run_id:  run_id || null,
-      task_id: taskId || null,
-      image_url: u
-    }));
-
-    const resp = await fetch(TABLE_URL, {
-      method: 'POST',
-      headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-      body: JSON.stringify(rows)
-    });
-
-    return reply(200, { ok: resp.ok, saved:true, count: rows.length, urls: finalUrls });
+    return json(200, { ok:true, status:'success', image_url: images[0], images });
 
   } catch (e) {
-    return reply(200, { ok:false, error:String(e) });
+    return json(200, { ok:false, error: String(e) });
   }
 };
 
-// ───────── helpers
+// ---------- helpers ----------
+function cors(){ return { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'GET,OPTIONS' }; }
+function json(code, obj){ return { statusCode: code, headers: { 'Content-Type': 'application/json', ...cors() }, body: JSON.stringify(obj) }; }
+function header(event, name){ const v = event.headers?.[name] || event.headers?.[name.toLowerCase()]; return Array.isArray(v) ? v[0] : v; }
+function kieHeaders(){ return { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' }; }
 
-async function fetchMJorJobsAll(id, limit=4){
+// === THE ONLY BEHAVIORAL CHANGE ===
+// Merge images from *all* success endpoints instead of returning at the first success.
+async function fetchAll(taskId){
   const endpoints = [
-    `/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(id)}`,
-    `/api/v1/mj/result?taskId=${encodeURIComponent(id)}`,
-    `/api/v1/mj/getTask?taskId=${encodeURIComponent(id)}`,
-    `/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(id)}`,
-    `/api/v1/jobs/result?taskId=${encodeURIComponent(id)}`
+    // Google / Nano Banana provider endpoints
+    `${KIE_BASE}/api/v1/google/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_BASE}/api/v1/google/result?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_BASE}/api/v1/google/getTask?taskId=${encodeURIComponent(taskId)}`,
+    // MJ endpoints first (usually contain full set for MidJourney)
+    `${KIE_BASE}/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_BASE}/api/v1/mj/result?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_BASE}/api/v1/mj/getTask?taskId=${encodeURIComponent(taskId)}`,
+    // Generic jobs fallbacks (used by Nano Banana and some providers)
+    `${KIE_BASE}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_BASE}/api/v1/jobs/result?taskId=${encodeURIComponent(taskId)}`
   ];
-  for (const path of endpoints){
-    try{
-      const r = await fetch(`${KIE_BASE}${path}`, { headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' } });
-      const j = await r.json();
-      const s = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
-      const ok = ['success','succeeded','completed','done'].includes(s) || !!j?.data?.result || Array.isArray(j?.data?.images);
-      if (!ok) continue;
-      const urls = pickResultUrls(j, limit);
-      if (urls.length) return urls;
-    }catch{}
+
+  let merged = [];         // merged image urls
+  let sawSuccess = false;  // did any endpoint report success?
+  let sawFailed  = false;  // did any endpoint report failure?
+
+  for (const url of endpoints) {
+    try {
+      const r = await fetch(url, { headers: kieHeaders() });
+      const txt = await r.text();
+      let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+
+      if (normalizeStatus(data) === 'success') {
+        sawSuccess = true;
+        const imgs = firstImageUrls(data, 4);
+        for (const u of imgs) if (!merged.includes(u)) merged.push(u);
+        if (merged.length >= 4) break; // got all 4, stop early
+      }
+      const stat = normalizeStatus(data);
+      if (stat === 'failed') { sawFailed = true; } // explicit
+
+      const hint = providerHint(data);
+      // Treat any explicit failure or failure hints as failure, regardless of provider
+      if (stat !== 'success' && (hasFailureHint(data) || hasFailureHintStrong(data))) { sawFailed = true; }
+      // do not early-return on pending; try other endpoints
+    } catch {}
   }
-  return [];
+
+  if (sawSuccess && merged.length) {
+    // Return a data shape that downstream understands (contains images array)
+    return { ok: true, status: 'success', data: { images: merged } };
+  }
+  if (sawFailed) return { ok: false, status: 'failed' };
+  return { ok: false, status: 'pending' };
 }
 
-function deduceMJ4(u){
-  if (typeof u !== 'string') return [u].filter(Boolean);
-  // ..._0_0.jpeg|png|webp → derive siblings
-  const m = u.match(/^(.*_0_)(0)(\.(?:jpe?g|png|webp))$/i);
-  if (m) return [0,1,2,3].map(i => `${m[1]}${i}${m[3]}`);
-  return [u]; // fallback
+function normalizeStatus(d){
+  const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || d?.data?.state || '').toLowerCase();
+  if (['success','succeeded','completed','done'].includes(s)) return 'success';
+  if (['failed','error','failure','fail'].includes(s)) return 'failed';
+  return 'pending';
 }
 
-function sb(){ return { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }; }
 
-function reply(statusCode, body) {
-  return { statusCode, headers: { ...cors(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
-}
-function cors(){ return {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST, GET, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization'}; }
-function lowerKeys(obj){const out={}; for(const k in obj) out[k.toLowerCase()]=obj[k]; return out;}
-function parseFormLike(s){const out={}; try{ for(const part of s.split('&')){ const [k,v]=part.split('='); if(!k) continue; out[decodeURIComponent(k)]=decodeURIComponent(v||''); } }catch{} return out;}
-function get(o,p){ try{ return p.split('.').reduce((a,k)=> (a && k in a ? a[k] : undefined), o); } catch { return undefined; } }
-function isUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u); }
-function host(u){ try{ return new URL(u).hostname; } catch { return ''; } }
-function isAllowedFinal(u){
+function isUrl(x){ try { new URL(x); return true; } catch { return false; } }
+function host(u){ try { return new URL(u).hostname; } catch { return ''; } }
+function allowed(u){
   if (!isUrl(u)) return false;
-  const h = host(u);
-  if (!ALLOWED_HOSTS.has(h)) return false;
-  if (!/\/(workers|f|m)\//i.test(u)) return false;
+  try { const url = new URL(u); if (url.protocol !== 'https:') return false; } catch { return false; }
   return true;
 }
+function valStr(x){ try { return (x??'')+''; } catch { return ''; } }
+function hasFailureHint(d){
+  try{
+    const s = valStr(d?.status || d?.state || d?.result?.status || d?.data?.status).toLowerCase();
+    if (s === 'failure') return true;
+    const code = Number(d?.errorCode || d?.code || d?.error?.code || d?.data?.code);
+    if (code === 422) return true;
+    const msg = (valStr(d?.message || d?.error?.message || d?.data?.message || d?.result?.message)).toLowerCase();
+    if (/(sensitive|flagged|policy|blocked)/.test(msg)) return true;
+  }catch{}
+  return false;
+}
+function providerHint(d){
+  const prov = valStr(d?.provider || d?.model || d?.interfaceName || d?.data?.provider || d?.data?.model).toLowerCase();
+  const name = valStr(d?.result?.modelName || d?.result?.provider || d?.params?.provider).toLowerCase();
+  const source = (prov + ' ' + name).trim();
+  return source;
+}
 
-// Collect up to N URLs from common MJ shapes or deep scan
-function pickResultUrls(obj, limit=4){
-  const acc = [];
-  const prefer = [
-    get(obj,'result.images'),
-    get(obj,'data.result.images'),
-    get(obj,'data.images'),
-    get(obj,'images')
-  ];
-  for (const a of prefer) if (Array.isArray(a)) acc.push(...a);
+function firstImageUrls(obj, limit=4){
+  let acc = [];
+  const cand = obj?.data?.result?.images || obj?.result?.images || obj?.data?.images || obj?.images;
+  if (Array.isArray(cand)) acc = acc.concat(cand);
+
   (function walk(x){
     if (!x) return;
     if (typeof x === 'string'){
       const m = x.match(/https?:\/\/[^\s"']+/i);
       if (m) acc.push(m[0]);
-    } else if (Array.isArray(x)){
+    } else if (Array.isArray(x)) {
       for (const v of x) walk(v);
-    } else if (typeof x === 'object'){
+    } else if (typeof x === 'object') {
       for (const v of Object.values(x)) walk(v);
     }
   })(obj);
@@ -217,7 +162,7 @@ function pickResultUrls(obj, limit=4){
   const seen = new Set();
   for (const it of acc){
     const u = typeof it === 'string' ? it : (it && it.url);
-    if (u && isAllowedFinal(u) && !seen.has(u)){
+    if (u && allowed(u) && !seen.has(u)){
       seen.add(u);
       out.push(u);
       if (out.length >= limit) break;
@@ -227,42 +172,37 @@ function pickResultUrls(obj, limit=4){
 }
 
 
-function _num(x){ const n = Number(x); return Number.isFinite(n) ? n : NaN; }
-function _txt(x){ try { return (x ?? '') + ''; } catch { return ''; } }
-
-function isFailurePayload(d){
-  try{
-    const s = (_txt(d?.status) + ' ' + _txt(d?.state) + ' ' + _txt(d?.result?.status) + ' ' + _txt(d?.data?.state) + ' ' + _txt(d?.data?.status)).toLowerCase();
-    if (/\b(fail|failed|failure|error)\b/.test(s)) return true;
-    const codeTop = _num(d?.code);
-    const codeNested = _num(d?.data?.failCode || d?.data?.code || d?.errorCode || d?.code);
-    if ((Number.isFinite(codeTop) && codeTop >= 400) || (Number.isFinite(codeNested) && codeNested >= 400)) return true;
-    const msg = (_txt(d?.msg) + ' ' + _txt(d?.message) + ' ' + _txt(d?.data?.failMsg) + ' ' + _txt(d?.data?.message) + ' ' + _txt(d?.error?.message)).toLowerCase();
-    if (/(\bsensitive\b|\bflagged\b|\bpolicy\b|\bblocked\b|\bforbidden\b|\bdenied\b)/.test(msg)) return true;
-  }catch{}
-  return false;
-}
-
+// === Refund logic: mark failed + refund dynamically (MidJourney=1.0, Nano Banana=0.5) exactly once via user_generations ===
 async function markFailedAndRefund(uid, run_id, taskId){
   try{
-    if (!UG_URL || !SERVICE_KEY || !uid) return false;
+    if (!SUPABASE_URL || !SERVICE_KEY || !uid) return false;
     const base = SUPABASE_URL.replace(/\/+$/,'');
     const ug = `${base}/rest/v1/user_generations`;
 
-    // Locate row
+    // 1) Fetch placeholder row by run_id first, fallback task_id
     let row = null;
     if (run_id){
-      const r = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=*,meta`, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
-      if (r.ok){ const a = await r.json(); if (Array.isArray(a) && a.length) row = a[0]; }
+      const r = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=*,meta`, {
+        headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+      });
+      if (r.ok){
+        const a = await r.json();
+        if (Array.isArray(a) && a.length) row = a[0];
+      }
     }
     if (!row && taskId){
-      const r2 = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>task_id=eq.${encodeURIComponent(taskId)}&select=*,meta`, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
-      if (r2.ok){ const a2 = await r2.json(); if (Array.isArray(a2) && a2.length) row = a2[0]; }
+      const r2 = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>task_id=eq.${encodeURIComponent(taskId)}&select=*,meta`, {
+        headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+      });
+      if (r2.ok){
+        const a2 = await r2.json();
+        if (Array.isArray(a2) && a2.length) row = a2[0];
+      }
     }
 
     const meta = (row && row.meta) || {};
     if (meta.refunded === true){
-      // ensure status is failed
+      // ensure status is failed and exit
       const newMeta = { ...meta, status: 'failed', refunded: true };
       if (row && row.id){
         await fetch(`${ug}?id=eq.${encodeURIComponent(row.id)}`, {
@@ -271,19 +211,22 @@ async function markFailedAndRefund(uid, run_id, taskId){
           body: JSON.stringify({ meta: newMeta })
         });
       }
-      return true;
+      return false;
     }
 
-    // Determine refund amount
-    let refund = 0.5;
-    const mcost = Number(meta.cost);
-    if (!Number.isNaN(mcost) && mcost > 0) refund = mcost;
-
-    // Credit back to profiles
+    // 2) Refund +0.5 credit (Nano Banana cost)
     const profGet = `${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
     const g = await fetch(profGet, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
-    const arr = await g.json().catch(()=>[]);
+    const arr = await g.json();
     const cur = (Array.isArray(arr) && arr[0] && (arr[0].credits ?? 0)) || 0;
+    // Determine refund based on provider/model
+    const providerStr = (row && row.provider ? String(row.provider).toLowerCase() : '');
+    const sourceStr   = (meta && meta.source ? String(meta.source).toLowerCase() : '');
+    const modelStr    = (meta && meta.model ? String(meta.model).toLowerCase() : '');
+
+    const isMidJourney = providerStr.includes('midjourney') || sourceStr === 'midjourney' || modelStr.includes('midjourney') || (taskId && String(taskId).startsWith('mj_'));
+
+    const refund = isMidJourney ? 1.0 : 0.5;
     const next = cur + refund;
     await fetch(`${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
       method:'PATCH',
@@ -291,7 +234,7 @@ async function markFailedAndRefund(uid, run_id, taskId){
       body: JSON.stringify({ credits: next })
     });
 
-    // Mark failed
+    // 3) Mark failed + refunded=true on the generation row(s)
     const newMeta = { ...meta, status: 'failed', refunded: true };
     if (row && row.id){
       await fetch(`${ug}?id=eq.${encodeURIComponent(row.id)}`, {
@@ -300,10 +243,10 @@ async function markFailedAndRefund(uid, run_id, taskId){
         body: JSON.stringify({ meta: newMeta })
       });
     } else {
-      const filt = run_id
+      const filter = run_id
         ? `user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`
         : `user_id=eq.${encodeURIComponent(uid)}&meta->>task_id=eq.${encodeURIComponent(taskId)}`;
-      await fetch(`${ug}?${filt}`, {
+      await fetch(`${ug}?${filter}`, {
         method:'PATCH',
         headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
         body: JSON.stringify({ meta: newMeta })
@@ -311,7 +254,136 @@ async function markFailedAndRefund(uid, run_id, taskId){
     }
     return true;
   }catch(e){
-    console.warn('[kie-callback] refund failed', e);
+    console.warn('[nb-check] refund failed', e);
     return false;
   }
+}
+
+async function backfillAll({ uid, run_id, taskId, images }){
+  if (!SUPABASE_URL || !SERVICE_KEY || !images?.length) return;
+  const rows = images.slice(0,4).map(u => ({
+    user_id: uid || '00000000-0000-0000-0000-000000000000',
+    run_id:  run_id || null,
+    task_id: taskId || null,
+    image_url: u
+  }));
+  await fetch(`${SUPABASE_URL}/rest/v1/nb_results`, {
+    method: 'POST',
+    headers: {
+      'apikey': SERVICE_KEY,
+      'Authorization': `Bearer ${SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify(rows)
+  });
+}
+
+
+// === Smart refund: per-provider cost (uses meta.cost if present; else MJ=1.0, Nano Banana=0.5) ===
+async function markFailedAndRefundSmart(uid, run_id, taskId){
+  try{
+    if (!SUPABASE_URL || !SERVICE_KEY || !uid) return false;
+    const base = SUPABASE_URL.replace(/\/+$/,'');
+    const ug = `${base}/rest/v1/user_generations`;
+
+    // Fetch row by run_id, fallback task_id
+    let row = null;
+    if (run_id){
+      const r = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=*,meta`, {
+        headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+      });
+      if (r.ok){
+        const a = await r.json();
+        if (Array.isArray(a) && a.length) row = a[0];
+      }
+    }
+    if (!row && taskId){
+      const r2 = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>task_id=eq.${encodeURIComponent(taskId)}&select=*,meta`, {
+        headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+      });
+      if (r2.ok){
+        const a2 = await r2.json();
+        if (Array.isArray(a2) && a2.length) row = a2[0];
+      }
+    }
+
+    const meta = (row && row.meta) || {};
+
+    // Already refunded?
+    if (meta.refunded === true){
+      const newMeta = { ...meta, status: 'failed', refunded: true };
+      if (row && row.id){
+        await fetch(`${ug}?id=eq.${encodeURIComponent(row.id)}`, {
+          method:'PATCH',
+          headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+          body: JSON.stringify({ meta: newMeta })
+        });
+      }
+      return false;
+    }
+
+    // Determine refund cost
+    let refund = 0.5;
+    const mcost = Number(meta.cost);
+    if (!Number.isNaN(mcost) && mcost > 0) {
+      refund = mcost;
+    } else {
+      const prov = (meta.provider || '').toString().toLowerCase();
+      const model = (meta.model || '').toString().toLowerCase();
+      const hint = prov + ' ' + model;
+      if (/(midjourney|\bmj\b)/.test(hint)) refund = 1.0;
+      else if (/(nano[\s-]?banana|\bnb\b|banana)/.test(hint)) refund = 0.5;
+    }
+
+    // Refund credits
+    const profGet = `${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
+    const g = await fetch(profGet, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+    const arr = await g.json();
+    const cur = (Array.isArray(arr) && arr[0] && (arr[0].credits ?? 0)) || 0;
+    const next = cur + refund;
+    await fetch(`${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
+      method:'PATCH',
+      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      body: JSON.stringify({ credits: next })
+    });
+
+    // Mark failed + refunded flag
+    const newMeta = { ...meta, status: 'failed', refunded: true };
+    if (row && row.id){
+      await fetch(`${ug}?id=eq.${encodeURIComponent(row.id)}`, {
+        method:'PATCH',
+        headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+        body: JSON.stringify({ meta: newMeta })
+      });
+    } else {
+      const filter = run_id
+        ? `user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`
+        : `user_id=eq.${encodeURIComponent(uid)}&meta->>task_id=eq.${encodeURIComponent(taskId)}`;
+      await fetch(`${ug}?${filter}`, {
+        method:'PATCH',
+        headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+        body: JSON.stringify({ meta: newMeta })
+      });
+    }
+    return true;
+  }catch(e){
+    console.warn('[nb-check] refund failed', e);
+    return false;
+  }
+}
+
+
+
+function _num(x){ const n = Number(x); return Number.isFinite(n) ? n : NaN; }
+function _txt(x){ try { return (x ?? '') + ''; } catch { return ''; } }
+function hasFailureHintStrong(d){
+  try{
+    const codeTop = _num(d?.code);
+    const codeNested = _num(d?.data?.failCode || d?.data?.code || d?.errorCode || d?.code);
+    if ((Number.isFinite(codeTop) && codeTop >= 400) || (Number.isFinite(codeNested) && codeNested >= 400)) return true;
+    const msg = (_txt(d?.msg) + ' ' + _txt(d?.message) + ' ' + _txt(d?.data?.failMsg) + ' ' + _txt(d?.data?.message) + ' ' + _txt(d?.error?.message)).toLowerCase();
+    if (/(\bfail(?:ed)?\b|sensitive|flagged|policy|blocked|forbidden|denied)/.test(msg)) return true;
+  }catch{}
+  return false;
 }
