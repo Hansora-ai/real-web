@@ -264,19 +264,20 @@ function onResult(url){
     resultBox.innerHTML='';
     img.className='w-full h-full object-contain';
     resultBox.appendChild(img);
-    const __name = (url.split('/').pop()||'generation');
+        const __name = (url.split('/').pop()||'generation');
     downloadLink.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(url)+'&name='+encodeURIComponent(__name);
     downloadLink.setAttribute('download', __name);
     downloadLink.classList.remove('hidden');
     downloadLink.textContent='Download';
+
     showStatus('✅ Done.','text-emerald-300');
-    try { 
-      localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url }));
-      localStorage.removeItem('nb_pending');
-    } catch(e){}
+    try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{};
+    try { localStorage.removeItem('nb_pending'); } catch{};
   };
+  
   img.src=url;
-  try{ channel?.unsubscribe?.(); }catch(e){}}
+  try{ channel?.unsubscribe?.(); }catch{}
+}
 
 // Credits + URL extraction helpers
 async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 0.5)throw new Error('Not enough credits (need 0.5).');await supabase.from('profiles').update({credits:cur-0.5}).eq('user_id',data.user.id);}
@@ -339,7 +340,7 @@ async function nbCheckPoll(taskId, uid, rid){
         try { j = JSON.parse(txt); } catch { j = { raw: txt }; }
       }
 
-      const status = String((j && (j.status || j.state)) || (j && j.data && (j.data.status || j.data.state)) || (j && j.result && (j.result.status || j.result.state)) || '').toLowerCase();
+      const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
       if(['success','succeeded','completed','done'].includes(status)){
         const url = await (async function tryExtractImageUrl(o){
           if(!o) return null;
@@ -433,7 +434,7 @@ window.__run=async function(){
       body:JSON.stringify({urls, prompt: (promptEl.value||'.'), format:'png', size:(document.getElementById('size')?.value||'auto'), run_id: rid})
     });
 
-    if (res === 202 || res.ok) {
+    if (res.status === 202 || res.ok) {
       await chargeOneCredit();
     } else {
       const errT = await res.text().catch(()=> '');
@@ -444,15 +445,27 @@ window.__run=async function(){
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
 
     // store pending ticket so we can resume after refresh
-    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 }))// ensure Usage shows even if user navigates away
+    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 })); } catch{}
+
+    // ensure Usage shows even if user navigates away
     backfillSubmitted(uid, rid, taskId);
 
-    } catch(e){}
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
     runBtn.textContent='Processing…';
 
     // subscribe to Supabase (if webhook inserts there)
-        // start polling taskId (and backfill DB when done)
+    channel = supabase.channel('nb_results_' + rid)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'nb_results', filter: 'run_id=eq.' + rid },
+        (payload) => {
+          const url = payload?.new?.image_url;
+          if (url) onResult(url);
+        }
+      )
+      .subscribe();
+
+    // start polling taskId (and backfill DB when done)
     nbCheckPoll(taskId, uid, rid);
 
     // fallback: poll table directly in case realtime is blocked
@@ -460,21 +473,21 @@ window.__run=async function(){
     while (!__done && Date.now() - started < 200000) { // up to 120s
       await new Promise(r => setTimeout(r, 1500));
       const { data: row } = await supabase
-        .from('user_generations').select('result_url')
+        .from('user_generations')
+        .select('image_url')
         .eq('user_id', uid)
-        .eq('provider','Nano Banana')
         .eq('run_id', rid)
         .limit(1)
         .maybeSingle();
 
-      const url = row?.result_url || null;
+      const url = row?.image_url || null;
       if (url) { onResult(url); break; }
     }
 
     if (!__done) {
       const __MSG='❌ Generation failed. Credits refunded. Try again or contact us.';
       try{ await refundHalfCreditOnce(taskId); }catch{}
-      try{ localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG }));; }catch{}
+      try{ localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG })); }catch{}
       showStatus(__MSG,'text-rose-300');
     }
 
@@ -560,7 +573,7 @@ window.__run=async function(){
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.querySelector('input[type="file"]');
-  const statusEl = document.getElementById('status') || document.querySelector('') || document.querySelector('#status-text');
+  const statusEl = document.getElementById('status') || document.querySelector('.status') || document.querySelector('#status-text');
   if (fileInput) {
     fileInput.addEventListener('change', () => {
       if (statusEl) statusEl.textContent = '';
@@ -572,7 +585,63 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 
+<script>
+// Server-first: fetch the most recent run from Supabase on load and render it.
+// This guarantees we show the *latest* run (even if user left the page).
+document.addEventListener('DOMContentLoaded', async function serverFirstLatest(){
+  try{
+    const ures = await supabase.auth.getUser();
+    const user = ures?.data?.user;
+    if (!user) return;
 
+    const { data: row } = await supabase
+      .from('user_generations')
+      .select('id, user_id, provider, result_url, created_at, status')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!row) return;
+
+    const st = String(row.status || '').toLowerCase();
+    const url = row.result_url || null;
+
+    // If terminal success -> render image and persist
+    if (url){
+      if (!window.__done) {
+        window.__renderedFromServer = true;
+        onResult(url);
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{}
+        try {
+          const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
+          if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
+        } catch {}
+      }
+      return;
+    }
+
+    // If terminal failed -> render failure + persist
+    if (st === 'failed'){
+      window.__renderedFromServer = true;
+      const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
+      showStatus(msg, 'text-rose-300');
+      try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{}
+      try {
+        const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
+        if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
+      } catch {}
+      return;
+    }
+
+    // Otherwise (pending): seed nb_pending to resume auto-poll from server
+    try {
+      const startedAt = new Date(row.created_at).getTime();
+      localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId:null, run_id: row.run_id, startedAt, ttl:200 }));
+    } catch {}
+  }catch(e){ console.warn('serverFirstLatest error', e); }
+});
+</script>
 <script>
 async function refundHalfCreditOnce(taskId){
   try{
@@ -590,17 +659,10 @@ async function refundHalfCreditOnce(taskId){
   }catch(e){ console.warn('refundHalfCreditOnce failed', e); return false; }
 }
 
-</script>
-
-
-
-
-
-<script>
-// === Imagen-style last-result ONLY (Nano Banana) ===
-// Reads a single local ticket 'nb_last_run' and restores the last image or failure message.
-document.addEventListener('DOMContentLoaded', function NB_lastResultOnly(){
+document.addEventListener('DOMContentLoaded', function restoreLastRun(){
   try{
+    // Skip drawing old cache if a pending ticket exists or server already rendered
+    if (localStorage.getItem('nb_pending')) return;
     const raw = localStorage.getItem('nb_last_run');
     if (!raw) return;
     const last = JSON.parse(raw);
@@ -621,8 +683,139 @@ document.addEventListener('DOMContentLoaded', function NB_lastResultOnly(){
     } else if (last.msg){
       box.innerHTML = '<span class="text-xs text-rose-300">'+ last.msg +'</span>';
     }
-  }catch(e){}
+  }catch{}
 });
+
+document.addEventListener('DOMContentLoaded', function resumeFromPending(){
+  try{
+    const raw = localStorage.getItem('nb_pending');
+    if (!raw) return;
+    const p = JSON.parse(raw);
+    const ttlMs = (p.ttl || 200) * 1000;
+    const remaining = ttlMs - (Date.now() - (p.startedAt || 0));
+    if (remaining <= 0){
+      (async () => {
+        await refundHalfCreditOnce(p.taskId);
+        const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
+        showStatus(msg, 'text-rose-300');
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
+        try { localStorage.removeItem('nb_pending'); } catch{};
+      })();
+      return;
+    }
+    (async () => {
+      const started = Date.now();
+      while (!window.__done && Date.now() - started < remaining){
+        await new Promise(r => setTimeout(r, 1500));
+        try{
+          const { data: row } = await supabase
+            .from('user_generations')
+            .select('image_url,status')
+            .eq('run_id', p.run_id)
+            .maybeSingle();
+          const url = row?.image_url || null;
+          const st = (row?.status || '').toLowerCase();
+          if (url){
+            window.onResult(url);
+            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{};
+            try { localStorage.removeItem('nb_pending'); } catch{};
+            break;
+          }
+          if (st === 'failed'){
+            await refundHalfCreditOnce(p.taskId);
+            const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
+            showStatus(msg, 'text-rose-300');
+            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
+            try { localStorage.removeItem('nb_pending'); } catch{};
+            break;
+          }
+        }catch(e){}
+      }
+      if (!window.__done){
+        await refundHalfCreditOnce(p.taskId);
+        const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
+        showStatus(msg, 'text-rose-300');
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
+        try { localStorage.removeItem('nb_pending'); } catch{};
+      }
+    })();
+  }catch(e){ console.warn('resumeFromPending error', e); }
+});
+</script>
+
+
+<script>
+// ==== Imagen-style minimal persistence for Nano Banana ====
+(function(){
+  const KEY = 'nb:lastRun';
+  function __nbSaveState(state){ try{ localStorage.setItem(KEY, JSON.stringify(state||{})); }catch{} }
+  function __nbLoadState(){ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch{ return {}; } }
+  function __nbClearState(){ try{ localStorage.removeItem(KEY); }catch{} }
+
+  // Wrap nbCheckPoll to capture (taskId, uid, run_id) on first call after submit
+  if (typeof window.nbCheckPoll === 'function' && !window.nbCheckPoll.__persistWrapped){
+    const __origPoll = window.nbCheckPoll;
+    window.nbCheckPoll = async function(taskId, uid, run_id){
+      try{
+        const s = __nbLoadState();
+        if (!s || !s.taskId || s.taskId !== taskId){
+          __nbSaveState({ taskId, uid, run_id, result_url: null, failed:false });
+        }
+      }catch{}
+      return await __origPoll.apply(this, arguments);
+    };
+    window.nbCheckPoll.__persistWrapped = true;
+  }
+
+  // Wrap onResult(url) to cache the final URL
+  if (typeof window.onResult === 'function' && !window.onResult.__persistWrapped){
+    const __origRes = window.onResult;
+    window.onResult = function(url){
+      try{
+        const s = __nbLoadState(); s.result_url = url; s.failed=false; __nbSaveState(s);
+      }catch{}
+      return __origRes.apply(this, arguments);
+    };
+    window.onResult.__persistWrapped = true;
+  }
+
+  // Resume on load for the same user (prefer latest server truth but ensure resume works)
+  document.addEventListener('DOMContentLoaded', async () => {
+    try{
+      if (typeof supabase === 'undefined' || !supabase.auth) return;
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if(!user) return;
+      const s = __nbLoadState();
+      if(!s || !s.uid || s.uid != user.id) return;
+
+      // If server-first already rendered something, skip
+
+      // If we have a saved result -> restore it
+      if (s.result_url && typeof window.onResult === 'function'){
+        try{ window.onResult(s.result_url); }catch{}
+        try{ showStatus && showStatus('Last result restored.', 'text-emerald-300'); }catch{}
+        return;
+      }
+      // Else, resume polling with saved ids
+      if (s.taskId && s.run_id && typeof window.nbCheckPoll === 'function'){
+        try{ showStatus && showStatus('Resuming your previous run…', 'text-zinc-300'); }catch{}
+        await window.nbCheckPoll(s.taskId, s.uid, s.run_id);
+      }
+    }catch{}
+  });
+
+  // Clear cache before a new run via Run button (non-invasive)
+  document.addEventListener('DOMContentLoaded', () => {
+    try{
+      const btn = document.getElementById('runBtn');
+      if (btn && !btn.__persistHooked){
+        btn.__persistHooked = true;
+        btn.addEventListener('click', function(){ try{ __nbClearState(); }catch{}; }, { capture:true });
+      }
+    }catch{}
+  });
+})();
 </script>
 
 </body>
