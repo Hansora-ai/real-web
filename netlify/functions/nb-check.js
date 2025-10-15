@@ -88,7 +88,8 @@ async function fetchAll(taskId){
       const stat = normalizeStatus(data);
       if (stat === 'failed') { sawFailed = true; }
       const hint = providerHint(data);
-      if (/google\s*\/\s*nano-?banana/i.test(hint) && (stat === 'failed' || hasFailureHint(data))) { sawFailed = true; }
+      // Treat any explicit failure or failure hints as failure, regardless of provider
+      if (stat !== 'success' && (hasFailureHint(data) || String(data?.error_code||data?.code||'').startsWith('4') || String(data?.status||'').toLowerCase()==='failure')) { sawFailed = true; }
       // do not early-return on pending; try other endpoints
     } catch {}
   }
@@ -104,7 +105,7 @@ async function fetchAll(taskId){
 function normalizeStatus(d){
   const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || '').toLowerCase();
   if (['success','succeeded','completed','done'].includes(s)) return 'success';
-  if (['failed','error'].includes(s)) return 'failed';
+  if (['failed','error','failure'].includes(s)) return 'failed';
   return 'pending';
 }
 
