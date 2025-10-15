@@ -27,6 +27,11 @@ exports.handler = async (event) => {
     const probe = await fetchAll(taskId);
 
     if (!probe.ok) {
+
+    if (probe.status === 'failed') {
+      if (uid) { try { await markFailedAndRefundSmart(uid, run_id, taskId); } catch{} }
+      return json(200, { ok:false, status:'failed' });
+    }
       return json(200, { ok:false, status: probe.status || 'pending' });
     }
 
@@ -66,6 +71,7 @@ async function fetchAll(taskId){
 
   let merged = [];         // merged image urls
   let sawSuccess = false;  // did any endpoint report success?
+  let sawFailed  = false;  // did any endpoint report failure?
 
   for (const url of endpoints) {
     try {
@@ -79,7 +85,8 @@ async function fetchAll(taskId){
         for (const u of imgs) if (!merged.includes(u)) merged.push(u);
         if (merged.length >= 4) break; // got all 4, stop early
       }
-      // do not early-return on pending/failed; try other endpoints
+      if (normalizeStatus(data) === 'failed') { sawFailed = true; }
+      // do not early-return on pending; try other endpoints
     } catch {}
   }
 
@@ -87,6 +94,7 @@ async function fetchAll(taskId){
     // Return a data shape that downstream understands (contains images array)
     return { ok: true, status: 'success', data: { images: merged } };
   }
+  if (sawFailed) return { ok: false, status: 'failed' };
   return { ok: false, status: 'pending' };
 }
 
@@ -137,6 +145,94 @@ function firstImageUrls(obj, limit=4){
   return out;
 }
 
+
+// === Refund logic: mark failed + refund dynamically (MidJourney=1.0, Nano Banana=0.5) exactly once via user_generations ===
+async function markFailedAndRefund(uid, run_id, taskId){
+  try{
+    if (!SUPABASE_URL || !SERVICE_KEY || !uid) return false;
+    const base = SUPABASE_URL.replace(/\/+$/,'');
+    const ug = `${base}/rest/v1/user_generations`;
+
+    // 1) Fetch placeholder row by run_id first, fallback task_id
+    let row = null;
+    if (run_id){
+      const r = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=*,meta`, {
+        headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+      });
+      if (r.ok){
+        const a = await r.json();
+        if (Array.isArray(a) && a.length) row = a[0];
+      }
+    }
+    if (!row && taskId){
+      const r2 = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>task_id=eq.${encodeURIComponent(taskId)}&select=*,meta`, {
+        headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+      });
+      if (r2.ok){
+        const a2 = await r2.json();
+        if (Array.isArray(a2) && a2.length) row = a2[0];
+      }
+    }
+
+    const meta = (row && row.meta) || {};
+    if (meta.refunded === true){
+      // ensure status is failed and exit
+      const newMeta = { ...meta, status: 'failed', refunded: true };
+      if (row && row.id){
+        await fetch(`${ug}?id=eq.${encodeURIComponent(row.id)}`, {
+          method:'PATCH',
+          headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+          body: JSON.stringify({ meta: newMeta })
+        });
+      }
+      return false;
+    }
+
+    // 2) Refund +0.5 credit (Nano Banana cost)
+    const profGet = `${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
+    const g = await fetch(profGet, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+    const arr = await g.json();
+    const cur = (Array.isArray(arr) && arr[0] && (arr[0].credits ?? 0)) || 0;
+    // Determine refund based on provider/model
+    const providerStr = (row && row.provider ? String(row.provider).toLowerCase() : '');
+    const sourceStr   = (meta && meta.source ? String(meta.source).toLowerCase() : '');
+    const modelStr    = (meta && meta.model ? String(meta.model).toLowerCase() : '');
+
+    const isMidJourney = providerStr.includes('midjourney') || sourceStr === 'midjourney' || modelStr.includes('midjourney') || (taskId && String(taskId).startsWith('mj_'));
+
+    const refund = isMidJourney ? 1.0 : 0.5;
+    const next = cur + refund;
+    await fetch(`${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
+      method:'PATCH',
+      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      body: JSON.stringify({ credits: next })
+    });
+
+    // 3) Mark failed + refunded=true on the generation row(s)
+    const newMeta = { ...meta, status: 'failed', refunded: true };
+    if (row && row.id){
+      await fetch(`${ug}?id=eq.${encodeURIComponent(row.id)}`, {
+        method:'PATCH',
+        headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+        body: JSON.stringify({ meta: newMeta })
+      });
+    } else {
+      const filter = run_id
+        ? `user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`
+        : `user_id=eq.${encodeURIComponent(uid)}&meta->>task_id=eq.${encodeURIComponent(taskId)}`;
+      await fetch(`${ug}?${filter}`, {
+        method:'PATCH',
+        headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+        body: JSON.stringify({ meta: newMeta })
+      });
+    }
+    return true;
+  }catch(e){
+    console.warn('[nb-check] refund failed', e);
+    return false;
+  }
+}
+
 async function backfillAll({ uid, run_id, taskId, images }){
   if (!SUPABASE_URL || !SERVICE_KEY || !images?.length) return;
   const rows = images.slice(0,4).map(u => ({
@@ -156,3 +252,98 @@ async function backfillAll({ uid, run_id, taskId, images }){
     body: JSON.stringify(rows)
   });
 }
+
+
+// === Smart refund: per-provider cost (uses meta.cost if present; else MJ=1.0, Nano Banana=0.5) ===
+async function markFailedAndRefundSmart(uid, run_id, taskId){
+  try{
+    if (!SUPABASE_URL || !SERVICE_KEY || !uid) return false;
+    const base = SUPABASE_URL.replace(/\/+$/,'');
+    const ug = `${base}/rest/v1/user_generations`;
+
+    // Fetch row by run_id, fallback task_id
+    let row = null;
+    if (run_id){
+      const r = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=*,meta`, {
+        headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+      });
+      if (r.ok){
+        const a = await r.json();
+        if (Array.isArray(a) && a.length) row = a[0];
+      }
+    }
+    if (!row && taskId){
+      const r2 = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>task_id=eq.${encodeURIComponent(taskId)}&select=*,meta`, {
+        headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+      });
+      if (r2.ok){
+        const a2 = await r2.json();
+        if (Array.isArray(a2) && a2.length) row = a2[0];
+      }
+    }
+
+    const meta = (row && row.meta) || {};
+
+    // Already refunded?
+    if (meta.refunded === true){
+      const newMeta = { ...meta, status: 'failed', refunded: true };
+      if (row && row.id){
+        await fetch(`${ug}?id=eq.${encodeURIComponent(row.id)}`, {
+          method:'PATCH',
+          headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+          body: JSON.stringify({ meta: newMeta })
+        });
+      }
+      return false;
+    }
+
+    // Determine refund cost
+    let refund = 0.5;
+    const mcost = Number(meta.cost);
+    if (!Number.isNaN(mcost) && mcost > 0) {
+      refund = mcost;
+    } else {
+      const prov = (meta.provider || '').toString().toLowerCase();
+      const model = (meta.model || '').toString().toLowerCase();
+      const hint = prov + ' ' + model;
+      if (/(midjourney|\bmj\b)/.test(hint)) refund = 1.0;
+      else if (/(nano[\s-]?banana|\bnb\b|banana)/.test(hint)) refund = 0.5;
+    }
+
+    // Refund credits
+    const profGet = `${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
+    const g = await fetch(profGet, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+    const arr = await g.json();
+    const cur = (Array.isArray(arr) && arr[0] && (arr[0].credits ?? 0)) || 0;
+    const next = cur + refund;
+    await fetch(`${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
+      method:'PATCH',
+      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      body: JSON.stringify({ credits: next })
+    });
+
+    // Mark failed + refunded flag
+    const newMeta = { ...meta, status: 'failed', refunded: true };
+    if (row && row.id){
+      await fetch(`${ug}?id=eq.${encodeURIComponent(row.id)}`, {
+        method:'PATCH',
+        headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+        body: JSON.stringify({ meta: newMeta })
+      });
+    } else {
+      const filter = run_id
+        ? `user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`
+        : `user_id=eq.${encodeURIComponent(uid)}&meta->>task_id=eq.${encodeURIComponent(taskId)}`;
+      await fetch(`${ug}?${filter}`, {
+        method:'PATCH',
+        headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return:minimal' },
+        body: JSON.stringify({ meta: newMeta })
+      });
+    }
+    return true;
+  }catch(e){
+    console.warn('[nb-check] refund failed', e);
+    return false;
+  }
+}
+
