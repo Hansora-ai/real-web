@@ -448,7 +448,7 @@ window.__run=async function(){
     try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 }
 
     // ensure Usage shows even if user navigates away
-    backfillSubmitted(uid, rid, taskId);
+    backfillSubmitted(uid, rid, taskId)));
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
     runBtn.textContent='Processing…';
@@ -476,7 +476,7 @@ window.__run=async function(){
     if (!__done) {
       const __MSG='❌ Generation failed. Credits refunded. Try again or contact us.';
       try{ await refundHalfCreditOnce(taskId); }catch{}
-      try{ localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG })); }catch{}
+      try{ localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG })))); }catch{}
       showStatus(__MSG,'text-rose-300');
     }
 
@@ -602,7 +602,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
         onResult(url);
         try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url }
         try {
-          const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
+          const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null')));
           if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
         } catch {}
       }
@@ -621,7 +621,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
     // Otherwise (pending): seed nb_pending to resume auto-poll from server
     try {
       const startedAt = new Date(row.created_at).getTime();
-      localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId:null, run_id: row.run_id, startedAt, ttl:200 }));
+      localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId:null, run_id: row.run_id, startedAt, ttl:200 }))));
     } catch {}
   }catch(e){ console.warn('serverFirstLatest error', e); }
 });
