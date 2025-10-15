@@ -370,46 +370,6 @@ async function nbCheckPoll(taskId, uid, rid){
     await new Promise(r=>setTimeout(r,1500));
   }
 }
-});
-
-      let j;
-      try { j = await r.json(); }
-      catch {
-        const txt = await r.text();
-        try { j = JSON.parse(txt); } catch { j = { raw: txt }; }
-      }
-
-      const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
-      if(['success','succeeded','completed','done'].includes(status)){
-        const url = await (async function tryExtractImageUrl(o){
-          if(!o) return null;
-          if(typeof o==='string'&&/^https?:\/\//.test(o)) return o;
-          if(o.imageUrl) return o.imageUrl;
-          if(o.outputUrl) return o.outputUrl;
-          if(o.url) return o.url;
-          if(o.data) { const x=await tryExtractImageUrl(o.data); if(x) return x; }
-          if(o.result) { const x=await tryExtractImageUrl(o.result); if(x) return x; }
-          if(Array.isArray(o.images)&&o.images[0]?.url) return o.images[0].url;
-          if(Array.isArray(o.resultUrls) && o.resultUrls[0]) return o.resultUrls[0];
-          if(Array.isArray(o.output)&&o.output[0]?.url) return o.output[0].url;
-          return null;
-        })(j);
-        if(url){
-          onResult(url);               // show immediately
-          try { localStorage.removeItem('nb_last_run'); } catch{}
-          backfillRow(uid, rid, taskId, url); // ensure Supabase row exists
-        }
-        break;
-      }
-      if(['failed','error','failure','fail'].includes(status)){
-        showStatus('❌ Generation failed. Credits refunded.','text-rose-300'); try{ if (typeof __refreshCredits==='function') await __refreshCredits(); }catch(e){}
-        try { localStorage.removeItem('nb_last_run'); } catch{}
-        break;
-      }
-    }catch{}
-    await new Promise(r=>setTimeout(r,1500));
-  }
-}
 
 // Main run
 window.__run=async function(){
@@ -490,7 +450,6 @@ window.__run=async function(){
   // start polling nb-check
   try { pollNb(taskId); } catch(_) { try { nbCheckPoll(taskId); } catch(e){} }
 
-    
     try { __NB_SET_LAST_SUBMIT__(uid, rid, taskId); } catch(e){}
 
 
