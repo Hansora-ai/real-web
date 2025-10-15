@@ -744,5 +744,81 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
 });
 </script>
 
+
+<script>
+// ==== Imagen-style minimal persistence for Nano Banana ====
+(function(){
+  const KEY = 'nb:lastRun';
+  function __nbSaveState(state){ try{ localStorage.setItem(KEY, JSON.stringify(state||{})); }catch{} }
+  function __nbLoadState(){ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch{ return {}; } }
+  function __nbClearState(){ try{ localStorage.removeItem(KEY); }catch{} }
+
+  // Wrap nbCheckPoll to capture (taskId, uid, run_id) on first call after submit
+  if (typeof window.nbCheckPoll === 'function' && !window.nbCheckPoll.__persistWrapped){
+    const __origPoll = window.nbCheckPoll;
+    window.nbCheckPoll = async function(taskId, uid, run_id){
+      try{
+        const s = __nbLoadState();
+        if (!s || !s.taskId || s.taskId !== taskId){
+          __nbSaveState({ taskId, uid, run_id, result_url: null, failed:false });
+        }
+      }catch{}
+      return await __origPoll.apply(this, arguments);
+    };
+    window.nbCheckPoll.__persistWrapped = true;
+  }
+
+  // Wrap onResult(url) to cache the final URL
+  if (typeof window.onResult === 'function' && !window.onResult.__persistWrapped){
+    const __origRes = window.onResult;
+    window.onResult = function(url){
+      try{
+        const s = __nbLoadState(); s.result_url = url; s.failed=false; __nbSaveState(s);
+      }catch{}
+      return __origRes.apply(this, arguments);
+    };
+    window.onResult.__persistWrapped = true;
+  }
+
+  // Resume on load for the same user (prefer latest server truth but ensure resume works)
+  document.addEventListener('DOMContentLoaded', async () => {
+    try{
+      if (typeof supabase === 'undefined' || !supabase.auth) return;
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if(!user) return;
+      const s = __nbLoadState();
+      if(!s || !s.uid || s.uid != user.id) return;
+
+      // If server-first already rendered something, skip
+      if (window.__renderedFromServer) return;
+
+      // If we have a saved result -> restore it
+      if (s.result_url && typeof window.onResult === 'function'){
+        try{ window.onResult(s.result_url); }catch{}
+        try{ showStatus && showStatus('Last result restored.', 'text-emerald-300'); }catch{}
+        return;
+      }
+      // Else, resume polling with saved ids
+      if (s.taskId && s.run_id && typeof window.nbCheckPoll === 'function'){
+        try{ showStatus && showStatus('Resuming your previous run…', 'text-zinc-300'); }catch{}
+        await window.nbCheckPoll(s.taskId, s.uid, s.run_id);
+      }
+    }catch{}
+  });
+
+  // Clear cache before a new run via Run button (non-invasive)
+  document.addEventListener('DOMContentLoaded', () => {
+    try{
+      const btn = document.getElementById('runBtn');
+      if (btn && !btn.__persistHooked){
+        btn.__persistHooked = true;
+        btn.addEventListener('click', function(){ try{ __nbClearState(); }catch{}; }, { capture:true });
+      }
+    }catch{}
+  });
+})();
+</script>
+
 </body>
 </html>
