@@ -102,7 +102,7 @@ exports.handler = async (event) => {
         const q = (uid && run_id)
           ? `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`
           : `?meta->>run_id=eq.${encodeURIComponent(run_id||'')}`;
-        const bodyJson = { result_url: finalUrls[0], provider: 'MidJourney', kind: 'image', meta: { run_id, task_id: taskId, status: 'done' } };
+        const bodyJson = { result_url: finalUrls[0],kind: 'image', meta: { run_id, task_id: taskId, status: 'done' } };
         const chk = await fetch(UG_URL + q + '&select=id', { headers: sb() });
         let hasRow = false;
         try { const arr = await chk.json(); hasRow = Array.isArray(arr) && arr.length > 0; } catch {}
