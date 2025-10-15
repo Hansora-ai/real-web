@@ -324,7 +324,7 @@ async function nbCheckPoll(taskId, uid, rid){
   const start = Date.now();
   while(!__done && Date.now() - start < 180000){ // up to 3 min
     try{
-      const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId), {
+      const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId)+'&run_id='+encodeURIComponent(rid), {
         headers: { 'X-USER-ID': uid }
       });
 
@@ -357,8 +357,8 @@ async function nbCheckPoll(taskId, uid, rid){
         }
         break;
       }
-      if(['failed','error'].includes(status)){
-        showStatus('❌ Generation failed.','text-rose-300');
+      if(['failed','error','failure'].includes(status)){
+        showStatus('❌ Generation failed. Credits refunded.','text-rose-300'); try{ if (typeof __refreshCredits==='function') await __refreshCredits(); }catch(e){}
         try { localStorage.removeItem('nb_last_run'); } catch{}
         break;
       }
