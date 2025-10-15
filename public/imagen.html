@@ -45,14 +45,8 @@
         .subscribe();
 
       // patch __run to guard when credits are 0 (without changing its internals)
-      const __origRun = (function(orig){ 
-  window.__run = async function(){ try{ __imagenClearState(); }catch{}; return await orig.apply(this, arguments); };
-  return window.__run;
-})(window.__run);
-      (function(orig){ 
-  window.__run = async function(){ try{ __imagenClearState(); }catch{}; return await orig.apply(this, arguments); };
-  return window.__run;
-})(window.__run) = async function(){
+      const __origRun = window.__run;
+      window.__run = async function(){
         try{
           const { data: prof2 } = await supabase
             .from('profiles')
@@ -111,18 +105,9 @@
         }
 
         // Also poll briefly after Run to catch server-side debit
-        if (typeof (function(orig){ 
-  window.__run = async function(){ try{ __imagenClearState(); }catch{}; return await orig.apply(this, arguments); };
-  return window.__run;
-})(window.__run) === 'function'){
-          const __origRun = (function(orig){ 
-  window.__run = async function(){ try{ __imagenClearState(); }catch{}; return await orig.apply(this, arguments); };
-  return window.__run;
-})(window.__run);
-          (function(orig){ 
-  window.__run = async function(){ try{ __imagenClearState(); }catch{}; return await orig.apply(this, arguments); };
-  return window.__run;
-})(window.__run) = async function(){
+        if (typeof window.__run === 'function'){
+          const __origRun = window.__run;
+          window.__run = async function(){
             const ret = await __origRun();
             const id = setInterval(__refreshCredits, 1500);
             setTimeout(()=>clearInterval(id), 15000);
@@ -304,7 +289,7 @@ setModel('fast');
 
 // Guarded renderer
 let __done=false;
-function onResult(url){ try{ const s=__imagenLoadState(); s.result_url=url; s.failed=false; __imagenSaveState(s);}catch{};
+function onResult(url){
   if(__done || !url) return;
   __done = true;
   const img=new Image();
@@ -345,8 +330,7 @@ async function imagenCheckPoll(id, uid, rid){
         if(url){ onResult(url); break; }
       }
       if(status === 'failed' || status === 'canceled'){
-        try{ const s=__imagenLoadState(); s.failed=true; __imagenSaveState(s);}catch{};
-showStatus('❌ Generation failed.','text-rose-300');
+        showStatus('❌ Generation failed.','text-rose-300');
         runBtn.disabled=false; runBtn.textContent=(modelChoice.value==='ultra'?'Run (cost: 1⚡)':'Run (cost: 0.5⚡)');
         break;
       }
@@ -360,10 +344,7 @@ showStatus('❌ Generation failed.','text-rose-300');
 }
 
 // Main run
-(function(orig){ 
-  window.__run = async function(){ try{ __imagenClearState(); }catch{}; return await orig.apply(this, arguments); };
-  return window.__run;
-})(window.__run)=async function(){
+window.__run=async function(){
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
@@ -416,51 +397,85 @@ showStatus('❌ Generation failed.','text-rose-300');
     const id = resJson?.id || resJson?.prediction_id || resJson?.data?.id || null;
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-    try{ __imagenSaveState({ id, run_id: rid, uid, result_url: null, failed: false }); }catch{}
-// Start polling prediction
+
+    // Start polling prediction
     imagenCheckPoll(id, uid, rid);
 
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
   } finally{ /* keep disabled while polling; re-enabled on success/fail/timeout */ }
 };
+</script>
 
-// === Imagen persistence (minimal + scoped to current user) ===
-function __imagenSaveState(state){
-  try{ localStorage.setItem('imagen:lastRun', JSON.stringify(state||{})); }catch{}
-}
-function __imagenLoadState(){
-  try{ return JSON.parse(localStorage.getItem('imagen:lastRun')||'{}'); }catch{ return {}; }
-}
-function __imagenClearState(){ try{ localStorage.removeItem('imagen:lastRun'); }catch{} }catch{} }catch{} }); }catch{}
- }catch{}
-}
-
-// Resume last run on load
-document.addEventListener('DOMContentLoaded', async () => {
-  try{
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if(!user) return;
-    const s = __imagenLoadState();
-    if(!s || !s.uid || s.uid !== user.id) return;
-    if (s.result_url){
+<!-- Hansora minimal persistence (append-only, safe) -->
+<script>
+(function(){
+  function __imagenSaveState(state){
+    try{ localStorage.setItem('imagen:lastRun', JSON.stringify(state||{})); }catch{}
+  }
+  function __imagenLoadState(){
+    try{ return JSON.parse(localStorage.getItem('imagen:lastRun')||'{}'); }catch{ return {}; }
+  }
+  function __imagenClearState(){
+    try{ localStorage.removeItem('imagen:lastRun'); }catch{}
+  }
+  // Wrap imagenCheckPoll to capture (id, uid, run_id) on first call after submit
+  if (typeof window.imagenCheckPoll === 'function' && !window.imagenCheckPoll.__persistWrapped){
+    const __origPoll = window.imagenCheckPoll;
+    window.imagenCheckPoll = async function(id, uid, run_id){
       try{
-        if (typeof onResult === 'function'){ onResult(s.result_url); }
-        showStatus('Last result restored.', 'text-emerald-300');
-      }catch{}
-      return;
-    }
-    if (s.id && s.run_id){
-      try{
-        showStatus('Resuming your previous run…', 'text-zinc-300');
-        if (typeof imagenCheckPoll === 'function'){
-          await imagenCheckPoll(s.id, s.uid, s.run_id);
+        const s = __imagenLoadState();
+        if (!s || !s.id || s.id !== id){
+          __imagenSaveState({ id, uid, run_id, result_url: null, failed:false });
         }
       }catch{}
-    }
-  }catch{}
-});
+      return await __origPoll.apply(this, arguments);
+    };
+    window.imagenCheckPoll.__persistWrapped = true;
+  }
+  // Wrap onResult(url) to cache the final URL
+  if (typeof window.onResult === 'function' && !window.onResult.__persistWrapped){
+    const __origRes = window.onResult;
+    window.onResult = function(url){
+      try{
+        const s = __imagenLoadState(); s.result_url = url; s.failed=false; __imagenSaveState(s);
+      }catch{}
+      return __origRes.apply(this, arguments);
+    };
+    window.onResult.__persistWrapped = true;
+  }
+  // Resume on load for the same user
+  document.addEventListener('DOMContentLoaded', async () => {
+    try{
+      if (typeof supabase === 'undefined' || !supabase.auth) return;
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if(!user) return;
+      const s = __imagenLoadState();
+      if(!s || !s.uid || s.uid !== user.id) return;
+      if (s.result_url && typeof window.onResult === 'function'){
+        try{ window.onResult(s.result_url); }catch{}
+        try{ showStatus && showStatus('Last result restored.', 'text-emerald-300'); }catch{}
+        return;
+      }
+      if (s.id && s.run_id && typeof window.imagenCheckPoll === 'function'){
+        try{ showStatus && showStatus('Resuming your previous run…', 'text-zinc-300'); }catch{}
+        await window.imagenCheckPoll(s.id, s.uid, s.run_id);
+      }
+    }catch{}
+  });
+  // Clear cache before a new run via Run button (non-invasive)
+  document.addEventListener('DOMContentLoaded', () => {
+    try{
+      const btn = document.getElementById('runBtn');
+      if (btn && !btn.__persistHooked){
+        btn.__persistHooked = true;
+        btn.addEventListener('click', function(){ try{ __imagenClearState(); }catch{}; }, { capture:true });
+      }
+    }catch{}
+  });
+})();
 </script>
+
 </body>
 </html>
