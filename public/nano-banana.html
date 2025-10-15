@@ -60,6 +60,8 @@ function pollNb(taskId){ return nbCheckPoll(taskId); }
     // patch __run to guard when credits are 0 (without changing its internals)
     const __origRun = window.__run;
     window.__run = async function(){
+  // start polling window
+  NB_STARTED_AT = Date.now();
   // set start time once per submission
   NB_STARTED_AT = Date.now();
 
@@ -342,12 +344,33 @@ async function backfillSubmitted(uid, rid, taskId){
 // Option A: poll nb-check (does NOT rely on webhook)
 async function nbCheckPoll(taskId, uid, rid){
   if(!taskId) return;
-  const start = Date.now();
-  while(!__done && Date.now() - start < 180000){ // up to 3 min
+  const startWall = Date.now();
+  while(!__done && Date.now() - startWall < 180000){ // up to 3 min
     try{
-      const r = await fetch(&startedAt=' + NB_STARTED_AT + '&ttl=180'/.netlify/functions/nb-check?taskId=&startedAt=' + NB_STARTED_AT + '&ttl=180'+encodeURIComponent(taskId)+'&run_id='+encodeURIComponent(rid)+'&run_id='+encodeURIComponent(rid), {
-        headers: { 'X-USER-ID': uid }
-      });
+      const url = '/.netlify/functions/nb-check?taskId=' + encodeURIComponent(taskId)
+        + '&startedAt=' + NB_STARTED_AT + '&ttl=' + NB_TTL_SEC;
+      const r = await fetch(url, { headers: { 'X-USER-ID': uid || '' } });
+      let j; try { j = await r.json(); } catch { j = {}; }
+      const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
+      if(['success','succeeded','completed','done'].includes(status)){
+        const url = (j.image_url) ? j.image_url : (Array.isArray(j.images) ? j.images[0] : null);
+        if (url) {
+          onResult(url);
+          try { localStorage.removeItem('nb_last_run'); } catch{}
+        }
+        break;
+      }
+      if(['failed','error','failure','fail'].includes(status)){
+        showStatus('❌ Generation failed. Credits refunded.','text-rose-300');
+        try{ if (typeof __refreshCredits==='function') await __refreshCredits(); }catch(e){}
+        try { localStorage.removeItem('nb_last_run'); } catch{}
+        break;
+      }
+    }catch{}
+    await new Promise(r=>setTimeout(r,1500));
+  }
+}
+});
 
       let j;
       try { j = await r.json(); }
@@ -461,6 +484,9 @@ window.__run=async function(){
 
     const resJson = await res.json().catch(()=> ({}));
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.result?.taskId || resJson?.id || null;
+  // start polling nb-check (startedAt included)
+  try { pollNb(taskId); } catch(_) { try { nbCheckPoll(taskId); } catch(e){} }
+
   // start polling nb-check
   try { pollNb(taskId); } catch(_) { try { nbCheckPoll(taskId); } catch(e){} }
 
@@ -487,7 +513,6 @@ window.__run=async function(){
       .subscribe();
 
     // start polling taskId (and backfill DB when done)
-    nbCheckPoll(taskId, uid, rid);
 
     // fallback: poll table directly in case realtime is blocked
     const started = Date.now();
