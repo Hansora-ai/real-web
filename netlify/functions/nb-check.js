@@ -1,7 +1,10 @@
 // netlify/functions/nb-check.js
-// Surgical fix: probe both /api/v1/mj/* and /api/v1/jobs/*, MERGE images from all
-// success endpoints, return original fields plus images[], and backfill ALL rows.
-// Compatible with Nano Banana + MidJourney. No interface changes.
+// Purpose: Report KIE job status for Nano Banana & MJ.
+// Additions in this version (surgical):
+// 1) Failure mapping: detect NB-style failures (data.state:'fail', failCode/failMsg, top-level code>=400, msg contains 'failed').
+// 2) HTTP 404 from KIE => treat as 'failed' (purged/blocked tasks).
+// 3) **DB fallback for success**: if KIE looks pending, read Supabase nb_results by task_id; if rows exist, return success with those images.
+// Everything else is preserved.
 
 const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,'');
 const KIE_KEY  = process.env.KIE_API_KEY;
@@ -9,6 +12,7 @@ const KIE_KEY  = process.env.KIE_API_KEY;
 const SUPABASE_URL  = process.env.SUPABASE_URL || '';
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
+// Hosts whitelist to avoid rendering arbitrary URLs
 const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
 
 exports.handler = async (event) => {
@@ -23,22 +27,32 @@ exports.handler = async (event) => {
     const uid    = header(event, 'x-user-id') || qs.uid || null;
     const run_id = (qs.run_id || '').trim() || null;
 
-    // Fetch once across endpoints (the page will poll repeatedly)
+    // Probe KIE endpoints first
     const probe = await fetchAll(taskId);
 
-    if (!probe.ok) {
-      return json(200, { ok:false, status: probe.status || 'pending' });
+    // If KIE reports success with image URLs, short-circuit
+    if (probe.ok) {
+      const images = firstImageUrls(probe.data, 4);
+      if (images.length) {
+        // optional backfill – harmless if callback already wrote rows
+        await backfillAll({ uid, run_id, taskId, images }).catch(()=>{});
+        return json(200, { ok:true, status:'success', image_url: images[0], images });
+      }
     }
 
-    const images = firstImageUrls(probe.data, 4);
-    if (!images.length) {
-      return json(200, { ok:false, status:'pending' });
+    // If KIE reports failure explicitly, respect it
+    if (probe.status === 'failed') {
+      return json(200, { ok:false, status:'failed' });
     }
 
-    // Backfill ALL (up to 4) rows so Realtime/subscribe can render each
-    await backfillAll({ uid, run_id, taskId, images }).catch(()=>{});
+    // === DB FALLBACK FOR SUCCESS ===
+    const imagesFromDB = await dbImagesByTask(taskId, 4);
+    if (imagesFromDB.length) {
+      return json(200, { ok:true, status:'success', image_url: imagesFromDB[0], images: imagesFromDB });
+    }
 
-    return json(200, { ok:true, status:'success', image_url: images[0], images });
+    // Otherwise still pending
+    return json(200, { ok:false, status:'pending' });
 
   } catch (e) {
     return json(200, { ok:false, error: String(e) });
@@ -51,62 +65,64 @@ function json(code, obj){ return { statusCode: code, headers: { 'Content-Type': 
 function header(event, name){ const v = event.headers?.[name] || event.headers?.[name.toLowerCase()]; return Array.isArray(v) ? v[0] : v; }
 function kieHeaders(){ return { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' }; }
 
-// === THE ONLY BEHAVIORAL CHANGE ===
-// Merge images from *all* success endpoints instead of returning at the first success.
+// Probe multiple endpoints; merge images; detect failed (incl. HTTP 404)
 async function fetchAll(taskId){
   const endpoints = [
-    // MJ endpoints first (usually contain full set for MidJourney)
+    // MJ family
     `${KIE_BASE}/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
     `${KIE_BASE}/api/v1/mj/result?taskId=${encodeURIComponent(taskId)}`,
     `${KIE_BASE}/api/v1/mj/getTask?taskId=${encodeURIComponent(taskId)}`,
-    // Generic jobs fallbacks (used by Nano Banana and some providers)
+    // Jobs family (Nano Banana)
     `${KIE_BASE}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
     `${KIE_BASE}/api/v1/jobs/result?taskId=${encodeURIComponent(taskId)}`
   ];
 
-  let merged = [];         // merged image urls
-  let sawSuccess = false;  // did any endpoint report success?
+  let merged = [];
+  let sawSuccess = false;
+  let sawFailed  = false;
+  let lastData   = null;
 
   for (const url of endpoints) {
     try {
       const r = await fetch(url, { headers: kieHeaders() });
       const txt = await r.text();
       let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+      lastData = data;
 
-      if (normalizeStatus(data) === 'success') {
+      if (r.status === 404) { sawFailed = true; continue; }
+
+      const stat = normalizeStatus(data);
+      if (stat === 'success') {
         sawSuccess = true;
         const imgs = firstImageUrls(data, 4);
         for (const u of imgs) if (!merged.includes(u)) merged.push(u);
-        if (merged.length >= 4) break; // got all 4, stop early
+        if (merged.length >= 4) break;
+      } else if (stat === 'failed') {
+        sawFailed = true;
       }
-      // do not early-return on pending/failed; try other endpoints
-    } catch {}
+    } catch (_) {}
   }
 
-  if (sawSuccess && merged.length) {
-    // Return a data shape that downstream understands (contains images array)
-    return { ok: true, status: 'success', data: { images: merged } };
-  }
-  return { ok: false, status: 'pending' };
+  if (sawSuccess && merged.length) return { ok:true, status:'success', data: { images: merged } };
+  if (sawFailed) return { ok:false, status:'failed', data: lastData || null };
+  return { ok:false, status:'pending', data: lastData || null };
 }
 
 function normalizeStatus(d){
-// Nano Banana failure hints
-try {
-  const __statusRaw =
-    (body && (body.status || body.state)) ||
-    (body && body.data && (body.data.state || body.data.status)) ||
-    (body && body.result && (body.result.state || body.result.status)) || '';
-  const __s = String(__statusRaw).toLowerCase();
-  if (__s === 'fail' || __s === 'failure') return 'failed';
-  if (body && typeof body.code !== 'undefined' && Number(body.code) >= 400) return 'failed';
-  if (body && body.data && (body.data.failCode || body.data.failMsg)) return 'failed';
-  if (body && body.msg && String(body.msg).toLowerCase().includes('failed')) return 'failed';
-} catch (_) {}
+  const s = String(
+    d?.status || d?.state ||
+    d?.data?.state || d?.data?.status ||
+    d?.result?.state || d?.result?.status || ''
+  ).toLowerCase();
 
-  const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || '').toLowerCase();
   if (['success','succeeded','completed','done'].includes(s)) return 'success';
-  if (['failed','error'].includes(s)) return 'failed';
+  if (['failed','fail','error','failure'].includes(s)) return 'failed';
+
+  // NB failure hints
+  if (typeof d?.code !== 'undefined' && Number(d.code) >= 400) return 'failed';
+  if (d?.data && (d.data.failCode || d.data.failMsg)) return 'failed';
+  if (d?.msg && String(d.msg).toLowerCase().includes('failed')) return 'failed';
+
   return 'pending';
 }
 
@@ -150,22 +166,44 @@ function firstImageUrls(obj, limit=4){
   return out;
 }
 
+// Read images from nb_results when KIE still looks pending
+async function dbImagesByTask(taskId, limit=4){
+  try {
+    if (!SUPABASE_URL || !SERVICE_KEY) return [];
+    const url = `${SUPABASE_URL}/rest/v1/nb_results?task_id=eq.${encodeURIComponent(taskId)}&select=image_url&order=created_at.desc&limit=${limit}`;
+    const r = await fetch(url, {
+      headers: {
+        'apikey': SERVICE_KEY,
+        'Authorization': `Bearer ${SERVICE_KEY}`,
+        'Accept': 'application/json'
+      }
+    });
+    const rows = await r.json().catch(()=>[]);
+    const images = rows.map(x => x.image_url).filter(u => typeof u === 'string' && allowed(u));
+    // de-dup
+    const uniq = Array.from(new Set(images));
+    return uniq.slice(0, limit);
+  } catch { return []; }
+}
+
 async function backfillAll({ uid, run_id, taskId, images }){
-  if (!SUPABASE_URL || !SERVICE_KEY || !images?.length) return;
-  const rows = images.slice(0,4).map(u => ({
-    user_id: uid || '00000000-0000-0000-0000-000000000000',
-    run_id:  run_id || null,
-    task_id: taskId || null,
-    image_url: u
-  }));
-  await fetch(`${SUPABASE_URL}/rest/v1/nb_results`, {
-    method: 'POST',
-    headers: {
-      'apikey': SERVICE_KEY,
-      'Authorization': `Bearer ${SERVICE_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates,return=minimal'
-    },
-    body: JSON.stringify(rows)
-  });
+  try {
+    if (!SUPABASE_URL || !SERVICE_KEY || !images?.length) return;
+    const rows = images.slice(0,4).map(u => ({
+      user_id: uid || '00000000-0000-0000-0000-000000000000',
+      run_id:  run_id || null,
+      task_id: taskId || null,
+      image_url: u
+    }));
+    await fetch(`${SUPABASE_URL}/rest/v1/nb_results`, {
+      method: 'POST',
+      headers: {
+        'apikey': SERVICE_KEY,
+        'Authorization': `Bearer ${SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify(rows)
+    });
+  } catch {}
 }
