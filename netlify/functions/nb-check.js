@@ -29,6 +29,7 @@ exports.handler = async (event) => {
     if (!probe.ok) {
 
     if (probe.status === 'failed') {
+      // ensure refund + status flip on any detected failure
       if (uid) { try { await markFailedAndRefundSmart(uid, run_id, taskId); } catch{} }
       return json(200, { ok:false, status:'failed' });
     }
