@@ -32,6 +32,7 @@ exports.handler = async (event) => {
       if (uid) { try { await markFailedAndRefundSmart(uid, run_id, taskId); } catch{} }
       return json(200, { ok:false, status:'failed' });
     }
+      if ((probe.status||'') === 'pending') { try{ if (await shouldTimeFail(uid, run_id, taskId)) { if (uid) { try { await markFailedAndRefundSmart(uid, run_id, taskId); } catch{} } return json(200, { ok:false, status:'failed' }); } }catch{} }
       return json(200, { ok:false, status: probe.status || 'pending' });
     }
 
@@ -388,6 +389,28 @@ function hasFailureHintStrong(d){
     if ((Number.isFinite(codeTop) && codeTop >= 400) || (Number.isFinite(codeNested) && codeNested >= 400)) return true;
     const msg = (_txt(d?.msg) + ' ' + _txt(d?.message) + ' ' + _txt(d?.data?.failMsg) + ' ' + _txt(d?.data?.message) + ' ' + _txt(d?.error?.message)).toLowerCase();
     if (/(\bfail(?:ed)?\b|sensitive|flagged|policy|blocked|forbidden|denied)/.test(msg)) return true;
-  }catch{}
+  }
+
+async function shouldTimeFail(uid, run_id, taskId){
+  try{
+    if (!uid || !SUPABASE_URL || !SERVICE_KEY) return false;
+    const base = SUPABASE_URL.replace(/\/+$/,'');
+    const ug = `${base}/rest/v1/user_generations?user_id=eq.${encodeURIComponent(uid)}&select=id,created_at,meta&limit=1&order=created_at.desc` +
+               (run_id ? `&meta->>run_id=eq.${encodeURIComponent(run_id)}` : (taskId ? `&meta->>task_id=eq.${encodeURIComponent(taskId)}` : ''));
+    const r = await fetch(ug, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }});
+    if (!r.ok) return false;
+    const a = await r.json();
+    if (!Array.isArray(a) || !a.length) return false;
+    const row = a[0];
+    const created = Date.parse(row.created_at);
+    if (!Number.isFinite(created)) return false;
+    const age = Date.now() - created;
+    const ttlMs = 150000; // 150s
+    const status = (row.meta && (row.meta.status || row.meta.state || ''))+'';
+    if (age > ttlMs && !/succeed|done/i.test(status)) return true;
+    return false;
+  }catch{ return false; }
+}
+catch{}
   return false;
 }
