@@ -276,8 +276,7 @@ function onResult(url){
     } catch(e){}
   };
   img.src=url;
-  try{ channel?.unsubscribe?.(); }catch(e){}
-}
+  try{ channel?.unsubscribe?.(); }catch(e){}}
 
 // Credits + URL extraction helpers
 async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 0.5)throw new Error('Not enough credits (need 0.5).');await supabase.from('profiles').update({credits:cur-0.5}).eq('user_id',data.user.id);}
@@ -415,7 +414,7 @@ window.__run=async function(){
     };
 
     const settled = await Promise.allSettled(files.map(uploadOne));
-    const urls = settled.filter(x => x === 'fulfilled' && x.value).map(x => x.value);
+    const urls = settled.filter(x => x.status === 'fulfilled' && x.value).map(x => x.value);
 
     // guard: if no URLs were produced, stop here
     if (urls.length === 0) {
@@ -448,6 +447,7 @@ window.__run=async function(){
     try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 }))// ensure Usage shows even if user navigates away
     backfillSubmitted(uid, rid, taskId);
 
+    } catch(e){}
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
     runBtn.textContent='Processing…';
 
@@ -641,79 +641,6 @@ async function refundHalfCreditOnce(taskId){
   }catch(e){ console.warn('refundHalfCreditOnce failed', e); return false; }
 }
 
-document.addEventListener('DOMContentLoaded', function restoreLastRun(){
-  try{
-    // Always restore from local cache (Imagen-style) — no pending guard
-    const raw = localStorage.getItem('nb_last_run');
-    if (!raw) return;
-    const last = JSON.parse(raw);
-    const box = document.getElementById('resultBox');
-    const dl  = document.getElementById('downloadLink');
-    if (!box) return;
-    if (last.ok && last.url){
-      const img = new Image();
-      img.onload = function(){ box.innerHTML=''; img.className='w-full h-full object-contain'; box.appendChild(img); };
-      img.src = last.url;
-      if (dl) {
-        const __name = (last.url.split('/').pop()||'generation');
-        dl.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(last.url)+'&name='+encodeURIComponent(__name);
-        dl.setAttribute('download', __name);
-        dl.classList.remove('hidden');
-        dl.textContent='Download';
-      }
-    } else if (last.msg){
-      box.innerHTML = '<span class="text-xs text-rose-300">'+ last.msg +'</span>';
-    }
-  }catch{}
-});
-
-document.addEventListener('DOMContentLoaded', function resumeFromPending(){
-  try{
-    const raw = localStorage.getItem('nb_pending');
-    if (!raw) return;
-    const p = JSON.parse(raw);
-    const ttlMs = (p.ttl || 200) * 1000;
-    const remaining = ttlMs - (Date.now() - (p.startedAt || 0));
-    if (remaining <= 0){
-      (async () => {
-        await refundHalfCreditOnce(p.taskId);
-        const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
-        showStatus(msg, 'text-rose-300');
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg }));
-        try { localStorage.removeItem('nb_pending'); } catch(e){}
-      })();
-      return;
-    }
-    (async () => {
-      const started = Date.now();
-      while (!window.__done && Date.now() - started < remaining){
-        await new Promise(r => setTimeout(r, 1500));
-        try{
-          const { data: row } = await supabase
-            .from('user_generations').select('result_url')
-            .eq('run_id', p.run_id)
-            .eq('provider','Nano Banana')
-            .maybeSingle();
-          const url = row?.result_url || null;
-          
-          if (url){
-            window.onResult(url);
-            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url }))
-            try { localStorage.removeItem('nb_pending'); } catch(e){}
-            break;
-          }
-        }catch(e){}
-      }
-      if (!window.__done){
-        await refundHalfCreditOnce(p.taskId);
-        const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
-        showStatus(msg, 'text-rose-300');
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg }));
-        try { localStorage.removeItem('nb_pending'); } catch(e){}
-      }
-    })();
-  }catch(e){ console.warn('resumeFromPending error', e); }
-});
 </script>
 
 
@@ -789,6 +716,36 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
     }catch{}
   });
 })();
+</script>
+
+
+<script>
+// === Imagen-style last-result ONLY (Nano Banana) ===
+// Reads a single local ticket 'nb_last_run' and restores the last image or failure message.
+document.addEventListener('DOMContentLoaded', function NB_lastResultOnly(){
+  try{
+    const raw = localStorage.getItem('nb_last_run');
+    if (!raw) return;
+    const last = JSON.parse(raw);
+    const box = document.getElementById('resultBox');
+    const dl  = document.getElementById('downloadLink');
+    if (!box) return;
+    if (last.ok && last.url){
+      const img = new Image();
+      img.onload = function(){ box.innerHTML=''; img.className='w-full h-full object-contain'; box.appendChild(img); };
+      img.src = last.url;
+      if (dl) {
+        const __name = (last.url.split('/').pop()||'generation');
+        dl.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(last.url)+'&name='+encodeURIComponent(__name);
+        dl.setAttribute('download', __name);
+        dl.classList.remove('hidden');
+        dl.textContent='Download';
+      }
+    } else if (last.msg){
+      box.innerHTML = '<span class="text-xs text-rose-300">'+ last.msg +'</span>';
+    }
+  }catch(e){}
+});
 </script>
 
 </body>
