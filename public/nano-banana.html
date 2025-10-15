@@ -152,9 +152,6 @@
 <a class="hover:text-white/90" href="index.html#faq">FAQ</a>
 </nav>
 <div class="flex items-center gap-3"><a class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft" href="login.html" id="btnLoginSignup">Login / Signup</a>
-
-
-
 <div class="hidden items-center gap-2" id="navUser">
 <span class="text-sm text-white/80 mr-2" id="navCredits">0⚡</span>
 <div class="relative">
@@ -355,12 +352,14 @@ async function nbCheckPoll(taskId, uid, rid){
         })(j);
         if(url){
           onResult(url);               // show immediately
+          try { localStorage.removeItem('nb_last_run'); } catch{}
           backfillRow(uid, rid, taskId, url); // ensure Supabase row exists
         }
         break;
       }
       if(['failed','error'].includes(status)){
         showStatus('❌ Generation failed.','text-rose-300');
+        try { localStorage.removeItem('nb_last_run'); } catch{}
         break;
       }
     }catch{}
@@ -440,7 +439,9 @@ window.__run=async function(){
     }
 
     const resJson = await res.json().catch(()=> ({}));
-    const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
+    \1
+    try { __NB_SET_LAST_SUBMIT__(uid, rid, taskId); } catch(e){}
+
 
     // ensure Usage shows even if user navigates away
     backfillSubmitted(uid, rid, taskId);
@@ -575,5 +576,38 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
+
+<script>
+(function(){
+  function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
+  function saveLastRun(rec){ try { localStorage.setItem('nb_last_run', JSON.stringify(rec)); } catch {} }
+  function clearLastRun(){ try { localStorage.removeItem('nb_last_run'); } catch {} }
+  window.__NB_SET_LAST_SUBMIT__ = function(uid, run_id, taskId){
+    try { saveLastRun({ uid, run_id, taskId, ts: Date.now() }); } catch {}
+  };
+  async function resumeIfNeeded(){
+    try{
+      const ures = await supabase.auth.getUser();
+      const user = ures?.data?.user; if(!user) return;
+      const rec = safeParse(localStorage.getItem('nb_last_run')); if(!rec) return;
+      if (rec.uid !== user.id) return;
+      // First, check DB for a result
+      const { data: row } = await supabase
+        .from('nb_results')
+        .select('image_url')
+        .eq('user_id', user.id)
+        .eq('run_id', rec.run_id)
+        .limit(1)
+        .maybeSingle();
+      const url = row?.image_url || null;
+      if (url){ onResult(url); clearLastRun(); return; }
+      // Else, resume polling
+      nbCheckPoll(rec.taskId, rec.uid, rec.run_id);
+    }catch{}
+  }
+  document.addEventListener('DOMContentLoaded', resumeIfNeeded);
+})();
+</script>
+
 </body>
 </html>
