@@ -267,7 +267,7 @@ async function backfillAll({ uid, run_id, taskId, images }){
     task_id: taskId || null,
     image_url: u
   }));
-  await fetch(`${SUPABASE_URL}/rest/v1/nb_results`, {
+  await fetch(`${SUPABASE_URL}/rest/v1/nb_result`, { // ← minimal requested change: plural → singular
     method: 'POST',
     headers: {
       'apikey': SERVICE_KEY,
