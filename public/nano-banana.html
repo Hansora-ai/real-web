@@ -6,76 +6,11 @@
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>HANSORA • Nano Banana</title>
 <link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" rel="icon"/>
-<script src="https://cdn.tailwindcss.com">// RESTORE (Imagen-style)
-try {
-  const s = JSON.parse(localStorage.getItem('nb_last_run')||'null');
-  if (s && s.result_url) {
-    if (typeof window.onResult === 'function') try{ window.onResult(s.result_url); }catch(e){}
-  } else if (s && s.id && s.uid) {
-    try { window.__nbResume && window.__nbResume(s.id, s.uid); } catch(e) {}
-  }
-} catch (e) {}
-// END RESTORE
-</script>
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
 <script src="/kie-upload-bridge.js"></script>
-<script>
-// === Live credits (Supabase Realtime) + pre-run check ===
-(async function HANSORA_LIVE_CREDITS(){
-  try{
-    const navCreditsEl = document.getElementById('navCredits');
-    const runBtn = document.getElementById('runBtn');
-    function renderCredits(c){
-      if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-      if (runBtn) {
-        const ok = true;
-        runBtn.disabled=false;
-        runBtn.classList.toggle('opacity-50', !ok);
-        runBtn.classList.toggle('cursor-not-allowed', !ok);
-      }
-    }
 
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if(!user) return;
-
-    // initial fetch
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    renderCredits(prof?.credits ?? 0);
-
-    // subscribe to updates
-    supabase.channel('credits_live_' + user.id)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
-        (payload) => { renderCredits(payload.new?.credits ?? 0); }
-      )
-      .subscribe();
-
-    // patch __run to guard when credits are 0 (without changing its internals)
-    const __origRun = window.__run;
-    window.__run = async function(){
-      try{
-        const { data: prof2 } = await supabase
-          .from('profiles')
-          .select('credits')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        const c = prof2?.credits ?? 0;
-        if (c < 0.5) {
-          console.warn('No credits left.');
-          alert('Not enough credits (need 0.5).'); 
-          return;
-        }
-      }catch{}
-      return __origRun ? __origRun() : undefined;
-    };
-  }catch(e){ console.warn('credits live failed', e); }
-})();
-</script>
 <script>
 (function(){
   function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
@@ -227,281 +162,7 @@ try {
 </nav>
 </div>
 </footer>
-<script>
-document.getElementById('y').textContent = new Date().getFullYear();
 
-// Supabase init
-const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// Header UI
-const $btnLoginSignup = document.getElementById('btnLoginSignup');
-const $navUser = document.getElementById('navUser');
-const $navCredits = document.getElementById('navCredits');
-const $navAvatar = document.getElementById('navAvatar');
-const $navMenu = document.getElementById('navMenu');
-const $btnLogout = document.getElementById('btnLogout');
-const $navAvatarImg = document.getElementById('navAvatarImg');
-function showLoggedInUI(profile, user){$btnLoginSignup.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
-function showLoggedOutUI(){$btnLoginSignup.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
-$navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
-document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
-$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
-async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
-
-// Elements
-const filesEl=document.getElementById('files');
-const thumbsEl=document.getElementById('thumbs');
-const promptEl=document.getElementById('prompt');
-const runBtn=document.getElementById('runBtn');
-const statusEl=document.getElementById('status');
-const resultBox=document.getElementById('resultBox');
-const downloadLink=document.getElementById('downloadLink');
-
-filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,4).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
-
-function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
-
-// Guarded renderer
-let __done=false; let channel=null;
-function onResult(url){
-  if(__done || !url) return;
-  __done = true;
-  const img=new Image();
-  img.onload=()=>{
-    resultBox.innerHTML='';
-    img.className='w-full h-full object-contain';
-    resultBox.appendChild(img);
-        const __name = (url.split('/').pop()||'generation');
-    downloadLink.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(url)+'&name='+encodeURIComponent(__name);
-    downloadLink.setAttribute('download', __name);
-    downloadLink.classList.remove('hidden');
-    downloadLink.textContent='Download';
-
-    showStatus('✅ Done.','text-emerald-300');
-    try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{};
-    try { localStorage.removeItem('nb_pending'); } catch{};
-  };
-  
-  img.src=url;
-  try{ channel?.unsubscribe?.(); }catch{}
-}
-
-// Credits + URL extraction helpers
-async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 0.5)throw new Error('Not enough credits (need 0.5).');await supabase.from('profiles').update({credits:cur-0.5}).eq('user_id',data.user.id);}
-
-function derivePublicUrl(up){
-  if (!up) return null;
-  if (up.publicUrl) return up.publicUrl;
-  try{
-    if (up.bucket && up.objectPath && up.uploadUrl){
-      const u = new URL(up.uploadUrl);
-      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
-      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
-    }
-  }catch(e){}
-  return null;
-}
-
-// ADDED: make sure DB gets a row even if webhook is late/blocked
-async function backfillRow(uid, rid, taskId, url){
-  try{
-    await fetch(
-      '/.netlify/functions/kie-callback?uid='+encodeURIComponent(uid)+'&run_id='+encodeURIComponent(rid)+'&taskId='+encodeURIComponent(taskId),
-      {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          status:'success',
-          result:{ images:[{ url }] }
-        })
-      }
-    );
-  }catch{}
-}
-
-// Best-effort: create a submitted row immediately so Usage shows even if user leaves.
-async function backfillSubmitted(uid, rid, taskId){
-  try{
-    await fetch('/.netlify/functions/kie-callback?uid='+encodeURIComponent(uid)+'&run_id='+encodeURIComponent(rid)+'&taskId='+encodeURIComponent(taskId||''),{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ status:'submitted', result:{ images:[] } })
-    });
-  }catch{}
-}
-
-// Option A: poll nb-check (does NOT rely on webhook)
-async function nbCheckPoll(taskId, uid, rid){
-  if(!taskId) return;
-  const start = Date.now();
-  while(!__done && Date.now() - start < 180000){ // up to 3 min
-    try{
-      const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId), {
-        headers: { 'X-USER-ID': uid }
-      });
-
-      let j;
-      try { j = await r.json(); }
-      catch {
-        const txt = await r.text();
-        try { j = JSON.parse(txt); } catch { j = { raw: txt }; }
-      }
-
-      const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
-      if(['success','succeeded','completed','done'].includes(status)){
-        const url = await (async function tryExtractImageUrl(o){
-          if(!o) return null;
-          if(typeof o==='string'&&/^https?:\/\//.test(o)) return o;
-          if(o.imageUrl) return o.imageUrl;
-          if(o.outputUrl) return o.outputUrl;
-          if(o.url) return o.url;
-          if(o.data) { const x=await tryExtractImageUrl(o.data); if(x) return x; }
-          if(o.result) { const x=await tryExtractImageUrl(o.result); if(x) return x; }
-          if(Array.isArray(o.images)&&o.images[0]?.url) return o.images[0].url;
-          if(Array.isArray(o.resultUrls) && o.resultUrls[0]) return o.resultUrls[0];
-          if(Array.isArray(o.output)&&o.output[0]?.url) return o.output[0].url;
-          return null;
-        })(j);
-        if(url){
-          onResult(url);               // show immediately
-          backfillRow(uid, rid, taskId, url); // ensure Supabase row exists
-        }
-        break;
-      }
-      if(['failed','error'].includes(status)){
-        showStatus('❌ Generation failed.','text-rose-300');
-        break;
-      }
-    }catch{}
-    await new Promise(r=>setTimeout(r,1500));
-  }
-}
-
-// Main run
-window.__run=async function(){
-  const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ alert('Please log in or register first.'); return; }
-
-  // HARD CREDIT CHECK (surgical): prevent run if credits insufficient
-  try{
-    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
-    const cur = prof?.credits ?? 0;
-    if (cur < 0.5) {
-      showStatus('Not enough credits (need 0.5).','text-rose-300');
-      runBtn.disabled = false; runBtn.textContent = "Run (cost: 0.5⚡)";
-      return;
-    }
-  }catch(_){ /* ignore, but don't proceed if unknown? proceed cautiously */ }
-
-  __done=false;
-  const files=[...filesEl.files];
-  if(!files.length){alert('Choose at least one image.');return;}
-  if(files.length>4){alert('Max 4 images.');return;}
-  for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}
-
-  runBtn.disabled=true;runBtn.textContent='Uploading…';
-  showStatus('Uploading images…','text-zinc-400');
-  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
-
-  try{
-    const uid=authData.user.id;
-    const rid=uid+'-'+Date.now();
-
-    // ==== FIX: await all uploads, then proceed ====
-    if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
-      throw new Error('upload_bridge_missing');
-    }
-
-    const uploadOne = async (f) => {
-      const up = await window.kieUploadBridge.upload(f);
-      const url = derivePublicUrl(up);
-      if (!url) throw new Error('no_public_url');
-      // Best effort warm HEAD to reduce signed-url cache lag
-      try { await fetch(url, { method: 'HEAD', cache: 'no-store' }); } catch {}
-      return url;
-    };
-
-    const settled = await Promise.allSettled(files.map(uploadOne));
-    const urls = settled.filter(x => x.status === 'fulfilled' && x.value).map(x => x.value);
-
-    // guard: if no URLs were produced, stop here
-    if (urls.length === 0) {
-      showStatus('Upload failed: no image URLs to send','text-rose-300');
-      runBtn.disabled = false; runBtn.textContent = 'Run (cost: 0.5⚡)';
-      return;
-    }
-
-    runBtn.textContent='Submitting…';
-    showStatus('Submitting…','text-zinc-400');
-
-    // create job
-    const res=await fetch('/.netlify/functions/run-nano-banana',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-USER-ID':uid},
-      body:JSON.stringify({urls, prompt: (promptEl.value||'.'), format:'png', size:(document.getElementById('size')?.value||'auto'), run_id: rid})
-    });
-
-    if (res.status === 202 || res.ok) {
-      await chargeOneCredit();
-    } else {
-      const errT = await res.text().catch(()=> '');
-      throw new Error('Create failed: ' + errT);
-    }
-
-    const resJson = await res.json().catch(()=> ({}));
-    const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
-
-    // store pending ticket so we can resume after refresh
-    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 })); } catch{}
-
-    // ensure Usage shows even if user navigates away
-    backfillSubmitted(uid, rid, taskId);
-
-    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-    runBtn.textContent='Processing…';
-
-    // subscribe to Supabase (if webhook inserts there)
-    channel = supabase.channel('nb_results_' + rid)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'nb_results', filter: 'run_id=eq.' + rid },
-        (payload) => {
-          const url = payload?.new?.image_url;
-          if (url) onResult(url);
-        }
-      )
-      .subscribe();
-
-    // start polling taskId (and backfill DB when done)
-    nbCheckPoll(taskId, uid, rid);
-
-    // fallback: poll table directly in case realtime is blocked
-    const started = Date.now();
-    while (!__done && Date.now() - started < 200000) { // up to 120s
-      await new Promise(r => setTimeout(r, 1500));
-      const { data: row } = /* Imagen-style: no DB restore from user_generations */
-
-      const url = row?.image_url || null;
-      if (url) { onResult(url); break; }
-    }
-
-    if (!__done) {
-      const __MSG='❌ Generation failed. Credits refunded. Try again or contact us.';
-      try{ await refundHalfCreditOnce(taskId); }catch{}
-      try{ localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); }catch{}
-      showStatus(__MSG,'text-rose-300');
-    }
-
-  }catch(e){
-    showStatus('❌ '+(e.message||String(e)),'text-rose-300')
-  }finally{
-    runBtn.disabled=false;runBtn.textContent='Run (cost: 0.5⚡)';
-  }
-};
-</script>
 <!-- Delete buttons + safe validation (additive, non-destructive) -->
 <script>
 (function(){
@@ -589,153 +250,8 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 
-<script>
-// Server-first: fetch the most recent run from Supabase on load and render it.
-// This guarantees we show the *latest* run (even if user left the page).
-document.addEventListener('DOMContentLoaded', async function serverFirstLatest(){
-  try{
-    const ures = await supabase.auth.getUser();
-    const user = ures?.data?.user;
-    if (!user) return;
 
-    const { data: row } = /* Imagen-style: no DB restore from user_generations */
 
-    if (!row) return;
-
-    const st = String(row.status || '').toLowerCase();
-    const url = row.result_url || null;
-
-    // If terminal success -> render image and persist
-    if (url){
-      if (!window.__done) {
-        window.__renderedFromServer = true;
-        onResult(url);
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{}
-        try {
-          const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
-          if (pend && pend.run_id === row && row.created_at) localStorage.removeItem('nb_pending');
-        } catch {}
-      }
-      return;
-    }
-
-    // If terminal failed -> render failure + persist
-    if (st === 'failed'){
-      window.__renderedFromServer = true;
-      const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
-      showStatus(msg, 'text-rose-300');
-      try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{}
-      try {
-        const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
-        if (pend && pend.run_id === row && row.created_at) localStorage.removeItem('nb_pending');
-      } catch {}
-      return;
-    }
-
-    // Otherwise (pending): seed nb_pending to resume auto-poll from server
-    try {
-      const startedAt = new Date(row.created_at).getTime();
-      localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId:null, run_id: row && row.created_at, startedAt, ttl:200 }));
-    } catch {}
-  }catch(e){ console.warn('serverFirstLatest error', e); }
-});
-</script>
-<script>
-async function refundHalfCreditOnce(taskId){
-  try{
-    const key = 'nb_refunded_' + (taskId || 'unknown');
-    if (localStorage.getItem(key)) return false;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return false;
-    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-    const cur = prof?.credits ?? 0;
-    const next = Math.round((cur + 0.5) * 1000) / 1000;
-    await supabase.from('profiles').update({ credits: next }).eq('user_id', user.id);
-    const nav = document.getElementById('navCredits'); if (nav) nav.textContent = next + '⚡';
-    localStorage.setItem(key, '1');
-    return true;
-  }catch(e){ console.warn('refundHalfCreditOnce failed', e); return false; }
-}
-
-document.addEventListener('DOMContentLoaded', function restoreLastRun(){
-  try{
-    // Skip drawing old cache if a pending ticket exists or server already rendered
-    if (localStorage.getItem('nb_pending')) return;
-    const raw = localStorage.getItem('nb_last_run');
-    if (!raw) return;
-    const last = JSON.parse(raw);
-    const box = document.getElementById('resultBox');
-    const dl  = document.getElementById('downloadLink');
-    if (!box) return;
-    if (last.ok && last.url){
-      const img = new Image();
-      img.onload = function(){ box.innerHTML=''; img.className='w-full h-full object-contain'; box.appendChild(img); };
-      img.src = last.url;
-      if (dl) {
-        const __name = (last.url.split('/').pop()||'generation');
-        dl.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(last.url)+'&name='+encodeURIComponent(__name);
-        dl.setAttribute('download', __name);
-        dl.classList.remove('hidden');
-        dl.textContent='Download';
-      }
-    } else if (last.msg){
-      box.innerHTML = '<span class="text-xs text-rose-300">'+ last.msg +'</span>';
-    }
-  }catch{}
-});
-
-document.addEventListener('DOMContentLoaded', function resumeFromPending(){
-  try{
-    const raw = localStorage.getItem('nb_pending');
-    if (!raw) return;
-    const p = JSON.parse(raw);
-    const ttlMs = (p.ttl || 200) * 1000;
-    const remaining = ttlMs - (Date.now() - (p.startedAt || 0));
-    if (remaining <= 0){
-      (async () => {
-        await refundHalfCreditOnce(p.taskId);
-        const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
-        showStatus(msg, 'text-rose-300');
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{};
-        try { localStorage.removeItem('nb_pending'); } catch{};
-      })();
-      return;
-    }
-    (async () => {
-      const started = Date.now();
-      while (!window.__done && Date.now() - started < remaining){
-        await new Promise(r => setTimeout(r, 1500));
-        try{
-          const { data: row } = /* Imagen-style: no DB restore from user_generations */
-          const url = row?.image_url || null;
-          const st = (row?.status || '').toLowerCase();
-          if (url){
-            window.onResult(url);
-            try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{};
-            try { localStorage.removeItem('nb_pending'); } catch{};
-            break;
-          }
-          if (st === 'failed'){
-            await refundHalfCreditOnce(p.taskId);
-            const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
-            showStatus(msg, 'text-rose-300');
-            try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{};
-            try { localStorage.removeItem('nb_pending'); } catch{};
-            break;
-          }
-        }catch(e){}
-      }
-      if (!window.__done){
-        await refundHalfCreditOnce(p.taskId);
-        const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
-        showStatus(msg, 'text-rose-300');
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ id, uid, result_url:null, failed:false })); } catch{};
-        try { localStorage.removeItem('nb_pending'); } catch{};
-      }
-    })();
-  }catch(e){ console.warn('resumeFromPending error', e); }
-});
-</script>
 
 
 <script>
@@ -810,6 +326,53 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
     }catch{}
   });
 })();
+</script>
+
+
+<script>
+function __imagenSaveState(state){ try{ localStorage.setItem('Nano Banan:lastRun', JSON.stringify(state||{})); }catch{} }
+function __imagenLoadState(){ try{ return JSON.parse(localStorage.getItem('Nano Banan:lastRun')||'{}'); }catch{ return {}; } }
+function __imagenClearState(){ try{ localStorage.removeItem('Nano Banan:lastRun'); }catch{} }
+
+// Wrap onResult to persist result_url
+(function(){
+  if (typeof window.onResult === 'function' && !window.onResult.__persistWrapped){
+    const __orig = window.onResult;
+    window.onResult = function(url){
+      try{
+        const s = __imagenLoadState(); s.result_url = url; s.failed = false; __imagenSaveState(s);
+      }catch{}
+      return __orig.apply(this, arguments);
+    };
+    window.onResult.__persistWrapped = true;
+  }
+})();
+
+// On load: strict localStorage-only resume
+document.addEventListener('DOMContentLoaded', () => {
+  const s = __imagenLoadState();
+  if (s && s.result_url) {
+    if (typeof window.onResult === 'function') try{ window.onResult(s.result_url); }catch{}
+  } else if (s && s.id && s.uid) {
+    if (typeof window.imagenCheckPoll === 'function') try{ window.imagenCheckPoll(s.id, s.uid, s.run_id); }catch{}
+  }
+});
+
+// Clear state before a new run
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('runBtn');
+  if (btn && !btn.__persistHooked){
+    btn.__persistHooked = true;
+    btn.addEventListener('click', function(){ try{ __imagenClearState(); }catch{}; }, { capture:true });
+  }
+});
+</script>
+
+
+<script>
+if (typeof window.nbCheckPoll === 'function' && !window.imagenCheckPoll){
+  window.imagenCheckPoll = function(id, uid, run_id){ return window.nbCheckPoll(id, uid, run_id); };
+}
 </script>
 
 </body>
