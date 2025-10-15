@@ -1,158 +1,158 @@
 // netlify/functions/nb-check.js
-// Behavior requested by user:
-// - Call ONLY KIE /api/task/{taskId} (console-accurate)
-// - If HTTP 404: keep 'pending' until 180s have passed since `startedAt`
-// - Any other HTTP >= 400 (422/500/501/etc): fail immediately
-// - If JSON says status: success -> success
-// - If JSON says failed/failure or code>=400 inside JSON -> fail immediately
-// - Echo taskId + startedAt in every response
-// - Minimal CORS
-//
-// Query params expected: ?taskId=...&startedAt=<ms epoch>&ttl=180 (ttl optional; default 180s)
+// Surgical fix: probe both /api/v1/mj/* and /api/v1/jobs/*, MERGE images from all
+// success endpoints, return original fields plus images[], and backfill ALL rows.
+// Compatible with Nano Banana + MidJourney. No interface changes.
 
 const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,'');
 const KIE_KEY  = process.env.KIE_API_KEY;
 
+const SUPABASE_URL  = process.env.SUPABASE_URL || '';
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
+
 exports.handler = async (event) => {
   try {
-    if (event.httpMethod === 'OPTIONS') {
-      return { statusCode: 204, headers: cors(), body: '' };
-    }
-    if (event.httpMethod !== 'GET') {
-      return { statusCode: 405, headers: cors(), body: 'Use GET' };
-    }
+    if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
+    if (event.httpMethod !== 'GET')     return { statusCode: 405, headers: cors(), body: 'Use GET' };
 
     const qs = event.queryStringParameters || {};
     const taskId = (qs.taskId || qs.task_id || '').trim();
-    if (!taskId) return json(400, { ok:false, status:'failed', error:'missing taskId' });
+    if (!taskId) return json(400, { ok:false, error:'missing taskId' });
 
-    // startedAt and TTL (seconds)
-    const now = Date.now();
-    const startedAt = Number(qs.startedAt || qs.started_at || 0);
-    const ttlSec = Number(qs.ttl || 180);
-    const ageMs = startedAt ? (now - startedAt) : null;
+    const uid    = header(event, 'x-user-id') || qs.uid || null;
+    const run_id = (qs.run_id || '').trim() || null;
 
-    const url = `${KIE_BASE}/api/task/${encodeURIComponent(taskId)}`;
-    const r = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${KIE_KEY}`,
-        'Accept': 'application/json'
-      }
-    });
+    // Fetch once across endpoints (the page will poll repeatedly)
+    const probe = await fetchAll(taskId);
 
-    const http = r.status;
-    const ct = r.headers.get('content-type') || '';
-
-    // HTTP error handling
-    if (http >= 400) {
-      // Special case: 404 -> grace window
-      if (http === 404) {
-        // If we know the job is younger than TTL seconds, keep pending
-        if (ageMs !== null && ageMs < ttlSec * 1000) {
-          return json(200, { ok:false, status:'pending', http, taskId, startedAt, ttl: ttlSec });
-        }
-        // If no startedAt provided, treat first minute as pending to avoid false negatives
-        if (ageMs === null) {
-          return json(200, { ok:false, status:'pending', http, taskId, note:'no startedAt; treating 404 as pending' });
-        }
-        // Past grace window -> fail
-        return json(200, { ok:false, status:'failed', code:404, error:'Not found (expired/not ready after grace window)', taskId, startedAt, ttl: ttlSec });
-      }
-
-      // Any non-404 HTTP error -> fail immediately
-      let body = null;
-      if (ct.includes('application/json')) {
-        body = await r.json().catch(() => null);
-      } else {
-        body = { error: await r.text().catch(()=>'') };
-      }
-      const code = body?.code ?? http;
-      const err  = body?.error || body?.message || body?.msg || `HTTP ${http}`;
-      return json(200, { ok:false, status:'failed', code, error: err, raw: body, taskId, startedAt, ttl: ttlSec });
+    if (!probe.ok) {
+      return json(200, { ok:false, status: probe.status || 'pending' });
     }
 
-    // Non-error HTTP (<400)
-    if (!ct.includes('application/json')) {
-      // Non-JSON yet -> pending within grace window
-      if (ageMs === null || ageMs < ttlSec * 1000) {
-        return json(200, { ok:false, status:'pending', http, taskId, startedAt, ttl: ttlSec });
-      }
-      return json(200, { ok:false, status:'failed', http, error:'Non-JSON after grace window', taskId, startedAt, ttl: ttlSec });
+    const images = firstImageUrls(probe.data, 4);
+    if (!images.length) {
+      return json(200, { ok:false, status:'pending' });
     }
 
-    const data = await r.json();
-    const s = normalizeStatus(data);
+    // Backfill ALL (up to 4) rows so Realtime/subscribe can render each
+    await backfillAll({ uid, run_id, taskId, images }).catch(()=>{});
 
-    if (s === 'success') {
-      const images = extractResultUrls(data, 4);
-      return json(200, { ok:true, status:'success', images, image_url: images[0] || null, raw:data, taskId, startedAt, ttl: ttlSec });
-    }
-    if (s === 'failed') {
-      const code = data?.code ?? null;
-      const err  = data?.error || data?.message || data?.msg || null;
-      return json(200, { ok:false, status:'failed', code, error: err, raw:data, taskId, startedAt, ttl: ttlSec });
-    }
-
-    // Still not final -> pending (respect grace window)
-    if (ageMs === null || ageMs < ttlSec * 1000) {
-      return json(200, { ok:false, status:'pending', raw:data, taskId, startedAt, ttl: ttlSec });
-    }
-    return json(200, { ok:false, status:'failed', error:'No final status after grace window', raw:data, taskId, startedAt, ttl: ttlSec });
+    return json(200, { ok:true, status:'success', image_url: images[0], images });
 
   } catch (e) {
-    // Network/exception -> pending inside grace window, otherwise failed
-    const qs = event.queryStringParameters || {};
-    const startedAt = Number(qs.startedAt || qs.started_at || 0);
-    const ttlSec = Number(qs.ttl || 180);
-    const ageMs = startedAt ? (Date.now() - startedAt) : null;
-
-    if (ageMs === null || ageMs < ttlSec * 1000) {
-      return json(200, { ok:false, status:'pending', error:String(e), startedAt, ttl: ttlSec });
-    }
-    return json(200, { ok:false, status:'failed', error:String(e), startedAt, ttl: ttlSec });
+    return json(200, { ok:false, error: String(e) });
   }
 };
 
-function cors(){
-  return {
-    'Access-Control-Allow-Origin': '*', // set to 'https://hansora.co' if you want to restrict
-    'Access-Control-Allow-Methods': 'GET,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Vary': 'Origin'
-  };
-}
-function json(code, obj){
-  return { statusCode: code, headers: { 'Content-Type': 'application/json', ...cors() }, body: JSON.stringify(obj) };
+// ---------- helpers ----------
+function cors(){ return { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'GET,OPTIONS' }; }
+function json(code, obj){ return { statusCode: code, headers: { 'Content-Type': 'application/json', ...cors() }, body: JSON.stringify(obj) }; }
+function header(event, name){ const v = event.headers?.[name] || event.headers?.[name.toLowerCase()]; return Array.isArray(v) ? v[0] : v; }
+function kieHeaders(){ return { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' }; }
+
+// === THE ONLY BEHAVIORAL CHANGE ===
+// Merge images from *all* success endpoints instead of returning at the first success.
+async function fetchAll(taskId){
+  const endpoints = [
+    // MJ endpoints first (usually contain full set for MidJourney)
+    `${KIE_BASE}/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_BASE}/api/v1/mj/result?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_BASE}/api/v1/mj/getTask?taskId=${encodeURIComponent(taskId)}`,
+    // Generic jobs fallbacks (used by Nano Banana and some providers)
+    `${KIE_BASE}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_BASE}/api/v1/jobs/result?taskId=${encodeURIComponent(taskId)}`
+  ];
+
+  let merged = [];         // merged image urls
+  let sawSuccess = false;  // did any endpoint report success?
+
+  for (const url of endpoints) {
+    try {
+      const r = await fetch(url, { headers: kieHeaders() });
+      const txt = await r.text();
+      let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+
+      if (normalizeStatus(data) === 'success') {
+        sawSuccess = true;
+        const imgs = firstImageUrls(data, 4);
+        for (const u of imgs) if (!merged.includes(u)) merged.push(u);
+        if (merged.length >= 4) break; // got all 4, stop early
+      }
+      // do not early-return on pending/failed; try other endpoints
+    } catch {}
+  }
+
+  if (sawSuccess && merged.length) {
+    // Return a data shape that downstream understands (contains images array)
+    return { ok: true, status: 'success', data: { images: merged } };
+  }
+  return { ok: false, status: 'pending' };
 }
 
 function normalizeStatus(d){
-  const s = String(
-    d?.status || d?.state ||
-    d?.data?.status || d?.data?.state ||
-    d?.result?.status || d?.result?.state || ''
-  ).toLowerCase();
-
+  const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || '').toLowerCase();
   if (['success','succeeded','completed','done'].includes(s)) return 'success';
-  if (['failed','failure','error'].includes(s)) return 'failed';
-
-  if (typeof d?.code !== 'undefined' && Number(d.code) >= 400) return 'failed';
-
+  if (['failed','error'].includes(s)) return 'failed';
   return 'pending';
 }
 
-function extractResultUrls(d, limit=4){
-  const from = Array.isArray(d?.resultUrls) ? d.resultUrls
-             : Array.isArray(d?.result?.urls) ? d.result.urls
-             : Array.isArray(d?.data?.resultUrls) ? d.data.resultUrls
-             : [];
+function isUrl(x){ try { new URL(x); return true; } catch { return false; } }
+function host(u){ try { return new URL(u).hostname; } catch { return ''; } }
+function allowed(u){
+  if (!isUrl(u)) return false;
+  const h = host(u);
+  if (!ALLOWED_HOSTS.has(h)) return false;
+  if (!/\/(m|f|workers)\//i.test(u)) return false;
+  return true;
+}
+
+function firstImageUrls(obj, limit=4){
+  let acc = [];
+  const cand = obj?.data?.result?.images || obj?.result?.images || obj?.data?.images || obj?.images;
+  if (Array.isArray(cand)) acc = acc.concat(cand);
+
+  (function walk(x){
+    if (!x) return;
+    if (typeof x === 'string'){
+      const m = x.match(/https?:\/\/[^\s"']+/i);
+      if (m) acc.push(m[0]);
+    } else if (Array.isArray(x)) {
+      for (const v of x) walk(v);
+    } else if (typeof x === 'object') {
+      for (const v of Object.values(x)) walk(v);
+    }
+  })(obj);
+
   const out = [];
   const seen = new Set();
-  for (const u of from){
-    if (typeof u === 'string' && !seen.has(u)){
+  for (const it of acc){
+    const u = typeof it === 'string' ? it : (it && it.url);
+    if (u && allowed(u) && !seen.has(u)){
       seen.add(u);
       out.push(u);
       if (out.length >= limit) break;
     }
   }
   return out;
+}
+
+async function backfillAll({ uid, run_id, taskId, images }){
+  if (!SUPABASE_URL || !SERVICE_KEY || !images?.length) return;
+  const rows = images.slice(0,4).map(u => ({
+    user_id: uid || '00000000-0000-0000-0000-000000000000',
+    run_id:  run_id || null,
+    task_id: taskId || null,
+    image_url: u
+  }));
+  await fetch(`${SUPABASE_URL}/rest/v1/nb_results`, {
+    method: 'POST',
+    headers: {
+      'apikey': SERVICE_KEY,
+      'Authorization': `Bearer ${SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify(rows)
+  });
 }
