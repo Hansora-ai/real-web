@@ -90,7 +90,8 @@ async function fetchAll(taskId){
         if (merged.length >= 4) break; // got all 4, stop early
       }
       const stat = normalizeStatus(data);
-      if (stat === 'failed') { sawFailed = true; }
+      if (stat === 'failed') { sawFailed = true; } // explicit
+
       const hint = providerHint(data);
       // Treat any explicit failure or failure hints as failure, regardless of provider
       if (stat !== 'success' && (hasFailureHint(data) || String(data?.error_code||data?.code||'').startsWith('4') || String(data?.status||'').toLowerCase()==='failure')) { sawFailed = true; }
@@ -109,7 +110,7 @@ async function fetchAll(taskId){
 function normalizeStatus(d){
   const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || '').toLowerCase();
   if (['success','succeeded','completed','done'].includes(s)) return 'success';
-  if (['failed','error','failure'].includes(s)) return 'failed';
+  if (['failed','error','failure','fail'].includes(s)) return 'failed';
   return 'pending';
 }
 
@@ -375,3 +376,17 @@ async function markFailedAndRefundSmart(uid, run_id, taskId){
   }
 }
 
+
+
+function _num(x){ const n = Number(x); return Number.isFinite(n) ? n : NaN; }
+function _txt(x){ try { return (x ?? '') + ''; } catch { return ''; } }
+function hasFailureHintStrong(d){
+  try{
+    const codeTop = _num(d?.code);
+    const codeNested = _num(d?.data?.failCode || d?.data?.code || d?.errorCode || d?.code);
+    if ((Number.isFinite(codeTop) && codeTop >= 400) || (Number.isFinite(codeNested) && codeNested >= 400)) return true;
+    const msg = (_txt(d?.msg) + ' ' + _txt(d?.message) + ' ' + _txt(d?.data?.failMsg) + ' ' + _txt(d?.data?.message) + ' ' + _txt(d?.error?.message)).toLowerCase();
+    if (/(\bfail(?:ed)?\b|sensitive|flagged|policy|blocked|forbidden|denied)/.test(msg)) return true;
+  }catch{}
+  return false;
+}
