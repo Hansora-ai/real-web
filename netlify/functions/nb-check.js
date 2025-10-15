@@ -359,7 +359,7 @@ async function markFailedAndRefundSmart(uid, run_id, taskId){
         : `user_id=eq.${encodeURIComponent(uid)}&meta->>task_id=eq.${encodeURIComponent(taskId)}`;
       await fetch(`${ug}?${filter}`, {
         method:'PATCH',
-        headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return:minimal' },
+        headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
         body: JSON.stringify({ meta: newMeta })
       });
     }
