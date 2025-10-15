@@ -108,11 +108,12 @@ async function fetchAll(taskId){
 }
 
 function normalizeStatus(d){
-  const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || '').toLowerCase();
+  const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || d?.data?.state || '').toLowerCase();
   if (['success','succeeded','completed','done'].includes(s)) return 'success';
   if (['failed','error','failure','fail'].includes(s)) return 'failed';
   return 'pending';
 }
+
 
 function isUrl(x){ try { new URL(x); return true; } catch { return false; } }
 function host(u){ try { return new URL(u).hostname; } catch { return ''; } }
