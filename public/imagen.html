@@ -45,8 +45,14 @@
         .subscribe();
 
       // patch __run to guard when credits are 0 (without changing its internals)
-      const __origRun = window.__run;
-      window.__run = async function(){
+      const __origRun = (function(orig){ 
+  window.__run = async function(){ try{ __imagenClearState(); }catch{}; return await orig.apply(this, arguments); };
+  return window.__run;
+})(window.__run);
+      (function(orig){ 
+  window.__run = async function(){ try{ __imagenClearState(); }catch{}; return await orig.apply(this, arguments); };
+  return window.__run;
+})(window.__run) = async function(){
         try{
           const { data: prof2 } = await supabase
             .from('profiles')
@@ -105,9 +111,18 @@
         }
 
         // Also poll briefly after Run to catch server-side debit
-        if (typeof window.__run === 'function'){
-          const __origRun = window.__run;
-          window.__run = async function(){
+        if (typeof (function(orig){ 
+  window.__run = async function(){ try{ __imagenClearState(); }catch{}; return await orig.apply(this, arguments); };
+  return window.__run;
+})(window.__run) === 'function'){
+          const __origRun = (function(orig){ 
+  window.__run = async function(){ try{ __imagenClearState(); }catch{}; return await orig.apply(this, arguments); };
+  return window.__run;
+})(window.__run);
+          (function(orig){ 
+  window.__run = async function(){ try{ __imagenClearState(); }catch{}; return await orig.apply(this, arguments); };
+  return window.__run;
+})(window.__run) = async function(){
             const ret = await __origRun();
             const id = setInterval(__refreshCredits, 1500);
             setTimeout(()=>clearInterval(id), 15000);
@@ -345,7 +360,10 @@ showStatus('❌ Generation failed.','text-rose-300');
 }
 
 // Main run
-window.__run=async function(){
+(function(orig){ 
+  window.__run = async function(){ try{ __imagenClearState(); }catch{}; return await orig.apply(this, arguments); };
+  return window.__run;
+})(window.__run)=async function(){
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
@@ -398,8 +416,8 @@ window.__run=async function(){
     const id = resJson?.id || resJson?.prediction_id || resJson?.data?.id || null;
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-
-    // Start polling prediction
+    try{ __imagenSaveState({ id, run_id: rid, uid, result_url: null, failed: false }); }catch{}
+// Start polling prediction
     imagenCheckPoll(id, uid, rid);
 
   }catch(e){
@@ -414,9 +432,7 @@ function __imagenSaveState(state){
 function __imagenLoadState(){
   try{ return JSON.parse(localStorage.getItem('imagen:lastRun')||'{}'); }catch{ return {}; }
 }
-function __imagenClearState(){
-  try{ localStorage.removeItem('imagen:lastRun');
-  try{ __imagenSaveState({ id: (j.taskId||id), run_id: (runId||rid||''), uid: auth.user.id, result_url: null, failed: false }); }catch{}
+function __imagenClearState(){ try{ localStorage.removeItem('imagen:lastRun'); }catch{} }catch{} }catch{} }); }catch{}
  }catch{}
 }
 
