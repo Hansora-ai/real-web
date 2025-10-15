@@ -459,7 +459,7 @@ window.__run=async function(){
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'nb_results', filter: 'run_id=eq.' + rid },
         (payload) => {
-          const url = payload?.new?.image_url;
+          const url = payload?.new?.result_url;
           if (url) onResult(url);
         }
       )
@@ -473,14 +473,13 @@ window.__run=async function(){
     while (!__done && Date.now() - started < 200000) { // up to 120s
       await new Promise(r => setTimeout(r, 1500));
       const { data: row } = await supabase
-        .from('user_generations')
-        .select('image_url')
+        .from('user_generations').select('result_url')
         .eq('user_id', uid)
         .eq('run_id', rid)
         .limit(1)
         .maybeSingle();
 
-      const url = row?.image_url || null;
+      const url = row?.result_url || null;
       if (url) { onResult(url); break; }
     }
 
@@ -595,8 +594,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
     if (!user) return;
 
     const { data: row } = await supabase
-      .from('user_generations')
-      .select('id, user_id, provider, result_url, created_at, status')
+      .from('user_generations').select('id,user_id,provider,result_url,created_at,run_id')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -622,11 +620,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
     }
 
     // If terminal failed -> render failure + persist
-    if (st === 'failed'){
-      window.__renderedFromServer = true;
-      const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
-      showStatus(msg, 'text-rose-300');
-      try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{}
+    )); } catch{}
       try {
         const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
         if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
@@ -709,23 +703,18 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         await new Promise(r => setTimeout(r, 1500));
         try{
           const { data: row } = await supabase
-            .from('user_generations')
-            .select('image_url,status')
+            .from('user_generations').select('result_url')
             .eq('run_id', p.run_id)
             .maybeSingle();
-          const url = row?.image_url || null;
-          const st = (row?.status || '').toLowerCase();
+          const url = row?.result_url || null;
+          
           if (url){
             window.onResult(url);
             try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{};
             try { localStorage.removeItem('nb_pending'); } catch{};
             break;
           }
-          if (st === 'failed'){
-            await refundHalfCreditOnce(p.taskId);
-            const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
-            showStatus(msg, 'text-rose-300');
-            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
+          )); } catch{};
             try { localStorage.removeItem('nb_pending'); } catch{};
             break;
           }
