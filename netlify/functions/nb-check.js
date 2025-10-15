@@ -60,6 +60,10 @@ function kieHeaders(){ return { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 
 // Merge images from *all* success endpoints instead of returning at the first success.
 async function fetchAll(taskId){
   const endpoints = [
+    // Google / Nano Banana provider endpoints
+    `${KIE_BASE}/api/v1/google/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_BASE}/api/v1/google/result?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_BASE}/api/v1/google/getTask?taskId=${encodeURIComponent(taskId)}`,
     // MJ endpoints first (usually contain full set for MidJourney)
     `${KIE_BASE}/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
     `${KIE_BASE}/api/v1/mj/result?taskId=${encodeURIComponent(taskId)}`,
