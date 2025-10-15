@@ -93,8 +93,13 @@ exports.handler = async (event) => {
     }
 
     if (!finalUrls.length) {
-      return reply(200, { ok:true, saved:false, note:'no allowed final image_url; not inserting' });
-    }
+  const failed = isFailurePayload(data);
+  if (failed && (uid || run_id)) {
+    try { await markFailedAndRefund(uid, run_id, taskId); } catch {}
+    return reply(200, { ok:true, saved:false, failed:true, note:'failure payload: refunded/marked failed' });
+  }
+  return reply(200, { ok:true, saved:false, note:'no allowed final image_url; not inserting' });
+}
 
     // Update user_generations with the first URL
     try {
@@ -219,4 +224,94 @@ function pickResultUrls(obj, limit=4){
     }
   }
   return out;
+}
+
+
+function _num(x){ const n = Number(x); return Number.isFinite(n) ? n : NaN; }
+function _txt(x){ try { return (x ?? '') + ''; } catch { return ''; } }
+
+function isFailurePayload(d){
+  try{
+    const s = (_txt(d?.status) + ' ' + _txt(d?.state) + ' ' + _txt(d?.result?.status) + ' ' + _txt(d?.data?.state) + ' ' + _txt(d?.data?.status)).toLowerCase();
+    if (/\b(fail|failed|failure|error)\b/.test(s)) return true;
+    const codeTop = _num(d?.code);
+    const codeNested = _num(d?.data?.failCode || d?.data?.code || d?.errorCode || d?.code);
+    if ((Number.isFinite(codeTop) && codeTop >= 400) || (Number.isFinite(codeNested) && codeNested >= 400)) return true;
+    const msg = (_txt(d?.msg) + ' ' + _txt(d?.message) + ' ' + _txt(d?.data?.failMsg) + ' ' + _txt(d?.data?.message) + ' ' + _txt(d?.error?.message)).toLowerCase();
+    if (/(\bsensitive\b|\bflagged\b|\bpolicy\b|\bblocked\b|\bforbidden\b|\bdenied\b)/.test(msg)) return true;
+  }catch{}
+  return false;
+}
+
+async function markFailedAndRefund(uid, run_id, taskId){
+  try{
+    if (!UG_URL || !SERVICE_KEY || !uid) return false;
+    const base = SUPABASE_URL.replace(/\/+$/,'');
+    const ug = `${base}/rest/v1/user_generations`;
+
+    // Locate row
+    let row = null;
+    if (run_id){
+      const r = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=*,meta`, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+      if (r.ok){ const a = await r.json(); if (Array.isArray(a) && a.length) row = a[0]; }
+    }
+    if (!row && taskId){
+      const r2 = await fetch(`${ug}?user_id=eq.${encodeURIComponent(uid)}&meta->>task_id=eq.${encodeURIComponent(taskId)}&select=*,meta`, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+      if (r2.ok){ const a2 = await r2.json(); if (Array.isArray(a2) && a2.length) row = a2[0]; }
+    }
+
+    const meta = (row && row.meta) || {};
+    if (meta.refunded === true){
+      // ensure status is failed
+      const newMeta = { ...meta, status: 'failed', refunded: true };
+      if (row && row.id){
+        await fetch(`${ug}?id=eq.${encodeURIComponent(row.id)}`, {
+          method:'PATCH',
+          headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+          body: JSON.stringify({ meta: newMeta })
+        });
+      }
+      return true;
+    }
+
+    // Determine refund amount
+    let refund = 0.5;
+    const mcost = Number(meta.cost);
+    if (!Number.isNaN(mcost) && mcost > 0) refund = mcost;
+
+    // Credit back to profiles
+    const profGet = `${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
+    const g = await fetch(profGet, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+    const arr = await g.json().catch(()=>[]);
+    const cur = (Array.isArray(arr) && arr[0] && (arr[0].credits ?? 0)) || 0;
+    const next = cur + refund;
+    await fetch(`${base}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
+      method:'PATCH',
+      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      body: JSON.stringify({ credits: next })
+    });
+
+    // Mark failed
+    const newMeta = { ...meta, status: 'failed', refunded: true };
+    if (row && row.id){
+      await fetch(`${ug}?id=eq.${encodeURIComponent(row.id)}`, {
+        method:'PATCH',
+        headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+        body: JSON.stringify({ meta: newMeta })
+      });
+    } else {
+      const filt = run_id
+        ? `user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`
+        : `user_id=eq.${encodeURIComponent(uid)}&meta->>task_id=eq.${encodeURIComponent(taskId)}`;
+      await fetch(`${ug}?${filt}`, {
+        method:'PATCH',
+        headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+        body: JSON.stringify({ meta: newMeta })
+      });
+    }
+    return true;
+  }catch(e){
+    console.warn('[kie-callback] refund failed', e);
+    return false;
+  }
 }
