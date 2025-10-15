@@ -6,22 +6,10 @@
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>HANSORA • Nano Banana</title>
 <link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" rel="icon"/>
-<script src="https://cdn.tailwindcss.com">
-// Grace window timer for nb-check 404
-let NB_STARTED_AT = 0;
-
-// alias for unified naming
-function pollNb(taskId){ return nbCheckPoll(taskId); }
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-// alias for unified naming
-function pollNb(taskId){ return nbCheckPoll(taskId); }
-</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
-<script src="/kie-upload-bridge.js">
-// alias for unified naming
-function pollNb(taskId){ return nbCheckPoll(taskId); }
-</script>
+<script src="/kie-upload-bridge.js"></script>
 <script>
 // === Live credits (Supabase Realtime) + pre-run check ===
 (async function HANSORA_LIVE_CREDITS(){
@@ -60,11 +48,6 @@ function pollNb(taskId){ return nbCheckPoll(taskId); }
     // patch __run to guard when credits are 0 (without changing its internals)
     const __origRun = window.__run;
     window.__run = async function(){
-  // start polling window
-  NB_STARTED_AT = Date.now();
-  // set start time once per submission
-  NB_STARTED_AT = Date.now();
-
       try{
         const { data: prof2 } = await supabase
           .from('profiles')
@@ -82,9 +65,6 @@ function pollNb(taskId){ return nbCheckPoll(taskId); }
     };
   }catch(e){ console.warn('credits live failed', e); }
 })();
-
-// alias for unified naming
-function pollNb(taskId){ return nbCheckPoll(taskId); }
 </script>
 <script>
 (function(){
@@ -137,9 +117,6 @@ function pollNb(taskId){ return nbCheckPoll(taskId); }
     }catch(e){ console.warn('live credits wrapper error', e); }
   });
 })();
-
-// alias for unified naming
-function pollNb(taskId){ return nbCheckPoll(taskId); }
 </script>
 <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
@@ -175,6 +152,9 @@ function pollNb(taskId){ return nbCheckPoll(taskId); }
 <a class="hover:text-white/90" href="index.html#faq">FAQ</a>
 </nav>
 <div class="flex items-center gap-3"><a class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft" href="login.html" id="btnLoginSignup">Login / Signup</a>
+
+
+
 <div class="hidden items-center gap-2" id="navUser">
 <span class="text-sm text-white/80 mr-2" id="navCredits">0⚡</span>
 <div class="relative">
@@ -291,6 +271,7 @@ function onResult(url){
     downloadLink.textContent='Download';
 
     showStatus('✅ Done.','text-emerald-300');
+    try { localStorage.setItem('nb_last_run', JSON.stringify({ t: Date.now(), ok:true, url })); } catch{}
   };
   
   img.src=url;
@@ -344,26 +325,43 @@ async function backfillSubmitted(uid, rid, taskId){
 // Option A: poll nb-check (does NOT rely on webhook)
 async function nbCheckPoll(taskId, uid, rid){
   if(!taskId) return;
-  const startWall = Date.now();
-  while(!__done && Date.now() - startWall < 180000){ // up to 3 min
+  const start = Date.now();
+  while(!__done && Date.now() - start < 180000){ // up to 3 min
     try{
-      const url = '/.netlify/functions/nb-check?taskId=' + encodeURIComponent(taskId)
-        + '&startedAt=' + NB_STARTED_AT + '&ttl=' + NB_TTL_SEC;
-      const r = await fetch(url, { headers: { 'X-USER-ID': uid || '' } });
-      let j; try { j = await r.json(); } catch { j = {}; }
+      const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId), {
+        headers: { 'X-USER-ID': uid }
+      });
+
+      let j;
+      try { j = await r.json(); }
+      catch {
+        const txt = await r.text();
+        try { j = JSON.parse(txt); } catch { j = { raw: txt }; }
+      }
+
       const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
       if(['success','succeeded','completed','done'].includes(status)){
-        const url = (j.image_url) ? j.image_url : (Array.isArray(j.images) ? j.images[0] : null);
-        if (url) {
-          onResult(url);
-          try { localStorage.removeItem('nb_last_run'); } catch{}
+        const url = await (async function tryExtractImageUrl(o){
+          if(!o) return null;
+          if(typeof o==='string'&&/^https?:\/\//.test(o)) return o;
+          if(o.imageUrl) return o.imageUrl;
+          if(o.outputUrl) return o.outputUrl;
+          if(o.url) return o.url;
+          if(o.data) { const x=await tryExtractImageUrl(o.data); if(x) return x; }
+          if(o.result) { const x=await tryExtractImageUrl(o.result); if(x) return x; }
+          if(Array.isArray(o.images)&&o.images[0]?.url) return o.images[0].url;
+          if(Array.isArray(o.resultUrls) && o.resultUrls[0]) return o.resultUrls[0];
+          if(Array.isArray(o.output)&&o.output[0]?.url) return o.output[0].url;
+          return null;
+        })(j);
+        if(url){
+          onResult(url);               // show immediately
+          backfillRow(uid, rid, taskId, url); // ensure Supabase row exists
         }
         break;
       }
-      if(['failed','error','failure','fail'].includes(status)){
-        showStatus('❌ Generation failed. Credits refunded.','text-rose-300');
-        try{ if (typeof __refreshCredits==='function') await __refreshCredits(); }catch(e){}
-        try { localStorage.removeItem('nb_last_run'); } catch{}
+      if(['failed','error'].includes(status)){
+        showStatus('❌ Generation failed.','text-rose-300');
         break;
       }
     }catch{}
@@ -443,15 +441,7 @@ window.__run=async function(){
     }
 
     const resJson = await res.json().catch(()=> ({}));
-    const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.result?.taskId || resJson?.id || null;
-  // start polling nb-check (startedAt included)
-  try { pollNb(taskId); } catch(_) { try { nbCheckPoll(taskId); } catch(e){} }
-
-  // start polling nb-check
-  try { pollNb(taskId); } catch(_) { try { nbCheckPoll(taskId); } catch(e){} }
-
-    try { __NB_SET_LAST_SUBMIT__(uid, rid, taskId); } catch(e){}
-
+    const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
 
     // ensure Usage shows even if user navigates away
     backfillSubmitted(uid, rid, taskId);
@@ -472,10 +462,11 @@ window.__run=async function(){
       .subscribe();
 
     // start polling taskId (and backfill DB when done)
+    nbCheckPoll(taskId, uid, rid);
 
     // fallback: poll table directly in case realtime is blocked
     const started = Date.now();
-    while (!__done && Date.now() - started < 500000) { // up to 120s
+    while (!__done && Date.now() - started < 200000) { // up to 120s
       await new Promise(r => setTimeout(r, 1500));
       const { data: row } = await supabase
         .from('nb_results')
@@ -488,20 +479,18 @@ window.__run=async function(){
       const url = row?.image_url || null;
       if (url) { onResult(url); break; }
     }
-
     if (!__done) {
-      showStatus('Still processing… you can wait or try again.','text-yellow-300');
+      await refundHalfCredit();
+      const msg = "❌ Generation failed. Credits refunded. Try again or contact us.";
+      showStatus(msg, "text-rose-300");
+      try { localStorage.setItem("nb_last_run", JSON.stringify({ t: Date.now(), ok:false, msg })); } catch{}
     }
-
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300')
   }finally{
     runBtn.disabled=false;runBtn.textContent='Run (cost: 0.5⚡)';
   }
 };
-
-// alias for unified naming
-function pollNb(taskId){ return nbCheckPoll(taskId); }
 </script>
 <!-- Delete buttons + safe validation (additive, non-destructive) -->
 <script>
@@ -574,9 +563,6 @@ function pollNb(taskId){ return nbCheckPoll(taskId); }
     }
   });
 })();
-
-// alias for unified naming
-function pollNb(taskId){ return nbCheckPoll(taskId); }
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -591,44 +577,60 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// alias for unified naming
-function pollNb(taskId){ return nbCheckPoll(taskId); }
+<script>
+async function refundHalfCredit(){
+  try{
+    const ures = await supabase.auth.getUser();
+    const user = ures?.data?.user;
+    if(!user) return false;
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    const cur = prof?.credits ?? 0;
+    const next = Math.round((cur + 0.5) * 1000) / 1000;
+    await supabase
+      .from('profiles')
+      .update({ credits: next })
+      .eq('user_id', user.id);
+    try{ const nav = document.getElementById('navCredits'); if (nav) nav.textContent = next + '⚡'; }catch{}
+    return true;
+  }catch(e){ console.warn('refund failed', e); return false; }
+}
+</script>
 </script>
 
 <script>
-(function(){
-  function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
-  function saveLastRun(rec){ try { localStorage.setItem('nb_last_run', JSON.stringify(rec)); } catch {} }
-  function clearLastRun(){ try { localStorage.removeItem('nb_last_run'); } catch {} }
-  window.__NB_SET_LAST_SUBMIT__ = function(uid, run_id, taskId){
-    try { saveLastRun({ uid, run_id, taskId, ts: Date.now() }); } catch {}
-  };
-  async function resumeIfNeeded(){
-    try{
-      const ures = await supabase.auth.getUser();
-      const user = ures?.data?.user; if(!user) return;
-      const rec = safeParse(localStorage.getItem('nb_last_run')); if(!rec) return;
-      if (rec.uid !== user.id) return;
-      // First, check DB for a result
-      const { data: row } = await supabase
-        .from('nb_results')
-        .select('image_url')
-        .eq('user_id', user.id)
-        .eq('run_id', rec.run_id)
-        .limit(1)
-        .maybeSingle();
-      const url = row?.image_url || null;
-      if (url){ onResult(url); clearLastRun(); return; }
-      // Else, resume polling
-      nbCheckPoll(rec.taskId, rec.uid, rec.run_id);
-    }catch{}
-  }
-  document.addEventListener('DOMContentLoaded', resumeIfNeeded);
-})();
-
-// alias for unified naming
-function pollNb(taskId){ return nbCheckPoll(taskId); }
+document.addEventListener('DOMContentLoaded', function restoreLastRun(){
+  try{
+    const raw = localStorage.getItem('nb_last_run');
+    if(!raw) return;
+    const last = JSON.parse(raw);
+    const box = document.getElementById('resultBox');
+    const dl  = document.getElementById('downloadLink');
+    if (!box) return;
+    if (last.ok && last.url){
+      const img = new Image();
+      img.onload = function(){
+        box.innerHTML='';
+        img.className = 'w-full h-full object-contain';
+        box.appendChild(img);
+      };
+      img.src = last.url;
+      if (dl) {
+        const __name = (last.url.split('/').pop()||'generation');
+        dl.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(last.url)+'&name='+encodeURIComponent(__name);
+        dl.setAttribute('download', __name);
+        dl.classList.remove('hidden');
+        dl.textContent='Download';
+      }
+    } else if (last.msg){
+      box.innerHTML = '<span class="text-xs text-rose-300">'+ last.msg +'</span>';
+    }
+  }catch(e){}
+});
 </script>
-
 </body>
+
 </html>
