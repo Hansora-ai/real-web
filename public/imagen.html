@@ -289,7 +289,7 @@ setModel('fast');
 
 // Guarded renderer
 let __done=false;
-function onResult(url){
+function onResult(url){ try{ const s=__imagenLoadState(); s.result_url=url; s.failed=false; __imagenSaveState(s);}catch{};
   if(__done || !url) return;
   __done = true;
   const img=new Image();
@@ -330,7 +330,8 @@ async function imagenCheckPoll(id, uid, rid){
         if(url){ onResult(url); break; }
       }
       if(status === 'failed' || status === 'canceled'){
-        showStatus('❌ Generation failed.','text-rose-300');
+        try{ const s=__imagenLoadState(); s.failed=true; __imagenSaveState(s);}catch{};
+showStatus('❌ Generation failed.','text-rose-300');
         runBtn.disabled=false; runBtn.textContent=(modelChoice.value==='ultra'?'Run (cost: 1⚡)':'Run (cost: 0.5⚡)');
         break;
       }
@@ -405,6 +406,45 @@ window.__run=async function(){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
   } finally{ /* keep disabled while polling; re-enabled on success/fail/timeout */ }
 };
+
+// === Imagen persistence (minimal + scoped to current user) ===
+function __imagenSaveState(state){
+  try{ localStorage.setItem('imagen:lastRun', JSON.stringify(state||{})); }catch{}
+}
+function __imagenLoadState(){
+  try{ return JSON.parse(localStorage.getItem('imagen:lastRun')||'{}'); }catch{ return {}; }
+}
+function __imagenClearState(){
+  try{ localStorage.removeItem('imagen:lastRun');
+  try{ __imagenSaveState({ id: (j.taskId||id), run_id: (runId||rid||''), uid: auth.user.id, result_url: null, failed: false }); }catch{}
+ }catch{}
+}
+
+// Resume last run on load
+document.addEventListener('DOMContentLoaded', async () => {
+  try{
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if(!user) return;
+    const s = __imagenLoadState();
+    if(!s || !s.uid || s.uid !== user.id) return;
+    if (s.result_url){
+      try{
+        if (typeof onResult === 'function'){ onResult(s.result_url); }
+        showStatus('Last result restored.', 'text-emerald-300');
+      }catch{}
+      return;
+    }
+    if (s.id && s.run_id){
+      try{
+        showStatus('Resuming your previous run…', 'text-zinc-300');
+        if (typeof imagenCheckPoll === 'function'){
+          await imagenCheckPoll(s.id, s.uid, s.run_id);
+        }
+      }catch{}
+    }
+  }catch{}
+});
 </script>
 </body>
 </html>
