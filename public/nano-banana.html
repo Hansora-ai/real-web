@@ -596,7 +596,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
 
     const { data: row } = await supabase
       .from('user_generations')
-      .select('id, user_id, provider, result_url, created_at, status')
+      .select('id, user_id, provider, image_url, run_id, created_at, status')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -605,7 +605,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
     if (!row) return;
 
     const st = String(row.status || '').toLowerCase();
-    const url = row.result_url || null;
+    const url = row.image_url || null;
 
     // If terminal success -> render image and persist
     if (url){
@@ -747,7 +747,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
 <script>
 // ==== Imagen-style minimal persistence for Nano Banana ====
 (function(){
-  const KEY = 'nb:lastRun';
+  const KEY = 'nb_last_run';
   function __nbSaveState(state){ try{ localStorage.setItem(KEY, JSON.stringify(state||{})); }catch{} }
   function __nbLoadState(){ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch{ return {}; } }
   function __nbClearState(){ try{ localStorage.removeItem(KEY); }catch{} }
