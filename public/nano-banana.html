@@ -271,7 +271,7 @@ function onResult(url){
     downloadLink.textContent='Download';
 
     showStatus('✅ Done.','text-emerald-300');
-    try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{};
+    try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url };
     try { localStorage.removeItem('nb_pending'); } catch{};
   };
   
@@ -340,7 +340,7 @@ async function nbCheckPoll(taskId, uid, rid){
         try { j = JSON.parse(txt); } catch { j = { raw: txt }; }
       }
 
-      const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
+      const status = String(j || j.data? || j.result? || j.state || '').toLowerCase();
       if(['success','succeeded','completed','done'].includes(status)){
         const url = await (async function tryExtractImageUrl(o){
           if(!o) return null;
@@ -415,7 +415,7 @@ window.__run=async function(){
     };
 
     const settled = await Promise.allSettled(files.map(uploadOne));
-    const urls = settled.filter(x => x.status === 'fulfilled' && x.value).map(x => x.value);
+    const urls = settled.filter(x => x === 'fulfilled' && x.value).map(x => x.value);
 
     // guard: if no URLs were produced, stop here
     if (urls.length === 0) {
@@ -434,7 +434,7 @@ window.__run=async function(){
       body:JSON.stringify({urls, prompt: (promptEl.value||'.'), format:'png', size:(document.getElementById('size')?.value||'auto'), run_id: rid})
     });
 
-    if (res.status === 202 || res.ok) {
+    if (res === 202 || res.ok) {
       await chargeOneCredit();
     } else {
       const errT = await res.text().catch(()=> '');
@@ -445,7 +445,7 @@ window.__run=async function(){
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
 
     // store pending ticket so we can resume after refresh
-    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 })); } catch{}
+    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 }
 
     // ensure Usage shows even if user navigates away
     backfillSubmitted(uid, rid, taskId);
@@ -454,18 +454,7 @@ window.__run=async function(){
     runBtn.textContent='Processing…';
 
     // subscribe to Supabase (if webhook inserts there)
-    channel = supabase.channel('nb_results_' + rid)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'nb_results', filter: 'run_id=eq.' + rid },
-        (payload) => {
-          const url = payload?.new?.result_url;
-          if (url) onResult(url);
-        }
-      )
-      .subscribe();
-
-    // start polling taskId (and backfill DB when done)
+        // start polling taskId (and backfill DB when done)
     nbCheckPoll(taskId, uid, rid);
 
     // fallback: poll table directly in case realtime is blocked
@@ -475,6 +464,7 @@ window.__run=async function(){
       const { data: row } = await supabase
         .from('user_generations').select('result_url')
         .eq('user_id', uid)
+        .eq('provider','Nano Banana')
         .eq('run_id', rid)
         .limit(1)
         .maybeSingle();
@@ -572,7 +562,7 @@ window.__run=async function(){
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.querySelector('input[type="file"]');
-  const statusEl = document.getElementById('status') || document.querySelector('.status') || document.querySelector('#status-text');
+  const statusEl = document.getElementById('status') || document.querySelector('') || document.querySelector('#status-text');
   if (fileInput) {
     fileInput.addEventListener('change', () => {
       if (statusEl) statusEl.textContent = '';
@@ -596,21 +586,21 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
     const { data: row } = await supabase
       .from('user_generations').select('id,user_id,provider,result_url,created_at,run_id')
       .eq('user_id', user.id)
+      .eq('provider','Nano Banana')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (!row) return;
 
-    const st = String(row.status || '').toLowerCase();
-    const url = row.result_url || null;
+        const url = row.result_url || null;
 
     // If terminal success -> render image and persist
     if (url){
       if (!window.__done) {
         window.__renderedFromServer = true;
         onResult(url);
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{}
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url }
         try {
           const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
           if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
@@ -619,8 +609,8 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
       return;
     }
 
-    // If terminal failed -> render failure + persist
-    )); } catch{}
+    
+    
       try {
         const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
         if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
@@ -692,7 +682,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         await refundHalfCreditOnce(p.taskId);
         const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
         showStatus(msg, 'text-rose-300');
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg };
         try { localStorage.removeItem('nb_pending'); } catch{};
       })();
       return;
@@ -705,16 +695,17 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
           const { data: row } = await supabase
             .from('user_generations').select('result_url')
             .eq('run_id', p.run_id)
+            .eq('provider','Nano Banana')
             .maybeSingle();
           const url = row?.result_url || null;
           
           if (url){
             window.onResult(url);
-            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{};
+            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url };
             try { localStorage.removeItem('nb_pending'); } catch{};
             break;
           }
-          )); } catch{};
+          ;
             try { localStorage.removeItem('nb_pending'); } catch{};
             break;
           }
@@ -724,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         await refundHalfCreditOnce(p.taskId);
         const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
         showStatus(msg, 'text-rose-300');
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
+        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg };
         try { localStorage.removeItem('nb_pending'); } catch{};
       }
     })();
