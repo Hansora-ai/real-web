@@ -85,7 +85,10 @@ async function fetchAll(taskId){
         for (const u of imgs) if (!merged.includes(u)) merged.push(u);
         if (merged.length >= 4) break; // got all 4, stop early
       }
-      if (normalizeStatus(data) === 'failed') { sawFailed = true; }
+      const stat = normalizeStatus(data);
+      if (stat === 'failed') { sawFailed = true; }
+      const hint = providerHint(data);
+      if (/google\s*\/\s*nano-?banana/i.test(hint) && (stat === 'failed' || hasFailureHint(data))) { sawFailed = true; }
       // do not early-return on pending; try other endpoints
     } catch {}
   }
@@ -113,6 +116,26 @@ function allowed(u){
   if (!ALLOWED_HOSTS.has(h)) return false;
   if (!/\/(m|f|workers)\//i.test(u)) return false;
   return true;
+}
+
+
+function valStr(x){ try { return (x??'')+''; } catch { return ''; } }
+function hasFailureHint(d){
+  try{
+    const s = valStr(d?.status || d?.state || d?.result?.status || d?.data?.status).toLowerCase();
+    if (s === 'failure') return true;
+    const code = Number(d?.errorCode || d?.code || d?.error?.code || d?.data?.code);
+    if (code === 422) return true;
+    const msg = (valStr(d?.message || d?.error?.message || d?.data?.message || d?.result?.message)).toLowerCase();
+    if (/(sensitive|flagged|policy|blocked)/.test(msg)) return true;
+  }catch{}
+  return false;
+}
+function providerHint(d){
+  const prov = valStr(d?.provider || d?.model || d?.interfaceName || d?.data?.provider || d?.data?.model).toLowerCase();
+  const name = valStr(d?.result?.modelName || d?.result?.provider || d?.params?.provider).toLowerCase();
+  const source = (prov + ' ' + name).trim();
+  return source;
 }
 
 function firstImageUrls(obj, limit=4){
