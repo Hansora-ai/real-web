@@ -91,6 +91,19 @@ async function fetchAll(taskId){
 }
 
 function normalizeStatus(d){
+// Nano Banana failure hints
+try {
+  const __statusRaw =
+    (body && (body.status || body.state)) ||
+    (body && body.data && (body.data.state || body.data.status)) ||
+    (body && body.result && (body.result.state || body.result.status)) || '';
+  const __s = String(__statusRaw).toLowerCase();
+  if (__s === 'fail' || __s === 'failure') return 'failed';
+  if (body && typeof body.code !== 'undefined' && Number(body.code) >= 400) return 'failed';
+  if (body && body.data && (body.data.failCode || body.data.failMsg)) return 'failed';
+  if (body && body.msg && String(body.msg).toLowerCase().includes('failed')) return 'failed';
+} catch (_) {}
+
   const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || '').toLowerCase();
   if (['success','succeeded','completed','done'].includes(s)) return 'success';
   if (['failed','error'].includes(s)) return 'failed';
