@@ -474,7 +474,7 @@ window.__run=async function(){
       await new Promise(r => setTimeout(r, 1500));
       const { data: row } = await supabase
         .from('user_generations')
-        .select('image_url')
+        .select('result_url')
         .eq('user_id', uid)
         .eq('run_id', rid)
         .limit(1)
@@ -596,7 +596,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
 
     const { data: row } = await supabase
       .from('user_generations')
-      .select('id, user_id, provider, image_url, run_id, created_at, status')
+      .select('id, user_id, provider, result_url, run_id, created_at, status')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -605,7 +605,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
     if (!row) return;
 
     const st = String(row.status || '').toLowerCase();
-    const url = row.image_url || null;
+    const url = row.result_url || null;
 
     // If terminal success -> render image and persist
     if (url){
@@ -710,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         try{
           const { data: row } = await supabase
             .from('user_generations')
-            .select('image_url,status')
+            .select('result_url,status')
             .eq('run_id', p.run_id)
             .maybeSingle();
           const url = row?.image_url || null;
