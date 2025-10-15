@@ -6,10 +6,22 @@
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>HANSORA • Nano Banana</title>
 <link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" rel="icon"/>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.tailwindcss.com">
+// Grace window timer for nb-check 404
+let NB_STARTED_AT = 0;
+
+// alias for unified naming
+function pollNb(taskId){ return nbCheckPoll(taskId); }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+// alias for unified naming
+function pollNb(taskId){ return nbCheckPoll(taskId); }
+</script>
 <!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
-<script src="/kie-upload-bridge.js"></script>
+<script src="/kie-upload-bridge.js">
+// alias for unified naming
+function pollNb(taskId){ return nbCheckPoll(taskId); }
+</script>
 <script>
 // === Live credits (Supabase Realtime) + pre-run check ===
 (async function HANSORA_LIVE_CREDITS(){
@@ -48,6 +60,9 @@
     // patch __run to guard when credits are 0 (without changing its internals)
     const __origRun = window.__run;
     window.__run = async function(){
+  // set start time once per submission
+  NB_STARTED_AT = Date.now();
+
       try{
         const { data: prof2 } = await supabase
           .from('profiles')
@@ -65,6 +80,9 @@
     };
   }catch(e){ console.warn('credits live failed', e); }
 })();
+
+// alias for unified naming
+function pollNb(taskId){ return nbCheckPoll(taskId); }
 </script>
 <script>
 (function(){
@@ -117,6 +135,9 @@
     }catch(e){ console.warn('live credits wrapper error', e); }
   });
 })();
+
+// alias for unified naming
+function pollNb(taskId){ return nbCheckPoll(taskId); }
 </script>
 <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
@@ -324,7 +345,7 @@ async function nbCheckPoll(taskId, uid, rid){
   const start = Date.now();
   while(!__done && Date.now() - start < 180000){ // up to 3 min
     try{
-      const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId)+'&run_id='+encodeURIComponent(rid)+'&run_id='+encodeURIComponent(rid), {
+      const r = await fetch(&startedAt=' + NB_STARTED_AT + '&ttl=180'/.netlify/functions/nb-check?taskId=&startedAt=' + NB_STARTED_AT + '&ttl=180'+encodeURIComponent(taskId)+'&run_id='+encodeURIComponent(rid)+'&run_id='+encodeURIComponent(rid), {
         headers: { 'X-USER-ID': uid }
       });
 
@@ -440,6 +461,9 @@ window.__run=async function(){
 
     const resJson = await res.json().catch(()=> ({}));
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.result?.taskId || resJson?.id || null;
+  // start polling nb-check
+  try { pollNb(taskId); } catch(_) { try { nbCheckPoll(taskId); } catch(e){} }
+
     
     try { __NB_SET_LAST_SUBMIT__(uid, rid, taskId); } catch(e){}
 
@@ -491,6 +515,9 @@ window.__run=async function(){
     runBtn.disabled=false;runBtn.textContent='Run (cost: 0.5⚡)';
   }
 };
+
+// alias for unified naming
+function pollNb(taskId){ return nbCheckPoll(taskId); }
 </script>
 <!-- Delete buttons + safe validation (additive, non-destructive) -->
 <script>
@@ -563,6 +590,9 @@ window.__run=async function(){
     }
   });
 })();
+
+// alias for unified naming
+function pollNb(taskId){ return nbCheckPoll(taskId); }
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -576,6 +606,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
   }
 });
+
+// alias for unified naming
+function pollNb(taskId){ return nbCheckPoll(taskId); }
 </script>
 
 <script>
@@ -608,6 +641,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   document.addEventListener('DOMContentLoaded', resumeIfNeeded);
 })();
+
+// alias for unified naming
+function pollNb(taskId){ return nbCheckPoll(taskId); }
 </script>
 
 </body>
