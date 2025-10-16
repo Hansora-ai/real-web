@@ -4,11 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Usage — HANSORA AI</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-<script>
-
-</script>
-<script>
+  <script src="https://cdn.tailwindcss.com">
 // Minimal auth wiring for Usage modal
 function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); document.getElementById('authMsg').textContent=''; }
 function closeAuth(){ document.getElementById('authModal')?.classList.add('hidden'); document.getElementById('authMsg').textContent=''; }
@@ -45,6 +41,7 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
     m.textContent = 'Check your email to confirm';
   }catch(e){ m.textContent = String(e||'Signup failed'); }
 });
+
 </script>
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
@@ -170,14 +167,7 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
     const $doSignup = document.getElementById('btnDoSignup');
     const $openLogin = document.getElementById('openLogin');
 
-    const $btnLoginNav = document.getElementById('btnLoginNav');
-    const $btnGetStarted = document.getElementById('btnGetStarted');
-    const $navMenu = document.getElementById('navMenu');
-    const $navUser = document.getElementById('navUser');
-    const $navCredits = document.getElementById('navCredits');
-    const $navAvatar = document.getElementById('navAvatar');
-    const $navAvatarImg = document.getElementById('navAvatarImg');
-const $usageList = document.getElementById('usageList');
+    const $usageList = document.getElementById('usageList');
     const $usageEmpty = document.getElementById('usageEmpty');
     const $notLogged = document.getElementById('notLogged');
 
@@ -188,11 +178,11 @@ const $usageList = document.getElementById('usageList');
       else{ $authTitle.textContent='Log in'; $pass2In.classList.add('hidden'); }
     }
     $openLogin.addEventListener('click', ()=>{ setAuthMode('login'); openAuth(); });
-    $btnLoginNav?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
-    $btnGetStarted?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
+    $btnLoginNav.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+    $btnGetStarted.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
     $authClose.addEventListener('click', closeAuth);
 
-    $navAvatar?.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
+    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
     document.addEventListener('click', (e)=>{
       if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
     });
@@ -229,19 +219,20 @@ const $usageList = document.getElementById('usageList');
     }
     function esc(s){ return (s||'').replace(/</g,'&lt;'); }
 
-    let currentWindowDays = 7; let fetchedIds = new Set(); const makeSince = (d)=> new Date(Date.now() - d*24*60*60*1000).toISOString();
-async function loadUsage(){
+    async function loadUsage(){
       const { data:userData } = await supabase.auth.getUser();
       const user = userData.user;
       if(!user){ $notLogged.classList.remove('hidden'); return; }
       const prof = await getOrCreateProfile(user);
       await showLoggedInUI(prof, user);
 
+      // initial window: last 7 days; "Load more" expands to 30
+      const days = window.__usageDays || 7;
+      const since = new Date(Date.now() - days*24*60*60*1000).toISOString();
 
-      const since = makeSince(currentWindowDays);
       const { data, error } = await supabase
         .from('user_generations')
-        .select('id,created_at,provider,kind,prompt,result_url,meta,thumb_url,image_url,refunded_at')
+        .select('id,created_at,provider,kind,prompt,result_url,image_url,thumb_url,meta,refunded_at')
         .eq('user_id', user.id)
         .gte('created_at', since)
         .order('created_at', { ascending: false })
@@ -250,41 +241,31 @@ async function loadUsage(){
       if(error){ $usageEmpty.textContent = error.message; $usageEmpty.classList.remove('hidden'); return; }
       if(!data || data.length===0){ $usageEmpty.classList.remove('hidden'); return; }
 
-      // Prepare "Load more" button once
-      let $more = document.getElementById('loadMore');
-      if(!$more){
-        $more = document.createElement('button');
-        $more.id = 'loadMore';
-        $more.className = 'mt-6 mx-auto block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10';
-        $more.textContent = 'Load last 30 days';
-        $usageEmpty.after($more);
-        $more.addEventListener('click', async ()=>{
-          $more.disabled = true;
-          currentWindowDays = 30;
-          // Clear "empty" state and fetch more
-          await loadUsage();
-          $more.remove(); // only once
-        });
-      }
+      // de-dupe by id if reloading (when expanding from 7 -> 30)
+      const existing = new Set(Array.from($usageList.children).map(el => el.getAttribute('data-id')));
 
-      // Build cards in small batches to avoid main-thread jank
-      const queue = data.filter(r => !fetchedIds.has(r.id));
-      queue.forEach(r=>fetchedIds.add(r.id));
-
-      function failureInfo(row){
-        const meta = (typeof row.meta === 'string') ? ( ()=>{ try{return JSON.parse(row.meta)}catch{return {}} } )() : (row.meta || {});
-        const failed = (!row.result_url) && (meta.failed === true || !!row.refunded_at || !!meta.refund_reason || !!meta.error_message || (typeof meta.note === 'string' && /fail/i.test(meta.note)));
-        const reason = meta.error_message || meta.refund_reason || meta.note || '';
-        return { failed, reason, meta };
-      }
-
-      function makeCard(row){
+      for(const row of data){
+        if(existing.has(String(row.id))) continue;
         const pretty = new Date(row.created_at).toLocaleString();
-        const { failed, reason, meta } = failureInfo(row);
 
-        // Prefer thumbnails first, then original
-        const rawUrl = row.thumb_url || row.image_url || row.result_url || "";
-        const isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(row.result_url || "");
+        // meta parsing + failure detection
+        let meta = row.meta;
+        if(typeof meta === 'string'){
+          try{ meta = JSON.parse(meta); } catch{ meta = {}; }
+        }
+        meta = meta || {};
+        const failed = (!row.result_url) && (
+          meta.failed === true ||
+          !!row.refunded_at ||
+          !!meta.refund_reason ||
+          !!meta.error_message ||
+          (typeof meta.note === 'string' && /fail|error|timeout/i.test(meta.note))
+        );
+        const failReason = meta.error_message || meta.refund_reason || meta.note || '';
+
+        // prefer thumb -> image -> original
+        const displayUrl = row.thumb_url || row.image_url || row.result_url || '';
+        const isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(row.result_url || displayUrl);
 
         let media = '';
         if(failed){
@@ -292,69 +273,53 @@ async function loadUsage(){
             <div class="h-40 w-full rounded-lg border border-rose-500/30 bg-rose-500/10 flex items-center justify-center text-center p-3">
               <div>
                 <div class="inline-block text-xs uppercase tracking-wide rounded-full bg-rose-500/20 text-rose-300 px-2 py-0.5 mb-2">Failed</div>
-                <p class="text-xs text-rose-200/90">\${(reason && String(reason).slice(0,140)) || 'Generation failed due to an error.'}</p>
+                <p class="text-xs text-rose-200/90">${(String(failReason||'Generation failed due to an error.')).slice(0,140)}</p>
               </div>
             </div>`;
-        } else if (rawUrl) {
-          if(isVideo){
-            const poster = row.thumb_url || row.image_url || '';
-            // Poster-first shell; load video on click
-            media = `
-              <div class="video-shell h-40 w-full rounded-lg border border-white/10 overflow-hidden relative bg-black"
-                   data-src="\${row.result_url || ''}" data-poster="\${poster}">
-                \${poster ? `<img class="poster w-full h-full object-cover" loading="lazy" decoding="async" src="\${poster}" alt="">` : ''}
-                <button class="play absolute inset-0 flex items-center justify-center text-white text-3xl">▶</button>
-              </div>`;
-          } else {
-            media = `<img src="\${rawUrl}" loading="lazy" decoding="async" alt="" class="h-40 w-full object-cover rounded-lg border border-white/10"/>`;
-          }
+        } else if (displayUrl){
+          media = isVideo
+            ? `<video src="${row.result_url || displayUrl}" preload="metadata" controls playsinline class="h-40 w-full object-contain rounded-lg border border-white/10"></video>`
+            : `<img src="${displayUrl}" loading="lazy" decoding="async" alt="" class="h-40 w-full object-cover rounded-lg border border-white/10"/>`;
         } else {
           media = '<div class="text-xs text-zinc-400 p-3">No preview</div>';
         }
 
-        const $card = document.createElement('article');
-        $card.className = 'glass rounded-2xl p-3 border border-white/10';
-        $card.innerHTML = `
-          <div class="aspect-video overflow-hidden rounded-lg bg-black/20 border border-white/10 flex items-center justify-center">\${media}</div>
+        const card = document.createElement('article');
+        card.className = 'glass rounded-2xl p-3 border border-white/10';
+        card.setAttribute('data-id', String(row.id));
+        card.innerHTML = `
+          <div class="aspect-video overflow-hidden rounded-lg bg-black/20 border border-white/10 flex items-center justify-center">${media}</div>
           <div class="mt-3">
             <div class="flex items-center justify-between text-xs text-zinc-400">
-              <span>\${(row.provider || 'Generator')} • \${(row.kind || '')}</span>
-              <span>\${pretty}</span>
+              <span>${row.provider || 'Generator'} • ${row.kind || ''}</span>
+              <span>${pretty}</span>
             </div>
-            <p class="mt-2 text-sm text-zinc-300 line-clamp-2">\${esc(row.prompt)}</p>
-            \${row.result_url && !failed ? `<a href="/.netlify/functions/download?url=\${encodeURIComponent(row.result_url)}" class="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-sm">Download</a>` : ''}
+            <p class="mt-2 text-sm text-zinc-300 line-clamp-2">${esc(row.prompt)}</p>
+            ${row.result_url && !failed ? `<a href="/.netlify/functions/download?url=${encodeURIComponent(row.result_url)}&name=${encodeURIComponent((row.result_url||'').split('/').pop()||'generation')}" class="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-sm">Download</a>` : ''}
           </div>`;
-        return $card;
+        $usageList.appendChild(card);
       }
 
-      // Batch append (16 at a time)
-      const BATCH = 16;
-      function pump(){
-        if(queue.length === 0) return;
-        for(let i=0;i<BATCH && queue.length;i++){
-          $usageList.appendChild(makeCard(queue.shift()));
+      // Add "Load last 30 days" once when on 7-day window
+      if(days === 7){
+        let moreBtn = document.getElementById('loadMore');
+        if(!moreBtn){
+          moreBtn = document.createElement('button');
+          moreBtn.id = 'loadMore';
+          moreBtn.className = 'mt-6 mx-auto block rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10';
+          moreBtn.textContent = 'Load last 30 days';
+          $usageList.parentNode.appendChild(moreBtn);
+          moreBtn.addEventListener('click', async ()=>{
+            window.__usageDays = 30;
+            moreBtn.disabled = true;
+            await loadUsage();
+            moreBtn.remove();
+          }, { once:true });
         }
-        (window.requestIdleCallback || window.requestAnimationFrame || setTimeout)(pump, 0);
       }
-      pump();
+    }    }
 
-      // Delegate click to load videos on demand
-      if(!window.__videoHandlerBound){ window.__videoHandlerBound = true; document.addEventListener('click', (e)=>{
-        const shell = e.target.closest('.video-shell');
-        if(!shell) return;
-        const src = shell.dataset.src;
-        const poster = shell.dataset.poster || '';
-        const v = document.createElement('video');
-        if(src) v.src = src;
-        v.controls = true; v.preload = 'metadata'; v.playsInline = true; v.poster = poster;
-        shell.replaceChildren(v);
-        v.play().catch(()=>{});
-      }, { once:false }); }
-
-    }
-
-
-    document.getElementById('btnLogout')?.addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
+    document.getElementById('btnLogout').addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
 
     loadUsage();
   </script>
