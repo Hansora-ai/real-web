@@ -445,7 +445,7 @@ window.__run=async function(){
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
 
     // store pending ticket so we can resume after refresh
-    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 })); } catch{}
+    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId: (row?.id||null), startedAt, ttl:200 })); } catch{}
 
     // ensure Usage shows even if user navigates away
     backfillSubmitted(uid, rid, taskId);
@@ -474,13 +474,13 @@ window.__run=async function(){
       await new Promise(r => setTimeout(r, 1500));
       const { data: row } = await supabase
         .from('user_generations')
-        .select('image_url')
+        .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
         .eq('user_id', uid)
-        .eq('run_id', rid)
+        
         .limit(1)
         .maybeSingle();
 
-      const url = row?.image_url || null;
+      const url = row?.result_url || null;
       if (url) { onResult(url); break; }
     }
 
@@ -596,7 +596,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
 
     const { data: row } = await supabase
       .from('user_generations')
-      .select('id, user_id, provider, result_url, created_at, status')
+      .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -604,7 +604,6 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
 
     if (!row) return;
 
-    const st = String(row.status || '').toLowerCase();
     const url = row.result_url || null;
 
     // If terminal success -> render image and persist
@@ -615,29 +614,15 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
         try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{}
         try {
           const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
-          if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
         } catch {}
       }
-      return;
-    }
-
-    // If terminal failed -> render failure + persist
-    if (st === 'failed'){
-      window.__renderedFromServer = true;
-      const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
-      showStatus(msg, 'text-rose-300');
-      try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{}
-      try {
-        const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
-        if (pend && pend.run_id === row.run_id) localStorage.removeItem('nb_pending');
-      } catch {}
       return;
     }
 
     // Otherwise (pending): seed nb_pending to resume auto-poll from server
     try {
       const startedAt = new Date(row.created_at).getTime();
-      localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId:null, run_id: row.run_id, startedAt, ttl:200 }));
+      localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId: (row?.id||null), startedAt, ttl:200 }));
     } catch {}
   }catch(e){ console.warn('serverFirstLatest error', e); }
 });
@@ -686,6 +671,7 @@ document.addEventListener('DOMContentLoaded', function restoreLastRun(){
   }catch{}
 });
 
+
 document.addEventListener('DOMContentLoaded', function resumeFromPending(){
   try{
     const raw = localStorage.getItem('nb_pending');
@@ -710,22 +696,13 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         try{
           const { data: row } = await supabase
             .from('user_generations')
-            .select('image_url,status')
-            .eq('run_id', p.run_id)
+            .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
+            .eq('id', p.taskId)
             .maybeSingle();
-          const url = row?.image_url || null;
-          const st = (row?.status || '').toLowerCase();
+          const url = row?.result_url || null;
           if (url){
             window.onResult(url);
             try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{};
-            try { localStorage.removeItem('nb_pending'); } catch{};
-            break;
-          }
-          if (st === 'failed'){
-            await refundHalfCreditOnce(p.taskId);
-            const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
-            showStatus(msg, 'text-rose-300');
-            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
             try { localStorage.removeItem('nb_pending'); } catch{};
             break;
           }
@@ -869,18 +846,7 @@ function __nbClear(){ try{ localStorage.removeItem('Nano Banan:lastRun'); }catch
                 const now = new Date();
                 const deadline = new Date(now.getTime() + 200*1000).toISOString();
                 await supabase
-                  .from('user_generations')
-                  .upsert({
-                    id: taskId,
-                    user_id: uid,
-                    created_at: now.toISOString(),
-                    provider: 'nano-banana',
-                    kind: 'edit',
-                    prompt: (document.getElementById('prompt')?.value || '.'),
-                    result_url: null,
-                    meta: { state:'pending', started_at: now.toISOString(), deadline, refunded:false }
-                  }, { onConflict: 'id' })
-                  .select('id');
+                  /* removed: client upsert to user_generations (server-only insert) */
               }catch(e){}
             }
           }
