@@ -220,8 +220,8 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
     function esc(s){ return (s||'').replace(/</g,'&lt;'); }
 
     async function loadUsage(){
-      const { data:userData } = await supabase.auth.getUser();
-      const user = userData.user;
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session && session.user;
       if(!user){ $notLogged.classList.remove('hidden'); return; }
       const prof = await getOrCreateProfile(user);
       await showLoggedInUI(prof, user);
@@ -313,6 +313,25 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
             window.__usageDays = 30;
             moreBtn.disabled = true;
             await loadUsage();
+
+// Ensure UI updates when auth state is restored from storage
+if (!window.__usageAuthBound) {
+  window.__usageAuthBound = true;
+  supabase.auth.onAuthStateChange((_event, session) => {
+    if (session && session.user) {
+      // Hide the "not logged" notice and reload usage
+      const notLogged = document.getElementById('notLogged');
+      if (notLogged) notLogged.classList.add('hidden');
+      loadUsage();
+    } else {
+      // Show logged-out UI if session cleared
+      try { showLoggedOutUI(); } catch(_){}
+      const notLogged = document.getElementById('notLogged');
+      if (notLogged) notLogged.classList.remove('hidden');
+    }
+  });
+}
+
             moreBtn.remove();
           }, { once:true });
         }
@@ -322,6 +341,25 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
     document.getElementById('btnLogout').addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
 
     loadUsage();
+
+// Ensure UI updates when auth state is restored from storage
+if (!window.__usageAuthBound) {
+  window.__usageAuthBound = true;
+  supabase.auth.onAuthStateChange((_event, session) => {
+    if (session && session.user) {
+      // Hide the "not logged" notice and reload usage
+      const notLogged = document.getElementById('notLogged');
+      if (notLogged) notLogged.classList.add('hidden');
+      loadUsage();
+    } else {
+      // Show logged-out UI if session cleared
+      try { showLoggedOutUI(); } catch(_){}
+      const notLogged = document.getElementById('notLogged');
+      if (notLogged) notLogged.classList.remove('hidden');
+    }
+  });
+}
+
   </script>
 <script>
 
