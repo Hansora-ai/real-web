@@ -400,12 +400,10 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
       img.setAttribute('decoding','async');
     });
     // Videos: move src -> data-src so they don't auto-load
-    root.querySelectorAll('video[src]').forEach(v => {
-      if (!v.dataset.src) {
-        v.dataset.src = v.src;
-        try { v.removeAttribute('src'); v.load(); } catch(e){}
-      }
-    });
+    root.querySelectorAll('video').forEach(v => {
+  try { v.setAttribute('preload','metadata'); } catch(e){}
+  try { v.setAttribute('playsinline',''); } catch(e){}
+});
     // Observe cards to attach media when near viewport
     root.querySelectorAll('article, .card, .media, .result, .usage-item').forEach(el => {
       io.observe(el);
@@ -444,5 +442,35 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
   mo.observe(document.documentElement, { childList: true, subtree: true });
 })();
 </script>
+
+
+// HANSORA add-on: directly observe videos with data-src (if any) and attach when near viewport.
+(function(){
+  try{
+    const __ioVideo = new IntersectionObserver((entries)=>{
+      for (const e of entries){
+        if (!e.isIntersecting) continue;
+        const v = e.target;
+        if (v.dataset && v.dataset.src && !v.src){
+          v.src = v.dataset.src;
+          try { v.load(); } catch(e){}
+        }
+        __ioVideo.unobserve(v);
+      }
+    }, { rootMargin: '600px 0px' });
+    document.querySelectorAll('video[data-src]').forEach(v=>__ioVideo.observe(v));
+    // Also watch for dynamically added videos
+    const __moVideo = new MutationObserver((ml)=>{
+      for (const m of ml){
+        m.addedNodes && m.addedNodes.forEach(n=>{
+          if (n.nodeType===1){
+            n.querySelectorAll && n.querySelectorAll('video[data-src]').forEach(v=>__ioVideo.observe(v));
+          }
+        });
+      }
+    });
+    __moVideo.observe(document.documentElement,{childList:true,subtree:true});
+  }catch(e){}
+})();
 </body>
 </html>
