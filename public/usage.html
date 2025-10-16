@@ -6,6 +6,9 @@
   <title>Usage — HANSORA AI</title>
   <script src="https://cdn.tailwindcss.com"></script>
 <script>
+
+</script>
+<script>
 // Minimal auth wiring for Usage modal
 function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); document.getElementById('authMsg').textContent=''; }
 function closeAuth(){ document.getElementById('authModal')?.classList.add('hidden'); document.getElementById('authMsg').textContent=''; }
@@ -351,7 +354,7 @@ async function loadUsage(){
     }
 
 
-    document.getElementById('btnLogout').addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
+    document.getElementById('btnLogout')?.addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
 
     loadUsage();
   </script>
