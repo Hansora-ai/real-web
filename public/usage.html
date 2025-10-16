@@ -440,5 +440,75 @@ function renderRows(rows){
 })();
 </script>
 
+
+<!-- Auth re-bind (non-invasive, DOM-ready) -->
+<script>
+(function(){
+  function ready(fn){ if(document.readyState!=='loading'){ fn(); } else { document.addEventListener('DOMContentLoaded', fn, {once:true}); } }
+  ready(function(){
+    // Define safe helpers only if missing (preserve existing logic)
+    if(typeof window.openAuth!=='function'){
+      window.openAuth = function(){
+        var m = document.getElementById('authModal');
+        var msg = document.getElementById('authMsg') || document.getElementById('authMessage');
+        if(m) m.classList.remove('hidden');
+        if(msg) msg.textContent = '';
+      };
+    }
+    if(typeof window.closeAuth!=='function'){
+      window.closeAuth = function(){
+        var m = document.getElementById('authModal');
+        var msg = document.getElementById('authMsg') || document.getElementById('authMessage');
+        if(m) m.classList.add('hidden');
+        if(msg) msg.textContent = '';
+      };
+    }
+    if(typeof window.setAuthMode!=='function'){
+      window.setAuthMode = function(mode){
+        var title = document.getElementById('authTitle');
+        var pass2 = document.getElementById('authPass2');
+        var btnLogin = document.getElementById('btnDoLogin');
+        var btnSignup = document.getElementById('btnDoSignup');
+        if(mode==='signup'){
+          if(title) title.textContent = 'Sign up';
+          if(pass2) pass2.classList.remove('hidden');
+          if(btnSignup) btnSignup.classList.add('btn-brand');
+          if(btnLogin) btnLogin.classList.remove('btn-brand');
+        }else{
+          if(title) title.textContent = 'Log in';
+          if(pass2) pass2.classList.add('hidden');
+          if(btnLogin) btnLogin.classList.add('btn-brand');
+          if(btnSignup) btnSignup.classList.remove('btn-brand');
+        }
+      };
+    }
+
+    // Attach click handlers AFTER elements exist
+    var btnLoginNav = document.getElementById('btnLoginNav');
+    if(btnLoginNav && !btnLoginNav.__boundAuth){
+      btnLoginNav.addEventListener('click', function(e){
+        try{ e.preventDefault(); }catch(_){}
+        setAuthMode('login'); openAuth();
+      }, {passive:false});
+      btnLoginNav.__boundAuth = true;
+    }
+
+    var btnGetStarted = document.getElementById('btnGetStarted');
+    if(btnGetStarted && !btnGetStarted.__boundAuth){
+      btnGetStarted.addEventListener('click', function(e){
+        try{ e.preventDefault(); }catch(_){}
+        setAuthMode('signup'); openAuth();
+      }, {passive:false});
+      btnGetStarted.__boundAuth = true;
+    }
+
+    var authClose = document.getElementById('authClose');
+    if(authClose && !authClose.__boundAuth){
+      authClose.addEventListener('click', function(){ closeAuth(); });
+      authClose.__boundAuth = true;
+    }
+  });
+})();
+</script>
 </body>
 </html>
