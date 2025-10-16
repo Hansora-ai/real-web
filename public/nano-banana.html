@@ -266,9 +266,10 @@ function onFail(msg, taskId){
 
 // Guarded renderer
 let __done=false; let channel=null;
+window.__done=false; window.__renderedFromServer=window.__renderedFromServer||false;
 function onResult(url){
   if(__done || !url) return;
-  __done = true;
+  __done = true; window.__done = true; window.__renderedFromServer = true;
   const img=new Image();
   img.onload=()=>{
     resultBox.innerHTML='';
@@ -337,7 +338,7 @@ async function backfillSubmitted(uid, rid, taskId){
 async function nbCheckPoll(taskId, uid, rid){
   if(!taskId) return;
   const start = Date.now();
-  while(!__done && Date.now() - start < 200000){ // up to 3 min
+  while(!window.__done && Date.now() - start < 200000){ // up to 3 min
     try{
       const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId), {
         headers: { 'X-USER-ID': uid }
@@ -547,7 +548,7 @@ window.__run=async function(){
         return null;
       }
 
-    while (!__done && Date.now() - started < 200000) { // up to 120s
+    while (!window.__done && Date.now() - started < 200000) { // up to 120s
       await new Promise(r => setTimeout(r, 1500));
       try{
         // Multi-lookup (id=taskId OR run_id=rid OR meta->>taskId OR meta->>run_id)
@@ -560,7 +561,7 @@ window.__run=async function(){
     }
     
 
-    if (!__done) { // final timeout only; intermediate failures no-op
+    if (!window.__done) { // final timeout only; intermediate failures no-op
       const __MSG='❌ Generation failed. Credits refunded. Try again or contact us.';
       try{ await refundHalfCreditOnce(taskId); }catch{}
       try{ supabase.auth.getUser().then(u=>{ const _uid=u?.data?.user?.id||null; localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG, uid:_uid })); }); }catch{}
@@ -669,7 +670,16 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
     const _pendRaw = localStorage.getItem('nb_pending');
     if (_pendRaw) {
       try { const _p = JSON.parse(_pendRaw); const _active = _p && (Date.now() - (_p.startedAt||0)) < ((_p.ttl||200)*1000);
-        if (_active) { return; } else { try{ localStorage.removeItem('nb_pending'); }catch{} }
+        if (_active) {
+      try{
+        const __p = JSON.parse(_pendRaw);
+        const __tid = __p?.taskId || null; const __rid = __p?.run_id || null;
+        let __row=null;
+        try{ __row=(await supabase.from('user_generations').select('result_url').eq('id', __tid).maybeSingle())?.data||null;}catch{}
+        if((!__row||!__row.result_url)&&__rid){ try{ __row=(await supabase.from('user_generations').select('result_url').eq('run_id', __rid).maybeSingle())?.data||null;}catch{} }
+        if(__row&&__row.result_url){ onResult(__row.result_url); try{ localStorage.removeItem('nb_pending'); }catch{}; return; }
+      }catch{}
+      return; } else { try{ localStorage.removeItem('nb_pending'); }catch{} }
       } catch {}
     }
     const ures = await supabase.auth.getUser();
@@ -694,9 +704,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
         window.__renderedFromServer = true;
         onResult(url);
         try { supabase.auth.getUser().then(u=>{ const _uid=u?.data?.user?.id||null; localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url, uid:_uid })); }); } catch{}
-        try {
-          const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
-        } catch {}
+        try { localStorage.removeItem('nb_pending'); } catch{}
       }
       return;
     }
@@ -776,6 +784,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         showStatus(msg, 'text-rose-300');
         try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
         try { localStorage.removeItem('nb_pending'); } catch{};
+        }
       })();
       return;
     }
@@ -836,11 +845,15 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         }catch(e){}
       }
       if (!window.__done){
+        const __pend = JSON.parse(localStorage.getItem('nb_pending')||'null');
+        const __same = __pend && (__pend.taskId===p.taskId || (__pend.run_id && __pend.run_id===p.run_id));
+        if (__same) {
         await refundHalfCreditOnce(p.taskId);
         const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
         showStatus(msg, 'text-rose-300');
         try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg })); } catch{};
         try { localStorage.removeItem('nb_pending'); } catch{};
+        }
       }
     })();
   }catch(e){ console.warn('resumeFromPending error', e); }
@@ -885,6 +898,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
 
   // Resume on load for the same user (prefer latest server truth but ensure resume works)
   document.addEventListener('DOMContentLoaded', async () => {
+  if (window.__done || window.__renderedFromServer) return;
     try{
       if (typeof supabase === 'undefined' || !supabase.auth) return;
       const { data: userData } = await supabase.auth.getUser();
@@ -986,6 +1000,7 @@ function __nbClear(){ try{ localStorage.removeItem('Nano Banan:lastRun'); }catch
 })();
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (window.__done || window.__renderedFromServer) return;
   const s = __nbLoad();
   if (!s || !s.id) return;
 
@@ -1039,7 +1054,7 @@ if (typeof window.onResult === 'function') try{ window.onResult(row.result_url);
       try{ window.nbCheckPoll(s.id, user.id, null); }catch{}
     }
   }else{
-    if (typeof window.onFail === 'function') try{ window.onFail('Generation failed (timeout). Credits will be refunded automatically.'); }catch{}
+    if (!window.__done && typeof window.onFail === 'function') try{ window.onFail('Generation failed (timeout). Credits will be refunded automatically.'); }catch{}
   }
 });
 </script>
