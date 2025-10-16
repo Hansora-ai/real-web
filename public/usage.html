@@ -4,7 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Usage — HANSORA AI</title>
-  <script src="https://cdn.tailwindcss.com">
+  <script src="https://cdn.tailwindcss.com"></script>
+<script>
 // Minimal auth wiring for Usage modal
 function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); document.getElementById('authMsg').textContent=''; }
 function closeAuth(){ document.getElementById('authModal')?.classList.add('hidden'); document.getElementById('authMsg').textContent=''; }
@@ -41,7 +42,6 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
     m.textContent = 'Check your email to confirm';
   }catch(e){ m.textContent = String(e||'Signup failed'); }
 });
-
 </script>
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
@@ -167,7 +167,14 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
     const $doSignup = document.getElementById('btnDoSignup');
     const $openLogin = document.getElementById('openLogin');
 
-    const $usageList = document.getElementById('usageList');
+    const $btnLoginNav = document.getElementById('btnLoginNav');
+    const $btnGetStarted = document.getElementById('btnGetStarted');
+    const $navMenu = document.getElementById('navMenu');
+    const $navUser = document.getElementById('navUser');
+    const $navCredits = document.getElementById('navCredits');
+    const $navAvatar = document.getElementById('navAvatar');
+    const $navAvatarImg = document.getElementById('navAvatarImg');
+const $usageList = document.getElementById('usageList');
     const $usageEmpty = document.getElementById('usageEmpty');
     const $notLogged = document.getElementById('notLogged');
 
@@ -178,11 +185,11 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
       else{ $authTitle.textContent='Log in'; $pass2In.classList.add('hidden'); }
     }
     $openLogin.addEventListener('click', ()=>{ setAuthMode('login'); openAuth(); });
-    $btnLoginNav.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
-    $btnGetStarted.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
+    $btnLoginNav?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+    $btnGetStarted?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
     $authClose.addEventListener('click', closeAuth);
 
-    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
+    $navAvatar?.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
     document.addEventListener('click', (e)=>{
       if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
     });
