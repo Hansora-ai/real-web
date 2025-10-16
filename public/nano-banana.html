@@ -274,7 +274,7 @@ function onResult(url){
     downloadLink.textContent='Download';
 
     showStatus('✅ Done.','text-emerald-300');
-    try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{};
+    try { supabase.auth.getUser().then(u=>{ const _uid=u?.data?.user?.id||null; localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url, uid:_uid })); }); } catch{};
     try { localStorage.removeItem('nb_pending'); } catch{};
   };
   
@@ -492,7 +492,7 @@ window.__run=async function(){
     if (!__done) {
       const __MSG='❌ Generation failed. Credits refunded. Try again or contact us.';
       try{ await refundHalfCreditOnce(taskId); }catch{}
-      try{ localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG })); }catch{}
+      try{ supabase.auth.getUser().then(u=>{ const _uid=u?.data?.user?.id||null; localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG, uid:_uid })); }); }catch{}
       showStatus(__MSG,'text-rose-300');
     }
 
@@ -622,7 +622,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
       if (!window.__done) {
         window.__renderedFromServer = true;
         onResult(url);
-        try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{}
+        try { supabase.auth.getUser().then(u=>{ const _uid=u?.data?.user?.id||null; localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url, uid:_uid })); }); } catch{}
         try {
           const pend = JSON.parse(localStorage.getItem('nb_pending') || 'null');
         } catch {}
@@ -655,13 +655,21 @@ async function refundHalfCreditOnce(taskId){
   }catch(e){ console.warn('refundHalfCreditOnce failed', e); return false; }
 }
 
-document.addEventListener('DOMContentLoaded', function restoreLastRun(){
+document.addEventListener('DOMContentLoaded', async function restoreLastRun(){
   try{
     // Skip drawing old cache if a pending ticket exists or server already rendered
     if (localStorage.getItem('nb_pending')) return;
+    if (window.__renderedFromServer) return;
+
     const raw = localStorage.getItem('nb_last_run');
     if (!raw) return;
     const last = JSON.parse(raw);
+
+    // Verify cache belongs to the current user
+    const ures = await supabase.auth.getUser();
+    const user = ures?.data?.user || null;
+    if (!user || !last.uid || last.uid !== user.id) { try{ localStorage.removeItem('nb_last_run'); }catch{}; return; }
+
     const box = document.getElementById('resultBox');
     const dl  = document.getElementById('downloadLink');
     if (!box) return;
@@ -713,7 +721,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
           const url = row?.result_url || null;
           if (url){
             window.onResult(url);
-            try { localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url })); } catch{};
+            try { supabase.auth.getUser().then(u=>{ const _uid=u?.data?.user?.id||null; localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url, uid:_uid })); }); } catch{};
             try { localStorage.removeItem('nb_pending'); } catch{};
             break;
           }
