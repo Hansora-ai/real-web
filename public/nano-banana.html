@@ -250,6 +250,9 @@ const statusEl=document.getElementById('status');
 const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
 
+// Track current task id strictly
+window.__CURRENT_TASK_ID = null;
+
 filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,4).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
@@ -327,7 +330,7 @@ async function backfillSubmitted(uid, rid, taskId){
 async function nbCheckPoll(taskId, uid, rid){
   if(!taskId) return;
   const start = Date.now();
-  while(!__done && Date.now() - start < 180000){ // up to 3 min
+  while(!__done && Date.now() - start < 200000){ // up to 3 min
     try{
       const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId), {
         headers: { 'X-USER-ID': uid }
@@ -356,6 +359,7 @@ async function nbCheckPoll(taskId, uid, rid){
           return null;
         })(j);
         if(url){
+          if (window.__CURRENT_TASK_ID && taskId && window.__CURRENT_TASK_ID !== taskId) { break; }
           onResult(url);               // show immediately
           backfillRow(uid, rid, taskId, url); // ensure Supabase row exists
         }
@@ -444,8 +448,11 @@ window.__run=async function(){
     const resJson = await res.json().catch(()=> ({}));
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
 
+    window.__CURRENT_TASK_ID = taskId;
+
+
     // store pending ticket so we can resume after refresh
-    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId: (row?.id||null), startedAt, ttl:200 })); } catch{}
+    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, startedAt: Date.now(), ttl:200 })); } catch{}
 
     // ensure Usage shows even if user navigates away
     backfillSubmitted(uid, rid, taskId);
@@ -475,9 +482,7 @@ window.__run=async function(){
       const { data: row } = await supabase
         .from('user_generations')
         .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
-        .eq('user_id', uid)
-        
-        .limit(1)
+        .eq('id', taskId)
         .maybeSingle();
 
       const url = row?.result_url || null;
@@ -590,6 +595,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // This guarantees we show the *latest* run (even if user left the page).
 document.addEventListener('DOMContentLoaded', async function serverFirstLatest(){
   try{
+    const _pendRaw = localStorage.getItem('nb_pending');
+    if (_pendRaw) {
+      try { const _p = JSON.parse(_pendRaw); const _active = _p && (Date.now() - (_p.startedAt||0)) < ((_p.ttl||200)*1000);
+        if (_active) { return; } else { try{ localStorage.removeItem('nb_pending'); }catch{} }
+      } catch {}
+    }
     const ures = await supabase.auth.getUser();
     const user = ures?.data?.user;
     if (!user) return;
