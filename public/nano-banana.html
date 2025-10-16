@@ -194,7 +194,7 @@
 <textarea class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark" id="prompt" placeholder="Describe the edit or style…"></textarea>
 </div>
 <button class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" id="runBtn" onclick="__run()" type="button">Run (cost: 0.5⚡)</button>
-<div class="mt-2 text-sm" id=></div>
+<div class="mt-2 text-sm" id="status"></div>
 </div>
 </div>
 <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
@@ -246,7 +246,7 @@ const filesEl=document.getElementById('files');
 const thumbsEl=document.getElementById('thumbs');
 const promptEl=document.getElementById('prompt');
 const runBtn=document.getElementById('runBtn');
-const statusEl=document.getElementById();
+const statusEl=document.getElementById('status');
 const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
 
@@ -474,7 +474,7 @@ window.__run=async function(){
       await new Promise(r => setTimeout(r, 1500));
       const { data: row } = await supabase
         .from('user_generations')
-        .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
+        .select('image_url')
         .eq('user_id', uid)
         .eq('run_id', rid)
         .limit(1)
@@ -573,7 +573,7 @@ window.__run=async function(){
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.querySelector('input[type="file"]');
-  const statusEl = document.getElementById() || document.querySelector('.status') || document.querySelector('#status-text');
+  const statusEl = document.getElementById('status') || document.querySelector('.status') || document.querySelector('#status-text');
   if (fileInput) {
     fileInput.addEventListener('change', () => {
       if (statusEl) statusEl.textContent = '';
@@ -596,7 +596,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
 
     const { data: row } = await supabase
       .from('user_generations')
-      .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
+      .select('id, user_id, provider, result_url, created_at, status')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -710,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
         try{
           const { data: row } = await supabase
             .from('user_generations')
-            .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
+            .select('image_url,status')
             .eq('run_id', p.run_id)
             .maybeSingle();
           const url = row?.image_url || null;
@@ -816,6 +816,115 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
     }catch{}
   });
 })();
+</script>
+
+
+<!-- Live-mode + 200s timeout (non-destructive wrappers) -->
+<script>
+function __nbSave(state){ try{ localStorage.setItem('Nano Banan:lastRun', JSON.stringify(state||{})); }catch{} }
+function __nbLoad(){ try{ return JSON.parse(localStorage.getItem('Nano Banan:lastRun')||'{}'); }catch{ return {}; } }
+function __nbClear(){ try{ localStorage.removeItem('Nano Banan:lastRun'); }catch{} }
+
+(function(){
+  if (typeof window.onResult === 'function' && !window.onResult.__nbWrapped){
+    const __orig = window.onResult;
+    window.onResult = function(url){
+      try{ const s = __nbLoad(); s.result_url = url; s.failed = false; __nbSave(s); }catch{}
+      return __orig.apply(this, arguments);
+    };
+    window.onResult.__nbWrapped = true;
+  }
+})();
+
+(function(){
+  if (window.__run && !window.__run.__nbWrapped){
+    const __origRun = window.__run;
+    window.__run = async function(){
+      __nbClear();
+      const r = await __origRun.apply(this, arguments);
+      return r;
+    };
+    window.__run.__nbWrapped = true;
+  }
+
+  if (!window.__nbFetchPatched){
+    const __origFetch = window.fetch;
+    window.fetch = async function(input, init){
+      const url = (typeof input === 'string') ? input : (input && input.url ? String(input.url) : '');
+      const isRun = url.indexOf('/.netlify/functions/run-nano-banana') === 0;
+      const res = await __origFetch(input, init);
+      try{
+        if (isRun && res && res.clone){
+          const clone = res.clone();
+          let payload = {};
+          try { payload = await clone.json(); } catch{ payload = {}; }
+          const taskId = payload?.taskId || payload?.data?.taskId || payload?.id || null;
+          if (taskId && typeof supabase !== 'undefined' && supabase.auth){
+            const ures = await supabase.auth.getUser();
+            const user = ures?.data?.user;
+            if (user){
+              const uid = user.id;
+              __nbSave({ id: taskId, uid: uid, result_url: null, failed: false });
+              try{
+                const now = new Date();
+                const deadline = new Date(now.getTime() + 200*1000).toISOString();
+                await supabase
+                  .from('user_generations')
+                  .upsert({
+                    id: taskId,
+                    user_id: uid,
+                    created_at: now.toISOString(),
+                    provider: 'nano-banana',
+                    kind: 'edit',
+                    prompt: (document.getElementById('prompt')?.value || '.'),
+                    result_url: null,
+                    meta: { state:'pending', started_at: now.toISOString(), deadline, refunded:false }
+                  }, { onConflict: 'id' })
+                  .select('id');
+              }catch(e){}
+            }
+          }
+        }
+      }catch(e){}
+      return res;
+    };
+    window.__nbFetchPatched = true;
+  }
+})();
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const s = __nbLoad();
+  if (!s || !s.id) return;
+
+  if (typeof supabase === 'undefined' || !supabase.auth) return;
+  const ures = await supabase.auth.getUser();
+  const user = ures?.data?.user;
+  if (!user) return;
+
+  const { data: row, error } = await supabase
+    .from('user_generations')
+    .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
+    .eq('id', s.id)
+    .maybeSingle();
+  if (error) return;
+
+  if (row && row.result_url){
+    if (typeof window.onResult === 'function') try{ window.onResult(row.result_url); }catch{}
+    s.result_url = row.result_url; __nbSave(s);
+    return;
+  }
+
+  const deadlineMs = row?.meta?.deadline ? (new Date(row.meta.deadline)).getTime() : 0;
+  if (deadlineMs && Date.now() < deadlineMs){
+    if (typeof window.imagenCheckPoll === 'function'){
+      try{ window.imagenCheckPoll(s.id, user.id, null); }catch{}
+    }else if (typeof window.nbCheckPoll === 'function'){
+      try{ window.nbCheckPoll(s.id, user.id, null); }catch{}
+    }
+  }else{
+    if (typeof window.onFail === 'function') try{ window.onFail('Generation failed (timeout). Credits will be refunded automatically.'); }catch{}
+  }
+});
 </script>
 
 </body>
