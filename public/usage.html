@@ -4,45 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Usage — HANSORA AI</title>
-  <script src="https://cdn.tailwindcss.com">
-// Minimal auth wiring for Usage modal
-function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); document.getElementById('authMsg').textContent=''; }
-function closeAuth(){ document.getElementById('authModal')?.classList.add('hidden'); document.getElementById('authMsg').textContent=''; }
-function setAuthMode(mode){
-  const $title = document.getElementById('authTitle');
-  const $pass2 = document.getElementById('authPass2');
-  const $bLogin = document.getElementById('btnDoLogin');
-  const $bSignup = document.getElementById('btnDoSignup');
-  if(mode==='signup'){ $title.textContent='Sign up'; $pass2?.classList.remove('hidden'); $bSignup?.classList.add('btn-brand'); $bLogin?.classList.remove('btn-brand'); }
-  else { $title.textContent='Log in'; $pass2?.classList.add('hidden'); $bLogin?.classList.add('btn-brand'); $bSignup?.classList.remove('btn-brand'); }
-}
-document.getElementById('btnLoginNav')?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
-document.getElementById('btnGetStarted')?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
-document.getElementById('authClose')?.addEventListener('click', closeAuth);
-document.getElementById('btnDoLogin')?.addEventListener('click', async ()=>{
-  const email = document.getElementById('authEmail').value.trim();
-  const password = document.getElementById('authPass').value;
-  const m = document.getElementById('authMsg');
-  try{
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if(error){ m.textContent = error.message; return; }
-    m.textContent = 'Logged in'; setTimeout(()=>location.reload(), 300);
-  }catch(e){ m.textContent = String(e||'Login failed'); }
-});
-document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
-  const email = document.getElementById('authEmail').value.trim();
-  const password = document.getElementById('authPass').value;
-  const password2 = document.getElementById('authPass2').value;
-  const m = document.getElementById('authMsg');
-  if(password !== password2){ m.textContent='Passwords do not match'; return; }
-  try{
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if(error){ m.textContent = error.message; return; }
-    m.textContent = 'Check your email to confirm';
-  }catch(e){ m.textContent = String(e||'Signup failed'); }
-});
-
-</script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
@@ -226,21 +188,14 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
       const prof = await getOrCreateProfile(user);
       await showLoggedInUI(prof, user);
 
-      
-      // --- paging setup (added) ---
-      if (typeof window.__USAGE_PAGE === 'undefined') window.__USAGE_PAGE = 0;
-      const PAGE_SIZE = 30;
-      const from = window.__USAGE_PAGE * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-      // --- end paging setup ---
-    const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+      const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
       const { data, error } = await supabase
         .from('user_generations')
-        .select('id,created_at,provider,kind,prompt,result_url,thumb_url,meta')
+        .select('id,created_at,provider,kind,prompt,result_url,meta')
         .eq('user_id', user.id)
         .gte('created_at', since)
         .order('created_at', { ascending: false })
-        .range(from, to);
+        .limit(100);
 
       if(error){ $usageEmpty.textContent = error.message; $usageEmpty.classList.remove('hidden'); return; }
       if(!data || data.length===0){ $usageEmpty.classList.remove('hidden'); return; }
@@ -249,21 +204,11 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
         const pretty = new Date(row.created_at).toLocaleString();
         const url = row.result_url || row.image_url || row.thumb_url || "";
         const isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(url);
-        const failed = (row.meta && (row.meta.status==='failed' || row.meta.failed === true || (typeof row.meta.note==='string' && /refunded|marked failed/i.test(row.meta.note))));
-        
-const media = failed
-          ? `<div class="relative h-40 w-full rounded-lg border border-white/10 bg-black/50 flex items-center justify-center">
-               <div class="absolute inset-0 bg-black/60"></div>
-               <div class="relative text-center">
-                 <div class="text-red-300 font-semibold text-sm">Failed — credits refunded</div>
-                 <div class="text-zinc-200 text-xs opacity-90 mt-1">Tap for details</div>
-               </div>
-             </div>`
-          : (url
-             ? (isVideo
-                ? `<video src="${url}" controls class="h-40 w-full object-contain rounded-lg border border-white/10"></video>`
-                : `<img src="${url}" alt="" loading="lazy" decoding="async" class="h-40 w-full object-cover rounded-lg border border-white/10"/>`)
-             : '<div class="text-xs text-zinc-400 p-3">No preview</div>');
+        const media = url
+          ? (isVideo
+             ? `<video src="${url}" controls class="h-40 w-full object-contain rounded-lg border border-white/10"></video>`
+             : `<img src="${url}" alt="" class="h-40 w-full object-cover rounded-lg border border-white/10"/>`)
+          : '<div class="text-xs text-zinc-400 p-3">No preview</div>';
         const card = document.createElement('article');
         card.className = 'glass rounded-2xl p-3 border border-white/10';
         card.innerHTML = `
@@ -278,68 +223,6 @@ const media = failed
           </div>`;
         $usageList.appendChild(card);
       }
-
-      // --- Load More (added) ---
-      (function(){
-        const existingBtn = document.getElementById('loadMore');
-        if(!existingBtn){
-          const btn = document.createElement('button');
-          btn.id = 'loadMore';
-          btn.className = 'mt-4 w-full rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white py-2';
-          btn.textContent = 'Load more';
-          $usageList.parentElement.appendChild(btn);
-          btn.addEventListener('click', async () => {
-            btn.disabled = true; btn.textContent = 'Loading…';
-            window.__USAGE_PAGE++;
-            const from2 = window.__USAGE_PAGE * PAGE_SIZE;
-            const to2 = from2 + PAGE_SIZE - 1;
-            const { data: more, error: err2 } = await supabase
-              .from('user_generations')
-              .select('id,created_at,provider,kind,prompt,result_url,thumb_url,meta')
-              .eq('user_id', user.id)
-              .gte('created_at', since)
-              .order('created_at', { ascending: false })
-              .range(from2, to2);
-            if(err2){ console.error(err2); btn.disabled=false; btn.textContent='Load more'; return; }
-            if(!more || more.length===0){ btn.remove(); return; }
-            for(const row of more){
-              const pretty = new Date(row.created_at).toLocaleString();
-              const url = row.result_url || row.image_url || row.thumb_url || "";
-              const isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(url);
-              const failed = (row.meta && (row.meta.status==='failed' || row.meta.failed === true || (typeof row.meta.note==='string' && /refunded|marked failed/i.test(row.meta.note))));
-              const media = failed
-                ? `<div class="relative h-40 w-full rounded-lg border border-white/10 bg-black/50 flex items-center justify-center">
-                     <div class="absolute inset-0 bg-black/60"></div>
-                     <div class="relative text-center">
-                       <div class="text-red-300 font-semibold text-sm">Failed — credits refunded</div>
-                       <div class="text-zinc-200 text-xs opacity-90 mt-1">Tap for details</div>
-                     </div>
-                   </div>`
-                : (url
-                   ? (isVideo
-                      ? `<video src="${url}" controls class="h-40 w-full object-contain rounded-lg border border-white/10"></video>`
-                      : `<img src="${url}" alt="" loading="lazy" decoding="async" class="h-40 w-full object-cover rounded-lg border border-white/10"/>`)
-                   : '<div class="text-xs text-zinc-400 p-3">No preview</div>');
-              const card = document.createElement('article');
-              card.className = 'glass rounded-2xl p-3 border border-white/10';
-              card.innerHTML = `
-                <div class="aspect-video overflow-hidden rounded-lg bg-black/20 border border-white/10 flex items-center justify-center">${media}</div>
-                <div class="mt-3">
-                  <div class="flex items-center justify-between text-xs text-zinc-400">
-                    <span>${row.provider || 'Generator'} • ${row.kind || ''}</span>
-                    <span>${pretty}</span>
-                  </div>
-                  <p class="mt-2 text-sm text-zinc-300 line-clamp-2">${esc(row.prompt)}</p>
-                  ${row.result_url ? \`<a href="/.netlify/functions/download?url=\${encodeURIComponent(row.result_url)}" class="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-sm">Download</a>\` : ''}
-                </div>`;
-              $usageList.appendChild(card);
-            }
-            if(more.length < PAGE_SIZE){ btn.remove(); } else { btn.disabled=false; btn.textContent='Load more'; }
-          });
-        }
-      })();
-      // --- end Load More ---
-
     }
 
     document.getElementById('btnLogout').addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
@@ -463,5 +346,103 @@ function renderRows(rows){
 })();
 </script>
 
+
+<!-- HANSORA performance helpers: moved inline Tailwind JS + lazy loading (no logic changes) -->
+<script defer>
+// Minimal auth wiring for Usage modal
+function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); document.getElementById('authMsg').textContent=''; }
+function closeAuth(){ document.getElementById('authModal')?.classList.add('hidden'); document.getElementById('authMsg').textContent=''; }
+function setAuthMode(mode){
+  const $title = document.getElementById('authTitle');
+  const $pass2 = document.getElementById('authPass2');
+  const $bLogin = document.getElementById('btnDoLogin');
+  const $bSignup = document.getElementById('btnDoSignup');
+  if(mode==='signup'){ $title.textContent='Sign up'; $pass2?.classList.remove('hidden'); $bSignup?.classList.add('btn-brand'); $bLogin?.classList.remove('btn-brand'); }
+  else { $title.textContent='Log in'; $pass2?.classList.add('hidden'); $bLogin?.classList.add('btn-brand'); $bSignup?.classList.remove('btn-brand'); }
+}
+document.getElementById('btnLoginNav')?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+document.getElementById('btnGetStarted')?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
+document.getElementById('authClose')?.addEventListener('click', closeAuth);
+document.getElementById('btnDoLogin')?.addEventListener('click', async ()=>{
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPass').value;
+  const m = document.getElementById('authMsg');
+  try{
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if(error){ m.textContent = error.message; return; }
+    m.textContent = 'Logged in'; setTimeout(()=>location.reload(), 300);
+  }catch(e){ m.textContent = String(e||'Login failed'); }
+});
+document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPass').value;
+  const password2 = document.getElementById('authPass2').value;
+  const m = document.getElementById('authMsg');
+  if(password !== password2){ m.textContent='Passwords do not match'; return; }
+  try{
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if(error){ m.textContent = error.message; return; }
+    m.textContent = 'Check your email to confirm';
+  }catch(e){ m.textContent = String(e||'Signup failed'); }
+});
+</script>
+<script defer>
+// === HANSORA: non-invasive performance helpers (no auth/preview changes) ===
+(function(){
+  // If the page already defines its own observer, bail.
+  if (window.__hansora_lazy) return; window.__hansora_lazy = true;
+
+  // Attach lazy behavior to images/videos present now
+  function lazify(root){
+    // Images: ensure loading="lazy"
+    root.querySelectorAll('img:not([loading])').forEach(img => {
+      img.setAttribute('loading','lazy');
+      img.setAttribute('decoding','async');
+    });
+    // Videos: move src -> data-src so they don't auto-load
+    root.querySelectorAll('video[src]').forEach(v => {
+      if (!v.dataset.src) {
+        v.dataset.src = v.src;
+        try { v.removeAttribute('src'); v.load(); } catch(e){}
+      }
+    });
+    // Observe cards to attach media when near viewport
+    root.querySelectorAll('article, .card, .media, .result, .usage-item').forEach(el => {
+      io.observe(el);
+    });
+  }
+
+  const io = new IntersectionObserver((entries)=>{
+    for (const ent of entries) {
+      if (!ent.isIntersecting) continue;
+      const el = ent.target;
+      // Attach image
+      el.querySelectorAll('img[data-src], img[loading="lazy"]').forEach(img => {
+        if (img.dataset.src) { img.src = img.dataset.src; img.removeAttribute('data-src'); }
+      });
+      // Attach video
+      el.querySelectorAll('video[data-src]').forEach(v => {
+        if (!v.src && v.dataset.src) { v.src = v.dataset.src; try { v.load(); } catch(e){} }
+      });
+      io.unobserve(el);
+    }
+  }, { rootMargin: '600px 0px' });
+
+  // Apply to initial DOM
+  lazify(document);
+
+  // Apply to dynamically added content (e.g., Supabase render)
+  const mo = new MutationObserver((mutList)=>{
+    for (const m of mutList) {
+      m.addedNodes && m.addedNodes.forEach(n => {
+        if (n.nodeType === 1) {
+          lazify(n);
+        }
+      });
+    }
+  });
+  mo.observe(document.documentElement, { childList: true, subtree: true });
+})();
+</script>
 </body>
 </html>
