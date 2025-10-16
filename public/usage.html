@@ -202,13 +202,18 @@
 
       for(const row of data){
         const pretty = new Date(row.created_at).toLocaleString();
+        const failed = (row && row.meta && row.meta.status === 'failed');
         const url = row.result_url || row.image_url || row.thumb_url || "";
         const isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(url);
-        const media = url
-          ? (isVideo
+        const media = failed
+          ? `<div class="w-full aspect-video bg-red-950/40 flex items-center justify-center">
+               <div class="px-3 py-2 rounded-lg border border-red-500/40 bg-red-500/10 text-red-300 text-sm font-medium">
+                 Failed — credits refunded
+               </div>
+             </div>`
+          : (url ? (isVideo
              ? `<video src="${url}" controls class="h-40 w-full object-contain rounded-lg border border-white/10"></video>`
-             : `<img src="${url}" alt="" class="h-40 w-full object-cover rounded-lg border border-white/10"/>`)
-          : '<div class="text-xs text-zinc-400 p-3">No preview</div>';
+             : `<img src="${url}" alt="" class="h-40 w-full object-cover rounded-lg border border-white/10"/>`) : '<div class="text-xs text-zinc-400 p-3">No preview</div>');
         const card = document.createElement('article');
         card.className = 'glass rounded-2xl p-3 border border-white/10';
         card.innerHTML = `
@@ -219,7 +224,7 @@
               <span>${pretty}</span>
             </div>
             <p class="mt-2 text-sm text-zinc-300 line-clamp-2">${esc(row.prompt)}</p>
-            ${row.result_url ? `<a href="/.netlify/functions/download-proxy?url=${encodeURIComponent(row.result_url)}&name=${encodeURIComponent((row.result_url||"").split("/").pop()||"generation")}" download class="mt-2 inline-block rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-sm">Download</a>` : ''}
+            ${(!failed && row.result_url) ? `<a href="/.netlify/functions/download-proxy?url=${encodeURIComponent(row.result_url)}&name=${encodeURIComponent((row.result_url||"").split("/").pop()||"generation")}" download class="mt-2 inline-block rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-sm">Download</a>` : ''}
           </div>`;
         $usageList.appendChild(card);
       }
