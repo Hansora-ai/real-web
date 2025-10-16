@@ -256,6 +256,13 @@ window.__CURRENT_TASK_ID = null;
 filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,4).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
+function onFail(msg, taskId){
+  try{ showStatus(msg || '❌ Generation failed. Credits refunded.', 'text-rose-300'); }catch{}
+  try{ localStorage.removeItem('nb_pending'); }catch{}
+  try{ if (typeof refundHalfCreditOnce==='function') refundHalfCreditOnce(taskId||null); }catch{}
+  try{ supabase.auth.getUser().then(u=>{ const _uid=u?.data?.user?.id||null; localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: (msg||'❌ Generation failed. Credits refunded.'), uid:_uid })); }); }catch{}
+}
+
 
 // Guarded renderer
 let __done=false; let channel=null;
@@ -633,7 +640,7 @@ document.addEventListener('DOMContentLoaded', async function serverFirstLatest()
     // Otherwise (pending): seed nb_pending to resume auto-poll from server
     try {
       const startedAt = new Date(row.created_at).getTime();
-      localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId: (row?.id||null), startedAt, ttl:200 }));
+      if (Date.now() - startedAt < 200000) { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId: (row?.id||null), startedAt, ttl:200 })); }
     } catch {}
   }catch(e){ console.warn('serverFirstLatest error', e); }
 });
