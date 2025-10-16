@@ -847,7 +847,7 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
       if (!window.__done){
         const __pend = JSON.parse(localStorage.getItem('nb_pending')||'null');
         const __same = __pend && (__pend.taskId===p.taskId || (__pend.run_id && __pend.run_id===p.run_id));
-        if (__same) {
+        if (__same || (!__pend && remaining <= 0)) {
         await refundHalfCreditOnce(p.taskId);
         const msg = '❌ Generation failed. Credits refunded. Try again or contact us.';
         showStatus(msg, 'text-rose-300');
