@@ -372,10 +372,36 @@ async function nbCheckPoll(taskId, uid, rid){
         }
         break;
       }
+      
       if(['failed','error'].includes(status)){
-        showStatus('❌ Generation failed.','text-rose-300');
-        break;
+        // Race safety: before declaring failure, double-check DB — 
+        // sometimes the job succeeds but the checker returns 'failed' briefly.
+        try{
+          if (__done) break;
+          const row = await (async()=>{
+            try{
+              const r1 = await supabase.from('user_generations')
+                .select('id, result_url')
+                .eq('id', taskId).maybeSingle();
+              if (r1 && r1.data && r1.data.result_url) return r1.data;
+            }catch{}
+            try{
+              if (rid){
+                const r2 = await supabase.from('user_generations')
+                  .select('id, result_url')
+                  .eq('run_id', rid).maybeSingle();
+                if (r2 && r2.data && r2.data.result_url) return r2.data;
+              }
+            }catch{}
+            return null;
+          })();
+          const url = row?.result_url || null;
+          if (url){ onResult(url); break; }
+        }catch{}
+        // No DB result—do NOT mark failed yet; let the 200s timeout handle refunds.
+        continue;
       }
+
     }catch{}
     await new Promise(r=>setTimeout(r,1500));
   }
@@ -459,7 +485,7 @@ window.__run=async function(){
 
 
     // store pending ticket so we can resume after refresh
-    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, startedAt: Date.now(), ttl:200 })); } catch{}
+    try { localStorage.setItem('nb_pending', JSON.stringify({ pending:true, taskId, run_id: rid, startedAt: Date.now(), ttl:200 })); } catch{}
 
     // ensure Usage shows even if user navigates away
     backfillSubmitted(uid, rid, taskId);
@@ -484,19 +510,57 @@ window.__run=async function(){
 
     // fallback: poll table directly in case realtime is blocked
     const started = Date.now();
+    
+      async function __tryFetchUserGen(__taskId, __rid){
+        // Try id == taskId
+        try{ 
+          const r1 = await supabase.from('user_generations')
+            .select('id, user_id, created_at, provider, kind, prompt, result_url, meta, run_id')
+            .eq('id', __taskId).maybeSingle();
+          if (r1 && r1.data && r1.data.result_url) return r1.data;
+        }catch{}
+        // Try run_id == rid
+        try{ 
+          if (__rid) {
+            const r2 = await supabase.from('user_generations')
+              .select('id, user_id, created_at, provider, kind, prompt, result_url, meta, run_id')
+              .eq('run_id', __rid).maybeSingle();
+            if (r2 && r2.data && r2.data.result_url) return r2.data;
+          }
+        }catch{}
+        // Try meta->>taskId == taskId
+        try{
+          const r3 = await supabase.from('user_generations')
+            .select('id, user_id, created_at, provider, kind, prompt, result_url, meta, run_id')
+            .filter('meta->>taskId', 'eq', __taskId).maybeSingle();
+          if (r3 && r3.data && r3.data.result_url) return r3.data;
+        }catch{}
+        // Try meta->>run_id == rid
+        try{
+          if (__rid) {
+            const r4 = await supabase.from('user_generations')
+              .select('id, user_id, created_at, provider, kind, prompt, result_url, meta, run_id')
+              .filter('meta->>run_id', 'eq', __rid).maybeSingle();
+            if (r4 && r4.data && r4.data.result_url) return r4.data;
+          }
+        }catch{}
+        return null;
+      }
+
     while (!__done && Date.now() - started < 200000) { // up to 120s
       await new Promise(r => setTimeout(r, 1500));
-      const { data: row } = await supabase
-        .from('user_generations')
-        .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
-        .eq('id', taskId)
-        .maybeSingle();
-
-      const url = row?.result_url || null;
-      if (url) { onResult(url); break; }
+      try{
+        // Multi-lookup (id=taskId OR run_id=rid OR meta->>taskId OR meta->>run_id)
+        const row = await (async()=>{
+          return await __tryFetchUserGen(taskId, rid);
+        })();
+        const url = row?.result_url || null;
+        if (url) { onResult(url); break; }
+      }catch(e){}
     }
+    
 
-    if (!__done) {
+    if (!__done) { // final timeout only; intermediate failures no-op
       const __MSG='❌ Generation failed. Credits refunded. Try again or contact us.';
       try{ await refundHalfCreditOnce(taskId); }catch{}
       try{ supabase.auth.getUser().then(u=>{ const _uid=u?.data?.user?.id||null; localStorage.setItem('nb_last_run', JSON.stringify({ ok:false, msg: __MSG, uid:_uid })); }); }catch{}
@@ -717,15 +781,52 @@ document.addEventListener('DOMContentLoaded', function resumeFromPending(){
     }
     (async () => {
       const started = Date.now();
+      
+      async function __tryFetchUserGen(__taskId, __rid){
+        // Try id == taskId
+        try{ 
+          const r1 = await supabase.from('user_generations')
+            .select('id, user_id, created_at, provider, kind, prompt, result_url, meta, run_id')
+            .eq('id', __taskId).maybeSingle();
+          if (r1 && r1.data && r1.data.result_url) return r1.data;
+        }catch{}
+        // Try run_id == rid
+        try{ 
+          if (__rid) {
+            const r2 = await supabase.from('user_generations')
+              .select('id, user_id, created_at, provider, kind, prompt, result_url, meta, run_id')
+              .eq('run_id', __rid).maybeSingle();
+            if (r2 && r2.data && r2.data.result_url) return r2.data;
+          }
+        }catch{}
+        // Try meta->>taskId == taskId
+        try{
+          const r3 = await supabase.from('user_generations')
+            .select('id, user_id, created_at, provider, kind, prompt, result_url, meta, run_id')
+            .filter('meta->>taskId', 'eq', __taskId).maybeSingle();
+          if (r3 && r3.data && r3.data.result_url) return r3.data;
+        }catch{}
+        // Try meta->>run_id == rid
+        try{
+          if (__rid) {
+            const r4 = await supabase.from('user_generations')
+              .select('id, user_id, created_at, provider, kind, prompt, result_url, meta, run_id')
+              .filter('meta->>run_id', 'eq', __rid).maybeSingle();
+            if (r4 && r4.data && r4.data.result_url) return r4.data;
+          }
+        }catch{}
+        return null;
+      }
+
       while (!window.__done && Date.now() - started < remaining){
         await new Promise(r => setTimeout(r, 1500));
         try{
-          const { data: row } = await supabase
-            .from('user_generations')
-            .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
-            .eq('id', p.taskId)
-            .maybeSingle();
+          const row = await (async()=>{
+            return await __tryFetchUserGen(p.taskId, p.run_id || null);
+          })();
           const url = row?.result_url || null;
+    
+    
           if (url){
             window.onResult(url);
             try { supabase.auth.getUser().then(u=>{ const _uid=u?.data?.user?.id||null; localStorage.setItem('nb_last_run', JSON.stringify({ ok:true, url, uid:_uid })); }); } catch{};
@@ -893,15 +994,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   const user = ures?.data?.user;
   if (!user) return;
 
-  const { data: row, error } = await supabase
+  let { data: row, error } = await supabase
     .from('user_generations')
-    .select('id, user_id, created_at, provider, kind, prompt, result_url, meta')
+    .select('id, user_id, created_at, provider, kind, prompt, result_url, meta, run_id')
     .eq('id', s.id)
     .maybeSingle();
-  if (error) return;
+  if (error) row = null;
+  if ((!row || !row.result_url) && (!error)) {
+    try{
+      const alt1 = await supabase.from('user_generations')
+        .select('id, user_id, created_at, provider, kind, prompt, result_url, meta, run_id')
+        .eq('run_id', s.id).maybeSingle();
+      if (alt1 && alt1.data) row = alt1.data;
+    }catch{}
+    if (!row || !row.result_url) {
+      try{
+        const alt2 = await supabase.from('user_generations')
+          .select('id, user_id, created_at, provider, kind, prompt, result_url, meta, run_id')
+          .filter('meta->>taskId', 'eq', s.id).maybeSingle();
+        if (alt2 && alt2.data) row = alt2.data;
+      }catch{}
+    }
+    if (!row || !row.result_url) {
+      try{
+        const alt3 = await supabase.from('user_generations')
+          .select('id, user_id, created_at, provider, kind, prompt, result_url, meta, run_id')
+          .filter('meta->>run_id', 'eq', s.id).maybeSingle();
+        if (alt3 && alt3.data) row = alt3.data;
+      }catch{}
+    }
+  }
 
   if (row && row.result_url){
-    if (typeof window.onResult === 'function') try{ window.onResult(row.result_url); }catch{}
+if (typeof window.onResult === 'function') try{ window.onResult(row.result_url); }catch{}
     s.result_url = row.result_url; __nbSave(s);
     return;
   }
