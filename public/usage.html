@@ -4,7 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Usage — HANSORA AI</title>
-  <script src="https://cdn.tailwindcss.com">
+  <script src="https://cdn.tailwindcss.com"></script>
+<script>
 // Minimal auth wiring for Usage modal
 function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); document.getElementById('authMsg').textContent=''; }
 function closeAuth(){ document.getElementById('authModal')?.classList.add('hidden'); document.getElementById('authMsg').textContent=''; }
@@ -41,7 +42,6 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
     m.textContent = 'Check your email to confirm';
   }catch(e){ m.textContent = String(e||'Signup failed'); }
 });
-
 </script>
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
