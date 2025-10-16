@@ -4,9 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Usage — HANSORA AI</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-<script>
-
+  <script src="https://cdn.tailwindcss.com">
 // Minimal auth wiring for Usage modal
 function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); document.getElementById('authMsg').textContent=''; }
 function closeAuth(){ document.getElementById('authModal')?.classList.add('hidden'); document.getElementById('authMsg').textContent=''; }
@@ -43,7 +41,6 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
     m.textContent = 'Check your email to confirm';
   }catch(e){ m.textContent = String(e||'Signup failed'); }
 });
-
 
 </script>
   <style>
@@ -229,21 +226,21 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
       const prof = await getOrCreateProfile(user);
       await showLoggedInUI(prof, user);
 
-      const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
-window.__USAGE_PAGE = 0;
-const PAGE_SIZE = 30;
-async function fetchPage(page){
-  const from = page * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
-  return await supabase
-    .from('user_generations')
-    .select('id,created_at,provider,kind,prompt,result_url,thumb_url,meta')
-    .eq('user_id', user.id)
-    .gte('created_at', since)
-    .order('created_at', { ascending: false })
-    .range(from, to);
-}
-let { data, error } = await fetchPage(0);
+      
+      // --- paging setup (added) ---
+      if (typeof window.__USAGE_PAGE === 'undefined') window.__USAGE_PAGE = 0;
+      const PAGE_SIZE = 30;
+      const from = window.__USAGE_PAGE * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      // --- end paging setup ---
+    const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+      const { data, error } = await supabase
+        .from('user_generations')
+        .select('id,created_at,provider,kind,prompt,result_url,thumb_url,meta')
+        .eq('user_id', user.id)
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if(error){ $usageEmpty.textContent = error.message; $usageEmpty.classList.remove('hidden'); return; }
       if(!data || data.length===0){ $usageEmpty.classList.remove('hidden'); return; }
@@ -253,19 +250,20 @@ let { data, error } = await fetchPage(0);
         const url = row.result_url || row.image_url || row.thumb_url || "";
         const isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(url);
         const failed = (row.meta && (row.meta.status==='failed' || row.meta.failed === true || (typeof row.meta.note==='string' && /refunded|marked failed/i.test(row.meta.note))));
+        
 const media = failed
-  ? `<div class="relative h-40 w-full rounded-lg border border-white/10 bg-black/50 flex items-center justify-center">
-       <div class="absolute inset-0 bg-black/60"></div>
-       <div class="relative text-center">
-         <div class="text-red-300 font-semibold text-sm">Failed — credits refunded</div>
-         <div class="text-zinc-200 text-xs opacity-90 mt-1">Tap for details</div>
-       </div>
-     </div>`
-  : (url
-     ? (isVideo
-        ? `<video src="${url}" controls class="h-40 w-full object-contain rounded-lg border border-white/10"></video>`
-        : `<img src="${url}" alt="" loading="lazy" decoding="async" class="h-40 w-full object-cover rounded-lg border border-white/10"/>`)
-     : '<div class="text-xs text-zinc-400 p-3">No preview</div>');
+          ? `<div class="relative h-40 w-full rounded-lg border border-white/10 bg-black/50 flex items-center justify-center">
+               <div class="absolute inset-0 bg-black/60"></div>
+               <div class="relative text-center">
+                 <div class="text-red-300 font-semibold text-sm">Failed — credits refunded</div>
+                 <div class="text-zinc-200 text-xs opacity-90 mt-1">Tap for details</div>
+               </div>
+             </div>`
+          : (url
+             ? (isVideo
+                ? `<video src="${url}" controls class="h-40 w-full object-contain rounded-lg border border-white/10"></video>`
+                : `<img src="${url}" alt="" loading="lazy" decoding="async" class="h-40 w-full object-cover rounded-lg border border-white/10"/>`)
+             : '<div class="text-xs text-zinc-400 p-3">No preview</div>');
         const card = document.createElement('article');
         card.className = 'glass rounded-2xl p-3 border border-white/10';
         card.innerHTML = `
@@ -281,7 +279,7 @@ const media = failed
         $usageList.appendChild(card);
       }
 
-      // Load More (append once)
+      // --- Load More (added) ---
       (function(){
         const existingBtn = document.getElementById('loadMore');
         if(!existingBtn){
@@ -292,14 +290,22 @@ const media = failed
           $usageList.parentElement.appendChild(btn);
           btn.addEventListener('click', async () => {
             btn.disabled = true; btn.textContent = 'Loading…';
-            const page = (++window.__USAGE_PAGE);
-            const { data: more, error: err2 } = await fetchPage(page);
+            window.__USAGE_PAGE++;
+            const from2 = window.__USAGE_PAGE * PAGE_SIZE;
+            const to2 = from2 + PAGE_SIZE - 1;
+            const { data: more, error: err2 } = await supabase
+              .from('user_generations')
+              .select('id,created_at,provider,kind,prompt,result_url,thumb_url,meta')
+              .eq('user_id', user.id)
+              .gte('created_at', since)
+              .order('created_at', { ascending: false })
+              .range(from2, to2);
             if(err2){ console.error(err2); btn.disabled=false; btn.textContent='Load more'; return; }
             if(!more || more.length===0){ btn.remove(); return; }
             for(const row of more){
               const pretty = new Date(row.created_at).toLocaleString();
               const url = row.result_url || row.image_url || row.thumb_url || "";
-              const isVideo = /(\.mp4|\.webm|\.mov)(\?|$)/i.test(url);
+              const isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(url);
               const failed = (row.meta && (row.meta.status==='failed' || row.meta.failed === true || (typeof row.meta.note==='string' && /refunded|marked failed/i.test(row.meta.note))));
               const media = failed
                 ? `<div class="relative h-40 w-full rounded-lg border border-white/10 bg-black/50 flex items-center justify-center">
@@ -317,7 +323,7 @@ const media = failed
               const card = document.createElement('article');
               card.className = 'glass rounded-2xl p-3 border border-white/10';
               card.innerHTML = `
-                <div class="aspect-video overflow-hidden rounded-lg bg-base-bg/60 border border-white/10 flex items-center justify-center">${media}</div>
+                <div class="aspect-video overflow-hidden rounded-lg bg-black/20 border border-white/10 flex items-center justify-center">${media}</div>
                 <div class="mt-3">
                   <div class="flex items-center justify-between text-xs text-zinc-400">
                     <span>${row.provider || 'Generator'} • ${row.kind || ''}</span>
@@ -332,6 +338,7 @@ const media = failed
           });
         }
       })();
+      // --- end Load More ---
 
     }
 
