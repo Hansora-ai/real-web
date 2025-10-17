@@ -359,7 +359,7 @@ async function signForUpload(filename, contentType){
   const res = await fetch('/.netlify/functions/sign-upload', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filename, contentType })
+    body: JSON.stringify({filename, contentType })
   });
   const j = await res.json().catch(()=>null);
   if (!res.ok || !j || !(j.uploadUrl || j.signedUrl) || !j.publicUrl){
@@ -420,7 +420,7 @@ if (fileEl && fileEl.files && fileEl.files.length){
 const res = await fetch('/.netlify/functions/run-kling',{
   method:'POST',
   headers:{'Content-Type':'application/json','X-USER-ID':uid},
-  body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, imageUrl })
+  body:JSON.stringify({prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, imageUrl })
 });
 if (res.status === 201 || res.status === 200 || res.status === 202) {
       /* client-side debit removed */
