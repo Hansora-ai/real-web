@@ -75,7 +75,7 @@
 
           <div class="hidden" aria-hidden="true">
   <label class="text-xs text-zinc-400">Aspect ratio</label>
-  <select id="ratio"
+  <select id="ratio">
               <option value="1:1" selected>1:1</option>
               <option value="2:3">2:3 (portrait)</option>
               <option value="3:2">3:2 (landscape)</option>
@@ -287,13 +287,33 @@ window.__run = async function(){
     const uid=authData.user.id;
     const aspectRatio=ratioEl.value || '1:1';
 
-    // Upload image via kie-upload
-    const fd=new FormData();
-    fd.append('file', files[0], files[0].name || 'image.png');
-    const ur=await fetch('/.netlify/functions/kie-upload',{method:'POST',headers:{'X-USER-ID':uid},body:fd});
-    const uj=await ur.json().catch(()=>null);
-    if(!ur.ok || !uj || !uj.downloadUrl) throw new Error(uj?.error || 'Upload failed');
-    const imageUrl=uj.downloadUrl;
+    // Upload image via presign (1:1 with Nano Banana)
+    const f = files[0];
+    const origName = f.name || 'image.jpg';
+    const type = (f.type || 'image/jpeg').toLowerCase();
+    const safeExt = type.includes('png') ? '.png' : (type.includes('jpeg') || type.includes('jpg')) ? '.jpg' : (type.includes('webp') ? '.webp' : '.jpg');
+    const base = origName.replace(/\.[^./\]+$/, '');
+    const filename = `${Date.now()}-${base}${safeExt}`;
+
+    // Request presigned upload from sign-upload (expects 'mime')
+    const signResp = await fetch('/.netlify/functions/sign-upload',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-USER-ID':uid},
+      body: JSON.stringify({ filename, mime: type })
+    });
+    const signJson = await signResp.json().catch(()=>null);
+    if(!signResp.ok || !signJson || !signJson.uploadUrl || !signJson.publicUrl){
+      throw new Error((signJson && signJson.error) || 'sign-upload failed');
+    }
+
+    // PUT file directly to Supabase Storage with correct Content-Type
+    const putResp = await fetch(signJson.uploadUrl, { method:'PUT', headers:{ 'Content-Type': type }, body: f });
+    if(!putResp.ok){ throw new Error('Upload PUT failed'); }
+
+    // Warm the public URL to avoid eventual consistency glitches
+    try{ await fetch(signJson.publicUrl, { method:'HEAD', cache:'no-store' }); }catch{}
+
+    const imageUrl = signJson.publicUrl;
 
     // Create MJ job
     const resp=await fetch('/.netlify/functions/run-mj-video',{
