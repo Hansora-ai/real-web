@@ -262,17 +262,7 @@ const COST = 4;
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
 
-async function readFileAsDataUrl(file){
-  if(!file) return null;
-  return await new Promise((resolve) => {
-    try{
-      const fr = new FileReader();
-      fr.onload = () => resolve(fr.result);
-      fr.onerror = () => resolve(null);
-      fr.readAsDataURL(file);
-    }catch(e){ resolve(null); }
-  });
-}
+// readFileAsDataUrl removed (now using presigned URL uploads)
 
 // Guarded renderer
 let __done=false;
@@ -363,16 +353,41 @@ window.__run=async function(){
     const rid=uid+'-'+Date.now();
 
     const fileEl = document.getElementById('imageFile');
-let image_data_urls = [];
+// Build array of public image URLs (presign → PUT → HEAD warm), up to 4
+let image_urls = [];
 if (fileEl && fileEl.files && fileEl.files.length){
-  for (let i=0;i<fileEl.files.length;i++){
-    image_data_urls.push(await readFileAsDataUrl(fileEl.files[i]));
+  const limit = Math.min(4, fileEl.files.length);
+  for (let i=0;i<limit;i++){
+    const f = fileEl.files[i];
+    const origName = f.name || 'image.jpg';
+    const type = (f.type || 'image/jpeg').toLowerCase();
+    const safeExt = type.includes('png') ? '.png' : ((type.includes('jpeg') || type.includes('jpg')) ? '.jpg' : (type.includes('webp') ? '.webp' : '.jpg'));
+    const base = origName.replace(/\.[^./\]+$/, '');
+    const filename = `${Date.now()}-${base}${safeExt}`;
+
+    // Presign (expects 'mime')
+    const sres = await fetch('/.netlify/functions/sign-upload', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-USER-ID':uid},
+      body: JSON.stringify({ filename, mime: type })
+    });
+    const sj = await sres.json().catch(()=>null);
+    if(!sres.ok || !sj || !sj.uploadUrl || !sj.publicUrl){
+      console.warn('sign-upload failed for file', i, sj && sj.error);
+      continue;
+    }
+    // PUT with correct Content-Type
+    const put = await fetch(sj.uploadUrl, { method:'PUT', headers:{ 'Content-Type': type }, body: f });
+    if(!put.ok){ console.warn('PUT failed for file', i); continue; }
+    try{ await fetch(sj.publicUrl, { method:'HEAD', cache:'no-store' }); }catch{}
+    image_urls.push(sj.publicUrl);
   }
 }
+
 const res = await fetch('/.netlify/functions/run-gpt-image-1',{
   method:'POST',
   headers:{'Content-Type':'application/json','X-USER-ID':uid},
-  body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_data_urls })
+  body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_urls })
 });
 if (res.status === 201 || res.status === 200 || res.status === 202) {
       /* client-side debit removed */
@@ -381,13 +396,13 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
       throw new Error('Create failed: ' + errT);
     }
 
-    const resJson = await res.json().catch(()=> ({}));
-    const id = resJson?.id || resJson?.prediction_id || resJson?.data?.id || null;
+const resJson = await res.json().catch(()=> ({}));
+const id = resJson?.id || resJson?.prediction_id || resJson?.data?.id || null;
 
-    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
 
-    // Start polling prediction
-    imagenCheckPoll(id, uid, rid);
+// Start polling prediction
+imagenCheckPoll(id, uid, rid);
 
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
@@ -496,43 +511,8 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if (fileEl) fileEl.addEventListener('change', renderThumbs);
 
-    // --- Inject image_data_urls into ONLY the GPT-Image-1 request ---
-    var __origFetch = window.fetch;
-    window.fetch = async function(input, init){
-      try {
-        var isTarget = (typeof input === 'string') && input.indexOf('/.netlify/functions/run-gpt-image-1') !== -1;
-        if (isTarget && init && init.body && typeof init.body === 'string') {
-          try {
-            var body = JSON.parse(init.body);
-            if (!body.image_data_urls) {
-              // Build data URLs for up to 4 files with FileReader (no stack overflow)
-              var urls = [];
-              if (fileEl && fileEl.files && fileEl.files.length){
-                var limit = Math.min(4, fileEl.files.length);
-                for (var k=0;k<limit;k++){
-                  var u = await new Promise(function(resolve){
-                    try{
-                      var fr = new FileReader();
-                      fr.onload = function(){ resolve(fr.result); };
-                      fr.onerror = function(){ resolve(null); };
-                      fr.readAsDataURL(fileEl.files[k]);
-                    }catch(e){ resolve(null); }
-                  });
-                  if (u) urls.push(u);
-                }
-              }
-              body.image_data_urls = urls;
-              init.body = JSON.stringify(body);
-            }
-          } catch(e) {
-            // ignore if body isn't JSON
-          }
-        }
-      } catch(e) {
-        // never block login or other scripts
-      }
-      return __origFetch.apply(this, arguments);
-    };
+    // (image_data_urls monkeypatch removed; using presign URL uploads)
+
 
     // If browser restores file input after reload, draw thumbs
     setTimeout(function(){
