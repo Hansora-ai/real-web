@@ -500,11 +500,16 @@ document.addEventListener('click', function(e){
 
 <script>
 (function(){try{
-  if (window.supabase && supabase.auth && typeof supabase.auth.getSession === 'function') {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data && data.session && typeof window.showLoggedInUI === 'function') {
-        try { window.showLoggedInUI(data.session); } catch(e){ console.warn('showLoggedInUI error', e); }
-      }
+  if (window.supabase && supabase.auth && typeof supabase.auth.getUser === 'function') {
+    supabase.auth.getUser().then(async ({ data }) => {
+      try {
+        const user = data?.user;
+        if (!user) return;
+        if (typeof window.getOrCreateProfile === 'function') {
+          const prof = await window.getOrCreateProfile(user);
+          if (typeof window.showLoggedInUI === 'function') window.showLoggedInUI(prof, user);
+        }
+      } catch(e){ console.warn('post-init header refresh error', e); }
     });
   }
 } catch(e){ console.warn('post-init session check failed', e); }} )();
