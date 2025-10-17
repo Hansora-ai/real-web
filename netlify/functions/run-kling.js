@@ -1,9 +1,10 @@
 // netlify/functions/run-kling.js
-// Create a KIE Kling job (text→video or image→video), seed a placeholder Usage row,
-// and (server-side) debit credits. Minimal changes elsewhere.
+// KIE Kling job launcher (text→video or image→video) using URL-only image input.
+// Minimal, surgical: accepts only imageUrl/image_url, ignores any data URLs.
+// Preserves seeding user_generations and server-side credit debit.
 //
-// Required env: KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-// Optional: KIE_BASE_URL (default https://api.kie.ai), SUPABASE_BUCKET (uploads/results bucket)
+// Env: KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// Opt: KIE_BASE_URL, SUPABASE_BUCKET, SITE_BASE
 //
 const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/, '');
 const KIE_KEY  = process.env.KIE_API_KEY || '';
@@ -13,7 +14,6 @@ const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'downloads';
 const SITE_BASE = (process.env.SITE_BASE || 'https://webhansora.netlify.app').replace(/\/+$/,'');
 const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/video-kie-callback`;
 
-
 function cors(){ return {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -21,7 +21,7 @@ function cors(){ return {
 }; }
 const json = (c,o)=>({ statusCode:c, headers:{ 'Content-Type':'application/json', ...cors() }, body:JSON.stringify(o) });
 
-function getHeader(event, k){ return event.headers[k] || event.headers[k.toLowerCase()] || event.headers[k.toUpperCase()] || null; }
+function getHeader(event, k){ return event.headers?.[k] || event.headers?.[k.toLowerCase()] || event.headers?.[k.toUpperCase()] || null; }
 function getUID(event, body){
   const qs = new URLSearchParams(event.queryStringParameters || {});
   return ((getHeader(event,'x-user-id')||'') || (body && (body.uid||'')) || (qs.get('uid')||'')).trim();
@@ -49,34 +49,7 @@ async function debitCredits(uid, cost){
   }catch(e){ return { ok:false, error:'server_exception', details:String(e&&e.message||e) }; }
 }
 
-// Decode data URL -> { mime, buffer }
-function decodeDataUrl(dataUrl){
-  const m = String(dataUrl||'').match(/^data:([^;]+);base64,(.*)$/i);
-  if (!m) return null;
-  const mime = m[1]; const b64 = m[2];
-  try { return { mime, buffer: Buffer.from(b64, 'base64') }; } catch { return null; }
-}
-
-// Upload buffer to Supabase public bucket -> public URL
-async function uploadBuffer(buf, mime, nameHint){
-  if (!(SUPABASE_URL && SERVICE_KEY && buf)) return '';
-  const d = new Date();
-  const y = String(d.getUTCFullYear());
-  const m = String(d.getUTCMonth()+1).padStart(2,'0');
-  const day = String(d.getUTCDate()).padStart(2,'0');
-  const safe = String(nameHint||'kling-input').replace(/[^\w.\- ]+/g,'_').slice(0,120);
-  const path = `${y}/${m}/${day}/${Date.now()}-${safe}`;
-  const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`;
-  const up = await fetch(uploadUrl, {
-    method:'POST',
-    headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': mime || 'application/octet-stream', 'x-upsert':'true' },
-    body: buf
-  });
-  if (!up.ok) return '';
-  return `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`;
-}
-
-// Extract common taskId from KIE responses
+// Extract a taskId from various KIE response shapes
 function extractTaskId(data){
   if (!data || typeof data !== 'object') return '';
   const cands = [
@@ -85,7 +58,7 @@ function extractTaskId(data){
     data?.id
   ].map(v => (v==null?'':String(v))).filter(s => s && s.length>3);
   if (cands.length) return cands[0];
-  // deep scan
+  // deep scan fallback
   const seen = new Set();
   const scan = (x)=>{
     if (!x || typeof x!=='object' || seen.has(x)) return '';
@@ -117,9 +90,12 @@ exports.handler = async (event) => {
 
     const prompt = String(body.prompt || '').trim();
     const aspect_ratio = (body.aspect_ratio ? String(body.aspect_ratio) : '1:1').trim();
-const duration = (body && (body.duration === 10 || String(body.duration) === '10')) ? 10 : 5;
-    if (!prompt && !( || (s && s.length))) {
-      return json(400, { ok:false, error:'missing_input', details:'Provide a prompt or an image.' });
+    const duration = (body && (body.duration === 10 || String(body.duration) === '10')) ? 10 : 5;
+
+    // URL-only image intake (accept body.image_url OR body.imageUrl)
+    const imageUrl = (body && (body.image_url || body.imageUrl)) ? String(body.image_url || body.imageUrl).trim() : '';
+    if (!prompt && !imageUrl) {
+      return json(400, { ok:false, error:'missing_input', details:'Provide a prompt or an image_url.' });
     }
 
     // Costs: 5s -> 4⚡, 10s -> 8⚡
@@ -144,54 +120,26 @@ const duration = (body && (body.duration === 10 || String(body.duration) === '10
       }
     } catch {}
 
-    // Prepare image_url if provided as data URL
-    let image_url = '';
-
-// If client sent a public URL already, take it directly and skip data URL decoding/upload.
-
-if (__imageUrls && Array.isArray(__imageUrls) && __imageUrls.length) {
-  try { image_urls = __imageUrls; } catch(e){}
-}
-
-    const firstData = (!__imageUrl && !(__imageUrls && __imageUrls.length)) ? ((s && s[0]) ||  || '') : '';
-    if (firstData) {
-      const dec = decodeDataUrl(firstData);
-      if (!dec) return json(400, { ok:false, error:'bad_' });
-      image_url = await uploadBuffer(dec.buffer, dec.mime, 'kling-input');
-      if (!image_url) return json(500, { ok:false, error:'image_upload_failed' });
-    }
-
     // Choose model per mode
+    const image_url = imageUrl || ''; // normalize to snake_case key for KIE
     const model = image_url ? "kling/v2-5-turbo-image-to-video-pro" : "kling/v2-5-turbo-text-to-video-pro";
 
     // Build KIE createTask payload
-    
-// Normalize single/array image params before sending to provider
-try {
-  if (typeof image_urls === 'undefined' && typeof image_url !== 'undefined' && image_url) {
-    image_urls = [ String(image_url) ];
-  }
-  if (Array.isArray(image_urls) && !image_url && image_urls.length) {
-    image_url = String(image_urls[0]);
-  }
-} catch {}
-const payload = {
+    const payload = {
       model,
       input: {
         prompt,
         aspect_ratio,
         duration: (duration === 10 ? '10' : '5'),
-        ...(image_url ? { image_url } : {})
-      }
-    ,
-      callBackUrl: `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`
+        ...(image_url ? { image_url } : {}),
+      },
+      callBackUrl: `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`,
     };
 
-    // Create task (no webhook required; we poll)
     const resp = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
     const data = await resp.json().catch(()=>({}));
     if (!resp.ok) return json(resp.status || 502, { ok:false, error:'kie_create_failed', details:data });
@@ -210,17 +158,15 @@ const payload = {
           await fetch(`${ug}?id=eq.${encodeURIComponent(arr[0].id)}`, {
             method: 'PATCH',
             headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-            body: JSON.stringify({ meta: { source:'kling', run_id, model, status:'processing', task_id: taskId } })
+            body: JSON.stringify({ meta: { source:'kling', run_id, model, status:'processing', task_id: taskId } }),
           });
         }
       }
     } catch {}
 
-
     // Debit credits AFTER task was accepted
     const debit = await debitCredits(uid, cost);
     if (!debit.ok){
-      // We don't know a cancel endpoint for KIE generic jobs; return error.
       return json(402, { ok:false, error:'not_enough_credits', details: debit });
     }
 
