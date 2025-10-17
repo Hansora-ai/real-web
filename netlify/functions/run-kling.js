@@ -117,10 +117,8 @@ exports.handler = async (event) => {
 
     const prompt = String(body.prompt || '').trim();
     const aspect_ratio = (body.aspect_ratio ? String(body.aspect_ratio) : '1:1').trim();
-    const image_data_url = body.image_data_url || null;
-    const image_data_urls = Array.isArray(body.image_data_urls) ? body.image_data_urls.filter(Boolean) : null;
-    const duration = (body && (body.duration === 10 || String(body.duration) === '10')) ? 10 : 5;
-    if (!prompt && !(image_data_url || (image_data_urls && image_data_urls.length))) {
+const duration = (body && (body.duration === 10 || String(body.duration) === '10')) ? 10 : 5;
+    if (!prompt && !( || (s && s.length))) {
       return json(400, { ok:false, error:'missing_input', details:'Provide a prompt or an image.' });
     }
 
@@ -150,22 +148,15 @@ exports.handler = async (event) => {
     let image_url = '';
 
 // If client sent a public URL already, take it directly and skip data URL decoding/upload.
-if (__imageUrl) { try { image_url = __imageUrl; } catch(e){} }
-if (__imageUrls && Array.isArray(__imageUrls) && __imageUrls.length) { try { image_urls = __imageUrls; } catch(e){} }
 
-
-// If client sent a public URL already, take it directly and skip data URL decoding/upload.
-if (__imageUrl) {
-  try { image_url = __imageUrl; } catch(e){}
-}
 if (__imageUrls && Array.isArray(__imageUrls) && __imageUrls.length) {
   try { image_urls = __imageUrls; } catch(e){}
 }
 
-    const firstData = (!__imageUrl && !(__imageUrls && __imageUrls.length)) ? ((image_data_urls && image_data_urls[0]) || image_data_url || '') : '';
+    const firstData = (!__imageUrl && !(__imageUrls && __imageUrls.length)) ? ((s && s[0]) ||  || '') : '';
     if (firstData) {
       const dec = decodeDataUrl(firstData);
-      if (!dec) return json(400, { ok:false, error:'bad_image_data_url' });
+      if (!dec) return json(400, { ok:false, error:'bad_' });
       image_url = await uploadBuffer(dec.buffer, dec.mime, 'kling-input');
       if (!image_url) return json(500, { ok:false, error:'image_upload_failed' });
     }
