@@ -353,8 +353,10 @@ window.__run=async function(){
     const rid=uid+'-'+Date.now();
 
     const fileEl = document.getElementById('imageFile');
-// Build array of public image URLs (presign → PUT → HEAD warm), up to 4
+
+// Build array of public image URLs (presign → PUT → HEAD warm), up to 4, for storage/preview
 let image_urls = [];
+let image_data_urls = [];
 if (fileEl && fileEl.files && fileEl.files.length){
   const limit = Math.min(4, fileEl.files.length);
   for (let i=0;i<limit;i++){
@@ -362,7 +364,7 @@ if (fileEl && fileEl.files && fileEl.files.length){
     const origName = f.name || 'image.jpg';
     const type = (f.type || 'image/jpeg').toLowerCase();
     const safeExt = type.includes('png') ? '.png' : ((type.includes('jpeg') || type.includes('jpg')) ? '.jpg' : (type.includes('webp') ? '.webp' : '.jpg'));
-    const base = origName.replace(/\.[^./\\]+$/, '');
+    const base = origName.replace(/\.[^./\]+$/, '');
     const filename = `${Date.now()}-${base}${safeExt}`;
 
     // Presign (expects 'mime')
@@ -381,13 +383,22 @@ if (fileEl && fileEl.files && fileEl.files.length){
     if(!put.ok){ console.warn('PUT failed for file', i); continue; }
     try{ await fetch(sj.publicUrl, { method:'HEAD', cache:'no-store' }); }catch{}
     image_urls.push(sj.publicUrl);
+
+    // ALSO collect a data URL to send to the server (compat with existing run JS)
+    image_data_urls.push(await new Promise((resolve, reject)=>{
+      const fr = new FileReader();
+      fr.onerror = ()=>reject(new Error('file read failed'));
+      fr.onload = ()=>resolve(fr.result);
+      fr.readAsDataURL(f);
+    }));
   }
 }
 
 const res = await fetch('/.netlify/functions/run-gpt-image-1',{
   method:'POST',
   headers:{'Content-Type':'application/json','X-USER-ID':uid},
-  body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_urls })
+  // IMPORTANT: send `image_data_urls` for compatibility; server maps these to `input_images`
+  body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_data_urls })
 });
 if (res.status === 201 || res.status === 200 || res.status === 202) {
       /* client-side debit removed */
@@ -403,8 +414,7 @@ showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
 
 // Start polling prediction
 imagenCheckPoll(id, uid, rid);
-
-  }catch(e){
+}catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
   } finally{ /* keep disabled while polling; re-enabled on success/fail/timeout */ }
 };
