@@ -236,7 +236,7 @@
       }
     }
 
-const $btnLogout = document.getElementById('btnLogout'); if ($btnLogout) $btnLogout.addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
+if ($btnLogout) $btnLogout.addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
 
     loadUsage();
   </script>
@@ -285,7 +285,7 @@ function renderRows(rows){
 <script>
 // Add missing listeners so the login modal opens (no other changes)
 (function(){
-  function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); (()=>{const __m=document.getElementById('authMsg'); if(__m) __m.textContent =''; }});
+  function openAuth(){ const m=document.getElementById('authModal'); m?.classList.remove('hidden'); const __m=document.getElementById('authMsg'); if(__m) __m.textContent=''; }
   function setAuthMode(mode){
     const $title = document.getElementById('authTitle');
     const $pass2 = document.getElementById('authPass2');
