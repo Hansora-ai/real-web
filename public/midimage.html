@@ -259,7 +259,41 @@ const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
   const urls = new Set();
 
-filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,1).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='block w-full max-h-56 object-contain rounded-lg border border-white/10 bg-black/20';thumbsEl.appendChild(img);});});
+filesEl.addEventListener('change', ()=>{
+  // clear existing previews
+  thumbsEl.innerHTML='';
+
+  // only allow up to 1 file preview
+  const selected = [...filesEl.files].slice(0,1);
+  if (!selected.length) return;
+
+  const f = selected[0];
+  const u = URL.createObjectURL(f);
+
+  // wrapper with X button
+  const wrap = document.createElement('div');
+  wrap.className = 'relative inline-block';
+
+  const img = new Image();
+  img.src = u;
+  img.className = 'block w-full max-h-56 object-contain rounded-lg border border-white/10 bg-black/20';
+
+  // X button (remove image)
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.setAttribute('aria-label', 'Remove image');
+  btn.className = 'absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white text-sm leading-none flex items-center justify-center hover:bg-black/80';
+  btn.textContent = '×';
+  btn.addEventListener('click', ()=>{
+    // clear preview and input
+    thumbsEl.innerHTML = '';
+    try { filesEl.value = ''; } catch {}
+  });
+
+  wrap.appendChild(img);
+  wrap.appendChild(btn);
+  thumbsEl.appendChild(wrap);
+});
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
