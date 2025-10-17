@@ -236,7 +236,7 @@
       }
     }
 
-    document.getElementById('btnLogout').addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
+    (function(tmp){ if(tmp) return tmp; })(document.getElementById('btnLogout')).addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
 
     loadUsage();
   </script>
@@ -495,6 +495,19 @@ document.addEventListener('click', function(e){
   e.preventDefault();
   window.location.assign('login.html');
 }, true);
+</script>
+
+
+<script>
+(function(){try{
+  if (window.supabase && supabase.auth && typeof supabase.auth.getSession === 'function') {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data && data.session && typeof window.showLoggedInUI === 'function') {
+        try { window.showLoggedInUI(data.session); } catch(e){ console.warn('showLoggedInUI error', e); }
+      }
+    });
+  }
+} catch(e){ console.warn('post-init session check failed', e); }} )();
 </script>
 
 </body>
