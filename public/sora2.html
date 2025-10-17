@@ -271,12 +271,36 @@ async function runSora(){
 
   const cost = currentCost(); const credits=await getCredits(); if(credits<cost){ showStatus('Not enough credits (need '+cost+').','text-rose-300'); runBtn.disabled=false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
 
-  let imageUrl='';
-  if(hasImage){
-    const fd=new FormData(); fd.append('file', files[0], files[0].name||'image-0.png');
-    const ur=await fetch('/.netlify/functions/kie-upload',{method:'POST',headers:{'X-USER-ID':auth.user.id},body:fd});
-    const uj=await ur.json().catch(()=>null); if(!ur.ok||!uj||!uj.downloadUrl){ showStatus('Upload failed','text-rose-300'); runBtn.disabled=false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
-    imageUrl=uj.downloadUrl;
+  let imageUrl = '';
+  if (hasImage) {
+    // Nano Banana 1:1: presign → PUT → HEAD warm → public URL
+    const f = files[0];
+    const origName = f.name || 'image.jpg';
+    const type = (f.type || 'image/jpeg').toLowerCase();
+    const safeExt = type.includes('png') ? '.png' : ((type.includes('jpeg') || type.includes('jpg')) ? '.jpg' : (type.includes('webp') ? '.webp' : '.jpg'));
+    const base = origName.replace(/\.[^./\\]+$/, '');
+    const filename = `${Date.now()}-${base}${safeExt}`;
+
+    const signResp = await fetch('/.netlify/functions/sign-upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-USER-ID': auth.user.id },
+      body: JSON.stringify({ filename, mime: type })
+    });
+    const signJson = await signResp.json().catch(() => null);
+    if (!signResp.ok || !signJson || !signJson.uploadUrl || !signJson.publicUrl) {
+      showStatus('Upload failed', 'text-rose-300');
+      runBtn.disabled = false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy = false; return;
+    }
+
+    const putResp = await fetch(signJson.uploadUrl, { method: 'PUT', headers: { 'Content-Type': type }, body: f });
+    if (!putResp.ok) {
+      showStatus('Upload failed', 'text-rose-300');
+      runBtn.disabled = false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy = false; return;
+    }
+
+    try { await fetch(signJson.publicUrl, { method: 'HEAD', cache: 'no-store' }); } catch {}
+
+    imageUrl = signJson.publicUrl;
   }
 
   const aspectRatio = (ratioEl.value||'16:9');
