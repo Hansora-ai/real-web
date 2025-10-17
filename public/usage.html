@@ -36,8 +36,8 @@
         <a href="price.html" class="hover:text-white/90">Pricing</a>
         <a href="/index.html#faq" class="hover:text-white/90">FAQ</a>
       </nav>
-      <div class="flex items-center gap-3"><a id="btnLoginNav" href="login.html" class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm bg-indigo-500 hover:bg-indigo-600 text-white bg-indigo-500 hover:bg-indigo-600 text-white">Login / Signup</a>
-        <a id="btnGetStarted" href="#" class="rounded-xl px-3 py-2 text-sm font-semibold shadow-soft" style="background:#6366f1;color:white">Get Started</a>
+      <div class="flex items-center gap-3"><a id="btnLoginNav" href="login.html" class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm bg-indigo-500 hover:bg-indigo-600 text-white bg-indigo-500 hover:bg-indigo-600 text-white" onclick="event.stopImmediatePropagation();window.location.assign('login.html');return false;">Login / Signup</a>
+        <a aria-hidden="true" tabindex="-1" id="btnGetStarted" href="#" class="rounded-xl px-3 py-2 text-sm font-semibold shadow-soft hidden" style="background:#6366f1;color:white;display:none!important;visibility:hidden!important;pointer-events:none!important;width:0!important;height:0!important;overflow:hidden!important">Get Started</a>
         <div id="navUser" class="hidden items-center gap-2">
           <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
           <div class="relative">
