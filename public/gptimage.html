@@ -362,7 +362,7 @@ if (fileEl && fileEl.files && fileEl.files.length){
     const origName = f.name || 'image.jpg';
     const type = (f.type || 'image/jpeg').toLowerCase();
     const safeExt = type.includes('png') ? '.png' : ((type.includes('jpeg') || type.includes('jpg')) ? '.jpg' : (type.includes('webp') ? '.webp' : '.jpg'));
-    const base = origName.replace(/\.[^./\]+$/, '');
+    const base = origName.replace(/\.[^./\\]+$/, '');
     const filename = `${Date.now()}-${base}${safeExt}`;
 
     // Presign (expects 'mime')
