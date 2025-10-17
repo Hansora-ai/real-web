@@ -314,6 +314,33 @@ async function vvCheckPoll(taskId, uid, rid){
   try{ runBtn.disabled=false; repaintCost(); }catch{}
 }
 
+
+// --- Supabase direct upload helpers (Nano Banana 1:1 style) ---
+async function signForUpload(filename, contentType){
+  const res = await fetch('/.netlify/functions/sign-upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename, contentType })
+  });
+  const j = await res.json().catch(()=>null);
+  if (!res.ok || !j || !(j.uploadUrl || j.signedUrl) || !j.publicUrl){
+    throw new Error((j && j.error) ? j.error : 'sign_failed');
+  }
+  return { uploadUrl: j.uploadUrl || j.signedUrl, publicUrl: j.publicUrl };
+}
+async function putFile(url, file, contentType){
+  const r = await fetch(url, { method:'PUT', headers:{ 'Content-Type': contentType }, body: file });
+  if (!r.ok) throw new Error('put_failed_' + r.status);
+}
+async function headWarm(url){
+  try{ await fetch(url, { method:'HEAD', cache:'no-store' }); }catch{}
+}
+async function uploadToSupabase(file){
+  const sign = await signForUpload(file.name || 'image.png', file.type || 'image/png');
+  await putFile(sign.uploadUrl, file, file.type || 'application/octet-stream');
+  await headWarm(sign.publicUrl);
+  return sign.publicUrl;
+}
 // Main run
 window.__run = async function(){
   try{ document.getElementById('playBtn')?.classList.add('hidden'); }catch{}
@@ -350,15 +377,12 @@ window.__run = async function(){
     const uid = authData.user.id;
     const aspectRatio = ratioEl.value || '16:9';
 
-    // If image→video, upload first via kie-upload
+    // If image→video, upload first via Supabase signer + PUT (1:1 with Nano Banana)
     let imageUrl = '';
     if (hasImage){
-      const fd = new FormData();
-      fd.append('file', files[0], files[0].name || 'image-0.png');
-      const ur = await fetch('/.netlify/functions/kie-upload',{ method:'POST', headers:{'X-USER-ID': uid}, body: fd });
-      const uj = await ur.json().catch(()=>null);
-      if (!ur.ok || !uj || !uj.downloadUrl) throw new Error(uj?.error || 'Upload failed');
-      imageUrl = uj.downloadUrl;
+      const f = files[0];
+      imageUrl = await uploadToSupabase(f);
+      if (!imageUrl) throw new Error('upload_failed');
     }
 
     // Create job
