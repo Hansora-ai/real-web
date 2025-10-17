@@ -375,8 +375,25 @@ async function headWarm(url){
   try{ await fetch(url, { method:'HEAD', cache:'no-store' }); }catch{}
 }
 async function uploadToSupabase(file){
-  const sign = await signForUpload(file.name || 'image.png', file.type || 'image/png');
-  await putFile(sign.uploadUrl, file, file.type || 'application/octet-stream');
+  // 1:1 with Nano Banana behavior (bridge-equivalent):
+  // - Ensure JPG/PNG (convert others to JPEG)
+  // - Force safe filename extension and correct Content-Type
+  // - PUT file, then warm HEAD, return public URL
+  async function ensureJpegOrPng(f){
+    if (f && (f.type === 'image/jpeg' || f.type === 'image/png')) return f;
+    const bmp = await createImageBitmap(f);
+    const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+    c.getContext('2d').drawImage(bmp, 0, 0);
+    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
+    return new File([blob], (f.name || 'upload').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+  }
+
+  const f2 = await ensureJpegOrPng(file);
+  const safeName = (f2.name || 'upload').replace(/\.[^.]+$/, '') + (f2.type === 'image/png' ? '.png' : '.jpg');
+  const contentType = f2.type || (safeName.endsWith('.png') ? 'image/png' : 'image/jpeg');
+
+  const sign = await signForUpload(safeName, contentType);
+  await putFile(sign.uploadUrl, f2, contentType);
   await headWarm(sign.publicUrl);
   return sign.publicUrl;
 }
