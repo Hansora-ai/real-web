@@ -30,28 +30,22 @@
         </a>
       </div>
       <nav class="hidden md:flex items-center gap-8 text-sm">
-        <a href="models.html" class="hover:text-white/90">Models</a>
-                <a href="examples-prompts.html" class="hover:text-white/90">Examples/Prompts</a>
-        <a href="templates.html" class="hover:text-white/90">Templates</a>
-        <a href="price.html" class="hover:text-white/90">Pricing</a>
+        <a href="/index.html#models" class="hover:text-white/90">Models</a>
+        <a href="/index.html#templates" class="hover:text-white/90">Templates</a>
+        <a href="/index.html#pricing" class="hover:text-white/90">Pricing</a>
         <a href="/index.html#faq" class="hover:text-white/90">FAQ</a>
       </nav>
-      <div class="flex items-center gap-3"><a id="btnLoginNav" href="login.html" class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm bg-indigo-500 hover:bg-indigo-600 text-white">Login / Signup</a>
-        <a  id="btnGetStarted" href="#" class="rounded-xl px-3 py-2 text-sm font-semibold shadow-soft" style="background:#6366f1;color:white" style="display:none" href="login.html">Login / Signup</a>
+      <div class="flex items-center gap-3">
+        <a href="#" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
+        <a id="btnLoginNav" href="#" class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm">Log in</a>
+        <a id="btnGetStarted" href="#" class="rounded-xl px-3 py-2 text-sm font-semibold shadow-soft" style="background:#6366f1;color:white">Get Started</a>
         <div id="navUser" class="hidden items-center gap-2">
           <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
           <div class="relative">
             <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
               <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
             </button>
-            <div id="navMenu" class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm">
-  <ul class="py-1 text-sm text-gray-200" role="menu">
-    <li><a href="profile.html" class="block px-4 py-2 hover:bg-white/10" role="menuitem">Profile</a></li>
-    <li><a href="usage.html" class="block px-4 py-2 hover:bg-white/10" role="menuitem">History</a></li>
-    <li><a href="price.html" class="block px-4 py-2 hover:bg-white/10" role="menuitem">Subscription</a></li>
-    <li><button class="w-full text-left px-4 py-2 hover:bg-white/10" onclick="logout()" role="menuitem">Log out</button></li>
-  </ul>
-</div>
+            <div id="navMenu" class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm"><a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a><a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Edit profile</a><a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a><a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a><button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button></div>
           </div>
         </div>
       </div>
