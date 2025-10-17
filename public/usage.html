@@ -121,7 +121,7 @@
     const $navCredits = document.getElementById('navCredits');
     const $navAvatar = document.getElementById('navAvatar');
     const $navMenu = document.getElementById('navMenu');
-    const $btnLogout = document.const $btnLogout = document.getElementById('btnLogout'); $btnLogout && $btnLogout.addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
+    const $btnLogout = document.getElementById('btnLogout');
     const $navAvatarImg = document.getElementById('navAvatarImg');
 
     const $modal = document.getElementById('authModal');
@@ -236,7 +236,7 @@
       }
     }
 
-    (function(tmp){ if(tmp) return tmp; })(document.getElementById('btnLogout')).addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
+const $btnLogout = document.getElementById('btnLogout'); if ($btnLogout) $btnLogout.addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
 
     loadUsage();
   </script>
@@ -285,7 +285,7 @@ function renderRows(rows){
 <script>
 // Add missing listeners so the login modal opens (no other changes)
 (function(){
-  function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); var __msg=document.getElementById('authMsg'); if(__msg){ __msg.textContent=''; } }
+  function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); (()=>{const __m=document.getElementById('authMsg'); if(__m) __m.textContent =''; }});
   function setAuthMode(mode){
     const $title = document.getElementById('authTitle');
     const $pass2 = document.getElementById('authPass2');
@@ -297,9 +297,9 @@ function renderRows(rows){
   const navLogin = document.getElementById('btnLoginNav');
   const navGetStarted = document.getElementById('btnGetStarted');
   const cardCTA = document.getElementById('openLogin');
-  navLogin?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
-  navGetStarted?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
-  cardCTA?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+if (navLogin) navLogin.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+if (navGetStarted) navGetStarted.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
+if (cardCTA) cardCTA.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
 })();
 </script>
 
@@ -371,10 +371,10 @@ function setAuthMode(mode){
   if(mode==='signup'){ $title.textContent='Sign up'; $pass2?.classList.remove('hidden'); $bSignup?.classList.add('btn-brand'); $bLogin?.classList.remove('btn-brand'); }
   else { $title.textContent='Log in'; $pass2?.classList.add('hidden'); $bLogin?.classList.add('btn-brand'); $bSignup?.classList.remove('btn-brand'); }
 }
-document.getElementById('btnLoginNav')?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
-document.getElementById('btnGetStarted')?.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
-document.getElementById('authClose')?.addEventListener('click', closeAuth);
-document.getElementById('btnDoLogin')?.addEventListener('click', async ()=>{
+if (document.getElementById('btnLoginNav')) document.getElementById('btnLoginNav').addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+if (document.getElementById('btnGetStarted')) document.getElementById('btnGetStarted').addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
+if (document.getElementById('authClose')) document.getElementById('authClose').addEventListener('click', closeAuth);
+if (document.getElementById('btnDoLogin')) document.getElementById('btnDoLogin').addEventListener('click', async ()=>{
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPass').value;
   const m = document.getElementById('authMsg');
@@ -384,7 +384,7 @@ document.getElementById('btnDoLogin')?.addEventListener('click', async ()=>{
     m.textContent = 'Logged in'; setTimeout(()=>location.reload(), 300);
   }catch(e){ m.textContent = String(e||'Login failed'); }
 });
-document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
+if (document.getElementById('btnDoSignup')) document.getElementById('btnDoSignup').addEventListener('click', async ()=>{
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPass').value;
   const password2 = document.getElementById('authPass2').value;
