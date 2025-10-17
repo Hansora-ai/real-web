@@ -544,7 +544,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if (fileEl) fileEl.addEventListener('change', renderThumbs);
 
-    // --- Inject image_data_urls into ONLY the Kling 2.5 Turbo Pro request ---
+    // --- Inject  into ONLY the Kling 2.5 Turbo Pro request ---
     var __origFetch = window.fetch;
     window.fetch = async function(input, init){
       try {
@@ -552,14 +552,14 @@ document.addEventListener('DOMContentLoaded', function(){
         if (isTarget && init && init.body && typeof init.body === 'string') {
           try {
             var body = JSON.parse(init.body);
-            if (!body.image_data_url) {
+            if (!body.) {
   var first = null;
   if (fileEl && fileEl.files && fileEl.files.length){
     first = await new Promise(function(resolve){
       try{ var fr = new FileReader(); fr.onload = function(){ resolve(fr.result); }; fr.onerror = function(){ resolve(null); }; fr.readAsDataURL(fileEl.files[0]); }catch(e){ resolve(null); }
     });
   }
-  if (first) { body.image_data_url = first; init.body = JSON.stringify(body); }
+  if (first) { body. = first; init.body = JSON.stringify(body); }
 }
           } catch(e) {
             // ignore if body isn't JSON
