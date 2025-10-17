@@ -36,10 +36,9 @@
         <a href="price.html" class="hover:text-white/90">Pricing</a>
         <a href="/index.html#faq" class="hover:text-white/90">FAQ</a>
       </nav>
-      <div class="flex items-center gap-3">
-        
-        <a id="btnLoginNav" href="login.html" class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm bg-indigo-500 hover:bg-indigo-600 text-white">Login / Signup</a>
-        <a id="btnGetStarted" href="login.html" class="hidden rounded-xl px-3 py-2 text-sm" style="background:#6366f1;color:white">Login / Signup</a><div id="navUser" class="hidden items-center gap-2">
+      <div class="flex items-center gap-3"><a id="btnLoginNav" href="login.html" class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm bg-indigo-500 hover:bg-indigo-600 text-white">Login / Signup</a>
+        <a  id="btnGetStarted" href="#" class="rounded-xl px-3 py-2 text-sm font-semibold shadow-soft" style="background:#6366f1;color:white" style="display:none" href="login.html">Login / Signup</a>
+        <div id="navUser" class="hidden items-center gap-2">
           <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
           <div class="relative">
             <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
@@ -74,7 +73,7 @@
       <h3 class="font-semibold">Please log in</h3>
       <p class="text-zinc-400 mt-1 text-sm">You must be signed in to view your generations.</p>
       <div class="mt-4">
-        <a href="login.html" class="rounded-xl px-4 py-2 text-sm bg-indigo-500 hover:bg-indigo-600 text-white">Login / Signup</a>
+        <button id="openLogin" class="rounded-xl px-4 py-2 text-sm" style="background:#6366f1;color:white">Log in / Sign up</button>
       </div>
     </div>
 
@@ -100,7 +99,7 @@
         <input id="authPass" type="password" placeholder="Password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
         <input id="authPass2" type="password" placeholder="Repeat password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden">
         <div class="flex gap-2">
-          <a href="login.html" class="w-1/2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-semibold bg-indigo-500 hover:bg-indigo-600 text-white">Login / Signup</a>
+          <button id="btnDoLogin" type="button" class="w-1/2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-semibold">Log in</button>
           <button id="btnDoSignup" type="button" class="w-1/2 rounded-lg border border-white/10 bg-white/5 px-3 py-2">Sign up</button>
         </div>
         <p id="authMsg" class="text-xs text-zinc-400"></p>
