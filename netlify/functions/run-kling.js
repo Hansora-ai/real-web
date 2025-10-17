@@ -150,6 +150,11 @@ exports.handler = async (event) => {
     let image_url = '';
 
 // If client sent a public URL already, take it directly and skip data URL decoding/upload.
+if (__imageUrl) { try { image_url = __imageUrl; } catch(e){} }
+if (__imageUrls && Array.isArray(__imageUrls) && __imageUrls.length) { try { image_urls = __imageUrls; } catch(e){} }
+
+
+// If client sent a public URL already, take it directly and skip data URL decoding/upload.
 if (__imageUrl) {
   try { image_url = __imageUrl; } catch(e){}
 }
@@ -157,7 +162,7 @@ if (__imageUrls && Array.isArray(__imageUrls) && __imageUrls.length) {
   try { image_urls = __imageUrls; } catch(e){}
 }
 
-    const firstData = (image_data_urls && image_data_urls[0]) || image_data_url || '';
+    const firstData = (!__imageUrl && !(__imageUrls && __imageUrls.length)) ? ((image_data_urls && image_data_urls[0]) || image_data_url || '') : '';
     if (firstData) {
       const dec = decodeDataUrl(firstData);
       if (!dec) return json(400, { ok:false, error:'bad_image_data_url' });
