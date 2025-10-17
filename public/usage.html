@@ -485,5 +485,17 @@ document.getElementById('btnDoSignup')?.addEventListener('click', async ()=>{
   }catch(e){}
 })();
 </script>
+
+<script>
+// Option A shim: allow #btnLoginNav to navigate to login.html; only modal triggers are intercepted elsewhere.
+document.addEventListener('click', function(e){
+  const a = e.target.closest('#btnLoginNav');
+  if(!a) return;
+  e.stopImmediatePropagation(); // defeat any capture/bubble interceptors
+  e.preventDefault();
+  window.location.assign('login.html');
+}, true);
+</script>
+
 </body>
 </html>
