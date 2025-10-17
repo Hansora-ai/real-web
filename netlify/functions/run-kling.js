@@ -148,6 +148,15 @@ exports.handler = async (event) => {
 
     // Prepare image_url if provided as data URL
     let image_url = '';
+
+// If client sent a public URL already, take it directly and skip data URL decoding/upload.
+if (__imageUrl) {
+  try { image_url = __imageUrl; } catch(e){}
+}
+if (__imageUrls && Array.isArray(__imageUrls) && __imageUrls.length) {
+  try { image_urls = __imageUrls; } catch(e){}
+}
+
     const firstData = (image_data_urls && image_data_urls[0]) || image_data_url || '';
     if (firstData) {
       const dec = decodeDataUrl(firstData);
@@ -160,7 +169,17 @@ exports.handler = async (event) => {
     const model = image_url ? "kling/v2-5-turbo-image-to-video-pro" : "kling/v2-5-turbo-text-to-video-pro";
 
     // Build KIE createTask payload
-    const payload = {
+    
+// Normalize single/array image params before sending to provider
+try {
+  if (typeof image_urls === 'undefined' && typeof image_url !== 'undefined' && image_url) {
+    image_urls = [ String(image_url) ];
+  }
+  if (Array.isArray(image_urls) && !image_url && image_urls.length) {
+    image_url = String(image_urls[0]);
+  }
+} catch {}
+const payload = {
       model,
       input: {
         prompt,
