@@ -359,7 +359,7 @@ async function signForUpload(filename, contentType){
   const res = await fetch('/.netlify/functions/sign-upload', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({filename, contentType })
+    body: JSON.stringify({ filename, mime: contentType })
   });
   const j = await res.json().catch(()=>null);
   if (!res.ok || !j || !(j.uploadUrl || j.signedUrl) || !j.publicUrl){
