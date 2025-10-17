@@ -34,8 +34,15 @@ exports.handler = async (event) => {
     const uid = (event.headers['x-user-id'] || event.headers['X-USER-ID'] || '').trim() || null;
     const prompt = String(body.prompt || '').trim();
     const aspect_ratio = (body.aspect_ratio ? String(body.aspect_ratio) : '1:1').trim();
+
+    // --- New: accept direct public URLs as the primary image source ---
+    const image_urls = Array.isArray(body.image_urls) ? body.image_urls.filter(Boolean) : null;
+    const image_url  = body.image_url ? String(body.image_url).trim() : null;
+
+    // Legacy/secondary sources (data URLs)
     const image_data_url = body.image_data_url || null;
     const image_data_urls = Array.isArray(body.image_data_urls) ? body.image_data_urls.filter(Boolean) : null;
+
     if (!prompt) return json(400, { ok:false, error:'missing_prompt' });
 
     const run_id = (body.run_id && String(body.run_id).trim()) || `${uid || 'anon'}-${Date.now()}`;
@@ -82,19 +89,28 @@ exports.handler = async (event) => {
 
     // Replicate input
     const input = { openai_api_key: OPENAI_API_KEY, prompt, aspect_ratio, output_format: "png" };
-    if (image_data_urls && image_data_urls.length){
-      input.image = image_data_urls[0];
-      input.images = image_data_urls;
-      input.input_image = image_data_urls[0];
-      input.input_images = image_data_urls;
-      input.reference_images = image_data_urls;
-      input.input_fidelity = "high";
+
+    // --- Choose images by precedence:
+    // 1) image_urls (array) or image_url (single)  -> treat as public URLs
+    // 2) image_data_urls (array) or image_data_url (single) -> data URLs (legacy)
+    let chosenImages = null;
+    if (image_urls && image_urls.length){
+      chosenImages = image_urls;
+    } else if (image_url){
+      chosenImages = [image_url];
+    } else if (image_data_urls && image_data_urls.length){
+      chosenImages = image_data_urls;
     } else if (image_data_url){
-      input.image = image_data_url;
-      input.images = [image_data_url];
-      input.input_image = image_data_url;
-      input.input_images = [image_data_url];
-      input.reference_images = [image_data_url];
+      chosenImages = [image_data_url];
+    }
+
+    if (chosenImages && chosenImages.length){
+      // Map to all commonly-accepted keys for GPT-Image-1 on Replicate
+      input.image = chosenImages[0];
+      input.images = chosenImages;
+      input.input_image = chosenImages[0];
+      input.input_images = chosenImages;
+      input.reference_images = chosenImages;
       input.input_fidelity = "high";
     }
 
