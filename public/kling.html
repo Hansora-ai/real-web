@@ -353,6 +353,33 @@ async function imagenCheckPoll(id, uid, rid){
   }
 }
 
+
+// --- Supabase direct upload helpers (Nano Banana 1:1 style) ---
+async function signForUpload(filename, contentType){
+  const res = await fetch('/.netlify/functions/sign-upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename, contentType })
+  });
+  const j = await res.json().catch(()=>null);
+  if (!res.ok || !j || !(j.uploadUrl || j.signedUrl) || !j.publicUrl){
+    throw new Error((j && j.error) ? j.error : 'sign_failed');
+  }
+  return { uploadUrl: j.uploadUrl || j.signedUrl, publicUrl: j.publicUrl };
+}
+async function putFile(url, file, contentType){
+  const r = await fetch(url, { method:'PUT', headers:{ 'Content-Type': contentType }, body: file });
+  if (!r.ok) throw new Error('put_failed_' + r.status);
+}
+async function headWarm(url){
+  try{ await fetch(url, { method:'HEAD', cache:'no-store' }); }catch{}
+}
+async function uploadToSupabase(file){
+  const sign = await signForUpload(file.name || 'image.png', file.type || 'image/png');
+  await putFile(sign.uploadUrl, file, file.type || 'application/octet-stream');
+  await headWarm(sign.publicUrl);
+  return sign.publicUrl;
+}
 // Main run
 window.__run=async function(){
   const {data:authData}=await supabase.auth.getUser();
@@ -386,14 +413,14 @@ window.__run=async function(){
     const rid=uid+'-'+Date.now();
 
     const fileEl = document.getElementById('imageFile');
-let image_data_url = null;
+let imageUrl = '';
 if (fileEl && fileEl.files && fileEl.files.length){
-  image_data_url = await readFileAsDataUrl(fileEl.files[0]);
+  imageUrl = await uploadToSupabase(fileEl.files[0]);
 }
 const res = await fetch('/.netlify/functions/run-kling',{
   method:'POST',
   headers:{'Content-Type':'application/json','X-USER-ID':uid},
-  body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_data_url })
+  body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, imageUrl })
 });
 if (res.status === 201 || res.status === 200 || res.status === 202) {
       /* client-side debit removed */
