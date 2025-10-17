@@ -121,7 +121,7 @@
     const $navCredits = document.getElementById('navCredits');
     const $navAvatar = document.getElementById('navAvatar');
     const $navMenu = document.getElementById('navMenu');
-    const $btnLogout = document.getElementById('btnLogout');
+    const $btnLogout = document.const $btnLogout = document.getElementById('btnLogout'); $btnLogout && $btnLogout.addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
     const $navAvatarImg = document.getElementById('navAvatarImg');
 
     const $modal = document.getElementById('authModal');
@@ -285,7 +285,7 @@ function renderRows(rows){
 <script>
 // Add missing listeners so the login modal opens (no other changes)
 (function(){
-  function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); document.getElementById('authMsg')?.textContent=''; }
+  function openAuth(){ document.getElementById('authModal')?.classList.remove('hidden'); var __msg=document.getElementById('authMsg'); if(__msg){ __msg.textContent=''; } }
   function setAuthMode(mode){
     const $title = document.getElementById('authTitle');
     const $pass2 = document.getElementById('authPass2');
