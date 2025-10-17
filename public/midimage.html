@@ -447,7 +447,7 @@ async function nbCheckPoll(taskId, uid, rid){
 // Main run
 window.__run=async function(){
   const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ alert('Please log in or register first.'); return; }
+  if(!authData.user){ alert('Please log in || register first.'); return; }
 
   
   // HARD CREDIT CHECK (surgical): prevent run if credits insufficient
@@ -474,16 +474,35 @@ __done=false; urls.clear();
     const uid=authData.user.id;
     const rid=uid+'-'+Date.now();
 
-    // upload optional single image
+    // upload optional single image (presign → PUT → HEAD warm)
     let image_url = "";
     if (files.length === 1) {
-      const fd=new FormData();
-      fd.append('file',files[0],files[0].name||('image-0.png'));
-      fd.append('run_id',rid);
-      const r=await fetch('/.netlify/functions/kie-upload',{method:'POST',headers:{'X-USER-ID':uid},body:fd});
-      const j=await r.json().catch(()=>null);
-      if(!r.ok||!j||!j.downloadUrl)throw new Error(j?.error||'Upload failed');
-      image_url = j.downloadUrl;
+      const f = files[0];
+      const origName = f.name || 'image.jpg';
+      const type = (f.type || 'image/jpeg').toLowerCase();
+      const safeExt = type.includes('png') ? '.png' : (type.includes('jpeg') || type.includes('jpg')) ? '.jpg' : (type.includes('webp') ? '.webp' : '.jpg');
+      const base = origName.replace(/\.[^./\]+$/, '');
+      const filename = `${Date.now()}-${base}${safeExt}`;
+
+      // Request presigned upload (expects 'mime')
+      const signResp = await fetch('/.netlify/functions/sign-upload',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-USER-ID':uid},
+        body: JSON.stringify({ filename, mime: type })
+      });
+      const signJson = await signResp.json().catch(()=>null);
+      if(!signResp.ok || !signJson || !signJson.uploadUrl || !signJson.publicUrl){
+        throw new Error((signJson && signJson.error) || 'sign-upload failed');
+      }
+
+      // PUT file with correct Content-Type
+      const putResp = await fetch(signJson.uploadUrl, { method:'PUT', headers:{ 'Content-Type': type }, body: f });
+      if(!putResp.ok){ throw new Error('Upload PUT failed'); }
+
+      // Warm the public URL to avoid eventual consistency delays
+      try{ await fetch(signJson.publicUrl, { method:'HEAD', cache:'no-store' }); }catch{}
+
+      image_url = signJson.publicUrl;
     }
 
     // create job
@@ -547,7 +566,7 @@ __done=false; urls.clear();
     }
 
     if (!__done) {
-      showStatus('Still processing… you can wait or try again.','text-yellow-300');
+      showStatus('Still processing… you can wait || try again.','text-yellow-300');
     }
 
   }catch(e){
