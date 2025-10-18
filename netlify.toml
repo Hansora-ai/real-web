@@ -27,5 +27,5 @@
 
 # --- Mobile bottom banner Edge Function (injects the phone-only bottom nav into every HTML page) ---
 [[edge_functions]]
-path = "/*"
+path = "/models"
 function = "inject-bottom-nav-inline"
