@@ -1,10 +1,16 @@
 export default async (request, context) => {
   const res = await context.next();
   try {
+    // Skip non-HTML
     const ct = res.headers.get('content-type') || '';
-    // Only rewrite HTML responses
     if (!ct.includes('text/html')) return res;
 
+    // Optional: if homepage already has a hard-coded bar, skip to avoid duplicates.
+    // Comment out the next 3 lines if you want injection on / as well.
+    const url = new URL(request.url);
+    if (url.pathname === '/' || url.pathname === '/index.html') return res;
+
+    // Inject CSS link + root + external initializer (mobile-only styles live in CSS)
     const rewriter = new HTMLRewriter()
       .on('head', {
         element(e) {
@@ -13,13 +19,13 @@ export default async (request, context) => {
       })
       .on('body', {
         element(e) {
-          // Insert a root for the bottom nav and load the initializer script
           e.append('<div id="hs-bottom-nav-root"></div><script defer src="/nav-bottom.js"></script>', { html: true });
         }
       });
+
     return rewriter.transform(res);
   } catch (err) {
-    // Never crash the page if injection fails; return the original response
+    // Never take down the page if anything fails
     return res;
   }
 };
