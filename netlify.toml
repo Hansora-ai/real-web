@@ -1,0 +1,31 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+  node_version = "18"
+
+# ✅ ADD THIS so the lambda runs on Node 20 (safe even if the site build stays on 18)
+[build.environment]
+  AWS_LAMBDA_JS_RUNTIME = "nodejs20.x"
+
+[functions]
+  node_bundler = "esbuild"
+
+# (kept) Function-specific settings
+[functions."kie-create"]
+  timeout = 26
+  memory = 512
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+  Access-Control-Allow-Origin = "*"
+
+# --- Kept: Scheduled Function for the no-webhook finisher ---
+[[scheduled]]
+  path = "/.netlify/functions/hf-sweeper"
+  schedule = "*/1 * * * *"
+
+# --- Mobile bottom banner Edge Function (injects the phone-only bottom nav into every HTML page) ---
+[[edge_functions]]
+path = "/*"
+function = "inject-bottom-nav-inline"
