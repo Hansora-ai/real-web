@@ -515,5 +515,29 @@ document.addEventListener('click', function(e){
 } catch(e){ console.warn('post-init session check failed', e); }} )();
 </script>
 
+
+<!-- minimal additions: working logout + hide bottom login/signup (kept in DOM) -->
+<script>
+  async function logout() {
+    try {
+      // sign out via Supabase
+      await supabase.auth.signOut();
+      // clear any cached tokens just in case
+      try { localStorage.removeItem('sb-access-token'); } catch (_) {}
+      try { localStorage.removeItem('sb-refresh-token'); } catch (_) {}
+    } catch (e) {
+      console.error('Logout failed:', e);
+    } finally {
+      // redirect to login screen
+      window.location.href = '/login.html';
+    }
+  }
+  // keep the element but hide it from users
+  document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('openLogin');
+    if (el) { el.style.display = 'none'; }
+  });
+</script>
+
 </body>
 </html>
