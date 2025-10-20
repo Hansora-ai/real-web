@@ -15,15 +15,7 @@
     try{
       const navCreditsEl = document.getElementById('navCredits');
       const runBtn = document.getElementById('runBtn');
-      function renderCredits(c){
-        if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-        if (runBtn) {
-          const ok = true;
-          runBtn.disabled=false;
-          runBtn.classList.toggle('opacity-50', !ok);
-          runBtn.classList.toggle('cursor-not-allowed', !ok);
-        }
-      }
+      function renderCredits(c){if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';if (runBtn) {  const running = !!window.__running;  const ok = !running;  runBtn.disabled = !ok;  runBtn.classList.toggle('opacity-50', !ok);  runBtn.classList.toggle('cursor-not-allowed', !ok);}}
 
       const { data: userData } = await supabase.auth.getUser();
       const user = userData?.user;
@@ -81,12 +73,7 @@
             const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
             const c = prof?.credits ?? 0;
             const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
-            const runBtn = document.getElementById('runBtn'); if (runBtn){
-              const zero = false;
-              runBtn.disabled = zero;
-              runBtn.classList.toggle('opacity-50', zero);
-              runBtn.classList.toggle('cursor-not-allowed', zero);
-            }
+            const runBtn = document.getElementById('runBtn'); if (runBtn){  const zero = false;  const running = !!window.__running;  runBtn.disabled = zero || running;  runBtn.classList.toggle('opacity-50', zero || running);  runBtn.classList.toggle('cursor-not-allowed', zero || running);}
             return c;
           }catch(e){ console.warn('refreshCredits failed', e); return null; }
         }
@@ -282,6 +269,7 @@ function onResult(url){
     downloadLink.classList.remove('hidden');
     downloadLink.textContent='Download';
     showStatus('✅ Done.','text-emerald-300');
+  window.__running = false;
   runBtn.disabled=false; runBtn.textContent = 'Run (cost: 4⚡)';
     };
   img.src=url;
@@ -310,6 +298,7 @@ async function imagenCheckPoll(id, uid, rid){
       }
       if(status === 'failed' || status === 'canceled'){
         showStatus('❌ Generation failed, please try again. Your credits is refunded.','text-rose-300');
+        window.__running = false;
         runBtn.disabled=false; runBtn.textContent = 'Run (cost: 4⚡)';
         break;
       }
@@ -318,6 +307,7 @@ async function imagenCheckPoll(id, uid, rid){
   }
   if(!__done){
     showStatus('Still processing… you can wait or try again.','text-yellow-300');
+    window.__running = false;
     runBtn.disabled=false; runBtn.textContent = 'Run (cost: 4⚡)';
   }
 }
@@ -345,6 +335,9 @@ window.__run=async function(){
       return;
     }
   }catch(_){}
+
+  window.__running = true;
+
 
   runBtn.disabled=true; runBtn.textContent='Working…';
   showStatus('Submitting…','text-zinc-400');
