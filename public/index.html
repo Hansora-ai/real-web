@@ -100,14 +100,15 @@ hr, .section-line { border-color: var(--base-bg) !important; opacity:.12 }
 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
 <div class="flex items-center gap-3">
 <a class="flex items-center gap-3 hover:opacity-90" href="index.html">
-<img alt="Hansora AI" class="h-10 w-10 rounded-lg object-contain" src="hansora-logo.png"/>
+<img alt="Hansora AI" class="h-10 w-10 rounded-lg object-contain" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png"/>
 <span class="font-semibold tracking-wide">HANSORA AI</span>
 </a>
 </div>
 <nav class="hidden md:flex items-center gap-8 text-sm">
-<a class="hover:text-white/90" href="/models.html">Models</a>
-<a class="hover:text-white/90" href="/templates.html">Templates</a>
-<a class="hover:opacity-80" href="examples-prompts.html">Examples/Prompts</a> <a class="hover:text-white/90" href="#pricing">Pricing</a>
+<a class="hover:text-white/90" href="models.html">Models</a>
+          <a class="hover:text-white/90" href="examples-prompts.html">Examples/Prompts</a>
+<a class="hover:text-white/90" href="templates.html">Templates</a>
+ <a class="hover:text-white/90" href="pricing.html">Pricing</a>
 <a class="hover:text-white/90" href="#faq">FAQ</a>
 </nav>
 <div class="flex items-center gap-3">
@@ -160,7 +161,7 @@ hr, .section-line { border-color: var(--base-bg) !important; opacity:.12 }
 <div>
 <div class="glass relative rounded-2xl p-3 md:p-4 shadow-soft">
 <div class="aspect-video w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60">
-<img alt="Showcase" class="h-full w-full object-cover opacity-90" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/uploads/0754df91-4ddf-43d2-8b40-e86d7a5fdd62-1759396702699-IMG_4003.MP4?q=80&amp;w=1600&amp;auto=format&amp;fit=crop"/>
+<img alt="Showcase" class="h-full w-full object-cover opacity-90" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&amp;w=1600&amp;auto=format&amp;fit=crop"/>
 </div>
 <div class="mt-3 flex items-center justify-between text-xs text-zinc-400">
 <span>Veo 3 • 1080p • 8s</span>
@@ -672,25 +673,11 @@ hr, .section-line { border-color: var(--base-bg) !important; opacity:.12 }
         $doLogin.classList.add('btn-brand'); $doSignup.classList.remove('btn-brand');
       }
     }
-    function showLoggedInUI(profile, user){
-      $btnLoginNav.classList.add('hidden');
-      $btnGetStarted.classList.add('hidden');
-      $navUser.classList.remove('hidden');
-      $navUser.classList.add('flex');
-      $navCredits.textContent = (profile?.credits ?? 0) + '⚡';
-      if(user?.user_metadata?.avatar_url){
-        $navAvatarImg.src = user.user_metadata.avatar_url;
-        $navAvatarImg.classList.remove('hidden');
-      } else {
+    function showLoggedInUI(profile, user){var u=document.getElementById('loginUnified'); if(u) u.classList.add('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}} else {
         $navAvatarImg.classList.add('hidden');
       }
     }
-    function showLoggedOutUI(){
-      $btnLoginNav.classList.remove('hidden');
-      $btnGetStarted.classList.remove('hidden');
-      $navUser.classList.add('hidden');
-      $navUser.classList.remove('flex');
-    }
+    function showLoggedOutUI(){var u=document.getElementById('loginUnified'); if(u) u.classList.remove('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
     // Dropdown
     $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
     document.addEventListener('click', (e)=>{
