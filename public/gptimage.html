@@ -306,7 +306,7 @@ async function imagenCheckPoll(id, uid, rid){
     await new Promise(r=>setTimeout(r,1500));
   }
   if(!__done){
-    showStatus('❌ Generation failed, please try again. Your credits is refunded.','text-yellow-300');
+    showStatus('❌ Generation failed, please try again. Your credits will be refunded in minutes.','text-yellow-300');
     window.__running = false;
     runBtn.disabled=false; runBtn.textContent = 'Run (cost: 4⚡)';
   }
