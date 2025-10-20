@@ -13,15 +13,7 @@
   try{
     const navCreditsEl = document.getElementById('navCredits');
     const runBtn = document.getElementById('runBtn');
-    function renderCredits(c){
-      if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-      if (runBtn) {
-        const ok = true;
-        runBtn.disabled=false;
-        runBtn.classList.toggle('opacity-50', !ok);
-        runBtn.classList.toggle('cursor-not-allowed', !ok);
-      }
-    }
+    function renderCredits(c){if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';if (runBtn) {  const running = !!window.__running;  const ok = !running;  runBtn.disabled = !ok;  runBtn.classList.toggle('opacity-50', !ok);  runBtn.classList.toggle('cursor-not-allowed', !ok);}}
 
     const { data: userData } = await supabase.auth.getUser();
     const user = userData?.user;
@@ -78,12 +70,7 @@
           const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
           const c = prof?.credits ?? 0;
           const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
-          const runBtn = document.getElementById('runBtn'); if (runBtn){
-            const zero = false;
-            runBtn.disabled = zero;
-            runBtn.classList.toggle('opacity-50', zero);
-            runBtn.classList.toggle('cursor-not-allowed', zero);
-          }
+          const runBtn = document.getElementById('runBtn'); if (runBtn){  const zero = false;  const running = !!window.__running;  runBtn.disabled = zero || running;  runBtn.classList.toggle('opacity-50', zero || running);  runBtn.classList.toggle('cursor-not-allowed', zero || running);}
           return c;
         }catch(e){ console.warn('refreshCredits failed', e); return null; }
       }
@@ -243,7 +230,7 @@ const $navAvatar = document.getElementById('navAvatar');
 const $navMenu = document.getElementById('navMenu');
 const $btnLogout = document.getElementById('btnLogout');
 const $navAvatarImg = document.getElementById('navAvatarImg');
-function showLoggedInUI(profile, user){var u=document.getElementById('loginUnified'); if(u) u.classList.add('hidden');$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
+function showLoggedInUI(profile, user){var u=document.getElementById('loginUnified'); if(u) u.classList.add('hidden');$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}}
 function showLoggedOutUI(){var u=document.getElementById('loginUnified'); if(u) u.classList.remove('hidden');$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
 $navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
@@ -350,7 +337,7 @@ grid.appendChild(wrap);
   // Hide the single download link; we render per-image
   downloadLink.classList.add('hidden');
 
-  if (urls.size >= 4) { __done = true; runBtn.disabled = false; runBtn.textContent = 'Run (cost: 1⚡)'; }
+  if (urls.size >= 4) { __done = true; window.__running=false; runBtn.disabled = false; runBtn.textContent = 'Run (cost: 1⚡)'; }
   showStatus('✅ Done.','text-emerald-300');
 }
 
@@ -445,7 +432,7 @@ async function backfillRow(uid, rid, taskId, url){
 async function nbCheckPoll(taskId, uid, rid){
   if(!taskId) return;
   const start = Date.now();
-  while(!__done && Date.now() - start < 180000){ // up to 3 min
+  while(!__done && Date.now() - start < 200000){ // up to 3 min
     try{
       const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId)+'&run_id='+encodeURIComponent(rid), {
         headers: { 'X-USER-ID': uid }
@@ -472,7 +459,7 @@ async function nbCheckPoll(taskId, uid, rid){
       break;
     }
       if(['failed','error'].includes(status)){
-        showStatus('❌ Generation failed.','text-rose-300');
+        showStatus('❌ Generation failed. Credit is refunded','text-rose-300');
         break;
       }
     }catch{}
@@ -502,7 +489,7 @@ __done=false; urls.clear();
   if(files.length>1){alert('Select at most 1 image.');return;}
   for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}
 
-  runBtn.disabled=true;runBtn.textContent='Working…';
+  window.__running=true;runBtn.disabled=true;runBtn.textContent='Working…';
   showStatus('Submitting…','text-zinc-400');
   resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
 
@@ -601,15 +588,10 @@ __done=false; urls.clear();
       if (urls.size >= 4) { __done = true; showStatus('✅ Done.','text-emerald-300'); break; }
     }
 
-    if (!__done) {
-      showStatus('Still processing… you can wait || try again.','text-yellow-300');
+    if (!__done) { window.__running=false; showStatus('❌ Generation failed. Credit is refunded.','text-red-300');
     }
 
-  }catch(e){
-    showStatus('❌ '+(e.message||String(e)),'text-rose-300')
-  }finally{
-    try{ if (channel && typeof channel.unsubscribe === 'function') channel.unsubscribe(); }catch{}
-    runBtn.disabled=false;runBtn.textContent='Run (cost: 1⚡)';
+  }catch(e){ window.__running=false; showStatus('❌ '+(e.message||String(e)),'text-rose-300') }finally{ window.__running=false; try{ if (channel && typeof channel.unsubscribe === 'function') channel.unsubscribe(); }catch{} runBtn.disabled=false;runBtn.textContent='Run (cost: 1⚡)';
   }
 };
 </script>
