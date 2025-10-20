@@ -326,7 +326,7 @@ async function backfillSubmitted(uid, rid, taskId){
 async function nbCheckPoll(taskId, uid, rid){
   if(!taskId) return;
   const start = Date.now();
-  while(!__done && Date.now() - start < 180000){ // up to 3 min
+  while(!__done && Date.now() - start < 200000){ // up to 200s
     try{
       const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId), {
         headers: { 'X-USER-ID': uid }
@@ -466,7 +466,7 @@ window.__run=async function(){
 
     // fallback: poll table directly in case realtime is blocked
     const started = Date.now();
-    while (!__done && Date.now() - started < 500000) { // up to 120s
+    while (!__done && Date.now() - started < 200000) { // up to 200s
       await new Promise(r => setTimeout(r, 1500));
       const { data: row } = await supabase
         .from('nb_results')
@@ -481,7 +481,7 @@ window.__run=async function(){
     }
 
     if (!__done) {
-      showStatus('Still processing… you can wait or try again.','text-yellow-300');
+      showStatus('❌Failed — credits refunded','text-red-300','text-yellow-300');
     }
 
   }catch(e){
