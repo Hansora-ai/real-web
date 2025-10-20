@@ -346,7 +346,6 @@ window.__run=async function(){
     }
   }catch(_){}
 
-  await chargeCost(cost);
   runBtn.disabled=true; runBtn.textContent='Working…';
   showStatus('Submitting…','text-zinc-400');
   resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~5–20s</span>';
@@ -403,6 +402,8 @@ const resJson = await res.json().catch(()=> ({}));
 const id = resJson?.id || resJson?.prediction_id || resJson?.data?.id || null;
 
 showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+  await chargeCost(cost);
+
 
 // Start polling prediction
 imagenCheckPoll(id, uid, rid);
