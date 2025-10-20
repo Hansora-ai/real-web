@@ -908,12 +908,10 @@ document.addEventListener('DOMContentLoaded', () => {
       avatar.parentElement.appendChild(menu);
     }
     menu.className = 'menu show bg-base-bg border border-base-line rounded-xl p-2 text-sm';
-    menu.innerHTML = `
-      <li><a href="profile.html">Profile</a></li>
-      <li><a href="price.html">Subscription</a></li>
-      <li><a href="usage.html">History</a></li>
-      <li><button id="hs-logout">Logout</button></li>
-    `;
+    menu.innerHTML = `      <li><a href="/profile.html">Profile</a></li>
+      <li><a href="/usage.html">History</a></li>
+      <li><a href="/price.html">Subscription</a></li>
+      <li><button id="hs-logout">Log out</button></li>`;
     document.addEventListener('click',(e)=>{
       if(e.target && e.target.id==='hs-logout'){ window.location.href='logout.html'; }
     });
