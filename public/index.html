@@ -673,7 +673,7 @@ hr, .section-line { border-color: var(--base-bg) !important; opacity:.12 }
         $doLogin.classList.add('btn-brand'); $doSignup.classList.remove('btn-brand');
       }
     }
-    function showLoggedInUI(profile, user){var u=document.getElementById('loginUnified'); if(u) u.classList.add('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}} else {
+    function showLoggedInUI(profile, user){var u=document.getElementById('loginUnified'); if(u) u.classList.add('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');} else {
         $navAvatarImg.classList.add('hidden');
       }
     }
