@@ -57,7 +57,7 @@ exports.handler = async (event) => {
 
         const payload = {
           user_id: uid,
-          provider: "veo3",
+          provider: (String(model||"").includes("fast") ? "veo3fast" : "veo3"),
           kind: "video",
           prompt,
           result_url: null,
