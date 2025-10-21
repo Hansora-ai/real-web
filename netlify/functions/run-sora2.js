@@ -56,11 +56,17 @@ exports.handler = async (event) => {
 
     // seed/patch "processing" row
     const metaBase = { status: "processing", run_id: runId, provider: "kie", engine: "sora2" };
+// Compute provider label from tier + duration (pro-10s / pro-15s)
+let __frames = (body.n_frames ?? body.duration ?? "").toString().trim();
+let __seconds = "";
+if (/^\d+$/.test(__frames)) { __seconds = (parseInt(__frames,10) === 15) ? "15s" : "10s"; }
+const providerLabel = (tier === "pro") ? `Sora 2 pro-${__seconds || "10s"}` : "Sora 2";
+
     await patchUserGen({
       id: body.id,
       payload: {
         user_id: uid,
-        provider: "Sora 2",
+        provider: providerLabel,
         kind: "video",
         prompt,
         result_url: null,
