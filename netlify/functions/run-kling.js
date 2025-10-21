@@ -111,7 +111,7 @@ exports.handler = async (event) => {
         const rIns = await fetch(ug, {
           method: 'POST',
           headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-          body: JSON.stringify({ user_id: uid, provider: 'kling', kind: 'video', prompt, result_url: null, meta }),
+          body: JSON.stringify({ user_id: uid, provider: (duration === 10 ? 'Kling-10s' : 'Kling-5s'), kind: 'video', prompt, result_url: null, meta }),
         });
         if (rIns.ok){
           const arr = await rIns.json().catch(()=>null);
