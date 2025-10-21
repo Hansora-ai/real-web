@@ -300,7 +300,7 @@ refreshCreditsUI();
 
 // Poll vv-check until mp4
 async function vvCheckPoll(taskId, uid, rid){
-  for (let i=0;i<120;i++){
+  for (let i=0;i<350;i++){
     try{
       const r = await fetch('/.netlify/functions/vv-check?taskId=' + encodeURIComponent(taskId) + '&uid=' + encodeURIComponent(uid) + '&run_id=' + encodeURIComponent(rid));
       const j = await r.json().catch(()=>({}));
@@ -313,7 +313,7 @@ async function vvCheckPoll(taskId, uid, rid){
     }catch{}
     await new Promise(r=>setTimeout(r,1500));
   }
-  showStatus('Still processing… try refreshing later','text-yellow-300'); window.__VEO_BUSY = false;
+  showStatus('❌ Generation failed, please try again later. Your credits are refunded','text-red-300'); window.__VEO_BUSY = false;
   try{ runBtn.disabled=false; repaintCost(); }catch{}
 }
 
@@ -374,7 +374,7 @@ window.__run = async function(){
 
   window.__VEO_BUSY = true; runBtn.disabled=true; runBtn.textContent='Working…';
   showStatus('Submitting…','text-zinc-400');
-  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take 2–5 minutes. You can leave this page; the result will appear in the Usage section.</span>';
+  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take 2–7 minutes. You can leave this page; the result will appear in your History section.</span>';
 
   try{
     const uid = authData.user.id;
