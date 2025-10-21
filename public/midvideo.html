@@ -239,7 +239,7 @@ refreshCreditsUI();
 
 // Poll mjv-check until mp4
 async function mjvCheckPoll(taskId, uid, rid){
-  for(let i=0;i<120;i++){
+  for(let i=0;i<240;i++){
     try{
       const r = await fetch('/.netlify/functions/mjv-check?taskId='+encodeURIComponent(taskId)+'&uid='+encodeURIComponent(uid)+'&run_id='+encodeURIComponent(rid));
       const j = await r.json().catch(()=>({}));
