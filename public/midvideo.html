@@ -30,27 +30,29 @@
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
-        <div class="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center font-bold">H</div>
+        <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="HANSORA logo" class="h-9 w-9 rounded-full object-cover bg-white/10" />
         <span class="font-semibold tracking-wide">HANSORA AI</span>
       </a>
       <nav class="hidden md:flex items-center gap-8 text-sm">
-        <a href="index.html#models" class="hover:text-white/90">Models</a>
-        <a href="index.html#templates" class="hover:text-white/90">Templates</a>
-        <a href="index.html#pricing" class="hover:text-white/90">Pricing</a>
+        <a href="models.html" class="hover:text-white/90">Models</a>
+        <a href="examples-prompts.html" class="hover:text-white/90">Examples/Prompts</a>
+        <a href="templates.html" class="hover:text-white/90">Templates</a>
+        <a href="pricing.html" class="hover:text-white/90">Pricing</a>
         <a href="index.html#faq" class="hover:text-white/90">FAQ</a>
       </nav>
       <div class="flex items-center gap-3">
-        <a href="#" class="text-sm hover:text-white/90 hidden sm:inline">EN / RU</a>
-        <a id="btnLoginNav" href="index.html#login" class="rounded-xl btn px-3 py-2 text-sm">Log in</a>
-        <a id="btnGetStarted" href="index.html#login" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Get Started</a>
+        <a href="#" class="text-sm hover:text-white/90 hidden" aria-hidden="true" data-keep="true">EN / RU</a>
+        <a id="btnLoginNav" href="index.html#login" class="rounded-xl btn px-3 py-2 text-sm" style="display:none">Log in</a>
+        <a id="btnGetStarted" href="index.html#login" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft" style="display:none">Get Started</a>
+        <a id="btnLoginSignup" href="login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a>
         <div id="navUser" class="hidden items-center gap-2">
           <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
           <div class="relative">
             <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden"><img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden"></button>
             <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden">
-              <a href="#" class="block rounded-lg px-3 py-2 hover:bg-white/5">Settings</a>
-              <a href="index.html#pricing" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscriptions</a>
-              <a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Usage</a>
+              <a href="profile.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Profile</a>
+              <a href="pricing.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscription</a>
+              <a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">History</a>
               <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
             </div>
           </div>
@@ -132,14 +134,15 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Header UI (same minimal logic)
 const $btnLoginNav = document.getElementById('btnLoginNav');
 const $btnGetStarted = document.getElementById('btnGetStarted');
+const $btnLoginSignup = document.getElementById('btnLoginSignup');
 const $navUser = document.getElementById('navUser');
 const $navCredits = document.getElementById('navCredits');
 const $navAvatar = document.getElementById('navAvatar');
 const $navMenu = document.getElementById('navMenu');
 const $btnLogout = document.getElementById('btnLogout');
 const $navAvatarImg = document.getElementById('navAvatarImg');
-function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url && $navAvatarImg){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
-function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
+function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$btnLoginSignup?.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url && $navAvatarImg){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
+function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$btnLoginSignup?.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
 $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
