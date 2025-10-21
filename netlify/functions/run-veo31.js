@@ -39,7 +39,7 @@ exports.handler = async (event) => {
     const aspectRatio = normalizeAspect(body.aspectRatio || "16:9");
 
     // Accept a single URL, convert to array as imageUrls
-    const imageUrl = normalizeUrl(body.imageUrl || body.fileUrl || "");
+    const imageUrl      = body.imageUrl || body.fileUrl || "";
     const imageUrls = imageUrl ? [ imageUrl ] : [];
 
     const clientRunId = (body.run_id || "").toString().trim();
@@ -92,8 +92,8 @@ const kiePayload = {
   callBackUrl
 };
 // Veo 3.1 generationType handling
-const firstFrameUrl = normalizeUrl(body.firstFrameUrl || "");
-const lastFrameUrl  = normalizeUrl(body.lastFrameUrl  || "");
+const firstFrameUrl = body.firstFrameUrl || "";
+const lastFrameUrl  = body.lastFrameUrl  || "";
 if (firstFrameUrl && lastFrameUrl){
   kiePayload.generationType = "FIRST_AND_LAST_FRAMES_2_VIDEO";
   kiePayload.firstFrameUrl = firstFrameUrl;
