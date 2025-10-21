@@ -98,6 +98,8 @@ if (firstFrameUrl && lastFrameUrl){
   kiePayload.generationType = "FIRST_AND_LAST_FRAMES_2_VIDEO";
   kiePayload.firstFrameUrl = firstFrameUrl;
   kiePayload.lastFrameUrl  = lastFrameUrl;
+
+  kiePayload.imageUrls = [firstFrameUrl, lastFrameUrl];
 } else {
   kiePayload.generationType = "TEXT_2_VIDEO";
 }
