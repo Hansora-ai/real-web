@@ -342,7 +342,7 @@ async function imagenCheckPoll(id, uid, rid){
         if(url){ onResult(url); break; }
       }
       if(status === 'failed' || status === 'canceled'){
-        showStatus('❌ Generation failed.','text-rose-300');
+        showStatus('❌ Generation failed, please try again later. Your credits are refunded.','text-red-300');
         if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
         break;
       }
@@ -350,7 +350,7 @@ async function imagenCheckPoll(id, uid, rid){
     await new Promise(r=>setTimeout(r,1500));
   }
   if(!__done){
-    showStatus('Still processing… large 10s videos can take up to ~8 minutes. I will keep waiting automatically.','text-yellow-300');
+    showStatus('❌ Generation failed, please try again later. Your credits are refunded.','text-red-300');
     if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
   }
 }
