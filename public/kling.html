@@ -19,7 +19,7 @@
         if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
         if (runBtn) {
           const ok = true;
-          runBtn.disabled=false;
+          if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false;
           runBtn.classList.toggle('opacity-50', !ok);
           runBtn.classList.toggle('cursor-not-allowed', !ok);
         }
@@ -83,7 +83,7 @@
             const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
             const runBtn = document.getElementById('runBtn'); if (runBtn){
               const zero = false;
-              runBtn.disabled = zero;
+              if(!window.__klingBusy){ runBtn.disabled=zero; }
               runBtn.classList.toggle('opacity-50', zero);
               runBtn.classList.toggle('cursor-not-allowed', zero);
             }
@@ -136,6 +136,7 @@
     .input-dark::placeholder{color:#9ca3af}
     select.input-dark option{background:#0b0d13;color:#e5e7eb}
   </style>
+<script>window.__klingBusy=false;</script>
 </head>
 <body class="min-h-screen">
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
@@ -256,7 +257,7 @@ function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btn
 function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
 $navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
-$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
+$btnLogout?.addEventListener('click',async()=>{ if(window.__klingBusy){return;}await supabase.auth.signOut();showLoggedOutUI();});
 async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
 (async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
 
@@ -299,7 +300,7 @@ function onResult(url){
     downloadLink.classList.remove('hidden');
     downloadLink.textContent='Download';
     showStatus('✅ Done.','text-emerald-300');
-    runBtn.disabled=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+    if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
   }
 
   if (isVideo){
@@ -331,7 +332,7 @@ async function chargeCost(cost){
 async function imagenCheckPoll(id, uid, rid){
   if(!id) return;
   const start = Date.now();
-  while(!__done && Date.now() - start < 720000){
+  while(!__done && Date.now() - start < 480000){
     try{
       const r = await fetch('/.netlify/functions/kling-check?id='+encodeURIComponent(id)+'&uid='+encodeURIComponent(uid||'')+'&run_id='+encodeURIComponent(rid||''));
       const j = await r.json().catch(()=>({}));
@@ -341,16 +342,16 @@ async function imagenCheckPoll(id, uid, rid){
         if(url){ onResult(url); break; }
       }
       if(status === 'failed' || status === 'canceled'){
-        showStatus('❌ Generation failed. The credits are refunded.','text-rose-300');
-        runBtn.disabled=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+        showStatus('❌ Generation failed.','text-rose-300');
+        if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
         break;
       }
     }catch{}
     await new Promise(r=>setTimeout(r,1500));
   }
   if(!__done){
-    showStatus('❌ Generation failed. The credits are refunded.','text-red-300');
-    runBtn.disabled=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+    showStatus('Still processing… large 10s videos can take up to ~8 minutes. I will keep waiting automatically.','text-yellow-300');
+    if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
   }
 }
 
@@ -417,14 +418,14 @@ window.__run=async function(){
     const cur = prof?.credits ?? 0;
     if (cur < cost) {
       showStatus('Not enough credits (need '+cost+').','text-rose-300');
-      runBtn.disabled = false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+      if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
       return;
     }
   }catch(_){}
 
-  runBtn.disabled=true; runBtn.textContent='Working…';
+  window.__klingBusy=true; runBtn.disabled=true; runBtn.textContent='Working…';
   showStatus('Submitting…','text-zinc-400');
-  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take 5-10m</span>';
+  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~5–20s</span>';
 
   try{
     const uid=authData.user.id;
@@ -673,7 +674,7 @@ document.addEventListener('DOMContentLoaded', function(){
     function renderRunCost(){
       if (!runBtn) return;
       var c = computeCost();
-      runBtn.textContent = 'Run (cost: ' + c + '⚡)';
+      if(!window.__klingBusy){ runBtn.textContent = 'Run (cost: ' + c + '⚡)'; }
     }
 
     if (durSel) durSel.addEventListener('change', renderRunCost);
