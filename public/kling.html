@@ -331,7 +331,7 @@ async function chargeCost(cost){
 async function imagenCheckPoll(id, uid, rid){
   if(!id) return;
   const start = Date.now();
-  while(!__done && Date.now() - start < 600000){
+  while(!__done && Date.now() - start < 720000){
     try{
       const r = await fetch('/.netlify/functions/kling-check?id='+encodeURIComponent(id)+'&uid='+encodeURIComponent(uid||'')+'&run_id='+encodeURIComponent(rid||''));
       const j = await r.json().catch(()=>({}));
