@@ -331,7 +331,7 @@ async function chargeCost(cost){
 async function imagenCheckPoll(id, uid, rid){
   if(!id) return;
   const start = Date.now();
-  while(!__done && Date.now() - start < 480000){
+  while(!__done && Date.now() - start < 600000){
     try{
       const r = await fetch('/.netlify/functions/kling-check?id='+encodeURIComponent(id)+'&uid='+encodeURIComponent(uid||'')+'&run_id='+encodeURIComponent(rid||''));
       const j = await r.json().catch(()=>({}));
@@ -341,7 +341,7 @@ async function imagenCheckPoll(id, uid, rid){
         if(url){ onResult(url); break; }
       }
       if(status === 'failed' || status === 'canceled'){
-        showStatus('❌ Generation failed.','text-rose-300');
+        showStatus('❌ Generation failed. The credits are refunded.','text-rose-300');
         runBtn.disabled=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
         break;
       }
@@ -349,7 +349,7 @@ async function imagenCheckPoll(id, uid, rid){
     await new Promise(r=>setTimeout(r,1500));
   }
   if(!__done){
-    showStatus('Still processing… large 10s videos can take up to ~8 minutes. I will keep waiting automatically.','text-yellow-300');
+    showStatus('❌ Generation failed. The credits are refunded.','text-red-300');
     runBtn.disabled=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
   }
 }
