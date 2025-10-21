@@ -357,22 +357,21 @@ window.__run = async function(){
     if (c < cost){ showStatus('Not enough credits (need ' + cost + ').','text-rose-300'); runBtn.disabled = false; repaintCost(); return; }
   }catch{}
 
-  // Validate image (≤10MB) and prompt rules
-  const files=[...imageEl.files].slice(0,1);
-  for(const f of files){ if(f.size>10*1024*1024){ alert('File too large: '+f.name); return; } }
-
-  const hasImage = files.length === 1;
+  // Validate Start/End and prompt rules (≤10MB each)
+  const sFile = startEl?.files?.[0] || null;
+  const eFile = endEl?.files?.[0] || null;
+  if (sFile && sFile.size > 10 * 1024 * 1024) { alert('Start frame too large: ' + sFile.name); return; }
+  if (eFile && eFile.size > 10 * 1024 * 1024) { alert('End frame too large: ' + eFile.name); return; }
+  const hasStart = !!sFile; const hasEnd = !!eFile;
   const _prompt = (promptEl.value || '').trim();
-  if (!hasImage && !_prompt){
-    showStatus('Please enter a prompt (or upload an image with a prompt).', 'text-rose-300');
+  if (!hasStart && !_prompt){
+    showStatus('Please enter a prompt (or upload a Start Frame with a prompt).', 'text-rose-300'); runBtn.disabled = false; repaintCost(); return;
+  }
+  if (hasStart && !_prompt){
+    showStatus('A prompt is required when uploading a Start Frame.', 'text-rose-300');
     runBtn.disabled = false; repaintCost(); return;
   }
-  if (hasImage && !_prompt){
-    showStatus('A prompt is required when uploading an image.', 'text-rose-300');
-    runBtn.disabled = false; repaintCost(); return;
-  }
-
-  window.__VEO_BUSY = true; runBtn.disabled=true; runBtn.textContent='Working…';
+window.__VEO_BUSY = true; runBtn.disabled=true; runBtn.textContent='Working…';
   showStatus('Submitting…','text-zinc-400');
   resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take 2–7 minutes. You can leave this page; the result will appear in your History section.</span>';
 
