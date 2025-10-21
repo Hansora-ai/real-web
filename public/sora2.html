@@ -351,14 +351,14 @@ async function runSora(){
   try{ await chargeCredits(cost); await refreshCreditsUI(); }catch{}
 
   showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-  resultBox.innerHTML = '<div class="py-6 text-center space-y-2"><div class="text-xs text-zinc-400">Generating…</div><div class="text-[15px] font-semibold text-zinc-100">Sometimes during high demand it takes a little longer (15-25m).<br/>You can leave this page — your result will appear in <a class="underline hover:no-underline" href="usage.html">History</a> when it’s done.</div></div>';
+  resultBox.innerHTML = '<div class="py-6 text-center space-y-2"><div class="text-xs text-zinc-400">Generating…</div><div class="text-[15px] font-semibold text-zinc-100">Sora Pro takes a little longer (20-35m), because of OpenAI’s native delivery speed.<br/>You can leave this page — your result will appear in <a class="underline hover:no-underline" href="usage.html">History</a> when it’s done.</div></div>';
 
   await soraPoll(j.taskId, auth.user.id, runId);
 }
 
 async function soraPoll(taskId, uid, rid){
   // 20 minutes (800 × 1.5s)
-  for(let i=0;i<1500;i++){
+  for(let i=0;i<2000;i++){
     try{
       const r=await fetch('/.netlify/functions/sora2-check?taskId='+encodeURIComponent(taskId)+'&uid='+encodeURIComponent(uid)+'&run_id='+encodeURIComponent(rid));
       const j=await r.json().catch(()=>({}));
