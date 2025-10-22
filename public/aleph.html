@@ -337,7 +337,7 @@ async function alephCheckPoll(taskId, uid, rid, uploadedUrl){
     } catch {}
     await new Promise(r=>setTimeout(r,1500));
   }
-  showStatus('Still processing… try refreshing later','text-yellow-300');
+  showStatus('❌ Generation failed, please try again later. Your credits are refunded','text-red-300');
   runBtn.disabled=false;
   try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
 }
