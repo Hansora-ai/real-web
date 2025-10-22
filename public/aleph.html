@@ -5,7 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HANSORA • Runway Aleph (Video)</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com">
+
+// --- helper: construct public Supabase URL (Nano Banana 1:1) ---
+function derivePublicUrl(up){
+  if (!up) return null;
+  if (up.publicUrl) return up.publicUrl;
+  try{
+    if (up.bucket && up.objectPath && up.uploadUrl){
+      const u = new URL(up.uploadUrl);
+      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
+      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+    }
+  }catch(e){}
+  return null;
+}
+
+</script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
@@ -27,21 +43,6 @@
     .input-dark::placeholder{color:#9ca3af}
     select.input-dark option{background:#0b0d13;color:#e5e7eb}
   </style>
-<script>
-function derivePublicUrl(up){
-  if (!up) return null;
-  if (up.publicUrl) return up.publicUrl;
-  try{
-    if (up.bucket && up.objectPath && up.uploadUrl){
-      const u = new URL(up.uploadUrl);
-      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
-      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
-    }
-  }catch(e){}
-  return null;
-}
-</script>
-
 </head>
 <body class="min-h-screen">
   <!-- Header (kept identical style from Veo 3) -->
