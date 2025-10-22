@@ -6,7 +6,6 @@
   <title>HANSORA • Runway Aleph (Video)</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com">
-
 // --- helper: construct public Supabase URL (Nano Banana 1:1) ---
 function derivePublicUrl(up){
   if (!up) return null;
@@ -20,7 +19,6 @@ function derivePublicUrl(up){
   }catch(e){}
   return null;
 }
-
 </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -281,13 +279,8 @@ async function refreshCreditsUI(){
 }
 refreshCreditsUI();
 
-//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
-    }
-  }catch(e){}
-  return null;
-}
-
-
+//}
+  
 function showVideo(url){
   resultBox.innerHTML = '';
   const v = document.createElement('video');
@@ -323,11 +316,8 @@ async function alephCheckPoll(taskId, uid, rid, uploadedUrl){
           try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
           try{ await refreshCreditsUI();
 
-//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
-    }
-  }catch(e){}
-  return null;
-}
+//}
+  
  }catch{}
           return;
         }
@@ -440,11 +430,8 @@ const supaUpload = await (async () => {
     // Client-side debit (fixed 9⚡)
     try{ await chargeCredits(9); await refreshCreditsUI();
 
-//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
-    }
-  }catch(e){}
-  return null;
-}
+//}
+  
  }catch{}
 
     const taskId = j.taskId || '';
