@@ -27,6 +27,21 @@
     .input-dark::placeholder{color:#9ca3af}
     select.input-dark option{background:#0b0d13;color:#e5e7eb}
   </style>
+<script>
+function derivePublicUrl(up){
+  if (!up) return null;
+  if (up.publicUrl) return up.publicUrl;
+  try{
+    if (up.bucket && up.objectPath && up.uploadUrl){
+      const u = new URL(up.uploadUrl);
+      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
+      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+    }
+  }catch(e){}
+  return null;
+}
+</script>
+
 </head>
 <body class="min-h-screen">
   <!-- Header (kept identical style from Veo 3) -->
@@ -265,14 +280,7 @@ async function refreshCreditsUI(){
 }
 refreshCreditsUI();
 
-function derivePublicUrl(up){
-  if (!up) return null;
-  if (up.publicUrl) return up.publicUrl;
-  try{
-    if (up.bucket && up.objectPath && up.uploadUrl){
-      const u = new URL(up.uploadUrl);
-      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
-      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
     }
   }catch(e){}
   return null;
@@ -314,14 +322,7 @@ async function alephCheckPoll(taskId, uid, rid, uploadedUrl){
           try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
           try{ await refreshCreditsUI();
 
-function derivePublicUrl(up){
-  if (!up) return null;
-  if (up.publicUrl) return up.publicUrl;
-  try{
-    if (up.bucket && up.objectPath && up.uploadUrl){
-      const u = new URL(up.uploadUrl);
-      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
-      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
     }
   }catch(e){}
   return null;
@@ -438,14 +439,7 @@ const supaUpload = await (async () => {
     // Client-side debit (fixed 9⚡)
     try{ await chargeCredits(9); await refreshCreditsUI();
 
-function derivePublicUrl(up){
-  if (!up) return null;
-  if (up.publicUrl) return up.publicUrl;
-  try{
-    if (up.bucket && up.objectPath && up.uploadUrl){
-      const u = new URL(up.uploadUrl);
-      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
-      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
     }
   }catch(e){}
   return null;
