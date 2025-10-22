@@ -160,19 +160,20 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Header UI (untouched login flow)
 const $btnLoginNav = document.getElementById('btnLoginNav');
 const $btnGetStarted = document.getElementById('btnGetStarted');
+const $btnLoginSignup = document.getElementById('btnLoginSignup');
 const $navUser = document.getElementById('navUser');
 const $navCredits = document.getElementById('navCredits');
 const $navAvatar = document.getElementById('navAvatar');
 const $navMenu = document.getElementById('navMenu');
 const $btnLogout = document.getElementById('btnLogout');
 
-function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';
+function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if($btnLoginSignup){$btnLoginSignup.classList.add('hidden');}
   try{
     const u = (window.__user && window.__user.user_metadata && window.__user.user_metadata.avatar_url) || (profile && profile.avatar_url);
     if (u && $navAvatarImg){ $navAvatarImg.src = u; $navAvatarImg.classList.remove('hidden'); if($navAvatarFallback){$navAvatarFallback.classList.add('hidden');} } else { if($navAvatarImg){ $navAvatarImg.classList.add('hidden'); $navAvatarImg.removeAttribute('src'); } if($navAvatarFallback){$navAvatarFallback.classList.remove('hidden');} }
   }catch{}
 }
-function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');
+function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');if($btnLoginSignup){$btnLoginSignup.classList.remove('hidden');}
   try{ if($navAvatarImg){ $navAvatarImg.classList.add('hidden'); $navAvatarImg.removeAttribute('src'); } if($navAvatarFallback){$navAvatarFallback.classList.remove('hidden');} }catch{}
 }
 $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
