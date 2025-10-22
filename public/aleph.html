@@ -8,6 +8,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
+  <script src="/kie-upload-bridge.js"></script>
+
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
@@ -262,6 +265,20 @@ async function refreshCreditsUI(){
 }
 refreshCreditsUI();
 
+function derivePublicUrl(up){
+  if (!up) return null;
+  if (up.publicUrl) return up.publicUrl;
+  try{
+    if (up.bucket && up.objectPath && up.uploadUrl){
+      const u = new URL(up.uploadUrl);
+      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
+      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+    }
+  }catch(e){}
+  return null;
+}
+
+
 function showVideo(url){
   resultBox.innerHTML = '';
   const v = document.createElement('video');
@@ -295,7 +312,21 @@ async function alephCheckPoll(taskId, uid, rid, uploadedUrl){
           showStatus('✅ Done.','text-emerald-300');
           runBtn.disabled = false;
           try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
-          try{ await refreshCreditsUI(); }catch{}
+          try{ await refreshCreditsUI();
+
+function derivePublicUrl(up){
+  if (!up) return null;
+  if (up.publicUrl) return up.publicUrl;
+  try{
+    if (up.bucket && up.objectPath && up.uploadUrl){
+      const u = new URL(up.uploadUrl);
+      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
+      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+    }
+  }catch(e){}
+  return null;
+}
+ }catch{}
           return;
         }
         // same as uploaded; keep polling
@@ -374,18 +405,22 @@ const supaUpload = await (async () => {
   return { videoUrl, imageUrl };
 })(); 
 
-// Use Supabase URLs directly (no .json(), not a fetch response)
-let videoUrl = supaUpload.videoUrl || "";
-let imageUrl = supaUpload.imageUrl || "";
-// Optional image upload
+
+    // Use Supabase URLs directly (no .json(), not a fetch response)
+    let videoUrl = supaUpload.videoUrl || "";
+    let imageUrl = supaUpload.imageUrl || "";
+
+    // Reference image: 1:1 Nano Banana logic (single file; direct-to-Supabase via kieUploadBridge)
     imageUrl = imageUrl || '';
     if (img){
-      const ifd = new FormData();
-      ifd.append('file', img, img.name || 'image.png');
-      const iur = await fetch('/.netlify/functions/kie-upload',{ method:'POST', headers:{'X-USER-ID': uid}, body: ifd });
-      const ij  = await iur.json().catch(()=>null);
-      if (!iur.ok || !ij || !ij.downloadUrl) throw new Error(ij?.error || 'Image upload failed');
-      imageUrl = ij.downloadUrl;
+      if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
+        throw new Error('upload_bridge_missing');
+      }
+      const up = await window.kieUploadBridge.upload(img);
+      const u = derivePublicUrl(up);
+      if (!u) throw new Error('no_public_url');
+      try { await fetch(u, { method: 'HEAD', cache: 'no-store' }); } catch {}
+      imageUrl = u;
     }
 
     // Create job
@@ -401,7 +436,21 @@ let imageUrl = supaUpload.imageUrl || "";
     }
 
     // Client-side debit (fixed 9⚡)
-    try{ await chargeCredits(9); await refreshCreditsUI(); }catch{}
+    try{ await chargeCredits(9); await refreshCreditsUI();
+
+function derivePublicUrl(up){
+  if (!up) return null;
+  if (up.publicUrl) return up.publicUrl;
+  try{
+    if (up.bucket && up.objectPath && up.uploadUrl){
+      const u = new URL(up.uploadUrl);
+      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
+      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+    }
+  }catch(e){}
+  return null;
+}
+ }catch{}
 
     const taskId = j.taskId || '';
     const run_id = j.run_id || '';
