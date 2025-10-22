@@ -139,7 +139,21 @@ function derivePublicUrl(up){
     </div>
   </footer>
 
-<script>
+<script>// --- helper: construct public Supabase URL (Nano Banana 1:1) ---
+function derivePublicUrl(up){
+  if (!up) return null;
+  if (up.publicUrl) return up.publicUrl;
+  try{
+    if (up.bucket && up.objectPath && up.uploadUrl){
+      const u = new URL(up.uploadUrl);
+      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
+      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+    }
+  }catch(e){}
+  return null;
+}
+
+
 document.getElementById('y').textContent = new Date().getFullYear();
 
 // Supabase init (same as other pages)
