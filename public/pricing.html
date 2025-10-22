@@ -771,6 +771,72 @@ document.addEventListener('DOMContentLoaded', () => {
 </nav>
 </div>
 </footer>
+
+<!-- Resilient header bootstrap (UI-only; does not modify your auth/login logic) -->
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const $ = (id) => document.getElementById(id);
+
+  const btnLoginSignup = $('btnLoginSignup');
+  const btnLoginNav   = $('btnLoginNav');
+  const btnGetStarted = $('btnGetStarted');
+  const navUser       = $('navUser');
+  const navCredits    = $('navCredits');
+  const navAvatarImg  = $('navAvatarImg');
+
+  function showLoggedOut() {
+    btnLoginSignup && btnLoginSignup.classList.remove('hidden');
+    btnLoginNav   && btnLoginNav.classList.remove('hidden');
+    btnGetStarted && btnGetStarted.classList.remove('hidden');
+    navUser       && navUser.classList.add('hidden');
+  }
+
+  function hideLoggedOut() {
+    btnLoginSignup && btnLoginSignup.classList.add('hidden');
+    btnLoginNav   && btnLoginNav.classList.add('hidden');
+    btnGetStarted && btnGetStarted.classList.add('hidden');
+    navUser       && navUser.classList.remove('hidden');
+  }
+
+  try {
+    const client = (window.supabaseClient || window.supabase || null);
+    if (!client || !client.auth || !client.auth.getUser) {
+      showLoggedOut();
+      return;
+    }
+
+    const { data, error } = await client.auth.getUser();
+    if (error) {
+      showLoggedOut();
+      return;
+    }
+    const user = data && data.user ? data.user : null;
+
+    if (user) {
+      hideLoggedOut();
+
+      // Optional credits & avatar hydrate if helpers exist, otherwise no-op
+      try {
+        if (typeof window.fetchUserCredits === 'function' && navCredits) {
+          const credits = await window.fetchUserCredits(client, user.id);
+          if (typeof credits !== 'undefined' && credits !== null) {
+            navCredits.textContent = credits;
+          }
+        }
+      } catch (e) {}
+
+      try {
+        const avatar = user.user_metadata && (user.user_metadata.avatar_url || user.user_metadata.picture);
+        if (avatar && navAvatarImg) navAvatarImg.src = avatar;
+      } catch (e) {}
+    } else {
+      showLoggedOut();
+    }
+  } catch (e) {
+    showLoggedOut();
+  }
+});
+</script>
 </body>
 </html>
 
