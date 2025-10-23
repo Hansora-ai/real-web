@@ -621,8 +621,6 @@ document.addEventListener('DOMContentLoaded', () => {
       avatar.parentElement.appendChild(menu);
     }
     menu.className = 'menu show bg-base-bg border border-base-line rounded-xl p-2 text-sm';
-    const avatar = document.getElementById('navAvatar');
-    const menu = document.getElementById('navMenu');
     if (!avatar || !menu) return;
     // Ensure visible styling applied to the single existing menu
     menu.classList.add('show');
