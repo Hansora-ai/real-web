@@ -194,9 +194,11 @@
         .replace(/\[\[KLING\]\]/gi, '<a class="inline-link" href="kling.html">Kling</a>')
         .replace(/\[\[IMAGEN\]\]/gi, '<a class="inline-link" href="imagen.html">Imagen</a>')
         .replace(/\[\[SORA\]\]/gi, '<a class="inline-link" href="sora.html">Sora</a>')
-        .replace(/\[\[MIDJOURNEY\]\]/gi, '<a class="inline-link" href="midjourney.html">Midjourney</a>')
+        .replace(/\[\[MIDJOURNEY\]\]/gi, '<a class="inline-link" href="midimage.html">Midjourney</a>')
         .replace(/\[\[RUNWAY\]\]/gi, '<a class="inline-link" href="runway.html">Runway</a>')
-        .replace(/\[\[GPTIMAGE\]\]/gi, '<a class="inline-link" href="gptimage.html">Gpt_image</a>');
+        .replace(/\[\[GPTIMAGE\]\]/gi, '<a class="inline-link" href="gptimage.html">Gpt_image</a>')
+        .replace(/\[\[VEO3.1\]\]/gi, '<a class="inline-link" href="veo3_1.html">VEO 3.1</a>')
+        .replace(/\[\[NANOBANANA\]\]/gi, '<a class="inline-link" href="nano-banana.html">Nano-Banana</a>'):
       if (!/\[\[(VEO3|KLING|IMAGEN|SORA|MIDJOURNEY|RUNWAY|GPTIMAGE)\]\]/i.test(text) && MODEL_LINKS[modelSlug]) {
         html += ` — <a class="inline-link" href="${MODEL_LINKS[modelSlug]}">${(modelSlug||'').toUpperCase()}</a>`;
       }
