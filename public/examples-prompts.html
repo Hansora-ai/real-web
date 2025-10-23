@@ -195,8 +195,8 @@
         .replace(/\[\[IMAGEN\]\]/gi, '<a class="inline-link" href="imagen.html">Imagen</a>')
         .replace(/\[\[SORA\]\]/gi, '<a class="inline-link" href="sora.html">Sora</a>')
         .replace(/\[\[MIDJOURNEY\]\]/gi, '<a class="inline-link" href="midjourney.html">Midjourney</a>')
-        .replace(/\[\[RUNWAY\]\]/gi, '<a class="inline-link" href="runway.html">Runway</a>');
-        .replace(/\[\[GPT IMAGE\]\]/gi, '<a class="inline-link" href="gptimage.html">Gpt image</a>');
+        .replace(/\[\[RUNWAY\]\]/gi, '<a class="inline-link" href="runway.html">Runway</a>')
+        .replace(/\[\[GPT IMAGE\]\]/gi, '<a class="inline-link" href="gptimage.html">Gpt_image</a>');
       if (!/\[\[(VEO3|KLING|IMAGEN|SORA|MIDJOURNEY|RUNWAY)\]\]/i.test(text) && MODEL_LINKS[modelSlug]) {
         html += ` — <a class="inline-link" href="${MODEL_LINKS[modelSlug]}">${(modelSlug||'').toUpperCase()}</a>`;
       }
