@@ -35,7 +35,8 @@
     #grid > article.mitem { position: absolute; width: var(--col-width, 100%); }
   </style>
 </head>
-<body class="min-h-full flex flex-col"><header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
+<body class="min-h-full flex flex-col">
+<header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
 <div class="flex items-center gap-3">
 <a class="flex items-center gap-3 hover:opacity-90" href="index.html">
@@ -336,14 +337,28 @@
 
     loadExamples();
   </script>
-<!-- Injected header/auth scripts (from pricing.1to1.html) -->
-<script>
-    document.getElementById('y').textContent = new Date().getFullYear();
+<div class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4" id="authModal">
+<div class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft" id="authCard">
+<div class="mb-4 flex items-center justify-between">
+<h3 class="text-lg font-semibold" id="authTitle">Log in</h3>
+<button class="rounded-lg btn px-2 py-1 text-sm" id="authClose">✕</button>
+</div>
+<form class="space-y-3" id="authForm">
+<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" id="authEmail" placeholder="Email" required="" type="email"/>
+<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" id="authPass" placeholder="Password" required="" type="password"/>
+<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden" id="authPass2" placeholder="Repeat password" type="password"/>
+<div class="flex gap-2">
+<button class="w-1/2 rounded-lg btn px-3 py-2 font-semibold" id="btnDoLogin" type="button">Log in</button>
+<button class="w-1/2 rounded-lg btn px-3 py-2" id="btnDoSignup" type="button">Sign up</button>
+</div>
+<p class="text-xs text-zinc-400" id="authMsg"></p>
+</form>
+</div>
+</div><script>document.getElementById('y').textContent = new Date().getFullYear();
 
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const __sb__ = (typeof supabase !== 'undefined' && supabase.auth) ? supabase : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const supabase = __sb__;
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Header elements
     const $btnLoginNav = document.getElementById('btnLoginNav');
@@ -398,7 +413,7 @@ const supabase = __sb__;
     $btnLogin.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
     $btnLoginNav.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
     $btnGetStarted.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
-    if ($close) $close.addEventListener('click', closeAuth);
+    $close.addEventListener('click', closeAuth);
 
     async function getOrCreateProfile(user){
       const { data, error } = await supabase
@@ -426,7 +441,7 @@ const supabase = __sb__;
     window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
 
     // Sign up
-    if ($doSignup) $doSignup.addEventListener('click', async ()=>{
+    $doSignup.addEventListener('click', async ()=>{
       if(authMode!=='signup'){ setAuthMode('signup'); $msg.textContent=''; return; }
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
@@ -437,7 +452,7 @@ const supabase = __sb__;
       setAuthMode('login');
     });
     // Log in
-    if ($doLogin) $doLogin.addEventListener('click', async ()=>{
+    $doLogin.addEventListener('click', async ()=>{
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       $msg.textContent = 'Signing in…';
       try{
@@ -450,7 +465,7 @@ const supabase = __sb__;
       }catch(e){ $msg.textContent = e.message || 'Login failed.'; }
     });
     // Logout
-    const __btnLogout = document.getElementById('btnLogout'); if (__btnLogout) __btnLogout.addEventListener('click', async ()=>{
+    document.getElementById('btnLogout').addEventListener('click', async ()=>{
       await supabase.auth.signOut();
       showLoggedOutUI();
     });
@@ -510,7 +525,8 @@ const supabase = __sb__;
         showLoggedOutUI();
       }
     })();
-  </script><script>
+  
+
   (function(){ 
     function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
     ready(async function(){ 
@@ -568,7 +584,8 @@ const supabase = __sb__;
       } catch(e){ console.warn('credits polling v2 error', e); }
     });
   })();
-  </script><script>
+  
+
 document.addEventListener('DOMContentLoaded', async () => {
   const el = document.getElementById('btnLoginSignup');
   if (!el || !window.supabase) return;
@@ -586,7 +603,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   } catch (_) { /* silent */ }
 });
-</script><script>
+
+
 document.addEventListener('DOMContentLoaded', () => {
   /* 1) PROFILE MENU — exactly 4 items */
   (function(){
@@ -622,84 +640,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   
 
-  /* 2) HERO — remove 3 CTAs in the HERO ROW ONLY and keep a single "Get Started" there */
-  (function(){
-    // Find hero section by main heading
-    const hero = Array.from(document.querySelectorAll('h1,h2')).find(h => (h.textContent||'').toLowerCase().includes('create stunning'))?.closest('section');
-    // Fallback: topmost section
-    const heroSection = hero || document.querySelector('main section, section') || document.body;
-
-    // Inside hero ONLY: hide buttons with those exact labels
-    const kill = ['explore models','see templates','log in / sign up','log in','sign up'];
-    if (heroSection){
-      const btns = heroSection.querySelectorAll('a,button');
-      btns.forEach(b => {
-        const t=(b.textContent||'').trim().toLowerCase();
-        if (kill.includes(t)) b.classList.add('hs-hide');
-      });
-      // ensure single Get Started exists in this section
-      if (!heroSection.querySelector('a.hs-get-started-hero')) {
-        const row = (Array.from(btns).find(b => kill.includes((b.textContent||'').trim().toLowerCase()))?.closest('div')) || heroSection;
-        const gs = document.createElement('a');
-        gs.href='login.html';
-        gs.className='hs-get-started-hero btn btn-brand rounded-xl px-5 py-3';
-        gs.textContent='Get Started';
-        row.appendChild(gs);
-      }
-    }
-
-    // Additionally, if there is any "Get Started" in the HEADER, hide it (user didn't want header changes)
-    const header = document.querySelector('header');
-    if (header){
-      Array.from(header.querySelectorAll('a,button')).forEach(el => {
-        const t=(el.textContent||'').trim().toLowerCase();
-        if (t==='get started') el.classList.add('hs-hide');
-      });
-    }
-  })();
-
-  /* 2b) HERO MEDIA — replace the mountain IMAGE with a VIDEO */
-  (function(){
-    // Find the hero media image inside the hero section (right side card)
-    const heroTitle = Array.from(document.querySelectorAll('h1,h2')).find(h => (h.textContent||'').toLowerCase().includes('create stunning'));
-    const heroSection = heroTitle ? heroTitle.closest('section') : document.body;
-    // Look for an <img> inside the hero media container
-    let img = heroSection ? heroSection.querySelector('img') : null;
-    if (!img) img = document.querySelector('img'); // last resort
-    if (img){
-      img.style.display='none'; // ensure it doesn't cover the video
-      const box = img.parentElement || heroSection;
-      if (box && !box.querySelector('video.hs-hero-video')){
-        const vid = document.createElement('video');
-        vid.src='assets/placeholder.mp4';  // replace with your actual video
-        vid.setAttribute('playsinline','');
-        vid.setAttribute('muted','');
-        vid.setAttribute('loop','');
-        vid.setAttribute('autoplay','');
-        vid.className='hs-hero-video';
-        box.insertBefore(vid, img);
-      }
-    }
-  })();
-});
-</script>
-<!-- Injected auth modal (from pricing.1to1.html) -->
-<div class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4" id="authModal">
-<div class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft" id="authCard">
-<div class="mb-4 flex items-center justify-between">
-<h3 class="text-lg font-semibold" id="authTitle">Log in</h3>
-<button class="rounded-lg btn px-2 py-1 text-sm" id="authClose">✕</button>
-</div>
-<form class="space-y-3" id="authForm">
-<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" id="authEmail" placeholder="Email" required="" type="email"/>
-<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" id="authPass" placeholder="Password" required="" type="password"/>
-<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden" id="authPass2" placeholder="Repeat password" type="password"/>
-<div class="flex gap-2">
-<button class="w-1/2 rounded-lg btn px-3 py-2 font-semibold" id="btnDoLogin" type="button">Log in</button>
-<button class="w-1/2 rounded-lg btn px-3 py-2" id="btnDoSignup" type="button">Sign up</button>
-</div>
-<p class="text-xs text-zinc-400" id="authMsg"></p>
-</form>
-</div>
-</div></body>
+  </script></body>
 </html>
