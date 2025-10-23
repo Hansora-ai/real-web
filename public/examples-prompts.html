@@ -627,7 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const menu = document.getElementById('navMenu');
     if (!avatar || !menu) return;
     // Ensure visible styling applied to the single existing menu
-    menu.classList.add('show');
+    
     menu.innerHTML = `
       <li><a href="/profile.html">Profile</a></li>
       <li><a href="/usage.html">History</a></li>
@@ -816,5 +816,19 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
   
 </script>
+
+<script>
+(function(){
+  const btn = document.getElementById('navAvatar');
+  const menu = document.getElementById('navMenu');
+  if(!btn || !menu) return;
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    menu.classList.toggle('show');
+  });
+  document.addEventListener('click', ()=> menu.classList.remove('show'));
+})();
+</script>
+
 </body>
 </html>
