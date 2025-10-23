@@ -10,18 +10,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-// Idempotent Supabase client init
-(function(){
-  try {
-    if (!window.__sb) {
-      window.__sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    }
-    window.supabaseClient = window.__sb;
-  } catch(e) { console.error("Supabase init error", e); }
-})();
-</script>
-
 <style>
     :root { --base-line: rgba(255,255,255,0.08); }
     body { background: #0b0b0f; color: #e5e7eb; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
@@ -47,8 +35,7 @@
     #grid > article.mitem { position: absolute; width: var(--col-width, 100%); }
   </style>
 </head>
-<body class="min-h-full flex flex-col">
-<header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
+<body class="min-h-full flex flex-col"><header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
 <div class="flex items-center gap-3">
 <a class="flex items-center gap-3 hover:opacity-90" href="index.html">
@@ -58,9 +45,9 @@
 </div>
 <nav class="hidden md:flex items-center gap-8 text-sm">
 <a class="hover:text-white/90" href="models.html">Models</a>
-          <a class="hover:text-white/90" href="examples-prompts.html">Examples/Prompts</a>
+<a class="hover:text-white/90" href="examples-prompts.html">Examples/Prompts</a>
 <a class="hover:text-white/90" href="templates.html">Templates</a>
- <a class="hover:text-white/90" href="pricing.html">Pricing</a>
+<a class="hover:text-white/90" href="pricing.html">Pricing</a>
 <a class="hover:text-white/90" href="#faq">FAQ</a>
 </nav>
 <div class="flex items-center gap-3">
@@ -86,6 +73,7 @@
 </div>
 <a aria-hidden="true" class="hidden" href="/login.html" id="btnLogin" style="display:none!important;visibility:hidden" tabindex="-1">Log in / Sign up</a>
 </header>
+
 <main class="flex-1">
 <section>
 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
@@ -133,12 +121,11 @@
 </div>
 </div>
 <script>
-    const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.window.supabaseClient.co';
+    const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    // [removed duplicate supabase init] // [removed duplicate supabase init]
-// window.__sb = window.__sb || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-// 
-//     const MODEL_LINKS = {
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    const MODEL_LINKS = {
       veo3: "veo3.html",
       kling: "kling.html",
       imagen: "imagen.html",
@@ -304,7 +291,7 @@
 
     async function loadExamples(filter='all'){
       try{
-        let q = window.supabaseClient.from('prompt_examples')
+        let q = supabase.from('prompt_examples')
           .select('id,title,model_slug,media_type,media_url,poster_url,highlight,prompt,sort_order')
           .order('sort_order', { ascending: true });
 
@@ -350,314 +337,15 @@
 
     loadExamples();
   </script>
-<div class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4" id="authModal">
-<div class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft" id="authCard">
-<div class="mb-4 flex items-center justify-between">
-<h3 class="text-lg font-semibold" id="authTitle">Log in</h3>
-<button class="rounded-lg btn px-2 py-1 text-sm" id="authClose">✕</button>
-</div>
-<form class="space-y-3" id="authForm">
-<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" id="authEmail" placeholder="Email" required="" type="email"/>
-<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" id="authPass" placeholder="Password" required="" type="password"/>
-<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden" id="authPass2" placeholder="Repeat password" type="password"/>
-<div class="flex gap-2">
-<button class="w-1/2 rounded-lg btn px-3 py-2 font-semibold" id="btnDoLogin" type="button">Log in</button>
-<button class="w-1/2 rounded-lg btn px-3 py-2" id="btnDoSignup" type="button">Sign up</button>
-</div>
-<p class="text-xs text-zinc-400" id="authMsg"></p>
-</form>
-</div>
-</div><script>(function(el){ if(el) el.textContent = new Date().getFullYear(); }) (document.getElementById('y'));
 
-    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.window.supabaseClient.co';
+<!-- Injected header/auth scripts (from pricing.1to1.html) -->
+<script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    // reuse existing global supabase client
-// Header elements
-    const $btnLoginNav = document.getElementById('btnLoginNav');
-    const $btnGetStarted = document.getElementById('btnGetStarted');
-    const $navUser = document.getElementById('navUser');
-    const $navCredits = document.getElementById('navCredits');
-    const $navAvatar = document.getElementById('navAvatar');
-    const $navMenu = document.getElementById('navMenu');
-    const $btnLogout = document.getElementById('btnLogout');
-    const $navAvatarImg = document.getElementById('navAvatarImg');
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Hero button
-    const $btnLogin = document.getElementById('btnLogin');
-
-    // Modal elements
-    const $modal = document.getElementById('authModal');
-    const $close = document.getElementById('authClose');
-    const $title = document.getElementById('authTitle');
-    const $emailIn = document.getElementById('authEmail');
-    const $passIn = document.getElementById('authPass');
-    const $pass2In = document.getElementById('authPass2');
-    const $msg = document.getElementById('authMsg');
-    const $doLogin = document.getElementById('btnDoLogin');
-    const $doSignup = document.getElementById('btnDoSignup');
-
-    let authMode = 'login';
-    function openAuth(){ $modal.classList.remove('hidden'); $msg.textContent=''; }
-    function closeAuth(){ $modal.classList.add('hidden'); $msg.textContent=''; }
-    function setAuthMode(mode){
-      authMode = mode;
-      if(mode==='signup'){
-        $title.textContent = 'Sign up';
-        $pass2In.classList.remove('hidden');
-        $doSignup.classList.add('btn-brand'); $doLogin.classList.remove('btn-brand');
-      }else{
-        $title.textContent = 'Log in';
-        $pass2In.classList.add('hidden');
-        $doLogin.classList.add('btn-brand'); $doSignup.classList.remove('btn-brand');
-      }
-    }
-    function showLoggedInUI(profile, user){var u=document.getElementById('loginUnified'); if(u) u.classList.add('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');} else {
-        $navAvatarImg.classList.add('hidden');
-      }
-    }
-    function showLoggedOutUI(){var u=document.getElementById('loginUnified'); if(u) u.classList.remove('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
-    // Dropdown
-    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
-    document.addEventListener('click', (e)=>{
-      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
-    });
-    // Openers
-    $btnLogin.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
-    $btnLoginNav.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
-    $btnGetStarted.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
-    $close.addEventListener('click', closeAuth);
-
-    async function getOrCreateProfile(user){
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id,email,credits')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if(error){ throw error; }
-      if(!data){
-        const ins = await window.supabaseClient.from('profiles').insert({
-          user_id: user.id, email: user.email, credits: 3
-        }).select().single();
-        if(ins.error){ throw ins.error; }
-        return ins.data;
-      }
-      return data;
-    }
-    async function refreshCredits(){
-      const { data } = await window.supabaseClient.auth.getUser();
-      const user = data.user;
-      if(!user) return;
-      const prof = await window.supabaseClient.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-      if(prof?.data?.credits != null){ $navCredits.textContent = prof.data.credits + '⚡'; }
-    }
-    window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
-
-    // Sign up
-    $doSignup.addEventListener('click', async ()=>{
-      if(authMode!=='signup'){ setAuthMode('signup'); $msg.textContent=''; return; }
-      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
-      if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
-      $msg.textContent = 'Creating account…';
-      const { data, error } = await window.supabaseClient.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
-      if(error){ $msg.textContent = error.message; return; }
-      $msg.textContent = 'Check your email to confirm, then Log in.';
-      setAuthMode('login');
-    });
-    // Log in
-    $doLogin.addEventListener('click', async ()=>{
-      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
-      $msg.textContent = 'Signing in…';
-      try{
-        const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
-        if(error){ $msg.textContent = error.message; return; }
-        const user = data.user;
-        const prof = await getOrCreateProfile(user);
-        showLoggedInUI(prof, user);
-        closeAuth();
-      }catch(e){ $msg.textContent = e.message || 'Login failed.'; }
-    });
-    // Logout
-    document.getElementById('btnLogout').addEventListener('click', async ()=>{
-      await window.supabaseClient.auth.signOut();
-      showLoggedOutUI();
-    });
-    
-    // === Credit helpers (pure Supabase; no Make.com) ===
-    async function getUserId() {
-      const { data } = await window.supabaseClient.auth.getUser();
-      return data.user?.id || null;
-    }
-    async function setCredits(value) {
-      const uid = await getUserId();
-      if (!uid) throw new Error('Not logged in');
-      const { error } = await supabase
-        .from('profiles')
-        .update({ credits: value })
-        .eq('user_id', uid);
-      if (error) throw error;
-      await window.refreshCredits();
-    }
-    async function addCredits(delta) {
-      const uid = await getUserId();
-      if (!uid) throw new Error('Not logged in');
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('user_id', uid)
-        .maybeSingle();
-      if (error) throw error;
-      const next = (data?.credits ?? 0) + delta;
-      await setCredits(next);
-    }
-    async function useCredits(cost) {
-      const uid = await getUserId();
-      if (!uid) throw new Error('Not logged in');
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('user_id', uid)
-        .maybeSingle();
-      if (error) throw error;
-      const current = data?.credits ?? 0;
-      if (current < cost) throw new Error('Not enough credits');
-      await setCredits(current - cost);
-    }
-    window.hansoraCredits = { addCredits, useCredits, setCredits };
-
-    // Restore session
-    (async ()=>{
-      const { data } = await window.supabaseClient.auth.getUser();
-      const user = data.user;
-      if(user){
-        try{
-          const prof = await getOrCreateProfile(user);
-          showLoggedInUI(prof, user);
-        }catch{ showLoggedOutUI(); }
-      }else{
-        showLoggedOutUI();
-      }
-    })();
-  
-
-  (function(){ 
-    function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-    ready(async function(){ 
-      try {
-        if (typeof supabase === 'undefined' || !window.supabaseClient.auth) return;
-        const navCreditsEl = document.getElementById('navCredits');
-        const runBtn = document.getElementById('runBtn');
-        const R = (c)=>{ 
-          if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-          if (runBtn) {
-            const ok = (c ?? 0) > 0;
-            runBtn.disabled = !ok;
-            runBtn.classList.toggle('opacity-50', !ok);
-            runBtn.classList.toggle('cursor-not-allowed', !ok);
-          }
-        };
-
-        const ures = await window.supabaseClient.auth.getUser();
-        const user = ures?.data?.user;
-        if(!user) return;
-
-        async function loadCreditsOnce(){ 
-          try {
-            const { data: prof } = await window.supabaseClient.from('profiles')
-              .select('credits').eq('user_id', user.id).maybeSingle();
-            const c = prof?.credits ?? 0;
-            R(c);
-            return c;
-          } catch(e) { console.warn('credits poll read failed', e); return null; }
-        }
-
-        // Long polling burst (3 minutes) every 2s
-        function startCreditsPolling(durationMs=180000, intervalMs=2000){
-          if (window.__creditsPoll) clearInterval(window.__creditsPoll);
-          const t0 = Date.now();
-          window.__creditsPoll = setInterval(async ()=>{
-            await loadCreditsOnce();
-            if (Date.now() - t0 > durationMs) clearInterval(window.__creditsPoll);
-          }, intervalMs);
-        }
-
-        // Initial load -> reflect current value
-        await loadCreditsOnce();
-
-        // If __run exists, wrap it so we start long polling right after Run
-        if (typeof window.__run === 'function') {
-          const __origRun = window.__run;
-          window.__run = async function(){ 
-            const c = await loadCreditsOnce();
-            if ((c ?? 0) <= 0) { alert('No credits left.'); return; }
-            startCreditsPolling(180000, 2000); // 3 minutes polling
-            return __origRun();
-          }
-        }
-      } catch(e){ console.warn('credits polling v2 error', e); }
-    });
-  })();
-  
-
-document.addEventListener('DOMContentLoaded', async () => {
-  const el = document.getElementById('btnLoginSignup');
-  if (!el || !window.supabase) return;
-  try {
-    const { data } = await window.supabaseClient.auth.getSession();
-    if (data && data.session && data.session.user) {
-      el.style.display = 'none';
-    }
-    window.supabaseClient.auth.onAuthStateChange((_e, session) => {
-      if (session && session.user) {
-        el.style.display = 'none';
-      } else {
-        el.style.display = '';
-      }
-    });
-  } catch (_) { /* silent */ }
-});
-
-
-document.addEventListener('DOMContentLoaded', () => {
-  /* 1) PROFILE MENU — exactly 4 items */
-  (function(){
-    const header = document.querySelector('header') || document.body;
-    const avatar = Array.from(header.querySelectorAll('button,a,div')).find(el => {
-      const aria=(el.getAttribute('aria-label')||'').toLowerCase();
-      const cls=(el.className||'').toLowerCase();
-      const txt=(el.textContent||'').toLowerCase();
-      return aria.includes('profile') || aria.includes('avatar') || cls.includes('avatar') || txt==='profile';
-    });
-    if(!avatar) return;
-    let menu = avatar.parentElement.querySelector('ul,div[role="menu"],div.menu');
-    if(!menu){
-      menu = document.createElement('ul');
-      avatar.parentElement.appendChild(menu);
-    }
-    menu.className = 'menu show bg-base-bg border border-base-line rounded-xl p-2 text-sm';
-    const avatar = document.getElementById('navAvatar');
-    const menu = document.getElementById('navMenu');
-    if (!avatar || !menu) return;
-    // Ensure visible styling applied to the single existing menu
-    
-    menu.innerHTML = `
-      <li><a href="/profile.html">Profile</a></li>
-      <li><a href="/usage.html">History</a></li>
-      <li><a href="/price.html">Subscription</a></li>
-      <li><button id="hs-logout">Log out</button></li>
-    `;
-    document.addEventListener('click',(e)=>{
-      if(e.target && e.target.id==='hs-logout'){ window.location.href='logout.html'; }
-    });
-  })();
-
-  
-
-  </script><script>
-
-    (function(el){ if(el) el.textContent = new Date().getFullYear(); }) (document.getElementById('y'));
-
-    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.window.supabaseClient.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     // Header elements
     const $btnLoginNav = document.getElementById('btnLoginNav');
     const $btnGetStarted = document.getElementById('btnGetStarted');
@@ -721,7 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .maybeSingle();
       if(error){ throw error; }
       if(!data){
-        const ins = await window.supabaseClient.from('profiles').insert({
+        const ins = await supabase.from('profiles').insert({
           user_id: user.id, email: user.email, credits: 3
         }).select().single();
         if(ins.error){ throw ins.error; }
@@ -730,10 +418,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return data;
     }
     async function refreshCredits(){
-      const { data } = await window.supabaseClient.auth.getUser();
+      const { data } = await supabase.auth.getUser();
       const user = data.user;
       if(!user) return;
-      const prof = await window.supabaseClient.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
       if(prof?.data?.credits != null){ $navCredits.textContent = prof.data.credits + '⚡'; }
     }
     window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
@@ -744,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
       $msg.textContent = 'Creating account…';
-      const { data, error } = await window.supabaseClient.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+      const { data, error } = await supabase.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
       if(error){ $msg.textContent = error.message; return; }
       $msg.textContent = 'Check your email to confirm, then Log in.';
       setAuthMode('login');
@@ -754,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       $msg.textContent = 'Signing in…';
       try{
-        const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+        const { data, error } = await supabase.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
         if(error){ $msg.textContent = error.message; return; }
         const user = data.user;
         const prof = await getOrCreateProfile(user);
@@ -764,13 +452,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     // Logout
     document.getElementById('btnLogout').addEventListener('click', async ()=>{
-      await window.supabaseClient.auth.signOut();
+      await supabase.auth.signOut();
       showLoggedOutUI();
     });
     
     // === Credit helpers (pure Supabase; no Make.com) ===
     async function getUserId() {
-      const { data } = await window.supabaseClient.auth.getUser();
+      const { data } = await supabase.auth.getUser();
       return data.user?.id || null;
     }
     async function setCredits(value) {
@@ -812,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Restore session
     (async ()=>{
-      const { data } = await window.supabaseClient.auth.getUser();
+      const { data } = await supabase.auth.getUser();
       const user = data.user;
       if(user){
         try{
@@ -823,64 +511,177 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoggedOutUI();
       }
     })();
-  
-</script>
+  </script><script>
+  (function(){ 
+    function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+    ready(async function(){ 
+      try {
+        if (typeof supabase === 'undefined' || !supabase.auth) return;
+        const navCreditsEl = document.getElementById('navCredits');
+        const runBtn = document.getElementById('runBtn');
+        const R = (c)=>{ 
+          if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+          if (runBtn) {
+            const ok = (c ?? 0) > 0;
+            runBtn.disabled = !ok;
+            runBtn.classList.toggle('opacity-50', !ok);
+            runBtn.classList.toggle('cursor-not-allowed', !ok);
+          }
+        };
 
-<script>
-(function(){
-  const btn = document.getElementById('navAvatar');
-  const menu = document.getElementById('navMenu');
-  if(!btn || !menu) return;
-  btn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    menu.classList.toggle('show');
-  });
-  document.addEventListener('click', ()=> menu.classList.remove('show'));
-})();
-</script>
+        const ures = await supabase.auth.getUser();
+        const user = ures?.data?.user;
+        if(!user) return;
 
+        async function loadCreditsOnce(){ 
+          try {
+            const { data: prof } = await supabase.from('profiles')
+              .select('credits').eq('user_id', user.id).maybeSingle();
+            const c = prof?.credits ?? 0;
+            R(c);
+            return c;
+          } catch(e) { console.warn('credits poll read failed', e); return null; }
+        }
 
-<script>
-(function(){
-  try { window.supabaseClient = window.__sb || window.supabaseClient; } catch(_){}
-  try { window.supabaseClient = window.supabaseClient || (window.supabase && window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON)); } catch(_){}
-  try { window.supabaseClient && (window.hs_supabase_ready = true); } catch(_){}
-} )();
-</script>
+        // Long polling burst (3 minutes) every 2s
+        function startCreditsPolling(durationMs=180000, intervalMs=2000){
+          if (window.__creditsPoll) clearInterval(window.__creditsPoll);
+          const t0 = Date.now();
+          window.__creditsPoll = setInterval(async ()=>{
+            await loadCreditsOnce();
+            if (Date.now() - t0 > durationMs) clearInterval(window.__creditsPoll);
+          }, intervalMs);
+        }
 
+        // Initial load -> reflect current value
+        await loadCreditsOnce();
 
-<script>
-(function(){
-  const btnLogin = document.getElementById('btnLoginSignup');
-  const creditsEl = document.getElementById('navCredits');
-  const avatarBtn = document.getElementById('navAvatar');
-  function showLoggedIn(){
-    if(btnLogin) btnLogin.style.display = 'none';
-    if(creditsEl) creditsEl.style.display = '';
-    if(avatarBtn) avatarBtn.style.display = '';
-  }
-  function showLoggedOut(){
-    if(btnLogin) btnLogin.style.display = '';
-    if(creditsEl) creditsEl.style.display = 'none';
-    if(avatarBtn) avatarBtn.style.display = 'none';
-  }
-  async function init(){
-    try{
-      const sb = window.supabaseClient;
-      if(!sb){ showLoggedOut(); return; }
-      const { data: { session } } = await sb.auth.getSession();
-      if(session){ showLoggedIn(); }
-      else { showLoggedOut(); }
-    }catch(e){
-      console.warn('auth UI init error', e);
-      showLoggedOut();
+        // If __run exists, wrap it so we start long polling right after Run
+        if (typeof window.__run === 'function') {
+          const __origRun = window.__run;
+          window.__run = async function(){ 
+            const c = await loadCreditsOnce();
+            if ((c ?? 0) <= 0) { alert('No credits left.'); return; }
+            startCreditsPolling(180000, 2000); // 3 minutes polling
+            return __origRun();
+          }
+        }
+      } catch(e){ console.warn('credits polling v2 error', e); }
+    });
+  })();
+  </script><script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const el = document.getElementById('btnLoginSignup');
+  if (!el || !window.supabase) return;
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data && data.session && data.session.user) {
+      el.style.display = 'none';
     }
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else { init(); }
-})();
-</script>
+    supabase.auth.onAuthStateChange((_e, session) => {
+      if (session && session.user) {
+        el.style.display = 'none';
+      } else {
+        el.style.display = '';
+      }
+    });
+  } catch (_) { /* silent */ }
+});
+</script><script>
+document.addEventListener('DOMContentLoaded', () => {
+  /* 1) PROFILE MENU — exactly 4 items */
+  (function(){
+    const header = document.querySelector('header') || document.body;
+    const avatar = Array.from(header.querySelectorAll('button,a,div')).find(el => {
+      const aria=(el.getAttribute('aria-label')||'').toLowerCase();
+      const cls=(el.className||'').toLowerCase();
+      const txt=(el.textContent||'').toLowerCase();
+      return aria.includes('profile') || aria.includes('avatar') || cls.includes('avatar') || txt==='profile';
+    });
+    if(!avatar) return;
+    let menu = avatar.parentElement.querySelector('ul,div[role="menu"],div.menu');
+    if(!menu){
+      menu = document.createElement('ul');
+      avatar.parentElement.appendChild(menu);
+    }
+    menu.className = 'menu show bg-base-bg border border-base-line rounded-xl p-2 text-sm';
+    const avatar = document.getElementById('navAvatar');
+    const menu = document.getElementById('navMenu');
+    if (!avatar || !menu) return;
+    // Ensure visible styling applied to the single existing menu
+    menu.classList.add('show');
+    menu.innerHTML = `
+      <li><a href="/profile.html">Profile</a></li>
+      <li><a href="/usage.html">History</a></li>
+      <li><a href="/price.html">Subscription</a></li>
+      <li><button id="hs-logout">Log out</button></li>
+    `;
+    document.addEventListener('click',(e)=>{
+      if(e.target && e.target.id==='hs-logout'){ window.location.href='logout.html'; }
+    });
+  })();
 
-</body>
+  
+
+  /* 2) HERO — remove 3 CTAs in the HERO ROW ONLY and keep a single "Get Started" there */
+  (function(){
+    // Find hero section by main heading
+    const hero = Array.from(document.querySelectorAll('h1,h2')).find(h => (h.textContent||'').toLowerCase().includes('create stunning'))?.closest('section');
+    // Fallback: topmost section
+    const heroSection = hero || document.querySelector('main section, section') || document.body;
+
+    // Inside hero ONLY: hide buttons with those exact labels
+    const kill = ['explore models','see templates','log in / sign up','log in','sign up'];
+    if (heroSection){
+      const btns = heroSection.querySelectorAll('a,button');
+      btns.forEach(b => {
+        const t=(b.textContent||'').trim().toLowerCase();
+        if (kill.includes(t)) b.classList.add('hs-hide');
+      });
+      // ensure single Get Started exists in this section
+      if (!heroSection.querySelector('a.hs-get-started-hero')) {
+        const row = (Array.from(btns).find(b => kill.includes((b.textContent||'').trim().toLowerCase()))?.closest('div')) || heroSection;
+        const gs = document.createElement('a');
+        gs.href='login.html';
+        gs.className='hs-get-started-hero btn btn-brand rounded-xl px-5 py-3';
+        gs.textContent='Get Started';
+        row.appendChild(gs);
+      }
+    }
+
+    // Additionally, if there is any "Get Started" in the HEADER, hide it (user didn't want header changes)
+    const header = document.querySelector('header');
+    if (header){
+      Array.from(header.querySelectorAll('a,button')).forEach(el => {
+        const t=(el.textContent||'').trim().toLowerCase();
+        if (t==='get started') el.classList.add('hs-hide');
+      });
+    }
+  })();
+
+  /* 2b) HERO MEDIA — replace the mountain IMAGE with a VIDEO */
+  (function(){
+    // Find the hero media image inside the hero section (right side card)
+    const heroTitle = Array.from(document.querySelectorAll('h1,h2')).find(h => (h.textContent||'').toLowerCase().includes('create stunning'));
+    const heroSection = heroTitle ? heroTitle.closest('section') : document.body;
+    // Look for an <img> inside the hero media container
+    let img = heroSection ? heroSection.querySelector('img') : null;
+    if (!img) img = document.querySelector('img'); // last resort
+    if (img){
+      img.style.display='none'; // ensure it doesn't cover the video
+      const box = img.parentElement || heroSection;
+      if (box && !box.querySelector('video.hs-hero-video')){
+        const vid = document.createElement('video');
+        vid.src='assets/placeholder.mp4';  // replace with your actual video
+        vid.setAttribute('playsinline','');
+        vid.setAttribute('muted','');
+        vid.setAttribute('loop','');
+        vid.setAttribute('autoplay','');
+        vid.className='hs-hero-video';
+        box.insertBefore(vid, img);
+      }
+    }
+  })();
+});
+</script></body>
 </html>
