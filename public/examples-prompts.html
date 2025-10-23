@@ -1,16 +1,15 @@
 <!DOCTYPE html>
-
 <html class="h-full" lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width,initial-scale=1" name="viewport"/>
-<title>Examples &amp; Prompts — HANSORA AI (Masonry Grid, No Gaps)</title>
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Examples &amp; Prompts — HANSORA AI (Masonry Grid, No Gaps)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
     :root { --base-line: rgba(255,255,255,0.08); }
     body { background: #0b0b0f; color: #e5e7eb; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
     .glass { background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); backdrop-filter: blur(8px); }
@@ -30,329 +29,330 @@
     .prompt-box { border:1px solid var(--base-line); background:#0b0c10; border-radius:12px; }
     .prompt-body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; white-space: pre-wrap; word-break: break-word; }
     a.inline-link { color:#a9b4ff; border-bottom:1px dotted #3b3f68; }
-    /* Masonry grid by absolute positioning (no gaps, preserves visual flow) */
+    /* Masonry */
     #grid { position: relative; }
     #grid > article.mitem { position: absolute; width: var(--col-width, 100%); }
   </style>
 </head>
-<body class="min-h-full flex flex-col"><header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-<div class="flex items-center gap-3">
-<a class="flex items-center gap-3 hover:opacity-90" href="index.html">
-<img alt="Hansora AI" class="h-10 w-10 rounded-lg object-contain" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png"/>
-<span class="font-semibold tracking-wide">HANSORA AI</span>
-</a>
-</div>
-<nav class="hidden md:flex items-center gap-8 text-sm">
-<a class="hover:text-white/90" href="models.html">Models</a>
-<a class="hover:text-white/90" href="examples-prompts.html">Examples/Prompts</a>
-<a class="hover:text-white/90" href="templates.html">Templates</a>
-<a class="hover:text-white/90" href="pricing.html">Pricing</a>
-<a class="hover:text-white/90" href="#faq">FAQ</a>
-</nav>
-<div class="flex items-center gap-3">
-<a class="hidden" href="gptimage.html">EN / RU</a>
-<!-- pre-login -->
-<a class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft" href="/login.html" id="btnLoginSignup">Login / Signup</a><a aria-hidden="true" class="hidden" href="/login.html" id="btnLoginNav" style="display:none!important;visibility:hidden" tabindex="-1">Log in</a><a aria-hidden="true" class="hidden" href="/login.html" id="btnGetStarted" style="display:none!important;visibility:hidden" tabindex="-1">Get Started</a>
-<!-- after login -->
-<div class="hidden items-center gap-2" id="navUser">
-<span class="text-sm text-white/80 mr-2" id="navCredits">0⚡</span>
-<div class="relative">
-<button class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden" id="navAvatar">
-<img alt="profile" class="h-full w-full object-cover hidden" id="navAvatarImg"/>
-</button>
-<div class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm" id="navMenu">
-<a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/profile.html">Profile</a>
-<a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/usage.html">History</a>
-<a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/price.html">Subscription</a>
-<button class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5" id="btnLogout">Log out</button>
-</div>
-</div>
-</div>
-</div>
-</div>
-<a aria-hidden="true" class="hidden" href="/login.html" id="btnLogin" style="display:none!important;visibility:hidden" tabindex="-1">Log in / Sign up</a>
+<body class="min-h-full flex flex-col">
+<header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+        <img class="h-10 w-10 rounded-lg object-contain" alt="Hansora AI" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png"/>
+        <span class="font-semibold tracking-wide">HANSORA AI</span>
+      </a>
+    </div>
+    <nav class="hidden md:flex items-center gap-8 text-sm">
+      <a class="hover:text-white/90" href="models.html">Models</a>
+      <a class="hover:text-white/90" href="examples-prompts.html">Examples/Prompts</a>
+      <a class="hover:text-white/90" href="templates.html">Templates</a>
+      <a class="hover:text-white/90" href="pricing.html">Pricing</a>
+      <a class="hover:text-white/90" href="#faq">FAQ</a>
+    </nav>
+    <div class="flex items-center gap-3">
+      <a class="hidden" href="gptimage.html">EN / RU</a>
+      <!-- pre-login -->
+      <a id="btnLoginSignup" href="/login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a>
+      <a id="btnLoginNav" href="/login.html" class="hidden" aria-hidden="true" tabindex="-1" style="display:none!important;visibility:hidden">Log in</a>
+      <a id="btnGetStarted" href="/login.html" class="hidden" aria-hidden="true" tabindex="-1" style="display:none!important;visibility:hidden">Get Started</a>
+      <!-- after login -->
+      <div id="navUser" class="hidden items-center gap-2">
+        <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
+        <div class="relative">
+          <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
+            <img id="navAvatarImg" class="h-full w-full object-cover hidden" alt="profile"/>
+          </button>
+          <div id="navMenu" class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm">
+            <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/profile.html">Profile</a>
+            <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/usage.html">History</a>
+            <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/price.html">Subscription</a>
+            <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <a id="btnLogin" href="/login.html" class="hidden" aria-hidden="true" tabindex="-1" style="display:none!important;visibility:hidden">Log in / Sign up</a>
 </header>
 
 <main class="flex-1">
-<section>
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-<h1 class="text-2xl sm:text-3xl font-bold">Examples &amp; Prompts</h1>
-<p class="mt-2 text-zinc-400 max-w-2xl">Tap any example to see the prompt and media. Copy only the prompt and jump to the right generator link in the same tab.</p>
-<div class="mt-6 flex flex-wrap items-center gap-3 text-sm">
-<button class="btn" data-filter="all">All</button>
-<button class="btn" data-filter="veo3">Veo 3</button>
-<button class="btn" data-filter="kling">Kling</button>
-<button class="btn" data-filter="imagen">Imagen</button>
-<button class="btn" data-filter="sora">Sora</button>
-<button class="btn" data-filter="midjourney">Midjourney</button>
-<button class="btn" data-filter="runway">Runway</button>
-<button class="btn" data-filter="gpt_image">GPT Image</button>
-<button class="btn" data-filter="nano_banana">Nano Banana</button>
-</div>
-<div class="mt-6" id="grid"></div>
-<p class="mt-3 text-sm text-rose-300" id="err"></p>
-</div>
-</section>
+  <section>
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <h1 class="text-2xl sm:text-3xl font-bold">Examples &amp; Prompts</h1>
+      <p class="mt-2 text-zinc-400 max-w-2xl">Tap any example to see the prompt and media. Copy only the prompt and jump to the right generator link in the same tab.</p>
+      <div class="mt-6 flex flex-wrap items-center gap-3 text-sm">
+        <button class="btn" data-filter="all">All</button>
+        <button class="btn" data-filter="veo3">Veo 3</button>
+        <button class="btn" data-filter="kling">Kling</button>
+        <button class="btn" data-filter="imagen">Imagen</button>
+        <button class="btn" data-filter="sora">Sora</button>
+        <button class="btn" data-filter="midjourney">Midjourney</button>
+        <button class="btn" data-filter="runway">Runway</button>
+        <button class="btn" data-filter="gpt_image">GPT Image</button>
+        <button class="btn" data-filter="nano_banana">Nano Banana</button>
+      </div>
+      <div id="grid" class="mt-6"></div>
+      <p id="err" class="mt-3 text-sm text-rose-300"></p>
+    </div>
+  </section>
 </main>
+
 <!-- modal -->
-<div class="modal-mask" id="mask">
-<div class="modal">
-<div class="body">
-<div class="poster">
-<video controls="" id="mVideo" loop="" muted="" playsinline="" style="display:none"></video>
-<img alt="example image" id="mImg" style="display:none"/>
+<div id="mask" class="modal-mask">
+  <div class="modal">
+    <div class="body">
+      <div class="poster">
+        <video id="mVideo" style="display:none" controls loop muted playsinline></video>
+        <img id="mImg" style="display:none" alt="example image"/>
+      </div>
+      <div>
+        <h3 id="mTitle" class="text-lg font-semibold mb-1"></h3>
+        <div id="mHighlight" class="text-[15px] text-zinc-200 font-semibold mb-2"></div>
+        <div class="text-xs text-zinc-500 mb-3">Tip: Click the model link below to open the generator in the <b>same tab</b>.</div>
+        <div class="prompt-box p-3">
+          <div class="text-xs text-zinc-400 mb-1">Prompt</div>
+          <div id="mPrompt" class="prompt-body text-[13px] leading-5"></div>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-3">
+          <button id="btnCopy" class="btn">Copy prompt</button>
+          <a id="modelLink" href="#" class="btn">Open generator</a>
+          <button id="mClose" class="btn">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-<div>
-<h3 class="text-lg font-semibold mb-1" id="mTitle"></h3>
-<div class="text-[15px] text-zinc-200 font-semibold mb-2" id="mHighlight"></div>
-<div class="text-xs text-zinc-500 mb-3">Tip: Click the model link below to open the generator in the <b>same tab</b>.</div>
-<div class="prompt-box p-3">
-<div class="text-xs text-zinc-400 mb-1">Prompt</div>
-<div class="prompt-body text-[13px] leading-5" id="mPrompt"></div>
-</div>
-<div class="mt-4 flex flex-wrap gap-3">
-<button class="btn" id="btnCopy">Copy prompt</button>
-<a class="btn" href="#" id="modelLink">Open generator</a>
-<button class="btn" id="mClose">Close</button>
-</div>
-</div>
-</div>
-</div>
-</div>
+
 <script>
-    const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-    const MODEL_LINKS = {
-      veo3: "veo3.html",
-      veo3.1: "veo3_1.html',
-      kling: "kling.html",
-      imagen: "imagen.html",
-      sora: "sora.html",
-      midjourney: "midimage.html",
-      midjourney v: "midvideo.html",
-      runway: "runway.html",
-      gpt_image: "gptimage.html",
-      nano_banana: "nano-banana.html",
-      aleph: "aleph.html"
-    };
+  const MODEL_LINKS = {
+    "veo3": "veo3.html",
+    "veo3.1": "veo3_1.html",
+    "kling": "kling.html",
+    "imagen": "imagen.html",
+    "sora": "sora.html",
+    "midjourney": "midimage.html",
+    "midjourney v": "midvideo.html",
+    "runway": "runway.html",
+    "gpt_image": "gptimage.html",
+    "nano_banana": "nano-banana.html",
+    "aleph": "aleph.html"
+  };
 
-    const GUTTER = 16; // px between items/columns
-    const grid = document.getElementById('grid');
+  const GUTTER = 16;
+  const grid = document.getElementById('grid');
 
-    function columnsForWidth(w){
-      // Tuned breakpoints for tighter 4-in-a-row on desktop
-      if (w >= 1100) return 4;
-      if (w >= 820)  return 3;
-      if (w >= 560)  return 2;
-      return 1;
+  function columnsForWidth(w){
+    if (w >= 1100) return 4;
+    if (w >= 820)  return 3;
+    if (w >= 560)  return 2;
+    return 1;
+  }
+
+  function layoutMasonry(){
+    const width = grid.clientWidth;
+    const cols = columnsForWidth(width);
+    const colW = Math.floor((width - (cols - 1) * GUTTER));
+    const itemW = Math.floor(colW / cols);
+    grid.style.setProperty('--col-width', itemW + 'px');
+
+    const colHeights = new Array(cols).fill(0);
+    const items = Array.from(grid.children);
+    let maxH = 0;
+
+    items.forEach(el => {
+      const minCol = colHeights.indexOf(Math.min(...colHeights));
+      const x = (itemW + GUTTER) * minCol;
+      const y = colHeights[minCol];
+      el.style.transform = `translate(${x}px, ${y}px)`;
+      el.style.width = itemW + 'px';
+      colHeights[minCol] = y + el.offsetHeight + GUTTER;
+      maxH = Math.max(maxH, colHeights[minCol]);
+    });
+
+    grid.style.height = maxH + 'px';
+  }
+
+  let relayoutQueued = false;
+  function requestLayout(){
+    if (relayoutQueued) return;
+    relayoutQueued = true;
+    requestAnimationFrame(()=>{
+      relayoutQueued = false;
+      layoutMasonry();
+    });
+  }
+  window.addEventListener('resize', requestLayout);
+
+  function linkifyHighlight(text, modelSlug){
+    if (!text) return "";
+    let html = text
+      .replace(/\[\[VEO3\]\]/gi, '<a class="inline-link" href="veo3.html">VEO 3</a>')
+      .replace(/\[\[KLING\]\]/gi, '<a class="inline-link" href="kling.html">Kling</a>')
+      .replace(/\[\[IMAGEN\]\]/gi, '<a class="inline-link" href="imagen.html">Imagen</a>')
+      .replace(/\[\[SORA\]\]/gi, '<a class="inline-link" href="sora.html">Sora</a>')
+      .replace(/\[\[MIDJOURNEY\]\]/gi, '<a class="inline-link" href="midimage.html">Midjourney</a>')
+      .replace(/\[\[RUNWAY\]\]/gi, '<a class="inline-link" href="runway.html">Runway</a>')
+      .replace(/\[\[GPTIMAGE\]\]/gi, '<a class="inline-link" href="gptimage.html">GPT Image</a>')
+      .replace(/\[\[VEO3\.1\]\]/gi, '<a class="inline-link" href="veo3_1.html">VEO 3.1</a>')
+      .replace(/\[\[NANOBANANA\]\]/gi, '<a class="inline-link" href="nano-banana.html">Nano Banana</a>');
+    if (!/\[\[(VEO3|KLING|IMAGEN|SORA|MIDJOURNEY|RUNWAY|GPTIMAGE|VEO3\.1|NANOBANANA)\]\]/i.test(text) && MODEL_LINKS[(modelSlug||'').toLowerCase()]) {
+      html += ` — <a class="inline-link" href="${MODEL_LINKS[(modelSlug||'').toLowerCase()]}">${(modelSlug||'').toUpperCase()}</a>`;
+    }
+    return html;
+  }
+
+  function setAspectFromMedia(box, el){
+    const apply = (w, h) => { if (w && h) box.style.aspectRatio = w + ' / ' + h; requestLayout(); };
+    if (el.tagName === 'VIDEO') {
+      el.addEventListener('loadedmetadata', () => apply(el.videoWidth, el.videoHeight), { once:true });
+      if (el.videoWidth && el.videoHeight) apply(el.videoWidth, el.videoHeight);
+    } else if (el.tagName === 'IMG') {
+      el.addEventListener('load', () => apply(el.naturalWidth, el.naturalHeight), { once:true });
+      if (el.naturalWidth && el.naturalHeight) apply(el.naturalWidth, el.naturalHeight);
+    }
+  }
+
+  function makeCard(row){
+    const card = document.createElement('article');
+    card.className = 'card glass mitem';
+
+    const media = document.createElement('div');
+    media.className = 'media';
+
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = ((row.media_type||'').toLowerCase()==='image') ? 'Image' : 'Video';
+    media.appendChild(badge);
+
+    if ((row.media_type || '').toLowerCase() === 'image') {
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.src = row.media_url;
+      media.appendChild(img);
+      setAspectFromMedia(media, img);
+      img.addEventListener('load', requestLayout);
+    } else {
+      const v = document.createElement('video');
+      v.setAttribute('preload','metadata');
+      v.muted = true;
+      v.playsInline = true;
+      v.setAttribute('loop','');
+      v.autoplay = true;
+      if (row.poster_url) v.setAttribute('poster', row.poster_url);
+      v.src = row.media_url || '';
+      v.addEventListener('canplay', () => { const p = v.play(); if (p && p.catch) p.catch(()=>{}); requestLayout(); });
+      media.appendChild(v);
+      setAspectFromMedia(media, v);
     }
 
-    function layoutMasonry(){
-      const width = grid.clientWidth;
-      const cols = columnsForWidth(width);
-      const colW = Math.floor((width - (cols - 1) * GUTTER));
-      const itemW = Math.floor(colW / cols);
-      grid.style.setProperty('--col-width', itemW + 'px');
+    card.appendChild(media);
 
-      const colHeights = new Array(cols).fill(0);
-      const items = Array.from(grid.children);
-      let maxH = 0;
+    const meta = document.createElement('div');
+    meta.className = 'p-4';
+    meta.innerHTML = '<h3 class="font-semibold">'+(row.title || 'Example')+'</h3><div class="text-xs text-zinc-400 mt-1">'+(row.model_slug || '').toUpperCase()+'</div>';
+    card.appendChild(meta);
 
-      items.forEach(el => {
-        const minCol = colHeights.indexOf(Math.min(...colHeights));
-        const x = (itemW + GUTTER) * minCol;
-        const y = colHeights[minCol];
+    card.addEventListener('click', () => {
+      const mask = document.getElementById('mask');
+      const mVideo = document.getElementById('mVideo');
+      const mImg = document.getElementById('mImg');
+      const mTitle = document.getElementById('mTitle');
+      const mHi = document.getElementById('mHighlight');
+      const mPr = document.getElementById('mPrompt');
+      const mLink = document.getElementById('modelLink');
 
-        el.style.transform = `translate(${x}px, ${y}px)`;
-        el.style.width = itemW + 'px';
+      const page = MODEL_LINKS[(row.model_slug || '').toLowerCase()] || '#';
+      mTitle.textContent = row.title || 'Example';
+      mHi.innerHTML      = linkifyHighlight(row.highlight || '', row.model_slug || '');
+      mPr.textContent    = row.prompt || '';
 
-        colHeights[minCol] = y + el.offsetHeight + GUTTER;
-        maxH = Math.max(maxH, colHeights[minCol]);
-      });
-
-      grid.style.height = maxH + 'px';
-    }
-
-    let relayoutQueued = false;
-    function requestLayout(){
-      if (relayoutQueued) return;
-      relayoutQueued = true;
-      requestAnimationFrame(()=>{
-        relayoutQueued = false;
-        layoutMasonry();
-      });
-    }
-    window.addEventListener('resize', requestLayout);
-
-    function linkifyHighlight(text, modelSlug){
-      if (!text) return "";
-      let html = text
-        .replace(/\[\[VEO3\]\]/gi, '<a class="inline-link" href="veo3.html">VEO 3</a>')
-        .replace(/\[\[KLING\]\]/gi, '<a class="inline-link" href="kling.html">Kling</a>')
-        .replace(/\[\[IMAGEN\]\]/gi, '<a class="inline-link" href="imagen.html">Imagen</a>')
-        .replace(/\[\[SORA\]\]/gi, '<a class="inline-link" href="sora.html">Sora</a>')
-        .replace(/\[\[MIDJOURNEY\]\]/gi, '<a class="inline-link" href="midimage.html">Midjourney</a>')
-        .replace(/\[\[RUNWAY\]\]/gi, '<a class="inline-link" href="runway.html">Runway</a>')
-        .replace(/\[\[GPTIMAGE\]\]/gi, '<a class="inline-link" href="gptimage.html">Gpt_image</a>')
-        .replace(/\[\[VEO3.1\]\]/gi, '<a class="inline-link" href="veo3_1.html">VEO 3.1</a>')
-        .replace(/\[\[NANOBANANA\]\]/gi, '<a class="inline-link" href="nano-banana.html">Nano-Banana</a>'):
-      if (!/\[\[(VEO3|KLING|IMAGEN|SORA|MIDJOURNEY|RUNWAY|GPTIMAGE)\]\]/i.test(text) && MODEL_LINKS[modelSlug]) {
-        html += ` — <a class="inline-link" href="${MODEL_LINKS[modelSlug]}">${(modelSlug||'').toUpperCase()}</a>`;
-      }
-      return html;
-    }
-
-    function setAspectFromMedia(box, el){
-      const apply = (w, h) => { if (w && h) box.style.aspectRatio = w + ' / ' + h; requestLayout(); };
-      if (el.tagName === 'VIDEO') {
-        el.addEventListener('loadedmetadata', () => apply(el.videoWidth, el.videoHeight), { once:true });
-        if (el.videoWidth && el.videoHeight) apply(el.videoWidth, el.videoHeight);
-      } else if (el.tagName === 'IMG') {
-        el.addEventListener('load', () => apply(el.naturalWidth, el.naturalHeight), { once:true });
-        if (el.naturalWidth && el.naturalHeight) apply(el.naturalWidth, el.naturalHeight);
-      }
-    }
-
-    function makeCard(row){
-      const card = document.createElement('article');
-      card.className = 'card glass mitem';
-
-      const media = document.createElement('div');
-      media.className = 'media';
-
-      const badge = document.createElement('span');
-      badge.className = 'badge';
-      badge.textContent = ((row.media_type||'').toLowerCase()==='image') ? 'Image' : 'Video';
-      media.appendChild(badge);
-
-      if ((row.media_type || '').toLowerCase() === 'image') {
-        const img = document.createElement('img');
-        img.loading = 'lazy';
-        img.src = row.media_url;
-        media.appendChild(img);
-        setAspectFromMedia(media, img);
-        img.addEventListener('load', requestLayout);
+      const isImg = (row.media_type || '').toLowerCase() === 'image';
+      mImg.style.display = isImg ? 'block' : 'none';
+      mVideo.style.display = isImg ? 'none' : 'block';
+      if (isImg) {
+        mImg.src = row.media_url || '';
       } else {
-        const v = document.createElement('video');
-        v.setAttribute('preload','metadata');
-        v.muted = true;
-        v.playsInline = true;
-        v.setAttribute('loop','');
-        v.autoplay = true;
-        if (row.poster_url) v.setAttribute('poster', row.poster_url);
-        v.src = row.media_url || '';
-        v.addEventListener('canplay', () => { const p = v.play(); if (p && p.catch) p.catch(()=>{}); requestLayout(); });
-        media.appendChild(v);
-        setAspectFromMedia(media, v);
+        try { mVideo.pause(); } catch {}
+        mVideo.src = row.media_url || '';
+        mVideo.load();
+        mVideo.play().catch(()=>{});
       }
-
-      card.appendChild(media);
-
-      const meta = document.createElement('div');
-      meta.className = 'p-4';
-      meta.innerHTML = '<h3 class="font-semibold">'+(row.title || 'Example')+'</h3><div class="text-xs text-zinc-400 mt-1">'+(row.model_slug || '').toUpperCase()+'</div>';
-      card.appendChild(meta);
-
-      card.addEventListener('click', () => {
-        const mask = document.getElementById('mask');
-        const mVideo = document.getElementById('mVideo');
-        const mImg = document.getElementById('mImg');
-        const mTitle = document.getElementById('mTitle');
-        const mHi = document.getElementById('mHighlight');
-        const mPr = document.getElementById('mPrompt');
-        const mLink = document.getElementById('modelLink');
-
-        const page = MODEL_LINKS[(row.model_slug || '').toLowerCase()] || '#';
-        mTitle.textContent = row.title || 'Example';
-        mHi.innerHTML      = linkifyHighlight(row.highlight || '', row.model_slug || '');
-        mPr.textContent    = row.prompt || '';
-
-        const isImg = (row.media_type || '').toLowerCase() === 'image';
-        mImg.style.display = isImg ? 'block' : 'none';
-        mVideo.style.display = isImg ? 'none' : 'block';
-        if (isImg) {
-          mImg.src = row.media_url || '';
-        } else {
-          try { mVideo.pause(); } catch {}
-          mVideo.src = row.media_url || '';
-          mVideo.load();
-          mVideo.play().catch(()=>{});
-        }
-        mLink.setAttribute('href', page);
-        mask.style.display = 'flex';
-      });
-
-      return card;
-    }
-
-    const mask = document.getElementById('mask');
-    const mVideo = document.getElementById('mVideo');
-    const mImg = document.getElementById('mImg');
-    const mClose = document.getElementById('mClose');
-    mClose.onclick = () => { try { mVideo.pause(); } catch {} mask.style.display='none'; mVideo.removeAttribute('src'); mVideo.load(); mImg.removeAttribute('src'); };
-    mask.addEventListener('click', e => { if (e.target === mask) mClose.click(); });
-
-    async function loadExamples(filter='all'){
-      try{
-        let q = supabase.from('prompt_examples')
-          .select('id,title,model_slug,media_type,media_url,poster_url,highlight,prompt,sort_order')
-          .order('sort_order', { ascending: true });
-
-        if (filter && filter !== 'all') q = q.eq('model_slug', filter);
-
-        const { data, error } = await q;
-        if (error){ console.error(error); document.getElementById('err').textContent = error.message || 'Failed to load examples.'; return; }
-        grid.innerHTML = '';
-        (data || []).forEach(row => grid.appendChild(makeCard(row)));
-        // Initial layout (after DOM paint)
-        setTimeout(requestLayout, 0);
-
-        // Pause offscreen videos
-        const vids = Array.from(document.querySelectorAll('.media video'));
-        const io = new IntersectionObserver((entries)=>{
-          entries.forEach(ent => {
-            const v = ent.target;
-            if (ent.isIntersecting) { const p = v.play(); if (p && p.catch) p.catch(()=>{}); }
-            else { try { v.pause(); } catch {} }
-          });
-        }, { root: null, threshold: 0.1 });
-        vids.forEach(v => io.observe(v));
-      }catch(e){
-        console.error(e);
-        document.getElementById('err').textContent = 'Failed to load examples (exception).';
-      }
-    }
-
-    document.querySelectorAll('button[data-filter]').forEach(btn => {
-      btn.addEventListener('click', () => loadExamples(btn.getAttribute('data-filter')));
+      mLink.setAttribute('href', page);
+      mask.style.display = 'flex';
     });
 
-    document.getElementById('btnCopy').addEventListener('click', async () => {
-      const text = (document.getElementById('mPrompt').textContent || '').trim();
-      try{
-        await navigator.clipboard.writeText(text);
-        const btn = document.getElementById('btnCopy');
-        const prev = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = prev, 900);
-      }catch{}
-    });
+    return card;
+  }
 
-    loadExamples();
-  </script>
+  const mask = document.getElementById('mask');
+  const mVideo = document.getElementById('mVideo');
+  const mImg = document.getElementById('mImg');
+  const mClose = document.getElementById('mClose');
+  mClose.onclick = () => { try { mVideo.pause(); } catch {} mask.style.display='none'; mVideo.removeAttribute('src'); mVideo.load(); mImg.removeAttribute('src'); };
+  mask.addEventListener('click', e => { if (e.target === mask) mClose.click(); });
 
-<!-- Injected header/auth scripts (from pricing.1to1.html) -->
+  async function loadExamples(filter='all'){
+    try{
+      let q = supabase.from('prompt_examples')
+        .select('id,title,model_slug,media_type,media_url,poster_url,highlight,prompt,sort_order')
+        .order('sort_order', { ascending: true });
+
+      if (filter && filter !== 'all') q = q.eq('model_slug', filter);
+
+      const { data, error } = await q;
+      if (error){ console.error(error); document.getElementById('err').textContent = error.message || 'Failed to load examples.'; return; }
+      grid.innerHTML = '';
+      (data || []).forEach(row => grid.appendChild(makeCard(row)));
+      setTimeout(requestLayout, 0);
+
+      const vids = Array.from(document.querySelectorAll('.media video'));
+      const io = new IntersectionObserver((entries)=>{
+        entries.forEach(ent => {
+          const v = ent.target;
+          if (ent.isIntersecting) { const p = v.play(); if (p && p.catch) p.catch(()=>{}); }
+          else { try { v.pause(); } catch {} }
+        });
+      }, { root: null, threshold: 0.1 });
+      vids.forEach(v => io.observe(v));
+    }catch(e){
+      console.error(e);
+      document.getElementById('err').textContent = 'Failed to load examples (exception).';
+    }
+  }
+
+  document.querySelectorAll('button[data-filter]').forEach(btn => {
+    btn.addEventListener('click', () => loadExamples(btn.getAttribute('data-filter')));
+  });
+
+  document.getElementById('btnCopy').addEventListener('click', async () => {
+    const text = (document.getElementById('mPrompt').textContent || '').trim();
+    try{
+      await navigator.clipboard.writeText(text);
+      const btn = document.getElementById('btnCopy');
+      const prev = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = prev, 900);
+    }catch{}
+  });
+
+  loadExamples();
+</script>
+
+<!-- Injected header/auth scripts (scoped & conflict-free) -->
 <script>
-    document.getElementById('y').textContent = new Date().getFullYear();
+  // Guard: only set footer year element if present
+  (function(){ const y = document.getElementById('y'); if (y) y.textContent = new Date().getFullYear(); })();
 
+  (function(){
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Header elements
     const $btnLoginNav = document.getElementById('btnLoginNav');
     const $btnGetStarted = document.getElementById('btnGetStarted');
     const $navUser = document.getElementById('navUser');
@@ -361,152 +361,55 @@
     const $navMenu = document.getElementById('navMenu');
     const $btnLogout = document.getElementById('btnLogout');
     const $navAvatarImg = document.getElementById('navAvatarImg');
-
-    // Hero button
     const $btnLogin = document.getElementById('btnLogin');
 
-    // Modal elements
-    const $modal = document.getElementById('authModal');
-    const $close = document.getElementById('authClose');
-    const $title = document.getElementById('authTitle');
-    const $emailIn = document.getElementById('authEmail');
-    const $passIn = document.getElementById('authPass');
-    const $pass2In = document.getElementById('authPass2');
-    const $msg = document.getElementById('authMsg');
-    const $doLogin = document.getElementById('btnDoLogin');
-    const $doSignup = document.getElementById('btnDoSignup');
+    function openAuth(){} function closeAuth(){} function setAuthMode(){}
 
-    let authMode = 'login';
-    function openAuth(){ $modal.classList.remove('hidden'); $msg.textContent=''; }
-    function closeAuth(){ $modal.classList.add('hidden'); $msg.textContent=''; }
-    function setAuthMode(mode){
-      authMode = mode;
-      if(mode==='signup'){
-        $title.textContent = 'Sign up';
-        $pass2In.classList.remove('hidden');
-        $doSignup.classList.add('btn-brand'); $doLogin.classList.remove('btn-brand');
-      }else{
-        $title.textContent = 'Log in';
-        $pass2In.classList.add('hidden');
-        $doLogin.classList.add('btn-brand'); $doSignup.classList.remove('btn-brand');
-      }
+    function showLoggedInUI(profile, user){
+      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
+      $navUser.classList.remove('hidden'); $navUser.classList.add('flex');
+      $navCredits.textContent=(profile?.credits??0)+'⚡';
+      if(user?.user_metadata?.avatar_url){ $navAvatarImg.src=user.user_metadata.avatar_url; $navAvatarImg.classList.remove('hidden'); }
+      else { $navAvatarImg.classList.add('hidden'); }
     }
-    function showLoggedInUI(profile, user){var u=document.getElementById('loginUnified'); if(u) u.classList.add('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');} else {
-        $navAvatarImg.classList.add('hidden');
-      }
+    function showLoggedOutUI(){
+      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
+      $navUser.classList.add('hidden'); $navUser.classList.remove('flex');
     }
-    function showLoggedOutUI(){var u=document.getElementById('loginUnified'); if(u) u.classList.remove('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
-    // Dropdown
     $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
     document.addEventListener('click', (e)=>{
       if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
     });
-    // Openers
-    $btnLogin.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
-    $btnLoginNav.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
-    $btnGetStarted.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
-    $close.addEventListener('click', closeAuth);
+    document.getElementById('btnLogout').addEventListener('click', async ()=>{
+      await sb.auth.signOut();
+      showLoggedOutUI();
+    });
 
     async function getOrCreateProfile(user){
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id,email,credits')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if(error){ throw error; }
+      const { data, error } = await sb
+        .from('profiles').select('user_id,email,credits')
+        .eq('user_id', user.id).maybeSingle();
+      if(error) throw error;
       if(!data){
-        const ins = await supabase.from('profiles').insert({
+        const ins = await sb.from('profiles').insert({
           user_id: user.id, email: user.email, credits: 3
         }).select().single();
-        if(ins.error){ throw ins.error; }
+        if(ins.error) throw ins.error;
         return ins.data;
       }
       return data;
     }
     async function refreshCredits(){
-      const { data } = await supabase.auth.getUser();
+      const { data } = await sb.auth.getUser();
       const user = data.user;
       if(!user) return;
-      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-      if(prof?.data?.credits != null){ $navCredits.textContent = prof.data.credits + '⚡'; }
+      const prof = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      if (prof?.data?.credits != null) { $navCredits.textContent = prof.data.credits + '⚡'; }
     }
-    window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
+    window.refreshCredits = refreshCredits;
 
-    // Sign up
-    $doSignup.addEventListener('click', async ()=>{
-      if(authMode!=='signup'){ setAuthMode('signup'); $msg.textContent=''; return; }
-      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
-      if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
-      $msg.textContent = 'Creating account…';
-      const { data, error } = await supabase.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
-      if(error){ $msg.textContent = error.message; return; }
-      $msg.textContent = 'Check your email to confirm, then Log in.';
-      setAuthMode('login');
-    });
-    // Log in
-    $doLogin.addEventListener('click', async ()=>{
-      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
-      $msg.textContent = 'Signing in…';
-      try{
-        const { data, error } = await supabase.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
-        if(error){ $msg.textContent = error.message; return; }
-        const user = data.user;
-        const prof = await getOrCreateProfile(user);
-        showLoggedInUI(prof, user);
-        closeAuth();
-      }catch(e){ $msg.textContent = e.message || 'Login failed.'; }
-    });
-    // Logout
-    document.getElementById('btnLogout').addEventListener('click', async ()=>{
-      await supabase.auth.signOut();
-      showLoggedOutUI();
-    });
-    
-    // === Credit helpers (pure Supabase; no Make.com) ===
-    async function getUserId() {
-      const { data } = await supabase.auth.getUser();
-      return data.user?.id || null;
-    }
-    async function setCredits(value) {
-      const uid = await getUserId();
-      if (!uid) throw new Error('Not logged in');
-      const { error } = await supabase
-        .from('profiles')
-        .update({ credits: value })
-        .eq('user_id', uid);
-      if (error) throw error;
-      await window.refreshCredits();
-    }
-    async function addCredits(delta) {
-      const uid = await getUserId();
-      if (!uid) throw new Error('Not logged in');
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('user_id', uid)
-        .maybeSingle();
-      if (error) throw error;
-      const next = (data?.credits ?? 0) + delta;
-      await setCredits(next);
-    }
-    async function useCredits(cost) {
-      const uid = await getUserId();
-      if (!uid) throw new Error('Not logged in');
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('user_id', uid)
-        .maybeSingle();
-      if (error) throw error;
-      const current = data?.credits ?? 0;
-      if (current < cost) throw new Error('Not enough credits');
-      await setCredits(current - cost);
-    }
-    window.hansoraCredits = { addCredits, useCredits, setCredits };
-
-    // Restore session
     (async ()=>{
-      const { data } = await supabase.auth.getUser();
+      const { data } = await sb.auth.getUser();
       const user = data.user;
       if(user){
         try{
@@ -517,65 +420,11 @@
         showLoggedOutUI();
       }
     })();
-  </script><script>
-  (function(){ 
-    function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-    ready(async function(){ 
-      try {
-        if (typeof supabase === 'undefined' || !supabase.auth) return;
-        const navCreditsEl = document.getElementById('navCredits');
-        const runBtn = document.getElementById('runBtn');
-        const R = (c)=>{ 
-          if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-          if (runBtn) {
-            const ok = (c ?? 0) > 0;
-            runBtn.disabled = !ok;
-            runBtn.classList.toggle('opacity-50', !ok);
-            runBtn.classList.toggle('cursor-not-allowed', !ok);
-          }
-        };
-
-        const ures = await supabase.auth.getUser();
-        const user = ures?.data?.user;
-        if(!user) return;
-
-        async function loadCreditsOnce(){ 
-          try {
-            const { data: prof } = await supabase.from('profiles')
-              .select('credits').eq('user_id', user.id).maybeSingle();
-            const c = prof?.credits ?? 0;
-            R(c);
-            return c;
-          } catch(e) { console.warn('credits poll read failed', e); return null; }
-        }
-
-        // Long polling burst (3 minutes) every 2s
-        function startCreditsPolling(durationMs=180000, intervalMs=2000){
-          if (window.__creditsPoll) clearInterval(window.__creditsPoll);
-          const t0 = Date.now();
-          window.__creditsPoll = setInterval(async ()=>{
-            await loadCreditsOnce();
-            if (Date.now() - t0 > durationMs) clearInterval(window.__creditsPoll);
-          }, intervalMs);
-        }
-
-        // Initial load -> reflect current value
-        await loadCreditsOnce();
-
-        // If __run exists, wrap it so we start long polling right after Run
-        if (typeof window.__run === 'function') {
-          const __origRun = window.__run;
-          window.__run = async function(){ 
-            const c = await loadCreditsOnce();
-            if ((c ?? 0) <= 0) { alert('No credits left.'); return; }
-            startCreditsPolling(180000, 2000); // 3 minutes polling
-            return __origRun();
-          }
-        }
-      } catch(e){ console.warn('credits polling v2 error', e); }
-    });
   })();
-  </script><script>
+</script>
+
+<script>
+// Keep header login button hidden when authenticated
 document.addEventListener('DOMContentLoaded', async () => {
   const el = document.getElementById('btnLoginSignup');
   if (!el || !window.supabase) return;
@@ -593,101 +442,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   } catch (_) { /* silent */ }
 });
-</script><script>
+</script>
+
+<script>
+// PROFILE MENU: ensure exactly 4 items, no redeclarations
 document.addEventListener('DOMContentLoaded', () => {
-  /* 1) PROFILE MENU — exactly 4 items */
   (function(){
-    const header = document.querySelector('header') || document.body;
-    const avatar = Array.from(header.querySelectorAll('button,a,div')).find(el => {
-      const aria=(el.getAttribute('aria-label')||'').toLowerCase();
-      const cls=(el.className||'').toLowerCase();
-      const txt=(el.textContent||'').toLowerCase();
-      return aria.includes('profile') || aria.includes('avatar') || cls.includes('avatar') || txt==='profile';
-    });
-    if(!avatar) return;
-    let menu = avatar.parentElement.querySelector('ul,div[role="menu"],div.menu');
-    if(!menu){
-      menu = document.createElement('ul');
-      avatar.parentElement.appendChild(menu);
-    }
-    menu.className = 'menu show bg-base-bg border border-base-line rounded-xl p-2 text-sm';
-    const avatar = document.getElementById('navAvatar');
-    const menu = document.getElementById('navMenu');
-    if (!avatar || !menu) return;
-    // Ensure visible styling applied to the single existing menu
-    menu.classList.add('show');
-    menu.innerHTML = `
-      <li><a href="/profile.html">Profile</a></li>
-      <li><a href="/usage.html">History</a></li>
-      <li><a href="/price.html">Subscription</a></li>
-      <li><button id="hs-logout">Log out</button></li>
+    const navAvatar = document.getElementById('navAvatar');
+    const navMenu = document.getElementById('navMenu');
+    if (!navAvatar || !navMenu) return;
+    navMenu.classList.add('show');
+    navMenu.innerHTML = `
+      <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/profile.html">Profile</a>
+      <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/usage.html">History</a>
+      <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/price.html">Subscription</a>
+      <button class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5" id="hs-logout">Log out</button>
     `;
     document.addEventListener('click',(e)=>{
       if(e.target && e.target.id==='hs-logout'){ window.location.href='logout.html'; }
     });
   })();
-
-  
-
-  /* 2) HERO — remove 3 CTAs in the HERO ROW ONLY and keep a single "Get Started" there */
-  (function(){
-    // Find hero section by main heading
-    const hero = Array.from(document.querySelectorAll('h1,h2')).find(h => (h.textContent||'').toLowerCase().includes('create stunning'))?.closest('section');
-    // Fallback: topmost section
-    const heroSection = hero || document.querySelector('main section, section') || document.body;
-
-    // Inside hero ONLY: hide buttons with those exact labels
-    const kill = ['explore models','see templates','log in / sign up','log in','sign up'];
-    if (heroSection){
-      const btns = heroSection.querySelectorAll('a,button');
-      btns.forEach(b => {
-        const t=(b.textContent||'').trim().toLowerCase();
-        if (kill.includes(t)) b.classList.add('hs-hide');
-      });
-      // ensure single Get Started exists in this section
-      if (!heroSection.querySelector('a.hs-get-started-hero')) {
-        const row = (Array.from(btns).find(b => kill.includes((b.textContent||'').trim().toLowerCase()))?.closest('div')) || heroSection;
-        const gs = document.createElement('a');
-        gs.href='login.html';
-        gs.className='hs-get-started-hero btn btn-brand rounded-xl px-5 py-3';
-        gs.textContent='Get Started';
-        row.appendChild(gs);
-      }
-    }
-
-    // Additionally, if there is any "Get Started" in the HEADER, hide it (user didn't want header changes)
-    const header = document.querySelector('header');
-    if (header){
-      Array.from(header.querySelectorAll('a,button')).forEach(el => {
-        const t=(el.textContent||'').trim().toLowerCase();
-        if (t==='get started') el.classList.add('hs-hide');
-      });
-    }
-  })();
-
-  /* 2b) HERO MEDIA — replace the mountain IMAGE with a VIDEO */
-  (function(){
-    // Find the hero media image inside the hero section (right side card)
-    const heroTitle = Array.from(document.querySelectorAll('h1,h2')).find(h => (h.textContent||'').toLowerCase().includes('create stunning'));
-    const heroSection = heroTitle ? heroTitle.closest('section') : document.body;
-    // Look for an <img> inside the hero media container
-    let img = heroSection ? heroSection.querySelector('img') : null;
-    if (!img) img = document.querySelector('img'); // last resort
-    if (img){
-      img.style.display='none'; // ensure it doesn't cover the video
-      const box = img.parentElement || heroSection;
-      if (box && !box.querySelector('video.hs-hero-video')){
-        const vid = document.createElement('video');
-        vid.src='assets/placeholder.mp4';  // replace with your actual video
-        vid.setAttribute('playsinline','');
-        vid.setAttribute('muted','');
-        vid.setAttribute('loop','');
-        vid.setAttribute('autoplay','');
-        vid.className='hs-hero-video';
-        box.insertBefore(vid, img);
-      }
-    }
-  })();
 });
-</script></body>
+</script>
+</body>
 </html>
