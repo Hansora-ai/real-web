@@ -73,7 +73,6 @@
 </div>
 <a aria-hidden="true" class="hidden" href="/login.html" id="btnLogin" style="display:none!important;visibility:hidden" tabindex="-1">Log in / Sign up</a>
 </header>
-
 <main class="flex-1">
 <section>
 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
@@ -337,14 +336,14 @@
 
     loadExamples();
   </script>
-
 <!-- Injected header/auth scripts (from pricing.1to1.html) -->
 <script>
     document.getElementById('y').textContent = new Date().getFullYear();
 
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const __sb__ = (typeof supabase !== 'undefined' && supabase.auth) ? supabase : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = __sb__;
 
     // Header elements
     const $btnLoginNav = document.getElementById('btnLoginNav');
@@ -399,7 +398,7 @@
     $btnLogin.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
     $btnLoginNav.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
     $btnGetStarted.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
-    $close.addEventListener('click', closeAuth);
+    if ($close) $close.addEventListener('click', closeAuth);
 
     async function getOrCreateProfile(user){
       const { data, error } = await supabase
@@ -427,7 +426,7 @@
     window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
 
     // Sign up
-    $doSignup.addEventListener('click', async ()=>{
+    if ($doSignup) $doSignup.addEventListener('click', async ()=>{
       if(authMode!=='signup'){ setAuthMode('signup'); $msg.textContent=''; return; }
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
@@ -438,7 +437,7 @@
       setAuthMode('login');
     });
     // Log in
-    $doLogin.addEventListener('click', async ()=>{
+    if ($doLogin) $doLogin.addEventListener('click', async ()=>{
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       $msg.textContent = 'Signing in…';
       try{
@@ -451,7 +450,7 @@
       }catch(e){ $msg.textContent = e.message || 'Login failed.'; }
     });
     // Logout
-    document.getElementById('btnLogout').addEventListener('click', async ()=>{
+    const __btnLogout = document.getElementById('btnLogout'); if (__btnLogout) __btnLogout.addEventListener('click', async ()=>{
       await supabase.auth.signOut();
       showLoggedOutUI();
     });
@@ -683,5 +682,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   })();
 });
-</script></body>
+</script>
+<!-- Injected auth modal (from pricing.1to1.html) -->
+<div class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4" id="authModal">
+<div class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft" id="authCard">
+<div class="mb-4 flex items-center justify-between">
+<h3 class="text-lg font-semibold" id="authTitle">Log in</h3>
+<button class="rounded-lg btn px-2 py-1 text-sm" id="authClose">✕</button>
+</div>
+<form class="space-y-3" id="authForm">
+<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" id="authEmail" placeholder="Email" required="" type="email"/>
+<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" id="authPass" placeholder="Password" required="" type="password"/>
+<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden" id="authPass2" placeholder="Repeat password" type="password"/>
+<div class="flex gap-2">
+<button class="w-1/2 rounded-lg btn px-3 py-2 font-semibold" id="btnDoLogin" type="button">Log in</button>
+<button class="w-1/2 rounded-lg btn px-3 py-2" id="btnDoSignup" type="button">Sign up</button>
+</div>
+<p class="text-xs text-zinc-400" id="authMsg"></p>
+</form>
+</div>
+</div></body>
 </html>
