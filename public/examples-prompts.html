@@ -123,9 +123,11 @@
 <script>
     const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-
-    const MODEL_LINKS = {
+    // [removed duplicate supabase init] // [removed duplicate supabase init]
+// window.__sb = window.__sb || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const supabase = window.__sb;
+// 
+//     const MODEL_LINKS = {
       veo3: "veo3.html",
       kling: "kling.html",
       imagen: "imagen.html",
@@ -354,7 +356,7 @@
 <p class="text-xs text-zinc-400" id="authMsg"></p>
 </form>
 </div>
-</div><script>document.getElementById('y').textContent = new Date().getFullYear();
+</div><script>(function(el){ if(el) el.textContent = new Date().getFullYear(); }) (document.getElementById('y'));
 
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
@@ -641,7 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   </script><script>
 
-    document.getElementById('y').textContent = new Date().getFullYear();
+    (function(el){ if(el) el.textContent = new Date().getFullYear(); }) (document.getElementById('y'));
 
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
