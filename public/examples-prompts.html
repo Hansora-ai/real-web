@@ -10,6 +10,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// Idempotent Supabase client init
+(function(){
+  try {
+    if (!window.__sb) {
+      window.__sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    }
+    window.supabaseClient = window.__sb;
+  } catch(e) { console.error("Supabase init error", e); }
+})();
+</script>
+
 <style>
     :root { --base-line: rgba(255,255,255,0.08); }
     body { background: #0b0b0f; color: #e5e7eb; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
@@ -121,11 +133,10 @@
 </div>
 </div>
 <script>
-    const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.window.supabaseClient.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     // [removed duplicate supabase init] // [removed duplicate supabase init]
 // window.__sb = window.__sb || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const supabase = window.__sb;
 // 
 //     const MODEL_LINKS = {
       veo3: "veo3.html",
@@ -293,7 +304,7 @@ const supabase = window.__sb;
 
     async function loadExamples(filter='all'){
       try{
-        let q = supabase.from('prompt_examples')
+        let q = window.supabaseClient.from('prompt_examples')
           .select('id,title,model_slug,media_type,media_url,poster_url,highlight,prompt,sort_order')
           .order('sort_order', { ascending: true });
 
@@ -358,7 +369,7 @@ const supabase = window.__sb;
 </div>
 </div><script>(function(el){ if(el) el.textContent = new Date().getFullYear(); }) (document.getElementById('y'));
 
-    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.window.supabaseClient.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     // reuse existing global supabase client
 // Header elements
@@ -424,7 +435,7 @@ const supabase = window.__sb;
         .maybeSingle();
       if(error){ throw error; }
       if(!data){
-        const ins = await supabase.from('profiles').insert({
+        const ins = await window.supabaseClient.from('profiles').insert({
           user_id: user.id, email: user.email, credits: 3
         }).select().single();
         if(ins.error){ throw ins.error; }
@@ -433,10 +444,10 @@ const supabase = window.__sb;
       return data;
     }
     async function refreshCredits(){
-      const { data } = await supabase.auth.getUser();
+      const { data } = await window.supabaseClient.auth.getUser();
       const user = data.user;
       if(!user) return;
-      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      const prof = await window.supabaseClient.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
       if(prof?.data?.credits != null){ $navCredits.textContent = prof.data.credits + '⚡'; }
     }
     window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
@@ -447,7 +458,7 @@ const supabase = window.__sb;
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
       $msg.textContent = 'Creating account…';
-      const { data, error } = await supabase.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+      const { data, error } = await window.supabaseClient.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
       if(error){ $msg.textContent = error.message; return; }
       $msg.textContent = 'Check your email to confirm, then Log in.';
       setAuthMode('login');
@@ -457,7 +468,7 @@ const supabase = window.__sb;
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       $msg.textContent = 'Signing in…';
       try{
-        const { data, error } = await supabase.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+        const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
         if(error){ $msg.textContent = error.message; return; }
         const user = data.user;
         const prof = await getOrCreateProfile(user);
@@ -467,13 +478,13 @@ const supabase = window.__sb;
     });
     // Logout
     document.getElementById('btnLogout').addEventListener('click', async ()=>{
-      await supabase.auth.signOut();
+      await window.supabaseClient.auth.signOut();
       showLoggedOutUI();
     });
     
     // === Credit helpers (pure Supabase; no Make.com) ===
     async function getUserId() {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await window.supabaseClient.auth.getUser();
       return data.user?.id || null;
     }
     async function setCredits(value) {
@@ -515,7 +526,7 @@ const supabase = window.__sb;
 
     // Restore session
     (async ()=>{
-      const { data } = await supabase.auth.getUser();
+      const { data } = await window.supabaseClient.auth.getUser();
       const user = data.user;
       if(user){
         try{
@@ -532,7 +543,7 @@ const supabase = window.__sb;
     function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
     ready(async function(){ 
       try {
-        if (typeof supabase === 'undefined' || !supabase.auth) return;
+        if (typeof supabase === 'undefined' || !window.supabaseClient.auth) return;
         const navCreditsEl = document.getElementById('navCredits');
         const runBtn = document.getElementById('runBtn');
         const R = (c)=>{ 
@@ -545,13 +556,13 @@ const supabase = window.__sb;
           }
         };
 
-        const ures = await supabase.auth.getUser();
+        const ures = await window.supabaseClient.auth.getUser();
         const user = ures?.data?.user;
         if(!user) return;
 
         async function loadCreditsOnce(){ 
           try {
-            const { data: prof } = await supabase.from('profiles')
+            const { data: prof } = await window.supabaseClient.from('profiles')
               .select('credits').eq('user_id', user.id).maybeSingle();
             const c = prof?.credits ?? 0;
             R(c);
@@ -591,11 +602,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const el = document.getElementById('btnLoginSignup');
   if (!el || !window.supabase) return;
   try {
-    const { data } = await supabase.auth.getSession();
+    const { data } = await window.supabaseClient.auth.getSession();
     if (data && data.session && data.session.user) {
       el.style.display = 'none';
     }
-    supabase.auth.onAuthStateChange((_e, session) => {
+    window.supabaseClient.auth.onAuthStateChange((_e, session) => {
       if (session && session.user) {
         el.style.display = 'none';
       } else {
@@ -645,10 +656,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     (function(el){ if(el) el.textContent = new Date().getFullYear(); }) (document.getElementById('y'));
 
-    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.window.supabaseClient.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
     // Header elements
     const $btnLoginNav = document.getElementById('btnLoginNav');
     const $btnGetStarted = document.getElementById('btnGetStarted');
@@ -712,7 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .maybeSingle();
       if(error){ throw error; }
       if(!data){
-        const ins = await supabase.from('profiles').insert({
+        const ins = await window.supabaseClient.from('profiles').insert({
           user_id: user.id, email: user.email, credits: 3
         }).select().single();
         if(ins.error){ throw ins.error; }
@@ -721,10 +730,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return data;
     }
     async function refreshCredits(){
-      const { data } = await supabase.auth.getUser();
+      const { data } = await window.supabaseClient.auth.getUser();
       const user = data.user;
       if(!user) return;
-      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      const prof = await window.supabaseClient.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
       if(prof?.data?.credits != null){ $navCredits.textContent = prof.data.credits + '⚡'; }
     }
     window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
@@ -735,7 +744,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
       $msg.textContent = 'Creating account…';
-      const { data, error } = await supabase.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+      const { data, error } = await window.supabaseClient.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
       if(error){ $msg.textContent = error.message; return; }
       $msg.textContent = 'Check your email to confirm, then Log in.';
       setAuthMode('login');
@@ -745,7 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       $msg.textContent = 'Signing in…';
       try{
-        const { data, error } = await supabase.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+        const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
         if(error){ $msg.textContent = error.message; return; }
         const user = data.user;
         const prof = await getOrCreateProfile(user);
@@ -755,13 +764,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     // Logout
     document.getElementById('btnLogout').addEventListener('click', async ()=>{
-      await supabase.auth.signOut();
+      await window.supabaseClient.auth.signOut();
       showLoggedOutUI();
     });
     
     // === Credit helpers (pure Supabase; no Make.com) ===
     async function getUserId() {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await window.supabaseClient.auth.getUser();
       return data.user?.id || null;
     }
     async function setCredits(value) {
@@ -803,7 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Restore session
     (async ()=>{
-      const { data } = await supabase.auth.getUser();
+      const { data } = await window.supabaseClient.auth.getUser();
       const user = data.user;
       if(user){
         try{
@@ -827,6 +836,49 @@ document.addEventListener('DOMContentLoaded', () => {
     menu.classList.toggle('show');
   });
   document.addEventListener('click', ()=> menu.classList.remove('show'));
+})();
+</script>
+
+
+<script>
+(function(){
+  try { window.supabaseClient = window.__sb || window.supabaseClient; } catch(_){}
+  try { window.supabaseClient = window.supabaseClient || (window.supabase && window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON)); } catch(_){}
+  try { window.supabaseClient && (window.hs_supabase_ready = true); } catch(_){}
+} )();
+</script>
+
+
+<script>
+(function(){
+  const btnLogin = document.getElementById('btnLoginSignup');
+  const creditsEl = document.getElementById('navCredits');
+  const avatarBtn = document.getElementById('navAvatar');
+  function showLoggedIn(){
+    if(btnLogin) btnLogin.style.display = 'none';
+    if(creditsEl) creditsEl.style.display = '';
+    if(avatarBtn) avatarBtn.style.display = '';
+  }
+  function showLoggedOut(){
+    if(btnLogin) btnLogin.style.display = '';
+    if(creditsEl) creditsEl.style.display = 'none';
+    if(avatarBtn) avatarBtn.style.display = 'none';
+  }
+  async function init(){
+    try{
+      const sb = window.supabaseClient;
+      if(!sb){ showLoggedOut(); return; }
+      const { data: { session } } = await sb.auth.getSession();
+      if(session){ showLoggedIn(); }
+      else { showLoggedOut(); }
+    }catch(e){
+      console.warn('auth UI init error', e);
+      showLoggedOut();
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else { init(); }
 })();
 </script>
 
