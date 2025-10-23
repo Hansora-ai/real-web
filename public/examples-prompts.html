@@ -32,6 +32,8 @@
     /* Masonry */
     #grid { position: relative; }
     #grid > article.mitem { position: absolute; width: var(--col-width, 100%); }
+      .menu{display:none}
+    .menu.show{display:block}
   </style>
 </head>
 <body class="min-h-full flex flex-col">
@@ -451,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navAvatar = document.getElementById('navAvatar');
     const navMenu = document.getElementById('navMenu');
     if (!navAvatar || !navMenu) return;
-    navMenu.classList.add('show');
+    
     navMenu.innerHTML = `
       <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/profile.html">Profile</a>
       <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/usage.html">History</a>
