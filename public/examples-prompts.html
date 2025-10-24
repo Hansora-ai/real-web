@@ -34,6 +34,13 @@
     #grid > article.mitem { position: absolute; width: var(--col-width, 100%); }
       .menu{display:none}
     .menu.show{display:block}
+
+    /* Scroll lock for mobile when modal is open */
+    body.modal-open { overflow: hidden; width: 100%; }
+    .modal-mask { overflow: auto; overscroll-behavior: contain; }
+    .modal { max-height: 92vh; }
+    .modal .body { max-height: calc(92vh - 0px); overflow: auto; -webkit-overflow-scrolling: touch; }
+
   </style>
 </head>
 <body class="min-h-full flex flex-col">
@@ -310,6 +317,7 @@ function linkifyHighlight(text, modelSlug){
         mVideo.play().catch(()=>{});
       }
       mLink.setAttribute('href', page);
+      document.body.classList.add('modal-open');
       mask.style.display = 'flex';
     });
 
@@ -320,8 +328,9 @@ function linkifyHighlight(text, modelSlug){
   const mVideo = document.getElementById('mVideo');
   const mImg = document.getElementById('mImg');
   const mClose = document.getElementById('mClose');
-  mClose.onclick = () => { try { mVideo.pause(); } catch {} mask.style.display='none'; mVideo.removeAttribute('src'); mVideo.load(); mImg.removeAttribute('src'); };
+  mClose.onclick = () => { try { mVideo.pause(); } catch {} mask.style.display='none'; document.body.classList.remove('modal-open'); mVideo.removeAttribute('src'); mVideo.load(); mImg.removeAttribute('src'); };
   mask.addEventListener('click', e => { if (e.target === mask) mClose.click(); });
+  mask.addEventListener('touchmove', (e) => { if (e.target === mask) e.preventDefault(); }, { passive: false });
 
   async function loadExamples(filter='all'){
     try{
