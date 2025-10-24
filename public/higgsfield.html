@@ -311,7 +311,7 @@ async function runJob(){
     try{ await chargeCredits(7); await refreshCreditsUI(); }catch{}
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-    try{displayBox.innerHTML = '<div class="py-6 text-center space-y-2"><div class="text-xs text-zinc-400">Generating…</div><div class="text-[15px] font-semibold text-zinc-100">Sometimes during high demand it takes a little longer.<br/>You can leave this page — your result will appear in <a class="underline hover:no-underline" href="usage.html">Usage</a> when it’s done.</div></div>'; }catch{}
+    try{displayBox.innerHTML = '<div class="py-6 text-center space-y-2"><div class="text-xs text-zinc-400">Generating…</div><div class="text-[15px] font-semibold text-zinc-100">Sometimes during high demand it takes a little longer.<br/>You can leave this page — your result will appear in <a class="underline hover:no-underline" href="usage.html">History</a> when it’s done.</div></div>'; }catch{}
     await pollResult(j.job_set_id, uid, j.run_id);
   } catch (e){
     showStatus('❌ ' + (e.message || String(e)), 'text-rose-300');
@@ -335,7 +335,7 @@ async function pollResult(jobSetId, uid, runId){
     }catch{}
     await new Promise(s=>setTimeout(s,1500));
   }
-  showStatus('Still processing… try refreshing later','text-yellow-300');
+  showStatus('❌ Generation failed, please try again later. Your credits are refunded','text-red-300');
   runBtn.disabled=false; runBtn.textContent='Run (cost: 7⚡)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; window.__hfBusy=false;
 }
 
