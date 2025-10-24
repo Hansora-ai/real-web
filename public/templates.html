@@ -26,37 +26,6 @@
     .poster { background: #0b0c10; border-radius: 12px; border:1px solid var(--base-line); overflow:hidden }
     .poster video { width:100%; height:auto; display:block; }
   </style>
-
-<script>
-// Ensure single Supabase client across the page
-(function(){
-  if (!window.__supa) {
-    try {
-      // Best effort: if any script defined SUPABASE_URL/ANON, reuse; otherwise no-op.
-      if (typeof SUPABASE_URL !== 'undefined' && (typeof SUPABASE_ANON !== 'undefined' || typeof SUPABASE_ANON_KEY !== 'undefined')) {
-        const key = (typeof SUPABASE_ANON !== 'undefined') ? SUPABASE_ANON : SUPABASE_ANON_KEY;
-        window.__supa = window.supabase.createClient(SUPABASE_URL, key);
-// Unify client names for this page (so both 'supa' and 'supabase' work)
-try {
-  (function(){
-    var __client = (typeof supa !== 'undefined' && supa) ? supa : (typeof supabase !== 'undefined' && supabase ? supabase : null);
-    if (!__client) { /* if this block runs inside script where client was just created, bind it */
-      try { __client = arguments.callee.caller && arguments.callee.caller.arguments && arguments.callee.caller.arguments[0] } catch(_) {}
-    }
-    if (__client) {
-      if (typeof window.__supa === 'undefined') window.__supa = __client;
-      if (typeof window.supa === 'undefined') window.supa = window.__supa;
-      if (typeof window.supabase === 'undefined') window.supabase = window.__supa; // expose for scripts expecting 'supabase'
-    }
-  })();
-} catch {}
-
-      }
-    } catch {}
-  }
-})();
-</script>
-
 </head>
 <body class="min-h-full flex flex-col">
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
@@ -121,9 +90,9 @@ try {
   </div>
 
   <script>
-    const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supa.co';
+    const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supa = window.supa.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
     const mask = document.getElementById('mask');
     const mVideo = document.getElementById('mVideo');
@@ -215,10 +184,9 @@ try {
 
 <script>
 // === Supabase init (same as Higgsfield) ===
-const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supa.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-const supa = window.supa.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+// (reused top-level SUPABASE_URL/ANON)
+// (reused top-level SUPABASE_ANON)
+// (reused existing supabase client)
 // === Header auth UI (1:1 from Higgsfield) ===
 const $btnLoginNav = document.getElementById('btnLoginNav');
 const $btnLoginSignup = document.getElementById('btnLoginSignup');
@@ -235,33 +203,11 @@ function showLoggedOutUI(){try{$btnLoginNav.classList.add('hidden');$btnGetStart
 
 $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
-$btnLogout?.addEventListener('click',async()=>{await supa.auth.signOut();showLoggedOutUI();});
+$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
 
-async function getOrCreateProfile(user){const r=await supa.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supa.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
 
-(async()=>{try{const {data}=await supa.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}}catch{}})();
-</script>
-
-
-<script>
-// Final safety: expose a single shared client for all blocks
-(function(){
-  try{
-    if (!window.__supa) {
-      if (typeof SUPABASE_URL !== 'undefined' && (typeof SUPABASE_ANON !== 'undefined' || typeof SUPABASE_ANON_KEY !== 'undefined')) {
-        const key = (typeof SUPABASE_ANON !== 'undefined') ? SUPABASE_ANON : SUPABASE_ANON_KEY;
-        window.__supa = window.supabase.createClient(SUPABASE_URL, key);
-      }
-    }
-    if (window.__supa) {
-      window.supa = window.__supa;
-      // Provide a `.from` API on window.supabase if someone expects that directly
-      if (typeof window.supabase === 'undefined' || !window.supabase.from) {
-        window.supabase = window.__supa;
-      }
-    }
-  }catch(e){}
-})();
+(async()=>{try{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}}catch{}})();
 </script>
 
 </body>
