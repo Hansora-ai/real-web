@@ -190,7 +190,29 @@
   }
   window.addEventListener('resize', requestLayout);
 
-  function linkifyHighlight(text, modelSlug){
+  
+  // Show a preview of first N 'units' (sentences OR newline/bullet lines)
+  function previewPrompt(text, n = 5) {
+    if (!text) return '';
+    const t = String(text).replace(/\r\n?/g, '\n');
+    const lines = t.split(/\n+/);
+    const units = [];
+    for (let line of lines) {
+      if (!line.trim()) continue;
+      // bullet or numbered list lines count as one unit
+      if (/^\s*(?:[-•\u2022\u25CF]|\d+[)\.])\s+/.test(line)) {
+        units.push(line.trim());
+      } else {
+        // split paragraphs by sentence endings
+        const parts = line.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [line];
+        for (const p of parts) units.push(p.trim());
+      }
+      if (units.length >= n) break;
+    }
+    return units.slice(0, n).join('\n').trim();
+  }
+
+function linkifyHighlight(text, modelSlug){
     if (!text) return "";
     let html = text
       .replace(/\[\[VEO3\]\]/gi, '<a class="inline-link" href="veo3.html">VEO 3</a>')
@@ -271,7 +293,10 @@
       const page = MODEL_LINKS[(row.model_slug || '').toLowerCase()] || '#';
       mTitle.textContent = row.title || 'Example';
       mHi.innerHTML      = linkifyHighlight(row.highlight || '', row.model_slug || '');
-      mPr.textContent    = row.prompt || '';
+      const __full = (row.prompt || '').trim();
+      const __prev = previewPrompt(__full, 5);
+      mPr.textContent    = __prev + (__prev.length < __full.length ? ' …' : '');
+      mPr.dataset.full   = __full;
 
       const isImg = (row.media_type || '').toLowerCase() === 'image';
       mImg.style.display = isImg ? 'block' : 'none';
@@ -332,7 +357,8 @@
   });
 
   document.getElementById('btnCopy').addEventListener('click', async () => {
-    const text = (document.getElementById('mPrompt').textContent || '').trim();
+    const el = document.getElementById('mPrompt');
+    const text = (el.dataset.full || el.textContent || '').trim();
     try{
       await navigator.clipboard.writeText(text);
       const btn = document.getElementById('btnCopy');
