@@ -24,8 +24,8 @@
     .modal { width: min(980px, 92vw); background: #0e0f14; border: 1px solid var(--base-line); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
     .modal .body { display: grid; grid-template-columns: 1.2fr .8fr; gap: 18px; padding: 18px; }
     @media (max-width: 900px){ .modal .body { grid-template-columns: 1fr; } }
-    .poster { background: #0b0c10; border-radius: 12px; border:1px solid var(--base-line); overflow:hidden }
-    .poster video { width:100%; height:auto; display:block; }
+    .poster { background:#0b0c10; border-radius:12px; border:1px solid var(--base-line); overflow:hidden; display:flex; align-items:center; justify-content:center }
+    .poster video, .poster img { max-width:100%; max-height:70vh; width:auto; height:auto; object-fit:contain; display:block }
 
     /* Masonry */
     #grid { position: relative; opacity:0 }
@@ -42,7 +42,7 @@
 <body class="min-h-full flex flex-col">
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+      <a href="templates.html" class="flex items-center gap-3 hover:opacity-90">
         <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="HANSORA logo" class="h-9 w-9 object-contain" />
         <span class="font-semibold tracking-wide">HANSORA AI</span>
       </a>
@@ -88,7 +88,7 @@
   <div id="mask" class="modal-mask">
     <div class="modal">
       <div class="body">
-        <div class="poster"><video id="mVideo" controls playsinline muted loop></video></div>
+        <div class="poster"><video id="mVideo" controls playsinline muted loop style="display:none"></video><img id="mImg" alt="preview" style="display:none;max-width:100%;height:auto"/></div>
         <div>
           <h3 id="mName" class="text-lg font-semibold"></h3>
           <p class="text-sm text-zinc-400 mt-1">Preview of this motion. Click Generate to continue.</p>
@@ -167,6 +167,8 @@
     }
     window.addEventListener('resize', requestLayout);
 
+    function isImageUrl(u){ try{const clean=(u||'').split('?')[0].toLowerCase(); return /\.(webp|png|jpe?g|gif)$/i.test(clean);}catch{return false} }
+
     function setAspectFromMedia(box, el){
       const apply = (w, h) => { if (w && h) box.style.aspectRatio = w + ' / ' + h; requestLayout(); };
       el.addEventListener('loadedmetadata', () => apply(el.videoWidth, el.videoHeight), { once:true });
@@ -180,18 +182,27 @@
       const media = document.createElement('div');
       media.className = 'media';
 
-      const v = document.createElement('video');
-      v.autoplay = true;
-      v.muted = true;
-      v.playsInline = true;
-      v.setAttribute('loop','');
-      v.setAttribute('preload','metadata');
-      if (row.poster_url) v.setAttribute('poster', row.poster_url);
-      media.appendChild(v);
+      let v = null, img = null;
+      if (isImageUrl(row.preview_url)){
+        img = document.createElement('img');
+        img.loading = 'lazy';
+        img.src = row.preview_url;
+        media.appendChild(img);
+        setAspectFromMedia(media, img);
+        img.addEventListener('load', requestLayout);
+      } else {
+        v = document.createElement('video');
+        v.autoplay = true;
+        v.muted = true;
+        v.playsInline = true;
+        v.setAttribute('loop','');
+        v.setAttribute('preload','metadata');
+        if (row.poster_url) v.setAttribute('poster', row.poster_url);
+        media.appendChild(v);
+        // dynamic aspect ratio from actual video metadata
+        setAspectFromMedia(media, v);
+      }
       card.appendChild(media);
-
-      // dynamic aspect ratio from actual video metadata
-      setAspectFromMedia(media, v);
 
       const meta = document.createElement('div');
       meta.className = 'p-4 flex items-center justify-between';
@@ -199,23 +210,33 @@
       card.appendChild(meta);
 
       const begin = () => {
-        if (!v.src && row.preview_url){
+        if (v && !v.src && row.preview_url){
           v.src = row.preview_url;
           Promise.resolve().then(() => v.play().catch(()=>{}));
         }
       };
       begin();
 
-      v.addEventListener('canplay', () => { v.play().catch(()=>{}); requestLayout(); });
-      v.addEventListener('loadeddata', requestLayout);
+      (v||{}).addEventListener && v.addEventListener('canplay', () => { v.play().catch(()=>{}); requestLayout(); });
+      (v||{}).addEventListener && v.addEventListener('loadeddata', requestLayout);
 
       // Click -> open modal
       card.addEventListener('click', () => {
         mName.textContent = row.name || 'Template';
-        try { mVideo.pause(); } catch {}
-        mVideo.src = row.preview_url || '';
-        mVideo.load();
-        mVideo.play().catch(()=>{});
+        const mImg = document.getElementById('mImg');
+        if (isImageUrl(row.preview_url)){
+          try { mVideo.pause(); } catch {}
+          mVideo.style.display = 'none';
+          mImg.style.display = 'block';
+          mImg.src = row.preview_url || '';
+        } else {
+          mImg.style.display = 'none';
+          mVideo.style.display = 'block';
+          try { mVideo.pause(); } catch {}
+          mVideo.src = row.preview_url || '';
+          mVideo.load();
+          mVideo.play().catch(()=>{});
+        }
         document.body.classList.add('modal-open');
         mask.style.display = 'flex';
 
