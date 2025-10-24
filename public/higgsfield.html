@@ -7,6 +7,8 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
+  <script src="/kie-upload-bridge.js"></script>
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
@@ -279,12 +281,11 @@ async function runJob(){
     showStatus('Uploading image…','text-zinc-400');
 
     const uid = authData.user.id;
-    const fd = new FormData();
-    fd.append('file', f, f.name || 'image.png');
-    const ur = await fetch('/.netlify/functions/kie-upload',{ method:'POST', headers:{'X-USER-ID': uid}, body: fd });
-    const uj = await ur.json().catch(()=>null);
-    if (!ur.ok || !uj || !uj.downloadUrl) { showStatus('Upload failed','text-rose-300'); runBtn.disabled=false; runBtn.textContent='Run (cost: 7⚡)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; runBtn.style.pointerEvents=''; window.__hfBusy=false; return; }
-    const imageUrl = uj.downloadUrl;
+    const up = await window.kieUploadBridge.upload(f);
+    const imageUrl = derivePublicUrl(up);
+    if (!imageUrl){ showStatus('Upload failed','text-rose-300'); runBtn.disabled=false; runBtn.textContent='Run (cost: 7⚡)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; window.__hfBusy=false; return; }
+    try { await fetch(imageUrl, { method:'HEAD', cache:'no-store' }); } catch {}
+
 
     showStatus('Submitting job… (deducting 7⚡)','text-zinc-400');
 
@@ -339,6 +340,22 @@ async function pollResult(jobSetId, uid, runId){
 }
 
 document.getElementById('runBtn').addEventListener('click', runJob);
+</script>
+<script>
+
+function derivePublicUrl(up){
+  if (!up) return null;
+  if (up.publicUrl) return up.publicUrl;
+  try{
+    if (up.bucket && up.objectPath && up.uploadUrl){
+      const u = new URL(up.uploadUrl);
+      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
+      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+    }
+  }catch(e){}
+  return null;
+}
+
 </script>
 </body>
 </html>
