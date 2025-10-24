@@ -114,8 +114,9 @@
     const mClose = document.getElementById('mClose');
     const $err   = document.getElementById('err');
 
-    mClose.onclick = () => { try { mVideo.pause(); } catch {} mask.style.display = 'none'; mVideo.removeAttribute('src'); mVideo.load(); };
+    mClose.onclick = () => { try { mVideo.pause(); } catch {} mask.style.display = 'none'; document.body.classList.remove('modal-open'); mVideo.removeAttribute('src'); mVideo.load(); const im = document.getElementById('mImg'); if(im){ im.removeAttribute('src'); im.style.display='none'; } mVideo.style.display='none'; };
     mask.addEventListener('click', e => { if (e.target === mask) mClose.click(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && mask.style.display==='flex'){ mClose.click(); } });
 
     // ===== Masonry helpers (1:1 logic from Examples/Prompts) =====
     const GUTTER = 16;
