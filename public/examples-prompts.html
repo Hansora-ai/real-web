@@ -68,7 +68,7 @@
           <div id="navMenu" class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm">
             <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/profile.html">Profile</a>
             <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/usage.html">History</a>
-            <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/price.html">Subscription</a>
+            <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/pricing.html">Subscription</a>
             <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
           </div>
         </div>
@@ -483,13 +483,16 @@ document.addEventListener('DOMContentLoaded', () => {
     navMenu.innerHTML = `
       <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/profile.html">Profile</a>
       <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/usage.html">History</a>
-      <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/price.html">Subscription</a>
+      <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/pricing.html">Subscription</a>
       <button class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5" id="hs-logout">Log out</button>
     `;
-    document.addEventListener('click',(e)=>{
-      if(e.target && e.target.id==='hs-logout'){ window.location.href='logout.html'; }
+    navMenu.addEventListener('click', async (e) => {
+      if (e.target && e.target.id === 'hs-logout') {
+        try { await supabase.auth.signOut(); } catch(_) {}
+        window.location.href = '/login.html';
+      }
     });
-  })();
+})();
 });
 </script>
 </body>
