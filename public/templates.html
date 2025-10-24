@@ -28,7 +28,8 @@
     .poster video { width:100%; height:auto; display:block; }
 
     /* Masonry */
-    #grid { position: relative; }
+    #grid { position: relative; opacity:0 }
+    #grid.ready{opacity:1; transition:opacity .12s ease-out}
     #grid > article.mitem { position: absolute; width: var(--col-width, 100%); }
 
     /* Scroll lock for mobile when modal is open */
@@ -119,6 +120,13 @@
     // ===== Masonry helpers (1:1 logic from Examples/Prompts) =====
     const GUTTER = 16;
     const grid = document.getElementById('grid');
+
+    function presetColWidth(){
+      const width = grid.clientWidth;
+      const cols  = columnsForWidth(width);
+      const itemW = Math.floor((width - (cols - 1) * GUTTER) / cols);
+      grid.style.setProperty('--col-width', itemW + 'px');
+    }
 
     function columnsForWidth(w){
       if (w >= 1100) return 4;
@@ -231,6 +239,7 @@
         if (error){ console.error(error); $err.textContent = error.message || 'Failed to load templates.'; return; }
 
         grid.innerHTML = '';
+        presetColWidth(); // prevent 100% width first paint
         (data || []).forEach(row => grid.appendChild(makeCard(row)));
 
         // Autoplay when visible, pause when out of view (performance)
@@ -244,7 +253,7 @@
         }, { root: null, threshold: 0.1 });
         vids.forEach(v => io.observe(v));
 
-        setTimeout(requestLayout, 0);
+        setTimeout(()=>{ requestLayout(); grid.classList.add('ready'); }, 0);
       }catch(e){
         console.error(e);
         $err.textContent = 'Failed to load templates (exception).';
