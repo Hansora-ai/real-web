@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Templates — HANSORA AI</title>
+  <title>Templates — HANSORA AI (Masonry Grid, No Gaps)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -15,8 +15,9 @@
     .glass { background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); backdrop-filter: blur(8px); }
     .border-line { border-color: var(--base-line); }
     .card { border:1px solid var(--base-line); border-radius: 16px; overflow: hidden; background: #0e0f14; }
-    .media { background:#0a0a0f; }
-    .media video { width: 100%; height: auto; display:block; object-fit: contain; }
+    .media { background:#000; position:relative; width:100%; aspect-ratio: 16/9; }
+    .media video, .media img { width:100%; height:auto; display:block; object-fit:contain; background:#000; }
+    .badge { position:absolute; top:10px; right:10px; background:#11132a; border:1px solid #242847; color:#c9ccff; font-size:11px; padding:5px 8px; border-radius:999px; z-index:2; }
     .btn { background: #1c1e2a; border:1px solid #2a2d3e; color:#eaeafa; border-radius:12px; padding:10px 14px; font-size:14px; }
     .btn:hover { background:#242844; }
     .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items:center; justify-content:center; z-index: 50; }
@@ -25,6 +26,16 @@
     @media (max-width: 900px){ .modal .body { grid-template-columns: 1fr; } }
     .poster { background: #0b0c10; border-radius: 12px; border:1px solid var(--base-line); overflow:hidden }
     .poster video { width:100%; height:auto; display:block; }
+
+    /* Masonry */
+    #grid { position: relative; }
+    #grid > article.mitem { position: absolute; width: var(--col-width, 100%); }
+
+    /* Scroll lock for mobile when modal is open */
+    body.modal-open { overflow: hidden; width: 100%; }
+    .modal-mask { overflow: auto; overscroll-behavior: contain; }
+    .modal { max-height: 92vh; }
+    .modal .body { max-height: calc(92vh - 0px); overflow: auto; -webkit-overflow-scrolling: touch; }
   </style>
 </head>
 <body class="min-h-full flex flex-col">
@@ -65,7 +76,8 @@
         <h1 class="text-2xl sm:text-3xl font-bold">Motion Templates</h1>
         <p class="mt-2 text-zinc-400 max-w-2xl">Click a template to preview. Press <em>Generate</em> to open the page with this motion preselected and start creating without effort.</p>
 
-        <div id="grid" class="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+        <!-- NOTE: remove Tailwind CSS grid classes to allow JS masonry -->
+        <div id="grid" class="mt-6"></div>
         <p id="err" class="mt-3 text-sm text-rose-300"></p>
       </div>
     </section>
@@ -104,22 +116,74 @@
     mClose.onclick = () => { try { mVideo.pause(); } catch {} mask.style.display = 'none'; mVideo.removeAttribute('src'); mVideo.load(); };
     mask.addEventListener('click', e => { if (e.target === mask) mClose.click(); });
 
+    // ===== Masonry helpers (1:1 logic from Examples/Prompts) =====
+    const GUTTER = 16;
+    const grid = document.getElementById('grid');
+
+    function columnsForWidth(w){
+      if (w >= 1100) return 4;
+      if (w >= 820)  return 3;
+      if (w >= 560)  return 2;
+      return 1;
+    }
+
+    function layoutMasonry(){
+      const width = grid.clientWidth;
+      const cols = columnsForWidth(width);
+      const colW = Math.floor((width - (cols - 1) * GUTTER));
+      const itemW = Math.floor(colW / cols);
+      grid.style.setProperty('--col-width', itemW + 'px');
+
+      const colHeights = new Array(cols).fill(0);
+      const items = Array.from(grid.children);
+      let maxH = 0;
+
+      items.forEach(el => {
+        const minCol = colHeights.indexOf(Math.min(...colHeights));
+        const x = (itemW + GUTTER) * minCol;
+        const y = colHeights[minCol];
+        el.style.transform = `translate(${x}px, ${y}px)`;
+        el.style.width = itemW + 'px';
+        colHeights[minCol] = y + el.offsetHeight + GUTTER;
+        maxH = Math.max(maxH, colHeights[minCol]);
+      });
+
+      grid.style.height = maxH + 'px';
+    }
+
+    let relayoutQueued = false;
+    function requestLayout(){
+      if (relayoutQueued) return;
+      relayoutQueued = true;
+      requestAnimationFrame(()=>{ relayoutQueued = false; layoutMasonry(); });
+    }
+    window.addEventListener('resize', requestLayout);
+
+    function setAspectFromMedia(box, el){
+      const apply = (w, h) => { if (w && h) box.style.aspectRatio = w + ' / ' + h; requestLayout(); };
+      el.addEventListener('loadedmetadata', () => apply(el.videoWidth, el.videoHeight), { once:true });
+      if (el.videoWidth && el.videoHeight) apply(el.videoWidth, el.videoHeight);
+    }
+
     function makeCard(row){
       const card = document.createElement('article');
-      card.className = 'card glass hover:border-white/20 transition cursor-pointer';
+      card.className = 'card glass mitem hover:border-white/20 transition cursor-pointer';
 
       const media = document.createElement('div');
       media.className = 'media';
 
       const v = document.createElement('video');
-      v.autoplay = true;          // property set before src
-      v.muted = true;             // critical for autoplay
-      v.playsInline = true;       // Safari/iOS
+      v.autoplay = true;
+      v.muted = true;
+      v.playsInline = true;
       v.setAttribute('loop','');
-      v.setAttribute('preload','auto');
+      v.setAttribute('preload','metadata');
       if (row.poster_url) v.setAttribute('poster', row.poster_url);
       media.appendChild(v);
       card.appendChild(media);
+
+      // dynamic aspect ratio from actual video metadata
+      setAspectFromMedia(media, v);
 
       const meta = document.createElement('div');
       meta.className = 'p-4 flex items-center justify-between';
@@ -129,17 +193,13 @@
       const begin = () => {
         if (!v.src && row.preview_url){
           v.src = row.preview_url;
-          // force a play tick after src assignment
           Promise.resolve().then(() => v.play().catch(()=>{}));
         }
       };
-
-      // start immediately (no hover)
       begin();
 
-      // in case browser delays, try again when we get metadata
-      v.addEventListener('loadedmetadata', () => v.play().catch(()=>{}));
-      v.addEventListener('canplay', () => v.play().catch(()=>{}));
+      v.addEventListener('canplay', () => { v.play().catch(()=>{}); requestLayout(); });
+      v.addEventListener('loadeddata', requestLayout);
 
       // Click -> open modal
       card.addEventListener('click', () => {
@@ -148,6 +208,7 @@
         mVideo.src = row.preview_url || '';
         mVideo.load();
         mVideo.play().catch(()=>{});
+        document.body.classList.add('modal-open');
         mask.style.display = 'flex';
 
         const url = new URL(window.location.origin + '/higgsfield.html');
@@ -167,12 +228,23 @@
           .select('name,motion_id,preview_url,poster_url,sort_order')
           .order('sort_order', { ascending: true });
 
-        const grid = document.getElementById('grid');
         if (error){ console.error(error); $err.textContent = error.message || 'Failed to load templates.'; return; }
-        if (!data || data.length === 0){ grid.innerHTML = '<p class="text-zinc-400">No templates yet.</p>'; return; }
 
         grid.innerHTML = '';
-        data.forEach(row => grid.appendChild(makeCard(row)));
+        (data || []).forEach(row => grid.appendChild(makeCard(row)));
+
+        // Autoplay when visible, pause when out of view (performance)
+        const vids = Array.from(document.querySelectorAll('.media video'));
+        const io = new IntersectionObserver((entries)=>{
+          entries.forEach(ent => {
+            const v = ent.target;
+            if (ent.isIntersecting) { const p = v.play(); if (p && p.catch) p.catch(()=>{}); }
+            else { try { v.pause(); } catch {} }
+          });
+        }, { root: null, threshold: 0.1 });
+        vids.forEach(v => io.observe(v));
+
+        setTimeout(requestLayout, 0);
       }catch(e){
         console.error(e);
         $err.textContent = 'Failed to load templates (exception).';
@@ -183,11 +255,7 @@
   </script>
 
 <script>
-// === Supabase init (same as Higgsfield) ===
-// (reused top-level SUPABASE_URL/ANON)
-// (reused top-level SUPABASE_ANON)
-// (reused existing supabase client)
-// === Header auth UI (1:1 from Higgsfield) ===
+// === Supabase auth + header UI (kept 1:1 with existing) ===
 const $btnLoginNav = document.getElementById('btnLoginNav');
 const $btnLoginSignup = document.getElementById('btnLoginSignup');
 const $btnGetStarted = document.getElementById('btnGetStarted');
