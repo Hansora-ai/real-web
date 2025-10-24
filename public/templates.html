@@ -26,6 +26,7 @@
     .poster { background: #0b0c10; border-radius: 12px; border:1px solid var(--base-line); overflow:hidden }
     .poster video { width:100%; height:auto; display:block; }
   </style>
+<style>[data-auth="hydrating"] #btnLoginSignup,[data-auth="hydrating"] #navUser{visibility:hidden;}</style>
 </head>
 <body class="min-h-full flex flex-col">
   
@@ -195,8 +196,12 @@
     loadTemplates();
   </script>
 
+
 <script>
 (function(){
+  // Hide auth UI until we know the session (prevents "logged out" flash)
+  try{ document.body.setAttribute('data-auth','hydrating'); }catch{}
+
   const supa = window.supabase;
   const $btnLoginNav    = document.getElementById('btnLoginNav');
   const $btnGetStarted  = document.getElementById('btnGetStarted');
@@ -232,36 +237,45 @@
     }catch{}
   }
 
-  async function initAuth(){
+  async function finalize(session){
     try{
-      const { data: { user } } = await supa.auth.getUser();
-      if(!user){ showLoggedOutUI(); return; }
-      const { data: prof } = await supa.from('profiles').select('credits, avatar_url').eq('id', user.id).maybeSingle();
-      showLoggedInUI(prof || {}, user);
+      if(session && session.user){
+        const { data: prof } = await supa.from('profiles').select('credits, avatar_url').eq('id', session.user.id).maybeSingle();
+        showLoggedInUI(prof || {}, session.user);
+      }else{
+        showLoggedOutUI();
+      }
     }catch{
       showLoggedOutUI();
+    }finally{
+      try{ document.body.removeAttribute('data-auth'); }catch{}
     }
   }
 
-  $navAvatar?.addEventListener('click', () => {
-    if(!$navMenu) return;
-    $navMenu.classList.toggle('hidden');
-  });
-  document.addEventListener('click', (e) => {
-    if(!$navMenu) return;
-    if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.add('hidden');
-  });
-  $btnLogout?.addEventListener('click', async () => {
-    try{ await supa.auth.signOut(); }catch{}
-    window.location.href = 'login.html';
-  });
+  // Avatar menu & logout
+  $navAvatar?.addEventListener('click', () => { if(!$navMenu) return; $navMenu.classList.toggle('hidden'); });
+  document.addEventListener('click', (e) => { if(!$navMenu) return; if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.add('hidden'); });
+  $btnLogout?.addEventListener('click', async () => { try{ await supa.auth.signOut(); }catch{} window.location.href = 'login.html'; });
 
-  initAuth();
-  supa.auth.onAuthStateChange((_evt, session) => {
-    if(session?.user){ initAuth(); } else { showLoggedOutUI(); }
+  // Use INITIAL_SESSION to avoid flashes
+  let __authHydrated = false;
+  // Fallback: if INITIAL_SESSION doesn't fire (e.g., file://), reveal UI deterministically
+  setTimeout(async () => {
+    if(__authHydrated) return;
+    try{
+      const { data: { session } } = await supa.auth.getSession();
+      finalize(session || null);
+    }catch{ finalize(null); }
+  }, 1500);
+
+  supa.auth.onAuthStateChange((event, session) => {
+    if(event === 'INITIAL_SESSION'){ __authHydrated = true; finalize(session); }
+    else if(event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED'){ __authHydrated = true; finalize(session); }
+    else if(event === 'SIGNED_OUT'){ __authHydrated = true; finalize(null); }
   });
 })();
 </script>
+
 
 </body>
 </html>
