@@ -30,25 +30,23 @@
   <!-- Header (match index layout/IDs) -->
   <header class="border-b border-base-line">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-      <a href="/" class="font-semibold text-lg">HANSORA AI</a>
+      <a href="/" class="font-semibold text-lg"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora logo" class="inline-block h-9 w-9 object-contain mr-3 align-middle"/><span class="align-middle">HANSORA AI</span></a>
       <nav class="hidden md:flex items-center gap-6 text-sm">
-        <a href="/models.html" class="hover:opacity-80">Models</a>
-        <a href="/templates.html" class="hover:opacity-80">Templates</a>
-        <a href="/examples-prompts.html" class="hover:opacity-80">Examples/Prompts</a>
-        <a href="/prices.html" class="hover:opacity-80">Prices</a>
-        <a href="/#faq" class="hover:opacity-80">FAQs</a>
-      </nav>
+<a href="models.html" class="hover:opacity-80">Models</a>
+<a href="examples-prompts.html" class="hover:opacity-80">Examples/Prompts</a>
+<a href="templates.html" class="hover:opacity-80">Templates</a>
+<a href="price.html" class="hover:opacity-80">Pricing</a>
+<a href="index.html#faq" class="hover:opacity-80">FAQ</a>
+</nav>
       <div class="flex items-center gap-3">
-        <button id="btnLoginNav" class="btn text-sm">Log in</button>
+        <a id="btnLoginNav" class="btn text-sm" href="login.html">Login / Signup</a>
+<a class="hidden" href="#" id="btnGetStarted" aria-hidden="true" tabindex="-1"></a>
         <div id="navUser" class="hidden items-center gap-3 relative">
           <span id="navCredits" class="text-sm text-zinc-300">0⚡</span>
           <button id="navAvatar" class="w-9 h-9 rounded-full overflow-hidden border border-white/10">
             <img id="navAvatarImg" alt="User avatar" class="w-full h-full object-cover hidden"/>
           </button>
-          <div id="navMenu" class="glass">
-            <a href="/#profile" class="block px-3 py-2 rounded hover:bg-white/5 text-sm">Profile</a>
-            <button id="btnLogout" class="block w-full text-left px-3 py-2 rounded hover:bg-white/5 text-sm">Log out</button>
-          </div>
+          <div id="navMenu" class="glass"><a href="profile.html" class="block px-3 py-2 rounded hover:bg-white/5 text-sm">Profile</a><a href="usage.html" class="block px-3 py-2 rounded hover:bg-white/5 text-sm">History</a><a href="price.html" class="block px-3 py-2 rounded hover:bg-white/5 text-sm">Subscription</a><button id="btnLogout" class="block w-full text-left px-3 py-2 rounded hover:bg-white/5 text-sm">Log out</button></div>
         </div>
       </div>
     </div>
@@ -94,11 +92,7 @@
     </form>
   </main>
 
-  <footer class="border-t border-base-line mt-16">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-sm text-zinc-400">
-      © <span id="year"></span> HANSORA AI
-    </div>
-  </footer>
+  <footer class="border-t border-base-line mt-16"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-sm text-zinc-400 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">  <span>© <span id="year"></span> HANSORA AI</span>  <div class="flex items-center gap-4 sm:ml-auto">    <a class="hover:text-white/80" href="terms.html">Terms</a>    <a class="hover:text-white/80" href="policy.html">Privacy</a>    <a class="hover:text-white/80" href="contact.html">Contact</a>  </div></div></footer>
 
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
 
