@@ -769,5 +769,47 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 
+
+<script>
+(() => {
+  const TEST_URL = 'https://test.checkout.dodopayments.com/buy/pdt_EfHDUnsXi3GqJwOS3qaPw?quantity=1';
+  const returnUrl = window.location.origin + window.location.pathname + '?paid=1';
+  function buildUrl(credits, uid) {
+    const u = new URL(TEST_URL);
+    u.searchParams.set('quantity', '1');
+    u.searchParams.set('uid', uid || '');
+    u.searchParams.set('credits', String(credits));
+    u.searchParams.set('return_url', returnUrl);
+    return u.toString();
+  }
+  async function getUserId() {
+    try {
+      if (window.supabase && window.supabase.auth) {
+        const result = await window.supabase.auth.getUser();
+        const data = result && result.data;
+        return (data && data.user && data.user.id) ? data.user.id : '';
+      }
+    } catch(e) { console.warn('getUserId failed', e); }
+    return '';
+  }
+  function attachBuyHandlers() {
+    document.querySelectorAll('a[href^="#buy-"], button[data-buy]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const href = (btn.getAttribute('href') || btn.dataset.buy || '');
+        const m = href.match(/#buy-(\d+)/);
+        const credits = m ? Number(m[1]) : Number(btn.dataset.credits||0);
+        if (!credits) return;
+        const uid = await getUserId();
+        const url = buildUrl(credits, uid);
+        window.location.href = url;
+      }, { passive:false });
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attachBuyHandlers);
+  else attachBuyHandlers();
+})();
+</script>
+
 </body>
 </html>
