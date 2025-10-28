@@ -138,7 +138,7 @@ export default async (request, context) => {
   })();
 </script>`;
 
-  let out = html.replace(/</body>/i, `${STYLE}${NAV}</body>`);
-  if (out === html) { out = `${html}${STYLE}${NAV}`; }
+  let out = html.replace(/<\/body>/i, STYLE + NAV + '</body>');
+  if (out === html) { out = html + STYLE + NAV; }
   return new Response(out, { status: res.status, headers: res.headers });
 };
