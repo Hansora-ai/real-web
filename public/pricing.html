@@ -520,11 +520,11 @@ document.addEventListener('DOMContentLoaded', () => {
       avatar.parentElement.appendChild(menu);
     }
     menu.className = 'menu show bg-base-bg border border-base-line rounded-xl p-2 text-sm';
-    const avatar = document.getElementById('navAvatar');
-    const menu = document.getElementById('navMenu');
-    if (!avatar || !menu) return;
+    const navAvatar2 = document.getElementById('navAvatar');
+    const navMenu2 = document.getElementById('navMenu');
+    if (!navAvatar2 || !navMenu2) return;
     // Ensure visible styling applied to the single existing menu
-    menu.classList.add('show');
+    navMenu2.classList.add('show');
     menu.innerHTML = `
       <li><a href="/profile.html">Profile</a></li>
       <li><a href="/usage.html">History</a></li>
