@@ -75,7 +75,7 @@ export async function handler(event) {
     if (!uid) {
       const email = (data.customer && data.customer.email) || root.email || null;
       if (email) {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=id`, {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=user_id`, {
           headers: { "Accept": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
         });
         if (r.ok) {
@@ -113,7 +113,8 @@ export async function handler(event) {
           paid_at: new Date().toISOString()
         }])
       });
-      if (!res.ok) {
+      const updated = await res.clone().json().catch(()=>[]);
+      if (!res.ok || !Array.isArray(updated) || updated.length===0) {
         const text = await res.text();
         return json(500, { error: "payments upsert failed", detail: text });
       }
@@ -122,10 +123,11 @@ export async function handler(event) {
     // 2) Fetch current credits
     let currentCredits = 0;
     {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(uid)}&select=credits`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`, {
         headers: { "Accept": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
       });
-      if (!res.ok) {
+      const updated = await res.clone().json().catch(()=>[]);
+      if (!res.ok || !Array.isArray(updated) || updated.length===0) {
         const text = await res.text();
         return json(500, { error: "profiles fetch failed", detail: text });
       }
@@ -136,7 +138,7 @@ export async function handler(event) {
     // 3) Update credits
     {
       const newCredits = currentCredits + credits;
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(uid)}`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -146,7 +148,8 @@ export async function handler(event) {
         },
         body: JSON.stringify({ credits: newCredits })
       });
-      if (!res.ok) {
+      const updated = await res.clone().json().catch(()=>[]);
+      if (!res.ok || !Array.isArray(updated) || updated.length===0) {
         const text = await res.text();
         return json(500, { error: "profiles update failed", detail: text });
       }
