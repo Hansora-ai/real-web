@@ -106,7 +106,7 @@ export default async (request, context) => {
 <header>
 <h3 id="hs-ol-title">Quick Links</h3>
 <button aria-label="Close" id="hs-close">
-<svg viewbox="0 0 24 24"><path d="M6 6l12 12M6 18L18 6"></path></svg>
+<svg viewBox="0 0 24 24"><path d="M6 6l12 12M6 18L18 6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
 </button>
 </header>
 <div class="links">
