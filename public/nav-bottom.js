@@ -103,3 +103,35 @@
   const mo = new MutationObserver(() => fixCloseIcon());
   mo.observe(document.documentElement, {childList:true, subtree:true});
 })();
+
+
+;(() => {
+  function fixCloseIconImportant(){
+    try{
+      const svg = document.querySelector('#hs-close svg');
+      const p = document.querySelector('#hs-close svg path');
+      if (svg){
+        svg.style.setProperty('width','24px','important');
+        svg.style.setProperty('height','24px','important');
+        svg.style.setProperty('overflow','visible','important');
+      }
+      if (p){
+        p.style.setProperty('stroke','#fff','important');
+        p.style.setProperty('stroke-width','2','important');
+        p.style.setProperty('fill','none','important');
+        p.style.setProperty('stroke-linecap','round','important');
+        p.style.setProperty('stroke-linejoin','round','important');
+        p.style.removeProperty('stroke-opacity');
+        p.style.removeProperty('opacity');
+      }
+    }catch(e){}
+  }
+  // run now and after DOM mutations (covers Edge-injected overlay)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixCloseIconImportant, {once:true});
+  } else {
+    fixCloseIconImportant();
+  }
+  const mo = new MutationObserver(() => fixCloseIconImportant());
+  mo.observe(document.documentElement, {childList:true, subtree:true});
+})();
