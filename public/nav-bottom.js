@@ -79,3 +79,27 @@
     // fail silently
   }
 })();
+
+
+;(() => {
+  function fixCloseIcon(){
+    try{
+      const p = document.querySelector('#hs-close svg path');
+      if (p){
+        p.style.stroke = '#fff';
+        p.style.strokeWidth = '2';
+        p.style.fill = 'none';
+        p.style.strokeLinecap = 'round';
+        p.style.strokeLinejoin = 'round';
+      }
+    }catch(e){}
+  }
+  // run now and after DOM mutations (covers Edge-injected overlay)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixCloseIcon, {once:true});
+  } else {
+    fixCloseIcon();
+  }
+  const mo = new MutationObserver(() => fixCloseIcon());
+  mo.observe(document.documentElement, {childList:true, subtree:true});
+})();
