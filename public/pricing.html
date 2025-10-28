@@ -145,7 +145,7 @@ hr, .section-line { border-color: var(--base-bg) !important; opacity:.12 }
 <div class="text-sm text-white/60">100 + 0 credits</div>
 <div class="mt-1 text-5xl font-extrabold tracking-tight">100 <span class="text-2xl align-baseline text-white">credits</span></div>
 <div class="mt-3 text-3xl font-semibold">$9.90</div>
-<a class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white buy-credits" data-credits="100" href="#buy-100">Buy</a>
+<a class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white buy-credits" data-credits="100" href="#buy-100" data-product="https://test.checkout.dodopayments.com/buy/pdt_EfHDUnsXi3GqJwOS3qaPw?quantity=1">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>720–1080p high quality (model‑dependent)</li>
@@ -776,92 +776,82 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script>
 // STRICT dynamic checkout: never proceed if uid or credits are empty.
-// Does not touch your auth/header logic; only wires the Buy buttons.
 (function () {
-  // Wait for DOM
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, { once: true });
-  } else {
-    init();
-  }
+  function onReady(fn){ if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, {once:true}); else fn(); }
 
-  async function init() {
-    const buttons = document.querySelectorAll('.buy-credits[data-credits]');
-    if (!buttons.length) return;
+  onReady(function init(){
+    document.addEventListener('click', async function(ev){
+      const el = ev.target.closest('.buy-credits[data-credits]');
+      if (!el) return;
 
-    for (const btn of buttons) {
-      btn.addEventListener('click', onBuyClick);
-    }
-  }
+      ev.preventDefault();
+      ev.stopPropagation();
 
-  async function onBuyClick(e) {
-    const btn = e.currentTarget;
-    const original = btn.innerText;
-    try {
-      const credits = Number(btn.dataset.credits);
-      if (!Number.isFinite(credits) || credits <= 0) {
-        throw new Error('Missing credits on button');
-      }
+      // Resolve product base URL
+      const base = (el.getAttribute('data-product')||'').trim();
+      const href = (el.getAttribute('href')||'').trim();
+      const isDodo = /dodopayments\.com\/buy/i.test(href);
+      const productUrl = base || (isDodo ? href : '');
+      if (!productUrl) return; // no product configured
 
-      const uid = await getUidStrict();
-      if (!uid) throw new Error('Not logged in (uid unavailable)');
+      // Resolve credits
+      const credits = Number(el.getAttribute('data-credits')||NaN);
+      if (!Number.isFinite(credits) || credits <= 0) return;
 
-      // UI feedback
-      btn.disabled = true;
-      btn.innerText = 'Creating checkout…';
+      // Resolve Supabase UID (multi-strategy)
+      const uid = await (async function resolveUid(){
+        try {
+          if (window.supabase?.auth?.getUser) {
+            const { data } = await window.supabase.auth.getUser();
+            if (data?.user?.id) return data.user.id;
+          }
+          if (window.supabase?.auth?.getSession) {
+            const { data } = await window.supabase.auth.getSession();
+            if (data?.session?.user?.id) return data.session.user.id;
+          }
+        } catch {}
 
-      // Create session on server (this injects metadata.uid & metadata.credits)
-      const res = await fetch('/.netlify/functions/create-dodo-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, credits })
-      });
+        try {
+          // Modern sb-* keys (varies by version)
+          for (let i=0;i<localStorage.length;i++){
+            const k = localStorage.key(i);
+            if (/^sb-.*-auth-token$/.test(k)) {
+              const raw = localStorage.getItem(k);
+              if (!raw) continue;
+              const parsed = JSON.parse(raw);
+              const id = parsed?.user?.id || parsed?.currentSession?.user?.id || parsed?.session?.user?.id;
+              if (id) return id;
+            }
+          }
+        } catch {}
 
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.error || 'Failed to create checkout session');
-      }
-      if (!data?.url) {
-        throw new Error('Checkout URL missing from server response');
-      }
+        try {
+          const raw = localStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.session');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            const id = parsed?.currentSession?.user?.id || parsed?.user?.id || parsed?.session?.user?.id;
+            if (id) return id;
+          }
+        } catch {}
+        return null;
+      })();
 
-      // Final redirect
-      window.location.href = data.url;
-    } catch (err) {
-      console.error('[checkout] error:', err);
-      alert('Checkout blocked: ' + (err?.message || err));
-      btn.disabled = false;
-      btn.innerText = original;
-    }
-  }
+      if (!uid) return; // block redirect when not logged-in
 
-  // Try multiple ways to read Supabase uid without altering your auth logic.
-  async function getUidStrict() {
-    try {
-      if (window.supabase?.auth?.getUser) {
-        const { data } = await window.supabase.auth.getUser();
-        if (data?.user?.id) return data.user.id;
-      }
-      if (window.supabase?.auth?.getSession) {
-        const { data } = await window.supabase.auth.getSession();
-        if (data?.session?.user?.id) return data.session.user.id;
-      }
-    } catch {}
+      // Build final URL
+      const u = new URL(productUrl, location.origin);
+      // quantity default 1 if absent
+      if (!u.searchParams.has('quantity')) u.searchParams.set('quantity','1');
+      u.searchParams.set('uid', uid);
+      u.searchParams.set('credits', String(credits));
 
-    // Fallback: localStorage (Supabase stores the session for some versions)
-    try {
-      const raw = localStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.session');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const uid = parsed?.currentSession?.user?.id || parsed?.user?.id || parsed?.session?.user?.id;
-        if (uid) return uid;
-      }
-    } catch {}
-
-    return null;
-  }
+      // Redirect
+      location.href = u.toString();
+    });
+  });
 })();
 </script>
+
 <!-- BEGIN: HARD-BLOCK if uid missing; robust Supabase UID resolver -->
 <script>
 (function(){
