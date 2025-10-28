@@ -1,21 +1,11 @@
 // netlify/functions/dodo-webhook.mjs
-// Updated: tolerant to Dodo payloads like { type: "payment.succeeded", status: "succeeded", data: {...} }
-// - Accepts transaction id under payment_id or transaction_id
-// - Accepts status "paid" or "succeeded"
-// - Accepts metadata at body.metadata, body.data.metadata, or body.data.payment.metadata
-// - FALLBACKS when metadata.uid missing:
-//     * Map product_id -> credits (PRODUCT_CREDIT_MAP env or internal default)
-//     * Try to resolve uid by customer.email against Supabase profiles.email
-//       (requires profiles.email column to exist; otherwise skip)
-// - Still idempotent UPSERT on payments(transaction_id)
-// - Only minimal, surgical changes; core logic preserved.
-
-const PRODUCT_CREDIT_MAP = (() => {
-  try {
-    // JSON like: {"pdt_EfHDUnsXi3GqJwOS3qaPw":50}
-    return JSON.parse(process.env.PRODUCT_CREDIT_MAP || "{}");
-  } catch { return {}; }
-})();
+// FINAL (matches your payments schema).
+// Table public.payments columns used:
+// id, transaction_id (unique), uid (uuid), credits (int), amount_cents (int),
+// currency (text), status (text), provider (text default 'dodopayments'),
+// return_url (text), payload (jsonb), created_at (timestamptz default now()), paid_at (timestamptz)
+// Idempotent: if a row with the same transaction_id already has status 'succeeded', credits won't be added again.
+// Uses profiles.user_id to update the user's credits.
 
 export async function handler(event) {
   try {
@@ -27,70 +17,57 @@ export async function handler(event) {
     try { body = JSON.parse(event.body || "{}"); }
     catch { return json(400, { error: "Bad JSON" }); }
 
-    // Unify shape
+    // ---- Normalize Dodo payload ------------------------------------------------
     const root = body || {};
     const data = root.data || root;
-    const type = root.type || data.type || null;
-    const payloadType = root.payload_type || data.payload_type || null;
+    const type = root.type || root.payload_type || data.type || data.payload_type || null;
     let status = root.status || data.status || null;
     if (!status && type === "payment.succeeded") status = "succeeded";
 
-    // transaction id
+    const meta = (root.metadata || data.metadata || (data.payment && data.payment.metadata)) || {};
+
     const transaction_id = root.transaction_id || data.transaction_id || data.payment_id || root.payment_id || null;
+    const uid = meta.uid || null;
+    const credits = Number(meta.credits || 0);
 
-    // money
-    const amount_cents = data.total_amount ?? data.settlement_amount ?? root.amount ?? null;
-    const currency = data.currency || data.settlement_currency || root.currency || null;
+    const amount_cents = (Number.isFinite(Number(data.total_amount)) ? Number(data.total_amount) :
+                         (Number.isFinite(Number(data.settlement_amount)) ? Number(data.settlement_amount) : null));
+    const currency = data.currency || data.settlement_currency || null;
+    const provider = "dodopayments";
+    const return_url = meta.return_url || null;
+    const paid_at = data.created_at || data.updated_at || new Date().toISOString();
 
-    // metadata (multiple places)
-    const meta =
-      root.metadata ||
-      data.metadata ||
-      (data.payment && data.payment.metadata) ||
-      {};
-
-    // product id (to map credits when metadata missing)
-    const product_id = (Array.isArray(data.product_cart) && data.product_cart[0]?.product_id) || null;
-    const quantity = (Array.isArray(data.product_cart) && Number(data.product_cart[0]?.quantity || 1)) || 1;
-
-    // extract uid/credits
-    let uid = meta.uid || null;
-    let credits = Number(meta.credits || 0);
-
-    // normalize success status
-    const okStatus = (status === "paid" || status === "succeeded");
-
-    // Fallback credits from product id
-    if (!credits && product_id && PRODUCT_CREDIT_MAP[product_id]) {
-      credits = Number(PRODUCT_CREDIT_MAP[product_id]) * quantity;
+    if (!(status === "paid" || status === "succeeded")) {
+      return json(200, { ok: true, skipped: "not a successful payment status", status, type });
+    }
+    if (!transaction_id || !uid || !credits) {
+      return json(400, { error: "Missing required fields", transaction_id: !!transaction_id, uid: !!uid, credits });
     }
 
+    // ---- Supabase env ----------------------------------------------------------
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return json(500, { error: "Missing Supabase env" });
+      return json(500, { error: "Missing Supabase env (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)" });
     }
 
-    // Fallback uid from customer.email (if available), by looking up profiles table
-    if (!uid) {
-      const email = (data.customer && data.customer.email) || root.email || null;
-      if (email) {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=user_id`, {
-          headers: { "Accept": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
-        });
-        if (r.ok) {
-          const rows = await r.json();
-          uid = rows?.[0]?.id || null;
-        }
-      }
-    }
+    // Helper: fetch JSON
+    async function sjson(res) { try { return await res.json(); } catch { return null; } }
 
-    // Validate minimum
-    if (!okStatus || !transaction_id || !uid || !credits) {
-      return json(400, { error: "Invalid payload", debug: { okStatus, transaction_id, uid: !!uid, credits } });
-    }
+    // ---- 0) Check if payment already processed --------------------------------
+    const existed = await (async () => {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/payments?transaction_id=eq.${encodeURIComponent(transaction_id)}&select=status,credits,uid`, {
+        headers: { "Accept":"application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+      });
+      if (!res.ok) return { err: await res.text() };
+      const rows = await sjson(res) || [];
+      return { row: Array.isArray(rows) && rows.length ? rows[0] : null };
+    })();
+    if (existed.err) return json(500, { error: "payments fetch failed", detail: existed.err });
 
-    // 1) UPSERT into payments
+    const alreadySucceeded = existed.row && String(existed.row.status || "").toLowerCase() === "succeeded";
+
+    // ---- 1) Upsert the payment row (full schema you provided) ------------------
     {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/payments?on_conflict=transaction_id`, {
         method: "POST",
@@ -106,56 +83,56 @@ export async function handler(event) {
           credits,
           amount_cents,
           currency,
-          status: "paid",
-          provider: "dodopayments",
-          return_url: meta.return_url ?? null,
+          status: "succeeded",
+          provider,
+          return_url,
           payload: root,
-          paid_at: new Date().toISOString()
+          paid_at
         }])
       });
-      const updated = await res.clone().json().catch(()=>[]);
-      if (!res.ok || !Array.isArray(updated) || updated.length===0) {
-        const text = await res.text();
+      const updated = await sjson(res);
+      if (!res.ok || !Array.isArray(updated) || updated.length === 0) {
+        const text = updated || await res.text();
         return json(500, { error: "payments upsert failed", detail: text });
       }
     }
 
-    // 2) Fetch current credits
-    let currentCredits = 0;
-    {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`, {
-        headers: { "Accept": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
-      });
-      const updated = await res.clone().json().catch(()=>[]);
-      if (!res.ok || !Array.isArray(updated) || updated.length===0) {
-        const text = await res.text();
-        return json(500, { error: "profiles fetch failed", detail: text });
+    // ---- 2) Only add credits if this is the first time we see 'succeeded' -----
+    if (!alreadySucceeded) {
+      // Read current credits
+      let currentCredits = 0;
+      {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`, {
+          headers: { "Accept":"application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+        });
+        const rows = await sjson(res) || [];
+        if (!res.ok || !Array.isArray(rows) || rows.length === 0) {
+          return json(500, { error: "profiles fetch failed or 0 rows" });
+        }
+        currentCredits = Number(rows?.[0]?.credits ?? 0);
       }
-      const rows = await res.json();
-      currentCredits = Number(rows?.[0]?.credits ?? 0);
+      // Update credits
+      {
+        const newCredits = currentCredits + credits;
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Prefer": "return=representation",
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+          },
+          body: JSON.stringify({ credits: newCredits })
+        });
+        const updated = await sjson(res) || [];
+        if (!res.ok || !Array.isArray(updated) || updated.length === 0) {
+          const text = await res.text();
+          return json(500, { error: "profiles update failed", detail: text });
+        }
+      }
     }
 
-    // 3) Update credits
-    {
-      const newCredits = currentCredits + credits;
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Prefer": "return=representation",
-          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-        },
-        body: JSON.stringify({ credits: newCredits })
-      });
-      const updated = await res.clone().json().catch(()=>[]);
-      if (!res.ok || !Array.isArray(updated) || updated.length===0) {
-        const text = await res.text();
-        return json(500, { error: "profiles update failed", detail: text });
-      }
-    }
-
-    return json(200, { ok: true });
+    return json(200, { ok: true, credited: !alreadySucceeded });
   } catch (e) {
     return json(500, { error: String(e?.message || e) });
   }
