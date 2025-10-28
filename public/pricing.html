@@ -899,106 +899,115 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 })();
 </script>
-<!-- BEGIN: Minimal, surgical patch to include uid & credits in the Dodo URL (no other changes) -->
+<!-- BEGIN: HARD-BLOCK if uid missing; robust Supabase UID resolver -->
 <script>
-(function () {
-  // Capture clicks early so normal href doesn't navigate first
-  document.addEventListener('click', function (e) {
-    const el = e.target.closest('a,button');
+(function(){
+  // Resolve Supabase UID from multiple possible sources
+  async function resolveUid() {
+    // 1) Supabase SDK v2
+    try {
+      if (window.supabase?.auth?.getUser) {
+        const { data } = await window.supabase.auth.getUser();
+        if (data && data.user && data.user.id) return data.user.id;
+      }
+    } catch(e){}
+    // 2) Supabase SDK session()
+    try {
+      if (window.supabase?.auth?.getSession) {
+        const { data } = await window.supabase.auth.getSession();
+        if (data && data.session && data.session.user && data.session.user.id) return data.session.user.id;
+      }
+    } catch(e){}
+    // 3) LocalStorage common keys
+    try {
+      const direct = localStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.session');
+      if (direct) {
+        const p = JSON.parse(direct);
+        const uid = p?.currentSession?.user?.id || p?.user?.id || p?.session?.user?.id;
+        if (uid) return uid;
+      }
+    } catch(e){}
+    // 4) Any sb-*-auth-token key (Supabase v2 browser sessions)
+    try {
+      for (let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if (/^sb-.*-auth-token$/.test(k)) {
+          const v = localStorage.getItem(k);
+          if (!v) continue;
+          const p = JSON.parse(v);
+          const uid = p?.user?.id || p?.currentSession?.user?.id || p?.session?.user?.id;
+          if (uid) return uid;
+        }
+      }
+    } catch(e){}
+    return null;
+  }
+
+  // Global click hijack (capture phase)
+  document.addEventListener('click', function(ev){
+    const el = ev.target.closest('a,button');
     if (!el) return;
-
-    // We only hijack if an explicit credits amount is present OR the link goes to Dodo
-    const href = (el.getAttribute('href') || '').trim();
+    const href = (el.getAttribute('href')||'').trim();
     const isDodo = /dodopayments\.com\/buy/i.test(href);
-    let credits = Number(el.dataset.credits || NaN);
+    const hasCreditsData = el.hasAttribute('data-credits');
+    if (!isDodo && !hasCreditsData) return;
 
-    if (!isDodo && !(Number.isFinite(credits) && credits > 0)) return;
+    ev.preventDefault();
+    ev.stopPropagation();
 
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Helper: get Supabase UID (strict)
-    async function getUidStrict() {
-      try {
-        if (window.supabase?.auth?.getUser) {
-          const { data } = await window.supabase.auth.getUser();
-          if (data?.user?.id) return data.user.id;
-        }
-        if (window.supabase?.auth?.getSession) {
-          const { data } = await window.supabase.auth.getSession();
-          if (data?.session?.user?.id) return data.session.user.id;
-        }
-      } catch {}
-      try {
-        const raw = localStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.session');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          return parsed?.currentSession?.user?.id || parsed?.user?.id || parsed?.session?.user?.id || null;
-        }
-      } catch {}
-      return null;
+    // Determine credits
+    let credits = Number(el.getAttribute('data-credits') || NaN);
+    if (!Number.isFinite(credits) || credits<=0){
+      try{
+        const u = new URL(href, location.href);
+        const c = Number(u.searchParams.get('credits') || u.searchParams.get('quantity') || NaN);
+        if (Number.isFinite(c) && c>0) credits = c;
+      }catch(e){}
     }
-
-    // If credits missing but href has ?credits= or ?quantity=, use that
-    if (!Number.isFinite(credits) || credits <= 0) {
-      try {
-        const u = new URL(href, window.location.origin);
-        const try1 = Number(u.searchParams.get('credits') || NaN);
-        const try2 = Number(u.searchParams.get('quantity') || NaN);
-        const got = Number.isFinite(try1) ? try1 : (Number.isFinite(try2) ? try2 : NaN);
-        if (Number.isFinite(got) && got > 0) credits = got;
-      } catch {}
-    }
-
-    // As a last resort: parse plain text (e.g., "Buy 100 credits")
-    if (!Number.isFinite(credits) || credits <= 0) {
-      const m = (el.textContent || '').match(/(\d+)\s*credits/i);
+    if (!Number.isFinite(credits) || credits<=0){
+      const m = (el.textContent||'').match(/(\d+)\s*credits/i);
       if (m) credits = Number(m[1]);
     }
-
-    if (!Number.isFinite(credits) || credits <= 0) {
-      alert('Cannot detect credits amount for this button/link.');
+    if (!Number.isFinite(credits) || credits<=0){
+      alert('Cannot detect credits amount for this purchase.');
       return;
     }
 
-    // Resolve the base Dodo URL
-    let baseUrl = href || el.dataset.href || '';
-    if (!baseUrl) {
-      alert('Missing Dodo checkout link (href).');
+    const baseUrl = href || el.getAttribute('data-href') || '';
+    if (!baseUrl){
+      alert('Missing Dodo checkout URL.');
       return;
     }
 
-    // Visual feedback
-    const originalLabel = el.innerText;
-    el.disabled = true;
-    el.innerText = 'Opening checkout…';
+    const original = el.innerText;
+    if ('disabled' in el) el.disabled = true;
+    if (original) el.innerText = 'Opening checkout…';
 
-    // Fetch uid then navigate with uid & credits in URL
-    getUidStrict().then(function (uid) {
-      if (!uid) {
-        alert('Please log in first.');
-        el.disabled = false;
-        el.innerText = originalLabel;
+    resolveUid().then(function(uid){
+      if (!uid){
+        alert('You are not logged in. (UID missing)');
+        if ('disabled' in el) el.disabled = false;
+        if (original) el.innerText = original;
         return;
       }
-      try {
-        const u = new URL(baseUrl, window.location.href);
+      try{
+        const u = new URL(baseUrl, location.href);
         u.searchParams.set('uid', uid);
         u.searchParams.set('credits', String(credits));
-        // Optional pass-through: preserve existing return url if present on the element
         const ru = el.getAttribute('data-return-url');
         if (ru) u.searchParams.set('return_url', ru);
-        window.location.href = u.toString();
-      } catch (err) {
-        console.error('Bad checkout URL:', err);
+        // FINAL redirect only when uid is present (hard block otherwise)
+        location.href = u.toString();
+      }catch(err){
+        console.error(err);
         alert('Invalid checkout URL.');
-        el.disabled = false;
-        el.innerText = originalLabel;
+        if ('disabled' in el) el.disabled = false;
+        if (original) el.innerText = original;
       }
     });
   }, true);
 })();
 </script>
-<!-- END: Minimal, surgical patch -->
+<!-- END: HARD-BLOCK if uid missing; robust Supabase UID resolver -->
 </body>
 </html>
