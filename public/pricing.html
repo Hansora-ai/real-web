@@ -520,11 +520,11 @@ document.addEventListener('DOMContentLoaded', () => {
       avatar.parentElement.appendChild(menu);
     }
     menu.className = 'menu show bg-base-bg border border-base-line rounded-xl p-2 text-sm';
-    const navAvatar2 = document.getElementById('navAvatar');
-    const navMenu2 = document.getElementById('navMenu');
-    if (!navAvatar2 || !navMenu2) return;
+    const avatar = document.getElementById('navAvatar');
+    const menu = document.getElementById('navMenu');
+    if (!avatar || !menu) return;
     // Ensure visible styling applied to the single existing menu
-    navMenu2.classList.add('show');
+    menu.classList.add('show');
     menu.innerHTML = `
       <li><a href="/profile.html">Profile</a></li>
       <li><a href="/usage.html">History</a></li>
@@ -775,11 +775,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 <script>
-// STRICT dynamic checkout: never proceed if uid or credits are empty.
+// STRICT dynamic checkout: prefer data-product; never proceed if uid/credits missing.
 (function () {
   function onReady(fn){ if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, {once:true}); else fn(); }
-
-  onReady(function init(){
+  onReady(function(){
     document.addEventListener('click', async function(ev){
       const el = ev.target.closest('.buy-credits[data-credits]');
       if (!el) return;
@@ -787,19 +786,19 @@ document.addEventListener('DOMContentLoaded', () => {
       ev.preventDefault();
       ev.stopPropagation();
 
-      // Resolve product base URL
-      const base = (el.getAttribute('data-product')||'').trim();
+      // Choose base product URL: prefer data-product; else only use href if it's already a Dodo URL
+      const dataProduct = (el.getAttribute('data-product')||'').trim();
       const href = (el.getAttribute('href')||'').trim();
-      const isDodo = /dodopayments\.com\/buy/i.test(href);
-      const productUrl = base || (isDodo ? href : '');
-      if (!productUrl) return; // no product configured
+      const isDodoHref = /dodopayments\.com\/buy/i.test(href);
+      const base = dataProduct || (isDodoHref ? href : '');
+      if (!base) return; // no product configured
 
-      // Resolve credits
-      const credits = Number(el.getAttribute('data-credits')||NaN);
+      // Credits
+      const credits = Number(el.getAttribute('data-credits') || NaN);
       if (!Number.isFinite(credits) || credits <= 0) return;
 
-      // Resolve Supabase UID (multi-strategy)
-      const uid = await (async function resolveUid(){
+      // Resolve Supabase UID
+      const uid = await (async function(){
         try {
           if (window.supabase?.auth?.getUser) {
             const { data } = await window.supabase.auth.getUser();
@@ -810,9 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data?.session?.user?.id) return data.session.user.id;
           }
         } catch {}
-
         try {
-          // Modern sb-* keys (varies by version)
           for (let i=0;i<localStorage.length;i++){
             const k = localStorage.key(i);
             if (/^sb-.*-auth-token$/.test(k)) {
@@ -824,7 +821,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }
         } catch {}
-
         try {
           const raw = localStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.session');
           if (raw) {
@@ -836,21 +832,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
       })();
 
-      if (!uid) return; // block redirect when not logged-in
+      if (!uid) return; // block when not logged in
 
       // Build final URL
-      const u = new URL(productUrl, location.origin);
-      // quantity default 1 if absent
-      if (!u.searchParams.has('quantity')) u.searchParams.set('quantity','1');
+      const u = new URL(base, location.origin);
+      if (!u.searchParams.has('quantity')) u.searchParams.set('quantity', '1');
       u.searchParams.set('uid', uid);
       u.searchParams.set('credits', String(credits));
 
-      // Redirect
       location.href = u.toString();
     });
   });
 })();
 </script>
+
 
 <!-- BEGIN: HARD-BLOCK if uid missing; robust Supabase UID resolver -->
 <script>
