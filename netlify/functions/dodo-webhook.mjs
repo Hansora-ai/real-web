@@ -57,7 +57,7 @@ export async function handler(event) {
     // ---- 0) Check if payment already processed --------------------------------
     const existed = await (async () => {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/payments?transaction_id=eq.${encodeURIComponent(transaction_id)}&select=status,credits,uid`, {
-        headers: { "Accept":"application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+        headers: { "Accept":"application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, "apikey": SUPABASE_SERVICE_ROLE_KEY }
       });
       if (!res.ok) return { err: await res.text() };
       const rows = await sjson(res) || [];
@@ -75,7 +75,8 @@ export async function handler(event) {
           "Content-Type": "application/json",
           "Accept": "application/json",
           "Prefer": "resolution=merge-duplicates,return=representation",
-          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          "apikey": SUPABASE_SERVICE_ROLE_KEY
         },
         body: JSON.stringify([{
           transaction_id,
@@ -103,7 +104,7 @@ export async function handler(event) {
       let currentCredits = 0;
       {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`, {
-          headers: { "Accept":"application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+          headers: { "Accept":"application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, "apikey": SUPABASE_SERVICE_ROLE_KEY }
         });
         const rows = await sjson(res) || [];
         if (!res.ok || !Array.isArray(rows) || rows.length === 0) {
@@ -120,7 +121,8 @@ export async function handler(event) {
             "Content-Type": "application/json",
             "Accept": "application/json",
             "Prefer": "return=representation",
-            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            "apikey": SUPABASE_SERVICE_ROLE_KEY
           },
           body: JSON.stringify({ credits: newCredits })
         });
