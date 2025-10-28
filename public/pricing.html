@@ -905,23 +905,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Determine credits
     let credits = Number(el.getAttribute('data-credits') || NaN);
-    if (!Number.isFinite(credits) || credits<=0){
-      try{
-        const u = new URL(href, location.href);
-        const c = Number(u.searchParams.get('credits') || u.searchParams.get('quantity') || NaN);
-        if (Number.isFinite(c) && c>0) credits = c;
-      }catch(e){}
-    }
-    if (!Number.isFinite(credits) || credits<=0){
-      const m = (el.textContent||'').match(/(\d+)\s*credits/i);
-      if (m) credits = Number(m[1]);
-    }
-    if (!Number.isFinite(credits) || credits<=0){
+if (!Number.isFinite(credits) || credits<=0){
+  // Prefer reading from the pricing card text (e.g., '100 credits')
+  try{
+    const card = el.closest('.rounded-2xl') || el.closest('[data-plan]') || el.parentElement;
+    const text = (card?.textContent || '').toLowerCase();
+    const m = text.match(/(\d+)\s*credits/);
+    if (m) credits = Number(m[1]);
+  }catch(e){}
+}
+if (!Number.isFinite(credits) || credits<=0){
+  // Fall back to URL params only at the end (some Dodo links use quantity=1)
+  try{
+    const u = new URL(href || '', location.href);
+    const c = Number(u.searchParams.get('credits') || u.searchParams.get('quantity') || NaN);
+    if (Number.isFinite(c) && c>0) credits = c;
+  }catch(e){}
+}
+if (!Number.isFinite(credits) || credits<=0){
       alert('Cannot detect credits amount for this purchase.');
       return;
     }
 
-    const baseUrl = href || el.getAttribute('data-href') || '';
+    const baseUrl = (el.getAttribute('data-product')||'').trim() || (isDodo ? href : '') || '';
     if (!baseUrl){
       alert('Missing Dodo checkout URL.');
       return;
