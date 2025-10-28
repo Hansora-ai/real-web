@@ -837,8 +837,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Build final URL
       const u = new URL(base, location.origin);
       if (!u.searchParams.has('quantity')) u.searchParams.set('quantity', '1');
-      u.searchParams.set('uid', uid);
-      u.searchParams.set('credits', String(credits));
+      u.searchParams.set('metadata_uid', uid);
+      u.searchParams.set('metadata_credits', String(credits));
 
       location.href = u.toString();
     });
@@ -946,8 +946,8 @@ if (!Number.isFinite(credits) || credits<=0){
       }
       try{
         const u = new URL(baseUrl, location.href);
-        u.searchParams.set('uid', uid);
-        u.searchParams.set('credits', String(credits));
+        u.searchParams.set('metadata_uid', uid);
+        u.searchParams.set('metadata_credits', String(credits));
         const ru = el.getAttribute('data-return-url');
         if (ru) u.searchParams.set('return_url', ru);
         // FINAL redirect only when uid is present (hard block otherwise)
