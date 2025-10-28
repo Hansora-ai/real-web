@@ -898,5 +898,107 @@ document.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 })();
-</script></body>
+</script>
+<!-- BEGIN: Minimal, surgical patch to include uid & credits in the Dodo URL (no other changes) -->
+<script>
+(function () {
+  // Capture clicks early so normal href doesn't navigate first
+  document.addEventListener('click', function (e) {
+    const el = e.target.closest('a,button');
+    if (!el) return;
+
+    // We only hijack if an explicit credits amount is present OR the link goes to Dodo
+    const href = (el.getAttribute('href') || '').trim();
+    const isDodo = /dodopayments\.com\/buy/i.test(href);
+    let credits = Number(el.dataset.credits || NaN);
+
+    if (!isDodo && !(Number.isFinite(credits) && credits > 0)) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Helper: get Supabase UID (strict)
+    async function getUidStrict() {
+      try {
+        if (window.supabase?.auth?.getUser) {
+          const { data } = await window.supabase.auth.getUser();
+          if (data?.user?.id) return data.user.id;
+        }
+        if (window.supabase?.auth?.getSession) {
+          const { data } = await window.supabase.auth.getSession();
+          if (data?.session?.user?.id) return data.session.user.id;
+        }
+      } catch {}
+      try {
+        const raw = localStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.session');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return parsed?.currentSession?.user?.id || parsed?.user?.id || parsed?.session?.user?.id || null;
+        }
+      } catch {}
+      return null;
+    }
+
+    // If credits missing but href has ?credits= or ?quantity=, use that
+    if (!Number.isFinite(credits) || credits <= 0) {
+      try {
+        const u = new URL(href, window.location.origin);
+        const try1 = Number(u.searchParams.get('credits') || NaN);
+        const try2 = Number(u.searchParams.get('quantity') || NaN);
+        const got = Number.isFinite(try1) ? try1 : (Number.isFinite(try2) ? try2 : NaN);
+        if (Number.isFinite(got) && got > 0) credits = got;
+      } catch {}
+    }
+
+    // As a last resort: parse plain text (e.g., "Buy 100 credits")
+    if (!Number.isFinite(credits) || credits <= 0) {
+      const m = (el.textContent || '').match(/(\d+)\s*credits/i);
+      if (m) credits = Number(m[1]);
+    }
+
+    if (!Number.isFinite(credits) || credits <= 0) {
+      alert('Cannot detect credits amount for this button/link.');
+      return;
+    }
+
+    // Resolve the base Dodo URL
+    let baseUrl = href || el.dataset.href || '';
+    if (!baseUrl) {
+      alert('Missing Dodo checkout link (href).');
+      return;
+    }
+
+    // Visual feedback
+    const originalLabel = el.innerText;
+    el.disabled = true;
+    el.innerText = 'Opening checkout…';
+
+    // Fetch uid then navigate with uid & credits in URL
+    getUidStrict().then(function (uid) {
+      if (!uid) {
+        alert('Please log in first.');
+        el.disabled = false;
+        el.innerText = originalLabel;
+        return;
+      }
+      try {
+        const u = new URL(baseUrl, window.location.href);
+        u.searchParams.set('uid', uid);
+        u.searchParams.set('credits', String(credits));
+        // Optional pass-through: preserve existing return url if present on the element
+        const ru = el.getAttribute('data-return-url');
+        if (ru) u.searchParams.set('return_url', ru);
+        window.location.href = u.toString();
+      } catch (err) {
+        console.error('Bad checkout URL:', err);
+        alert('Invalid checkout URL.');
+        el.disabled = false;
+        el.innerText = originalLabel;
+      }
+    });
+  }, true);
+})();
+</script>
+<!-- END: Minimal, surgical patch -->
+</body>
 </html>
