@@ -47,7 +47,7 @@
     <header>
       <h3 id="hs-ol-title">Quick Links</h3>
       <button id="hs-close" aria-label="Close">
-        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M6 18L18 6" style="stroke:#fff !important;stroke-width:2 !important;fill:none !important;stroke-linecap:round !important;stroke-linejoin:round !important"></path></svg>
+        <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="6" y1="18" x2="18" y2="6"></line></svg>
       </button>
     </header>
     <div class="links">
@@ -133,5 +133,37 @@
     fixCloseIconImportant();
   }
   const mo = new MutationObserver(() => fixCloseIconImportant());
+  mo.observe(document.documentElement, {childList:true, subtree:true});
+})();
+
+
+;(() => {
+  function forceCloseIconVisible(){
+    try{
+      const svg = document.querySelector('#hs-close svg');
+      if (svg){
+        svg.setAttribute('viewBox','0 0 24 24');
+        svg.style.setProperty('width','24px','important');
+        svg.style.setProperty('height','24px','important');
+        svg.style.setProperty('overflow','visible','important');
+      }
+      const shapes = document.querySelectorAll('#hs-close svg path, #hs-close svg line, #hs-close svg polyline');
+      shapes.forEach(el => {
+        el.style.setProperty('stroke','#fff','important');
+        el.style.setProperty('stroke-width','2','important');
+        el.style.setProperty('fill','none','important');
+        el.style.setProperty('stroke-linecap','round','important');
+        el.style.setProperty('stroke-linejoin','round','important');
+        el.style.removeProperty('opacity');
+        el.style.removeProperty('stroke-opacity');
+      });
+    }catch(e){}
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', forceCloseIconVisible, {once:true});
+  } else {
+    forceCloseIconVisible();
+  }
+  const mo = new MutationObserver(() => forceCloseIconVisible());
   mo.observe(document.documentElement, {childList:true, subtree:true});
 })();
