@@ -811,5 +811,50 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 
-</body>
+<script>
+// Minimal, surgical: attach to buy buttons without touching auth/header logic.
+// Assumes a button has: class="buy-credits" data-credits="50" id="buy50"
+// Requires Supabase auth already present on the page to get user id.
+(async function attachDodoBuy() {
+  function supabaseUserId() {
+    try {
+      // Expect supabase client exists globally as 'supabase'
+      return window?.supabase?.auth?.getUser?.().then(r => r?.data?.user?.id || null);
+    } catch { return null; }
+  }
+  async function createSession(uid, credits) {
+    const res = await fetch('/.netlify/functions/create-dodo-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid, credits })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to create session');
+    if (!data.url) throw new Error('No checkout url');
+    return data.url;
+  }
+  async function onBuyClick(e) {
+    const btn = e.currentTarget;
+    const credits = Number(btn.dataset.credits || 0) || 50;
+    btn.disabled = true; const original = btn.innerText; btn.innerText = 'Redirecting…';
+    try {
+      let uid = await supabaseUserId();
+      if (!uid) {
+        // Fallback: try from local storage if your app stores it
+        uid = localStorage.getItem('uid') || null;
+      }
+      if (!uid) { throw new Error('Not logged in'); }
+      const url = await createSession(uid, credits);
+      window.location.href = url;
+    } catch (err) {
+      console.error(err);
+      alert('Checkout error: ' + err.message);
+      btn.disabled = false; btn.innerText = original;
+    }
+  }
+  document.querySelectorAll('.buy-credits[data-credits]').forEach(btn => {
+    btn.addEventListener('click', onBuyClick);
+  });
+})();
+</script></body>
 </html>
