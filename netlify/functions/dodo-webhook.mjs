@@ -1,28 +1,21 @@
 // netlify/functions/dodo-webhook.mjs
-// ESM Netlify Function (Node 18). No external deps.
-// Place this file at: netlify/functions/dodo-webhook.mjs
-// Set environment variables in Netlify dashboard:
-//   SUPABASE_URL = https://<PROJECT-REF>.supabase.co
-//   SUPABASE_SERVICE_ROLE_KEY = <your service role key>
-// Optional (if DodoPayments signing is available):
-//   DODO_WEBHOOK_SECRET = <test/production signing secret>
-//
-// DodoPayments expected JSON example:
-// {
-//   "status": "paid",
-//   "transaction_id": "tx_123",
-//   "amount": 990,
-//   "currency": "USD",
-//   "metadata": {
-//     "uid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-//     "credits": 220,
-//     "return_url": "https://your-site/pricing.html?paid=1"
-//   }
-// }
-//
-// This handler is idempotent thanks to an UPSERT on payments(transaction_id).
-// It then increments the user's credits (read + write).
-// Make sure you've created the `payments` table with a unique transaction_id column.
+// Updated: tolerant to Dodo payloads like { type: "payment.succeeded", status: "succeeded", data: {...} }
+// - Accepts transaction id under payment_id or transaction_id
+// - Accepts status "paid" or "succeeded"
+// - Accepts metadata at body.metadata, body.data.metadata, or body.data.payment.metadata
+// - FALLBACKS when metadata.uid missing:
+//     * Map product_id -> credits (PRODUCT_CREDIT_MAP env or internal default)
+//     * Try to resolve uid by customer.email against Supabase profiles.email
+//       (requires profiles.email column to exist; otherwise skip)
+// - Still idempotent UPSERT on payments(transaction_id)
+// - Only minimal, surgical changes; core logic preserved.
+
+const PRODUCT_CREDIT_MAP = (() => {
+  try {
+    // JSON like: {"pdt_EfHDUnsXi3GqJwOS3qaPw":50}
+    return JSON.parse(process.env.PRODUCT_CREDIT_MAP || "{}");
+  } catch { return {}; }
+})();
 
 export async function handler(event) {
   try {
@@ -30,27 +23,46 @@ export async function handler(event) {
       return json(405, { error: "Method Not Allowed" });
     }
 
-    // Safety: basic JSON parse
     let body;
-    try {
-      body = JSON.parse(event.body || "{}");
-    } catch {
-      return json(400, { error: "Bad JSON" });
-    }
+    try { body = JSON.parse(event.body || "{}"); }
+    catch { return json(400, { error: "Bad JSON" }); }
 
-    const {
-      status,
-      transaction_id,
-      amount,
-      currency,
-      metadata = {}
-    } = body || {};
+    // Unify shape
+    const root = body || {};
+    const data = root.data || root;
+    const type = root.type || data.type || null;
+    const payloadType = root.payload_type || data.payload_type || null;
+    let status = root.status || data.status || null;
+    if (!status && type === "payment.succeeded") status = "succeeded";
 
-    const uid = metadata.uid;
-    const credits = Number(metadata.credits);
+    // transaction id
+    const transaction_id = root.transaction_id || data.transaction_id || data.payment_id || root.payment_id || null;
 
-    if (status !== "paid" || !transaction_id || !uid || !credits) {
-      return json(400, { error: "Invalid payload" });
+    // money
+    const amount_cents = data.total_amount ?? data.settlement_amount ?? root.amount ?? null;
+    const currency = data.currency || data.settlement_currency || root.currency || null;
+
+    // metadata (multiple places)
+    const meta =
+      root.metadata ||
+      data.metadata ||
+      (data.payment && data.payment.metadata) ||
+      {};
+
+    // product id (to map credits when metadata missing)
+    const product_id = (Array.isArray(data.product_cart) && data.product_cart[0]?.product_id) || null;
+    const quantity = (Array.isArray(data.product_cart) && Number(data.product_cart[0]?.quantity || 1)) || 1;
+
+    // extract uid/credits
+    let uid = meta.uid || null;
+    let credits = Number(meta.credits || 0);
+
+    // normalize success status
+    const okStatus = (status === "paid" || status === "succeeded");
+
+    // Fallback credits from product id
+    if (!credits && product_id && PRODUCT_CREDIT_MAP[product_id]) {
+      credits = Number(PRODUCT_CREDIT_MAP[product_id]) * quantity;
     }
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -59,7 +71,26 @@ export async function handler(event) {
       return json(500, { error: "Missing Supabase env" });
     }
 
-    // 1) UPSERT into payments (idempotent by transaction_id)
+    // Fallback uid from customer.email (if available), by looking up profiles table
+    if (!uid) {
+      const email = (data.customer && data.customer.email) || root.email || null;
+      if (email) {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=id`, {
+          headers: { "Accept": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+        });
+        if (r.ok) {
+          const rows = await r.json();
+          uid = rows?.[0]?.id || null;
+        }
+      }
+    }
+
+    // Validate minimum
+    if (!okStatus || !transaction_id || !uid || !credits) {
+      return json(400, { error: "Invalid payload", debug: { okStatus, transaction_id, uid: !!uid, credits } });
+    }
+
+    // 1) UPSERT into payments
     {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/payments?on_conflict=transaction_id`, {
         method: "POST",
@@ -73,30 +104,26 @@ export async function handler(event) {
           transaction_id,
           uid,
           credits,
-          amount_cents: amount ?? null,
-          currency: currency ?? null,
+          amount_cents,
+          currency,
           status: "paid",
           provider: "dodopayments",
-          return_url: metadata.return_url ?? null,
-          payload: body,
+          return_url: meta.return_url ?? null,
+          payload: root,
           paid_at: new Date().toISOString()
         }])
       });
-
       if (!res.ok) {
         const text = await res.text();
         return json(500, { error: "payments upsert failed", detail: text });
       }
     }
 
-    // 2) Read current credits
+    // 2) Fetch current credits
     let currentCredits = 0;
     {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(uid)}&select=credits`, {
-        headers: {
-          "Accept": "application/json",
-          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-        }
+        headers: { "Accept": "application/json", "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
       });
       if (!res.ok) {
         const text = await res.text();
@@ -106,7 +133,7 @@ export async function handler(event) {
       currentCredits = Number(rows?.[0]?.credits ?? 0);
     }
 
-    // 3) Update credits (simple add). For heavy concurrency you can switch to a SQL RPC.
+    // 3) Update credits
     {
       const newCredits = currentCredits + credits;
       const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(uid)}`, {
@@ -131,7 +158,7 @@ export async function handler(event) {
   }
 }
 
-// Utility: JSON response with CORS
+// Utility
 function json(status, obj) {
   return {
     statusCode: status,
