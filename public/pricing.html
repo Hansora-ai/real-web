@@ -92,6 +92,23 @@ hr, .section-line { border-color: var(--base-bg) !important; opacity:.12 }
   }
 }
 </style>
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1336278884948294');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 </head>
 <body>
 <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
@@ -974,5 +991,45 @@ if (!Number.isFinite(credits) || credits<=0){
 })();
 </script>
 <!-- END: HARD-BLOCK if uid missing; robust Supabase UID resolver -->
+
+<script>
+(function(){
+  try {
+    function normalize(s){ return (s||'').trim().toLowerCase(); }
+    function extractInfo(card){
+      var info = {content_name: '', value: null, currency: 'USD'};
+      if(!card) return info;
+      var text = card.innerText || '';
+      var mCredits = text.match(/(\d{2,4})\s*credits/i);
+      if(mCredits) info.content_name = mCredits[1] + ' credits';
+      var mPrice = text.replace(/,/g,'').match(/\$(\d+(?:\.\d+)?)/);
+      if(mPrice) info.value = parseFloat(mPrice[1]);
+      return info;
+    }
+
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('a,button'));
+    buttons = buttons.filter(function(el){
+      return normalize(el.textContent) === 'buy';
+    });
+
+    buttons.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        try{
+          var card = btn.closest('.card, .pricing-card, .plan, .package, .bundle, .credit, .item, .shadow, .rounded');
+          var info = extractInfo(card);
+          if(typeof fbq === 'function'){
+            if(info.value){
+              fbq('track','InitiateCheckout',{value: info.value, currency: info.currency, content_name: info.content_name});
+            } else {
+              fbq('track','InitiateCheckout');
+            }
+          }
+        }catch(e){}
+      }, {capture:true});
+    });
+  } catch(e){}
+})();
+</script>
+
 </body>
 </html>
