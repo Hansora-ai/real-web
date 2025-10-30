@@ -1031,5 +1031,61 @@ if (!Number.isFinite(credits) || credits<=0){
 })();
 </script>
 
+
+<script>
+/* Meta Pixel: InitiateCheckout tracking for ALL Buy buttons + safe delay navigation */
+(function(){
+  function normalize(s){ return (s||'').trim().toLowerCase(); }
+  function extractInfo(card){
+    var info = {content_name:'', value:null, currency:'USD'};
+    if(!card) return info;
+    var t = (card.innerText||'').replace(/\s+/g,' ');
+    var mC = t.match(/(\d{2,4})\s*credits/i);
+    if(mC) info.content_name = mC[1] + ' credits';
+    var mP = t.replace(/,/g,'').match(/\$(\d+(?:\.\d+)?)/);
+    if(mP) info.value = parseFloat(mP[1]);
+    return info;
+  }
+  document.addEventListener('click', function(e){
+    var el = e.target && e.target.closest && e.target.closest('a,button');
+    if(!el) return;
+    var txt = normalize(el.textContent);
+    var href = (el.getAttribute && el.getAttribute('href')) || '';
+    var id = (el.id||'').toLowerCase();
+    var cls = (el.className||'').toString().toLowerCase();
+    var isBuy = txt==='buy' || txt.indexOf('buy')>=0 || (href && (href.toLowerCase().indexOf('dodo')>=0 || href.indexOf('#buy')>=0)) || id.indexOf('buy')>=0 || cls.indexOf('buy')>=0;
+    if(!isBuy) return;
+    try{
+      var card = el.closest('.card, .pricing-card, .plan, .package, .bundle, .credit, .item, .shadow, .rounded, .box');
+      var info = extractInfo(card);
+      if (typeof fbq === 'function'){
+        if(info.value){
+          fbq('track','InitiateCheckout',{value:info.value, currency:info.currency, content_name:info.content_name});
+          console.log('✅ Pixel InitiateCheckout sent', info);
+        } else {
+          fbq('track','InitiateCheckout');
+          console.log('✅ Pixel InitiateCheckout sent');
+        }
+      } else {
+        console.log('⚠️ fbq not available at click time');
+      }
+      // If this is a link, delay navigation slightly so the pixel can flush
+      if (el.tagName.toLowerCase() === 'a' && href && !/^javascript:/i.test(href)) {
+        e.preventDefault();
+        var target = el.getAttribute('target');
+        var doNav = function(){
+          if (target === '_blank') { window.open(href, '_blank'); }
+          else { window.location.href = href; }
+        };
+        // 180ms is enough for pixel to send, feels instant to users
+        setTimeout(doNav, 180);
+      }
+    }catch(err){
+      console.log('⚠️ Pixel click handler error', err);
+    }
+  }, {capture:true});
+})();
+</script>
+
 </body>
 </html>
