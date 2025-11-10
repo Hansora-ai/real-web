@@ -47,7 +47,7 @@
             .maybeSingle();
           const c = prof2?.credits ?? 0;
           // Minimal guard: block if below 0.5 (lowest possible cost)
-          if (c < 4) {
+          if (c < 0.5) {
             console.warn('No credits left.');
             alert('Not enough credits.');
             return;
@@ -331,8 +331,7 @@ window.__run=async function(){
     const cur = prof?.credits ?? 0;
     if (cur < cost) {
       showStatus('Not enough credits (need '+cost+').','text-rose-300');
-      runBtn.disabled = false; runBtn.textContent = (model==='ultra'?'Run (cost: 4⚡)':'Run (cost: 4⚡)');
-      return;
+      runBtn.disabled = false; runBtn.textContent = 'Run (cost: 4⚡)'; return;
     }
   }catch(_){}
 
@@ -379,13 +378,16 @@ if (fileEl && fileEl.files && fileEl.files.length){
   }
 }
 
+// Debit before submitting to prevent free jobs on failure
+await chargeCost(cost);
+
 const res = await fetch('/.netlify/functions/run-gpt-image-1',{
   method:'POST',
   headers:{'Content-Type':'application/json','X-USER-ID':uid},
   body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_urls })
 });
 if (res.status === 201 || res.status === 200 || res.status === 202) {
-      /* client-side debit removed — server will deduct after successful submit */
+      /* client-side debit removed */
     } else {
       const errT = await res.text().catch(()=> '');
       throw new Error('Create failed: ' + errT);
@@ -393,11 +395,7 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
 
 const resJson = await res.json().catch(()=> ({}));
 const id = resJson?.id || resJson?.prediction_id || resJson?.data?.id || null;
-
 showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-  // client-side debit removed to match Imagen (server handles deduction)
-
-
 // Start polling prediction
 imagenCheckPoll(id, uid, rid);
 
