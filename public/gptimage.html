@@ -47,7 +47,7 @@
             .maybeSingle();
           const c = prof2?.credits ?? 0;
           // Minimal guard: block if below 0.5 (lowest possible cost)
-          if (c < 0.5) {
+          if (c < 4) {
             console.warn('No credits left.');
             alert('Not enough credits.');
             return;
@@ -385,7 +385,7 @@ const res = await fetch('/.netlify/functions/run-gpt-image-1',{
   body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_urls })
 });
 if (res.status === 201 || res.status === 200 || res.status === 202) {
-      /* client-side debit removed */
+      /* client-side debit removed — server will deduct after successful submit */
     } else {
       const errT = await res.text().catch(()=> '');
       throw new Error('Create failed: ' + errT);
@@ -395,7 +395,7 @@ const resJson = await res.json().catch(()=> ({}));
 const id = resJson?.id || resJson?.prediction_id || resJson?.data?.id || null;
 
 showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-  await chargeCost(cost);
+  // client-side debit removed to match Imagen (server handles deduction)
 
 
 // Start polling prediction
