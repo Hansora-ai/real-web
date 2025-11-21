@@ -103,7 +103,7 @@ function allowed(u){
   if (!isUrl(u)) return false;
   const h = host(u);
   if (!ALLOWED_HOSTS.has(h)) return false;
-  if (!/\/(m|f|workers|r)\//i.test(u)) return false;
+  if (!/\/(m|f|workers|r|h)\//i.test(u)) return false;
   return true;
 }
 
