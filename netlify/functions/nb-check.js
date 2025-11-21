@@ -91,7 +91,7 @@ async function fetchAll(taskId){
 }
 
 function normalizeStatus(d){
-  const s = String(d?.status || d?.state || d?.result?.status || d?.data?.state || d?.data?.status || '').toLowerCase();
+  const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || d?.data?.state || '').toLowerCase();
   if (['success','succeeded','completed','done'].includes(s)) return 'success';
   if (['failed','error'].includes(s)) return 'failed';
   return 'pending';
