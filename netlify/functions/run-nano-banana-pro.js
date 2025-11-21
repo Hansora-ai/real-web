@@ -45,9 +45,19 @@ exports.handler = async (event) => {
     const cb = `${CALLBACK_URL}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
 
     // Build KIE payload
+    const input = {
+      prompt,
+      aspect_ratio: size,
+      resolution: normalizeResolution(body.resolution),
+      output_format: format
+    };
+    if (Array.isArray(image_input) && image_input.length) {
+      input.image_input = image_input;
+    }
+
     const payload = {
       model: "nano-banana-pro",
-      input: { prompt, image_input, aspect_ratio: size, resolution: normalizeResolution(body.resolution), output_format: format },
+      input,
 
       // Callbacks (add all variants)
       webhook_url: cb,
