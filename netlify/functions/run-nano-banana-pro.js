@@ -28,9 +28,7 @@ exports.handler = async (event) => {
 
     // Required inputs
     const rawUrls = Array.isArray(body.urls) ? body.urls : [];
-    if (!rawUrls.length) {
-      return ok({ submitted: false, note: "urls_required", version: VERSION_TAG });
-    }
+// For Nano Banana Pro, image_input is optional, so empty urls are allowed.
 
     // Normalize/encode URLs (handles spaces/commas)
     const image_input = rawUrls.map(u => encodeURI(String(u)));
