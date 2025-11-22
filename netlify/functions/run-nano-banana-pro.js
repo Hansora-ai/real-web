@@ -166,7 +166,19 @@ function normalizeImageSize(v) {
   const s = String(v).trim().toLowerCase();
 
   // Pass through if already valid ratio or auto
-  const direct = new Set(["auto", "1:1", "3:4", "4:3", "9:16", "16:9"]);
+  const direct = new Set([
+    "auto",
+    "1:1",
+    "2:3",
+    "3:2",
+    "3:4",
+    "4:3",
+    "4:5",
+    "5:4",
+    "9:16",
+    "16:9",
+    "21:9"
+  ]);
   if (direct.has(s)) return s;
 
   // Map named tokens to ratio strings (KIE-accepted)
@@ -176,7 +188,7 @@ function normalizeImageSize(v) {
   if (s === "landscape_4_3") return "4:3";
   if (s === "landscape_16_9") return "16:9";
 
-  // Coerce variants like "16_9", "16-9" → "16:9"
+  // Coerce variants like "16_9", "16-9", "2-3" → "2:3"
   const coerced = s.replace(/(\d)[_\-:](\d)/g, "$1:$2");
   if (direct.has(coerced)) return coerced;
 
