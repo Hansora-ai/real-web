@@ -18,7 +18,7 @@
     const runBtn = document.getElementById('runBtn');
     function renderCredits(c){
       if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-      if (runBtn) {
+      if (runBtn && !__isRunning) {
         const ok = true;
         runBtn.disabled=false;
         runBtn.classList.toggle('opacity-50', !ok);
@@ -80,7 +80,7 @@
           const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
           const c = prof?.credits ?? 0;
           const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
-          const runBtn = document.getElementById('runBtn'); if (runBtn){
+          const runBtn = document.getElementById('runBtn'); if (runBtn && !__isRunning){
             const zero = false;
             runBtn.disabled = zero;
             runBtn.classList.toggle('opacity-50', zero);
@@ -263,6 +263,9 @@ const statusEl=document.getElementById('status');
 const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
 
+// Track whether a run is currently in progress to keep the Run button locked
+let __isRunning = false;
+
 filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,4).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
@@ -397,6 +400,7 @@ window.__run=async function(){
     }
   }catch(_){ /* ignore, proceed cautiously */ }
 
+  __isRunning = true;
   __done=false;
   const files=[...filesEl.files];
   if(files.length>4){alert('Max 4 images.');return;}
@@ -510,6 +514,7 @@ window.__run=async function(){
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300')
   }finally{
+    __isRunning = false;
     runBtn.disabled=false;runBtn.textContent='Run (cost: 3⚡)';
   }
 };
