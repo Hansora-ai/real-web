@@ -182,7 +182,6 @@ function isAllowedFinal(u){
   if (!isUrl(u)) return false;
   const h = host(u);
   if (!ALLOWED_HOSTS.has(h)) return false;
-  if (!/\/(workers|f|m|r|h)\//i.test(u)) return false;
   return true;
 }
 
