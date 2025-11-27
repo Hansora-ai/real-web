@@ -131,6 +131,7 @@
         <button class="btn" data-filter="runway">Runway</button>
         <button class="btn" data-filter="gpt_image">GPT Image</button>
         <button class="btn" data-filter="nano_banana">Nano Banana</button>
+        <button class="btn" data-filter="nano-banana-pro">Nano Banana Pro</button>
       </div>
       <div id="grid" class="mt-6"></div>
       <p id="err" class="mt-3 text-sm text-rose-300"></p>
@@ -261,6 +262,7 @@ function linkifyHighlight(text, modelSlug){
       .replace(/\[\[RUNWAY\]\]/gi, '<a class="inline-link" href="runway.html">Runway</a>')
       .replace(/\[\[GPTIMAGE\]\]/gi, '<a class="inline-link" href="gptimage.html">GPT Image</a>')
       .replace(/\[\[VEO3\.1\]\]/gi, '<a class="inline-link" href="veo3_1.html">VEO 3.1</a>')
+      .replace(/\[\[NANOBANANAPRO\]\]/gi, '<a class="inline-link" href="nano-banana-pro.hmtl">Nano Banana Pro</a>')
       .replace(/\[\[NANOBANANA\]\]/gi, '<a class="inline-link" href="nano-banana.html">Nano Banana</a>');
     if (!/\[\[(VEO3|KLING|IMAGEN|SORA|MIDJOURNEY|RUNWAY|GPTIMAGE|VEO3\.1|NANOBANANA)\]\]/i.test(text) && MODEL_LINKS[(modelSlug||'').toLowerCase()]) {
       html += ` — <a class="inline-link" href="${MODEL_LINKS[(modelSlug||'').toLowerCase()]}">${(modelSlug||'').toUpperCase()}</a>`;
