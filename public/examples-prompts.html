@@ -264,7 +264,7 @@ function linkifyHighlight(text, modelSlug){
       .replace(/\[\[VEO3\.1\]\]/gi, '<a class="inline-link" href="veo3_1.html">VEO 3.1</a>')
       .replace(/\[\[NANOBANANAPRO\]\]/gi, '<a class="inline-link" href="nano-banana-pro.hmtl">Nano Banana Pro</a>')
       .replace(/\[\[NANOBANANA\]\]/gi, '<a class="inline-link" href="nano-banana.html">Nano Banana</a>');
-    if (!/\[\[(VEO3|KLING|IMAGEN|SORA|MIDJOURNEY|RUNWAY|GPTIMAGE|VEO3\.1|NANOBANANA)\]\]/i.test(text) && MODEL_LINKS[(modelSlug||'').toLowerCase()]) {
+    if (!/\[\[(VEO3|KLING|IMAGEN|SORA|MIDJOURNEY|RUNWAY|GPTIMAGE|VEO3\.1|NANOBANANA|NANOBANANAPRO)\]\]/i.test(text) && MODEL_LINKS[(modelSlug||'').toLowerCase()]) {
       html += ` — <a class="inline-link" href="${MODEL_LINKS[(modelSlug||'').toLowerCase()]}">${(modelSlug||'').toUpperCase()}</a>`;
     }
     return html;
