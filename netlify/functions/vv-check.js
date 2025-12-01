@@ -43,6 +43,20 @@ exports.handler = async (event) => {
       if (/\.mp4(\?|#|$)/i.test(u)) { video_url = u; break; }
     }
 
+    // Fallback for providers where KIE record-info has no direct mp4 (e.g. Kling).
+    // If callback already wrote result_url into user_generations, reuse that.
+    if (!video_url && SUPABASE_URL && SERVICE_KEY && uid && run_id) {
+      try {
+        const q2 = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=result_url&order=created_at.desc&limit=1`;
+        const r2 = await fetch(UG_URL + q2, { headers: sb() });
+        const arr2 = await r2.json().catch(() => []);
+        const row = Array.isArray(arr2) && arr2.length ? arr2[0] : null;
+        if (row && row.result_url && isAllowed(row.result_url) && /\.mp4(\?|#|$)/i.test(row.result_url)) {
+          video_url = row.result_url;
+        }
+      } catch {}
+    }
+
     const out = { ok: !!video_url, status: video_url ? "success" : "pending", video_url, version: VERSION_TAG };
     if (!video_url) return json(200, out);
 
