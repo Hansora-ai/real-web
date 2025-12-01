@@ -301,10 +301,10 @@ async function vvCheckPoll(taskId, uid, rid){
 
 // Supabase upload helpers (same as Veo/Nano Banana)
 async function signForUpload(filename, contentType){
-  const res = await fetch('/.netlify/functions/sign-upload', {
+  const res = await fetch('/.netlify/functions/sign-upload-kling', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filename, contentType })
+    body: JSON.stringify({ filename, mime: contentType || 'image/png', contentType })
   });
   const j = await res.json().catch(()=>null);
   if (!res.ok || !j || !(j.uploadUrl || j.signedUrl) || !j.publicUrl){
@@ -320,26 +320,10 @@ async function headWarm(url){
   try{ await fetch(url, { method:'HEAD', cache:'no-store' }); }catch{}
 }
 async function uploadToSupabase(file){
-  // Direct upload via Supabase Storage for Kling (avoid .bin URLs)
-  if (!file) throw new Error('no_file');
-
-  // Ensure we use an image extension and MIME
-  let ext = 'png';
-  if (file.type === 'image/jpeg') ext = 'jpg';
-  else if (file.type === 'image/webp') ext = 'webp';
-
-  const path = `video/images/kling/${new Date().getFullYear()}/${String(new Date().getMonth()+1).padStart(2,'0')}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-  const { error: upErr } = await supabase.storage
-    .from('downloads')
-    .upload(path, file, { contentType: file.type || 'image/png', upsert: false });
-
-  if (upErr) throw upErr;
-
-  const { data } = supabase.storage.from('downloads').getPublicUrl(path);
-  if (!data || !data.publicUrl) throw new Error('no_public_url');
-
-  return data.publicUrl;
+  const sign = await signForUpload(file.name || 'image.png', file.type || 'image/png');
+  await putFile(sign.uploadUrl, file, file.type || 'application/octet-stream');
+  await headWarm(sign.publicUrl);
+  return sign.publicUrl;
 }
 
 // Main run
