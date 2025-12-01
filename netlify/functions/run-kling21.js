@@ -54,7 +54,7 @@ exports.handler = async (event) => {
 
         const payload = {
           user_id: uid,
-          provider: "klingv2.1pro",
+          provider: duration === 5 ? "klingv2.1pro5s" : "klingv2.1pro10s",
           kind: "video",
           prompt,
           result_url: null,
@@ -92,7 +92,7 @@ exports.handler = async (event) => {
       metadata: {
         uid,
         run_id,
-        provider: "klingv2.1pro"
+        provider: duration === 5 ? "klingv2.1pro5s" : "klingv2.1pro10s"
       }
     };
 
