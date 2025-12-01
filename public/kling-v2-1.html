@@ -331,22 +331,26 @@ async function headWarm(url){
   try{ await fetch(url, { method:'HEAD', cache:'no-store' }); }catch{}
 }
 async function uploadToSupabase(file){
-  // Ensure proper filename + MIME type for KIE (no .bin / octet-stream)
-  let filename = file && file.name ? file.name : 'image.png';
-  // If the name has no extension, force .png so KIE sees a real image URL
-  if (!/\.[a-zA-Z0-9]+$/.test(filename)) {
-    filename = filename + '.png';
-  }
+  // Direct upload via Supabase Storage for Kling (avoid .bin URLs)
+  if (!file) throw new Error('no_file');
 
-  let contentType = file && file.type ? file.type : 'image/png';
-  if (contentType === 'application/octet-stream') {
-    contentType = 'image/png';
-  }
+  // Ensure we use an image extension and MIME
+  let ext = 'png';
+  if (file.type === 'image/jpeg') ext = 'jpg';
+  else if (file.type === 'image/webp') ext = 'webp';
 
-  const sign = await signForUpload(filename, contentType);
-  await putFile(sign.uploadUrl, file, contentType);
-  await headWarm(sign.publicUrl);
-  return sign.publicUrl;
+  const path = `video/images/kling/${new Date().getFullYear()}/${String(new Date().getMonth()+1).padStart(2,'0')}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  const { error: upErr } = await supabase.storage
+    .from('downloads')
+    .upload(path, file, { contentType: file.type || 'image/png', upsert: false });
+
+  if (upErr) throw upErr;
+
+  const { data } = supabase.storage.from('downloads').getPublicUrl(path);
+  if (!data || !data.publicUrl) throw new Error('no_public_url');
+
+  return data.publicUrl;
 }
 
 // Main run
