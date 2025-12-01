@@ -81,6 +81,17 @@
         </p>
 
         <div class="mt-4 space-y-3">
+          <!-- Model info -->
+          <div>
+            <label class="text-xs text-zinc-400">Model</label>
+            <div class="mt-1">
+              <div class="inline-flex items-center gap-2 rounded-lg px-3 py-2 border border-white/10 bg-white/10 font-medium">
+                <span>Kling v2.1 Pro</span>
+              </div>
+            </div>
+            <p id="costHint" class="mt-1 text-xs text-zinc-400">Cost: 4⚡ (5s) or 8⚡ (10s)</p>
+          </div>
+
           <div>
             <label class="text-xs text-zinc-400">Image *</label>
             <div class="grid grid-cols-2 gap-3 mt-1">
@@ -320,8 +331,20 @@ async function headWarm(url){
   try{ await fetch(url, { method:'HEAD', cache:'no-store' }); }catch{}
 }
 async function uploadToSupabase(file){
-  const sign = await signForUpload(file.name || 'image.png', file.type || 'image/png');
-  await putFile(sign.uploadUrl, file, file.type || 'application/octet-stream');
+  // Ensure proper filename + MIME type for KIE (no .bin / octet-stream)
+  let filename = file && file.name ? file.name : 'image.png';
+  // If the name has no extension, force .png so KIE sees a real image URL
+  if (!/\.[a-zA-Z0-9]+$/.test(filename)) {
+    filename = filename + '.png';
+  }
+
+  let contentType = file && file.type ? file.type : 'image/png';
+  if (contentType === 'application/octet-stream') {
+    contentType = 'image/png';
+  }
+
+  const sign = await signForUpload(filename, contentType);
+  await putFile(sign.uploadUrl, file, contentType);
   await headWarm(sign.publicUrl);
   return sign.publicUrl;
 }
