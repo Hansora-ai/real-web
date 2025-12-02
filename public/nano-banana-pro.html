@@ -206,7 +206,7 @@
 <label class="text-xs text-zinc-400">Prompt</label>
 <textarea class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark" id="prompt" placeholder="Describe the edit or style…"></textarea>
 </div>
-<button class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" id="runBtn" onclick="__run()" type="button">Run (cost: 3⚡)</button>
+<button class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" id="runBtn" onclick="__run()" type="button">Run (cost: 2⚡)</button>
 <div class="mt-2 text-sm" id="status"></div>
 </div>
 </div>
@@ -294,7 +294,7 @@ function onResult(url){
 }
 
 // Credits + URL extraction helpers
-async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 3)throw new Error('Not enough credits (need 3).');await supabase.from('profiles').update({credits:cur-3}).eq('user_id',data.user.id);}
+async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 2)throw new Error('Not enough credits (need 2).');await supabase.from('profiles').update({credits:cur-2}).eq('user_id',data.user.id);}
 
 function derivePublicUrl(up){
   if (!up) return null;
@@ -393,9 +393,9 @@ window.__run=async function(){
   try{
     const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
     const cur = prof?.credits ?? 0;
-    if (cur < 3) {
-      showStatus('Not enough credits (need 3).','text-rose-300');
-      runBtn.disabled = false; runBtn.textContent = "Run (cost: 3⚡)";
+    if (cur < 2) {
+      showStatus('Not enough credits (need 2).','text-rose-300');
+      runBtn.disabled = false; runBtn.textContent = "Run (cost: 2⚡)";
       return;
     }
   }catch(_){ /* ignore, proceed cautiously */ }
@@ -438,7 +438,7 @@ window.__run=async function(){
       // guard: if uploads were attempted but no URLs produced, stop here
       if (urls.length === 0) {
         showStatus('Upload failed: no image URLs to send','text-rose-300');
-        runBtn.disabled = false; runBtn.textContent = 'Run (cost: 3⚡)';
+        runBtn.disabled = false; runBtn.textContent = 'Run (cost: 2⚡)';
         return;
       }
     } else {
@@ -515,7 +515,7 @@ window.__run=async function(){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300')
   }finally{
     __isRunning = false;
-    runBtn.disabled=false;runBtn.textContent='Run (cost: 3⚡)';
+    runBtn.disabled=false;runBtn.textContent='Run (cost: 2⚡)';
   }
 };
 </script></script>
