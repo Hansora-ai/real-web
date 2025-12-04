@@ -131,6 +131,7 @@ exports.handler = async (event) => {
         prompt,
         aspect_ratio,
         duration: (duration === 10 ? '10' : '5'),
+        sound: true,
         ...(image_url ? { image_url } : {}),
       },
       callBackUrl: `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`,
