@@ -127,12 +127,15 @@ exports.handler = async (event) => {
     // Build KIE createTask payload
     const payload = {
       model,
-      input: {
+      input: image_url ? {
         prompt,
-        aspect_ratio,
         duration: (duration === 10 ? '10' : '5'),
         sound: true,
-        ...(image_url ? { image_url } : {}),
+        image_urls: [image_url],
+      } : {
+        prompt,
+        duration: (duration === 10 ? '10' : '5'),
+        sound: true,
       },
       callBackUrl: `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`,
     };
