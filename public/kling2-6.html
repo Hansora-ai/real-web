@@ -436,10 +436,14 @@ let imageUrl = '';
 if (fileEl && fileEl.files && fileEl.files.length){
   imageUrl = await uploadToSupabase(fileEl.files[0]);
 }
+const payload = { prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid };
+if (imageUrl){
+  payload.imageUrl = imageUrl;
+}
 const res = await fetch('/.netlify/functions/run-kling-26',{
   method:'POST',
   headers:{'Content-Type':'application/json','X-USER-ID':uid},
-  body:JSON.stringify({prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, imageUrl })
+  body: JSON.stringify(payload)
 });
 if (res.status === 201 || res.status === 200 || res.status === 202) {
       /* client-side debit removed */
