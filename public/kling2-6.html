@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA • Kling 2.6</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Live credits + wrappers (1:1 with working image feature) -->
+  <script>
+  // === Live credits (Supabase Realtime) + pre-run check ===
+  (async function HANSORA_LIVE_CREDITS(){
+    try{
+      const navCreditsEl = document.getElementById('navCredits');
+      const runBtn = document.getElementById('runBtn');
+      function renderCredits(c){
+        if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+        if (runBtn) {
+          const ok = true;
+          if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false;
+          runBtn.classList.toggle('opacity-50', !ok);
+          runBtn.classList.toggle('cursor-not-allowed', !ok);
+        }
+      }
+
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if(!user) return;
+
+      // initial fetch
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      renderCredits(prof?.credits ?? 0);
+
+      // subscribe to updates
+      supabase.channel('credits_live_' + user.id)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
+          (payload) => { renderCredits(payload.new?.credits ?? 0); }
+        )
+        .subscribe();
+
+      // patch __run to guard when credits are 0 (without changing its internals)
+      const __origRun = window.__run;
+      window.__run = async function(){
+        try{
+          const { data: prof2 } = await supabase
+            .from('profiles')
+            .select('credits')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          const c = prof2?.credits ?? 0;
+          // Minimal guard: block if below 0.5 (lowest possible cost)
+          if (c < 0.5) {
+            console.warn('No credits left.');
+            alert('Not enough credits.');
+            return;
+          }
+        }catch{}
+        return __origRun ? __origRun() : undefined;
+      };
+    }catch(e){ console.warn('credits live failed', e); }
+  })();
+  </script>
+
+  <script>
+  (function(){
+    function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+    ready(async function(){
+      try{
+        if (typeof supabase === 'undefined' || !supabase.auth) return;
+
+        async function __refreshCredits(){
+          try{
+            const ures = await supabase.auth.getUser();
+            const user = ures?.data?.user; if(!user) return null;
+            const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+            const c = prof?.credits ?? 0;
+            const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
+            const runBtn = document.getElementById('runBtn'); if (runBtn){
+              const zero = false;
+              if(!window.__klingBusy){ runBtn.disabled=zero; }
+              runBtn.classList.toggle('opacity-50', zero);
+              runBtn.classList.toggle('cursor-not-allowed', zero);
+            }
+            return c;
+          }catch(e){ console.warn('refreshCredits failed', e); return null; }
+        }
+
+        // On load
+        await __refreshCredits();
+
+        // Wrap chargeCost (client debit) to repaint after debit
+        if (typeof window.chargeCost === 'function'){
+          const __origCharge = window.chargeCost;
+          window.chargeCost = async function(cost){
+            const out = await __origCharge(cost);
+            await __refreshCredits();
+            return out;
+          };
+        }
+
+        // Also poll briefly after Run to catch server-side debit
+        if (typeof window.__run === 'function'){
+          const __origRun = window.__run;
+          window.__run = async function(){
+            const ret = await __origRun();
+            const id = setInterval(__refreshCredits, 1500);
+            setTimeout(()=>clearInterval(id), 15000);
+            return ret;
+          };
+        }
+      }catch(e){ console.warn('live credits wrapper error', e); }
+    });
+  })();
+  </script>
+
+  <style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+                       var(--base-bg); color:#e5e7eb}
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    #navAvatar{background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%25%22 stop-color=%2291c1ff%22/><stop offset=%22100%25%22 stop-color=%225a8cff%22/></linearGradient></defs><circle cx=%2264%22 cy=%2264%22 r=%2264%22 fill=%22url(%23g)%22/><circle cx=%2264%22 cy=%2250%22 r=%2222%22 fill=%22white%22 fill-opacity=%22.9%22/><path d=%22M20 108a44 30 0 0 1 88 0%22 fill=%22white%22 fill-opacity=%22.9%22/></svg>');background-size:cover;background-position:center;}
+    .input-dark{background:rgba(255,255,255,.05)!important;color:#e5e7eb!important;border:1px solid rgba(255,255,255,.12)!important}
+    .input-dark::placeholder{color:#9ca3af}
+    select.input-dark option{background:#0b0d13;color:#e5e7eb}
+  </style>
+<script>window.__klingBusy=false;</script>
+</head>
+<body class="min-h-screen">
+  <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+        <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora logo" class="h-9 w-9 rounded-full object-cover" />
+        <span class="font-semibold tracking-wide">HANSORA AI</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-8 text-sm">
+        <a href="models.html" class="hover:text-white/90">Models</a>
+        <a href="examples-prompts.html" class="hover:text-white/90">Examples/Prompts</a>
+        <a href="templates.html" class="hover:text-white/90">Templates</a>
+        <a href="pricing.html" class="hover:text-white/90">Pricing</a>
+        <a href="index.html#faq" class="hover:text-white/90">FAQ</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="#" class="hidden text-sm hover:text-white/90 hidden sm:inline" style="display:none!important;visibility:hidden">EN / RU</a>
+        <a id="btnLoginNav" href="index.html#login" class="rounded-xl btn px-3 py-2 text-sm hidden"" style="display:none!important;visibility:hidden">Log in</a>
+        <a id="btnGetStarted" href="login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a>
+        <div id="navUser" class="hidden items-center gap-2">
+          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
+          <div class="relative">
+            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
+              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
+            </button>
+<div id="runError" class="mt-2 text-sm text-red-400 hidden"></div>
+            <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden"><a href="profile.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Profile</a><a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">History</a><a href="pricing.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscription</a><button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+        <h1 class="text-2xl font-bold">Kling 2.6 — Text or Image (with sound)</h1>
+        <p class="mt-1 text-sm text-zinc-400">Write a prompt. (Optional: upload an image to guide the result.)</p>
+
+        <div class="mt-4 space-y-3">
+          <!-- Optional image upload -->
+          <div>
+            <label class="text-xs text-zinc-400">Optional image (guidance)</label>
+            <input id="imageFile" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
+            <div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div>
+            <p class="text-xs text-zinc-500 mt-1">Not required — leave empty to generate from text only.</p>
+</div>
+          </div>
+
+          <!-- Aspect ratio -->
+          <div>
+            <label class="text-xs text-zinc-400">Aspect ratio (If an image is uploaded, the video will automatically match its aspect ratio)</label>
+            <select id="ratio" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark"><option value="1:1">1:1</option>
+<option value="16:9">16:9</option>
+<option value="9:16">9:16</option>
+</select>
+          </div>
+
+
+<div class="mt-3 flex items-center gap-3" id="durationRow">
+  <label class="text-sm text-white/70">Duration</label>
+  <select id="durationSelect" class="rounded-lg bg-white/10 border border-white/10 px-2 py-1 text-sm">
+    <option value="5" selected>5s</option>
+    <option value="10">10s</option>
+  </select>
+  <span id="costBadge" class="ml-2 text-sm text-white/80 hidden">Cost: 9⚡</span>
+</div>
+          <!-- Prompt -->
+          <div>
+            <label class="text-xs text-zinc-400">Prompt</label>
+            <textarea id="prompt" placeholder="Describe your image…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark"></textarea>
+          </div>
+
+          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()">Run (cost: 9⚡)</button>
+          <div id="status" class="mt-2 text-sm"></div>
+      </div>
+
+      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
+        <h3 class="text-lg font-semibold">Result</h3>
+        <p class="text-xs text-zinc-400">Generated image will appear below.</p>
+        <div id="resultBox" class="mt-3 aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
+          <span class="text-xs text-zinc-500">No result yet</span>
+        </div>
+        <a id="downloadLink" href="#" class="hidden mt-3 inline-block rounded-xl btn px-4 py-2 text-sm">Download</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="border-t border-base-line/60">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
+      <nav class="flex items-center gap-5">
+        <a href="index.html#terms" class="hover:text-white/80">Terms</a>
+        <a href="index.html#privacy" class="hover:text-white/80">Privacy</a>
+        <a href="index.html#contact" class="hover:text-white/80">Contact</a>
+      </nav>
+    </div>
+  </footer>
+
+<script>
+document.getElementById('y').textContent = new Date().getFullYear();
+
+// Supabase init (same as working page)
+const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Header UI (1:1)
+const $btnLoginNav = document.getElementById('btnLoginNav');
+const $btnGetStarted = document.getElementById('btnGetStarted');
+const $navUser = document.getElementById('navUser');
+const $navCredits = document.getElementById('navCredits');
+const $navAvatar = document.getElementById('navAvatar');
+const $navMenu = document.getElementById('navMenu');
+const $btnLogout = document.getElementById('btnLogout');
+const $navAvatarImg = document.getElementById('navAvatarImg');
+function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
+function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
+$navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
+document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
+$btnLogout?.addEventListener('click',async()=>{ if(window.__klingBusy){return;}await supabase.auth.signOut();showLoggedOutUI();});
+async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
+
+// Elements
+const promptEl=document.getElementById('prompt');
+const ratioEl=document.getElementById('ratio');
+const runBtn=document.getElementById('runBtn');
+const statusEl=document.getElementById('status');
+const resultBox=document.getElementById('resultBox');
+const downloadLink=document.getElementById('downloadLink');
+/* dynamic cost: 5s=7⚡, 10s=13⚡ via __klingComputeCost() */
+
+function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
+
+
+async function readFileAsDataUrl(file){
+  if(!file) return null;
+  return await new Promise((resolve) => {
+    try{
+      const fr = new FileReader();
+      fr.onload = () => resolve(fr.result);
+      fr.onerror = () => resolve(null);
+      fr.readAsDataURL(file);
+    }catch(e){ resolve(null); }
+  });
+}
+
+// Guarded renderer
+let __done=false;
+function onResult(url){
+  if(__done || !url) return;
+  __done = true;
+  const isVideo = /\.(mp4|mov|webm|gif)(\?|$)/i.test(url);
+  resultBox.innerHTML='';
+
+  function finalize(){
+    const __name = (url.split('/').pop()||'kling-result');
+    downloadLink.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(url)+'&name='+encodeURIComponent(__name);
+    downloadLink.setAttribute('download', __name);
+    downloadLink.classList.remove('hidden');
+    downloadLink.textContent='Download';
+    showStatus('✅ Done.','text-emerald-300');
+    if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+  }
+
+  if (isVideo){
+    const v = document.createElement('video');
+    v.controls = true; v.playsInline = true; v.autoplay = false; v.muted = false;
+    v.className = 'w-full h-full object-contain';
+    v.src = url;
+    resultBox.appendChild(v);
+    v.addEventListener('loadedmetadata', finalize, { once:true });
+    setTimeout(finalize, 300);
+  } else {
+    const img = new Image();
+    img.onload = finalize;
+    img.className='w-full h-full object-contain';
+    img.src=url;
+    resultBox.appendChild(img);
+  }
+}
+
+async function chargeCost(cost){
+  const {data}=await supabase.auth.getUser(); if(!data.user) return;
+  const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();
+  const cur=prof?.data?.credits??0;
+  if(cur < cost) throw new Error('Not enough credits (need '+cost+').');
+  await supabase.from('profiles').update({credits:cur - cost}).eq('user_id',data.user.id);
+}
+
+// Poller
+async function imagenCheckPoll(id, uid, rid){
+  if(!id) return;
+  const start = Date.now();
+  while(!__done && Date.now() - start < 480000){
+    try{
+      const r = await fetch('/.netlify/functions/kling-check?id='+encodeURIComponent(id)+'&uid='+encodeURIComponent(uid||'')+'&run_id='+encodeURIComponent(rid||''));
+      const j = await r.json().catch(()=>({}));
+      const status = String(j.status || '').toLowerCase();
+      if(status === 'succeeded' || j.ok){
+        const url = j.result_url || j.image_url || j.video_url || (Array.isArray(j.output) ? j.output[0] : null);
+        if(url){ onResult(url); break; }
+      }
+      if(status === 'failed' || status === 'canceled'){
+        showStatus('❌ Generation failed, please try again later. Your credits are refunded.','text-red-300');
+        if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+        break;
+      }
+    }catch{}
+    await new Promise(r=>setTimeout(r,1500));
+  }
+  if(!__done){
+    showStatus('❌ Generation failed, please try again later. Your credits are refunded.','text-red-300');
+    if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+  }
+}
+
+
+// --- Supabase direct upload helpers (Nano Banana 1:1 style) ---
+async function signForUpload(filename, contentType){
+  const res = await fetch('/.netlify/functions/sign-upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filename, mime: contentType })
+  });
+  const j = await res.json().catch(()=>null);
+  if (!res.ok || !j || !(j.uploadUrl || j.signedUrl) || !j.publicUrl){
+    throw new Error((j && j.error) ? j.error : 'sign_failed');
+  }
+  return { uploadUrl: j.uploadUrl || j.signedUrl, publicUrl: j.publicUrl };
+}
+async function putFile(url, file, contentType){
+  const r = await fetch(url, { method:'PUT', headers:{ 'Content-Type': contentType }, body: file });
+  if (!r.ok) throw new Error('put_failed_' + r.status);
+}
+async function headWarm(url){
+  try{ await fetch(url, { method:'HEAD', cache:'no-store' }); }catch{}
+}
+async function uploadToSupabase(file){
+  // 1:1 with Nano Banana behavior (bridge-equivalent):
+  // - Ensure JPG/PNG (convert others to JPEG)
+  // - Force safe filename extension and correct Content-Type
+  // - PUT file, then warm HEAD, return public URL
+  async function ensureJpegOrPng(f){
+    if (f && (f.type === 'image/jpeg' || f.type === 'image/png')) return f;
+    const bmp = await createImageBitmap(f);
+    const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+    c.getContext('2d').drawImage(bmp, 0, 0);
+    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
+    return new File([blob], (f.name || 'upload').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+  }
+
+  const f2 = await ensureJpegOrPng(file);
+  const safeName = (f2.name || 'upload').replace(/\.[^.]+$/, '') + (f2.type === 'image/png' ? '.png' : '.jpg');
+  const contentType = f2.type || (safeName.endsWith('.png') ? 'image/png' : 'image/jpeg');
+
+  const sign = await signForUpload(safeName, contentType);
+  await putFile(sign.uploadUrl, f2, contentType);
+  await headWarm(sign.publicUrl);
+  return sign.publicUrl;
+}
+// Main run
+window.__run=async function(){
+  const {data:authData}=await supabase.auth.getUser();
+  if(!authData.user){ alert('Please log in or register first.'); return; }
+
+  // Reset old result actions
+  downloadLink.classList.add('hidden'); downloadLink.removeAttribute('href');
+
+  __done=false;
+  const prompt=(promptEl.value||'').trim();
+  if(!prompt){ alert('Please enter a prompt.'); return; }
+
+  const cost = (typeof window.__klingComputeCost==='function' ? window.__klingComputeCost() : 7);
+// HARD CREDIT CHECK
+  try{
+    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
+    const cur = prof?.credits ?? 0;
+    if (cur < cost) {
+      showStatus('Not enough credits (need '+cost+').','text-rose-300');
+      if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+      return;
+    }
+  }catch(_){}
+
+  window.__klingBusy=true; runBtn.disabled=true; runBtn.textContent='Working…';
+  showStatus('Submitting…','text-zinc-400');
+  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~2-5m</span>';
+
+  try{
+    const uid=authData.user.id;
+    const rid=uid+'-'+Date.now();
+
+    const fileEl = document.getElementById('imageFile');
+let imageUrl = '';
+if (fileEl && fileEl.files && fileEl.files.length){
+  imageUrl = await uploadToSupabase(fileEl.files[0]);
+}
+const res = await fetch('/.netlify/functions/run-kling-26',{
+  method:'POST',
+  headers:{'Content-Type':'application/json','X-USER-ID':uid},
+  body:JSON.stringify({prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, imageUrl })
+});
+if (res.status === 201 || res.status === 200 || res.status === 202) {
+      /* client-side debit removed */
+    } else {
+      const errT = await res.text().catch(()=> '');
+      throw new Error('Create failed: ' + errT);
+    }
+
+    const resJson = await res.json().catch(()=> ({}));
+    const id = resJson?.id || resJson?.prediction_id || resJson?.data?.id || null;
+
+    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+
+    // Start polling prediction
+    imagenCheckPoll(id, uid, rid);
+
+  }catch(e){
+    showStatus('❌ '+(e.message||String(e)),'text-rose-300');
+  } finally{ /* keep disabled while polling; re-enabled on success/fail/timeout */ }
+};
+</script>
+
+<script>
+// Multi-image preview & delete (matching Nano Banana behavior)
+(function(){
+  const fileEl = document.getElementById('imageFile');
+  const thumbs = document.getElementById('thumbs');
+  if(!fileEl || !thumbs) return;
+
+  function rebuildFileList(keepIndexes){
+    const dt = new DataTransfer();
+    const files = fileEl.files;
+    for (let i = 0; i < files.length; i++){
+      if (keepIndexes.has(i)) dt.items.add(files[i]);
+    }
+    fileEl.files = dt.files;
+  }
+
+  function renderThumbs(){
+    thumbs.innerHTML = '';
+    const files = fileEl.files;
+    if (!files || !files.length) return;
+
+    for (let i = 0; i < files.length; i++){
+      const f = files[i];
+      const url = URL.createObjectURL(f);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'relative inline-block';
+
+      const img = new Image();
+      img.className = 'h-24 w-24 object-cover rounded-lg border border-white/10';
+      img.src = url;
+      img.onload = () => { try{ URL.revokeObjectURL(url); }catch{} };
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center';
+      btn.setAttribute('aria-label','Remove image');
+      btn.innerHTML = '&times;';
+      btn.addEventListener('click', ()=>{
+        const keep = new Set();
+        for (let j = 0; j < files.length; j++) if (j !== i) keep.add(j);
+        rebuildFileList(keep);
+        renderThumbs();
+      });
+
+      wrap.appendChild(img);
+      wrap.appendChild(btn);
+      thumbs.appendChild(wrap);
+    }
+  }
+
+  fileEl.addEventListener('change', renderThumbs);
+})();
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  try {
+    var fileEl = document.getElementById('imageFile');
+    var thumbs = document.getElementById('thumbs');
+
+    // --- Nano-Banana style thumbs + delete (no globals) ---
+    function renderThumbs(){
+      if (!thumbs || !fileEl) return;
+      thumbs.innerHTML = '';
+      var files = (fileEl.files || []);
+      for (var i=0; i<files.length && i<4; i++){
+        (function(i){
+          var f = files[i];
+          var url = URL.createObjectURL(f);
+          var wrap = document.createElement('span');
+          wrap.className = 'nb-thumb relative inline-block';
+          var img = new Image();
+          img.src = url;
+          img.className = 'h-24 w-24 object-cover rounded-lg border border-white/10';
+          img.onload = function(){ try{ URL.revokeObjectURL(url); }catch(e){} };
+
+          var del = document.createElement('button');
+          del.type = 'button';
+          del.className = 'absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center';
+          del.setAttribute('aria-label','Remove image');
+          del.innerHTML = '×';
+          del.addEventListener('click', function(){
+            try {
+              var dt = new DataTransfer();
+              var fs = fileEl.files;
+              for (var j=0;j<fs.length;j++){ if (j!==i) dt.items.add(fs[j]); }
+              fileEl.files = dt.files;
+            } catch(e) { fileEl.value=''; }
+            renderThumbs();
+          });
+
+          wrap.appendChild(img);
+          wrap.appendChild(del);
+          thumbs.appendChild(wrap);
+        })(i);
+      }
+    }
+    if (fileEl) fileEl.addEventListener('change', renderThumbs);
+
+    // --- Inject  into ONLY the Kling 2.5 Turbo Pro request ---
+    var __origFetch = window.fetch;
+    window.fetch = async function(input, init){
+      try {
+        var isTarget = (typeof input === 'string') && input.indexOf('/.netlify/functions/run-kling-26') !== -1;
+        if (isTarget && init && init.body && typeof init.body === 'string') {
+          try {
+            var body = JSON.parse(init.body);
+            if (!body.) {
+  var first = null;
+  if (fileEl && fileEl.files && fileEl.files.length){
+    first = await new Promise(function(resolve){
+      try{ var fr = new FileReader(); fr.onload = function(){ resolve(fr.result); }; fr.onerror = function(){ resolve(null); }; fr.readAsDataURL(fileEl.files[0]); }catch(e){ resolve(null); }
+    });
+  }
+  if (first) { body. = first; init.body = JSON.stringify(body); }
+}
+          } catch(e) {
+            // ignore if body isn't JSON
+          }
+        }
+      } catch(e) {
+        // never block login or other scripts
+      }
+      return __origFetch.apply(this, arguments);
+    };
+
+    // If browser restores file input after reload, draw thumbs
+    setTimeout(function(){
+      if (fileEl && fileEl.files && fileEl.files.length){ renderThumbs(); }
+    }, 0);
+
+  } catch(e) {
+    // Do not let any error break header/auth
+    console.warn('thumbs/init error', e);
+  }
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var dur = document.getElementById('durationSelect');
+  var cost = document.getElementById('costBadge');
+  if (dur && cost){
+    function updateCost(){
+      const v = String(dur.value||'5');
+      cost.textContent = 'Cost: ' + (v === '10' ? '16⚡' : '9⚡');
+    }
+    dur.addEventListener('change', updateCost);
+    updateCost();
+  }
+  // Block Run if both prompt and image are empty
+  var runBtn = document.getElementById('btnRun') || document.querySelector('[data-run]');
+  var promptEl = document.getElementById('prompt') || document.querySelector('textarea[name="prompt"]');
+  var fileEl = document.getElementById('fileInput') || document.querySelector('input[type="file"]');
+  var errEl = document.getElementById('runError');
+  if (runBtn){
+    runBtn.addEventListener('click', function(e){
+      var hasPrompt = promptEl && String(promptEl.value||'').trim().length > 0;
+      var hasImage = fileEl && fileEl.files && fileEl.files.length > 0;
+      if (!hasPrompt && !hasImage){
+        e.preventDefault();
+        e.stopPropagation();
+        if (errEl){ errEl.textContent = 'Please provide a prompt or upload an image.'; errEl.classList.remove('hidden'); }
+        return false;
+      }
+      if (errEl){ errEl.classList.add('hidden'); }
+    }, true);
+  }
+});
+</script>
+
+
+<script>
+(function(){
+  const _fetch = window.fetch;
+  window.fetch = function(url, opts){
+    try{
+      if (typeof url === 'string' && url.indexOf('/.netlify/functions/run-kling-26') !== -1 && opts && typeof opts.body === 'string'){
+        try{
+          const ds = document.getElementById('durationSelect');
+          const dur = ds && ds.value === '10' ? 10 : 5;
+          const obj = JSON.parse(opts.body || '{}');
+          if (obj && typeof obj.duration === 'undefined'){
+            obj.duration = dur;
+            opts.body = JSON.stringify(obj);
+          }
+        }catch(e){}
+      }
+    }catch(e){}
+    return _fetch.apply(this, arguments);
+  };
+})();
+</script>
+
+
+<script>
+// --- Keep cost on the Run button (like GPT page) and update on changes ---
+document.addEventListener('DOMContentLoaded', function(){
+  try {
+    var runBtn = document.getElementById('runBtn');
+    var durSel = document.getElementById('durationSelect');
+    var ratioSel = document.getElementById('ratio');
+
+    function computeCost(){
+      return (durSel && String(durSel.value) === '10') ? 16 : 9;
+    }
+    function renderRunCost(){
+      if (!runBtn) return;
+      var c = computeCost();
+      if(!window.__klingBusy){ runBtn.textContent = 'Run (cost: ' + c + '⚡)'; }
+    }
+
+    if (durSel) durSel.addEventListener('change', renderRunCost);
+    if (ratioSel) ratioSel.addEventListener('change', renderRunCost);
+
+    // Initial paint
+    renderRunCost();
+
+    // Expose for other scripts in this page to reuse
+    window.__klingComputeCost = computeCost;
+    window.__klingRenderRunCost = renderRunCost;
+  } catch(e) { /* do nothing */ }
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    var fileEl = document.getElementById('imageFile');
+    if (!fileEl) return;
+    fileEl.addEventListener('change', function(){
+      try{
+        if (fileEl.files && fileEl.files.length > 1){
+          var dt = new DataTransfer();
+          dt.items.add(fileEl.files[0]);
+          fileEl.files = dt.files;
+        }
+      }catch(_){ /* ignore */ }
+    });
+  }catch(_){}
+});
+</script>
+
+</body>
+</html>
