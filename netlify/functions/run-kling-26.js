@@ -128,14 +128,16 @@ exports.handler = async (event) => {
     const payload = {
       model,
       input: image_url ? {
+        prompt,
+        aspect_ratio,
         duration: (duration === 10 ? '10' : '5'),
         sound: true,
         image_urls: [image_url],
-        prompt,
       } : {
-        duration: (duration === 10 ? '10' : '5'),
-        sound: true,
         prompt,
+        aspect_ratio,
+        duration: (duration === 10 ? '10' : '5'),
+        sound: false,
       },
       callBackUrl: `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`,
     };
