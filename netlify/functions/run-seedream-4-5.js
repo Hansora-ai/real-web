@@ -57,7 +57,7 @@ exports.handler = async (event) => {
     }
 
     const payload = {
-      model: hasImages ? "seedream4.5-edit" : "seedream4.5-text-to-image",
+      model: hasImages ? "seedream/4.5-edit" : "seedream/4.5-text-to-image",
       input,
 
       // Callbacks (add all variants)
