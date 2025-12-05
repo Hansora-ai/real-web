@@ -48,14 +48,16 @@ exports.handler = async (event) => {
     const input = {
       prompt,
       aspect_ratio: size,
+      quality: "basic",
       output_format: format
     };
-    if (Array.isArray(image_input) && image_input.length) {
+    const hasImages = Array.isArray(image_input) && image_input.length;
+    if (hasImages) {
       input.image_urls = image_input;
     }
 
     const payload = {
-      model: "seedream-4-5",
+      model: hasImages ? "seedream4.5-edit" : "seedream4.5-text-to-image",
       input,
 
       // Callbacks (add all variants)
