@@ -1,607 +1,431 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1" name="viewport"/>
-<title>HANSORA • Nano Banana Pro</title>
-<link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" rel="icon"/>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
-<script src="/kie-upload-bridge.js"></script>
-<script>
-// === Live credits (Supabase Realtime) + pre-run check ===
-(async function HANSORA_LIVE_CREDITS(){
-  try{
-    const navCreditsEl = document.getElementById('navCredits');
-    const runBtn = document.getElementById('runBtn');
-    function renderCredits(c){
-      if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-      if (runBtn && !__isRunning) {
-        const ok = true;
-        runBtn.disabled=false;
-        runBtn.classList.toggle('opacity-50', !ok);
-        runBtn.classList.toggle('cursor-not-allowed', !ok);
-      }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA • Nano Banana Pro (Text / Image → Image) • Telegram</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23111827'/%3E%3Ctext x='50%25' y='52%25' font-size='32' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{
+      --base-bg:#0b0d13;
+      --base-line:#1a1f2b;
+      --brand:#6366f1;
     }
-
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if(!user) return;
-
-    // initial fetch
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    renderCredits(prof?.credits ?? 0);
-
-    // subscribe to updates
-    supabase.channel('credits_live_' + user.id)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
-        (payload) => { renderCredits(payload.new?.credits ?? 0); }
-      )
-      .subscribe();
-
-    // patch __run to guard when credits are 0 (without changing its internals)
-    const __origRun = window.__run;
-    window.__run = async function(){
-      try{
-        const { data: prof2 } = await supabase
-          .from('profiles')
-          .select('credits')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        const c = prof2?.credits ?? 0;
-        if (c < 3) {
-          console.warn('No credits left.');
-          alert('Not enough credits (need 3).'); 
-          return;
-        }
-      }catch{}
-      return __origRun ? __origRun() : undefined;
-    };
-  }catch(e){ console.warn('credits live failed', e); }
-})();
-</script>
-<script>
-(function(){
-  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-  ready(async function(){
-    try{
-      if (typeof supabase === 'undefined' || !supabase.auth) return;
-
-      async function __refreshCredits(){
-        try{
-          const ures = await supabase.auth.getUser();
-          const user = ures?.data?.user; if(!user) return null;
-          const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-          const c = prof?.credits ?? 0;
-          const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
-          const runBtn = document.getElementById('runBtn'); if (runBtn && !__isRunning){
-            const zero = false;
-            runBtn.disabled = zero;
-            runBtn.classList.toggle('opacity-50', zero);
-            runBtn.classList.toggle('cursor-not-allowed', zero);
-          }
-          return c;
-        }catch(e){ console.warn('refreshCredits failed', e); return null; }
-      }
-
-      // On load
-      await __refreshCredits();
-
-      // Wrap chargeOneCredit (client debit) to repaint after debit
-      if (typeof window.chargeOneCredit === 'function'){
-        const __origCharge = window.chargeOneCredit;
-        window.chargeOneCredit = async function(){
-          const out = await __origCharge();
-          await __refreshCredits();
-          return out;
-        };
-      }
-
-      // Also poll briefly after Run to catch server-side debit
-      if (typeof window.__run === 'function'){
-        const __origRun = window.__run;
-        window.__run = async function(){
-          const ret = await __origRun();
-          // poll for 15s every 1.5s
-          const id = setInterval(__refreshCredits, 1500);
-          setTimeout(()=>clearInterval(id), 15000);
-          return ret;
-        };
-      }
-    }catch(e){ console.warn('live credits wrapper error', e); }
-  });
-})();
-</script>
-<style>
-    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
-    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
-                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
-                       var(--base-bg); color:#e5e7eb}
-    .bg-base-bg{background:var(--base-bg)}
-    .border-base-line{border-color:var(--base-line)}
-    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
-    .btn:hover{background:rgba(255,255,255,.1)}
-    .btn-brand{background:var(--brand); border-color:transparent; color:white}
-    .btn-brand:hover{background:#7c7ff6}
+    body{
     .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
-    #navAvatar{background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%25%22 stop-color=%2291c1ff%22/><stop offset=%22100%25%22 stop-color=%225a8cff%22/></linearGradient></defs><circle cx=%2264%22 cy=%2264%22 r=%2264%22 fill=%22url(%23g)%22/><circle cx=%2264%22 cy=%2250%22 r=%2222%22 fill=%22white%22 fill-opacity=%22.9%22/><path d=%22M20 108a44 30 0 0 1 88 0%22 fill=%22white%22 fill-opacity=%22.9%22/></svg>');background-size:cover;background-position:center;}
-  </style>
-<style id="dark-inputs-patch">
     .input-dark{background:rgba(255,255,255,.05)!important;color:#e5e7eb!important;border:1px solid rgba(255,255,255,.12)!important}
     .input-dark::placeholder{color:#9ca3af}
     select.input-dark option{background:#0b0d13;color:#e5e7eb}
+      background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+        radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+        var(--base-bg);
+      color:#e5e7eb;
+    }
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .btn{
+      background:linear-gradient(135deg,#4f46e5,#6366f1);
+      color:white;
+    }
+    .btn:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+    }
   </style>
 </head>
-<body class="min-h-screen">
-<header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-<a class="flex items-center gap-3 hover:opacity-90" href="index.html">
-<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora Logo" class="h-9 w-9 rounded-full object-cover"/>
-<span class="font-semibold tracking-wide">HANSORA AI</span>
-</a>
-<nav class="hidden md:flex items-center gap-8 text-sm">
-<a class="hover:text-white/90" href="models.html">Models</a>
-<a class="hover:text-white/90" href="examples-prompts.html">Examples/Prompts</a>
-<a class="hover:text-white/90" href="templates.html">Templates</a>
-<a class="hover:text-white/90" href="pricing.html">Pricing</a>
-<a class="hover:text-white/90" href="index.html#faq">FAQ</a>
-</nav>
-<div class="flex items-center gap-3"><a class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft" href="login.html" id="btnLoginSignup">Login / Signup</a>
+<body class="min-h-screen flex flex-col bg-base-bg">
+  <header class="border-b border-base-line/60">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <div class="h-8 w-8 rounded-2xl bg-indigo-500 flex items-center justify-center text-sm font-bold shadow-lg shadow-indigo-500/40">
+          H
+        </div>
+        <div class="flex flex-col leading-tight">
+          <span class="text-sm font-semibold text-white">Hansora AI</span>
+          <span class="text-xs text-zinc-400">Nano Banana Pro Image → Image</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 text-xs">
+        <div class="px-3 py-1 rounded-full border border-base-line bg-black/40">
+          <span class="text-zinc-400">Credits:</span>
+          <span id="creditsDisplay" class="font-semibold text-emerald-300 ml-1">0⚡</span>
+        </div>
+      </div>
+    </div>
+  </header>
 
+  <main class="flex-1">
+    <div class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <section class="rounded-2xl p-5 border border-white/10 shadow-soft bg-white/5 space-y-4">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h1 class="text-lg md:text-xl font-semibold text-white">
+              Nano Banana Pro (Text / Image → Image)
+            </h1>
+            <p class="text-xs md:text-sm text-zinc-400 mt-1">
+              Use Nano Banana Pro with text-only (prompt) or text + images to create high-quality styled images.
+            </p>
+          </div>
+        </div>
 
+        <div class="grid md:grid-cols-[1.1fr,0.9fr] gap-4 md:gap-6 items-start">
+          <div class="space-y-4">
+            <div class="space-y-2">
+              <label class="block text-xs font-medium text-zinc-300 mb-1">Images (optional, up to 6)</label>
+              <input
+                id="imageInput"
+                type="file"
+                accept="image/*"
+                multiple
+                class="input-dark block w-full text-xs file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-500 file:text-white hover:file:bg-indigo-400"
+              />
+              <div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div>
+              <p class="text-[11px] text-zinc-500">
+                Required. Upload 1–6 images (max 30MB each). All images will be edited in the same style.
+              </p>
+            </div>
 
-<div class="hidden items-center gap-2" id="navUser">
-<span class="text-sm text-white/80 mr-2" id="navCredits">0⚡</span>
-<div class="relative">
-<button class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden" id="navAvatar">
-<img alt="profile" class="h-full w-full object-cover hidden" id="navAvatarImg"/>
-</button>
-<div class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden" id="navMenu"><a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="profile.html">Profile</a><a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="usage.html">History</a><a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="pricing.html">Subscription</a><button class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5" id="btnLogout">Log out</button></div>
-</div>
-</div>
-</div>
-</div>
-</header>
-<section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-<div class="grid md:grid-cols-2 gap-6 items-start">
-<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-<h1 class="text-2xl font-bold">Nano Banana Pro — Text/Image to Image</h1>
-<p class="mt-1 text-sm text-zinc-400">Upload 1–4 images and describe the edit you want.</p>
-<div class="mt-4 space-y-3">
-<div>
-<label class="text-xs text-zinc-400">Select 1–4 images (jpeg/png/webp, ≤10MB)</label>
-<input accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" id="files" multiple="" type="file"/>
-<div class="mt-2 flex gap-2 flex-wrap" id="thumbs"></div>
-</div>
-<div>
-<label class="text-xs text-zinc-400">Image size</label>
-<select class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark" id="size">
-<option selected="" value="1:1">1:1 (Square)</option>
-<option value="2:3">2:3 (Portrait)</option>
-<option value="3:2">3:2 (Landscape)</option>
-<option value="3:4">3:4</option>
-<option value="4:3">4:3</option>
-<option value="4:5">4:5</option>
-<option value="5:4">5:4</option>
-<option value="9:16">9:16 (Vertical)</option>
-<option value="16:9">16:9 (Wide)</option>
-<option value="21:9">21:9 (Ultra-wide)</option>
-</select>
-</div>
-<div>
-<label class="text-xs text-zinc-400">Resolution</label>
-<select class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark" id="resolution">
-<option selected="" value="1K">1K</option>
-<option value="2K">2K</option>
-<option value="4K">4K</option>
-</select>
-</div>
-<div>
-<label class="text-xs text-zinc-400">Prompt</label>
-<textarea class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark" id="prompt" placeholder="Describe the edit or style…"></textarea>
-</div>
-<button class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" id="runBtn" onclick="__run()" type="button">Run (cost: 2⚡)</button>
-<div class="mt-2 text-sm" id="status"></div>
-</div>
-</div>
-<div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-<h3 class="text-lg font-semibold">Result</h3>
-<p class="text-xs text-zinc-400">Generated image will appear below.</p>
-<div class="mt-3 aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center" id="resultBox">
-<span class="text-xs text-zinc-500">No result yet</span>
-</div>
-<a class="hidden mt-3 inline-block rounded-xl btn px-4 py-2 text-sm" href="#" id="downloadLink">Download</a>
-</div>
-</div>
-</section>
-<footer class="border-t border-base-line/60">
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
-<p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
-<nav class="flex items-center gap-5">
-<a class="hover:text-white/80" href="index.html#terms">Terms</a>
-<a class="hover:text-white/80" href="index.html#privacy">Privacy</a>
-<a class="hover:text-white/80" href="index.html#contact">Contact</a>
-</nav>
-</div>
-</footer>
-<script>
-document.getElementById('y').textContent = new Date().getFullYear();
+            <div class="space-y-2">
+              <label class="block text-xs font-medium text-zinc-300 mb-1">Prompt (required)</label>
+              <textarea
+                id="promptInput"
+                rows="4"
+                class="input-dark w-full text-xs rounded-xl px-3 py-2 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                placeholder="Describe the scene and motion. Example: cinematic shot of a city street at night, slow camera move, neon lights, dramatic mood..."></textarea>
+              <p class="text-[11px] text-zinc-500">
+                Required. Describe the style or changes you want Nano Banana Pro to apply (text-only also works).
+              </p>
+            </div>
+            <div class="space-y-2">
+              <label for="sizeSelect" class="block text-xs font-medium text-zinc-300 mb-1">Aspect ratio</label>
+              <select
+                id="sizeSelect"
+                class="input-dark w-full text-xs rounded-xl px-3 py-2 text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value="auto" selected>Auto</option>
+                <option value="square">Square (1:1)</option>
+                <option value="portrait_3_4">Portrait 3:4</option>
+                <option value="portrait_9_16">Portrait 9:16</option>
+                <option value="landscape_4_3">Landscape 4:3</option>
+                <option value="landscape_16_9">Landscape 16:9</option>
+              </select>
+            </div>
 
-// Supabase init
-const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            <div class="space-y-2">
+              <label for="resolutionSelect" class="block text-xs font-medium text-zinc-300 mb-1">Quality</label>
+              <select
+                id="resolutionSelect"
+                class="input-dark w-full text-xs rounded-xl px-3 py-2 text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value="1K" selected>1K</option>
+                <option value="2K">2K</option>
+                <option value="4K">4K</option>
+              </select>
+            </div>
 
-// Header UI
-const $btnLoginSignup = document.getElementById('btnLoginSignup');
-const $navUser = document.getElementById('navUser');
-const $navCredits = document.getElementById('navCredits');
-const $navAvatar = document.getElementById('navAvatar');
-const $navMenu = document.getElementById('navMenu');
-const $btnLogout = document.getElementById('btnLogout');
-const $navAvatarImg = document.getElementById('navAvatarImg');
-function showLoggedInUI(profile, user){$btnLoginSignup.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
-function showLoggedOutUI(){$btnLoginSignup.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
-$navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
-document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
-$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
-async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
+            <div class="space-y-2">
+              <button
+                id="runBtn"
+                class="btn w-full rounded-2xl px-4 py-3 text-sm font-semibold shadow-lg shadow-indigo-500/40">
+                Run (cost: 3⚡)
+              </button>
+              <p id="statusText" class="text-[11px] text-zinc-500">
+                Ready.
+              </p>
+            </div>
+            <div id="successBox" class="mt-3 hidden">
+              <div class="rounded-2xl border border-emerald-500 bg-emerald-900/80 px-4 py-3 text-emerald-50 text-sm md:text-base leading-snug">
+                <div class="flex items-start gap-2">
+                  <div class="text-2xl">✅</div>
+                  <div id="successText" class="flex-1"></div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-// Elements
-const filesEl=document.getElementById('files');
-const thumbsEl=document.getElementById('thumbs');
-const promptEl=document.getElementById('prompt');
-const runBtn=document.getElementById('runBtn');
-const statusEl=document.getElementById('status');
-const resultBox=document.getElementById('resultBox');
-const downloadLink=document.getElementById('downloadLink');
+          <div class="space-y-3">
+            <div class="rounded-2xl border border-base-line bg-black/40 p-3 md:p-4">
+              <h2 class="text-xs font-semibold text-zinc-200 mb-1">Instructions</h2>
+              <ol class="list-decimal list-inside text-[11px] text-zinc-400 space-y-1.5">
+                <li>Type a prompt (required) describing the desired edit or style.</li>
+                <li>Optionally upload 1–6 images (up to 30MB each) for image-to-image editing.</li>
+                <li>Choose the aspect ratio (Auto, Square, Portrait, Landscape).</li>
+                <li>Click Run. If you have enough credits, the edited images will be sent to your bot's chat.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
 
-// Track whether a run is currently in progress to keep the Run button locked
-let __isRunning = false;
+  <script>
+    const COST_NB = 2.5;
+    let telegramId = "";
+    let credits = 0;
+    let mode = "";
+    let leng = "";
 
-filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].slice(0,4).forEach(f=>{const u=URL.createObjectURL(f);const img=new Image();img.src=u;img.className='h-24 w-24 object-cover rounded-lg border border-white/10';thumbsEl.appendChild(img);});});
+    const creditsDisplay = document.getElementById("creditsDisplay");
+    const statusText = document.getElementById("statusText");
+    const successBox = document.getElementById("successBox");
+    const successText = document.getElementById("successText");
+    const runBtn = document.getElementById("runBtn");
+    const imageInput = document.getElementById("imageInput");
+    const promptInput = document.getElementById("promptInput");
+    const thumbsEl = document.getElementById("thumbs");
 
-function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
+    let selectedFiles = [];
 
-// Guarded renderer
-let __done=false; let channel=null;
-function onResult(url){
-  if(__done || !url) return;
-  __done = true;
-  const img=new Image();
-  img.onload=()=>{
-    resultBox.innerHTML='';
-    img.className='w-full h-full object-contain';
-    resultBox.appendChild(img);
-        const __name = (url.split('/').pop()||'generation');
-    downloadLink.href='/.netlify/functions/download-proxy?url='+encodeURIComponent(url)+'&name='+encodeURIComponent(__name);
-    downloadLink.setAttribute('download', __name);
-    downloadLink.classList.remove('hidden');
-    downloadLink.textContent='Download';
-
-    showStatus('✅ Done.','text-emerald-300');
-  };
-  
-  img.src=url;
-  try{ channel?.unsubscribe?.(); }catch{}
-}
-
-// Credits + URL extraction helpers
-async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 2)throw new Error('Not enough credits (need 2).');await supabase.from('profiles').update({credits:cur-2}).eq('user_id',data.user.id);}
-
-function derivePublicUrl(up){
-  if (!up) return null;
-  if (up.publicUrl) return up.publicUrl;
-  try{
-    if (up.bucket && up.objectPath && up.uploadUrl){
-      const u = new URL(up.uploadUrl);
-      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
-      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+function syncInputFiles() {
+  if (!imageInput) return;
+  if (!selectedFiles || selectedFiles.length === 0) {
+    imageInput.value = "";
+    return;
+  }
+  try {
+    const dt = new DataTransfer();
+    for (const f of selectedFiles) {
+      dt.items.add(f);
     }
-  }catch(e){}
-  return null;
-}
-
-// ADDED: make sure DB gets a row even if webhook is late/blocked
-async function backfillRow(uid, rid, taskId, url){
-  try{
-    await fetch(
-      '/.netlify/functions/kie-callback?uid='+encodeURIComponent(uid)+'&run_id='+encodeURIComponent(rid)+'&taskId='+encodeURIComponent(taskId),
-      {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          status:'success',
-          result:{ images:[{ url }] }
-        })
-      }
-    );
-  }catch{}
-}
-
-// Best-effort: create a submitted row immediately so Usage shows even if user leaves.
-async function backfillSubmitted(uid, rid, taskId){
-  try{
-    await fetch('/.netlify/functions/kie-callback?uid='+encodeURIComponent(uid)+'&run_id='+encodeURIComponent(rid)+'&taskId='+encodeURIComponent(taskId||''),{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ status:'submitted', result:{ images:[] } })
-    });
-  }catch{}
-}
-
-// Option A: poll nb-check (does NOT rely on webhook)
-async function nbCheckPoll(taskId, uid, rid){
-  if(!taskId) return;
-  const start = Date.now();
-  while(!__done && Date.now() - start < 200000){ // up to 200s
-    try{
-      const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId), {
-        headers: { 'X-USER-ID': uid }
-      });
-
-      let j;
-      try { j = await r.json(); }
-      catch {
-        const txt = await r.text();
-        try { j = JSON.parse(txt); } catch { j = { raw: txt }; }
-      }
-
-      const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
-      if(['success','succeeded','completed','done'].includes(status)){
-        const url = await (async function tryExtractImageUrl(o){
-          if(!o) return null;
-          if(typeof o==='string'&&/^https?:\/\//.test(o)) return o;
-          if(o.imageUrl) return o.imageUrl;
-          if(o.outputUrl) return o.outputUrl;
-          if(o.url) return o.url;
-          if(o.data) { const x=await tryExtractImageUrl(o.data); if(x) return x; }
-          if(o.result) { const x=await tryExtractImageUrl(o.result); if(x) return x; }
-          if(Array.isArray(o.images)&&o.images[0]?.url) return o.images[0].url;
-          if(Array.isArray(o.resultUrls) && o.resultUrls[0]) return o.resultUrls[0];
-          if(Array.isArray(o.output)&&o.output[0]?.url) return o.output[0].url;
-          return null;
-        })(j);
-        if(url){
-          onResult(url);               // show immediately
-          backfillRow(uid, rid, taskId, url); // ensure Supabase row exists
-        }
-        break;
-      }
-      if(['failed','error'].includes(status)){
-        showStatus('❌ Generation failed.','text-rose-300');
-        break;
-      }
-    }catch{}
-    await new Promise(r=>setTimeout(r,1500));
+    imageInput.files = dt.files;
+  } catch (e) {
+    // Fallback: if DataTransfer unsupported, just clear when empty (handled above)
   }
 }
+let previewUrls = [];
 
-// Main run
-window.__run=async function(){
-  const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ alert('Please log in or register first.'); return; }
-
-  // HARD CREDIT CHECK (surgical): prevent run if credits insufficient
-  try{
-    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
-    const cur = prof?.credits ?? 0;
-    if (cur < 2) {
-      showStatus('Not enough credits (need 2).','text-rose-300');
-      runBtn.disabled = false; runBtn.textContent = "Run (cost: 2⚡)";
-      return;
+function revokePreviewUrls(){
+  try {
+    for (const u of previewUrls){
+      URL.revokeObjectURL(u);
     }
-  }catch(_){ /* ignore, proceed cautiously */ }
+  } catch {}
+  previewUrls = [];
+}
 
-  __isRunning = true;
-  __done=false;
-  const files=[...filesEl.files];
-  if(files.length>4){alert('Max 4 images.');return;}
-  for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}
+function clearImageSelection(){
+  revokePreviewUrls();
+  selectedFiles = [];
+  if (imageInput) imageInput.value = "";
+  if (thumbsEl) thumbsEl.innerHTML = "";
+}
 
-  const promptVal = (promptEl && promptEl.value ? promptEl.value : '').trim();
+function renderImageThumbs(){
+  if (!thumbsEl) return;
+  thumbsEl.innerHTML = "";
+  revokePreviewUrls();
+  selectedFiles.forEach((file, index) => {
+    const url = URL.createObjectURL(file);
+    previewUrls.push(url);
+    const img = new Image();
+    img.src = url;
+    img.className = "block w-full max-h-56 object-contain rounded-lg border border-white/10 bg-black/20";
+    const wrap = document.createElement("div");
+    wrap.className = "relative inline-block";
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 text-xs text-white hover:bg-black/90 flex items-center justify-center";
+    del.innerHTML = "\u00d7";
+    del.onclick = () => {
+      selectedFiles.splice(index, 1);
+      renderImageThumbs();
+      syncInputFiles();
+    };
+    wrap.appendChild(img);
+    wrap.appendChild(del);
+    thumbsEl.appendChild(wrap);
+  });
+}
 
-  runBtn.disabled=true;runBtn.textContent='Uploading…';
-  showStatus('Uploading images…','text-zinc-400');
-  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
+if (imageInput && thumbsEl){
+  imageInput.addEventListener("change", () => {
+    selectedFiles = Array.from(imageInput.files || []);
+    renderImageThumbs();
+    syncInputFiles();
+  });
+}
 
-  try{
-    const uid=authData.user.id;
-    const rid=uid+'-'+Date.now();
-    let urls = [];
+const sizeSelect = document.getElementById("sizeSelect");
+const resolutionSelect = document.getElementById("resolutionSelect");
 
-    if (files.length > 0) {
-      // ==== FIX: await all uploads, then proceed ====
-      if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
-        throw new Error('upload_bridge_missing');
+    function setStatus(msg, tone){
+      statusText.textContent = msg;
+      statusText.className = "text-[11px] " + (tone || "text-zinc-500");
+    }
+
+    function getCurrentCost(){
+      return COST_NB;
+    }
+
+    function updateRunButtonLabel(){
+      if (!runBtn) return;
+      runBtn.textContent = "Run (cost: " + COST_NB + "⚡)";
+    }
+
+    function repaintCredits(){
+      creditsDisplay.textContent = credits.toFixed(1).replace(/\.0$/, "") + "⚡";
+    }
+
+    function parseQueryParams(){
+      const url = new URL(window.location.href);
+      telegramId = url.searchParams.get("telegram_id") || "";
+      const cStr = url.searchParams.get("credits") || "0";
+      const parsed = Number(cStr);
+      credits = Number.isFinite(parsed) ? parsed : 0;
+      repaintCredits();
+
+      mode = url.searchParams.get("mode") || url.searchParams.get("modul") || "";
+      leng = url.searchParams.get("leng") || url.searchParams.get("lang") || "";
+
+      if (!telegramId){
+        setStatus("Missing telegram_id in URL. Please open this page from the bot.", "text-rose-300");
+        runBtn.disabled = true;
       }
+    }
 
-      const uploadOne = async (f) => {
-        const up = await window.kieUploadBridge.upload(f);
-        const url = derivePublicUrl(up);
-        if (!url) throw new Error('no_public_url');
-        // Best effort warm HEAD to reduce signed-url cache lag
-        try { await fetch(url, { method: 'HEAD', cache: 'no-store' }); } catch {}
-        return url;
-      };
+    async function signUpload(filename, mime){
+      const resp = await fetch("/.netlify/functions/sign-upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-USER-ID": telegramId || "tg-anon"
+        },
+        body: JSON.stringify({ filename, mime })
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok || !data || !data.uploadUrl || !data.publicUrl){
+        throw new Error((data && data.error) || "sign-upload failed");
+      }
+      return data;
+    }
 
-      const settled = await Promise.allSettled(files.map(uploadOne));
-      urls = settled.filter(x => x.status === 'fulfilled' && x.value).map(x => x.value);
+    async function handleRun(){
+      if (successBox) successBox.classList.add("hidden");
 
-      // guard: if uploads were attempted but no URLs produced, stop here
-      if (urls.length === 0) {
-        showStatus('Upload failed: no image URLs to send','text-rose-300');
-        runBtn.disabled = false; runBtn.textContent = 'Run (cost: 2⚡)';
+      if (runBtn.disabled) return;
+
+      if (!telegramId){
+        setStatus("Missing telegram_id, cannot continue.", "text-rose-300");
         return;
       }
-    } else {
-      urls = [];
-    }
 
-    const sizeEl = document.getElementById('size');
-    const resEl = document.getElementById('resolution');
-    const aspect_ratio = (sizeEl && sizeEl.value) ? sizeEl.value : '1:1';
-    const resolution = (resEl && resEl.value) ? resEl.value : '1K';
+      const files = Array.isArray(selectedFiles)
+        ? selectedFiles.slice()
+        : Array.from(imageInput.files || []);
+      const hasFile = files.length > 0;
+      if (files.length > 6){
+        setStatus("You can upload up to 6 images.", "text-rose-300");
+        return;
+      }
 
-    runBtn.textContent='Submitting…';
-    showStatus('Submitting…','text-zinc-400');
+      const prompt = (promptInput.value || "").trim();
+      if (!prompt){
+        setStatus("Please enter a prompt (required for Nano Banana Pro).", "text-rose-300");
+        return;
+      }
+      const sizeValue = sizeSelect ? sizeSelect.value : "auto";
+      const resolutionValue = resolutionSelect ? resolutionSelect.value : "1K";
 
-    // create job
-    const res=await fetch('/.netlify/functions/run-nano-banana-pro',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-USER-ID':uid},
-      body:JSON.stringify({urls, prompt: (promptVal||'.'), size: aspect_ratio, resolution, run_id: rid})
-    });
-
-    if (res.status === 202 || res.ok) {
-      await chargeOneCredit();
-    } else {
-      const errT = await res.text().catch(()=> '');
-      throw new Error('Create failed: ' + errT);
-    }
-
-    const resJson = await res.json().catch(()=> ({}));
-    const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
-
-    // ensure Usage shows even if user navigates away
-    backfillSubmitted(uid, rid, taskId);
-
-    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-    runBtn.textContent='Processing…';
-
-    // subscribe to Supabase (if webhook inserts there)
-    channel = supabase.channel('nb_results_' + rid)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'nb_results', filter: 'run_id=eq.' + rid },
-        (payload) => {
-          const url = payload?.new?.image_url;
-          if (url) onResult(url);
+      for (const file of files){
+        if (file.size > 30 * 1024 * 1024){
+          setStatus("Each image must be at most 30MB.", "text-rose-300");
+          return;
         }
-      )
-      .subscribe();
+      }
 
-    // start polling taskId (and backfill DB when done)
-    nbCheckPoll(taskId, uid, rid);
+      const cost = getCurrentCost();
+      if (credits < cost){
+        setStatus("Not enough credits (need " + cost + ").", "text-rose-300");
+        return;
+      }
 
-    // fallback: poll table directly in case realtime is blocked
-    const started = Date.now();
-    while (!__done && Date.now() - started < 200000) { // up to 200s
-      await new Promise(r => setTimeout(r, 1500));
-      const { data: row } = await supabase
-        .from('nb_results')
-        .select('image_url')
-        .eq('user_id', uid)
-        .eq('run_id', rid)
-        .limit(1)
-        .maybeSingle();
+      runBtn.disabled = true;
+      runBtn.textContent = "Working…";
 
-      const url = row?.image_url || null;
-      if (url) { onResult(url); break; }
-    }
+      const imageUrls = [];
+      try {
+        let index = 0;
+        for (const file of files){
+          index += 1;
+          setStatus("Uploading image " + index + " of " + files.length + "…", "text-zinc-400");
+          const origName = file.name || "image.jpg";
+          const type = (file.type || "image/jpeg").toLowerCase();
+          const safeExt = type.includes("png") ? ".png"
+            : (type.includes("jpeg") || type.includes("jpg")) ? ".jpg"
+            : (type.includes("webp") ? ".webp" : ".jpg");
+          const base = origName.replace(/\.[^./\\]+$/, "");
+          const filename = Date.now() + "-" + index + "-" + base + safeExt;
 
-    if (!__done) {
-      showStatus('❌Failed — credits refunded','text-red-300','text-yellow-300');
-    }
+          const signJson = await signUpload(filename, type || "image/jpeg");
 
-  }catch(e){
-    showStatus('❌ '+(e.message||String(e)),'text-rose-300')
-  }finally{
-    __isRunning = false;
-    runBtn.disabled=false;runBtn.textContent='Run (cost: 2⚡)';
-  }
-};
-</script></script>
-<!-- Delete buttons + safe validation (additive, non-destructive) -->
-<script>
-(function(){
-  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+          const putResp = await fetch(signJson.uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": type || "image/jpeg" },
+            body: file
+          });
+          if (!putResp.ok){
+            throw new Error("Upload failed");
+          }
 
-  ready(function(){
-    var filesEl = document.getElementById('files') || document.querySelector('input[type=file][id*="file"]');
-    var thumbsEl = document.getElementById('thumbs') || document.querySelector('#thumbs, .thumbs, [data-role="thumbs"]');
-    var promptEl = document.getElementById('prompt') || document.querySelector('textarea[name="prompt"], #promptEl');
-
-    if (!filesEl || !thumbsEl) return;
-
-    function enhanceThumbs(){
-      // Wrap plain IMG nodes with a relative container + delete button.
-      var imgs = Array.from(thumbsEl.querySelectorAll('img'));
-      imgs.forEach(function(img, idx){
-        if (img.closest('.nb-thumb-wrap')) return; // already wrapped
-
-        var wrap = document.createElement('span');
-        wrap.className = 'nb-thumb-wrap relative inline-block';
-        img.parentNode.insertBefore(wrap, img);
-        wrap.appendChild(img);
-
-        var del = document.createElement('button');
-        del.type = 'button';
-        del.className = 'absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center';
-        del.setAttribute('aria-label','Remove image');
-        del.innerHTML = '&times;';
-
-        del.addEventListener('click', function(){
           try {
-            var dt = new DataTransfer();
-            Array.from(filesEl.files).forEach(function(f, i){
-              if (i !== idx) dt.items.add(f);
-            });
-            filesEl.files = dt.files;
-          } catch(e){ /* ignore */ }
+            await fetch(signJson.publicUrl, { method: "HEAD", cache: "no-store" });
+          } catch {}
 
-          // Remove UI thumb and re-index remaining
-          wrap.remove();
-          // Re-run to re-bind indexes
-          setTimeout(enhanceThumbs, 0);
+          imageUrls.push(signJson.publicUrl);
+        }
+
+        setStatus("Submitting Nano Banana Pro job…", "text-zinc-400");
+
+        const resp = await fetch("/.netlify/functions/run-nano-banana-pro-tg", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            telegram_id: telegramId,
+            credits_before: credits,
+            new_credits: credits - cost,
+            cost,
+            prompt,
+            urls: imageUrls,
+            size: sizeValue,
+            resolution: resolutionValue,
+            mode,
+            leng
+          })
         });
 
-        wrap.appendChild(del);
-      });
+        const j = await resp.json().catch(() => ({}));
+
+        if (!resp.ok || !j.submitted){
+          const err = j && (j.error || j.message);
+          throw new Error(err || "Error submitting job");
+        }
+
+        // Only deduct credits after successful submission
+        credits -= cost;
+        repaintCredits();
+
+        setStatus("✅ Request submitted.", "text-emerald-300");
+        if (successBox && successText){
+          successBox.classList.remove("hidden");
+          successText.innerHTML = "✦ Submitted successfully. You will receive the Nano Banana Pro images in Telegram when they are ready.<br/>✦ Запрос успешно принят. Вы получите обработанные изображения Nano Banana Pro в Telegram, когда они будут готовы.";
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus("Error: " + (err && err.message ? err.message : "Something went wrong."), "text-rose-300");
+      } finally {
+        runBtn.disabled = false;
+        updateRunButtonLabel();
+      }
     }
 
-    // After the built-in change handler updates the thumbs, enhance them.
-    filesEl.addEventListener('change', function(){ setTimeout(enhanceThumbs, 0); });
-
-    // Run once in case thumbs already exist on load (hot re-render etc.)
-    setTimeout(enhanceThumbs, 0);
-
-    // Safe validation without touching original __run
-    if (typeof window.__run === 'function'){
-      var __origRun = window.__run;
-      window.__run = async function(){
-        try{
-          var promptVal = (promptEl && promptEl.value ? promptEl.value : '').trim();
-          if (!promptVal){
-            alert('Please enter a prompt.');
-            return;
-          }
-        }catch(e){ /* ignore */ }
-        return __origRun();
-      };
-    }
-  });
-})();
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const fileInput = document.querySelector('input[type="file"]');
-  const statusEl = document.getElementById('status') || document.querySelector('.status') || document.querySelector('#status-text');
-  if (fileInput) {
-    fileInput.addEventListener('change', () => {
-      if (statusEl) statusEl.textContent = '';
-      const errEl = document.querySelector('.error, .error-text');
-      if (errEl) errEl.textContent = '';
-    }, { passive: true });
-  }
-});
-</script>
+    document.addEventListener("DOMContentLoaded", () => {
+      parseQueryParams();
+      updateRunButtonLabel();
+      runBtn.addEventListener("click", () => { handleRun(); });
+    });
+  </script>
 </body>
 </html>
