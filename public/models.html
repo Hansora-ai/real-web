@@ -190,6 +190,29 @@
 
     ];
 
+    // --- inserted Kling 2.6 & Seedream 4.5 models ---
+    const KLING_2_6 = {
+      type: 'video',
+      name: 'Kling 2.6',
+      desc: 'Text → Video',
+      badges: ['Text→Video'],
+      href: 'kling2-6.html',
+      thumbnail: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/ChatGPT%20Image%20Dec%206,%202025,%2011_11_06%20PM.png'
+    };
+    VIDEO_MODELS.splice(1, 0, KLING_2_6);
+
+    const SEEDREAM_4_5 = {
+      type: 'image',
+      name: 'Seedream 4.5',
+      desc: 'Text / Image → Image',
+      badges: ['Text→Image', 'Image→Image'],
+      href: 'seedream4.5.html',
+      thumbnail: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/ChatGPT%20Image%20Dec%206,%202025,%2011_15_25%20PM.png'
+    };
+    IMAGE_MODELS.splice(1, 0, SEEDREAM_4_5);
+
+
+
     function tile(m){
       return `
         <a href="${m.href}" class="group glass rounded-2xl overflow-hidden border border-white/10 shadow-soft block focus:outline-none focus:ring-2 ring-muted">
