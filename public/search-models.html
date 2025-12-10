@@ -124,7 +124,7 @@
   </header>
 
   <!-- MAIN HERO -->
-  <main class="flex-1">
+  <main class="flex-1 overflow-y-auto pb-40">
     <section id="resultsSection" class="hidden mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-semibold text-white/80">Recent generations</h2>
@@ -412,10 +412,10 @@
       const statusText = document.createElement('span');
       statusText.className = 'text-[10px] text-indigo-200/80';
       const downloadBtn = document.createElement('a');
-      downloadBtn.className = 'text-[10px] px-2 py-1 rounded-full bg-indigo-500/90 hover:bg-indigo-400 text-white hidden';
+      downloadBtn.className = 'text-[12px] px-4 py-2 rounded-full bg-indigo-500/90 hover:bg-indigo-400 text-white hidden';
       downloadBtn.target = '_blank';
       downloadBtn.rel = 'noopener noreferrer';
-      downloadBtn.textContent = 'Open';
+      downloadBtn.textContent = 'GET';
       bottomRow.appendChild(statusText);
       bottomRow.appendChild(downloadBtn);
 
