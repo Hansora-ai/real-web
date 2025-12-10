@@ -67,10 +67,27 @@
     textarea#promptBox{
       resize:none;
     }
+    .result-card-loader{
+      width:24px;
+      height:24px;
+      border-radius:9999px;
+      border:3px solid rgba(148,163,184,.5);
+      border-top-color:#a855f7;
+      animation:spin 1s linear infinite;
+    }
+    @keyframes spin{
+      to{ transform:rotate(360deg); }
+    }
+    .clamp-2{
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
-  <!-- HEADER (copied style from Nano Banana) -->
+  <!-- HEADER (Nano Banana style) -->
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
@@ -108,7 +125,7 @@
 
   <!-- MAIN HERO -->
   <main class="flex-1">
-    <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-40 text-center">
+    <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-10 text-center">
       <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold">
         Let’s start with some image &amp; video magic
       </h1>
@@ -128,9 +145,18 @@
         </div>
       </div>
     </section>
+
+    <!-- RESULTS STRIP -->
+    <section id="resultsSection" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-white/80">Recent generations</h2>
+        <p class="text-[11px] text-white/45">Last 7 jobs from this account</p>
+      </div>
+      <div id="resultsStrip" class="flex gap-3 overflow-x-auto pb-2"></div>
+    </section>
   </main>
 
-  <!-- BOTTOM BAR (LTX-style, bigger, purple) -->
+  <!-- BOTTOM BAR -->
   <div class="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-6 px-3">
     <div class="w-full max-w-5xl rounded-3xl bg-black/80 border border-white/15 shadow-soft px-4 py-4 space-y-3 backdrop-blur-xl">
       <!-- FIRST ROW: mode + prompt + model -->
@@ -204,7 +230,7 @@
     </div>
   </div>
 
-  <!-- MODEL OVERLAY (centered above bar) -->
+  <!-- MODEL OVERLAY (centered) -->
   <div
     id="modelOverlay"
     class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"
@@ -292,6 +318,7 @@
         }
 
         await refreshCredits();
+        await loadRecentHistory();
       } catch (e) {
         console.warn('loadUser failed', e);
       }
@@ -322,12 +349,215 @@
         }
         if (btnLogin) btnLogin.classList.remove('hidden');
         if (navCredits) navCredits.textContent = '0⚡';
+        const strip = document.getElementById('resultsStrip');
+        if (strip) strip.innerHTML = '';
       } catch (e) {
         console.warn('logout failed', e);
       }
     });
 
-    // === MODELS CONFIG (same as v2) ===
+    // === RESULTS (last 7 generations) ===
+    function createResultCard(data) {
+      const provider = data.provider || 'Model';
+      const kind = (data.kind || 'image').toLowerCase();
+      const prompt = data.prompt || '';
+      const statusRaw = (data.status || '').toString();
+      const statusLower = statusRaw.toLowerCase();
+      const hasUrl = !!data.result_url;
+
+      const card = document.createElement('div');
+      card.className = 'w-56 flex-shrink-0 rounded-2xl border border-white/15 bg-slate-950/80 shadow-soft overflow-hidden';
+      card.dataset.runId = data.run_id || '';
+
+      const media = document.createElement('div');
+      media.className = 'relative aspect-[16/9] bg-slate-900 flex items-center justify-center';
+      const loader = document.createElement('div');
+      loader.className = 'result-card-loader';
+      media.appendChild(loader);
+
+      const mediaEl = document.createElement(kind === 'video' ? 'video' : 'img');
+      mediaEl.className = 'absolute inset-0 h-full w-full object-cover hidden';
+      if (kind === 'video') {
+        mediaEl.controls = true;
+        mediaEl.muted = true;
+        mediaEl.playsInline = true;
+      }
+      media.appendChild(mediaEl);
+
+      const statusChip = document.createElement('div');
+      statusChip.className = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-black/70 text-white/80';
+      media.appendChild(statusChip);
+
+      const body = document.createElement('div');
+      body.className = 'p-2.5 space-y-1';
+      const topRow = document.createElement('div');
+      topRow.className = 'flex items-center justify-between gap-2';
+      const nameEl = document.createElement('span');
+      nameEl.className = 'text-[11px] font-medium truncate';
+      nameEl.textContent = provider;
+      const kindEl = document.createElement('span');
+      kindEl.className = 'text-[10px] text-white/45 uppercase tracking-wide';
+      kindEl.textContent = kind;
+      topRow.appendChild(nameEl);
+      topRow.appendChild(kindEl);
+
+      const promptEl = document.createElement('p');
+      promptEl.className = 'text-[10px] text-white/60 clamp-2';
+      promptEl.textContent = prompt;
+
+      const bottomRow = document.createElement('div');
+      bottomRow.className = 'flex items-center justify-between gap-2 mt-1';
+      const statusText = document.createElement('span');
+      statusText.className = 'text-[10px] text-indigo-200/80';
+      const downloadBtn = document.createElement('a');
+      downloadBtn.className = 'text-[10px] px-2 py-1 rounded-full bg-indigo-500/90 hover:bg-indigo-400 text-white hidden';
+      downloadBtn.target = '_blank';
+      downloadBtn.rel = 'noopener noreferrer';
+      downloadBtn.textContent = 'Open';
+      bottomRow.appendChild(statusText);
+      bottomRow.appendChild(downloadBtn);
+
+      body.appendChild(topRow);
+      body.appendChild(promptEl);
+      body.appendChild(bottomRow);
+
+      card.appendChild(media);
+      card.appendChild(body);
+
+      function apply(newData) {
+        const stRaw = (newData.status || '').toString();
+        const st = stRaw.toLowerCase();
+        const hasUrlNow = !!newData.result_url;
+
+        if (hasUrlNow) {
+          mediaEl.src = newData.result_url;
+          mediaEl.classList.remove('hidden');
+          downloadBtn.href = newData.result_url;
+          downloadBtn.classList.remove('hidden');
+          loader.style.display = 'none';
+        } else {
+          mediaEl.classList.add('hidden');
+          downloadBtn.classList.add('hidden');
+          loader.style.display = st.includes('fail') ? 'none' : 'block';
+        }
+
+        let label = 'Processing…';
+        let pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-black/70 text-white/80';
+        let statusClass = 'text-[10px] text-indigo-200/80';
+
+        if (st.includes('fail') || st.includes('error')) {
+          label = 'Failed';
+          pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-red-500/85 text-white';
+          statusClass = 'text-[10px] text-red-300';
+        } else if (hasUrlNow) {
+          label = 'Ready';
+          pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/85 text-white';
+          statusClass = 'text-[10px] text-emerald-300';
+        }
+
+        statusChip.textContent = label;
+        statusChip.className = pillClass;
+        statusText.textContent = label;
+        statusText.className = statusClass;
+      }
+
+      apply({
+        status: statusRaw || (hasUrl ? 'ready' : 'processing'),
+        result_url: data.result_url
+      });
+
+      return { card, apply };
+    }
+
+    function addResultCard(data, options) {
+      const strip = document.getElementById('resultsStrip');
+      if (!strip) return null;
+      const { card, apply } = createResultCard(data);
+      if (options && options.prepend) {
+        strip.prepend(card);
+      } else {
+        strip.appendChild(card);
+      }
+      while (strip.children.length > 7) {
+        strip.removeChild(strip.lastElementChild);
+      }
+      return { card, apply };
+    }
+
+    async function loadRecentHistory() {
+      if (!currentUser) return;
+      try {
+        const { data, error } = await supabaseClient
+          .from('user_generations')
+          .select('provider, kind, prompt, result_url, meta, created_at')
+          .eq('user_id', currentUser.id)
+          .order('created_at', { ascending: false })
+          .limit(7);
+
+        if (error) {
+          console.warn('loadRecentHistory error', error);
+          return;
+        }
+
+        const strip = document.getElementById('resultsStrip');
+        if (strip) strip.innerHTML = '';
+
+        (data || []).forEach((row) => {
+          const runId = row.meta && row.meta.run_id ? row.meta.run_id : '';
+          const status = row.meta && row.meta.status ? row.meta.status : (row.result_url ? 'ready' : 'processing');
+          addResultCard({
+            run_id: runId,
+            provider: row.provider || 'Model',
+            kind: row.kind || 'image',
+            prompt: row.prompt || '',
+            result_url: row.result_url,
+            status
+          }, { prepend: false });
+        });
+      } catch (e) {
+        console.warn('loadRecentHistory failed', e);
+      }
+    }
+
+    async function pollGeneration(runId, controller) {
+      if (!currentUser || !runId || !controller) return;
+      const maxMs = 210000;
+      const started = Date.now();
+      while (Date.now() - started < maxMs) {
+        await new Promise((r) => setTimeout(r, 3000));
+        try {
+          const { data, error } = await supabaseClient
+            .from('user_generations')
+            .select('provider, kind, prompt, result_url, meta, created_at')
+            .eq('user_id', currentUser.id)
+            .eq('meta->>run_id', runId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (error) {
+            console.warn('pollGeneration error', error);
+            break;
+          }
+          if (!data) continue;
+
+          const status = data.meta && data.meta.status ? data.meta.status : (data.result_url ? 'ready' : 'processing');
+          controller.apply({
+            status,
+            result_url: data.result_url
+          });
+
+          if (status.toLowerCase().includes('fail') || status.toLowerCase().includes('error') || data.result_url) {
+            return;
+          }
+        } catch (e) {
+          console.warn('pollGeneration exception', e);
+          break;
+        }
+      }
+    }
+
+    // === MODELS CONFIG ===
     const MODELS = [
       {
         id: 'nano-banana',
@@ -792,13 +1022,13 @@
       uploadedFiles.forEach((file, index) => {
         const url = URL.createObjectURL(file);
         const wrapper = document.createElement('div');
-        wrapper.className = 'relative h-11 w-11 rounded-xl overflow-hidden border border-white/20';
+        wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
         const img = document.createElement('img');
         img.src = url;
         img.className = 'h-full w-full object-cover';
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
-        closeBtn.className = 'absolute -top-1 -right-1 h-4 w-4 rounded-full bg-black/80 text-[10px] leading-none flex items-center justify-center';
+        closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
         closeBtn.textContent = '×';
         closeBtn.addEventListener('click', () => {
           uploadedFiles.splice(index, 1);
@@ -954,6 +1184,15 @@
           duration: currentDuration
         });
 
+        const placeholderController = addResultCard({
+          run_id: runId,
+          provider: currentModel.name,
+          kind: currentModel.category,
+          prompt,
+          result_url: null,
+          status: 'processing'
+        }, { prepend: true });
+
         const res = await fetch(currentModel.endpoint, {
           method: 'POST',
           headers: {
@@ -966,12 +1205,18 @@
         if (!res.ok) {
           const txt = await res.text().catch(() => '');
           showStatus('Error from model: ' + (txt || `status ${res.status}`), 'error');
+          if (placeholderController) {
+            placeholderController.apply({ status: 'failed', result_url: null });
+          }
         } else {
           showStatus(
-            `✅ Request submitted to ${currentModel.name}. You will see the result in Usage / History when it is ready.`,
+            `✅ Request submitted to ${currentModel.name}. You will see the result here and in Usage / History when it is ready.`,
             'success'
           );
           await refreshCredits();
+          if (placeholderController) {
+            pollGeneration(runId, placeholderController);
+          }
         }
       } catch (err) {
         console.error(err);
