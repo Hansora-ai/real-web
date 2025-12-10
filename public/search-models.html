@@ -370,13 +370,13 @@
       card.dataset.runId = data.run_id || '';
 
       const media = document.createElement('div');
-      media.className = 'relative aspect-[16/9] bg-slate-900 flex items-center justify-center';
+      media.className = 'relative h-40 bg-slate-900 flex items-center justify-center';
       const loader = document.createElement('div');
       loader.className = 'result-card-loader';
       media.appendChild(loader);
 
       const mediaEl = document.createElement(kind === 'video' ? 'video' : 'img');
-      mediaEl.className = 'absolute inset-0 h-full w-full object-cover hidden';
+      mediaEl.className = 'max-h-full max-w-full object-contain hidden';
       if (kind === 'video') {
         mediaEl.controls = true;
         mediaEl.muted = true;
@@ -501,6 +501,11 @@
 
         const strip = document.getElementById('resultsStrip');
         if (strip) strip.innerHTML = '';
+
+        const hero = document.getElementById('heroSection');
+        if ((data || []).length > 0 && hero) {
+          hero.classList.add('hidden');
+        }
 
         (data || []).forEach((row) => {
           const runId = row.meta && row.meta.run_id ? row.meta.run_id : '';
@@ -1025,7 +1030,7 @@
         wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
         const img = document.createElement('img');
         img.src = url;
-        img.className = 'max-h-full max-w-full object-contain';
+        img.className = 'h-full w-full object-cover';
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
         closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
