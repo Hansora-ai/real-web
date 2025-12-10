@@ -1025,7 +1025,7 @@
         wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
         const img = document.createElement('img');
         img.src = url;
-        img.className = 'h-full w-full object-cover';
+        img.className = 'max-h-full max-w-full object-contain';
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
         closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
