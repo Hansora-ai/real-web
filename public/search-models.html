@@ -125,7 +125,15 @@
 
   <!-- MAIN HERO -->
   <main class="flex-1">
-    <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-10 text-center">
+    <section id="resultsSection" class="hidden mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-white/80">Recent generations</h2>
+        <p class="text-[11px] text-white/45">Last 7 jobs from this account</p>
+      </div>
+      <div id="resultsStrip" class="flex gap-3 overflow-x-auto pb-2"></div>
+    </section>
+
+    <section id="heroSection" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-10 text-center">
       <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold">
         Let’s start with some image &amp; video magic
       </h1>
@@ -147,13 +155,7 @@
     </section>
 
     <!-- RESULTS STRIP -->
-    <section id="resultsSection" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-semibold text-white/80">Recent generations</h2>
-        <p class="text-[11px] text-white/45">Last 7 jobs from this account</p>
-      </div>
-      <div id="resultsStrip" class="flex gap-3 overflow-x-auto pb-2"></div>
-    </section>
+    
   </main>
 
   <!-- BOTTOM BAR -->
@@ -503,8 +505,16 @@
         if (strip) strip.innerHTML = '';
 
         const hero = document.getElementById('heroSection');
-        if ((data || []).length > 0 && hero) {
-          hero.classList.add('hidden');
+        const resultsSection = document.getElementById('resultsSection');
+        const hasItems = (data || []).length > 0;
+
+        if (hero) {
+          if (hasItems) hero.classList.add('hidden');
+          else hero.classList.remove('hidden');
+        }
+        if (resultsSection) {
+          if (hasItems) resultsSection.classList.remove('hidden');
+          else resultsSection.classList.add('hidden');
         }
 
         (data || []).forEach((row) => {
