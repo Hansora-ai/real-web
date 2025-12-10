@@ -125,7 +125,7 @@
 
   <!-- MAIN HERO -->
   <main class="flex-1">
-    <section id="resultsSection" class="hidden mt-12 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
+    <section id="resultsSection" class="hidden mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-semibold text-white/80">Recent generations</h2>
         <p class="text-[11px] text-white/45">Last 7 jobs from this account</p>
@@ -368,7 +368,7 @@
       const hasUrl = !!data.result_url;
 
       const card = document.createElement('div');
-      card.className = 'w-56 flex-shrink-0 rounded-2xl border border-white/15 bg-slate-950/80 shadow-soft overflow-hidden';
+      card.className = 'w-80 flex-shrink-0 rounded-2xl border border-white/15 bg-slate-950/80 shadow-soft overflow-hidden';
       card.dataset.runId = data.run_id || '';
 
       const media = document.createElement('div');
