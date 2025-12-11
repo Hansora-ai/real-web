@@ -89,6 +89,7 @@
           <div>
             <label class="text-xs text-zinc-400">Select 0–1 image (jpeg/png/webp, ≤10MB)</label>
             <input id="image" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
+            <p class="mt-2 text-xs font-semibold text-yellow-300">Currently images with real human faces are not allowed by OpenAI.</p>
             <div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div>
           </div>
 
@@ -121,7 +122,7 @@
 
           <div>
             <label class="text-sm text-zinc-300 font-medium">Prompt (optional)</label>
-            <p class="mt-1 text-[13px] text-zinc-200/90 font-medium">Note: The image is optional. If you include one, match the video’s aspect ratio (16:9 or 9:16) to avoid automatic cropping. !Currently image with real Human face is not allowed by Open AI.!</p>
+            <p class="mt-1 text-[13px] text-zinc-200/90 font-medium">Note: The image is optional. If you include one, match the video’s aspect ratio (16:9 or 9:16) to avoid automatic cropping.</p>
             <textarea id="prompt" placeholder="Describe your video…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[160px] input-dark"></textarea>
           </div>
 
