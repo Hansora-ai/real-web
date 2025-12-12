@@ -179,8 +179,29 @@ function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarte
 $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
-async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p, user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}})();
+$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
+
+// Read-only profile fetch (NO browser-side inserts/updates to credits)
+async function getProfileReadOnly(user){
+  const r = await supabase.from('profiles').select('credits, avatar_url').eq('user_id', user.id).maybeSingle();
+  if (r.error) throw r.error;
+  return r.data || { credits: 0 };
+}
+
+(async()=>{
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
+  if (user){
+    try{
+      const p = await getProfileReadOnly(user);
+      showLoggedInUI(p, user);
+    }catch{
+      showLoggedOutUI();
+    }
+  }else{
+    showLoggedOutUI();
+  }
+})();
 
 // Elements
 const videoEl=document.getElementById('video');
@@ -273,14 +294,6 @@ async function getCredits(){
     return prof?.credits ?? 0;
   }catch{return 0;}
 }
-async function chargeCredits(cost){
-  const { data } = await supabase.auth.getUser();
-  const user = data?.user; if(!user) return;
-  const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-  const cur = prof?.credits ?? 0;
-  if (cur < cost) throw new Error('Not enough credits (need ' + cost + ').');
-  await supabase.from('profiles').update({ credits: cur - cost }).eq('user_id', user.id);
-}
 async function refreshCreditsUI(){
   try{
     const c = await getCredits();
@@ -289,6 +302,32 @@ async function refreshCreditsUI(){
   }catch{}
 }
 refreshCreditsUI();
+
+// === Live credits (Supabase Realtime) — 1:1 behavior with Kling 2.6 ===
+(async function HANSORA_LIVE_CREDITS(){
+  try{
+    if (typeof supabase === 'undefined' || !supabase.auth) return;
+
+    const navCreditsEl = document.getElementById('navCredits');
+    function renderCredits(c){
+      try{
+        if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+      }catch{}
+    }
+
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if (!user) return;
+
+    // subscribe to updates
+    supabase.channel('credits_live_' + user.id)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
+        (payload) => { renderCredits(payload.new?.credits ?? 0); }
+      )
+      .subscribe();
+  }catch(e){ console.warn('live credits failed', e); }
+})();
+
 
 //}
   
@@ -313,35 +352,42 @@ function showVideo(url){
   }
 }
 
-// Poll aleph-check until mp4
-async function alephCheckPoll(taskId, uid, rid, uploadedUrl){
+// Wait for result saved by the SAME KIE callback logic as Kling (video-kie-callback → Supabase)
+async function waitForSupabaseResult(uid, rid, uploadedUrl){
   for (let i=0;i<320;i++){ // up to ~8 min (1.5s step)
     try{
-      const r = await fetch('/.netlify/functions/aleph-check?taskId=' + encodeURIComponent(taskId) + '&uid=' + encodeURIComponent(uid) + '&run_id=' + encodeURIComponent(rid));
-      const j = await r.json().catch(()=>({}));
-      if (j && j.ok && j.video_url) {
-        if (!uploadedUrl || j.video_url !== uploadedUrl) {
-          showVideo(j.video_url);
-          showStatus('✅ Done.','text-emerald-300');
-          runBtn.disabled = false;
-          try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
-          try{ await refreshCreditsUI();
-
-//}
-  
- }catch{}
-          return;
+      const { data, error } = await supabase
+        .from('user_generations')
+        .select('result_url, meta')
+        .eq('user_id', uid)
+        .filter('meta->>run_id', 'eq', rid)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (!error && Array.isArray(data) && data.length){
+        const row = data[0] || {};
+        const url = row.result_url || '';
+        const st  = String((row.meta && row.meta.status) || '').toLowerCase();
+        if (url && url !== uploadedUrl){
+          onResult(url);
+          break;
         }
-        // same as uploaded; keep polling
+        if (st === 'failed' || st === 'canceled' || st === 'payment_failed'){
+          showStatus('❌ Generation failed, please try again later. Your credits are refunded.','text-red-300');
+          runBtn.disabled=false;
+          try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
+          break;
+        }
       }
-    } catch {}
+    }catch(e){}
     await new Promise(r=>setTimeout(r,1500));
   }
-  showStatus('❌ Generation failed, please try again later. Your credits are refunded','text-red-300');
-  runBtn.disabled=false;
-  try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
+  // timeout fallback
+  if (runBtn.disabled){
+    showStatus('⏳ Still processing… Please check the Usage page in a bit.','text-zinc-300');
+    runBtn.disabled=false;
+    try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
+  }
 }
-
 window.__run = async function(){
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
@@ -375,6 +421,9 @@ window.__run = async function(){
   try{
     const uid = authData.user.id;
     const aspectRatio = ASPECT_RATIO_DEFAULT || '16:9';
+
+    // Client run_id for idempotency across retries of the same click
+    const run_id = `${uid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
     // Upload video via kie-upload
     const vfd = new FormData();
@@ -427,29 +476,27 @@ const supaUpload = await (async () => {
     }
 
     // Create job
-    const resp = await fetch('/.netlify/functions/run-aleph',{
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', 'X-USER-ID': uid },
-      body: JSON.stringify({ uid, prompt: _prompt, aspectRatio, videoUrl, imageUrl })
-    });
+    const { data: sessData } = await supabase.auth.getSession();
+const accessToken = sessData?.session?.access_token || '';
+const resp = await fetch('/.netlify/functions/run-aleph',{
+  method:'POST',
+  headers:{
+    'Content-Type':'application/json',
+    'X-USER-ID': uid,
+    ...(accessToken ? { 'Authorization': 'Bearer ' + accessToken } : {})
+  },
+  body: JSON.stringify({ uid, prompt: _prompt, aspectRatio, videoUrl, imageUrl, run_id })
+});
     const j = await resp.json().catch(()=>({}));
     if (!resp.ok || !j.submitted){
       showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
       runBtn.disabled = false; runBtn.textContent='Run (cost: 9⚡)'; return;
     }
-
-    // Client-side debit (fixed 9⚡)
-    try{ await chargeCredits(9); await refreshCreditsUI();
-
-//}
-  
- }catch{}
-
     const taskId = j.taskId || '';
-    const run_id = j.run_id || '';
+    const server_run_id = j.run_id || run_id || '';
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-    if (taskId && run_id) alephCheckPoll(taskId, uid, run_id, videoUrl);
+    if (server_run_id) waitForSupabaseResult(uid, server_run_id, videoUrl);
 
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
