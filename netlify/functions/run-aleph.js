@@ -17,7 +17,7 @@ const PROFILES_URL  = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
 
 // Your site base for callback (same style as Veo 3)
 const SITE_BASE = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/,'');
-const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/aleph-check`;
+const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/video-kie-callback`;
 
 const COST = 9; // Aleph cost in credits
 
