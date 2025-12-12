@@ -238,20 +238,27 @@ async function getCredits(){
   }catch{return 0;}
 }
 
-// Debit and refresh header immediately
-async function chargeCredits(cost){
-  const { data } = await supabase.auth.getUser();
-  const user = data?.user; if(!user) return;
-  const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-  const cur = prof?.credits ?? 0;
-  if (cur < cost) throw new Error('Not enough credits (need ' + cost + ').');
-  await supabase.from('profiles').update({ credits: cur - cost }).eq('user_id', user.id);
-}
 
 async function refreshCreditsUI(){
   try{
     const c = await getCredits();
     const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
+  }catch{}
+}
+
+async function waitForCreditsDrop(target){
+  try{
+    const start = Date.now();
+    const timeoutMs = 15000;
+    while (Date.now() - start < timeoutMs){
+      const c = await getCredits();
+      if (typeof c === 'number' && c <= target){
+        const nav = document.getElementById('navCredits'); if (nav) nav.textContent = c + '⚡';
+        return;
+      }
+      await new Promise(r=>setTimeout(r,800));
+    }
+    await refreshCreditsUI();
   }catch{}
 }
 
@@ -320,9 +327,9 @@ async function runJob(){
       return;
     }
 
-    try{ await chargeCredits(7); await refreshCreditsUI(); }catch{}
+    try{ await refreshCreditsUI(); await waitForCreditsDrop(credits - cost); }catch{}
 
-    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
     try{displayBox.innerHTML = '<div class="py-6 text-center space-y-2"><div class="text-xs text-zinc-400">Generating…</div><div class="text-[15px] font-semibold text-zinc-100">Sometimes during high demand it takes a little longer.<br/>You can leave this page — your result will appear in <a class="underline hover:no-underline" href="usage.html">History</a> when it’s done.</div></div>'; }catch{}
     await pollResult(j.job_set_id, uid, j.run_id);
   } catch (e){
