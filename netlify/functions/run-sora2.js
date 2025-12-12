@@ -29,8 +29,15 @@ exports.handler = async (event) => {
     const body = isJson ? safeJson(event.body) : {};
 
     const uid  = String(body.uid || body.user_id || "").trim();
-    const runId = String(body.run_id || body.runId || "").trim();
+    const runIdRaw = String(body.run_id || body.runId || "").trim();
+    const runId = runIdRaw || `${uid}-${Date.now()}`;
     const prompt = (body.prompt ?? "").toString().trim();
+    // Verify caller identity (prevents uid spoofing / external abuse)
+    const authz = (headers["authorization"] || "").toString();
+    if (!await verifyCaller(uid, authz)) {
+      return err(401, "unauthorized");
+    }
+
 
     // aspect ratio normalization (accept various keys)
     const aspectRaw = String(
@@ -53,6 +60,27 @@ exports.handler = async (event) => {
     const model = image_urls.length
       ? (tier === "pro" ? "sora-2-pro-image-to-video" : "sora-2-image-to-video")
       : (tier === "pro" ? "sora-2-pro-text-to-video"  : "sora-2-text-to-video");
+
+
+    // Pricing (must match client UI)
+    const seconds = (() => {
+      const v = body.n_frames ?? body.duration ?? body.frames ?? "";
+      const n = parseInt(String(v), 10);
+      return (n === 15) ? 15 : 10;
+    })();
+    const cost = (tier === "pro") ? (seconds === 15 ? 25 : 15) : 3;
+
+    // Idempotency: if this run_id was already charged, return existing task_id (if present)
+    const existing = await findUserGenByRunId(uid, runId);
+    if (existing?.meta?.charged === true || existing?.meta?.charged === "true") {
+      return ok({ submitted: true, taskId: existing?.meta?.task_id || existing?.meta?.taskId || "", already_charged: true, run_id: runId });
+    }
+
+    // Server-side balance check (do not trust browser)
+    const currentCredits = await getCredits(uid);
+    if (currentCredits < cost) {
+      return ok({ submitted: false, error: "insufficient_credits", need: cost, credits: currentCredits });
+    }
 
     // seed/patch "processing" row
     const metaBase = { status: "processing", run_id: runId, provider: "kie", engine: "sora2" };
@@ -128,7 +156,30 @@ const providerLabel = (tier === "pro") ? `Sora 2 pro-${__seconds || "10s"}` : "S
       payload: { meta: { ...metaBase, task_id: taskId } }
     });
 
-    return ok({ submitted:true, taskId, data });
+
+    // Deduct credits AFTER successful submission (idempotent)
+    const genId = body.id || existing?.id || null;
+    const charged = await debitCreditsOnce({ uid, cost, runId, genId });
+    if (!charged.ok) {
+      // Extremely rare race condition (credits changed between precheck and debit). Mark failed.
+      try {
+        await patchUserGen({
+          id: genId,
+          payload: { meta: { ...metaBase, task_id: taskId, status: "failed", error: charged.error || "charge_failed" } }
+        });
+      } catch {}
+      return ok({ submitted: false, error: charged.error || "charge_failed" });
+    }
+
+    // Mark charged in meta for replay protection
+    try {
+      await patchUserGen({
+        id: genId,
+        payload: { meta: { ...metaBase, task_id: taskId, charged: true, charged_cost: cost, charged_at: new Date().toISOString() } }
+      });
+    } catch {}
+
+    return ok({ submitted:true, taskId, data, charged: true, cost });
   } catch (e) {
     return err(500, "server_error", { detail: String(e && e.stack || e) });
   }
@@ -147,6 +198,89 @@ function cors(){
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
 }
+
+// ------------------------------
+// Auth + Credits (SERVICE ROLE only)
+// ------------------------------
+
+async function verifyCaller(expectedUid, authz){
+  try{
+    const token = String(authz || "").replace(/^Bearer\s+/i, "").trim();
+    if (!token) return false;
+    if (!SUPABASE_URL) return false;
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        "apikey": SERVICE_KEY,
+        "Authorization": `Bearer ${token}`
+      }
+    });
+    if (!r.ok) return false;
+    const u = await r.json().catch(()=>null);
+    return !!u && String(u.id || "").trim() === String(expectedUid || "").trim();
+  }catch{
+    return false;
+  }
+}
+
+async function getCredits(uid){
+  try{
+    if (!SUPABASE_URL || !SERVICE_KEY) return 0;
+    const url = `${SUPABASE_URL}/rest/v1/profiles?select=credits&user_id=eq.${encodeURIComponent(uid)}&limit=1`;
+    const r = await fetch(url, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } });
+    const arr = await r.json().catch(()=>[]);
+    const c = Array.isArray(arr) && arr.length ? Number(arr[0].credits || 0) : 0;
+    return Number.isFinite(c) ? c : 0;
+  }catch{
+    return 0;
+  }
+}
+
+// Atomic CAS-style debit to prevent double-spend
+async function debitCreditsOnce({ uid, cost, runId, genId }){
+  try{
+    // If already marked charged in user_generations, skip
+    const ex = await findUserGenByRunId(uid, runId);
+    if (ex?.meta?.charged === true || ex?.meta?.charged === "true") {
+      return { ok:true, already:true };
+    }
+
+    // Read current credits
+    const cur = await getCredits(uid);
+    if (cur < cost) return { ok:false, error:"insufficient_credits" };
+
+    // Compare-and-swap update: update only if credits still equals cur
+    const patchUrl = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&credits=eq.${encodeURIComponent(cur)}&select=credits`;
+    const r = await fetch(patchUrl, {
+      method: "PATCH",
+      headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, "Content-Type":"application/json", "Prefer":"return=representation" },
+      body: JSON.stringify({ credits: cur - cost })
+    });
+    const arr = await r.json().catch(()=>[]);
+    if (Array.isArray(arr) && arr.length) return { ok:true };
+
+    // If CAS failed, re-check if it was charged concurrently
+    const ex2 = await findUserGenByRunId(uid, runId);
+    if (ex2?.meta?.charged === true || ex2?.meta?.charged === "true") return { ok:true, already:true };
+
+    return { ok:false, error:"charge_race" };
+  }catch(e){
+    return { ok:false, error:String(e) };
+  }
+}
+
+async function findUserGenByRunId(uid, runId){
+  try{
+    if (!UG_URL || !SERVICE_KEY || !uid || !runId) return null;
+    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(runId)}&select=id,meta&limit=1`;
+    const r = await fetch(UG_URL + q, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } });
+    const arr = await r.json().catch(()=>[]);
+    if (Array.isArray(arr) && arr.length) return { id: arr[0].id, meta: arr[0].meta || {} };
+    return null;
+  }catch{
+    return null;
+  }
+}
+
 
 // Patch existing row in user_generations (same as Veo style)
 async function patchUserGen({ id, payload }){
