@@ -460,10 +460,11 @@ const resp = await fetch('/.netlify/functions/run-aleph',{
       runBtn.disabled = false; runBtn.textContent='Run (cost: 9⚡)'; return;
     }
     const taskId = j.taskId || '';
-    const run_id = j.run_id || '';
+    const server_run_id = j.run_id || run_id || '';
+
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-    if (taskId && run_id) alephCheckPoll(taskId, uid, run_id, videoUrl);
+    if (taskId && server_run_id) alephCheckPoll(taskId, uid, server_run_id, videoUrl);
 
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
