@@ -12,6 +12,10 @@ const SUPABASE_URL  = process.env.SUPABASE_URL || "";
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
 
+// Credits (server-side only)
+const PROFILES_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
+const COST_CREDITS = 2;
+
 // Public site base for callback (same style as other flows)
 const SITE_BASE = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/,'');
 const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/video-kie-callback`;
@@ -27,6 +31,14 @@ exports.handler = async (event) => {
 
     const uid = (body.uid || body.user_id || "").toString().trim();
     if (!uid) return ok({ submitted:false, error:"missing_user_id" });
+    // Require a valid Supabase session token and prevent UID spoofing
+    const authz = (headers["authorization"] || "").toString();
+    const accessToken = authz.toLowerCase().startsWith("bearer ") ? authz.slice(7).trim() : "";
+    if (!accessToken) return ok({ submitted:false, error:"missing_auth" });
+    const authedUserId = await verifySupabaseUser(accessToken);
+    if (!authedUserId) return ok({ submitted:false, error:"invalid_auth" });
+    if (authedUserId !== uid) return ok({ submitted:false, error:"uid_mismatch" });
+
 
     // For MJ image→video, BOTH image and prompt are required
     const prompt = (body.prompt || "").toString().trim();
@@ -35,6 +47,24 @@ exports.handler = async (event) => {
 
     const aspectRatio = normalizeAspect(body.aspectRatio || "1:1");
     const run_id = (body.run_id || `${uid}-${Date.now()}`);
+
+    // Idempotency: if this run_id already has a task_id and was charged, return it and do not charge again
+    try {
+      if (UG_URL && SERVICE_KEY) {
+        const q0 = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id,meta`;
+        const chk0 = await fetch(UG_URL + q0, { headers: sb() });
+        const arr0 = await chk0.json().catch(()=>[]);
+        if (Array.isArray(arr0) && arr0.length) {
+          const meta0 = arr0[0].meta || {};
+          const existingTask = meta0.task_id || meta0.taskId || "";
+          const alreadyCharged = meta0.charged === true || meta0.charged === "true";
+          if (existingTask && alreadyCharged) {
+            return ok({ submitted:true, run_id, taskId: existingTask, status: 200, data: { reused:true } });
+          }
+        }
+      }
+    } catch {}
+
 
     const callBackUrl = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
 
@@ -73,6 +103,12 @@ exports.handler = async (event) => {
       }
     }
 
+
+    // Server-side credit precheck (do not submit if insufficient)
+    const bal = await getCredits(uid);
+    if (bal < COST_CREDITS) {
+      return ok({ submitted:false, error:"insufficient_credits", need: COST_CREDITS, have: bal });
+    }
     // Build KIE payload for Midjourney image→video
     const kiePayload = {
       taskType: "mj_video",
@@ -103,6 +139,22 @@ exports.handler = async (event) => {
     }
     if (!resp.ok) return ok({ submitted:false, error:`kie_${resp.status}`, data });
     if (!taskId)  return ok({ submitted:false, error:"missing_taskId", data });
+
+    // Server-side debit AFTER successful submission (idempotent per run_id)
+    try {
+      // Mark charged in user_generations meta; charge only once
+      const already = await isAlreadyCharged(uid, run_id);
+      if (!already) {
+        const charged = await debitCredits(uid, COST_CREDITS);
+        if (!charged) {
+          // If we cannot debit after submit (race), still avoid giving free runs.
+          return ok({ submitted:false, error:"debit_failed", taskId, run_id });
+        }
+        await markCharged(uid, run_id, taskId, aspectRatio);
+      }
+    } catch (e) {
+      return ok({ submitted:false, error:"debit_exception", message:String(e), taskId, run_id });
+    }
 
     // Persist taskId into meta (optional)
     try {
@@ -165,4 +217,68 @@ function extractTaskId(data){
     return "";
   }
   return scan(data) || "";
+}
+
+
+async function verifySupabaseUser(accessToken){
+  if (!SUPABASE_URL || !SERVICE_KEY) return "";
+  try{
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { "apikey": SERVICE_KEY, "Authorization": `Bearer ${accessToken}` }
+    });
+    if (!r.ok) return "";
+    const j = await r.json().catch(()=>null);
+    return (j && (j.id || j.user?.id)) ? String(j.id || j.user.id) : "";
+  }catch{ return ""; }
+}
+
+async function getCredits(uid){
+  if (!PROFILES_URL || !SERVICE_KEY) return 0;
+  const q = `?select=credits&user_id=eq.${encodeURIComponent(uid)}&limit=1`;
+  const r = await fetch(PROFILES_URL + q, { headers: sb() });
+  const arr = await r.json().catch(()=>[]);
+  return (Array.isArray(arr) && arr.length) ? (arr[0].credits ?? 0) : 0;
+}
+
+async function debitCredits(uid, cost){
+  if (!PROFILES_URL || !SERVICE_KEY) return false;
+  for (let i=0;i<3;i++){
+    const cur = await getCredits(uid);
+    if (cur < cost) return false;
+    const q = `?user_id=eq.${encodeURIComponent(uid)}&credits=eq.${encodeURIComponent(cur)}`;
+    const r = await fetch(PROFILES_URL + q, {
+      method: "PATCH",
+      headers: { ...sb(), "Content-Type":"application/json", "Prefer":"return=representation" },
+      body: JSON.stringify({ credits: Number(cur) - Number(cost) })
+    });
+    const arr = await r.json().catch(()=>[]);
+    if (Array.isArray(arr) && arr.length) return true;
+  }
+  return false;
+}
+
+async function isAlreadyCharged(uid, run_id){
+  if (!UG_URL || !SERVICE_KEY) return false;
+  const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=meta&limit=1`;
+  const r = await fetch(UG_URL + q, { headers: sb() });
+  const arr = await r.json().catch(()=>[]);
+  if (Array.isArray(arr) && arr.length){
+    const meta = arr[0].meta || {};
+    return meta.charged === true || meta.charged === "true";
+  }
+  return false;
+}
+
+async function markCharged(uid, run_id, taskId, aspectRatio){
+  if (!UG_URL || !SERVICE_KEY) return;
+  const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id&limit=1`;
+  const r = await fetch(UG_URL + q, { headers: sb() });
+  const arr = await r.json().catch(()=>[]);
+  if (!Array.isArray(arr) || !arr.length) return;
+  const id = arr[0].id;
+  await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { ...sb(), "Content-Type":"application/json", "Prefer":"return=minimal" },
+    body: JSON.stringify({ meta: { run_id, status:"processing", aspect_ratio: aspectRatio, duration: 5, task_id: taskId, task_type:"mj_video", version:7, charged:true, charged_cost:COST_CREDITS } })
+  });
 }
