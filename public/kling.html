@@ -167,6 +167,52 @@ const downloadLink=document.getElementById('downloadLink');
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
+// --- Live credits (same idea as Kling 2.6): fetch + realtime subscribe + safe refresh loop ---
+async function getCredits(){
+  try{
+    const u = await supabase.auth.getUser();
+    const user = u?.data?.user;
+    if(!user) return 0;
+    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+    return prof?.credits ?? 0;
+  }catch(e){ return 0; }
+}
+
+async function refreshCreditsUI(){
+  try{
+    const c = await getCredits();
+    const nav = document.getElementById('navCredits');
+    if(nav) nav.textContent = (c ?? 0) + '⚡';
+  }catch(e){}
+}
+
+// Because server-side debit happens AFTER provider accepts, a single immediate refresh is often too early.
+// This polls credits briefly to catch the change without requiring a manual refresh.
+async function refreshCreditsUIAfterSubmit(){
+  try{
+    const before = await getCredits();
+    for (let i=0;i<12;i++){
+      await new Promise(r=>setTimeout(r,650));
+      await refreshCreditsUI();
+      const now = await getCredits();
+      if (now !== before) break;
+    }
+  }catch(e){}
+}
+
+// Initial render + realtime updates on profile credit changes
+(async function(){
+  try{
+    const u = await supabase.auth.getUser();
+    const user = u?.data?.user;
+    if(!user) return;
+    await refreshCreditsUI();
+    supabase.channel('credits_live_kling_'+user.id)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'profiles',filter:'user_id=eq.'+user.id}, ()=>{ refreshCreditsUI(); })
+      .subscribe();
+  }catch(e){}
+})();
+
 
 async function readFileAsDataUrl(file){
   if(!file) return null;
@@ -329,6 +375,9 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
     const id = resJson?.id || resJson?.prediction_id || resJson?.data?.id || null;
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+
+    // Live credits: update after server-side debit (no manual refresh)
+    refreshCreditsUIAfterSubmit();
 
     // Start polling prediction
     imagenCheckPoll(id, uid, rid);
