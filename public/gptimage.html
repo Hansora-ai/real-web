@@ -237,7 +237,7 @@ $navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMen
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
 async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
+(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);__startCreditsRealtime(user.id);await __refreshCreditsUI();}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
 
 // Elements
 const promptEl=document.getElementById('prompt');
@@ -275,12 +275,34 @@ function onResult(url){
   img.src=url;
 }
 
+// Live credits (Realtime) + manual refresh (used for immediate post-deduction UI update)
+let __creditsChannel = null;
+async function __refreshCreditsUI(){
+  try{
+    const ures = await supabase.auth.getUser();
+    const user = ures?.data?.user; if(!user) return null;
+    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+    const c = prof?.credits ?? 0;
+    if ($navCredits) $navCredits.textContent = (c ?? 0) + '⚡';
+    return c;
+  }catch(e){ console.warn('refreshCredits failed', e); return null; }
+}
+function __startCreditsRealtime(userId){
+  try{
+    if (!userId) return;
+    if (__creditsChannel) { try{ supabase.removeChannel(__creditsChannel); }catch{} __creditsChannel = null; }
+    __creditsChannel = supabase.channel('credits_live_' + userId)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + userId }, (payload)=>{
+        const c = payload?.new?.credits ?? 0;
+        if ($navCredits) $navCredits.textContent = (c ?? 0) + '⚡';
+      })
+      .subscribe();
+  }catch(e){ console.warn('credits realtime failed', e); }
+}
+
 async function chargeCost(cost){
-  const {data}=await supabase.auth.getUser(); if(!data.user) return;
-  const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();
-  const cur=prof?.data?.credits??0;
-  if(cur < cost) throw new Error('Not enough credits (need '+cost+').');
-  await supabase.from('profiles').update({credits:cur - cost}).eq('user_id',data.user.id);
+  // Client-side debit is disabled. Credits are deducted server-side in the Netlify function.
+  throw new Error('Client-side debit disabled.');
 }
 
 // Poller
@@ -378,14 +400,17 @@ if (fileEl && fileEl.files && fileEl.files.length){
   }
 }
 
-// Debit before submitting to prevent free jobs on failure
-await chargeCost(cost);
+// Credits are deducted server-side inside the Netlify function (Service Role).
 
-const res = await fetch('/.netlify/functions/run-gpt-image-1',{
-  method:'POST',
-  headers:{'Content-Type':'application/json','X-USER-ID':uid},
-  body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_urls })
-});
+const sess = await supabase.auth.getSession().catch(()=>null);
+    const accessToken = sess?.data?.session?.access_token || null;
+    const headers = {'Content-Type':'application/json','X-USER-ID':uid};
+    if (accessToken) headers['Authorization'] = 'Bearer ' + accessToken;
+    const res = await fetch('/.netlify/functions/run-gpt-image-1',{
+      method:'POST',
+      headers,
+      body:JSON.stringify({ prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, image_urls })
+    });
 if (res.status === 201 || res.status === 200 || res.status === 202) {
       /* client-side debit removed */
     } else {
@@ -396,8 +421,12 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
 const resJson = await res.json().catch(()=> ({}));
 const id = resJson?.id || resJson?.prediction_id || resJson?.data?.id || null;
 showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-// Start polling prediction
-imagenCheckPoll(id, uid, rid);
+    // Live credits: refresh immediately after server-side deduction, then poll briefly
+    await __refreshCreditsUI();
+    const __cInt = setInterval(__refreshCreditsUI, 1500);
+    setTimeout(()=>clearInterval(__cInt), 15000);
+    // Start polling prediction
+    imagenCheckPoll(id, uid, rid);
 
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
