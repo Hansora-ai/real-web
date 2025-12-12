@@ -9,11 +9,19 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
+  // Supabase init (shared across scripts)
+  const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+  window.hansoraSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
+
+<script>
 window.__RUNWAY_BUSY = false;
 
 // === Live credits (Supabase Realtime) + pre-run check (adapted for 4⚡) ===
 (async function HANSORA_LIVE_CREDITS(){
   try{
+    const supabase = window.hansoraSupabase;
     const navCreditsEl = document.getElementById('navCredits');
     const runBtn = document.getElementById('runBtn');
     function renderCredits(c){
@@ -47,19 +55,34 @@ window.__RUNWAY_BUSY = false;
       .subscribe();
 
     // patch __run to guard when credits are low (need 4)
-    const __origRun = window.__run;
-    window.__run = async function(){
-      try{
-        const { data: prof2 } = await supabase
-          .from('profiles')
-          .select('credits')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        const c = prof2?.credits ?? 0;
-        if (c < 4) { console.warn('Not enough credits.'); alert('Not enough credits (need 4).'); return; }
-      }catch{}
-      return __origRun ? __origRun() : undefined;
-    };
+    function patchRunGuard(){
+      if (typeof window.__run !== 'function') return false;
+      if (window.__run && window.__run.__creditsWrapped) return true;
+
+      const __origRun = window.__run;
+      const wrapped = async function(){
+        try{
+          const { data: prof2 } = await supabase
+            .from('profiles')
+            .select('credits')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          const c = prof2?.credits ?? 0;
+          if (c < 4) { console.warn('Not enough credits.'); alert('Not enough credits (need 4).'); return; }
+        }catch{}
+        return __origRun();
+      };
+      wrapped.__creditsWrapped = true;
+      window.__run = wrapped;
+      return true;
+    }
+
+    // If __run isn't defined yet (it is defined later in the page), retry briefly.
+    patchRunGuard();
+    const __patchTimer = setInterval(()=>{
+      if (patchRunGuard()) clearInterval(__patchTimer);
+    }, 500);
+    setTimeout(()=>{ try{ clearInterval(__patchTimer); }catch{} }, 10000);
   }catch(e){ console.warn('credits live failed', e); }
 })();
 </script>
@@ -69,7 +92,8 @@ window.__RUNWAY_BUSY = false;
   function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
   ready(async function(){
     try{
-      if (typeof supabase === 'undefined' || !supabase.auth) return;
+      const supabase = window.hansoraSupabase;
+      if (!supabase || !supabase.auth) return;
 
       async function __refreshCredits(){
         try{
@@ -79,7 +103,8 @@ window.__RUNWAY_BUSY = false;
           const c = prof?.credits ?? 0;
           const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
           const runBtn = document.getElementById('runBtn'); if (runBtn){
-            if (!window.__RUNWAY_BUSY) { const zero = false; runBtn.disabled = zero; }
+            const zero = false;
+            if (!window.__RUNWAY_BUSY) { runBtn.disabled = zero; }
             runBtn.classList.toggle('opacity-50', zero);
             runBtn.classList.toggle('cursor-not-allowed', zero);
           }
@@ -222,10 +247,8 @@ window.__RUNWAY_BUSY = false;
 <script>
 document.getElementById('y').textContent = new Date().getFullYear();
 
-// Supabase init — matching your MidImage page
-const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Supabase client
+const supabase = window.hansoraSupabase;
 
 // Header UI (copied style, minimal logic)
 const $btnLoginNav = document.getElementById('btnLoginNav');
@@ -437,6 +460,8 @@ window.__run = async function(){
     }
 
     // Create job (server will return authoritative run_id)
+    const { data: sessData } = await supabase.auth.getSession();
+    const accessToken = sessData?.session?.access_token || '';
     const resp = await fetch('/.netlify/functions/run-runway',{
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'X-USER-ID': uid, ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}) },
