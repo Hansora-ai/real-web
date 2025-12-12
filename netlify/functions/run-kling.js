@@ -27,6 +27,32 @@ function getUID(event, body){
   return ((getHeader(event,'x-user-id')||'') || (body && (body.uid||'')) || (qs.get('uid')||'')).trim();
 }
 
+
+async function verifyAuth(event, uid){
+  // Require a valid Supabase access token and ensure it matches uid.
+  const auth = getHeader(event, 'authorization') || getHeader(event, 'Authorization') || '';
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  const token = m ? m[1].trim() : '';
+  if (!token) return { ok:false, error:'missing_auth' };
+  if (!SUPABASE_URL) return { ok:false, error:'missing_supabase_url' };
+
+  try{
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        'apikey': SERVICE_KEY || '', 
+        'Authorization': `Bearer ${token}`,
+      }
+    });
+    if (!r.ok) return { ok:false, error:'bad_auth', status:r.status };
+    const u = await r.json().catch(()=>null);
+    const id = u && (u.id || u.user?.id);
+    if (!id) return { ok:false, error:'bad_auth_payload' };
+    if (String(id) !== String(uid)) return { ok:false, error:'uid_mismatch' };
+    return { ok:true, user_id: String(id) };
+  }catch(e){
+    return { ok:false, error:'auth_exception', details:String(e&&e.message||e) };
+  }
+}
 // ---- server-side debit (4⚡ for 5s, 8⚡ for 10s) ----
 async function debitCredits(uid, cost){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { ok:false, error:'missing_env_or_uid' };
@@ -42,7 +68,7 @@ async function debitCredits(uid, cost){
     const r1 = await fetch(updUrl, {
       method:'PATCH',
       headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer':'return=representation' },
-      body: JSON.stringify([{ credits: newCredits }])
+      body: JSON.stringify({ credits: newCredits })
     });
     if (!r1.ok) return { ok:false, error:'profile_update_failed', status:r1.status };
     return { ok:true, credits:newCredits };
@@ -88,6 +114,10 @@ exports.handler = async (event) => {
     const uid = getUID(event, body);
     if (!uid) return json(401, { ok:false, error:'missing_uid' });
 
+    // Require valid Supabase auth token (prevents calling outside Hansora / uid spoofing)
+    const authOk = await verifyAuth(event, uid);
+    if (!authOk.ok) return json(401, { ok:false, error: authOk.error, details: authOk });
+
     const prompt = String(body.prompt || '').trim();
     const aspect_ratio = (body.aspect_ratio ? String(body.aspect_ratio) : '1:1').trim();
     const duration = (body && (body.duration === 10 || String(body.duration) === '10')) ? 10 : 5;
@@ -101,6 +131,37 @@ exports.handler = async (event) => {
     // Costs: 5s -> 4⚡, 10s -> 8⚡
     const cost = (duration === 10) ? 8 : 4;
     const run_id = (body.run_id && String(body.run_id).trim()) || `${uid || 'anon'}-${Date.now()}`;
+
+    // Idempotency: if this run_id was already submitted, return the existing task without charging twice.
+    let existingTaskId = '';
+    let existingCharged = false;
+    try{
+      if (SUPABASE_URL && SERVICE_KEY){
+        const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
+        const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id,meta,provider`;
+        const chk = await fetch(ug + q, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+        const arr = await chk.json().catch(()=>[]);
+        if (Array.isArray(arr) && arr.length){
+          const meta = arr[0].meta || {};
+          existingTaskId = meta.task_id || meta.taskId || '';
+          existingCharged = !!meta.charged;
+          if (existingTaskId){
+            return json(200, { ok:true, submitted:true, taskId: existingTaskId, id: existingTaskId, run_id, row_id: arr[0].id, already_submitted:true, charged: existingCharged });
+          }
+        }
+      }
+    }catch(_){}
+
+    // Pre-check credits (no deduction here). Deduction still happens after KIE accepts.
+    try{
+      if (SUPABASE_URL && SERVICE_KEY){
+        const profUrl = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
+        const r0 = await fetch(profUrl, { headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+        const arr = await r0.json().catch(()=>[]);
+        const cur = (Array.isArray(arr) && arr[0] && (typeof arr[0].credits==='number' || typeof arr[0].credits==='string')) ? Number(arr[0].credits) : 0;
+        if (cur < cost) return json(402, { ok:false, error:'not_enough_credits', credits: cur, need: cost });
+      }
+    }catch(_){}
 
     // Seed placeholder row
     let row_id = null;
@@ -170,7 +231,26 @@ exports.handler = async (event) => {
       return json(402, { ok:false, error:'not_enough_credits', details: debit });
     }
 
-    return json(201, { ok:true, submitted:true, taskId, id: taskId, run_id, row_id, debited: cost, credits: debit.credits });
+    
+    // Mark charged in meta (best-effort, used for idempotency/traceability)
+    try{
+      if (SUPABASE_URL && SERVICE_KEY){
+        const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
+        const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id,meta`;
+        const chk = await fetch(ug + q, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+        const arr = await chk.json().catch(()=>[]);
+        if (Array.isArray(arr) && arr.length){
+          const meta0 = arr[0].meta || {};
+          const meta = { ...meta0, charged: true, charged_at: new Date().toISOString(), debited: cost };
+          await fetch(`${ug}?id=eq.${encodeURIComponent(arr[0].id)}`, {
+            method:'PATCH',
+            headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+            body: JSON.stringify({ meta })
+          });
+        }
+      }
+    }catch(_){}
+return json(201, { ok:true, submitted:true, taskId, id: taskId, run_id, row_id, debited: cost, credits: debit.credits });
   }catch(e){
     return json(500, { ok:false, error:'server_error', details: String(e && e.message || e) });
   }
