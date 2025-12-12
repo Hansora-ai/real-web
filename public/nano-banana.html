@@ -92,31 +92,6 @@
 
       // On load
       await __refreshCredits();
-
-      // Wrap chargeOneCredit (client debit) to repaint after debit
-      if (typeof window.chargeOneCredit === 'function'){
-        const __origCharge = window.chargeOneCredit;
-        window.chargeOneCredit = async function(){
-          const out = await __origCharge();
-          await __refreshCredits();
-          return out;
-        };
-      }
-
-      // Also poll briefly after Run to catch server-side debit
-      if (typeof window.__run === 'function'){
-        const __origRun = window.__run;
-        window.__run = async function(){
-          const ret = await __origRun();
-          // poll for 15s every 1.5s
-          const id = setInterval(__refreshCredits, 1500);
-          setTimeout(()=>clearInterval(id), 15000);
-          return ret;
-        };
-      }
-    }catch(e){ console.warn('live credits wrapper error', e); }
-  });
-})();
 </script>
 <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
@@ -239,7 +214,12 @@ function showLoggedOutUI(){$btnLoginSignup.classList.remove('hidden');$navUser.c
 $navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
-async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+async function getOrCreateProfile(user){
+  const r = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+  if (r.error) throw r.error;
+  // No browser-side profile insert. If profile missing, treat as 0 credits.
+  return (r.data || { credits: 0 });
+}
 (async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
 
 // Elements
@@ -279,20 +259,6 @@ function onResult(url){
 }
 
 // Credits + URL extraction helpers
-async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 0.5)throw new Error('Not enough credits (need 0.5).');await supabase.from('profiles').update({credits:cur-0.5}).eq('user_id',data.user.id);}
-
-function derivePublicUrl(up){
-  if (!up) return null;
-  if (up.publicUrl) return up.publicUrl;
-  try{
-    if (up.bucket && up.objectPath && up.uploadUrl){
-      const u = new URL(up.uploadUrl);
-      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
-      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
-    }
-  }catch(e){}
-  return null;
-}
 
 // ADDED: make sure DB gets a row even if webhook is late/blocked
 async function backfillRow(uid, rid, taskId, url){
@@ -426,15 +392,18 @@ window.__run=async function(){
     runBtn.textContent='Submitting…';
     showStatus('Submitting…','text-zinc-400');
 
-    // create job
+        // create job
+    const sessionData = await supabase.auth.getSession().catch(()=>({ data:{ session:null } }));
+    const accessToken = sessionData?.data?.session?.access_token || '';
+    const headers = {'Content-Type':'application/json','X-USER-ID':uid};
+    if (accessToken) headers['Authorization'] = 'Bearer ' + accessToken;
     const res=await fetch('/.netlify/functions/run-nano-banana',{
       method:'POST',
-      headers:{'Content-Type':'application/json','X-USER-ID':uid},
+      headers: headers,
       body:JSON.stringify({urls, prompt: (promptEl.value||'.'), format:'png', size:(document.getElementById('size')?.value||'auto'), run_id: rid})
     });
-
-    if (res.status === 202 || res.ok) {
-      await chargeOneCredit();
+if (res.status === 202 || res.ok) {
+      /* server-side debit only */
     } else {
       const errT = await res.text().catch(()=> '');
       throw new Error('Create failed: ' + errT);
