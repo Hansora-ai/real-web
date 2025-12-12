@@ -422,6 +422,8 @@ window.__run = async function(){
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
 
+    try{ await refreshCreditsUI(); }catch{}
+
     if (taskId && run_id) vvCheckPoll(taskId, uid, run_id);
 
   }catch(e){
