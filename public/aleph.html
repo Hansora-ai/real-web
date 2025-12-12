@@ -352,30 +352,43 @@ function showVideo(url){
   }
 }
 
-// Poll aleph-check until mp4
-async function alephCheckPoll(taskId, uid, rid, uploadedUrl){
+// Wait for result saved by the SAME KIE callback logic as Kling (video-kie-callback → Supabase)
+async function waitForSupabaseResult(uid, rid, uploadedUrl){
   for (let i=0;i<320;i++){ // up to ~8 min (1.5s step)
     try{
-      const r = await fetch('/.netlify/functions/aleph-check?taskId=' + encodeURIComponent(taskId) + '&uid=' + encodeURIComponent(uid) + '&run_id=' + encodeURIComponent(rid));
-      const j = await r.json().catch(()=>({}));
-      if (j && j.ok && j.video_url) {
-        if (!uploadedUrl || j.video_url !== uploadedUrl) {
-          showVideo(j.video_url);
-          showStatus('✅ Done.','text-emerald-300');
-          runBtn.disabled = false;
-          try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
-          try{ await refreshCreditsUI();
-
-//}
-  
- }catch{}
-          return;
+      const { data, error } = await supabase
+        .from('user_generations')
+        .select('result_url, meta')
+        .eq('user_id', uid)
+        .filter('meta->>run_id', 'eq', rid)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (!error && Array.isArray(data) && data.length){
+        const row = data[0] || {};
+        const url = row.result_url || '';
+        const st  = String((row.meta && row.meta.status) || '').toLowerCase();
+        if (url && url !== uploadedUrl){
+          onResult(url);
+          break;
         }
-        // same as uploaded; keep polling
+        if (st === 'failed' || st === 'canceled' || st === 'payment_failed'){
+          showStatus('❌ Generation failed, please try again later. Your credits are refunded.','text-red-300');
+          runBtn.disabled=false;
+          try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
+          break;
+        }
       }
-    } catch {}
+    }catch(e){}
     await new Promise(r=>setTimeout(r,1500));
   }
+  // timeout fallback
+  if (runBtn.disabled){
+    showStatus('⏳ Still processing… Please check the Usage page in a bit.','text-zinc-300');
+    runBtn.disabled=false;
+    try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
+  }
+}
+
   showStatus('❌ Generation failed, please try again later. Your credits are refunded','text-red-300');
   runBtn.disabled=false;
   try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
@@ -489,7 +502,7 @@ const resp = await fetch('/.netlify/functions/run-aleph',{
     const server_run_id = j.run_id || run_id || '';
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-    if (taskId && server_run_id) alephCheckPoll(taskId, uid, server_run_id, videoUrl);
+    if (server_run_id) waitForSupabaseResult(uid, server_run_id, videoUrl);
 
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
