@@ -6,21 +6,6 @@
   <title>HANSORA • Runway Aleph (Video)</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
-<script>
-// --- helper: construct public Supabase URL (Nano Banana 1:1) ---
-function derivePublicUrl(up){
-  if (!up) return null;
-  if (up.publicUrl) return up.publicUrl;
-  try{
-    if (up.bucket && up.objectPath && up.uploadUrl){
-      const u = new URL(up.uploadUrl);
-      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
-      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
-    }
-  }catch(e){}
-  return null;
-}
-</script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
@@ -218,6 +203,7 @@ const statusEl=document.getElementById('status');
 const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
 const guardMsg=document.getElementById('guardMsg');
+
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 function clearChilds(el){while(el.firstChild)el.removeChild(el.firstChild)}
 
@@ -352,6 +338,18 @@ function showVideo(url){
   }
 }
 
+function onResult(url){
+  try{
+    showStatus('✅ Done.','text-emerald-300');
+    showVideo(url);
+  }catch(e){}
+  try{ runBtn.disabled=false; }catch(e){}
+  try{ runBtn.textContent='Run (cost: 9⚡)'; }catch(e){}
+  try{ refreshCreditsUI(); }catch(e){}
+}
+
+
+
 // Wait for result saved by the SAME KIE callback logic as Kling (video-kie-callback → Supabase)
 async function waitForSupabaseResult(uid, rid, uploadedUrl){
   for (let i=0;i<320;i++){ // up to ~8 min (1.5s step)
@@ -389,10 +387,6 @@ async function waitForSupabaseResult(uid, rid, uploadedUrl){
   }
 }
 
-  showStatus('❌ Generation failed, please try again later. Your credits are refunded','text-red-300');
-  runBtn.disabled=false;
-  try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
-}
 
 window.__run = async function(){
   const {data:authData}=await supabase.auth.getUser();
