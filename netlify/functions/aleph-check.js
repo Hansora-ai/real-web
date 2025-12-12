@@ -16,7 +16,9 @@ const UG_URL       = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` :
 const TABLE_URL    = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/nb_results` : "";
 
 // Accept these result hosts by default. Expand if provider changes.
-const ALLOWED = new Set(["tempfile.aiquickdraw.com","tempfile.redpandaai.co"]);
+const ALLOWED = new Set([$1]);
+const EXTRA_ALLOWED = (process.env.ALEPH_ALLOWED_RESULT_HOSTS || process.env.ALLOWED_RESULT_HOSTS || "").split(",").map(s=>s.trim()).filter(Boolean);
+for (const h of EXTRA_ALLOWED){ ALLOWED.add(h); }
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors(), body: "" };
@@ -33,6 +35,7 @@ exports.handler = async (event) => {
 
   // If missing taskId, resolve from Supabase row using (uid + run_id), like video-kie-callback
   let idToPatch = null;
+  let metaExisting = null;
   try {
     if (!taskId && uid && run_id && SUPABASE_URL && SERVICE_KEY) {
       const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id,meta,result_url,video_url&limit=1`;
@@ -42,10 +45,12 @@ exports.handler = async (event) => {
         const row = arr[0];
         idToPatch = row.id || null;
         const meta = (row.meta && typeof row.meta === "object") ? row.meta : {};
+        metaExisting = meta;
         taskId = (meta.task_id || meta.taskId || meta.taskid || "").toString().trim();
 
         // If already has a valid stored URL, return it immediately (fast / idempotent)
-        const existing = (row.result_url || row.video_url || "").toString();
+        const existing = (row.result_url || "").toString();
+        // Only treat as cached if it is a finalized result_url (avoid returning the uploaded input video_url)
         if (existing && isAllowed(existing)) {
           const out = { ok:true, status:"done", version: VERSION, uid, run_id, taskId: taskId || null, video_url: existing, cached:true };
           if (debug) out.debug = { idToPatch, from:"supabase_cache", urlHost: host(existing) };
@@ -103,7 +108,7 @@ exports.handler = async (event) => {
         idToPatch = Array.isArray(arr) && arr.length ? arr[0].id : null;
       }
 
-      const payload = { result_url: video_url, meta: { run_id, task_id: taskId, status: "done" } };
+      const payload = { result_url: video_url, meta: { ...(metaExisting && typeof metaExisting === "object" ? metaExisting : {}), source:"aleph", run_id, task_id: taskId, status: "done" } };
 
       if (idToPatch) {
         const pr = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(idToPatch)}`, {
@@ -172,7 +177,20 @@ function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVIC
 function safeJson(s){ try{ return JSON.parse(s||"{}"); } catch { return {}; } }
 function isUrl(u){ return typeof u === "string" && /^https?:\/\//i.test(u); }
 function host(u){ try { return new URL(u).hostname; } catch { return ""; } }
-function isAllowed(u){ if (!isUrl(u)) return false; return ALLOWED.has(host(u)); }
+function isAllowed(u){
+  if (!isUrl(u)) return false;
+  try{
+    const uu = new URL(u);
+    const h = (uu.hostname || "").toLowerCase();
+    const isHttps = uu.protocol === "https:";
+    const isMp4 = /\.mp4(\?|#|$)/i.test(uu.pathname || "");
+    // Primary allow: known safe hosts
+    if (ALLOWED.has(h)) return true;
+    // Fallback allow: any HTTPS direct mp4
+    if (isHttps && isMp4) return true;
+  }catch{}
+  return false;
+}
 function collect(x, out){
   if (!x) return;
   if (typeof x === "string"){
