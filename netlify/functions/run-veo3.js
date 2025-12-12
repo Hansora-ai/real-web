@@ -12,6 +12,8 @@ const API_KEY = process.env.KIE_API_KEY;
 const SUPABASE_URL  = process.env.SUPABASE_URL || "";
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
+const PROFILES_URL  = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
+const AUTH_USER_URL = SUPABASE_URL ? `${SUPABASE_URL}/auth/v1/user` : "";
 
 // Your site base for callback (same style as Runway)
 const SITE_BASE = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/,'');
@@ -29,6 +31,15 @@ exports.handler = async (event) => {
     const uid = (body.uid || body.user_id || "").toString().trim();
     if (!uid) return ok({ submitted:false, error:"missing_user_id" });
 
+
+    // Require a real Supabase session token to prevent external calls / uid spoofing
+    const authz = String((headers["authorization"] || "")).trim();
+    const token = authz.toLowerCase().startsWith("bearer ") ? authz.slice(7).trim() : "";
+    if (!token) return ok({ submitted:false, error:"missing_auth" });
+
+    const authedUid = await verifyUser(token);
+    if (!authedUid || authedUid !== uid) return ok({ submitted:false, error:"auth_mismatch" });
+
     const promptRaw = (body.prompt || "").toString();
     const prompt = promptRaw.trim();
     if (!prompt && !body.fileUrl && !body.imageUrl && !body.imageUrls) {
@@ -36,6 +47,7 @@ exports.handler = async (event) => {
     }
 
     const model = normalizeModel(body.model || "veo3_fast");
+    const cost = (model === "veo3" ? 20 : 7);
     const aspectRatio = normalizeAspect(body.aspectRatio || "16:9");
 
     // Accept a single URL, convert to array as imageUrls
@@ -46,6 +58,17 @@ exports.handler = async (event) => {
     const run_id = clientRunId || `${uid}-${Date.now()}`;
 
     const callBackUrl = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
+
+
+    // Idempotency: if the same (uid + run_id) was already submitted, return the existing taskId
+    const existing = await getExistingTask(uid, run_id);
+    if (existing && existing.taskId) {
+      return ok({ submitted: true, run_id, taskId: existing.taskId, status: 200, already: true });
+    }
+
+    // Server-side credit pre-check (authoritative)
+    const bal = await getCredits(uid);
+    if (bal < cost) return ok({ submitted:false, error:"insufficient_credits", credits: bal, needed: cost });
 
     // Seed placeholder row in user_generations
     if (UG_URL && SERVICE_KEY) {
@@ -120,7 +143,19 @@ if (imageUrls.length) {
     }
     if (!taskId) {
       return ok({ submitted:false, error:'missing_taskId', data });
+    
+    // Deduct credits ONLY after KIE accepted (Submitted), and ensure it happens exactly once per (uid + run_id)
+    const charged = await isCharged(uid, run_id);
+    if (!charged) {
+      const okDebit = await debitCredits(uid, cost);
+      if (!okDebit) {
+        // If we couldn't debit (race/insufficient), do not allow a free job
+        return ok({ submitted:false, error:"debit_failed", run_id, taskId });
+      }
+      await markCharged(uid, run_id, cost, taskId);
     }
+
+}
 
     // Persist taskId into meta for easier tracing
     try {
@@ -160,6 +195,87 @@ function normalizeModel(m){
 function normalizeAspect(a){ a=String(a||"").trim(); return /^(16:9|9:16)$/.test(a)?a:"16:9"; }
 function normalizeUrl(u){ try{ const url=new URL(String(u||"")); return url.href; } catch { return ""; } }
 function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` }; }
+
+
+
+async function verifyUser(token){
+  try{
+    if (!AUTH_USER_URL || !SERVICE_KEY) return "";
+    const r = await fetch(AUTH_USER_URL, {
+      headers: { "apikey": SERVICE_KEY, "Authorization": "Bearer " + token }
+    });
+    if (!r.ok) return "";
+    const j = await r.json().catch(()=>null);
+    return (j && j.id) ? String(j.id) : "";
+  }catch{ return ""; }
+}
+
+async function getCredits(uid){
+  try{
+    if (!PROFILES_URL) return 0;
+    const q = `?select=credits&user_id=eq.${encodeURIComponent(uid)}`;
+    const r = await fetch(PROFILES_URL + q, { headers: sb() });
+    const arr = await r.json().catch(()=>[]);
+    const c = Array.isArray(arr) && arr.length ? Number(arr[0].credits || 0) : 0;
+    return Number.isFinite(c) ? c : 0;
+  }catch{ return 0; }
+}
+
+async function debitCredits(uid, cost){
+  try{
+    const cur = await getCredits(uid);
+    if (cur < cost) return false;
+    const next = Math.round((cur - cost) * 10) / 10;
+    const r = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(uid)}`, {
+      method: "PATCH",
+      headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify({ credits: next })
+    });
+    return r.ok;
+  }catch{ return false; }
+}
+
+async function getExistingTask(uid, run_id){
+  try{
+    if (!UG_URL) return null;
+    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=meta`;
+    const r = await fetch(UG_URL + q, { headers: sb() });
+    const arr = await r.json().catch(()=>[]);
+    if (Array.isArray(arr) && arr.length) {
+      const meta = arr[0].meta || {};
+      const taskId = meta.task_id || meta.taskId || "";
+      if (taskId) return { taskId: String(taskId) };
+    }
+    return null;
+  }catch{ return null; }
+}
+
+async function isCharged(uid, run_id){
+  try{
+    if (!UG_URL) return false;
+    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=meta`;
+    const r = await fetch(UG_URL + q, { headers: sb() });
+    const arr = await r.json().catch(()=>[]);
+    if (Array.isArray(arr) && arr.length) {
+      const meta = arr[0].meta || {};
+      return meta.charged === true || meta.charged === "true";
+    }
+    return false;
+  }catch{ return false; }
+}
+
+async function markCharged(uid, run_id, cost, taskId){
+  try{
+    if (!UG_URL) return;
+    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`;
+    const patchMeta = { charged: true, charged_cost: cost, task_id: taskId, run_id };
+    await fetch(UG_URL + q, {
+      method: "PATCH",
+      headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify({ meta: patchMeta })
+    });
+  }catch{}
+}
 
 // Searches the JSON object for common taskId locations or any property named "taskId".
 function extractTaskId(data){
