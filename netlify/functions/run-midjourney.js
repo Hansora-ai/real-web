@@ -1,7 +1,6 @@
 // netlify/functions/run-midimage.js
-// Create MidJourney job via KIE and deduct credits server-side (Service Role).
-// Logic mirrors Kling 2.6: server debit + run_id idempotent charging + placeholder insert.
-
+// Create MidJourney job via KIE and immediately return "submitted".
+// Logic mirrors run-nano-banana: callback-based, server placeholder insert, no server debit.
 
 const KIE_URL = "https://api.kie.ai/api/v1/mj/generate";
 const API_KEY = process.env.KIE_API_KEY;
@@ -13,7 +12,126 @@ const UG_URL = (process.env.SUPABASE_URL ? process.env.SUPABASE_URL + '/rest/v1/
 
 // Same callback as Nano Banana
 const CALLBACK_URL = "https://webhansora.netlify.app/.netlify/functions/kie-callback";
-const VERSION_TAG  = "midimage_fn_v2";
+const VERSION_TAG  = "midimage_fn_v1";
+
+// Credits cost (must match UI)
+const COST_CREDITS = 1.0;
+
+// Supabase REST endpoints
+const PROFILES_URL = (process.env.SUPABASE_URL ? process.env.SUPABASE_URL + '/rest/v1/profiles' : undefined);
+
+// ---- Credits helpers (mirrors Kling 2.6 pattern: server-side debit + run_id idempotency via user_generations.meta) ----
+async function fetchProfileCredits(uid){
+  if (!PROFILES_URL || !SERVICE_KEY) return { ok:false, credits:null, status:0, text:'missing_supabase' };
+  const url = `${PROFILES_URL}?user_id=eq.${encodeURIComponent(uid)}&select=credits&limit=1`;
+  const r = await fetch(url, { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Accept': 'application/json' } });
+  const t = await r.text();
+  let j = null; try{ j = JSON.parse(t); }catch(_e){}
+  const credits = Array.isArray(j) && j[0] && typeof j[0].credits !== 'undefined' ? Number(j[0].credits) : null;
+  return { ok: r.ok, credits, status: r.status, text: t };
+}
+
+async function setProfileCredits(uid, newCredits){
+  if (!PROFILES_URL || !SERVICE_KEY) return { ok:false, status:0, text:'missing_supabase' };
+  const url = `${PROFILES_URL}?user_id=eq.${encodeURIComponent(uid)}`;
+  const r = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=representation' },
+    body: JSON.stringify({ credits: newCredits })
+  });
+  const t = await r.text();
+  let j = null; try{ j = JSON.parse(t); }catch(_e){}
+  const credits = Array.isArray(j) && j[0] && typeof j[0].credits !== 'undefined' ? Number(j[0].credits) : null;
+  return { ok: r.ok, credits, status: r.status, text: t };
+}
+
+async function debitCredits(uid, cost){
+  const cur = await fetchProfileCredits(uid);
+  if (!cur.ok || typeof cur.credits !== 'number') return { ok:false, credits: cur.credits, error:'read_failed', detail: cur.text };
+  const after = Number((cur.credits - cost).toFixed(1));
+  if (after < 0) return { ok:false, credits: cur.credits, error:'insufficient_credits' };
+  const upd = await setProfileCredits(uid, after);
+  return { ok: !!upd.ok, credits: upd.credits ?? after, error: upd.ok ? null : 'update_failed', detail: upd.text };
+}
+
+async function fetchUserGenByRunId(uid, run_id){
+  if (!UG_URL || !SERVICE_KEY) return null;
+  const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id,meta&order=created_at.desc&limit=1`;
+  const r = await fetch(UG_URL + q, {
+    headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Accept':'application/json' }
+  });
+  const arr = await r.json().catch(()=>[]);
+  return Array.isArray(arr) && arr.length ? arr[0] : null;
+}
+
+async function patchUserGenerationMetaById(id, meta){
+  if (!UG_URL || !SERVICE_KEY || !id) return false;
+  try{
+    const q = `?id=eq.${encodeURIComponent(id)}`;
+    const r = await fetch(UG_URL + q, {
+      method: 'PATCH',
+      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      body: JSON.stringify({ meta }),
+    });
+    return !!r.ok;
+  }catch(_e){ return false; }
+}
+
+// Exactly-once charging per (uid, run_id) via meta charge_claim + charged
+async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) {
+    const debit = await debitCredits(uid, cost);
+    return { ok: !!debit.ok, debit, idempotent: false, already: false };
+  }
+
+  try{
+    const existing = await fetchUserGenByRunId(uid, run_id);
+    const meta0 = existing?.meta || baseMeta || {};
+    if (String(meta0?.charged || '').toLowerCase() === 'true'){
+      return { ok:true, debit:{ ok:true, credits: null }, idempotent:true, already:true };
+    }
+
+    const claim = `c_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const mergedForClaim = { ...(meta0||{}), ...(baseMeta||{}), charge_claim: claim };
+
+    const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
+    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&meta->>charged=is.null&meta->>charge_claim=is.null&select=id`;
+    const rClaim = await fetch(ug + q, {
+      method: 'PATCH',
+      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=representation' },
+      body: JSON.stringify({ meta: mergedForClaim }),
+    });
+
+    const claimedArr = await rClaim.json().catch(()=>[]);
+    const claimed = (rClaim.ok && Array.isArray(claimedArr) && claimedArr.length > 0);
+
+    if (!claimed){
+      const after = await fetchUserGenByRunId(uid, run_id);
+      const metaAfter = after?.meta || {};
+      if (String(metaAfter?.charged || '').toLowerCase() === 'true'){
+        return { ok:true, debit:{ ok:true, credits: null }, idempotent:true, already:true };
+      }
+      return { ok:false, error:'charge_in_progress', idempotent:true, already:false };
+    }
+
+    const debit = await debitCredits(uid, cost);
+    if (!debit.ok){
+      const rollbackMeta = { ...(mergedForClaim||{}) };
+      delete rollbackMeta.charge_claim;
+      await patchUserGenerationMetaById(row_id || (claimedArr[0]?.id) || (existing?.id), rollbackMeta);
+      return { ok:false, debit, idempotent:true, already:false };
+    }
+
+    const chargedMeta = { ...(mergedForClaim||{}), charged:'true', charged_cost: cost, charged_at: (new Date()).toISOString() };
+    await patchUserGenerationMetaById(row_id || (claimedArr[0]?.id) || (existing?.id), chargedMeta);
+
+    return { ok:true, debit, idempotent:true, already:false };
+  }catch(e){
+    const debit = await debitCredits(uid, cost);
+    return { ok: !!debit.ok, debit, idempotent:false, already:false, error: String(e && e.message || e) };
+  }
+}
+
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
@@ -46,20 +164,10 @@ exports.handler = async (event) => {
     const weirdness = body.weirdness ?? 0;
     const watermark = body.watermark ?? ""; // empty by default
     const paramJson = body.paramJson || JSON.stringify({ numberOfImages: 1 });
-    // Identify user/run (server-side debit; require uid)
-    const hdr = event.headers || {};
-    const uid = String(hdr["x-user-id"] || hdr["X-USER-ID"] || "").trim();
-    if (!uid) {
-      return err(401, { error: "missing_uid", message: "Missing X-USER-ID header.", version: VERSION_TAG });
-    }
-    const run_id = body.run_id || `${uid}-${Date.now()}`;
 
-    // Preflight: check credits before creating provider job
-    const prof0 = await getProfileCredits(uid);
-    const curCredits = Number(prof0?.credits ?? 0);
-    if (!Number.isFinite(curCredits) || curCredits < 1) {
-      return err(402, { error: "not_enough_credits", need: 1, credits: curCredits || 0, run_id, version: VERSION_TAG });
-    }
+    // Identify the user/run to bind result
+    const uid    = event.headers["x-user-id"] || event.headers["X-USER-ID"] || "anon";
+    const run_id = body.run_id || `${uid}-${Date.now()}`;
 
     // include uid & run_id in the callback URL
     const cb = `${CALLBACK_URL}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
@@ -118,7 +226,7 @@ exports.handler = async (event) => {
           kind: 'image',
           prompt,
           result_url: null,
-          meta: { run_id, task_id: taskId, aspectRatio: aspect, status: 'processing', cost: 1, charge_claim: false, charged: false }
+          meta: { run_id, task_id: taskId, aspectRatio: aspect, status: 'processing' }
         };
         await fetch(UG_URL, {
           method: 'POST',
@@ -135,39 +243,37 @@ exports.handler = async (event) => {
       console.warn('[midimage] placeholder insert failed', e);
     }
 
-    
-    // --- server-side debit (Service Role) + run_id idempotency ---
-    let credits_after = null;
-    try {
-      const ugRows = await getUserGenerationRows(uid, run_id);
-      const alreadyCharged = (ugRows || []).some(r => (r?.meta && (r.meta.charged === true || String(r.meta.charged).toLowerCase() === "true")));
-      if (!alreadyCharged) {
-        // debit
-        const prof1 = await getProfileCredits(uid);
-        const cur1 = Number(prof1?.credits ?? 0);
-        if (!Number.isFinite(cur1) || cur1 < 1) {
-          // should not happen (preflight check), but keep safe
-          return err(402, { error: "not_enough_credits", need: 1, credits: cur1 || 0, run_id, taskId, version: VERSION_TAG });
+    // NO client-side debit; server handles charging
+
+
+    // Server-side debit (Service Role) + run_id idempotency (Kling 2.6 pattern)
+    let charge = null;
+    try{
+      if (uid && uid !== 'anon') {
+        const baseMeta = { source:'midjourney', run_id, status:'processing', task_id: taskId };
+        charge = await chargeOnceForRun(uid, run_id, COST_CREDITS, null, baseMeta);
+        if (!charge.ok){
+          if (charge.debit && !charge.debit.ok && (charge.debit.error === 'insufficient_credits' || charge.debit.error === 'insufficient')){
+            return json(402, { ok:false, error:'not_enough_credits', details: charge.debit, version: VERSION_TAG });
+          }
+          if (charge.error === 'charge_in_progress'){
+            return json(409, { ok:false, error:'charge_in_progress', version: VERSION_TAG });
+          }
+          return json(500, { ok:false, error:'charge_failed', details: charge, version: VERSION_TAG });
         }
-        credits_after = Number((cur1 - 1).toFixed(1));
-        await setProfileCredits(uid, credits_after);
-        // mark charged in user_generations meta (best-effort)
-        await markUserGenerationCharged(uid, run_id, ugRows, { taskId, aspectRatio: aspect });
-      } else {
-        // reflect current credits
-        const prof2 = await getProfileCredits(uid);
-        credits_after = Number(prof2?.credits ?? 0);
       }
-    } catch (e) {
-      console.warn("[midimage] debit/mark failed", e);
-      // do not fail the generation submission; client will still see submitted
+    }catch(e){
+      return json(500, { ok:false, error:'charge_exception', message: String(e && e.message || e), version: VERSION_TAG });
     }
+
 
     return ok({
       submitted: true,
       taskId,
       run_id,
-      credits_after,
+      credits_after: charge?.debit?.credits ?? null,
+      charged: charge?.ok ?? null,
+      already_charged: charge?.already ?? null,
       version: VERSION_TAG,
       used_callback: cb
     });
@@ -177,104 +283,6 @@ exports.handler = async (event) => {
   }
 };
 
-
-async function sbFetch(url, options) {
-  const res = await fetch(url, options);
-  const txt = await res.text();
-  let js;
-  try { js = txt ? JSON.parse(txt) : null; } catch { js = { raw: txt }; }
-  if (!res.ok) {
-    const errMsg = (js && (js.message || js.error_description || js.error)) || txt || res.statusText;
-    const e = new Error(errMsg);
-    e.status = res.status;
-    e.payload = js;
-    throw e;
-  }
-  return js;
-}
-
-async function getProfileCredits(uid) {
-  if (!SUPABASE_URL || !SERVICE_KEY) throw new Error("Missing SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY");
-  const url = `${SUPABASE_URL}/rest/v1/profiles?select=credits&user_id=eq.${encodeURIComponent(uid)}&limit=1`;
-  const out = await sbFetch(url, {
-    method: "GET",
-    headers: {
-      "apikey": SERVICE_KEY,
-      "Authorization": `Bearer ${SERVICE_KEY}`,
-      "Accept": "application/json"
-    }
-  });
-  return Array.isArray(out) ? out[0] : out;
-}
-
-async function setProfileCredits(uid, credits) {
-  if (!SUPABASE_URL || !SERVICE_KEY) throw new Error("Missing SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY");
-  const url = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`;
-  await sbFetch(url, {
-    method: "PATCH",
-    headers: {
-      "apikey": SERVICE_KEY,
-      "Authorization": `Bearer ${SERVICE_KEY}`,
-      "Content-Type": "application/json",
-      "Prefer": "return=minimal"
-    },
-    body: JSON.stringify({ credits })
-  });
-}
-
-async function getUserGenerationRows(uid, run_id) {
-  if (!UG_URL || !SERVICE_KEY) return [];
-  // Try to locate the placeholder row by meta.run_id
-  const url = `${UG_URL}?select=id,meta&user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&limit=10`;
-  try {
-    const out = await sbFetch(url, {
-      method: "GET",
-      headers: {
-        "apikey": SERVICE_KEY,
-        "Authorization": `Bearer ${SERVICE_KEY}`,
-        "Accept": "application/json"
-      }
-    });
-    return Array.isArray(out) ? out : [];
-  } catch (e) {
-    // If JSON filter is unsupported in this project schema, silently ignore
-    return [];
-  }
-}
-
-async function markUserGenerationCharged(uid, run_id, rows, extraMeta) {
-  if (!UG_URL || !SERVICE_KEY) return;
-  const arr = Array.isArray(rows) ? rows : [];
-  // Update by id when possible (best-effort)
-  for (const r of arr) {
-    const id = r && r.id;
-    const meta = (r && r.meta && typeof r.meta === "object") ? r.meta : {};
-    const nextMeta = { ...meta, ...(extraMeta || {}), run_id, charged: true, charge_claim: true, charged_at: new Date().toISOString() };
-    if (!id) continue;
-    const url = `${UG_URL}?id=eq.${encodeURIComponent(id)}`;
-    try {
-      await sbFetch(url, {
-        method: "PATCH",
-        headers: {
-          "apikey": SERVICE_KEY,
-          "Authorization": `Bearer ${SERVICE_KEY}`,
-          "Content-Type": "application/json",
-          "Prefer": "return=minimal"
-        },
-        body: JSON.stringify({ meta: nextMeta })
-      });
-    } catch {}
-  }
-}
-
-function err(code, json) {
-  return {
-    statusCode: code,
-    headers: { ...cors(), "X-MIDIMAGE-Version": VERSION_TAG },
-    body: JSON.stringify(json || { error: "error" })
-  };
-}
-
 function normalizeAspect(v) {
   if (!v) return "2:3";
   const s = String(v).trim().toLowerCase();
@@ -283,6 +291,15 @@ function normalizeAspect(v) {
   if (allowed.has(s)) return s;
   const coerced = s.replace(/(\d)[_\-:](\d)/g, "$1:$2");
   return allowed.has(coerced) ? coerced : "2:3";
+}
+
+
+function json(statusCode, payload){
+  return {
+    statusCode,
+    headers: { ...cors(), "X-MIDIMAGE-Version": VERSION_TAG },
+    body: JSON.stringify(payload)
+  };
 }
 
 function ok(json) {
