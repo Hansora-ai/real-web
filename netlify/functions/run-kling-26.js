@@ -27,6 +27,24 @@ function getUID(event, body){
   return ((getHeader(event,'x-user-id')||'') || (body && (body.uid||'')) || (qs.get('uid')||'')).trim();
 }
 
+
+async function getUidFromBearer(event){
+  const auth = (getHeader(event,'authorization')||'').trim();
+  if (!auth) return '';
+  const m = auth.match(/Bearer\s+(.+)/i);
+  if (!m) return '';
+  const token = (m[1]||'').trim();
+  if (!token || !SUPABASE_URL || !SERVICE_KEY) return '';
+  try{
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${token}` }
+    });
+    if (!r.ok) return '';
+    const u = await r.json().catch(()=>null);
+    return (u && (u.id || u.user?.id) ? String(u.id || u.user.id) : '').trim();
+  }catch(_e){ return ''; }
+}
+
 // ---- server-side debit (4⚡ for 5s, 8⚡ for 10s) ----
 async function debitCredits(uid, cost){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { ok:false, error:'missing_env_or_uid' };
@@ -42,7 +60,7 @@ async function debitCredits(uid, cost){
     const r1 = await fetch(updUrl, {
       method:'PATCH',
       headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer':'return=representation' },
-      body: JSON.stringify([{ credits: newCredits }])
+      body: JSON.stringify({ credits: newCredits })
     });
     if (!r1.ok) return { ok:false, error:'profile_update_failed', status:r1.status };
     return { ok:true, credits:newCredits };
@@ -85,7 +103,7 @@ exports.handler = async (event) => {
     try { body = JSON.parse(event.body || '{}'); }
     catch(e){ return json(400, { ok:false, error:'bad_json', details: String(e.message || e) }); }
 
-    const uid = getUID(event, body);
+    const uid = (await getUidFromBearer(event)) || getUID(event, body);
     if (!uid) return json(401, { ok:false, error:'missing_uid' });
 
     const prompt = String(body.prompt || '').trim();
@@ -101,6 +119,12 @@ exports.handler = async (event) => {
     // Costs: 5s -> 9⚡, 10s -> 16⚡ (Kling 2.6 with sound)
     const cost = (duration === 10) ? 16 : 9;
     const run_id = (body.run_id && String(body.run_id).trim()) || `${uid || 'anon'}-${Date.now()}`;
+
+// Debit credits BEFORE task is created
+    const debit = await debitCredits(uid, cost);
+    if (!debit.ok){
+      return json(402, { ok:false, error:'not_enough_credits', details: debit });
+    }
 
     // Seed placeholder row
     let row_id = null;
@@ -137,7 +161,7 @@ exports.handler = async (event) => {
         prompt,
         aspect_ratio,
         duration: (duration === 10 ? '10' : '5'),
-        sound: false,
+        sound: true,
       },
       callBackUrl: `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`,
     };
@@ -170,13 +194,7 @@ exports.handler = async (event) => {
       }
     } catch {}
 
-    // Debit credits AFTER task was accepted
-    const debit = await debitCredits(uid, cost);
-    if (!debit.ok){
-      return json(402, { ok:false, error:'not_enough_credits', details: debit });
-    }
-
-    return json(201, { ok:true, submitted:true, taskId, id: taskId, run_id, row_id, debited: cost, credits: debit.credits });
+        return json(201, { ok:true, submitted:true, taskId, id: taskId, run_id, row_id, debited: cost, credits: debit.credits });
   }catch(e){
     return json(500, { ok:false, error:'server_error', details: String(e && e.message || e) });
   }
