@@ -216,6 +216,45 @@ filesEl.addEventListener('change',()=>{thumbsEl.innerHTML='';[...filesEl.files].
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
+
+function derivePublicUrl(up){
+  if (!up) return null;
+
+  // If bridge already returns a URL string
+  if (typeof up === 'string' && /^https?:\/\//.test(up)) return up;
+
+  // Common fields
+  const direct =
+    up.publicUrl || up.public_url || up.publicURL || up.url || up.downloadUrl || up.download_url;
+  if (direct && typeof direct === 'string') return direct;
+
+  // Try to build from bucket + path/key/objectPath
+  const bucket = up.bucket || up.bucket_name || up.bucketName;
+  const objPath =
+    up.objectPath || up.object_path || up.path || up.filepath || up.key || up.objectKey || up.object_key;
+
+  // Prefer SUPABASE_URL if available in scope
+  try{
+    if (bucket && objPath && typeof SUPABASE_URL === 'string' && SUPABASE_URL){
+      const enc = String(objPath).split('/').map(encodeURIComponent).join('/');
+      return `${SUPABASE_URL.replace(/\/+$/,'')}/storage/v1/object/public/${encodeURIComponent(bucket)}/${enc}`;
+    }
+  }catch{}
+
+  // Fallback using uploadUrl host
+  try{
+    const uploadUrl = up.uploadUrl || up.upload_url;
+    if (bucket && objPath && uploadUrl){
+      const u = new URL(uploadUrl);
+      const enc = String(objPath).split('/').map(encodeURIComponent).join('/');
+      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(bucket)}/${enc}`;
+    }
+  }catch{}
+
+  return null;
+}
+
+
 // Guarded renderer
 let __done=false; let channel=null;
 function onResult(url){
