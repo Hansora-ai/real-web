@@ -417,6 +417,9 @@ window.__VEO_BUSY = true; runBtn.disabled=true; runBtn.textContent='Working…';
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
 
+    // Refresh credits UI after server-side deduction (Kling 2.6 pattern)
+    try { await refreshCreditsUI(); } catch (e) {}
+
     if (taskId && run_id) vvCheckPoll(taskId, uid, run_id);
 
   }catch(e){
