@@ -179,7 +179,12 @@ function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarte
 $navAvatar?.addEventListener('click',()=>{document.getElementById('navMenu').classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
-async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+async function getOrCreateProfile(user){
+  // Read-only: profile creation / credits seeding is NOT allowed in the browser.
+  const r = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+  if (r.error) throw r.error;
+  return r.data || { credits: 0 };
+}
 (async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);
       try{ const rb=document.getElementById('runBtn'); if(rb){ rb.disabled=false; rb.style.pointerEvents=''; rb.classList.remove('opacity-50','cursor-not-allowed'); try{ repaintRunBtn(); }catch{} } }catch{}}catch{showLoggedOutUI();}}else{showLoggedOutUI();}})();
 
@@ -234,7 +239,6 @@ imageEl.addEventListener('change',()=>{
 });
 
 async function getCredits(){ try{ const u=await supabase.auth.getUser(); const user=u?.data?.user; if(!user) return 0; const {data:prof}=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle(); return prof?.credits??0; }catch{return 0;} }
-async function chargeCredits(cost){ const {data}=await supabase.auth.getUser(); const user=data?.user; if(!user) return; const {data:prof}=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle(); const cur=prof?.credits??0; if(cur<cost) throw new Error('Not enough credits (need '+cost+').'); await supabase.from('profiles').update({credits:cur-cost}).eq('user_id',user.id); }
 async function refreshCreditsUI(){ try{ const c=await getCredits(); const nav=document.getElementById('navCredits'); if(nav) nav.textContent=(c??0)+'⚡'; }catch{} }
 (function(){ (async()=>{ try{ const {data:userData}=await supabase.auth.getUser(); const user=userData?.user; if(!user) return; const refresh=async()=>{ try{ const {data:prof}=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle(); const c=prof?.credits??0; const nav=document.getElementById('navCredits'); if(nav) nav.textContent=c+'⚡'; }catch{} }; await refresh(); supabase.channel('credits_live_sora_'+user.id).on('postgres_changes',{event:'UPDATE',schema:'public',table:'profiles',filter:'user_id=eq.'+user.id},refresh).subscribe(); }catch{} })(); })();
 
@@ -266,7 +270,9 @@ async function runSora(){
   if(__busy) return;
   __busy=true; runBtn.disabled=true; runBtn.textContent='Working…'; runBtn.classList.add('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents='none';
   try{ downloadLink.classList.add('hidden'); }catch{}
-  const {data:auth}=await supabase.auth.getUser(); if(!auth.user){ alert('Please log in or register first.'); runBtn.disabled=false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
+  const {data:auth}=await supabase.auth.getUser();
+  const {data:sessionData}=await supabase.auth.getSession();
+  const accessToken = sessionData?.session?.access_token || ''; if(!auth.user){ alert('Please log in or register first.'); runBtn.disabled=false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; }
 
   const files=[...imageEl.files].slice(0,1);
   for(const f of files){ if(f.size>10*1024*1024){ alert('File too large: '+f.name); runBtn.disabled=false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return; } }
@@ -329,7 +335,7 @@ async function runSora(){
 
   const resp = await fetch('/.netlify/functions/run-sora2', {
     method:'POST',
-    headers:{'Content-Type':'application/json','X-USER-ID':auth.user.id},
+    headers:{'Content-Type':'application/json','X-USER-ID':auth.user.id, ...(accessToken ? {'Authorization':`Bearer ${accessToken}`} : {})},
     body: JSON.stringify({
       uid: auth.user.id,
       run_id: runId,
@@ -348,8 +354,6 @@ async function runSora(){
     showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
     runBtn.disabled=false; try{ repaintRunBtn(); }catch{} runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; __busy=false; return;
   }
-
-  try{ await chargeCredits(cost); await refreshCreditsUI(); }catch{}
 
   showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
   resultBox.innerHTML = '<div class="py-6 text-center space-y-2"><div class="text-xs text-zinc-400">Generating…</div><div class="text-[15px] font-semibold text-zinc-100">Sora Pro takes a little longer (20-35m), because of OpenAI’s native delivery speed.<br/>You can leave this page — your result will appear in <a class="underline hover:no-underline" href="usage.html">History</a> when it’s done.</div></div>';
@@ -399,12 +403,6 @@ async function soraPoll(taskId, uid, rid){
         .channel('credits_live_sora_' + user.id)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id }, __refresh)
         .subscribe();
-
-      // After debit, repaint for 15s
-      if (typeof window.chargeCredits === 'function'){
-        const __orig = window.chargeCredits;
-        window.chargeCredits = async function(cost){ const out = await __orig(cost); try{ await __refresh(); }catch{} return out; };
-      }
     }catch{}
   });
 })();
