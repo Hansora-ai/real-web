@@ -303,6 +303,32 @@ async function refreshCreditsUI(){
 }
 refreshCreditsUI();
 
+// === Live credits (Supabase Realtime) — 1:1 behavior with Kling 2.6 ===
+(async function HANSORA_LIVE_CREDITS(){
+  try{
+    if (typeof supabase === 'undefined' || !supabase.auth) return;
+
+    const navCreditsEl = document.getElementById('navCredits');
+    function renderCredits(c){
+      try{
+        if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+      }catch{}
+    }
+
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if (!user) return;
+
+    // subscribe to updates
+    supabase.channel('credits_live_' + user.id)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
+        (payload) => { renderCredits(payload.new?.credits ?? 0); }
+      )
+      .subscribe();
+  }catch(e){ console.warn('live credits failed', e); }
+})();
+
+
 //}
   
 function showVideo(url){
@@ -461,7 +487,6 @@ const resp = await fetch('/.netlify/functions/run-aleph',{
     }
     const taskId = j.taskId || '';
     const server_run_id = j.run_id || run_id || '';
-
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
     if (taskId && server_run_id) alephCheckPoll(taskId, uid, server_run_id, videoUrl);
