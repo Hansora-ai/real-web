@@ -10,63 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
 <script src="/kie-upload-bridge.js"></script>
-<script>
-// === Live credits (Supabase Realtime) + pre-run check ===
-(async function HANSORA_LIVE_CREDITS(){
-  try{
-    const navCreditsEl = document.getElementById('navCredits');
-    const runBtn = document.getElementById('runBtn');
-    function renderCredits(c){
-      if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-      if (runBtn && !__isRunning) {
-        const ok = true;
-        runBtn.disabled=false;
-        runBtn.classList.toggle('opacity-50', !ok);
-        runBtn.classList.toggle('cursor-not-allowed', !ok);
-      }
-    }
-
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if(!user) return;
-
-    // initial fetch
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    renderCredits(prof?.credits ?? 0);
-
-    // subscribe to updates
-    supabase.channel('credits_live_' + user.id)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
-        (payload) => { renderCredits(payload.new?.credits ?? 0); }
-      )
-      .subscribe();
-
-    // patch __run to guard when credits are 0 (without changing its internals)
-    const __origRun = window.__run;
-    window.__run = async function(){
-      try{
-        const { data: prof2 } = await supabase
-          .from('profiles')
-          .select('credits')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        const c = prof2?.credits ?? 0;
-        if (c < 1) {
-          console.warn('No credits left.');
-          alert('Not enough credits (need 1).'); 
-          return;
-        }
-      }catch{}
-      return __origRun ? __origRun() : undefined;
-    };
-  }catch(e){ console.warn('credits live failed', e); }
-})();
-</script>
-
+<!-- Live credits init is handled after Supabase client initialization (see bottom scripts) -->
 <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
@@ -181,6 +125,52 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $btnLoginSignup = document.getElementById('btnLoginSignup');
 const $navUser = document.getElementById('navUser');
 const $navCredits = document.getElementById('navCredits');
+
+// === Live credits sync (show server-side deductions in real time) ===
+let __creditsLiveChannel = null;
+
+async function __refreshNavCreditsFor(uid){
+  try{
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('user_id', uid)
+      .maybeSingle();
+    if ($navCredits) $navCredits.textContent = (prof?.credits ?? 0) + '⚡';
+    return prof?.credits ?? 0;
+  }catch(e){
+    console.warn('refresh credits failed', e);
+    return null;
+  }
+}
+
+function __startCreditsLiveFor(uid){
+  try{ __creditsLiveChannel?.unsubscribe?.(); }catch{}
+  __creditsLiveChannel = supabase.channel('credits_live_' + uid)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + uid },
+      (payload) => {
+        if ($navCredits) $navCredits.textContent = (payload.new?.credits ?? 0) + '⚡';
+      }
+    )
+    .subscribe();
+
+  // initial pull
+  __refreshNavCreditsFor(uid);
+}
+
+// Start live credits once the authenticated user is available (no changes to login/auth flow)
+(async function __initCreditsLive(){
+  try{
+    const { data } = await supabase.auth.getUser();
+    const user = data?.user;
+    if (!user) return;
+    __startCreditsLiveFor(user.id);
+  }catch(e){
+    console.warn('credits live init failed', e);
+  }
+})();
 const $navAvatar = document.getElementById('navAvatar');
 const $navMenu = document.getElementById('navMenu');
 const $btnLogout = document.getElementById('btnLogout');
@@ -405,6 +395,10 @@ window.__run=async function(){
     const resJson = await res.json().catch(()=> ({}));
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
 
+    // Refresh credits to reflect the server-side deduction as soon as possible
+    try { await __refreshNavCreditsFor(uid); } catch {}
+    try { setTimeout(() => { __refreshNavCreditsFor(uid); }, 1500); } catch {}
+
     // ensure Usage shows even if user navigates away
     backfillSubmitted(uid, rid, taskId);
 
@@ -453,7 +447,7 @@ window.__run=async function(){
     runBtn.disabled=false;runBtn.textContent='Run (cost: 1⚡)';
   }
 };
-</script></script>
+</script>
 <!-- Delete buttons + safe validation (additive, non-destructive) -->
 <script>
 (function(){
