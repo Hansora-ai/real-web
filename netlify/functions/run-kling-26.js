@@ -67,6 +67,112 @@ async function debitCredits(uid, cost){
   }catch(e){ return { ok:false, error:'server_exception', details:String(e&&e.message||e) }; }
 }
 
+
+async function fetchUserGenByRunId(uid, run_id){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) return null;
+  try{
+    const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
+    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id,meta,provider,kind,prompt,result_url,created_at`;
+    const r = await fetch(ug + q, { headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+    if (!r.ok) return null;
+    const arr = await r.json().catch(()=>null);
+    return (Array.isArray(arr) && arr[0]) ? arr[0] : null;
+  }catch(_e){ return null; }
+}
+
+async function seedUserGeneration(uid, run_id, duration, prompt){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { row_id:null };
+  try{
+    const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
+    const meta = { source:'kling', run_id, model:'kling2.6', status:'pending' };
+    const rIns = await fetch(ug, {
+      method: 'POST',
+      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify({ user_id: uid, provider: (duration === 10 ? 'kling2.6-10s' : 'kling2.6-5s'), kind: 'video', prompt, result_url: null, meta }),
+    });
+    if (!rIns.ok) return { row_id:null };
+    const arr = await rIns.json().catch(()=>null);
+    return { row_id: (Array.isArray(arr) && arr[0] && arr[0].id) ? arr[0].id : null };
+  }catch(_e){ return { row_id:null }; }
+}
+
+async function patchUserGenerationMetaById(id, meta){
+  if (!SUPABASE_URL || !SERVICE_KEY || !id) return false;
+  try{
+    const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
+    const r = await fetch(`${ug}?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ meta }),
+    });
+    return !!r.ok;
+  }catch(_e){ return false; }
+}
+
+// Exactly-once charging per (uid, run_id) via meta charge_claim + charged
+async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) {
+    // Fallback: still debit server-side (but cannot persist idempotency)
+    const debit = await debitCredits(uid, cost);
+    return { ok: !!debit.ok, debit, idempotent: false, already: false };
+  }
+
+  // If already charged, do nothing
+  try{
+    const existing = await fetchUserGenByRunId(uid, run_id);
+    const meta0 = existing?.meta || baseMeta || {};
+    if (String(meta0?.charged || '').toLowerCase() === 'true'){
+      return { ok:true, debit:{ ok:true, credits: null }, idempotent:true, already:true };
+    }
+
+    // Claim
+    const claim = `c_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const mergedForClaim = { ...(meta0||{}), ...(baseMeta||{}), charge_claim: claim };
+
+    // Only one request can set charge_claim when it's null and charged is null
+    const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
+    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&meta->>charged=is.null&meta->>charge_claim=is.null&select=id`;
+    const rClaim = await fetch(ug + q, {
+      method: 'PATCH',
+      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=representation' },
+      body: JSON.stringify({ meta: mergedForClaim }),
+    });
+
+    const claimedArr = await rClaim.json().catch(()=>[]);
+    const claimed = (rClaim.ok && Array.isArray(claimedArr) && claimedArr.length > 0);
+
+    if (!claimed){
+      // Someone else claimed/charged already. Re-read and treat as already charged.
+      const after = await fetchUserGenByRunId(uid, run_id);
+      const metaAfter = after?.meta || {};
+      if (String(metaAfter?.charged || '').toLowerCase() === 'true'){
+        return { ok:true, debit:{ ok:true, credits: null }, idempotent:true, already:true };
+      }
+      // If it's claimed but not charged yet, do not double-debit; ask client to wait/retry
+      return { ok:false, error:'charge_in_progress', idempotent:true, already:false };
+    }
+
+    // Debit now (after provider task is created)
+    const debit = await debitCredits(uid, cost);
+    if (!debit.ok){
+      // Rollback claim so user can retry later
+      const rollbackMeta = { ...(mergedForClaim||{}) };
+      delete rollbackMeta.charge_claim;
+      await patchUserGenerationMetaById(row_id || (Array.isArray(claimedArr)&&claimedArr[0]?.id) || (existing?.id), rollbackMeta);
+      return { ok:false, debit, idempotent:true, already:false };
+    }
+
+    // Mark charged
+    const chargedMeta = { ...(mergedForClaim||{}), charged:'true', charged_cost: cost, charged_at: (new Date()).toISOString() };
+    await patchUserGenerationMetaById(row_id || (Array.isArray(claimedArr)&&claimedArr[0]?.id) || (existing?.id), chargedMeta);
+
+    return { ok:true, debit, idempotent:true, already:false };
+  }catch(e){
+    const debit = await debitCredits(uid, cost);
+    return { ok: !!debit.ok, debit, idempotent:false, already:false, error: String(e && e.message || e) };
+  }
+}
+
 // Extract a taskId from various KIE response shapes
 function extractTaskId(data){
   if (!data || typeof data !== 'object') return '';
@@ -120,29 +226,16 @@ exports.handler = async (event) => {
     const cost = (duration === 10) ? 16 : 9;
     const run_id = (body.run_id && String(body.run_id).trim()) || `${uid || 'anon'}-${Date.now()}`;
 
-// Debit credits BEFORE task is created
-    const debit = await debitCredits(uid, cost);
-    if (!debit.ok){
-      return json(402, { ok:false, error:'not_enough_credits', details: debit });
+    // If this run_id was already submitted before, return the same taskId (no re-debit)
+    const existing = await fetchUserGenByRunId(uid, run_id);
+    const existingTask = existing?.meta?.task_id || existing?.meta?.taskId || '';
+    if (existingTask){
+      return json(201, { ok:true, submitted:true, taskId: String(existingTask), id: String(existingTask), run_id, row_id: existing?.id || null, already:true });
     }
 
-    // Seed placeholder row
-    let row_id = null;
-    try {
-      if (SUPABASE_URL && SERVICE_KEY && uid){
-        const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-        const meta = { source:'kling', run_id, model:'kling2.6', status:'pending' };
-        const rIns = await fetch(ug, {
-          method: 'POST',
-          headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-          body: JSON.stringify({ user_id: uid, provider: (duration === 10 ? 'kling2.6-10s' : 'kling2.6-5s'), kind: 'video', prompt, result_url: null, meta }),
-        });
-        if (rIns.ok){
-          const arr = await rIns.json().catch(()=>null);
-          if (Array.isArray(arr) && arr[0] && arr[0].id) row_id = arr[0].id;
-        }
-      }
-    } catch {}
+    // Seed placeholder row early (used for idempotent charging)
+    const seed = await seedUserGeneration(uid, run_id, duration, prompt);
+    let row_id = seed.row_id;
 
     // Choose model per mode
     const image_url = imageUrl || ''; // normalize to snake_case key for KIE
@@ -194,7 +287,20 @@ exports.handler = async (event) => {
       }
     } catch {}
 
-        return json(201, { ok:true, submitted:true, taskId, id: taskId, run_id, row_id, debited: cost, credits: debit.credits });
+            // Debit credits AFTER provider accepted the task (after 'submitted') and exactly once per (uid, run_id)
+    const baseMeta = { source:'kling', run_id, model, status:'processing', task_id: taskId };
+    const charge = await chargeOnceForRun(uid, run_id, cost, row_id, baseMeta);
+    if (!charge.ok){
+      if (charge.debit && !charge.debit.ok && (charge.debit.error === 'insufficient_credits' || charge.debit.error === 'insufficient')){
+        return json(402, { ok:false, error:'not_enough_credits', details: charge.debit });
+      }
+      if (charge.error === 'charge_in_progress'){
+        return json(409, { ok:false, error:'charge_in_progress' });
+      }
+      return json(500, { ok:false, error:'charge_failed', details: charge.debit || charge.error || charge });
+    }
+
+    return json(201, { ok:true, submitted:true, taskId, id: taskId, run_id, row_id, debited: cost, credits: (charge.debit && charge.debit.credits != null ? charge.debit.credits : undefined), already_charged: !!charge.already });
   }catch(e){
     return json(500, { ok:false, error:'server_error', details: String(e && e.message || e) });
   }
