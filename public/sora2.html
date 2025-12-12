@@ -356,6 +356,10 @@ async function runSora(){
   }
 
   showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+
+  // Live credits update (same pattern as Kling 2.6)
+  try{ await refreshCreditsUI(); }catch{}
+
   resultBox.innerHTML = '<div class="py-6 text-center space-y-2"><div class="text-xs text-zinc-400">Generating…</div><div class="text-[15px] font-semibold text-zinc-100">Sora Pro takes a little longer (20-35m), because of OpenAI’s native delivery speed.<br/>You can leave this page — your result will appear in <a class="underline hover:no-underline" href="usage.html">History</a> when it’s done.</div></div>';
 
   await soraPoll(j.taskId, auth.user.id, runId);
