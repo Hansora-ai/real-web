@@ -10,89 +10,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
 <script src="/kie-upload-bridge.js"></script>
-<script>
-// === Live credits (Supabase Realtime) + pre-run check ===
-(async function HANSORA_LIVE_CREDITS(){
-  try{
-    const navCreditsEl = document.getElementById('navCredits');
-    const runBtn = document.getElementById('runBtn');
-    function renderCredits(c){
-      if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-      if (runBtn) {
-        const ok = true;
-        runBtn.disabled=false;
-        runBtn.classList.toggle('opacity-50', !ok);
-        runBtn.classList.toggle('cursor-not-allowed', !ok);
-      }
-    }
-
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if(!user) return;
-
-    // initial fetch
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    renderCredits(prof?.credits ?? 0);
-
-    // subscribe to updates
-    supabase.channel('credits_live_' + user.id)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
-        (payload) => { renderCredits(payload.new?.credits ?? 0); }
-      )
-      .subscribe();
-
-    // patch __run to guard when credits are 0 (without changing its internals)
-    const __origRun = window.__run;
-    window.__run = async function(){
-      try{
-        const { data: prof2 } = await supabase
-          .from('profiles')
-          .select('credits')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        const c = prof2?.credits ?? 0;
-        if (c < 0.5) {
-          console.warn('No credits left.');
-          alert('Not enough credits (need 0.5).'); 
-          return;
-        }
-      }catch{}
-      return __origRun ? __origRun() : undefined;
-    };
-  }catch(e){ console.warn('credits live failed', e); }
-})();
-</script>
-<script>
-(function(){
-  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-  ready(async function(){
-    try{
-      if (typeof supabase === 'undefined' || !supabase.auth) return;
-
-      async function __refreshCredits(){
-        try{
-          const ures = await supabase.auth.getUser();
-          const user = ures?.data?.user; if(!user) return null;
-          const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-          const c = prof?.credits ?? 0;
-          const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
-          const runBtn = document.getElementById('runBtn'); if (runBtn){
-            const zero = false;
-            runBtn.disabled = zero;
-            runBtn.classList.toggle('opacity-50', zero);
-            runBtn.classList.toggle('cursor-not-allowed', zero);
-          }
-          return c;
-        }catch(e){ console.warn('refreshCredits failed', e); return null; }
-      }
-
-      // On load
-      await __refreshCredits();
-</script>
 <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
@@ -201,6 +118,63 @@ const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// === Live credits (Supabase Realtime) + pre-run check (NO client-side debit) ===
+(async function HANSORA_LIVE_CREDITS(){
+  try{
+    const navCreditsEl = document.getElementById('navCredits');
+    const runBtn = document.getElementById('runBtn');
+
+    function renderCredits(c){
+      if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+      // Do NOT disable the button here; __run will hard-check before submit.
+      if (runBtn) runBtn.classList.remove('opacity-50','cursor-not-allowed');
+    }
+
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if(!user) return;
+
+    // Initial fetch
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    renderCredits(prof?.credits ?? 0);
+
+    // Subscribe to updates
+    supabase.channel('credits_live_' + user.id)
+      .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
+          (payload) => { renderCredits(payload.new?.credits ?? 0); }
+      )
+      .subscribe();
+
+    // After Run, briefly poll credits to reflect server-side debit even if realtime lags.
+    document.addEventListener('click', (e) => {
+      const btn = e.target && e.target.closest ? e.target.closest('#runBtn') : null;
+      if(!btn) return;
+      let n = 0;
+      const t = setInterval(async ()=>{
+        n++;
+        try{
+          const { data: prof2 } = await supabase
+            .from('profiles')
+            .select('credits')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          renderCredits(prof2?.credits ?? 0);
+        }catch{}
+        if(n >= 10) clearInterval(t); // ~15s (10 * 1.5s)
+      }, 1500);
+    }, true);
+
+  }catch(e){
+    console.warn('credits live failed', e);
+  }
+})();
+
+
 // Header UI
 const $btnLoginSignup = document.getElementById('btnLoginSignup');
 const $navUser = document.getElementById('navUser');
@@ -214,12 +188,7 @@ function showLoggedOutUI(){$btnLoginSignup.classList.remove('hidden');$navUser.c
 $navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
-async function getOrCreateProfile(user){
-  const r = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-  if (r.error) throw r.error;
-  // No browser-side profile insert. If profile missing, treat as 0 credits.
-  return (r.data || { credits: 0 });
-}
+async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
 (async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
 
 // Elements
@@ -259,6 +228,19 @@ function onResult(url){
 }
 
 // Credits + URL extraction helpers
+
+function derivePublicUrl(up){
+  if (!up) return null;
+  if (up.publicUrl) return up.publicUrl;
+  try{
+    if (up.bucket && up.objectPath && up.uploadUrl){
+      const u = new URL(up.uploadUrl);
+      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
+      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+    }
+  }catch(e){}
+  return null;
+}
 
 // ADDED: make sure DB gets a row even if webhook is late/blocked
 async function backfillRow(uid, rid, taskId, url){
@@ -392,24 +374,20 @@ window.__run=async function(){
     runBtn.textContent='Submitting…';
     showStatus('Submitting…','text-zinc-400');
 
-        // create job
-    const sessionData = await supabase.auth.getSession().catch(()=>({ data:{ session:null } }));
-    const accessToken = sessionData?.data?.session?.access_token || '';
-    const headers = {'Content-Type':'application/json','X-USER-ID':uid};
-    if (accessToken) headers['Authorization'] = 'Bearer ' + accessToken;
+
+    // create job
     const res=await fetch('/.netlify/functions/run-nano-banana',{
       method:'POST',
-      headers: headers,
+      headers:{'Content-Type':'application/json','X-USER-ID':uid},
       body:JSON.stringify({urls, prompt: (promptEl.value||'.'), format:'png', size:(document.getElementById('size')?.value||'auto'), run_id: rid})
     });
-if (res.status === 202 || res.ok) {
-      /* server-side debit only */
-    } else {
-      const errT = await res.text().catch(()=> '');
-      throw new Error('Create failed: ' + errT);
-    }
 
     const resJson = await res.json().catch(()=> ({}));
+    if (!res.ok || resJson?.submitted !== true) {
+      const msg = resJson?.note || resJson?.message || ('HTTP ' + res.status);
+      throw new Error('Create failed: ' + msg);
+    }
+
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
 
     // ensure Usage shows even if user navigates away
@@ -450,7 +428,7 @@ if (res.status === 202 || res.ok) {
     }
 
     if (!__done) {
-      showStatus('❌Failed — credits refunded','text-red-300','text-yellow-300');
+      showStatus('❌ Failed — credits refunded','text-rose-300');
     }
 
   }catch(e){
