@@ -93,16 +93,6 @@
       // On load
       await __refreshCredits();
 
-      // Wrap chargeOneCredit (client debit) to repaint after debit
-      if (typeof window.chargeOneCredit === 'function'){
-        const __origCharge = window.chargeOneCredit;
-        window.chargeOneCredit = async function(){
-          const out = await __origCharge();
-          await __refreshCredits();
-          return out;
-        };
-      }
-
       // Also poll briefly after Run to catch server-side debit
       if (typeof window.__run === 'function'){
         const __origRun = window.__run;
@@ -284,8 +274,6 @@ function onResult(url){
 }
 
 // Credits + URL extraction helpers
-async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 2)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
-
 function derivePublicUrl(up){
   if (!up) return null;
   if (up.publicUrl) return up.publicUrl;
@@ -449,7 +437,7 @@ window.__run=async function(){
     });
 
     if (res.status === 202 || res.ok) {
-      await chargeOneCredit();
+
     } else {
       const errT = await res.text().catch(()=> '');
       throw new Error('Create failed: ' + errT);
