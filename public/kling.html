@@ -8,117 +8,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- Live credits + wrappers (1:1 with working image feature) -->
-  <script>
-  // === Live credits (Supabase Realtime) + pre-run check ===
-  (async function HANSORA_LIVE_CREDITS(){
-    try{
-      const navCreditsEl = document.getElementById('navCredits');
-      const runBtn = document.getElementById('runBtn');
-      function renderCredits(c){
-        if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-        if (runBtn) {
-          const ok = true;
-          if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false;
-          runBtn.classList.toggle('opacity-50', !ok);
-          runBtn.classList.toggle('cursor-not-allowed', !ok);
-        }
-      }
-
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData?.user;
-      if(!user) return;
-
-      // initial fetch
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      renderCredits(prof?.credits ?? 0);
-
-      // subscribe to updates
-      supabase.channel('credits_live_' + user.id)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
-          (payload) => { renderCredits(payload.new?.credits ?? 0); }
-        )
-        .subscribe();
-
-      // patch __run to guard when credits are 0 (without changing its internals)
-      const __origRun = window.__run;
-      window.__run = async function(){
-        try{
-          const { data: prof2 } = await supabase
-            .from('profiles')
-            .select('credits')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          const c = prof2?.credits ?? 0;
-          // Minimal guard: block if below 0.5 (lowest possible cost)
-          if (c < 0.5) {
-            console.warn('No credits left.');
-            alert('Not enough credits.');
-            return;
-          }
-        }catch{}
-        return __origRun ? __origRun() : undefined;
-      };
-    }catch(e){ console.warn('credits live failed', e); }
-  })();
-  </script>
-
-  <script>
-  (function(){
-    function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-    ready(async function(){
-      try{
-        if (typeof supabase === 'undefined' || !supabase.auth) return;
-
-        async function __refreshCredits(){
-          try{
-            const ures = await supabase.auth.getUser();
-            const user = ures?.data?.user; if(!user) return null;
-            const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-            const c = prof?.credits ?? 0;
-            const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
-            const runBtn = document.getElementById('runBtn'); if (runBtn){
-              const zero = false;
-              if(!window.__klingBusy){ runBtn.disabled=zero; }
-              runBtn.classList.toggle('opacity-50', zero);
-              runBtn.classList.toggle('cursor-not-allowed', zero);
-            }
-            return c;
-          }catch(e){ console.warn('refreshCredits failed', e); return null; }
-        }
-
-        // On load
-        await __refreshCredits();
-
-        // Wrap chargeCost (client debit) to repaint after debit
-        if (typeof window.chargeCost === 'function'){
-          const __origCharge = window.chargeCost;
-          window.chargeCost = async function(cost){
-            const out = await __origCharge(cost);
-            await __refreshCredits();
-            return out;
-          };
-        }
-
-        // Also poll briefly after Run to catch server-side debit
-        if (typeof window.__run === 'function'){
-          const __origRun = window.__run;
-          window.__run = async function(){
-            const ret = await __origRun();
-            const id = setInterval(__refreshCredits, 1500);
-            setTimeout(()=>clearInterval(id), 15000);
-            return ret;
-          };
-        }
-      }catch(e){ console.warn('live credits wrapper error', e); }
-    });
-  })();
-  </script>
-
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
@@ -258,7 +147,13 @@ function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarte
 $navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{ if(window.__klingBusy){return;}await supabase.auth.signOut();showLoggedOutUI();});
-async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+async function getOrCreateProfile(user){
+  // Read-only profile fetch. Do NOT create or modify credits client-side.
+  const r = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+  if (r.error) throw r.error;
+  return r.data || { credits: 0 };
+}
+
 (async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
 
 // Elements
@@ -320,13 +215,6 @@ function onResult(url){
   }
 }
 
-async function chargeCost(cost){
-  const {data}=await supabase.auth.getUser(); if(!data.user) return;
-  const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();
-  const cur=prof?.data?.credits??0;
-  if(cur < cost) throw new Error('Not enough credits (need '+cost+').');
-  await supabase.from('profiles').update({credits:cur - cost}).eq('user_id',data.user.id);
-}
 
 // Poller
 async function imagenCheckPoll(id, uid, rid){
@@ -342,7 +230,7 @@ async function imagenCheckPoll(id, uid, rid){
         if(url){ onResult(url); break; }
       }
       if(status === 'failed' || status === 'canceled'){
-        showStatus('❌ Generation failed, please try again later. Your credits are refunded.','text-red-300');
+        showStatus('❌ Generation failed, please try again later. Credits were not deducted.','text-red-300');
         if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
         break;
       }
@@ -350,7 +238,7 @@ async function imagenCheckPoll(id, uid, rid){
     await new Promise(r=>setTimeout(r,1500));
   }
   if(!__done){
-    showStatus('❌ Generation failed, please try again later. Your credits are refunded.','text-red-300');
+    showStatus('❌ Generation failed, please try again later. Credits were not deducted.','text-red-300');
     if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
   }
 }
@@ -412,17 +300,6 @@ window.__run=async function(){
   if(!prompt){ alert('Please enter a prompt.'); return; }
 
   const cost = (typeof window.__klingComputeCost==='function' ? window.__klingComputeCost() : 7);
-// HARD CREDIT CHECK
-  try{
-    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
-    const cur = prof?.credits ?? 0;
-    if (cur < cost) {
-      showStatus('Not enough credits (need '+cost+').','text-rose-300');
-      if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
-      return;
-    }
-  }catch(_){}
-
   window.__klingBusy=true; runBtn.disabled=true; runBtn.textContent='Working…';
   showStatus('Submitting…','text-zinc-400');
   resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~2-5m</span>';
@@ -438,7 +315,7 @@ if (fileEl && fileEl.files && fileEl.files.length){
 }
 const res = await fetch('/.netlify/functions/run-kling',{
   method:'POST',
-  headers:{'Content-Type':'application/json','X-USER-ID':uid},
+  headers:{'Content-Type':'application/json','X-USER-ID':uid,'Authorization':'Bearer '+(await supabase.auth.getSession()).data.session?.access_token},
   body:JSON.stringify({prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid, imageUrl })
 });
 if (res.status === 201 || res.status === 200 || res.status === 202) {
@@ -515,91 +392,6 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
 
   fileEl.addEventListener('change', renderThumbs);
 })();
-</script>
-
-
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-  try {
-    var fileEl = document.getElementById('imageFile');
-    var thumbs = document.getElementById('thumbs');
-
-    // --- Nano-Banana style thumbs + delete (no globals) ---
-    function renderThumbs(){
-      if (!thumbs || !fileEl) return;
-      thumbs.innerHTML = '';
-      var files = (fileEl.files || []);
-      for (var i=0; i<files.length && i<4; i++){
-        (function(i){
-          var f = files[i];
-          var url = URL.createObjectURL(f);
-          var wrap = document.createElement('span');
-          wrap.className = 'nb-thumb relative inline-block';
-          var img = new Image();
-          img.src = url;
-          img.className = 'h-24 w-24 object-cover rounded-lg border border-white/10';
-          img.onload = function(){ try{ URL.revokeObjectURL(url); }catch(e){} };
-
-          var del = document.createElement('button');
-          del.type = 'button';
-          del.className = 'absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center';
-          del.setAttribute('aria-label','Remove image');
-          del.innerHTML = '×';
-          del.addEventListener('click', function(){
-            try {
-              var dt = new DataTransfer();
-              var fs = fileEl.files;
-              for (var j=0;j<fs.length;j++){ if (j!==i) dt.items.add(fs[j]); }
-              fileEl.files = dt.files;
-            } catch(e) { fileEl.value=''; }
-            renderThumbs();
-          });
-
-          wrap.appendChild(img);
-          wrap.appendChild(del);
-          thumbs.appendChild(wrap);
-        })(i);
-      }
-    }
-    if (fileEl) fileEl.addEventListener('change', renderThumbs);
-
-    // --- Inject  into ONLY the Kling 2.5 Turbo Pro request ---
-    var __origFetch = window.fetch;
-    window.fetch = async function(input, init){
-      try {
-        var isTarget = (typeof input === 'string') && input.indexOf('/.netlify/functions/run-kling') !== -1;
-        if (isTarget && init && init.body && typeof init.body === 'string') {
-          try {
-            var body = JSON.parse(init.body);
-            if (!body.) {
-  var first = null;
-  if (fileEl && fileEl.files && fileEl.files.length){
-    first = await new Promise(function(resolve){
-      try{ var fr = new FileReader(); fr.onload = function(){ resolve(fr.result); }; fr.onerror = function(){ resolve(null); }; fr.readAsDataURL(fileEl.files[0]); }catch(e){ resolve(null); }
-    });
-  }
-  if (first) { body. = first; init.body = JSON.stringify(body); }
-}
-          } catch(e) {
-            // ignore if body isn't JSON
-          }
-        }
-      } catch(e) {
-        // never block login or other scripts
-      }
-      return __origFetch.apply(this, arguments);
-    };
-
-    // If browser restores file input after reload, draw thumbs
-    setTimeout(function(){
-      if (fileEl && fileEl.files && fileEl.files.length){ renderThumbs(); }
-    }, 0);
-
-  } catch(e) {
-    // Do not let any error break header/auth
-    console.warn('thumbs/init error', e);
-  }
-});
 </script>
 
 
