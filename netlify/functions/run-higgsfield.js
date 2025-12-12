@@ -13,6 +13,8 @@ const HF_SECRET = process.env.HF_SECRET || "";
 const SUPABASE_URL  = process.env.SUPABASE_URL || "";
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
+const PROFILES_URL  = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
+const COST_CREDITS  = 7;
 
 exports.handler = async (event) => {
   try {
@@ -77,7 +79,15 @@ exports.handler = async (event) => {
     // update record with job_set_id
     await upsertGen(uid, { run_id, status:"processing", provider:"higgsfield", model:"dop-turbo", motion_id, job_set_id: jobSetId });
 
-    return ok({ submitted:true, run_id, job_set_id: jobSetId, data });
+
+    // Charge credits (Kling 2.6-style: server-side only, idempotent by run_id)
+    const charge = await maybeChargeCredits(uid, run_id, COST_CREDITS);
+    if (charge && charge.insufficient) {
+      await upsertGen(uid, { run_id, status:"failed", provider:"higgsfield", model:"dop-turbo", motion_id, job_set_id: jobSetId, error:"insufficient_credits" });
+      return ok({ submitted:false, error:"insufficient_credits", needed: COST_CREDITS });
+    }
+
+    return ok({ submitted:true, run_id, job_set_id: jobSetId, data, charged: !!(charge && charge.charged) });
   } catch (e) {
     return ok({ submitted:false, error:"exception", reason: String(e && e.message ? e.message : e) });
   }
@@ -100,6 +110,74 @@ async function upsertGen(uid, meta){
     }
   }catch{}
 }
+
+
+async function maybeChargeCredits(uid, run_id, cost){
+  try{
+    if (!PROFILES_URL || !UG_URL || !SERVICE_KEY) return { charged:false, reason:"missing_service" };
+
+    // Find generation row by run_id
+    const q = `${UG_URL}?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id,meta`;
+    const chk = await getJson(q, sbHeaders());
+    const row = Array.isArray(chk.json) && chk.json.length ? chk.json[0] : null;
+    if (!row) return { charged:false, reason:"no_gen_row" };
+
+    const meta0 = row.meta || {};
+    if (meta0.charged === true) return { charged:false, already:true };
+
+    // Claim charging (best-effort idempotency)
+    const claim = String(meta0.charge_claim || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    if (!meta0.charge_claim){
+      await patchJson(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
+        meta: { ...meta0, charge_claim: claim, charge_amount: cost, charge_claim_at: new Date().toISOString() }
+      }, { ...sbHeaders(), "Prefer":"return=minimal" });
+    }
+
+    // Re-check after claim
+    const chk2 = await getJson(q, sbHeaders());
+    const row2 = Array.isArray(chk2.json) && chk2.json.length ? chk2.json[0] : null;
+    const meta = row2?.meta || {};
+    if (meta.charged === true) return { charged:false, already:true };
+    if (meta.charge_claim && meta.charge_claim !== claim) return { charged:false, reason:"claimed_by_other" };
+
+    // Read credits
+    const pr = await getJson(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(uid)}&select=credits`, sbHeaders());
+    const cur = (Array.isArray(pr.json) && pr.json.length) ? Number(pr.json[0].credits) : NaN;
+    const credits = Number.isFinite(cur) ? cur : 0;
+
+    if (credits < cost){
+      await patchJson(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
+        meta: { ...meta, charged:false, charge_failed:true, charge_failed_reason:"insufficient_credits", needed: cost, credits_at_charge: credits }
+      }, { ...sbHeaders(), "Prefer":"return=minimal" });
+      return { charged:false, insufficient:true, credits };
+    }
+
+    const newCredits = credits - cost;
+
+    // Update credits
+    const upd = await patchJson(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(uid)}`, { credits: newCredits }, { ...sbHeaders(), "Prefer":"return=representation" });
+    if (upd.statusCode < 200 || upd.statusCode >= 300){
+      await patchJson(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
+        meta: { ...meta, charged:false, charge_failed:true, charge_failed_reason:"credits_update_failed", credits_at_charge: credits }
+      }, { ...sbHeaders(), "Prefer":"return=minimal" });
+      return { charged:false, reason:"credits_update_failed" };
+    }
+
+    // Mark charged
+    await patchJson(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
+      meta: { ...meta, charged:true, charged_amount: cost, charged_at: new Date().toISOString(), credits_before: credits, credits_after: newCredits }
+    }, { ...sbHeaders(), "Prefer":"return=minimal" });
+
+    return { charged:true, credits_before: credits, credits_after: newCredits };
+  }catch(e){
+    return { charged:false, reason:"exception", error: String(e && e.message ? e.message : e) };
+  }
+}
+
+function sbHeaders(){
+  return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` };
+}
+
 
 // ---------- tiny https helpers (no external deps) ----------
 function httpRequest(method, urlStr, headers, body){
