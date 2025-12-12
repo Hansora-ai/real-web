@@ -92,17 +92,6 @@
 
         // On load
         await __refreshCredits();
-
-        // Wrap chargeCost (client debit) to repaint after debit
-        if (typeof window.chargeCost === 'function'){
-          const __origCharge = window.chargeCost;
-          window.chargeCost = async function(cost){
-            const out = await __origCharge(cost);
-            await __refreshCredits();
-            return out;
-          };
-        }
-
         // Also poll briefly after Run to catch server-side debit
         if (typeof window.__run === 'function'){
           const __origRun = window.__run;
@@ -241,10 +230,26 @@ function showLoggedOutUI(){$btnLoginSignup.classList.remove('hidden');$navUser.c
 $navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
-async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
-
-// Elements
+async function getProfile(user){
+  const r = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+  if (r.error) throw r.error;
+  // IMPORTANT: Browser must NEVER create/update credits. If missing, treat as 0 for UI.
+  return r.data || { credits: 0 };
+}
+(async()=>{
+  const {data} = await supabase.auth.getUser();
+  const user = data.user;
+  if(user){
+    try{
+      const p = await getProfile(user);
+      showLoggedInUI(p, user);
+    }catch{
+      showLoggedOutUI();
+    }
+  }else{
+    showLoggedOutUI();
+  }
+})();// Elements
 const promptEl=document.getElementById('prompt');
 const ratioEl=document.getElementById('ratio');
 const runBtn=document.getElementById('runBtn');
@@ -298,13 +303,6 @@ function onResult(url){
   img.src=url;
 }
 
-async function chargeCost(cost){
-  const {data}=await supabase.auth.getUser(); if(!data.user) return;
-  const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();
-  const cur=prof?.data?.credits??0;
-  if(cur < cost) throw new Error('Not enough credits (need '+cost+').');
-  await supabase.from('profiles').update({credits:cur - cost}).eq('user_id',data.user.id);
-}
 
 // Poller
 async function imagenCheckPoll(id, uid, rid){
