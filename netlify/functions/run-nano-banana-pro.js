@@ -136,6 +136,19 @@ async function debitCredits(uid, cost){
   }catch(e){ return { ok:false, error:'server_exception', details:String(e&&e.message||e) }; }
 }
 
+async function patchUserGenerationMetaById(id, meta){
+  if (!SUPABASE_URL || !SERVICE_KEY || !id) return false;
+  try{
+    const ug = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(id)}`;
+    const r = await fetch(ug, {
+      method:'PATCH',
+      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      body: JSON.stringify({ meta })
+    });
+    return !!r.ok;
+  }catch(_e){ return false; }
+}
+
 async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) {
     // Fallback: still debit server-side (but cannot persist idempotency)
