@@ -10,114 +10,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
 <script src="/kie-upload-bridge.js"></script>
-<script>
-// === Live credits (Supabase Realtime) + pre-run check ===
-(async function HANSORA_LIVE_CREDITS(){
-  try{
-    const navCreditsEl = document.getElementById('navCredits');
-    const runBtn = document.getElementById('runBtn');
-    function renderCredits(c){
-      if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-      if (runBtn && !__isRunning) {
-        const ok = true;
-        runBtn.disabled=false;
-        runBtn.classList.toggle('opacity-50', !ok);
-        runBtn.classList.toggle('cursor-not-allowed', !ok);
-      }
-    }
-
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if(!user) return;
-
-    // initial fetch
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    renderCredits(prof?.credits ?? 0);
-
-    // subscribe to updates
-    supabase.channel('credits_live_' + user.id)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
-        (payload) => { renderCredits(payload.new?.credits ?? 0); }
-      )
-      .subscribe();
-
-    // patch __run to guard when credits are 0 (without changing its internals)
-    const __origRun = window.__run;
-    window.__run = async function(){
-      try{
-        const { data: prof2 } = await supabase
-          .from('profiles')
-          .select('credits')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        const c = prof2?.credits ?? 0;
-        if (c < 3) {
-          console.warn('No credits left.');
-          alert('Not enough credits (need 3).'); 
-          return;
-        }
-      }catch{}
-      return __origRun ? __origRun() : undefined;
-    };
-  }catch(e){ console.warn('credits live failed', e); }
-})();
-</script>
-<script>
-(function(){
-  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-  ready(async function(){
-    try{
-      if (typeof supabase === 'undefined' || !supabase.auth) return;
-
-      async function __refreshCredits(){
-        try{
-          const ures = await supabase.auth.getUser();
-          const user = ures?.data?.user; if(!user) return null;
-          const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-          const c = prof?.credits ?? 0;
-          const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
-          const runBtn = document.getElementById('runBtn'); if (runBtn && !__isRunning){
-            const zero = false;
-            runBtn.disabled = zero;
-            runBtn.classList.toggle('opacity-50', zero);
-            runBtn.classList.toggle('cursor-not-allowed', zero);
-          }
-          return c;
-        }catch(e){ console.warn('refreshCredits failed', e); return null; }
-      }
-
-      // On load
-      await __refreshCredits();
-
-      // Wrap chargeOneCredit (client debit) to repaint after debit
-      if (typeof window.chargeOneCredit === 'function'){
-        const __origCharge = window.chargeOneCredit;
-        window.chargeOneCredit = async function(){
-          const out = await __origCharge();
-          await __refreshCredits();
-          return out;
-        };
-      }
-
-      // Also poll briefly after Run to catch server-side debit
-      if (typeof window.__run === 'function'){
-        const __origRun = window.__run;
-        window.__run = async function(){
-          const ret = await __origRun();
-          // poll for 15s every 1.5s
-          const id = setInterval(__refreshCredits, 1500);
-          setTimeout(()=>clearInterval(id), 15000);
-          return ret;
-        };
-      }
-    }catch(e){ console.warn('live credits wrapper error', e); }
-  });
-})();
-</script>
 <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
@@ -238,6 +130,60 @@ const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// === Live credits (Supabase Realtime) + post-run polling (NO client-side debit) ===
+(async function HANSORA_LIVE_CREDITS(){
+  try{
+    const navCreditsEl = document.getElementById('navCredits');
+    const runBtn = document.getElementById('runBtn');
+
+    function renderCredits(c){
+      if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+      // do not toggle disabled here; __run does the hard check.
+    }
+
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if(!user) return;
+
+    // initial fetch
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    renderCredits(prof?.credits ?? 0);
+
+    // subscribe to updates
+    supabase.channel('credits_live_' + user.id)
+      .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
+          (payload) => { renderCredits(payload.new?.credits ?? 0); }
+      )
+      .subscribe();
+
+    // poll briefly after clicking Run (helps if realtime lags)
+    document.addEventListener('click', (e) => {
+      const btn = e.target && e.target.closest ? e.target.closest('#runBtn') : null;
+      if(!btn) return;
+      let n = 0;
+      const t = setInterval(async ()=>{
+        n++;
+        try{
+          const { data: prof2 } = await supabase
+            .from('profiles')
+            .select('credits')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          renderCredits(prof2?.credits ?? 0);
+        }catch{}
+        if(n >= 10) clearInterval(t);
+      }, 1500);
+    }, true);
+
+  }catch(e){ console.warn('credits live failed', e); }
+})();
+
+
 // Header UI
 const $btnLoginSignup = document.getElementById('btnLoginSignup');
 const $navUser = document.getElementById('navUser');
@@ -294,20 +240,6 @@ function onResult(url){
 }
 
 // Credits + URL extraction helpers
-async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 2)throw new Error('Not enough credits (need 2).');await supabase.from('profiles').update({credits:cur-2}).eq('user_id',data.user.id);}
-
-function derivePublicUrl(up){
-  if (!up) return null;
-  if (up.publicUrl) return up.publicUrl;
-  try{
-    if (up.bucket && up.objectPath && up.uploadUrl){
-      const u = new URL(up.uploadUrl);
-      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
-      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
-    }
-  }catch(e){}
-  return null;
-}
 
 // ADDED: make sure DB gets a row even if webhook is late/blocked
 async function backfillRow(uid, rid, taskId, url){
@@ -453,6 +385,7 @@ window.__run=async function(){
     runBtn.textContent='Submitting…';
     showStatus('Submitting…','text-zinc-400');
 
+
     // create job
     const res=await fetch('/.netlify/functions/run-nano-banana-pro',{
       method:'POST',
@@ -460,14 +393,12 @@ window.__run=async function(){
       body:JSON.stringify({urls, prompt: (promptVal||'.'), size: aspect_ratio, resolution, run_id: rid})
     });
 
-    if (res.status === 202 || res.ok) {
-      await chargeOneCredit();
-    } else {
-      const errT = await res.text().catch(()=> '');
-      throw new Error('Create failed: ' + errT);
+    const resJson = await res.json().catch(()=> ({}));
+    if (!res.ok || resJson?.submitted !== true) {
+      const msg = resJson?.error || resJson?.note || resJson?.message || ('HTTP ' + res.status);
+      throw new Error('Create failed: ' + msg);
     }
 
-    const resJson = await res.json().catch(()=> ({}));
     const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
 
     // ensure Usage shows even if user navigates away
@@ -508,7 +439,7 @@ window.__run=async function(){
     }
 
     if (!__done) {
-      showStatus('❌Failed — credits refunded','text-red-300','text-yellow-300');
+      showStatus('❌ Failed — credits refunded','text-rose-300');
     }
 
   }catch(e){
