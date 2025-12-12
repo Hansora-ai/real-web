@@ -11,11 +11,21 @@
 // === Live credits (Supabase Realtime) + pre-run check ===
 (async function HANSORA_LIVE_CREDITS(){
   try{
+    async function __waitSB(){
+      for (let i=0;i<80;i++){
+        const sb = window.__SUPABASE_CLIENT__;
+        if (sb && sb.auth && sb.from) return sb;
+        await new Promise(r=>setTimeout(r,50));
+      }
+      return null;
+    }
+    const sb = await __waitSB();
+    if(!sb) return;
     const navCreditsEl = document.getElementById('navCredits');
     const runBtn = document.getElementById('runBtn');
     function renderCredits(c){if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';if (runBtn) {  const running = !!window.__running;  const ok = !running;  runBtn.disabled = !ok;  runBtn.classList.toggle('opacity-50', !ok);  runBtn.classList.toggle('cursor-not-allowed', !ok);}}
 
-    const { data: userData } = await supabase.auth.getUser();
+    const { data: userData } = await sb.auth.getUser();
     const user = userData?.user;
     if(!user) return;
 
@@ -28,9 +38,9 @@
     renderCredits(prof?.credits ?? 0);
 
     // subscribe to updates
-    supabase.channel('credits_live_' + user.id)
+    sb.channel('credits_live_' + user.id)
   .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
-    () => { /* noop: only credits UI is handled elsewhere */ }
+    (payload) => { try { renderCredits(payload?.new?.credits ?? 0); } catch {} }
   )
   .subscribe();
 
@@ -61,13 +71,22 @@
   function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
   ready(async function(){
     try{
-      if (typeof supabase === 'undefined' || !supabase.auth) return;
+      async function __waitSB2(){
+        for (let i=0;i<80;i++){
+          const sb2 = window.__SUPABASE_CLIENT__;
+          if (sb2 && sb2.auth && sb2.from) return sb2;
+          await new Promise(r=>setTimeout(r,50));
+        }
+        return null;
+      }
+      const sb2 = await __waitSB2();
+      if(!sb2) return;
 
       async function __refreshCredits(){
         try{
-          const ures = await supabase.auth.getUser();
+          const ures = await sb2.auth.getUser();
           const user = ures?.data?.user; if(!user) return null;
-          const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+          const { data: prof } = await sb2.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
           const c = prof?.credits ?? 0;
           const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
           const runBtn = document.getElementById('runBtn'); if (runBtn){  const zero = false;  const running = !!window.__running;  runBtn.disabled = zero || running;  runBtn.classList.toggle('opacity-50', zero || running);  runBtn.classList.toggle('cursor-not-allowed', zero || running);}
@@ -220,6 +239,7 @@ document.getElementById('y').textContent = new Date().getFullYear();
 const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.__SUPABASE_CLIENT__ = supabase;
 
 // Header UI
 const $btnLoginNav = document.getElementById('btnLoginNav');
@@ -344,7 +364,10 @@ grid.appendChild(wrap);
 
 // Credits + URL extraction helpers
 
-async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 0.5)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
+async function chargeOneCredit(){
+  // Client-side debit disabled. Credits are deducted server-side in the Netlify Function.
+  return;
+}
 
 async function tryExtractImageUrl(o){
   function firstUrl(x){
@@ -536,7 +559,7 @@ __done=false; urls.clear();
     });
 
     if (res.status === 202 || res.ok) {
-      await chargeOneCredit();
+      // server-side deduction happens in the function (Service Role)
     } else {
       const errT = await res.text().catch(()=> '');
       throw new Error('Create failed: ' + errT);
