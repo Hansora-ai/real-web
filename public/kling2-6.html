@@ -440,13 +440,21 @@ const payload = { prompt, aspect_ratio: ratioEl.value || '1:1', run_id: rid };
 if (imageUrl){
   payload.imageUrl = imageUrl;
 }
+const sessionData = await supabase.auth.getSession().catch(()=>({ data:{ session:null } }));
+const accessToken = sessionData?.data?.session?.access_token || '';
+const headers = {'Content-Type':'application/json','X-USER-ID':uid};
+if (accessToken) headers['Authorization'] = 'Bearer ' + accessToken;
 const res = await fetch('/.netlify/functions/run-kling-26',{
   method:'POST',
-  headers:{'Content-Type':'application/json','X-USER-ID':uid},
+  headers,
   body: JSON.stringify(payload)
 });
 if (res.status === 201 || res.status === 200 || res.status === 202) {
       /* client-side debit removed */
+    } else if (res.status === 402) {
+      const errJ = await res.json().catch(()=> ({}));
+      showStatus('❌ Not enough credits. Please buy more credits.','text-red-300');
+      return;
     } else {
       const errT = await res.text().catch(()=> '');
       throw new Error('Create failed: ' + errT);
