@@ -12,6 +12,9 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/,'');
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
+// Pricing (must match UI label)
+const COST = 4;
+
 function cors(){ return {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -32,6 +35,7 @@ exports.handler = async (event) => {
     catch(e){ return json(400, { ok:false, error:'bad_json', details: String(e.message || e) }); }
 
     const uid = (event.headers['x-user-id'] || event.headers['X-USER-ID'] || '').trim() || null;
+    if (!uid) return json(401, { ok:false, error:'missing_user_id' });
     const prompt = String(body.prompt || '').trim();
     const aspect_ratio = (body.aspect_ratio ? String(body.aspect_ratio) : '1:1').trim();
 
@@ -45,16 +49,57 @@ exports.handler = async (event) => {
 
     if (!prompt) return json(400, { ok:false, error:'missing_prompt' });
 
-    const run_id = (body.run_id && String(body.run_id).trim()) || `${uid || 'anon'}-${Date.now()}`;
+    const run_id = (body.run_id && String(body.run_id).trim()) || `${uid}-${Date.now()}`;
 
     const proto = (event.headers['x-forwarded-proto'] || 'https').replace(/[^a-z]+/ig,'');
     const host  = (event.headers['x-forwarded-host'] || event.headers['host'] || '').replace(/\/+$/,'');
     if (!host) return json(500, { ok:false, error:'missing_host_header' });
 
+
+    // --- Supabase REST helpers (Service Role) ---
+    const SB_HEADERS = {
+      'apikey': SERVICE_KEY,
+      'Authorization': `Bearer ${SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+    };
+    async function sbGet(path, qs){
+      const url = `${SUPABASE_URL}/rest/v1/${path}?${qs}`;
+      const r = await fetch(url, { method:'GET', headers: { ...SB_HEADERS, 'Accept':'application/json' } });
+      return r;
+    }
+    async function sbPost(path, payload){
+      const url = `${SUPABASE_URL}/rest/v1/${path}`;
+      const r = await fetch(url, { method:'POST', headers: { ...SB_HEADERS, 'Prefer':'return=representation' }, body: JSON.stringify(payload) });
+      return r;
+    }
+    async function sbPatch(path, qs, payload){
+      const url = `${SUPABASE_URL}/rest/v1/${path}?${qs}`;
+      const r = await fetch(url, { method:'PATCH', headers: { ...SB_HEADERS, 'Prefer':'return=representation' }, body: JSON.stringify(payload) });
+      return r;
+    }
+
     // --- Insert placeholder row FIRST so we have row_id ---
     let row_id = null;
+    let existing = null;
+    // --- Kling 2.6 style run_id idempotency: reuse existing run if present ---
+    try{
+      if (SUPABASE_URL && SERVICE_KEY && uid && !row_id){
+        const rFind = await sbGet('user_generations', `select=id,meta,charged,provider&user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&limit=1`);
+        if (rFind.ok){
+          const arr = await rFind.json().catch(()=>null);
+          if (Array.isArray(arr) && arr[0]) existing = arr[0];
+        }
+      }
+    }catch(e){}
+    if (existing && existing.id){
+      row_id = existing.id;
+      const prevId = existing?.meta?.prediction_id || existing?.meta?.id || null;
+      if (prevId && existing?.charged === true){
+        return json(200, { ok:true, id: prevId, run_id, row_id, reused:true });
+      }
+    }
     try {
-      if (SUPABASE_URL && SERVICE_KEY && uid){
+      if (SUPABASE_URL && SERVICE_KEY && uid && !row_id){
         const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
         const meta = { source:'gpt-image-1', run_id, model:'gpt-image-1', status:'pending' };
         const rIns = await fetch(ug, {
@@ -132,6 +177,62 @@ exports.handler = async (event) => {
     const data = await res.json().catch(()=>null);
     const id = data && data.id;
     if (!id) return json(502, { ok:false, error:'missing_prediction_id' });
+
+    // Persist prediction id on the usage row (best-effort)
+    try{
+      if (SUPABASE_URL && SERVICE_KEY && uid && row_id){
+        const metaPatch = { ...(existing?.meta || {}), source:'gpt-image-1', run_id, model:'gpt-image-1', status:'submitted', prediction_id: id };
+        await sbPatch('user_generations', `id=eq.${encodeURIComponent(row_id)}`, { meta: metaPatch });
+      }
+    }catch(e){}
+
+    // --- Server-side deduction (Service Role) + idempotent charge by run_id (Kling 2.6 style) ---
+    try{
+      if (SUPABASE_URL && SERVICE_KEY && uid){
+        // If we already had an existing row marked charged, do not charge again
+        const alreadyCharged = (existing && existing.charged === true);
+        if (!alreadyCharged){
+          const claim = `${run_id}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
+          // Claim (best-effort)
+          if (row_id){
+            try{ await sbPatch('user_generations', `id=eq.${encodeURIComponent(row_id)}`, { charge_claim: claim }); }catch(e){}
+          }
+          // Read credits
+          const rProf = await sbGet('profiles', `select=credits&user_id=eq.${encodeURIComponent(uid)}&limit=1`);
+          let cur = null;
+          if (rProf.ok){
+            const arr = await rProf.json().catch(()=>null);
+            cur = (Array.isArray(arr) && arr[0] && typeof arr[0].credits === 'number') ? arr[0].credits : (Array.isArray(arr) && arr[0] ? arr[0].credits : null);
+          }
+          cur = (cur == null) ? 0 : cur;
+          if (cur < COST){
+            // Do not cancel the prediction here; client pre-check should prevent this. Mark row as not charged.
+            if (row_id){
+              try{
+                const metaPatch = { ...(existing?.meta || {}), source:'gpt-image-1', run_id, model:'gpt-image-1', status:'submitted', prediction_id: id, charge_error:'insufficient_credits' };
+                await sbPatch('user_generations', `id=eq.${encodeURIComponent(row_id)}`, { meta: metaPatch });
+              }catch(e){}
+            }
+            return json(402, { ok:false, error:'not_enough_credits', need:COST, have:cur, id, run_id, row_id });
+          }
+          const next = Math.round((cur - COST) * 10) / 10; // keep one decimal safety
+          const rUp = await sbPatch('profiles', `user_id=eq.${encodeURIComponent(uid)}`, { credits: next });
+          if (!rUp.ok){
+            // If debit failed, return error (prediction still running)
+            return json(500, { ok:false, error:'credits_debit_failed', id, run_id, row_id });
+          }
+          // Mark charged on generation row (best-effort)
+          if (row_id){
+            try{
+              const metaPatch = { ...(existing?.meta || {}), source:'gpt-image-1', run_id, model:'gpt-image-1', status:'submitted', prediction_id: id, charged_cost: COST, charged_at: new Date().toISOString() };
+              await sbPatch('user_generations', `id=eq.${encodeURIComponent(row_id)}`, { charged: true, meta: metaPatch, charge_claim: claim });
+            }catch(e){}
+          }
+        }
+      }
+    }catch(e){
+      // Do not fail run if charging bookkeeping fails; return id so polling can continue.
+    }
 
     return json(201, { ok:true, id, run_id, row_id });
   }catch(e){
