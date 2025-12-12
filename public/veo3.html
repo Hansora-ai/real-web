@@ -167,8 +167,25 @@ function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarte
 $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
-async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}})();
+async function getProfile(user){
+  const r = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+  if (r.error) throw r.error;
+  return r.data || { credits: 0 };
+}
+(async()=>{
+  const {data}=await supabase.auth.getUser();
+  const user=data.user;
+  if(user){
+    try{
+      const p=await getProfile(user);
+      showLoggedInUI(p,user);
+    }catch{
+      showLoggedOutUI();
+    }
+  }else{
+    showLoggedOutUI();
+  }
+})();;
 
 // Elements
 const imageEl=document.getElementById('image');
@@ -278,14 +295,6 @@ async function getCredits(){
     return prof?.credits ?? 0;
   }catch{return 0;}
 }
-async function chargeCredits(cost){
-  const { data } = await supabase.auth.getUser();
-  const user = data?.user; if(!user) return;
-  const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-  const cur = prof?.credits ?? 0;
-  if (cur < cost) throw new Error('Not enough credits (need ' + cost + ').');
-  await supabase.from('profiles').update({ credits: cur - cost }).eq('user_id', user.id);
-}
 
 async function refreshCreditsUI(){
   try{
@@ -351,6 +360,8 @@ window.__run = async function(){
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
+  try{ const s = await supabase.auth.getSession(); window.__sbToken = s?.data?.session?.access_token || ''; }catch{ window.__sbToken=''; }
+
   const cost = currentCost();
   try{
     const c = await getCredits();
@@ -391,7 +402,7 @@ window.__run = async function(){
     // Create job
     const resp = await fetch('/.netlify/functions/run-veo3',{
       method:'POST',
-      headers:{ 'Content-Type':'application/json', 'X-USER-ID': uid },
+      headers:{ 'Content-Type':'application/json', 'X-USER-ID': uid, 'Authorization': 'Bearer ' + (window.__sbToken||'') },
       body: JSON.stringify({
         uid,
         prompt: _prompt,
@@ -405,9 +416,6 @@ window.__run = async function(){
       showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
       runBtn.disabled = false; repaintCost(); return;
     }
-
-    // Optional: client-side debit (dynamic cost)
-    try{ await chargeCredits(cost); }catch{}
 
     const taskId = j.taskId || '';
     const run_id = j.run_id || '';
@@ -477,15 +485,7 @@ window.__run = async function(){
         };
       }
 
-      // Wrap chargeCredits(cost) to refresh UI immediately after debit
-      if (typeof window.chargeCredits === 'function'){
-        const __origCharge = window.chargeCredits;
-        window.chargeCredits = async function(cost){
-          const out = await __origCharge(cost);
-          try{ await __refreshCredits(); }catch{}
-          return out;
-        };
-      }
+
     }catch(e){ /* silent */ }
   });
 })();
