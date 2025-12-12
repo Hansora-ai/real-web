@@ -32,9 +32,19 @@ exports.handler = async (event) => {
     // provider payloads vary; gather all URLs & find mp4
     const urls = collectUrls(body);
     let video_url = "";
+
+    // Pass 1: strict allowlist hosts
     for (const u of urls) {
       if (!isAllowed(u)) continue;
       if (/\.mp4(\?|#|$)/i.test(u)) { video_url = u; break; }
+    }
+
+    // Pass 2: fallback for Aleph/other providers — accept HTTPS direct mp4 even if host changes
+    if (!video_url) {
+      for (const u of urls) {
+        if (!isHttpsUrl(u)) continue;
+        if (/\.mp4(\?|#|$)/i.test(u)) { video_url = u; break; }
+      }
     }
 
     // Try to read taskId from common places
@@ -116,6 +126,7 @@ function json(code, obj){
 }
 function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` }; }
 function safeJson(s){ try{ return JSON.parse(s||"{}"); } catch { return {}; } }
+function isHttpsUrl(u){ return typeof u === "string" && /^https:\/\//i.test(u); }
 function isUrl(u){ return typeof u === "string" && /^https?:\/\//i.test(u); }
 function host(u){ try { return new URL(u).hostname; } catch { return ""; } }
 function isAllowed(u){ if (!isUrl(u)) return false; const h = host(u); return ALLOWED.has(h); }
