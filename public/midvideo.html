@@ -334,34 +334,75 @@ window.__run = async function(){
   }
 };
 
-// Realtime credits listener (same pattern as Veo page)
+// Realtime credits listener (Kling 2.6 1:1 pattern)
 (function(){
   function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+
   ready(async function(){
     try{
+      const navCreditsEl = document.getElementById('navCredits');
+      const runBtnEl = document.getElementById('runBtn');
+
+      function renderCredits(c){
+        if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+        if (runBtnEl) {
+          if(!window.__MJ_BUSY){ runBtnEl.disabled = false; }
+          runBtnEl.classList.toggle('opacity-50', false);
+          runBtnEl.classList.toggle('cursor-not-allowed', false);
+        }
+      }
+
       const { data: userData } = await supabase.auth.getUser();
-      const user = userData?.user; if(!user) return;
-      async function __refresh(){ try{
-        const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-        const c = prof?.credits ?? 0;
-        const nav=document.getElementById('navCredits'); if(nav) nav.textContent=(c??0)+'⚡';
-        if(!window.__MJ_BUSY) runBtn.disabled=false; return c;
-      }catch{return null;} }
-      await __refresh();
-      supabase.channel('credits_live_'+user.id)
-        .on('postgres_changes', {event:'UPDATE',schema:'public',table:'profiles',filter:'user_id=eq.'+user.id}, __refresh)
-        .subscribe();
-      const orig=window.__run;
-      window.__run=async function(){
+      const user = userData?.user;
+      if(!user) return;
+
+      async function __refreshCredits(){
         try{
-          const c=await __refresh();
-          if(c!==null && c<currentCost()){ showStatus('Not enough credits (need '+currentCost()+').','text-rose-300'); return; }
-        }catch{}
-        const r=await orig(); const id=setInterval(__refresh,1500); setTimeout(()=>clearInterval(id),15000); return r;
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('credits')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          const c = prof?.credits ?? 0;
+          renderCredits(c);
+          return c;
+        }catch(_){
+          return null;
+        }
+      }
+
+      // initial fetch
+      await __refreshCredits();
+
+      // subscribe to updates
+      supabase.channel('credits_live_' + user.id)
+        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'profiles', filter:'user_id=eq.' + user.id }, function(){
+          __refreshCredits();
+        })
+        .subscribe();
+
+      // patch __run to keep UI fresh after submit (no internal changes)
+      const __origRun = window.__run;
+      window.__run = async function(){
+        try{
+          const c = await __refreshCredits();
+          if (c !== null && c < currentCost()){
+            showStatus('Not enough credits (need ' + currentCost() + ').', 'text-rose-300');
+            return;
+          }
+        }catch(_){}
+        const ret = await __origRun();
+        const id = setInterval(__refreshCredits, 1500);
+        setTimeout(()=>clearInterval(id), 15000);
+        return ret;
       };
-    }catch{}
+
+    }catch(e){
+      console.warn('live credits wrapper error', e);
+    }
   });
 })();
+
 </script>
 </body>
 </html>
