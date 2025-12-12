@@ -311,10 +311,11 @@ window.__run = async function(){
     const imageUrl = signJson.publicUrl;
 
     // Create MJ job
+    const run_id = (crypto?.randomUUID ? crypto.randomUUID() : (uid+'-'+Date.now()));
+
     const resp=await fetch('/.netlify/functions/run-mj-video',{
       method:'POST',
       headers:{'Content-Type':'application/json','X-USER-ID':uid, ...(accessToken?{'Authorization':'Bearer '+accessToken}:{})},
-      const run_id = (crypto?.randomUUID ? crypto.randomUUID() : (uid+'-'+Date.now()));
       body:JSON.stringify({ uid, run_id, prompt:_prompt, imageUrl, aspectRatio })
     });
     const j=await resp.json().catch(()=>({}));
@@ -322,9 +323,12 @@ window.__run = async function(){
       showStatus('Error submitting: '+(j.error || resp.status),'text-rose-300'); runBtn.disabled=false; repaintCost(); return;
     }
 
-    const taskId=j.taskId || ''; const run_id=j.run_id || '';
+    const taskId=j.taskId || '';
+    const runId = j.run_id || run_id;
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-    if(taskId && run_id) mjvCheckPoll(taskId, uid, run_id);
+    // Live credits update (server deduct happens slightly after provider accepts)
+    try{ await refreshCreditsUI(); const _t=setInterval(refreshCreditsUI,1500); setTimeout(()=>clearInterval(_t),15000); }catch{}
+    if(taskId && runId) mjvCheckPoll(taskId, uid, runId);
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300'); window.__MJ_BUSY=false; runBtn.disabled=false; repaintCost();
   }
