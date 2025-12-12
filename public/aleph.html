@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HANSORA • Runway Aleph (Video)</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
-  <script src="https://cdn.tailwindcss.com">
+  <script src="https://cdn.tailwindcss.com"></script>
+<script>
 // --- helper: construct public Supabase URL (Nano Banana 1:1) ---
 function derivePublicUrl(up){
   if (!up) return null;
@@ -166,6 +167,8 @@ const $navCredits = document.getElementById('navCredits');
 const $navAvatar = document.getElementById('navAvatar');
 const $navMenu = document.getElementById('navMenu');
 const $btnLogout = document.getElementById('btnLogout');
+const $navAvatarImg = document.getElementById('navAvatarImg');
+const $navAvatarFallback = document.getElementById('navAvatarFallback');
 
 function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if($btnLoginSignup){$btnLoginSignup.classList.add('hidden');}
   try{
@@ -215,9 +218,6 @@ const statusEl=document.getElementById('status');
 const resultBox=document.getElementById('resultBox');
 const downloadLink=document.getElementById('downloadLink');
 const guardMsg=document.getElementById('guardMsg');
-const $navAvatarImg=document.getElementById('navAvatarImg');
-const $navAvatarFallback=document.getElementById('navAvatarFallback');
-
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 function clearChilds(el){while(el.firstChild)el.removeChild(el.firstChild)}
 
