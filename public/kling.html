@@ -167,6 +167,32 @@ const downloadLink=document.getElementById('downloadLink');
 
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 
+// --- Instant anti-multi-click lock (Veo 3.1 fixed-working logic) ---
+function __klingUnlockRunButton(){
+  window.__klingBusy = false;
+  try{
+    runBtn.disabled = false;
+    runBtn.classList.remove('opacity-50','cursor-not-allowed');
+    runBtn.style.pointerEvents = 'auto';
+    runBtn.removeAttribute('aria-disabled');
+  }catch{}
+  try{
+    if (typeof window.__klingRenderRunCost === 'function') window.__klingRenderRunCost();
+    else runBtn.textContent = 'Run';
+  }catch{}
+}
+function __klingLockRunButton(){
+  window.__klingBusy = true;
+  try{
+    runBtn.disabled = true;
+    runBtn.classList.add('opacity-50','cursor-not-allowed');
+    runBtn.style.pointerEvents = 'none';
+    runBtn.setAttribute('aria-disabled','true');
+    runBtn.textContent = 'Working…';
+  }catch{}
+}
+
+
 // --- Live credits (same idea as Kling 2.6): fetch + realtime subscribe + safe refresh loop ---
 async function getCredits(){
   try{
@@ -241,7 +267,7 @@ function onResult(url){
     downloadLink.classList.remove('hidden');
     downloadLink.textContent='Download';
     showStatus('✅ Done.','text-emerald-300');
-    if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+    __klingUnlockRunButton();
   }
 
   if (isVideo){
@@ -277,7 +303,7 @@ async function imagenCheckPoll(id, uid, rid){
       }
       if(status === 'failed' || status === 'canceled'){
         showStatus('❌ Generation failed, please try again later. Credits were not deducted.','text-red-300');
-        if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+        __klingUnlockRunButton();
         break;
       }
     }catch{}
@@ -285,7 +311,7 @@ async function imagenCheckPoll(id, uid, rid){
   }
   if(!__done){
     showStatus('❌ Generation failed, please try again later. Credits were not deducted.','text-red-300');
-    if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+    __klingUnlockRunButton();
   }
 }
 
@@ -335,18 +361,22 @@ async function uploadToSupabase(file){
 }
 // Main run
 window.__run=async function(){
+  // Instant client-side anti-double-submit lock (prevents multi-click before UI switches to processing)
+  if (window.__klingBusy) return;
+  __klingLockRunButton();
+
   const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ alert('Please log in or register first.'); return; }
+  if(!authData.user){ alert('Please log in or register first.'); __klingUnlockRunButton(); return; }
 
   // Reset old result actions
   downloadLink.classList.add('hidden'); downloadLink.removeAttribute('href');
 
   __done=false;
   const prompt=(promptEl.value||'').trim();
-  if(!prompt){ alert('Please enter a prompt.'); return; }
+  if(!prompt){ alert('Please enter a prompt.'); __klingUnlockRunButton(); return; }
 
   const cost = (typeof window.__klingComputeCost==='function' ? window.__klingComputeCost() : 7);
-  window.__klingBusy=true; runBtn.disabled=true; runBtn.textContent='Working…';
+  
   showStatus('Submitting…','text-zinc-400');
   resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~2-5m</span>';
 
@@ -384,6 +414,7 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
 
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
+    __klingUnlockRunButton();
   } finally{ /* keep disabled while polling; re-enabled on success/fail/timeout */ }
 };
 </script>
