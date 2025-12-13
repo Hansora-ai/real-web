@@ -473,8 +473,27 @@ async function nbCheckPoll(taskId, uid, rid){
 
 // Main run
 window.__run=async function(){
+  // Instant anti-multi-click lock (Veo 3.1 style) — set before any await
+  if (window.__MIDIMAGE_BUSY) return;
+  window.__MIDIMAGE_BUSY = true;
+  window.__running = true;
+  try{
+    runBtn.disabled = true;
+    runBtn.style.pointerEvents = 'none';
+    runBtn.classList.add('opacity-50','cursor-not-allowed');
+  }catch{}
+  const __unlock = () => {
+    window.__MIDIMAGE_BUSY = false;
+    window.__running = false;
+    try{
+      runBtn.disabled = false;
+      runBtn.style.pointerEvents = 'auto';
+      runBtn.classList.remove('opacity-50','cursor-not-allowed');
+      runBtn.textContent = 'Run (cost: 1⚡)';
+    }catch{}
+  };
   const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ alert('Please log in || register first.'); return; }
+  if(!authData.user){ alert('Please log in || register first.'); __unlock(); return; }
 
   
   // HARD CREDIT CHECK (surgical): prevent run if credits insufficient
@@ -483,15 +502,15 @@ window.__run=async function(){
     const cur = prof?.credits ?? 0;
     if (cur < 1) {
       showStatus('Not enough credits (need 1).','text-rose-300');
-      runBtn.disabled = false; runBtn.textContent = "Run (cost: 1⚡)";
+      __unlock();
       return;
     }
   }catch(_){ /* ignore, but don't proceed if unknown? proceed cautiously */ }
 __done=false; urls.clear();
   const files=[...filesEl.files];
   // 0 images allowed for text-to-image
-  if(files.length>1){alert('Select at most 1 image.');return;}
-  for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}
+  if(files.length>1){alert('Select at most 1 image.');__unlock();return;}
+  for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);__unlock();return;}}
 
   window.__running=true;runBtn.disabled=true;runBtn.textContent='Working…';
   showStatus('Submitting…','text-zinc-400');
@@ -596,7 +615,16 @@ __done=false; urls.clear();
     if (!__done) { window.__running=false; showStatus('❌ Generation failed. Credit is refunded.','text-red-300');
     }
 
-  }catch(e){ window.__running=false; showStatus('❌ '+(e.message||String(e)),'text-rose-300') }finally{ window.__running=false; try{ if (channel && typeof channel.unsubscribe === 'function') channel.unsubscribe(); }catch{} runBtn.disabled=false;runBtn.textContent='Run (cost: 1⚡)';
+  }catch(e){ window.__running=false; showStatus('❌ '+(e.message||String(e)),'text-rose-300') }finally{
+    try{ if (channel && typeof channel.unsubscribe === 'function') channel.unsubscribe(); }catch{}
+    window.__MIDIMAGE_BUSY = false;
+    window.__running = false;
+    try{
+      runBtn.disabled = false;
+      runBtn.style.pointerEvents = 'auto';
+      runBtn.classList.remove('opacity-50','cursor-not-allowed');
+      runBtn.textContent = 'Run (cost: 1⚡)';
+    }catch{}
   }
 };
 </script>
