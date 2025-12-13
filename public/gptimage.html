@@ -269,8 +269,9 @@ function onResult(url){
     downloadLink.classList.remove('hidden');
     downloadLink.textContent='Download';
     showStatus('✅ Done.','text-emerald-300');
+  window.__GPTIMG_BUSY = false;
   window.__running = false;
-  runBtn.disabled=false; runBtn.textContent = 'Run (cost: 4⚡)';
+  runBtn.disabled=false; runBtn.style.pointerEvents=''; runBtn.textContent = 'Run (cost: 4⚡)';
     };
   img.src=url;
 }
@@ -320,8 +321,9 @@ async function imagenCheckPoll(id, uid, rid){
       }
       if(status === 'failed' || status === 'canceled'){
         showStatus('❌ Generation failed, please try again. Your credits is refunded.','text-rose-300');
+        window.__GPTIMG_BUSY = false;
         window.__running = false;
-        runBtn.disabled=false; runBtn.textContent = 'Run (cost: 4⚡)';
+        runBtn.disabled=false; runBtn.style.pointerEvents=''; runBtn.textContent = 'Run (cost: 4⚡)';
         break;
       }
     }catch{}
@@ -329,22 +331,35 @@ async function imagenCheckPoll(id, uid, rid){
   }
   if(!__done){
     showStatus('❌ Generation failed, please try again. Your credits will be refunded in minutes.','text-yellow-300');
+    window.__GPTIMG_BUSY = false;
     window.__running = false;
-    runBtn.disabled=false; runBtn.textContent = 'Run (cost: 4⚡)';
+    runBtn.disabled=false; runBtn.style.pointerEvents=''; runBtn.textContent = 'Run (cost: 4⚡)';
   }
 }
 
 // Main run
+window.__GPTIMG_BUSY = false;
 window.__run=async function(){
+  // Instant anti-multi-click lock (Veo3.1 pattern)
+  if (window.__GPTIMG_BUSY) return;
+  window.__GPTIMG_BUSY = true;
+  window.__running = true;
+  try { runBtn.disabled = true; runBtn.style.pointerEvents = 'none'; } catch(_){ }
+  const __unlock = () => {
+    window.__GPTIMG_BUSY = false;
+    window.__running = false;
+    try { runBtn.disabled = false; runBtn.style.pointerEvents = ''; runBtn.textContent = 'Run (cost: 4⚡)'; } catch(_){ }
+  };
+
   const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ alert('Please log in or register first.'); return; }
+  if(!authData.user){ alert('Please log in or register first.'); __unlock(); return; }
 
   // Reset old result actions
   downloadLink.classList.add('hidden'); downloadLink.removeAttribute('href');
 
   __done=false;
   const prompt=(promptEl.value||'').trim();
-  if(!prompt){ alert('Please enter a prompt.'); return; }
+  if(!prompt){ alert('Please enter a prompt.'); __unlock(); return; }
 
   const cost = COST;
 // HARD CREDIT CHECK
@@ -353,7 +368,7 @@ window.__run=async function(){
     const cur = prof?.credits ?? 0;
     if (cur < cost) {
       showStatus('Not enough credits (need '+cost+').','text-rose-300');
-      runBtn.disabled = false; runBtn.textContent = 'Run (cost: 4⚡)'; return;
+      __unlock(); return;
     }
   }catch(_){}
 
@@ -430,6 +445,7 @@ showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
 
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
+    __unlock();
   } finally{ /* keep disabled while polling; re-enabled on success/fail/timeout */ }
 };
 </script>
