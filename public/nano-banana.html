@@ -319,8 +319,24 @@ async function nbCheckPoll(taskId, uid, rid){
 
 // Main run
 window.__run=async function(){
+  // Veo 3.1-style hard lock: prevent rapid multi-click re-entry BEFORE any await
+  if (window.__NB_BUSY) return;
+  window.__NB_BUSY = true;
+  const __nbUnlock = () => {
+    window.__NB_BUSY = false;
+    try{
+      runBtn.disabled = false;
+      runBtn.style.pointerEvents = '';
+      runBtn.classList.remove('opacity-50','cursor-not-allowed');
+    }catch(_){ }
+  };
+  try{
+    runBtn.disabled = true;
+    runBtn.style.pointerEvents = 'none';
+    runBtn.classList.add('opacity-50','cursor-not-allowed');
+  }catch(_){ }
   const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ alert('Please log in or register first.'); return; }
+  if(!authData.user){ alert('Please log in or register first.'); __nbUnlock(); return; }
 
   // HARD CREDIT CHECK (surgical): prevent run if credits insufficient
   try{
@@ -329,15 +345,15 @@ window.__run=async function(){
     if (cur < 0.5) {
       showStatus('Not enough credits (need 0.5).','text-rose-300');
       runBtn.disabled = false; runBtn.textContent = "Run (cost: 0.5⚡)";
-      return;
+      __nbUnlock(); return;
     }
   }catch(_){ /* ignore, but don't proceed if unknown? proceed cautiously */ }
 
   __done=false;
   const files=[...filesEl.files];
-  if(!files.length){alert('Choose at least one image.');return;}
-  if(files.length>4){alert('Max 4 images.');return;}
-  for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}
+  if(!files.length){alert('Choose at least one image.');__nbUnlock();return;}
+  if(files.length>4){alert('Max 4 images.');__nbUnlock();return;}
+  for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);__nbUnlock();return;}}
 
   runBtn.disabled=true;runBtn.textContent='Uploading…';
   showStatus('Uploading images…','text-zinc-400');
@@ -345,7 +361,9 @@ window.__run=async function(){
 
   try{
     const uid=authData.user.id;
-    const rid=uid+'-'+Date.now();
+    const rid = (crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : (uid + '-' + Date.now() + '-' + Math.random().toString(16).slice(2));
 
     // ==== FIX: await all uploads, then proceed ====
     if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
@@ -434,7 +452,8 @@ window.__run=async function(){
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300')
   }finally{
-    runBtn.disabled=false;runBtn.textContent='Run (cost: 0.5⚡)';
+    __nbUnlock();
+    runBtn.textContent='Run (cost: 0.5⚡)';
   }
 };
 </script>
