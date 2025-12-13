@@ -357,33 +357,36 @@ async function nbCheckPoll(taskId, uid, rid){
 
 // Main run
 window.__run=async function(){
-  const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ alert('Please log in or register first.'); return; }
-
-  // HARD CREDIT CHECK (surgical): prevent run if credits insufficient
-  try{
-    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
-    const cur = prof?.credits ?? 0;
-    if (cur < 2) {
-      showStatus('Not enough credits (need 2).','text-rose-300');
-      runBtn.disabled = false; runBtn.textContent = "Run (cost: 2⚡)";
-      return;
-    }
-  }catch(_){ /* ignore, proceed cautiously */ }
-
+  // Anti multi-click lock (1:1 with Veo 3.1): set BEFORE any await
+  if (__isRunning) return;
   __isRunning = true;
-  __done=false;
-  const files=[...filesEl.files];
-  if(files.length>8){alert('Max 8 images.');return;}
-  for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}
-
-  const promptVal = (promptEl && promptEl.value ? promptEl.value : '').trim();
-
-  runBtn.disabled=true;runBtn.textContent='Uploading…';
-  showStatus('Uploading images…','text-zinc-400');
-  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
+  __done = false;
+  try { runBtn.disabled = true; runBtn.style.pointerEvents = 'none'; runBtn.textContent = 'Preparing…'; } catch(_) {}
 
   try{
+    const {data:authData}=await supabase.auth.getUser();
+    if(!authData.user){ alert('Please log in or register first.'); return; }
+
+    // HARD CREDIT CHECK (surgical): prevent run if credits insufficient
+    try{
+      const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
+      const cur = prof?.credits ?? 0;
+      if (cur < 2) {
+        showStatus('Not enough credits (need 2).','text-rose-300');
+        return;
+      }
+    }catch(_){ /* ignore, proceed cautiously */ }
+
+    const files=[...filesEl.files];
+    if(files.length>8){alert('Max 8 images.');return;}
+    for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);return;}}
+
+    const promptVal = (promptEl && promptEl.value ? promptEl.value : '').trim();
+
+    runBtn.textContent='Uploading…';
+    showStatus('Uploading images…','text-zinc-400');
+    resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take ~20–60s</span>';
+
     const uid=authData.user.id;
     const rid=uid+'-'+Date.now();
     let urls = [];
@@ -409,7 +412,6 @@ window.__run=async function(){
       // guard: if uploads were attempted but no URLs produced, stop here
       if (urls.length === 0) {
         showStatus('Upload failed: no image URLs to send','text-rose-300');
-        runBtn.disabled = false; runBtn.textContent = 'Run (cost: 2⚡)';
         return;
       }
     } else {
@@ -423,7 +425,6 @@ window.__run=async function(){
 
     runBtn.textContent='Submitting…';
     showStatus('Submitting…','text-zinc-400');
-
 
     // create job
     const res=await fetch('/.netlify/functions/run-nano-banana-pro',{
@@ -485,10 +486,10 @@ window.__run=async function(){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300')
   }finally{
     __isRunning = false;
-    runBtn.disabled=false;runBtn.textContent='Run (cost: 2⚡)';
+    try { runBtn.disabled = false; runBtn.style.pointerEvents = 'auto'; runBtn.textContent = 'Run (cost: 2⚡)'; } catch(_) {}
   }
 };
-</script></script>
+</script>
 <!-- Delete buttons + safe validation (additive, non-destructive) -->
 <script>
 (function(){
