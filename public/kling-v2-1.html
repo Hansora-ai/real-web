@@ -320,77 +320,97 @@ async function uploadToSupabase(file){
 
 // Main run
 window.__run = async function(){
-  try{ document.getElementById('playBtn')?.classList.add('hidden'); }catch{}
-  try{ document.getElementById('downloadLink')?.classList.add('hidden'); }catch{}
-  const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ alert('Please log in or register first.'); return; }
+  // Anti-multi-click lock (1:1 with Veo 3.1)
+  if (window.__KLING_BUSY) return;
+  window.__KLING_BUSY = true;
 
-  const cost = currentCost();
+  // Lock UI immediately BEFORE any await
   try{
-    const c = await getCredits();
-    if (c < cost){ showStatus('Not enough credits (need ' + cost + ').','text-rose-300'); runBtn.disabled = false; repaintCost(); return; }
+    runBtn.disabled = true;
+    runBtn.style.pointerEvents = 'none';
+    runBtn.classList.add('opacity-50','cursor-not-allowed');
+    runBtn.textContent = 'Working…';
   }catch{}
 
-  const sFile = startEl?.files?.[0] || null;
-  const eFile = endEl?.files?.[0] || null;
-  if (!sFile){
-    showStatus('Please upload a Start Frame image (required).','text-rose-300'); return;
-  }
-  if (sFile && sFile.size > 10 * 1024 * 1024) { alert('Start frame too large: ' + sFile.name); return; }
-  if (eFile && eFile.size > 10 * 1024 * 1024) { alert('End frame too large: ' + eFile.name); return; }
-
-  const _prompt = (promptEl.value || '').trim();
-  if (!_prompt){
-    showStatus('A prompt is required.','text-rose-300');
-    return;
-  }
-
-  window.__KLING_BUSY = true; runBtn.disabled=true; runBtn.textContent='Working…';
-  showStatus('Submitting…','text-zinc-400');
-  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take a few minutes. You can leave this page; the result will appear in your History section.</span>';
-
   try{
-    const uid = authData.user.id;
-    const duration = parseInt(durationEl.value || '5', 10) || 5;
+      try{ document.getElementById('playBtn')?.classList.add('hidden'); }catch{}
+      try{ document.getElementById('downloadLink')?.classList.add('hidden'); }catch{}
+      const {data:authData}=await supabase.auth.getUser();
+      if(!authData.user){ alert('Please log in or register first.'); return; }
 
-    // Upload frames
-    let startUrl='', endUrl='';
-    if (sFile){ startUrl = await uploadToSupabase(sFile); if(!startUrl) throw new Error('upload_failed_start'); }
-    if (eFile){ endUrl = await uploadToSupabase(eFile); if(!endUrl) throw new Error('upload_failed_end'); }
+      const cost = currentCost();
+      try{
+        const c = await getCredits();
+        if (c < cost){ showStatus('Not enough credits (need ' + cost + ').','text-rose-300'); runBtn.disabled = false; repaintCost(); return; }
+      }catch{}
 
-    const sessionData = await supabase.auth.getSession().catch(()=>({ data:{ session:null } }));
-    const accessToken = sessionData?.data?.session?.access_token || '';
-    const headers = { 'Content-Type':'application/json', 'X-USER-ID': uid };
-    if (accessToken) headers['Authorization'] = 'Bearer ' + accessToken;
+      const sFile = startEl?.files?.[0] || null;
+      const eFile = endEl?.files?.[0] || null;
+      if (!sFile){
+        showStatus('Please upload a Start Frame image (required).','text-rose-300'); return;
+      }
+      if (sFile && sFile.size > 10 * 1024 * 1024) { alert('Start frame too large: ' + sFile.name); return; }
+      if (eFile && eFile.size > 10 * 1024 * 1024) { alert('End frame too large: ' + eFile.name); return; }
 
-    const resp = await fetch('/.netlify/functions/run-kling21',{
-      method:'POST',
-      headers,
-      body: JSON.stringify({
-        uid,
-        prompt: _prompt,
-        duration,
-        firstFrameUrl: startUrl,
-        lastFrameUrl: endUrl
-      })
-    });
-    const j = await resp.json().catch(()=>({}));
-    if (!resp.ok || !j.submitted){
-      showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
-      runBtn.disabled = false; repaintCost(); window.__KLING_BUSY = false; return;
-    }
+      const _prompt = (promptEl.value || '').trim();
+      if (!_prompt){
+        showStatus('A prompt is required.','text-rose-300');
+        return;
+      }
 
-    const taskId = j.taskId || '';
-    const run_id = j.run_id || '';
+      showStatus('Submitting…','text-zinc-400');
+      resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… this can take a few minutes. You can leave this page; the result will appear in your History section.</span>';
 
-    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+      try{
+        const uid = authData.user.id;
+        const duration = parseInt(durationEl.value || '5', 10) || 5;
 
-    if (taskId && run_id) vvCheckPoll(taskId, uid, run_id);
+        // Upload frames
+        let startUrl='', endUrl='';
+        if (sFile){ startUrl = await uploadToSupabase(sFile); if(!startUrl) throw new Error('upload_failed_start'); }
+        if (eFile){ endUrl = await uploadToSupabase(eFile); if(!endUrl) throw new Error('upload_failed_end'); }
 
-  }catch(e){
-    showStatus('❌ '+(e.message||String(e)),'text-rose-300'); window.__KLING_BUSY = false;
+        const sessionData = await supabase.auth.getSession().catch(()=>({ data:{ session:null } }));
+        const accessToken = sessionData?.data?.session?.access_token || '';
+        const headers = { 'Content-Type':'application/json', 'X-USER-ID': uid };
+        if (accessToken) headers['Authorization'] = 'Bearer ' + accessToken;
+
+        const resp = await fetch('/.netlify/functions/run-kling21',{
+          method:'POST',
+          headers,
+          body: JSON.stringify({
+            uid,
+            prompt: _prompt,
+            duration,
+            firstFrameUrl: startUrl,
+            lastFrameUrl: endUrl
+          })
+        });
+        const j = await resp.json().catch(()=>({}));
+        if (!resp.ok || !j.submitted){
+          showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
+          runBtn.disabled = false; repaintCost(); return;
+        }
+
+        const taskId = j.taskId || '';
+        const run_id = j.run_id || '';
+
+        showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+
+        if (taskId && run_id) vvCheckPoll(taskId, uid, run_id);
+
+      }catch(e){
+        showStatus('❌ '+(e.message||String(e)),'text-rose-300');
+      }
   }finally{
-    if (!window.__KLING_BUSY) { runBtn.disabled=false; repaintCost(); }
+    // Always unlock UI
+    window.__KLING_BUSY = false;
+    try{
+      runBtn.disabled = false;
+      runBtn.style.pointerEvents = 'auto';
+      runBtn.classList.remove('opacity-50','cursor-not-allowed');
+      repaintCost();
+    }catch{}
   }
 };
 </script>
@@ -428,24 +448,6 @@ window.__run = async function(){
         .channel('credits_live_' + user.id)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id }, __refreshCredits)
         .subscribe();
-
-      // Guard __run to check currentCost() before submitting
-      if (typeof window.__run === 'function'){
-        const __origRun = window.__run;
-        window.__run = async function(){
-          try{
-            const c = await __refreshCredits();
-            if (c !== null && typeof currentCost === 'function' && c < currentCost()){
-              showStatus('Not enough credits (need ' + currentCost() + ').','text-rose-300');
-              return;
-            }
-          }catch{}
-          const ret = await __origRun();
-          const id = setInterval(__refreshCredits, 1500);
-          setTimeout(()=>clearInterval(id), 15000);
-          return ret;
-        };
-      }
 
       }catch(e){ /* silent */ }
   });
