@@ -218,17 +218,6 @@ const guardMsg=document.getElementById('guardMsg');
 const $navAvatarImg=document.getElementById('navAvatarImg');
 const $navAvatarFallback=document.getElementById('navAvatarFallback');
 
-// Instant client-side anti-double-submit lock helpers (Veo 3.1 fixed working 1:1)
-window.__ALEPH_BUSY = false;
-function __alephUnlockRun(){
-  window.__ALEPH_BUSY = false;
-  try{
-    runBtn.disabled = false;
-    runBtn.classList.remove('opacity-50','cursor-not-allowed');
-    runBtn.style.pointerEvents = '';
-  }catch{}
-}
-
 function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
 function clearChilds(el){while(el.firstChild)el.removeChild(el.firstChild)}
 
@@ -309,11 +298,7 @@ async function refreshCreditsUI(){
   try{
     const c = await getCredits();
     const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
-    if (!window.__ALEPH_BUSY){
-      runBtn.disabled = false;
-      runBtn.classList.remove('opacity-50','cursor-not-allowed');
-      runBtn.style.pointerEvents = '';
-    }
+    runBtn.disabled = false; runBtn.classList.remove('opacity-50','cursor-not-allowed');
   }catch{}
 }
 refreshCreditsUI();
@@ -383,12 +368,16 @@ async function waitForSupabaseResult(uid, rid, uploadedUrl){
         const url = row.result_url || '';
         const st  = String((row.meta && row.meta.status) || '').toLowerCase();
         if (url && url !== uploadedUrl){
-          onResult(url);
+          showVideo(url);
+          showStatus('✅ Done!','text-emerald-300');
+          runBtn.disabled=false;
+          try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
+          try{ await refreshCreditsUI(); }catch{}
           break;
         }
         if (st === 'failed' || st === 'canceled' || st === 'payment_failed'){
           showStatus('❌ Generation failed, please try again later. Your credits are refunded.','text-red-300');
-          __alephUnlockRun();
+          runBtn.disabled=false;
           try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
           break;
         }
@@ -399,43 +388,34 @@ async function waitForSupabaseResult(uid, rid, uploadedUrl){
   // timeout fallback
   if (runBtn.disabled){
     showStatus('⏳ Still processing… Please check the Usage page in a bit.','text-zinc-300');
-    __alephUnlockRun();
+    runBtn.disabled=false;
     try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{}
   }
 }
 window.__run = async function(){
-  // Instant client-side anti-double-submit lock (Veo 3.1 fixed working 1:1)
-  if (window.__ALEPH_BUSY) return;
-  window.__ALEPH_BUSY = true;
-  try{
-    runBtn.disabled = true;
-    runBtn.classList.add('opacity-50','cursor-not-allowed');
-    runBtn.style.pointerEvents = 'none';
-    runBtn.textContent = 'Working…';
-  }catch{}
-
   const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ alert('Please log in or register first.'); try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{} __alephUnlockRun(); return; }
+  if(!authData.user){ alert('Please log in or register first.'); return; }
 
   // Validate sizes
   const vid=videoEl.files[0];
-  if(!vid){ showStatus('Video is required (≤10MB).','text-rose-300'); document.getElementById('guardMsg').classList.remove('hidden'); try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{} __alephUnlockRun(); return; }
-  if(vid.size>10*1024*1024){ showStatus('Video is too large (>10MB).','text-rose-300'); try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{} __alephUnlockRun(); return; }
+  if(!vid){ showStatus('Video is required (≤10MB).','text-rose-300'); document.getElementById('guardMsg').classList.remove('hidden'); return; }
+  if(vid.size>10*1024*1024){ showStatus('Video is too large (>10MB).','text-rose-300'); return; }
 
   const img=imageEl.files[0];
-  if(img && img.size>10*1024*1024){ showStatus('Image is too large (>10MB).','text-rose-300'); try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{} __alephUnlockRun(); return; }
+  if(img && img.size>10*1024*1024){ showStatus('Image is too large (>10MB).','text-rose-300'); return; }
 
   const _prompt=(promptEl.value||'').trim();
-  if(!_prompt){ showStatus('Prompt is required.','text-rose-300'); document.getElementById('guardMsg').classList.remove('hidden'); try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{} __alephUnlockRun(); return; }
+  if(!_prompt){ showStatus('Prompt is required.','text-rose-300'); document.getElementById('guardMsg').classList.remove('hidden'); return; }
   // Inputs valid — hide guard
   document.getElementById('guardMsg').classList.add('hidden');
 
   // Credits guard (fixed 9⚡)
   try{
     const c = await getCredits();
-    if (c < 9){ showStatus('Not enough credits (need 9).','text-rose-300'); try{ runBtn.textContent='Run (cost: 9⚡)'; }catch{} __alephUnlockRun(); return; }
+    if (c < 9){ showStatus('Not enough credits (need 9).','text-rose-300'); return; }
   }catch{}
 
+  runBtn.disabled = true; runBtn.textContent = 'Working…';
   showStatus('Submitting…','text-zinc-400');
   // Hide old play/download and reset result box
   try{ document.getElementById('playBtn')?.classList.add('hidden'); }catch{}
@@ -514,7 +494,7 @@ const resp = await fetch('/.netlify/functions/run-aleph',{
     const j = await resp.json().catch(()=>({}));
     if (!resp.ok || !j.submitted){
       showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
-      runBtn.textContent='Run (cost: 9⚡)'; __alephUnlockRun(); return;
+      runBtn.disabled = false; runBtn.textContent='Run (cost: 9⚡)'; return;
     }
     const taskId = j.taskId || '';
     const server_run_id = j.run_id || run_id || '';
@@ -524,8 +504,8 @@ const resp = await fetch('/.netlify/functions/run-aleph',{
 
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
+    runBtn.disabled=false;
     runBtn.textContent='Run (cost: 9⚡)';
-    __alephUnlockRun();
   }
 };
 </script>
