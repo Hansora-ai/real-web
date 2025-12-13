@@ -19,7 +19,7 @@
         if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
         if (runBtn) {
           const ok = true;
-          if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false;
+          if(!window.__klingBusy){ runBtn.disabled=false; } try{ runBtn.style.pointerEvents='auto'; }catch(_){}
           runBtn.classList.toggle('opacity-50', !ok);
           runBtn.classList.toggle('cursor-not-allowed', !ok);
         }
@@ -44,23 +44,10 @@
         )
         .subscribe();
 
-      // patch __run to guard when credits are 0 (without changing its internals)
+      // patch __run to avoid pre-await wrappers (anti multi-click relies on __run internal busy lock)
       const __origRun = window.__run;
       window.__run = async function(){
-        try{
-          const { data: prof2 } = await supabase
-            .from('profiles')
-            .select('credits')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          const c = prof2?.credits ?? 0;
-          // Minimal guard: block if below 0.5 (lowest possible cost)
-          if (c < 0.5) {
-            console.warn('No credits left.');
-            alert('Not enough credits.');
-            return;
-          }
-        }catch{}
+        if(window.__klingBusy) return;
         return __origRun ? __origRun() : undefined;
       };
     }catch(e){ console.warn('credits live failed', e); }
@@ -290,7 +277,7 @@ function onResult(url){
     downloadLink.classList.remove('hidden');
     downloadLink.textContent='Download';
     showStatus('✅ Done.','text-emerald-300');
-    if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+    if(!window.__klingBusy){ runBtn.disabled=false; } try{ runBtn.style.pointerEvents='auto'; }catch(_){} (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
   }
 
   if (isVideo){
@@ -326,7 +313,7 @@ async function imagenCheckPoll(id, uid, rid){
       }
       if(status === 'failed' || status === 'canceled'){
         showStatus('❌ Generation failed, please try again later. Your credits are refunded.','text-red-300');
-        if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+        if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; try{ runBtn.style.pointerEvents='auto'; }catch(_){} (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
         break;
       }
     }catch{}
@@ -384,15 +371,26 @@ async function uploadToSupabase(file){
 }
 // Main run
 window.__run=async function(){
+  // Anti multi-click lock (set BEFORE any await)
+  if (window.__klingBusy) return;
+  window.__klingBusy = true;
+
+  // Disable immediately
+  try{
+    runBtn.disabled = true;
+    runBtn.style.pointerEvents = 'none';
+    runBtn.textContent = 'Working…';
+  }catch(_){}
+
   const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ alert('Please log in or register first.'); return; }
+  if(!authData.user){ alert('Please log in or register first.'); window.__klingBusy=false; try{ runBtn.disabled=false; runBtn.style.pointerEvents='auto'; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run')); }catch(_){} return; }
 
   // Reset old result actions
   downloadLink.classList.add('hidden'); downloadLink.removeAttribute('href');
 
   __done=false;
   const prompt=(promptEl.value||'').trim();
-  if(!prompt){ alert('Please enter a prompt.'); return; }
+  if(!prompt){ alert('Please enter a prompt.'); window.__klingBusy=false; try{ runBtn.disabled=false; runBtn.style.pointerEvents='auto'; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run')); }catch(_){} return; }
 
   const cost = (typeof window.__klingComputeCost==='function' ? window.__klingComputeCost() : 7);
 // HARD CREDIT CHECK
@@ -402,6 +400,7 @@ window.__run=async function(){
     if (cur < cost) {
       showStatus('Not enough credits (need '+cost+').','text-rose-300');
       if(!window.__klingBusy){ runBtn.disabled=false; } window.__klingBusy=false; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run'));
+      try{ runBtn.style.pointerEvents='auto'; }catch(_){}
       return;
     }
   }catch(_){}
@@ -453,6 +452,9 @@ if (res.status === 201 || res.status === 200 || res.status === 202) {
 
   }catch(e){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300');
+    // unlock on immediate error (no poll will resolve this)
+    window.__klingBusy=false;
+    try{ runBtn.disabled=false; runBtn.style.pointerEvents='auto'; (window.__klingRenderRunCost ? __klingRenderRunCost() : (runBtn.textContent='Run')); }catch(_){}
   } finally{ /* keep disabled while polling; re-enabled on success/fail/timeout */ }
 };
 </script>
@@ -558,7 +560,8 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if (fileEl) fileEl.addEventListener('change', renderThumbs);
 
-    // --- Inject  into ONLY the Kling 2.5 Turbo Pro request ---
+        /*
+// --- Inject  into ONLY the Kling 2.5 Turbo Pro request ---
     var __origFetch = window.fetch;
     window.fetch = async function(input, init){
       try {
@@ -584,6 +587,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
       return __origFetch.apply(this, arguments);
     };
+    */
 
     // If browser restores file input after reload, draw thumbs
     setTimeout(function(){
