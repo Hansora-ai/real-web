@@ -313,6 +313,11 @@ async function nbCheckPoll(taskId, uid, rid){
 
 // Main run
 window.__run=async function(){
+  // Anti multi-click lock (must happen before any await)
+  if (window.__SD45_BUSY) return;
+  window.__SD45_BUSY = true;
+  try{ runBtn.disabled = true; runBtn.style.pointerEvents = 'none'; runBtn.textContent = 'Processing…'; }catch{}
+
   const {data:authData}=await supabase.auth.getUser();
   if(!authData.user){ alert('Please log in or register first.'); return; }
 
@@ -444,7 +449,10 @@ window.__run=async function(){
     showStatus('❌ '+(e.message||String(e)),'text-rose-300')
   }finally{
     __isRunning = false;
-    runBtn.disabled=false;runBtn.textContent='Run (cost: 1⚡)';
+    window.__SD45_BUSY = false;
+    runBtn.disabled=false;
+    try{ runBtn.style.pointerEvents=''; }catch{}
+    runBtn.textContent='Run (cost: 1⚡)';
   }
 };
 </script>
