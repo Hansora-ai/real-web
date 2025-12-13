@@ -438,6 +438,10 @@ window.__run = async function(){
     if (!window.__VEO_BUSY) { runBtn.disabled=false; runBtn.style.pointerEvents=''; runBtn.classList.remove('opacity-50','cursor-not-allowed'); repaintCost(); }
   }
 };
+// Enable Run button on initial load (live credits)
+try{ refreshCreditsUI(); }catch(e){}
+try{ repaintCost(); }catch(e){}
+
 </script>
 
 </body>
