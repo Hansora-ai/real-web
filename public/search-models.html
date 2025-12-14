@@ -594,27 +594,27 @@
         id: 'nano-banana-pro',
         name: 'Nano Banana Pro',
         emoji: '🍌',
-        subtitle: 'Text / Image → Image',
+        subtitle: 'Text / (Image) → Image',
         category: 'image',
         description: 'Studio-grade quality with multi-image fusion.',
         endpoint: '/.netlify/functions/run-nano-banana-pro',
-        needsImage: true,
+        needsImage: false,
         maxFiles: 4,
         aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
         defaultAspect: '1:1',
         durations: null,
-        costLabel: '1⚡ per job',
-        minCredits: 1
+        costLabel: '2⚡ per job',
+        minCredits: 2
       },
       {
         id: 'seedream-4-5',
         name: 'Seedream 4.5',
         emoji: '🎨',
-        subtitle: 'Text / Image → Image',
+        subtitle: 'Text / (Image) → Image',
         category: 'image',
         description: 'Seedream 4.5 creative image generator.',
         endpoint: '/.netlify/functions/run-seedream-4-5',
-        needsImage: true,
+        needsImage: false,
         maxFiles: 4,
         aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
         defaultAspect: '1:1',
@@ -632,7 +632,7 @@
         endpoint: '/.netlify/functions/run-gpt-image-1',
         needsImage: false,
         maxFiles: 1,
-        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
+        aspectOptions: ['1:1', '2:3', '3:2'],
         defaultAspect: '1:1',
         durations: null,
         costLabel: '4⚡ per job',
@@ -640,19 +640,19 @@
       },
       {
         id: 'imagen',
-        name: 'Imagen 4 (Fast / Ultra)',
+        name: 'Imagen Ultra',
         emoji: '🌈',
         subtitle: 'Text → Image',
         category: 'image',
-        description: 'Google Imagen 4 Fast & Ultra models.',
+        description: 'Google Imagen Ultra for high-quality text-to-image.',
         endpoint: '/.netlify/functions/run-imagen',
         needsImage: false,
         maxFiles: 0,
         aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
         defaultAspect: '1:1',
         durations: null,
-        costLabel: '0.5–1⚡ per job',
-        minCredits: 0.5
+        costLabel: '1⚡ per job',
+        minCredits: 1
       },
       {
         id: 'midjourney',
@@ -1006,6 +1006,16 @@
       if (thumbs) thumbs.innerHTML = '';
       const imageInput = document.getElementById('imageInput');
       if (imageInput) imageInput.value = '';
+
+      // Upload UI: hide for pure text-only models (e.g., Imagen Ultra)
+      const uploadBtn = document.getElementById('uploadBtn');
+      if (currentModel && Number(currentModel.maxFiles || 0) === 0) {
+        if (uploadBtn) uploadBtn.classList.add('hidden');
+        if (thumbs) thumbs.classList.add('hidden');
+      } else {
+        if (uploadBtn) uploadBtn.classList.remove('hidden');
+        if (thumbs) thumbs.classList.remove('hidden');
+      }
     }
 
     // MODE TOGGLE
@@ -1086,7 +1096,7 @@
         case 'gpt-image-1':
           return { prompt, aspect_ratio: aspect || '1:1', image_urls: urls && urls.length ? urls : undefined, run_id: runId };
         case 'imagen':
-          return { prompt, model: 'fast', aspect_ratio: aspect || '1:1', run_id: runId };
+          return { prompt, model: 'ultra', aspect_ratio: aspect || '1:1', run_id: runId };
         case 'midjourney':
           return { prompt, image_url: urls && urls[0] ? urls[0] : undefined, aspectRatio: aspect || '2:3', run_id: runId };
         case 'mj-video':
