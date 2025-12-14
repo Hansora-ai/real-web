@@ -193,15 +193,58 @@
       <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 text-[11px] sm:text-xs">
         <!-- Upload + previews -->
         <div class="flex items-center gap-2 md:w-1/3">
+          <!-- Default image upload (general models) -->
           <input id="imageInput" type="file" accept="image/*" class="hidden" multiple />
           <button
             id="uploadBtn"
             class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]"
           >
             <span class="text-lg leading-none">📎</span>
-            <span>Upload image</span>
+            <span id="uploadBtnLabel">Upload image</span>
           </button>
           <div id="imageThumbs" class="flex gap-1.5"></div>
+
+          <!-- Start / Last frame uploads (Veo 3.1 + Kling 2.1) -->
+          <div id="framesUploadWrap" class="hidden items-center gap-2">
+            <div class="flex items-center gap-2">
+              <input id="startFrameInput" type="file" accept="image/*" class="hidden" />
+              <button id="startFrameBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">➕</span>
+                <span>Start</span>
+              </button>
+              <div id="startFrameThumb" class="flex gap-1.5"></div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input id="lastFrameInput" type="file" accept="image/*" class="hidden" />
+              <button id="lastFrameBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">➕</span>
+                <span>Last</span>
+              </button>
+              <div id="lastFrameThumb" class="flex gap-1.5"></div>
+            </div>
+          </div>
+
+          <!-- Aleph uploads: video required + optional image -->
+          <div id="alephUploadWrap" class="hidden items-center gap-2">
+            <div class="flex items-center gap-2">
+              <input id="alephVideoInput" type="file" accept="video/*" class="hidden" />
+              <button id="alephVideoBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">📎</span>
+                <span>Upload video</span>
+              </button>
+              <div id="alephVideoThumb" class="flex gap-1.5"></div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input id="alephImageInput" type="file" accept="image/*" class="hidden" />
+              <button id="alephImageBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">📎</span>
+                <span>Upload image</span>
+              </button>
+              <div id="alephImageThumb" class="flex gap-1.5"></div>
+            </div>
+          </div>
         </div>
 
         <!-- Aspect & duration -->
@@ -686,67 +729,103 @@
         costLabel: '2⚡ per job',
         minCredits: 2
       },
-      {
-        id: 'veo3',
-        name: 'Veo 3',
+            {
+        id: 'veo31-fast',
+        name: 'Veo 3.1 Fast',
         emoji: '🎥',
-        subtitle: 'Text / Image → Video',
+        subtitle: 'Text → Video (start / last frames optional)',
         category: 'video',
-        description: 'Veo 3 cinematic video generation (Fast).',
-        endpoint: '/.netlify/functions/run-veo3',
+        description: 'Veo 3.1 Fast — 8s only, vertical/horizontal only.',
+        endpoint: '/.netlify/functions/run-veo31',
         needsImage: false,
-        maxFiles: 1,
-        aspectOptions: ['16:9', '9:16', '1:1'],
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: true,
+        aspectOptions: ['16:9', '9:16'],
         defaultAspect: '16:9',
-        durations: [5, 10],
-        costLabel: '5–9⚡ per job',
+        durations: [8],
+        costLabel: 'video credits',
         minCredits: 5
       },
       {
         id: 'veo31',
         name: 'Veo 3.1',
         emoji: '🎥',
-        subtitle: 'Text / Image → Video',
+        subtitle: 'Text → Video (start / last frames optional)',
         category: 'video',
-        description: 'Latest Veo 3.1 video model.',
+        description: 'Veo 3.1 — 8s only, vertical/horizontal only.',
         endpoint: '/.netlify/functions/run-veo31',
         needsImage: false,
-        maxFiles: 1,
-        aspectOptions: ['16:9', '9:16', '1:1'],
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: true,
+        aspectOptions: ['16:9', '9:16'],
         defaultAspect: '16:9',
-        durations: [5, 10],
-        costLabel: '5–9⚡ per job',
+        durations: [8],
+        costLabel: 'video credits',
         minCredits: 5
       },
       {
+        id: 'veo3-fast',
+        name: 'Veo 3 Fast',
+        emoji: '🎥',
+        subtitle: 'Text / (Image) → Video',
+        category: 'video',
+        description: 'Veo 3 Fast — 8s only, vertical/horizontal only.',
+        endpoint: '/.netlify/functions/run-veo3',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [8],
+        costLabel: 'video credits',
+        minCredits: 5
+      },
+      {
+        id: 'veo3',
+        name: 'Veo 3',
+        emoji: '🎥',
+        subtitle: 'Text / (Image) → Video',
+        category: 'video',
+        description: 'Veo 3 — 8s only, vertical/horizontal only.',
+        endpoint: '/.netlify/functions/run-veo3',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [8],
+        costLabel: 'video credits',
+        minCredits: 5
+      },
+            {
         id: 'sora2',
         name: 'Sora 2',
         emoji: '🎞️',
-        subtitle: 'Text / Image → Video',
+        subtitle: 'Text / (Image) → Video',
         category: 'video',
-        description: 'OpenAI Sora 2 style video generation.',
+        description: 'Sora 2 video generation (10s / 15s).',
         endpoint: '/.netlify/functions/run-sora2',
         needsImage: false,
         maxFiles: 1,
-        aspectOptions: ['16:9', '9:16', '1:1'],
+        aspectOptions: ['16:9'],
         defaultAspect: '16:9',
-        durations: [5, 10],
+        durations: [10, 15],
         costLabel: '7–13⚡ per job',
         minCredits: 7
       },
-      {
+            {
         id: 'runway',
         name: 'Runway',
         emoji: '🎞️',
-        subtitle: 'Text / Image → Video',
+        subtitle: 'Text / (Image) → Video',
         category: 'video',
-        description: 'Runway Gen-2 video model.',
+        description: 'Runway video generation (5s).',
         endpoint: '/.netlify/functions/run-runway',
         needsImage: false,
         maxFiles: 1,
-        aspectOptions: ['16:9', '9:16', '1:1'],
-        defaultAspect: '16:9',
-        durations: [5, 10],
+        aspectOptions: ['3:4', '4:3'],
+        defaultAspect: '3:4',
+        durations: [5],
         costLabel: 'video credits',
         minCredits: 4
       },
@@ -782,7 +861,7 @@
         costLabel: '9–16⚡ per job',
         minCredits: 9
       },
-      {
+            {
         id: 'kling21',
         name: 'Kling v2.1 Pro',
         emoji: '🖼️',
@@ -791,34 +870,47 @@
         description: 'Kling 2.1 Pro image-to-video with optional last frame.',
         endpoint: '/.netlify/functions/run-kling21',
         needsImage: true,
-        maxFiles: 2,
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: false,
         aspectOptions: ['1:1', '9:16', '16:9'],
         defaultAspect: '1:1',
         durations: [5, 10],
         costLabel: '5–9⚡ per job',
         minCredits: 5
       },
-      {
+            {
         id: 'aleph',
         name: 'Aleph',
         emoji: '🧪',
-        subtitle: 'Video → Video',
+        subtitle: 'Video → Video (optional image)',
         category: 'video',
-        description: 'Aleph video-to-video transformations.',
+        description: 'Aleph video-to-video transformations (video required).',
         endpoint: '/.netlify/functions/run-aleph',
         needsImage: false,
-        maxFiles: 1,
+        maxFiles: 0,
+        needsVideo: true,
+        allowOptionalImage: true,
         aspectOptions: ['16:9', '9:16', '1:1'],
         defaultAspect: '16:9',
         durations: [5],
         costLabel: 'video credits',
         minCredits: 4
       }
-    ];
+    ];;
 
     let currentModel = MODELS[0];
     let currentMode = 'image';
     let uploadedFiles = [];
+
+    // Frames (Veo 3.1 + Kling 2.1)
+    let startFrameFile = null;
+    let lastFrameFile = null;
+
+    // Aleph: video required + optional image
+    let alephVideoFile = null;
+    let alephImageFile = null;
+
     let currentAspect = null;
     let currentDuration = null;
 
@@ -826,6 +918,7 @@
       currentMode = mode;
       const btnImage = document.getElementById('btnModeImage');
       const btnVideo = document.getElementById('btnModeVideo');
+
       if (mode === 'image') {
         btnImage.classList.add('bg-gradient-to-r','from-indigo-500','to-violet-500','text-white','font-semibold');
         btnVideo.classList.remove('bg-gradient-to-r','from-indigo-500','to-violet-500','text-white','font-semibold');
@@ -835,7 +928,17 @@
         btnImage.classList.remove('bg-gradient-to-r','from-indigo-500','to-violet-500','text-white','font-semibold');
         btnImage.classList.add('text-white/70');
       }
+
+      // Default model per mode
+      const defaultId = mode === 'image' ? 'nano-banana-pro' : 'veo31-fast';
+      const def = MODELS.find(m => m.id === defaultId);
+      if (def) {
+        currentModel = def;
+        updateModelButtonLabels();
+        configureControlsForModel();
+      }
     }
+
 
     function updateModelButtonLabels() {
       const labelText = currentModel ? currentModel.name : 'Choose model';
@@ -1002,19 +1105,72 @@
 
       // Reset previews when model changes
       uploadedFiles = [];
+      startFrameFile = null;
+      lastFrameFile = null;
+      alephVideoFile = null;
+      alephImageFile = null;
+
       const thumbs = document.getElementById('imageThumbs');
       if (thumbs) thumbs.innerHTML = '';
       const imageInput = document.getElementById('imageInput');
       if (imageInput) imageInput.value = '';
 
-      // Upload UI: hide for pure text-only models (e.g., Imagen Ultra)
+      const startWrap = document.getElementById('framesUploadWrap');
+      const startThumb = document.getElementById('startFrameThumb');
+      const lastThumb = document.getElementById('lastFrameThumb');
+      const startInput = document.getElementById('startFrameInput');
+      const lastInput = document.getElementById('lastFrameInput');
+      if (startThumb) startThumb.innerHTML = '';
+      if (lastThumb) lastThumb.innerHTML = '';
+      if (startInput) startInput.value = '';
+      if (lastInput) lastInput.value = '';
+
+      const alephWrap = document.getElementById('alephUploadWrap');
+      const alephVideoThumb = document.getElementById('alephVideoThumb');
+      const alephImageThumb = document.getElementById('alephImageThumb');
+      const alephVideoInput = document.getElementById('alephVideoInput');
+      const alephImageInput = document.getElementById('alephImageInput');
+      if (alephVideoThumb) alephVideoThumb.innerHTML = '';
+      if (alephImageThumb) alephImageThumb.innerHTML = '';
+      if (alephVideoInput) alephVideoInput.value = '';
+      if (alephImageInput) alephImageInput.value = '';
+
+      // Upload UI switching
       const uploadBtn = document.getElementById('uploadBtn');
-      if (currentModel && Number(currentModel.maxFiles || 0) === 0) {
-        if (uploadBtn) uploadBtn.classList.add('hidden');
-        if (thumbs) thumbs.classList.add('hidden');
+      const uploadBtnLabel = document.getElementById('uploadBtnLabel');
+
+      const isFrames = !!currentModel.useFrames;
+      const isAleph = !!currentModel.needsVideo;
+
+      // Default: hide everything, then enable what we need
+      if (uploadBtn) uploadBtn.classList.add('hidden');
+      if (thumbs) thumbs.classList.add('hidden');
+      if (startWrap) {
+        startWrap.classList.add('hidden');
+        startWrap.classList.remove('flex');
+      }
+      if (alephWrap) {
+        alephWrap.classList.add('hidden');
+        alephWrap.classList.remove('flex');
+      }
+
+      if (isFrames) {
+        if (startWrap) {
+          startWrap.classList.remove('hidden');
+          startWrap.classList.add('flex');
+        }
+      } else if (isAleph) {
+        if (alephWrap) {
+          alephWrap.classList.remove('hidden');
+          alephWrap.classList.add('flex');
+        }
       } else {
-        if (uploadBtn) uploadBtn.classList.remove('hidden');
-        if (thumbs) thumbs.classList.remove('hidden');
+        // General image upload for models that allow image input
+        if (currentModel && Number(currentModel.maxFiles || 0) > 0) {
+          if (uploadBtn) uploadBtn.classList.remove('hidden');
+          if (thumbs) thumbs.classList.remove('hidden');
+          if (uploadBtnLabel) uploadBtnLabel.textContent = (currentModel.category === 'video') ? 'Upload image' : 'Upload image';
+        }
       }
     }
 
@@ -1065,13 +1221,115 @@
       });
     });
 
-    async function uploadImagesAndGetUrls() {
-      if (!uploadedFiles.length) return [];
+    // START / LAST FRAME (Veo 3.1 + Kling 2.1)
+    document.getElementById('startFrameBtn').addEventListener('click', () => {
+      document.getElementById('startFrameInput').click();
+    });
+    document.getElementById('lastFrameBtn').addEventListener('click', () => {
+      document.getElementById('lastFrameInput').click();
+    });
+
+    function renderSingleThumb(file, containerEl, onRemove) {
+      containerEl.innerHTML = '';
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const wrapper = document.createElement('div');
+      wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
+      const img = document.createElement('img');
+      img.src = url;
+      img.className = 'h-full w-full object-cover';
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
+      closeBtn.textContent = '×';
+      closeBtn.addEventListener('click', () => {
+        onRemove();
+        wrapper.remove();
+      });
+      wrapper.appendChild(img);
+      wrapper.appendChild(closeBtn);
+      containerEl.appendChild(wrapper);
+    }
+
+    document.getElementById('startFrameInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      startFrameFile = file;
+      renderSingleThumb(startFrameFile, document.getElementById('startFrameThumb'), () => {
+        startFrameFile = null;
+        document.getElementById('startFrameInput').value = '';
+        // If start is cleared, last is not allowed
+        lastFrameFile = null;
+        document.getElementById('lastFrameInput').value = '';
+        document.getElementById('lastFrameThumb').innerHTML = '';
+      });
+    });
+
+    document.getElementById('lastFrameInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      // Enforce: last cannot be used without start
+      if (!startFrameFile && file) {
+        document.getElementById('lastFrameInput').value = '';
+        showStatus('Last frame requires a Start frame first.', 'error');
+        return;
+      }
+      lastFrameFile = file;
+      renderSingleThumb(lastFrameFile, document.getElementById('lastFrameThumb'), () => {
+        lastFrameFile = null;
+        document.getElementById('lastFrameInput').value = '';
+      });
+    });
+
+    // ALEPH: VIDEO REQUIRED + OPTIONAL IMAGE
+    document.getElementById('alephVideoBtn').addEventListener('click', () => {
+      document.getElementById('alephVideoInput').click();
+    });
+    document.getElementById('alephImageBtn').addEventListener('click', () => {
+      document.getElementById('alephImageInput').click();
+    });
+
+    document.getElementById('alephVideoInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      alephVideoFile = file;
+      const container = document.getElementById('alephVideoThumb');
+      container.innerHTML = '';
+      if (!alephVideoFile) return;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20 bg-slate-900 flex items-center justify-center';
+      const label = document.createElement('span');
+      label.className = 'text-[10px] text-white/70 px-2 text-center';
+      label.textContent = 'VIDEO';
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
+      closeBtn.textContent = '×';
+      closeBtn.addEventListener('click', () => {
+        alephVideoFile = null;
+        document.getElementById('alephVideoInput').value = '';
+        wrapper.remove();
+      });
+      wrapper.appendChild(label);
+      wrapper.appendChild(closeBtn);
+      container.appendChild(wrapper);
+    });
+
+    document.getElementById('alephImageInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      alephImageFile = file;
+      renderSingleThumb(alephImageFile, document.getElementById('alephImageThumb'), () => {
+        alephImageFile = null;
+        document.getElementById('alephImageInput').value = '';
+      });
+    });
+
+
+    async function uploadImagesAndGetUrls(files) {
+      const list = Array.isArray(files) ? files : (uploadedFiles || []);
+      if (!list.length) return [];
       if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
         throw new Error('upload_bridge_missing');
       }
       const urls = [];
-      for (const file of uploadedFiles) {
+      for (const file of list) {
         if (file.size > 10 * 1024 * 1024) {
           throw new Error('file_too_large');
         }
@@ -1101,14 +1359,26 @@
           return { prompt, image_url: urls && urls[0] ? urls[0] : undefined, aspectRatio: aspect || '2:3', run_id: runId };
         case 'mj-video':
           return { prompt, imageUrl: urls && urls[0] ? urls[0] : undefined, aspectRatio: aspect || '1:1', run_id: runId };
+        case 'veo3-fast':
         case 'veo3':
+          return {
+            prompt,
+            aspectRatio: aspect || '16:9',
+            duration: duration ? Number(duration) : 8,
+            imageUrl: urls && urls[0] ? urls[0] : undefined,
+            model: model.id === 'veo3-fast' ? 'veo3_fast' : 'veo3',
+            run_id: runId
+          };
+        case 'veo31-fast':
         case 'veo31':
           return {
             prompt,
             aspectRatio: aspect || '16:9',
-            duration: duration ? Number(duration) : 5,
+            duration: duration ? Number(duration) : 8,
+            startFrameUrl: urls && urls[0] ? urls[0] : undefined,
+            lastFrameUrl: urls && urls[1] ? urls[1] : undefined,
             imageUrl: urls && urls[0] ? urls[0] : undefined,
-            model: model.id === 'veo31' ? 'veo3_1' : 'veo3_fast',
+            model: model.id === 'veo31-fast' ? 'veo3_1_fast' : 'veo3_1',
             run_id: runId
           };
         case 'sora2':
@@ -1155,6 +1425,7 @@
           return {
             prompt,
             videoUrl: urls && urls[0] ? urls[0] : undefined,
+            imageUrl: urls && urls[1] ? urls[1] : undefined,
             aspectRatio: aspect || '16:9',
             run_id: runId
           };
@@ -1186,7 +1457,23 @@
         return;
       }
 
-      if (currentModel.needsImage && !uploadedFiles.length) {
+            // Image / frame / video requirements
+      if (currentModel.useFrames) {
+        // Kling 2.1 requires start frame; Veo 3.1 start frame is optional
+        if (!currentModel.startOptional && !startFrameFile) {
+          showStatus('This model requires a Start frame image.', 'error');
+          return;
+        }
+        if (lastFrameFile && !startFrameFile) {
+          showStatus('Last frame requires a Start frame first.', 'error');
+          return;
+        }
+      } else if (currentModel.needsVideo) {
+        if (!alephVideoFile) {
+          showStatus('This model requires a video upload.', 'error');
+          return;
+        }
+      } else if (currentModel.needsImage && !uploadedFiles.length) {
         showStatus('This model requires at least one image.', 'error');
         return;
       }
@@ -1196,7 +1483,11 @@
       showStatus('Preparing your request…');
 
       try {
-        const urls = await uploadImagesAndGetUrls();
+        const urls = currentModel.useFrames
+          ? await uploadImagesAndGetUrls([startFrameFile, lastFrameFile].filter(Boolean))
+          : currentModel.needsVideo
+          ? await uploadImagesAndGetUrls([alephVideoFile, alephImageFile].filter(Boolean))
+          : await uploadImagesAndGetUrls(uploadedFiles);
         const uid = currentUser.id;
         const runId = `${uid}-${Date.now()}`;
 
