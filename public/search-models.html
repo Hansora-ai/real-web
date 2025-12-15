@@ -192,7 +192,8 @@
       <!-- SECOND ROW: upload, AR/duration, cost, run -->
       <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 text-[11px] sm:text-xs">
         <!-- Upload + previews -->
-        <div class="flex items-center gap-2 md:w-1/3">
+        <div class="md:w-1/3 flex flex-col gap-1.5">
+          <div class="flex items-center gap-2">
           <!-- Default image upload (general models) -->
           <input id="imageInput" type="file" accept="image/*" class="hidden" multiple />
           <button
@@ -245,6 +246,11 @@
               <div id="alephImageThumb" class="flex gap-1.5"></div>
             </div>
           </div>
+          </div>
+          <div class="w-full">
+            <p id="status" class="text-[11px] text-amber-200/80 min-h-[1.1rem]"></p>
+        </div>
+
         </div>
 
         <!-- Aspect & duration -->
@@ -260,20 +266,19 @@
           <div id="costLabel" class="text-[11px] text-indigo-200/80"></div>
           <button
             id="runBtn"
-            class="inline-flex items-center justify-center btn-brand px-4 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
+            class="inline-flex items-center justify-center btn-brand px-6 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
           >
             Run
-          <div class="w-full flex justify-end mt-2">
-                      <div id="aspectBlock" class="flex items-center gap-1.5 hidden">
-                        <span class="text-white/50">AR</span>
-                        <div id="aspectPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
-                      </div>
-          </div>
           </button>
-        </div>
-      </div>
 
-      <p id="status" class="text-[11px] text-amber-200/80 min-h-[1.1rem]"></p>
+          <!-- Aspect Ratio (moved under Run) -->
+          <div class="w-full flex justify-end">
+            <div id="aspectBlock" class="flex items-center gap-1.5 hidden">
+              <span class="text-white/50">AR</span>
+              <div id="aspectPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
+            </div>
+          </div>
+        </div>
     </div>
   </div>
 
@@ -404,8 +409,6 @@
     });
 
     // === RESULTS (last 7 generations) ===
-    // run_id -> controller ({ card, apply }) for in-place updates without refresh
-    const RECENT_CONTROLLERS = new Map();
     function createResultCard(data) {
       const provider = data.provider || 'Model';
       const kind = (data.kind || 'image').toLowerCase();
@@ -522,24 +525,15 @@
       const strip = document.getElementById('resultsStrip');
       if (!strip) return null;
       const { card, apply } = createResultCard(data);
-
-      const runId = data && data.run_id ? String(data.run_id) : '';
-      const controller = { card, apply };
-      if (runId) RECENT_CONTROLLERS.set(runId, controller);
-
       if (options && options.prepend) {
         strip.prepend(card);
       } else {
         strip.appendChild(card);
       }
       while (strip.children.length > 7) {
-        const last = strip.lastElementChild;
-        if (last && last.dataset && last.dataset.runId) {
-          RECENT_CONTROLLERS.delete(String(last.dataset.runId));
-        }
-        strip.removeChild(last);
+        strip.removeChild(strip.lastElementChild);
       }
-      return controller;
+      return { card, apply };
     }
 
     async function loadRecentHistory() {
@@ -547,8 +541,7 @@
       try {
         const { data, error } = await supabaseClient
           .from('user_generations')
-          // include run_id if table has it (harmless if absent in UI usage)
-          .select('run_id, provider, kind, prompt, result_url, meta, created_at')
+          .select('provider, kind, prompt, result_url, meta, created_at')
           .eq('user_id', currentUser.id)
           .order('created_at', { ascending: false })
           .limit(7);
@@ -575,9 +568,9 @@
         }
 
         (data || []).forEach((row) => {
-          const runId = (row && row.run_id) ? row.run_id : (row.meta && row.meta.run_id ? row.meta.run_id : '');
+          const runId = row.meta && row.meta.run_id ? row.meta.run_id : '';
           const status = row.meta && row.meta.status ? row.meta.status : (row.result_url ? 'ready' : 'processing');
-          const controller = addResultCard({
+          addResultCard({
             run_id: runId,
             provider: row.provider || 'Model',
             kind: row.kind || 'image',
@@ -585,79 +578,109 @@
             result_url: row.result_url,
             status
           }, { prepend: false });
-
-          // If job is still processing, start a background poll so the card updates
-          // when result_url/status arrives (no page refresh needed).
-          const st = String(status || '').toLowerCase();
-          const isTerminal = st.includes('fail') || st.includes('error') || st.includes('ready') || !!row.result_url;
-          if (controller && runId && !isTerminal) {
-            pollGeneration(String(runId), controller);
-          }
         });
       } catch (e) {
         console.warn('loadRecentHistory failed', e);
       }
     }
 
-    async function pollGeneration(runId, controller) {
-      if (!currentUser || !runId || !controller) return;
-      const maxMs = 210000;
-      const started = Date.now();
-      while (Date.now() - started < maxMs) {
-        await new Promise((r) => setTimeout(r, 3000));
-        try {
-          // Try to find the row by meta.run_id (JSON) first. If not found, fall back
-          // to a direct run_id column (some tables store it as a real column).
-          let data = null;
-          let error = null;
+    async function __extractResultUrls(row) {
+  try {
+    // Prefer explicit arrays in meta (provider-specific)
+    const meta = row && row.meta ? row.meta : null;
+    const candidates = [];
+    const pushMany = (arr) => {
+      if (Array.isArray(arr)) arr.forEach((u) => { if (typeof u === 'string' && u.trim()) candidates.push(u.trim()); });
+    };
+    if (meta) {
+      // Common patterns
+      pushMany(meta.images);
+      pushMany(meta.image_urls);
+      pushMany(meta.result_urls);
+      if (meta.result && meta.result.images) pushMany(meta.result.images);
+      if (meta.output && meta.output.images) pushMany(meta.output.images);
+    }
+    // Fallback to single result_url
+    if (row && typeof row.result_url === 'string' && row.result_url.trim()) {
+      if (!candidates.length) candidates.push(row.result_url.trim());
+    }
+    // Dedupe while preserving order
+    const seen = new Set();
+    return candidates.filter((u) => (seen.has(u) ? false : (seen.add(u), true)));
+  } catch (e) {
+    return [];
+  }
+}
 
-          {
-            const r1 = await supabaseClient
-              .from('user_generations')
-              .select('run_id, provider, kind, prompt, result_url, meta, created_at')
-              .eq('user_id', currentUser.id)
-              .eq('meta->>run_id', runId)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            data = r1.data || null;
-            error = r1.error || null;
-          }
 
-          if (!data) {
-            // Fallback: try direct run_id column.
-            const r2 = await supabaseClient
-              .from('user_generations')
-              .select('run_id, provider, kind, prompt, result_url, meta, created_at')
-              .eq('user_id', currentUser.id)
-              .eq('run_id', runId)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            if (r2.data) data = r2.data;
-            // Ignore errors here because some schemas may not have the column.
-          }
+const __activePolls = new Map(); // runId -> token
 
-          if (error) {
-            console.warn('pollGeneration error', error);
-          }
-          if (!data) continue;
+function startPollGeneration(runId, controllers) {
+  if (!runId || !controllers || !controllers.length) return;
+  if (__activePolls.has(runId)) return; // already polling this run
+  const token = { cancelled: false };
+  __activePolls.set(runId, token);
+  // Fire and forget; cleanup when done
+  pollGeneration(runId, controllers, token)
+    .catch((e) => console.warn('pollGeneration wrapper exception', e))
+    .finally(() => {
+      __activePolls.delete(runId);
+    });
+}
 
-          const status = data.meta && data.meta.status ? data.meta.status : (data.result_url ? 'ready' : 'processing');
-          controller.apply({
-            status,
-            result_url: data.result_url
+async function pollGeneration(runId, controllers, token) {
+  if (!currentUser || !runId || !controllers || !controllers.length) return;
+  const maxMs = 210000;
+  const started = Date.now();
+  while (Date.now() - started < maxMs) {
+    await new Promise((r) => setTimeout(r, 3000));
+    if (token && token.cancelled) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('user_generations')
+        .select('provider, kind, prompt, result_url, meta, created_at')
+        .eq('user_id', currentUser.id)
+        .eq('meta->>run_id', runId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('pollGeneration error', error);
+        break;
+      }
+      if (!data) continue;
+
+      const status = data.meta && data.meta.status ? data.meta.status : (data.result_url ? 'ready' : 'processing');
+      const urls = await __extractResultUrls(data);
+
+      // Apply to 1..N placeholder cards
+      if (urls && urls.length) {
+        for (let i = 0; i < controllers.length; i++) {
+          controllers[i].apply({
+            status: status,
+            result_url: urls[i] || null
           });
-
-          if (status.toLowerCase().includes('fail') || status.toLowerCase().includes('error') || data.result_url) {
-            return;
-          }
-        } catch (e) {
-          console.warn('pollGeneration exception', e);
-          break;
+        }
+      } else {
+        for (let i = 0; i < controllers.length; i++) {
+          controllers[i].apply({ status: status });
         }
       }
+
+      if (
+        status.toLowerCase().includes('fail') ||
+        status.toLowerCase().includes('error') ||
+        (urls && urls.length)
+      ) {
+        return;
+      }
+    } catch (e) {
+      console.warn('pollGeneration exception', e);
+      break;
     }
+  }
+}
 
     // === MODELS CONFIG ===
     const MODELS = [
@@ -748,9 +771,9 @@
         subtitle: 'Text / Image → Image',
         category: 'image',
         description: 'MidJourney-style image generation.',
-        endpoint: '/.netlify/functions/run-midimage',
+        endpoint: '/.netlify/functions/run-midjourney',
         needsImage: false,
-        maxFiles: 1,
+        maxFiles: 4,
         aspectOptions: ['2:3', '3:2', '1:1', '9:16', '16:9'],
         defaultAspect: '2:3',
         durations: null,
@@ -1544,14 +1567,19 @@
           duration: currentDuration
         });
 
-        const placeholderController = addResultCard({
-          run_id: runId,
-          provider: currentModel.name,
-          kind: currentModel.category,
-          prompt,
-          result_url: null,
-          status: 'processing'
-        }, { prepend: true });
+        const expectedOutputs = (currentModel && currentModel.id === 'midjourney') ? 4 : 1;
+const placeholderControllers = [];
+for (let i = 0; i < expectedOutputs; i++) {
+  const c = addResultCard({
+    run_id: runId,
+    provider: currentModel.name,
+    kind: currentModel.category,
+    prompt,
+    result_url: null,
+    status: 'processing'
+  }, { prepend: true });
+  if (c) placeholderControllers.push(c);
+}
 
         const res = await fetch(currentModel.endpoint, {
           method: 'POST',
@@ -1565,8 +1593,10 @@
         if (!res.ok) {
           const txt = await res.text().catch(() => '');
           showStatus('Error from model: ' + (txt || `status ${res.status}`), 'error');
-          if (placeholderController) {
-            placeholderController.apply({ status: 'failed', result_url: null });
+          if (placeholderControllers && placeholderControllers.length) {
+            for (let i = 0; i < placeholderControllers.length; i++) {
+              placeholderControllers[i].apply({ status: 'failed', result_url: null });
+            }
           }
         } else {
           showStatus(
@@ -1574,8 +1604,8 @@
             'success'
           );
           await refreshCredits();
-          if (placeholderController) {
-            pollGeneration(runId, placeholderController);
+          if (placeholderControllers && placeholderControllers.length) {
+            startPollGeneration(runId, placeholderControllers);
           }
         }
       } catch (err) {
