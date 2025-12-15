@@ -14,6 +14,17 @@ const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-callback`; // your ex
 
 const VERSION_TAG  = "nb_fn_kling26_style_v1";
 
+function inferSiteBase(event){
+  try{
+    const h = (event && event.headers) ? event.headers : {};
+    const host = h['x-forwarded-host'] || h['host'] || h['Host'];
+    if (!host) return null;
+    const proto = h['x-forwarded-proto'] || 'https';
+    return `${proto}://${host}`;
+  }catch(_e){ return null; }
+}
+
+
 function cors(){ return {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -219,7 +230,8 @@ exports.handler = async (event) => {
     const row_id = seeded?.row_id || null;
 
     // Provider callback includes uid + run_id (for Make/subscenario and for DB match)
-    const cb = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
+    const cbBase = (process.env.SITE_BASE || inferSiteBase(event) || SITE_BASE).replace(/\/+$|\s+$/g,'');
+    const cb = `${cbBase}/.netlify/functions/kie-callback?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
 
     // Create task at KIE (Nano Banana edit)
     const payload = {
