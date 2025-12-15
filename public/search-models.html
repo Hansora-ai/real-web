@@ -567,18 +567,52 @@
           else resultsSection.classList.add('hidden');
         }
 
-        (data || []).forEach((row) => {
+        // Render history; if provider returned multiple images in meta, render them as separate cards.
+        for (const row of (data || [])) {
           const runId = row.meta && row.meta.run_id ? row.meta.run_id : '';
           const status = row.meta && row.meta.status ? row.meta.status : (row.result_url ? 'ready' : 'processing');
-          addResultCard({
-            run_id: runId,
-            provider: row.provider || 'Model',
-            kind: row.kind || 'image',
-            prompt: row.prompt || '',
-            result_url: row.result_url,
-            status
-          }, { prepend: false });
-        });
+          const providerName = row.provider || 'Model';
+          const kind = row.kind || 'image';
+          const prompt = row.prompt || '';
+
+          const urls = await __extractResultUrls(row);
+
+          // MidJourney: persist 4 placeholders even before URLs exist (after refresh)
+          const isMJ = (providerName || '').toLowerCase().includes('midjourney');
+
+          if (urls && urls.length) {
+            for (const u of urls) {
+              addResultCard({
+                run_id: runId,
+                provider: providerName,
+                kind,
+                prompt,
+                result_url: u,
+                status: 'ready'
+              }, { prepend: false });
+            }
+          } else if (isMJ && String(status).toLowerCase().includes('process')) {
+            for (let i = 0; i < 4; i++) {
+              addResultCard({
+                run_id: runId,
+                provider: providerName,
+                kind,
+                prompt,
+                result_url: null,
+                status: 'processing'
+              }, { prepend: false });
+            }
+          } else {
+            addResultCard({
+              run_id: runId,
+              provider: providerName,
+              kind,
+              prompt,
+              result_url: row.result_url,
+              status
+            }, { prepend: false });
+          }
+        }
       } catch (e) {
         console.warn('loadRecentHistory failed', e);
       }
@@ -651,29 +685,37 @@ async function pollGeneration(runId, controllers, token) {
       }
       if (!data) continue;
 
-      const status = data.meta && data.meta.status ? data.meta.status : (data.result_url ? 'ready' : 'processing');
+      // Expand multi-image outputs (MidJourney) when provider returns arrays in meta.
       const urls = await __extractResultUrls(data);
+      const meta = (data && data.meta) ? data.meta : null;
+      const stRaw = String((meta && meta.status) || (data.status) || (data.result_url ? 'ready' : 'processing'));
+      const st = stRaw.toLowerCase();
 
-      // Apply to 1..N placeholder cards
-      if (urls && urls.length) {
-        for (let i = 0; i < controllers.length; i++) {
-          controllers[i].apply({
-            status: status,
-            result_url: urls[i] || null
-          });
-        }
-      } else {
-        for (let i = 0; i < controllers.length; i++) {
-          controllers[i].apply({ status: status });
-        }
+      // If failed -> mark all failed and stop
+      if (st.includes('fail') || st.includes('error')) {
+        controllers.forEach((c) => c && c.apply({ status: 'failed', result_url: null }));
+        break;
       }
 
-      if (
-        status.toLowerCase().includes('fail') ||
-        status.toLowerCase().includes('error') ||
-        (urls && urls.length)
-      ) {
-        return;
+      // If we have URLs, apply them across cards (up to number of controllers)
+      if (Array.isArray(urls) && urls.length) {
+        for (let i = 0; i < controllers.length; i++) {
+          const u = urls[i] || null;
+          controllers[i] && controllers[i].apply({ status: u ? 'ready' : 'processing', result_url: u });
+        }
+        // Stop polling if we filled all placeholders or status looks done
+        if (urls.length >= controllers.length || st.includes('ready') || st.includes('success') || st.includes('done') || st.includes('complete')) {
+          break;
+        }
+        continue;
+      }
+
+      // Fallback: single result_url
+      if (data.result_url) {
+        controllers[0] && controllers[0].apply({ status: 'ready', result_url: data.result_url });
+        if (controllers.length === 1 || st.includes('ready') || st.includes('success') || st.includes('done') || st.includes('complete')) {
+          break;
+        }
       }
     } catch (e) {
       console.warn('pollGeneration exception', e);
