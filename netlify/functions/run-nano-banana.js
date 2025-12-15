@@ -6,7 +6,6 @@
 // Opt: KIE_BASE_URL, SITE_BASE
 //
 const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/, '');
-const CREATE_URL = process.env.KIE_CREATE_URL || `${KIE_BASE}/api/v1/jobs/createTask`;
 const KIE_KEY  = process.env.KIE_API_KEY || '';
 const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -125,7 +124,12 @@ async function patchUserGenerationMetaById(id, meta){
     const ug = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(id)}`;
     const r = await fetch(ug, {
       method:'PATCH',
-      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      headers:{
+        'apikey': SERVICE_KEY,
+        'Authorization': `Bearer ${SERVICE_KEY}`,
+        'Content-Type':'application/json',
+        'Prefer':'return=minimal'
+      },
       body: JSON.stringify({ meta })
     });
     return !!r.ok;
@@ -189,12 +193,10 @@ async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
     await patchUserGenerationMetaById(row_id || (Array.isArray(claimedArr)&&claimedArr[0]?.id) || (existing?.id), chargedMeta);
 
     return { ok:true, debit, idempotent:true, already:false };
+  }catch(e){
+    const debit = await debitCredits(uid, cost);
+    return { ok: !!debit.ok, debit, idempotent:false, already:false, error: String(e && e.message || e) };
   }
-  catch(e){
-    // Do NOT debit again here; avoid double-charging on meta/claim failures.
-    return { ok:false, debit:{ ok:false, error:'charge_exception' }, idempotent:false, already:false, error: String(e && e.message || e) };
-  }
-}
 }
 
 
@@ -249,30 +251,30 @@ exports.handler = async (event) => {
     const payload = {
       model: 'google/nano-banana-edit',
 
-      // Keep as string for this model (matches working provider behavior in your logs)
+      // This model expects input as a JSON string (matches your working logs)
       input: JSON.stringify(inputObj),
 
-      // callbacks (KIE is inconsistent across models; include all common keys)
+      // callbacks (KIE is inconsistent; include all common keys)
       webhook_url: cb,
       webhookUrl:  cb,
       callbackUrl: cb,
       callBackUrl: cb,
       notify_url:  cb,
 
-      // meta for callback (some KIE routes only forward metadata)
+      // meta for callback forwarding
       meta:     { uid, run_id, version: VERSION_TAG, cb },
       metadata: { uid, run_id, version: VERSION_TAG, cb }
     };
 
-    const create = await fetch(CREATE_URL, {
+    const create = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
       method:'POST',
       headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Content-Type':'application/json', 'Accept':'application/json' },
       body: JSON.stringify(payload)
     });
 
     const text = await create.text();
-    let js; try { js = JSON.parse(text); } catch { js = { raw: text }; }
-    const taskId = js.taskId || js.id || js.data?.taskId || js.data?.id || null;
+    let js = {}; try { js = JSON.parse(text); } catch(_e) { js = { raw: text }; }
+    const taskId = js.taskId || js.id || (js.data && js.data.taskId) || (js.data && js.data.id) || null;
 
     if (!create.ok){
       // update meta status = failed_create (best effort)
