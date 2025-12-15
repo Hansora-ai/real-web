@@ -10,7 +10,7 @@ const KIE_KEY  = process.env.KIE_API_KEY || '';
 const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SITE_BASE = (process.env.SITE_BASE || 'https://webhansora.netlify.app').replace(/\/+$/,'');
-const CALLBACK_BASE = (event)=> `${getSiteBaseFromEvent(event)}/.netlify/functions/kie-callback`; // your existing callback
+const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-callback`; // your existing callback
 
 const VERSION_TAG  = "nb_fn_kling26_style_v1";
 
@@ -219,7 +219,7 @@ exports.handler = async (event) => {
     const row_id = seeded?.row_id || null;
 
     // Provider callback includes uid + run_id (for Make/subscenario and for DB match)
-    const cb = `${CALLBACK_BASE(event)}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
+    const cb = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
 
     // Create task at KIE (Nano Banana edit)
     const payload = {
