@@ -345,8 +345,11 @@ function __mjTryExtractAllImageUrls(obj){
   walk(obj);
   return out.slice(0,4);
 }
-async function __mjFetchNbCheck(uid, runId){
-  const url = `/.netlify/functions/nb-check?uid=${encodeURIComponent(uid||'')}&run_id=${encodeURIComponent(runId||'')}`;
+async function __mjFetchNbCheck(uid, runId, taskId){
+  const qs = taskId
+    ? `taskId=${encodeURIComponent(taskId)}`
+    : `uid=${encodeURIComponent(uid||'')}&run_id=${encodeURIComponent(runId||'')}`;
+  const url = `/.netlify/functions/nb-check?${qs}`;
   const r = await fetch(url, { method:'GET', headers:{ 'Accept':'application/json' } });
   const t = await r.text();
   let js; try{ js = JSON.parse(t); }catch{ js = { raw:t }; }
@@ -635,19 +638,21 @@ async function __mjFetchNbCheck(uid, runId){
     const prov = String((row && (row.provider || row.model)) || '');
     const isMJ = prov.toLowerCase().includes('midjourney');
     const runId = (row && row.meta && row.meta.run_id) ? row.meta.run_id : (row && row.run_id) ? row.run_id : '';
-    if (isMJ && runId) {
-      const cached = __mjLoadCached(runId);
+    const taskId = (row && row.meta && (row.meta.task_id || row.meta.taskId || row.meta.taskid)) ? (row.meta.task_id || row.meta.taskId || row.meta.taskid) : '';
+    const cacheKey = runId || taskId;
+    if (isMJ && (runId || taskId)) {
+      const cached = __mjLoadCached(cacheKey);
       if (cached && cached.length) return cached.slice(0,4);
 
       // If meta already includes arrays, we'll fall through to normal candidate logic below.
       const meta = row && row.meta ? row.meta : null;
       const hasArray = meta && (Array.isArray(meta.images) || Array.isArray(meta.image_urls) || Array.isArray(meta.result_urls));
       if (!hasArray) {
-        const nb = await __mjFetchNbCheck(uid, runId);
+        const nb = await __mjFetchNbCheck(uid, runId, taskId);
         if (nb && nb.ok) {
           const urls = __mjTryExtractAllImageUrls(nb.js);
           if (urls && urls.length) {
-            __mjSaveCached(runId, urls);
+            __mjSaveCached(cacheKey, urls);
             return urls.slice(0,4);
           }
         }
