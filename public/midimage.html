@@ -3,138 +3,95 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HANSORA • MIDIMAGE (MidJourney)</title>
+  <title>HANSORA • Search Models</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-// === Live credits (Supabase Realtime) + pre-run check ===
-(async function HANSORA_LIVE_CREDITS(){
-  try{
-    const navCreditsEl = document.getElementById('navCredits');
-    const runBtn = document.getElementById('runBtn');
-    function renderCredits(c){if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';if (runBtn) {  const running = !!window.__running;  const ok = !running;  runBtn.disabled = !ok;  runBtn.classList.toggle('opacity-50', !ok);  runBtn.classList.toggle('cursor-not-allowed', !ok);}}
-
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if(!user) return;
-
-    // initial fetch
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    renderCredits(prof?.credits ?? 0);
-
-    // subscribe to updates
-    supabase.channel('credits_live_' + user.id)
-  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
-    (payload) => { renderCredits(payload.new?.credits ?? 0); }
-  )
-  .subscribe();
-
-    // patch __run to guard when credits are 0 (without changing its internals)
-    const __origRun = window.__run;
-    window.__run = async function(){
-      try{
-        const { data: prof2 } = await supabase
-          .from('profiles')
-          .select('credits')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        const c = prof2?.credits ?? 0;
-        if (c < 1) {
-          console.warn('No credits left.');
-          alert('Not enough credits (need 1).'); 
-          return;
-        }
-      }catch{}
-      return __origRun ? __origRun() : undefined;
-    };
-  }catch(e){ console.warn('credits live failed', e); }
-})();
-</script>
-
-<script>
-(function(){
-  function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-  ready(async function(){
-    try{
-      if (typeof supabase === 'undefined' || !supabase.auth) return;
-
-      async function __refreshCredits(){
-        try{
-          const ures = await supabase.auth.getUser();
-          const user = ures?.data?.user; if(!user) return null;
-          const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-          const c = prof?.credits ?? 0;
-          const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
-          const runBtn = document.getElementById('runBtn'); if (runBtn){  const zero = false;  const running = !!window.__running;  runBtn.disabled = zero || running;  runBtn.classList.toggle('opacity-50', zero || running);  runBtn.classList.toggle('cursor-not-allowed', zero || running);}
-          return c;
-        }catch(e){ console.warn('refreshCredits failed', e); return null; }
-      }
-
-      // expose for immediate post-run refresh
-      window.__refreshCreditsNow = __refreshCredits;
-
-
-      // On load
-      await __refreshCredits();
-
-      // Wrap chargeOneCredit (client debit) to repaint after debit
-      if (typeof window.chargeOneCredit === 'function'){
-        const __origCharge = window.chargeOneCredit;
-        window.chargeOneCredit = async function(){
-          const out = await __origCharge();
-          await __refreshCredits();
-          return out;
-        };
-      }
-
-      // Also poll briefly after Run to catch server-side debit
-      if (typeof window.__run === 'function'){
-        const __origRun = window.__run;
-        window.__run = async function(){
-          const ret = await __origRun();
-          // poll for 15s every 1.5s
-          const id = setInterval(__refreshCredits, 1500);
-          setTimeout(()=>clearInterval(id), 15000);
-          return ret;
-        };
-      }
-    }catch(e){ console.warn('live credits wrapper error', e); }
-  });
-})();
-</script>
-
+  <script src="/kie-upload-bridge.js"></script>
   <style>
-    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
-    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
-                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
-                       var(--base-bg); color:#e5e7eb}
+    :root{
+      --base-bg:#050714;
+      --base-line:#15182a;
+      --brand:#6366f1;
+      --brand-soft:rgba(99,102,241,.12);
+    }
+    body{
+      background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.18), transparent 60%),
+        radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.14), transparent 60%),
+        var(--base-bg);
+      color:#e5e7eb;
+      font-family:system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    }
     .bg-base-bg{background:var(--base-bg)}
     .border-base-line{border-color:var(--base-line)}
-    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
-    .btn:hover{background:rgba(255,255,255,.1)}
-    .btn-brand{background:var(--brand); border-color:transparent; color:white}
-    .btn-brand:hover{background:#7c7ff6}
-    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
-    #navAvatar{background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%25%22 stop-color=%2291c1ff%22/><stop offset=%22100%25%22 stop-color=%225a8cff%22/></linearGradient></defs><circle cx=%2264%22 cy=%2264%22 r=%2264%22 fill=%22url(%23g)%22/><circle cx=%2264%22 cy=%2250%22 r=%2222%22 fill=%22white%22 fill-opacity=%22.9%22/><path d=%22M20 108a44 30 0 0 1 88 0%22 fill=%22white%22 fill-opacity=%22.9%22/></svg>');background-size:cover;background-position:center;}
+    .btn-soft{
+      border-radius:9999px;
+      border:1px solid rgba(148,163,184,.35);
+      background:radial-gradient(circle at 0 0,#1f2937, #020617);
+      color:#e5e7eb;
+    }
+    .btn-soft:hover{
+      border-color:rgba(129,140,248,.9);
+      background:radial-gradient(circle at 0 0,#111827,#020617);
+    }
+    .btn-brand{
+      border-radius:9999px;
+      border:0;
+      background:linear-gradient(135deg,#6366f1,#8b5cf6);
+      color:white;
+      box-shadow:0 10px 30px rgba(79,70,229,.55);
+    }
+    .btn-brand:hover{
+      background:linear-gradient(135deg,#7c7ff6,#a855f7);
+      box-shadow:0 14px 40px rgba(79,70,229,.75);
+    }
+    .chip{
+      border-radius:9999px;
+      border:1px solid rgba(148,163,184,.4);
+      background:rgba(15,23,42,.9);
+      color:#e5e7eb;
+    }
+    .chip-active{
+      background:linear-gradient(135deg,#6366f1,#8b5cf6);
+      border-color:transparent;
+      color:white;
+      box-shadow:0 8px 22px rgba(79,70,229,.6);
+    }
+    .shadow-soft{box-shadow:0 18px 55px rgba(0,0,0,.75)}
+    #navAvatar{
+      background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%25%22 stop-color=%2291c1ff%22/><stop offset=%22100%25%22 stop-color=%225a8cff%22/></linearGradient></defs><circle cx=%2264%22 cy=%2264%22 r=%2264%22 fill=%22url(%23g)%22/><circle cx=%2264%22 cy=%2250%22 r=%2222%22 fill=%22white%22 fill-opacity=%22.9%22/><path d=%22M20 108a44 30 0 0 1 88 0%22 fill=%22white%22 fill-opacity=%22.9%22/></svg>');
+      background-size:cover;
+      background-position:center;
+    }
+    textarea#promptBox{
+      resize:none;
+    }
+    .result-card-loader{
+      width:24px;
+      height:24px;
+      border-radius:9999px;
+      border:3px solid rgba(148,163,184,.5);
+      border-top-color:#a855f7;
+      animation:spin 1s linear infinite;
+    }
+    @keyframes spin{
+      to{ transform:rotate(360deg); }
+    }
+    .clamp-2{
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
   </style>
-
-  <style id="dark-inputs-patch">
-    .input-dark{background:rgba(255,255,255,.05)!important;color:#e5e7eb!important;border:1px solid rgba(255,255,255,.12)!important}
-    .input-dark::placeholder{color:#9ca3af}
-    select.input-dark option{background:#0b0d13;color:#e5e7eb}
-  </style>
-
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen flex flex-col">
+  <!-- HEADER (Nano Banana style) -->
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
-        <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora Logo" class="h-9 w-9 rounded-full object-cover"/>
+        <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora Logo" class="h-9 w-9 rounded-full object-cover" />
         <span class="font-semibold tracking-wide">HANSORA AI</span>
       </a>
       <nav class="hidden md:flex items-center gap-8 text-sm">
@@ -145,488 +102,1521 @@
         <a href="index.html#faq" class="hover:text-white/90">FAQ</a>
       </nav>
       <div class="flex items-center gap-3">
-        <a href="#" class="hidden">EN / RU</a>
-        <a id="btnLoginNav" href="index.html#login" class="rounded-xl btn px-3 py-2 text-sm hidden">Log in</a>
-        <a id="btnGetStarted" href="index.html#login" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft hidden">Get Started</a>
-        <a id="loginUnified" href="login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a>
-<div id="navUser" class="hidden items-center gap-2">
+        <a id="btnLoginSignup" href="login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold">
+          Login / Signup
+        </a>
+        <div id="navUser" class="hidden items-center gap-2">
           <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
           <div class="relative">
             <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
-              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
+              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden" />
             </button>
-            <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden"><a href="profile.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Profile</a><a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">History</a><a href="pricing.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscription</a><button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button></div>
+            <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden">
+              <a href="profile.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Profile</a>
+              <a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">History</a>
+              <a href="pricing.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscription</a>
+              <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </header>
 
-  <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-    <div class="grid md:grid-cols-2 gap-6 items-start">
-      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-        <h1 class="text-2xl font-bold">MidJourney — Text to Image / Image to Image</h1>
-        <p class="mt-1 text-sm text-zinc-400">Upload 0–1 image and describe what you want.</p>
-        <div class="mt-4 space-y-3">
-          <div>
-            <label class="text-xs text-zinc-400">Select 0–1 image (jpeg/png/webp, ≤10MB each)</label>
-            <input id="files" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
-            <div id="thumbs" class="mt-2 flex gap-2 flex-wrap"></div>
-          </div>
-          <div>
-            <label class="text-xs text-zinc-400">Image size</label>
-            <select id="size" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
-              <option value="auto" selected>2:3 (default)</option>
-              <option value="square">Square</option>
-              <option value="portrait_3_4">Portrait 3:4</option>
-              <option value="portrait_9_16">Portrait 9:16</option>
-              <option value="landscape_4_3">Landscape 4:3</option>
-              <option value="landscape_16_9">Landscape 16:9</option>
-            </select>
-          </div>
+  <!-- MAIN HERO -->
+  <main class="flex-1 overflow-y-auto pb-40">
+    <section id="resultsSection" class="hidden mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm pt-8 font-semibold text-white/80">Recent generations</h2>
+        <p class="text-[11px] text-white/45">Last 7 jobs from this account</p>
+      </div>
+      <div id="resultsStrip" class="flex gap-3 overflow-x-auto pb-2"></div>
+    </section>
 
-          
-          <div>
-            <label class="text-xs text-zinc-400">Prompt</label>
-            <textarea id="prompt" placeholder="Describe your image…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark"></textarea>
-          </div>
-          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()">Run (cost: 1⚡)</button>
-          <div id="status" class="mt-2 text-sm"></div>
+    <section id="heroSection" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-10 text-center">
+      <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold">
+        Let’s start with some image &amp; video magic
+      </h1>
+      <p class="mt-2 text-sm sm:text-base text-zinc-300 max-w-xl mx-auto">
+        Type your idea once, then choose any model to generate images or videos — all from one clean bar.
+      </p>
+
+      <div class="mt-8 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl">
+        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
+          <img src="https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Preset 1" class="h-full w-full object-cover" />
+        </div>
+        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
+          <img src="https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Preset 2" class="h-full w-full object-cover" />
+        </div>
+        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9] hidden sm:block">
+          <img src="https://images.pexels.com/photos/935835/pexels-photo-935835.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Preset 3" class="h-full w-full object-cover" />
         </div>
       </div>
+    </section>
 
-      <div class="glass rounded-2xl p-5 border border-white/10 shadow-soft">
-        <h3 class="text-lg font-semibold">Result</h3>
-        <p class="text-xs text-zinc-400">Generated image will appear below.</p>
-        <div id="resultBox" class="mt-3 aspect-square w-full overflow-hidden rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
-          <span class="text-xs text-zinc-500">No result yet</span>
+    <!-- RESULTS STRIP -->
+    
+  </main>
+
+  <!-- BOTTOM BAR -->
+  <div class="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-6 px-3">
+    <div class="w-full max-w-5xl rounded-3xl bg-black/80 border border-white/15 shadow-soft px-4 py-4 space-y-3 backdrop-blur-xl">
+      <!-- FIRST ROW: mode + prompt + model -->
+      <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+        <!-- Mode toggle -->
+        <div class="flex rounded-full bg-slate-900/80 border border-white/15 p-1 text-[11px] w-fit">
+          <button id="btnModeImage" class="px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-[11px] font-semibold shadow-sm">Image</button>
+          <button id="btnModeVideo" class="px-3 py-1.5 rounded-full text-white/70">Video</button>
         </div>
-        <a id="downloadLink" href="#" class="hidden mt-3 inline-block rounded-xl btn px-4 py-2 text-sm">Download</a>
+
+        <!-- Prompt (textarea) -->
+        <div class="flex-1 flex items-stretch gap-2 rounded-2xl border border-white/15 bg-slate-950/70 px-3 py-2">
+          <textarea
+            id="promptBox"
+            rows="2"
+            placeholder="Describe what you want to create…"
+            class="w-full bg-transparent text-sm sm:text-[15px] outline-none placeholder:text-white/40 leading-5"
+          ></textarea>
+        </div>
+
+        <!-- Model button -->
+        <button
+          id="modelButton"
+          class="inline-flex items-center justify-center gap-2 btn-brand px-4 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap"
+        >
+          <span class="text-xs opacity-80 hidden sm:inline">Model</span>
+          <span id="modelButtonLabel" class="truncate max-w-[150px] sm:max-w-[180px]">Nano Banana</span>
+        </button>
+      </div>
+
+      <!-- SECOND ROW: upload, AR/duration, cost, run -->
+      <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 text-[11px] sm:text-xs">
+        <!-- Upload + previews -->
+        <div class="md:w-1/3 flex flex-col gap-1.5">
+          <div class="flex items-center gap-2">
+          <!-- Default image upload (general models) -->
+          <input id="imageInput" type="file" accept="image/*" class="hidden" multiple />
+          <button
+            id="uploadBtn"
+            class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]"
+          >
+            <span class="text-lg leading-none">📎</span>
+            <span id="uploadBtnLabel">Upload image</span>
+          </button>
+          <div id="imageThumbs" class="flex gap-1.5"></div>
+
+          <!-- Start / Last frame uploads (Veo 3.1 + Kling 2.1) -->
+          <div id="framesUploadWrap" class="hidden items-center gap-2">
+            <div class="flex items-center gap-2">
+              <input id="startFrameInput" type="file" accept="image/*" class="hidden" />
+              <button id="startFrameBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">➕</span>
+                <span>Start</span>
+              </button>
+              <div id="startFrameThumb" class="flex gap-1.5"></div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input id="lastFrameInput" type="file" accept="image/*" class="hidden" />
+              <button id="lastFrameBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">➕</span>
+                <span>Last</span>
+              </button>
+              <div id="lastFrameThumb" class="flex gap-1.5"></div>
+            </div>
+          </div>
+
+          <!-- Aleph uploads: video required + optional image -->
+          <div id="alephUploadWrap" class="hidden items-center gap-2">
+            <div class="flex items-center gap-2">
+              <input id="alephVideoInput" type="file" accept="video/*" class="hidden" />
+              <button id="alephVideoBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">📎</span>
+                <span>Upload video</span>
+              </button>
+              <div id="alephVideoThumb" class="flex gap-1.5"></div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input id="alephImageInput" type="file" accept="image/*" class="hidden" />
+              <button id="alephImageBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">📎</span>
+                <span>Upload image</span>
+              </button>
+              <div id="alephImageThumb" class="flex gap-1.5"></div>
+            </div>
+          </div>
+          </div>
+          <div class="w-full">
+            <p id="status" class="text-[11px] text-amber-200/80 min-h-[1.1rem]"></p>
+        </div>
+
+        </div>
+
+        <!-- Aspect & duration -->
+        <div class="flex-1 flex flex-wrap items-center gap-3 justify-start">
+          <div id="durationBlock" class="flex items-center gap-1.5 hidden">
+            <span class="text-white/50">Sec</span>
+            <div id="durationPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
+          </div>
+        </div>
+
+        <!-- Cost + Run -->
+        <div class="flex flex-col items-end gap-2 md:w-1/3">
+          <div id="costLabel" class="text-[11px] text-indigo-200/80"></div>
+          <button
+            id="runBtn"
+            class="inline-flex items-center justify-center btn-brand px-6 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Run
+          </button>
+
+          <!-- Aspect Ratio (moved under Run) -->
+          <div class="w-full flex justify-end">
+            <div id="aspectBlock" class="flex items-center gap-1.5 hidden">
+              <span class="text-white/50">AR</span>
+              <div id="aspectPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
+            </div>
+          </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- MODEL OVERLAY (centered) -->
+  <div
+    id="modelOverlay"
+    class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"
+  >
+    <div class="absolute left-1/2 translate-x-[-50%] bottom-40 w-full max-w-md mx-3 rounded-3xl bg-slate-950/95 border border-white/15 shadow-2xl overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+        <div class="flex flex-col">
+          <span class="text-xs font-semibold text-white/80">IMAGE / VIDEO MODELS</span>
+          <span class="text-[11px] text-white/50">Choose a model that fits your idea.</span>
+        </div>
+        <button id="closeOverlay" class="text-white/60 hover:text-white text-lg">&times;</button>
+      </div>
+      <div class="px-4 py-3 border-b border-white/10">
+        <input
+          id="overlayModelSearch"
+          type="text"
+          placeholder="Search Nano Banana, GPT-Image, Veo, Kling…"
+          class="w-full rounded-full bg-slate-900 border border-white/15 px-3 py-2 text-xs outline-none placeholder:text-white/40"
+        />
+      </div>
+      <div id="overlayModelList" class="max-h-80 overflow-y-auto text-sm">
+        <!-- items via JS -->
       </div>
     </div>
-  </section>
+  </div>
 
-  <footer class="border-t border-base-line/60">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
-      <nav class="flex items-center gap-5">
-        <a href="index.html#terms" class="hover:text-white/80">Terms</a>
-        <a href="index.html#privacy" class="hover:text-white/80">Privacy</a>
-        <a href="index.html#contact" class="hover:text-white/80">Contact</a>
-      </nav>
-    </div>
-  </footer>
+  <script>
+    // === Supabase + header auth/credits ===
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 
-<script>
-document.getElementById('y').textContent = new Date().getFullYear();
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let currentUser = null;
+    let currentCredits = 0;
 
-// Supabase init
-const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    async function refreshCredits() {
+      try {
+        const { data: userRes } = await supabaseClient.auth.getUser();
+        if (!userRes || !userRes.user) return;
+        const { data: profile } = await supabaseClient
+          .from('profiles')
+          .select('credits, avatar_url')
+          .eq('user_id', userRes.user.id)
+          .maybeSingle();
+        currentCredits = profile && typeof profile.credits === 'number' ? profile.credits : 0;
 
-// Header UI
-const $btnLoginNav = document.getElementById('btnLoginNav');
-const $btnGetStarted = document.getElementById('btnGetStarted');
-const $navUser = document.getElementById('navUser');
-const $navCredits = document.getElementById('navCredits');
-const $navAvatar = document.getElementById('navAvatar');
-const $navMenu = document.getElementById('navMenu');
-const $btnLogout = document.getElementById('btnLogout');
-const $navAvatarImg = document.getElementById('navAvatarImg');
-function showLoggedInUI(profile, user){var u=document.getElementById('loginUnified'); if(u) u.classList.add('hidden');$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
-function showLoggedOutUI(){var u=document.getElementById('loginUnified'); if(u) u.classList.remove('hidden');$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
-$navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
-document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
-$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
-async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
+        const navCredits = document.getElementById('navCredits');
+        if (navCredits) navCredits.textContent = currentCredits + '⚡';
 
-// Elements
-const filesEl=document.getElementById('files');
-const thumbsEl=document.getElementById('thumbs');
-const promptEl=document.getElementById('prompt');
-const runBtn=document.getElementById('runBtn');
-const statusEl=document.getElementById('status');
-const resultBox=document.getElementById('resultBox');
-const downloadLink=document.getElementById('downloadLink');
-  const urls = new Set();
-
-filesEl.addEventListener('change', ()=>{
-  // clear existing previews
-  thumbsEl.innerHTML='';
-
-  // only allow up to 1 file preview
-  const selected = [...filesEl.files].slice(0,1);
-  if (!selected.length) return;
-
-  const f = selected[0];
-  const u = URL.createObjectURL(f);
-
-  // wrapper with X button
-  const wrap = document.createElement('div');
-  wrap.className = 'relative inline-block';
-
-  const img = new Image();
-  img.src = u;
-  img.className = 'block w-full max-h-56 object-contain rounded-lg border border-white/10 bg-black/20';
-
-  // X button (remove image)
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.setAttribute('aria-label', 'Remove image');
-  btn.className = 'absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white text-sm leading-none flex items-center justify-center hover:bg-black/80';
-  btn.textContent = '×';
-  btn.addEventListener('click', ()=>{
-    // clear preview and input
-    thumbsEl.innerHTML = '';
-    try { filesEl.value = ''; } catch {}
-  });
-
-  wrap.appendChild(img);
-  wrap.appendChild(btn);
-  thumbsEl.appendChild(wrap);
-});
-
-function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
-
-// Guarded renderer
-let __done=false; let channel=null;
-
-function onResult(url){
-  if (!url) return;
-  // Dedup
-  urls.add(url);
-
-  // Render gallery (up to 4)
-  const list = Array.from(urls).slice(0,4);
-  resultBox.innerHTML = '';
-// Allow the results area to expand for 2 rows with footers
-resultBox.classList.remove('aspect-square','overflow-hidden');
-resultBox.style.height = 'auto';
-resultBox.style.minHeight = '0px';
-resultBox.style.overflow = 'visible';
-const cardWrap = resultBox.closest('.glass');
-if (cardWrap) { cardWrap.style.overflow = 'visible'; }
-
-
-  const grid = document.createElement('div');
-  grid.className = 'grid grid-cols-2 gap-3 w-full';
-  resultBox.appendChild(grid);
-
-  for (const u of list){
-    const wrap = document.createElement('div');
-    wrap.className = 'relative rounded-lg border border-white/10 bg-black/20 flex flex-col';
-
-    const img = new Image();
-    img.src = u;
-    img.className = 'block w-full max-h-56 object-contain rounded-lg border border-white/10 bg-black/20';
-    wrap.appendChild(img);
-
-    const name = (u.split('/').pop()||'generation');
-const footer = document.createElement('div');
-footer.className = 'p-2 border-t border-white/10 bg-white/5 flex justify-end';
-
-const a = document.createElement('a');
-a.href = '/.netlify/functions/download-proxy?url=' + encodeURIComponent(u) + '&name=' + encodeURIComponent(name);
-a.setAttribute('download', name);
-a.textContent = 'Download';
-a.className = 'rounded-md btn px-3 py-1 text-xs';
-
-footer.appendChild(a);
-wrap.appendChild(footer);
-grid.appendChild(wrap);
-  }
-
-  // Hide the single download link; we render per-image
-  downloadLink.classList.add('hidden');
-
-  if (urls.size >= 4) { __done = true; window.__running=false; runBtn.disabled = false; runBtn.textContent = 'Run (cost: 1⚡)'; }
-  showStatus('✅ Done.','text-emerald-300');
-}
-
-
-// Credits + URL extraction helpers
-
-async function chargeOneCredit(){const {data}=await supabase.auth.getUser();if(!data.user)return;const prof=await supabase.from('profiles').select('credits').eq('user_id',data.user.id).maybeSingle();const cur=prof?.data?.credits??0;if(cur < 0.5)throw new Error('Not enough credits (need 1).');await supabase.from('profiles').update({credits:cur-1}).eq('user_id',data.user.id);}
-
-async function tryExtractImageUrl(o){
-  function firstUrl(x){
-    if (!x) return null;
-    if (typeof x === 'string'){
-      const m = x.match(/https?:\/\/[^"'\s]+/i);
-      return m ? m[0] : null;
-    }
-    if (Array.isArray(x)){
-      if (typeof x[0] === 'string'){
-        const m = String(x[0]).match(/https?:\/\/[^"'\s]+/i);
-        if (m) return m[0];
-      }
-      for (const v of x){ const u = firstUrl(v); if (u) return u; }
-      return null;
-    }
-    if (typeof x === 'object'){
-      if (x.images && Array.isArray(x.images)){ const u = firstUrl(x.images); if (u) return u; }
-      if (x.result && x.result.images){ const u = firstUrl(x.result.images); if (u) return u; }
-      if (x.data && x.data.result && x.data.result.images){ const u = firstUrl(x.data.result.images); if (u) return u; }
-      for (const v of Object.values(x)){ const u = firstUrl(v); if (u) return u; }
-      return null;
-    }
-    return null;
-  }
-  return firstUrl(o);
-}
-
-async function tryExtractAllImageUrls(o){
-  function collect(x, out){
-    if (!x) return;
-    if (typeof x === 'string'){
-      const m = x.match(/https?:\/\/[^" '\s]+/i);
-      if (m) out.push(m[0]);
-      return;
-    }
-    if (Array.isArray(x)){
-      for (const v of x) collect(v, out);
-      return;
-    }
-    if (typeof x === 'object'){
-      if (x.images) collect(x.images, out);
-      if (x.result && x.result.images) collect(x.result.images, out);
-      if (x.data && x.data.result && x.data.result.images) collect(x.data.result.images, out);
-      for (const v of Object.values(x)) collect(v, out);
-      return;
-    }
-  }
-  const acc = [];
-  collect(o, acc);
-  const seen = new Set();
-  const out = [];
-  for (const u of acc){
-    if (typeof u === 'string' && /^https?:\/\//i.test(u) && !seen.has(u)){
-      seen.add(u);
-      out.push(u);
-      if (out.length >= 4) break;
-    } else if (u && typeof u === 'object' && u.url && /^https?:\/\//i.test(u.url) && !seen.has(u.url)){
-      seen.add(u.url);
-      out.push(u.url);
-      if (out.length >= 4) break;
-    }
-  }
-  return out;
-}
-
-// ADDED: make sure DB gets a row even if webhook is late/blocked
-async function backfillRow(uid, rid, taskId, url){
-  try{
-    await fetch(
-      '/.netlify/functions/kie-callback?uid='+encodeURIComponent(uid)+'&run_id='+encodeURIComponent(rid)+'&taskId='+encodeURIComponent(taskId),
-      {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          status:'success',
-          result:{ images:[{ url }] }
-        })
-      }
-    );
-  }catch{}
-}
-
-// Option A: poll nb-check (does NOT rely on webhook)
-async function nbCheckPoll(taskId, uid, rid){
-  if(!taskId) return;
-  const start = Date.now();
-  while(!__done && Date.now() - start < 200000){ // up to 3 min
-    try{
-      const r = await fetch('/.netlify/functions/nb-check?taskId='+encodeURIComponent(taskId)+'&run_id='+encodeURIComponent(rid), {
-        headers: { 'X-USER-ID': uid }
-      });
-
-      let j;
-      try { j = await r.json(); }
-      catch {
-        const txt = await r.text();
-        try { j = JSON.parse(txt); } catch { j = { raw: txt }; }
-      }
-
-      const status = String(j.status || j.data?.status || j.result?.status || j.state || '').toLowerCase();
-    if(['success','succeeded','completed','done'].includes(status)){
-      if (Array.isArray(j.images) && j.images.length){
-        for (const u of j.images.slice(0,4)) onResult(u);
-      } else {
-        const all = await tryExtractAllImageUrls(j);
-        if (all && all.length){
-          for (const u of all.slice(0,4)) onResult(u);
-          await backfillRow(uid, rid, taskId, all[0]).catch(()=>{});
+        const navUser = document.getElementById('navUser');
+        const btnLogin = document.getElementById('btnLoginSignup');
+        if (btnLogin && navUser) {
+          btnLogin.classList.add('hidden');
+          navUser.classList.remove('hidden');
+          navUser.classList.add('flex');
         }
+
+        const avatarImg = document.getElementById('navAvatarImg');
+        if (avatarImg && profile && profile.avatar_url) {
+          avatarImg.src = profile.avatar_url;
+          avatarImg.classList.remove('hidden');
+        }
+
+      } catch (e) {
+        console.warn('refreshCredits failed', e);
       }
-      break;
-    }
-      if(['failed','error'].includes(status)){
-        showStatus('❌ Generation failed. Credit is refunded','text-rose-300');
-        break;
-      }
-    }catch{}
-    await new Promise(r=>setTimeout(r,1500));
-  }
-}
-
-// Main run
-window.__run=async function(){
-  // Instant anti-multi-click lock (Veo 3.1 style) — set before any await
-  if (window.__MIDIMAGE_BUSY) return;
-  window.__MIDIMAGE_BUSY = true;
-  window.__running = true;
-  try{
-    runBtn.disabled = true;
-    runBtn.style.pointerEvents = 'none';
-    runBtn.classList.add('opacity-50','cursor-not-allowed');
-  }catch{}
-  const __unlock = () => {
-    window.__MIDIMAGE_BUSY = false;
-    window.__running = false;
-    try{
-      runBtn.disabled = false;
-      runBtn.style.pointerEvents = 'auto';
-      runBtn.classList.remove('opacity-50','cursor-not-allowed');
-      runBtn.textContent = 'Run (cost: 1⚡)';
-    }catch{}
-  };
-  const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ alert('Please log in || register first.'); __unlock(); return; }
-
-  
-  // HARD CREDIT CHECK (surgical): prevent run if credits insufficient
-  try{
-    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', authData.user.id).maybeSingle();
-    const cur = prof?.credits ?? 0;
-    if (cur < 1) {
-      showStatus('Not enough credits (need 1).','text-rose-300');
-      __unlock();
-      return;
-    }
-  }catch(_){ /* ignore, but don't proceed if unknown? proceed cautiously */ }
-__done=false; urls.clear();
-  const files=[...filesEl.files];
-  // 0 images allowed for text-to-image
-  if(files.length>1){alert('Select at most 1 image.');__unlock();return;}
-  for(const f of files){if(f.size>10*1024*1024){alert('File too large: '+f.name);__unlock();return;}}
-
-  window.__running=true;runBtn.disabled=true;runBtn.textContent='Working…';
-  showStatus('Submitting…','text-zinc-400');
-  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Your image will be ready in about 60 seconds. MidJourney sometimes rejects requests — if it takes too long or fails, your credits will be automatically refunded. If this keeps happening, please try again or use another feature like Nano Banana.</span>';
-
-  try{
-    const uid=authData.user.id;
-    const rid=uid+'-'+Date.now();
-
-    // upload optional single image (presign → PUT → HEAD warm)
-    let image_url = "";
-    if (files.length === 1) {
-      const f = files[0];
-      const origName = f.name || 'image.jpg';
-      const type = (f.type || 'image/jpeg').toLowerCase();
-      const safeExt = type.includes('png') ? '.png' : (type.includes('jpeg') || type.includes('jpg')) ? '.jpg' : (type.includes('webp') ? '.webp' : '.jpg');
-      const base = origName.replace(/\.[^./\\]+$/, '');
-      const filename = `${Date.now()}-${base}${safeExt}`;
-
-      // Request presigned upload (expects 'mime')
-      const signResp = await fetch('/.netlify/functions/sign-upload',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','X-USER-ID':uid},
-        body: JSON.stringify({ filename, mime: type })
-      });
-      const signJson = await signResp.json().catch(()=>null);
-      if(!signResp.ok || !signJson || !signJson.uploadUrl || !signJson.publicUrl){
-        throw new Error((signJson && signJson.error) || 'sign-upload failed');
-      }
-
-      // PUT file with correct Content-Type
-      const putResp = await fetch(signJson.uploadUrl, { method:'PUT', headers:{ 'Content-Type': type }, body: f });
-      if(!putResp.ok){ throw new Error('Upload PUT failed'); }
-
-      // Warm the public URL to avoid eventual consistency delays
-      try{ await fetch(signJson.publicUrl, { method:'HEAD', cache:'no-store' }); }catch{}
-
-      image_url = signJson.publicUrl;
     }
 
-    // create job
-    const res=await fetch('/.netlify/functions/run-midjourney',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-USER-ID':uid},
-      body:JSON.stringify({ image_url, prompt: promptEl.value||'.', size:(document.getElementById('size')?.value||'auto'), run_id: rid })
+    async function loadUser() {
+      try {
+        const { data } = await supabaseClient.auth.getUser();
+        const user = data.user;
+        currentUser = user;
+
+        const navUser = document.getElementById('navUser');
+        const btnLogin = document.getElementById('btnLoginSignup');
+        if (!user) {
+          if (navUser) {
+            navUser.classList.add('hidden');
+            navUser.classList.remove('flex');
+          }
+          if (btnLogin) btnLogin.classList.remove('hidden');
+          return;
+        }
+
+        await refreshCredits();
+        await loadRecentHistory();
+      } catch (e) {
+        console.warn('loadUser failed', e);
+      }
+    }
+
+    document.addEventListener('click', (e) => {
+      const avatar = document.getElementById('navAvatar');
+      const menu = document.getElementById('navMenu');
+      if (!avatar || !menu) return;
+      if (avatar.contains(e.target)) {
+        menu.classList.toggle('hidden');
+      } else if (!menu.contains(e.target)) {
+        menu.classList.add('hidden');
+      }
     });
 
-    if (res.status === 202 || res.ok) {
-      // server-side debit (function). Refresh credits immediately.
-      if (typeof window.__refreshCreditsNow === 'function') { await window.__refreshCreditsNow(); }
-    } else {
-      const errT = await res.text().catch(()=> '');
-      throw new Error('Create failed: ' + errT);
-    }
-
-    const resJson = await res.json().catch(()=> ({}));
-    const taskId = resJson?.taskId || resJson?.data?.taskId || resJson?.id || null;
-
-    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-
-    // subscribe to Supabase (if webhook inserts there)
-    channel = supabase.channel('nb_results_' + rid)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'nb_results', filter: 'run_id=eq.' + rid },
-        (payload) => {
-          const url = payload?.new?.image_url;
-          if (url) onResult(url);
+    document.getElementById('btnLogout')?.addEventListener('click', async () => {
+      try {
+        await supabaseClient.auth.signOut();
+        currentUser = null;
+        currentCredits = 0;
+        const navUser = document.getElementById('navUser');
+        const btnLogin = document.getElementById('btnLoginSignup');
+        const navCredits = document.getElementById('navCredits');
+        if (navUser) {
+          navUser.classList.add('hidden');
+          navUser.classList.remove('flex');
         }
-      )
-      .subscribe();
+        if (btnLogin) btnLogin.classList.remove('hidden');
+        if (navCredits) navCredits.textContent = '0⚡';
+        const strip = document.getElementById('resultsStrip');
+        if (strip) strip.innerHTML = '';
+      } catch (e) {
+        console.warn('logout failed', e);
+      }
+    });
 
-    // seed from DB (up to 4 already-present rows)
-    try {
-      const { data: seedRows } = await supabase
-        .from('nb_results')
-        .select('image_url')
-        .eq('user_id', uid)
-        .eq('run_id', rid)
-        .order('created_at', { ascending: true })
-        .limit(4);
-      (seedRows || []).forEach(r => onResult(r.image_url));
-    } catch {}
+    // === RESULTS (last 7 generations) ===
+    function createResultCard(data) {
+      const provider = data.provider || 'Model';
+      const kind = (data.kind || 'image').toLowerCase();
+      const prompt = data.prompt || '';
+      const statusRaw = (data.status || '').toString();
+      const statusLower = statusRaw.toLowerCase();
+      const hasUrl = !!data.result_url;
 
-    // start polling taskId (and backfill DB when done)
-    nbCheckPoll(taskId, uid, rid);
-    // fallback: poll table directly in case realtime is blocked
-    const started = Date.now();
-    while (!__done && Date.now() - started < 120000) { // up to 120s
-      await new Promise(r => setTimeout(r, 1500));
-      const { data: rows } = await supabase
-        .from('nb_results')
-        .select('image_url')
-        .eq('user_id', uid)
-        .eq('run_id', rid)
-        .order('created_at', { ascending: true })
-        .limit(4);
-      (rows || []).forEach(r => onResult(r.image_url));
-      if (urls.size >= 4) { __done = true; showStatus('✅ Done.','text-emerald-300'); break; }
+      const card = document.createElement('div');
+      card.className = 'w-64 flex-shrink-0 rounded-2xl border border-white/15 bg-slate-950/80 shadow-soft overflow-hidden';
+      card.dataset.runId = data.run_id || '';
+
+      const media = document.createElement('div');
+      media.className = 'relative h-72 bg-slate-900 flex items-center justify-center';
+      const loader = document.createElement('div');
+      loader.className = 'result-card-loader';
+      media.appendChild(loader);
+
+      const mediaEl = document.createElement(kind === 'video' ? 'video' : 'img');
+      mediaEl.className = 'max-h-full max-w-full object-contain hidden';
+      if (kind === 'video') {
+        mediaEl.controls = true;
+        mediaEl.muted = true;
+        mediaEl.playsInline = true;
+      }
+      media.appendChild(mediaEl);
+
+      const statusChip = document.createElement('div');
+      statusChip.className = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-black/70 text-white/80';
+      media.appendChild(statusChip);
+
+      const body = document.createElement('div');
+      body.className = 'p-2.5 space-y-1';
+      const topRow = document.createElement('div');
+      topRow.className = 'flex items-center justify-between gap-2';
+      const nameEl = document.createElement('span');
+      nameEl.className = 'text-[11px] font-medium truncate';
+      nameEl.textContent = provider;
+      const kindEl = document.createElement('span');
+      kindEl.className = 'text-[10px] text-white/45 uppercase tracking-wide';
+      kindEl.textContent = kind;
+      topRow.appendChild(nameEl);
+      topRow.appendChild(kindEl);
+
+      const promptEl = document.createElement('p');
+      promptEl.className = 'text-[10px] text-white/60 clamp-2';
+      promptEl.textContent = prompt;
+
+      const bottomRow = document.createElement('div');
+      bottomRow.className = 'flex items-center justify-between gap-2 mt-1';
+      const statusText = document.createElement('span');
+      statusText.className = 'text-[10px] text-indigo-200/80';
+      const downloadBtn = document.createElement('a');
+      downloadBtn.className = 'text-[12px] px-4 py-2 rounded-full bg-indigo-500/90 hover:bg-indigo-400 text-white hidden';
+      downloadBtn.target = '_blank';
+      downloadBtn.rel = 'noopener noreferrer';
+      downloadBtn.textContent = 'GET';
+      bottomRow.appendChild(statusText);
+      bottomRow.appendChild(downloadBtn);
+
+      body.appendChild(topRow);
+      body.appendChild(promptEl);
+      body.appendChild(bottomRow);
+
+      card.appendChild(media);
+      card.appendChild(body);
+
+      function apply(newData) {
+        const stRaw = (newData.status || '').toString();
+        const st = stRaw.toLowerCase();
+        const hasUrlNow = !!newData.result_url;
+
+        if (hasUrlNow) {
+          mediaEl.src = newData.result_url;
+          mediaEl.classList.remove('hidden');
+          downloadBtn.href = newData.result_url;
+          downloadBtn.classList.remove('hidden');
+          loader.style.display = 'none';
+        } else {
+          mediaEl.classList.add('hidden');
+          downloadBtn.classList.add('hidden');
+          loader.style.display = st.includes('fail') ? 'none' : 'block';
+        }
+
+        let label = 'Processing…';
+        let pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-black/70 text-white/80';
+        let statusClass = 'text-[10px] text-indigo-200/80';
+
+        if (st.includes('fail') || st.includes('error')) {
+          label = 'Failed';
+          pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-red-500/85 text-white';
+          statusClass = 'text-[10px] text-red-300';
+        } else if (hasUrlNow) {
+          label = 'Ready';
+          pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/85 text-white';
+          statusClass = 'text-[10px] text-emerald-300';
+        }
+
+        statusChip.textContent = label;
+        statusChip.className = pillClass;
+        statusText.textContent = label;
+        statusText.className = statusClass;
+      }
+
+      apply({
+        status: statusRaw || (hasUrl ? 'ready' : 'processing'),
+        result_url: data.result_url
+      });
+
+      return { card, apply };
     }
 
-    if (!__done) { window.__running=false; showStatus('❌ Generation failed. Credit is refunded.','text-red-300');
+    function addResultCard(data, options) {
+      const strip = document.getElementById('resultsStrip');
+      if (!strip) return null;
+      const { card, apply } = createResultCard(data);
+      if (options && options.prepend) {
+        strip.prepend(card);
+      } else {
+        strip.appendChild(card);
+      }
+      while (strip.children.length > 7) {
+        strip.removeChild(strip.lastElementChild);
+      }
+      return { card, apply };
     }
 
-  }catch(e){ window.__running=false; showStatus('❌ '+(e.message||String(e)),'text-rose-300') }finally{
-    try{ if (channel && typeof channel.unsubscribe === 'function') channel.unsubscribe(); }catch{}
-    window.__MIDIMAGE_BUSY = false;
-    window.__running = false;
-    try{
-      runBtn.disabled = false;
-      runBtn.style.pointerEvents = 'auto';
-      runBtn.classList.remove('opacity-50','cursor-not-allowed');
-      runBtn.textContent = 'Run (cost: 1⚡)';
-    }catch{}
+    async function loadRecentHistory() {
+      if (!currentUser) return;
+      try {
+        const { data, error } = await supabaseClient
+          .from('user_generations')
+          .select('provider, kind, prompt, result_url, meta, created_at')
+          .eq('user_id', currentUser.id)
+          .order('created_at', { ascending: false })
+          .limit(7);
+
+        if (error) {
+          console.warn('loadRecentHistory error', error);
+          return;
+        }
+
+        const strip = document.getElementById('resultsStrip');
+        if (strip) strip.innerHTML = '';
+
+        const hero = document.getElementById('heroSection');
+        const resultsSection = document.getElementById('resultsSection');
+        const hasItems = (data || []).length > 0;
+
+        if (hero) {
+          if (hasItems) hero.classList.add('hidden');
+          else hero.classList.remove('hidden');
+        }
+        if (resultsSection) {
+          if (hasItems) resultsSection.classList.remove('hidden');
+          else resultsSection.classList.add('hidden');
+        }
+
+        (data || []).forEach((row) => {
+          const runId = row.meta && row.meta.run_id ? row.meta.run_id : '';
+          const status = row.meta && row.meta.status ? row.meta.status : (row.result_url ? 'ready' : 'processing');
+          addResultCard({
+            run_id: runId,
+            provider: row.provider || 'Model',
+            kind: row.kind || 'image',
+            prompt: row.prompt || '',
+            result_url: row.result_url,
+            status
+          }, { prepend: false });
+        });
+      } catch (e) {
+        console.warn('loadRecentHistory failed', e);
+      }
+    }
+
+    async function __extractResultUrls(row) {
+  try {
+    // Prefer explicit arrays in meta (provider-specific)
+    const meta = row && row.meta ? row.meta : null;
+    const candidates = [];
+    const pushMany = (arr) => {
+      if (Array.isArray(arr)) arr.forEach((u) => { if (typeof u === 'string' && u.trim()) candidates.push(u.trim()); });
+    };
+    if (meta) {
+      // Common patterns
+      pushMany(meta.images);
+      pushMany(meta.image_urls);
+      pushMany(meta.result_urls);
+      if (meta.result && meta.result.images) pushMany(meta.result.images);
+      if (meta.output && meta.output.images) pushMany(meta.output.images);
+    }
+    // Fallback to single result_url
+    if (row && typeof row.result_url === 'string' && row.result_url.trim()) {
+      if (!candidates.length) candidates.push(row.result_url.trim());
+    }
+    // Dedupe while preserving order
+    const seen = new Set();
+    return candidates.filter((u) => (seen.has(u) ? false : (seen.add(u), true)));
+  } catch (e) {
+    return [];
   }
-};
-</script>
+}
+
+async function pollGeneration(runId, controllers) {
+  if (!currentUser || !runId || !controllers || !controllers.length) return;
+  const maxMs = 210000;
+  const started = Date.now();
+  while (Date.now() - started < maxMs) {
+    await new Promise((r) => setTimeout(r, 3000));
+    try {
+      const { data, error } = await supabaseClient
+        .from('user_generations')
+        .select('provider, kind, prompt, result_url, meta, created_at')
+        .eq('user_id', currentUser.id)
+        .eq('meta->>run_id', runId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('pollGeneration error', error);
+        break;
+      }
+      if (!data) continue;
+
+      const status = data.meta && data.meta.status ? data.meta.status : (data.result_url ? 'ready' : 'processing');
+      const urls = __extractResultUrls(data);
+
+      // Apply to 1..N placeholder cards
+      if (urls && urls.length) {
+        for (let i = 0; i < controllers.length; i++) {
+          controllers[i].apply({
+            status: status,
+            result_url: urls[i] || null
+          });
+        }
+      } else {
+        for (let i = 0; i < controllers.length; i++) {
+          controllers[i].apply({ status: status });
+        }
+      }
+
+      if (
+        status.toLowerCase().includes('fail') ||
+        status.toLowerCase().includes('error') ||
+        (urls && urls.length)
+      ) {
+        return;
+      }
+    } catch (e) {
+      console.warn('pollGeneration exception', e);
+      break;
+    }
+  }
+}
+
+    // === MODELS CONFIG ===
+    const MODELS = [
+      {
+        id: 'nano-banana',
+        name: 'Nano Banana',
+        emoji: '🍌',
+        subtitle: 'Image → Image',
+        category: 'image',
+        description: 'Fast image-to-image edits with up to 4 input images.',
+        endpoint: '/.netlify/functions/run-nano-banana',
+        needsImage: true,
+        maxFiles: 4,
+        aspectOptions: ['auto', '1:1', '3:4', '4:3', '9:16', '16:9'],
+        defaultAspect: 'auto',
+        durations: null,
+        costLabel: '0.5⚡ per job',
+        minCredits: 0.5
+      },
+      {
+        id: 'nano-banana-pro',
+        name: 'Nano Banana Pro',
+        emoji: '🍌',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'Studio-grade quality with multi-image fusion.',
+        endpoint: '/.netlify/functions/run-nano-banana-pro',
+        needsImage: false,
+        maxFiles: 8,
+        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: null,
+        costLabel: '2⚡ per job',
+        minCredits: 2
+      },
+      {
+        id: 'seedream-4-5',
+        name: 'Seedream 4.5',
+        emoji: '🎨',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'Seedream 4.5 creative image generator.',
+        endpoint: '/.netlify/functions/run-seedream-4-5',
+        needsImage: false,
+        maxFiles: 8,
+        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: null,
+        costLabel: '1⚡ per job',
+        minCredits: 1
+      },
+      {
+        id: 'gpt-image-1',
+        name: 'GPT-Image-1',
+        emoji: '🧠',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'OpenAI GPT-Image-1 for sharp, detailed visuals.',
+        endpoint: '/.netlify/functions/run-gpt-image-1',
+        needsImage: false,
+        maxFiles: 3,
+        aspectOptions: ['1:1', '2:3', '3:2'],
+        defaultAspect: '1:1',
+        durations: null,
+        costLabel: '4⚡ per job',
+        minCredits: 4
+      },
+      {
+        id: 'imagen',
+        name: 'Imagen Ultra',
+        emoji: '🌈',
+        subtitle: 'Text → Image',
+        category: 'image',
+        description: 'Google Imagen Ultra for high-quality text-to-image.',
+        endpoint: '/.netlify/functions/run-imagen',
+        needsImage: false,
+        maxFiles: 0,
+        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: null,
+        costLabel: '1⚡ per job',
+        minCredits: 1
+      },
+      {
+        id: 'midjourney',
+        name: 'MidJourney Image',
+        emoji: '🌀',
+        subtitle: 'Text / Image → Image',
+        category: 'image',
+        description: 'MidJourney-style image generation.',
+        endpoint: '/.netlify/functions/run-midjourney',
+        needsImage: false,
+        maxFiles: 4,
+        aspectOptions: ['2:3', '3:2', '1:1', '9:16', '16:9'],
+        defaultAspect: '2:3',
+        durations: null,
+        costLabel: '1⚡ per job',
+        minCredits: 1
+      },
+      {
+        id: 'mj-video',
+        name: 'MidJourney Video',
+        emoji: '🎬',
+        subtitle: 'Image → Video',
+        category: 'video',
+        description: 'Turn an image into a MidJourney-style motion.',
+        endpoint: '/.netlify/functions/run-mj-video',
+        needsImage: true,
+        maxFiles: 1,
+        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: [5],
+        costLabel: '2⚡ per job',
+        minCredits: 2
+      },
+            {
+        id: 'veo31-fast',
+        name: 'Veo 3.1 Fast',
+        emoji: '🎥',
+        subtitle: 'Text → Video (start / last frames optional)',
+        category: 'video',
+        description: 'Veo 3.1 Fast — 8s only, vertical/horizontal only.',
+        endpoint: '/.netlify/functions/run-veo31',
+        needsImage: false,
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: true,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [8],
+        costLabel: 'video credits',
+        minCredits: 5
+      },
+      {
+        id: 'veo31',
+        name: 'Veo 3.1',
+        emoji: '🎥',
+        subtitle: 'Text → Video (start / last frames optional)',
+        category: 'video',
+        description: 'Veo 3.1 — 8s only, vertical/horizontal only.',
+        endpoint: '/.netlify/functions/run-veo31',
+        needsImage: false,
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: true,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [8],
+        costLabel: 'video credits',
+        minCredits: 5
+      },
+      {
+        id: 'veo3-fast',
+        name: 'Veo 3 Fast',
+        emoji: '🎥',
+        subtitle: 'Text / (Image) → Video',
+        category: 'video',
+        description: 'Veo 3 Fast — 8s only, vertical/horizontal only.',
+        endpoint: '/.netlify/functions/run-veo3',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [8],
+        costLabel: 'video credits',
+        minCredits: 5
+      },
+      {
+        id: 'veo3',
+        name: 'Veo 3',
+        emoji: '🎥',
+        subtitle: 'Text / (Image) → Video',
+        category: 'video',
+        description: 'Veo 3 — 8s only, vertical/horizontal only.',
+        endpoint: '/.netlify/functions/run-veo3',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [8],
+        costLabel: 'video credits',
+        minCredits: 5
+      },
+            {
+        id: 'sora2',
+        name: 'Sora 2',
+        emoji: '🎞️',
+        subtitle: 'Text / (Image) → Video',
+        category: 'video',
+        description: 'Sora 2 video generation (10s / 15s).',
+        endpoint: '/.netlify/functions/run-sora2',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['16:9'],
+        defaultAspect: '16:9',
+        durations: [10, 15],
+        costLabel: '7–13⚡ per job',
+        minCredits: 7
+      },
+            {
+        id: 'runway',
+        name: 'Runway',
+        emoji: '🎞️',
+        subtitle: 'Text / (Image) → Video',
+        category: 'video',
+        description: 'Runway video generation (5s).',
+        endpoint: '/.netlify/functions/run-runway',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['3:4', '4:3'],
+        defaultAspect: '3:4',
+        durations: [5],
+        costLabel: 'video credits',
+        minCredits: 4
+      },
+      {
+        id: 'kling25',
+        name: 'Kling 2.5 Turbo',
+        emoji: '⚡',
+        subtitle: 'Text / Image → Video',
+        category: 'video',
+        description: 'Fast Kling 2.5 text & image to video.',
+        endpoint: '/.netlify/functions/run-kling',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['1:1', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: [5, 10],
+        costLabel: '4–8⚡ per job',
+        minCredits: 4
+      },
+      {
+        id: 'kling26',
+        name: 'Kling 2.6',
+        emoji: '🎧',
+        subtitle: 'Text / Image → Video + sound',
+        category: 'video',
+        description: 'Kling 2.6 high-quality video with sound.',
+        endpoint: '/.netlify/functions/run-kling-26',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['1:1', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: [5, 10],
+        costLabel: '9–16⚡ per job',
+        minCredits: 9
+      },
+            {
+        id: 'kling21',
+        name: 'Kling v2.1 Pro',
+        emoji: '🖼️',
+        subtitle: 'Image → Video (start / end frames)',
+        category: 'video',
+        description: 'Kling 2.1 Pro image-to-video with optional last frame.',
+        endpoint: '/.netlify/functions/run-kling21',
+        needsImage: true,
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: false,
+        aspectOptions: ['1:1', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: [5, 10],
+        costLabel: '5–9⚡ per job',
+        minCredits: 5
+      },
+            {
+        id: 'aleph',
+        name: 'Aleph',
+        emoji: '🧪',
+        subtitle: 'Video → Video (optional image)',
+        category: 'video',
+        description: 'Aleph video-to-video transformations (video required).',
+        endpoint: '/.netlify/functions/run-aleph',
+        needsImage: false,
+        maxFiles: 0,
+        needsVideo: true,
+        allowOptionalImage: true,
+        aspectOptions: ['16:9', '9:16', '1:1'],
+        defaultAspect: '16:9',
+        durations: [5],
+        costLabel: 'video credits',
+        minCredits: 4
+      }
+    ];;
+
+    let currentModel = MODELS[0];
+    let currentMode = 'image';
+    let uploadedFiles = [];
+
+    // Frames (Veo 3.1 + Kling 2.1)
+    let startFrameFile = null;
+    let lastFrameFile = null;
+
+    // Aleph: video required + optional image
+    let alephVideoFile = null;
+    let alephImageFile = null;
+
+    let currentAspect = null;
+    let currentDuration = null;
+
+    function setMode(mode) {
+      currentMode = mode;
+      const btnImage = document.getElementById('btnModeImage');
+      const btnVideo = document.getElementById('btnModeVideo');
+
+      if (mode === 'image') {
+        btnImage.classList.add('bg-gradient-to-r','from-indigo-500','to-violet-500','text-white','font-semibold');
+        btnVideo.classList.remove('bg-gradient-to-r','from-indigo-500','to-violet-500','text-white','font-semibold');
+        btnVideo.classList.add('text-white/70');
+      } else {
+        btnVideo.classList.add('bg-gradient-to-r','from-indigo-500','to-violet-500','text-white','font-semibold');
+        btnImage.classList.remove('bg-gradient-to-r','from-indigo-500','to-violet-500','text-white','font-semibold');
+        btnImage.classList.add('text-white/70');
+      }
+
+      // Default model per mode
+      const defaultId = mode === 'image' ? 'nano-banana-pro' : 'veo31-fast';
+      const def = MODELS.find(m => m.id === defaultId);
+      if (def) {
+        currentModel = def;
+        updateModelButtonLabels();
+        configureControlsForModel();
+      }
+    }
+
+
+    function updateModelButtonLabels() {
+      const labelText = currentModel ? currentModel.name : 'Choose model';
+      const btnLabel = document.getElementById('modelButtonLabel');
+      if (btnLabel) btnLabel.textContent = labelText;
+
+      const costLabelEl = document.getElementById('costLabel');
+      if (costLabelEl && currentModel && currentModel.costLabel) {
+        costLabelEl.textContent = currentModel.costLabel;
+      }
+    }
+
+    function showStatus(message, tone = 'normal') {
+      const el = document.getElementById('status');
+      el.textContent = message || '';
+      el.className =
+        'text-[11px] min-h-[1.1rem] ' +
+        (tone === 'error'
+          ? 'text-red-300'
+          : tone === 'success'
+          ? 'text-emerald-300'
+          : 'text-amber-200/80');
+    }
+
+    function openModelOverlay() {
+      const overlay = document.getElementById('modelOverlay');
+      overlay.classList.remove('hidden');
+      renderOverlayModels();
+      const input = document.getElementById('overlayModelSearch');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    function closeModelOverlay() {
+      const overlay = document.getElementById('modelOverlay');
+      overlay.classList.add('hidden');
+    }
+
+    function renderOverlayModels() {
+      const listEl = document.getElementById('overlayModelList');
+      const searchValue = (document.getElementById('overlayModelSearch').value || '').toLowerCase().trim();
+      listEl.innerHTML = '';
+
+      const filtered = MODELS.filter((m) => {
+        const matchesMode = currentMode === 'image' ? m.category === 'image' : m.category === 'video';
+        const matchesSearch =
+          !searchValue ||
+          m.name.toLowerCase().includes(searchValue) ||
+          (m.subtitle && m.subtitle.toLowerCase().includes(searchValue));
+        return matchesMode && matchesSearch;
+      });
+
+      filtered.forEach((model) => {
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className =
+          'w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-slate-900/90 border-b border-white/5 last:border-b-0';
+        row.innerHTML = `
+          <div class="mt-0.5 text-lg">${model.emoji}</div>
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium">${model.name}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-900 text-indigo-200 border border-indigo-400/40">
+                ${model.subtitle}
+              </span>
+            </div>
+            <p class="text-[11px] text-white/55 mt-0.5">${model.description}</p>
+            <p class="text-[10px] text-indigo-200/90 mt-0.5">${model.costLabel}</p>
+          </div>
+        `;
+        row.addEventListener('click', () => {
+          currentModel = model;
+          updateModelButtonLabels();
+          configureControlsForModel();
+          closeModelOverlay();
+        });
+        listEl.appendChild(row);
+      });
+
+      if (!filtered.length) {
+        const empty = document.createElement('div');
+        empty.className = 'px-4 py-4 text-[12px] text-white/60';
+        empty.textContent = 'No models found for this search.';
+        listEl.appendChild(empty);
+      }
+    }
+
+    function configureControlsForModel() {
+      if (!currentModel) return;
+      const aspectBlock = document.getElementById('aspectBlock');
+      const aspectPills = document.getElementById('aspectPills');
+      const durationBlock = document.getElementById('durationBlock');
+      const durationPills = document.getElementById('durationPills');
+
+      currentAspect = currentModel.defaultAspect || (currentModel.aspectOptions && currentModel.aspectOptions[0]) || null;
+      currentDuration = currentModel.durations && currentModel.durations.length ? currentModel.durations[0] : null;
+
+      // Aspect pills
+      if (currentModel.aspectOptions && currentModel.aspectOptions.length) {
+        aspectBlock.classList.remove('hidden');
+        aspectPills.innerHTML = '';
+        currentModel.aspectOptions.forEach((val) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = val;
+          btn.className =
+            'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+          btn.addEventListener('click', () => {
+            currentAspect = val;
+            Array.from(aspectPills.children).forEach((child) => {
+              child.classList.remove('chip-active');
+            });
+            btn.classList.add('chip-active');
+          });
+          aspectPills.appendChild(btn);
+        });
+
+        // Set default active
+        if (aspectPills.children.length) {
+          Array.from(aspectPills.children).forEach((child) => {
+            if (child.textContent === currentAspect) {
+              child.classList.add('chip-active');
+            }
+          });
+        }
+      } else {
+        aspectBlock.classList.add('hidden');
+        aspectPills.innerHTML = '';
+      }
+
+      // Duration pills
+      if (currentModel.durations && currentModel.durations.length) {
+        durationBlock.classList.remove('hidden');
+        durationPills.innerHTML = '';
+        currentModel.durations.forEach((val) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = val;
+          btn.className =
+            'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+          btn.addEventListener('click', () => {
+            currentDuration = val;
+            Array.from(durationPills.children).forEach((child) => {
+              child.classList.remove('chip-active');
+            });
+            btn.classList.add('chip-active');
+          });
+          durationPills.appendChild(btn);
+        });
+
+        if (durationPills.children.length) {
+          Array.from(durationPills.children).forEach((child) => {
+            if (Number(child.textContent) === Number(currentDuration)) {
+              child.classList.add('chip-active');
+            }
+          });
+        }
+      } else {
+        durationBlock.classList.add('hidden');
+        durationPills.innerHTML = '';
+      }
+
+      // Reset previews when model changes
+      uploadedFiles = [];
+      startFrameFile = null;
+      lastFrameFile = null;
+      alephVideoFile = null;
+      alephImageFile = null;
+
+      const thumbs = document.getElementById('imageThumbs');
+      if (thumbs) thumbs.innerHTML = '';
+      const imageInput = document.getElementById('imageInput');
+      if (imageInput) imageInput.value = '';
+
+      const startWrap = document.getElementById('framesUploadWrap');
+      const startThumb = document.getElementById('startFrameThumb');
+      const lastThumb = document.getElementById('lastFrameThumb');
+      const startInput = document.getElementById('startFrameInput');
+      const lastInput = document.getElementById('lastFrameInput');
+      if (startThumb) startThumb.innerHTML = '';
+      if (lastThumb) lastThumb.innerHTML = '';
+      if (startInput) startInput.value = '';
+      if (lastInput) lastInput.value = '';
+
+      const alephWrap = document.getElementById('alephUploadWrap');
+      const alephVideoThumb = document.getElementById('alephVideoThumb');
+      const alephImageThumb = document.getElementById('alephImageThumb');
+      const alephVideoInput = document.getElementById('alephVideoInput');
+      const alephImageInput = document.getElementById('alephImageInput');
+      if (alephVideoThumb) alephVideoThumb.innerHTML = '';
+      if (alephImageThumb) alephImageThumb.innerHTML = '';
+      if (alephVideoInput) alephVideoInput.value = '';
+      if (alephImageInput) alephImageInput.value = '';
+
+      // Upload UI switching
+      const uploadBtn = document.getElementById('uploadBtn');
+      const uploadBtnLabel = document.getElementById('uploadBtnLabel');
+
+      const isFrames = !!currentModel.useFrames;
+      const isAleph = !!currentModel.needsVideo;
+
+      // Default: hide everything, then enable what we need
+      if (uploadBtn) uploadBtn.classList.add('hidden');
+      if (thumbs) thumbs.classList.add('hidden');
+      if (startWrap) {
+        startWrap.classList.add('hidden');
+        startWrap.classList.remove('flex');
+      }
+      if (alephWrap) {
+        alephWrap.classList.add('hidden');
+        alephWrap.classList.remove('flex');
+      }
+
+      if (isFrames) {
+        if (startWrap) {
+          startWrap.classList.remove('hidden');
+          startWrap.classList.add('flex');
+        }
+      } else if (isAleph) {
+        if (alephWrap) {
+          alephWrap.classList.remove('hidden');
+          alephWrap.classList.add('flex');
+        }
+      } else {
+        // General image upload for models that allow image input
+        if (currentModel && Number(currentModel.maxFiles || 0) > 0) {
+          if (uploadBtn) uploadBtn.classList.remove('hidden');
+          if (thumbs) thumbs.classList.remove('hidden');
+          if (uploadBtnLabel) uploadBtnLabel.textContent = (currentModel.category === 'video') ? 'Upload image' : 'Upload image';
+        }
+      }
+    }
+
+    // MODE TOGGLE
+    document.getElementById('btnModeImage').addEventListener('click', () => setMode('image'));
+    document.getElementById('btnModeVideo').addEventListener('click', () => setMode('video'));
+
+    // MODEL BUTTON
+    document.getElementById('modelButton').addEventListener('click', openModelOverlay);
+    document.getElementById('closeOverlay').addEventListener('click', closeModelOverlay);
+    document.getElementById('overlayModelSearch').addEventListener('input', renderOverlayModels);
+    document.getElementById('modelOverlay').addEventListener('click', (e) => {
+      if (e.target.id === 'modelOverlay') closeModelOverlay();
+    });
+
+    // UPLOAD + PREVIEW
+    document.getElementById('uploadBtn').addEventListener('click', () => {
+      document.getElementById('imageInput').click();
+    });
+
+    document.getElementById('imageInput').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files || []);
+      const thumbs = document.getElementById('imageThumbs');
+      thumbs.innerHTML = '';
+
+      if (!currentModel) return;
+      const max = currentModel.maxFiles || 1;
+      uploadedFiles = files.slice(0, max);
+
+      uploadedFiles.forEach((file, index) => {
+        const url = URL.createObjectURL(file);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
+        const img = document.createElement('img');
+        img.src = url;
+        img.className = 'h-full w-full object-cover';
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', () => {
+          uploadedFiles.splice(index, 1);
+          wrapper.remove();
+        });
+        wrapper.appendChild(img);
+        wrapper.appendChild(closeBtn);
+        thumbs.appendChild(wrapper);
+      });
+    });
+
+    // START / LAST FRAME (Veo 3.1 + Kling 2.1)
+    document.getElementById('startFrameBtn').addEventListener('click', () => {
+      document.getElementById('startFrameInput').click();
+    });
+    document.getElementById('lastFrameBtn').addEventListener('click', () => {
+      document.getElementById('lastFrameInput').click();
+    });
+
+    function renderSingleThumb(file, containerEl, onRemove) {
+      containerEl.innerHTML = '';
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const wrapper = document.createElement('div');
+      wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
+      const img = document.createElement('img');
+      img.src = url;
+      img.className = 'h-full w-full object-cover';
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
+      closeBtn.textContent = '×';
+      closeBtn.addEventListener('click', () => {
+        onRemove();
+        wrapper.remove();
+      });
+      wrapper.appendChild(img);
+      wrapper.appendChild(closeBtn);
+      containerEl.appendChild(wrapper);
+    }
+
+    document.getElementById('startFrameInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      startFrameFile = file;
+      renderSingleThumb(startFrameFile, document.getElementById('startFrameThumb'), () => {
+        startFrameFile = null;
+        document.getElementById('startFrameInput').value = '';
+        // If start is cleared, last is not allowed
+        lastFrameFile = null;
+        document.getElementById('lastFrameInput').value = '';
+        document.getElementById('lastFrameThumb').innerHTML = '';
+      });
+    });
+
+    document.getElementById('lastFrameInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      // Enforce: last cannot be used without start
+      if (!startFrameFile && file) {
+        document.getElementById('lastFrameInput').value = '';
+        showStatus('Last frame requires a Start frame first.', 'error');
+        return;
+      }
+      lastFrameFile = file;
+      renderSingleThumb(lastFrameFile, document.getElementById('lastFrameThumb'), () => {
+        lastFrameFile = null;
+        document.getElementById('lastFrameInput').value = '';
+      });
+    });
+
+    // ALEPH: VIDEO REQUIRED + OPTIONAL IMAGE
+    document.getElementById('alephVideoBtn').addEventListener('click', () => {
+      document.getElementById('alephVideoInput').click();
+    });
+    document.getElementById('alephImageBtn').addEventListener('click', () => {
+      document.getElementById('alephImageInput').click();
+    });
+
+    document.getElementById('alephVideoInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      alephVideoFile = file;
+      const container = document.getElementById('alephVideoThumb');
+      container.innerHTML = '';
+      if (!alephVideoFile) return;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20 bg-slate-900 flex items-center justify-center';
+      const label = document.createElement('span');
+      label.className = 'text-[10px] text-white/70 px-2 text-center';
+      label.textContent = 'VIDEO';
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
+      closeBtn.textContent = '×';
+      closeBtn.addEventListener('click', () => {
+        alephVideoFile = null;
+        document.getElementById('alephVideoInput').value = '';
+        wrapper.remove();
+      });
+      wrapper.appendChild(label);
+      wrapper.appendChild(closeBtn);
+      container.appendChild(wrapper);
+    });
+
+    document.getElementById('alephImageInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      alephImageFile = file;
+      renderSingleThumb(alephImageFile, document.getElementById('alephImageThumb'), () => {
+        alephImageFile = null;
+        document.getElementById('alephImageInput').value = '';
+      });
+    });
+
+
+    async function uploadImagesAndGetUrls(files) {
+      const list = Array.isArray(files) ? files : (uploadedFiles || []);
+      if (!list.length) return [];
+      if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
+        throw new Error('upload_bridge_missing');
+      }
+      const urls = [];
+      for (const file of list) {
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error('file_too_large');
+        }
+        const up = await window.kieUploadBridge.upload(file);
+        if (!up || !up.publicUrl) {
+          throw new Error('upload_failed');
+        }
+        urls.push(up.publicUrl);
+      }
+      return urls;
+    }
+
+    function buildBodyForModel(model, ctx) {
+      const { uid, runId, urls, prompt, aspect, duration } = ctx;
+      switch (model.id) {
+        case 'nano-banana':
+          return { urls, prompt: prompt || '.', format: 'png', size: aspect || 'auto', run_id: runId };
+        case 'nano-banana-pro':
+          return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', resolution: '1080p', run_id: runId };
+        case 'seedream-4-5':
+          return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', run_id: runId };
+        case 'gpt-image-1':
+          return { prompt, aspect_ratio: aspect || '1:1', image_urls: urls && urls.length ? urls : undefined, run_id: runId };
+        case 'imagen':
+          return { prompt, model: 'ultra', aspect_ratio: aspect || '1:1', run_id: runId };
+        case 'midjourney':
+          return { prompt, image_url: urls && urls[0] ? urls[0] : undefined, aspectRatio: aspect || '2:3', run_id: runId };
+        case 'mj-video':
+          return { prompt, imageUrl: urls && urls[0] ? urls[0] : undefined, aspectRatio: aspect || '1:1', run_id: runId };
+        case 'veo3-fast':
+        case 'veo3':
+          return {
+            prompt,
+            aspectRatio: aspect || '16:9',
+            duration: duration ? Number(duration) : 8,
+            imageUrl: urls && urls[0] ? urls[0] : undefined,
+            model: model.id === 'veo3-fast' ? 'veo3_fast' : 'veo3',
+            run_id: runId
+          };
+        case 'veo31-fast':
+        case 'veo31':
+          return {
+            prompt,
+            aspectRatio: aspect || '16:9',
+            duration: duration ? Number(duration) : 8,
+            startFrameUrl: urls && urls[0] ? urls[0] : undefined,
+            lastFrameUrl: urls && urls[1] ? urls[1] : undefined,
+            imageUrl: urls && urls[0] ? urls[0] : undefined,
+            model: model.id === 'veo31-fast' ? 'veo3_1_fast' : 'veo3_1',
+            run_id: runId
+          };
+        case 'sora2':
+          return {
+            prompt,
+            aspectRatio: aspect || '16:9',
+            duration: duration ? Number(duration) : 5,
+            imageUrl: urls && urls[0] ? urls[0] : undefined,
+            run_id: runId
+          };
+        case 'runway':
+          return {
+            prompt,
+            aspectRatio: aspect || '16:9',
+            duration: duration ? Number(duration) : 5,
+            imageUrl: urls && urls[0] ? urls[0] : undefined,
+            run_id: runId
+          };
+        case 'kling25':
+          return {
+            prompt,
+            aspect_ratio: aspect || '1:1',
+            duration: duration ? Number(duration) : 5,
+            image_url: urls && urls[0] ? urls[0] : undefined,
+            run_id: runId
+          };
+        case 'kling26':
+          return {
+            prompt,
+            aspect_ratio: aspect || '1:1',
+            duration: duration ? Number(duration) : 5,
+            image_url: urls && urls[0] ? urls[0] : undefined,
+            run_id: runId
+          };
+        case 'kling21':
+          return {
+            prompt,
+            duration: duration ? Number(duration) : 5,
+            firstFrameUrl: urls && urls[0] ? urls[0] : undefined,
+            lastFrameUrl: urls && urls[1] ? urls[1] : undefined,
+            run_id: runId
+          };
+        case 'aleph':
+          return {
+            prompt,
+            videoUrl: urls && urls[0] ? urls[0] : undefined,
+            imageUrl: urls && urls[1] ? urls[1] : undefined,
+            aspectRatio: aspect || '16:9',
+            run_id: runId
+          };
+        default:
+          return { prompt, run_id: runId };
+      }
+    }
+
+    async function runCurrentModel() {
+      if (!currentModel) {
+        showStatus('Please choose a model first.', 'error');
+        return;
+      }
+      const promptBox = document.getElementById('promptBox');
+      const rawPrompt = promptBox.value || '';
+      const prompt = rawPrompt.trim();
+      if (!prompt) {
+        showStatus('Please enter a prompt.', 'error');
+        return;
+      }
+
+      if (!currentUser) {
+        showStatus('Please log in first.', 'error');
+        return;
+      }
+
+      if (typeof currentModel.minCredits === 'number' && currentCredits < currentModel.minCredits) {
+        showStatus('Not enough credits for this model.', 'error');
+        return;
+      }
+
+            // Image / frame / video requirements
+      if (currentModel.useFrames) {
+        // Kling 2.1 requires start frame; Veo 3.1 start frame is optional
+        if (!currentModel.startOptional && !startFrameFile) {
+          showStatus('This model requires a Start frame image.', 'error');
+          return;
+        }
+        if (lastFrameFile && !startFrameFile) {
+          showStatus('Last frame requires a Start frame first.', 'error');
+          return;
+        }
+      } else if (currentModel.needsVideo) {
+        if (!alephVideoFile) {
+          showStatus('This model requires a video upload.', 'error');
+          return;
+        }
+      } else if (currentModel.needsImage && !uploadedFiles.length) {
+        showStatus('This model requires at least one image.', 'error');
+        return;
+      }
+
+      const runBtn = document.getElementById('runBtn');
+      runBtn.disabled = true;
+      showStatus('Preparing your request…');
+
+      try {
+        const urls = currentModel.useFrames
+          ? await uploadImagesAndGetUrls([startFrameFile, lastFrameFile].filter(Boolean))
+          : currentModel.needsVideo
+          ? await uploadImagesAndGetUrls([alephVideoFile, alephImageFile].filter(Boolean))
+          : await uploadImagesAndGetUrls(uploadedFiles);
+        const uid = currentUser.id;
+        const runId = `${uid}-${Date.now()}`;
+
+        const body = buildBodyForModel(currentModel, {
+          uid,
+          runId,
+          urls,
+          prompt,
+          aspect: currentAspect,
+          duration: currentDuration
+        });
+
+        const expectedOutputs = (currentModel && currentModel.id === 'midjourney') ? 4 : 1;
+const placeholderControllers = [];
+for (let i = 0; i < expectedOutputs; i++) {
+  const c = addResultCard({
+    run_id: runId,
+    provider: currentModel.name,
+    kind: currentModel.category,
+    prompt,
+    result_url: null,
+    status: 'processing'
+  }, { prepend: true });
+  if (c) placeholderControllers.push(c);
+}
+
+        const res = await fetch(currentModel.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-USER-ID': uid
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(() => '');
+          showStatus('Error from model: ' + (txt || `status ${res.status}`), 'error');
+          if (placeholderControllers && placeholderControllers.length) {
+            for (let i = 0; i < placeholderControllers.length; i++) {
+              placeholderControllers[i].apply({ status: 'failed', result_url: null });
+            }
+          }
+        } else {
+          showStatus(
+            `✅ Request submitted to ${currentModel.name}. You will see the result here and in Usage / History when it is ready.`,
+            'success'
+          );
+          await refreshCredits();
+          if (placeholderControllers && placeholderControllers.length) {
+            pollGeneration(runId, placeholderControllers);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        if (err && err.message === 'file_too_large') {
+          showStatus('One of the images is larger than 10MB.', 'error');
+        } else if (err && err.message === 'upload_bridge_missing') {
+          showStatus('Upload bridge is missing on this page.', 'error');
+        } else {
+          showStatus('Unexpected error while submitting the job.', 'error');
+        }
+      } finally {
+        runBtn.disabled = false;
+      }
+    }
+
+    document.getElementById('runBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      runCurrentModel();
+    });
+
+    // boot
+    (async () => {
+      await loadUser();
+      setMode('image');
+      updateModelButtonLabels();
+      configureControlsForModel();
+    })();
+  </script>
 </body>
 </html>
