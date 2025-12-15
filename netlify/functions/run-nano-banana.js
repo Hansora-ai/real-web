@@ -1,5 +1,5 @@
 // netlify/functions/run-nano-banana.js
-// Nano Banana (KIE) job launcher with Kling 2.6-style server-side credit debit (idempotent per run_id).
+// Nano Banana (KIE) launcher with server-side credit debit (idempotent per run_id).
 // Client must NOT debit credits. Credits are charged only here using SUPABASE_SERVICE_ROLE_KEY.
 //
 // Env: KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
@@ -9,305 +9,263 @@ const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+
 const KIE_KEY  = process.env.KIE_API_KEY || '';
 const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const SITE_BASE = (process.env.SITE_BASE || 'https://webhansora.netlify.app').replace(/\/+$/,'');
-const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-callback`; // your existing callback
+const SITE_BASE_ENV = (process.env.SITE_BASE || '').replace(/\/+$/,'');
+const VERSION_TAG  = "nb_fn_idempotent_v3";
 
-const VERSION_TAG  = "nb_fn_kling26_style_v1";
-
-function inferSiteBase(event){
-  try{
-    const h = (event && event.headers) ? event.headers : {};
-    const host = h['x-forwarded-host'] || h['host'] || h['Host'];
-    if (!host) return null;
-    const proto = h['x-forwarded-proto'] || 'https';
-    return `${proto}://${host}`;
-  }catch(_e){ return null; }
+function json(statusCode, body, extraHeaders = {}) {
+  return {
+    statusCode,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      ...extraHeaders,
+    },
+    body: JSON.stringify(body),
+  };
 }
 
-
-function cors(){ return {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': '*',
-}; }
-const json = (c,o)=>({ statusCode:c, headers:{ 'Content-Type':'application/json', ...cors() }, body:JSON.stringify(o) });
-
-function getHeader(event, k){ return event.headers?.[k] || event.headers?.[k.toLowerCase()] || event.headers?.[k.toUpperCase()] || null; }
-function getUID(event, body){
-  const qs = new URLSearchParams(event.queryStringParameters || {});
-  return ((getHeader(event,'x-user-id')||'') || (body && (body.uid||'')) || (qs.get('uid')||'')).trim();
+function getHeader(event, name) {
+  const h = event.headers || {};
+  const key = Object.keys(h).find(k => k.toLowerCase() === name.toLowerCase());
+  return key ? h[key] : '';
 }
 
-async function getUidFromBearer(event){
-  const auth = (getHeader(event,'authorization')||'').trim();
-  if (!auth) return '';
-  const m = auth.match(/Bearer\s+(.+)/i);
-  if (!m) return '';
-  const token = (m[1]||'').trim();
-  if (!token || !SUPABASE_URL || !SERVICE_KEY) return '';
-  try{
-    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${token}` }
-    });
-    if (!r.ok) return '';
-    const u = await r.json().catch(()=>null);
-    return (u && (u.id || u.user?.id) ? String(u.id || u.user.id) : '').trim();
-  }catch(_e){ return ''; }
+function getBaseFromEvent(event) {
+  const proto = (getHeader(event, 'x-forwarded-proto') || 'https').split(',')[0].trim() || 'https';
+  const host  = (getHeader(event, 'x-forwarded-host') || getHeader(event, 'host') || '').split(',')[0].trim();
+  if (!host) return SITE_BASE_ENV || '';
+  return `${proto}://${host}`;
 }
 
-
-function normalizeImageSize(v) {
-  if (!v) return "auto";
-  const s = String(v).trim().toLowerCase();
-
-  // Pass through if already valid ratio or auto
-  const direct = new Set(["auto", "1:1", "3:4", "4:3", "9:16", "16:9"]);
-  if (direct.has(s)) return s;
-
-  // Map named tokens to ratio strings (KIE-accepted)
-  if (s === "square") return "1:1";
-  if (s === "portrait_3_4") return "3:4";
-  if (s === "portrait_9_16") return "9:16";
-  if (s === "landscape_4_3") return "4:3";
-  if (s === "landscape_16_9") return "16:9";
-
-  // Coerce variants like "16_9", "16-9" → "16:9"
-  const coerced = s.replace(/(\d)[_\-:](\d)/g, "$1:$2");
-  if (direct.has(coerced)) return coerced;
-
-  return "auto";
+function safeJsonParse(s) {
+  try { return JSON.parse(s || '{}'); } catch { return {}; }
 }
 
+async function supaFetch(path, opts = {}) {
+  const url = `${SUPABASE_URL}${path}`;
+  const headers = {
+    apikey: SERVICE_KEY,
+    Authorization: `Bearer ${SERVICE_KEY}`,
+    ...opts.headers,
+  };
+  return fetch(url, { ...opts, headers });
+}
 
-async function fetchUserGenByRunId(uid, run_id){
+async function fetchUserGenByRunId(uid, run_id) {
   if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) return null;
-  try{
-    const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id,meta,provider,kind,prompt,result_url,created_at`;
-    const r = await fetch(ug + q, { headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
-    if (!r.ok) return null;
-    const arr = await r.json().catch(()=>null);
-    return (Array.isArray(arr) && arr[0]) ? arr[0] : null;
-  }catch(_e){ return null; }
+  const q = new URLSearchParams();
+  q.set('user_id', `eq.${uid}`);
+  q.set('provider', `eq.nano-banana`);
+  // PostgREST JSON path filter: meta->>run_id
+  q.set('meta->>run_id', `eq.${run_id}`);
+  q.set('select', 'id,status,result_url,meta,created_at');
+  const r = await supaFetch(`/rest/v1/user_generations?${q.toString()}`, { method: 'GET' });
+  if (!r.ok) return null;
+  const arr = await r.json().catch(() => null);
+  return (Array.isArray(arr) && arr[0]) ? arr[0] : null;
 }
 
-async function seedUserGeneration(uid, run_id, prompt){
-  if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { row_id:null };
-  try{
-    const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-    const meta = { source:'nano-banana', run_id, model:'nano-banana', status:'pending' };
-    const rIns = await fetch(ug, {
-      method: 'POST',
-      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-      body: JSON.stringify({ user_id: uid, provider: 'nano-banana', kind: 'image', prompt, result_url: null, meta }),
-    });
-    if (!rIns.ok) return { row_id:null };
-    const arr = await rIns.json().catch(()=>null);
-    return { row_id: (Array.isArray(arr) && arr[0] && arr[0].id) ? arr[0].id : null };
-  }catch(_e){ return { row_id:null }; }
+async function seedUserGeneration(uid, run_id, prompt) {
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) return null;
+  const meta = {
+    source: 'nano-banana',
+    run_id,
+    model: 'nano-banana',
+    status: 'pending',
+    charged: "false", // store as string for reliable meta->>charged filter
+    version: VERSION_TAG,
+  };
+  const r = await supaFetch(`/rest/v1/user_generations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      user_id: uid,
+      provider: 'nano-banana',
+      kind: 'image',
+      prompt: prompt || null,
+      status: 'pending',
+      result_url: null,
+      meta,
+    }),
+  });
+  if (!r.ok) return null;
+  const arr = await r.json().catch(() => null);
+  return (Array.isArray(arr) && arr[0]) ? arr[0] : null;
 }
 
-async function debitCredits(uid, cost){
-  if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { ok:false, error:'missing_env_or_uid' };
-  try{
-    const profUrl = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
-    const r0 = await fetch(profUrl, { headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
-    if (!r0.ok) return { ok:false, error:'profile_fetch_failed', status:r0.status };
-    const arr = await r0.json().catch(()=>null);
-    const cur = (Array.isArray(arr) && arr[0] && typeof arr[0].credits==='number') ? arr[0].credits : 0;
-    if (cur < cost) return { ok:false, error:'insufficient_credits', credits: cur };
-    const newCredits = Math.max(0, cur - cost);
-    const updUrl = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`;
-    const r1 = await fetch(updUrl, {
-      method:'PATCH',
-      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer':'return=representation' },
-      body: JSON.stringify({ credits: newCredits })
-    });
-    if (!r1.ok) return { ok:false, error:'profile_update_failed', status:r1.status };
-    return { ok:true, credits:newCredits };
-  }catch(e){ return { ok:false, error:'server_exception', details:String(e&&e.message||e) }; }
-}
-
-async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
-  if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) {
-    // Fallback: still debit server-side (but cannot persist idempotency)
-    const debit = await debitCredits(uid, cost);
-    return { ok: !!debit.ok, debit, idempotent: false, already: false };
-  }
-
-  // If already charged, do nothing
-  try{
-    const existing = await fetchUserGenByRunId(uid, run_id);
-    const meta0 = existing?.meta || baseMeta || {};
-    if (String(meta0?.charged || '').toLowerCase() === 'true'){
-      return { ok:true, debit:{ ok:true, credits: null }, idempotent:true, already:true };
-    }
-
-    // Claim
-    const claim = `c_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    const mergedForClaim = { ...(meta0||{}), ...(baseMeta||{}), charge_claim: claim };
-
-    // Only one request can set charge_claim when it's null and charged is null
-    const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&meta->>charged=is.null&meta->>charge_claim=is.null&select=id`;
-    const rClaim = await fetch(ug + q, {
-      method: 'PATCH',
-      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=representation' },
-      body: JSON.stringify({ meta: mergedForClaim }),
-    });
-
-    const claimedArr = await rClaim.json().catch(()=>[]);
-    const claimed = (rClaim.ok && Array.isArray(claimedArr) && claimedArr.length > 0);
-
-    if (!claimed){
-      // Someone else claimed/charged already. Re-read and treat as already charged.
-      const after = await fetchUserGenByRunId(uid, run_id);
-      const metaAfter = after?.meta || {};
-      if (String(metaAfter?.charged || '').toLowerCase() === 'true'){
-        return { ok:true, debit:{ ok:true, credits: null }, idempotent:true, already:true };
+async function claimChargeByRowId(rowId) {
+  // Atomically flip meta.charged from "false" to "true".
+  // If another invocation already claimed, this returns {claimed:false}.
+  if (!SUPABASE_URL || !SERVICE_KEY || !rowId) return { claimed: false };
+  const claim_id = crypto.randomUUID();
+  const q = new URLSearchParams();
+  q.set('id', `eq.${rowId}`);
+  q.set('meta->>charged', 'eq.false');
+  const r = await supaFetch(`/rest/v1/user_generations?${q.toString()}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      meta: {
+        charged: "true",
+        charge_claim_id: claim_id,
+        charge_claimed_at: new Date().toISOString(),
+        version: VERSION_TAG,
       }
-      // If it's claimed but not charged yet, do not double-debit; ask client to wait/retry
-      return { ok:false, error:'charge_in_progress', idempotent:true, already:false };
-    }
-
-    // Debit now (after provider task is created)
-    const debit = await debitCredits(uid, cost);
-    if (!debit.ok){
-      // Rollback claim so user can retry later
-      const rollbackMeta = { ...(mergedForClaim||{}) };
-      delete rollbackMeta.charge_claim;
-      await patchUserGenerationMetaById(row_id || (Array.isArray(claimedArr)&&claimedArr[0]?.id) || (existing?.id), rollbackMeta);
-      return { ok:false, debit, idempotent:true, already:false };
-    }
-
-    // Mark charged
-    const chargedMeta = { ...(mergedForClaim||{}), charged:'true', charged_cost: cost, charged_at: (new Date()).toISOString() };
-    await patchUserGenerationMetaById(row_id || (Array.isArray(claimedArr)&&claimedArr[0]?.id) || (existing?.id), chargedMeta);
-
-    return { ok:true, debit, idempotent:true, already:false };
-  }catch(e){
-    const debit = await debitCredits(uid, cost);
-    return { ok: !!debit.ok, debit, idempotent:false, already:false, error: String(e && e.message || e) };
-  }
+    }),
+  });
+  if (!r.ok) return { claimed: false };
+  const arr = await r.json().catch(() => null);
+  const claimed = Array.isArray(arr) && arr.length > 0;
+  return { claimed, claim_id };
 }
 
+async function debitCredits(uid, cost) {
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { ok: false, error: 'missing_env_or_uid' };
+  const costNum = Number(cost);
+  if (!Number.isFinite(costNum) || costNum <= 0) return { ok: false, error: 'invalid_cost' };
+
+  // Read credits
+  const q = new URLSearchParams();
+  q.set('user_id', `eq.${uid}`);
+  q.set('select', 'credits');
+  const r0 = await supaFetch(`/rest/v1/profiles?${q.toString()}`, { method: 'GET' });
+  if (!r0.ok) return { ok: false, error: 'profile_read_failed', status: r0.status };
+  const arr = await r0.json().catch(() => null);
+  const credits = Number(arr && arr[0] ? arr[0].credits : NaN);
+  if (!Number.isFinite(credits)) return { ok: false, error: 'credits_missing' };
+  if (credits < costNum) return { ok: false, error: 'not_enough_credits', credits };
+
+  const newCredits = Math.round((credits - costNum) * 10) / 10;
+
+  // Update with optimistic check to reduce double-debit risk further.
+  // Only update if credits still equals previous credits.
+  const q2 = new URLSearchParams();
+  q2.set('user_id', `eq.${uid}`);
+  q2.set('credits', `eq.${credits}`);
+  const r1 = await supaFetch(`/rest/v1/profiles?${q2.toString()}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({ credits: newCredits }),
+  });
+  if (!r1.ok) {
+    return { ok: false, error: 'profile_update_failed', status: r1.status };
+  }
+  return { ok: true, credits_before: credits, credits_after: newCredits };
+}
 
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: { ...cors() } };
-  if (event.httpMethod !== 'POST') return json(405, { ok:false, error:'method_not_allowed', version: VERSION_TAG });
-
-  try{
-    const body = JSON.parse(event.body || '{}');
-
-    // Identify user (X-USER-ID OR uid OR querystring) and fallback to bearer token
-    let uid = getUID(event, body);
-    if (!uid || uid === 'anon'){
-      const uidFromBearer = await getUidFromBearer(event);
-      if (uidFromBearer) uid = uidFromBearer;
-    }
-    if (!uid) uid = 'anon';
-
-    const run_id = (body.run_id || body.runId || `${uid}-${Date.now()}`).toString();
-
-    // Required inputs
-    const rawUrls = Array.isArray(body.urls) ? body.urls : [];
-    if (!rawUrls.length) {
-      return json(400, { ok:false, submitted:false, error:'urls_required', version: VERSION_TAG });
-    }
-
-    // Normalize/encode URLs
-    const image_urls = rawUrls.map(u => encodeURI(String(u)));
-
-    const prompt  = (body.prompt || '').toString();
-    const format  = (body.format || 'png').toString().toLowerCase();
-    const size    = normalizeImageSize(body.size);
-
-    // Cost (must match UI)
-    const cost = 0.5;
-
-    // Seed user_generations (pending)
-    const seeded = await seedUserGeneration(uid, run_id, prompt);
-    const row_id = seeded?.row_id || null;
-
-    // Provider callback includes uid + run_id (for Make/subscenario and for DB match)
-    const cbBase = (process.env.SITE_BASE || inferSiteBase(event) || SITE_BASE).replace(/\/+$|\s+$/g,'');
-    const cb = `${cbBase}/.netlify/functions/kie-callback?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
-
-    // Create task at KIE (Nano Banana edit)
-    const payload = {
-      model: 'google/nano-banana-edit',
-      input: {
-        prompt,
-        image_urls,
-        output_format: format,
-        image_size: size
-      },
-      webhook_url: cb,
-      webhookUrl:  cb,
-      callbackUrl: cb
-    };
-
-    const create = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
-      method:'POST',
-      headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${KIE_KEY}` },
-      body: JSON.stringify(payload)
-    });
-
-    const js = await create.json().catch(()=> ({}));
-    const taskId = js.taskId || js.id || js.data?.taskId || js.data?.id || null;
-
-    if (!create.ok){
-      // update meta status = failed_create (best effort)
-      try{
-        if (SUPABASE_URL && SERVICE_KEY && row_id){
-          await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(row_id)}`, {
-            method:'PATCH',
-            headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
-            body: JSON.stringify({ meta: { source:'nano-banana', run_id, model:'nano-banana', status:'create_failed', task_id: taskId, raw: js } }),
-          });
-        }
-      }catch{}
-      return json(create.status || 500, { ok:false, submitted:false, error:'create_failed', status:create.status, response: js, version: VERSION_TAG });
-    }
-
-    // Update meta status=processing + task_id (best effort)
-    try{
-      if (SUPABASE_URL && SERVICE_KEY && row_id){
-        await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(row_id)}`, {
-          method:'PATCH',
-          headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
-          body: JSON.stringify({ meta: { source:'nano-banana', run_id, model:'nano-banana', status:'processing', task_id: taskId } }),
-        });
-      }
-    }catch{}
-
-    // Debit credits AFTER provider accepted the task and exactly once per (uid, run_id)
-    const baseMeta = { source:'nano-banana', run_id, model:'nano-banana', status:'processing', task_id: taskId };
-    const charge = await chargeOnceForRun(uid, run_id, cost, row_id, baseMeta);
-
-    if (!charge.ok){
-      if (charge.debit && !charge.debit.ok && (charge.debit.error === 'insufficient_credits' || charge.debit.error === 'insufficient')){
-        return json(402, { ok:false, submitted:false, error:'not_enough_credits', details: charge.debit, version: VERSION_TAG });
-      }
-      if (charge.error === 'charge_in_progress'){
-        return json(409, { ok:false, submitted:false, error:'charge_in_progress', version: VERSION_TAG });
-      }
-      return json(500, { ok:false, submitted:false, error:'charge_failed', details: charge.debit || charge.error || charge, version: VERSION_TAG });
-    }
-
-    return json(201, {
-      ok:true,
-      submitted:true,
-      taskId,
-      run_id,
-      cost,
-      credits_after: (charge.debit && charge.debit.credits !== null ? charge.debit.credits : undefined),
-      already_charged: !!charge.already,
-      version: VERSION_TAG,
-      callback: cb
-    });
-
-  }catch(e){
-    return json(500, { ok:false, submitted:false, error:'exception', message:String(e), version: VERSION_TAG });
+  // CORS preflight: NEVER charge
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'POST,OPTIONS' }, body: '' };
   }
+  if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'method_not_allowed' });
+
+  if (!KIE_KEY) return json(500, { ok:false, error:'missing_kie_api_key' });
+  if (!SUPABASE_URL || !SERVICE_KEY) return json(500, { ok:false, error:'missing_supabase_env' });
+
+  const body = safeJsonParse(event.body);
+  const uid = (getHeader(event, 'x-user-id') || body.uid || '').trim();
+  const run_id = (body.run_id || body.runId || '').trim() || crypto.randomUUID();
+  const prompt = (body.prompt || '.').toString();
+  const image_urls = Array.isArray(body.urls) ? body.urls : (Array.isArray(body.image_urls) ? body.image_urls : []);
+  const format = (body.format || body.output_format || 'png').toString();
+  const size = (body.size || body.image_size || 'auto').toString();
+  const cost = 0.5;
+
+  if (!uid) return json(401, { ok:false, error:'missing_uid' });
+  if (!image_urls.length) return json(400, { ok:false, error:'missing_image_urls' });
+
+  // Ensure a user_generations row exists
+  let row = await fetchUserGenByRunId(uid, run_id);
+  if (!row) row = await seedUserGeneration(uid, run_id, prompt);
+  if (!row || !row.id) return json(500, { ok:false, error:'cannot_create_or_find_user_generation' });
+
+  // If already charged, do not charge again
+  const alreadyCharged = row.meta && (row.meta.charged === true || row.meta.charged === "true");
+  let debit = { ok: true, skipped: true };
+
+  if (!alreadyCharged) {
+    const claim = await claimChargeByRowId(row.id);
+    if (claim.claimed) {
+      debit = await debitCredits(uid, cost);
+      if (!debit.ok) {
+        // Mark charge failed and flip charged back to false so user can retry safely.
+        try {
+          await supaFetch(`/rest/v1/user_generations?id=eq.${encodeURIComponent(row.id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+            body: JSON.stringify({ meta: { charged: "false", charge_failed: true, charge_error: debit.error, version: VERSION_TAG } }),
+          });
+        } catch {}
+        return json(402, { ok:false, error: debit.error, run_id, version: VERSION_TAG });
+      }
+    } else {
+      // Another invocation claimed; treat as charged elsewhere
+      debit = { ok: true, skipped: true, note: 'charge_claimed_elsewhere' };
+    }
+  }
+
+  // Build callback URL (use actual host unless SITE_BASE is set)
+  const siteBase = SITE_BASE_ENV || getBaseFromEvent(event);
+  const callbackBase = `${siteBase.replace(/\/+$/,'')}/.netlify/functions/kie-callback`;
+  const cb = `${callbackBase}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}&model=nano-banana`;
+
+  // Create KIE task
+  const payload = {
+    model: 'google/nano-banana-edit',
+    input: {
+      prompt,
+      image_urls,
+      output_format: format,
+      image_size: size,
+    },
+    webhook_url: cb,
+    callbackUrl: cb,
+  };
+
+  const create = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  const js = await create.json().catch(() => null);
+
+  // KIE response handling (store task_id/status best-effort)
+  const taskId = js && (js.task_id || js.taskId || js.data?.task_id || js.data?.taskId);
+  const ok = create.ok && !!taskId;
+
+  try {
+    await supaFetch(`/rest/v1/user_generations?id=eq.${encodeURIComponent(row.id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        status: ok ? 'processing' : 'create_failed',
+        meta: {
+          source: 'nano-banana',
+          run_id,
+          model: 'nano-banana',
+          status: ok ? 'processing' : 'create_failed',
+          task_id: taskId || null,
+          callback: cb,
+          version: VERSION_TAG,
+        },
+      }),
+    });
+  } catch {}
+
+  if (!ok) {
+    return json(create.status || 500, { ok:false, error:'kie_create_failed', run_id, response: js, version: VERSION_TAG });
+  }
+
+  return json(200, {
+    ok: true,
+    submitted: true,
+    run_id,
+    task_id: taskId,
+    cost,
+    credits_before: debit.credits_before,
+    credits_after: debit.credits_after,
+    version: VERSION_TAG,
+  }, { 'Access-Control-Allow-Origin': '*' });
 };
