@@ -96,6 +96,21 @@ async function seedUserGeneration(uid, run_id, prompt){
   }catch(_e){ return { row_id:null }; }
 }
 
+async function patchUserGenerationMetaById(id, meta){
+  if (!SUPABASE_URL || !SERVICE_KEY || !id) return { ok:false, error:'missing_env_or_id' };
+  try{
+    const url = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(id)}`;
+    const r = await fetch(url, {
+      method:'PATCH',
+      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      body: JSON.stringify({ meta })
+    });
+    return { ok: !!r.ok, status: r.status };
+  }catch(e){
+    return { ok:false, error:'patch_failed', details:String(e && e.message || e) };
+  }
+}
+
 async function debitCredits(uid, cost){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { ok:false, error:'missing_env_or_uid' };
   try{
@@ -175,10 +190,11 @@ async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
 
     return { ok:true, debit, idempotent:true, already:false };
   }catch(e){
-    const debit = await debitCredits(uid, cost);
-    return { ok: !!debit.ok, debit, idempotent:false, already:false, error: String(e && e.message || e) };
+    // IMPORTANT: do NOT debit here. Any exception in the idempotent flow must not trigger a second charge.
+    return { ok:false, error:'charge_exception', idempotent:false, already:false, details: String(e && (e.message||e) || e) };
   }
 }
+
 
 
 exports.handler = async (event) => {
