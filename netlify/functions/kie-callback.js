@@ -17,18 +17,6 @@ const KIE_KEY  = process.env.KIE_API_KEY;
 
 const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
 
-
-
-function isMidJourney(data){
-  try{
-    const m = String(get(data,'model') || get(data,'meta.model') || get(data,'metadata.model') || get(data,'data.model') || '');
-    const p = String(get(data,'provider') || get(data,'meta.provider') || '');
-    const s = (m + ' ' + p).toLowerCase();
-    if (s.includes('midjourney') || s.includes('mj')) return true;
-  }catch{}
-  return false;
-}
-
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
   if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') {
@@ -87,8 +75,6 @@ exports.handler = async (event) => {
     // 1) Collect URLs from webhook body
     let urls = pickResultUrls(data, 4);
 
-
-    const isMJ = isMidJourney(data);
     // 2) Verify via KIE to get full set when taskId is known
     if (taskId && KIE_KEY) {
       try {
@@ -100,8 +86,8 @@ exports.handler = async (event) => {
     // 3) Filter allowed
     let finalUrls = urls.filter(isAllowedFinal).slice(0,4);
 
-    // 4) MidJourney fallback: if only one allowed URL and it ends with _0_0, deduce _1/_2/_3
-    if (isMJ && finalUrls.length === 1) {
+    // 4) Fallback: if only one allowed URL and it ends with _0_0, deduce _1/_2/_3
+    if (finalUrls.length === 1) {
       const derived = deduceMJ4(finalUrls[0]);
       if (derived.length > 1) finalUrls = derived;
     }
@@ -110,61 +96,25 @@ exports.handler = async (event) => {
       return reply(200, { ok:true, saved:false, note:'no allowed final image_url; not inserting' });
     }
 
-    // Update user_generations with the first URL (safe merge; do not clobber meta)
+    // Update user_generations with the first URL
     try {
       if (UG_URL && SERVICE_KEY && (uid || run_id)) {
         const q = (uid && run_id)
           ? `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`
           : `?meta->>run_id=eq.${encodeURIComponent(run_id||'')}`;
-
-        // Read existing row (if any) so we can merge meta safely
-        const chk = await fetch(UG_URL + q + '&select=id,meta,kind,provider', { headers: sb() });
-        let existing = null;
-        try {
-          const arr = await chk.json();
-          if (Array.isArray(arr) && arr[0]) existing = arr[0];
-        } catch {}
-
-        const prevMeta = (existing && typeof existing.meta === 'object' && existing.meta) ? existing.meta : {};
-        const nextMeta = {
-          ...prevMeta,
-          run_id: run_id || prevMeta.run_id,
-          task_id: taskId || prevMeta.task_id,
-          status: 'done'
-        };
-
-        // If MidJourney and we have up to 4 final urls, persist them in meta for UI expansion
-        if (isMJ && Array.isArray(finalUrls) && finalUrls.length) {
-          nextMeta.images = finalUrls.slice(0,4);
-        }
-
-        const bodyJson = {
-          result_url: finalUrls[0],
-          kind: existing && existing.kind ? existing.kind : 'image',
-          meta: nextMeta
-        };
-
-        if (existing && existing.id) {
-          await fetch(UG_URL + `?id=eq.${encodeURIComponent(existing.id)}`, {
-            method: 'PATCH',
-            headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-            body: JSON.stringify(bodyJson)
-          });
-        } else {
-          // Create a row only when we have uid; otherwise skip creation (avoid cross-model leakage)
-          if (uid) {
-            await fetch(UG_URL, {
-              method: 'POST',
-              headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-              body: JSON.stringify({ user_id: uid, ...bodyJson })
-            });
-          }
-        }
+        const bodyJson = { result_url: finalUrls[0],kind: 'image', meta: { run_id, task_id: taskId, status: 'done' } };
+        const chk = await fetch(UG_URL + q + '&select=id', { headers: sb() });
+        let hasRow = false;
+        try { const arr = await chk.json(); hasRow = Array.isArray(arr) && arr.length > 0; } catch {}
+        await fetch(UG_URL + (hasRow ? q : ''), {
+          method: hasRow ? 'PATCH' : 'POST',
+          headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify(hasRow ? bodyJson : { user_id: uid, ...bodyJson })
+        });
       }
     } catch {}
 
     // Insert ALL image rows (merge-duplicates avoids dup rows)
- (merge-duplicates avoids dup rows)
     const rows = finalUrls.map(u => ({
       user_id: uid || '00000000-0000-0000-0000-000000000000',
       run_id:  run_id || null,
@@ -178,7 +128,7 @@ exports.handler = async (event) => {
       body: JSON.stringify(rows)
     });
 
-    return reply(200, { ok: resp.ok, saved:true, count: rows.length, urls: urlsToInsert });
+    return reply(200, { ok: resp.ok, saved:true, count: rows.length, urls: finalUrls });
 
   } catch (e) {
     return reply(200, { ok:false, error:String(e) });
