@@ -192,7 +192,8 @@
       <!-- SECOND ROW: upload, AR/duration, cost, run -->
       <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 text-[11px] sm:text-xs">
         <!-- Upload + previews -->
-        <div class="flex items-center gap-2 md:w-1/3">
+        <div class="md:w-1/3 flex flex-col gap-1.5">
+          <div class="flex items-center gap-2">
           <!-- Default image upload (general models) -->
           <input id="imageInput" type="file" accept="image/*" class="hidden" multiple />
           <button
@@ -245,6 +246,11 @@
               <div id="alephImageThumb" class="flex gap-1.5"></div>
             </div>
           </div>
+          </div>
+          <div class="w-full">
+            <p id="status" class="text-[11px] text-amber-200/80 min-h-[1.1rem]"></p>
+        </div>
+
         </div>
 
         <!-- Aspect & duration -->
@@ -273,8 +279,6 @@
             </div>
           </div>
         </div>
-
-      <p id="status" class="text-[11px] text-amber-200/80 min-h-[1.1rem]"></p>
     </div>
   </div>
 
@@ -580,43 +584,86 @@
       }
     }
 
-    async function pollGeneration(runId, controller) {
-      if (!currentUser || !runId || !controller) return;
-      const maxMs = 210000;
-      const started = Date.now();
-      while (Date.now() - started < maxMs) {
-        await new Promise((r) => setTimeout(r, 3000));
-        try {
-          const { data, error } = await supabaseClient
-            .from('user_generations')
-            .select('provider, kind, prompt, result_url, meta, created_at')
-            .eq('user_id', currentUser.id)
-            .eq('meta->>run_id', runId)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+    async function __extractResultUrls(row) {
+  try {
+    // Prefer explicit arrays in meta (provider-specific)
+    const meta = row && row.meta ? row.meta : null;
+    const candidates = [];
+    const pushMany = (arr) => {
+      if (Array.isArray(arr)) arr.forEach((u) => { if (typeof u === 'string' && u.trim()) candidates.push(u.trim()); });
+    };
+    if (meta) {
+      // Common patterns
+      pushMany(meta.images);
+      pushMany(meta.image_urls);
+      pushMany(meta.result_urls);
+      if (meta.result && meta.result.images) pushMany(meta.result.images);
+      if (meta.output && meta.output.images) pushMany(meta.output.images);
+    }
+    // Fallback to single result_url
+    if (row && typeof row.result_url === 'string' && row.result_url.trim()) {
+      if (!candidates.length) candidates.push(row.result_url.trim());
+    }
+    // Dedupe while preserving order
+    const seen = new Set();
+    return candidates.filter((u) => (seen.has(u) ? false : (seen.add(u), true)));
+  } catch (e) {
+    return [];
+  }
+}
 
-          if (error) {
-            console.warn('pollGeneration error', error);
-            break;
-          }
-          if (!data) continue;
+async function pollGeneration(runId, controllers) {
+  if (!currentUser || !runId || !controllers || !controllers.length) return;
+  const maxMs = 210000;
+  const started = Date.now();
+  while (Date.now() - started < maxMs) {
+    await new Promise((r) => setTimeout(r, 3000));
+    try {
+      const { data, error } = await supabaseClient
+        .from('user_generations')
+        .select('provider, kind, prompt, result_url, meta, created_at')
+        .eq('user_id', currentUser.id)
+        .eq('meta->>run_id', runId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-          const status = data.meta && data.meta.status ? data.meta.status : (data.result_url ? 'ready' : 'processing');
-          controller.apply({
-            status,
-            result_url: data.result_url
+      if (error) {
+        console.warn('pollGeneration error', error);
+        break;
+      }
+      if (!data) continue;
+
+      const status = data.meta && data.meta.status ? data.meta.status : (data.result_url ? 'ready' : 'processing');
+      const urls = __extractResultUrls(data);
+
+      // Apply to 1..N placeholder cards
+      if (urls && urls.length) {
+        for (let i = 0; i < controllers.length; i++) {
+          controllers[i].apply({
+            status: status,
+            result_url: urls[i] || null
           });
-
-          if (status.toLowerCase().includes('fail') || status.toLowerCase().includes('error') || data.result_url) {
-            return;
-          }
-        } catch (e) {
-          console.warn('pollGeneration exception', e);
-          break;
+        }
+      } else {
+        for (let i = 0; i < controllers.length; i++) {
+          controllers[i].apply({ status: status });
         }
       }
+
+      if (
+        status.toLowerCase().includes('fail') ||
+        status.toLowerCase().includes('error') ||
+        (urls && urls.length)
+      ) {
+        return;
+      }
+    } catch (e) {
+      console.warn('pollGeneration exception', e);
+      break;
     }
+  }
+}
 
     // === MODELS CONFIG ===
     const MODELS = [
@@ -709,7 +756,7 @@
         description: 'MidJourney-style image generation.',
         endpoint: '/.netlify/functions/run-midjourney',
         needsImage: false,
-        maxFiles: 1,
+        maxFiles: 4,
         aspectOptions: ['2:3', '3:2', '1:1', '9:16', '16:9'],
         defaultAspect: '2:3',
         durations: null,
@@ -1503,14 +1550,19 @@
           duration: currentDuration
         });
 
-        const placeholderController = addResultCard({
-          run_id: runId,
-          provider: currentModel.name,
-          kind: currentModel.category,
-          prompt,
-          result_url: null,
-          status: 'processing'
-        }, { prepend: true });
+        const expectedOutputs = (currentModel && currentModel.id === 'midjourney') ? 4 : 1;
+const placeholderControllers = [];
+for (let i = 0; i < expectedOutputs; i++) {
+  const c = addResultCard({
+    run_id: runId,
+    provider: currentModel.name,
+    kind: currentModel.category,
+    prompt,
+    result_url: null,
+    status: 'processing'
+  }, { prepend: true });
+  if (c) placeholderControllers.push(c);
+}
 
         const res = await fetch(currentModel.endpoint, {
           method: 'POST',
@@ -1524,8 +1576,10 @@
         if (!res.ok) {
           const txt = await res.text().catch(() => '');
           showStatus('Error from model: ' + (txt || `status ${res.status}`), 'error');
-          if (placeholderController) {
-            placeholderController.apply({ status: 'failed', result_url: null });
+          if (placeholderControllers && placeholderControllers.length) {
+            for (let i = 0; i < placeholderControllers.length; i++) {
+              placeholderControllers[i].apply({ status: 'failed', result_url: null });
+            }
           }
         } else {
           showStatus(
@@ -1533,8 +1587,8 @@
             'success'
           );
           await refreshCredits();
-          if (placeholderController) {
-            pollGeneration(runId, placeholderController);
+          if (placeholderControllers && placeholderControllers.length) {
+            pollGeneration(runId, placeholderControllers);
           }
         }
       } catch (err) {
