@@ -1,19 +1,19 @@
-// netlify/functions/run-nano-banana.js
-// Nano Banana (KIE) job launcher with Kling 2.6-style server-side credit debit (idempotent per run_id).
+// netlify/functions/run-nano-banana-pro.js
+// Nano Banana Pro launcher with Kling 2.6-style server-side credit debit (idempotent per run_id).
 // Client must NOT debit credits. Credits are charged only here using SUPABASE_SERVICE_ROLE_KEY.
 //
-// Env: KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-// Opt: KIE_BASE_URL, SITE_BASE
+// Env: KIE_CREATE_URL (optional), KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SITE_BASE (optional)
 //
-const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/, '');
-const CREATE_URL = process.env.KIE_CREATE_URL || `${KIE_BASE}/api/v1/jobs/createTask`;
-const KIE_KEY  = process.env.KIE_API_KEY || '';
-const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
-const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const SITE_BASE = (process.env.SITE_BASE || 'https://webhansora.netlify.app').replace(/\/+$/,'');
-const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-callback`; // your existing callback
+const CREATE_URL = process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/jobs/createTask";
+const API_KEY    = process.env.KIE_API_KEY || "";
 
-const VERSION_TAG  = "nb_fn_kling26_style_v1";
+const SUPABASE_URL  = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+const SITE_BASE   = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/, "");
+const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/kie-callback`;
+
+const VERSION_TAG  = "nb_pro_fn_kling26_style_v1";
 
 function cors(){ return {
   'Access-Control-Allow-Origin': '*',
@@ -45,13 +45,24 @@ async function getUidFromBearer(event){
   }catch(_e){ return ''; }
 }
 
-
 function normalizeImageSize(v) {
   if (!v) return "auto";
   const s = String(v).trim().toLowerCase();
 
   // Pass through if already valid ratio or auto
-  const direct = new Set(["auto", "1:1", "3:4", "4:3", "9:16", "16:9"]);
+  const direct = new Set([
+    "auto",
+    "1:1",
+    "2:3",
+    "3:2",
+    "3:4",
+    "4:3",
+    "4:5",
+    "5:4",
+    "9:16",
+    "16:9",
+    "21:9"
+  ]);
   if (direct.has(s)) return s;
 
   // Map named tokens to ratio strings (KIE-accepted)
@@ -61,13 +72,20 @@ function normalizeImageSize(v) {
   if (s === "landscape_4_3") return "4:3";
   if (s === "landscape_16_9") return "16:9";
 
-  // Coerce variants like "16_9", "16-9" → "16:9"
+  // Coerce variants like "16_9", "16-9", "2-3" → "2:3"
   const coerced = s.replace(/(\d)[_\-:](\d)/g, "$1:$2");
   if (direct.has(coerced)) return coerced;
 
   return "auto";
 }
 
+function normalizeResolution(v) {
+  if (!v) return "1K";
+  const s = String(v).trim().toLowerCase();
+  if (s === "2k" || s === "2048") return "2K";
+  if (s === "4k") return "4K";
+  return "1K";
+}
 
 async function fetchUserGenByRunId(uid, run_id){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) return null;
@@ -81,35 +99,20 @@ async function fetchUserGenByRunId(uid, run_id){
   }catch(_e){ return null; }
 }
 
-async function seedUserGeneration(uid, run_id, prompt){
+async function seedUserGeneration(uid, run_id, prompt, metaExtra){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { row_id:null };
   try{
     const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-    const meta = { source:'nano-banana', run_id, model:'nano-banana', status:'pending' };
+    const meta = Object.assign({ source:'nano-banana-pro', run_id, model:'nano-banana-pro', status:'pending' }, (metaExtra||{}));
     const rIns = await fetch(ug, {
       method: 'POST',
       headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-      body: JSON.stringify({ user_id: uid, provider: 'nano-banana', kind: 'image', prompt, result_url: null, meta }),
+      body: JSON.stringify({ user_id: uid, provider: 'Nano Banana Pro', kind: 'image', prompt, result_url: null, meta }),
     });
     if (!rIns.ok) return { row_id:null };
     const arr = await rIns.json().catch(()=>null);
     return { row_id: (Array.isArray(arr) && arr[0] && arr[0].id) ? arr[0].id : null };
   }catch(_e){ return { row_id:null }; }
-}
-
-async function patchUserGenerationMetaById(id, meta){
-  if (!SUPABASE_URL || !SERVICE_KEY || !id) return { ok:false, error:'missing_env_or_id' };
-  try{
-    const url = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(id)}`;
-    const r = await fetch(url, {
-      method:'PATCH',
-      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
-      body: JSON.stringify({ meta })
-    });
-    return { ok: !!r.ok, status: r.status };
-  }catch(e){
-    return { ok:false, error:'patch_failed', details:String(e && e.message || e) };
-  }
 }
 
 async function debitCredits(uid, cost){
@@ -131,6 +134,19 @@ async function debitCredits(uid, cost){
     if (!r1.ok) return { ok:false, error:'profile_update_failed', status:r1.status };
     return { ok:true, credits:newCredits };
   }catch(e){ return { ok:false, error:'server_exception', details:String(e&&e.message||e) }; }
+}
+
+async function patchUserGenerationMetaById(id, meta){
+  if (!SUPABASE_URL || !SERVICE_KEY || !id) return false;
+  try{
+    const ug = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(id)}`;
+    const r = await fetch(ug, {
+      method:'PATCH',
+      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      body: JSON.stringify({ meta })
+    });
+    return !!r.ok;
+  }catch(_e){ return false; }
 }
 
 async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
@@ -191,122 +207,135 @@ async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
 
     return { ok:true, debit, idempotent:true, already:false };
   }catch(e){
-    // IMPORTANT: do NOT debit here. Any exception in the idempotent flow must not trigger a second charge.
-    return { ok:false, error:'charge_exception', idempotent:false, already:false, details: String(e && (e.message||e) || e) };
+    const debit = await debitCredits(uid, cost);
+    return { ok: !!debit.ok, debit, idempotent:false, already:false, error: String(e && e.message || e) };
   }
 }
 
-
-
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: { ...cors() } };
-  if (event.httpMethod !== 'POST') return json(405, { ok:false, error:'method_not_allowed', version: VERSION_TAG });
+  if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: { ...cors() } };
+  if (event.httpMethod !== "POST") return json(405, { ok:false, submitted:false, error:"method_not_allowed", version: VERSION_TAG });
 
-  try{
-    const body = JSON.parse(event.body || '{}');
+  try {
+    const body = JSON.parse(event.body || "{}");
 
-    // Identify user (X-USER-ID OR uid OR querystring) and fallback to bearer token
+    // Identify user (X-USER-ID OR uid) + fallback to bearer token
     let uid = getUID(event, body);
-    if (!uid || uid === 'anon'){
-      const uidFromBearer = await getUidFromBearer(event);
-      if (uidFromBearer) uid = uidFromBearer;
+    if (!uid || uid === "anon") {
+      const b = await getUidFromBearer(event);
+      if (b) uid = b;
     }
-    if (!uid) uid = 'anon';
+    if (!uid) uid = "anon";
 
     const run_id = (body.run_id || body.runId || `${uid}-${Date.now()}`).toString();
 
-    // Required inputs
+    // Inputs (image_input is optional)
     const rawUrls = Array.isArray(body.urls) ? body.urls : [];
-    if (!rawUrls.length) {
-      return json(400, { ok:false, submitted:false, error:'urls_required', version: VERSION_TAG });
-    }
+    const image_input = rawUrls.map(u => encodeURI(String(u)));
 
-    // Normalize/encode URLs
-    const image_urls = rawUrls.map(u => encodeURI(String(u)));
+    const prompt = (body.prompt || "").toString();
+    const format = (body.format || "png").toString().toLowerCase();
+    const size   = normalizeImageSize(body.size);
+    const resolution = normalizeResolution(body.resolution);
 
-    const prompt  = (body.prompt || '').toString();
-    const format  = (body.format || 'png').toString().toLowerCase();
-    const size    = normalizeImageSize(body.size);
+    const cost = 2;
 
-    // Cost (must match UI)
-    const cost = 0.5;
-
-    // Seed user_generations (pending)
-    const seeded = await seedUserGeneration(uid, run_id, prompt);
+    // Seed user_generations row (pending)
+    const seeded = await seedUserGeneration(uid, run_id, prompt, { size, resolution });
     const row_id = seeded?.row_id || null;
 
-    // Provider callback includes uid + run_id (for Make/subscenario and for DB match)
-    const cb = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
+    // callback must include uid & run_id
+    const cb = `${CALLBACK_URL}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
 
-    // Create task at KIE (Nano Banana edit)
+    // Build KIE payload
+    const input = {
+      prompt,
+      aspect_ratio: size,
+      resolution,
+      output_format: format
+    };
+    if (Array.isArray(image_input) && image_input.length) {
+      input.image_input = image_input;
+    }
+
     const payload = {
-      model: 'google/nano-banana-edit',
-      input: {
-        prompt,
-        image_urls,
-        output_format: format,
-        image_size: size
-      },
+      model: "nano-banana-pro",
+      input,
 
-      // callbacks (KIE is inconsistent across models; include all common keys)
+      // callbacks
       webhook_url: cb,
-      webhookUrl:  cb,
+      webhookUrl: cb,
       callbackUrl: cb,
       callBackUrl: cb,
-      notify_url:  cb,
+      notify_url: cb,
 
-      // meta for callback (some KIE routes only forward metadata)
+      // meta for callback
       meta:     { uid, run_id, version: VERSION_TAG, cb },
       metadata: { uid, run_id, version: VERSION_TAG, cb }
     };
 
-    const create = await fetch(CREATE_URL, {(`${KIE_BASE}/api/v1/jobs/createTask`, {
-      method:'POST',
-      headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    const create = await fetch(CREATE_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
       body: JSON.stringify(payload)
     });
 
     const text = await create.text();
     let js; try { js = JSON.parse(text); } catch { js = { raw: text }; }
+
     const taskId = js.taskId || js.id || js.data?.taskId || js.data?.id || null;
 
-    if (!create.ok){
-      // update meta status = failed_create (best effort)
-      try{
-        if (SUPABASE_URL && SERVICE_KEY && row_id){
+    if (!create.ok) {
+      // best-effort mark failure in meta
+      try {
+        if (SUPABASE_URL && SERVICE_KEY && row_id) {
           await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(row_id)}`, {
-            method:'PATCH',
-            headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
-            body: JSON.stringify({ meta: { source:'nano-banana', run_id, model:'nano-banana', status:'create_failed', task_id: taskId, raw: js } }),
+            method: "PATCH",
+            headers: {
+              "apikey": SERVICE_KEY,
+              "Authorization": `Bearer ${SERVICE_KEY}`,
+              "Content-Type": "application/json",
+              "Prefer": "return=minimal"
+            },
+            body: JSON.stringify({ meta: { source:"nano-banana-pro", run_id, model:"nano-banana-pro", status:"create_failed", task_id: taskId, raw: js } })
           });
         }
-      }catch{}
-      return json(create.status || 500, { ok:false, submitted:false, error:'create_failed', status:create.status, response: js, version: VERSION_TAG });
+      } catch {}
+      return json(create.status || 500, { ok:false, submitted:false, error:"create_failed", status:create.status, response: js, version: VERSION_TAG });
     }
 
-    // Update meta status=processing + task_id (best effort)
-    try{
-      if (SUPABASE_URL && SERVICE_KEY && row_id){
+    // best-effort update meta processing + task id
+    try {
+      if (SUPABASE_URL && SERVICE_KEY && row_id) {
         await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(row_id)}`, {
-          method:'PATCH',
-          headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
-          body: JSON.stringify({ meta: { source:'nano-banana', run_id, model:'nano-banana', status:'processing', task_id: taskId } }),
+          method: "PATCH",
+          headers: {
+            "apikey": SERVICE_KEY,
+            "Authorization": `Bearer ${SERVICE_KEY}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+          },
+          body: JSON.stringify({ meta: { source:"nano-banana-pro", run_id, model:"nano-banana-pro", status:"processing", task_id: taskId, size, resolution } })
         });
       }
-    }catch{}
+    } catch {}
 
-    // Debit credits AFTER provider accepted the task and exactly once per (uid, run_id)
-    const baseMeta = { source:'nano-banana', run_id, model:'nano-banana', status:'processing', task_id: taskId };
-    const charge = await chargeOnceForRun(uid, run_id, cost, row_id, baseMeta);
+    // Debit credits AFTER provider accepted and exactly once per (uid, run_id)
+    const baseMeta = { source:"nano-banana-pro", run_id, model:"nano-banana-pro", status:"processing", task_id: taskId, size, resolution };
+    const charged = await chargeOnceForRun(uid, run_id, cost, row_id, baseMeta);
 
-    if (!charge.ok){
-      if (charge.debit && !charge.debit.ok && (charge.debit.error === 'insufficient_credits' || charge.debit.error === 'insufficient')){
-        return json(402, { ok:false, submitted:false, error:'not_enough_credits', details: charge.debit, version: VERSION_TAG });
+    if (!charged.ok) {
+      if (charged.debit && !charged.debit.ok && (charged.debit.error === "insufficient_credits" || charged.debit.error === "insufficient")) {
+        return json(402, { ok:false, submitted:false, error:"not_enough_credits", details: charged.debit, version: VERSION_TAG });
       }
-      if (charge.error === 'charge_in_progress'){
-        return json(409, { ok:false, submitted:false, error:'charge_in_progress', version: VERSION_TAG });
+      if (charged.error === "charge_in_progress") {
+        return json(409, { ok:false, submitted:false, error:"charge_in_progress", version: VERSION_TAG });
       }
-      return json(500, { ok:false, submitted:false, error:'charge_failed', details: charge.debit || charge.error || charge, version: VERSION_TAG });
+      return json(500, { ok:false, submitted:false, error:"charge_failed", details: charged.debit || charged.error || charged, version: VERSION_TAG });
     }
 
     return json(201, {
@@ -315,13 +344,12 @@ exports.handler = async (event) => {
       taskId,
       run_id,
       cost,
-      credits_after: (charge.debit && charge.debit.credits !== null ? charge.debit.credits : undefined),
-      already_charged: !!charge.already,
+      already_charged: !!charged.already,
       version: VERSION_TAG,
-      callback: cb
+      used_callback: cb
     });
 
-  }catch(e){
-    return json(500, { ok:false, submitted:false, error:'exception', message:String(e), version: VERSION_TAG });
+  } catch (e) {
+    return json(500, { ok:false, submitted:false, error:"exception", message:String(e), version: VERSION_TAG });
   }
 };
