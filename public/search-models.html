@@ -283,6 +283,11 @@
                 <div id="durationPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
               </div>
 
+              <div id="resolutionBlock" class="flex items-center gap-1.5 hidden">
+                <span class="text-white/50">Res</span>
+                <div id="resolutionPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
+              </div>
+
               <div id="aspectBlock" class="flex items-center gap-1.5 hidden">
                 <span class="text-white/50">AR</span>
                 <div id="aspectPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
@@ -1122,7 +1127,7 @@ async function pollGeneration(runId, controllers, token) {
         aspectOptions: ['1:1', '9:16', '16:9'],
         defaultAspect: '1:1',
         durations: [5, 10],
-        costLabel: 'Credits 5s-5⚡ 10s-9⚡,
+        costLabel: 'Credits 5s-5⚡ 10s-9⚡',
         minCredits: 5
       },
             {
@@ -1161,6 +1166,7 @@ async function pollGeneration(runId, controllers, token) {
 
     let currentAspect = null;
     let currentDuration = null;
+    let currentResolution = '1K';
     let currentSoraTier = 'base';
 
     function setMode(mode) {
@@ -1339,6 +1345,9 @@ async function pollGeneration(runId, controllers, token) {
       const soraTierPills = document.getElementById('soraTierPills');
       const durationPills = document.getElementById('durationPills');
 
+      const resolutionBlock = document.getElementById('resolutionBlock');
+      const resolutionPills = document.getElementById('resolutionPills');
+
       const veoQualityBlock = document.getElementById('veoQualityBlock');
       const veoQualityPills = document.getElementById('veoQualityPills');
 
@@ -1421,6 +1430,36 @@ async function pollGeneration(runId, controllers, token) {
         if (soraTierBlock) soraTierBlock.classList.add('hidden');
         if (soraTierPills) soraTierPills.innerHTML = '';
       }
+
+      
+
+      // Resolution pills (Nano Banana Pro only) — shown only for nano-banana-pro
+      if (currentModel.id === 'nano-banana-pro') {
+        if (resolutionBlock) resolutionBlock.classList.remove('hidden');
+        if (resolutionPills) {
+          resolutionPills.innerHTML = '';
+          const opts = ['1K', '2K', '4K'];
+          if (!currentResolution || !opts.includes(currentResolution)) currentResolution = '1K';
+          opts.forEach((val) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = val;
+            btn.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+            if (val === currentResolution) btn.classList.add('chip-active');
+            btn.addEventListener('click', () => {
+              currentResolution = val;
+              Array.from(resolutionPills.children).forEach((child) => child.classList.remove('chip-active'));
+              btn.classList.add('chip-active');
+            });
+            resolutionPills.appendChild(btn);
+          });
+        }
+      } else {
+        if (resolutionBlock) resolutionBlock.classList.add('hidden');
+        if (resolutionPills) resolutionPills.innerHTML = '';
+        currentResolution = '1K';
+      }
+
 
       // Aspect pills
       if (currentModel.aspectOptions && currentModel.aspectOptions.length) {
@@ -1809,12 +1848,12 @@ async function pollGeneration(runId, controllers, token) {
     }
 
     function buildBodyForModel(model, ctx) {
-      const { uid, runId, urls, prompt, aspect, duration, genId, soraQuality } = ctx;
+      const { uid, runId, urls, prompt, aspect, duration, resolution, genId, soraQuality } = ctx;
       switch (model.id) {
         case 'nano-banana':
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || 'auto', run_id: runId };
         case 'nano-banana-pro':
-          return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', resolution: '1080p', run_id: runId };
+          return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', resolution: (resolution || '1K'), run_id: runId };
         case 'seedream-4-5':
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', run_id: runId };
         case 'gpt-image-1':
@@ -2008,7 +2047,8 @@ async function pollGeneration(runId, controllers, token) {
           aspect: currentAspect,
           duration: currentDuration,
           genId: __genId,
-          soraQuality: __soraQuality
+          soraQuality: __soraQuality,
+          resolution: currentResolution
         });
 
                 const expectedOutputs = 1;
