@@ -1657,11 +1657,6 @@ async function pollGeneration(runId, controllers, token) {
       wrap.appendChild(closeBtn);
       container.appendChild(wrap);
     });
-wrapper.appendChild(label);
-      wrapper.appendChild(closeBtn);
-      container.appendChild(wrapper);
-    });
-
     document.getElementById('alephImageInput').addEventListener('change', (e) => {
       const file = (e.target.files || [])[0] || null;
       alephImageFile = file;
