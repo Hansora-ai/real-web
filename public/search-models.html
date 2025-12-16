@@ -1660,7 +1660,13 @@ async function pollGeneration(runId, controllers, token) {
         case 'midjourney':
           return { prompt, image_url: urls && urls[0] ? urls[0] : undefined, aspectRatio: aspect || '2:3', run_id: runId };
         case 'mj-video':
-          return { prompt, imageUrl: urls && urls[0] ? urls[0] : undefined, aspectRatio: aspect || '1:1', run_id: runId };
+          return {
+            uid,
+            prompt,
+            imageUrl: (urls && urls[0]) ? urls[0] : '',
+            aspectRatio: aspect || '1:1',
+            run_id: runId
+          };
         case 'veo3-fast':
         case 'veo3':
           return {
@@ -1669,7 +1675,7 @@ async function pollGeneration(runId, controllers, token) {
             prompt,
             aspectRatio: aspect || '16:9',
             duration: duration ? Number(duration) : 8,
-            imageUrl: urls && urls[0] ? urls[0] : undefined,
+            imageUrl: (urls && urls[0]) ? urls[0] : '',
             model: model.id === 'veo3-fast' ? 'veo3_fast' : 'veo3',
             run_id: runId
           };
@@ -1692,15 +1698,16 @@ async function pollGeneration(runId, controllers, token) {
             prompt,
             aspectRatio: aspect || '16:9',
             duration: duration ? Number(duration) : 5,
-            imageUrl: urls && urls[0] ? urls[0] : undefined,
+            imageUrl: (urls && urls[0]) ? urls[0] : '',
             run_id: runId
           };
         case 'runway':
           return {
+            uid,
             prompt,
             aspectRatio: aspect || '16:9',
             duration: duration ? Number(duration) : 5,
-            imageUrl: urls && urls[0] ? urls[0] : undefined,
+            imageUrl: (urls && urls[0]) ? urls[0] : '',
             run_id: runId
           };
         case 'kling25':
