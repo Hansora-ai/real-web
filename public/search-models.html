@@ -634,7 +634,7 @@ async function __mjFetchNbCheck(params){
           // MidJourney: on refresh, render 4 cards using cached nb-check URLs (or 4 placeholders if still processing)
           try {
             const prov = String((row && (row.provider || row.model)) || '');
-            const isMJ = prov.toLowerCase().includes('midjourney');
+            const isMJ = prov.toLowerCase().includes('midjourney') && String((row && row.kind) || '').toLowerCase() === 'image';
             const mjRunId = (row && row.meta && row.meta.run_id) ? row.meta.run_id : (row && row.run_id) ? row.run_id : '';
             const taskId = (row && row.meta && (row.meta.task_id || row.meta.taskId)) ? (row.meta.task_id || row.meta.taskId) : '';
 
@@ -697,7 +697,7 @@ async function __mjFetchNbCheck(params){
   // MidJourney: if DB row doesn't carry all 4 URLs, use nb-check (taskId preferred) + local cache.
   try {
     const prov = String((row && (row.provider || row.model)) || '');
-    const isMJ = prov.toLowerCase().includes('midjourney');
+    const isMJ = prov.toLowerCase().includes('midjourney') && String((row && row.kind) || '').toLowerCase() === 'image';
     const runId = (row && row.meta && row.meta.run_id) ? row.meta.run_id : (row && row.run_id) ? row.run_id : '';
     const taskId = (row && row.meta && (row.meta.task_id || row.meta.taskId)) ? (row.meta.task_id || row.meta.taskId) : '';
     if (isMJ && runId) {
@@ -925,8 +925,8 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-mj-video',
         needsImage: true,
         maxFiles: 1,
-        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
-        defaultAspect: '1:1',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: [5],
         costLabel: '2⚡ per job',
         minCredits: 2
@@ -1025,7 +1025,7 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-runway',
         needsImage: false,
         maxFiles: 1,
-        aspectOptions: ['3:4', '4:3'],
+        aspectOptions: ['3:4', '1:1', '4:3', '16:9', '9:16'],
         defaultAspect: '3:4',
         durations: [5],
         costLabel: 'video credits',
