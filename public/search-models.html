@@ -596,7 +596,7 @@ async function __mjFetchNbCheck(params){
 
     async function loadRecentHistory() {
       if (!currentUser) return;
-      const uid = currentUser.id;
+      const uid = (currentUser && (currentUser.id || currentUser.user_id || currentUser.userId || (currentUser.user && currentUser.user.id))) || '';
       try {
         const { data, error } = await supabaseClient
           .from('user_generations')
@@ -765,7 +765,7 @@ function startPollGeneration(runId, controllers) {
 
 async function pollGeneration(runId, controllers, token) {
   if (!currentUser || !runId || !controllers || !controllers.length) return;
-  const maxMs = 900000;
+  const maxMs = 900000; // 15 minutes
   const started = Date.now();
   while (Date.now() - started < maxMs) {
     await new Promise((r) => setTimeout(r, 3000));
@@ -829,8 +829,8 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-nano-banana',
         needsImage: true,
         maxFiles: 4,
-        aspectOptions: ['auto', '1:1', '3:4', '4:3', '9:16', '16:9'],
-        defaultAspect: 'auto',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: null,
         costLabel: '0.5⚡ per job',
         minCredits: 0.5
@@ -845,8 +845,8 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-nano-banana-pro',
         needsImage: false,
         maxFiles: 8,
-        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
-        defaultAspect: '1:1',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: null,
         costLabel: '2⚡ per job',
         minCredits: 2
@@ -861,8 +861,8 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-seedream-4-5',
         needsImage: false,
         maxFiles: 8,
-        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
-        defaultAspect: '1:1',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: null,
         costLabel: '1⚡ per job',
         minCredits: 1
@@ -877,8 +877,8 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-gpt-image-1',
         needsImage: false,
         maxFiles: 3,
-        aspectOptions: ['1:1', '2:3', '3:2'],
-        defaultAspect: '1:1',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: null,
         costLabel: '4⚡ per job',
         minCredits: 4
@@ -893,8 +893,8 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-imagen',
         needsImage: false,
         maxFiles: 0,
-        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
-        defaultAspect: '1:1',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: null,
         costLabel: '1⚡ per job',
         minCredits: 1
@@ -909,8 +909,8 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-midjourney',
         needsImage: false,
         maxFiles: 1,
-        aspectOptions: ['2:3', '3:2', '1:1', '9:16', '16:9'],
-        defaultAspect: '2:3',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: null,
         costLabel: '1⚡ per job',
         minCredits: 1
@@ -943,8 +943,8 @@ async function pollGeneration(runId, controllers, token) {
         maxFiles: 0,
         useFrames: true,
         startOptional: true,
-        aspectOptions: ['16:9', '9:16'],
-        defaultAspect: '16:9',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: [8],
         costLabel: 'video credits',
         minCredits: 5
@@ -961,8 +961,8 @@ async function pollGeneration(runId, controllers, token) {
         maxFiles: 0,
         useFrames: true,
         startOptional: true,
-        aspectOptions: ['16:9', '9:16'],
-        defaultAspect: '16:9',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: [8],
         costLabel: 'video credits',
         minCredits: 5
@@ -977,8 +977,8 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-veo3',
         needsImage: false,
         maxFiles: 1,
-        aspectOptions: ['16:9', '9:16'],
-        defaultAspect: '16:9',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: [8],
         costLabel: 'video credits',
         minCredits: 5
@@ -993,8 +993,8 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-veo3',
         needsImage: false,
         maxFiles: 1,
-        aspectOptions: ['16:9', '9:16'],
-        defaultAspect: '16:9',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: [8],
         costLabel: 'video credits',
         minCredits: 5
@@ -1009,8 +1009,8 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-sora2',
         needsImage: false,
         maxFiles: 1,
-        aspectOptions: ['16:9'],
-        defaultAspect: '16:9',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: [10, 15],
         costLabel: '7–13⚡ per job',
         minCredits: 7
@@ -1025,8 +1025,8 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-runway',
         needsImage: false,
         maxFiles: 1,
-        aspectOptions: ['3:4', '1:1', '4:3', '16:9', '9:16'],
-        defaultAspect: '3:4',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: [5],
         costLabel: 'video credits',
         minCredits: 4
@@ -1041,8 +1041,8 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-kling',
         needsImage: false,
         maxFiles: 1,
-        aspectOptions: ['1:1', '9:16', '16:9'],
-        defaultAspect: '1:1',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: [5, 10],
         costLabel: '4–8⚡ per job',
         minCredits: 4
@@ -1057,8 +1057,8 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-kling-26',
         needsImage: false,
         maxFiles: 1,
-        aspectOptions: ['1:1', '9:16', '16:9'],
-        defaultAspect: '1:1',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: [5, 10],
         costLabel: '9–16⚡ per job',
         minCredits: 9
@@ -1075,8 +1075,8 @@ async function pollGeneration(runId, controllers, token) {
         maxFiles: 0,
         useFrames: true,
         startOptional: false,
-        aspectOptions: ['1:1', '9:16', '16:9'],
-        defaultAspect: '1:1',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: [5, 10],
         costLabel: '5–9⚡ per job',
         minCredits: 5
@@ -1094,6 +1094,7 @@ async function pollGeneration(runId, controllers, token) {
         needsVideo: true,
         allowOptionalImage: true,
         aspectOptions: [],
+        defaultAspect: '',
         durations: [5],
         costLabel: 'video credits',
         minCredits: 4
@@ -1113,7 +1114,6 @@ async function pollGeneration(runId, controllers, token) {
     // Aleph: video required + optional image
     let alephVideoFile = null;
     let alephImageFile = null;
-    let __alephVideoObjURL = null;
 
     let currentAspect = null;
     let currentDuration = null;
@@ -1586,92 +1586,97 @@ async function pollGeneration(runId, controllers, token) {
       document.getElementById('alephVideoInput').click();
     });
     document.getElementById('alephImageBtn').addEventListener('click', () => {
-      document.getElementById('alephdocument.getElementById('alephVideoInput').addEventListener('change', async (e) => {
+      document.getElementById('alephImageInput').click();
+    });
+
+    document.getElementById('alephVideoInput').addEventListener('change', (e) => {
       const file = (e.target.files || [])[0] || null;
       alephVideoFile = file;
+
       const container = document.getElementById('alephVideoThumb');
       container.innerHTML = '';
-
-      // cleanup previous object URL
-      try { if (__alephVideoObjURL) URL.revokeObjectURL(__alephVideoObjURL); } catch {}
-      __alephVideoObjURL = null;
-
       if (!alephVideoFile) return;
 
+      // Create a first-frame thumbnail preview (like aleph.html)
       const wrapper = document.createElement('div');
-      wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20 bg-slate-900 flex items-center justify-center';
-
-      // Image preview (first frame)
-      const img = document.createElement('img');
-      img.className = 'absolute inset-0 h-full w-full object-cover';
-      img.alt = 'video preview';
-      wrapper.appendChild(img);
-
-      const label = document.createElement('span');
-      label.className = 'absolute bottom-1 left-1 text-[9px] text-white/80 px-1.5 py-0.5 rounded bg-black/60';
-      label.textContent = 'VIDEO';
-      wrapper.appendChild(label);
+      wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-lg border border-white/20 bg-slate-900 flex items-center justify-center overflow-hidden';
 
       const closeBtn = document.createElement('button');
       closeBtn.type = 'button';
-      closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
+      closeBtn.className = 'absolute -top-2 -right-2 h-6 w-6 rounded-full bg-black/70 text-white text-sm border border-white/20 flex items-center justify-center';
+      closeBtn.title = 'Remove selected video';
       closeBtn.textContent = '×';
-      closeBtn.addEventListener('click', () => {
-        alephVideoFile = null;
-        document.getElementById('alephVideoInput').value = '';
-        try { if (__alephVideoObjURL) URL.revokeObjectURL(__alephVideoObjURL); } catch {}
-        __alephVideoObjURL = null;
-        wrapper.remove();
-      });
-      wrapper.appendChild(closeBtn);
-      container.appendChild(wrapper);
 
-      // Extract first frame preview
+      // Keep track of object URL so we can revoke it
+      if (window.__alephVidObjURL) {
+        try { URL.revokeObjectURL(window.__alephVidObjURL); } catch (err) {}
+        window.__alephVidObjURL = null;
+      }
+      const u = URL.createObjectURL(alephVideoFile);
+      window.__alephVidObjURL = u;
+
+      const img = document.createElement('img');
+      img.alt = 'Video preview';
+      img.className = 'block h-full w-full object-cover';
+
+      const fallbackLabel = document.createElement('span');
+      fallbackLabel.className = 'text-[10px] text-white/70 px-2 text-center';
+      fallbackLabel.textContent = 'VIDEO';
+
+      // Draw the first frame to a canvas and use it as an image
       try {
-        const objUrl = URL.createObjectURL(alephVideoFile);
-        __alephVideoObjURL = objUrl;
-
         const v = document.createElement('video');
-        v.preload = 'metadata';
         v.muted = true;
         v.playsInline = true;
-        v.src = objUrl;
+        v.src = u;
 
-        const grab = () => {
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = v.videoWidth || 256;
-            canvas.height = v.videoHeight || 256;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-            ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-            img.src = canvas.toDataURL('image/jpeg', 0.82);
-          } catch {}
-        };
-
-        v.addEventListener('loadeddata', () => {
-          try {
-            const t = 0.12;
-            v.currentTime = t;
-          } catch {
-            grab();
-          }
+        v.addEventListener('loadedmetadata', () => {
+          const targetTime = Math.min(0.15, (v.duration || 1) / 10);
+          v.currentTime = targetTime;
         }, { once: true });
 
         v.addEventListener('seeked', () => {
-          grab();
+          try {
+            const canvas = document.createElement('canvas');
+            const w = 360;
+            const ratio = v.videoWidth ? (v.videoHeight / v.videoWidth) : (9 / 16);
+            canvas.width = w;
+            canvas.height = Math.max(1, Math.round(w * ratio));
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+            img.src = canvas.toDataURL('image/jpeg', 0.85);
+            wrapper.innerHTML = '';
+            wrapper.appendChild(img);
+            wrapper.appendChild(closeBtn);
+          } catch (err) {
+            // If frame capture fails, keep fallback label
+          }
         }, { once: true });
 
         v.addEventListener('error', () => {
-          // fallback: keep dark tile with VIDEO label
+          // Keep fallback label
         }, { once: true });
-      } catch {
-        // ignore preview failures
+
+        wrapper.appendChild(fallbackLabel);
+      } catch (err) {
+        wrapper.appendChild(fallbackLabel);
       }
-    });
-       wrapper.remove();
+
+      closeBtn.addEventListener('click', () => {
+        alephVideoFile = null;
+        const input = document.getElementById('alephVideoInput');
+        if (input) input.value = '';
+        container.innerHTML = '';
+        if (window.__alephVidObjURL) {
+          try { URL.revokeObjectURL(window.__alephVidObjURL); } catch (err) {}
+          window.__alephVidObjURL = null;
+        }
       });
-      wrapper.appendChild(label);
+
+      wrapper.appendChild(closeBtn);
+      container.appendChild(wrapper);
+    });
+wrapper.appendChild(label);
       wrapper.appendChild(closeBtn);
       container.appendChild(wrapper);
     });
@@ -1799,10 +1804,11 @@ async function pollGeneration(runId, controllers, token) {
         case 'aleph':
           return {
             uid,
+            user_id: uid,
+            userId: uid,
             prompt,
             videoUrl: urls && urls[0] ? urls[0] : undefined,
             imageUrl: urls && urls[1] ? urls[1] : undefined,
-            aspectRatio: '16:9',
             run_id: runId
           };
         default:
@@ -1864,7 +1870,7 @@ async function pollGeneration(runId, controllers, token) {
           : currentModel.needsVideo
           ? await uploadImagesAndGetUrls([alephVideoFile, alephImageFile].filter(Boolean))
           : await uploadImagesAndGetUrls(uploadedFiles);
-        const uid = currentUser.id;
+        const uid = (currentUser && (currentUser.id || currentUser.user_id || currentUser.userId || (currentUser.user && currentUser.user.id))) || '';
         const runId = `${uid}-${Date.now()}`;
 
         const body = buildBodyForModel(currentModel, {
