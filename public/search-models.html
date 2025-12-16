@@ -1669,7 +1669,6 @@ async function pollGeneration(runId, controllers, token) {
             duration: duration ? Number(duration) : 8,
             imageUrl: urls && urls[0] ? urls[0] : undefined,
             model: model.id === 'veo3-fast' ? 'veo3_fast' : 'veo3',
-            user_id: uid,
             run_id: runId
           };
         case 'veo31-fast':
@@ -1682,7 +1681,6 @@ async function pollGeneration(runId, controllers, token) {
             lastFrameUrl: urls && urls[1] ? urls[1] : undefined,
             imageUrl: urls && urls[0] ? urls[0] : undefined,
             model: model.id === 'veo31-fast' ? 'veo3_1_fast' : 'veo3_1',
-            user_id: uid,
             run_id: runId
           };
         case 'sora2':
@@ -1691,7 +1689,6 @@ async function pollGeneration(runId, controllers, token) {
             aspectRatio: aspect || '16:9',
             duration: duration ? Number(duration) : 5,
             imageUrl: urls && urls[0] ? urls[0] : undefined,
-            user_id: uid,
             run_id: runId
           };
         case 'runway':
@@ -1700,7 +1697,6 @@ async function pollGeneration(runId, controllers, token) {
             aspectRatio: aspect || '16:9',
             duration: duration ? Number(duration) : 5,
             imageUrl: urls && urls[0] ? urls[0] : undefined,
-            user_id: uid,
             run_id: runId
           };
         case 'kling25':
@@ -1709,7 +1705,6 @@ async function pollGeneration(runId, controllers, token) {
             aspect_ratio: aspect || '1:1',
             duration: duration ? Number(duration) : 5,
             image_url: urls && urls[0] ? urls[0] : undefined,
-            user_id: uid,
             run_id: runId
           };
         case 'kling26':
@@ -1718,7 +1713,6 @@ async function pollGeneration(runId, controllers, token) {
             aspect_ratio: aspect || '1:1',
             duration: duration ? Number(duration) : 5,
             image_url: urls && urls[0] ? urls[0] : undefined,
-            user_id: uid,
             run_id: runId
           };
         case 'kling21':
@@ -1727,7 +1721,6 @@ async function pollGeneration(runId, controllers, token) {
             duration: duration ? Number(duration) : 5,
             firstFrameUrl: urls && urls[0] ? urls[0] : undefined,
             lastFrameUrl: urls && urls[1] ? urls[1] : undefined,
-            user_id: uid,
             run_id: runId
           };
         case 'aleph':
@@ -1736,7 +1729,6 @@ async function pollGeneration(runId, controllers, token) {
             videoUrl: urls && urls[0] ? urls[0] : undefined,
             imageUrl: urls && urls[1] ? urls[1] : undefined,
             aspectRatio: aspect || '16:9',
-            user_id: uid,
             run_id: runId
           };
         default:
@@ -1824,11 +1816,24 @@ for (let i = 0; i < expectedOutputs; i++) {
   if (c) placeholderControllers.push(c);
 }
 
+        const { data: __sess } = await supabaseClient.auth.getSession();
+        const __token = (__sess && __sess.session && __sess.session.access_token) ? __sess.session.access_token : '';
+        if (!__token) {
+          showStatus('You must be logged in to run this model.', 'error');
+          if (placeholderControllers && placeholderControllers.length) {
+            for (let i = 0; i < placeholderControllers.length; i++) {
+              placeholderControllers[i].apply({ status: 'failed', result_url: null });
+            }
+          }
+          return;
+        }
+
         const res = await fetch(currentModel.endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-USER-ID': uid
+            'X-USER-ID': uid,
+            'Authorization': `Bearer ${__token}`
           },
           body: JSON.stringify(body)
         });
