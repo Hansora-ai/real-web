@@ -1677,14 +1677,12 @@ async function pollGeneration(runId, controllers, token) {
         case 'veo31':
           return {
             uid,
-            user_id: uid,
             prompt,
             aspectRatio: aspect || '16:9',
             duration: duration ? Number(duration) : 8,
-            startFrameUrl: urls && urls[0] ? urls[0] : undefined,
-            lastFrameUrl: urls && urls[1] ? urls[1] : undefined,
-            // For Veo 3.1, imageUrl is optional; when only one image is provided it can be treated as the start frame.
-            imageUrl: urls && urls[0] ? urls[0] : undefined,
+            firstFrameUrl: (urls && urls[0]) ? urls[0] : '',
+            lastFrameUrl: (urls && urls[1]) ? urls[1] : '',
+            imageUrl: '',
             model: model.id === 'veo31-fast' ? 'veo3_1_fast' : 'veo3_1',
             run_id: runId
           };
@@ -1725,7 +1723,7 @@ async function pollGeneration(runId, controllers, token) {
           return {
             prompt,
             duration: duration ? Number(duration) : 5,
-            startFrameUrl: urls && urls[0] ? urls[0] : undefined,
+            firstFrameUrl: urls && urls[0] ? urls[0] : undefined,
             lastFrameUrl: urls && urls[1] ? urls[1] : undefined,
             run_id: runId
           };
