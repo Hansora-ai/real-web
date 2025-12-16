@@ -765,7 +765,7 @@ function startPollGeneration(runId, controllers) {
 
 async function pollGeneration(runId, controllers, token) {
   if (!currentUser || !runId || !controllers || !controllers.length) return;
-  const maxMs = 210000;
+  const maxMs = 900000;
   const started = Date.now();
   while (Date.now() - started < maxMs) {
     await new Promise((r) => setTimeout(r, 3000));
@@ -1093,8 +1093,8 @@ async function pollGeneration(runId, controllers, token) {
         maxFiles: 0,
         needsVideo: true,
         allowOptionalImage: true,
-        aspectOptions: ['16:9', '9:16', '1:1'],
-        defaultAspect: '16:9',
+        aspectOptions: [],
+        defaultAspect: '',
         durations: [5],
         costLabel: 'video credits',
         minCredits: 4
@@ -1114,6 +1114,7 @@ async function pollGeneration(runId, controllers, token) {
     // Aleph: video required + optional image
     let alephVideoFile = null;
     let alephImageFile = null;
+    let __alephVideoObjURL = null;
 
     let currentAspect = null;
     let currentDuration = null;
@@ -1594,22 +1595,69 @@ async function pollGeneration(runId, controllers, token) {
       alephVideoFile = file;
       const container = document.getElementById('alephVideoThumb');
       container.innerHTML = '';
+      if (__alephVideoObjURL) { try { URL.revokeObjectURL(__alephVideoObjURL); } catch(_e){} __alephVideoObjURL = null; }
       if (!alephVideoFile) return;
-      const wrapper = document.createElement('div');
-      wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20 bg-slate-900 flex items-center justify-center';
-      const label = document.createElement('span');
-      label.className = 'text-[10px] text-white/70 px-2 text-center';
-      label.textContent = 'VIDEO';
+
+      const url = URL.createObjectURL(alephVideoFile);
+      __alephVideoObjURL = url;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20 bg-slate-900 flex items-center justify-center';
+
       const closeBtn = document.createElement('button');
       closeBtn.type = 'button';
-      closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
+      closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/80 text-[11px] leading-none flex items-center justify-center';
       closeBtn.textContent = '×';
       closeBtn.addEventListener('click', () => {
         alephVideoFile = null;
-        document.getElementById('alephVideoInput').value = '';
-        wrapper.remove();
+        const input = document.getElementById('alephVideoInput');
+        if (input) input.value = '';
+        container.innerHTML = '';
+        if (__alephVideoObjURL) { try { URL.revokeObjectURL(__alephVideoObjURL); } catch(_e){} __alephVideoObjURL = null; }
       });
-      wrapper.appendChild(label);
+
+      const img = document.createElement('img');
+      img.className = 'w-full h-full object-cover';
+      img.alt = 'video preview';
+
+      // Generate first-frame thumbnail
+      try {
+        const v = document.createElement('video');
+        v.muted = true;
+        v.playsInline = true;
+        v.preload = 'metadata';
+        v.src = url;
+
+        v.addEventListener('loadedmetadata', () => {
+          try {
+            const t = Math.min(0.15, (v.duration || 1) / 10);
+            v.currentTime = t;
+          } catch(_e) {}
+        }, { once: true });
+
+        v.addEventListener('seeked', () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const w = 240;
+            const ratio = v.videoWidth ? (v.videoHeight / v.videoWidth) : (9/16);
+            canvas.width = w;
+            canvas.height = Math.max(1, Math.round(w * ratio));
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+            img.src = canvas.toDataURL('image/jpeg', 0.85);
+          } catch(_e) {
+            // fallback: keep empty (still shows wrap)
+          }
+        }, { once: true });
+      } catch(_e) {
+        // ignore thumbnail errors
+      }
+
+      wrap.appendChild(img);
+      wrap.appendChild(closeBtn);
+      container.appendChild(wrap);
+    });
+wrapper.appendChild(label);
       wrapper.appendChild(closeBtn);
       container.appendChild(wrapper);
     });
