@@ -268,9 +268,14 @@
 
           <!-- Veo quality + duration + aspect -->
           <div class="w-full flex justify-end">
-            <div class="flex items-center gap-3 whitespace-nowrap overflow-x-auto max-w-full">
+            <div class="flex items-center gap-3">
               <div id="veoQualityBlock" class="flex items-center gap-1.5 hidden">
                 <div id="veoQualityPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
+              </div>
+
+              
+              <div id="soraTierBlock" class="flex items-center gap-1.5 hidden">
+                <div id="soraTierPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
               </div>
 
               <div id="durationBlock" class="flex items-center gap-1.5 hidden">
@@ -1009,7 +1014,7 @@ async function pollGeneration(runId, controllers, token) {
         endpoint: '/.netlify/functions/run-sora2',
         needsImage: false,
         maxFiles: 1,
-        aspectOptions: ['16:9'],
+        aspectOptions: ['16:9', '9:16'],
         defaultAspect: '16:9',
         durations: [10, 15],
         costLabel: '7–13⚡ per job',
@@ -1117,6 +1122,7 @@ async function pollGeneration(runId, controllers, token) {
 
     let currentAspect = null;
     let currentDuration = null;
+    let currentSoraTier = 'base';
 
     function setMode(mode) {
       currentMode = mode;
@@ -1290,6 +1296,8 @@ async function pollGeneration(runId, controllers, token) {
       const aspectBlock = document.getElementById('aspectBlock');
       const aspectPills = document.getElementById('aspectPills');
       const durationBlock = document.getElementById('durationBlock');
+      const soraTierBlock = document.getElementById('soraTierBlock');
+      const soraTierPills = document.getElementById('soraTierPills');
       const durationPills = document.getElementById('durationPills');
 
       const veoQualityBlock = document.getElementById('veoQualityBlock');
@@ -1337,6 +1345,42 @@ async function pollGeneration(runId, controllers, token) {
         currentVeoVariant = 'fast';
         if (veoQualityBlock) veoQualityBlock.classList.add('hidden');
         if (veoQualityPills) veoQualityPills.innerHTML = '';
+      }
+
+
+      // Sora 2 tier toggle (Standard / Pro) — shown only for Sora 2
+      if (currentModel.id === 'sora2') {
+        currentSoraTier = 'base';
+        if (soraTierBlock) soraTierBlock.classList.remove('hidden');
+        if (soraTierPills) {
+          soraTierPills.innerHTML = '';
+          const makeTierBtn = (label, val) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = label;
+            b.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+            if (currentSoraTier === val) b.classList.add('chip-active');
+            b.addEventListener('click', () => {
+              currentSoraTier = val;
+              Array.from(soraTierPills.querySelectorAll('button')).forEach(x => x.classList.remove('chip-active'));
+              b.classList.add('chip-active');
+            });
+            return b;
+          };
+          // Default: Standard (Sora 2)
+          soraTierPills.appendChild(makeTierBtn('Sora 2', 'base'));
+          soraTierPills.appendChild(makeTierBtn('Pro', 'pro'));
+          // ensure default active exists
+          const active = soraTierPills.querySelector('button.chip-active');
+          if (!active) {
+            currentSoraTier = 'base';
+            soraTierPills.querySelector('button')?.classList.add('chip-active');
+          }
+        }
+      } else {
+        currentSoraTier = 'base';
+        if (soraTierBlock) soraTierBlock.classList.add('hidden');
+        if (soraTierPills) soraTierPills.innerHTML = '';
       }
 
       // Aspect pills
@@ -1634,10 +1678,26 @@ async function pollGeneration(runId, controllers, token) {
         __alephVideoObjURL = objUrl;
 
         const v = document.createElement('video');
-        v.preload = 'metadata';
+        v.preload = 'auto';
         v.muted = true;
         v.playsInline = true;
+        v.setAttribute('playsinline', '');
+        v.setAttribute('muted', '');
         v.src = objUrl;
+        // Safari needs the video in the DOM to reliably decode the first frame
+        v.style.position = 'fixed';
+        v.style.left = '-9999px';
+        v.style.top = '-9999px';
+        v.style.width = '1px';
+        v.style.height = '1px';
+        v.style.opacity = '0';
+        v.style.pointerEvents = 'none';
+        document.body.appendChild(v);
+
+        const cleanupVideo = () => {
+          try { v.pause(); } catch {}
+          try { v.remove(); } catch {}
+        };
 
         const grab = () => {
           try {
@@ -1651,22 +1711,29 @@ async function pollGeneration(runId, controllers, token) {
           } catch {}
         };
 
-        v.addEventListener('loadeddata', () => {
+        v.addEventListener('loadedmetadata', async () => {
+          try { await v.play(); } catch {}
+          try { v.pause(); } catch {}
           try {
-            const t = 0.12;
+            const t = Math.min(0.1, Math.max(0, (v.duration || 1) * 0.02));
             v.currentTime = t;
           } catch {
             grab();
+            cleanupVideo();
           }
         }, { once: true });
 
         v.addEventListener('seeked', () => {
           grab();
+          cleanupVideo();
         }, { once: true });
 
         v.addEventListener('error', () => {
           // fallback: keep dark tile with VIDEO label
+          cleanupVideo();
         }, { once: true });
+
+        try { v.load(); } catch {}
       } catch {
         // ignore preview failures
       }
@@ -1792,6 +1859,24 @@ async function pollGeneration(runId, controllers, token) {
             lastFrameUrl: urls && urls[1] ? urls[1] : undefined,
             run_id: runId
           };
+
+        case 'sora2': {
+          const tier = (typeof currentSoraTier !== 'undefined' && currentSoraTier) ? currentSoraTier : 'base';
+          const aspectRatio = aspect || '16:9';
+          const orientation = (aspectRatio === '9:16') ? 'portrait' : 'landscape';
+          return {
+            uid,
+            run_id: runId,
+            tier,
+            prompt,
+            image_urls: urls && urls[0] ? [urls[0]] : [],
+            orientation,
+            aspectRatio,
+            duration: typeof duration === 'number' ? duration : parseInt(duration || '10', 10),
+            quality: 'high'
+          };
+        }
+
         case 'aleph':
           return {
             uid,
@@ -1897,11 +1982,10 @@ for (let i = 0; i < expectedOutputs; i++) {
 
         const res = await fetch(currentModel.endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-USER-ID': uid,
-            'Authorization': __accessToken ? ('Bearer ' + __accessToken) : ''
-          },
+          headers: Object.assign(
+            { 'Content-Type': 'application/json', 'X-USER-ID': uid },
+            __accessToken ? { 'Authorization': ('Bearer ' + __accessToken) } : {}
+          ),
           body: JSON.stringify(body)
         });
 
