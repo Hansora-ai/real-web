@@ -1664,6 +1664,8 @@ async function pollGeneration(runId, controllers, token) {
         case 'veo3-fast':
         case 'veo3':
           return {
+            uid,
+            user_id: uid,
             prompt,
             aspectRatio: aspect || '16:9',
             duration: duration ? Number(duration) : 8,
@@ -1674,16 +1676,20 @@ async function pollGeneration(runId, controllers, token) {
         case 'veo31-fast':
         case 'veo31':
           return {
+            uid,
+            user_id: uid,
             prompt,
             aspectRatio: aspect || '16:9',
             duration: duration ? Number(duration) : 8,
-            startFrameUrl: urls && urls[0] ? urls[0] : undefined,
+            firstFrameUrl: urls && urls[0] ? urls[0] : undefined,
             lastFrameUrl: urls && urls[1] ? urls[1] : undefined,
+            // For Veo 3.1, imageUrl is optional; when only one image is provided it can be treated as the start frame.
             imageUrl: urls && urls[0] ? urls[0] : undefined,
-            model: model.id === 'veo31-fast' ? 'veo3_1_fast' : 'veo3_1',
+            model: model.id === 'veo31-fast' ? 'veo3_fast' : 'veo3',
             run_id: runId
           };
         case 'sora2':
+
           return {
             prompt,
             aspectRatio: aspect || '16:9',
@@ -1816,16 +1822,13 @@ for (let i = 0; i < expectedOutputs; i++) {
   if (c) placeholderControllers.push(c);
 }
 
-        const { data: __sess } = await supabaseClient.auth.getSession();
-        const __token = (__sess && __sess.session && __sess.session.access_token) ? __sess.session.access_token : '';
-        if (!__token) {
-          showStatus('You must be logged in to run this model.', 'error');
-          if (placeholderControllers && placeholderControllers.length) {
-            for (let i = 0; i < placeholderControllers.length; i++) {
-              placeholderControllers[i].apply({ status: 'failed', result_url: null });
-            }
-          }
-          return;
+        // Get Supabase access token (required by Netlify functions that validate auth)
+        let __accessToken = '';
+        try {
+          const { data: s } = await supabaseClient.auth.getSession();
+          __accessToken = s && s.session && s.session.access_token ? s.session.access_token : '';
+        } catch (e) {
+          __accessToken = '';
         }
 
         const res = await fetch(currentModel.endpoint, {
@@ -1833,7 +1836,7 @@ for (let i = 0; i < expectedOutputs; i++) {
           headers: {
             'Content-Type': 'application/json',
             'X-USER-ID': uid,
-            'Authorization': `Bearer ${__token}`
+            'Authorization': __accessToken ? ('Bearer ' + __accessToken) : ''
           },
           body: JSON.stringify(body)
         });
