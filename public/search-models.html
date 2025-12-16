@@ -768,6 +768,45 @@ function startPollGeneration(runId, controllers) {
     });
 }
 
+function startSora2Poll(taskId, uid, runId, controllers) {
+  if (!taskId || !uid || !runId || !controllers || !controllers.length) return;
+  const key = 'sora2:' + runId;
+  if (__activePolls.has(key)) return;
+  const token = { cancelled: false };
+  __activePolls.set(key, token);
+  sora2Poll(taskId, uid, runId, controllers, token).finally(() => {
+    __activePolls.delete(key);
+  });
+}
+
+// Poll Sora 2 via Netlify function sora2-check (15 minutes max)
+async function sora2Poll(taskId, uid, runId, controllers, token) {
+  const deadline = Date.now() + (15 * 60 * 1000);
+  while (Date.now() < deadline) {
+    if (token && token.cancelled) return;
+    try {
+      const r = await fetch('/.netlify/functions/sora2-check?taskId=' + encodeURIComponent(taskId) + '&uid=' + encodeURIComponent(uid) + '&run_id=' + encodeURIComponent(runId), { cache: 'no-store' });
+      const j = await r.json().catch(() => null);
+      if (j && j.ok && (j.video_url || j.result_url)) {
+        const url = j.video_url || j.result_url;
+        for (let i = 0; i < controllers.length; i++) {
+          controllers[i].apply({ status: 'ready', result_url: url });
+        }
+        return;
+      }
+      if (j && j.failed) {
+        for (let i = 0; i < controllers.length; i++) {
+          controllers[i].apply({ status: 'failed', result_url: null });
+        }
+        return;
+      }
+    } catch (e) {}
+    await new Promise(res => setTimeout(res, 1500));
+  }
+  // timeout -> mark as processing still (do not fail automatically)
+}
+
+
 async function pollGeneration(runId, controllers, token) {
   if (!currentUser || !runId || !controllers || !controllers.length) return;
   const maxMs = 900000;
@@ -1770,7 +1809,7 @@ async function pollGeneration(runId, controllers, token) {
     }
 
     function buildBodyForModel(model, ctx) {
-      const { uid, runId, urls, prompt, aspect, duration } = ctx;
+      const { uid, runId, urls, prompt, aspect, duration, genId, soraQuality } = ctx;
       switch (model.id) {
         case 'nano-banana':
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || 'auto', run_id: runId };
@@ -1817,15 +1856,7 @@ async function pollGeneration(runId, controllers, token) {
             model: model.id === 'veo31-fast' ? 'veo3_1_fast' : 'veo3_1',
             run_id: runId
           };
-        case 'sora2':
 
-          return {
-            prompt,
-            aspectRatio: aspect || '16:9',
-            duration: duration ? Number(duration) : 5,
-            imageUrl: (urls && urls[0]) ? urls[0] : '',
-            run_id: runId
-          };
         case 'runway':
           return {
             uid,
@@ -1861,19 +1892,21 @@ async function pollGeneration(runId, controllers, token) {
           };
 
         case 'sora2': {
+          // Sora 2 payload (1:1 with working sora2 page)
           const tier = (typeof currentSoraTier !== 'undefined' && currentSoraTier) ? currentSoraTier : 'base';
-          const aspectRatio = aspect || '16:9';
+          const aspectRatio = (aspect || '16:9');
           const orientation = (aspectRatio === '9:16') ? 'portrait' : 'landscape';
           return {
             uid,
             run_id: runId,
+            id: genId || null,
             tier,
             prompt,
-            image_urls: urls && urls[0] ? [urls[0]] : [],
+            image_urls: (urls && urls[0]) ? [urls[0]] : [],
             orientation,
             aspectRatio,
-            duration: typeof duration === 'number' ? duration : parseInt(duration || '10', 10),
-            quality: 'high'
+            duration: (typeof duration === 'number') ? duration : parseInt(duration || '10', 10),
+            quality: soraQuality || 'high'
           };
         }
 
@@ -1948,13 +1981,34 @@ async function pollGeneration(runId, controllers, token) {
         const uid = currentUser.id;
         const runId = `${uid}-${Date.now()}`;
 
+        // Sora 2 requires a seeded user_generations row id (1:1 with working sora2 page)
+        let __genId = null;
+        let __soraQuality = 'high';
+        if (currentModel && currentModel.id === 'sora2') {
+          try {
+            const ins = await supabaseClient.from('user_generations').insert({
+              user_id: uid,
+              provider: 'kie',
+              kind: 'video',
+              prompt,
+              result_url: null,
+              meta: { run_id: runId, status: 'processing', engine: 'sora2' }
+            }).select('id').single();
+            if (ins && !ins.error && ins.data && ins.data.id) __genId = ins.data.id;
+          } catch (e) {
+            __genId = null;
+          }
+        }
+
         const body = buildBodyForModel(currentModel, {
           uid,
           runId,
           urls,
           prompt,
           aspect: currentAspect,
-          duration: currentDuration
+          duration: currentDuration,
+          genId: __genId,
+          soraQuality: __soraQuality
         });
 
                 const expectedOutputs = 1;
@@ -1991,20 +2045,51 @@ for (let i = 0; i < expectedOutputs; i++) {
 
         if (!res.ok) {
           const txt = await res.text().catch(() => '');
-          showStatus('Error from model: ' + (txt || `status ${res.status}`), 'error');
+          let msg = txt || `status ${res.status}`;
+          try {
+            const j = JSON.parse(txt);
+            if (j && (j.error || j.message)) msg = j.error || j.message;
+          } catch {}
+          showStatus('Error from model: ' + msg, 'error');
           if (placeholderControllers && placeholderControllers.length) {
             for (let i = 0; i < placeholderControllers.length; i++) {
               placeholderControllers[i].apply({ status: 'failed', result_url: null });
             }
           }
         } else {
-          showStatus(
-            `✅ Request submitted to ${currentModel.name}. You will see the result here and in Usage / History when it is ready.`,
-            'success'
-          );
-          await refreshCredits();
-          if (placeholderControllers && placeholderControllers.length) {
-            startPollGeneration(runId, placeholderControllers);
+          // Some endpoints (e.g., Sora 2) return JSON with taskId/submitted flags
+          let j = null;
+          try { j = await res.json(); } catch { j = null; }
+
+          // Sora 2: require submitted + taskId, then poll sora2-check
+          if (currentModel && currentModel.id === 'sora2') {
+            if (!j || !j.submitted || !j.taskId) {
+              const errMsg = (j && j.error) ? j.error : 'unknown_error';
+              showStatus('Error from model: ' + errMsg, 'error');
+              if (placeholderControllers && placeholderControllers.length) {
+                for (let i = 0; i < placeholderControllers.length; i++) {
+                  placeholderControllers[i].apply({ status: 'failed', result_url: null });
+                }
+              }
+            } else {
+              showStatus(
+                `✅ Request submitted to ${currentModel.name}. You will see the result here and in Usage / History when it is ready.`,
+                'success'
+              );
+              await refreshCredits();
+              if (placeholderControllers && placeholderControllers.length) {
+                startSora2Poll(j.taskId, uid, runId, placeholderControllers);
+              }
+            }
+          } else {
+            showStatus(
+              `✅ Request submitted to ${currentModel.name}. You will see the result here and in Usage / History when it is ready.`,
+              'success'
+            );
+            await refreshCredits();
+            if (placeholderControllers && placeholderControllers.length) {
+              startPollGeneration(runId, placeholderControllers);
+            }
           }
         }
       } catch (err) {
