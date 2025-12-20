@@ -575,46 +575,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 
-<script>
-// Resilient header bootstrap (does not change your auth logic)
-(async function(){
-  try{
-    if(!window.supabase || !window.supabase.createClient) return;
-    // Reuse existing client if your scripts already made it; otherwise create with same keys if present in global
-    const SUPABASE_URL = (typeof window.SUPABASE_URL!=='undefined' && window.SUPABASE_URL) || (function(){ try{ return (/%22SUPABASE_URL%22:/.test(document.body.innerHTML)?null:null);}catch(e){return null;}})();
-    const SUPABASE_ANON_KEY = (typeof window.SUPABASE_ANON_KEY!=='undefined' && window.SUPABASE_ANON_KEY) || null;
-    // If your index scripts already set a global client, use it
-    const client = window._supabase || window.supabaseClient || window.supabase;
-    if(!client || !client.auth){ return; }
-
-    const byId = (id)=>document.getElementById(id);
-    const $btnLoginSignup = byId('btnLoginSignup');
-    const $btnLoginNav = byId('btnLoginNav');
-    const $btnGetStarted = byId('btnGetStarted');
-    const $navUser = byId('navUser');
-    const $navCredits = byId('navCredits');
-    const $navAvatarImg = byId('navAvatarImg');
-
-    const { data } = await client.auth.getUser();
-    if(data && data.user){
-      // Try to fetch credits from profiles table; if fails, still show avatar
-      let credits = null;
-      try {
-        const prof = await client.from('profiles').select('credits,avatar_url').eq('user_id', data.user.id).maybeSingle();
-        if(prof && prof.data){
-          credits = prof.data.credits;
-          if(prof.data.avatar_url){ $navAvatarImg.src = prof.data.avatar_url; $navAvatarImg.classList.remove('hidden'); }
-        }
-      } catch(e){}
-      if($btnLoginSignup) $btnLoginSignup.classList.add('hidden');
-      if($btnLoginNav) $btnLoginNav.classList.add('hidden');
-      if($btnGetStarted) $btnGetStarted?.classList.add('hidden');
-      if($navUser){ $navUser.classList.remove('hidden'); $navUser.classList.add('flex'); }
-      if($navCredits){ $navCredits.textContent = (credits!=null?credits:0) + '⚡'; }
-    }
-  }catch(e){ /* swallow bootstrap errors */ }
-})();
-</script>
-
 </body>
 </html>
