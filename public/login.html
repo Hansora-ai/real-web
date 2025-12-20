@@ -131,13 +131,12 @@
     </div>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
-        onerror="this.onerror=function(){this.onerror=null;this.src='https://esm.sh/@supabase/supabase-js@2';};this.src='https://unpkg.com/@supabase/supabase-js@2';"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     // Initialize Supabase (from your project)
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Elements
     const form = document.getElementById('formAuth');
@@ -221,7 +220,7 @@
     // Google OAuth
     btnGoogle.addEventListener('click', async () => {
       try {
-        const { error } = await supabase.auth.signInWithOAuth({
+        const { error } = await sb.auth.signInWithOAuth({
           provider: 'google',
           options: { redirectTo: `${location.origin}/index.html` }
         });
@@ -238,7 +237,7 @@
       const { type, access_token, refresh_token } = getHashParams();
       if (type === 'recovery' && access_token) {
         // setSession works best with both tokens; pass empty string if refresh is missing
-        await supabase.auth.setSession({
+        await sb.auth.setSession({
           access_token,
           refresh_token: refresh_token || ''
         }).catch(()=>{});
@@ -258,7 +257,7 @@
       if (mode.value === 'reset') {
         if (!email) { err.textContent = 'Enter your account email.'; return; }
         try {
-          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          const { error } = await sb.auth.resetPasswordForEmail(email, {
             redirectTo: `${location.origin}/login.html`
           });
           if (error) throw error;
@@ -276,7 +275,7 @@
         if (password.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
         if (password !== confirm) { err.textContent = 'Passwords do not match.'; return; }
         try {
-          const { error } = await supabase.auth.updateUser({ password });
+          const { error } = await sb.auth.updateUser({ password });
           if (error) throw error;
           history.replaceState({}, document.title, location.pathname);
           form.classList.add('hidden');
@@ -295,7 +294,7 @@
         if (password.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
         try {
           // v2 signature with options
-          const { data, error } = await supabase.auth.signUp({
+          const { data, error } = await sb.auth.signUp({
             email, password,
             options: { emailRedirectTo: `${location.origin}/login.html` }
           });
@@ -333,7 +332,7 @@
 
       // login
       try {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await sb.auth.signInWithPassword({ email, password });
         if (error) throw error;
         window.location.href = '/index.html';
       } catch (e) { err.textContent = 'Incorrect email or password.'; }
