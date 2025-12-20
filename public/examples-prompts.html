@@ -166,13 +166,12 @@
 </div>
 
 <script>
-  const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.sb.co';
+  const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supabase.co';
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-  window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.sb.createClient(SUPABASE_URL, SUPABASE_ANON);
-  var sb = window.__HANSORA_SB__;
-  window.supabaseClient = window.__HANSORA_SB__;
-  window._supabase = window.__HANSORA_SB__;
-const MODEL_LINKS = {
+  window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  const supabase = window.__HANSORA_SB__;
+
+  const MODEL_LINKS = {
     "veo3": "veo3.html",
     "veo3.1": "veo3_1.html",
     "kling": "kling.html",
@@ -370,7 +369,7 @@ function linkifyHighlight(text, modelSlug){
 
   async function loadExamples(filter='all'){
     try{
-      let q = sb.from('prompt_examples')
+      let q = supabase.from('prompt_examples')
         .select('id,title,model_slug,media_type,media_url,poster_url,highlight,prompt,sort_order')
         .order('sort_order', { ascending: true });
 
@@ -424,11 +423,8 @@ function linkifyHighlight(text, modelSlug){
   (function(){
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    var sb = window.__HANSORA_SB__;
-    window.supabaseClient = window.__HANSORA_SB__;
-    window._supabase = window.__HANSORA_SB__;
-const $btnLoginNav = document.getElementById('btnLoginNav');
+    const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+    const $btnLoginNav = document.getElementById('btnLoginNav');
     const $btnGetStarted = document.getElementById('btnGetStarted');
     const $navUser = document.getElementById('navUser');
     const $navCredits = document.getElementById('navCredits');
