@@ -132,7 +132,7 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
-  onerror="(function(s){var u=['https://unpkg.com/@supabase/supabase-js@2','https://cdn.skypack.dev/@supabase/supabase-js@2','https://esm.sh/@supabase/supabase-js@2'];var i=0;s.onerror=function(){i++;if(i<u.length){s.src=u[i];}else{console.error('Failed to load Supabase JS from all CDNs');}};s.src=u[0];})(this)"></script>
+        onerror="this.onerror=function(){this.onerror=null;this.src='https://esm.sh/@supabase/supabase-js@2';};this.src='https://unpkg.com/@supabase/supabase-js@2';"></script>
   <script>
     // Initialize Supabase (from your project)
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
