@@ -311,11 +311,12 @@
 
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    var sb = window.__HANSORA_SB__;
 
     
-  window.supabaseClient = supabase; // expose for header bootstrap
-  window._supabase = supabase;
+  window.supabaseClient = window.__HANSORA_SB__; // expose for header bootstrap
+  window._supabase = window.__HANSORA_SB__;
 // Header elements
     const $btnLoginNav = document.getElementById('btnLoginNav');
     const $btnGetStarted = document.getElementById('btnGetStarted');
@@ -393,7 +394,7 @@
         .maybeSingle();
       if(error){ throw error; }
       if(!data){
-        const ins = await supabase.from('profiles').insert({
+        const ins = await sb.from('profiles').insert({
           user_id: user.id, email: user.email, credits: 3
         }).select().single();
         if(ins.error){ throw ins.error; }
@@ -402,10 +403,10 @@
       return data;
     }
     async function refreshCredits(){
-      const { data } = await supabase.auth.getUser();
+      const { data } = await sb.auth.getUser();
       const user = data.user;
       if(!user) return;
-      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      const prof = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
       if(prof?.data?.credits != null){ $navCredits.textContent = prof.data.credits + '⚡'; }
     }
     window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
@@ -416,7 +417,7 @@
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
       $msg.textContent = 'Creating account…';
-      const { data, error } = await supabase.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+      const { data, error } = await sb.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
       if(error){ $msg.textContent = error.message; return; }
       $msg.textContent = 'Check your email to confirm, then Log in.';
       setAuthMode('login');
@@ -426,7 +427,7 @@
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       $msg.textContent = 'Signing in…';
       try{
-        const { data, error } = await supabase.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+        const { data, error } = await sb.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
         if(error){ $msg.textContent = error.message; return; }
         const user = data.user;
         const prof = await getOrCreateProfile(user);
@@ -436,13 +437,13 @@
     });
     // Logout
     document.getElementById('btnLogout').addEventListener('click', async ()=>{
-      await supabase.auth.signOut();
+      await sb.auth.signOut();
       showLoggedOutUI();
     });
     
     // === Credit helpers (pure Supabase; no Make.com) ===
     async function getUserId() {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await sb.auth.getUser();
       return data.user?.id || null;
     }
     async function setCredits(value) {
@@ -484,7 +485,7 @@
 
     // Restore session
     (async ()=>{
-      const { data } = await supabase.auth.getUser();
+      const { data } = await sb.auth.getUser();
       const user = data.user;
       if(user){
         try{
@@ -501,7 +502,7 @@
     function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
     ready(async function(){ 
       try {
-        if (typeof supabase === 'undefined' || !supabase.auth) return;
+        if (typeof sb === 'undefined' || !sb.auth) return;
         const navCreditsEl = document.getElementById('navCredits');
         const runBtn = document.getElementById('runBtn');
         const R = (c)=>{ 
@@ -514,13 +515,13 @@
           }
         };
 
-        const ures = await supabase.auth.getUser();
+        const ures = await sb.auth.getUser();
         const user = ures?.data?.user;
         if(!user) return;
 
         async function loadCreditsOnce(){ 
           try {
-            const { data: prof } = await supabase.from('profiles')
+            const { data: prof } = await sb.from('profiles')
               .select('credits').eq('user_id', user.id).maybeSingle();
             const c = prof?.credits ?? 0;
             R(c);
@@ -560,11 +561,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const el = document.getElementById('btnLoginSignup');
   if (!el || !window.supabase) return;
   try {
-    const { data } = await supabase.auth.getSession();
+    const { data } = await sb.auth.getSession();
     if (data && data.session && data.session.user) {
       el.style.display = 'none';
     }
-    supabase.auth.onAuthStateChange((_e, session) => {
+    sb.auth.onAuthStateChange((_e, session) => {
       if (session && session.user) {
         el.style.display = 'none';
       } else {
