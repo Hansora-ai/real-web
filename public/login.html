@@ -131,255 +131,208 @@
     </div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.35.7"></script>
   <script>
-    // Robust Supabase JS loader (fixes cases where CDN is blocked by ISP / adblock)
-    function __hs_loadScript(src) {
-      return new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.async = true;
-        s.onload = () => resolve();
-        s.onerror = () => reject(new Error('Failed to load: ' + src));
-        document.head.appendChild(s);
+    // Initialize Supabase (from your project)
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Elements
+    const form = document.getElementById('formAuth');
+    const linkToggle = document.getElementById('linkToggle');
+    const confirmWrap = document.getElementById('confirmWrap');
+    const err = document.getElementById('err');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const btnGoogle = document.getElementById('btnGoogle');
+    const successPanel = document.getElementById('successPanel');
+    const successTitle = document.getElementById('successTitle');
+    const successText  = document.getElementById('successText');
+    const rowPassword = document.getElementById('rowPassword');
+    const inputPassword = document.getElementById('password');
+    const inputConfirm = document.getElementById('confirm');
+    const linkForgot = document.getElementById('linkForgot');
+    const rowEmail = document.getElementById('rowEmail');
+    const inputEmail = document.getElementById('email');
+
+    // Mode machine
+    const mode = { value: 'login' }; // 'login' | 'signup' | 'reset' | 'set-new-password'
+
+    function setMode(next) {
+      mode.value = next;
+      err.textContent = '';
+      successPanel.classList.add('hidden');
+
+      // defaults
+      rowEmail.classList.remove('hidden');
+      if (inputEmail) inputEmail.disabled = false;
+      rowPassword.classList.remove('hidden');
+      inputPassword.disabled = false;
+      inputConfirm.disabled = false;
+      confirmWrap.classList.add('hidden');
+      linkToggle.classList.remove('hidden');
+      if (linkForgot) linkForgot.classList.remove('hidden');
+
+      if (next === 'signup') {
+        confirmWrap.classList.remove('hidden');
+        btnSubmit.textContent = 'Create account';
+        linkToggle.textContent = 'Back to Log in';
+        if (linkForgot) linkForgot.classList.add('hidden');
+      } else if (next === 'reset') {
+        // email-only
+        rowPassword.classList.add('hidden');
+        inputPassword.disabled = true;
+        inputConfirm.disabled = true;
+        btnSubmit.textContent = 'Send reset link';
+        linkToggle.textContent = 'Back to Log in';
+        if (linkForgot) linkForgot.classList.add('hidden');
+      } else if (next === 'set-new-password') {
+        rowEmail.classList.add('hidden');
+        if (inputEmail) inputEmail.disabled = true;
+        rowPassword.classList.remove('hidden');
+        confirmWrap.classList.remove('hidden');
+        inputPassword.disabled = false;
+        inputConfirm.disabled = false;
+        linkToggle.classList.add('hidden');
+        if (linkForgot) linkForgot.classList.add('hidden');
+        btnSubmit.textContent = 'Set new password';
+      } else {
+        // login
+        btnSubmit.textContent = 'Log in';
+        linkToggle.textContent = 'Sign up';
+      }
+    }
+
+    // Toggle login/signup
+    linkToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      setMode(mode.value === 'login' ? 'signup' : 'login');
+    });
+
+    // Forgot password → reset mode
+    if (linkForgot) {
+      linkForgot.addEventListener('click', (e) => {
+        e.preventDefault();
+        setMode('reset');
       });
     }
-  </script>
 
-  <script>
-    // Main auth logic (runs only after Supabase JS is available)
-    window.__hs_startAuth = async function __hs_startAuth() {
+    // Google OAuth
+    btnGoogle.addEventListener('click', async () => {
       try {
-        if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-          throw new Error('Supabase library is not available.');
-        }
-          // Initialize Supabase (from your project)
-          const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-          const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-          const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const { error } = await supabase.auth.signIn({ provider: 'google' }, { redirectTo: `${location.origin}/index.html` });
+        if (error) throw error;
+      } catch (e) { err.textContent = e.message || 'Google sign-in failed.'; }
+    });
 
-          // Elements
-          const form = document.getElementById('formAuth');
-          const linkToggle = document.getElementById('linkToggle');
-          const confirmWrap = document.getElementById('confirmWrap');
-          const err = document.getElementById('err');
-          const btnSubmit = document.getElementById('btnSubmit');
-          const btnGoogle = document.getElementById('btnGoogle');
-          const successPanel = document.getElementById('successPanel');
-          const successTitle = document.getElementById('successTitle');
-          const successText  = document.getElementById('successText');
-          const rowPassword = document.getElementById('rowPassword');
-          const inputPassword = document.getElementById('password');
-          const inputConfirm = document.getElementById('confirm');
-          const linkForgot = document.getElementById('linkForgot');
-          const rowEmail = document.getElementById('rowEmail');
-          const inputEmail = document.getElementById('email');
-
-          // Mode machine
-          const mode = { value: 'login' }; // 'login' | 'signup' | 'reset' | 'set-new-password'
-
-          function setMode(next) {
-            mode.value = next;
-            err.textContent = '';
-            successPanel.classList.add('hidden');
-
-            // defaults
-            rowEmail.classList.remove('hidden');
-            if (inputEmail) inputEmail.disabled = false;
-            rowPassword.classList.remove('hidden');
-            inputPassword.disabled = false;
-            inputConfirm.disabled = false;
-            confirmWrap.classList.add('hidden');
-            linkToggle.classList.remove('hidden');
-            if (linkForgot) linkForgot.classList.remove('hidden');
-
-            if (next === 'signup') {
-              confirmWrap.classList.remove('hidden');
-              btnSubmit.textContent = 'Create account';
-              linkToggle.textContent = 'Back to Log in';
-              if (linkForgot) linkForgot.classList.add('hidden');
-            } else if (next === 'reset') {
-              // email-only
-              rowPassword.classList.add('hidden');
-              inputPassword.disabled = true;
-              inputConfirm.disabled = true;
-              btnSubmit.textContent = 'Send reset link';
-              linkToggle.textContent = 'Back to Log in';
-              if (linkForgot) linkForgot.classList.add('hidden');
-            } else if (next === 'set-new-password') {
-              rowEmail.classList.add('hidden');
-              if (inputEmail) inputEmail.disabled = true;
-              rowPassword.classList.remove('hidden');
-              confirmWrap.classList.remove('hidden');
-              inputPassword.disabled = false;
-              inputConfirm.disabled = false;
-              linkToggle.classList.add('hidden');
-              if (linkForgot) linkForgot.classList.add('hidden');
-              btnSubmit.textContent = 'Set new password';
-            } else {
-              // login
-              btnSubmit.textContent = 'Log in';
-              linkToggle.textContent = 'Sign up';
-            }
-          }
-
-          // Toggle login/signup
-          linkToggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            setMode(mode.value === 'login' ? 'signup' : 'login');
-          });
-
-          // Forgot password → reset mode
-          if (linkForgot) {
-            linkForgot.addEventListener('click', (e) => {
-              e.preventDefault();
-              setMode('reset');
-            });
-          }
-
-          // Google OAuth
-          btnGoogle.addEventListener('click', async () => {
-            try {
-              const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: { redirectTo: `${location.origin}/index.html` }
-              });
-              if (error) throw error;
-            } catch (e) { err.textContent = e.message || 'Google sign-in failed.'; }
-          });
-
-          // Handle recovery link (#type=recovery)
-          function getHashParams () {
-            const h = new URLSearchParams(location.hash.replace(/^#/, ''));
-            return Object.fromEntries(h.entries());
-          }
-          (async () => {
-            const { type, access_token, refresh_token } = getHashParams();
-            if (type === 'recovery' && access_token) {
-              // setSession works best with both tokens; pass empty string if refresh is missing
-              await supabase.auth.setSession({
-                access_token,
-                refresh_token: refresh_token || ''
-              }).catch(()=>{});
-              setMode('set-new-password');
-            }
-          })();
-
-          // Form submit
-          form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            err.textContent = '';
-            successPanel.classList.add('hidden');
-
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-
-            if (mode.value === 'reset') {
-              if (!email) { err.textContent = 'Enter your account email.'; return; }
-              try {
-                const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                  redirectTo: `${location.origin}/login.html`
-                });
-                if (error) throw error;
-                form.classList.add('hidden');
-                successTitle.textContent = 'Password reset link sent';
-                successText.textContent = 'We sent a secure link to your inbox. Open it to set a new password.';
-                if (typeof alreadyRegistered !== 'undefined' && alreadyRegistered) { return; }
-                  successPanel.classList.remove('hidden');
-              } catch (e) { err.textContent = e.message || 'Could not send reset email. Please try again.'; }
-              return;
-            }
-
-            if (mode.value === 'set-new-password') {
-              const confirm = document.getElementById('confirm').value;
-              if (password.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
-              if (password !== confirm) { err.textContent = 'Passwords do not match.'; return; }
-              try {
-                const { error } = await supabase.auth.updateUser({ password });
-                if (error) throw error;
-                history.replaceState({}, document.title, location.pathname);
-                form.classList.add('hidden');
-                successTitle.textContent = 'Password updated';
-                successText.textContent = 'Your password has been changed. Continue to Hansora.';
-                if (typeof alreadyRegistered !== 'undefined' && alreadyRegistered) { return; }
-                  successPanel.classList.remove('hidden');
-                setTimeout(() => { window.location.href = '/index.html'; }, 800);
-              } catch (e) { err.textContent = e.message || 'Could not update password. Please try again.'; }
-              return;
-            }
-
-            if (mode.value === 'signup') {
-              const confirm = document.getElementById('confirm').value;
-              if (password !== confirm) { err.textContent = 'Passwords do not match.'; return; }
-              if (password.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
-              try {
-                // v2 signature with options
-                const { data, error } = await supabase.auth.signUp({
-                  email, password,
-                  options: { emailRedirectTo: `${location.origin}/login.html` }
-                });
-
-                // Guard: Supabase may return success for already-registered emails (identities===0)
-                if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-                  err.textContent = 'Email is already registered.';
-                  return;
-                }
-        // If user exists already: show inline red error (no resend, no success panel)
-                if (error && (String(error.message).toLowerCase().includes('already registered') || error.status === 400)) {
-                  alreadyRegistered = true;
-                  err.textContent = 'Email is already registered.';
-                  return;
-                }
-
-
-                if (error) throw error;
-
-                // If session created immediately, go in; else prompt to confirm
-                if (data && data.session && data.session.user) {
-                  window.location.href = '/index.html';
-                } else {
-                  form.classList.add('hidden');
-                  successTitle.textContent = 'Check your email to confirm';
-                  successText.textContent = 'We sent a confirmation link to your inbox. After confirming, return here to log in.';
-                  if (typeof alreadyRegistered !== 'undefined' && alreadyRegistered) { return; }
-                  successPanel.classList.remove('hidden');
-                }
-              } catch (e) {
-                err.textContent = e.message || 'Sign up failed. Please try again.';
-              }
-              return;
-            }
-
-            // login
-            try {
-              const { error } = await supabase.auth.signInWithPassword({ email, password });
-              if (error) throw error;
-              window.location.href = '/index.html';
-            } catch (e) { err.textContent = 'Incorrect email or password.'; }
-          });
-      } catch (e) {
-        const el = document.getElementById('err');
-        if (el) el.textContent = (e && e.message) ? e.message : 'Authentication failed. Please try again.';
-      }
-    };
-  </script>
-
-  <script>
+    // Handle recovery link (#type=recovery)
+    function getHashParams () {
+      const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+      return Object.fromEntries(h.entries());
+    }
     (async () => {
-      try {
-        // Try jsDelivr first
-        await __hs_loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
-      } catch (_) {
-        try {
-          // Fallback CDN (often works when jsDelivr is blocked)
-          await __hs_loadScript('https://unpkg.com/@supabase/supabase-js@2');
-        } catch (e) {
-          const el = document.getElementById('err');
-          if (el) el.textContent = 'Could not load sign-in library. Disable adblock/VPN or try another network.';
-          return;
-        }
+      const { type, access_token } = getHashParams();
+      // In supabase-js v1, handle password recovery by calling auth.api.updateUser(access_token,...)
+      window.__RECOVERY_ACCESS_TOKEN__ = (type === 'recovery' && access_token) ? access_token : null;
+      if (window.__RECOVERY_ACCESS_TOKEN__) {
+        setMode('set-new-password');
       }
-      await window.__hs_startAuth();
     })();
+
+    // Form submit
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.textContent = '';
+      successPanel.classList.add('hidden');
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (mode.value === 'reset') {
+        if (!email) { err.textContent = 'Enter your account email.'; return; }
+        try {
+          const { error } = await supabase.auth.api.resetPasswordForEmail(email, {
+            redirectTo: `${location.origin}/login.html`
+          });
+          if (error) throw error;
+          form.classList.add('hidden');
+          successTitle.textContent = 'Password reset link sent';
+          successText.textContent = 'We sent a secure link to your inbox. Open it to set a new password.';
+          if (typeof alreadyRegistered !== 'undefined' && alreadyRegistered) { return; }
+            successPanel.classList.remove('hidden');
+        } catch (e) { err.textContent = e.message || 'Could not send reset email. Please try again.'; }
+        return;
+      }
+
+      if (mode.value === 'set-new-password') {
+        const confirm = document.getElementById('confirm').value;
+        if (password.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
+        if (password !== confirm) { err.textContent = 'Passwords do not match.'; return; }
+        try {
+          const token = window.__RECOVERY_ACCESS_TOKEN__;
+          if (!token) throw new Error('Recovery token missing. Please request a new reset link.');
+          const { error } = await supabase.auth.api.updateUser(token, { password });
+          if (error) throw error;
+          history.replaceState({}, document.title, location.pathname);
+          form.classList.add('hidden');
+          successTitle.textContent = 'Password updated';
+          successText.textContent = 'Your password has been changed. Continue to Hansora.';
+          if (typeof alreadyRegistered !== 'undefined' && alreadyRegistered) { return; }
+            successPanel.classList.remove('hidden');
+          setTimeout(() => { window.location.href = '/index.html'; }, 800);
+        } catch (e) { err.textContent = e.message || 'Could not update password. Please try again.'; }
+        return;
+      }
+
+      if (mode.value === 'signup') {
+        const confirm = document.getElementById('confirm').value;
+        if (password !== confirm) { err.textContent = 'Passwords do not match.'; return; }
+        if (password.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
+        try {
+          // v2 signature with options
+          const { data, error } = await supabase.auth.signUp({
+            email, password,
+            options: { emailRedirectTo: `${location.origin}/login.html` }
+          });
+
+          // Guard: Supabase may return success for already-registered emails (identities===0)
+          if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+            err.textContent = 'Email is already registered.';
+            return;
+          }
+  // If user exists already: show inline red error (no resend, no success panel)
+          if (error && (String(error.message).toLowerCase().includes('already registered') || error.status === 400)) {
+            alreadyRegistered = true;
+            err.textContent = 'Email is already registered.';
+            return;
+          }
+
+
+          if (error) throw error;
+
+          // If session created immediately, go in; else prompt to confirm
+          if (data && data.session && data.session.user) {
+            window.location.href = '/index.html';
+          } else {
+            form.classList.add('hidden');
+            successTitle.textContent = 'Check your email to confirm';
+            successText.textContent = 'We sent a confirmation link to your inbox. After confirming, return here to log in.';
+            if (typeof alreadyRegistered !== 'undefined' && alreadyRegistered) { return; }
+            successPanel.classList.remove('hidden');
+          }
+        } catch (e) {
+          err.textContent = e.message || 'Sign up failed. Please try again.';
+        }
+        return;
+      }
+
+      // login
+      try {
+        const { error } = await supabase.auth.signIn({ email, password });
+        if (error) throw error;
+        window.location.href = '/index.html';
+      } catch (e) { err.textContent = 'Incorrect email or password.'; }
+    });
   </script>
 </body>
 </html>
