@@ -166,14 +166,13 @@
 </div>
 
 <script>
-  const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ey...CI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-  window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.sb.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+  window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.sb.createClient(SUPABASE_URL, SUPABASE_ANON);
   var sb = window.__HANSORA_SB__;
   window.supabaseClient = window.__HANSORA_SB__;
   window._supabase = window.__HANSORA_SB__;
-
-  const MODEL_LINKS = {
+const MODEL_LINKS = {
     "veo3": "veo3.html",
     "veo3.1": "veo3_1.html",
     "kling": "kling.html",
@@ -427,7 +426,6 @@ function linkifyHighlight(text, modelSlug){
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     var sb = window.__HANSORA_SB__;
-
     window.supabaseClient = window.__HANSORA_SB__;
     window._supabase = window.__HANSORA_SB__;
 const $btnLoginNav = document.getElementById('btnLoginNav');
@@ -504,13 +502,13 @@ const $btnLoginNav = document.getElementById('btnLoginNav');
 // Keep header login button hidden when authenticated
 document.addEventListener('DOMContentLoaded', async () => {
   const el = document.getElementById('btnLoginSignup');
-  if (!el || !window.supabase || !window.__HANSORA_SB__) return;
+  if (!el || !window.supabase) return;
   try {
-    const { data } = await sb.auth.getSession();
+    const { data } = await supabase.auth.getSession();
     if (data && data.session && data.session.user) {
       el.style.display = 'none';
     }
-    sb.auth.onAuthStateChange((_e, session) => {
+    supabase.auth.onAuthStateChange((_e, session) => {
       if (session && session.user) {
         el.style.display = 'none';
       } else {
@@ -537,7 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     navMenu.addEventListener('click', async (e) => {
       if (e.target && e.target.id === 'hs-logout') {
-        try { await sb.auth.signOut(); } catch(_) {}
+        try { await supabase.auth.signOut(); } catch(_) {}
         window.location.href = '/login.html';
       }
     });
