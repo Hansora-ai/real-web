@@ -426,6 +426,7 @@ function linkifyHighlight(text, modelSlug){
     const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
     const $btnLoginNav = document.getElementById('btnLoginNav');
     const $btnGetStarted = document.getElementById('btnGetStarted');
+    const $btnLoginSignup = document.getElementById('btnLoginSignup');
     const $navUser = document.getElementById('navUser');
     const $navCredits = document.getElementById('navCredits');
     const $navAvatar = document.getElementById('navAvatar');
@@ -438,6 +439,7 @@ function linkifyHighlight(text, modelSlug){
 
     function showLoggedInUI(profile, user){
       try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
+      try{ if($btnLoginSignup) $btnLoginSignup.style.display = 'none'; }catch(e){}
       $navUser.classList.remove('hidden'); $navUser.classList.add('flex');
       $navCredits.textContent=(profile?.credits??0)+'⚡';
       if(user?.user_metadata?.avatar_url){ $navAvatarImg.src=user.user_metadata.avatar_url; $navAvatarImg.classList.remove('hidden'); }
@@ -445,6 +447,7 @@ function linkifyHighlight(text, modelSlug){
     }
     function showLoggedOutUI(){
       try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
+      try{ if($btnLoginSignup) $btnLoginSignup.style.display = ''; }catch(e){}
       $navUser.classList.add('hidden'); $navUser.classList.remove('flex');
     }
     $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
@@ -498,23 +501,20 @@ function linkifyHighlight(text, modelSlug){
 // Keep header login button hidden when authenticated
 document.addEventListener('DOMContentLoaded', async () => {
   const el = document.getElementById('btnLoginSignup');
-  if (!el || !window.supabase) return;
+  const sb = window.__HANSORA_SB__;
+  if (!el || !sb || !sb.auth) return;
+
   try {
-    const { data } = await supabase.auth.getSession();
-    if (data && data.session && data.session.user) {
-      el.style.display = 'none';
-    }
-    supabase.auth.onAuthStateChange((_e, session) => {
-      if (session && session.user) {
-        el.style.display = 'none';
-      } else {
-        el.style.display = '';
-      }
+    const { data } = await sb.auth.getUser();
+    if (data && data.user) el.style.display = 'none';
+
+    sb.auth.onAuthStateChange((_e, session) => {
+      if (session && session.user) el.style.display = 'none';
+      else el.style.display = '';
     });
   } catch (_) { /* silent */ }
 });
 </script>
-
 <script>
 // PROFILE MENU: ensure exactly 4 items, no redeclarations
 document.addEventListener('DOMContentLoaded', () => {
@@ -531,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     navMenu.addEventListener('click', async (e) => {
       if (e.target && e.target.id === 'hs-logout') {
-        try { await supabase.auth.signOut(); } catch(_) {}
+        try { await sb.auth.signOut(); } catch(_) {}
         window.location.href = '/login.html';
       }
     });
