@@ -167,8 +167,11 @@
 
 <script>
   const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ey...CI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+  window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  var sb = window.__HANSORA_SB__;
+  window.supabaseClient = window.__HANSORA_SB__;
+  window._supabase = window.__HANSORA_SB__;
 
   const MODEL_LINKS = {
     "veo3": "veo3.html",
@@ -368,7 +371,7 @@ function linkifyHighlight(text, modelSlug){
 
   async function loadExamples(filter='all'){
     try{
-      let q = supabase.from('prompt_examples')
+      let q = sb.from('prompt_examples')
         .select('id,title,model_slug,media_type,media_url,poster_url,highlight,prompt,sort_order')
         .order('sort_order', { ascending: true });
 
@@ -422,9 +425,12 @@ function linkifyHighlight(text, modelSlug){
   (function(){
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    var sb = window.__HANSORA_SB__;
 
-    const $btnLoginNav = document.getElementById('btnLoginNav');
+    window.supabaseClient = window.__HANSORA_SB__;
+    window._supabase = window.__HANSORA_SB__;
+const $btnLoginNav = document.getElementById('btnLoginNav');
     const $btnGetStarted = document.getElementById('btnGetStarted');
     const $navUser = document.getElementById('navUser');
     const $navCredits = document.getElementById('navCredits');
@@ -498,13 +504,13 @@ function linkifyHighlight(text, modelSlug){
 // Keep header login button hidden when authenticated
 document.addEventListener('DOMContentLoaded', async () => {
   const el = document.getElementById('btnLoginSignup');
-  if (!el || !window.supabase) return;
+  if (!el || !window.supabase || !window.__HANSORA_SB__) return;
   try {
-    const { data } = await supabase.auth.getSession();
+    const { data } = await sb.auth.getSession();
     if (data && data.session && data.session.user) {
       el.style.display = 'none';
     }
-    supabase.auth.onAuthStateChange((_e, session) => {
+    sb.auth.onAuthStateChange((_e, session) => {
       if (session && session.user) {
         el.style.display = 'none';
       } else {
@@ -531,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     navMenu.addEventListener('click', async (e) => {
       if (e.target && e.target.id === 'hs-logout') {
-        try { await supabase.auth.signOut(); } catch(_) {}
+        try { await sb.auth.signOut(); } catch(_) {}
         window.location.href = '/login.html';
       }
     });
