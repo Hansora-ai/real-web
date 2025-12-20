@@ -169,7 +169,7 @@
   const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supabase.co';
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
   window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-  const supabase = window.__HANSORA_SB__;
+  const sb = window.__HANSORA_SB__;
 
   const MODEL_LINKS = {
     "veo3": "veo3.html",
@@ -369,7 +369,7 @@ function linkifyHighlight(text, modelSlug){
 
   async function loadExamples(filter='all'){
     try{
-      let q = supabase.from('prompt_examples')
+      let q = sb.from('prompt_examples')
         .select('id,title,model_slug,media_type,media_url,poster_url,highlight,prompt,sort_order')
         .order('sort_order', { ascending: true });
 
