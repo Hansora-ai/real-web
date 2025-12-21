@@ -280,7 +280,8 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
 
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const sb = window.__HANSORA_SB__;
 
     // Header elements
     const $btnLoginNav = document.getElementById('btnLoginNav');
@@ -290,6 +291,7 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
     const $navAvatar = document.getElementById('navAvatar');
     const $navMenu = document.getElementById('navMenu');
     const $btnLogout = document.getElementById('btnLogout');
+    const $btnLoginSignup = document.getElementById('btnLoginSignup');
     const $navAvatarImg = document.getElementById('navAvatarImg');
 
     // Hero button
@@ -321,11 +323,11 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
         $doLogin.classList.add('btn-brand'); $doSignup.classList.remove('btn-brand');
       }
     }
-    function showLoggedInUI(profile, user){var u=document.getElementById('loginUnified'); if(u) u.classList.add('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');} else {
+    function showLoggedInUI(profile, user){if($btnLoginSignup) $btnLoginSignup.style.display='none';var u=document.getElementById('loginUnified'); if(u) u.classList.add('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');} else {
         $navAvatarImg.classList.add('hidden');
       }
     }
-    function showLoggedOutUI(){var u=document.getElementById('loginUnified'); if(u) u.classList.remove('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
+    function showLoggedOutUI(){if($btnLoginSignup) $btnLoginSignup.style.display='';var u=document.getElementById('loginUnified'); if(u) u.classList.remove('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
     // Dropdown
     $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
     document.addEventListener('click', (e)=>{
@@ -338,14 +340,13 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
     $close.addEventListener('click', closeAuth);
 
     async function getOrCreateProfile(user){
-      const { data, error } = await supabase
-        .from('profiles')
+      const { data, error } = await sb.from('profiles')
         .select('user_id,email,credits')
         .eq('user_id', user.id)
         .maybeSingle();
       if(error){ throw error; }
       if(!data){
-        const ins = await supabase.from('profiles').insert({
+        const ins = await sb.from('profiles').insert({
           user_id: user.id, email: user.email, credits: 3
         }).select().single();
         if(ins.error){ throw ins.error; }
@@ -354,10 +355,10 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
       return data;
     }
     async function refreshCredits(){
-      const { data } = await supabase.auth.getUser();
+      const { data } = await sb.auth.getUser();
       const user = data.user;
       if(!user) return;
-      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      const prof = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
       if(prof?.data?.credits != null){ $navCredits.textContent = prof.data.credits + '⚡'; }
     }
     window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
@@ -368,7 +369,7 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
       $msg.textContent = 'Creating account…';
-      const { data, error } = await supabase.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+      const { data, error } = await sb.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
       if(error){ $msg.textContent = error.message; return; }
       $msg.textContent = 'Check your email to confirm, then Log in.';
       setAuthMode('login');
@@ -378,7 +379,7 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       $msg.textContent = 'Signing in…';
       try{
-        const { data, error } = await supabase.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+        const { data, error } = await sb.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
         if(error){ $msg.textContent = error.message; return; }
         const user = data.user;
         const prof = await getOrCreateProfile(user);
@@ -388,20 +389,19 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
     });
     // Logout
     document.getElementById('btnLogout').addEventListener('click', async ()=>{
-      await supabase.auth.signOut();
+      await sb.auth.signOut();
       showLoggedOutUI();
     });
     
     // === Credit helpers (pure Supabase; no Make.com) ===
     async function getUserId() {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await sb.auth.getUser();
       return data.user?.id || null;
     }
     async function setCredits(value) {
       const uid = await getUserId();
       if (!uid) throw new Error('Not logged in');
-      const { error } = await supabase
-        .from('profiles')
+      const { error } = await sb.from('profiles')
         .update({ credits: value })
         .eq('user_id', uid);
       if (error) throw error;
@@ -410,8 +410,7 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
     async function addCredits(delta) {
       const uid = await getUserId();
       if (!uid) throw new Error('Not logged in');
-      const { data, error } = await supabase
-        .from('profiles')
+      const { data, error } = await sb.from('profiles')
         .select('credits')
         .eq('user_id', uid)
         .maybeSingle();
@@ -422,8 +421,7 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
     async function useCredits(cost) {
       const uid = await getUserId();
       if (!uid) throw new Error('Not logged in');
-      const { data, error } = await supabase
-        .from('profiles')
+      const { data, error } = await sb.from('profiles')
         .select('credits')
         .eq('user_id', uid)
         .maybeSingle();
@@ -436,7 +434,7 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
 
     // Restore session
     (async ()=>{
-      const { data } = await supabase.auth.getUser();
+      const { data } = await sb.auth.getUser();
       const user = data.user;
       if(user){
         try{
@@ -465,7 +463,7 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
     function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
     ready(async function(){ 
       try {
-        if (typeof supabase === 'undefined' || !supabase.auth) return;
+        if (typeof sb === 'undefined' || !sb.auth) return;
         const navCreditsEl = document.getElementById('navCredits');
         const runBtn = document.getElementById('runBtn');
         const R = (c)=>{ 
@@ -478,13 +476,13 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
           }
         };
 
-        const ures = await supabase.auth.getUser();
+        const ures = await sb.auth.getUser();
         const user = ures?.data?.user;
         if(!user) return;
 
         async function loadCreditsOnce(){ 
           try {
-            const { data: prof } = await supabase.from('profiles')
+            const { data: prof } = await sb.from('profiles')
               .select('credits').eq('user_id', user.id).maybeSingle();
             const c = prof?.credits ?? 0;
             R(c);
@@ -522,13 +520,13 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
   const el = document.getElementById('btnLoginSignup');
-  if (!el || !window.supabase) return;
+  if (!el || !window.__HANSORA_SB__) return;
   try {
-    const { data } = await supabase.auth.getSession();
+    const { data } = await sb.auth.getSession();
     if (data && data.session && data.session.user) {
       el.style.display = 'none';
     }
-    supabase.auth.onAuthStateChange((_e, session) => {
+    sb.auth.onAuthStateChange((_e, session) => {
       if (session && session.user) {
         el.style.display = 'none';
       } else {
@@ -557,12 +555,12 @@ document.addEventListener('DOMContentLoaded', () => {
       avatar.parentElement.appendChild(menu);
     }
     menu.className = 'menu show bg-base-bg border border-base-line rounded-xl p-2 text-sm';
-    const avatar = document.getElementById('navAvatar');
-    const menu = document.getElementById('navMenu');
-    if (!avatar || !menu) return;
+    const avatarEl = document.getElementById('navAvatar');
+    const menuEl = document.getElementById('navMenu');
+    if (!avatarEl || !menuEl) return;
     // Ensure visible styling applied to the single existing menu
-    menu.classList.add('show');
-    menu.innerHTML = `
+    menuEl.classList.add('show');
+    menuEl.innerHTML = `
       <li><a href="/profile.html">Profile</a></li>
       <li><a href="/usage.html">History</a></li>
       <li><a href="/pricing.html">Subscription</a></li>
@@ -837,12 +835,12 @@ document.addEventListener('DOMContentLoaded', () => {
       // Resolve Supabase UID
       const uid = await (async function(){
         try {
-          if (window.supabase?.auth?.getUser) {
-            const { data } = await window.supabase.auth.getUser();
+          if (sb?.auth?.getUser) {
+            const { data } = await sb.auth.getUser();
             if (data?.user?.id) return data.user.id;
           }
-          if (window.supabase?.auth?.getSession) {
-            const { data } = await window.supabase.auth.getSession();
+          if (sb?.auth?.getSession) {
+            const { data } = await sb.auth.getSession();
             if (data?.session?.user?.id) return data.session.user.id;
           }
         } catch {}
@@ -859,7 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         } catch {}
         try {
-          const raw = localStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.session');
+          const raw = localStorage.getItem('sb.auth.token') || localStorage.getItem('sb.session');
           if (raw) {
             const parsed = JSON.parse(raw);
             const id = parsed?.currentSession?.user?.id || parsed?.user?.id || parsed?.session?.user?.id;
@@ -891,21 +889,21 @@ document.addEventListener('DOMContentLoaded', () => {
   async function resolveUid() {
     // 1) Supabase SDK v2
     try {
-      if (window.supabase?.auth?.getUser) {
-        const { data } = await window.supabase.auth.getUser();
+      if (sb?.auth?.getUser) {
+        const { data } = await sb.auth.getUser();
         if (data && data.user && data.user.id) return data.user.id;
       }
     } catch(e){}
     // 2) Supabase SDK session()
     try {
-      if (window.supabase?.auth?.getSession) {
-        const { data } = await window.supabase.auth.getSession();
+      if (sb?.auth?.getSession) {
+        const { data } = await sb.auth.getSession();
         if (data && data.session && data.session.user && data.session.user.id) return data.session.user.id;
       }
     } catch(e){}
     // 3) LocalStorage common keys
     try {
-      const direct = localStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.session');
+      const direct = localStorage.getItem('sb.auth.token') || localStorage.getItem('sb.session');
       if (direct) {
         const p = JSON.parse(direct);
         const uid = p?.currentSession?.user?.id || p?.user?.id || p?.session?.user?.id;
