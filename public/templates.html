@@ -128,7 +128,7 @@
     const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    const supabase = window.__HANSORA_SB__;
+    const sb = window.__HANSORA_SB__;
 
     const mask = document.getElementById('mask');
     const mVideo = document.getElementById('mVideo');
@@ -276,7 +276,7 @@
 
     async function loadTemplates(){
       try{
-        const { data, error } = await supabase
+        const { data, error } = await sb
           .from('motion_templates')
           .select('name,motion_id,preview_url,poster_url,sort_order')
           .order('sort_order', { ascending: true });
@@ -320,16 +320,17 @@ const $navMenu = document.getElementById('navMenu');
 const $btnLogout = document.getElementById('btnLogout');
 const $navAvatarImg = document.getElementById('navAvatarImg');
 
-function showLoggedInUI(profile, user){try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');if($btnLoginSignup){$btnLoginSignup.classList.add('hidden');}$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}catch{}}
-function showLoggedOutUI(){try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');if($btnLoginSignup){$btnLoginSignup.classList.remove('hidden');}$navUser.classList.add('hidden');$navUser.classList.remove('flex');}catch{}}
+function showLoggedInUI(profile, user){try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');if($btnLoginSignup){$btnLoginSignup.classList.add('hidden');$btnLoginSignup.style.display='none';}$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}catch{}}
+function showLoggedOutUI(){try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');if($btnLoginSignup){$btnLoginSignup.classList.remove('hidden');$btnLoginSignup.style.display='';}$navUser.classList.add('hidden');$navUser.classList.remove('flex');}catch{}}
 
 $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
-$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
+$btnLogout?.addEventListener('click',async()=>{await sb.auth.signOut();showLoggedOutUI();});
 
-async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+async function getOrCreateProfile(user){const r=await sb.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await sb.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
 
-(async()=>{try{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}}catch{}})();
+(async()=>{try{const {data}=await sb.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}}catch{}})();
+try{sb.auth.onAuthStateChange((_event, session)=>{const user=session?.user;if(user){getOrCreateProfile(user).then(p=>showLoggedInUI(p,user)).catch(()=>showLoggedOutUI());}else{showLoggedOutUI();}});}catch{}
 </script>
 
 </body>
