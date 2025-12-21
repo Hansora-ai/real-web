@@ -65,7 +65,7 @@
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
-        <img src="https://qmaealblegvcwodlmeht.sb.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="HANSORA logo" class="h-9 w-9 object-contain" />
+        <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="HANSORA logo" class="h-9 w-9 object-contain" />
         <span class="font-semibold tracking-wide">HANSORA AI</span>
       </a>
       <nav class="hidden md:flex items-center gap-8 text-sm">
@@ -125,11 +125,12 @@
   </div>
 
   <script>
-    const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.sb.co';
+    const SUPABASE_URL  = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    const sb = window.__HANSORA_SB__;
-const mask = document.getElementById('mask');
+    const supabase = window.__HANSORA_SB__;
+
+    const mask = document.getElementById('mask');
     const mVideo = document.getElementById('mVideo');
     const mName  = document.getElementById('mName');
     const mGen   = document.getElementById('mGenerate');
@@ -309,7 +310,6 @@ const mask = document.getElementById('mask');
 
 <script>
 // === Supabase auth + header UI (kept 1:1 with existing) ===
-const sbAuth = window.__HANSORA_SB__;
 const $btnLoginNav = document.getElementById('btnLoginNav');
 const $btnLoginSignup = document.getElementById('btnLoginSignup');
 const $btnGetStarted = document.getElementById('btnGetStarted');
@@ -325,11 +325,11 @@ function showLoggedOutUI(){try{$btnLoginNav.classList.add('hidden');$btnGetStart
 
 $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
-$btnLogout?.addEventListener('click',async()=>{await sbAuth.auth.signOut();showLoggedOutUI();});
+$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
 
-async function getOrCreateProfile(user){const r=await sbAuth.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await sbAuth.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
 
-(async()=>{try{const {data}=await sbAuth.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}}catch{}})();
+(async()=>{try{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}}catch{}})();
 </script>
 
 </body>
