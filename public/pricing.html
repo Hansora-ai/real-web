@@ -275,190 +275,7 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
 </form>
 </div>
 </div>
-<script>
-    document.getElementById('y').textContent = new Date().getFullYear();
 
-    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supabase = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
-
-    // Header elements
-    const $btnLoginNav = document.getElementById('btnLoginNav');
-    const $btnGetStarted = document.getElementById('btnGetStarted');
-    const $btnLoginSignup = document.getElementById('btnLoginSignup');
-    const $navUser = document.getElementById('navUser');
-    const $navCredits = document.getElementById('navCredits');
-    const $navAvatar = document.getElementById('navAvatar');
-    const $navMenu = document.getElementById('navMenu');
-    const $btnLogout = document.getElementById('btnLogout');
-    const $navAvatarImg = document.getElementById('navAvatarImg');
-
-    // Hero button
-    const $btnLogin = document.getElementById('btnLogin');
-
-    // Modal elements
-    const $modal = document.getElementById('authModal');
-    const $close = document.getElementById('authClose');
-    const $title = document.getElementById('authTitle');
-    const $emailIn = document.getElementById('authEmail');
-    const $passIn = document.getElementById('authPass');
-    const $pass2In = document.getElementById('authPass2');
-    const $msg = document.getElementById('authMsg');
-    const $doLogin = document.getElementById('btnDoLogin');
-    const $doSignup = document.getElementById('btnDoSignup');
-
-    let authMode = 'login';
-    function openAuth(){ $modal.classList.remove('hidden'); $msg.textContent=''; }
-    function closeAuth(){ $modal.classList.add('hidden'); $msg.textContent=''; }
-    function setAuthMode(mode){
-      authMode = mode;
-      if(mode==='signup'){
-        $title.textContent = 'Sign up';
-        $pass2In.classList.remove('hidden');
-        $doSignup.classList.add('btn-brand'); $doLogin.classList.remove('btn-brand');
-      }else{
-        $title.textContent = 'Log in';
-        $pass2In.classList.add('hidden');
-        $doLogin.classList.add('btn-brand'); $doSignup.classList.remove('btn-brand');
-      }
-    }
-    function showLoggedInUI(profile, user){
-      var u=document.getElementById('loginUnified'); if(u) u.classList.add('hidden');
-      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
-      try{ if($btnLoginSignup) $btnLoginSignup.style.display = 'none'; }catch(e){}
-      $navUser.classList.remove('hidden'); $navUser.classList.add('flex');
-      $navCredits.textContent=(profile?.credits??0)+'⚡';
-      if(user?.user_metadata?.avatar_url){ $navAvatarImg.src=user.user_metadata.avatar_url; $navAvatarImg.classList.remove('hidden'); }
-      else { $navAvatarImg.classList.add('hidden'); }
-    }
-    function showLoggedOutUI(){
-      var u=document.getElementById('loginUnified'); if(u) u.classList.remove('hidden');
-      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
-      try{ if($btnLoginSignup) $btnLoginSignup.style.display = ''; }catch(e){}
-      $navUser.classList.add('hidden'); $navUser.classList.remove('flex');
-    }
-    // Dropdown
-    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
-    document.addEventListener('click', (e)=>{
-      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
-    });
-    // Openers (guarded)
-    if($btnLogin) $btnLogin.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
-    if($btnLoginNav) $btnLoginNav.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
-    if($btnGetStarted) $btnGetStarted.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
-    if($close) $close.addEventListener('click', closeAuth);
-
-    async function getOrCreateProfile(user){
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id,email,credits')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if(error){ throw error; }
-      if(!data){
-        const ins = await supabase.from('profiles').insert({
-          user_id: user.id, email: user.email, credits: 3
-        }).select().single();
-        if(ins.error){ throw ins.error; }
-        return ins.data;
-      }
-      return data;
-    }
-    async function refreshCredits(){
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
-      if(!user) return;
-      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-      if(prof?.data?.credits != null){ $navCredits.textContent = prof.data.credits + '⚡'; }
-    }
-    window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
-
-    // Sign up
-    $doSignup.addEventListener('click', async ()=>{
-      if(authMode!=='signup'){ setAuthMode('signup'); $msg.textContent=''; return; }
-      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
-      if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
-      $msg.textContent = 'Creating account…';
-      const { data, error } = await supabase.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
-      if(error){ $msg.textContent = error.message; return; }
-      $msg.textContent = 'Check your email to confirm, then Log in.';
-      setAuthMode('login');
-    });
-    // Log in
-    $doLogin.addEventListener('click', async ()=>{
-      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
-      $msg.textContent = 'Signing in…';
-      try{
-        const { data, error } = await supabase.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
-        if(error){ $msg.textContent = error.message; return; }
-        const user = data.user;
-        const prof = await getOrCreateProfile(user);
-        showLoggedInUI(prof, user);
-        closeAuth();
-      }catch(e){ $msg.textContent = e.message || 'Login failed.'; }
-    });
-    // Logout
-    document.getElementById('btnLogout').addEventListener('click', async ()=>{
-      await supabase.auth.signOut();
-      showLoggedOutUI();
-    });
-    
-    // === Credit helpers (pure Supabase; no Make.com) ===
-    async function getUserId() {
-      const { data } = await supabase.auth.getUser();
-      return data.user?.id || null;
-    }
-    async function setCredits(value) {
-      const uid = await getUserId();
-      if (!uid) throw new Error('Not logged in');
-      const { error } = await supabase
-        .from('profiles')
-        .update({ credits: value })
-        .eq('user_id', uid);
-      if (error) throw error;
-      await window.refreshCredits();
-    }
-    async function addCredits(delta) {
-      const uid = await getUserId();
-      if (!uid) throw new Error('Not logged in');
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('user_id', uid)
-        .maybeSingle();
-      if (error) throw error;
-      const next = (data?.credits ?? 0) + delta;
-      await setCredits(next);
-    }
-    async function useCredits(cost) {
-      const uid = await getUserId();
-      if (!uid) throw new Error('Not logged in');
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('user_id', uid)
-        .maybeSingle();
-      if (error) throw error;
-      const current = data?.credits ?? 0;
-      if (current < cost) throw new Error('Not enough credits');
-      await setCredits(current - cost);
-    }
-    window.hansoraCredits = { addCredits, useCredits, setCredits };
-
-    // Restore session
-    (async ()=>{
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
-      if(user){
-        try{
-          const prof = await getOrCreateProfile(user);
-          showLoggedInUI(prof, user);
-        }catch{ showLoggedOutUI(); }
-      }else{
-        showLoggedOutUI();
-      }
-    })();
-  </script>
 <!-- USAGE MODAL -->
 <div class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-4" id="usageModal">
 <div class="w-full max-w-4xl rounded-2xl border border-white/10 p-6 shadow-soft bg-[color:var(--base-bg)]">
@@ -471,621 +288,129 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
 </div>
 </div>
 <!-- HANSORA: credits polling patch v2 -->
+
+<!-- Injected header/auth scripts (scoped & conflict-free) -->
 <script>
-  (function(){ 
-    function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-    ready(async function(){ 
-      try {
-        if (typeof supabase === 'undefined' || !supabase.auth) return;
-        const navCreditsEl = document.getElementById('navCredits');
-        const runBtn = document.getElementById('runBtn');
-        const R = (c)=>{ 
-          if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-          if (runBtn) {
-            const ok = (c ?? 0) > 0;
-            runBtn.disabled = !ok;
-            runBtn.classList.toggle('opacity-50', !ok);
-            runBtn.classList.toggle('cursor-not-allowed', !ok);
-          }
-        };
+  // Guard: only set footer year element if present
+  (function(){ const y = document.getElementById('y'); if (y) y.textContent = new Date().getFullYear(); })();
 
-        const ures = await supabase.auth.getUser();
-        const user = ures?.data?.user;
-        if(!user) return;
+  (function(){
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+    const $btnLoginNav = document.getElementById('btnLoginNav');
+    const $btnGetStarted = document.getElementById('btnGetStarted');
+    const $btnLoginSignup = document.getElementById('btnLoginSignup');
+    const $navUser = document.getElementById('navUser');
+    const $navCredits = document.getElementById('navCredits');
+    const $navAvatar = document.getElementById('navAvatar');
+    const $navMenu = document.getElementById('navMenu');
+    const $btnLogout = document.getElementById('btnLogout');
+    const $navAvatarImg = document.getElementById('navAvatarImg');
+    const $btnLogin = document.getElementById('btnLogin');
 
-        async function loadCreditsOnce(){ 
-          try {
-            const { data: prof } = await supabase.from('profiles')
-              .select('credits').eq('user_id', user.id).maybeSingle();
-            const c = prof?.credits ?? 0;
-            R(c);
-            return c;
-          } catch(e) { console.warn('credits poll read failed', e); return null; }
-        }
+    function openAuth(){} function closeAuth(){} function setAuthMode(){}
 
-        // Long polling burst (3 minutes) every 2s
-        function startCreditsPolling(durationMs=180000, intervalMs=2000){
-          if (window.__creditsPoll) clearInterval(window.__creditsPoll);
-          const t0 = Date.now();
-          window.__creditsPoll = setInterval(async ()=>{
-            await loadCreditsOnce();
-            if (Date.now() - t0 > durationMs) clearInterval(window.__creditsPoll);
-          }, intervalMs);
-        }
-
-        // Initial load -> reflect current value
-        await loadCreditsOnce();
-
-        // If __run exists, wrap it so we start long polling right after Run
-        if (typeof window.__run === 'function') {
-          const __origRun = window.__run;
-          window.__run = async function(){ 
-            const c = await loadCreditsOnce();
-            if ((c ?? 0) <= 0) { alert('No credits left.'); return; }
-            startCreditsPolling(180000, 2000); // 3 minutes polling
-            return __origRun();
-          }
-        }
-      } catch(e){ console.warn('credits polling v2 error', e); }
+    function showLoggedInUI(profile, user){
+      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
+      try{ if($btnLoginSignup) $btnLoginSignup.style.display = 'none'; }catch(e){}
+      $navUser.classList.remove('hidden'); $navUser.classList.add('flex');
+      $navCredits.textContent=(profile?.credits??0)+'⚡';
+      if(user?.user_metadata?.avatar_url){ $navAvatarImg.src=user.user_metadata.avatar_url; $navAvatarImg.classList.remove('hidden'); }
+      else { $navAvatarImg.classList.add('hidden'); }
+    }
+    function showLoggedOutUI(){
+      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
+      try{ if($btnLoginSignup) $btnLoginSignup.style.display = ''; }catch(e){}
+      $navUser.classList.add('hidden'); $navUser.classList.remove('flex');
+    }
+    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
+    document.addEventListener('click', (e)=>{
+      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
     });
+    document.getElementById('btnLogout').addEventListener('click', async ()=>{
+      await sb.auth.signOut();
+      showLoggedOutUI();
+    });
+
+    async function getOrCreateProfile(user){
+      const { data, error } = await sb
+        .from('profiles').select('user_id,email,credits')
+        .eq('user_id', user.id).maybeSingle();
+      if(error) throw error;
+      if(!data){
+        const ins = await sb.from('profiles').insert({
+          user_id: user.id, email: user.email, credits: 3
+        }).select().single();
+        if(ins.error) throw ins.error;
+        return ins.data;
+      }
+      return data;
+    }
+    async function refreshCredits(){
+      const { data } = await sb.auth.getUser();
+      const user = data.user;
+      if(!user) return;
+      const prof = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      if (prof?.data?.credits != null) { $navCredits.textContent = prof.data.credits + '⚡'; }
+    }
+    window.refreshCredits = refreshCredits;
+
+    (async ()=>{
+      const { data } = await sb.auth.getUser();
+      const user = data.user;
+      if(user){
+        try{
+          const prof = await getOrCreateProfile(user);
+          showLoggedInUI(prof, user);
+        }catch{ showLoggedOutUI(); }
+      }else{
+        showLoggedOutUI();
+      }
+    })();
   })();
-  </script>
-<!-- HS FINAL STEP1-2 START -->
+</script>
+
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  /* 1) PROFILE MENU — exactly 4 items */
-  (function(){
-    const header = document.querySelector('header') || document.body;
-    const avatar = Array.from(header.querySelectorAll('button,a,div')).find(el => {
-      const aria=(el.getAttribute('aria-label')||'').toLowerCase();
-      const cls=(el.className||'').toLowerCase();
-      const txt=(el.textContent||'').toLowerCase();
-      return aria.includes('profile') || aria.includes('avatar') || cls.includes('avatar') || txt==='profile';
+// Keep header login button hidden when authenticated
+document.addEventListener('DOMContentLoaded', async () => {
+  const el = document.getElementById('btnLoginSignup');
+  const sb = window.__HANSORA_SB__;
+  if (!el || !sb || !sb.auth) return;
+
+  try {
+    const { data } = await sb.auth.getUser();
+    if (data && data.user) el.style.display = 'none';
+
+    sb.auth.onAuthStateChange((_e, session) => {
+      if (session && session.user) el.style.display = 'none';
+      else el.style.display = '';
     });
-    if(!avatar) return;
-    let menu = avatar.parentElement.querySelector('ul,div[role="menu"],div.menu');
-    if(!menu){
-      menu = document.createElement('ul');
-      avatar.parentElement.appendChild(menu);
-    }
-    menu.className = 'menu show bg-base-bg border border-base-line rounded-xl p-2 text-sm';
-    const avatar = document.getElementById('navAvatar');
-    const menu = document.getElementById('navMenu');
-    if (!avatar || !menu) return;
-    // Ensure visible styling applied to the single existing menu
-    menu.classList.add('show');
-    menu.innerHTML = `
-      <li><a href="/profile.html">Profile</a></li>
-      <li><a href="/usage.html">History</a></li>
-      <li><a href="/pricing.html">Subscription</a></li>
-      <li><button id="hs-logout">Log out</button></li>
-    `;
-    document.addEventListener('click',(e)=>{
-      if(e.target && e.target.id==='hs-logout'){ window.location.href='logout.html'; }
-    });
-  })();
-
-  
-
-  /* 2) HERO — remove 3 CTAs in the HERO ROW ONLY and keep a single "Get Started" there */
-  (function(){
-    // Find hero section by main heading
-    const hero = Array.from(document.querySelectorAll('h1,h2')).find(h => (h.textContent||'').toLowerCase().includes('create stunning'))?.closest('section');
-    // Fallback: topmost section
-    const heroSection = hero || document.querySelector('main section, section') || document.body;
-
-    // Inside hero ONLY: hide buttons with those exact labels
-    const kill = ['explore models','see templates','log in / sign up','log in','sign up'];
-    if (heroSection){
-      const btns = heroSection.querySelectorAll('a,button');
-      btns.forEach(b => {
-        const t=(b.textContent||'').trim().toLowerCase();
-        if (kill.includes(t)) b.classList.add('hs-hide');
-      });
-      // ensure single Get Started exists in this section
-      if (!heroSection.querySelector('a.hs-get-started-hero')) {
-        const row = (Array.from(btns).find(b => kill.includes((b.textContent||'').trim().toLowerCase()))?.closest('div')) || heroSection;
-        const gs = document.createElement('a');
-        gs.href='login.html';
-        gs.className='hs-get-started-hero btn btn-brand rounded-xl px-5 py-3';
-        gs.textContent='Get Started';
-        row.appendChild(gs);
-      }
-    }
-
-    // Additionally, if there is any "Get Started" in the HEADER, hide it (user didn't want header changes)
-    const header = document.querySelector('header');
-    if (header){
-      Array.from(header.querySelectorAll('a,button')).forEach(el => {
-        const t=(el.textContent||'').trim().toLowerCase();
-        if (t==='get started') el.classList.add('hs-hide');
-      });
-    }
-  })();
-
-  /* 2b) HERO MEDIA — replace the mountain IMAGE with a VIDEO */
-  (function(){
-    // Find the hero media image inside the hero section (right side card)
-    const heroTitle = Array.from(document.querySelectorAll('h1,h2')).find(h => (h.textContent||'').toLowerCase().includes('create stunning'));
-    const heroSection = heroTitle ? heroTitle.closest('section') : document.body;
-    // Look for an <img> inside the hero media container
-    let img = heroSection ? heroSection.querySelector('img') : null;
-    if (!img) img = document.querySelector('img'); // last resort
-    if (img){
-      img.style.display='none'; // ensure it doesn't cover the video
-      const box = img.parentElement || heroSection;
-      if (box && !box.querySelector('video.hs-hero-video')){
-        const vid = document.createElement('video');
-        vid.src='assets/placeholder.mp4';  // replace with your actual video
-        vid.setAttribute('playsinline','');
-        vid.setAttribute('muted','');
-        vid.setAttribute('loop','');
-        vid.setAttribute('autoplay','');
-        vid.className='hs-hero-video';
-        box.insertBefore(vid, img);
-      }
-    }
-  })();
+  } catch (_) { /* silent */ }
 });
 </script>
-<!-- HS FINAL STEP1-2 END -->
-<!-- ===== Hansora Mobile Bottom Navigation (phones only) ===== -->
-<style>
-  .hs-bottom-nav, .hs-overlay { display: none; }
-  @media (max-width: 768px){
-    :root{
-      --hs-bg: rgba(12,14,20,.88);
-      --hs-ink: #e5e7eb;
-      --hs-muted: #9ca3af;
-      --hs-line: rgba(255,255,255,.08);
-      --hs-grad-a: #8b5cf6;
-      --hs-grad-b: #60a5fa;
-    }
-    body{ padding-bottom: 84px; }
-    .hs-bottom-nav{
-      position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
-      background: var(--hs-bg); border-top: 1px solid var(--hs-line);
-      backdrop-filter: saturate(120%) blur(12px); display:block;
-    }
-    .hs-bottom-rail{
-      max-width: 980px; margin: 0 auto; height: 64px;
-      display: grid; grid-template-columns: 1fr 1fr auto 1fr 1fr;
-      align-items: center; padding: 0 14px;
-    }
-    .hs-btn{
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 4px; text-decoration: none; color: var(--hs-muted); font-size: 11px; padding: 8px 4px;
-      border-radius: 12px;
-    }
-    .hs-btn:active{ background: rgba(255,255,255,.06); }
-    .hs-btn svg{ width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; }
-    .hs-fab-wrap{ display: flex; justify-content: center; align-items: center; }
-    .hs-fab{
-      width: 64px; height: 64px; margin-top: -28px; border-radius: 16px;
-      display: flex; align-items: center; justify-content: center; position: relative;
-      text-decoration: none; color: #fff; font-weight: 700; font-size: 12px;
-      background: radial-gradient(120% 120% at 20% 10%, var(--hs-grad-a) 0%, #6d28d9 50%, transparent 60%),
-                  radial-gradient(140% 140% at 80% 80%, var(--hs-grad-b) 0%, #1d4ed8 55%, transparent 65%),
-                  linear-gradient(180deg, #7c3aed, #2563eb);
-      box-shadow: 0 10px 30px rgba(139,92,246,.35), 0 6px 14px rgba(37,99,235,.25);
-      border: 1px solid rgba(255,255,255,.08);
-    }
-    .hs-fab svg{ width: 26px; height: 26px; stroke: #fff; }
-    .hs-fab span{ position: absolute; bottom: 6px; font-size: 10px; }
-    .hs-overlay{ position: fixed; inset: 0; z-index: 70; display: none; }
-    .hs-overlay.is-open{ display: block; }
-    .hs-overlay .backdrop{ position: absolute; inset: 0; background: rgba(0,0,0,.6); }
-    .hs-overlay .panel{ position: absolute; inset: 0; background: rgba(12,14,20,.98); display: flex; flex-direction: column; }
-    .hs-overlay .panel header{ display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--hs-line); color: var(--hs-ink); }
-    .hs-overlay .panel header h3{ font-size: 16px; font-weight: 700; letter-spacing: .2px; margin: 0; }
-    .hs-overlay .panel header button{ width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--hs-line); background: rgba(255,255,255,.04); color: var(--hs-ink); }
-    .hs-overlay .links{ padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-    .hs-overlay .links a{ display: flex; align-items: center; gap: 10px; padding: 14px 12px; border-radius: 12px; text-decoration: none; color: var(--hs-ink); border: 1px solid var(--hs-line); background: rgba(255,255,255,.04); font-size: 15px; }
-    .hs-overlay .links a:active{ background: rgba(255,255,255,.06); }
-    .hs-overlay .links svg{ width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
-  }
-</style>
-<nav aria-label="Mobile bottom navigation" class="hs-bottom-nav">
-<div class="hs-bottom-rail">
-<a aria-label="Home" class="hs-btn" href="index.html">
-<svg viewbox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
-<span>Home</span>
-</a>
-<a aria-label="Templates" class="hs-btn" href="templates.html">
-<svg viewbox="0 0 24 24">
-<rect height="7" rx="2" width="7" x="3" y="3"></rect><rect height="7" rx="2" width="7" x="14" y="3"></rect>
-<rect height="7" rx="2" width="7" x="3" y="14"></rect><rect height="7" rx="2" width="7" x="14" y="14"></rect>
-</svg>
-<span>Templates</span>
-</a>
-<div class="hs-fab-wrap">
-<a aria-label="Models" class="hs-fab" href="models.html">
-<svg viewbox="0 0 24 24"><path d="M12 6v12M6 12h12"></path></svg>
-<span>Models</span>
-</a>
-</div>
-<a aria-label="History" class="hs-btn" href="usage.html">
-<svg viewbox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.708"></path><path d="M3 3v6h6"></path><path d="M12 7v6l4 2"></path></svg>
-<span>History</span>
-</a>
-<button aria-label="Menu" class="hs-btn" id="hs-menu-btn" type="button">
-<svg viewbox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
-<span>Menu</span>
-</button>
-</div>
-</nav>
-<div class="hs-overlay" id="hs-overlay">
-<div class="backdrop" id="hs-backdrop"></div>
-<div aria-labelledby="hs-ol-title" aria-modal="true" class="panel" role="dialog">
-<header>
-<h3 id="hs-ol-title">Quick Links</h3>
-<button aria-label="Close" id="hs-close">
-<svg viewbox="0 0 24 24"><path d="M6 6l12 12M6 18L18 6"></path></svg>
-</button>
-</header>
-<div class="links">
-<a href="models.html"><svg viewbox="0 0 24 24"><path d="M12 6v12M6 12h12"></path></svg> Models</a>
-<a href="templates.html"><svg viewbox="0 0 24 24">
-<rect height="7" rx="2" width="7" x="3" y="3"></rect><rect height="7" rx="2" width="7" x="14" y="3"></rect>
-<rect height="7" rx="2" width="7" x="3" y="14"></rect><rect height="7" rx="2" width="7" x="14" y="14"></rect>
-</svg> Templates</a>
-<a href="examples-prompts.html"><svg viewbox="0 0 24 24"><path d="M4 4h16v12H4z"></path><path d="M8 20h8"></path></svg> Examples/Prompts</a>
-<a href="pricing.html"><svg viewbox="0 0 24 24"><path d="M6 6h12v12H6z"></path><path d="M8 10h8M8 14h8"></path></svg> Pricing</a>
-<a href="index.html#faq"><svg viewbox="0 0 24 24"><path d="M12 18v.01"></path><path d="M9.09 9a3 3 0 1 1 5.91 1c0 2-3 2-3 4"></path></svg> FAQ</a>
-
-      <a href="contact.html"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 8l8 6 8-6"/></svg> Contact</a>
-</div>
-</div>
-</div>
 <script>
+// PROFILE MENU: ensure exactly 4 items, no redeclarations
+document.addEventListener('DOMContentLoaded', () => {
   (function(){
-    const openBtn = document.getElementById('hs-menu-btn');
-    const overlay = document.getElementById('hs-overlay');
-    const closeBtn = document.getElementById('hs-close');
-    const backdrop = document.getElementById('hs-backdrop');
-    function open(){ overlay.classList.add('is-open'); }
-    function close(){ overlay.classList.remove('is-open'); }
-    openBtn && openBtn.addEventListener('click', open);
-    closeBtn && closeBtn.addEventListener('click', close);
-    backdrop && backdrop.addEventListener('click', close);
-    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') close(); });
-  })();
-</script>
-<!-- ===== /Hansora Mobile Bottom Navigation ===== -->
-<script>
-(function(){
-  function qs(s){return document.querySelector(s);}
-  var menu = qs('#mobileMenu') || qs('#mobile-menu') || qs('.mobile-menu') || qs('.sheet-panel');
-  var fab = qs('#mobileNavFab');
-  var closeBtn = qs('#mobileMenuClose') || qs('button[data-close="mobile-menu"]') || qs('button.close-menu') || qs('#closeMenu');
-  var backdrop = qs('#mobileMenuBackdrop') || qs('#mobile-backdrop') || qs('.mobile-backdrop');
-
-  function showMenu(){
-    if(!menu) return;
-    menu.classList.add('show');
-    if(backdrop){ backdrop.classList.remove('hidden'); backdrop.classList.add('block'); }
-    document.body.classList.add('no-scroll');
-  }
-  function hideMenu(){
-    if(!menu) return;
-    menu.classList.remove('show');
-    if(backdrop){ backdrop.classList.add('hidden'); backdrop.classList.remove('block'); }
-    document.body.classList.remove('no-scroll');
-  }
-
-  if(fab){ fab.addEventListener('click', function(e){ e.preventDefault(); showMenu(); }); }
-  if(closeBtn){ closeBtn.addEventListener('click', function(){ hideMenu(); }); }
-  if(backdrop){ backdrop.addEventListener('click', function(){ hideMenu(); }); }
-  document.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ hideMenu(); } });
-})();
-</script><script>
-(function(){
-  var overlay = document.getElementById('hs-overlay');
-  var closeBtn = document.getElementById('hs-close') || document.getElementById('mobileMenuClose');
-  var backdrop = document.getElementById('hs-backdrop') || document.getElementById('mobileMenuBackdrop');
-  function open(){ if(!overlay) return; overlay.classList.add('is-open'); document.body.classList.add('no-scroll'); }
-  function close(){ if(!overlay) return; overlay.classList.remove('is-open'); document.body.classList.remove('no-scroll'); }
-  // Re-bind safely without duplicating listeners
-  if (closeBtn) { closeBtn.onclick = close; }
-  if (backdrop) { backdrop.onclick = close; }
-  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') close(); });
-  // Also close when any menu link is clicked
-  var menuLinks = overlay ? overlay.querySelectorAll('.links a') : [];
-  menuLinks.forEach(function(a){ a.addEventListener('click', close); });
-  // Expose helpers (not global) if some other code calls open
-  window.__hs_menu_open = open;
-  window.__hs_menu_close = close;
-})();
-</script>
-
-
-
-<!-- demo handler removed by patch -->
-
-
-<script>
-// STRICT dynamic checkout: prefer data-product; never proceed if uid/credits missing.
-(function () {
-  function onReady(fn){ if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, {once:true}); else fn(); }
-  onReady(function(){
-    document.addEventListener('click', async function(ev){
-      const el = ev.target.closest('.buy-credits[data-credits]');
-      if (!el) return;
-
-      ev.preventDefault();
-      ev.stopPropagation();
-
-      // Choose base product URL: prefer data-product; else only use href if it's already a Dodo URL
-      const dataProduct = (el.getAttribute('data-product')||'').trim();
-      const href = (el.getAttribute('href')||'').trim();
-      const isDodoHref = /dodopayments\.com\/buy/i.test(href);
-      const base = dataProduct || (isDodoHref ? href : '');
-      if (!base) return; // no product configured
-
-      // Credits
-      const credits = Number(el.getAttribute('data-credits') || NaN);
-      if (!Number.isFinite(credits) || credits <= 0) return;
-
-      // Resolve Supabase UID
-      const uid = await (async function(){
-        try {
-          if (window.supabase?.auth?.getUser) {
-            const { data } = await window.supabase.auth.getUser();
-            if (data?.user?.id) return data.user.id;
-          }
-          if (window.supabase?.auth?.getSession) {
-            const { data } = await window.supabase.auth.getSession();
-            if (data?.session?.user?.id) return data.session.user.id;
-          }
-        } catch {}
-        try {
-          for (let i=0;i<localStorage.length;i++){
-            const k = localStorage.key(i);
-            if (/^sb-.*-auth-token$/.test(k)) {
-              const raw = localStorage.getItem(k);
-              if (!raw) continue;
-              const parsed = JSON.parse(raw);
-              const id = parsed?.user?.id || parsed?.currentSession?.user?.id || parsed?.session?.user?.id;
-              if (id) return id;
-            }
-          }
-        } catch {}
-        try {
-          const raw = localStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.session');
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            const id = parsed?.currentSession?.user?.id || parsed?.user?.id || parsed?.session?.user?.id;
-            if (id) return id;
-          }
-        } catch {}
-        return null;
-      })();
-
-      if (!uid) return; // block when not logged in
-
-      // Build final URL
-      const u = new URL(base, location.origin);
-      if (!u.searchParams.has('quantity')) u.searchParams.set('quantity', '1');
-      u.searchParams.set('metadata_uid', uid);
-      u.searchParams.set('metadata_credits', String(credits));
-
-      location.href = u.toString();
-    });
-  });
-})();
-</script>
-
-
-<!-- BEGIN: HARD-BLOCK if uid missing; robust Supabase UID resolver -->
-<script>
-(function(){
-  // Resolve Supabase UID from multiple possible sources
-  async function resolveUid() {
-    // 1) Supabase SDK v2
-    try {
-      if (window.supabase?.auth?.getUser) {
-        const { data } = await window.supabase.auth.getUser();
-        if (data && data.user && data.user.id) return data.user.id;
-      }
-    } catch(e){}
-    // 2) Supabase SDK session()
-    try {
-      if (window.supabase?.auth?.getSession) {
-        const { data } = await window.supabase.auth.getSession();
-        if (data && data.session && data.session.user && data.session.user.id) return data.session.user.id;
-      }
-    } catch(e){}
-    // 3) LocalStorage common keys
-    try {
-      const direct = localStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.session');
-      if (direct) {
-        const p = JSON.parse(direct);
-        const uid = p?.currentSession?.user?.id || p?.user?.id || p?.session?.user?.id;
-        if (uid) return uid;
-      }
-    } catch(e){}
-    // 4) Any sb-*-auth-token key (Supabase v2 browser sessions)
-    try {
-      for (let i=0;i<localStorage.length;i++){
-        const k = localStorage.key(i);
-        if (/^sb-.*-auth-token$/.test(k)) {
-          const v = localStorage.getItem(k);
-          if (!v) continue;
-          const p = JSON.parse(v);
-          const uid = p?.user?.id || p?.currentSession?.user?.id || p?.session?.user?.id;
-          if (uid) return uid;
-        }
-      }
-    } catch(e){}
-    return null;
-  }
-
-  // Global click hijack (capture phase)
-  document.addEventListener('click', function(ev){
-    const el = ev.target.closest('a,button');
-    if (!el) return;
-    const href = (el.getAttribute('href')||'').trim();
-    const isDodo = /dodopayments\.com\/buy/i.test(href);
-    const hasCreditsData = el.hasAttribute('data-credits');
-    if (!isDodo && !hasCreditsData) return;
-
-    ev.preventDefault();
-    ev.stopPropagation();
-
-    // Determine credits
-    let credits = Number(el.getAttribute('data-credits') || NaN);
-if (!Number.isFinite(credits) || credits<=0){
-  // Prefer reading from the pricing card text (e.g., '100 credits')
-  try{
-    const card = el.closest('.rounded-2xl') || el.closest('[data-plan]') || el.parentElement;
-    const text = (card?.textContent || '').toLowerCase();
-    const m = text.match(/(\d+)\s*credits/);
-    if (m) credits = Number(m[1]);
-  }catch(e){}
-}
-if (!Number.isFinite(credits) || credits<=0){
-  // Fall back to URL params only at the end (some Dodo links use quantity=1)
-  try{
-    const u = new URL(href || '', location.href);
-    const c = Number(u.searchParams.get('credits') || u.searchParams.get('quantity') || NaN);
-    if (Number.isFinite(c) && c>0) credits = c;
-  }catch(e){}
-}
-if (!Number.isFinite(credits) || credits<=0){
-      alert('Cannot detect credits amount for this purchase.');
-      return;
-    }
-
-    const baseUrl = (el.getAttribute('data-product')||'').trim() || (isDodo ? href : '') || '';
-    if (!baseUrl){
-      alert('Missing Dodo checkout URL.');
-      return;
-    }
-
-    const original = el.innerText;
-    if ('disabled' in el) el.disabled = true;
-    if (original) el.innerText = 'Opening checkout…';
-
-    resolveUid().then(function(uid){
-      if (!uid){
-        alert('You are not logged in. (UID missing)');
-        if ('disabled' in el) el.disabled = false;
-        if (original) el.innerText = original;
-        return;
-      }
-      try{
-        const u = new URL(baseUrl, location.href);
-        u.searchParams.set('metadata_uid', uid);
-        u.searchParams.set('metadata_credits', String(credits));
-        const ru = el.getAttribute('data-return-url');
-        if (ru) u.searchParams.set('return_url', ru);
-        // FINAL redirect only when uid is present (hard block otherwise)
-        location.href = u.toString();
-      }catch(err){
-        console.error(err);
-        alert('Invalid checkout URL.');
-        if ('disabled' in el) el.disabled = false;
-        if (original) el.innerText = original;
+    const navAvatar = document.getElementById('navAvatar');
+    const navMenu = document.getElementById('navMenu');
+    if (!navAvatar || !navMenu) return;
+    
+    navMenu.innerHTML = `
+      <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/profile.html">Profile</a>
+      <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/usage.html">History</a>
+      <a class="block rounded-lg px-3 py-2 hover:bg-white/5" href="/pricing.html">Subscription</a>
+      <button class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5" id="hs-logout">Log out</button>
+    `;
+    navMenu.addEventListener('click', async (e) => {
+      if (e.target && e.target.id === 'hs-logout') {
+        try { await sb.auth.signOut(); } catch(_) {}
+        window.location.href = '/login.html';
       }
     });
-  }, true);
 })();
-</script>
-<!-- END: HARD-BLOCK if uid missing; robust Supabase UID resolver -->
-
-<script>
-(function(){
-  try {
-    function normalize(s){ return (s||'').trim().toLowerCase(); }
-    function extractInfo(card){
-      var info = {content_name: '', value: null, currency: 'USD'};
-      if(!card) return info;
-      var text = card.innerText || '';
-      var mCredits = text.match(/(\d{2,4})\s*credits/i);
-      if(mCredits) info.content_name = mCredits[1] + ' credits';
-      var mPrice = text.replace(/,/g,'').match(/\$(\d+(?:\.\d+)?)/);
-      if(mPrice) info.value = parseFloat(mPrice[1]);
-      return info;
-    }
-
-    var buttons = Array.prototype.slice.call(document.querySelectorAll('a,button'));
-    buttons = buttons.filter(function(el){
-      return normalize(el.textContent) === 'buy';
-    });
-
-    buttons.forEach(function(btn){
-      btn.addEventListener('click', function(){
-        try{
-          var card = btn.closest('.card, .pricing-card, .plan, .package, .bundle, .credit, .item, .shadow, .rounded');
-          var info = extractInfo(card);
-          if(typeof fbq === 'function'){
-            if(info.value){
-              fbq('track','InitiateCheckout',{value: info.value, currency: info.currency, content_name: info.content_name});
-            } else {
-              fbq('track','InitiateCheckout');
-            }
-          }
-        }catch(e){}
-      }, {capture:true});
-    });
-  } catch(e){}
-})();
-</script>
-
-
-<script>
-/* Meta Pixel: InitiateCheckout tracking for ALL Buy buttons + safe delay navigation */
-(function(){
-  function normalize(s){ return (s||'').trim().toLowerCase(); }
-  function extractInfo(card){
-    var info = {content_name:'', value:null, currency:'USD'};
-    if(!card) return info;
-    var t = (card.innerText||'').replace(/\s+/g,' ');
-    var mC = t.match(/(\d{2,4})\s*credits/i);
-    if(mC) info.content_name = mC[1] + ' credits';
-    var mP = t.replace(/,/g,'').match(/\$(\d+(?:\.\d+)?)/);
-    if(mP) info.value = parseFloat(mP[1]);
-    return info;
-  }
-  document.addEventListener('click', function(e){
-    var el = e.target && e.target.closest && e.target.closest('a,button');
-    if(!el) return;
-    var txt = normalize(el.textContent);
-    var href = (el.getAttribute && el.getAttribute('href')) || '';
-    var id = (el.id||'').toLowerCase();
-    var cls = (el.className||'').toString().toLowerCase();
-    var isBuy = txt==='buy' || txt.indexOf('buy')>=0 || (href && (href.toLowerCase().indexOf('dodo')>=0 || href.indexOf('#buy')>=0)) || id.indexOf('buy')>=0 || cls.indexOf('buy')>=0;
-    if(!isBuy) return;
-    try{
-      var card = el.closest('.card, .pricing-card, .plan, .package, .bundle, .credit, .item, .shadow, .rounded, .box');
-      var info = extractInfo(card);
-      if (typeof fbq === 'function'){
-        if(info.value){
-          fbq('track','InitiateCheckout',{value:info.value, currency:info.currency, content_name:info.content_name});
-          console.log('✅ Pixel InitiateCheckout sent', info);
-        } else {
-          fbq('track','InitiateCheckout');
-          console.log('✅ Pixel InitiateCheckout sent');
-        }
-      } else {
-        console.log('⚠️ fbq not available at click time');
-      }
-      // If this is a link, delay navigation slightly so the pixel can flush
-      if (el.tagName.toLowerCase() === 'a' && href && !/^javascript:/i.test(href)) {
-        e.preventDefault();
-        var target = el.getAttribute('target');
-        var doNav = function(){
-          if (target === '_blank') { window.open(href, '_blank'); }
-          else { window.location.href = href; }
-        };
-        // 180ms is enough for pixel to send, feels instant to users
-        setTimeout(doNav, 180);
-      }
-    }catch(err){
-      console.log('⚠️ Pixel click handler error', err);
-    }
-  }, {capture:true});
-})();
+});
 </script>
 
 </body>
