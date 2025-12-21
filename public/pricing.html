@@ -281,17 +281,17 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const sb = window.__HANSORA_SB__;
+    const supabase = window.__HANSORA_SB__;
 
     // Header elements
     const $btnLoginNav = document.getElementById('btnLoginNav');
-    const $btnGetStarted = document.getElementById('btnGetStarted');
+        const $btnLoginSignup = document.getElementById('btnLoginSignup');
+const $btnGetStarted = document.getElementById('btnGetStarted');
     const $navUser = document.getElementById('navUser');
     const $navCredits = document.getElementById('navCredits');
     const $navAvatar = document.getElementById('navAvatar');
     const $navMenu = document.getElementById('navMenu');
     const $btnLogout = document.getElementById('btnLogout');
-    const $btnLoginSignup = document.getElementById('btnLoginSignup');
     const $navAvatarImg = document.getElementById('navAvatarImg');
 
     // Hero button
@@ -323,11 +323,13 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
         $doLogin.classList.add('btn-brand'); $doSignup.classList.remove('btn-brand');
       }
     }
-    function showLoggedInUI(profile, user){if($btnLoginSignup) $btnLoginSignup.style.display='none';var u=document.getElementById('loginUnified'); if(u) u.classList.add('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');} else {
+    function showLoggedInUI(profile, user){var u=document.getElementById('loginUnified'); if(u) u.classList.add('hidden');try{$btnLoginNav.classList.add('hidden');
+      if($btnLoginSignup){$btnLoginSignup.classList.add('hidden');$btnLoginSignup.style.display='none';}
+$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');} else {
         $navAvatarImg.classList.add('hidden');
       }
     }
-    function showLoggedOutUI(){if($btnLoginSignup) $btnLoginSignup.style.display='';var u=document.getElementById('loginUnified'); if(u) u.classList.remove('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
+    function showLoggedOutUI(){var u=document.getElementById('loginUnified'); if(u) u.classList.remove('hidden');try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
     // Dropdown
     $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
     document.addEventListener('click', (e)=>{
@@ -340,13 +342,14 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
     $close.addEventListener('click', closeAuth);
 
     async function getOrCreateProfile(user){
-      const { data, error } = await sb.from('profiles')
+      const { data, error } = await supabase
+        .from('profiles')
         .select('user_id,email,credits')
         .eq('user_id', user.id)
         .maybeSingle();
       if(error){ throw error; }
       if(!data){
-        const ins = await sb.from('profiles').insert({
+        const ins = await supabase.from('profiles').insert({
           user_id: user.id, email: user.email, credits: 3
         }).select().single();
         if(ins.error){ throw ins.error; }
@@ -355,10 +358,10 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
       return data;
     }
     async function refreshCredits(){
-      const { data } = await sb.auth.getUser();
+      const { data } = await supabase.auth.getUser();
       const user = data.user;
       if(!user) return;
-      const prof = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      const prof = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
       if(prof?.data?.credits != null){ $navCredits.textContent = prof.data.credits + '⚡'; }
     }
     window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
@@ -369,7 +372,7 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       if($passIn.value !== $pass2In.value){ $msg.textContent='Passwords do not match.'; return; }
       $msg.textContent = 'Creating account…';
-      const { data, error } = await sb.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+      const { data, error } = await supabase.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
       if(error){ $msg.textContent = error.message; return; }
       $msg.textContent = 'Check your email to confirm, then Log in.';
       setAuthMode('login');
@@ -379,7 +382,7 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
       if(!$emailIn.value || !$passIn.value){ $msg.textContent='Enter email & password.'; return; }
       $msg.textContent = 'Signing in…';
       try{
-        const { data, error } = await sb.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+        const { data, error } = await supabase.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
         if(error){ $msg.textContent = error.message; return; }
         const user = data.user;
         const prof = await getOrCreateProfile(user);
@@ -389,19 +392,20 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
     });
     // Logout
     document.getElementById('btnLogout').addEventListener('click', async ()=>{
-      await sb.auth.signOut();
+      await supabase.auth.signOut();
       showLoggedOutUI();
     });
     
     // === Credit helpers (pure Supabase; no Make.com) ===
     async function getUserId() {
-      const { data } = await sb.auth.getUser();
+      const { data } = await supabase.auth.getUser();
       return data.user?.id || null;
     }
     async function setCredits(value) {
       const uid = await getUserId();
       if (!uid) throw new Error('Not logged in');
-      const { error } = await sb.from('profiles')
+      const { error } = await supabase
+        .from('profiles')
         .update({ credits: value })
         .eq('user_id', uid);
       if (error) throw error;
@@ -410,7 +414,8 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
     async function addCredits(delta) {
       const uid = await getUserId();
       if (!uid) throw new Error('Not logged in');
-      const { data, error } = await sb.from('profiles')
+      const { data, error } = await supabase
+        .from('profiles')
         .select('credits')
         .eq('user_id', uid)
         .maybeSingle();
@@ -421,7 +426,8 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
     async function useCredits(cost) {
       const uid = await getUserId();
       if (!uid) throw new Error('Not logged in');
-      const { data, error } = await sb.from('profiles')
+      const { data, error } = await supabase
+        .from('profiles')
         .select('credits')
         .eq('user_id', uid)
         .maybeSingle();
@@ -434,7 +440,7 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
 
     // Restore session
     (async ()=>{
-      const { data } = await sb.auth.getUser();
+      const { data } = await supabase.auth.getUser();
       const user = data.user;
       if(user){
         try{
@@ -463,7 +469,7 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
     function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
     ready(async function(){ 
       try {
-        if (typeof sb === 'undefined' || !sb.auth) return;
+        if (typeof supabase === 'undefined' || !supabase.auth) return;
         const navCreditsEl = document.getElementById('navCredits');
         const runBtn = document.getElementById('runBtn');
         const R = (c)=>{ 
@@ -476,13 +482,13 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
           }
         };
 
-        const ures = await sb.auth.getUser();
+        const ures = await supabase.auth.getUser();
         const user = ures?.data?.user;
         if(!user) return;
 
         async function loadCreditsOnce(){ 
           try {
-            const { data: prof } = await sb.from('profiles')
+            const { data: prof } = await supabase.from('profiles')
               .select('credits').eq('user_id', user.id).maybeSingle();
             const c = prof?.credits ?? 0;
             R(c);
@@ -517,123 +523,7 @@ src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
     });
   })();
   </script>
-<script>
-document.addEventListener('DOMContentLoaded', async () => {
-  const el = document.getElementById('btnLoginSignup');
-  if (!el || !window.__HANSORA_SB__) return;
-  try {
-    const { data } = await sb.auth.getSession();
-    if (data && data.session && data.session.user) {
-      el.style.display = 'none';
-    }
-    sb.auth.onAuthStateChange((_e, session) => {
-      if (session && session.user) {
-        el.style.display = 'none';
-      } else {
-        el.style.display = '';
-      }
-    });
-  } catch (_) { /* silent */ }
-});
-</script>
-<!-- HS FINAL STEP1-2 START -->
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  /* 1) PROFILE MENU — exactly 4 items */
-  (function(){
-    const header = document.querySelector('header') || document.body;
-    const avatar = Array.from(header.querySelectorAll('button,a,div')).find(el => {
-      const aria=(el.getAttribute('aria-label')||'').toLowerCase();
-      const cls=(el.className||'').toLowerCase();
-      const txt=(el.textContent||'').toLowerCase();
-      return aria.includes('profile') || aria.includes('avatar') || cls.includes('avatar') || txt==='profile';
-    });
-    if(!avatar) return;
-    let menu = avatar.parentElement.querySelector('ul,div[role="menu"],div.menu');
-    if(!menu){
-      menu = document.createElement('ul');
-      avatar.parentElement.appendChild(menu);
-    }
-    menu.className = 'menu show bg-base-bg border border-base-line rounded-xl p-2 text-sm';
-    const avatarEl = document.getElementById('navAvatar');
-    const menuEl = document.getElementById('navMenu');
-    if (!avatarEl || !menuEl) return;
-    // Ensure visible styling applied to the single existing menu
-    menuEl.classList.add('show');
-    menuEl.innerHTML = `
-      <li><a href="/profile.html">Profile</a></li>
-      <li><a href="/usage.html">History</a></li>
-      <li><a href="/pricing.html">Subscription</a></li>
-      <li><button id="hs-logout">Log out</button></li>
-    `;
-    document.addEventListener('click',(e)=>{
-      if(e.target && e.target.id==='hs-logout'){ window.location.href='logout.html'; }
-    });
-  })();
 
-  
-
-  /* 2) HERO — remove 3 CTAs in the HERO ROW ONLY and keep a single "Get Started" there */
-  (function(){
-    // Find hero section by main heading
-    const hero = Array.from(document.querySelectorAll('h1,h2')).find(h => (h.textContent||'').toLowerCase().includes('create stunning'))?.closest('section');
-    // Fallback: topmost section
-    const heroSection = hero || document.querySelector('main section, section') || document.body;
-
-    // Inside hero ONLY: hide buttons with those exact labels
-    const kill = ['explore models','see templates','log in / sign up','log in','sign up'];
-    if (heroSection){
-      const btns = heroSection.querySelectorAll('a,button');
-      btns.forEach(b => {
-        const t=(b.textContent||'').trim().toLowerCase();
-        if (kill.includes(t)) b.classList.add('hs-hide');
-      });
-      // ensure single Get Started exists in this section
-      if (!heroSection.querySelector('a.hs-get-started-hero')) {
-        const row = (Array.from(btns).find(b => kill.includes((b.textContent||'').trim().toLowerCase()))?.closest('div')) || heroSection;
-        const gs = document.createElement('a');
-        gs.href='login.html';
-        gs.className='hs-get-started-hero btn btn-brand rounded-xl px-5 py-3';
-        gs.textContent='Get Started';
-        row.appendChild(gs);
-      }
-    }
-
-    // Additionally, if there is any "Get Started" in the HEADER, hide it (user didn't want header changes)
-    const header = document.querySelector('header');
-    if (header){
-      Array.from(header.querySelectorAll('a,button')).forEach(el => {
-        const t=(el.textContent||'').trim().toLowerCase();
-        if (t==='get started') el.classList.add('hs-hide');
-      });
-    }
-  })();
-
-  /* 2b) HERO MEDIA — replace the mountain IMAGE with a VIDEO */
-  (function(){
-    // Find the hero media image inside the hero section (right side card)
-    const heroTitle = Array.from(document.querySelectorAll('h1,h2')).find(h => (h.textContent||'').toLowerCase().includes('create stunning'));
-    const heroSection = heroTitle ? heroTitle.closest('section') : document.body;
-    // Look for an <img> inside the hero media container
-    let img = heroSection ? heroSection.querySelector('img') : null;
-    if (!img) img = document.querySelector('img'); // last resort
-    if (img){
-      img.style.display='none'; // ensure it doesn't cover the video
-      const box = img.parentElement || heroSection;
-      if (box && !box.querySelector('video.hs-hero-video')){
-        const vid = document.createElement('video');
-        vid.src='assets/placeholder.mp4';  // replace with your actual video
-        vid.setAttribute('playsinline','');
-        vid.setAttribute('muted','');
-        vid.setAttribute('loop','');
-        vid.setAttribute('autoplay','');
-        vid.className='hs-hero-video';
-        box.insertBefore(vid, img);
-      }
-    }
-  })();
-});
-</script>
 <!-- HS FINAL STEP1-2 END -->
 <!-- ===== Hansora Mobile Bottom Navigation (phones only) ===== -->
 <style>
@@ -835,12 +725,12 @@ document.addEventListener('DOMContentLoaded', () => {
       // Resolve Supabase UID
       const uid = await (async function(){
         try {
-          if (sb?.auth?.getUser) {
-            const { data } = await sb.auth.getUser();
+          if (window.supabase?.auth?.getUser) {
+            const { data } = await window.supabase.auth.getUser();
             if (data?.user?.id) return data.user.id;
           }
-          if (sb?.auth?.getSession) {
-            const { data } = await sb.auth.getSession();
+          if (window.supabase?.auth?.getSession) {
+            const { data } = await window.supabase.auth.getSession();
             if (data?.session?.user?.id) return data.session.user.id;
           }
         } catch {}
@@ -857,7 +747,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         } catch {}
         try {
-          const raw = localStorage.getItem('sb.auth.token') || localStorage.getItem('sb.session');
+          const raw = localStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.session');
           if (raw) {
             const parsed = JSON.parse(raw);
             const id = parsed?.currentSession?.user?.id || parsed?.user?.id || parsed?.session?.user?.id;
@@ -889,21 +779,21 @@ document.addEventListener('DOMContentLoaded', () => {
   async function resolveUid() {
     // 1) Supabase SDK v2
     try {
-      if (sb?.auth?.getUser) {
-        const { data } = await sb.auth.getUser();
+      if (window.supabase?.auth?.getUser) {
+        const { data } = await window.supabase.auth.getUser();
         if (data && data.user && data.user.id) return data.user.id;
       }
     } catch(e){}
     // 2) Supabase SDK session()
     try {
-      if (sb?.auth?.getSession) {
-        const { data } = await sb.auth.getSession();
+      if (window.supabase?.auth?.getSession) {
+        const { data } = await window.supabase.auth.getSession();
         if (data && data.session && data.session.user && data.session.user.id) return data.session.user.id;
       }
     } catch(e){}
     // 3) LocalStorage common keys
     try {
-      const direct = localStorage.getItem('sb.auth.token') || localStorage.getItem('sb.session');
+      const direct = localStorage.getItem('supabase.auth.token') || localStorage.getItem('supabase.session');
       if (direct) {
         const p = JSON.parse(direct);
         const uid = p?.currentSession?.user?.id || p?.user?.id || p?.session?.user?.id;
