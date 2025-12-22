@@ -1448,25 +1448,42 @@ async function pollGeneration(runId, controllers, token) {
       const urls = await __extractResultUrls(data);
 
       // Apply to 1..N placeholder cards
+      const expected = controllers.length || 1;
       if (urls && urls.length) {
-        for (let i = 0; i < controllers.length; i++) {
+        // For multi-output models (e.g., Midjourney image), keep missing slots in "processing"
+        // until we have all expected URLs (or until timeout).
+        for (let i = 0; i < expected; i++) {
+          const u = urls[i] || null;
           controllers[i].apply({
-            status: status,
-            result_url: urls[i] || null
+            status: u ? status : 'processing',
+            result_url: u
           });
         }
       } else {
-        for (let i = 0; i < controllers.length; i++) {
+        for (let i = 0; i < expected; i++) {
           controllers[i].apply({ status: status });
         }
       }
 
-      if (
-        status.toLowerCase().includes('fail') ||
-        status.toLowerCase().includes('error') ||
-        (urls && urls.length)
-      ) {
-        return;
+      // Stop conditions:
+      // - Fail/Error: stop immediately
+      // - Single-output: stop when we have any URL
+      // - Multi-output: stop only when we have all expected URLs
+      const isFail = status.toLowerCase().includes('fail') || status.toLowerCase().includes('error');
+      if (isFail) return;
+
+      if (urls && urls.length) {
+        if (expected <= 1) return;
+
+        let filled = 0;
+        for (let i = 0; i < expected; i++) if (urls[i]) filled++;
+        if (filled >= expected) {
+          // Ensure all are marked ready at the end
+          for (let i = 0; i < expected; i++) {
+            controllers[i].apply({ status: status, result_url: urls[i] || null });
+          }
+          return;
+        }
       }
     } catch (e) {
       console.warn('pollGeneration exception', e);
