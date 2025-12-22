@@ -128,8 +128,8 @@ document.getElementById('y').textContent = new Date().getFullYear();
 // Supabase init
 const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+const _sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+var supabase = _sb;
 // === Live credits (Supabase Realtime) + post-run polling (NO client-side debit) ===
 (async function HANSORA_LIVE_CREDITS(){
   try{
@@ -180,12 +180,10 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       }, 1500);
     }, true);
 
-  }catch(e){ console.warn('credits live failed', e); }
-})();
-
-
-// Header UI
-const $btnLoginSignup = document.getElementById('btnLoginSignup');
+  }catch(e)const sb = window.__HANSORA_SB__;
+const $btnLoginNav = document.getElementById('btnLoginNav');
+    const $btnGetStarted = document.getElementById('btnGetStarted');
+    const $btnLoginSignup = document.getElementById('btnLoginSignup');
     const $navUser = document.getElementById('navUser');
     const $navCredits = document.getElementById('navCredits');
     const $navAvatar = document.getElementById('navAvatar');
@@ -209,9 +207,9 @@ const $btnLoginSignup = document.getElementById('btnLoginSignup');
       try{ if($btnLoginSignup) $btnLoginSignup.style.display = ''; }catch(e){}
       $navUser.classList.add('hidden'); $navUser.classList.remove('flex');
     }
-    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
+    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('hidden'); });
     document.addEventListener('click', (e)=>{
-      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
+      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.add('hidden');
     });
     document.getElementById('btnLogout').addEventListener('click', async ()=>{
       await sb.auth.signOut();
@@ -253,6 +251,7 @@ const $btnLoginSignup = document.getElementById('btnLoginSignup');
         showLoggedOutUI();
       }
     })();
+  })();nUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
 
 // Elements
 const filesEl=document.getElementById('files');
