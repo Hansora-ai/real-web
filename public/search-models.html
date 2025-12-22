@@ -84,7 +84,157 @@
       -webkit-box-orient:vertical;
       overflow:hidden;
     }
-  </style>
+  
+    /* Mobile compact UI tweaks (UI only) */
+    @media (max-width: 767px) {
+      /* Make generator card compact */
+      #generatorCard { padding: 12px !important; }
+      #generatorCard .sm\:space-y-3 { row-gap: 10px !important; }
+      /* Hide large pill blocks on mobile (use compact pickers instead) */
+      #aspectBlock, #durationBlock { display: none !important; }
+      /* Thumbs scroll instead of overflow */
+      #imageThumbs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      #imageThumbs > div { flex: 0 0 auto; }
+      /* Run button full width + centered */
+      #runBtn { width: 100% !important; min-height: 48px !important; }
+      /* Reduce vertical gaps under upload row */
+      #uploadBtn { margin-top: 6px !important; }
+      /* Reduce extra spacing in Cost+Run block */
+      #costLabel { margin-bottom: 4px !important; }
+    
+      /* Mobile redesign: remove hero + make page fully scrollable (settings in flow) */
+      body{ background: var(--base-bg) !important; }
+      #heroSection{ display:none !important; }
+      #generatorDock{ position: static !important; inset: auto !important; padding: 12px 16px 0 !important; }
+      #generatorDock > #generatorCard{ width: 100% !important; max-width: 100% !important; }
+      main{ padding-bottom: 16px !important; }
+      /* Keep generator compact and avoid big gaps */
+      #generatorCard{ border-radius: 24px !important; }
+      #generatorCard .space-y-3{ row-gap: 10px !important; }
+
+      /* Make whole mobile page scroll (not only main) */
+      body{ overflow-y:auto !important; }
+      main{ overflow: visible !important; flex: 0 0 auto !important; }
+
+      /* Results section (mobile): fixed 2:3 viewport + thumb grid (7 items) */
+      #resultsSection{ display:block !important; padding-top: 12px !important; padding-bottom: 24px !important; }
+      #resultsStrip{
+        border: 1px solid rgba(255,255,255,.10) !important;
+        background: rgba(2,6,23,.45) !important;
+        border-radius: 22px !important;
+        padding: 10px !important;
+
+        /* 2:3 box */
+        aspect-ratio: 2 / 3;
+        width: 100% !important;
+
+        /* internal scroll for last 7 */
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+      }
+      #resultsStrip.empty{
+        grid-template-columns: 1fr !important;
+      }
+
+      #resultsStrip .result-thumb{
+        position: relative;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(15,23,42,.55);
+        aspect-ratio: 1 / 1;
+      }
+      #resultsStrip .result-thumb img,
+      #resultsStrip .result-thumb video{
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display:block;
+      }
+      #resultsStrip .thumb-badge{
+        position:absolute;
+        top:8px;
+        left:8px;
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(2,6,23,.70);
+        color: rgba(255,255,255,.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      #resultsStrip .thumb-status{
+        position:absolute;
+        bottom:8px;
+        left:8px;
+        right:8px;
+        display:flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        color: rgba(255,255,255,.78);
+      }
+      #resultsStrip .empty-placeholder{
+        width:100%;
+        height:100%;
+        border-radius: 18px;
+        border: 1px dashed rgba(255,255,255,.18);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        color: rgba(255,255,255,.55);
+        padding: 14px;
+      }
+      #resultsStrip .empty-placeholder .inner{
+        max-width: 220px;
+      }
+      #resultsStrip .empty-placeholder .icon{
+        width: 54px;
+        height: 54px;
+        margin: 0 auto 10px;
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(99,102,241,.12);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color: rgba(255,255,255,.80);
+        font-weight: 700;
+      }
+      #resultsStrip .result-card-loader{
+        position:absolute;
+        inset:0;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+      }
+
+}
+
+    .opt-btn{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      border-radius:9999px;
+      border:1px solid rgba(255,255,255,.15);
+      background:rgba(2,6,23,.55);
+      color:rgba(255,255,255,.9);
+      font-size:11px;
+      line-height:1;
+      white-space:nowrap;
+    }
+    .opt-btn:active{ transform: translateY(1px); }
+    .opt-chev{ opacity:.7; }
+    </style>
 </head>
 <body class="min-h-screen flex flex-col">
   <!-- HEADER (Nano Banana style) -->
@@ -123,50 +273,28 @@
     </div>
   </header>
 
-  <!-- MAIN HERO -->
-  <main class="flex-1 overflow-y-auto pb-40">
-    <section id="resultsSection" class="hidden mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm pt-8 font-semibold text-white/80">Recent generations</h2>
-        <p class="text-[11px] text-white/45">Last 7 jobs from this account</p>
-      </div>
-      <div id="resultsStrip" class="flex gap-3 overflow-x-auto pb-2"></div>
-    </section>
-
-    <section id="heroSection" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-10 text-center">
-      <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold">
-        Let’s start with some image &amp; video magic
-      </h1>
-      <p class="mt-2 text-sm sm:text-base text-zinc-300 max-w-xl mx-auto">
-        Type your idea once, then choose any model to generate images or videos — all from one clean bar.
-      </p>
-
-      <div class="mt-8 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl">
-        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
-          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/ChatGPT%20Image%20Dec%206,%202025,%2011_11_06%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 1" class="h-full w-full object-cover" />
-        </div>
-        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
-          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2022,%202025,%2010_42_41%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 2" class="h-full w-full object-cover" />
-        </div>
-        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9] hidden sm:block">
-          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2022,%202025,%2010_39_01%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 3" class="h-full w-full object-cover" />
-        </div>
-      </div>
-    </section>
-
-    <!-- RESULTS STRIP -->
-    
-  </main>
-
-  <!-- BOTTOM BAR -->
-  <div class="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-6 px-3">
-    <div class="w-full max-w-5xl rounded-3xl bg-black/80 border border-white/15 shadow-soft px-4 py-4 space-y-3 backdrop-blur-xl">
+  <div id="generatorDock" class="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-6 px-3">
+    <div id="generatorCard" class="w-full max-w-5xl rounded-3xl bg-black/80 border border-white/15 shadow-soft px-4 py-4 space-y-3 backdrop-blur-xl">
       <!-- FIRST ROW: mode + prompt + model -->
       <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-        <!-- Mode toggle -->
-        <div class="flex rounded-full bg-slate-900/80 border border-white/15 p-1 text-[11px] w-fit">
+        <!-- Mode + Mobile quick options -->
+        <div class="flex items-center justify-between w-full sm:w-auto gap-2">
+          <div class="flex rounded-full bg-slate-900/80 border border-white/15 p-1 text-[11px] w-fit">
           <button id="btnModeImage" class="px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-[11px] font-semibold shadow-sm">Image</button>
           <button id="btnModeVideo" class="px-3 py-1.5 rounded-full text-white/70">Video</button>
+        </div>
+          <div id="mobileQuickOptions" class="md:hidden flex items-center gap-2">
+            <button id="mobileAspectBtn" type="button" class="opt-btn hidden">
+              <span class="opacity-70">AR</span>
+              <span id="mobileAspectLabel">1:1</span>
+              <span class="opt-chev">▾</span>
+            </button>
+            <button id="mobileDurationBtn" type="button" class="opt-btn hidden">
+              <span class="opacity-70">Dur</span>
+              <span id="mobileDurationLabel">5s</span>
+              <span class="opt-chev">▾</span>
+            </button>
+          </div>
         </div>
 
         <!-- Prompt (textarea) -->
@@ -203,7 +331,7 @@
             <span class="text-lg leading-none">📎</span>
             <span id="uploadBtnLabel">Upload image</span>
           </button>
-          <div id="imageThumbs" class="flex gap-1.5"></div>
+          <div id="imageThumbs" class="flex gap-1.5 flex-nowrap overflow-x-auto max-w-full pr-1"></div>
 
           <!-- Start / Last frame uploads (Veo 3.1 + Kling 2.1) -->
           <div id="framesUploadWrap" class="hidden items-center gap-2">
@@ -326,6 +454,44 @@
     </div>
   </div>
 
+
+
+  <!-- MAIN HERO -->
+  <main class="flex-1 overflow-y-auto pb-40">
+    <section id="resultsSection" class="hidden mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm pt-8 font-semibold text-white/80">Recent generations</h2>
+        <p class="text-[11px] text-white/45">Last 7 jobs from this account</p>
+      </div>
+      <div id="resultsStrip" class="flex gap-3 overflow-x-auto pb-2"></div>
+    </section>
+
+    <section id="heroSection" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-10 text-center">
+      <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold">
+        Let’s start with some image &amp; video magic
+      </h1>
+      <p class="mt-2 text-sm sm:text-base text-zinc-300 max-w-xl mx-auto">
+        Type your idea once, then choose any model to generate images or videos — all from one clean bar.
+      </p>
+
+      <div class="mt-8 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl">
+        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
+          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/ChatGPT%20Image%20Dec%206,%202025,%2011_11_06%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 1" class="h-full w-full object-cover" />
+        </div>
+        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
+          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2022,%202025,%2010_42_41%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 2" class="h-full w-full object-cover" />
+        </div>
+        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9] hidden sm:block">
+          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2022,%202025,%2010_39_01%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 3" class="h-full w-full object-cover" />
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTS STRIP -->
+    
+  </main>
+
+  <!-- BOTTOM BAR -->
   <script>
 // --- MidJourney multi-image support via nb-check (no callback changes) ---
 function __mjCacheKey(runId){ return `mj_urls_${runId}`; }
@@ -477,7 +643,97 @@ async function __mjFetchNbCheck(params){
     });
 
     // === RESULTS (last 7 generations) ===
-    function createResultCard(data) {
+    function isMobileUI() {
+      return window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+    }
+
+    function ensureResultsEmptyState() {
+      const strip = document.getElementById('resultsStrip');
+      if (!strip) return;
+      if (!strip.children.length) {
+        strip.classList.add('empty');
+        strip.innerHTML = `
+          <div class="empty-placeholder">
+            <div class="inner">
+              <div class="icon">H</div>
+              <div style="font-weight:700; margin-bottom:6px;">No generations yet</div>
+              <div style="font-size:12px; line-height:1.35;">Your last 7 results will appear here after you run your first job.</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function createResultThumb(data) {
+      const provider = data.provider || 'Model';
+      const kind = (data.kind || 'image').toLowerCase();
+      const statusRaw = (data.status || '').toString();
+      const statusLower = statusRaw.toLowerCase();
+      const url = data.result_url || '';
+
+      const card = document.createElement('div');
+      card.className = 'result-thumb';
+      card.dataset.runId = data.run_id || '';
+
+      // media
+      if (url) {
+        if (kind === 'video') {
+          const v = document.createElement('video');
+          v.src = url;
+          v.muted = true;
+          v.playsInline = true;
+          v.loop = true;
+          v.autoplay = true;
+          v.preload = 'metadata';
+          card.appendChild(v);
+        } else {
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = provider;
+          img.loading = 'lazy';
+          card.appendChild(img);
+        }
+      } else {
+        const ph = document.createElement('div');
+        ph.style.width = '100%';
+        ph.style.height = '100%';
+        ph.style.display = 'flex';
+        ph.style.alignItems = 'center';
+        ph.style.justifyContent = 'center';
+        ph.style.color = 'rgba(255,255,255,.55)';
+        ph.style.fontSize = '12px';
+        ph.textContent = 'Processing';
+        card.appendChild(ph);
+      }
+
+      const badge = document.createElement('div');
+      badge.className = 'thumb-badge';
+      badge.textContent = (kind === 'video') ? 'VIDEO' : 'IMAGE';
+      card.appendChild(badge);
+
+      const st = document.createElement('div');
+      st.className = 'thumb-status';
+      const left = document.createElement('span');
+      left.textContent = provider.length > 12 ? (provider.slice(0, 12) + '…') : provider;
+      const right = document.createElement('span');
+      right.textContent = statusLower.includes('ready') || url ? 'Ready' : '…';
+      st.appendChild(left);
+      st.appendChild(right);
+      card.appendChild(st);
+
+      // click to open in new tab (full url)
+      if (url) {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', () => window.open(url, '_blank'));
+      }
+      return { card };
+    }
+
+    function createResultItem(data) {
+      return isMobileUI() ? createResultThumb(data) : createResultCard(data);
+    }
+
+function createResultCard(data) {
       const provider = data.provider || 'Model';
       const kind = (data.kind || 'image').toLowerCase();
       const prompt = data.prompt || '';
@@ -486,11 +742,11 @@ async function __mjFetchNbCheck(params){
       const hasUrl = !!data.result_url;
 
       const card = document.createElement('div');
-      card.className = 'w-64 flex-shrink-0 rounded-2xl border border-white/15 bg-slate-950/80 shadow-soft overflow-hidden';
+      card.className = 'result-card w-64 flex-shrink-0 rounded-2xl border border-white/15 bg-slate-950/80 shadow-soft overflow-hidden';
       card.dataset.runId = data.run_id || '';
 
       const media = document.createElement('div');
-      media.className = 'relative h-72 bg-slate-900 flex items-center justify-center';
+      media.className = 'result-media relative h-72 bg-slate-900 flex items-center justify-center';
       const loader = document.createElement('div');
       loader.className = 'result-card-loader';
       media.appendChild(loader);
@@ -592,16 +848,24 @@ async function __mjFetchNbCheck(params){
     function addResultCard(data, options) {
       const strip = document.getElementById('resultsStrip');
       if (!strip) return null;
-      const { card, apply } = createResultCard(data);
-      if (options && options.prepend) {
-        strip.prepend(card);
-      } else {
-        strip.appendChild(card);
+
+      // if empty placeholder exists, clear it
+      if (strip.classList.contains('empty')) {
+        strip.classList.remove('empty');
+        strip.innerHTML = '';
       }
-      while (strip.children.length > 7) {
-        strip.removeChild(strip.lastElementChild);
-      }
-      return { card, apply };
+
+      const built = createResultItem(data);
+      const card = built && built.card ? built.card : null;
+      if (!card) return null;
+
+      if (options && options.prepend) strip.prepend(card);
+      else strip.appendChild(card);
+
+      // keep at most 7 (or 28 in MJ 4-up view; handled separately)
+      while (strip.children.length > 7) strip.removeChild(strip.lastElementChild);
+
+      return card;
     }
 
     async function loadRecentHistory() {
@@ -632,8 +896,13 @@ async function __mjFetchNbCheck(params){
           else hero.classList.remove('hidden');
         }
         if (resultsSection) {
-          if (hasItems) resultsSection.classList.remove('hidden');
-          else resultsSection.classList.add('hidden');
+          if (isMobileUI()) {
+            // mobile always shows the 2:3 results viewport (empty placeholder if needed)
+            resultsSection.classList.remove('hidden');
+          } else {
+            if (hasItems) resultsSection.classList.remove('hidden');
+            else resultsSection.classList.add('hidden');
+          }
         }
 
         (async () => {
@@ -698,6 +967,7 @@ async function __mjFetchNbCheck(params){
           }, { prepend: false });
         }
       })();
+      if (isMobileUI()) ensureResultsEmptyState();
       } catch (e) {
         console.warn('loadRecentHistory failed', e);
       }
@@ -1495,7 +1765,7 @@ async function pollGeneration(runId, controllers, token) {
       }
 
       // Duration pills
-      if (currentModel.durations && currentModel.durations.length) {
+      if (currentModel.category === 'video' && currentModel.durations && currentModel.durations.length) {
         durationBlock.classList.remove('hidden');
         durationPills.innerHTML = '';
         currentModel.durations.forEach((val) => {
@@ -1596,7 +1866,132 @@ async function pollGeneration(runId, controllers, token) {
           if (uploadBtnLabel) uploadBtnLabel.textContent = (currentModel.category === 'video') ? 'Upload image' : 'Upload image';
         }
       }
+    
+      // Mobile quick options (UI only)
+      updateMobileQuickOptions();
+}
+    // ------------------------------------------------------------
+    // Mobile quick options (UI only): AR / Duration compact pickers
+    // ------------------------------------------------------------
+    function updateMobileQuickOptions() {
+      const arBtn = document.getElementById('mobileAspectBtn');
+      const arLabel = document.getElementById('mobileAspectLabel');
+      const durBtn = document.getElementById('mobileDurationBtn');
+      const durLabel = document.getElementById('mobileDurationLabel');
+
+      if (!arBtn || !arLabel || !durBtn || !durLabel) return;
+
+      if (!currentModel) {
+        arBtn.classList.add('hidden');
+        durBtn.classList.add('hidden');
+        return;
+      }
+
+      // AR
+      if (currentModel.aspectOptions && currentModel.aspectOptions.length) {
+        arBtn.classList.remove('hidden');
+        arLabel.textContent = currentAspect || currentModel.aspectOptions[0];
+      } else {
+        arBtn.classList.add('hidden');
+      }
+
+      // Duration (ONLY for video models that actually have durations)
+      if (currentModel.category === 'video' && Array.isArray(currentModel.durations) && currentModel.durations.length) {
+        durBtn.classList.remove('hidden');
+        const val = (currentDuration != null ? String(currentDuration) : String(currentModel.durations[0]));
+        durLabel.textContent = val + 's';
+      } else {
+        durBtn.classList.add('hidden');
+      }
     }
+
+    function openMobilePicker(type) {
+      const overlay = document.getElementById('mobileOptionOverlay');
+      const title = document.getElementById('mobileOptionTitle');
+      const list = document.getElementById('mobileOptionList');
+      if (!overlay || !title || !list || !currentModel) return;
+
+      let options = [];
+      let current = null;
+
+      if (type === 'aspect') {
+        options = (currentModel.aspectOptions || []).slice();
+        current = String(currentAspect || '');
+        title.textContent = 'Aspect ratio';
+      } else if (type === 'duration') {
+        // Only allow for proper video models
+        if (!(currentModel.category === 'video' && Array.isArray(currentModel.durations) && currentModel.durations.length)) return;
+        options = currentModel.durations.map((v) => String(v));
+        current = String(currentDuration != null ? currentDuration : '');
+        title.textContent = 'Duration';
+      } else {
+        return;
+      }
+
+      list.innerHTML = '';
+      options.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className =
+          'w-full flex items-center justify-between rounded-2xl border border-white/10 bg-slate-900/40 px-4 py-3 text-sm hover:bg-slate-900/60';
+        const left = document.createElement('span');
+        left.textContent = type === 'duration' ? (opt + 's') : opt;
+        const right = document.createElement('span');
+        right.className = 'text-white/60';
+        right.textContent = String(opt) === String(current) ? 'Selected' : '';
+        btn.appendChild(left);
+        btn.appendChild(right);
+
+        btn.addEventListener('click', () => {
+          if (type === 'aspect') {
+            currentAspect = opt;
+            // sync desktop pills if present
+            const aspectPills = document.getElementById('aspectPills');
+            if (aspectPills) {
+              Array.from(aspectPills.children).forEach((child) => {
+                child.classList.toggle('chip-active', child.textContent === opt);
+              });
+            }
+          } else if (type === 'duration') {
+            currentDuration = opt;
+            const durationPills = document.getElementById('durationPills');
+            if (durationPills) {
+              Array.from(durationPills.children).forEach((child) => {
+                child.classList.toggle('chip-active', child.textContent === String(opt));
+              });
+            }
+          }
+          updateMobileQuickOptions();
+          closeMobilePicker();
+        });
+
+        list.appendChild(btn);
+      });
+
+      overlay.classList.remove('hidden');
+    }
+
+    function closeMobilePicker() {
+      const overlay = document.getElementById('mobileOptionOverlay');
+      if (overlay) overlay.classList.add('hidden');
+    }
+
+    // Wire mobile picker events (UI only)
+    (function wireMobilePickers() {
+      const arBtn = document.getElementById('mobileAspectBtn');
+      const durBtn = document.getElementById('mobileDurationBtn');
+      const closeBtn = document.getElementById('mobileOptionClose');
+      const bg = document.getElementById('mobileOptionOverlayBg');
+
+      if (arBtn) arBtn.addEventListener('click', () => openMobilePicker('aspect'));
+      if (durBtn) durBtn.addEventListener('click', () => openMobilePicker('duration'));
+      if (closeBtn) closeBtn.addEventListener('click', closeMobilePicker);
+      if (bg) bg.addEventListener('click', closeMobilePicker);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMobilePicker();
+      });
+    })();
+
 
     // MODE TOGGLE
     document.getElementById('btnModeImage').addEventListener('click', () => setMode('image'));
@@ -1633,7 +2028,7 @@ async function pollGeneration(runId, controllers, token) {
         img.className = 'h-full w-full object-cover';
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
-        closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
+        closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
         closeBtn.textContent = '×';
         closeBtn.addEventListener('click', () => {
           uploadedFiles.splice(index, 1);
@@ -1664,7 +2059,7 @@ async function pollGeneration(runId, controllers, token) {
       img.className = 'h-full w-full object-cover';
       const closeBtn = document.createElement('button');
       closeBtn.type = 'button';
-      closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
+      closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
       closeBtn.textContent = '×';
       closeBtn.addEventListener('click', () => {
         onRemove();
@@ -1738,7 +2133,7 @@ async function pollGeneration(runId, controllers, token) {
 
       const closeBtn = document.createElement('button');
       closeBtn.type = 'button';
-      closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
+      closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
       closeBtn.textContent = '×';
       closeBtn.addEventListener('click', () => {
         alephVideoFile = null;
@@ -2159,5 +2554,17 @@ for (let i = 0; i < expectedOutputs; i++) {
       configureControlsForModel();
     })();
   </script>
+
+  <!-- Mobile option picker (UI only) -->
+  <div id="mobileOptionOverlay" class="fixed inset-0 z-50 hidden md:hidden">
+    <button id="mobileOptionOverlayBg" type="button" class="absolute inset-0 bg-black/60"></button>
+    <div class="absolute left-0 right-0 bottom-0 z-10 mx-auto w-full max-w-md rounded-t-3xl border border-white/10 bg-slate-950/95 backdrop-blur-xl p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div id="mobileOptionTitle" class="text-sm font-semibold">Select</div>
+        <button id="mobileOptionClose" class="btn-soft px-3 py-1.5 text-[11px]" type="button">Close</button>
+      </div>
+      <div id="mobileOptionList" class="space-y-2 max-h-[45vh] overflow-auto pr-1"></div>
+    </div>
+  </div>
 </body>
 </html>
