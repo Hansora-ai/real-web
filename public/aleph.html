@@ -150,58 +150,86 @@ function derivePublicUrl(up){
 }
 
 
-document.getElementById('y').textContent = new Date().getFullYear();
 
-// Supabase init (same as other pages)
-const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Guard: only set footer year element if present
+  (function(){ const y = document.getElementById('y'); if (y) y.textContent = new Date().getFullYear(); })();
 
-// Header UI (untouched login flow)
-const $btnLoginNav = document.getElementById('btnLoginNav');
-const $btnGetStarted = document.getElementById('btnGetStarted');
-const $btnLoginSignup = document.getElementById('btnLoginSignup');
-const $navUser = document.getElementById('navUser');
-const $navCredits = document.getElementById('navCredits');
-const $navAvatar = document.getElementById('navAvatar');
-const $navMenu = document.getElementById('navMenu');
-const $btnLogout = document.getElementById('btnLogout');
+  (function(){
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+    const supabase = sb; // alias for page scripts
+    const $btnLoginNav = document.getElementById('btnLoginNav');
+    const $btnGetStarted = document.getElementById('btnGetStarted');
+    const $btnLoginSignup = document.getElementById('btnLoginSignup');
+    const $navUser = document.getElementById('navUser');
+    const $navCredits = document.getElementById('navCredits');
+    const $navAvatar = document.getElementById('navAvatar');
+    const $navMenu = document.getElementById('navMenu');
+    const $btnLogout = document.getElementById('btnLogout');
+    const $navAvatarImg = document.getElementById('navAvatarImg');
+    const $btnLogin = document.getElementById('btnLogin');
 
-function showLoggedInUI(profile, user){$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if($btnLoginSignup){$btnLoginSignup.classList.add('hidden');}
-  try{
-    const u = (window.__user && window.__user.user_metadata && window.__user.user_metadata.avatar_url) || (profile && profile.avatar_url);
-    if (u && $navAvatarImg){ $navAvatarImg.src = u; $navAvatarImg.classList.remove('hidden'); if($navAvatarFallback){$navAvatarFallback.classList.add('hidden');} } else { if($navAvatarImg){ $navAvatarImg.classList.add('hidden'); $navAvatarImg.removeAttribute('src'); } if($navAvatarFallback){$navAvatarFallback.classList.remove('hidden');} }
-  }catch{}
-}
-function showLoggedOutUI(){$btnLoginNav.classList.remove('hidden');$btnGetStarted.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');if($btnLoginSignup){$btnLoginSignup.classList.remove('hidden');}
-  try{ if($navAvatarImg){ $navAvatarImg.classList.add('hidden'); $navAvatarImg.removeAttribute('src'); } if($navAvatarFallback){$navAvatarFallback.classList.remove('hidden');} }catch{}
-}
-$navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
-document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
-$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
-$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
+    function openAuth(){} function closeAuth(){} function setAuthMode(){}
 
-// Read-only profile fetch (NO browser-side inserts/updates to credits)
-async function getProfileReadOnly(user){
-  const r = await supabase.from('profiles').select('credits, avatar_url').eq('user_id', user.id).maybeSingle();
-  if (r.error) throw r.error;
-  return r.data || { credits: 0 };
-}
-
-(async()=>{
-  const { data } = await supabase.auth.getUser();
-  const user = data.user;
-  if (user){
-    try{
-      const p = await getProfileReadOnly(user);
-      showLoggedInUI(p, user);
-    }catch{
-      showLoggedOutUI();
+    function showLoggedInUI(profile, user){
+      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
+      try{ if($btnLoginSignup) $btnLoginSignup.style.display = 'none'; }catch(e){}
+      $navUser.classList.remove('hidden'); $navUser.classList.add('flex');
+      $navCredits.textContent=(profile?.credits??0)+'⚡';
+      if(user?.user_metadata?.avatar_url){ $navAvatarImg.src=user.user_metadata.avatar_url; $navAvatarImg.classList.remove('hidden'); }
+      else { $navAvatarImg.classList.add('hidden'); }
     }
-  }else{
-    showLoggedOutUI();
-  }
-})();
+    function showLoggedOutUI(){
+      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
+      try{ if($btnLoginSignup) $btnLoginSignup.style.display = ''; }catch(e){}
+      $navUser.classList.add('hidden'); $navUser.classList.remove('flex');
+    }
+    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
+    document.addEventListener('click', (e)=>{
+      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
+    });
+    document.getElementById('btnLogout').addEventListener('click', async ()=>{
+      await sb.auth.signOut();
+      showLoggedOutUI();
+    });
+
+    async function getOrCreateProfile(user){
+      const { data, error } = await sb
+        .from('profiles').select('user_id,email,credits')
+        .eq('user_id', user.id).maybeSingle();
+      if(error) throw error;
+      if(!data){
+        const ins = await sb.from('profiles').insert({
+          user_id: user.id, email: user.email, credits: 3
+        }).select().single();
+        if(ins.error) throw ins.error;
+        return ins.data;
+      }
+      return data;
+    }
+    async function refreshCredits(){
+      const { data } = await sb.auth.getUser();
+      const user = data.user;
+      if(!user) return;
+      const prof = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      if (prof?.data?.credits != null) { $navCredits.textContent = prof.data.credits + '⚡'; }
+    }
+    window.refreshCredits = refreshCredits;
+
+    (async ()=>{
+      const { data } = await sb.auth.getUser();
+      const user = data.user;
+      if(user){
+        try{
+          const prof = await getOrCreateProfile(user);
+          showLoggedInUI(prof, user);
+        }catch{ showLoggedOutUI(); }
+      }else{
+        showLoggedOutUI();
+      }
+    })();
+  })();
 
 // Elements
 const videoEl=document.getElementById('video');
