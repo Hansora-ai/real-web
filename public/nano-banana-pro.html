@@ -186,19 +186,73 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Header UI
 const $btnLoginSignup = document.getElementById('btnLoginSignup');
-const $navUser = document.getElementById('navUser');
-const $navCredits = document.getElementById('navCredits');
-const $navAvatar = document.getElementById('navAvatar');
-const $navMenu = document.getElementById('navMenu');
-const $btnLogout = document.getElementById('btnLogout');
-const $navAvatarImg = document.getElementById('navAvatarImg');
-function showLoggedInUI(profile, user){$btnLoginSignup.classList.add('hidden');$navUser.classList.remove('hidden');$navUser.classList.add('flex');$navCredits.textContent=(profile?.credits??0)+'⚡';if(user?.user_metadata?.avatar_url){$navAvatarImg.src=user.user_metadata.avatar_url;$navAvatarImg.classList.remove('hidden');}}
-function showLoggedOutUI(){$btnLoginSignup.classList.remove('hidden');$navUser.classList.add('hidden');$navUser.classList.remove('flex');}
-$navAvatar.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
-document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
-$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
-async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-(async()=>{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user)}catch{showLoggedOutUI()}}else{showLoggedOutUI()}})();
+    const $navUser = document.getElementById('navUser');
+    const $navCredits = document.getElementById('navCredits');
+    const $navAvatar = document.getElementById('navAvatar');
+    const $navMenu = document.getElementById('navMenu');
+    const $btnLogout = document.getElementById('btnLogout');
+    const $navAvatarImg = document.getElementById('navAvatarImg');
+    const $btnLogin = document.getElementById('btnLogin');
+
+    function openAuth(){} function closeAuth(){} function setAuthMode(){}
+
+    function showLoggedInUI(profile, user){
+      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
+      try{ if($btnLoginSignup) $btnLoginSignup.style.display = 'none'; }catch(e){}
+      $navUser.classList.remove('hidden'); $navUser.classList.add('flex');
+      $navCredits.textContent=(profile?.credits??0)+'⚡';
+      if(user?.user_metadata?.avatar_url){ $navAvatarImg.src=user.user_metadata.avatar_url; $navAvatarImg.classList.remove('hidden'); }
+      else { $navAvatarImg.classList.add('hidden'); }
+    }
+    function showLoggedOutUI(){
+      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
+      try{ if($btnLoginSignup) $btnLoginSignup.style.display = ''; }catch(e){}
+      $navUser.classList.add('hidden'); $navUser.classList.remove('flex');
+    }
+    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
+    document.addEventListener('click', (e)=>{
+      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
+    });
+    document.getElementById('btnLogout').addEventListener('click', async ()=>{
+      await sb.auth.signOut();
+      showLoggedOutUI();
+    });
+
+    async function getOrCreateProfile(user){
+      const { data, error } = await sb
+        .from('profiles').select('user_id,email,credits')
+        .eq('user_id', user.id).maybeSingle();
+      if(error) throw error;
+      if(!data){
+        const ins = await sb.from('profiles').insert({
+          user_id: user.id, email: user.email, credits: 3
+        }).select().single();
+        if(ins.error) throw ins.error;
+        return ins.data;
+      }
+      return data;
+    }
+    async function refreshCredits(){
+      const { data } = await sb.auth.getUser();
+      const user = data.user;
+      if(!user) return;
+      const prof = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      if (prof?.data?.credits != null) { $navCredits.textContent = prof.data.credits + '⚡'; }
+    }
+    window.refreshCredits = refreshCredits;
+
+    (async ()=>{
+      const { data } = await sb.auth.getUser();
+      const user = data.user;
+      if(user){
+        try{
+          const prof = await getOrCreateProfile(user);
+          showLoggedInUI(prof, user);
+        }catch{ showLoggedOutUI(); }
+      }else{
+        showLoggedOutUI();
+      }
+    })();
 
 // Elements
 const filesEl=document.getElementById('files');
