@@ -986,7 +986,84 @@ async function __mjFetchNbCheck(params){
         card.style.cursor = 'pointer';
         card.addEventListener('click', () => window.openPreview && window.openPreview(url, kind));
       }
-      return { card };
+      let __thumb_url = url;
+      let __thumb_kind = kind;
+      let __previewBound = false;
+
+      function apply(next) {
+        try {
+          const nextStatusRaw = (next && next.status != null) ? String(next.status) : statusRaw;
+          const nextStatusLower = String(nextStatusRaw || '').toLowerCase();
+          const nextUrl = (next && next.result_url) ? String(next.result_url) : (__thumb_url || '');
+          const failed = nextStatusLower.includes('fail') || nextStatusLower.includes('error');
+          const ready = !!nextUrl;
+
+          // update state chip
+          state.classList.remove('failed', 'processing', 'ready');
+          if (failed) {
+            state.textContent = 'Failed';
+            state.classList.add('failed');
+          } else if (ready) {
+            state.textContent = 'Ready';
+            state.classList.add('ready');
+          } else {
+            state.textContent = 'Processing';
+            state.classList.add('processing');
+          }
+
+          // update Get button visibility/enable
+          if (ready && !failed) {
+            getBtn.classList.remove('hidden');
+            getBtn.disabled = false;
+          } else {
+            getBtn.disabled = true;
+          }
+
+          // media element
+          __thumb_url = nextUrl || '';
+          __thumb_kind = (next && next.kind) ? String(next.kind).toLowerCase() : __thumb_kind;
+
+          const existingMedia = card.querySelector('img,video');
+          if (__thumb_url) {
+            if (!existingMedia) {
+              if (__thumb_kind === 'video') {
+                const v = document.createElement('video');
+                v.src = __thumb_url;
+                v.muted = true;
+                v.playsInline = true;
+                v.loop = true;
+                v.autoplay = true;
+                v.preload = 'metadata';
+                card.insertBefore(v, card.firstChild);
+              } else {
+                const img = document.createElement('img');
+                img.src = __thumb_url;
+                img.alt = provider;
+                img.loading = 'lazy';
+                card.insertBefore(img, card.firstChild);
+              }
+            } else {
+              if (existingMedia.tagName.toLowerCase() === 'video') existingMedia.src = __thumb_url;
+              else existingMedia.src = __thumb_url;
+            }
+          }
+
+          // click-to-preview (download only via Get)
+          if (__thumb_url) {
+            card.style.cursor = 'pointer';
+            if (!__previewBound) {
+              __previewBound = true;
+              card.addEventListener('click', () => {
+                if (window.openPreview) window.openPreview(__thumb_url, __thumb_kind);
+              });
+            }
+          }
+        } catch (_e) {}
+      }
+
+      // initial apply to normalize visuals
+      apply({ status: statusRaw || (url ? 'ready' : 'processing'), result_url: url, kind });
+      return { card, apply };
     }
 
     function createResultItem(data) {
@@ -1122,10 +1199,12 @@ function createResultCard(data) {
       if (options && options.prepend) strip.prepend(card);
       else strip.appendChild(card);
 
-      // keep at most 7 (or 28 in MJ 4-up view; handled separately)
-      while (strip.children.length > 7) strip.removeChild(strip.lastElementChild);
+      // keep at most 7 (or 28 in MidJourney 4-up view)
+      const __isMJ = /midjourney/i.test(String((data && (data.provider || data.model || ''))));
+      const __max = (__isMJ && isMobileUI()) ? 28 : 7;
+      while (strip.children.length > __max) strip.removeChild(strip.lastElementChild);
 
-      return card;
+      return built;
     }
 
     async function loadRecentHistory() {
@@ -2719,7 +2798,7 @@ async function pollGeneration(runId, controllers, token) {
           resolution: currentResolution
         });
 
-                const expectedOutputs = 1;
+                const expectedOutputs = (currentModel && currentModel.id === 'midjourney') ? 4 : 1;
 const placeholderControllers = [];
 for (let i = 0; i < expectedOutputs; i++) {
   const c = addResultCard({
