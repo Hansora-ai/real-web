@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HANSORA • Runway Aleph (Video)</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
-  <script src="https://cdn.tailwindcss.com">
+  <script src="https://cdn.tailwindcss.com"></script>
+<script>
 // --- helper: construct public Supabase URL (Nano Banana 1:1) ---
 function derivePublicUrl(up){
   if (!up) return null;
@@ -135,7 +136,8 @@ function derivePublicUrl(up){
     </div>
   </footer>
 
-<script>// --- helper: construct public Supabase URL (Nano Banana 1:1) ---
+<script>let supabase;
+// --- helper: construct public Supabase URL (Nano Banana 1:1) ---
 function derivePublicUrl(up){
   if (!up) return null;
   if (up.publicUrl) return up.publicUrl;
@@ -157,8 +159,8 @@ function derivePublicUrl(up){
   (function(){
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
-    const supabase = sb; // alias for page scripts
+    const sb = window.__HANSORA_SB__ = (window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+    supabase = sb; // alias for page scripts
     const $btnLoginNav = document.getElementById('btnLoginNav');
     const $btnGetStarted = document.getElementById('btnGetStarted');
     const $btnLoginSignup = document.getElementById('btnLoginSignup');
