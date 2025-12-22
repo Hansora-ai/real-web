@@ -158,7 +158,6 @@ function derivePublicUrl(up){
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
-    const supabase = sb; // alias for page scripts
     const $btnLoginNav = document.getElementById('btnLoginNav');
     const $btnGetStarted = document.getElementById('btnGetStarted');
     const $btnLoginSignup = document.getElementById('btnLoginSignup');
@@ -233,7 +232,7 @@ function derivePublicUrl(up){
 
 
 // Global alias for generation logic (must be top-level)
-const supabase = window.__HANSORA_SB__;
+var supabase = window.__HANSORA_SB__;
 // Elements
 const videoEl=document.getElementById('video');
 const imageEl=document.getElementById('image');
