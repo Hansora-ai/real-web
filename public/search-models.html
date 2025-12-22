@@ -194,6 +194,68 @@
         font-size: 11px;
         color: rgba(255,255,255,.78);
       }
+      #resultsStrip .thumb-status-extended{
+        flex-direction: column;
+        align-items: stretch;
+        padding: 8px 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(2,6,23,.72);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      #resultsStrip .thumb-row{
+        display:flex;
+        align-items:flex-end;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      #resultsStrip .thumb-meta{
+        display:flex;
+        flex-direction: column;
+        min-width: 0;
+        gap: 2px;
+      }
+      #resultsStrip .thumb-model{
+        font-size: 11px;
+        font-weight: 600;
+        color: rgba(255,255,255,.88);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 220px;
+      }
+      #resultsStrip .thumb-prompt{
+        font-size: 10px;
+        color: rgba(255,255,255,.65);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 220px;
+      }
+      #resultsStrip .thumb-actions{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      #resultsStrip .thumb-state{
+        font-size: 10px;
+        color: rgba(255,255,255,.75);
+      }
+      #resultsStrip .thumb-state.ready{ color: rgba(110,231,183,.95); }
+      #resultsStrip .thumb-state.failed{ color: rgba(248,113,113,.95); }
+      #resultsStrip .thumb-get{
+        font-size: 10px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.14);
+        background: rgba(99,102,241,.22);
+        color: rgba(255,255,255,.92);
+      }
+      #resultsStrip .thumb-get:active{ transform: translateY(1px); }
+
       #resultsStrip .empty-placeholder{
         width:100%;
         height:100%;
@@ -327,6 +389,7 @@
         >
           <span class="text-xs opacity-80 hidden sm:inline">Model</span>
           <span id="modelButtonLabel" class="truncate max-w-[150px] sm:max-w-[180px]">Nano Banana</span>
+          <span aria-hidden="true" class="ml-1 text-white/70 text-base leading-none">&gt;</span>
         </button>
       </div>
 
@@ -445,7 +508,7 @@
     id="modelOverlay"
     class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"
   >
-    <div class="absolute left-1/2 translate-x-[-50%] bottom-40 w-full max-w-md mx-3 rounded-3xl bg-slate-950/95 border border-white/15 shadow-2xl overflow-hidden">
+    <div class="absolute left-1/2 top-1/2 translate-x-[-50%] translate-y-[-50%] w-[92vw] max-w-md mx-3 rounded-3xl bg-slate-950/95 border border-white/15 shadow-2xl overflow-hidden max-h-[80vh] overflow-hidden">
       <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div class="flex flex-col">
           <span class="text-xs font-semibold text-white/80">IMAGE / VIDEO MODELS</span>
@@ -453,7 +516,7 @@
         </div>
         <button id="closeOverlay" class="text-white/60 hover:text-white text-lg">&times;</button>
       </div>
-      <div class="px-4 py-3 border-b border-white/10">
+      <div class="hidden">
         <input
           id="overlayModelSearch"
           type="text"
@@ -461,7 +524,7 @@
           class="w-full rounded-full bg-slate-900 border border-white/15 px-3 py-2 text-xs outline-none placeholder:text-white/40"
         />
       </div>
-      <div id="overlayModelList" class="max-h-80 overflow-y-auto text-sm">
+      <div id="overlayModelList" class="max-h-[58vh] overflow-y-auto text-sm">
         <!-- items via JS -->
       </div>
     </div>
@@ -680,6 +743,7 @@ async function __mjFetchNbCheck(params){
     function createResultThumb(data) {
       const provider = data.provider || 'Model';
       const kind = (data.kind || 'image').toLowerCase();
+      const prompt = (data.prompt || '').toString();
       const statusRaw = (data.status || '').toString();
       const statusLower = statusRaw.toLowerCase();
       const url = data.result_url || '';
@@ -724,17 +788,86 @@ async function __mjFetchNbCheck(params){
       badge.textContent = (kind === 'video') ? 'VIDEO' : 'IMAGE';
       card.appendChild(badge);
 
-      const st = document.createElement('div');
-      st.className = 'thumb-status';
-      const left = document.createElement('span');
-      left.textContent = provider.length > 12 ? (provider.slice(0, 12) + '…') : provider;
-      const right = document.createElement('span');
-      right.textContent = statusLower.includes('ready') || url ? 'Ready' : '…';
-      st.appendChild(left);
-      st.appendChild(right);
-      card.appendChild(st);
+      // status + info panel
+      const panel = document.createElement('div');
+      panel.className = 'thumb-status thumb-status-extended';
 
-      // click to open in new tab (full url)
+      const row = document.createElement('div');
+      row.className = 'thumb-row';
+
+      const meta = document.createElement('div');
+      meta.className = 'thumb-meta';
+
+      const modelLine = document.createElement('div');
+      modelLine.className = 'thumb-model';
+      modelLine.textContent = provider;
+
+      const promptLine = document.createElement('div');
+      promptLine.className = 'thumb-prompt';
+      promptLine.textContent = prompt || '—';
+
+      meta.appendChild(modelLine);
+      meta.appendChild(promptLine);
+
+      const actions = document.createElement('div');
+      actions.className = 'thumb-actions';
+
+      const state = document.createElement('span');
+      state.className = 'thumb-state';
+      const isFailed = statusLower.includes('fail') || statusLower.includes('error');
+      const isReady = !!url;
+      if (isFailed) {
+        state.textContent = 'Failed';
+        state.classList.add('failed');
+      } else if (isReady) {
+        state.textContent = 'Ready';
+        state.classList.add('ready');
+      } else {
+        state.textContent = '…';
+      }
+
+      const getBtn = document.createElement('button');
+      getBtn.type = 'button';
+      getBtn.className = 'thumb-get';
+      getBtn.textContent = 'Get';
+      if (!isReady || isFailed) getBtn.classList.add('hidden');
+
+      // download helper (best-effort; fallback to opening)
+      const downloadUrl = async (u) => {
+        try {
+          const resp = await fetch(u, { mode: 'cors', credentials: 'omit' });
+          if (!resp.ok) throw new Error('fetch failed');
+          const blob = await resp.blob();
+          const obj = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = obj;
+          const ext = (kind === 'video') ? 'mp4' : 'png';
+          a.download = `hansora-${Date.now()}.${ext}`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(obj), 2000);
+        } catch (e) {
+          window.open(u, '_blank');
+        }
+      };
+
+      getBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!url) return;
+        downloadUrl(url);
+      });
+
+      actions.appendChild(state);
+      actions.appendChild(getBtn);
+
+      row.appendChild(meta);
+      row.appendChild(actions);
+
+      panel.appendChild(row);
+      card.appendChild(panel);
+
+      // click to open in new tab (preview)
       if (url) {
         card.style.cursor = 'pointer';
         card.addEventListener('click', () => window.open(url, '_blank'));
@@ -1990,11 +2123,19 @@ async function pollGeneration(runId, controllers, token) {
     }
 
     // Wire mobile picker events (UI only)
-    (function wireMobilePickers() {
+    // NOTE: This script tag appears before the picker HTML in the document,
+    // so we must (re)bind after DOMContentLoaded as well.
+    function wireMobilePickersOnce() {
+      if (wireMobilePickersOnce._done) return;
+
       const arBtn = document.getElementById('mobileAspectBtn');
       const durBtn = document.getElementById('mobileDurationBtn');
       const closeBtn = document.getElementById('mobileOptionClose');
       const bg = document.getElementById('mobileOptionOverlayBg');
+      const overlay = document.getElementById('mobileOptionOverlay');
+
+      // If the picker HTML is not in the DOM yet, try again after DOMContentLoaded.
+      if (!overlay) return;
 
       if (arBtn) arBtn.addEventListener('click', () => openMobilePicker('aspect'));
       if (durBtn) durBtn.addEventListener('click', () => openMobilePicker('duration'));
@@ -2003,7 +2144,12 @@ async function pollGeneration(runId, controllers, token) {
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeMobilePicker();
       });
-    })();
+
+      wireMobilePickersOnce._done = true;
+    }
+
+    wireMobilePickersOnce();
+    window.addEventListener('DOMContentLoaded', wireMobilePickersOnce);
 
 
     // MODE TOGGLE
@@ -2569,9 +2715,9 @@ for (let i = 0; i < expectedOutputs; i++) {
   </script>
 
   <!-- Mobile option picker (UI only) -->
-  <div id="mobileOptionOverlay" class="fixed inset-0 z-50 hidden md:hidden">
+  <div id="mobileOptionOverlay" class="fixed inset-0 z-50 hidden md:hidden flex items-center justify-center p-4">
     <button id="mobileOptionOverlayBg" type="button" class="absolute inset-0 bg-black/60"></button>
-    <div class="absolute left-0 right-0 bottom-0 z-10 mx-auto w-full max-w-md rounded-t-3xl border border-white/10 bg-slate-950/95 backdrop-blur-xl p-4">
+    <div class="relative z-10 mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-slate-950/95 backdrop-blur-xl p-4 max-h-[75vh] overflow-hidden">
       <div class="flex items-center justify-between mb-3">
         <div id="mobileOptionTitle" class="text-sm font-semibold">Select</div>
         <button id="mobileOptionClose" class="btn-soft px-3 py-1.5 text-[11px]" type="button">Close</button>
