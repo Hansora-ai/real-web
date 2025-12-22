@@ -166,7 +166,8 @@
       #resultsStrip .result-thumb video{
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
+        background: rgba(2,6,23,.85);
         display:block;
       }
       #resultsStrip .thumb-badge{
@@ -309,6 +310,64 @@
     }
     .opt-btn:active{ transform: translateY(1px); }
     .opt-chev{ opacity:.7; }
+
+    /* Fullscreen preview overlay (click media shows, download only via Get) */
+    #previewOverlay{
+      position:fixed;
+      inset:0;
+      z-index:60;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.85);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 18px;
+    }
+    #previewOverlay.show{ display:flex; }
+    #previewOverlay .preview-card{
+      width: min(920px, 100%);
+      max-height: min(88vh, 900px);
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(2,6,23,.88);
+      box-shadow: 0 30px 90px rgba(0,0,0,.75);
+      overflow:hidden;
+      position: relative;
+    }
+    #previewOverlay .preview-close{
+      position:absolute;
+      top:10px;
+      right:10px;
+      width:40px;
+      height:40px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.45);
+      color: rgba(255,255,255,.9);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size: 22px;
+      line-height: 1;
+      cursor:pointer;
+    }
+    #previewOverlay .preview-media{
+      width:100%;
+      height:100%;
+      max-height: min(88vh, 900px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,.35);
+    }
+    #previewOverlay img,
+    #previewOverlay video{
+      max-width:100%;
+      max-height: min(88vh, 900px);
+      object-fit: contain;
+    }
+
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -619,6 +678,61 @@ async function __mjFetchNbCheck(params){
 }
 // --- end MidJourney support ---
 
+// === Fullscreen preview overlay (download only via Get) ===
+(function(){
+  if (document.getElementById('previewOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'previewOverlay';
+  overlay.innerHTML = `
+    <div class="preview-card">
+      <button type="button" class="preview-close" aria-label="Close preview">&times;</button>
+      <div class="preview-media" id="previewMedia"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const mediaHost = overlay.querySelector('#previewMedia');
+  const closeBtn = overlay.querySelector('.preview-close');
+
+  function close(){
+    overlay.classList.remove('show');
+    // clear media
+    mediaHost.innerHTML = '';
+    document.body.style.overflow = '';
+  }
+
+  function open(url, kind){
+    if (!url) return;
+    mediaHost.innerHTML = '';
+    const k = (kind || 'image').toLowerCase();
+    if (k === 'video') {
+      const v = document.createElement('video');
+      v.src = url;
+      v.controls = true;
+      v.playsInline = true;
+      v.autoplay = true;
+      v.muted = false;
+      mediaHost.appendChild(v);
+    } else {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = 'Preview';
+      mediaHost.appendChild(img);
+    }
+    overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  // expose
+  window.openPreview = open;
+  window.closePreview = close;
+
+  closeBtn.addEventListener('click', (e)=>{ e.stopPropagation(); close(); });
+  overlay.addEventListener('click', (e)=>{ if (e.target === overlay) close(); });
+  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape' && overlay.classList.contains('show')) close(); });
+})();
+
+
 
     // === Supabase + header auth/credits ===
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
@@ -867,10 +981,10 @@ async function __mjFetchNbCheck(params){
       panel.appendChild(row);
       card.appendChild(panel);
 
-      // click to open in new tab (preview)
+      // click shows fullscreen preview (download only via Get)
       if (url) {
         card.style.cursor = 'pointer';
-        card.addEventListener('click', () => window.open(url, '_blank'));
+        card.addEventListener('click', () => window.openPreview && window.openPreview(url, kind));
       }
       return { card };
     }
@@ -1712,9 +1826,9 @@ async function pollGeneration(runId, controllers, token) {
         const row = document.createElement('button');
         row.type = 'button';
         row.className =
-          'w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-slate-900/90 border-b border-white/5 last:border-b-0';
+          'w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-slate-900/90 border-b border-white/5 last:border-b-0';
         row.innerHTML = `
-          <div class="mt-0.5 text-lg">${model.emoji}</div>
+          <div class="w-7 h-7 flex items-center justify-center text-lg">${model.emoji}</div>
           <div class="flex-1">
             <div class="flex items-center gap-2">
               <span class="text-sm font-medium">${model.name}</span>
