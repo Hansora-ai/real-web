@@ -113,7 +113,8 @@
 
     const SUPABASE_URL='https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = window.__HANSORA_SB__;
 
     const $btnLoginNav = document.getElementById('btnLoginNav');
     const $btnGetStarted = document.getElementById('btnGetStarted');
@@ -191,6 +192,7 @@
       const { data:userData } = await supabase.auth.getUser();
       const user = userData.user;
       if(!user){ $notLogged.classList.remove('hidden'); return; }
+      $notLogged.classList.add('hidden');
       const prof = await getOrCreateProfile(user);
       await showLoggedInUI(prof, user);
 
@@ -238,7 +240,53 @@
 
 if ($btnLogout) $btnLogout.addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
 
-    loadUsage();
+    (function(){
+      let _initialDone = false;
+
+      async function _syncHeader(){
+        const { data } = await supabase.auth.getUser();
+        const user = data.user;
+        if(user){
+          try{
+            const prof = await getOrCreateProfile(user);
+            await showLoggedInUI(prof, user);
+          }catch(e){
+            showLoggedOutUI();
+          }
+        }else{
+          showLoggedOutUI();
+        }
+      }
+
+      supabase.auth.onAuthStateChange(async (event) => {
+        // Wait for the restored session; this fixes the "logged out" header flash
+        if(event === 'INITIAL_SESSION'){
+          _initialDone = true;
+          await _syncHeader();
+          await loadUsage();
+          return;
+        }
+        if(event === 'SIGNED_IN'){
+          await _syncHeader();
+          await loadUsage();
+          return;
+        }
+        if(event === 'SIGNED_OUT'){
+          showLoggedOutUI();
+          try{ $usageList.innerHTML = ''; }catch(_){}
+          try{ $usageEmpty.classList.add('hidden'); }catch(_){}
+          try{ $notLogged.classList.remove('hidden'); }catch(_){}
+        }
+      });
+
+      // Fallback: if INITIAL_SESSION doesn't fire for some reason
+      setTimeout(async ()=>{
+        if(_initialDone) return;
+        await _syncHeader();
+        await loadUsage();
+      }, 0);
+    })();
+
   </script>
 <script>
 
