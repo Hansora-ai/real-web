@@ -25,7 +25,7 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <a href="/index.html" class="flex items-center gap-3 hover:opacity-90">
-          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora Logo" class="h-10 w-10 rounded-full object-cover"/>
+          <img src="https://qmaealblegvcwodlmeht.sb.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora Logo" class="h-10 w-10 rounded-full object-cover"/>
           <span class="font-semibold tracking-wide">HANSORA AI</span>
         </a>
       </div>
@@ -111,10 +111,10 @@
     document.getElementById('y').textContent = new Date().getFullYear();
     document.getElementById('rangeLabel').textContent = 'Last 30 days';
 
-    const SUPABASE_URL='https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_URL='https://qmaealblegvcwodlmeht.sb.co';
     const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const supabase = window.__HANSORA_SB__;
+    const sb = window.__HANSORA_SB__;
 
     const $btnLoginNav = document.getElementById('btnLoginNav');
     const $btnGetStarted = document.getElementById('btnGetStarted');
@@ -177,10 +177,10 @@
     }
 
     async function getOrCreateProfile(user){
-      const { data, error } = await supabase.from('profiles').select('user_id,email,credits').eq('user_id', user.id).maybeSingle();
+      const { data, error } = await sb.from('profiles').select('user_id,email,credits').eq('user_id', user.id).maybeSingle();
       if(error) throw error;
       if(!data){
-        const ins = await supabase.from('profiles').insert({user_id:user.id, email:user.email, credits:3}).select().single();
+        const ins = await sb.from('profiles').insert({user_id:user.id, email:user.email, credits:3}).select().single();
         if(ins.error) throw ins.error;
         return ins.data;
       }
@@ -189,7 +189,7 @@
     function esc(s){ return (s||'').replace(/</g,'&lt;'); }
 
     async function loadUsage(){
-      const { data:userData } = await supabase.auth.getUser();
+      const { data:userData } = await sb.auth.getUser();
       const user = userData.user;
       if(!user){ $notLogged.classList.remove('hidden'); return; }
       $notLogged.classList.add('hidden');
@@ -197,8 +197,7 @@
       await showLoggedInUI(prof, user);
 
       const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
-      const { data, error } = await supabase
-        .from('user_generations')
+      const { data, error } = await sb.from('user_generations')
         .select('id,created_at,provider,kind,prompt,result_url,meta')
         .eq('user_id', user.id)
         .gte('created_at', since)
@@ -238,13 +237,13 @@
       }
     }
 
-if ($btnLogout) $btnLogout.addEventListener('click', async ()=>{ await supabase.auth.signOut(); location.reload(); });
+if ($btnLogout) $btnLogout.addEventListener('click', async ()=>{ await sb.auth.signOut(); location.reload(); });
 
     (function(){
       let _initialDone = false;
 
       async function _syncHeader(){
-        const { data } = await supabase.auth.getUser();
+        const { data } = await sb.auth.getUser();
         const user = data.user;
         if(user){
           try{
@@ -258,7 +257,7 @@ if ($btnLogout) $btnLogout.addEventListener('click', async ()=>{ await supabase.
         }
       }
 
-      supabase.auth.onAuthStateChange(async (event) => {
+      sb.auth.onAuthStateChange(async (event) => {
         // Wait for the restored session; this fixes the "logged out" header flash
         if(event === 'INITIAL_SESSION'){
           _initialDone = true;
@@ -427,7 +426,7 @@ if (document.getElementById('btnDoLogin')) document.getElementById('btnDoLogin')
   const password = document.getElementById('authPass').value;
   const m = document.getElementById('authMsg');
   try{
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if(error){ m.textContent = error.message; return; }
     m.textContent = 'Logged in'; setTimeout(()=>location.reload(), 300);
   }catch(e){ m.textContent = String(e||'Login failed'); }
@@ -439,7 +438,7 @@ if (document.getElementById('btnDoSignup')) document.getElementById('btnDoSignup
   const m = document.getElementById('authMsg');
   if(password !== password2){ m.textContent='Passwords do not match'; return; }
   try{
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await sb.auth.signUp({ email, password });
     if(error){ m.textContent = error.message; return; }
     m.textContent = 'Check your email to confirm';
   }catch(e){ m.textContent = String(e||'Signup failed'); }
@@ -548,8 +547,8 @@ document.addEventListener('click', function(e){
 
 <script>
 (function(){try{
-  if (window.supabase && supabase.auth && typeof supabase.auth.getUser === 'function') {
-    supabase.auth.getUser().then(async ({ data }) => {
+  if (window.supabase && sb.auth && typeof sb.auth.getUser === 'function') {
+    sb.auth.getUser().then(async ({ data }) => {
       try {
         const user = data?.user;
         if (!user) return;
@@ -569,7 +568,7 @@ document.addEventListener('click', function(e){
   async function logout() {
     try {
       // sign out via Supabase
-      await supabase.auth.signOut();
+      await sb.auth.signOut();
       // clear any cached tokens just in case
       try { localStorage.removeItem('sb-access-token'); } catch (_) {}
       try { localStorage.removeItem('sb-refresh-token'); } catch (_) {}
