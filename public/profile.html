@@ -114,11 +114,12 @@
   </main>
   <div class="h-10"></div>
 
-  <script>
+    <script>
     // === Supabase client (same as index) ===
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Shared client (same pattern as working pages) to avoid duplicate init and session timing issues
+    const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
 
     // === Helpers ===
     const $ = (id) => document.getElementById(id);
@@ -130,35 +131,65 @@
       if (!m) return;
       m.classList.toggle('show');
       document.addEventListener('click', (e) => {
-        if (!m.contains(e.target) && !$('navAvatar').contains(e.target)) m.classList.remove('show');
+        if (!m.contains(e.target) && !$('navAvatar')?.contains(e.target)) m.classList.remove('show');
       }, { once:true });
     }
 
-    // === Header auth and avatar (same as before) ===
+    // Wait for Supabase to restore the initial session (prevents "logged out" flash / wrong state)
+    function waitForInitialSession(timeoutMs = 2000) {
+      return new Promise((resolve) => {
+        let done = false;
+        const timer = setTimeout(() => {
+          if (done) return;
+          done = true;
+          resolve(null);
+        }, timeoutMs);
+
+        const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+          if (event !== 'INITIAL_SESSION') return;
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          subscription?.unsubscribe();
+          resolve(session || null);
+        });
+      });
+    }
+
+    // === Header auth and avatar (same UI behavior as before) ===
     async function reflectHeader() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await sb.auth.getUser();
       const pre = $('btnLoginSignup');
       const navUser = $('navUser');
-      if (!user) { pre?.classList.remove('hidden'); navUser?.classList.add('hidden'); return; }
-      pre?.classList.add('hidden'); navUser?.classList.remove('hidden');
+      if (!user) {
+        pre?.classList.remove('hidden');
+        navUser?.classList.add('hidden');
+        return;
+      }
+      pre?.classList.add('hidden');
+      navUser?.classList.remove('hidden');
+
       const img = $('navAvatarImg');
       const url = user.user_metadata?.avatar_url || user.user_metadata?.picture;
-      if (url) { img.src = url; img.classList.remove('hidden'); }
+      if (url && img) {
+        img.src = url;
+        img.classList.remove('hidden');
+      }
     }
 
     async function ensureAuth() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await sb.auth.getUser();
       return user ?? null;
     }
 
     // === CREDITS: identical to index (plus: also update the card) ===
     async function startCreditsParity() {
       const navCreditsEl = document.getElementById('navCredits');
-      const runBtn = document.getElementById('runBtn');
+      const runBtn = document.getElementById('runBtn'); // may not exist on this page; kept as-is for parity
 
-      const R = (c)=>{
+      const R = (c) => {
         if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-        const tc=document.getElementById('totalCredits'); if(tc) tc.textContent=String(c ?? 0);
+        const tc = document.getElementById('totalCredits'); if (tc) tc.textContent = String(c ?? 0);
         if (runBtn) {
           const ok = (c ?? 0) > 0;
           runBtn.disabled = !ok;
@@ -167,43 +198,50 @@
         }
       };
 
-      const ures = await supabase.auth.getUser();
+      const ures = await sb.auth.getUser();
       const user = ures?.data?.user;
-      if(!user) return;
+      if (!user) return;
 
-      async function loadCreditsOnce(){ 
+      async function loadCreditsOnce() {
         try {
-          const { data: prof } = await supabase.from('profiles')
+          const { data: prof } = await sb.from('profiles')
             .select('credits').eq('user_id', user.id).maybeSingle();
           const c = prof?.credits ?? 0;
           R(c);
           return c;
-        } catch(e) { console.warn('credits poll read failed', e); return null; }
+        } catch (e) {
+          console.warn('credits poll read failed', e);
+          return null;
+        }
       }
 
-      // call once and then light polling like index
       await loadCreditsOnce();
 
       const intervalMs = 15000;
       if (!window.__creditsPoll) {
-        window.__creditsPoll = setInterval(async ()=>{
+        window.__creditsPoll = setInterval(async () => {
           await loadCreditsOnce();
         }, intervalMs);
       }
     }
 
-    
     function initActions() {
-      document.getElementById('btnCreateNow')?.addEventListener('click', ()=>{ window.location.href = 'models.html'; });
-      document.getElementById('btnBuyCredits')?.addEventListener('click', ()=>{ window.location.href = 'pricing.html'; });
+      document.getElementById('btnCreateNow')?.addEventListener('click', () => { window.location.href = 'models.html'; });
+      document.getElementById('btnBuyCredits')?.addEventListener('click', () => { window.location.href = 'pricing.html'; });
     }
 
     function initHeaderMenu() {
       $('navAvatar')?.addEventListener('click', toggleMenu);
-      $('btnLogout')?.addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = 'index.html'; });
+      $('btnLogout')?.addEventListener('click', async () => {
+        await sb.auth.signOut();
+        window.location.href = 'index.html';
+      });
     }
 
     (async () => {
+      // ensure session is restored before first render
+      await waitForInitialSession();
+
       await reflectHeader();
       const user = await ensureAuth();
       if (user) {
@@ -213,8 +251,17 @@
       await startCreditsParity();
       initHeaderMenu();
       initActions();
+
+      // Keep header correct if session changes while staying on the page
+      sb.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'SIGNED_OUT') {
+          reflectHeader();
+          startCreditsParity();
+        }
+      });
     })();
   </script>
+
 
   <footer class="border-t border-base-line mt-16"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-sm text-zinc-400 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">  <span>© 2025 HANSORA AI — All rights reserved.</span>  <div class="flex items-center gap-4 sm:ml-auto">    <a class="hover:text-white/80" href="terms.html">Terms</a>    <a class="hover:text-white/80" href="policy.html">Privacy</a>    <a class="hover:text-white/80" href="contact.html">Contact</a>  </div></div></footer>
 
