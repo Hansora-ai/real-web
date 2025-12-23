@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -122,10 +123,11 @@
 <script>
 document.getElementById('y').textContent = new Date().getFullYear();
 
-// === Supabase init (same as your Veo page, to avoid auth syntax issues) ===
+// === Supabase init (shared client, stable session restore) ===
 const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.__HANSORA_SB__;
 
 // === Header auth UI (unchanged) ===
 const $btnLoginNav = document.getElementById('btnLoginNav');
@@ -141,9 +143,56 @@ function showLoggedInUI(profile, user){try{$btnLoginNav.classList.add('hidden');
 function showLoggedOutUI(){try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');if($btnLoginSignup){$btnLoginSignup.classList.remove('hidden');}$navUser.classList.add('hidden');$navUser.classList.remove('flex');}catch{}}
 $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMenu');m.classList.toggle('hidden')});
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
-$btnLogout?.addEventListener('click',async()=>{await supabase.auth.signOut();showLoggedOutUI();});
-async function getOrCreateProfile(user){const r=await supabase.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await supabase.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-(async()=>{try{const {data}=await supabase.auth.getUser();const user=data.user;if(user){try{const p=await getOrCreateProfile(user);showLoggedInUI(p,user);}catch{showLoggedOutUI();}}else{showLoggedOutUI();}}catch{}})();
+$btnLogout?.addEventListener('click',async()=>{await sb.auth.signOut();showLoggedOutUI();});
+async function getOrCreateProfile(user){const r=await sb.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await sb.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
+// Auth init: wait for Supabase to restore session (prevents false "logged out")
+let __authInitDone = false;
+
+async function __renderAuth(user){
+  try{
+    if (user){
+      try{
+        const p = await getOrCreateProfile(user);
+        showLoggedInUI(p, user);
+      } catch {
+        showLoggedOutUI();
+      }
+    } else {
+      showLoggedOutUI();
+    }
+  } catch {
+    showLoggedOutUI();
+  }
+}
+
+try{
+  sb.auth.onAuthStateChange(async (event, session) => {
+    try{
+      if (event === 'INITIAL_SESSION'){
+        __authInitDone = true;
+        await __renderAuth(session?.user || null);
+      } else if (event === 'SIGNED_IN'){
+        await __renderAuth(session?.user || null);
+      } else if (event === 'SIGNED_OUT'){
+        await __renderAuth(null);
+      } else {
+        // default: attempt to refresh user state
+        const { data } = await sb.auth.getUser();
+        await __renderAuth(data?.user || null);
+      }
+    } catch {}
+  });
+} catch {}
+
+setTimeout(async () => {
+  if (__authInitDone) return;
+  try{
+    const { data } = await sb.auth.getUser();
+    await __renderAuth(data?.user || null);
+  } catch {
+    showLoggedOutUI();
+  }
+}, 700);
 
 // === Elements ===
 const imageEl=document.getElementById('image');
@@ -232,8 +281,8 @@ function showResultVideo(url, poster){
 // === Credits quick helpers ===
 async function getCredits(){
   try{
-    const ures = await supabase.auth.getUser(); const user = ures?.data?.user; if(!user) return 0;
-    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+    const ures = await sb.auth.getUser(); const user = ures?.data?.user; if(!user) return 0;
+    const { data: prof } = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
     return prof?.credits ?? 0;
   }catch{return 0;}
 }
@@ -266,9 +315,9 @@ async function waitForCreditsDrop(target){
 (function(){
   (async()=>{
     try{
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData } = await sb.auth.getUser();
       const user = userData?.user; if(!user) return;
-      const refresh = async()=>{ try{ const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle(); const c = prof?.credits ?? 0; const nav = document.getElementById('navCredits'); if (nav) nav.textContent = c + '⚡'; }catch{} };
+      const refresh = async()=>{ try{ const { data: prof } = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle(); const c = prof?.credits ?? 0; const nav = document.getElementById('navCredits'); if (nav) nav.textContent = c + '⚡'; }catch{} };
       await refresh();
       supabase
         .channel('credits_live_hf_' + user.id)
@@ -285,7 +334,7 @@ async function runJob(){
   try{ document.getElementById('downloadLink')?.classList.add('hidden'); }catch{}
   runBtn.disabled = true; runBtn.textContent = 'Working…'; runBtn.classList.add('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents='none';
   try{
-    const { data: authData } = await supabase.auth.getUser();
+    const { data: authData } = await sb.auth.getUser();
     if(!authData.user){ alert('Please log in or register first.'); runBtn.disabled=false; runBtn.textContent='Run (cost: 7⚡)'; runBtn.classList.remove('opacity-50','cursor-not-allowed'); runBtn.style.pointerEvents=''; runBtn.style.pointerEvents=''; window.__hfBusy=false; return; }
 
     const cost = 7;
