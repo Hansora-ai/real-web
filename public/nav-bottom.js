@@ -26,7 +26,7 @@
       <span>Templates</span>
     </a>
     <div class="hs-fab-wrap">
-      <a aria-label="Models" class="hs-fab" href="/models.html">
+      <a aria-label="Models" class="hs-fab" href="/search-models.html">
         <svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"></path></svg>
         <span>Models</span>
       </a>
