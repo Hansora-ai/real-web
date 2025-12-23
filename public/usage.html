@@ -25,7 +25,7 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <a href="/index.html" class="flex items-center gap-3 hover:opacity-90">
-          <img src="https://qmaealblegvcwodlmeht.sb.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora Logo" class="h-10 w-10 rounded-full object-cover"/>
+          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora Logo" class="h-10 w-10 rounded-full object-cover"/>
           <span class="font-semibold tracking-wide">HANSORA AI</span>
         </a>
       </div>
@@ -111,7 +111,7 @@
     document.getElementById('y').textContent = new Date().getFullYear();
     document.getElementById('rangeLabel').textContent = 'Last 30 days';
 
-    const SUPABASE_URL='https://qmaealblegvcwodlmeht.sb.co';
+    const SUPABASE_URL='https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const sb = window.__HANSORA_SB__;
@@ -188,16 +188,15 @@
     }
     function esc(s){ return (s||'').replace(/</g,'&lt;'); }
 
-    async function loadUsage(){
-      const { data:userData } = await sb.auth.getUser();
-      const user = userData.user;
+    async function loadUsage(passedUser){
+      const user = passedUser || (await sb.auth.getUser()).data.user;
       if(!user){ $notLogged.classList.remove('hidden'); return; }
-      $notLogged.classList.add('hidden');
       const prof = await getOrCreateProfile(user);
       await showLoggedInUI(prof, user);
 
       const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
-      const { data, error } = await sb.from('user_generations')
+      const { data, error } = await sb
+        .from('user_generations')
         .select('id,created_at,provider,kind,prompt,result_url,meta')
         .eq('user_id', user.id)
         .gte('created_at', since)
@@ -239,51 +238,23 @@
 
 if ($btnLogout) $btnLogout.addEventListener('click', async ()=>{ await sb.auth.signOut(); location.reload(); });
 
-    (function(){
-      let _initialDone = false;
 
-      async function _syncHeader(){
+    (async ()=>{
+      try{
         const { data } = await sb.auth.getUser();
-        const user = data.user;
+        const user = data?.user;
         if(user){
-          try{
-            const prof = await getOrCreateProfile(user);
-            await showLoggedInUI(prof, user);
-          }catch(e){
-            showLoggedOutUI();
-          }
-        }else{
+          const prof = await getOrCreateProfile(user);
+          await showLoggedInUI(prof, user);
+          await loadUsage(user);
+        } else {
           showLoggedOutUI();
+          try{ document.getElementById('notLogged')?.classList.remove('hidden'); }catch(e){}
         }
+      }catch(e){
+        try{ showLoggedOutUI(); }catch(_){}
+        try{ document.getElementById('notLogged')?.classList.remove('hidden'); }catch(_){}
       }
-
-      sb.auth.onAuthStateChange(async (event) => {
-        // Wait for the restored session; this fixes the "logged out" header flash
-        if(event === 'INITIAL_SESSION'){
-          _initialDone = true;
-          await _syncHeader();
-          await loadUsage();
-          return;
-        }
-        if(event === 'SIGNED_IN'){
-          await _syncHeader();
-          await loadUsage();
-          return;
-        }
-        if(event === 'SIGNED_OUT'){
-          showLoggedOutUI();
-          try{ $usageList.innerHTML = ''; }catch(_){}
-          try{ $usageEmpty.classList.add('hidden'); }catch(_){}
-          try{ $notLogged.classList.remove('hidden'); }catch(_){}
-        }
-      });
-
-      // Fallback: if INITIAL_SESSION doesn't fire for some reason
-      setTimeout(async ()=>{
-        if(_initialDone) return;
-        await _syncHeader();
-        await loadUsage();
-      }, 0);
     })();
 
   </script>
@@ -545,22 +516,7 @@ document.addEventListener('click', function(e){
 </script>
 
 
-<script>
-(function(){try{
-  if (window.supabase && sb.auth && typeof sb.auth.getUser === 'function') {
-    sb.auth.getUser().then(async ({ data }) => {
-      try {
-        const user = data?.user;
-        if (!user) return;
-        if (typeof window.getOrCreateProfile === 'function') {
-          const prof = await window.getOrCreateProfile(user);
-          if (typeof window.showLoggedInUI === 'function') window.showLoggedInUI(prof, user);
-        }
-      } catch(e){ console.warn('post-init header refresh error', e); }
-    });
-  }
-} catch(e){ console.warn('post-init session check failed', e); }} )();
-</script>
+
 
 
 <!-- minimal additions: working logout + hide bottom login/signup (kept in DOM) -->
