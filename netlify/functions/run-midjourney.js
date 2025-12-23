@@ -146,18 +146,24 @@ exports.handler = async (event) => {
 
     const image_url = String(body.image_url || "").trim();
     const prompt    = body.prompt || "";
-    const size = body.size || body.aspectRatio || 'auto';
-    function mapSizeToAR(s){
-      switch(String(s||'').toLowerCase()){
-        case 'square': return '1:1';
-        case 'portrait_3_4': return '3:4';
-        case 'portrait_9_16': return '9:16';
-        case 'landscape_4_3': return '4:3';
-        case 'landscape_16_9': return '16:9';
-        case 'auto': default: return '2:3'; // default per your note
-      }
-    }
-    const aspect = normalizeAspect(mapSizeToAR(size)); // default 2:3
+    const size = body.size || 'auto';
+
+// Prefer explicit aspect ratio if provided (e.g., "9:16", "1:1", etc.)
+const explicitAR = body.aspect_ratio || body.aspectRatio || body.aspect || body.ar || null;
+
+function mapSizeToAR(s){
+  switch(String(s||'').toLowerCase()){
+    case 'square': return '1:1';
+    case 'portrait_3_4': return '3:4';
+    case 'portrait_9_16': return '9:16';
+    case 'landscape_4_3': return '4:3';
+    case 'landscape_16_9': return '16:9';
+    case 'auto': default: return '2:3'; // default per your note
+  }
+}
+
+// If explicitAR looks like a ratio, use it; otherwise map size token -> ratio.
+const aspect = normalizeAspect((explicitAR && /\d+\s*:\s*\d+/.test(String(explicitAR))) ? explicitAR : mapSizeToAR(size));
     const speed     = "fast"; // per user request
     const version   = body.version ?? 7;
     const stylization = body.stylization ?? 100;
