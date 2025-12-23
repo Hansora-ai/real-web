@@ -32,7 +32,7 @@
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <a href="templates.html" class="flex items-center gap-3 hover:opacity-90">
-        <img src="https://qmaealblegvcwodlmeht.sb.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="HANSORA logo" class="h-9 w-9 object-contain" />
+        <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="HANSORA logo" class="h-9 w-9 object-contain" />
         <span class="font-semibold tracking-wide">HANSORA AI</span>
       </a>
       <nav class="hidden md:flex items-center gap-8 text-sm">
@@ -123,10 +123,10 @@
 document.getElementById('y').textContent = new Date().getFullYear();
 
 // === Supabase init (same as your Veo page, to avoid auth syntax issues) ===
-const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.sb.co';
+const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
-
+window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.__HANSORA_SB__;
 // === Header auth UI (unchanged) ===
 const $btnLoginNav = document.getElementById('btnLoginNav');
 const $btnLoginSignup = document.getElementById('btnLoginSignup');
@@ -143,51 +143,28 @@ $navAvatar?.addEventListener('click',()=>{const m=document.getElementById('navMe
 document.addEventListener('click',(e)=>{if(!e.target.closest('#navAvatar')&&!e.target.closest('#navMenu'))document.getElementById('navMenu').classList.add('hidden')});
 $btnLogout?.addEventListener('click',async()=>{await sb.auth.signOut();showLoggedOutUI();});
 async function getOrCreateProfile(user){const r=await sb.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(r.error)throw r.error;if(!r.data){const ins=await sb.from('profiles').insert({user_id:user.id,email:user.email,credits:3}).select().single();if(ins.error)throw ins.error;return ins.data;}return r.data;}
-async function waitForInitialSession(timeoutMs = 2000){
-  return new Promise((resolve)=>{
-    let done = false;
-    const timer = setTimeout(()=>{
-      if(done) return;
-      done = true;
-      resolve(null);
-    }, timeoutMs);
-
-    try{
-      const { data: { subscription } } = sb.auth.onAuthStateChange((event, session)=>{
-        if(event !== 'INITIAL_SESSION') return;
-        if(done) return;
-        done = true;
-        try{ clearTimeout(timer); }catch{}
-        try{ subscription?.unsubscribe(); }catch{}
-        resolve(session || null);
-      });
-    }catch{
-      // If listener fails for any reason, just continue after timeout
-    }
-  });
-}
-
-async function reflectHeader(){
+async function restoreAuthUI(){
   try{
-    const { data } = await sb.auth.getUser();
-    const user = data?.user || null;
-    if(!user){ showLoggedOutUI(); return; }
-    const p = await getOrCreateProfile(user);
-    showLoggedInUI(p, user);
+    const { data, error } = await sb.auth.getUser();
+    if (error) throw error;
+    const user = data?.user;
+    if (!user){ showLoggedOutUI(); return; }
+    const profile = await getOrCreateProfile(user);
+    showLoggedInUI(profile, user);
   }catch(e){
     showLoggedOutUI();
   }
 }
 
-(async()=>{
-  await waitForInitialSession();
-  await reflectHeader();
-  sb.auth.onAuthStateChange((event)=>{
-    if(event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'SIGNED_OUT'){
-      reflectHeader();
-    }
-  });
-})();
+// Wait for Supabase to restore session before first paint (prevents false "logged out")
+let __hsInitialSessionHandled = false;
+sb.auth.onAuthStateChange((event) => {
+  if (event === 'INITIAL_SESSION') __hsInitialSessionHandled = true;
+  restoreAuthUI();
+});
+// Fallback in case INITIAL_SESSION is delayed/not fired
+setTimeout(() => { if (!__hsInitialSessionHandled) restoreAuthUI(); }, 350);
+
 
 // === Elements ===
 const imageEl=document.getElementById('image');
