@@ -84,7 +84,291 @@
       -webkit-box-orient:vertical;
       overflow:hidden;
     }
-  </style>
+  
+    /* Mobile compact UI tweaks (UI only) */
+    @media (max-width: 767px) {
+      /* Make generator card compact */
+      #generatorCard { padding: 12px !important; }
+      #generatorCard .sm\:space-y-3 { row-gap: 10px !important; }
+      /* Hide large pill blocks on mobile (use compact pickers instead) */
+      #aspectBlock, #durationBlock { display: none !important; }
+      /* Thumbs scroll instead of overflow */
+      #imageThumbs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      #imageThumbs > div { flex: 0 0 auto; }
+      /* Run button full width + centered */
+      #runBtn { width: 100% !important; min-height: 48px !important; }
+      /* Reduce vertical gaps under upload row */
+      #uploadBtn { margin-top: 6px !important; }
+      /* Reduce extra spacing in Cost+Run block */
+      #costLabel { margin-bottom: 4px !important; }
+    
+      /* Mobile redesign: remove hero + make page fully scrollable (settings in flow) */
+      body{ background: var(--base-bg) !important; }
+      #heroSection{ display:none !important; }
+      #generatorDock{ position: static !important; inset: auto !important; padding: 12px 16px 0 !important; }
+      #generatorDock > #generatorCard{ width: 100% !important; max-width: 100% !important; }
+      main{ padding-bottom: 16px !important; }
+      /* Keep generator compact and avoid big gaps */
+      #generatorCard{ border-radius: 24px !important; }
+      #generatorCard .space-y-3{ row-gap: 10px !important; }
+
+      /* Make whole mobile page scroll (not only main) */
+      body{ overflow-y:auto !important; }
+      main{ overflow: visible !important; flex: 0 0 auto !important; }
+
+      
+      /* Results section (mobile): 2:3 viewport + horizontal swipe (peek next card) */
+      #resultsSection{ display:block !important; padding-top: 12px !important; padding-bottom: 24px !important; }
+
+      /* Container is a 2:3 window that scrolls horizontally */
+      #resultsStrip{
+        border: 1px solid rgba(255,255,255,.10) !important;
+        background: rgba(2,6,23,.45) !important;
+        border-radius: 22px !important;
+
+        padding: 10px !important;
+
+        aspect-ratio: 2 / 3;
+        width: 100% !important;
+
+        display: flex !important;
+        gap: 12px !important;
+
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x mandatory;
+        scroll-padding-left: 10px;
+
+        /* makes the next card "peek" ~25% */
+        padding-right: 22% !important;
+      }
+
+      #resultsStrip.empty{
+        justify-content: center !important;
+        align-items: center !important;
+      }
+
+      /* Each thumb becomes a 2:3 card (newest full, next card peeks) */
+      #resultsStrip .result-thumb{
+        position: relative;
+        border-radius: 18px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(15,23,42,.55);
+
+        flex: 0 0 78%;
+        aspect-ratio: 2 / 3;
+        scroll-snap-align: start;
+      }
+#resultsStrip .result-thumb img,
+      #resultsStrip .result-thumb video{
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: rgba(2,6,23,.85);
+        display:block;
+      }
+      #resultsStrip .thumb-badge{
+        position:absolute;
+        top:8px;
+        left:8px;
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(2,6,23,.70);
+        color: rgba(255,255,255,.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      #resultsStrip .thumb-status{
+        position:absolute;
+        bottom:8px;
+        left:8px;
+        right:8px;
+        display:flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        color: rgba(255,255,255,.78);
+      }
+      #resultsStrip .thumb-status-extended{
+        flex-direction: column;
+        align-items: stretch;
+        padding: 8px 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(2,6,23,.72);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      #resultsStrip .thumb-row{
+        display:flex;
+        align-items:flex-end;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      #resultsStrip .thumb-meta{
+        display:flex;
+        flex-direction: column;
+        min-width: 0;
+        gap: 2px;
+      }
+      #resultsStrip .thumb-model{
+        font-size: 11px;
+        font-weight: 600;
+        color: rgba(255,255,255,.88);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 220px;
+      }
+      #resultsStrip .thumb-prompt{
+        font-size: 10px;
+        color: rgba(255,255,255,.65);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 220px;
+      }
+      #resultsStrip .thumb-actions{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      #resultsStrip .thumb-state{
+        font-size: 10px;
+        color: rgba(255,255,255,.75);
+      }
+      #resultsStrip .thumb-state.ready{ color: rgba(110,231,183,.95); }
+      #resultsStrip .thumb-state.failed{ color: rgba(248,113,113,.95); }
+      #resultsStrip .thumb-get{
+        font-size: 10px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.14);
+        background: rgba(99,102,241,.22);
+        color: rgba(255,255,255,.92);
+      }
+      #resultsStrip .thumb-get:active{ transform: translateY(1px); }
+
+      #resultsStrip .empty-placeholder{
+        width:100%;
+        height:100%;
+        border-radius: 18px;
+        border: 1px dashed rgba(255,255,255,.18);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        color: rgba(255,255,255,.55);
+        padding: 14px;
+      }
+      #resultsStrip .empty-placeholder .inner{
+        max-width: 220px;
+      }
+      #resultsStrip .empty-placeholder .icon{
+        width: 54px;
+        height: 54px;
+        margin: 0 auto 10px;
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(99,102,241,.12);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color: rgba(255,255,255,.80);
+        font-weight: 700;
+      }
+      #resultsStrip .result-card-loader{
+        position:absolute;
+        inset:0;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+      }
+
+}
+
+    .opt-btn{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      border-radius:9999px;
+      border:1px solid rgba(255,255,255,.15);
+      background:rgba(2,6,23,.55);
+      color:rgba(255,255,255,.9);
+      font-size:11px;
+      line-height:1;
+      white-space:nowrap;
+    }
+    .opt-btn:active{ transform: translateY(1px); }
+    .opt-chev{ opacity:.7; }
+
+    /* Fullscreen preview overlay (click media shows, download only via Get) */
+    #previewOverlay{
+      position:fixed;
+      inset:0;
+      z-index:60;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.85);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 18px;
+    }
+    #previewOverlay.show{ display:flex; }
+    #previewOverlay .preview-card{
+      width: min(920px, 100%);
+      max-height: min(88vh, 900px);
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(2,6,23,.88);
+      box-shadow: 0 30px 90px rgba(0,0,0,.75);
+      overflow:hidden;
+      position: relative;
+    }
+    #previewOverlay .preview-close{
+      position:absolute;
+      top:10px;
+      right:10px;
+      width:40px;
+      height:40px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.45);
+      color: rgba(255,255,255,.9);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size: 22px;
+      line-height: 1;
+      cursor:pointer;
+    }
+    #previewOverlay .preview-media{
+      width:100%;
+      height:100%;
+      max-height: min(88vh, 900px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,.35);
+    }
+    #previewOverlay img,
+    #previewOverlay video{
+      max-width:100%;
+      max-height: min(88vh, 900px);
+      object-fit: contain;
+    }
+
+    </style>
 </head>
 <body class="min-h-screen flex flex-col">
   <!-- HEADER (Nano Banana style) -->
@@ -123,50 +407,28 @@
     </div>
   </header>
 
-  <!-- MAIN HERO -->
-  <main class="flex-1 overflow-y-auto pb-40">
-    <section id="resultsSection" class="hidden mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm pt-8 font-semibold text-white/80">Recent generations</h2>
-        <p class="text-[11px] text-white/45">Last 7 jobs from this account</p>
-      </div>
-      <div id="resultsStrip" class="flex gap-3 overflow-x-auto pb-2"></div>
-    </section>
-
-    <section id="heroSection" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-10 text-center">
-      <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold">
-        Let’s start with some image &amp; video magic
-      </h1>
-      <p class="mt-2 text-sm sm:text-base text-zinc-300 max-w-xl mx-auto">
-        Type your idea once, then choose any model to generate images or videos — all from one clean bar.
-      </p>
-
-      <div class="mt-8 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl">
-        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
-          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/ChatGPT%20Image%20Dec%206,%202025,%2011_11_06%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 1" class="h-full w-full object-cover" />
-        </div>
-        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
-          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2022,%202025,%2010_42_41%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 2" class="h-full w-full object-cover" />
-        </div>
-        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9] hidden sm:block">
-          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2022,%202025,%2010_39_01%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 3" class="h-full w-full object-cover" />
-        </div>
-      </div>
-    </section>
-
-    <!-- RESULTS STRIP -->
-    
-  </main>
-
-  <!-- BOTTOM BAR -->
-  <div class="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-6 px-3">
-    <div class="w-full max-w-5xl rounded-3xl bg-black/80 border border-white/15 shadow-soft px-4 py-4 space-y-3 backdrop-blur-xl">
+  <div id="generatorDock" class="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-6 px-3">
+    <div id="generatorCard" class="w-full max-w-5xl rounded-3xl bg-black/80 border border-white/15 shadow-soft px-4 py-4 space-y-3 backdrop-blur-xl">
       <!-- FIRST ROW: mode + prompt + model -->
       <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-        <!-- Mode toggle -->
-        <div class="flex rounded-full bg-slate-900/80 border border-white/15 p-1 text-[11px] w-fit">
+        <!-- Mode + Mobile quick options -->
+        <div class="flex items-center justify-between w-full sm:w-auto gap-2">
+          <div class="flex rounded-full bg-slate-900/80 border border-white/15 p-1 text-[11px] w-fit">
           <button id="btnModeImage" class="px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-[11px] font-semibold shadow-sm">Image</button>
           <button id="btnModeVideo" class="px-3 py-1.5 rounded-full text-white/70">Video</button>
+        </div>
+          <div id="mobileQuickOptions" class="md:hidden flex items-center gap-2">
+            <button id="mobileAspectBtn" type="button" class="opt-btn hidden">
+              <span class="opacity-70">AR</span>
+              <span id="mobileAspectLabel">1:1</span>
+              <span class="opt-chev">▾</span>
+            </button>
+            <button id="mobileDurationBtn" type="button" class="opt-btn hidden">
+              <span class="opacity-70">Dur</span>
+              <span id="mobileDurationLabel">5s</span>
+              <span class="opt-chev">▾</span>
+            </button>
+          </div>
         </div>
 
         <!-- Prompt (textarea) -->
@@ -186,6 +448,7 @@
         >
           <span class="text-xs opacity-80 hidden sm:inline">Model</span>
           <span id="modelButtonLabel" class="truncate max-w-[150px] sm:max-w-[180px]">Nano Banana</span>
+          <span aria-hidden="true" class="ml-1 text-white/70 text-base leading-none">&gt;</span>
         </button>
       </div>
 
@@ -203,7 +466,7 @@
             <span class="text-lg leading-none">📎</span>
             <span id="uploadBtnLabel">Upload image</span>
           </button>
-          <div id="imageThumbs" class="flex gap-1.5"></div>
+          <div id="imageThumbs" class="flex gap-1.5 flex-nowrap overflow-x-auto max-w-full pr-1"></div>
 
           <!-- Start / Last frame uploads (Veo 3.1 + Kling 2.1) -->
           <div id="framesUploadWrap" class="hidden items-center gap-2">
@@ -304,7 +567,7 @@
     id="modelOverlay"
     class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"
   >
-    <div class="absolute left-1/2 translate-x-[-50%] bottom-40 w-full max-w-md mx-3 rounded-3xl bg-slate-950/95 border border-white/15 shadow-2xl overflow-hidden">
+    <div class="absolute left-1/2 top-1/2 translate-x-[-50%] translate-y-[-50%] w-[92vw] max-w-[420px] rounded-3xl border border-white/10 bg-slate-950/80 backdrop-blur-xl shadow-2xl overflow-hidden max-h-[80vh]">
       <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div class="flex flex-col">
           <span class="text-xs font-semibold text-white/80">IMAGE / VIDEO MODELS</span>
@@ -312,7 +575,7 @@
         </div>
         <button id="closeOverlay" class="text-white/60 hover:text-white text-lg">&times;</button>
       </div>
-      <div class="px-4 py-3 border-b border-white/10">
+      <div class="hidden">
         <input
           id="overlayModelSearch"
           type="text"
@@ -320,12 +583,50 @@
           class="w-full rounded-full bg-slate-900 border border-white/15 px-3 py-2 text-xs outline-none placeholder:text-white/40"
         />
       </div>
-      <div id="overlayModelList" class="max-h-80 overflow-y-auto text-sm">
+      <div id="overlayModelList" class="max-h-[58vh] overflow-y-auto text-sm">
         <!-- items via JS -->
       </div>
     </div>
   </div>
 
+
+
+  <!-- MAIN HERO -->
+  <main class="flex-1 overflow-y-auto pb-40">
+    <section id="resultsSection" class="hidden mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm pt-8 font-semibold text-white/80">Recent generations</h2>
+        <p class="text-[11px] text-white/45">Last 7 jobs from this account</p>
+      </div>
+      <div id="resultsStrip" class="flex gap-3 overflow-x-auto pb-2"></div>
+    </section>
+
+    <section id="heroSection" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-10 text-center">
+      <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold">
+        Let’s start with some image &amp; video magic
+      </h1>
+      <p class="mt-2 text-sm sm:text-base text-zinc-300 max-w-xl mx-auto">
+        Type your idea once, then choose any model to generate images or videos — all from one clean bar.
+      </p>
+
+      <div class="mt-8 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl">
+        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
+          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/ChatGPT%20Image%20Dec%206,%202025,%2011_11_06%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 1" class="h-full w-full object-cover" />
+        </div>
+        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
+          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2022,%202025,%2010_42_41%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 2" class="h-full w-full object-cover" />
+        </div>
+        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9] hidden sm:block">
+          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2022,%202025,%2010_39_01%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 3" class="h-full w-full object-cover" />
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTS STRIP -->
+    
+  </main>
+
+  <!-- BOTTOM BAR -->
   <script>
 // --- MidJourney multi-image support via nb-check (no callback changes) ---
 function __mjCacheKey(runId){ return `mj_urls_${runId}`; }
@@ -376,6 +677,61 @@ async function __mjFetchNbCheck(params){
   return { ok:r.ok, status:r.status, js };
 }
 // --- end MidJourney support ---
+
+// === Fullscreen preview overlay (download only via Get) ===
+(function(){
+  if (document.getElementById('previewOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'previewOverlay';
+  overlay.innerHTML = `
+    <div class="preview-card">
+      <button type="button" class="preview-close" aria-label="Close preview">&times;</button>
+      <div class="preview-media" id="previewMedia"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const mediaHost = overlay.querySelector('#previewMedia');
+  const closeBtn = overlay.querySelector('.preview-close');
+
+  function close(){
+    overlay.classList.remove('show');
+    // clear media
+    mediaHost.innerHTML = '';
+    document.body.style.overflow = '';
+  }
+
+  function open(url, kind){
+    if (!url) return;
+    mediaHost.innerHTML = '';
+    const k = (kind || 'image').toLowerCase();
+    if (k === 'video') {
+      const v = document.createElement('video');
+      v.src = url;
+      v.controls = true;
+      v.playsInline = true;
+      v.autoplay = true;
+      v.muted = false;
+      mediaHost.appendChild(v);
+    } else {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = 'Preview';
+      mediaHost.appendChild(img);
+    }
+    overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  // expose
+  window.openPreview = open;
+  window.closePreview = close;
+
+  closeBtn.addEventListener('click', (e)=>{ e.stopPropagation(); close(); });
+  overlay.addEventListener('click', (e)=>{ if (e.target === overlay) close(); });
+  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape' && overlay.classList.contains('show')) close(); });
+})();
+
 
 
     // === Supabase + header auth/credits ===
@@ -477,7 +833,244 @@ async function __mjFetchNbCheck(params){
     });
 
     // === RESULTS (last 7 generations) ===
-    function createResultCard(data) {
+    function isMobileUI() {
+      return window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+    }
+
+    function ensureResultsEmptyState() {
+      const strip = document.getElementById('resultsStrip');
+      if (!strip) return;
+      if (!strip.children.length) {
+        strip.classList.add('empty');
+        strip.innerHTML = `
+          <div class="empty-placeholder">
+            <div class="inner">
+              <div class="icon">H</div>
+              <div style="font-weight:700; margin-bottom:6px;">No generations yet</div>
+              <div style="font-size:12px; line-height:1.35;">Your last 7 results will appear here after you run your first job.</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function createResultThumb(data) {
+      const provider = data.provider || 'Model';
+      const kind = (data.kind || 'image').toLowerCase();
+      const prompt = (data.prompt || '').toString();
+      const statusRaw = (data.status || '').toString();
+      const statusLower = statusRaw.toLowerCase();
+      const url = data.result_url || '';
+
+      const card = document.createElement('div');
+      card.className = 'result-thumb';
+      card.dataset.runId = data.run_id || '';
+
+      // media
+      if (url) {
+        if (kind === 'video') {
+          const v = document.createElement('video');
+          v.src = url;
+          v.muted = true;
+          v.playsInline = true;
+          v.loop = true;
+          v.autoplay = true;
+          v.preload = 'metadata';
+          card.appendChild(v);
+        } else {
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = provider;
+          img.loading = 'lazy';
+          card.appendChild(img);
+        }
+      } else {
+        const ph = document.createElement('div');
+        ph.style.width = '100%';
+        ph.style.height = '100%';
+        ph.style.display = 'flex';
+        ph.style.alignItems = 'center';
+        ph.style.justifyContent = 'center';
+        ph.style.color = 'rgba(255,255,255,.55)';
+        ph.style.fontSize = '12px';
+        ph.textContent = 'Processing';
+        card.appendChild(ph);
+      }
+
+      const badge = document.createElement('div');
+      badge.className = 'thumb-badge';
+      badge.textContent = (kind === 'video') ? 'VIDEO' : 'IMAGE';
+      card.appendChild(badge);
+
+      // status + info panel
+      const panel = document.createElement('div');
+      panel.className = 'thumb-status thumb-status-extended';
+
+      const row = document.createElement('div');
+      row.className = 'thumb-row';
+
+      const meta = document.createElement('div');
+      meta.className = 'thumb-meta';
+
+      const modelLine = document.createElement('div');
+      modelLine.className = 'thumb-model';
+      modelLine.textContent = provider;
+
+      const promptLine = document.createElement('div');
+      promptLine.className = 'thumb-prompt';
+      promptLine.textContent = prompt || '—';
+
+      meta.appendChild(modelLine);
+      meta.appendChild(promptLine);
+
+      const actions = document.createElement('div');
+      actions.className = 'thumb-actions';
+
+      const state = document.createElement('span');
+      state.className = 'thumb-state';
+      const isFailed = statusLower.includes('fail') || statusLower.includes('error');
+      const isReady = !!url;
+      if (isFailed) {
+        state.textContent = 'Failed';
+        state.classList.add('failed');
+      } else if (isReady) {
+        state.textContent = 'Ready';
+        state.classList.add('ready');
+      } else {
+        state.textContent = '…';
+      }
+
+      const getBtn = document.createElement('button');
+      getBtn.type = 'button';
+      getBtn.className = 'thumb-get';
+      getBtn.textContent = 'Get';
+      if (!isReady || isFailed) getBtn.classList.add('hidden');
+
+      // download helper (best-effort; fallback to opening)
+      const downloadUrl = async (u) => {
+        try {
+          const resp = await fetch(u, { mode: 'cors', credentials: 'omit' });
+          if (!resp.ok) throw new Error('fetch failed');
+          const blob = await resp.blob();
+          const obj = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = obj;
+          const ext = (kind === 'video') ? 'mp4' : 'png';
+          a.download = `hansora-${Date.now()}.${ext}`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(obj), 2000);
+        } catch (e) {
+          window.open(u, '_blank');
+        }
+      };
+
+      getBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!url) return;
+        downloadUrl(url);
+      });
+
+      actions.appendChild(state);
+      actions.appendChild(getBtn);
+
+      row.appendChild(meta);
+      row.appendChild(actions);
+
+      panel.appendChild(row);
+      card.appendChild(panel);
+
+      // click shows fullscreen preview (download only via Get)
+      if (url) {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', () => window.openPreview && window.openPreview(url, kind));
+      }
+      let __thumb_url = url;
+      let __thumb_kind = kind;
+      let __previewBound = false;
+
+      function apply(next) {
+        try {
+          const nextStatusRaw = (next && next.status != null) ? String(next.status) : statusRaw;
+          const nextStatusLower = String(nextStatusRaw || '').toLowerCase();
+          const nextUrl = (next && next.result_url) ? String(next.result_url) : (__thumb_url || '');
+          const failed = nextStatusLower.includes('fail') || nextStatusLower.includes('error');
+          const ready = !!nextUrl;
+
+          // update state chip
+          state.classList.remove('failed', 'processing', 'ready');
+          if (failed) {
+            state.textContent = 'Failed';
+            state.classList.add('failed');
+          } else if (ready) {
+            state.textContent = 'Ready';
+            state.classList.add('ready');
+          } else {
+            state.textContent = 'Processing';
+            state.classList.add('processing');
+          }
+
+          // update Get button visibility/enable
+          if (ready && !failed) {
+            getBtn.classList.remove('hidden');
+            getBtn.disabled = false;
+          } else {
+            getBtn.disabled = true;
+          }
+
+          // media element
+          __thumb_url = nextUrl || '';
+          __thumb_kind = (next && next.kind) ? String(next.kind).toLowerCase() : __thumb_kind;
+
+          const existingMedia = card.querySelector('img,video');
+          if (__thumb_url) {
+            if (!existingMedia) {
+              if (__thumb_kind === 'video') {
+                const v = document.createElement('video');
+                v.src = __thumb_url;
+                v.muted = true;
+                v.playsInline = true;
+                v.loop = true;
+                v.autoplay = true;
+                v.preload = 'metadata';
+                card.insertBefore(v, card.firstChild);
+              } else {
+                const img = document.createElement('img');
+                img.src = __thumb_url;
+                img.alt = provider;
+                img.loading = 'lazy';
+                card.insertBefore(img, card.firstChild);
+              }
+            } else {
+              if (existingMedia.tagName.toLowerCase() === 'video') existingMedia.src = __thumb_url;
+              else existingMedia.src = __thumb_url;
+            }
+          }
+
+          // click-to-preview (download only via Get)
+          if (__thumb_url) {
+            card.style.cursor = 'pointer';
+            if (!__previewBound) {
+              __previewBound = true;
+              card.addEventListener('click', () => {
+                if (window.openPreview) window.openPreview(__thumb_url, __thumb_kind);
+              });
+            }
+          }
+        } catch (_e) {}
+      }
+
+      // initial apply to normalize visuals
+      apply({ status: statusRaw || (url ? 'ready' : 'processing'), result_url: url, kind });
+      return { card, apply };
+    }
+
+    function createResultItem(data) {
+      return isMobileUI() ? createResultThumb(data) : createResultCard(data);
+    }
+
+function createResultCard(data) {
       const provider = data.provider || 'Model';
       const kind = (data.kind || 'image').toLowerCase();
       const prompt = data.prompt || '';
@@ -486,11 +1079,11 @@ async function __mjFetchNbCheck(params){
       const hasUrl = !!data.result_url;
 
       const card = document.createElement('div');
-      card.className = 'w-64 flex-shrink-0 rounded-2xl border border-white/15 bg-slate-950/80 shadow-soft overflow-hidden';
+      card.className = 'result-card w-64 flex-shrink-0 rounded-2xl border border-white/15 bg-slate-950/80 shadow-soft overflow-hidden';
       card.dataset.runId = data.run_id || '';
 
       const media = document.createElement('div');
-      media.className = 'relative h-72 bg-slate-900 flex items-center justify-center';
+      media.className = 'result-media relative h-72 bg-slate-900 flex items-center justify-center';
       const loader = document.createElement('div');
       loader.className = 'result-card-loader';
       media.appendChild(loader);
@@ -592,16 +1185,25 @@ async function __mjFetchNbCheck(params){
     function addResultCard(data, options) {
       const strip = document.getElementById('resultsStrip');
       if (!strip) return null;
-      const { card, apply } = createResultCard(data);
-      if (options && options.prepend) {
-        strip.prepend(card);
-      } else {
-        strip.appendChild(card);
+
+      // if empty placeholder exists, clear it
+      if (strip.classList.contains('empty')) {
+        strip.classList.remove('empty');
+        strip.innerHTML = '';
       }
-      while (strip.children.length > 7) {
-        strip.removeChild(strip.lastElementChild);
-      }
-      return { card, apply };
+
+      const built = createResultItem(data);
+      const card = built && built.card ? built.card : null;
+      if (!card) return null;
+
+      if (options && options.prepend) strip.prepend(card);
+      else strip.appendChild(card);
+
+      // keep at most 7
+      const __max = 7;
+      while (strip.children.length > __max) strip.removeChild(strip.lastElementChild);
+
+      return built;
     }
 
     async function loadRecentHistory() {
@@ -632,61 +1234,19 @@ async function __mjFetchNbCheck(params){
           else hero.classList.remove('hidden');
         }
         if (resultsSection) {
-          if (hasItems) resultsSection.classList.remove('hidden');
-          else resultsSection.classList.add('hidden');
+          if (isMobileUI()) {
+            // mobile always shows the 2:3 results viewport (empty placeholder if needed)
+            resultsSection.classList.remove('hidden');
+          } else {
+            if (hasItems) resultsSection.classList.remove('hidden');
+            else resultsSection.classList.add('hidden');
+          }
         }
 
         (async () => {
         for (const row of (data || [])) {
           const runId = row && row.meta && row.meta.run_id ? row.meta.run_id : '';
           const status = row && row.meta && row.meta.status ? row.meta.status : (row && row.result_url ? 'ready' : 'processing');
-
-          // MidJourney: on refresh, render 4 cards using cached nb-check URLs (or 4 placeholders if still processing)
-          try {
-            const prov = String((row && (row.provider || row.model)) || '');
-            const isMJ = prov.toLowerCase().includes('midjourney') && String((row && row.kind) || '').toLowerCase() === 'image';
-            const mjRunId = (row && row.meta && row.meta.run_id) ? row.meta.run_id : (row && row.run_id) ? row.run_id : '';
-            const taskId = (row && row.meta && (row.meta.task_id || row.meta.taskId)) ? (row.meta.task_id || row.meta.taskId) : '';
-
-            if (isMJ && mjRunId) {
-              const cached = __mjLoadCached(mjRunId);
-              if (cached && cached.length) {
-                cached.slice(0, 4).forEach((u) => addResultCard({
-                  run_id: mjRunId,
-                  provider: row.provider || 'MidJourney Image',
-                  kind: row.kind || 'image',
-                  prompt: row.prompt || '',
-                  result_url: u,
-                  status: 'ready'
-                }, { prepend: false }));
-                continue;
-              }
-
-              const st = String((row.meta && row.meta.status) || row.status || (row.result_url ? 'ready' : 'processing')).toLowerCase();
-              if (!row.result_url && (st.includes('process') || st === 'processing' || st.includes('pending'))) {
-                for (let i = 0; i < 4; i++) {
-                  addResultCard({
-                    run_id: mjRunId,
-                    provider: row.provider || 'MidJourney Image',
-                    kind: row.kind || 'image',
-                    prompt: row.prompt || '',
-                    result_url: null,
-                    status: 'processing'
-                  }, { prepend: false });
-                }
-
-                try {
-                  const nb = await __mjFetchNbCheck({ taskId, uid, runId: mjRunId });
-                  if (nb && nb.ok) {
-                    const urls = __mjTryExtractAllImageUrls(nb.js);
-                    if (urls && urls.length) __mjSaveCached(mjRunId, urls);
-                  }
-                } catch (_e) {}
-
-                continue;
-              }
-            }
-          } catch (_e) {}
 
           addResultCard({
             run_id: runId,
@@ -698,6 +1258,7 @@ async function __mjFetchNbCheck(params){
           }, { prepend: false });
         }
       })();
+      if (isMobileUI()) ensureResultsEmptyState();
       } catch (e) {
         console.warn('loadRecentHistory failed', e);
       }
@@ -705,57 +1266,82 @@ async function __mjFetchNbCheck(params){
 
     async function __extractResultUrls(row) {
   // MidJourney: if DB row doesn't carry all 4 URLs, use nb-check (taskId preferred) + local cache.
+  // For all models: attempt to extract multiple URLs from meta in a best-effort way.
+  const dedupe = (arr) => {
+    const out = [];
+    const seen = new Set();
+    (arr || []).forEach((u) => {
+      if (typeof u !== 'string') return;
+      const s = u.trim();
+      if (!s) return;
+      if (!/^https?:\/\//i.test(s)) return;
+      if (seen.has(s)) return;
+      seen.add(s);
+      out.push(s);
+    });
+    return out;
+  };
+
   try {
     const prov = String((row && (row.provider || row.model)) || '');
     const isMJ = prov.toLowerCase().includes('midjourney') && String((row && row.kind) || '').toLowerCase() === 'image';
     const runId = (row && row.meta && row.meta.run_id) ? row.meta.run_id : (row && row.run_id) ? row.run_id : '';
     const taskId = (row && row.meta && (row.meta.task_id || row.meta.taskId)) ? (row.meta.task_id || row.meta.taskId) : '';
+    const meta = row && row.meta ? row.meta : null;
+
+    // --- MidJourney: try cache first
     if (isMJ && runId) {
       const cached = __mjLoadCached(runId);
-      if (cached && cached.length) return cached.slice(0,4);
+      if (cached && cached.length) return cached.slice(0, 4);
+    }
 
-      const meta = row && row.meta ? row.meta : null;
-      const hasArray = meta && (Array.isArray(meta.images) || Array.isArray(meta.image_urls) || Array.isArray(meta.result_urls));
-      if (!hasArray) {
+    // --- Extract from meta (deep walk)
+    let urls = [];
+    try {
+      if (meta) {
+        // Prefer explicit arrays in common fields
+        const candidates = [];
+        const pushMany = (arr) => { if (Array.isArray(arr)) arr.forEach((u) => candidates.push(u)); };
+        pushMany(meta.images);
+        pushMany(meta.image_urls);
+        pushMany(meta.result_urls);
+        // Some providers store arrays nested
+        if (meta.result && meta.result.images) pushMany(meta.result.images);
+        if (meta.output && meta.output.images) pushMany(meta.output.images);
+
+        // Deep walk as fallback (covers meta.result_url, meta.urls, nested objects, etc.)
+        const walked = __mjTryExtractAllImageUrls(meta); // returns up to 4, already filters to URLs
+        urls = dedupe([...(candidates || []), ...(walked || [])]);
+      }
+    } catch (_e) {}
+
+    // --- Fallback to row.result_url (single)
+    if ((!urls || !urls.length) && row && typeof row.result_url === 'string' && row.result_url.trim()) {
+      urls = dedupe([row.result_url]);
+    }
+
+    // --- MidJourney: if still missing URLs, call nb-check and merge
+    if (isMJ && runId && (!urls || urls.length < 4)) {
+      try {
         const nb = await __mjFetchNbCheck({ taskId, uid: (currentUser ? currentUser.id : ''), runId });
         if (nb && nb.ok) {
-          const urls = __mjTryExtractAllImageUrls(nb.js);
-          if (urls && urls.length) {
-            __mjSaveCached(runId, urls);
-            return urls.slice(0,4);
+          const more = __mjTryExtractAllImageUrls(nb.js);
+          const merged = dedupe([...(urls || []), ...(more || [])]);
+          if (merged && merged.length) {
+            __mjSaveCached(runId, merged);
+            return merged.slice(0, 4);
           }
         }
-      }
+      } catch (_e) {}
     }
-  } catch(_e) {}
 
-
-  try {
-    // Prefer explicit arrays in meta (provider-specific)
-    const meta = row && row.meta ? row.meta : null;
-    const candidates = [];
-    const pushMany = (arr) => {
-      if (Array.isArray(arr)) arr.forEach((u) => { if (typeof u === 'string' && u.trim()) candidates.push(u.trim()); });
-    };
-    if (meta) {
-      // Common patterns
-      pushMany(meta.images);
-      pushMany(meta.image_urls);
-      pushMany(meta.result_urls);
-      if (meta.result && meta.result.images) pushMany(meta.result.images);
-      if (meta.output && meta.output.images) pushMany(meta.output.images);
-    }
-    // Fallback to single result_url
-    if (row && typeof row.result_url === 'string' && row.result_url.trim()) {
-      if (!candidates.length) candidates.push(row.result_url.trim());
-    }
-    // Dedupe while preserving order
-    const seen = new Set();
-    return candidates.filter((u) => (seen.has(u) ? false : (seen.add(u), true)));
+    // Return up to 4 (MJ) or as-is (other models typically 1)
+    return (urls || []).slice(0, 4);
   } catch (e) {
     return [];
   }
 }
+
 
 
 const __activePolls = new Map(); // runId -> token
@@ -839,25 +1425,42 @@ async function pollGeneration(runId, controllers, token) {
       const urls = await __extractResultUrls(data);
 
       // Apply to 1..N placeholder cards
+      const expected = controllers.length || 1;
       if (urls && urls.length) {
-        for (let i = 0; i < controllers.length; i++) {
+        // For multi-output models (e.g., Midjourney image), keep missing slots in "processing"
+        // until we have all expected URLs (or until timeout).
+        for (let i = 0; i < expected; i++) {
+          const u = urls[i] || null;
           controllers[i].apply({
-            status: status,
-            result_url: urls[i] || null
+            status: u ? status : 'processing',
+            result_url: u
           });
         }
       } else {
-        for (let i = 0; i < controllers.length; i++) {
+        for (let i = 0; i < expected; i++) {
           controllers[i].apply({ status: status });
         }
       }
 
-      if (
-        status.toLowerCase().includes('fail') ||
-        status.toLowerCase().includes('error') ||
-        (urls && urls.length)
-      ) {
-        return;
+      // Stop conditions:
+      // - Fail/Error: stop immediately
+      // - Single-output: stop when we have any URL
+      // - Multi-output: stop only when we have all expected URLs
+      const isFail = status.toLowerCase().includes('fail') || status.toLowerCase().includes('error');
+      if (isFail) return;
+
+      if (urls && urls.length) {
+        if (expected <= 1) return;
+
+        let filled = 0;
+        for (let i = 0; i < expected; i++) if (urls[i]) filled++;
+        if (filled >= expected) {
+          // Ensure all are marked ready at the end
+          for (let i = 0; i < expected; i++) {
+            controllers[i].apply({ status: status, result_url: urls[i] || null });
+          }
+          return;
+        }
       }
     } catch (e) {
       console.warn('pollGeneration exception', e);
@@ -1296,9 +1899,9 @@ async function pollGeneration(runId, controllers, token) {
         const row = document.createElement('button');
         row.type = 'button';
         row.className =
-          'w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-slate-900/90 border-b border-white/5 last:border-b-0';
+          'w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-slate-900/90 border-b border-white/5 last:border-b-0';
         row.innerHTML = `
-          <div class="mt-0.5 text-lg">${model.emoji}</div>
+          <div class="w-7 h-7 flex items-center justify-center text-lg">${model.emoji}</div>
           <div class="flex-1">
             <div class="flex items-center gap-2">
               <span class="text-sm font-medium">${model.name}</span>
@@ -1495,7 +2098,7 @@ async function pollGeneration(runId, controllers, token) {
       }
 
       // Duration pills
-      if (currentModel.durations && currentModel.durations.length) {
+      if (currentModel.category === 'video' && currentModel.durations && currentModel.durations.length) {
         durationBlock.classList.remove('hidden');
         durationPills.innerHTML = '';
         currentModel.durations.forEach((val) => {
@@ -1596,7 +2199,145 @@ async function pollGeneration(runId, controllers, token) {
           if (uploadBtnLabel) uploadBtnLabel.textContent = (currentModel.category === 'video') ? 'Upload image' : 'Upload image';
         }
       }
+    
+      // Mobile quick options (UI only)
+      updateMobileQuickOptions();
+}
+    // ------------------------------------------------------------
+    // Mobile quick options (UI only): AR / Duration compact pickers
+    // ------------------------------------------------------------
+    function updateMobileQuickOptions() {
+      const arBtn = document.getElementById('mobileAspectBtn');
+      const arLabel = document.getElementById('mobileAspectLabel');
+      const durBtn = document.getElementById('mobileDurationBtn');
+      const durLabel = document.getElementById('mobileDurationLabel');
+
+      if (!arBtn || !arLabel || !durBtn || !durLabel) return;
+
+      if (!currentModel) {
+        arBtn.classList.add('hidden');
+        durBtn.classList.add('hidden');
+        return;
+      }
+
+      // AR
+      if (currentModel.aspectOptions && currentModel.aspectOptions.length) {
+        arBtn.classList.remove('hidden');
+        arLabel.textContent = currentAspect || currentModel.aspectOptions[0];
+      } else {
+        arBtn.classList.add('hidden');
+      }
+
+      // Duration (ONLY for video models that actually have durations)
+      if (currentModel.category === 'video' && Array.isArray(currentModel.durations) && currentModel.durations.length) {
+        durBtn.classList.remove('hidden');
+        const val = (currentDuration != null ? String(currentDuration) : String(currentModel.durations[0]));
+        durLabel.textContent = val + 's';
+      } else {
+        durBtn.classList.add('hidden');
+      }
     }
+
+    function openMobilePicker(type) {
+      const overlay = document.getElementById('mobileOptionOverlay');
+      const title = document.getElementById('mobileOptionTitle');
+      const list = document.getElementById('mobileOptionList');
+      if (!overlay || !title || !list || !currentModel) return;
+
+      let options = [];
+      let current = null;
+
+      if (type === 'aspect') {
+        options = (currentModel.aspectOptions || []).slice();
+        current = String(currentAspect || '');
+        title.textContent = 'Aspect ratio';
+      } else if (type === 'duration') {
+        // Only allow for proper video models
+        if (!(currentModel.category === 'video' && Array.isArray(currentModel.durations) && currentModel.durations.length)) return;
+        options = currentModel.durations.map((v) => String(v));
+        current = String(currentDuration != null ? currentDuration : '');
+        title.textContent = 'Duration';
+      } else {
+        return;
+      }
+
+      list.innerHTML = '';
+      options.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className =
+          'w-full flex items-center justify-between rounded-2xl border border-white/10 bg-slate-900/40 px-4 py-3 text-sm hover:bg-slate-900/60';
+        const left = document.createElement('span');
+        left.textContent = type === 'duration' ? (opt + 's') : opt;
+        const right = document.createElement('span');
+        right.className = 'text-white/60';
+        right.textContent = String(opt) === String(current) ? 'Selected' : '';
+        btn.appendChild(left);
+        btn.appendChild(right);
+
+        btn.addEventListener('click', () => {
+          if (type === 'aspect') {
+            currentAspect = opt;
+            // sync desktop pills if present
+            const aspectPills = document.getElementById('aspectPills');
+            if (aspectPills) {
+              Array.from(aspectPills.children).forEach((child) => {
+                child.classList.toggle('chip-active', child.textContent === opt);
+              });
+            }
+          } else if (type === 'duration') {
+            currentDuration = opt;
+            const durationPills = document.getElementById('durationPills');
+            if (durationPills) {
+              Array.from(durationPills.children).forEach((child) => {
+                child.classList.toggle('chip-active', child.textContent === String(opt));
+              });
+            }
+          }
+          updateMobileQuickOptions();
+          closeMobilePicker();
+        });
+
+        list.appendChild(btn);
+      });
+
+      overlay.classList.remove('hidden');
+    }
+
+    function closeMobilePicker() {
+      const overlay = document.getElementById('mobileOptionOverlay');
+      if (overlay) overlay.classList.add('hidden');
+    }
+
+    // Wire mobile picker events (UI only)
+    // NOTE: This script tag appears before the picker HTML in the document,
+    // so we must (re)bind after DOMContentLoaded as well.
+    function wireMobilePickersOnce() {
+      if (wireMobilePickersOnce._done) return;
+
+      const arBtn = document.getElementById('mobileAspectBtn');
+      const durBtn = document.getElementById('mobileDurationBtn');
+      const closeBtn = document.getElementById('mobileOptionClose');
+      const bg = document.getElementById('mobileOptionOverlayBg');
+      const overlay = document.getElementById('mobileOptionOverlay');
+
+      // If the picker HTML is not in the DOM yet, try again after DOMContentLoaded.
+      if (!overlay) return;
+
+      if (arBtn) arBtn.addEventListener('click', () => openMobilePicker('aspect'));
+      if (durBtn) durBtn.addEventListener('click', () => openMobilePicker('duration'));
+      if (closeBtn) closeBtn.addEventListener('click', closeMobilePicker);
+      if (bg) bg.addEventListener('click', closeMobilePicker);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMobilePicker();
+      });
+
+      wireMobilePickersOnce._done = true;
+    }
+
+    wireMobilePickersOnce();
+    window.addEventListener('DOMContentLoaded', wireMobilePickersOnce);
+
 
     // MODE TOGGLE
     document.getElementById('btnModeImage').addEventListener('click', () => setMode('image'));
@@ -1633,7 +2374,7 @@ async function pollGeneration(runId, controllers, token) {
         img.className = 'h-full w-full object-cover';
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
-        closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
+        closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
         closeBtn.textContent = '×';
         closeBtn.addEventListener('click', () => {
           uploadedFiles.splice(index, 1);
@@ -1664,7 +2405,7 @@ async function pollGeneration(runId, controllers, token) {
       img.className = 'h-full w-full object-cover';
       const closeBtn = document.createElement('button');
       closeBtn.type = 'button';
-      closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
+      closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
       closeBtn.textContent = '×';
       closeBtn.addEventListener('click', () => {
         onRemove();
@@ -1738,7 +2479,7 @@ async function pollGeneration(runId, controllers, token) {
 
       const closeBtn = document.createElement('button');
       closeBtn.type = 'button';
-      closeBtn.className = 'absolute -top-1 -right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center';
+      closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
       closeBtn.textContent = '×';
       closeBtn.addEventListener('click', () => {
         alephVideoFile = null;
@@ -1861,7 +2602,14 @@ async function pollGeneration(runId, controllers, token) {
         case 'imagen':
           return { prompt, model: 'ultra', aspect_ratio: aspect || '1:1', run_id: runId };
         case 'midjourney':
-          return { prompt, image_url: urls && urls[0] ? urls[0] : undefined, aspectRatio: aspect || '2:3', run_id: runId };
+          return {
+            prompt,
+            image_url: urls && urls[0] ? urls[0] : undefined,
+            // send both keys for backward/forward compatibility
+            aspect_ratio: aspect || '2:3',
+            aspectRatio: aspect || '2:3',
+            run_id: runId
+          };
         case 'mj-video':
           return {
             uid,
@@ -2159,5 +2907,17 @@ for (let i = 0; i < expectedOutputs; i++) {
       configureControlsForModel();
     })();
   </script>
+
+  <!-- Mobile option picker (UI only) -->
+  <div id="mobileOptionOverlay" class="fixed inset-0 z-50 hidden md:hidden flex items-center justify-center p-4">
+    <button id="mobileOptionOverlayBg" type="button" class="absolute inset-0 bg-black/60"></button>
+    <div class="relative z-10 mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-slate-950/95 backdrop-blur-xl p-4 max-h-[75vh] overflow-hidden">
+      <div class="flex items-center justify-between mb-3">
+        <div id="mobileOptionTitle" class="text-sm font-semibold">Select</div>
+        <button id="mobileOptionClose" class="btn-soft px-3 py-1.5 text-[11px]" type="button">Close</button>
+      </div>
+      <div id="mobileOptionList" class="space-y-2 max-h-[45vh] overflow-auto pr-1"></div>
+    </div>
+  </div>
 </body>
 </html>
