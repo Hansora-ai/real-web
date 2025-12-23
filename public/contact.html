@@ -106,12 +106,12 @@
   </script>
 
   <!-- Supabase auth header logic (same as index) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 
-    // Use a single shared Supabase client across pages (prevents timing issues & duplicate init)
+    // Single shared Supabase client (same pattern as working pages)
     window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const sb = window.__HANSORA_SB__;
 
@@ -142,12 +142,16 @@
         }
       }
     }
+
     function showLoggedOutUI(){
       if($btnLoginNav) $btnLoginNav.classList.remove('hidden');
       if($navUser){ $navUser.classList.add('hidden'); $navUser.classList.remove('flex'); }
     }
+
     async function getOrCreateProfile(user){
-      const { data, error } = await sb.from('profiles').select('user_id,email,credits').eq('user_id', user.id).maybeSingle();
+      const { data, error } = await sb
+        .from('profiles').select('user_id,email,credits')
+        .eq('user_id', user.id).maybeSingle();
       if(error) throw error;
       if(!data){
         const ins = await sb.from('profiles').insert({ user_id: user.id, email: user.email, credits: 3 }).select().single();
@@ -157,46 +161,39 @@
       return data;
     }
 
-    // click outside to close menu
+    // Menu behavior (unchanged)
     if ($navAvatar) $navAvatar.addEventListener('click', ()=>{ if($navMenu) $navMenu.classList.toggle('show'); });
     document.addEventListener('click', (e)=>{
       if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')){ if($navMenu) $navMenu.classList.remove('show'); }
     });
+
     if ($btnLogout) $btnLogout.addEventListener('click', async ()=>{
       await sb.auth.signOut();
       showLoggedOutUI();
     });
 
-    async function restoreFromUser(user){
-      if(user){
-        const p = await getOrCreateProfile(user);
-        showLoggedInUI(p, user);
-      } else {
+    async function restore(){
+      try{
+        const { data } = await sb.auth.getUser();
+        const user = data.user;
+        if(user){
+          const prof = await getOrCreateProfile(user);
+          showLoggedInUI(prof, user);
+        } else {
+          showLoggedOutUI();
+        }
+      }catch(_){
         showLoggedOutUI();
       }
     }
 
-    let _didInitialRestore = false;
-
-    // Wait for the initial session to be restored from storage (fixes "shows logged out" on page load)
-    sb.auth.onAuthStateChange(async (event, session) => {
-      try {
-        if (event === 'INITIAL_SESSION') _didInitialRestore = true;
-        await restoreFromUser(session?.user || null);
-      } catch (_err) {
-        showLoggedOutUI();
-      }
-    });
-
-    // Fallback (in case INITIAL_SESSION isn't delivered for any reason)
-    setTimeout(() => {
-      if (_didInitialRestore) return;
-      sb.auth.getUser()
-        .then(({ data }) => restoreFromUser(data.user))
-        .catch(() => showLoggedOutUI());
-    }, 0);
+    // Same working flow: restore once, then keep in sync
+    (async ()=>{ await restore(); })();
+    sb.auth.onAuthStateChange(()=>{ restore(); });
   </script>
-<!-- Submit handler: calls Netlify Function, no redirect -->
+
+
+  <!-- Submit handler: calls Netlify Function, no redirect -->
   <script>
     const formEl = document.getElementById('contactForm');
     formEl?.addEventListener('submit', async (e) => {
