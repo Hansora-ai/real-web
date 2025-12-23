@@ -138,16 +138,17 @@
             Video Generation and Image Generations — All best AI models at one place
           </p>
           <div class="mt-6 md:inline-block">
-          <div class="flex flex-wrap gap-2 md:w-max">
+          <div class="flex flex-col gap-3">
+            <div class="flex flex-wrap gap-2 md:w-max">
             <button data-filter="all" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">All</button>
             <button data-filter="video" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">Video</button>
             <button data-filter="image" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">Image</button>
-          
+            </div>
+            <a href="search-models.html" class="w-full md:w-auto inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold text-white shadow-soft" style="background:linear-gradient(90deg,#2d0a57,#4c1d95); border:1px solid rgba(255,255,255,.10);">
+              Get started
+            </a>
           </div>
-          <a href="search-models.html" class="mt-3 w-full rounded-xl px-5 py-3 text-center font-semibold text-white shadow-soft" style="background:linear-gradient(90deg,#2d0a57,#4c1d95); border:1px solid rgba(255,255,255,.10);">
-            Get started
-          </a>
-</div>
+        </div>
           <p class="mt-3 text-xs text-zinc-500">Note: <b>All</b>. All models are original and not fake.</p>
         </div>
         <div>
@@ -274,15 +275,24 @@
     renderSections();
     setupFilters();
 
-    // Desktop: model tiles are display-only (not clickable)
-    document.addEventListener('click', (e) => {
-      const a = e.target.closest && e.target.closest('a[data-model-link="1"]');
-      if(!a) return;
-      if(window.matchMedia && window.matchMedia('(min-width: 768px)').matches){
-        e.preventDefault();
-      }
+      // Desktop: model tiles are display-only (not clickable)
+  function applyDesktopModelTileLock(){
+    const links = Array.from(document.querySelectorAll('a[data-model-link="1"]'));
+    links.forEach((a) => {
+      // preserve original href in case you ever want to restore later
+      if(!a.dataset.origHref) a.dataset.origHref = a.getAttribute('href') || '';
+      a.setAttribute('href', 'javascript:void(0)');
+      a.setAttribute('aria-disabled', 'true');
+      a.setAttribute('tabindex', '-1');
+      a.style.pointerEvents = 'none';
+      a.style.cursor = 'default';
     });
-  </script>
+  }
+
+// Run once now, and on resize
+  applyDesktopModelTileLock();
+  window.addEventListener('resize', applyDesktopModelTileLock);
+</script>
 
 <footer class="border-t border-base-line/60">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
