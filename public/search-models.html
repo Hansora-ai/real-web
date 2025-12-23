@@ -649,19 +649,69 @@ function __mjTryExtractAllImageUrls(obj){
     if(typeof x==='string'){ push(x); return; }
     if(Array.isArray(x)){ for(const it of x) walk(it, depth+1); return; }
     if(typeof x==='object'){
-      for(const k of ['image_urls','images','result_urls','result_url','image_url','output_urls','results','output','outputs','data','urls','url','image']){
+      for(const k of ['image_urls','images','result_urls','results','output','outputs','data','urls','url']){
         if(Object.prototype.hasOwnProperty.call(x,k)) walk(x[k], depth+1);
       }
       let n=0;
       for(const k in x){
         if(!Object.prototype.hasOwnProperty.call(x,k)) continue;
-        if(n++>140) break;
+        if(n++>60) break;
         walk(x[k], depth+1);
       }
     }
   };
   walk(obj);
   return out.slice(0,4);
+}
+
+// --- MidJourney: poll nb-check and update existing placeholder cards (history view) ---
+const __mjHistoryPolls = new Map(); // runId -> {cancelled:boolean}
+
+function __mjStopHistoryPoll(runId){
+  const tok = __mjHistoryPolls.get(runId);
+  if (tok) tok.cancelled = true;
+  __mjHistoryPolls.delete(runId);
+}
+
+async function __mjPollNbCheckUntilImages({ runId, taskId, uid, maxMs = 15*60*1000, intervalMs = 2500 }){
+  const started = Date.now();
+  while (Date.now() - started < maxMs){
+    await new Promise(r => setTimeout(r, intervalMs));
+    try{
+      const nb = await __mjFetchNbCheck({ taskId, uid, runId });
+      if (nb && nb.ok){
+        const urls = __mjTryExtractAllImageUrls(nb.js);
+        if (urls && urls.length){
+          __mjSaveCached(runId, urls);
+          return urls.slice(0,4);
+        }
+      }
+    }catch(_e){}
+  }
+  return [];
+}
+
+function __mjStartHistoryPollAndUpdate({ runId, taskId, uid, controllers }){
+  if (!runId || !controllers || !controllers.length) return;
+  if (__mjHistoryPolls.has(runId)) return; // already polling
+  const token = { cancelled:false };
+  __mjHistoryPolls.set(runId, token);
+
+  (async () => {
+    const urls = await __mjPollNbCheckUntilImages({ runId, taskId, uid });
+    if (token.cancelled) return;
+
+    if (urls && urls.length){
+      // Update placeholder cards in-place
+      for (let i = 0; i < controllers.length; i++){
+        const ctrl = controllers[i];
+        if (!ctrl || typeof ctrl.apply !== 'function') continue;
+        const u = urls[i] || urls[urls.length - 1];
+        ctrl.apply({ result_url: u, status: 'ready' });
+      }
+    }
+  })().catch((e)=>console.warn('MJ history poll error', e))
+    .finally(()=>{ __mjHistoryPolls.delete(runId); });
 }
 async function __mjFetchNbCheck(params){
   // params: { taskId?, uid?, runId? }
@@ -1249,92 +1299,50 @@ function createResultCard(data) {
           const runId = row && row.meta && row.meta.run_id ? row.meta.run_id : '';
           const status = row && row.meta && row.meta.status ? row.meta.status : (row && row.result_url ? 'ready' : 'processing');
 
-          // MidJourney: always render a 4-up grid (do not rely on Supabase storing 4 URLs)
-try {
-  const prov = String((row && (row.provider || row.model)) || '');
-  const isMJ = prov.toLowerCase().includes('midjourney') && String((row && row.kind) || '').toLowerCase() === 'image';
-  const mjRunId = (row && row.meta && row.meta.run_id) ? row.meta.run_id : (row && row.run_id) ? row.run_id : '';
-  const taskId = (row && row.meta && (row.meta.task_id || row.meta.taskId)) ? (row.meta.task_id || row.meta.taskId) : '';
+          // MidJourney: on refresh, render 4 cards using cached nb-check URLs (or 4 placeholders if still processing)
+          try {
+            const prov = String((row && (row.provider || row.model)) || '');
+            const isMJ = prov.toLowerCase().includes('midjourney') && String((row && row.kind) || '').toLowerCase() === 'image';
+            const mjRunId = (row && row.meta && row.meta.run_id) ? row.meta.run_id : (row && row.run_id) ? row.run_id : '';
+            const taskId = (row && row.meta && (row.meta.task_id || row.meta.taskId)) ? (row.meta.task_id || row.meta.taskId) : '';
 
-  if (isMJ && mjRunId) {
-    // 1) cached (browser)
-    let urls = __mjLoadCached(mjRunId);
-
-    // 2) embedded in meta (some providers put arrays there)
-    if (!urls || !urls.length) {
-      try {
-        urls = __mjTryExtractAllImageUrls(row && row.meta ? row.meta : row);
-        if (urls && urls.length) __mjSaveCached(mjRunId, urls);
-      } catch (_e) {}
-    }
-
-    // If we already have URLs, render 4 ready cards and skip normal single-image renderer
-    if (urls && urls.length) {
-      (urls.slice(0, 4)).forEach((u) => addResultCard({
-        run_id: mjRunId,
-        provider: row.provider || 'MidJourney Image',
-        kind: row.kind || 'image',
-        prompt: row.prompt || '',
-        result_url: u,
-        status: 'ready'
-      }, { prepend: false }));
-      continue;
-    }
-
-    // Otherwise render 4 processing placeholders, then poll nb-check and update these cards in-place
-    const placeholders = [];
-    for (let i = 0; i < 4; i++) {
-      const built = addResultCard({
-        run_id: mjRunId,
-        provider: row.provider || 'MidJourney Image',
-        kind: row.kind || 'image',
-        prompt: row.prompt || '',
-        result_url: null,
-        status: 'processing'
-      }, { prepend: false });
-      if (built) placeholders.push(built);
-    }
-
-    (async () => {
-      const started = Date.now();
-      const timeoutMs = 90000; // 90s max for history refresh
-      let lastUrls = null;
-
-      while (Date.now() - started < timeoutMs) {
-        try {
-          const nb = await __mjFetchNbCheck({ taskId, uid, runId: mjRunId });
-          if (nb && nb.ok) {
-            const extracted = __mjTryExtractAllImageUrls(nb.js);
-            if (extracted && extracted.length) {
-              lastUrls = extracted.slice(0, 4);
-              __mjSaveCached(mjRunId, lastUrls);
-
-              // update placeholders
-              for (let i = 0; i < placeholders.length; i++) {
-                const b = placeholders[i];
-                const u = lastUrls[i] || null;
-                if (b && typeof b.apply === 'function') {
-                  b.apply({
-                    status: u ? 'ready' : 'processing',
-                    result_url: u
-                  });
-                }
+            if (isMJ && mjRunId) {
+              const cached = __mjLoadCached(mjRunId);
+              if (cached && cached.length) {
+                cached.slice(0, 4).forEach((u) => addResultCard({
+                  run_id: mjRunId,
+                  provider: row.provider || 'MidJourney Image',
+                  kind: row.kind || 'image',
+                  prompt: row.prompt || '',
+                  result_url: u,
+                  status: 'ready'
+                }, { prepend: false }));
+                continue;
               }
-              return;
+
+              const st = String((row.meta && row.meta.status) || row.status || (row.result_url ? 'ready' : 'processing')).toLowerCase();
+              if (!row.result_url && (st.includes('process') || st === 'processing' || st.includes('pending'))) {
+                const mjControllers = [];
+                for (let i = 0; i < 4; i++) {
+                  const built = addResultCard({
+                    run_id: mjRunId,
+                    provider: row.provider || 'MidJourney Image',
+                    kind: row.kind || 'image',
+                    prompt: row.prompt || '',
+                    result_url: null,
+                    status: 'processing'
+                  }, { prepend: false });
+                  if (built) mjControllers.push(built);
+                }
+
+                // Poll nb-check until 4 images appear, then update these 4 placeholder cards in-place
+                __mjStartHistoryPollAndUpdate({ runId: mjRunId, taskId, uid, controllers: mjControllers });
+continue;
+              }
             }
-          }
-        } catch (_e) {}
+          } catch (_e) {}
 
-        // wait before next poll
-        await new Promise((res) => setTimeout(res, 2000));
-      }
-    })();
-
-    continue;
-  }
-} catch (_e) {}
-
-addResultCard({
+          addResultCard({
             run_id: runId,
             provider: row.provider || 'Model',
             kind: row.kind || 'image',
