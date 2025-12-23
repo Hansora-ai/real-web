@@ -191,10 +191,17 @@ fbq('track', 'PageView');
           </h1>
 <p class="mt-5 text-zinc-400 max-w-xl">Simple, beautiful, and fast. Pick a model, paste a prompt or upload an image, and generate. Clean and simple.</p>
 <div class="mt-8">
-            <!-- Mobile: original layout unchanged -->
-            <div class="flex flex-wrap items-center gap-3 md:hidden">
-              <a class="rounded-xl btn-brand px-5 py-3 text-sm font-semibold shadow-soft" href="/models.html">Get started</a>
-              <a class="rounded-xl btn px-5 py-3 text-sm font-semibold shadow-soft" href="examples-prompts.html">Examples/Prompts</a>
+            <!-- Mobile: match desktop buttons -->
+            <div class="md:hidden">
+              <div class="flex flex-wrap items-center gap-3 w-max">
+                <a class="rounded-xl btn-brand px-5 py-3 text-sm font-semibold shadow-soft" href="/models.html">Models</a>
+                <a class="rounded-xl btn px-5 py-3 text-sm font-semibold shadow-soft" href="examples-prompts.html">Examples/Prompts</a>
+              </div>
+
+              <div class="mt-3">
+                <a class="block w-full text-center rounded-xl px-5 py-3 text-sm font-semibold shadow-soft border border-white/10 bg-gradient-to-r from-purple-950 via-purple-900 to-violet-800 hover:from-purple-900 hover:via-purple-800 hover:to-violet-700"
+                   href="/search-models.html">Start Generate</a>
+              </div>
             </div>
 
             <!-- Desktop: Models + Examples stay in the SAME ROW (original place), Start Generate aligned to same width -->
@@ -1126,7 +1133,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <span>Templates</span>
 </a>
 <div class="hs-fab-wrap">
-<a aria-label="Models" class="hs-fab" href="models.html">
+<a aria-label="Models" class="hs-fab" href="search-models.html">
 <svg viewbox="0 0 24 24"><path d="M12 6v12M6 12h12"></path></svg>
 <span>Models</span>
 </a>
