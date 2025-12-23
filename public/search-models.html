@@ -649,13 +649,13 @@ function __mjTryExtractAllImageUrls(obj){
     if(typeof x==='string'){ push(x); return; }
     if(Array.isArray(x)){ for(const it of x) walk(it, depth+1); return; }
     if(typeof x==='object'){
-      for(const k of ['image_urls','images','result_urls','results','output','outputs','data','urls','url']){
+      for(const k of ['image_urls','images','result_urls','result_url','image_url','output_urls','results','output','outputs','data','urls','url','image']){
         if(Object.prototype.hasOwnProperty.call(x,k)) walk(x[k], depth+1);
       }
       let n=0;
       for(const k in x){
         if(!Object.prototype.hasOwnProperty.call(x,k)) continue;
-        if(n++>60) break;
+        if(n++>140) break;
         walk(x[k], depth+1);
       }
     }
