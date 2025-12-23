@@ -75,7 +75,7 @@
 
       <button type="submit" class="btn text-base font-medium">Send</button>
 
-      <div class="pt-6 flex items-center gap-4 text-sm text-zinc-300">
+      <div class="pt-6 flex flex-col items-start sm:flex-row sm:items-center gap-4 text-sm text-zinc-300">
         <span class="opacity-80">You can also contact us through:</span>
         <a href="https://t.me/Hansora_support" class="btn flex items-center gap-2" target="_self">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9.036 15.186l-.398 5.602c.567 0 .813-.244 1.106-.536l2.652-2.55 5.501 4.032c1.009.556 1.726.263 1.999-.931l3.622-16.966.001-.001c.322-1.5-.542-2.086-1.521-1.719L1.115 9.333C-.347 9.903-.324 10.72.864 11.084l5.69 1.775L19.51 5.68c.575-.378 1.099-.169.668.209"/></svg>
@@ -110,7 +110,10 @@
   <script>
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Use a single shared Supabase client across pages (prevents timing issues & duplicate init)
+    window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const sb = window.__HANSORA_SB__;
 
     const $btnLoginNav = document.getElementById('btnLoginNav');
     const $navUser = document.getElementById('navUser');
@@ -144,10 +147,10 @@
       if($navUser){ $navUser.classList.add('hidden'); $navUser.classList.remove('flex'); }
     }
     async function getOrCreateProfile(user){
-      const { data, error } = await supabase.from('profiles').select('user_id,email,credits').eq('user_id', user.id).maybeSingle();
+      const { data, error } = await sb.from('profiles').select('user_id,email,credits').eq('user_id', user.id).maybeSingle();
       if(error) throw error;
       if(!data){
-        const ins = await supabase.from('profiles').insert({ user_id: user.id, email: user.email, credits: 3 }).select().single();
+        const ins = await sb.from('profiles').insert({ user_id: user.id, email: user.email, credits: 3 }).select().single();
         if(ins.error) throw ins.error;
         return ins.data;
       }
@@ -159,11 +162,12 @@
     document.addEventListener('click', (e)=>{
       if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')){ if($navMenu) $navMenu.classList.remove('show'); }
     });
-    if ($btnLogout) $btnLogout.addEventListener('click', async ()=>{ await supabase.auth.signOut(); showLoggedOutUI(); });
+    if ($btnLogout) $btnLogout.addEventListener('click', async ()=>{
+      await sb.auth.signOut();
+      showLoggedOutUI();
+    });
 
-    async function restore(){
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
+    async function restoreFromUser(user){
       if(user){
         const p = await getOrCreateProfile(user);
         showLoggedInUI(p, user);
@@ -171,12 +175,28 @@
         showLoggedOutUI();
       }
     }
-    // Restore now and on auth state changes (handles cross-page nav)
-    restore();
-    supabase.auth.onAuthStateChange((_e, _s)=>{ restore(); });
-  </script>
 
-  <!-- Submit handler: calls Netlify Function, no redirect -->
+    let _didInitialRestore = false;
+
+    // Wait for the initial session to be restored from storage (fixes "shows logged out" on page load)
+    sb.auth.onAuthStateChange(async (event, session) => {
+      try {
+        if (event === 'INITIAL_SESSION') _didInitialRestore = true;
+        await restoreFromUser(session?.user || null);
+      } catch (_err) {
+        showLoggedOutUI();
+      }
+    });
+
+    // Fallback (in case INITIAL_SESSION isn't delivered for any reason)
+    setTimeout(() => {
+      if (_didInitialRestore) return;
+      sb.auth.getUser()
+        .then(({ data }) => restoreFromUser(data.user))
+        .catch(() => showLoggedOutUI());
+    }, 0);
+  </script>
+<!-- Submit handler: calls Netlify Function, no redirect -->
   <script>
     const formEl = document.getElementById('contactForm');
     formEl?.addEventListener('submit', async (e) => {
