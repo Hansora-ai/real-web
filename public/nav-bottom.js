@@ -64,7 +64,21 @@
     const frag = tpl.content.cloneNode(true);
     root.appendChild(frag);
 
-    // Wire events
+    
+    // Force center FAB (Models) to always navigate to /search-models.html
+    // (prevents any other scripts or cached hrefs from redirecting to /models.html)
+    const fab /* forceHsFabToSearchModels */ = document.querySelector('.hs-bottom-nav .hs-fab');
+    if (fab){
+      fab.setAttribute('href','/search-models.html');
+      fab.addEventListener('click', (e)=>{
+        try{
+          e.preventDefault();
+          e.stopPropagation();
+          window.location.href = '/search-models.html';
+        }catch(_e){}
+      }, {capture:true});
+    }
+// Wire events
     const openBtn = document.getElementById('hs-menu-btn');
     const overlay = document.getElementById('hs-overlay');
     const closeBtn = document.getElementById('hs-close');
