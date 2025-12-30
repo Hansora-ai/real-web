@@ -289,8 +289,6 @@
   </div>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/hs-header.js"></script>
-
 <script>
   (function(){ 
     function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
@@ -368,6 +366,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   } catch (_) { /* silent */ }
 });
+</script>
+
+
+<script src="/hs-header.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.HSHeader && typeof window.HSHeader.mount === 'function') {
+      window.HSHeader.mount('#hs-header').catch(function(e){ console.warn('HSHeader mount failed', e); });
+    }
+  });
 </script>
 
 </body>
