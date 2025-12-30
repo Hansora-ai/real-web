@@ -68,7 +68,7 @@
       const { data: profile, error } = await sb
         .from('profiles')
         .select('credits, avatar_url')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (error) throw error;
