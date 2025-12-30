@@ -86,7 +86,10 @@
   /></noscript>
   <!-- End Meta Pixel (noscript) -->
 
-<div id="hs-header"></div>
+  <!-- HEADER (hs-header) -->
+  <div id="hs-header"></div>
+  <script src="/hs-header.js"></script>
+
 
   <section class="relative">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 md:py-14">
@@ -335,30 +338,9 @@
         $doLogin.classList.add('btn-brand'); $doSignup.classList.remove('btn-brand');
       }
     }
-    function showLoggedInUI(profile, user){
-      if($btnLoginNav) $btnLoginNav.classList.add('hidden');
-      if($btnGetStarted) $btnGetStarted.classList.add('hidden');
-      if($navUser) $navUser.classList.remove('hidden');
-      if($navUser) $navUser.classList.add('flex');
-      if($navCredits) $navCredits.textContent = (profile?.credits ?? 0) + '⚡';
-      if(user?.user_metadata?.avatar_url){
-        if($navAvatarImg) $navAvatarImg.src = user.user_metadata.avatar_url;
-        if($navAvatarImg) $navAvatarImg.classList.remove('hidden');
-      } else {
-        if($navAvatarImg) $navAvatarImg.classList.add('hidden');
-      }
-    }
-    function showLoggedOutUI(){
-      if($btnLoginNav) $btnLoginNav.classList.remove('hidden');
-      if($btnGetStarted) $btnGetStarted.classList.remove('hidden');
-      if($navUser) $navUser.classList.add('hidden');
-      $navUser.classList.remove('flex');
-    }
-    // Dropdown
-    if($navAvatar && $navMenu) $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
-    document.addEventListener('click', (e)=>{
-      if(!$navMenu) return; if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
-    });
+    function showLoggedInUI(){ /* handled by hs-header.js */ }
+    function showLoggedOutUI(){ /* handled by hs-header.js */ }
+    // Dropdown handled by hs-header.js
     // Openers
     if($btnLogin) $btnLogin.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
     if($btnLoginNav) $btnLoginNav.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
@@ -381,13 +363,7 @@
       }
       return data;
     }
-    async function refreshCredits(){
-      const { data } = await sb.auth.getUser();
-      const user = data.user;
-      if(!user) return;
-      const prof = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-      if(prof?.data?.credits != null){ $navCredits.textContent = prof.data.credits + '⚡'; }
-    }
+    async function refreshCredits(){ /* handled by hs-header.js */ }
     window.refreshCredits = refreshCredits; // so your Make.com callback can call it if needed
 
     // Sign up
@@ -553,16 +529,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   } catch (_) { /* silent */ }
 });
-</script>
-
-
-<script src="/hs-header.js"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function(){
-    if (window.HSHeader && typeof window.HSHeader.mount === 'function') {
-      window.HSHeader.mount('#hs-header').catch(function(e){ console.warn('HSHeader mount failed', e); });
-    }
-  });
 </script>
 
 </body>
