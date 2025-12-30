@@ -84,18 +84,30 @@
   }
 
   function bindMenu(root, sb) {
-    // Avatar dropdown toggle + click-away
-    document.addEventListener('click', (e) => {
-      const avatar = q('#navAvatar', root);
-      const menu = q('#navMenu', root);
-      if (!avatar || !menu) return;
+    // Avatar dropdown toggle (direct) + click-away
+    const avatar = q('#navAvatar', root);
+    const menu = q('#navMenu', root);
 
-      if (avatar.contains(e.target)) {
+    if (avatar && menu) {
+      avatar.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         menu.classList.toggle('hidden');
-      } else if (!menu.contains(e.target)) {
-        menu.classList.add('hidden');
-      }
-    });
+      });
+
+      // Close on Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') menu.classList.add('hidden');
+      });
+
+      // Click-away
+      document.addEventListener('click', (e) => {
+        if (menu.classList.contains('hidden')) return;
+        if (!menu.contains(e.target) && !avatar.contains(e.target)) {
+          menu.classList.add('hidden');
+        }
+      });
+    }
 
     // Logout
     const btnLogout = q('#btnLogout', root);
