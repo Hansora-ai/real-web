@@ -2575,8 +2575,10 @@ async function pollGeneration(runId, controllers, token) {
         throw new Error('upload_bridge_missing');
       }
       const urls = [];
+      const maxUploadMB = (typeof currentModel !== 'undefined' && currentModel && currentModel.id === 'nano-banana-pro') ? 25 : 10;
+      const maxUploadBytes = maxUploadMB * 1024 * 1024;
       for (const file of list) {
-        if (file.size > 10 * 1024 * 1024) {
+        if (file.size > maxUploadBytes) {
           throw new Error('file_too_large');
         }
         const up = await window.kieUploadBridge.upload(file);
@@ -2883,7 +2885,8 @@ for (let i = 0; i < expectedOutputs; i++) {
       } catch (err) {
         console.error(err);
         if (err && err.message === 'file_too_large') {
-          showStatus('One of the images is larger than 10MB.', 'error');
+          const limitMb = (typeof currentModel !== 'undefined' && currentModel && currentModel.id === 'nano-banana-pro') ? 25 : 10;
+          showStatus(`One of the images is larger than ${limitMb}MB.`, 'error');
         } else if (err && err.message === 'upload_bridge_missing') {
           showStatus('Upload bridge is missing on this page.', 'error');
         } else {
