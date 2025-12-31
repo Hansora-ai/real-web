@@ -372,8 +372,40 @@
 </head>
 <body class="min-h-screen flex flex-col">
   <!-- HEADER (Nano Banana style) -->
-  <div id="hs-header"></div>
-
+  <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+        <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora Logo" class="h-9 w-9 rounded-full object-cover" />
+        <span class="font-semibold tracking-wide">HANSORA AI</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-8 text-sm">
+        <a href="models.html" class="hover:text-white/90">Models</a>
+        <a href="examples-prompts.html" class="hover:text-white/90">Examples/Prompts</a>
+        <a href="templates.html" class="hover:text-white/90">Templates</a>
+        <a href="pricing.html" class="hover:text-white/90">Pricing</a>
+        <a href="index.html#faq" class="hover:text-white/90">FAQ</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a id="btnLoginSignup" href="login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold">
+          Login / Signup
+        </a>
+        <div id="navUser" class="hidden items-center gap-2">
+          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
+          <div class="relative">
+            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
+              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden" />
+            </button>
+            <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden">
+              <a href="profile.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Profile</a>
+              <a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">History</a>
+              <a href="pricing.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscription</a>
+              <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
 
   <div id="generatorDock" class="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-6 px-3">
     <div id="generatorCard" class="w-full max-w-5xl rounded-3xl bg-black/80 border border-white/15 shadow-soft px-4 py-4 space-y-3 backdrop-blur-xl">
@@ -1725,6 +1757,35 @@ async function pollGeneration(runId, controllers, token) {
     let currentVeoFamily = null; // 'veo3' | 'veo31'
     let currentVeoVariant = 'fast'; // 'fast' | 'quality'
     let uploadedFiles = [];
+    // Models that should APPEND images when user uploads again (multi-image support)
+    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana', 'gpt-image-1', 'seedream-4-5']);
+
+    function __renderImageThumbs() {
+      const thumbs = document.getElementById('imageThumbs');
+      if (!thumbs) return;
+      thumbs.innerHTML = '';
+      (uploadedFiles || []).forEach((file, index) => {
+        const url = URL.createObjectURL(file);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
+        const img = document.createElement('img');
+        img.src = url;
+        img.className = 'h-full w-full object-cover';
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white/90 rounded-full h-5 w-5 text-[11px] leading-none flex items-center justify-center';
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', () => {
+          try { URL.revokeObjectURL(url); } catch (_) {}
+          uploadedFiles.splice(index, 1);
+          __renderImageThumbs();
+        });
+        wrapper.appendChild(img);
+        wrapper.appendChild(closeBtn);
+        thumbs.appendChild(wrapper);
+      });
+    }
+
 
     // Frames (Veo 3.1 + Kling 2.1)
     let startFrameFile = null;
@@ -2325,34 +2386,69 @@ async function pollGeneration(runId, controllers, token) {
     });
 
     document.getElementById('imageInput').addEventListener('change', (e) => {
-      const files = Array.from(e.target.files || []);
-      const thumbs = document.getElementById('imageThumbs');
-      thumbs.innerHTML = '';
-
-      if (!currentModel) return;
+      const files = Array.from(e.target.files || []).filter(f => (f && f.type && f.type.startsWith('image/')));
+      if (!currentModel) { e.target.value = ''; return; }
       const max = currentModel.maxFiles || 1;
-      uploadedFiles = files.slice(0, max);
 
-      uploadedFiles.forEach((file, index) => {
-        const url = URL.createObjectURL(file);
-        const wrapper = document.createElement('div');
-        wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
-        const img = document.createElement('img');
-        img.src = url;
-        img.className = 'h-full w-full object-cover';
-        const closeBtn = document.createElement('button');
-        closeBtn.type = 'button';
-        closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
-        closeBtn.textContent = '×';
-        closeBtn.addEventListener('click', () => {
-          uploadedFiles.splice(index, 1);
-          wrapper.remove();
-        });
-        wrapper.appendChild(img);
-        wrapper.appendChild(closeBtn);
-        thumbs.appendChild(wrapper);
-      });
+      // For select multi-image models, append new files instead of replacing existing ones.
+      if (__MULTI_APPEND_IMAGE_MODELS.has(currentModel.id) && max > 1) {
+        uploadedFiles = (uploadedFiles || []).concat(files).slice(0, max);
+      } else {
+        uploadedFiles = files.slice(0, max);
+      }
+
+      __renderImageThumbs();
+
+      // Allow selecting the same file again later
+      e.target.value = '';
     });
+
+    // Drag & Drop support: drop images anywhere on the generator bar to upload
+    (function __enableGeneratorDragDrop() {
+      const dock = document.getElementById('generatorCard') || document.getElementById('generatorDock');
+      if (!dock) return;
+
+      const prevent = (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+      };
+
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((t) => {
+        dock.addEventListener(t, prevent);
+      });
+
+      dock.addEventListener('drop', (ev) => {
+        try {
+          const dt = ev.dataTransfer;
+          const dropped = Array.from((dt && dt.files) ? dt.files : []).filter(
+            (f) => (f && f.type && f.type.startsWith('image/'))
+          );
+          if (!dropped.length) return;
+          if (!currentModel) return;
+
+          // Do not interfere with frame-based video models (start/last frame) or Aleph video upload UI
+          if (currentModel.useFrames || currentModel.needsVideo) return;
+
+          const max = currentModel.maxFiles || 1;
+
+          // Multi-image models: append; single-image models: replace
+          if (__MULTI_APPEND_IMAGE_MODELS.has(currentModel.id) && max > 1) {
+            uploadedFiles = (uploadedFiles || []).concat(dropped).slice(0, max);
+          } else {
+            uploadedFiles = dropped.slice(0, max);
+          }
+
+          __renderImageThumbs();
+
+          // Allow dropping the same file again later in some browsers
+          const imageInput = document.getElementById('imageInput');
+          if (imageInput) imageInput.value = '';
+        } catch (e) {
+          console.warn('drag-drop upload failed', e);
+        }
+      });
+    })();
+
 
     // START / LAST FRAME (Veo 3.1 + Kling 2.1)
     document.getElementById('startFrameBtn').addEventListener('click', () => {
@@ -2365,6 +2461,8 @@ async function pollGeneration(runId, controllers, token) {
     function renderSingleThumb(file, containerEl, onRemove) {
       containerEl.innerHTML = '';
       if (!file) return;
+
+    
       const url = URL.createObjectURL(file);
       const wrapper = document.createElement('div');
       wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
@@ -2543,8 +2641,10 @@ async function pollGeneration(runId, controllers, token) {
         throw new Error('upload_bridge_missing');
       }
       const urls = [];
+      const maxUploadMB = (typeof currentModel !== 'undefined' && currentModel && currentModel.id === 'nano-banana-pro') ? 25 : 10;
+      const maxUploadBytes = maxUploadMB * 1024 * 1024;
       for (const file of list) {
-        if (file.size > 10 * 1024 * 1024) {
+        if (file.size > maxUploadBytes) {
           throw new Error('file_too_large');
         }
         const up = await window.kieUploadBridge.upload(file);
@@ -2851,7 +2951,8 @@ for (let i = 0; i < expectedOutputs; i++) {
       } catch (err) {
         console.error(err);
         if (err && err.message === 'file_too_large') {
-          showStatus('One of the images is larger than 10MB.', 'error');
+          const limitMb = (typeof currentModel !== 'undefined' && currentModel && currentModel.id === 'nano-banana-pro') ? 25 : 10;
+          showStatus(`One of the images is larger than ${limitMb}MB.`, 'error');
         } else if (err && err.message === 'upload_bridge_missing') {
           showStatus('Upload bridge is missing on this page.', 'error');
         } else {
@@ -2887,15 +2988,5 @@ for (let i = 0; i < expectedOutputs; i++) {
       <div id="mobileOptionList" class="space-y-2 max-h-[45vh] overflow-auto pr-1"></div>
     </div>
   </div>
-
-<script src="/hs-header.js"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    if (window.HSHeader && typeof window.HSHeader.mount === 'function') {
-      window.HSHeader.mount('#hs-header').catch(function(e){ console.warn('HSHeader mount failed', e); });
-    }
-  });
-</script>
-
 </body>
 </html>
