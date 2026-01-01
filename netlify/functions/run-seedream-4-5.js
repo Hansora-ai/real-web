@@ -249,7 +249,7 @@ exports.handler = async (event) => {
     const input = {
       prompt,
       aspect_ratio: size,
-      quality: "basic",
+      quality: "high",
       output_format: format
     };
     if (hasImages){
