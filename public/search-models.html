@@ -1692,7 +1692,9 @@ async function pollGeneration(runId, controllers, token) {
         description: 'Fast Kling 2.5 text & image to video.',
         endpoint: '/.netlify/functions/run-kling',
         needsImage: false,
-        maxFiles: 1,
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: true,
         aspectOptions: ['1:1', '9:16', '16:9'],
         defaultAspect: '1:1',
         durations: [5, 10],
@@ -2727,6 +2729,7 @@ async function pollGeneration(runId, controllers, token) {
             aspect_ratio: aspect || '1:1',
             duration: duration ? Number(duration) : 5,
             image_url: urls && urls[0] ? urls[0] : undefined,
+            tail_image_url: urls && urls[1] ? urls[1] : undefined,
             run_id: runId
           };
         case 'kling26':
