@@ -1,6 +1,6 @@
 // netlify/functions/run-kling.js
 // KIE Kling job launcher (text→video or image→video) using URL-only image input.
-// Minimal, surgical: accepts only imageUrl/image_url, ignores any data URLs.
+// Minimal, surgical: accepts only imageUrl/image_url (+ optional tail_image_url), ignores any data URLs.
 // Preserves seeding user_generations and server-side credit debit.
 //
 // Env: KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
@@ -124,6 +124,11 @@ exports.handler = async (event) => {
 
     // URL-only image intake (accept body.image_url OR body.imageUrl)
     const imageUrl = (body && (body.image_url || body.imageUrl)) ? String(body.image_url || body.imageUrl).trim() : '';
+    // Optional last frame for image→video (accept tail_image_url OR tailImageUrl)
+    const tailUrl = (body && (body.tail_image_url || body.tailImageUrl)) ? String(body.tail_image_url || body.tailImageUrl).trim() : '';
+    if (tailUrl && !imageUrl) {
+      return json(400, { ok:false, error:'tail_requires_start_image', details:'tail_image_url requires image_url.' });
+    }
     if (!prompt && !imageUrl) {
       return json(400, { ok:false, error:'missing_input', details:'Provide a prompt or an image_url.' });
     }
@@ -193,6 +198,7 @@ exports.handler = async (event) => {
         aspect_ratio,
         duration: (duration === 10 ? '10' : '5'),
         ...(image_url ? { image_url } : {}),
+        ...(tailUrl ? { tail_image_url: tailUrl } : {}),
       },
       callBackUrl: `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`,
     };
