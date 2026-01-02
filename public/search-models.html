@@ -1525,20 +1525,20 @@ async function pollGeneration(runId, controllers, token) {
         minCredits: 1
       },
       {
-        id: 'gpt-image-1',
-        name: 'GPT-Image-1',
+        id: 'gpt-image-1.5',
+        name: 'GPT-Image-1.5',
         emoji: '🧠',
         subtitle: 'Text / (Image) → Image',
         category: 'image',
-        description: 'OpenAI GPT-Image-1 for sharp, detailed visuals.',
-        endpoint: '/.netlify/functions/run-gpt-image-1',
+        description: 'OpenAI GPT-Image-1.5 for sharp, detailed visuals.',
+        endpoint: '/.netlify/functions/run-gpt-image-1.5',
         needsImage: false,
-        maxFiles: 3,
+        maxFiles: 8,
         aspectOptions: ['1:1', '2:3', '3:2'],
         defaultAspect: '1:1',
         durations: null,
-        costLabel: '4⚡ per job',
-        minCredits: 4
+        costLabel: '2⚡ per job',
+        minCredits: 2
       },
       {
         id: 'imagen',
@@ -2439,14 +2439,20 @@ let currentKlingSound = false;
 
     document.getElementById('imageInput').addEventListener('change', (e) => {
       const files = Array.from(e.target.files || []).filter(f => (f && f.type && f.type.startsWith('image/')));
+      // GPT-Image-1: enforce per-image size limit (10MB each)
+      const __MAX_IMG_BYTES = 10 * 1024 * 1024;
+      let _files = files;
+      if (currentModel && currentModel.id === 'gpt-image-1') {
+        _files = files.filter(f => (f && typeof f.size === 'number' ? f.size <= __MAX_IMG_BYTES : true));
+      }
       if (!currentModel) { e.target.value = ''; return; }
       const max = currentModel.maxFiles || 1;
 
       // For select multi-image models, append new files instead of replacing existing ones.
       if (__MULTI_APPEND_IMAGE_MODELS.has(currentModel.id) && max > 1) {
-        uploadedFiles = (uploadedFiles || []).concat(files).slice(0, max);
+        uploadedFiles = (uploadedFiles || []).concat(_files).slice(0, max);
       } else {
-        uploadedFiles = files.slice(0, max);
+        uploadedFiles = _files.slice(0, max);
       }
 
       __renderImageThumbs();
