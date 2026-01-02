@@ -204,7 +204,7 @@ exports.handler = async (event) => {
     const cost = 2;
 
     // Provider label: keep stable, include mode
-    const provider = isImageToImage ? "GPT-Image-1.5 (I2I)" : "GPT-Image-1.5";
+    const provider = isImageToImage ? "GPT-Image-1.5" : "GPT-Image-1.5";
 
     // Seed user_generations row (pending)
     const seeded = await seedUserGeneration(uid, run_id, prompt, provider, { aspect_ratio, mode: isImageToImage ? "image-to-image" : "text-to-image" });
