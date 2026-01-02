@@ -45,7 +45,7 @@ async function getUidFromBearer(event){
   }catch(_e){ return ''; }
 }
 
-// ---- server-side debit (4⚡ for 5s, 8⚡ for 10s) ----
+// ---- server-side debit (no sound: 5⚡/9⚡, with sound: 9⚡/16⚡) ----
 async function debitCredits(uid, cost){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { ok:false, error:'missing_env_or_uid' };
   try{
@@ -80,7 +80,7 @@ async function fetchUserGenByRunId(uid, run_id){
   }catch(_e){ return null; }
 }
 
-async function seedUserGeneration(uid, run_id, duration, prompt){
+async function seedUserGeneration(uid, run_id, duration, sound, prompt){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { row_id:null };
   try{
     const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
@@ -88,7 +88,7 @@ async function seedUserGeneration(uid, run_id, duration, prompt){
     const rIns = await fetch(ug, {
       method: 'POST',
       headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-      body: JSON.stringify({ user_id: uid, provider: (duration === 10 ? 'kling2.6-10s' : 'kling2.6-5s'), kind: 'video', prompt, result_url: null, meta }),
+      body: JSON.stringify({ user_id: uid, provider: (sound ? (duration === 10 ? 'kling2.6-10s' : 'kling2.6-5s') : (duration === 10 ? 'Kling 2.6 no sound10s' : 'Kling 2.6 no sound5s')), kind: 'video', prompt, result_url: null, meta }),
     });
     if (!rIns.ok) return { row_id:null };
     const arr = await rIns.json().catch(()=>null);
@@ -215,6 +215,7 @@ exports.handler = async (event) => {
     const prompt = String(body.prompt || '').trim();
     const aspect_ratio = (body.aspect_ratio ? String(body.aspect_ratio) : '1:1').trim();
     const duration = (body && (body.duration === 10 || String(body.duration) === '10')) ? 10 : 5;
+    const sound = (body && Object.prototype.hasOwnProperty.call(body, 'sound')) ? (body.sound === true || body.sound === 'true' || body.sound === 1 || body.sound === '1') : false;
 
     // URL-only image intake (accept body.image_url OR body.imageUrl)
     const imageUrl = (body && (body.image_url || body.imageUrl)) ? String(body.image_url || body.imageUrl).trim() : '';
@@ -223,7 +224,7 @@ exports.handler = async (event) => {
     }
 
     // Costs: 5s -> 9⚡, 10s -> 16⚡ (Kling 2.6 with sound)
-    const cost = (duration === 10) ? 16 : 9;
+    const cost = sound ? ((duration === 10) ? 16 : 9) : ((duration === 10) ? 9 : 5);
     const run_id = (body.run_id && String(body.run_id).trim()) || `${uid || 'anon'}-${Date.now()}`;
 
     // If this run_id was already submitted before, return the same taskId (no re-debit)
@@ -234,7 +235,7 @@ exports.handler = async (event) => {
     }
 
     // Seed placeholder row early (used for idempotent charging)
-    const seed = await seedUserGeneration(uid, run_id, duration, prompt);
+    const seed = await seedUserGeneration(uid, run_id, duration, sound, prompt);
     let row_id = seed.row_id;
 
     // Choose model per mode
@@ -248,13 +249,13 @@ exports.handler = async (event) => {
         prompt,
         aspect_ratio,
         duration: (duration === 10 ? '10' : '5'),
-        sound: true,
+        sound: sound,
         image_urls: [image_url],
       } : {
         prompt,
         aspect_ratio,
         duration: (duration === 10 ? '10' : '5'),
-        sound: true,
+        sound: sound,
       },
       callBackUrl: `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`,
     };
@@ -288,7 +289,7 @@ exports.handler = async (event) => {
     } catch {}
 
             // Debit credits AFTER provider accepted the task (after 'submitted') and exactly once per (uid, run_id)
-    const baseMeta = { source:'kling', run_id, model, status:'processing', task_id: taskId };
+    const baseMeta = { source:'kling', run_id, model, status:'processing', task_id: taskId , sound: sound };
     const charge = await chargeOnceForRun(uid, run_id, cost, row_id, baseMeta);
     if (!charge.ok){
       if (charge.debit && !charge.debit.ok && (charge.debit.error === 'insufficient_credits' || charge.debit.error === 'insufficient')){
