@@ -181,15 +181,35 @@ const kiePayload = {
   callBackUrl
 };
 // Veo 3.1 generationType handling
-const firstFrameUrl = body.firstFrameUrl || "";
-const lastFrameUrl  = body.lastFrameUrl  || "";
-if (firstFrameUrl && lastFrameUrl){
+// Your UI sends firstFrameUrl and/or lastFrameUrl (from KIE signed uploads).
+// IMPORTANT:
+// - If ONLY firstFrameUrl is provided, this must be treated as image-to-video (not text-to-video).
+// - If BOTH firstFrameUrl + lastFrameUrl are provided, use FIRST_AND_LAST_FRAMES_2_VIDEO.
+const firstFrameUrl = (body.firstFrameUrl || "").toString().trim();
+const lastFrameUrl  = (body.lastFrameUrl  || "").toString().trim();
+
+if (firstFrameUrl && lastFrameUrl) {
+  // First + Last frames
   kiePayload.generationType = "FIRST_AND_LAST_FRAMES_2_VIDEO";
   kiePayload.firstFrameUrl = firstFrameUrl;
   kiePayload.lastFrameUrl  = lastFrameUrl;
-
+  // Keep imageUrls aligned with frames for KIE visibility/debugging.
   kiePayload.imageUrls = [firstFrameUrl, lastFrameUrl];
+} else if (firstFrameUrl && !lastFrameUrl) {
+  // First frame only
+  // KIE expects this to behave as image-to-video.
+  // We send generationType + firstFrameUrl and ALSO imageUrls for robustness.
+  kiePayload.generationType = "FIRST_FRAME_2_VIDEO";
+  kiePayload.firstFrameUrl = firstFrameUrl;
+  kiePayload.imageUrls = [firstFrameUrl];
+} else if (!firstFrameUrl && lastFrameUrl) {
+  // Edge case: last frame provided without first.
+  // Treat it as first-frame input to avoid silently falling back to TEXT_2_VIDEO.
+  kiePayload.generationType = "FIRST_FRAME_2_VIDEO";
+  kiePayload.firstFrameUrl = lastFrameUrl;
+  kiePayload.imageUrls = [lastFrameUrl];
 } else {
+  // Text only
   kiePayload.generationType = "TEXT_2_VIDEO";
 }
 
