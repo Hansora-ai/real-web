@@ -3,665 +3,3068 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HANSORA • KLING Motion Control (Video)</title>
+  <title>HANSORA • Search Models</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
-  <script src="https://cdn.tailwindcss.com">
-// --- helper: construct public Supabase URL (Nano Banana 1:1) ---
-function derivePublicUrl(up){
-  if (!up) return null;
-  if (up.publicUrl) return up.publicUrl;
-  try{
-    if (up.bucket && up.objectPath && up.uploadUrl){
-      const u = new URL(up.uploadUrl);
-      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
-      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
-    }
-  }catch(e){}
-  return null;
-}
-</script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
   <script src="/kie-upload-bridge.js"></script>
-
   <style>
-    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
-    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
-                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
-                       var(--base-bg); color:#e5e7eb}
+    :root{
+      --base-bg:#050714;
+      --base-line:#15182a;
+      --brand:#6366f1;
+      --brand-soft:rgba(99,102,241,.12);
+    }
+    body{
+      background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.18), transparent 60%),
+        radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.14), transparent 60%),
+        var(--base-bg);
+      color:#e5e7eb;
+      font-family:system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    }
     .bg-base-bg{background:var(--base-bg)}
     .border-base-line{border-color:var(--base-line)}
-    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
-    .btn:hover{background:rgba(255,255,255,.1)}
-    .btn-brand{background:var(--brand); border-color:transparent; color:white}
-    .btn-brand:hover{background:#7c7ff6}
-    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
-    .input-dark{background:rgba(255,255,255,.05)!important;color:#e5e7eb!important;border:1px solid rgba(255,255,255,.12)!important}
-    .input-dark::placeholder{color:#9ca3af}
-    select.input-dark option{background:#0b0d13;color:#e5e7eb}
-  </style>
+    .btn-soft{
+      border-radius:9999px;
+      border:1px solid rgba(148,163,184,.35);
+      background:radial-gradient(circle at 0 0,#1f2937, #020617);
+      color:#e5e7eb;
+    }
+    .btn-soft:hover{
+      border-color:rgba(129,140,248,.9);
+      background:radial-gradient(circle at 0 0,#111827,#020617);
+    }
+    .btn-brand{
+      border-radius:9999px;
+      border:0;
+      background:linear-gradient(135deg,#6366f1,#8b5cf6);
+      color:white;
+      box-shadow:0 10px 30px rgba(79,70,229,.55);
+    }
+    .btn-brand:hover{
+      background:linear-gradient(135deg,#7c7ff6,#a855f7);
+      box-shadow:0 14px 40px rgba(79,70,229,.75);
+    }
+    .chip{
+      border-radius:9999px;
+      border:1px solid rgba(148,163,184,.4);
+      background:rgba(15,23,42,.9);
+      color:#e5e7eb;
+    }
+    .chip-active{
+      background:linear-gradient(135deg,#6366f1,#8b5cf6);
+      border-color:transparent;
+      color:white;
+      box-shadow:0 8px 22px rgba(79,70,229,.6);
+    }
+    .shadow-soft{box-shadow:0 18px 55px rgba(0,0,0,.75)}
+    #navAvatar{
+      background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22><stop offset=%220%25%22 stop-color=%2291c1ff%22/><stop offset=%22100%25%22 stop-color=%225a8cff%22/></linearGradient></defs><circle cx=%2264%22 cy=%2264%22 r=%2264%22 fill=%22url(%23g)%22/><circle cx=%2264%22 cy=%2250%22 r=%2222%22 fill=%22white%22 fill-opacity=%22.9%22/><path d=%22M20 108a44 30 0 0 1 88 0%22 fill=%22white%22 fill-opacity=%22.9%22/></svg>');
+      background-size:cover;
+      background-position:center;
+    }
+    textarea#promptBox{
+      resize:none;
+    }
+    .result-card-loader{
+      width:24px;
+      height:24px;
+      border-radius:9999px;
+      border:3px solid rgba(148,163,184,.5);
+      border-top-color:#a855f7;
+      animation:spin 1s linear infinite;
+    }
+    @keyframes spin{
+      to{ transform:rotate(360deg); }
+    }
+    .clamp-2{
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
+  
+    /* Mobile compact UI tweaks (UI only) */
+    @media (max-width: 767px) {
+      /* Make generator card compact */
+      #generatorCard { padding: 12px !important; }
+      #generatorCard .sm\:space-y-3 { row-gap: 10px !important; }
+      /* Hide large pill blocks on mobile (use compact pickers instead) */
+      #aspectBlock, #durationBlock { display: none !important; }
+      /* Thumbs scroll instead of overflow */
+      #imageThumbs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      #imageThumbs > div { flex: 0 0 auto; }
+      /* Run button full width + centered */
+      #runBtn { width: 100% !important; min-height: 48px !important; }
+      /* Reduce vertical gaps under upload row */
+      #uploadBtn { margin-top: 6px !important; }
+      /* Reduce extra spacing in Cost+Run block */
+      #costLabel { margin-bottom: 4px !important; }
+    
+      /* Mobile redesign: remove hero + make page fully scrollable (settings in flow) */
+      body{ background: var(--base-bg) !important; }
+      #heroSection{ display:none !important; }
+      #generatorDock{ position: static !important; inset: auto !important; padding: 12px 16px 0 !important; }
+      #generatorDock > #generatorCard{ width: 100% !important; max-width: 100% !important; }
+      main{ padding-bottom: 16px !important; }
+      /* Keep generator compact and avoid big gaps */
+      #generatorCard{ border-radius: 24px !important; }
+      #generatorCard .space-y-3{ row-gap: 10px !important; }
+
+      /* Make whole mobile page scroll (not only main) */
+      body{ overflow-y:auto !important; }
+      main{ overflow: visible !important; flex: 0 0 auto !important; }
+
+      
+      /* Results section (mobile): 2:3 viewport + horizontal swipe (peek next card) */
+      #resultsSection{ display:block !important; padding-top: 12px !important; padding-bottom: 24px !important; }
+
+      /* Container is a 2:3 window that scrolls horizontally */
+      #resultsStrip{
+        border: 1px solid rgba(255,255,255,.10) !important;
+        background: rgba(2,6,23,.45) !important;
+        border-radius: 22px !important;
+
+        padding: 10px !important;
+
+        aspect-ratio: 2 / 3;
+        width: 100% !important;
+
+        display: flex !important;
+        gap: 12px !important;
+
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x mandatory;
+        scroll-padding-left: 10px;
+
+        /* makes the next card "peek" ~25% */
+        padding-right: 22% !important;
+      }
+
+      #resultsStrip.empty{
+        justify-content: center !important;
+        align-items: center !important;
+      }
+
+      /* Each thumb becomes a 2:3 card (newest full, next card peeks) */
+      #resultsStrip .result-thumb{
+        position: relative;
+        border-radius: 18px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(15,23,42,.55);
+
+        flex: 0 0 78%;
+        aspect-ratio: 2 / 3;
+        scroll-snap-align: start;
+      }
+#resultsStrip .result-thumb img,
+      #resultsStrip .result-thumb video{
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: rgba(2,6,23,.85);
+        display:block;
+      }
+      #resultsStrip .thumb-badge{
+        position:absolute;
+        top:8px;
+        left:8px;
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(2,6,23,.70);
+        color: rgba(255,255,255,.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      #resultsStrip .thumb-status{
+        position:absolute;
+        bottom:8px;
+        left:8px;
+        right:8px;
+        display:flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        color: rgba(255,255,255,.78);
+      }
+      #resultsStrip .thumb-status-extended{
+        flex-direction: column;
+        align-items: stretch;
+        padding: 8px 10px;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(2,6,23,.72);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      #resultsStrip .thumb-row{
+        display:flex;
+        align-items:flex-end;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      #resultsStrip .thumb-meta{
+        display:flex;
+        flex-direction: column;
+        min-width: 0;
+        gap: 2px;
+      }
+      #resultsStrip .thumb-model{
+        font-size: 11px;
+        font-weight: 600;
+        color: rgba(255,255,255,.88);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 220px;
+      }
+      #resultsStrip .thumb-prompt{
+        font-size: 10px;
+        color: rgba(255,255,255,.65);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 220px;
+      }
+      #resultsStrip .thumb-actions{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      #resultsStrip .thumb-state{
+        font-size: 10px;
+        color: rgba(255,255,255,.75);
+      }
+      #resultsStrip .thumb-state.ready{ color: rgba(110,231,183,.95); }
+      #resultsStrip .thumb-state.failed{ color: rgba(248,113,113,.95); }
+      #resultsStrip .thumb-get{
+        font-size: 10px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.14);
+        background: rgba(99,102,241,.22);
+        color: rgba(255,255,255,.92);
+      }
+      #resultsStrip .thumb-get:active{ transform: translateY(1px); }
+
+      #resultsStrip .empty-placeholder{
+        width:100%;
+        height:100%;
+        border-radius: 18px;
+        border: 1px dashed rgba(255,255,255,.18);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        color: rgba(255,255,255,.55);
+        padding: 14px;
+      }
+      #resultsStrip .empty-placeholder .inner{
+        max-width: 220px;
+      }
+      #resultsStrip .empty-placeholder .icon{
+        width: 54px;
+        height: 54px;
+        margin: 0 auto 10px;
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(99,102,241,.12);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color: rgba(255,255,255,.80);
+        font-weight: 700;
+      }
+      #resultsStrip .result-card-loader{
+        position:absolute;
+        inset:0;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+      }
+
+}
+
+    .opt-btn{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      border-radius:9999px;
+      border:1px solid rgba(255,255,255,.15);
+      background:rgba(2,6,23,.55);
+      color:rgba(255,255,255,.9);
+      font-size:11px;
+      line-height:1;
+      white-space:nowrap;
+    }
+    .opt-btn:active{ transform: translateY(1px); }
+    .opt-chev{ opacity:.7; }
+
+    /* Fullscreen preview overlay (click media shows, download only via Get) */
+    #previewOverlay{
+      position:fixed;
+      inset:0;
+      z-index:60;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.85);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 18px;
+    }
+    #previewOverlay.show{ display:flex; }
+    #previewOverlay .preview-card{
+      width: min(920px, 100%);
+      max-height: min(88vh, 900px);
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(2,6,23,.88);
+      box-shadow: 0 30px 90px rgba(0,0,0,.75);
+      overflow:hidden;
+      position: relative;
+    }
+    #previewOverlay .preview-close{
+      position:absolute;
+      top:10px;
+      right:10px;
+      width:40px;
+      height:40px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.45);
+      color: rgba(255,255,255,.9);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size: 22px;
+      line-height: 1;
+      cursor:pointer;
+    }
+    #previewOverlay .preview-media{
+      width:100%;
+      height:100%;
+      max-height: min(88vh, 900px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,.35);
+    }
+    #previewOverlay img,
+    #previewOverlay video{
+      max-width:100%;
+      max-height: min(88vh, 900px);
+      object-fit: contain;
+    }
+
+    </style>
 </head>
-<body class="min-h-screen">
-  <!-- Header (kept identical style from Veo 3) -->
+<body class="min-h-screen flex flex-col">
+  <!-- HEADER (Nano Banana style) -->
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <a href="index.html" class="flex items-center gap-3 hover:opacity-90"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora logo" class="h-9 w-9 object-contain" />
+      <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
+        <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora Logo" class="h-9 w-9 rounded-full object-cover" />
         <span class="font-semibold tracking-wide">HANSORA AI</span>
       </a>
       <nav class="hidden md:flex items-center gap-8 text-sm">
         <a href="models.html" class="hover:text-white/90">Models</a>
-<a href="examples-prompts.html" class="hover:text-white/90">Examples/Prompts</a>
+        <a href="examples-prompts.html" class="hover:text-white/90">Examples/Prompts</a>
         <a href="templates.html" class="hover:text-white/90">Templates</a>
         <a href="pricing.html" class="hover:text-white/90">Pricing</a>
         <a href="index.html#faq" class="hover:text-white/90">FAQ</a>
       </nav>
       <div class="flex items-center gap-3">
-        <a href="#" class="text-sm hover:text-white/90 hidden sm:inline" style="display:none">EN / RU</a>
-        <a id="btnLoginNav" href="index.html#login" class="rounded-xl btn px-3 py-2 text-sm" style="display:none">Log in</a>
-        <a id="btnGetStarted" href="index.html#login" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft" style="display:none">Get Started</a>
-        <a id="btnLoginSignup" href="login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a>
-<div id="navUser" class="hidden items-center gap-2">
+        <a id="btnLoginSignup" href="login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold">
+          Login / Signup
+        </a>
+        <div id="navUser" class="hidden items-center gap-2">
           <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
           <div class="relative">
-            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden relative"><img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden"><svg id="navAvatarFallback" viewBox="0 0 24 24" class="absolute inset-0 m-auto h-6 w-6 text-white/80"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4Z"/></svg></button>
-            <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden"><a href="profile.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Profile</a><a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">History</a><a href="pricing.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscription</a><button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button></div>
+            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
+              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden" />
+            </button>
+            <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden">
+              <a href="profile.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Profile</a>
+              <a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">History</a>
+              <a href="pricing.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscription</a>
+              <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </header>
 
-  <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-    <div class="grid md:grid-cols-2 gap-6 items-start">
-      <!-- Left card: form -->
-      <div class="rounded-2xl p-5 border border-white/10 shadow-soft bg-base-bg/60">
-        <h1 class="text-2xl font-bold">KLING Motion Control</h1>
-        <p class="mt-1 text-sm text-zinc-400">Upload a motion reference video (MP4/MOV, ≤100MB, ≤30s) and describe your scene. 
-          <span class="ml-2 inline-flex items-center gap-2">
-            <span class="text-xs text-zinc-300 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">≤30s</span>
-          </span>
-        </p>
-
-        <div class="mt-4 space-y-3">
-          <!-- Video -->
-          <div>
-            <label class="text-sm font-semibold text-zinc-300">Video (required, MP4/MOV, ≤100MB, ≤30s)</label>
-            <input id="video" type="file" accept="video/mp4,video/quicktime" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
-            <div id="videoThumb" class="mt-2 text-xs text-zinc-400"></div>
-          </div>
-
-          <!-- Optional Reference Image -->
-          <div>
-            <label class="text-sm font-semibold text-zinc-300">Reference image (optional, ≤10MB)</label>
-            <input id="image" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
-            <div id="imageThumbs" class="mt-2 flex gap-2 flex-wrap"></div>
-          </div>
-
-          <!-- Resolution -->
-          <div>
-            <label class="text-sm font-semibold text-zinc-300">Resolution</label>
-            <select id="mode" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
-              <option value="720p" selected>720p</option>
-              <option value="1080p">1080p</option>
-            </select>
-            <p class="mt-1 text-xs text-zinc-500">Pricing: 720p = 0.5⚡/s • 1080p = 1⚡/s (charged per started second)</p>
-          </div>
-
-<!-- Prompt -->
-          <div>
-            <label class="text-xs text-zinc-400">Prompt (optional)</label>
-            <textarea id="prompt" placeholder="Describe the transformation…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark"></textarea>
-          </div>
-
-          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()" disabled>Run (cost: —)</button>
-          <div id="status" class="mt-2 text-sm"></div>
-          <p id="guardMsg" class="hidden text-xs text-rose-300">Video + Image are required. Resolution defaults to 720p. Prompt is optional.</p>
+  <div id="generatorDock" class="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-6 px-3">
+    <div id="generatorCard" class="w-full max-w-5xl rounded-3xl bg-black/80 border border-white/15 shadow-soft px-4 py-4 space-y-3 backdrop-blur-xl">
+      <!-- FIRST ROW: mode + prompt + model -->
+      <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+        <!-- Mode + Mobile quick options -->
+        <div class="flex items-center justify-between w-full sm:w-auto gap-2">
+          <div class="flex rounded-full bg-slate-900/80 border border-white/15 p-1 text-[11px] w-fit">
+          <button id="btnModeImage" class="px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-[11px] font-semibold shadow-sm">Image</button>
+          <button id="btnModeVideo" class="px-3 py-1.5 rounded-full text-white/70">Video</button>
         </div>
+          <div id="mobileQuickOptions" class="md:hidden flex items-center gap-2">
+            <button id="mobileAspectBtn" type="button" class="opt-btn hidden">
+              <span class="opacity-70">AR</span>
+              <span id="mobileAspectLabel">1:1</span>
+              <span class="opt-chev">▾</span>
+            </button>
+            <button id="mobileDurationBtn" type="button" class="opt-btn hidden">
+              <span class="opacity-70">Dur</span>
+              <span id="mobileDurationLabel">5s</span>
+              <span class="opt-chev">▾</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Prompt (textarea) -->
+        <div class="flex-1 flex items-stretch gap-2 rounded-2xl border border-white/15 bg-slate-950/70 px-3 py-2">
+          <textarea
+            id="promptBox"
+            rows="2"
+            placeholder="Describe what you want to create…"
+            class="w-full bg-transparent text-sm sm:text-[15px] outline-none placeholder:text-white/40 leading-5"
+          ></textarea>
+        </div>
+
+        <!-- Model button -->
+        <button
+          id="modelButton"
+          class="inline-flex items-center justify-center gap-2 btn-brand px-4 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap"
+        >
+          <span class="text-xs opacity-80 hidden sm:inline">Model</span>
+          <span id="modelButtonLabel" class="truncate max-w-[150px] sm:max-w-[180px]">Nano Banana</span>
+          <span aria-hidden="true" class="ml-1 text-white/70 text-base leading-none">&gt;</span>
+        </button>
       </div>
 
-      <!-- Right card: result -->
-      <div class="rounded-2xl p-5 border border-white/10 shadow-soft bg-base-bg/60">
-        <h3 class="text-lg font-semibold">Result</h3>
-        <p class="text-xs text-zinc-400">Generated video will appear below.</p>
-        <div id="resultBox" class="mt-3 w-full rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
-          <span class="text-xs text-zinc-500">No result yet</span>
+      <!-- SECOND ROW: upload, AR/duration, cost, run -->
+      <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 text-[11px] sm:text-xs">
+        <!-- Upload + previews -->
+        <div class="md:w-1/3 flex flex-col gap-1.5">
+          <div class="flex items-center gap-2">
+          <!-- Default image upload (general models) -->
+          <input id="imageInput" type="file" accept="image/*" class="hidden" multiple />
+          <button
+            id="uploadBtn"
+            class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]"
+          >
+            <span class="text-lg leading-none">📎</span>
+            <span id="uploadBtnLabel">Upload image</span>
+          </button>
+          <div id="imageThumbs" class="flex gap-1.5 flex-nowrap overflow-x-auto max-w-full pr-1"></div>
+
+          <!-- Start / Last frame uploads (Veo 3.1 + Kling 2.1) -->
+          <div id="framesUploadWrap" class="hidden items-center gap-2">
+            <div class="flex items-center gap-2">
+              <input id="startFrameInput" type="file" accept="image/*" class="hidden" />
+              <button id="startFrameBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">➕</span>
+                <span>Start</span>
+              </button>
+              <div id="startFrameThumb" class="flex gap-1.5"></div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input id="lastFrameInput" type="file" accept="image/*" class="hidden" />
+              <button id="lastFrameBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">➕</span>
+                <span>Last</span>
+              </button>
+              <div id="lastFrameThumb" class="flex gap-1.5"></div>
+            </div>
+          </div>
+
+          <!-- Aleph uploads: video required + optional image -->
+          <div id="alephUploadWrap" class="hidden items-center gap-2">
+            <div class="flex items-center gap-2">
+              <input id="alephVideoInput" type="file" accept="video/*" class="hidden" />
+              <button id="alephVideoBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">📎</span>
+                <span>Upload video</span>
+              </button>
+              <div id="alephVideoThumb" class="flex gap-1.5"></div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input id="alephImageInput" type="file" accept="image/*" class="hidden" />
+              <button id="alephImageBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">📎</span>
+                <span>Upload image</span>
+              </button>
+              <div id="alephImageThumb" class="flex gap-1.5"></div>
+            </div>
+          </div>
+          </div>
+          <div class="w-full">
+            <p id="status" class="text-[11px] text-amber-200/80 min-h-[1.1rem]"></p>
         </div>
-        <div class="mt-3 flex items-center gap-3">
-          <button id="playBtn" class="hidden rounded-xl btn px-4 py-2 text-sm">Play</button>
-          <a id="downloadLink" href="#" class="hidden rounded-xl btn px-4 py-2 text-sm">Download</a>
+
         </div>
+
+        <!-- Aspect & duration -->
+        <div class="flex-1 flex items-center"></div>
+
+        <!-- Cost + Run -->
+        <div class="flex flex-col items-end gap-2 md:w-1/3">
+          <div id="costLabel" class="text-[11px] text-indigo-200/80"></div>
+          <button
+            id="runBtn"
+            class="inline-flex items-center justify-center btn-brand px-6 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Run
+          </button>
+
+          <!-- Veo quality + duration + aspect -->
+          <div class="w-full flex justify-end">
+            <div class="flex items-center gap-3">
+              <div id="veoQualityBlock" class="flex items-center gap-1.5 hidden">
+                <div id="veoQualityPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
+              </div>
+
+              
+              <div id="soraTierBlock" class="flex items-center gap-1.5 hidden">
+                <div id="soraTierPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
+              </div>
+
+              <div id="klingSoundBlock" class="flex items-center gap-1.5 hidden">
+                <span class="text-white/50">Sound</span>
+                <div id="klingSoundPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
+              </div>
+
+              <div id="durationBlock" class="flex items-center gap-1.5 hidden">
+                <span class="text-white/50">Sec</span>
+                <div id="durationPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
+              </div>
+
+              <div id="resolutionBlock" class="flex items-center gap-1.5 hidden">
+                <span class="text-white/50">Res</span>
+                <div id="resolutionPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
+              </div>
+
+              <div id="aspectBlock" class="flex items-center gap-1.5 hidden">
+                <span class="text-white/50">AR</span>
+                <div id="aspectPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- MODEL OVERLAY (centered) -->
+  <div
+    id="modelOverlay"
+    class="fixed inset-0 z-40 hidden bg-black/60 backdrop-blur-sm"
+  >
+    <div class="absolute left-1/2 top-1/2 translate-x-[-50%] translate-y-[-50%] w-[92vw] max-w-[420px] rounded-3xl border border-white/10 bg-slate-950/80 backdrop-blur-xl shadow-2xl overflow-hidden max-h-[80vh]">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+        <div class="flex flex-col">
+          <span class="text-xs font-semibold text-white/80">IMAGE / VIDEO MODELS</span>
+          <span class="text-[11px] text-white/50">Choose a model that fits your idea.</span>
+        </div>
+        <button id="closeOverlay" class="text-white/60 hover:text-white text-lg">&times;</button>
+      </div>
+      <div class="hidden">
+        <input
+          id="overlayModelSearch"
+          type="text"
+          placeholder="Search Nano Banana, GPT-Image, Veo, Kling…"
+          class="w-full rounded-full bg-slate-900 border border-white/15 px-3 py-2 text-xs outline-none placeholder:text-white/40"
+        />
+      </div>
+      <div id="overlayModelList" class="max-h-[58vh] overflow-y-auto text-sm">
+        <!-- items via JS -->
       </div>
     </div>
-  </section>
-
-  <footer class="border-t border-base-line/60">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
-      <nav class="flex items-center gap-5">
-        <a href="index.html#terms" class="hover:text-white/80">Terms</a>
-        <a href="index.html#privacy" class="hover:text-white/80">Privacy</a>
-        <a href="index.html#contact" class="hover:text-white/80">Contact</a>
-      </nav>
-    </div>
-  </footer>
-
-<script>// --- helper: construct public Supabase URL (Nano Banana 1:1) ---
-function derivePublicUrl(up){
-  if (!up) return null;
-  if (up.publicUrl) return up.publicUrl;
-  try{
-    if (up.bucket && up.objectPath && up.uploadUrl){
-      const u = new URL(up.uploadUrl);
-      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
-      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
-    }
-  }catch(e){}
-  return null;
-}
+  </div>
 
 
 
-  // Guard: only set footer year element if present
-  (function(){ const y = document.getElementById('y'); if (y) y.textContent = new Date().getFullYear(); })();
+  <!-- MAIN HERO -->
+  <main class="flex-1 overflow-y-auto pb-40">
+    <section id="resultsSection" class="hidden mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm pt-8 font-semibold text-white/80">Recent generations</h2>
+        <p class="text-[11px] text-white/45">Last 7 jobs from this account</p>
+      </div>
+      <div id="resultsStrip" class="flex gap-3 overflow-x-auto pb-2"></div>
+    </section>
 
-  (function(){
-    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
-    const $btnLoginNav = document.getElementById('btnLoginNav');
-    const $btnGetStarted = document.getElementById('btnGetStarted');
-    const $btnLoginSignup = document.getElementById('btnLoginSignup');
-    const $navUser = document.getElementById('navUser');
-    const $navCredits = document.getElementById('navCredits');
-    const $navAvatar = document.getElementById('navAvatar');
-    const $navMenu = document.getElementById('navMenu');
-    const $btnLogout = document.getElementById('btnLogout');
-    const $navAvatarImg = document.getElementById('navAvatarImg');
-    const $btnLogin = document.getElementById('btnLogin');
+    <section id="heroSection" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-10 text-center">
+      <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold">
+        Let’s start with some image &amp; video magic
+      </h1>
+      <p class="mt-2 text-sm sm:text-base text-zinc-300 max-w-xl mx-auto">
+        Type your idea once, then choose any model to generate images or videos — all from one clean bar.
+      </p>
 
-    function openAuth(){} function closeAuth(){} function setAuthMode(){}
+      <div class="mt-8 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl">
+        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
+          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/ChatGPT%20Image%20Dec%206,%202025,%2011_11_06%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 1" class="h-full w-full object-cover" />
+        </div>
+        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
+          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2022,%202025,%2010_42_41%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 2" class="h-full w-full object-cover" />
+        </div>
+        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9] hidden sm:block">
+          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2022,%202025,%2010_39_01%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 3" class="h-full w-full object-cover" />
+        </div>
+      </div>
+    </section>
 
-    function showLoggedInUI(profile, user){
-      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
-      try{ if($btnLoginSignup) $btnLoginSignup.style.display = 'none'; }catch(e){}
-      $navUser.classList.remove('hidden'); $navUser.classList.add('flex');
-      $navCredits.textContent=(profile?.credits??0)+'⚡';
-      if(user?.user_metadata?.avatar_url){ $navAvatarImg.src=user.user_metadata.avatar_url; $navAvatarImg.classList.remove('hidden'); }
-      else { $navAvatarImg.classList.add('hidden'); }
-    }
-    function showLoggedOutUI(){
-      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
-      try{ if($btnLoginSignup) $btnLoginSignup.style.display = ''; }catch(e){}
-      $navUser.classList.add('hidden'); $navUser.classList.remove('flex');
-    }
-    $navAvatar.addEventListener('click', (e)=>{
-      e.preventDefault();
-      e.stopPropagation();
-      $navMenu.classList.toggle('hidden');
-    });
-    document.addEventListener('click', (e)=>{
-      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.add('hidden');
-    });
-    document.getElementById('btnLogout').addEventListener('click', async ()=>{
-      await sb.auth.signOut();
-      showLoggedOutUI();
-    });
-
-    async function getOrCreateProfile(user){
-      const { data, error } = await sb
-        .from('profiles').select('user_id,email,credits')
-        .eq('user_id', user.id).maybeSingle();
-      if(error) throw error;
-      if(!data){
-        const ins = await sb.from('profiles').insert({
-          user_id: user.id, email: user.email, credits: 3
-        }).select().single();
-        if(ins.error) throw ins.error;
-        return ins.data;
-      }
-      return data;
-    }
-    async function refreshCredits(){
-      const { data } = await sb.auth.getUser();
-      const user = data.user;
-      if(!user) return;
-      const prof = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-      if (prof?.data?.credits != null) { $navCredits.textContent = prof.data.credits + '⚡'; }
-    }
-    window.refreshCredits = refreshCredits;
-
-    (async ()=>{
-      const { data } = await sb.auth.getUser();
-      const user = data.user;
-      if(user){
-        try{
-          const prof = await getOrCreateProfile(user);
-          showLoggedInUI(prof, user);
-        }catch{ showLoggedOutUI(); }
-      }else{
-        showLoggedOutUI();
-      }
-    })();
-  })();
-
-
-// Global alias for generation logic (must be top-level)
-var supabase = window.__HANSORA_SB__;
-// Elements
-const videoEl=document.getElementById('video');
-const imageEl=document.getElementById('image');
-const imageThumbs=document.getElementById('imageThumbs');
-const videoThumb=document.getElementById('videoThumb');
-const ASPECT_RATIO_DEFAULT='16:9';
-const promptEl=document.getElementById('prompt');
-const modeEl=document.getElementById('mode');
-const runBtn=document.getElementById('runBtn');
-const statusEl=document.getElementById('status');
-const resultBox=document.getElementById('resultBox');
-const downloadLink=document.getElementById('downloadLink');
-const guardMsg=document.getElementById('guardMsg');
-const $navAvatarImg=document.getElementById('navAvatarImg');
-const $navAvatarFallback=document.getElementById('navAvatarFallback');
-
-function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
-function clearChilds(el){while(el.firstChild)el.removeChild(el.firstChild)}
-
-function __rateForMode(mode){
-  return (String(mode||'720p') === '1080p') ? 1 : 0.5;
-}
-function __recalcCostUI(){
-  const mode = modeEl ? modeEl.value : '720p';
-  const rate = __rateForMode(mode);
-  const dur = (__videoDurationSec != null && Number.isFinite(__videoDurationSec)) ? __videoDurationSec : null;
-  if (!dur){
-    __billedSeconds = null;
-    __computedCost = null;
-    try{ runBtn.textContent = 'Run (cost: —)'; }catch{}
-    __updateRunEnabled();
-    return;
-  }
-  const billed = Math.min(30, Math.max(1, Math.ceil(dur)));
-  __billedSeconds = billed;
-  const cost = Number((billed * rate).toFixed(1));
-  __computedCost = cost;
-  try{ runBtn.textContent = `Run (cost: ${cost}⚡)`; }catch{}
-  // enable button only when prompt+video valid; guard logic handles disabled state too
-  __updateRunEnabled();
-}
-
-
-function __updateRunEnabled(){
-  try{
-    const hasVideo = !!(videoEl && videoEl.files && videoEl.files[0]);
-    const hasImage = !!(imageEl && imageEl.files && imageEl.files[0]);
-    const hasDur = (__videoDurationSec != null && Number.isFinite(__videoDurationSec) && __videoDurationSec > 0);
-    // Prompt is optional. Enable only when required inputs are ready and cost is computed.
-    const canRun = hasVideo && hasImage && hasDur && (__computedCost != null && Number.isFinite(__computedCost));
-    runBtn.disabled = !canRun || !!window.__KIE_RUNNING__;
-  }catch{}
-}
-
-
-
-
-let __imgObjURL=null; let __vidObjURL=null;
-let __videoDurationSec = null; let __billedSeconds = null; let __computedCost = null;
-window.__KIE_RUNNING__ = false;
-
-imageEl.addEventListener('change',()=>{
-  clearChilds(imageThumbs);
-  if(__imgObjURL){try{URL.revokeObjectURL(__imgObjURL)}catch{} __imgObjURL=null;}
-  const f=imageEl.files[0]; if(!f) return;
-  // Guard: image input must not accept video
-  if ((f.type||'').startsWith('video/') || /\.(mp4|mov)$/i.test(f.name||'')){
-    imageEl.value=''; clearChilds(imageThumbs);
-    showStatus('❌ This field accepts IMAGES only. Please upload an image file.','text-rose-300');
-    __updateRunEnabled();
-    return;
-  }
-  const u=URL.createObjectURL(f); __imgObjURL=u;
-  const img=new Image(); img.src=u; img.className='block w-full max-h-56 object-contain rounded-lg border border-white/10 bg-black/20';
-  const wrap=document.createElement('div'); wrap.className='relative inline-block';
-  const del=document.createElement('button'); del.type='button'; del.className='absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center'; del.innerHTML='&times;';
-  del.onclick=()=>{imageEl.value=''; clearChilds(imageThumbs); try{URL.revokeObjectURL(u)}catch{} __imgObjURL=null; };
-  wrap.appendChild(img); wrap.appendChild(del); imageThumbs.appendChild(wrap);
-});
-
-videoEl.addEventListener('change',()=>{
-  videoThumb.textContent='';
-  if(__vidObjURL){try{URL.revokeObjectURL(__vidObjURL)}catch{} __vidObjURL=null;}
-  const f=videoEl.files[0]; if(!f) return;
-  // Guard: video input must not accept images
-  if ((f.type||'').startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp|heic|heif)$/i.test(f.name||'')){
-    videoEl.value=''; while(videoThumb.firstChild){ videoThumb.removeChild(videoThumb.firstChild); }
-    showStatus('❌ This field accepts VIDEOS only. Please upload an MP4 or MOV.','text-rose-300');
-    __updateRunEnabled();
-    return;
-  }
-  const u=URL.createObjectURL(f); __vidObjURL=u;
-  __videoDurationSec = null; __billedSeconds = null; __computedCost = null; __recalcCostUI();
-
-  const p=document.createElement('p'); 
-  p.textContent='Selected: '+(f.name||'video.mp4')+' ('+Math.round(f.size/1024/1024*10)/10+'MB)';
-  videoThumb.appendChild(p);
-
-
-  // Create a non-playable thumbnail from the first frame
-  try{
-    const v=document.createElement('video');
-    v.muted=true; v.playsInline=true; v.preload='metadata'; v.src=u; try{v.load();}catch{}
+    <!-- RESULTS STRIP -->
     
-    v.addEventListener('error',()=>{
-      __videoDurationSec = null; __billedSeconds = null; __computedCost = null;
-      showStatus('Could not load video metadata. Please try another MP4/MOV (≤30s).','text-rose-300');
-      __recalcCostUI();
-    }, { once:true });
+  </main>
 
-    // Fallback: if metadata doesn't load quickly, try forcing a reload
-    setTimeout(()=>{
-      if(__videoDurationSec==null){ try{ v.load(); }catch{} }
-    }, 800);
-v.addEventListener('loadedmetadata',()=>{
-      try{ __videoDurationSec = Number(v.duration||0); }catch{ __videoDurationSec = null; }
-      __recalcCostUI();
-      // Seek a tiny bit into the video to ensure data is available
-      const targetTime = Math.min(0.15, (v.duration||1)/10);
-      v.currentTime = targetTime;
-    }, { once:true });
-    v.addEventListener('seeked',()=>{
-      try{
-        const canvas=document.createElement('canvas');
-        const w = 360; // target width for thumbnail
-        const ratio = v.videoWidth ? (v.videoHeight / v.videoWidth) : (9/16);
-        canvas.width = w;
-        canvas.height = Math.max(1, Math.round(w*ratio));
-        const ctx=canvas.getContext('2d');
-        ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-        const img=document.createElement('img');
-        img.src=canvas.toDataURL('image/jpeg', 0.85);
-        img.className='mt-2 block rounded-lg border border-white/10 max-w-full shadow-soft';
-        const wrap=document.createElement('div');
-        wrap.className='relative inline-block';
-        const del=document.createElement('button'); 
-        del.type='button';
-        del.className='absolute -top-2 -right-2 h-6 w-6 rounded-full bg-black/60 hover:bg-black/90 text-white/90 border border-white/10 flex items-center justify-center';
-        del.innerHTML='&times;';
-        del.title='Remove selected video';
-        del.onclick=()=>{
-          const vEl=document.getElementById('video');
-          if(vEl){ vEl.value=''; }
-          while(videoThumb.firstChild){ videoThumb.removeChild(videoThumb.firstChild); }
-          try{ if(__vidObjURL){ URL.revokeObjectURL(__vidObjURL); __vidObjURL=null; } }catch{};
-          __videoDurationSec = null; __billedSeconds = null; __computedCost = null; __recalcCostUI();
-        };
-        wrap.appendChild(img);
-        wrap.appendChild(del);
-        videoThumb.appendChild(wrap);
-      }catch{ /* ignore thumbnail errors */ }
-    }, { once:true });
-  }catch{ /* ignore thumbnail errors */ }
-});
-
-async function getCredits(){
-  try{
-    const ures = await supabase.auth.getUser(); const user = ures?.data?.user; if(!user) return 0;
-    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
-    return prof?.credits ?? 0;
-  }catch{return 0;}
+  <!-- BOTTOM BAR -->
+  <script>
+// --- MidJourney multi-image support via nb-check (no callback changes) ---
+function __mjCacheKey(runId){ return `mj_urls_${runId}`; }
+function __mjLoadCached(runId){
+  try{ const v = localStorage.getItem(__mjCacheKey(runId)); if(!v) return null;
+    const a = JSON.parse(v); return Array.isArray(a) ? a : null;
+  }catch(_e){ return null; }
 }
-async function refreshCreditsUI(){
-  try{
-    const c = await getCredits();
-    const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
-    __updateRunEnabled();
-    runBtn.classList.remove('opacity-50','cursor-not-allowed');
-  }catch{}
+function __mjSaveCached(runId, urls){
+  try{ if(!runId || !Array.isArray(urls) || !urls.length) return;
+    localStorage.setItem(__mjCacheKey(runId), JSON.stringify(urls.slice(0,4)));
+  }catch(_e){}
 }
-refreshCreditsUI();
-if (modeEl) modeEl.addEventListener('change', __recalcCostUI);
-if (promptEl) promptEl.addEventListener('input', ()=>{ __updateRunEnabled(); });
-
-// === Live credits (Supabase Realtime) — 1:1 behavior with Kling 2.6 ===
-(async function HANSORA_LIVE_CREDITS(){
-  try{
-    if (typeof supabase === 'undefined' || !supabase.auth) return;
-
-    const navCreditsEl = document.getElementById('navCredits');
-    function renderCredits(c){
-      try{
-        if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-      }catch{}
+function __mjTryExtractAllImageUrls(obj){
+  const out=[]; const seen=new Set();
+  const push=(u)=>{ if(typeof u!=='string') return; if(!/^https?:\/\//i.test(u)) return;
+    if(seen.has(u)) return; seen.add(u); out.push(u); };
+  const walk=(x,depth=0)=>{
+    if(!x || depth>7) return;
+    if(typeof x==='string'){ push(x); return; }
+    if(Array.isArray(x)){ for(const it of x) walk(it, depth+1); return; }
+    if(typeof x==='object'){
+      for(const k of ['image_urls','images','result_urls','results','output','outputs','data','urls','url']){
+        if(Object.prototype.hasOwnProperty.call(x,k)) walk(x[k], depth+1);
+      }
+      let n=0;
+      for(const k in x){
+        if(!Object.prototype.hasOwnProperty.call(x,k)) continue;
+        if(n++>60) break;
+        walk(x[k], depth+1);
+      }
     }
+  };
+  walk(obj);
+  return out.slice(0,4);
+}
+async function __mjFetchNbCheck(params){
+  // params: { taskId?, uid?, runId? }
+  const taskId = params && params.taskId ? String(params.taskId) : '';
+  const uid = params && params.uid ? String(params.uid) : '';
+  const runId = params && params.runId ? String(params.runId) : '';
+  let url = '';
+  if (taskId) url = `/.netlify/functions/nb-check?taskId=${encodeURIComponent(taskId)}`;
+  else url = `/.netlify/functions/nb-check?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
+  const r = await fetch(url, { method:'GET', headers:{ 'Accept':'application/json' } });
+  const t = await r.text();
+  let js; try{ js = JSON.parse(t); }catch{ js = { raw:t }; }
+  return { ok:r.ok, status:r.status, js };
+}
+// --- end MidJourney support ---
 
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if (!user) return;
+// === Fullscreen preview overlay (download only via Get) ===
+(function(){
+  if (document.getElementById('previewOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'previewOverlay';
+  overlay.innerHTML = `
+    <div class="preview-card">
+      <button type="button" class="preview-close" aria-label="Close preview">&times;</button>
+      <div class="preview-media" id="previewMedia"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
 
-    // subscribe to updates
-    supabase.channel('credits_live_' + user.id)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
-        (payload) => { renderCredits(payload.new?.credits ?? 0); }
-      )
-      .subscribe();
-  }catch(e){ console.warn('live credits failed', e); }
+  const mediaHost = overlay.querySelector('#previewMedia');
+  const closeBtn = overlay.querySelector('.preview-close');
+
+  function close(){
+    overlay.classList.remove('show');
+    // clear media
+    mediaHost.innerHTML = '';
+    document.body.style.overflow = '';
+  }
+
+  function open(url, kind){
+    if (!url) return;
+    mediaHost.innerHTML = '';
+    const k = (kind || 'image').toLowerCase();
+    if (k === 'video') {
+      const v = document.createElement('video');
+      v.src = url;
+      v.controls = true;
+      v.playsInline = true;
+      v.autoplay = true;
+      v.muted = false;
+      mediaHost.appendChild(v);
+    } else {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = 'Preview';
+      mediaHost.appendChild(img);
+    }
+    overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  // expose
+  window.openPreview = open;
+  window.closePreview = close;
+
+  closeBtn.addEventListener('click', (e)=>{ e.stopPropagation(); close(); });
+  overlay.addEventListener('click', (e)=>{ if (e.target === overlay) close(); });
+  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape' && overlay.classList.contains('show')) close(); });
 })();
 
 
-//}
-  
-function showVideo(url){
-  resultBox.innerHTML = '';
-  const v = document.createElement('video');
-  v.style.objectFit = 'contain';
-  v.controls = true;
-  v.src = url;
-  v.className = 'block w-full max-h-[70vh] rounded-lg border border-white/10 bg-black/20';
-  resultBox.appendChild(v);
 
-  downloadLink.href = url;
-  try{downloadLink.download='kling-motion-control.mp4';}catch(e){};
-  downloadLink.classList.remove('hidden');
+    // === Supabase + header auth/credits ===
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 
-  const playBtn = document.getElementById('playBtn');
-  if (playBtn) {
-    playBtn.classList.remove('hidden');
-    playBtn.textContent = 'Play';
-    playBtn.onclick = () => { try { if (v.paused) { v.play(); playBtn.textContent = 'Pause'; } else { v.pause(); playBtn.textContent = 'Play'; } } catch {} };
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let currentUser = null;
+    let currentCredits = 0;
+
+    async function refreshCredits() {
+      try {
+        const { data: userRes } = await supabaseClient.auth.getUser();
+        if (!userRes || !userRes.user) return;
+        const { data: profile } = await supabaseClient
+          .from('profiles')
+          .select('credits, avatar_url')
+          .eq('user_id', userRes.user.id)
+          .maybeSingle();
+        currentCredits = profile && typeof profile.credits === 'number' ? profile.credits : 0;
+
+        const navCredits = document.getElementById('navCredits');
+        if (navCredits) navCredits.textContent = currentCredits + '⚡';
+
+        const navUser = document.getElementById('navUser');
+        const btnLogin = document.getElementById('btnLoginSignup');
+        if (btnLogin && navUser) {
+          btnLogin.classList.add('hidden');
+          navUser.classList.remove('hidden');
+          navUser.classList.add('flex');
+        }
+
+        const avatarImg = document.getElementById('navAvatarImg');
+        if (avatarImg && profile && profile.avatar_url) {
+          avatarImg.src = profile.avatar_url;
+          avatarImg.classList.remove('hidden');
+        }
+
+      } catch (e) {
+        console.warn('refreshCredits failed', e);
+      }
+    }
+
+    async function loadUser() {
+      try {
+        const { data } = await supabaseClient.auth.getUser();
+        const user = data.user;
+        currentUser = user;
+
+        const navUser = document.getElementById('navUser');
+        const btnLogin = document.getElementById('btnLoginSignup');
+        if (!user) {
+          if (navUser) {
+            navUser.classList.add('hidden');
+            navUser.classList.remove('flex');
+          }
+          if (btnLogin) btnLogin.classList.remove('hidden');
+          return;
+        }
+
+        await refreshCredits();
+        await loadRecentHistory();
+      } catch (e) {
+        console.warn('loadUser failed', e);
+      }
+    }
+
+    document.addEventListener('click', (e) => {
+      const avatar = document.getElementById('navAvatar');
+      const menu = document.getElementById('navMenu');
+      if (!avatar || !menu) return;
+      if (avatar.contains(e.target)) {
+        menu.classList.toggle('hidden');
+      } else if (!menu.contains(e.target)) {
+        menu.classList.add('hidden');
+      }
+    });
+
+    document.getElementById('btnLogout')?.addEventListener('click', async () => {
+      try {
+        await supabaseClient.auth.signOut();
+        currentUser = null;
+        currentCredits = 0;
+        const navUser = document.getElementById('navUser');
+        const btnLogin = document.getElementById('btnLoginSignup');
+        const navCredits = document.getElementById('navCredits');
+        if (navUser) {
+          navUser.classList.add('hidden');
+          navUser.classList.remove('flex');
+        }
+        if (btnLogin) btnLogin.classList.remove('hidden');
+        if (navCredits) navCredits.textContent = '0⚡';
+        const strip = document.getElementById('resultsStrip');
+        if (strip) strip.innerHTML = '';
+      } catch (e) {
+        console.warn('logout failed', e);
+      }
+    });
+
+    // === RESULTS (last 7 generations) ===
+    function isMobileUI() {
+      return window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+    }
+
+    function ensureResultsEmptyState() {
+      const strip = document.getElementById('resultsStrip');
+      if (!strip) return;
+      if (!strip.children.length) {
+        strip.classList.add('empty');
+        strip.innerHTML = `
+          <div class="empty-placeholder">
+            <div class="inner">
+              <div class="icon">H</div>
+              <div style="font-weight:700; margin-bottom:6px;">No generations yet</div>
+              <div style="font-size:12px; line-height:1.35;">Your last 7 results will appear here after you run your first job.</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function createResultThumb(data) {
+      const provider = data.provider || 'Model';
+      const kind = (data.kind || 'image').toLowerCase();
+      const prompt = (data.prompt || '').toString();
+      const statusRaw = (data.status || '').toString();
+      const statusLower = statusRaw.toLowerCase();
+      const url = data.result_url || '';
+
+      const card = document.createElement('div');
+      card.className = 'result-thumb';
+      card.dataset.runId = data.run_id || '';
+
+      // media
+      if (url) {
+        if (kind === 'video') {
+          const v = document.createElement('video');
+          v.src = url;
+          v.muted = true;
+          v.playsInline = true;
+          v.loop = true;
+          v.autoplay = true;
+          v.preload = 'metadata';
+          card.appendChild(v);
+        } else {
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = provider;
+          img.loading = 'lazy';
+          card.appendChild(img);
+        }
+      } else {
+        const ph = document.createElement('div');
+        ph.style.width = '100%';
+        ph.style.height = '100%';
+        ph.style.display = 'flex';
+        ph.style.alignItems = 'center';
+        ph.style.justifyContent = 'center';
+        ph.style.color = 'rgba(255,255,255,.55)';
+        ph.style.fontSize = '12px';
+        ph.textContent = 'Processing';
+        card.appendChild(ph);
+      }
+
+      const badge = document.createElement('div');
+      badge.className = 'thumb-badge';
+      badge.textContent = (kind === 'video') ? 'VIDEO' : 'IMAGE';
+      card.appendChild(badge);
+
+      // status + info panel
+      const panel = document.createElement('div');
+      panel.className = 'thumb-status thumb-status-extended';
+
+      const row = document.createElement('div');
+      row.className = 'thumb-row';
+
+      const meta = document.createElement('div');
+      meta.className = 'thumb-meta';
+
+      const modelLine = document.createElement('div');
+      modelLine.className = 'thumb-model';
+      modelLine.textContent = provider;
+
+      const promptLine = document.createElement('div');
+      promptLine.className = 'thumb-prompt';
+      promptLine.textContent = prompt || '—';
+
+      meta.appendChild(modelLine);
+      meta.appendChild(promptLine);
+
+      const actions = document.createElement('div');
+      actions.className = 'thumb-actions';
+
+      const state = document.createElement('span');
+      state.className = 'thumb-state';
+      const isFailed = statusLower.includes('fail') || statusLower.includes('error');
+      const isReady = !!url;
+      if (isFailed) {
+        state.textContent = 'Failed';
+        state.classList.add('failed');
+      } else if (isReady) {
+        state.textContent = 'Ready';
+        state.classList.add('ready');
+      } else {
+        state.textContent = '…';
+      }
+
+      const getBtn = document.createElement('button');
+      getBtn.type = 'button';
+      getBtn.className = 'thumb-get';
+      getBtn.textContent = 'Get';
+      if (!isReady || isFailed) getBtn.classList.add('hidden');
+
+      // download helper (best-effort; fallback to opening)
+      const downloadUrl = async (u) => {
+        try {
+          const resp = await fetch(u, { mode: 'cors', credentials: 'omit' });
+          if (!resp.ok) throw new Error('fetch failed');
+          const blob = await resp.blob();
+          const obj = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = obj;
+          const ext = (kind === 'video') ? 'mp4' : 'png';
+          a.download = `hansora-${Date.now()}.${ext}`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(obj), 2000);
+        } catch (e) {
+          window.open(u, '_blank');
+        }
+      };
+
+      getBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!url) return;
+        downloadUrl(url);
+      });
+
+      actions.appendChild(state);
+      actions.appendChild(getBtn);
+
+      row.appendChild(meta);
+      row.appendChild(actions);
+
+      panel.appendChild(row);
+      card.appendChild(panel);
+
+      // click shows fullscreen preview (download only via Get)
+      if (url) {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', () => window.openPreview && window.openPreview(url, kind));
+      }
+      let __thumb_url = url;
+      let __thumb_kind = kind;
+      let __previewBound = false;
+
+      function apply(next) {
+        try {
+          const nextStatusRaw = (next && next.status != null) ? String(next.status) : statusRaw;
+          const nextStatusLower = String(nextStatusRaw || '').toLowerCase();
+          const nextUrl = (next && next.result_url) ? String(next.result_url) : (__thumb_url || '');
+          const failed = nextStatusLower.includes('fail') || nextStatusLower.includes('error');
+          const ready = !!nextUrl;
+
+          // update state chip
+          state.classList.remove('failed', 'processing', 'ready');
+          if (failed) {
+            state.textContent = 'Failed';
+            state.classList.add('failed');
+          } else if (ready) {
+            state.textContent = 'Ready';
+            state.classList.add('ready');
+          } else {
+            state.textContent = 'Processing';
+            state.classList.add('processing');
+          }
+
+          // update Get button visibility/enable
+          if (ready && !failed) {
+            getBtn.classList.remove('hidden');
+            getBtn.disabled = false;
+          } else {
+            getBtn.disabled = true;
+          }
+
+          // media element
+          __thumb_url = nextUrl || '';
+          __thumb_kind = (next && next.kind) ? String(next.kind).toLowerCase() : __thumb_kind;
+
+          const existingMedia = card.querySelector('img,video');
+          if (__thumb_url) {
+            if (!existingMedia) {
+              if (__thumb_kind === 'video') {
+                const v = document.createElement('video');
+                v.src = __thumb_url;
+                v.muted = true;
+                v.playsInline = true;
+                v.loop = true;
+                v.autoplay = true;
+                v.preload = 'metadata';
+                card.insertBefore(v, card.firstChild);
+              } else {
+                const img = document.createElement('img');
+                img.src = __thumb_url;
+                img.alt = provider;
+                img.loading = 'lazy';
+                card.insertBefore(img, card.firstChild);
+              }
+            } else {
+              if (existingMedia.tagName.toLowerCase() === 'video') existingMedia.src = __thumb_url;
+              else existingMedia.src = __thumb_url;
+            }
+          }
+
+          // click-to-preview (download only via Get)
+          if (__thumb_url) {
+            card.style.cursor = 'pointer';
+            if (!__previewBound) {
+              __previewBound = true;
+              card.addEventListener('click', () => {
+                if (window.openPreview) window.openPreview(__thumb_url, __thumb_kind);
+              });
+            }
+          }
+        } catch (_e) {}
+      }
+
+      // initial apply to normalize visuals
+      apply({ status: statusRaw || (url ? 'ready' : 'processing'), result_url: url, kind });
+      return { card, apply };
+    }
+
+    function createResultItem(data) {
+      return isMobileUI() ? createResultThumb(data) : createResultCard(data);
+    }
+
+function createResultCard(data) {
+      const provider = data.provider || 'Model';
+      const kind = (data.kind || 'image').toLowerCase();
+      const prompt = data.prompt || '';
+      const statusRaw = (data.status || '').toString();
+      const statusLower = statusRaw.toLowerCase();
+      const hasUrl = !!data.result_url;
+
+      const card = document.createElement('div');
+      card.className = 'result-card w-64 flex-shrink-0 rounded-2xl border border-white/15 bg-slate-950/80 shadow-soft overflow-hidden';
+      card.dataset.runId = data.run_id || '';
+
+      const media = document.createElement('div');
+      media.className = 'result-media relative h-72 bg-slate-900 flex items-center justify-center';
+      const loader = document.createElement('div');
+      loader.className = 'result-card-loader';
+      media.appendChild(loader);
+
+      const mediaEl = document.createElement(kind === 'video' ? 'video' : 'img');
+      mediaEl.className = 'max-h-full max-w-full object-contain hidden';
+      if (kind === 'video') {
+        mediaEl.controls = true;
+        mediaEl.muted = true;
+        mediaEl.playsInline = true;
+      }
+      media.appendChild(mediaEl);
+
+      const statusChip = document.createElement('div');
+      statusChip.className = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-black/70 text-white/80';
+      media.appendChild(statusChip);
+
+      const body = document.createElement('div');
+      body.className = 'p-2.5 space-y-1';
+      const topRow = document.createElement('div');
+      topRow.className = 'flex items-center justify-between gap-2';
+      const nameEl = document.createElement('span');
+      nameEl.className = 'text-[11px] font-medium truncate';
+      nameEl.textContent = provider;
+      const kindEl = document.createElement('span');
+      kindEl.className = 'text-[10px] text-white/45 uppercase tracking-wide';
+      kindEl.textContent = kind;
+      topRow.appendChild(nameEl);
+      topRow.appendChild(kindEl);
+
+      const promptEl = document.createElement('p');
+      promptEl.className = 'text-[10px] text-white/60 clamp-2';
+      promptEl.textContent = prompt;
+
+      const bottomRow = document.createElement('div');
+      bottomRow.className = 'flex items-center justify-between gap-2 mt-1';
+      const statusText = document.createElement('span');
+      statusText.className = 'text-[10px] text-indigo-200/80';
+      const downloadBtn = document.createElement('a');
+      downloadBtn.className = 'text-[12px] px-4 py-2 rounded-full bg-indigo-500/90 hover:bg-indigo-400 text-white hidden';
+      downloadBtn.target = '_blank';
+      downloadBtn.rel = 'noopener noreferrer';
+      downloadBtn.textContent = 'GET';
+      bottomRow.appendChild(statusText);
+      bottomRow.appendChild(downloadBtn);
+
+      body.appendChild(topRow);
+      body.appendChild(promptEl);
+      body.appendChild(bottomRow);
+
+      card.appendChild(media);
+      card.appendChild(body);
+
+      function apply(newData) {
+        const stRaw = (newData.status || '').toString();
+        const st = stRaw.toLowerCase();
+        const hasUrlNow = !!newData.result_url;
+
+        if (hasUrlNow) {
+          mediaEl.src = newData.result_url;
+          mediaEl.classList.remove('hidden');
+          downloadBtn.href = newData.result_url;
+          downloadBtn.classList.remove('hidden');
+          loader.style.display = 'none';
+        } else {
+          mediaEl.classList.add('hidden');
+          downloadBtn.classList.add('hidden');
+          loader.style.display = st.includes('fail') ? 'none' : 'block';
+        }
+
+        let label = 'Processing…';
+        let pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-black/70 text-white/80';
+        let statusClass = 'text-[10px] text-indigo-200/80';
+
+        if (st.includes('fail') || st.includes('error')) {
+          label = 'Failed';
+          pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-red-500/85 text-white';
+          statusClass = 'text-[10px] text-red-300';
+        } else if (hasUrlNow) {
+          label = 'Ready';
+          pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/85 text-white';
+          statusClass = 'text-[10px] text-emerald-300';
+        }
+
+        statusChip.textContent = label;
+        statusChip.className = pillClass;
+        statusText.textContent = label;
+        statusText.className = statusClass;
+      }
+
+      apply({
+        status: statusRaw || (hasUrl ? 'ready' : 'processing'),
+        result_url: data.result_url
+      });
+
+      return { card, apply };
+    }
+
+    function addResultCard(data, options) {
+      const strip = document.getElementById('resultsStrip');
+      if (!strip) return null;
+
+      // if empty placeholder exists, clear it
+      if (strip.classList.contains('empty')) {
+        strip.classList.remove('empty');
+        strip.innerHTML = '';
+      }
+
+      const built = createResultItem(data);
+      const card = built && built.card ? built.card : null;
+      if (!card) return null;
+
+      if (options && options.prepend) strip.prepend(card);
+      else strip.appendChild(card);
+
+      // keep at most 7
+      const __max = 7;
+      while (strip.children.length > __max) strip.removeChild(strip.lastElementChild);
+
+      return built;
+    }
+
+    async function loadRecentHistory() {
+      if (!currentUser) return;
+      const uid = currentUser.id;
+      try {
+        const { data, error } = await supabaseClient
+          .from('user_generations')
+          .select('provider, kind, prompt, result_url, meta, created_at')
+          .eq('user_id', currentUser.id)
+          .order('created_at', { ascending: false })
+          .limit(7);
+
+        if (error) {
+          console.warn('loadRecentHistory error', error);
+          return;
+        }
+
+        const strip = document.getElementById('resultsStrip');
+        if (strip) strip.innerHTML = '';
+
+        const hero = document.getElementById('heroSection');
+        const resultsSection = document.getElementById('resultsSection');
+        const hasItems = (data || []).length > 0;
+
+        if (hero) {
+          if (hasItems) hero.classList.add('hidden');
+          else hero.classList.remove('hidden');
+        }
+        if (resultsSection) {
+          if (isMobileUI()) {
+            // mobile always shows the 2:3 results viewport (empty placeholder if needed)
+            resultsSection.classList.remove('hidden');
+          } else {
+            if (hasItems) resultsSection.classList.remove('hidden');
+            else resultsSection.classList.add('hidden');
+          }
+        }
+
+        (async () => {
+        for (const row of (data || [])) {
+          const runId = row && row.meta && row.meta.run_id ? row.meta.run_id : '';
+          const status = row && row.meta && row.meta.status ? row.meta.status : (row && row.result_url ? 'ready' : 'processing');
+
+          addResultCard({
+            run_id: runId,
+            provider: row.provider || 'Model',
+            kind: row.kind || 'image',
+            prompt: row.prompt || '',
+            result_url: row.result_url,
+            status
+          }, { prepend: false });
+        }
+      })();
+      if (isMobileUI()) ensureResultsEmptyState();
+      } catch (e) {
+        console.warn('loadRecentHistory failed', e);
+      }
+    }
+
+    async function __extractResultUrls(row) {
+  // MidJourney: if DB row doesn't carry all 4 URLs, use nb-check (taskId preferred) + local cache.
+  // For all models: attempt to extract multiple URLs from meta in a best-effort way.
+  const dedupe = (arr) => {
+    const out = [];
+    const seen = new Set();
+    (arr || []).forEach((u) => {
+      if (typeof u !== 'string') return;
+      const s = u.trim();
+      if (!s) return;
+      if (!/^https?:\/\//i.test(s)) return;
+      if (seen.has(s)) return;
+      seen.add(s);
+      out.push(s);
+    });
+    return out;
+  };
+
+  try {
+    const prov = String((row && (row.provider || row.model)) || '');
+    const isMJ = prov.toLowerCase().includes('midjourney') && String((row && row.kind) || '').toLowerCase() === 'image';
+    const runId = (row && row.meta && row.meta.run_id) ? row.meta.run_id : (row && row.run_id) ? row.run_id : '';
+    const taskId = (row && row.meta && (row.meta.task_id || row.meta.taskId)) ? (row.meta.task_id || row.meta.taskId) : '';
+    const meta = row && row.meta ? row.meta : null;
+
+    // --- MidJourney: try cache first
+    if (isMJ && runId) {
+      const cached = __mjLoadCached(runId);
+      if (cached && cached.length) return cached.slice(0, 4);
+    }
+
+    // --- Extract from meta (deep walk)
+    let urls = [];
+    try {
+      if (meta) {
+        // Prefer explicit arrays in common fields
+        const candidates = [];
+        const pushMany = (arr) => { if (Array.isArray(arr)) arr.forEach((u) => candidates.push(u)); };
+        pushMany(meta.images);
+        pushMany(meta.image_urls);
+        pushMany(meta.result_urls);
+        // Some providers store arrays nested
+        if (meta.result && meta.result.images) pushMany(meta.result.images);
+        if (meta.output && meta.output.images) pushMany(meta.output.images);
+
+        // Deep walk as fallback (covers meta.result_url, meta.urls, nested objects, etc.)
+        const walked = __mjTryExtractAllImageUrls(meta); // returns up to 4, already filters to URLs
+        urls = dedupe([...(candidates || []), ...(walked || [])]);
+      }
+    } catch (_e) {}
+
+    // --- Fallback to row.result_url (single)
+    if ((!urls || !urls.length) && row && typeof row.result_url === 'string' && row.result_url.trim()) {
+      urls = dedupe([row.result_url]);
+    }
+
+    // --- MidJourney: if still missing URLs, call nb-check and merge
+    if (isMJ && runId && (!urls || urls.length < 4)) {
+      try {
+        const nb = await __mjFetchNbCheck({ taskId, uid: (currentUser ? currentUser.id : ''), runId });
+        if (nb && nb.ok) {
+          const more = __mjTryExtractAllImageUrls(nb.js);
+          const merged = dedupe([...(urls || []), ...(more || [])]);
+          if (merged && merged.length) {
+            __mjSaveCached(runId, merged);
+            return merged.slice(0, 4);
+          }
+        }
+      } catch (_e) {}
+    }
+
+    // Return up to 4 (MJ) or as-is (other models typically 1)
+    return (urls || []).slice(0, 4);
+  } catch (e) {
+    return [];
   }
 }
 
-// Wait for result saved by the SAME KIE callback logic as Kling (video-kie-callback → Supabase)
-async function waitForSupabaseResult(uid, rid, uploadedUrl){
-  for (let i=0;i<320;i++){ // up to ~8 min (1.5s step)
-    try{
-      const { data, error } = await supabase
-        .from('user_generations')
-        .select('result_url, meta')
-        .eq('user_id', uid)
-        .filter('meta->>run_id', 'eq', rid)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      if (!error && Array.isArray(data) && data.length){
-        const row = data[0] || {};
-        const url = row.result_url || '';
-        const st  = String((row.meta && row.meta.status) || '').toLowerCase();
-        if (url && url !== uploadedUrl){
-          showVideo(url);
-          showStatus('✅ Done!','text-emerald-300');
-          window.__KIE_RUNNING__=false;
-          __updateRunEnabled();
-          try{ runBtn.textContent='Run (cost: —)'; }catch{}
-          try{ await refreshCreditsUI();
-if (modeEl) modeEl.addEventListener('change', __recalcCostUI); }catch{}
-          break;
+
+
+const __activePolls = new Map(); // runId -> token
+
+function startPollGeneration(runId, controllers) {
+  if (!runId || !controllers || !controllers.length) return;
+  if (__activePolls.has(runId)) return; // already polling this run
+  const token = { cancelled: false };
+  __activePolls.set(runId, token);
+  // Fire and forget; cleanup when done
+  pollGeneration(runId, controllers, token)
+    .catch((e) => console.warn('pollGeneration wrapper exception', e))
+    .finally(() => {
+      __activePolls.delete(runId);
+    });
+}
+
+function startSora2Poll(taskId, uid, runId, controllers) {
+  if (!taskId || !uid || !runId || !controllers || !controllers.length) return;
+  const key = 'sora2:' + runId;
+  if (__activePolls.has(key)) return;
+  const token = { cancelled: false };
+  __activePolls.set(key, token);
+  sora2Poll(taskId, uid, runId, controllers, token).finally(() => {
+    __activePolls.delete(key);
+  });
+}
+
+// Poll Sora 2 via Netlify function sora2-check (15 minutes max)
+async function sora2Poll(taskId, uid, runId, controllers, token) {
+  const deadline = Date.now() + (15 * 60 * 1000);
+  while (Date.now() < deadline) {
+    if (token && token.cancelled) return;
+    try {
+      const r = await fetch('/.netlify/functions/sora2-check?taskId=' + encodeURIComponent(taskId) + '&uid=' + encodeURIComponent(uid) + '&run_id=' + encodeURIComponent(runId), { cache: 'no-store' });
+      const j = await r.json().catch(() => null);
+      if (j && j.ok && (j.video_url || j.result_url)) {
+        const url = j.video_url || j.result_url;
+        for (let i = 0; i < controllers.length; i++) {
+          controllers[i].apply({ status: 'ready', result_url: url });
         }
-        if (st === 'failed' || st === 'canceled' || st === 'payment_failed'){
-          showStatus('❌ Generation failed, please try again later. Your credits are refunded.','text-red-300');
-          window.__KIE_RUNNING__=false;
-          __updateRunEnabled();
-          try{ runBtn.textContent='Run (cost: —)'; }catch{}
-          break;
+        return;
+      }
+      if (j && j.failed) {
+        for (let i = 0; i < controllers.length; i++) {
+          controllers[i].apply({ status: 'failed', result_url: null });
+        }
+        return;
+      }
+    } catch (e) {}
+    await new Promise(res => setTimeout(res, 1500));
+  }
+  // timeout -> mark as processing still (do not fail automatically)
+}
+
+
+async function pollGeneration(runId, controllers, token) {
+  if (!currentUser || !runId || !controllers || !controllers.length) return;
+  const maxMs = 900000;
+  const started = Date.now();
+  while (Date.now() - started < maxMs) {
+    await new Promise((r) => setTimeout(r, 3000));
+    if (token && token.cancelled) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('user_generations')
+        .select('provider, kind, prompt, result_url, meta, created_at')
+        .eq('user_id', currentUser.id)
+        .eq('meta->>run_id', runId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('pollGeneration error', error);
+        break;
+      }
+      if (!data) continue;
+
+      const status = data.meta && data.meta.status ? data.meta.status : (data.result_url ? 'ready' : 'processing');
+      const urls = await __extractResultUrls(data);
+
+      // Apply to 1..N placeholder cards
+      const expected = controllers.length || 1;
+      if (urls && urls.length) {
+        // For multi-output models (e.g., Midjourney image), keep missing slots in "processing"
+        // until we have all expected URLs (or until timeout).
+        for (let i = 0; i < expected; i++) {
+          const u = urls[i] || null;
+          controllers[i].apply({
+            status: u ? status : 'processing',
+            result_url: u
+          });
+        }
+      } else {
+        for (let i = 0; i < expected; i++) {
+          controllers[i].apply({ status: status });
         }
       }
-    }catch(e){}
-    await new Promise(r=>setTimeout(r,1500));
-  }
-  // timeout fallback
-  if (runBtn.disabled){
-    showStatus('⏳ Still processing… Please check the Usage page in a bit.','text-zinc-300');
-    window.__KIE_RUNNING__=false;
-    __updateRunEnabled();
-    try{ runBtn.textContent='Run (cost: —)'; }catch{}
+
+      // Stop conditions:
+      // - Fail/Error: stop immediately
+      // - Single-output: stop when we have any URL
+      // - Multi-output: stop only when we have all expected URLs
+      const isFail = status.toLowerCase().includes('fail') || status.toLowerCase().includes('error');
+      if (isFail) return;
+
+      if (urls && urls.length) {
+        if (expected <= 1) return;
+
+        let filled = 0;
+        for (let i = 0; i < expected; i++) if (urls[i]) filled++;
+        if (filled >= expected) {
+          // Ensure all are marked ready at the end
+          for (let i = 0; i < expected; i++) {
+            controllers[i].apply({ status: status, result_url: urls[i] || null });
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('pollGeneration exception', e);
+      break;
+    }
   }
 }
-window.__run = async function(){
-  // Disable immediately to prevent double-clicks
-  if (window.__KIE_RUNNING__) return;
-  window.__KIE_RUNNING__ = true;
-  try{ runBtn.disabled = true; }catch{}
-  const {data:authData}=await supabase.auth.getUser();
-  if(!authData.user){ window.__KIE_RUNNING__=false; __updateRunEnabled(); alert('Please log in or register first.'); return; }
 
-  // Validate sizes
-  const vid=videoEl.files[0];
-  if(!vid){ showStatus('Video is required (MP4/MOV, ≤100MB, ≤30s).','text-rose-300'); document.getElementById('guardMsg').classList.remove('hidden'); window.__KIE_RUNNING__=false; __updateRunEnabled(); return; }
-  if(vid.size>100*1024*1024){ showStatus('Video is too large (>100MB).','text-rose-300'); window.__KIE_RUNNING__=false; __updateRunEnabled(); return; }
-  const okType = (vid.type === 'video/mp4' || vid.type === 'video/quicktime');
-  const okExt = /\.(mp4|mov)$/i.test(vid.name||'');
-  if(!(okType || okExt)){ showStatus('Unsupported video format. Only MP4 or MOV is allowed.','text-rose-300'); window.__KIE_RUNNING__=false; __updateRunEnabled(); return; }
-  const dur = (__videoDurationSec != null && Number.isFinite(__videoDurationSec)) ? __videoDurationSec : null;
-  if(!dur || dur <= 0){ showStatus('Could not read video duration. Please re-select the video.','text-rose-300'); window.__KIE_RUNNING__=false; __updateRunEnabled(); return; }
-  if(dur > 30.0001){ showStatus('Video is too long (>30s). Please trim it to 30s or less.','text-rose-300'); window.__KIE_RUNNING__=false; __updateRunEnabled(); return; }
+    // === MODELS CONFIG ===
+    const MODELS = [
+      {
+        id: 'nano-banana',
+        name: 'Nano Banana',
+        emoji: '🍌',
+        subtitle: 'Image → Image',
+        category: 'image',
+        description: 'Fast image-to-image edits with up to 4 input images.',
+        endpoint: '/.netlify/functions/run-nano-banana',
+        needsImage: true,
+        maxFiles: 4,
+        aspectOptions: ['auto', '1:1', '3:4', '4:3', '9:16', '16:9'],
+        defaultAspect: 'auto',
+        durations: null,
+        costLabel: '0.5⚡ per job',
+        minCredits: 0.5
+      },
+      {
+        id: 'nano-banana-pro',
+        name: 'Nano Banana Pro',
+        emoji: '🍌',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'Studio-grade quality with multi-image fusion.',
+        endpoint: '/.netlify/functions/run-nano-banana-pro',
+        needsImage: false,
+        maxFiles: 8,
+        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: null,
+        costLabel: '2⚡ per job',
+        minCredits: 2
+      },
+      {
+        id: 'seedream-4-5',
+        name: 'Seedream 4.5',
+        emoji: '🎨',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'Seedream 4.5 creative image generator.',
+        endpoint: '/.netlify/functions/run-seedream-4-5',
+        needsImage: false,
+        maxFiles: 8,
+        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: null,
+        costLabel: '1⚡ per job',
+        minCredits: 1
+      },
+      {
+        id: 'gpt-image-1.5',
+        name: 'GPT-Image-1.5',
+        emoji: '🧠',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'OpenAI GPT-Image-1.5 for sharp, detailed visuals.',
+        endpoint: '/.netlify/functions/run-gpt-image-1-5',
+        needsImage: false,
+        maxFiles: 3,
+        aspectOptions: ['1:1', '2:3', '3:2'],
+        defaultAspect: '1:1',
+        durations: null,
+        costLabel: '2⚡ per job',
+        minCredits: 4
+      },
+      {
+        id: 'imagen',
+        name: 'Imagen Ultra',
+        emoji: '🌈',
+        subtitle: 'Text → Image',
+        category: 'image',
+        description: 'Google Imagen Ultra for high-quality text-to-image.',
+        endpoint: '/.netlify/functions/run-imagen',
+        needsImage: false,
+        maxFiles: 0,
+        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: null,
+        costLabel: '1⚡ per job',
+        minCredits: 1
+      },
+      {
+        id: 'midjourney',
+        name: 'MidJourney Image',
+        emoji: '🌀',
+        subtitle: 'Text / Image → Image',
+        category: 'image',
+        description: 'MidJourney-style image generation.',
+        endpoint: '/.netlify/functions/run-midjourney',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['2:3', '3:2', '1:1', '9:16', '16:9'],
+        defaultAspect: '2:3',
+        durations: null,
+        costLabel: '1⚡ per job',
+        minCredits: 1
+      },
+      {
+        id: 'mj-video',
+        name: 'MidJourney Video',
+        emoji: '🎬',
+        subtitle: 'Image → Video',
+        category: 'video',
+        description: 'Turn an image into a MidJourney-style motion.',
+        endpoint: '/.netlify/functions/run-mj-video',
+        needsImage: true,
+        maxFiles: 1,
+        aspectOptions: [],
+        defaultAspect: '',
+        durations: [5],
+        costLabel: '2⚡ per job',
+        minCredits: 2
+      },
+            {
+        id: 'veo31-fast',
+        name: 'Veo 3.1 Fast',
+        emoji: '🎥',
+        subtitle: 'Text → Video (start / last frames optional)',
+        category: 'video',
+        description: 'Veo 3.1 Fast — 8s only, vertical/horizontal only.',
+        endpoint: '/.netlify/functions/run-veo31',
+        needsImage: false,
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: true,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [8],
+        costLabel: 'Credits 7⚡-20⚡',
+        minCredits: 5
+      },
+      {
+        id: 'veo31',
+        name: 'Veo 3.1 Quality',
+        emoji: '🎥',
+        subtitle: 'Text → Video (start / last frames optional)',
+        category: 'video',
+        description: 'Veo 3.1 — 8s only, vertical/horizontal only.',
+        endpoint: '/.netlify/functions/run-veo31',
+        needsImage: false,
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: true,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [8],
+        costLabel: 'Credits 7⚡-20⚡',
+        minCredits: 5
+      },
+      {
+        id: 'veo3-fast',
+        name: 'Veo 3 Fast',
+        emoji: '🎥',
+        subtitle: 'Text / (Image) → Video',
+        category: 'video',
+        description: 'Veo 3 Fast — 8s only, vertical/horizontal only.',
+        endpoint: '/.netlify/functions/run-veo3',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [8],
+        costLabel: 'Credits 7⚡-20⚡',
+        minCredits: 5
+      },
+      {
+        id: 'veo3',
+        name: 'Veo 3 Quality',
+        emoji: '🎥',
+        subtitle: 'Text / (Image) → Video',
+        category: 'video',
+        description: 'Veo 3 — 8s only, vertical/horizontal only.',
+        endpoint: '/.netlify/functions/run-veo3',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [8],
+        costLabel: 'Credits 7⚡-20⚡',
+        minCredits: 5
+      },
+            {
+        id: 'sora2',
+        name: 'Sora 2',
+        emoji: '🎞️',
+        subtitle: 'Text / (Image) → Video',
+        category: 'video',
+        description: 'Sora 2 video generation (10s / 15s).',
+        endpoint: '/.netlify/functions/run-sora2',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [10, 15],
+        costLabel: 'Credits Sora -3⚡ Pro 20-25⚡',
+        minCredits: 7
+      },
+            {
+        id: 'runway',
+        name: 'Runway',
+        emoji: '🎞️',
+        subtitle: 'Text / (Image) → Video',
+        category: 'video',
+        description: 'Runway video generation (5s).',
+        endpoint: '/.netlify/functions/run-runway',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['3:4', '1:1', '4:3', '16:9', '9:16'],
+        defaultAspect: '3:4',
+        durations: [5],
+        costLabel: 'Credits 4⚡',
+        minCredits: 4
+      },
+      {
+        id: 'kling25',
+        name: 'Kling 2.5 Turbo',
+        emoji: '⚡',
+        subtitle: 'Text / Image → Video',
+        category: 'video',
+        description: 'Fast Kling 2.5 text & image to video.',
+        endpoint: '/.netlify/functions/run-kling',
+        needsImage: false,
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: true,
+        aspectOptions: ['1:1', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: [5, 10],
+        costLabel: 'Credits 5s-4⚡ 10s-8⚡',
+        minCredits: 4
+      },
+      {
+        id: 'kling26',
+        name: 'Kling 2.6',
+        emoji: '🎧',
+        subtitle: 'Text / Image → Video (sound optional)',
+        category: 'video',
+        description: 'Kling 2.6 high-quality video (sound optional).',
+        endpoint: '/.netlify/functions/run-kling-26',
+        needsImage: false,
+        maxFiles: 1,
+        aspectOptions: ['1:1', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: [5, 10],
+        costLabel: 'Credits 5s-5⚡ 10s-9⚡',
+        minCredits: 5
+      },
+            {
+        id: 'kling21',
+        name: 'Kling v2.1 Pro',
+        emoji: '🖼️',
+        subtitle: 'Image → Video (start / end frames)',
+        category: 'video',
+        description: 'Kling 2.1 Pro image-to-video with optional last frame.',
+        endpoint: '/.netlify/functions/run-kling21',
+        needsImage: true,
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: false,
+        aspectOptions: ['1:1', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: [5, 10],
+        costLabel: 'Credits 5s-5⚡ 10s-9⚡',
+        minCredits: 5
+      },
+            {
+        id: 'aleph',
+        name: 'Aleph',
+        emoji: '🧪',
+        subtitle: 'Video → Video (optional image)',
+        category: 'video',
+        description: 'Aleph video-to-video transformations (video required).',
+        endpoint: '/.netlify/functions/run-aleph',
+        needsImage: false,
+        maxFiles: 0,
+        needsVideo: true,
+        allowOptionalImage: true,
+        aspectOptions: [],
+        durations: [5],
+        costLabel: 'Credits 9⚡',
+        minCredits: 4
+      }
+    ];;
 
-  const img=imageEl.files[0];
-  if(!img){ showStatus('Reference image is required. Please upload an image.','text-rose-300'); document.getElementById('guardMsg').classList.remove('hidden'); window.__KIE_RUNNING__=false; __updateRunEnabled(); return; }
-  if(img && img.size>10*1024*1024){ showStatus('Image is too large (>10MB).','text-rose-300'); window.__KIE_RUNNING__=false; __updateRunEnabled(); return; }
+    let currentModel = MODELS[0];
+    let currentMode = 'image';
+    let currentVeoFamily = null; // 'veo3' | 'veo31'
+    let currentVeoVariant = 'fast'; // 'fast' | 'quality'
+    let uploadedFiles = [];
+    // Models that should APPEND images when user uploads again (multi-image support)
+    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana', 'gpt-image-1', 'seedream-4-5']);
 
-  const _prompt=(promptEl.value||'').trim();
-  // Inputs valid — hide guard
-  document.getElementById('guardMsg').classList.add('hidden');
-
-  // Credits guard
-  try{
-    const c = await getCredits();
-    const need = (__computedCost != null && Number.isFinite(__computedCost)) ? __computedCost : null;
-    if (!need){ showStatus('Cost could not be calculated. Please re-select the video.','text-rose-300'); window.__KIE_RUNNING__=false; __updateRunEnabled(); return; }
-    if (c < need){ showStatus(`Not enough credits (need ${need}).`,'text-rose-300'); window.__KIE_RUNNING__=false; __updateRunEnabled(); return; }
-  }catch{}
-
-  runBtn.disabled = true; runBtn.textContent = 'Working…';
-  showStatus('Submitting…','text-zinc-400');
-  // Hide old play/download and reset result box
-  try{ document.getElementById('playBtn')?.classList.add('hidden'); }catch{}
-  try{ downloadLink?.classList.add('hidden'); downloadLink.href='#'; }catch{}
-  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… (up to ~8 min)</span>';
-
-  try{
-    const uid = authData.user.id;
-    const aspectRatio = ASPECT_RATIO_DEFAULT || '16:9';
-
-    // Client run_id for idempotency across retries of the same click
-    const run_id = `${uid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-    // Upload video via kie-upload
-    const vfd = new FormData();
-    vfd.append('file', vid, vid.name || 'video.mp4');
-    // Upload to Supabase (video + optional reference image) and get public URLs
-const supaUpload = await (async () => {
-  const supabaseClient = supabase; // already initialized
-  let videoUrl = "";
-  let imageUrl = "";
-
-  const fileInput = document.querySelector('input[type="file"][accept^="video"], input#referenceVideo');
-  const vid = fileInput && fileInput.files && fileInput.files[0];
-  if (vid) {
-    const key = `uploads/${uid}-${Date.now()}-${vid.name}`;
-    const { error } = await supabaseClient.storage.from("video").upload(key, vid);
-    if (error) throw error;
-    const { data: { publicUrl } } = supabaseClient.storage.from("video").getPublicUrl(key);
-    videoUrl = publicUrl;
-  }
-
-  const imageInput = document.querySelector('input[type="file"][accept^="image"], input#referenceImage');
-  const img2 = imageInput && imageInput.files && imageInput.files[0];
-  if (img2) {
-    const key2 = `uploads/${uid}-${Date.now()}-${img2.name}`;
-    const { error } = await supabaseClient.storage.from("video").upload(key2, img2);
-    if (error) throw error;
-    const { data: { publicUrl } } = supabaseClient.storage.from("video").getPublicUrl(key2);
-    imageUrl = publicUrl;
-  }
-
-  return { videoUrl, imageUrl };
-})(); 
+    function __renderImageThumbs() {
+      const thumbs = document.getElementById('imageThumbs');
+      if (!thumbs) return;
+      thumbs.innerHTML = '';
+      (uploadedFiles || []).forEach((file, index) => {
+        const url = URL.createObjectURL(file);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
+        const img = document.createElement('img');
+        img.src = url;
+        img.className = 'h-full w-full object-cover';
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white/90 rounded-full h-5 w-5 text-[11px] leading-none flex items-center justify-center';
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', () => {
+          try { URL.revokeObjectURL(url); } catch (_) {}
+          uploadedFiles.splice(index, 1);
+          __renderImageThumbs();
+        });
+        wrapper.appendChild(img);
+        wrapper.appendChild(closeBtn);
+        thumbs.appendChild(wrapper);
+      });
+    }
 
 
-    // Use Supabase URLs directly (no .json(), not a fetch response)
-    let videoUrl = supaUpload.videoUrl || "";
-    let imageUrl = supaUpload.imageUrl || "";
+    // Frames (Veo 3.1 + Kling 2.1)
+    let startFrameFile = null;
+    let lastFrameFile = null;
 
-    // Reference image: 1:1 Nano Banana logic (single file; direct-to-Supabase via kieUploadBridge)
-    imageUrl = imageUrl || '';
-    if (img){
+    // Aleph: video required + optional image
+    let alephVideoFile = null;
+    let alephImageFile = null;
+    let __alephVideoObjURL = null;
+
+    let currentAspect = null;
+    let currentDuration = null;
+let currentKlingSound = false;
+    let currentResolution = '1K';
+    let currentSoraTier = 'base';
+
+    function setMode(mode) {
+      currentMode = mode;
+      const btnImage = document.getElementById('btnModeImage');
+      const btnVideo = document.getElementById('btnModeVideo');
+
+      if (mode === 'image') {
+        btnImage.classList.add('bg-gradient-to-r','from-indigo-500','to-violet-500','text-white','font-semibold');
+        btnVideo.classList.remove('bg-gradient-to-r','from-indigo-500','to-violet-500','text-white','font-semibold');
+        btnVideo.classList.add('text-white/70');
+      } else {
+        btnVideo.classList.add('bg-gradient-to-r','from-indigo-500','to-violet-500','text-white','font-semibold');
+        btnImage.classList.remove('bg-gradient-to-r','from-indigo-500','to-violet-500','text-white','font-semibold');
+        btnImage.classList.add('text-white/70');
+      }
+
+      // Default model per mode
+      const defaultId = mode === 'image' ? 'nano-banana-pro' : 'veo31-fast';
+      const def = MODELS.find(m => m.id === defaultId);
+      if (def) {
+        currentModel = def;
+        updateModelButtonLabels();
+        configureControlsForModel();
+      }
+    }
+
+
+    function updateModelButtonLabels() {
+      const labelText = currentModel ? currentModel.name : 'Choose model';
+      const btnLabel = document.getElementById('modelButtonLabel');
+      if (btnLabel) btnLabel.textContent = labelText;
+
+      const costLabelEl = document.getElementById('costLabel');
+      if (costLabelEl && currentModel && currentModel.costLabel) {
+        costLabelEl.textContent = currentModel.costLabel;
+      }
+    }
+    function updateCostLabelForKling26() {
+      if (!currentModel || currentModel.id !== 'kling26') return;
+      const costLabelEl = document.getElementById('costLabel');
+      if (!costLabelEl) return;
+      costLabelEl.textContent = currentKlingSound ? 'Credits 5s-9⚡ 10s-16⚡' : 'Credits 5s-5⚡ 10s-9⚡';
+    }
+
+
+
+    function showStatus(message, tone = 'normal') {
+      const el = document.getElementById('status');
+      el.textContent = message || '';
+      el.className =
+        'text-[11px] min-h-[1.1rem] ' +
+        (tone === 'error'
+          ? 'text-red-300'
+          : tone === 'success'
+          ? 'text-emerald-300'
+          : 'text-amber-200/80');
+    }
+
+    function openModelOverlay() {
+      const overlay = document.getElementById('modelOverlay');
+      overlay.classList.remove('hidden');
+      renderOverlayModels();
+      const input = document.getElementById('overlayModelSearch');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    function closeModelOverlay() {
+      const overlay = document.getElementById('modelOverlay');
+      overlay.classList.add('hidden');
+    }
+
+    function renderOverlayModels() {
+      const listEl = document.getElementById('overlayModelList');
+      const searchValue = (document.getElementById('overlayModelSearch').value || '').toLowerCase().trim();
+      listEl.innerHTML = '';
+
+      let filtered = MODELS.filter((m) => {
+        const matchesMode = currentMode === 'image' ? m.category === 'image' : m.category === 'video';
+        const matchesSearch =
+          !searchValue ||
+          m.name.toLowerCase().includes(searchValue) ||
+          (m.subtitle && m.subtitle.toLowerCase().includes(searchValue));
+        return matchesMode && matchesSearch;
+      });
+
+      // Professionalize Veo list: show only "Veo 3" and "Veo 3.1" in the picker.
+      // Fast / Quality is selected in the bottom bar.
+      let overlayModels = filtered;
+      if (currentMode === 'video') {
+        const hasVeo3 = filtered.some((m) => m.id === 'veo3-fast' || m.id === 'veo3');
+        const hasVeo31 = filtered.some((m) => m.id === 'veo31-fast' || m.id === 'veo31');
+
+        filtered = filtered.filter((m) => !['veo3-fast', 'veo3', 'veo31-fast', 'veo31'].includes(m.id));
+
+        const matchGroup = (label) => {
+          if (!searchValue) return true;
+          const l = label.toLowerCase();
+          return l.includes(searchValue) || searchValue.includes('veo');
+        };
+
+        overlayModels = [];
+        if (hasVeo31 && matchGroup('Veo 3.1')) {
+          overlayModels.push({
+            id: '__veo31',
+            name: 'Veo 3.1',
+            emoji: '🎥',
+            subtitle: 'Text → Video (Fast / Quality in bottom)',
+            category: 'video',
+            __veoFamily: 'veo31',
+            __fastId: 'veo31-fast',
+            __qualityId: 'veo31',
+          });
+        }
+        if (hasVeo3 && matchGroup('Veo 3')) {
+          overlayModels.push({
+            id: '__veo3',
+            name: 'Veo 3',
+            emoji: '🎥',
+            subtitle: 'Text / (Image) → Video (Fast / Quality in bottom)',
+            category: 'video',
+            __veoFamily: 'veo3',
+            __fastId: 'veo3-fast',
+            __qualityId: 'veo3',
+          });
+        }
+
+        overlayModels.push(...filtered);
+      }
+
+      overlayModels.forEach((model) => {
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className =
+          'w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-slate-900/90 border-b border-white/5 last:border-b-0';
+        row.innerHTML = `
+          <div class="w-7 h-7 flex items-center justify-center text-lg">${model.emoji}</div>
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium">${model.name}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-950/70 border border-white/10 text-white/70">${
+                model.category === 'image' ? 'IMAGE' : 'VIDEO'
+              }</span>
+            </div>
+            <div class="mt-1 text-xs text-white/55">${model.subtitle || ''}</div>
+          </div>
+        `;
+
+        row.addEventListener('click', () => {
+          if (model.__veoFamily) {
+            currentModel = MODELS.find((m) => m.id === model.__fastId) || currentModel;
+            currentVeoFamily = model.__veoFamily;
+            currentVeoVariant = 'fast';
+          } else {
+            currentModel = model;
+            currentVeoFamily = null;
+            currentVeoVariant = 'fast';
+          }
+          closeModelOverlay();
+          updateModelButtonLabels();
+          configureControlsForModel();
+        });
+
+        listEl.appendChild(row);
+      });
+
+      if (!overlayModels.length) {
+        const empty = document.createElement('div');
+        empty.className = 'p-6 text-center text-white/55 text-sm';
+        empty.textContent = 'No models found.';
+        listEl.appendChild(empty);
+      }
+    }
+
+    function configureControlsForModel() {
+      if (!currentModel) return;
+      const aspectBlock = document.getElementById('aspectBlock');
+      const aspectPills = document.getElementById('aspectPills');
+      const durationBlock = document.getElementById('durationBlock');
+      const soraTierBlock = document.getElementById('soraTierBlock');
+      const soraTierPills = document.getElementById('soraTierPills');
+      const durationPills = document.getElementById('durationPills');
+      const klingSoundBlock = document.getElementById('klingSoundBlock');
+      const klingSoundPills = document.getElementById('klingSoundPills');
+
+      const resolutionBlock = document.getElementById('resolutionBlock');
+      const resolutionPills = document.getElementById('resolutionPills');
+
+      const veoQualityBlock = document.getElementById('veoQualityBlock');
+      const veoQualityPills = document.getElementById('veoQualityPills');
+
+      currentAspect = currentModel.defaultAspect || (currentModel.aspectOptions && currentModel.aspectOptions[0]) || null;
+      currentDuration = currentModel.durations && currentModel.durations.length ? currentModel.durations[0] : null;
+
+      // Veo Fast / Quality toggle (only for Veo 3 and Veo 3.1)
+      const isVeo3 = currentModel.id === 'veo3-fast' || currentModel.id === 'veo3';
+      const isVeo31 = currentModel.id === 'veo31-fast' || currentModel.id === 'veo31';
+      if (isVeo3 || isVeo31) {
+        currentVeoFamily = isVeo31 ? 'veo31' : 'veo3';
+        currentVeoVariant = (currentModel.id.endsWith('-fast') ? 'fast' : 'quality');
+
+        if (veoQualityBlock) veoQualityBlock.classList.remove('hidden');
+        if (veoQualityPills) {
+          veoQualityPills.innerHTML = '';
+          const makeBtn = (label, variant) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = label;
+            b.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+            if (variant === currentVeoVariant) b.classList.add('chip-active');
+            b.addEventListener('click', () => {
+              if (!currentVeoFamily) return;
+              const nextId =
+                currentVeoFamily === 'veo31'
+                  ? (variant === 'fast' ? 'veo31-fast' : 'veo31')
+                  : (variant === 'fast' ? 'veo3-fast' : 'veo3');
+              const nextModel = MODELS.find((m) => m.id === nextId);
+              if (!nextModel) return;
+              currentModel = nextModel;
+              currentVeoVariant = variant;
+              updateModelButtonLabels();
+              configureControlsForModel();
+            });
+            return b;
+          };
+          veoQualityPills.appendChild(makeBtn('Fast', 'fast'));
+          veoQualityPills.appendChild(makeBtn('Quality', 'quality'));
+        }
+      } else {
+        currentVeoFamily = null;
+        currentVeoVariant = 'fast';
+        if (veoQualityBlock) veoQualityBlock.classList.add('hidden');
+        if (veoQualityPills) veoQualityPills.innerHTML = '';
+      }
+
+
+      // Sora 2 tier toggle (Standard / Pro) — shown only for Sora 2
+      if (currentModel.id === 'sora2') {
+        currentSoraTier = 'base';
+        if (soraTierBlock) soraTierBlock.classList.remove('hidden');
+        if (soraTierPills) {
+          soraTierPills.innerHTML = '';
+          const makeTierBtn = (label, val) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = label;
+            b.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+            if (currentSoraTier === val) b.classList.add('chip-active');
+            b.addEventListener('click', () => {
+              currentSoraTier = val;
+              Array.from(soraTierPills.querySelectorAll('button')).forEach(x => x.classList.remove('chip-active'));
+              b.classList.add('chip-active');
+            });
+            return b;
+          };
+          // Default: Standard (Sora 2)
+          soraTierPills.appendChild(makeTierBtn('Sora 2', 'base'));
+          soraTierPills.appendChild(makeTierBtn('Pro', 'pro'));
+          // ensure default active exists
+          const active = soraTierPills.querySelector('button.chip-active');
+          if (!active) {
+            currentSoraTier = 'base';
+            soraTierPills.querySelector('button')?.classList.add('chip-active');
+          }
+        }
+      } else {
+        currentSoraTier = 'base';
+        if (soraTierBlock) soraTierBlock.classList.add('hidden');
+        if (soraTierPills) soraTierPills.innerHTML = '';
+      }
+
+      
+
+      // Resolution pills (Nano Banana Pro only) — shown only for nano-banana-pro
+      if (currentModel.id === 'nano-banana-pro') {
+        if (resolutionBlock) resolutionBlock.classList.remove('hidden');
+        if (resolutionPills) {
+          resolutionPills.innerHTML = '';
+          const opts = ['1K', '2K', '4K'];
+          if (!currentResolution || !opts.includes(currentResolution)) currentResolution = '1K';
+          opts.forEach((val) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = val;
+            btn.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+            if (val === currentResolution) btn.classList.add('chip-active');
+            btn.addEventListener('click', () => {
+              currentResolution = val;
+              Array.from(resolutionPills.children).forEach((child) => child.classList.remove('chip-active'));
+              btn.classList.add('chip-active');
+            });
+            resolutionPills.appendChild(btn);
+          });
+        }
+      } else {
+        if (resolutionBlock) resolutionBlock.classList.add('hidden');
+        if (resolutionPills) resolutionPills.innerHTML = '';
+        currentResolution = '1K';
+      }
+
+
+      // Aspect pills
+      if (currentModel.aspectOptions && currentModel.aspectOptions.length) {
+        aspectBlock.classList.remove('hidden');
+        aspectPills.innerHTML = '';
+        currentModel.aspectOptions.forEach((val) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = val;
+          btn.className =
+            'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+          btn.addEventListener('click', () => {
+            currentAspect = val;
+            Array.from(aspectPills.children).forEach((child) => {
+              child.classList.remove('chip-active');
+            });
+            btn.classList.add('chip-active');
+          });
+          aspectPills.appendChild(btn);
+        });
+
+        // Set default active
+        if (aspectPills.children.length) {
+          Array.from(aspectPills.children).forEach((child) => {
+            if (child.textContent === currentAspect) {
+              child.classList.add('chip-active');
+            }
+          });
+        }
+      } else {
+        aspectBlock.classList.add('hidden');
+        aspectPills.innerHTML = '';
+      }
+
+      
+      // Kling 2.6 sound toggle (default: no sound)
+      if (currentModel.id === 'kling26') {
+        currentKlingSound = false; // default no sound when switching to Kling 2.6
+        if (klingSoundBlock) klingSoundBlock.classList.remove('hidden');
+        if (klingSoundPills) {
+          klingSoundPills.innerHTML = '';
+          const makeBtn = (label, val) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'chip px-2 py-0.5 text-xs font-semibold text-white/80 hover:text-white hover:bg-white/5';
+            b.textContent = label;
+            b.dataset.value = String(val);
+            b.addEventListener('click', () => {
+              currentKlingSound = (String(val) === 'true');
+              [...klingSoundPills.querySelectorAll('button')].forEach((x) => x.classList.remove('chip-active'));
+              b.classList.add('chip-active');
+              updateCostLabelForKling26();
+            });
+            return b;
+          };
+          const b0 = makeBtn('No sound', false);
+          const b1 = makeBtn('With sound', true);
+          klingSoundPills.appendChild(b0);
+          klingSoundPills.appendChild(b1);
+          b0.classList.add('chip-active');
+        }
+        updateCostLabelForKling26();
+      } else {
+        currentKlingSound = false;
+        if (klingSoundBlock) klingSoundBlock.classList.add('hidden');
+        if (klingSoundPills) klingSoundPills.innerHTML = '';
+      }
+
+// Duration pills
+      if (currentModel.category === 'video' && currentModel.durations && currentModel.durations.length) {
+        durationBlock.classList.remove('hidden');
+        durationPills.innerHTML = '';
+        currentModel.durations.forEach((val) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = val;
+          btn.className =
+            'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+          btn.addEventListener('click', () => {
+            currentDuration = val;
+            Array.from(durationPills.children).forEach((child) => {
+              child.classList.remove('chip-active');
+            });
+            btn.classList.add('chip-active');
+          });
+          durationPills.appendChild(btn);
+        });
+
+        if (durationPills.children.length) {
+          Array.from(durationPills.children).forEach((child) => {
+            if (Number(child.textContent) === Number(currentDuration)) {
+              child.classList.add('chip-active');
+            }
+          });
+        }
+      } else {
+        durationBlock.classList.add('hidden');
+        durationPills.innerHTML = '';
+      }
+
+      // Reset previews when model changes
+      uploadedFiles = [];
+      startFrameFile = null;
+      lastFrameFile = null;
+      alephVideoFile = null;
+      alephImageFile = null;
+
+      const thumbs = document.getElementById('imageThumbs');
+      if (thumbs) thumbs.innerHTML = '';
+      const imageInput = document.getElementById('imageInput');
+      if (imageInput) imageInput.value = '';
+      if (imageInput) imageInput.multiple = !!(currentModel.maxFiles && currentModel.maxFiles > 1);
+
+      const startWrap = document.getElementById('framesUploadWrap');
+      const startThumb = document.getElementById('startFrameThumb');
+      const lastThumb = document.getElementById('lastFrameThumb');
+      const startInput = document.getElementById('startFrameInput');
+      const lastInput = document.getElementById('lastFrameInput');
+      if (startThumb) startThumb.innerHTML = '';
+      if (lastThumb) lastThumb.innerHTML = '';
+      if (startInput) startInput.value = '';
+      if (lastInput) lastInput.value = '';
+
+      const alephWrap = document.getElementById('alephUploadWrap');
+      const alephVideoThumb = document.getElementById('alephVideoThumb');
+      const alephImageThumb = document.getElementById('alephImageThumb');
+      const alephVideoInput = document.getElementById('alephVideoInput');
+      const alephImageInput = document.getElementById('alephImageInput');
+      if (alephVideoThumb) alephVideoThumb.innerHTML = '';
+      if (alephImageThumb) alephImageThumb.innerHTML = '';
+      if (alephVideoInput) alephVideoInput.value = '';
+      if (alephImageInput) alephImageInput.value = '';
+
+      // Upload UI switching
+      const uploadBtn = document.getElementById('uploadBtn');
+      const uploadBtnLabel = document.getElementById('uploadBtnLabel');
+
+      const isFrames = !!currentModel.useFrames;
+      const isAleph = !!currentModel.needsVideo;
+
+      // Default: hide everything, then enable what we need
+      if (uploadBtn) uploadBtn.classList.add('hidden');
+      if (thumbs) thumbs.classList.add('hidden');
+      if (startWrap) {
+        startWrap.classList.add('hidden');
+        startWrap.classList.remove('flex');
+      }
+      if (alephWrap) {
+        alephWrap.classList.add('hidden');
+        alephWrap.classList.remove('flex');
+      }
+
+      if (isFrames) {
+        if (startWrap) {
+          startWrap.classList.remove('hidden');
+          startWrap.classList.add('flex');
+        }
+      } else if (isAleph) {
+        if (alephWrap) {
+          alephWrap.classList.remove('hidden');
+          alephWrap.classList.add('flex');
+        }
+      } else {
+        // General image upload for models that allow image input
+        if (currentModel && Number(currentModel.maxFiles || 0) > 0) {
+          if (uploadBtn) uploadBtn.classList.remove('hidden');
+          if (thumbs) thumbs.classList.remove('hidden');
+          if (uploadBtnLabel) uploadBtnLabel.textContent = (currentModel.category === 'video') ? 'Upload image' : 'Upload image';
+        }
+      }
+    
+      // Mobile quick options (UI only)
+      updateMobileQuickOptions();
+}
+    // ------------------------------------------------------------
+    // Mobile quick options (UI only): AR / Duration compact pickers
+    // ------------------------------------------------------------
+    function updateMobileQuickOptions() {
+      const arBtn = document.getElementById('mobileAspectBtn');
+      const arLabel = document.getElementById('mobileAspectLabel');
+      const durBtn = document.getElementById('mobileDurationBtn');
+      const durLabel = document.getElementById('mobileDurationLabel');
+
+      if (!arBtn || !arLabel || !durBtn || !durLabel) return;
+
+      if (!currentModel) {
+        arBtn.classList.add('hidden');
+        durBtn.classList.add('hidden');
+        return;
+      }
+
+      // AR
+      if (currentModel.aspectOptions && currentModel.aspectOptions.length) {
+        arBtn.classList.remove('hidden');
+        arLabel.textContent = currentAspect || currentModel.aspectOptions[0];
+      } else {
+        arBtn.classList.add('hidden');
+      }
+
+      // Duration (ONLY for video models that actually have durations)
+      if (currentModel.category === 'video' && Array.isArray(currentModel.durations) && currentModel.durations.length) {
+        durBtn.classList.remove('hidden');
+        const val = (currentDuration != null ? String(currentDuration) : String(currentModel.durations[0]));
+        durLabel.textContent = val + 's';
+      } else {
+        durBtn.classList.add('hidden');
+      }
+    }
+
+    function openMobilePicker(type) {
+      const overlay = document.getElementById('mobileOptionOverlay');
+      const title = document.getElementById('mobileOptionTitle');
+      const list = document.getElementById('mobileOptionList');
+      if (!overlay || !title || !list || !currentModel) return;
+
+      let options = [];
+      let current = null;
+
+      if (type === 'aspect') {
+        options = (currentModel.aspectOptions || []).slice();
+        current = String(currentAspect || '');
+        title.textContent = 'Aspect ratio';
+      } else if (type === 'duration') {
+        // Only allow for proper video models
+        if (!(currentModel.category === 'video' && Array.isArray(currentModel.durations) && currentModel.durations.length)) return;
+        options = currentModel.durations.map((v) => String(v));
+        current = String(currentDuration != null ? currentDuration : '');
+        title.textContent = 'Duration';
+      } else {
+        return;
+      }
+
+      list.innerHTML = '';
+      options.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className =
+          'w-full flex items-center justify-between rounded-2xl border border-white/10 bg-slate-900/40 px-4 py-3 text-sm hover:bg-slate-900/60';
+        const left = document.createElement('span');
+        left.textContent = type === 'duration' ? (opt + 's') : opt;
+        const right = document.createElement('span');
+        right.className = 'text-white/60';
+        right.textContent = String(opt) === String(current) ? 'Selected' : '';
+        btn.appendChild(left);
+        btn.appendChild(right);
+
+        btn.addEventListener('click', () => {
+          if (type === 'aspect') {
+            currentAspect = opt;
+            // sync desktop pills if present
+            const aspectPills = document.getElementById('aspectPills');
+            if (aspectPills) {
+              Array.from(aspectPills.children).forEach((child) => {
+                child.classList.toggle('chip-active', child.textContent === opt);
+              });
+            }
+          } else if (type === 'duration') {
+            currentDuration = opt;
+            const durationPills = document.getElementById('durationPills');
+            if (durationPills) {
+              Array.from(durationPills.children).forEach((child) => {
+                child.classList.toggle('chip-active', child.textContent === String(opt));
+              });
+            }
+          }
+          updateMobileQuickOptions();
+          closeMobilePicker();
+        });
+
+        list.appendChild(btn);
+      });
+
+      overlay.classList.remove('hidden');
+    }
+
+    function closeMobilePicker() {
+      const overlay = document.getElementById('mobileOptionOverlay');
+      if (overlay) overlay.classList.add('hidden');
+    }
+
+    // Wire mobile picker events (UI only)
+    // NOTE: This script tag appears before the picker HTML in the document,
+    // so we must (re)bind after DOMContentLoaded as well.
+    function wireMobilePickersOnce() {
+      if (wireMobilePickersOnce._done) return;
+
+      const arBtn = document.getElementById('mobileAspectBtn');
+      const durBtn = document.getElementById('mobileDurationBtn');
+      const closeBtn = document.getElementById('mobileOptionClose');
+      const bg = document.getElementById('mobileOptionOverlayBg');
+      const overlay = document.getElementById('mobileOptionOverlay');
+
+      // If the picker HTML is not in the DOM yet, try again after DOMContentLoaded.
+      if (!overlay) return;
+
+      if (arBtn) arBtn.addEventListener('click', () => openMobilePicker('aspect'));
+      if (durBtn) durBtn.addEventListener('click', () => openMobilePicker('duration'));
+      if (closeBtn) closeBtn.addEventListener('click', closeMobilePicker);
+      if (bg) bg.addEventListener('click', closeMobilePicker);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMobilePicker();
+      });
+
+      wireMobilePickersOnce._done = true;
+    }
+
+    wireMobilePickersOnce();
+    window.addEventListener('DOMContentLoaded', wireMobilePickersOnce);
+
+
+    // MODE TOGGLE
+    document.getElementById('btnModeImage').addEventListener('click', () => setMode('image'));
+    document.getElementById('btnModeVideo').addEventListener('click', () => setMode('video'));
+
+    // MODEL BUTTON
+    document.getElementById('modelButton').addEventListener('click', openModelOverlay);
+    document.getElementById('closeOverlay').addEventListener('click', closeModelOverlay);
+    document.getElementById('overlayModelSearch').addEventListener('input', renderOverlayModels);
+    document.getElementById('modelOverlay').addEventListener('click', (e) => {
+      if (e.target.id === 'modelOverlay') closeModelOverlay();
+    });
+
+    // UPLOAD + PREVIEW
+    document.getElementById('uploadBtn').addEventListener('click', () => {
+      document.getElementById('imageInput').click();
+    });
+
+    document.getElementById('imageInput').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files || []).filter(f => (f && f.type && f.type.startsWith('image/')));
+      if (!currentModel) { e.target.value = ''; return; }
+      const max = currentModel.maxFiles || 1;
+
+      // For select multi-image models, append new files instead of replacing existing ones.
+      if (__MULTI_APPEND_IMAGE_MODELS.has(currentModel.id) && max > 1) {
+        uploadedFiles = (uploadedFiles || []).concat(files).slice(0, max);
+      } else {
+        uploadedFiles = files.slice(0, max);
+      }
+
+      __renderImageThumbs();
+
+      // Allow selecting the same file again later
+      e.target.value = '';
+    });
+
+    // Drag & Drop support: drop images anywhere on the generator bar to upload
+    (function __enableGeneratorDragDrop() {
+      const dock = document.getElementById('generatorCard') || document.getElementById('generatorDock');
+      if (!dock) return;
+
+      const prevent = (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+      };
+
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((t) => {
+        dock.addEventListener(t, prevent);
+      });
+
+      dock.addEventListener('drop', (ev) => {
+        try {
+          const dt = ev.dataTransfer;
+          const dropped = Array.from((dt && dt.files) ? dt.files : []).filter(
+            (f) => (f && f.type && f.type.startsWith('image/'))
+          );
+          if (!dropped.length) return;
+          if (!currentModel) return;
+
+          // Do not interfere with frame-based video models (start/last frame) or Aleph video upload UI
+          if (currentModel.useFrames || currentModel.needsVideo) return;
+
+          const max = currentModel.maxFiles || 1;
+
+          // Multi-image models: append; single-image models: replace
+          if (__MULTI_APPEND_IMAGE_MODELS.has(currentModel.id) && max > 1) {
+            uploadedFiles = (uploadedFiles || []).concat(dropped).slice(0, max);
+          } else {
+            uploadedFiles = dropped.slice(0, max);
+          }
+
+          __renderImageThumbs();
+
+          // Allow dropping the same file again later in some browsers
+          const imageInput = document.getElementById('imageInput');
+          if (imageInput) imageInput.value = '';
+        } catch (e) {
+          console.warn('drag-drop upload failed', e);
+        }
+      });
+    })();
+
+
+    // START / LAST FRAME (Veo 3.1 + Kling 2.1)
+    document.getElementById('startFrameBtn').addEventListener('click', () => {
+      document.getElementById('startFrameInput').click();
+    });
+    document.getElementById('lastFrameBtn').addEventListener('click', () => {
+      document.getElementById('lastFrameInput').click();
+    });
+
+    function renderSingleThumb(file, containerEl, onRemove) {
+      containerEl.innerHTML = '';
+      if (!file) return;
+
+    
+      const url = URL.createObjectURL(file);
+      const wrapper = document.createElement('div');
+      wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
+      const img = document.createElement('img');
+      img.src = url;
+      img.className = 'h-full w-full object-cover';
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
+      closeBtn.textContent = '×';
+      closeBtn.addEventListener('click', () => {
+        onRemove();
+        wrapper.remove();
+      });
+      wrapper.appendChild(img);
+      wrapper.appendChild(closeBtn);
+      containerEl.appendChild(wrapper);
+    }
+
+    document.getElementById('startFrameInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      startFrameFile = file;
+      renderSingleThumb(startFrameFile, document.getElementById('startFrameThumb'), () => {
+        startFrameFile = null;
+        document.getElementById('startFrameInput').value = '';
+        // If start is cleared, last is not allowed
+        lastFrameFile = null;
+        document.getElementById('lastFrameInput').value = '';
+        document.getElementById('lastFrameThumb').innerHTML = '';
+      });
+    });
+
+    document.getElementById('lastFrameInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      // Enforce: last cannot be used without start
+      if (!startFrameFile && file) {
+        document.getElementById('lastFrameInput').value = '';
+        showStatus('Last frame requires a Start frame first.', 'error');
+        return;
+      }
+      lastFrameFile = file;
+      renderSingleThumb(lastFrameFile, document.getElementById('lastFrameThumb'), () => {
+        lastFrameFile = null;
+        document.getElementById('lastFrameInput').value = '';
+      });
+    });
+
+    // ALEPH: VIDEO REQUIRED + OPTIONAL IMAGE
+    document.getElementById('alephVideoBtn').addEventListener('click', () => {
+      document.getElementById('alephVideoInput').click();
+    });
+    document.getElementById('alephImageBtn').addEventListener('click', () => {
+      document.getElementById('alephImageInput').click();
+    });
+    document.getElementById('alephVideoInput').addEventListener('change', async (e) => {
+      const file = (e.target.files || [])[0] || null;
+      alephVideoFile = file;
+      const container = document.getElementById('alephVideoThumb');
+      container.innerHTML = '';
+
+      // cleanup previous object URL
+      try { if (__alephVideoObjURL) URL.revokeObjectURL(__alephVideoObjURL); } catch {}
+      __alephVideoObjURL = null;
+
+      if (!alephVideoFile) return;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20 bg-slate-900 flex items-center justify-center';
+
+      // Image preview (first frame)
+      const img = document.createElement('img');
+      img.className = 'absolute inset-0 h-full w-full object-cover';
+      img.alt = 'video preview';
+      wrapper.appendChild(img);
+
+      const label = document.createElement('span');
+      label.className = 'absolute bottom-1 left-1 text-[9px] text-white/80 px-1.5 py-0.5 rounded bg-black/60';
+      label.textContent = 'VIDEO';
+      wrapper.appendChild(label);
+
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
+      closeBtn.textContent = '×';
+      closeBtn.addEventListener('click', () => {
+        alephVideoFile = null;
+        document.getElementById('alephVideoInput').value = '';
+        try { if (__alephVideoObjURL) URL.revokeObjectURL(__alephVideoObjURL); } catch {}
+        __alephVideoObjURL = null;
+        wrapper.remove();
+      });
+      wrapper.appendChild(closeBtn);
+      container.appendChild(wrapper);
+
+      // Extract first frame preview
+      try {
+        const objUrl = URL.createObjectURL(alephVideoFile);
+        __alephVideoObjURL = objUrl;
+
+        const v = document.createElement('video');
+        v.preload = 'auto';
+        v.muted = true;
+        v.playsInline = true;
+        v.setAttribute('playsinline', '');
+        v.setAttribute('muted', '');
+        v.src = objUrl;
+        // Safari needs the video in the DOM to reliably decode the first frame
+        v.style.position = 'fixed';
+        v.style.left = '-9999px';
+        v.style.top = '-9999px';
+        v.style.width = '1px';
+        v.style.height = '1px';
+        v.style.opacity = '0';
+        v.style.pointerEvents = 'none';
+        document.body.appendChild(v);
+
+        const cleanupVideo = () => {
+          try { v.pause(); } catch {}
+          try { v.remove(); } catch {}
+        };
+
+        const grab = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = v.videoWidth || 256;
+            canvas.height = v.videoHeight || 256;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+            img.src = canvas.toDataURL('image/jpeg', 0.82);
+          } catch {}
+        };
+
+        v.addEventListener('loadedmetadata', async () => {
+          try { await v.play(); } catch {}
+          try { v.pause(); } catch {}
+          try {
+            const t = Math.min(0.1, Math.max(0, (v.duration || 1) * 0.02));
+            v.currentTime = t;
+          } catch {
+            grab();
+            cleanupVideo();
+          }
+        }, { once: true });
+
+        v.addEventListener('seeked', () => {
+          grab();
+          cleanupVideo();
+        }, { once: true });
+
+        v.addEventListener('error', () => {
+          // fallback: keep dark tile with VIDEO label
+          cleanupVideo();
+        }, { once: true });
+
+        try { v.load(); } catch {}
+      } catch {
+        // ignore preview failures
+      }
+    });
+
+    document.getElementById('alephImageInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      alephImageFile = file;
+      renderSingleThumb(alephImageFile, document.getElementById('alephImageThumb'), () => {
+        alephImageFile = null;
+        document.getElementById('alephImageInput').value = '';
+      });
+    });
+
+
+    async function uploadImagesAndGetUrls(files) {
+      const list = Array.isArray(files) ? files : (uploadedFiles || []);
+      if (!list.length) return [];
       if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
         throw new Error('upload_bridge_missing');
       }
-      const up = await window.kieUploadBridge.upload(img);
-      const u = derivePublicUrl(up);
-      if (!u) throw new Error('no_public_url');
-      try { await fetch(u, { method: 'HEAD', cache: 'no-store' }); } catch {}
-      imageUrl = u;
-    }
-
-    // Create job
-    const { data: sessData } = await supabase.auth.getSession();
-const accessToken = sessData?.session?.access_token || '';
-const resp = await fetch('/.netlify/functions/run-kling-motion-control',{
-  method:'POST',
-  headers:{
-    'Content-Type':'application/json',
-    'X-USER-ID': uid,
-    ...(accessToken ? { 'Authorization': 'Bearer ' + accessToken } : {})
-  },
-  body: JSON.stringify({ uid, prompt: _prompt, aspectRatio, videoUrl, imageUrl, run_id, mode: (modeEl?modeEl.value:'720p'), duration_seconds: (__videoDurationSec||0) })
-});
-    const j = await resp.json().catch(()=>({}));
-    if (!resp.ok || !j.submitted){
-      showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
-      try{ if(__prevCredits!=null){ const nav=document.getElementById('navCredits'); if(nav) nav.textContent=__prevCredits+'⚡'; } }catch{}
-      window.__KIE_RUNNING__=false; __updateRunEnabled();
-      runBtn.textContent='Run (cost: —)'; return;
-    }
-    const taskId = j.taskId || '';
-    const server_run_id = j.run_id || run_id || '';
-
-    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-
-    // Deduct AFTER Submitted (UI immediate) — backend will sync via realtime/refresh
-    try{
-      const nav = document.getElementById('navCredits');
-      if (nav){
-        const cur = await getCredits();
-        const need = (__computedCost != null && Number.isFinite(__computedCost)) ? __computedCost : 0;
-        const next = Math.max(0, Number((cur - need).toFixed(1)));
-        nav.textContent = next + '⚡';
+      const urls = [];
+      const maxUploadMB = (typeof currentModel !== 'undefined' && currentModel && currentModel.id === 'nano-banana-pro') ? 25 : 10;
+      const maxUploadBytes = maxUploadMB * 1024 * 1024;
+      for (const file of list) {
+        if (file.size > maxUploadBytes) {
+          throw new Error('file_too_large');
+        }
+        const up = await window.kieUploadBridge.upload(file);
+        if (!up || !up.publicUrl) {
+          throw new Error('upload_failed');
+        }
+        urls.push(up.publicUrl);
       }
-    }catch{}
+      return urls;
+    }
 
-    // Force a fast sync in case realtime is delayed
-    try{ setTimeout(()=>{ try{ refreshCreditsUI(); }catch{} }, 500); }catch{}
+    function buildBodyForModel(model, ctx) {
+      const { uid, runId, urls, prompt, aspect, duration, resolution, genId, soraQuality } = ctx;
+      switch (model.id) {
+        case 'nano-banana':
+          return { urls, prompt: prompt || '.', format: 'png', size: aspect || 'auto', run_id: runId };
+        case 'nano-banana-pro':
+          return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', resolution: (resolution || '1K'), run_id: runId };
+        case 'seedream-4-5':
+          return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', run_id: runId };
+        case 'gpt-image-1':
+          return { prompt, aspect_ratio: aspect || '1:1', image_urls: urls && urls.length ? urls : undefined, run_id: runId };
+        case 'imagen':
+          return { prompt, model: 'ultra', aspect_ratio: aspect || '1:1', run_id: runId };
+        case 'midjourney':
+          return {
+            prompt,
+            image_url: urls && urls[0] ? urls[0] : undefined,
+            // send both keys for backward/forward compatibility
+            aspect_ratio: aspect || '2:3',
+            aspectRatio: aspect || '2:3',
+            run_id: runId
+          };
+        case 'mj-video':
+          return {
+            uid,
+            prompt,
+            imageUrl: (urls && urls[0]) ? urls[0] : '',
+            aspectRatio: aspect || '1:1',
+            run_id: runId
+          };
+        case 'veo3-fast':
+        case 'veo3':
+          return {
+            uid,
+            user_id: uid,
+            prompt,
+            aspectRatio: aspect || '16:9',
+            duration: duration ? Number(duration) : 8,
+            imageUrl: (urls && urls[0]) ? urls[0] : '',
+            model: model.id === 'veo3-fast' ? 'veo3_fast' : 'veo3',
+            run_id: runId
+          };
+        case 'veo31-fast':
+        case 'veo31':
+          return {
+            uid,
+            prompt,
+            aspectRatio: aspect || '16:9',
+            duration: duration ? Number(duration) : 8,
+            firstFrameUrl: (urls && urls[0]) ? urls[0] : '',
+            lastFrameUrl: (urls && urls[1]) ? urls[1] : '',
+            imageUrl: '',
+            model: model.id === 'veo31-fast' ? 'veo3_1_fast' : 'veo3_1',
+            run_id: runId
+          };
 
-    if (server_run_id) waitForSupabaseResult(uid, server_run_id, videoUrl);
+        case 'runway':
+          return {
+            uid,
+            prompt,
+            aspectRatio: aspect || '16:9',
+            duration: duration ? Number(duration) : 5,
+            imageUrl: (urls && urls[0]) ? urls[0] : '',
+            run_id: runId
+          };
+        case 'kling25':
+          return {
+            prompt,
+            aspect_ratio: aspect || '1:1',
+            duration: duration ? Number(duration) : 5,
+            image_url: urls && urls[0] ? urls[0] : undefined,
+            tail_image_url: urls && urls[1] ? urls[1] : undefined,
+            run_id: runId
+          };
+        case 'kling26':
+          return {
+            prompt,
+            aspect_ratio: aspect || '1:1',
+            duration: duration ? Number(duration) : 5,
+            sound: !!currentKlingSound,
+            image_url: urls && urls[0] ? urls[0] : undefined,
+            run_id: runId
+          };
+        case 'kling21':
+          return {
+            prompt,
+            duration: duration ? Number(duration) : 5,
+            firstFrameUrl: urls && urls[0] ? urls[0] : undefined,
+            lastFrameUrl: urls && urls[1] ? urls[1] : undefined,
+            run_id: runId
+          };
 
-  }catch(e){
-    showStatus('❌ '+(e.message||String(e)),'text-rose-300');
-    try{ if(__prevCredits!=null){ const nav=document.getElementById('navCredits'); if(nav) nav.textContent=__prevCredits+'⚡'; } }catch{}
-    window.__KIE_RUNNING__=false;
-    __updateRunEnabled();
-    runBtn.textContent='Run (cost: —)';
-  }
-};
-</script>
+        case 'sora2': {
+          // Sora 2 payload (1:1 with working sora2 page)
+          const tier = (typeof currentSoraTier !== 'undefined' && currentSoraTier) ? currentSoraTier : 'base';
+          const aspectRatio = (aspect || '16:9');
+          const orientation = (aspectRatio === '9:16') ? 'portrait' : 'landscape';
+          return {
+            uid,
+            run_id: runId,
+            id: genId || null,
+            tier,
+            prompt,
+            image_urls: (urls && urls[0]) ? [urls[0]] : [],
+            orientation,
+            aspectRatio,
+            duration: (typeof duration === 'number') ? duration : parseInt(duration || '10', 10),
+            quality: soraQuality || 'high'
+          };
+        }
+
+        case 'aleph':
+          return {
+            uid,
+            prompt,
+            videoUrl: urls && urls[0] ? urls[0] : undefined,
+            imageUrl: urls && urls[1] ? urls[1] : undefined,
+            aspectRatio: '16:9',
+            run_id: runId
+          };
+        default:
+          return { prompt, run_id: runId };
+      }
+    }
+
+    async function runCurrentModel() {
+      if (!currentModel) {
+        showStatus('Please choose a model first.', 'error');
+        return;
+      }
+      const promptBox = document.getElementById('promptBox');
+      const rawPrompt = promptBox.value || '';
+      const prompt = rawPrompt.trim();
+      if (!prompt) {
+        showStatus('Please enter a prompt.', 'error');
+        return;
+      }
+
+      if (!currentUser) {
+        showStatus('Please log in first.', 'error');
+        return;
+      }
+
+      if (typeof currentModel.minCredits === 'number' && currentCredits < currentModel.minCredits) {
+        showStatus('Not enough credits for this model.', 'error');
+        return;
+      }
+
+      // Kling 2.6 dynamic credit requirement (depends on sound + duration)
+      if (currentModel && currentModel.id === 'kling26') {
+        const __dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
+        const __need = (currentKlingSound ? (__dur === 10 ? 16 : 9) : (__dur === 10 ? 9 : 5));
+        if (typeof currentCredits === 'number' && currentCredits < __need) {
+          showStatus('Not enough credits for this selection.', 'error');
+          return;
+        }
+      }
+
+
+            // Image / frame / video requirements
+      if (currentModel.useFrames) {
+        // Kling 2.1 requires start frame; Veo 3.1 start frame is optional
+        if (!currentModel.startOptional && !startFrameFile) {
+          showStatus('This model requires a Start frame image.', 'error');
+          return;
+        }
+        if (lastFrameFile && !startFrameFile) {
+          showStatus('Last frame requires a Start frame first.', 'error');
+          return;
+        }
+      } else if (currentModel.needsVideo) {
+        if (!alephVideoFile) {
+          showStatus('This model requires a video upload.', 'error');
+          return;
+        }
+      } else if (currentModel.needsImage && !uploadedFiles.length) {
+        showStatus('This model requires at least one image.', 'error');
+        return;
+      }
+
+      const runBtn = document.getElementById('runBtn');
+      runBtn.disabled = true;
+      showStatus('Preparing your request…');
+
+      try {
+        const urls = currentModel.useFrames
+          ? await uploadImagesAndGetUrls([startFrameFile, lastFrameFile].filter(Boolean))
+          : currentModel.needsVideo
+          ? await uploadImagesAndGetUrls([alephVideoFile, alephImageFile].filter(Boolean))
+          : await uploadImagesAndGetUrls(uploadedFiles);
+        const uid = currentUser.id;
+        const runId = `${uid}-${Date.now()}`;
+
+        // Sora 2 requires a seeded user_generations row id (1:1 with working sora2 page)
+        let __genId = null;
+        let __soraQuality = 'high';
+        if (currentModel && currentModel.id === 'sora2') {
+          try {
+            const ins = await supabaseClient.from('user_generations').insert({
+              user_id: uid,
+              provider: 'kie',
+              kind: 'video',
+              prompt,
+              result_url: null,
+              meta: { run_id: runId, status: 'processing', engine: 'sora2' }
+            }).select('id').single();
+            if (ins && !ins.error && ins.data && ins.data.id) __genId = ins.data.id;
+          } catch (e) {
+            __genId = null;
+          }
+        }
+
+        const body = buildBodyForModel(currentModel, {
+          uid,
+          runId,
+          urls,
+          prompt,
+          aspect: currentAspect,
+          duration: currentDuration,
+          genId: __genId,
+          soraQuality: __soraQuality,
+          resolution: currentResolution
+        });
+
+        // --- GPT-Image-1.5 safeguard: always include aspect + any uploaded image URLs ---
+        // Some older builds may not hit the correct buildBodyForModel() switch-case.
+        if (currentModel && typeof currentModel.id === 'string' && currentModel.id.startsWith('gpt-image')) {
+          if (!body.aspect_ratio) body.aspect_ratio = (currentAspect || '1:1');
+          // If user uploaded images, force-send them under multiple accepted keys.
+          if (Array.isArray(urls) && urls.length) {
+            body.urls = urls;
+            body.image_urls = urls;
+            body.input_urls = urls;
+          }
+        }
+
+
+                const expectedOutputs = 1;
+const placeholderControllers = [];
+for (let i = 0; i < expectedOutputs; i++) {
+  const c = addResultCard({
+    run_id: runId,
+    provider: currentModel.name,
+    kind: currentModel.category,
+    prompt,
+    result_url: null,
+    status: 'processing'
+  }, { prepend: true });
+  if (c) placeholderControllers.push(c);
+}
+
+        // Get Supabase access token (required by Netlify functions that validate auth)
+        let __accessToken = '';
+        try {
+          const { data: s } = await supabaseClient.auth.getSession();
+          __accessToken = s && s.session && s.session.access_token ? s.session.access_token : '';
+        } catch (e) {
+          __accessToken = '';
+        }
+
+        const res = await fetch(currentModel.endpoint, {
+          method: 'POST',
+          headers: Object.assign(
+            { 'Content-Type': 'application/json', 'X-USER-ID': uid },
+            __accessToken ? { 'Authorization': ('Bearer ' + __accessToken) } : {}
+          ),
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(() => '');
+          let msg = txt || `status ${res.status}`;
+          try {
+            const j = JSON.parse(txt);
+            if (j && (j.error || j.message)) msg = j.error || j.message;
+          } catch {}
+          showStatus('Error from model: ' + msg, 'error');
+          if (placeholderControllers && placeholderControllers.length) {
+            for (let i = 0; i < placeholderControllers.length; i++) {
+              placeholderControllers[i].apply({ status: 'failed', result_url: null });
+            }
+          }
+        } else {
+          // Some endpoints (e.g., Sora 2) return JSON with taskId/submitted flags
+          let j = null;
+          try { j = await res.json(); } catch { j = null; }
+
+          // Sora 2: require submitted + taskId, then poll sora2-check
+          if (currentModel && currentModel.id === 'sora2') {
+            if (!j || !j.submitted || !j.taskId) {
+              const errMsg = (j && j.error) ? j.error : 'unknown_error';
+              showStatus('Error from model: ' + errMsg, 'error');
+              if (placeholderControllers && placeholderControllers.length) {
+                for (let i = 0; i < placeholderControllers.length; i++) {
+                  placeholderControllers[i].apply({ status: 'failed', result_url: null });
+                }
+              }
+            } else {
+              showStatus(
+                `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
+                'success'
+              );
+              await refreshCredits();
+              if (placeholderControllers && placeholderControllers.length) {
+                startSora2Poll(j.taskId, uid, runId, placeholderControllers);
+              }
+            }
+          } else {
+            showStatus(
+              `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
+              'success'
+            );
+            await refreshCredits();
+            if (placeholderControllers && placeholderControllers.length) {
+              startPollGeneration(runId, placeholderControllers);
+            }
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        if (err && err.message === 'file_too_large') {
+          const limitMb = (typeof currentModel !== 'undefined' && currentModel && currentModel.id === 'nano-banana-pro') ? 25 : 10;
+          showStatus(`One of the images is larger than ${limitMb}MB.`, 'error');
+        } else if (err && err.message === 'upload_bridge_missing') {
+          showStatus('Upload bridge is missing on this page.', 'error');
+        } else {
+          showStatus('Unexpected error while submitting the job.', 'error');
+        }
+      } finally {
+        runBtn.disabled = false;
+      }
+    }
+
+    document.getElementById('runBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      runCurrentModel();
+    });
+
+    // boot
+    (async () => {
+      await loadUser();
+      setMode('image');
+      updateModelButtonLabels();
+      configureControlsForModel();
+    })();
+  </script>
+
+  <!-- Mobile option picker (UI only) -->
+  <div id="mobileOptionOverlay" class="fixed inset-0 z-50 hidden md:hidden flex items-center justify-center p-4">
+    <button id="mobileOptionOverlayBg" type="button" class="absolute inset-0 bg-black/60"></button>
+    <div class="relative z-10 mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-slate-950/95 backdrop-blur-xl p-4 max-h-[75vh] overflow-hidden">
+      <div class="flex items-center justify-between mb-3">
+        <div id="mobileOptionTitle" class="text-sm font-semibold">Select</div>
+        <button id="mobileOptionClose" class="btn-soft px-3 py-1.5 text-[11px]" type="button">Close</button>
+      </div>
+      <div id="mobileOptionList" class="space-y-2 max-h-[45vh] overflow-auto pr-1"></div>
+    </div>
+  </div>
 </body>
 </html>
