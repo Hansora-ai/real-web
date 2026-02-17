@@ -1911,6 +1911,12 @@ let currentKlingSound = false;
           return l.includes(searchValue) || searchValue.includes('veo');
         };
 
+        const matchOther = (label) => {
+          if (!searchValue) return true;
+          const l = label.toLowerCase();
+          return l.includes(searchValue);
+        };
+
         overlayModels = [];
         if (hasVeo31 && matchGroup('Veo 3.1')) {
           overlayModels.push({
@@ -1937,6 +1943,17 @@ let currentKlingSound = false;
           });
         }
 
+        if (matchOther('Kling Motion Control')) {
+          overlayModels.push({
+            id: '__kling-motion-control',
+            name: 'Kling Motion Control',
+            emoji: '⚡',
+            subtitle: 'Open motion control',
+            category: 'video',
+            __navTo: '/kling-motion-control.html',
+          });
+        }
+
         overlayModels.push(...filtered);
       }
 
@@ -1959,6 +1976,11 @@ let currentKlingSound = false;
         `;
 
         row.addEventListener('click', () => {
+          if (model.__navTo) {
+            closeModelOverlay();
+            window.location.href = model.__navTo;
+            return;
+          }
           if (model.__veoFamily) {
             currentModel = MODELS.find((m) => m.id === model.__fastId) || currentModel;
             currentVeoFamily = model.__veoFamily;
