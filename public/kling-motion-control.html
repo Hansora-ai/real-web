@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA • KLING Motion Control (Video)</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com">
+// --- helper: construct public Supabase URL (Nano Banana 1:1) ---
+function derivePublicUrl(up){
+  if (!up) return null;
+  if (up.publicUrl) return up.publicUrl;
+  try{
+    if (up.bucket && up.objectPath && up.uploadUrl){
+      const u = new URL(up.uploadUrl);
+      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
+      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+    }
+  }catch(e){}
+  return null;
+}
+</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- BRIDGE: direct-to-Supabase upload (no Netlify body) -->
+  <script src="/kie-upload-bridge.js"></script>
+
+  <style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+                       var(--base-bg); color:#e5e7eb}
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .input-dark{background:rgba(255,255,255,.05)!important;color:#e5e7eb!important;border:1px solid rgba(255,255,255,.12)!important}
+    .input-dark::placeholder{color:#9ca3af}
+    select.input-dark option{background:#0b0d13;color:#e5e7eb}
+  </style>
+</head>
+<body class="min-h-screen">
+  <!-- Header (kept identical style from Veo 3) -->
+  <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3 hover:opacity-90"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora logo" class="h-9 w-9 object-contain" />
+        <span class="font-semibold tracking-wide">HANSORA AI</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-8 text-sm">
+        <a href="models.html" class="hover:text-white/90">Models</a>
+<a href="examples-prompts.html" class="hover:text-white/90">Examples/Prompts</a>
+        <a href="templates.html" class="hover:text-white/90">Templates</a>
+        <a href="pricing.html" class="hover:text-white/90">Pricing</a>
+        <a href="index.html#faq" class="hover:text-white/90">FAQ</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <a href="#" class="text-sm hover:text-white/90 hidden sm:inline" style="display:none">EN / RU</a>
+        <a id="btnLoginNav" href="index.html#login" class="rounded-xl btn px-3 py-2 text-sm" style="display:none">Log in</a>
+        <a id="btnGetStarted" href="index.html#login" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft" style="display:none">Get Started</a>
+        <a id="btnLoginSignup" href="login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a>
+<div id="navUser" class="hidden items-center gap-2">
+          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
+          <div class="relative">
+            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden relative"><img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden"><svg id="navAvatarFallback" viewBox="0 0 24 24" class="absolute inset-0 m-auto h-6 w-6 text-white/80"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4Z"/></svg></button>
+            <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden"><a href="profile.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Profile</a><a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">History</a><a href="pricing.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscription</a><button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+    <div class="grid md:grid-cols-2 gap-6 items-start">
+      <!-- Left card: form -->
+      <div class="rounded-2xl p-5 border border-white/10 shadow-soft bg-base-bg/60">
+        <h1 class="text-2xl font-bold">KLING Motion Control</h1>
+        <p class="mt-1 text-sm text-zinc-400">Upload a motion reference video (MP4/MOV, ≤100MB, ≤30s) and describe your scene. 
+          <span class="ml-2 inline-flex items-center gap-2">
+            <span class="text-xs text-zinc-300 bg-white/10 px-2 py-0.5 rounded-lg border border-white/10">≤30s</span>
+          </span>
+        </p>
+
+        <div class="mt-4 space-y-3">
+          <!-- Video -->
+          <div>
+            <label class="text-sm font-semibold text-zinc-300">Video (required, MP4/MOV, ≤100MB, ≤30s)</label>
+            <input id="video" type="file" accept="video/mp4,video/quicktime" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
+            <div id="videoThumb" class="mt-2 text-xs text-zinc-400"></div>
+          </div>
+
+          <!-- Optional Reference Image -->
+          <div>
+            <label class="text-sm font-semibold text-zinc-300">Reference image (optional, ≤10MB)</label>
+            <input id="image" type="file" accept="image/*" class="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none"/>
+            <div id="imageThumbs" class="mt-2 flex gap-2 flex-wrap"></div>
+          </div>
+
+          <!-- Resolution -->
+          <div>
+            <label class="text-sm font-semibold text-zinc-300">Resolution</label>
+            <select id="mode" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none input-dark">
+              <option value="720p" selected>720p</option>
+              <option value="1080p">1080p</option>
+            </select>
+            <p class="mt-1 text-xs text-zinc-500">Pricing: 720p = 0.5⚡/s • 1080p = 1⚡/s (charged per started second)</p>
+          </div>
+
+<!-- Prompt -->
+          <div>
+            <label class="text-xs text-zinc-400">Prompt (required)</label>
+            <textarea id="prompt" placeholder="Describe the transformation…" class="mt-1 w-full rounded-lg border border-white/10 bg-base-bg/60 px-3 py-2 outline-none min-h-[120px] input-dark"></textarea>
+          </div>
+
+          <button id="runBtn" type="button" class="w-full rounded-xl btn-brand px-4 py-3 font-semibold" onclick="__run()" disabled>Run (cost: —)</button>
+          <div id="status" class="mt-2 text-sm"></div>
+          <p id="guardMsg" class="hidden text-xs text-rose-300">Prompt + Video are required. Resolution defaults to 720p. Add an optional image if you want character guidance.</p>
+        </div>
+      </div>
+
+      <!-- Right card: result -->
+      <div class="rounded-2xl p-5 border border-white/10 shadow-soft bg-base-bg/60">
+        <h3 class="text-lg font-semibold">Result</h3>
+        <p class="text-xs text-zinc-400">Generated video will appear below.</p>
+        <div id="resultBox" class="mt-3 w-full rounded-xl border border-white/10 bg-base-bg/60 flex items-center justify-center">
+          <span class="text-xs text-zinc-500">No result yet</span>
+        </div>
+        <div class="mt-3 flex items-center gap-3">
+          <button id="playBtn" class="hidden rounded-xl btn px-4 py-2 text-sm">Play</button>
+          <a id="downloadLink" href="#" class="hidden rounded-xl btn px-4 py-2 text-sm">Download</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="border-t border-base-line/60">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p>© <span id="y"></span> HANSORA AI — All rights reserved.</p>
+      <nav class="flex items-center gap-5">
+        <a href="index.html#terms" class="hover:text-white/80">Terms</a>
+        <a href="index.html#privacy" class="hover:text-white/80">Privacy</a>
+        <a href="index.html#contact" class="hover:text-white/80">Contact</a>
+      </nav>
+    </div>
+  </footer>
+
+<script>// --- helper: construct public Supabase URL (Nano Banana 1:1) ---
+function derivePublicUrl(up){
+  if (!up) return null;
+  if (up.publicUrl) return up.publicUrl;
+  try{
+    if (up.bucket && up.objectPath && up.uploadUrl){
+      const u = new URL(up.uploadUrl);
+      const enc = up.objectPath.split('/').map(encodeURIComponent).join('/');
+      return `${u.protocol}//${u.host}/storage/v1/object/public/${encodeURIComponent(up.bucket)}/${enc}`;
+    }
+  }catch(e){}
+  return null;
+}
+
+
+
+  // Guard: only set footer year element if present
+  (function(){ const y = document.getElementById('y'); if (y) y.textContent = new Date().getFullYear(); })();
+
+  (function(){
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+    const $btnLoginNav = document.getElementById('btnLoginNav');
+    const $btnGetStarted = document.getElementById('btnGetStarted');
+    const $btnLoginSignup = document.getElementById('btnLoginSignup');
+    const $navUser = document.getElementById('navUser');
+    const $navCredits = document.getElementById('navCredits');
+    const $navAvatar = document.getElementById('navAvatar');
+    const $navMenu = document.getElementById('navMenu');
+    const $btnLogout = document.getElementById('btnLogout');
+    const $navAvatarImg = document.getElementById('navAvatarImg');
+    const $btnLogin = document.getElementById('btnLogin');
+
+    function openAuth(){} function closeAuth(){} function setAuthMode(){}
+
+    function showLoggedInUI(profile, user){
+      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
+      try{ if($btnLoginSignup) $btnLoginSignup.style.display = 'none'; }catch(e){}
+      $navUser.classList.remove('hidden'); $navUser.classList.add('flex');
+      $navCredits.textContent=(profile?.credits??0)+'⚡';
+      if(user?.user_metadata?.avatar_url){ $navAvatarImg.src=user.user_metadata.avatar_url; $navAvatarImg.classList.remove('hidden'); }
+      else { $navAvatarImg.classList.add('hidden'); }
+    }
+    function showLoggedOutUI(){
+      try{$btnLoginNav.classList.add('hidden');$btnGetStarted.classList.add('hidden');}catch(e){}
+      try{ if($btnLoginSignup) $btnLoginSignup.style.display = ''; }catch(e){}
+      $navUser.classList.add('hidden'); $navUser.classList.remove('flex');
+    }
+    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
+    document.addEventListener('click', (e)=>{
+      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
+    });
+    document.getElementById('btnLogout').addEventListener('click', async ()=>{
+      await sb.auth.signOut();
+      showLoggedOutUI();
+    });
+
+    async function getOrCreateProfile(user){
+      const { data, error } = await sb
+        .from('profiles').select('user_id,email,credits')
+        .eq('user_id', user.id).maybeSingle();
+      if(error) throw error;
+      if(!data){
+        const ins = await sb.from('profiles').insert({
+          user_id: user.id, email: user.email, credits: 3
+        }).select().single();
+        if(ins.error) throw ins.error;
+        return ins.data;
+      }
+      return data;
+    }
+    async function refreshCredits(){
+      const { data } = await sb.auth.getUser();
+      const user = data.user;
+      if(!user) return;
+      const prof = await sb.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+      if (prof?.data?.credits != null) { $navCredits.textContent = prof.data.credits + '⚡'; }
+    }
+    window.refreshCredits = refreshCredits;
+
+    (async ()=>{
+      const { data } = await sb.auth.getUser();
+      const user = data.user;
+      if(user){
+        try{
+          const prof = await getOrCreateProfile(user);
+          showLoggedInUI(prof, user);
+        }catch{ showLoggedOutUI(); }
+      }else{
+        showLoggedOutUI();
+      }
+    })();
+  })();
+
+
+// Global alias for generation logic (must be top-level)
+var supabase = window.__HANSORA_SB__;
+// Elements
+const videoEl=document.getElementById('video');
+const imageEl=document.getElementById('image');
+const imageThumbs=document.getElementById('imageThumbs');
+const videoThumb=document.getElementById('videoThumb');
+const ASPECT_RATIO_DEFAULT='16:9';
+const promptEl=document.getElementById('prompt');
+const modeEl=document.getElementById('mode');
+const runBtn=document.getElementById('runBtn');
+const statusEl=document.getElementById('status');
+const resultBox=document.getElementById('resultBox');
+const downloadLink=document.getElementById('downloadLink');
+const guardMsg=document.getElementById('guardMsg');
+const $navAvatarImg=document.getElementById('navAvatarImg');
+const $navAvatarFallback=document.getElementById('navAvatarFallback');
+
+function showStatus(m,c=''){statusEl.textContent=m;statusEl.className='mt-2 text-sm '+c}
+function clearChilds(el){while(el.firstChild)el.removeChild(el.firstChild)}
+
+function __rateForMode(mode){
+  return (String(mode||'720p') === '1080p') ? 1 : 0.5;
+}
+function __recalcCostUI(){
+  const mode = modeEl ? modeEl.value : '720p';
+  const rate = __rateForMode(mode);
+  const dur = (__videoDurationSec != null && Number.isFinite(__videoDurationSec)) ? __videoDurationSec : null;
+  if (!dur){
+    __billedSeconds = null;
+    __computedCost = null;
+    try{ runBtn.textContent = 'Run (cost: —)'; }catch{}
+    runBtn.disabled = true;
+    return;
+  }
+  const billed = Math.min(30, Math.max(1, Math.ceil(dur)));
+  __billedSeconds = billed;
+  const cost = Number((billed * rate).toFixed(1));
+  __computedCost = cost;
+  try{ runBtn.textContent = `Run (cost: ${cost}⚡)`; }catch{}
+  // enable button only when prompt+video valid; guard logic handles disabled state too
+}
+
+
+let __imgObjURL=null; let __vidObjURL=null;
+let __videoDurationSec = null; let __billedSeconds = null; let __computedCost = null;
+
+imageEl.addEventListener('change',()=>{
+  clearChilds(imageThumbs);
+  if(__imgObjURL){try{URL.revokeObjectURL(__imgObjURL)}catch{} __imgObjURL=null;}
+  const f=imageEl.files[0]; if(!f) return;
+  const u=URL.createObjectURL(f); __imgObjURL=u;
+  const img=new Image(); img.src=u; img.className='block w-full max-h-56 object-contain rounded-lg border border-white/10 bg-black/20';
+  const wrap=document.createElement('div'); wrap.className='relative inline-block';
+  const del=document.createElement('button'); del.type='button'; del.className='absolute -top-2 -right-2 h-7 w-7 rounded-full bg-black/70 border border-white/20 text-white/80 hover:text-white hover:bg-black/90 flex items-center justify-center'; del.innerHTML='&times;';
+  del.onclick=()=>{imageEl.value=''; clearChilds(imageThumbs); try{URL.revokeObjectURL(u)}catch{} __imgObjURL=null; };
+  wrap.appendChild(img); wrap.appendChild(del); imageThumbs.appendChild(wrap);
+});
+
+videoEl.addEventListener('change',()=>{
+  videoThumb.textContent='';
+  if(__vidObjURL){try{URL.revokeObjectURL(__vidObjURL)}catch{} __vidObjURL=null;}
+  const f=videoEl.files[0]; if(!f) return;
+  const u=URL.createObjectURL(f); __vidObjURL=u;
+  __videoDurationSec = null; __billedSeconds = null; __computedCost = null; __recalcCostUI();
+
+  const p=document.createElement('p'); 
+  p.textContent='Selected: '+(f.name||'video.mp4')+' ('+Math.round(f.size/1024/1024*10)/10+'MB)';
+  videoThumb.appendChild(p);
+
+
+  // Create a non-playable thumbnail from the first frame
+  try{
+    const v=document.createElement('video');
+    v.muted=true; v.playsInline=true; v.src=u;
+    v.addEventListener('loadedmetadata',()=>{
+      try{ __videoDurationSec = Number(v.duration||0); }catch{ __videoDurationSec = null; }
+      __recalcCostUI();
+      // Seek a tiny bit into the video to ensure data is available
+      const targetTime = Math.min(0.15, (v.duration||1)/10);
+      v.currentTime = targetTime;
+    }, { once:true });
+    v.addEventListener('seeked',()=>{
+      try{
+        const canvas=document.createElement('canvas');
+        const w = 360; // target width for thumbnail
+        const ratio = v.videoWidth ? (v.videoHeight / v.videoWidth) : (9/16);
+        canvas.width = w;
+        canvas.height = Math.max(1, Math.round(w*ratio));
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+        const img=document.createElement('img');
+        img.src=canvas.toDataURL('image/jpeg', 0.85);
+        img.className='mt-2 block rounded-lg border border-white/10 max-w-full shadow-soft';
+        const wrap=document.createElement('div');
+        wrap.className='relative inline-block';
+        const del=document.createElement('button'); 
+        del.type='button';
+        del.className='absolute -top-2 -right-2 h-6 w-6 rounded-full bg-black/60 hover:bg-black/90 text-white/90 border border-white/10 flex items-center justify-center';
+        del.innerHTML='&times;';
+        del.title='Remove selected video';
+        del.onclick=()=>{
+          const vEl=document.getElementById('video');
+          if(vEl){ vEl.value=''; }
+          while(videoThumb.firstChild){ videoThumb.removeChild(videoThumb.firstChild); }
+          try{ if(__vidObjURL){ URL.revokeObjectURL(__vidObjURL); __vidObjURL=null; } }catch{};
+          __videoDurationSec = null; __billedSeconds = null; __computedCost = null; __recalcCostUI();
+        };
+        wrap.appendChild(img);
+        wrap.appendChild(del);
+        videoThumb.appendChild(wrap);
+      }catch{ /* ignore thumbnail errors */ }
+    }, { once:true });
+  }catch{ /* ignore thumbnail errors */ }
+});
+
+async function getCredits(){
+  try{
+    const ures = await supabase.auth.getUser(); const user = ures?.data?.user; if(!user) return 0;
+    const { data: prof } = await supabase.from('profiles').select('credits').eq('user_id', user.id).maybeSingle();
+    return prof?.credits ?? 0;
+  }catch{return 0;}
+}
+async function refreshCreditsUI(){
+  try{
+    const c = await getCredits();
+    const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
+    runBtn.disabled = false; runBtn.classList.remove('opacity-50','cursor-not-allowed');
+  }catch{}
+}
+refreshCreditsUI();
+if (modeEl) modeEl.addEventListener('change', __recalcCostUI);
+
+// === Live credits (Supabase Realtime) — 1:1 behavior with Kling 2.6 ===
+(async function HANSORA_LIVE_CREDITS(){
+  try{
+    if (typeof supabase === 'undefined' || !supabase.auth) return;
+
+    const navCreditsEl = document.getElementById('navCredits');
+    function renderCredits(c){
+      try{
+        if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+      }catch{}
+    }
+
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if (!user) return;
+
+    // subscribe to updates
+    supabase.channel('credits_live_' + user.id)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'user_id=eq.' + user.id },
+        (payload) => { renderCredits(payload.new?.credits ?? 0); }
+      )
+      .subscribe();
+  }catch(e){ console.warn('live credits failed', e); }
+})();
+
+
+//}
+  
+function showVideo(url){
+  resultBox.innerHTML = '';
+  const v = document.createElement('video');
+  v.style.objectFit = 'contain';
+  v.controls = true;
+  v.src = url;
+  v.className = 'block w-full max-h-[70vh] rounded-lg border border-white/10 bg-black/20';
+  resultBox.appendChild(v);
+
+  downloadLink.href = url;
+  try{downloadLink.download='kling-motion-control.mp4';}catch(e){};
+  downloadLink.classList.remove('hidden');
+
+  const playBtn = document.getElementById('playBtn');
+  if (playBtn) {
+    playBtn.classList.remove('hidden');
+    playBtn.textContent = 'Play';
+    playBtn.onclick = () => { try { if (v.paused) { v.play(); playBtn.textContent = 'Pause'; } else { v.pause(); playBtn.textContent = 'Play'; } } catch {} };
+  }
+}
+
+// Wait for result saved by the SAME KIE callback logic as Kling (video-kie-callback → Supabase)
+async function waitForSupabaseResult(uid, rid, uploadedUrl){
+  for (let i=0;i<320;i++){ // up to ~8 min (1.5s step)
+    try{
+      const { data, error } = await supabase
+        .from('user_generations')
+        .select('result_url, meta')
+        .eq('user_id', uid)
+        .filter('meta->>run_id', 'eq', rid)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (!error && Array.isArray(data) && data.length){
+        const row = data[0] || {};
+        const url = row.result_url || '';
+        const st  = String((row.meta && row.meta.status) || '').toLowerCase();
+        if (url && url !== uploadedUrl){
+          showVideo(url);
+          showStatus('✅ Done!','text-emerald-300');
+          runBtn.disabled=false;
+          try{ runBtn.textContent='Run (cost: —)'; }catch{}
+          try{ await refreshCreditsUI();
+if (modeEl) modeEl.addEventListener('change', __recalcCostUI); }catch{}
+          break;
+        }
+        if (st === 'failed' || st === 'canceled' || st === 'payment_failed'){
+          showStatus('❌ Generation failed, please try again later. Your credits are refunded.','text-red-300');
+          runBtn.disabled=false;
+          try{ runBtn.textContent='Run (cost: —)'; }catch{}
+          break;
+        }
+      }
+    }catch(e){}
+    await new Promise(r=>setTimeout(r,1500));
+  }
+  // timeout fallback
+  if (runBtn.disabled){
+    showStatus('⏳ Still processing… Please check the Usage page in a bit.','text-zinc-300');
+    runBtn.disabled=false;
+    try{ runBtn.textContent='Run (cost: —)'; }catch{}
+  }
+}
+window.__run = async function(){
+  const {data:authData}=await supabase.auth.getUser();
+  if(!authData.user){ alert('Please log in or register first.'); return; }
+
+  // Validate sizes
+  const vid=videoEl.files[0];
+  if(!vid){ showStatus('Video is required (MP4/MOV, ≤100MB, ≤30s).','text-rose-300'); document.getElementById('guardMsg').classList.remove('hidden'); return; }
+  if(vid.size>100*1024*1024){ showStatus('Video is too large (>100MB).','text-rose-300'); return; }
+  const okType = (vid.type === 'video/mp4' || vid.type === 'video/quicktime');
+  const okExt = /\.(mp4|mov)$/i.test(vid.name||'');
+  if(!(okType || okExt)){ showStatus('Unsupported video format. Only MP4 or MOV is allowed.','text-rose-300'); return; }
+  const dur = (__videoDurationSec != null && Number.isFinite(__videoDurationSec)) ? __videoDurationSec : null;
+  if(!dur || dur <= 0){ showStatus('Could not read video duration. Please re-select the video.','text-rose-300'); return; }
+  if(dur > 30.0001){ showStatus('Video is too long (>30s). Please trim it to 30s or less.','text-rose-300'); return; }
+
+  const img=imageEl.files[0];
+  if(img && img.size>100*1024*1024){ showStatus('Image is too large (>10MB).','text-rose-300'); return; }
+
+  const _prompt=(promptEl.value||'').trim();
+  if(!_prompt){ showStatus('Prompt is required.','text-rose-300'); document.getElementById('guardMsg').classList.remove('hidden'); return; }
+  // Inputs valid — hide guard
+  document.getElementById('guardMsg').classList.add('hidden');
+
+  // Credits guard (fixed 9⚡)
+  try{
+    const c = await getCredits();
+    const need = (__computedCost != null && Number.isFinite(__computedCost)) ? __computedCost : null;
+    if (!need){ showStatus('Cost could not be calculated. Please re-select the video.','text-rose-300'); return; }
+    if (c < need){ showStatus(`Not enough credits (need ${need}).`,'text-rose-300'); return; }
+  }catch{}
+
+  runBtn.disabled = true; runBtn.textContent = 'Working…';
+  showStatus('Submitting…','text-zinc-400');
+  // Hide old play/download and reset result box
+  try{ document.getElementById('playBtn')?.classList.add('hidden'); }catch{}
+  try{ downloadLink?.classList.add('hidden'); downloadLink.href='#'; }catch{}
+  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… (up to ~8 min)</span>';
+
+  try{
+    const uid = authData.user.id;
+    const aspectRatio = ASPECT_RATIO_DEFAULT || '16:9';
+
+    // Client run_id for idempotency across retries of the same click
+    const run_id = `${uid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    // Upload video via kie-upload
+    const vfd = new FormData();
+    vfd.append('file', vid, vid.name || 'video.mp4');
+    // Upload to Supabase (video + optional reference image) and get public URLs
+const supaUpload = await (async () => {
+  const supabaseClient = supabase; // already initialized
+  let videoUrl = "";
+  let imageUrl = "";
+
+  const fileInput = document.querySelector('input[type="file"][accept^="video"], input#referenceVideo');
+  const vid = fileInput && fileInput.files && fileInput.files[0];
+  if (vid) {
+    const key = `uploads/${uid}-${Date.now()}-${vid.name}`;
+    const { error } = await supabaseClient.storage.from("video").upload(key, vid);
+    if (error) throw error;
+    const { data: { publicUrl } } = supabaseClient.storage.from("video").getPublicUrl(key);
+    videoUrl = publicUrl;
+  }
+
+  const imageInput = document.querySelector('input[type="file"][accept^="image"], input#referenceImage');
+  const img2 = imageInput && imageInput.files && imageInput.files[0];
+  if (img2) {
+    const key2 = `uploads/${uid}-${Date.now()}-${img2.name}`;
+    const { error } = await supabaseClient.storage.from("video").upload(key2, img2);
+    if (error) throw error;
+    const { data: { publicUrl } } = supabaseClient.storage.from("video").getPublicUrl(key2);
+    imageUrl = publicUrl;
+  }
+
+  return { videoUrl, imageUrl };
+})(); 
+
+
+    // Use Supabase URLs directly (no .json(), not a fetch response)
+    let videoUrl = supaUpload.videoUrl || "";
+    let imageUrl = supaUpload.imageUrl || "";
+
+    // Reference image: 1:1 Nano Banana logic (single file; direct-to-Supabase via kieUploadBridge)
+    imageUrl = imageUrl || '';
+    if (img){
+      if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
+        throw new Error('upload_bridge_missing');
+      }
+      const up = await window.kieUploadBridge.upload(img);
+      const u = derivePublicUrl(up);
+      if (!u) throw new Error('no_public_url');
+      try { await fetch(u, { method: 'HEAD', cache: 'no-store' }); } catch {}
+      imageUrl = u;
+    }
+
+    // Create job
+    const { data: sessData } = await supabase.auth.getSession();
+const accessToken = sessData?.session?.access_token || '';
+const resp = await fetch('/.netlify/functions/run-kling-motion-control',{
+  method:'POST',
+  headers:{
+    'Content-Type':'application/json',
+    'X-USER-ID': uid,
+    ...(accessToken ? { 'Authorization': 'Bearer ' + accessToken } : {})
+  },
+  body: JSON.stringify({ uid, prompt: _prompt, aspectRatio, videoUrl, imageUrl, run_id, mode: (modeEl?modeEl.value:'720p'), duration_seconds: (__videoDurationSec||0) })
+});
+    const j = await resp.json().catch(()=>({}));
+    if (!resp.ok || !j.submitted){
+      showStatus('Error submitting: ' + (j.error || resp.status), 'text-rose-300');
+      runBtn.disabled = false; runBtn.textContent='Run (cost: —)'; return;
+    }
+    const taskId = j.taskId || '';
+    const server_run_id = j.run_id || run_id || '';
+
+    showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
+    if (server_run_id) waitForSupabaseResult(uid, server_run_id, videoUrl);
+
+  }catch(e){
+    showStatus('❌ '+(e.message||String(e)),'text-rose-300');
+    runBtn.disabled=false;
+    runBtn.textContent='Run (cost: —)';
+  }
+};
+</script>
+</body>
+</html>
