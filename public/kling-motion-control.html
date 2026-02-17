@@ -195,9 +195,13 @@ function derivePublicUrl(up){
       try{ if($btnLoginSignup) $btnLoginSignup.style.display = ''; }catch(e){}
       $navUser.classList.add('hidden'); $navUser.classList.remove('flex');
     }
-    $navAvatar.addEventListener('click', ()=>{ $navMenu.classList.toggle('show'); });
+    $navAvatar.addEventListener('click', (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      $navMenu.classList.toggle('hidden');
+    });
     document.addEventListener('click', (e)=>{
-      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.remove('show');
+      if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')) $navMenu.classList.add('hidden');
     });
     document.getElementById('btnLogout').addEventListener('click', async ()=>{
       await sb.auth.signOut();
@@ -538,24 +542,12 @@ window.__run = async function(){
   // Inputs valid — hide guard
   document.getElementById('guardMsg').classList.add('hidden');
 
-  // Credits guard (fixed 9⚡)
+  // Credits guard
   try{
     const c = await getCredits();
     const need = (__computedCost != null && Number.isFinite(__computedCost)) ? __computedCost : null;
     if (!need){ showStatus('Cost could not be calculated. Please re-select the video.','text-rose-300'); window.__KIE_RUNNING__=false; __updateRunEnabled(); return; }
     if (c < need){ showStatus(`Not enough credits (need ${need}).`,'text-rose-300'); window.__KIE_RUNNING__=false; __updateRunEnabled(); return; }
-  // Optimistic live deduction (UI only) — realtime/refresh will sync the real value
-  let __prevCredits = null;
-  try{
-    const nav = document.getElementById('navCredits');
-    if (nav){
-      const cur = await getCredits();
-      __prevCredits = cur;
-      const need = (__computedCost != null && Number.isFinite(__computedCost)) ? __computedCost : 0;
-      const next = Math.max(0, Number((cur - need).toFixed(1)));
-      nav.textContent = next + '⚡';
-    }
-  }catch{}
   }catch{}
 
   runBtn.disabled = true; runBtn.textContent = 'Working…';
@@ -645,7 +637,21 @@ const resp = await fetch('/.netlify/functions/run-kling-motion-control',{
     const server_run_id = j.run_id || run_id || '';
 
     showStatus('✅ Submitted. Waiting for result…','text-emerald-300');
-    try{ await refreshCreditsUI(); }catch{}
+
+    // Deduct AFTER Submitted (UI immediate) — backend will sync via realtime/refresh
+    try{
+      const nav = document.getElementById('navCredits');
+      if (nav){
+        const cur = await getCredits();
+        const need = (__computedCost != null && Number.isFinite(__computedCost)) ? __computedCost : 0;
+        const next = Math.max(0, Number((cur - need).toFixed(1)));
+        nav.textContent = next + '⚡';
+      }
+    }catch{}
+
+    // Force a fast sync in case realtime is delayed
+    try{ setTimeout(()=>{ try{ refreshCreditsUI(); }catch{} }, 500); }catch{}
+
     if (server_run_id) waitForSupabaseResult(uid, server_run_id, videoUrl);
 
   }catch(e){
