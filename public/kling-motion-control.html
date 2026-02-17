@@ -473,7 +473,7 @@ function showVideo(url){
 
 // Wait for result saved by the SAME KIE callback logic as Kling (video-kie-callback → Supabase)
 async function waitForSupabaseResult(uid, rid, uploadedUrl){
-  for (let i=0;i<320;i++){ // up to ~8 min (1.5s step)
+  for (let i=0;i<800;i++){ // up to ~8 min (1.5s step)
     try{
       const { data, error } = await supabase
         .from('user_generations')
@@ -555,7 +555,7 @@ window.__run = async function(){
   // Hide old play/download and reset result box
   try{ document.getElementById('playBtn')?.classList.add('hidden'); }catch{}
   try{ downloadLink?.classList.add('hidden'); downloadLink.href='#'; }catch{}
-  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… (up to ~8 min)</span>';
+  resultBox.innerHTML='<span class="text-xs text-zinc-500 animate-pulse">Generating… (5min-25 min) it will also appear in history when it is ready</span>';
 
   try{
     const uid = authData.user.id;
