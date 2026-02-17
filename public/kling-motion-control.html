@@ -274,7 +274,7 @@ function __recalcCostUI(){
     __billedSeconds = null;
     __computedCost = null;
     try{ runBtn.textContent = 'Run (cost: —)'; }catch{}
-    runBtn.disabled = true;
+    __updateRunEnabled();
     return;
   }
   const billed = Math.min(30, Math.max(1, Math.ceil(dur)));
@@ -283,7 +283,21 @@ function __recalcCostUI(){
   __computedCost = cost;
   try{ runBtn.textContent = `Run (cost: ${cost}⚡)`; }catch{}
   // enable button only when prompt+video valid; guard logic handles disabled state too
+  __updateRunEnabled();
 }
+
+
+function __updateRunEnabled(){
+  try{
+    const hasVideo = !!(videoEl && videoEl.files && videoEl.files[0]);
+    const hasPrompt = !!((promptEl && (promptEl.value||'').trim()));
+    const hasDur = (__videoDurationSec != null && Number.isFinite(__videoDurationSec) && __videoDurationSec > 0);
+    // enable only when required inputs are ready and cost is computed
+    const canRun = hasVideo && hasPrompt && hasDur && (__computedCost != null && Number.isFinite(__computedCost));
+    runBtn.disabled = !canRun;
+  }catch{}
+}
+
 
 
 let __imgObjURL=null; let __vidObjURL=null;
@@ -316,8 +330,19 @@ videoEl.addEventListener('change',()=>{
   // Create a non-playable thumbnail from the first frame
   try{
     const v=document.createElement('video');
-    v.muted=true; v.playsInline=true; v.src=u;
-    v.addEventListener('loadedmetadata',()=>{
+    v.muted=true; v.playsInline=true; v.preload='metadata'; v.src=u; try{v.load();}catch{}
+    
+    v.addEventListener('error',()=>{
+      __videoDurationSec = null; __billedSeconds = null; __computedCost = null;
+      showStatus('Could not load video metadata. Please try another MP4/MOV (≤30s).','text-rose-300');
+      __recalcCostUI();
+    }, { once:true });
+
+    // Fallback: if metadata doesn't load quickly, try forcing a reload
+    setTimeout(()=>{
+      if(__videoDurationSec==null){ try{ v.load(); }catch{} }
+    }, 800);
+v.addEventListener('loadedmetadata',()=>{
       try{ __videoDurationSec = Number(v.duration||0); }catch{ __videoDurationSec = null; }
       __recalcCostUI();
       // Seek a tiny bit into the video to ensure data is available
@@ -369,11 +394,13 @@ async function refreshCreditsUI(){
   try{
     const c = await getCredits();
     const nav = document.getElementById('navCredits'); if (nav) nav.textContent = (c ?? 0) + '⚡';
-    runBtn.disabled = false; runBtn.classList.remove('opacity-50','cursor-not-allowed');
+    __updateRunEnabled();
+    runBtn.classList.remove('opacity-50','cursor-not-allowed');
   }catch{}
 }
 refreshCreditsUI();
 if (modeEl) modeEl.addEventListener('change', __recalcCostUI);
+if (promptEl) promptEl.addEventListener('input', ()=>{ __updateRunEnabled(); });
 
 // === Live credits (Supabase Realtime) — 1:1 behavior with Kling 2.6 ===
 (async function HANSORA_LIVE_CREDITS(){
