@@ -573,10 +573,24 @@ const supaUpload = await (async () => {
   let videoUrl = "";
   let imageUrl = "";
 
+  function sanitizeFilename(name, fallbackExt){
+    const n = (name || "").toString();
+    const extMatch = n.match(/\.[A-Za-z0-9]{1,8}$/);
+    const ext = extMatch ? extMatch[0] : "";
+    const base = ext ? n.slice(0, -ext.length) : n;
+    let b = base;
+    try { b = b.normalize("NFKD"); } catch {}
+    b = b.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/-+/g, "-").replace(/^[-_]+|[-_]+$/g, "");
+    if (!b) b = "video";
+    const e = ext || (fallbackExt || ".mp4");
+    return b.slice(0, 60) + e;
+  }
+
   const fileInput = document.querySelector('input[type="file"][accept^="video"], input#referenceVideo');
   const vid = fileInput && fileInput.files && fileInput.files[0];
   if (vid) {
-    const key = `uploads/${uid}-${Date.now()}-${vid.name}`;
+    const safeName = sanitizeFilename(vid.name, ".mp4");
+    const key = `uploads/${uid}-${Date.now()}-${safeName}`;
     const { error } = await supabaseClient.storage.from("video").upload(key, vid);
     if (error) throw error;
     const { data: { publicUrl } } = supabaseClient.storage.from("video").getPublicUrl(key);
