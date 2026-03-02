@@ -1509,6 +1509,23 @@ async function pollGeneration(runId, controllers, token) {
         minCredits: 2
       },
       {
+        id: 'nano-banana-2',
+        name: 'Nano Banana 2',
+        emoji: '🍌',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'Flash-speed generation with Pro-level quality (supports Google Search grounding).',
+        endpoint: '/.netlify/functions/run-nano-banana-2',
+        needsImage: false,
+        maxFiles: 14,
+        aspectOptions: ['auto', '1:1', '1:4', '1:8', '2:3', '3:2', '3:4', '4:1', '4:3', '4:5', '5:4', '8:1', '9:16', '16:9', '21:9'],
+        defaultAspect: 'auto',
+        durations: null,
+        costLabel: '1.5⚡ per job',
+        minCredits: 1.5
+      },
+
+      {
         id: 'seedream-4-5',
         name: 'Seedream 4.5',
         emoji: '🎨',
@@ -1765,7 +1782,7 @@ async function pollGeneration(runId, controllers, token) {
     let currentVeoVariant = 'fast'; // 'fast' | 'quality'
     let uploadedFiles = [];
     // Models that should APPEND images when user uploads again (multi-image support)
-    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana', 'gpt-image-1', 'seedream-4-5']);
+    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana', 'gpt-image-1', 'seedream-4-5']);
 
     function __renderImageThumbs() {
       const thumbs = document.getElementById('imageThumbs');
@@ -2106,7 +2123,7 @@ let currentKlingSound = false;
       
 
       // Resolution pills (Nano Banana Pro only) — shown only for nano-banana-pro
-      if (currentModel.id === 'nano-banana-pro') {
+      if (currentModel.id === 'nano-banana-pro' || currentModel.id === 'nano-banana-2') {
         if (resolutionBlock) resolutionBlock.classList.remove('hidden');
         if (resolutionPills) {
           resolutionPills.innerHTML = '';
@@ -2715,7 +2732,7 @@ let currentKlingSound = false;
         throw new Error('upload_bridge_missing');
       }
       const urls = [];
-      const maxUploadMB = (typeof currentModel !== 'undefined' && currentModel && currentModel.id === 'nano-banana-pro') ? 25 : 10;
+      const maxUploadMB = (typeof currentModel !== 'undefined' && currentModel && (currentModel.id === 'nano-banana-pro' || currentModel.id === 'nano-banana-2')) ? (currentModel.id === 'nano-banana-2' ? 30 : 25) : 10;
       const maxUploadBytes = maxUploadMB * 1024 * 1024;
       for (const file of list) {
         if (file.size > maxUploadBytes) {
@@ -2737,6 +2754,8 @@ let currentKlingSound = false;
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || 'auto', run_id: runId };
         case 'nano-banana-pro':
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', resolution: (resolution || '1K'), run_id: runId };
+        case 'nano-banana-2':
+          return { urls, prompt: prompt || '.', format: 'png', size: aspect || 'auto', resolution: (resolution || '1K'), google_search: true, run_id: runId };
         case 'seedream-4-5':
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', run_id: runId };
         case 'gpt-image-1':
