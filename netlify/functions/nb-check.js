@@ -1,84 +1,3 @@
-// netlify/functions/nb-check.js
-// Surgical fix: probe both /api/v1/mj/* and /api/v1/jobs/*, MERGE images from all
-// success endpoints, return original fields plus images[], and backfill ALL rows.
-// Compatible with Nano Banana + MidJourney. No interface changes.
-
-const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,'');
-const KIE_KEY  = process.env.KIE_API_KEY;
-
-const SUPABASE_URL  = process.env.SUPABASE_URL || '';
-const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
-
-exports.handler = async (event) => {
-  try {
-    if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
-    if (event.httpMethod !== 'GET')     return { statusCode: 405, headers: cors(), body: 'Use GET' };
-
-    const qs = event.queryStringParameters || {};
-    const taskId = (qs.taskId || qs.task_id || '').trim();
-    if (!taskId) return json(400, { ok:false, error:'missing taskId' });
-
-    const uid    = header(event, 'x-user-id') || qs.uid || null;
-    const run_id = (qs.run_id || '').trim() || null;
-
-    // Fetch once across endpoints (the page will poll repeatedly)
-    const probe = await fetchAll(taskId);
-
-    if (!probe.ok) {
-      return json(200, { ok:false, status: probe.status || 'pending' });
-    }
-
-    const images = firstImageUrls(probe.data, 4);
-    if (!images.length) {
-      return json(200, { ok:false, status:'pending' });
-    }
-
-    // Backfill ALL (up to 4) rows so Realtime/subscribe can render each
-    await backfillAll({ uid, run_id, taskId, images }).catch(()=>{});
-
-    return json(200, { ok:true, status:'success', image_url: images[0], images });
-
-  } catch (e) {
-    return json(200, { ok:false, error: String(e) });
-  }
-};
-
-// ---------- helpers ----------
-function cors(){ return { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'GET,OPTIONS' }; }
-function json(code, obj){ return { statusCode: code, headers: { 'Content-Type': 'application/json', ...cors() }, body: JSON.stringify(obj) }; }
-function header(event, name){ const v = event.headers?.[name] || event.headers?.[name.toLowerCase()]; return Array.isArray(v) ? v[0] : v; }
-function kieHeaders(){ return { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' }; }
-
-// === THE ONLY BEHAVIORAL CHANGE ===
-// Merge images from *all* success endpoints instead of returning at the first success.
-async function fetchAll(taskId){
-  const endpoints = [
-    // MJ endpoints first (usually contain full set for MidJourney)
-    `${KIE_BASE}/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
-    `${KIE_BASE}/api/v1/mj/result?taskId=${encodeURIComponent(taskId)}`,
-    `${KIE_BASE}/api/v1/mj/getTask?taskId=${encodeURIComponent(taskId)}`,
-    // Generic jobs fallbacks (used by Nano Banana and some providers)
-    `${KIE_BASE}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
-    `${KIE_BASE}/api/v1/jobs/result?taskId=${encodeURIComponent(taskId)}`
-  ];
-
-  let merged = [];         // merged image urls
-  let sawSuccess = false;  // did any endpoint report success?
-
-  for (const url of endpoints) {
-    try {
-      const r = await fetch(url, { headers: kieHeaders() });
-      const txt = await r.text();
-      let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
-
-      if (normalizeStatus(data) === 'success') {
-        sawSuccess = true;
-        const imgs = firstImageUrls(data, 4);
-        for (const u of imgs) if (!merged.includes(u)) merged.push(u);
-        if (merged.length >= 4) break; // got all 4, stop early
-      }
       // do not early-return on pending/failed; try other endpoints
     } catch {}
   }
@@ -87,14 +6,32 @@ async function fetchAll(taskId){
     // Return a data shape that downstream understands (contains images array)
     return { ok: true, status: 'success', data: { images: merged } };
   }
+  if (failed) {
+    return { ok: false, status: 'failed', failed: true, error: extractError(failed), data: failed };
+  }
   return { ok: false, status: 'pending' };
 }
 
 function normalizeStatus(d){
   const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || d?.data?.state || '').toLowerCase();
   if (['success','succeeded','completed','done'].includes(s)) return 'success';
-  if (['failed','error'].includes(s)) return 'failed';
+  if (['failed','error','canceled','cancelled'].includes(s)) return 'failed';
   return 'pending';
+}
+
+function extractError(d){
+  const msg =
+    d?.error ||
+    d?.message ||
+    d?.msg ||
+    d?.data?.error ||
+    d?.data?.message ||
+    d?.result?.error ||
+    d?.result?.message ||
+    d?.raw;
+  if (typeof msg === 'string' && msg.trim()) return msg.slice(0, 500);
+  try { return JSON.stringify(d).slice(0, 500); } catch {}
+  return 'kie_failed';
 }
 
 function isUrl(x){ try { new URL(x); return true; } catch { return false; } }
@@ -155,4 +92,108 @@ async function backfillAll({ uid, run_id, taskId, images }){
     },
     body: JSON.stringify(rows)
   });
+}
+
+async function markFailedAndRefund({ uid, run_id, taskId, reason }){
+  if (!SUPABASE_URL || !SERVICE_KEY) return { refunded:false };
+
+  const row = await findGeneration({ uid, run_id, taskId });
+  if (!row) return { refunded:false };
+
+  const meta = row.meta || {};
+  const now = new Date().toISOString();
+  const refundAmount = Number(meta.charged_cost || meta.cost || 0) || 0;
+  const failedMeta = {
+    ...meta,
+    status: 'failed',
+    state: 'failed',
+    fail_reason: reason || meta.fail_reason || 'kie_failed',
+    failed_reason: reason || meta.failed_reason || 'kie_failed',
+    failed_at: meta.failed_at || now
+  };
+
+  if (meta.refunded === true) {
+    await patchGeneration(row.id, { meta: { ...failedMeta, refunded: true } });
+    return { refunded:true, refund_amount: Number(meta.refund_amount || refundAmount || 0) };
+  }
+
+  if (refundAmount > 0 && row.user_id) {
+    const claim = `rf_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const claimed = await claimRefund(row.id, { ...failedMeta, refund_claim: claim });
+    if (!claimed) {
+      return { refunded:false, refund_amount: 0 };
+    }
+    await refundCredits(row.user_id, refundAmount);
+    await patchGeneration(row.id, {
+      meta: {
+        ...failedMeta,
+        refunded: true,
+        refund_amount: refundAmount,
+        refunded_at: meta.refunded_at || now
+      }
+    });
+    return { refunded:true, refund_amount: refundAmount };
+  }
+
+  await patchGeneration(row.id, { meta: failedMeta });
+  return { refunded:false, refund_amount: 0 };
+}
+
+async function findGeneration({ uid, run_id, taskId }){
+  const base = `${SUPABASE_URL}/rest/v1/user_generations`;
+  const headers = sbHeaders();
+  const queries = [];
+  if (uid && run_id) queries.push(`user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`);
+  if (run_id) queries.push(`meta->>run_id=eq.${encodeURIComponent(run_id)}`);
+  if (taskId) queries.push(`meta->>task_id=eq.${encodeURIComponent(taskId)}`);
+
+  for (const q of queries) {
+    const r = await fetch(`${base}?select=id,user_id,meta&${q}&order=created_at.desc&limit=1`, { headers });
+    if (!r.ok) continue;
+    const rows = await r.json().catch(()=>[]);
+    if (Array.isArray(rows) && rows[0]) return rows[0];
+  }
+  return null;
+}
+
+async function patchGeneration(id, patch){
+  await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { ...sbHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify(patch)
+  });
+}
+
+async function claimRefund(id, meta){
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(id)}&meta->>refunded=is.null&meta->>refund_claim=is.null&select=id`, {
+    method: 'PATCH',
+    headers: { ...sbHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+    body: JSON.stringify({ meta })
+  });
+  const rows = await r.json().catch(()=>[]);
+  return r.ok && Array.isArray(rows) && rows.length > 0;
+}
+
+async function refundCredits(userId, amount){
+  const rpc = await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_profile_credits`, {
+    method: 'POST',
+    headers: { ...sbHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_user_id: userId, p_delta: amount })
+  });
+  if (rpc.ok) return;
+
+  const prof = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=credits`, {
+    headers: sbHeaders()
+  });
+  const rows = await prof.json().catch(()=>[]);
+  const cur = Array.isArray(rows) && rows[0] && typeof rows[0].credits === 'number' ? rows[0].credits : 0;
+  await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    headers: { ...sbHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ credits: cur + amount })
+  });
+}
+
+function sbHeaders(){
+  return { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` };
 }
