@@ -116,7 +116,7 @@ async function fetchAll(taskId){
 function normalizeStatus(d){
   const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || d?.data?.state || '').toLowerCase();
   if (['success','succeeded','completed','done'].includes(s)) return 'success';
-  if (['failed','failure','error','canceled','cancelled'].includes(s)) return 'failed';
+  if (['failed','fail','failure','error','canceled','cancelled'].includes(s)) return 'failed';
   return 'pending';
 }
 
@@ -127,6 +127,8 @@ function extractError(d){
     d?.msg ||
     d?.data?.error ||
     d?.data?.message ||
+    d?.data?.failMsg ||
+    d?.data?.failCode ||
     d?.result?.error ||
     d?.result?.message ||
     d?.raw;
