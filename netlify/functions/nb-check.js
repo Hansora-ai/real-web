@@ -1,3 +1,103 @@
+// netlify/functions/nb-check.js
+// Surgical fix: probe both /api/v1/mj/* and /api/v1/jobs/*, MERGE images from all
+// success endpoints, return original fields plus images[], and backfill ALL rows.
+// Compatible with Nano Banana + MidJourney. No interface changes.
+
+const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,'');
+const KIE_KEY  = process.env.KIE_API_KEY;
+
+const SUPABASE_URL  = process.env.SUPABASE_URL || '';
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
+
+exports.handler = async (event) => {
+  try {
+    if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
+    if (event.httpMethod !== 'GET')     return { statusCode: 405, headers: cors(), body: 'Use GET' };
+
+    const qs = event.queryStringParameters || {};
+    const taskId = (qs.taskId || qs.task_id || '').trim();
+    if (!taskId) return json(400, { ok:false, error:'missing taskId' });
+
+    const uid    = header(event, 'x-user-id') || qs.uid || null;
+    const run_id = (qs.run_id || '').trim() || null;
+
+    // Fetch once across endpoints (the page will poll repeatedly)
+    const probe = await fetchAll(taskId);
+
+    if (probe.failed) {
+      const fail = await markFailedAndRefund({ uid, run_id, taskId, reason: probe.error || 'kie_failed' }).catch((e)=>({ error: String(e) }));
+      return json(200, {
+        ok:false,
+        status:'failed',
+        failed:true,
+        error: probe.error || 'kie_failed',
+        refunded: !!fail.refunded,
+        refund_amount: fail.refund_amount || null
+      });
+    }
+
+    if (!probe.ok) {
+      return json(200, { ok:false, status: probe.status || 'pending' });
+    }
+
+    const images = firstImageUrls(probe.data, 4);
+    if (!images.length) {
+      return json(200, { ok:false, status:'pending' });
+    }
+
+    // Backfill ALL (up to 4) rows so Realtime/subscribe can render each
+    await backfillAll({ uid, run_id, taskId, images }).catch(()=>{});
+
+    return json(200, { ok:true, status:'success', image_url: images[0], images });
+
+  } catch (e) {
+    return json(200, { ok:false, error: String(e) });
+  }
+};
+
+// ---------- helpers ----------
+function cors(){ return { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'GET,OPTIONS' }; }
+function json(code, obj){ return { statusCode: code, headers: { 'Content-Type': 'application/json', ...cors() }, body: JSON.stringify(obj) }; }
+function header(event, name){ const v = event.headers?.[name] || event.headers?.[name.toLowerCase()]; return Array.isArray(v) ? v[0] : v; }
+function kieHeaders(){ return { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' }; }
+
+// === THE ONLY BEHAVIORAL CHANGE ===
+// Merge images from *all* success endpoints instead of returning at the first success.
+async function fetchAll(taskId){
+  const endpoints = [
+    // MJ endpoints first (usually contain full set for MidJourney)
+    `${KIE_BASE}/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_BASE}/api/v1/mj/result?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_BASE}/api/v1/mj/getTask?taskId=${encodeURIComponent(taskId)}`,
+    // Generic jobs fallbacks (used by Nano Banana and some providers)
+    `${KIE_BASE}/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+    `${KIE_BASE}/api/v1/jobs/result?taskId=${encodeURIComponent(taskId)}`
+  ];
+
+  let merged = [];         // merged image urls
+  let sawSuccess = false;  // did any endpoint report success?
+  let failed = null;
+
+  for (const url of endpoints) {
+    try {
+      const r = await fetch(url, { headers: kieHeaders() });
+      const txt = await r.text();
+      let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+      const status = normalizeStatus(data);
+
+      if (status === 'failed') {
+        failed = data;
+        continue;
+      }
+
+      if (status === 'success') {
+        sawSuccess = true;
+        const imgs = firstImageUrls(data, 4);
+        for (const u of imgs) if (!merged.includes(u)) merged.push(u);
+        if (merged.length >= 4) break; // got all 4, stop early
+      }
       // do not early-return on pending/failed; try other endpoints
     } catch {}
   }
