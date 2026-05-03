@@ -674,7 +674,9 @@ async function __mjFetchNbCheck(params){
   const uid = params && params.uid ? String(params.uid) : '';
   const runId = params && params.runId ? String(params.runId) : '';
   let url = '';
-  if (taskId) url = `/.netlify/functions/nb-check?taskId=${encodeURIComponent(taskId)}`;
+  if (taskId) {
+    url = `/.netlify/functions/nb-check?taskId=${encodeURIComponent(taskId)}&uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
+  }
   else url = `/.netlify/functions/nb-check?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
   const r = await fetch(url, { method:'GET', headers:{ 'Accept':'application/json' } });
   const t = await r.text();
@@ -1351,13 +1353,13 @@ function createResultCard(data) {
 
 const __activePolls = new Map(); // runId -> token
 
-function startPollGeneration(runId, controllers) {
+function startPollGeneration(runId, controllers, taskId) {
   if (!runId || !controllers || !controllers.length) return;
   if (__activePolls.has(runId)) return; // already polling this run
   const token = { cancelled: false };
   __activePolls.set(runId, token);
   // Fire and forget; cleanup when done
-  pollGeneration(runId, controllers, token)
+  pollGeneration(runId, controllers, token, taskId)
     .catch((e) => console.warn('pollGeneration wrapper exception', e))
     .finally(() => {
       __activePolls.delete(runId);
@@ -1403,7 +1405,7 @@ async function sora2Poll(taskId, uid, runId, controllers, token) {
 }
 
 
-async function pollGeneration(runId, controllers, token) {
+async function pollGeneration(runId, controllers, token, taskId) {
   if (!currentUser || !runId || !controllers || !controllers.length) return;
   const maxMs = 900000;
   const started = Date.now();
@@ -1411,6 +1413,21 @@ async function pollGeneration(runId, controllers, token) {
     await new Promise((r) => setTimeout(r, 3000));
     if (token && token.cancelled) return;
     try {
+      if (taskId) {
+        const nb = await __mjFetchNbCheck({ taskId, uid: currentUser.id, runId });
+        const nbStatus = String(nb?.js?.status || '').toLowerCase();
+        const nbFailed = !!nb?.js?.failed || nbStatus.includes('fail') || nbStatus.includes('error') || nbStatus.includes('cancel');
+        if (nbFailed) {
+          const message = nb?.js?.error ? `❌ Generation failed: ${nb.js.error}` : '❌ Generation failed. Credits refunded.';
+          showStatus(message, 'error');
+          await refreshCredits();
+          for (let i = 0; i < controllers.length; i++) {
+            controllers[i].apply({ status: 'failed', result_url: null });
+          }
+          return;
+        }
+      }
+
       const { data, error } = await supabaseClient
         .from('user_generations')
         .select('provider, kind, prompt, result_url, meta, created_at')
@@ -3063,7 +3080,8 @@ for (let i = 0; i < expectedOutputs; i++) {
             );
             await refreshCredits();
             if (placeholderControllers && placeholderControllers.length) {
-              startPollGeneration(runId, placeholderControllers);
+              const taskId = j && (j.taskId || j.id || (j.data && (j.data.taskId || j.data.id)));
+              startPollGeneration(runId, placeholderControllers, taskId);
             }
           }
         }
