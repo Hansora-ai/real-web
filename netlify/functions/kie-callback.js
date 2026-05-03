@@ -98,3 +98,268 @@ exports.handler = async (event) => {
         const fail = await markFailedAndRefund({ uid, run_id, taskId, reason: extractError(failed === true ? data : failed) }).catch((e)=>({ error:String(e) }));
         return reply(200, {
           ok:true,
+          saved:false,
+          failed:true,
+          status:'failed',
+          refunded: !!fail.refunded,
+          refund_amount: fail.refund_amount || null
+        });
+      }
+      return reply(200, { ok:true, saved:false, note:'no allowed final image_url; not inserting' });
+    }
+
+    // Update user_generations with the first URL
+    try {
+      if (UG_URL && SERVICE_KEY && (uid || run_id)) {
+        const q = (uid && run_id)
+          ? `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`
+          : `?meta->>run_id=eq.${encodeURIComponent(run_id||'')}`;
+        const bodyJson = { result_url: finalUrls[0],kind: 'image', meta: { run_id, task_id: taskId, status: 'done' } };
+        const chk = await fetch(UG_URL + q + '&select=id', { headers: sb() });
+        let hasRow = false;
+        try { const arr = await chk.json(); hasRow = Array.isArray(arr) && arr.length > 0; } catch {}
+        await fetch(UG_URL + (hasRow ? q : ''), {
+          method: hasRow ? 'PATCH' : 'POST',
+          headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify(hasRow ? bodyJson : { user_id: uid, ...bodyJson })
+        });
+      }
+    } catch {}
+
+    // Insert ALL image rows (merge-duplicates avoids dup rows)
+    const rows = finalUrls.map(u => ({
+      user_id: uid || '00000000-0000-0000-0000-000000000000',
+      run_id:  run_id || null,
+      task_id: taskId || null,
+      image_url: u
+    }));
+
+    const resp = await fetch(TABLE_URL, {
+      method: 'POST',
+      headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(rows)
+    });
+
+    return reply(200, { ok: resp.ok, saved:true, count: rows.length, urls: finalUrls });
+
+  } catch (e) {
+    return reply(200, { ok:false, error:String(e) });
+  }
+};
+
+// ───────── helpers
+
+async function fetchMJorJobsAll(id, limit=4){
+  const endpoints = [
+    `/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(id)}`,
+    `/api/v1/mj/result?taskId=${encodeURIComponent(id)}`,
+    `/api/v1/mj/getTask?taskId=${encodeURIComponent(id)}`,
+    `/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(id)}`,
+    `/api/v1/jobs/result?taskId=${encodeURIComponent(id)}`
+  ];
+  for (const path of endpoints){
+    try{
+      const r = await fetch(`${KIE_BASE}${path}`, { headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' } });
+      const j = await r.json();
+      const s = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
+      const ok = ['success','succeeded','completed','done'].includes(s) || !!j?.data?.result || Array.isArray(j?.data?.images);
+      if (!ok) continue;
+      const urls = pickResultUrls(j, limit);
+      if (urls.length) return urls;
+    }catch{}
+  }
+  return [];
+}
+
+function deduceMJ4(u){
+  if (typeof u !== 'string') return [u].filter(Boolean);
+  // ..._0_0.jpeg|png|webp → derive siblings
+  const m = u.match(/^(.*_0_)(0)(\.(?:jpe?g|png|webp))$/i);
+  if (m) return [0,1,2,3].map(i => `${m[1]}${i}${m[3]}`);
+  return [u]; // fallback
+}
+
+function sb(){ return { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }; }
+
+function reply(statusCode, body) {
+  return { statusCode, headers: { ...cors(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+}
+function cors(){ return {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST, GET, OPTIONS','Access-Control-Allow-Headers':'Content-Type, Authorization'}; }
+function lowerKeys(obj){const out={}; for(const k in obj) out[k.toLowerCase()]=obj[k]; return out;}
+function parseFormLike(s){const out={}; try{ for(const part of s.split('&')){ const [k,v]=part.split('='); if(!k) continue; out[decodeURIComponent(k)]=decodeURIComponent(v||''); } }catch{} return out;}
+function get(o,p){ try{ return p.split('.').reduce((a,k)=> (a && k in a ? a[k] : undefined), o); } catch { return undefined; } }
+function isFailureStatus(d){
+  const s = String(get(d,'status') || get(d,'state') || get(d,'result.status') || get(d,'data.status') || get(d,'data.state') || '').toLowerCase();
+  return ['failed','error','canceled','cancelled'].includes(s);
+}
+function extractError(d){
+  const msg =
+    get(d,'error') ||
+    get(d,'message') ||
+    get(d,'msg') ||
+    get(d,'data.error') ||
+    get(d,'data.message') ||
+    get(d,'result.error') ||
+    get(d,'result.message') ||
+    get(d,'raw');
+  if (typeof msg === 'string' && msg.trim()) return msg.slice(0, 500);
+  try { return JSON.stringify(d).slice(0, 500); } catch {}
+  return 'kie_failed';
+}
+function isUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u); }
+function host(u){ try{ return new URL(u).hostname; } catch { return ''; } }
+function isAllowedFinal(u){
+  if (!isUrl(u)) return false;
+  const h = host(u);
+  if (!ALLOWED_HOSTS.has(h)) return false;
+  return true;
+}
+
+// Collect up to N URLs from common MJ shapes or deep scan
+function pickResultUrls(obj, limit=4){
+  const acc = [];
+  const prefer = [
+    get(obj,'result.images'),
+    get(obj,'data.result.images'),
+    get(obj,'data.images'),
+    get(obj,'images')
+  ];
+  for (const a of prefer) if (Array.isArray(a)) acc.push(...a);
+  (function walk(x){
+    if (!x) return;
+    if (typeof x === 'string'){
+      const m = x.match(/https?:\/\/[^\s"']+/i);
+      if (m) acc.push(m[0]);
+    } else if (Array.isArray(x)){
+      for (const v of x) walk(v);
+    } else if (typeof x === 'object'){
+      for (const v of Object.values(x)) walk(v);
+    }
+  })(obj);
+
+  const out = [];
+  const seen = new Set();
+  for (const it of acc){
+    const u = typeof it === 'string' ? it : (it && it.url);
+    if (u && isAllowedFinal(u) && !seen.has(u)){
+      seen.add(u);
+      out.push(u);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}
+
+async function fetchKieFailure(id){
+  const endpoints = [
+    `/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(id)}`,
+    `/api/v1/mj/result?taskId=${encodeURIComponent(id)}`,
+    `/api/v1/mj/getTask?taskId=${encodeURIComponent(id)}`,
+    `/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(id)}`,
+    `/api/v1/jobs/result?taskId=${encodeURIComponent(id)}`
+  ];
+  for (const path of endpoints){
+    try{
+      const r = await fetch(`${KIE_BASE}${path}`, { headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' } });
+      const j = await r.json().catch(()=>null);
+      if (isFailureStatus(j)) return j;
+    }catch{}
+  }
+  return null;
+}
+
+async function markFailedAndRefund({ uid, run_id, taskId, reason }){
+  if (!SUPABASE_URL || !SERVICE_KEY) return { refunded:false };
+
+  const row = await findGeneration({ uid, run_id, taskId });
+  if (!row) return { refunded:false };
+
+  const meta = row.meta || {};
+  const now = new Date().toISOString();
+  const refundAmount = Number(meta.charged_cost || meta.cost || 0) || 0;
+  const failedMeta = {
+    ...meta,
+    status: 'failed',
+    state: 'failed',
+    fail_reason: reason || meta.fail_reason || 'kie_failed',
+    failed_reason: reason || meta.failed_reason || 'kie_failed',
+    failed_at: meta.failed_at || now
+  };
+
+  if (meta.refunded === true) {
+    await patchGeneration(row.id, { ...failedMeta, refunded: true });
+    return { refunded:true, refund_amount: Number(meta.refund_amount || refundAmount || 0) };
+  }
+
+  if (refundAmount > 0 && row.user_id) {
+    const claim = `rf_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const claimed = await claimRefund(row.id, { ...failedMeta, refund_claim: claim });
+    if (!claimed) {
+      return { refunded:false, refund_amount: 0 };
+    }
+    await refundCredits(row.user_id, refundAmount);
+    await patchGeneration(row.id, {
+      ...failedMeta,
+      refunded: true,
+      refund_amount: refundAmount,
+      refunded_at: meta.refunded_at || now
+    });
+    return { refunded:true, refund_amount: refundAmount };
+  }
+
+  await patchGeneration(row.id, failedMeta);
+  return { refunded:false, refund_amount: 0 };
+}
+
+async function patchGeneration(id, meta){
+  await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ meta })
+  });
+}
+
+async function claimRefund(id, meta){
+  const r = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}&meta->>refunded=is.null&meta->>refund_claim=is.null&select=id`, {
+    method: 'PATCH',
+    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+    body: JSON.stringify({ meta })
+  });
+  const rows = await r.json().catch(()=>[]);
+  return r.ok && Array.isArray(rows) && rows.length > 0;
+}
+
+async function findGeneration({ uid, run_id, taskId }){
+  const queries = [];
+  if (uid && run_id) queries.push(`user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`);
+  if (run_id) queries.push(`meta->>run_id=eq.${encodeURIComponent(run_id)}`);
+  if (taskId) queries.push(`meta->>task_id=eq.${encodeURIComponent(taskId)}`);
+
+  for (const q of queries) {
+    const r = await fetch(`${UG_URL}?select=id,user_id,meta&${q}&order=created_at.desc&limit=1`, { headers: sb() });
+    if (!r.ok) continue;
+    const rows = await r.json().catch(()=>[]);
+    if (Array.isArray(rows) && rows[0]) return rows[0];
+  }
+  return null;
+}
+
+async function refundCredits(userId, amount){
+  const rpc = await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_profile_credits`, {
+    method: 'POST',
+    headers: { ...sb(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_user_id: userId, p_delta: amount })
+  });
+  if (rpc.ok) return;
+
+  const prof = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=credits`, {
+    headers: sb()
+  });
+  const rows = await prof.json().catch(()=>[]);
+  const cur = Array.isArray(rows) && rows[0] && typeof rows[0].credits === 'number' ? rows[0].credits : 0;
+  await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ credits: cur + amount })
+  });
+}
