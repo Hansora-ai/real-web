@@ -1102,6 +1102,31 @@
         min-width: 0;
       }
     }
+
+
+    /* Creator choices cards: transparent/clean PNG model icons only. */
+    .model-rail .model-card {
+      background: transparent !important;
+      border-color: transparent !important;
+      box-shadow: none !important;
+    }
+
+    .model-rail .model-card::before,
+    .model-rail .model-card::after {
+      display: none !important;
+    }
+
+    .model-rail .model-card img {
+      object-fit: contain;
+      padding: 28px;
+    }
+
+    @media (max-width: 740px) {
+      .model-rail .model-card img {
+        padding: 20px;
+      }
+    }
+
 </style>
 <link href="/header.css" rel="stylesheet"/>
 </head>
@@ -1221,6 +1246,8 @@
 <a class="slot model-card" href="/search-models.html"><img alt="Sora 2 preview image" src="/media/creator-choice-04.jpg"/><span class="slot-label"><strong>Sora 2</strong><span>Video</span></span></a>
 <a class="slot model-card" href="/search-models.html"><img alt="Veo preview image" src="/media/creator-choice-05.jpg"/><span class="slot-label"><strong>Veo</strong><span>Video</span></span></a>
 <a class="slot model-card" href="/search-models.html"><img alt="Midjourney preview image" src="/media/creator-choice-06.jpg"/><span class="slot-label"><strong>Midjourney</strong><span>Image</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Flux preview image" src="/media/creator-choice-07.jpg"/><span class="slot-label"><strong>Flux</strong><span>Image</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Grok preview image" src="/media/creator-choice-08.jpg"/><span class="slot-label"><strong>Grok</strong><span>Image</span></span></a>
 </div>
 </div>
 </section>
