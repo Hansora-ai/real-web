@@ -1,9 +1,16 @@
 /* HANSORA shared header/auth system */
-#sharedHeader { position: relative; z-index: 30; }
-.site-header {
-  position: sticky;
+#sharedHeader {
+  position: fixed;
   top: 0;
-  z-index: 30;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+}
+.site-header {
+  position: relative;
+  top: auto;
+  z-index: 1;
+  width: 100%;
   border-bottom: 1px solid var(--line, rgba(255,255,255,.11));
   background: rgba(11,13,19,.74);
   backdrop-filter: blur(18px);
@@ -155,7 +162,7 @@
 .hansora-auth-modal {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 10000;
   display: none;
   align-items: center;
   justify-content: center;
@@ -242,4 +249,15 @@
 
 .hansora-auth-actions a.btn {
   text-decoration: none;
+}
+
+/* Fixed shared header spacing */
+body {
+  padding-top: 68px;
+}
+
+@media (max-width: 740px) {
+  body {
+    padding-top: 64px;
+  }
 }
