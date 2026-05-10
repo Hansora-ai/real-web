@@ -209,3 +209,37 @@
   .site-header #btnLoginSignup { display: inline-flex !important; }
   .site-header .nav-actions .btn-primary { display: none; }
 }
+
+
+.hansora-google-btn {
+  width: 100%;
+  gap: 10px;
+  min-height: 46px;
+  margin-bottom: 4px;
+}
+
+.hansora-google-btn img {
+  width: 20px;
+  height: 20px;
+}
+
+.hansora-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(247,247,251,.48);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.hansora-auth-divider::before,
+.hansora-auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,.1);
+}
+
+.hansora-auth-actions a.btn {
+  text-decoration: none;
+}
