@@ -1,0 +1,211 @@
+/* HANSORA shared header/auth system */
+#sharedHeader { position: relative; z-index: 30; }
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  border-bottom: 1px solid var(--line, rgba(255,255,255,.11));
+  background: rgba(11,13,19,.74);
+  backdrop-filter: blur(18px);
+}
+.site-header .shell {
+  width: min(var(--max, 1440px), calc(100% - 48px));
+  margin: 0 auto;
+}
+.site-header .nav {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.site-header .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: max-content;
+  font-weight: 900;
+  color: inherit;
+  text-decoration: none;
+}
+.site-header .brand img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 14px rgba(56,189,248,.45));
+}
+.site-header .nav-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--line, rgba(255,255,255,.11));
+  border-radius: 999px;
+  background: rgba(255,255,255,.04);
+}
+.site-header .nav-links a {
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--muted, rgba(247,247,251,.62));
+  font-size: .9rem;
+  font-weight: 800;
+}
+.site-header .nav-links a:hover {
+  color: #fff;
+  background: rgba(255,255,255,.07);
+}
+.site-header .nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.site-header .btn,
+.hansora-auth-modal .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--line-strong, rgba(255,255,255,.2));
+  border-radius: 999px;
+  background: rgba(255,255,255,.06);
+  color: #fff;
+  font-weight: 850;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform .16s ease, background .16s ease, border-color .16s ease;
+  text-decoration: none;
+}
+.site-header .btn:hover,
+.hansora-auth-modal .btn:hover {
+  transform: translateY(-1px);
+  background: rgba(255,255,255,.1);
+}
+.site-header .btn-primary,
+.hansora-auth-modal .btn-brand {
+  border-color: transparent;
+  background: linear-gradient(90deg, var(--brand, #6366f1), var(--brand-3, #a78bfa), var(--brand-2, #38bdf8));
+  box-shadow: 0 16px 42px rgba(99,102,241,.32);
+  color: #fff;
+}
+.site-header .btn-ghost { color: var(--muted, rgba(247,247,251,.62)); }
+.site-header .credits-pill {
+  display: none;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(121,231,255,.32);
+  border-radius: 999px;
+  background: rgba(121,231,255,.08);
+  color: #dffbff;
+  font-weight: 850;
+  white-space: nowrap;
+}
+.site-header .avatar-button {
+  display: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line, rgba(255,255,255,.11));
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  cursor: pointer;
+}
+.site-header .avatar-button img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.site-header .user-menu {
+  position: absolute;
+  top: 58px;
+  right: 24px;
+  display: none;
+  min-width: 180px;
+  padding: 7px;
+  border: 1px solid var(--line, rgba(255,255,255,.11));
+  border-radius: var(--radius, 8px);
+  background: rgba(11,13,19,.96);
+  box-shadow: var(--shadow, 0 28px 80px rgba(0,0,0,.42));
+}
+.site-header .user-menu.is-open { display: block; }
+.site-header .user-menu a,
+.site-header .user-menu button {
+  display: block;
+  width: 100%;
+  padding: 10px 11px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted, rgba(247,247,251,.62));
+  text-align: left;
+  font-weight: 760;
+  cursor: pointer;
+  text-decoration: none;
+}
+.site-header .user-menu a:hover,
+.site-header .user-menu button:hover {
+  background: rgba(255,255,255,.07);
+  color: #fff;
+}
+.site-header.auth-checking #btnLoginSignup,
+.site-header.auth-checking #navCredits,
+.site-header.auth-checking #navAvatar { visibility: hidden !important; }
+.hansora-auth-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0,0,0,.8);
+}
+.hansora-auth-modal.is-open { display: flex; }
+.hansora-auth-card {
+  width: min(100%, 448px);
+  padding: 24px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 16px;
+  background: var(--bg, #0b0d13);
+  color: var(--text, #f7f7fb);
+  box-shadow: var(--shadow, 0 28px 80px rgba(0,0,0,.42));
+}
+.hansora-auth-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.hansora-auth-head h3 { margin: 0; font-size: 1.125rem; font-weight: 700; }
+.hansora-auth-close {
+  min-height: 32px !important;
+  padding: 0 10px !important;
+  border-radius: 8px !important;
+}
+.hansora-auth-form { display: grid; gap: 12px; }
+.hansora-auth-form input {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  background: rgba(255,255,255,.05);
+  color: #fff;
+  outline: none;
+}
+.hansora-auth-form input::placeholder { color: rgba(255,255,255,.45); }
+.hansora-auth-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.hansora-auth-actions .btn { min-height: 42px; border-radius: 10px; padding: 0 12px; }
+.hansora-auth-msg { min-height: 16px; margin: 0; color: rgba(255,255,255,.6); font-size: .78rem; }
+.hansora-hidden { display: none !important; }
+@media (max-width: 740px) {
+  .site-header .shell { width: min(100% - 28px, var(--max, 1440px)); }
+  .site-header .nav-links { display: none; }
+  .site-header .nav { min-height: 64px; }
+  .site-header .brand span { font-size: .95rem; }
+  .site-header #btnLoginSignup { display: inline-flex !important; }
+  .site-header .nav-actions .btn-primary { display: none; }
+}
