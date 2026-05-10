@@ -10,7 +10,7 @@ const API_KEY    = process.env.KIE_API_KEY || "";
 const SUPABASE_URL  = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-const SITE_BASE   = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/, "");
+const SITE_BASE   = (process.env.SITE_BASE || "https://hancora.co").replace(/\/+$/, "");
 const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/kie-callback`;
 
 const VERSION_TAG  = "nb_2_fn_kling26_style_v1";
