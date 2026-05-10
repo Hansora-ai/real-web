@@ -76,12 +76,16 @@
             <button class="btn hansora-auth-close" id="authClose" type="button">✕</button>
           </div>
           <form class="hansora-auth-form" id="authForm">
+            <button class="btn hansora-google-btn" id="btnGoogleLogin" type="button">
+              <img alt="G" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
+              <span>Log in with Google</span>
+            </button>
+            <div class="hansora-auth-divider"><span>or</span></div>
             <input id="authEmail" placeholder="Email" required type="email" autocomplete="email">
             <input id="authPass" placeholder="Password" required type="password" autocomplete="current-password">
-            <input class="hansora-hidden" id="authPass2" placeholder="Repeat password" type="password" autocomplete="new-password">
             <div class="hansora-auth-actions">
               <button class="btn btn-brand" id="btnDoLogin" type="button">Log in</button>
-              <button class="btn" id="btnDoSignup" type="button">Sign up</button>
+              <a class="btn" id="btnGoSignup" href="/login.html?mode=signup">Sign up</a>
             </div>
             <p class="hansora-auth-msg" id="authMsg"></p>
           </form>
@@ -137,22 +141,11 @@
   let authMode = 'login';
 
   function setAuthMode(mode) {
-    authMode = mode;
+    authMode = 'login';
     const title = el('authTitle');
-    const pass2 = el('authPass2');
-    const doLogin = el('btnDoLogin');
-    const doSignup = el('btnDoSignup');
-    if (mode === 'signup') {
-      if (title) title.textContent = 'Sign up';
-      if (pass2) pass2.classList.remove('hansora-hidden');
-      if (doSignup) doSignup.classList.add('btn-brand');
-      if (doLogin) doLogin.classList.remove('btn-brand');
-    } else {
-      if (title) title.textContent = 'Log in';
-      if (pass2) pass2.classList.add('hansora-hidden');
-      if (doLogin) doLogin.classList.add('btn-brand');
-      if (doSignup) doSignup.classList.remove('btn-brand');
-    }
+    const msg = el('authMsg');
+    if (title) title.textContent = 'Log in';
+    if (msg) msg.textContent = '';
   }
 
   function openAuth(mode) {
@@ -266,7 +259,7 @@
     const btnLogout = el('btnLogout');
     const authClose = el('authClose');
     const doLogin = el('btnDoLogin');
-    const doSignup = el('btnDoSignup');
+    const btnGoogleLogin = el('btnGoogleLogin');
     const modal = el('authModal');
 
     if (navAvatar && navMenu) {
@@ -284,7 +277,7 @@
       btnGetStarted.addEventListener('click', function (event) {
         if (!currentUser) {
           event.preventDefault();
-          openAuth('signup');
+          window.location.href = '/login.html?mode=signup';
         }
       });
     }
@@ -298,20 +291,19 @@
       if (event.key === 'Escape') closeAuth();
     });
 
-    if (doSignup) {
-      doSignup.addEventListener('click', async function () {
-        const emailIn = el('authEmail');
-        const passIn = el('authPass');
-        const pass2In = el('authPass2');
+    if (btnGoogleLogin) {
+      btnGoogleLogin.addEventListener('click', async function () {
         const msg = el('authMsg');
-        if (authMode !== 'signup') { setAuthMode('signup'); if (msg) msg.textContent = ''; return; }
-        if (!emailIn.value || !passIn.value) { if (msg) msg.textContent = 'Enter email & password.'; return; }
-        if (passIn.value !== pass2In.value) { if (msg) msg.textContent = 'Passwords do not match.'; return; }
-        if (msg) msg.textContent = 'Creating account…';
-        const { error } = await sb.auth.signUp({ email: emailIn.value.trim(), password: passIn.value.trim() });
-        if (error) { if (msg) msg.textContent = error.message; return; }
-        if (msg) msg.textContent = 'Check your email to confirm, then log in.';
-        setAuthMode('login');
+        if (msg) msg.textContent = 'Opening Google login…';
+        try {
+          const { error } = await sb.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: `${location.origin}/index.html` }
+          });
+          if (error && msg) msg.textContent = error.message || 'Google login failed.';
+        } catch (error) {
+          if (msg) msg.textContent = error.message || 'Google login failed.';
+        }
       });
     }
 
