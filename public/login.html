@@ -215,6 +215,12 @@
       setMode(mode.value === 'login' ? 'signup' : 'login');
     });
 
+    // Allow /login.html?mode=signup to open the proper sign-up form directly.
+    const initialMode = new URLSearchParams(window.location.search).get('mode');
+    if (initialMode === 'signup') {
+      setMode('signup');
+    }
+
     // Forgot password → reset mode
     if (linkForgot) {
       linkForgot.addEventListener('click', (e) => {
