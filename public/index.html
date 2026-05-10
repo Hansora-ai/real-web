@@ -340,6 +340,37 @@
       z-index: 0;
     }
 
+    .wide-banner > img,
+    .wide-banner > video,
+    .feature-icon > img,
+    .feature-icon > video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+
+    .wide-banner::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(5,6,11,.18), rgba(5,6,11,.46));
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .feature-icon::before,
+    .feature-icon::after {
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .feature-icon b {
+      z-index: 2;
+    }
+
     .slot-label {
       position: absolute;
       z-index: 2;
@@ -925,18 +956,18 @@
         </div>
         <div class="x-scroll" id="topVideos">
           <!-- Replace each .media-placeholder with your 16:9 <video> or <img>. Keep the <a> href for click target. -->
-          <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>New inputs</strong><span>Video 01</span></span></a>
-          <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Marketing studio hooks</strong><span>Video 02</span></span></a>
-          <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>HANSORA CLI</strong><span>Video 03</span></span></a>
-          <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Image to video</strong><span>Video 04</span></span></a>
-          <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Product demo</strong><span>Video 05</span></span></a>
-          <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Fashion concept</strong><span>Video 06</span></span></a>
-          <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Social ad</strong><span>Video 07</span></span></a>
-          <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Cinematic camera</strong><span>Video 08</span></span></a>
-          <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>UGC angle</strong><span>Video 09</span></span></a>
-          <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>AI poster</strong><span>Video 10</span></span></a>
-          <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Model preview</strong><span>Video 11</span></span></a>
-          <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Creator workflow</strong><span>Video 12</span></span></a>
+          <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/featured-workflow-01.mp4" autoplay muted loop playsinline preload="metadata" aria-label="New inputs"></video><span class="slot-label"><strong>New inputs</strong><span>Video 01</span></span></a>
+          <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/featured-workflow-02.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Marketing studio hooks"></video><span class="slot-label"><strong>Marketing studio hooks</strong><span>Video 02</span></span></a>
+          <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/featured-workflow-03.mp4" autoplay muted loop playsinline preload="metadata" aria-label="HANSORA CLI"></video><span class="slot-label"><strong>HANSORA CLI</strong><span>Video 03</span></span></a>
+          <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/featured-workflow-04.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Image to video"></video><span class="slot-label"><strong>Image to video</strong><span>Video 04</span></span></a>
+          <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/featured-workflow-05.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Product demo"></video><span class="slot-label"><strong>Product demo</strong><span>Video 05</span></span></a>
+          <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/featured-workflow-06.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Fashion concept"></video><span class="slot-label"><strong>Fashion concept</strong><span>Video 06</span></span></a>
+          <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/featured-workflow-07.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Social ad"></video><span class="slot-label"><strong>Social ad</strong><span>Video 07</span></span></a>
+          <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/featured-workflow-08.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Cinematic camera"></video><span class="slot-label"><strong>Cinematic camera</strong><span>Video 08</span></span></a>
+          <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/featured-workflow-09.mp4" autoplay muted loop playsinline preload="metadata" aria-label="UGC angle"></video><span class="slot-label"><strong>UGC angle</strong><span>Video 09</span></span></a>
+          <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/featured-workflow-10.mp4" autoplay muted loop playsinline preload="metadata" aria-label="AI poster"></video><span class="slot-label"><strong>AI poster</strong><span>Video 10</span></span></a>
+          <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/featured-workflow-11.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Model preview"></video><span class="slot-label"><strong>Model preview</strong><span>Video 11</span></span></a>
+          <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/featured-workflow-12.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Creator workflow"></video><span class="slot-label"><strong>Creator workflow</strong><span>Video 12</span></span></a>
         </div>
       </div>
     </section>
@@ -953,6 +984,7 @@
       <div class="shell">
         <!-- Wide clickable image/banner slot. Replace the background/media inside this link later. -->
         <a class="wide-banner aspect-wide" href="/search-models.html">
+          <img src="/media/one-canvas-banner.jpg" alt="One canvas banner">
           <div class="banner-content">
             <span class="kicker">New feature</span>
             <h2>One canvas.<br>Every workflow.</h2>
@@ -966,16 +998,16 @@
     <section class="section" id="image-models">
       <div class="shell">
         <div class="model-section">
-          <a class="slot model-info-card" href="/search-models.html">
+          <a class="slot model-info-card" href="/search-models.html"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/1.png" alt="Image models info image">
             <span class="slot-label"><span>Info image</span><strong>Image models</strong></span>
           </a>
           <div class="model-grid">
-            <a class="slot" href="/search-models.html"><span class="slot-label"><strong>Main image model</strong><span>Hero</span></span></a>
-            <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>16:9 result</strong><span>Image</span></span></a>
-            <a class="slot aspect-tall" href="/search-models.html"><span class="slot-label"><strong>9:16 result</strong><span>Image</span></span></a>
-            <a class="slot aspect-square" href="/search-models.html"><span class="slot-label"><strong>Square</strong><span>Image</span></span></a>
-            <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Campaign visual</strong><span>Image</span></span></a>
-            <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Poster set</strong><span>Image</span></span></a>
+            <a class="slot" href="/search-models.html"><video src="/media/image-models-demo-01.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Main image model"></video><span class="slot-label"><strong>Main image model</strong><span>Hero</span></span></a>
+            <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/image-models-demo-02.mp4" autoplay muted loop playsinline preload="metadata" aria-label="16:9 result"></video><span class="slot-label"><strong>16:9 result</strong><span>Image</span></span></a>
+            <a class="slot aspect-tall" href="/search-models.html"><video src="/media/image-models-demo-03.mp4" autoplay muted loop playsinline preload="metadata" aria-label="9:16 result"></video><span class="slot-label"><strong>9:16 result</strong><span>Image</span></span></a>
+            <a class="slot aspect-square" href="/search-models.html"><video src="/media/image-models-demo-04.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Square"></video><span class="slot-label"><strong>Square</strong><span>Image</span></span></a>
+            <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/image-models-demo-05.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Campaign visual"></video><span class="slot-label"><strong>Campaign visual</strong><span>Image</span></span></a>
+            <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/image-models-demo-06.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Poster set"></video><span class="slot-label"><strong>Poster set</strong><span>Image</span></span></a>
           </div>
         </div>
       </div>
@@ -984,16 +1016,16 @@
     <section class="section" id="video-models">
       <div class="shell">
         <div class="model-section">
-          <a class="slot model-info-card" href="/search-models.html">
+          <a class="slot model-info-card" href="/search-models.html"><img src="/media/video-models-info.jpg" alt="Video models info image">
             <span class="slot-label"><span>Info image</span><strong>Video models</strong></span>
           </a>
           <div class="model-grid video-grid">
-            <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Text to video</strong><span>16:9</span></span></a>
-            <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Image to video</strong><span>16:9</span></span></a>
-            <a class="slot aspect-tall" href="/search-models.html"><span class="slot-label"><strong>Vertical ad</strong><span>9:16</span></span></a>
-            <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Cinematic scene</strong><span>Video</span></span></a>
-            <a class="slot aspect-square" href="/search-models.html"><span class="slot-label"><strong>Social crop</strong><span>1:1</span></span></a>
-            <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Video edit</strong><span>Video</span></span></a>
+            <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/video-models-demo-01.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Text to video"></video><span class="slot-label"><strong>Text to video</strong><span>16:9</span></span></a>
+            <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/video-models-demo-02.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Image to video"></video><span class="slot-label"><strong>Image to video</strong><span>16:9</span></span></a>
+            <a class="slot aspect-tall" href="/search-models.html"><video src="/media/video-models-demo-03.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Vertical ad"></video><span class="slot-label"><strong>Vertical ad</strong><span>9:16</span></span></a>
+            <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/video-models-demo-04.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Cinematic scene"></video><span class="slot-label"><strong>Cinematic scene</strong><span>Video</span></span></a>
+            <a class="slot aspect-square" href="/search-models.html"><video src="/media/video-models-demo-05.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Social crop"></video><span class="slot-label"><strong>Social crop</strong><span>1:1</span></span></a>
+            <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/video-models-demo-06.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Video edit"></video><span class="slot-label"><strong>Video edit</strong><span>Video</span></span></a>
           </div>
         </div>
       </div>
@@ -1002,16 +1034,16 @@
     <section class="section">
       <div class="shell">
         <div class="model-section">
-          <a class="slot model-info-card" href="/search-models.html">
+          <a class="slot model-info-card" href="/search-models.html"><img src="/media/seedance-2-info.jpg" alt="Seedance 2.0 info image">
             <span class="slot-label"><span>Info image</span><strong>Seedance 2.0</strong></span>
           </a>
           <div class="model-grid video-grid">
-            <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Skate shot</strong><span>Video</span></span></a>
-            <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Energy effect</strong><span>Video</span></span></a>
-            <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Mirror scene</strong><span>Video</span></span></a>
-            <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Action shot</strong><span>Video</span></span></a>
-            <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Fantasy scene</strong><span>Video</span></span></a>
-            <a class="slot aspect-16x9" href="/search-models.html"><span class="slot-label"><strong>Fast motion</strong><span>Video</span></span></a>
+            <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/seedance-2-demo-01.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Skate shot"></video><span class="slot-label"><strong>Skate shot</strong><span>Video</span></span></a>
+            <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/seedance-2-demo-02.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Energy effect"></video><span class="slot-label"><strong>Energy effect</strong><span>Video</span></span></a>
+            <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/seedance-2-demo-03.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Mirror scene"></video><span class="slot-label"><strong>Mirror scene</strong><span>Video</span></span></a>
+            <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/seedance-2-demo-04.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Action shot"></video><span class="slot-label"><strong>Action shot</strong><span>Video</span></span></a>
+            <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/seedance-2-demo-05.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Fantasy scene"></video><span class="slot-label"><strong>Fantasy scene</strong><span>Video</span></span></a>
+            <a class="slot aspect-16x9" href="/search-models.html"><video src="/media/seedance-2-demo-06.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Fast motion"></video><span class="slot-label"><strong>Fast motion</strong><span>Video</span></span></a>
           </div>
         </div>
       </div>
@@ -1027,11 +1059,11 @@
             <a class="btn btn-primary" href="/models.html" style="margin-top:24px;">Explore all</a>
           </div>
           <div class="feature-icons">
-            <a class="feature-icon" href="/search-models.html"><b>Create image</b></a>
-            <a class="feature-icon" href="/search-models.html"><b>Create video</b></a>
-            <a class="feature-icon" href="/search-models.html"><b>Motion control</b></a>
-            <a class="feature-icon" href="/search-models.html"><b>Product ads</b></a>
-            <a class="feature-icon" href="/examples-prompts.html"><b>Templates</b></a>
+            <a class="feature-icon" href="/search-models.html"><video src="/media/feature-create-image.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Create image"></video><b>Create image</b></a>
+            <a class="feature-icon" href="/search-models.html"><video src="/media/feature-create-video.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Create video"></video><b>Create video</b></a>
+            <a class="feature-icon" href="/search-models.html"><video src="/media/feature-motion-control.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Motion control"></video><b>Motion control</b></a>
+            <a class="feature-icon" href="/search-models.html"><video src="/media/feature-product-ads.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Product ads"></video><b>Product ads</b></a>
+            <a class="feature-icon" href="/examples-prompts.html"><video src="/media/feature-templates.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Templates"></video><b>Templates</b></a>
           </div>
         </div>
       </div>
@@ -1047,12 +1079,12 @@
           <a class="btn btn-ghost" href="/models.html">See all</a>
         </div>
         <div class="x-scroll model-rail">
-          <a class="slot model-card" href="/search-models.html"><span class="slot-label"><strong>Nano Banana Pro</strong><span>Image</span></span></a>
-          <a class="slot model-card" href="/search-models.html"><span class="slot-label"><strong>Kling 3.0</strong><span>Video</span></span></a>
-          <a class="slot model-card" href="/search-models.html"><span class="slot-label"><strong>GPT Image</strong><span>Image</span></span></a>
-          <a class="slot model-card" href="/search-models.html"><span class="slot-label"><strong>Sora 2</strong><span>Video</span></span></a>
-          <a class="slot model-card" href="/search-models.html"><span class="slot-label"><strong>Veo</strong><span>Video</span></span></a>
-          <a class="slot model-card" href="/search-models.html"><span class="slot-label"><strong>Midjourney</strong><span>Image</span></span></a>
+          <a class="slot model-card" href="/search-models.html"><img src="/media/creator-choice-01.jpg" alt="Nano Banana Pro preview image"><span class="slot-label"><strong>Nano Banana Pro</strong><span>Image</span></span></a>
+          <a class="slot model-card" href="/search-models.html"><img src="/media/creator-choice-02.jpg" alt="Kling 3.0 preview image"><span class="slot-label"><strong>Kling 3.0</strong><span>Video</span></span></a>
+          <a class="slot model-card" href="/search-models.html"><img src="/media/creator-choice-03.jpg" alt="GPT Image preview image"><span class="slot-label"><strong>GPT Image</strong><span>Image</span></span></a>
+          <a class="slot model-card" href="/search-models.html"><img src="/media/creator-choice-04.jpg" alt="Sora 2 preview image"><span class="slot-label"><strong>Sora 2</strong><span>Video</span></span></a>
+          <a class="slot model-card" href="/search-models.html"><img src="/media/creator-choice-05.jpg" alt="Veo preview image"><span class="slot-label"><strong>Veo</strong><span>Video</span></span></a>
+          <a class="slot model-card" href="/search-models.html"><img src="/media/creator-choice-06.jpg" alt="Midjourney preview image"><span class="slot-label"><strong>Midjourney</strong><span>Image</span></span></a>
         </div>
       </div>
     </section>
@@ -1060,16 +1092,16 @@
     <section class="section">
       <div class="shell">
         <div class="model-section">
-          <a class="slot model-info-card" href="/kling.html">
+          <a class="slot model-info-card" href="/kling.html"><img src="/media/kling-3-info.jpg" alt="Kling 3.0 info image">
             <span class="slot-label"><span>Info image</span><strong>Kling 3.0</strong></span>
           </a>
           <div class="model-grid video-grid">
-            <a class="slot aspect-16x9" href="/kling.html"><span class="slot-label"><strong>Camera move</strong><span>Video</span></span></a>
-            <a class="slot aspect-16x9" href="/kling.html"><span class="slot-label"><strong>Action scene</strong><span>Video</span></span></a>
-            <a class="slot aspect-tall" href="/kling.html"><span class="slot-label"><strong>Vertical clip</strong><span>9:16</span></span></a>
-            <a class="slot aspect-16x9" href="/kling.html"><span class="slot-label"><strong>Product motion</strong><span>Video</span></span></a>
-            <a class="slot aspect-square" href="/kling.html"><span class="slot-label"><strong>Social crop</strong><span>1:1</span></span></a>
-            <a class="slot aspect-16x9" href="/kling.html"><span class="slot-label"><strong>Film scene</strong><span>Video</span></span></a>
+            <a class="slot aspect-16x9" href="/kling.html"><video src="/media/kling-3-demo-01.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Camera move"></video><span class="slot-label"><strong>Camera move</strong><span>Video</span></span></a>
+            <a class="slot aspect-16x9" href="/kling.html"><video src="/media/kling-3-demo-02.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Action scene"></video><span class="slot-label"><strong>Action scene</strong><span>Video</span></span></a>
+            <a class="slot aspect-tall" href="/kling.html"><video src="/media/kling-3-demo-03.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Vertical clip"></video><span class="slot-label"><strong>Vertical clip</strong><span>9:16</span></span></a>
+            <a class="slot aspect-16x9" href="/kling.html"><video src="/media/kling-3-demo-04.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Product motion"></video><span class="slot-label"><strong>Product motion</strong><span>Video</span></span></a>
+            <a class="slot aspect-square" href="/kling.html"><video src="/media/kling-3-demo-05.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Social crop"></video><span class="slot-label"><strong>Social crop</strong><span>1:1</span></span></a>
+            <a class="slot aspect-16x9" href="/kling.html"><video src="/media/kling-3-demo-06.mp4" autoplay muted loop playsinline preload="metadata" aria-label="Film scene"></video><span class="slot-label"><strong>Film scene</strong><span>Video</span></span></a>
           </div>
         </div>
       </div>
@@ -1078,6 +1110,7 @@
     <section class="section">
       <div class="shell">
         <a class="wide-banner aspect-wide" href="/search-models.html">
+          <img src="/media/usa-ai-marketing-banner.jpg" alt="USA AI marketing and ads banner">
           <div class="banner-content">
             <span class="kicker">Marketing studio</span>
             <h2>USA AI for marketing and ads</h2>
