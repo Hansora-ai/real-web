@@ -371,6 +371,28 @@
       z-index: 2;
     }
 
+        .slot:has(> img)::before,
+    .slot:has(> img)::after,
+    .slot:has(> video)::before,
+    .slot:has(> video)::after,
+    .wide-banner:has(> img)::after,
+    .wide-banner:has(> video)::after,
+    .feature-icon:has(> img)::before,
+    .feature-icon:has(> img)::after,
+    .feature-icon:has(> video)::before,
+    .feature-icon:has(> video)::after {
+      display: none !important;
+    }
+
+    .slot:has(> img) .slot-label,
+    .slot:has(> video) .slot-label,
+    .wide-banner:has(> img) .banner-content,
+    .wide-banner:has(> video) .banner-content,
+    .feature-icon:has(> img) b,
+    .feature-icon:has(> video) b {
+      display: none !important;
+    }
+
     .slot-label {
       position: absolute;
       z-index: 2;
