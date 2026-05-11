@@ -1176,6 +1176,46 @@
       }
     }
 
+    /* Final recent-generations layout: desktop 5 + 5, mobile tall carousel */
+    @media (min-width:901px){
+      body.workspace-redesign #resultsStrip:not(.empty){
+        display:grid !important;
+        grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+        grid-auto-rows:auto !important;
+        gap:12px !important;
+        overflow:visible !important;
+        min-height:0 !important;
+        padding:14px !important;
+      }
+      body.workspace-redesign #resultsStrip .result-thumb{
+        width:100% !important;
+        min-width:0 !important;
+        max-width:none !important;
+        aspect-ratio:9 / 13 !important;
+      }
+    }
+    @media (max-width:900px){
+      body.workspace-redesign #resultsStrip:not(.empty){
+        display:flex !important;
+        grid-template-columns:none !important;
+        gap:12px !important;
+        overflow-x:auto !important;
+        overflow-y:hidden !important;
+        min-height:0 !important;
+        aspect-ratio:auto !important;
+        padding:10px 22% 10px 10px !important;
+        scroll-snap-type:x mandatory;
+      }
+      body.workspace-redesign #resultsStrip .result-thumb{
+        flex:0 0 74% !important;
+        width:auto !important;
+        min-width:0 !important;
+        max-width:none !important;
+        aspect-ratio:9 / 16 !important;
+        scroll-snap-align:start;
+      }
+    }
+
     </style>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
