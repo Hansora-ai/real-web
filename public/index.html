@@ -14,21 +14,32 @@
 <link href="/favicon.png" rel="icon"/>
 <link href="https://cdn.jsdelivr.net" rel="preconnect"/>
 <link href="https://qmaealblegvcwodlmeht.supabase.co" rel="preconnect"/>
-<script async="" src="https://www.googletagmanager.com/gtag/js?id=AW-17704413676"></script>
 <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'AW-17704413676');
+    window.addEventListener('load', () => {
+      window.setTimeout(() => {
+        const gtagScript = document.createElement('script');
+        gtagScript.async = true;
+        gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=AW-17704413676';
+        document.head.appendChild(gtagScript);
+        gtag('js', new Date());
+        gtag('config', 'AW-17704413676');
+      }, 1800);
+    }, { once: true });
   </script>
 <script>
-    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '1336278884948294');
-    fbq('track', 'PageView');
+    window.addEventListener('load', () => {
+      window.setTimeout(() => {
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+        n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1336278884948294');
+        fbq('track', 'PageView');
+      }, 2500);
+    }, { once: true });
   </script>
 <style>
     :root {
@@ -1172,7 +1183,7 @@
 
 </head>
 <body>
-<noscript><img alt="" height="1" src="https://www.facebook.com/tr?id=1336278884948294&amp;ev=PageView&amp;noscript=1" style="display:none" width="1"/></noscript>
+<noscript><img alt="" height="1" src="https://www.facebook.com/tr?id=1336278884948294&amp;ev=PageView&amp;noscript=1" style="display:none" width="1" loading="lazy" decoding="async"></noscript>
 <div id="sharedHeader"></div>
 <main>
 <section aria-labelledby="reel-title" class="top-reel">
@@ -1185,11 +1196,11 @@
 </div>
 </div>
 <div class="x-scroll" id="topVideos">
-<!-- Replace each .media-placeholder with your 16:9 <video> or <img>. Keep the <a> href for click target. -->
-<a class="slot aspect-16x9" href="/search-models.html"><video aria-label="New inputs" autoplay="" loop="" muted="" playsinline="" preload="metadata" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0.mp4"></video><span class="slot-label"><strong>New inputs</strong><span>Video 01</span></span></a>
-<a class="slot aspect-16x9" href="/search-models.html"><video aria-label="Marketing studio hooks" autoplay="" loop="" muted="" playsinline="" preload="metadata" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0%20copy%202.mp4"></video><span class="slot-label"><strong>Marketing studio hooks</strong><span>Video 02</span></span></a>
-<a class="slot aspect-16x9" href="/search-models.html"><video aria-label="HANSORA CLI" autoplay="" loop="" muted="" playsinline="" preload="metadata" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0%20(2).mp4"></video><span class="slot-label"><strong>HANSORA CLI</strong><span>Video 03</span></span></a>
-<a class="slot aspect-16x9" href="/search-models.html"><video aria-label="Image to video" autoplay="" loop="" muted="" playsinline="" preload="metadata" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0%20copy.mp4"></video><span class="slot-label"><strong>Image to video</strong><span>Video 04</span></span></a>
+<!-- Replace each media placeholder with a 16:9 video or image. Keep the link href for click target. -->
+<a class="slot aspect-16x9" href="/search-models.html"><video aria-label="New inputs" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0.mp4" data-lazy-video></video><span class="slot-label"><strong>New inputs</strong><span>Video 01</span></span></a>
+<a class="slot aspect-16x9" href="/search-models.html"><video aria-label="Marketing studio hooks" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0%20copy%202.mp4" data-lazy-video></video><span class="slot-label"><strong>Marketing studio hooks</strong><span>Video 02</span></span></a>
+<a class="slot aspect-16x9" href="/search-models.html"><video aria-label="HANSORA CLI" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0%20(2).mp4" data-lazy-video></video><span class="slot-label"><strong>HANSORA CLI</strong><span>Video 03</span></span></a>
+<a class="slot aspect-16x9" href="/search-models.html"><video aria-label="Image to video" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0%20copy.mp4" data-lazy-video></video><span class="slot-label"><strong>Image to video</strong><span>Video 04</span></span></a>
 </div>
 </div>
 </section>
@@ -1204,7 +1215,7 @@
 <div class="shell">
 <!-- Wide clickable image/banner slot. Replace the background/media inside this link later. -->
 <a class="wide-banner aspect-wide" href="/search-models.html">
-<video aria-label="One canvas banner" autoplay="" loop="" muted="" playsinline="" preload="metadata" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/IMG_7661.mp4"></video>
+<video aria-label="One canvas banner" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/IMG_7661.mp4" data-lazy-video></video>
 <div class="banner-content">
 <span class="kicker">New feature</span>
 <h2>One canvas.<br/>Every workflow.</h2>
@@ -1220,7 +1231,7 @@
 <a class="slot model-info-card" href="/search-models.html">
   <img
     alt="Image models info image"
-    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/1.png">
+    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/1.png" loading="lazy" decoding="async">
   <span class="slot-label">
     <span>Info image</span>
     <strong>Image models</strong>
@@ -1231,7 +1242,7 @@
     <a class="slot aspect-tall" href="/search-models.html">
       <img
         alt="Main image model"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Main image model</strong>
         <span>Hero</span>
@@ -1241,7 +1252,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="16:9 result"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>16:9 result</strong>
         <span>Image</span>
@@ -1251,7 +1262,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="9:16 result"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>9:16 result</strong>
         <span>Image</span>
@@ -1262,7 +1273,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="Square"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Square</strong>
         <span>Image</span>
@@ -1272,7 +1283,7 @@
     <a class="slot aspect-tall" href="/search-models.html">
       <img
         alt="Campaign visual"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Campaign visual</strong>
         <span>Image</span>
@@ -1282,7 +1293,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="Poster set"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Poster set</strong>
         <span>Image</span>
@@ -1294,7 +1305,7 @@
     <a class="slot aspect-tall" href="/search-models.html">
       <img
         alt="Main image model"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Main image model</strong>
         <span>Hero</span>
@@ -1304,7 +1315,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="16:9 result"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>16:9 result</strong>
         <span>Image</span>
@@ -1315,7 +1326,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="9:16 result"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>9:16 result</strong>
         <span>Image</span>
@@ -1325,7 +1336,7 @@
     <a class="slot aspect-tall" href="/search-models.html">
       <img
         alt="Square"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Square</strong>
         <span>Image</span>
@@ -1336,7 +1347,7 @@
     <a class="slot aspect-tall" href="/search-models.html">
       <img
         alt="Campaign visual"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Campaign visual</strong>
         <span>Image</span>
@@ -1346,7 +1357,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="Poster set"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Poster set</strong>
         <span>Image</span>
@@ -1357,7 +1368,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="Preview 07"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Preview 07</strong>
         <span>Image</span>
@@ -1367,7 +1378,7 @@
     <a class="slot aspect-tall" href="/search-models.html">
       <img
         alt="Preview 08"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Preview 08</strong>
         <span>Image</span>
@@ -1384,7 +1395,7 @@
 <a class="slot model-info-card" href="/search-models.html">
   <img
     alt="Video models info image"
-    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/2.png">
+    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/2.png" loading="lazy" decoding="async">
   <span class="slot-label">
     <span>Info image</span>
     <strong>Video models</strong>
@@ -1399,8 +1410,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Text to video</strong>
@@ -1415,8 +1425,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(4).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(4).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Image to video</strong>
@@ -1431,8 +1440,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(5).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(5).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Vertical ad</strong>
@@ -1448,8 +1456,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(7).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(7).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Cinematic scene</strong>
@@ -1464,8 +1471,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(1).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(1).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Social crop</strong>
@@ -1480,8 +1486,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(6).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(6).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Video edit</strong>
@@ -1498,8 +1503,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Text to video</strong>
@@ -1514,8 +1518,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(5).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(5).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Image to video</strong>
@@ -1531,8 +1534,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(4).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(4).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Vertical ad</strong>
@@ -1547,8 +1549,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(1).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(1).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Cinematic scene</strong>
@@ -1564,8 +1565,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(2).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(2).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Social crop</strong>
@@ -1580,8 +1580,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(6).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(6).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Video edit</strong>
@@ -1597,8 +1596,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(7).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(7).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 07</strong>
@@ -1613,8 +1611,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(3).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(3).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 08</strong>
@@ -1632,7 +1629,7 @@
 <a class="slot model-info-card" href="/search-models.html">
   <img
     alt="Seedance 2.0 info image"
-    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/12.png">
+    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/12.png" loading="lazy" decoding="async">
   <span class="slot-label">
     <span>Info image</span>
     <strong>Seedance 2.0</strong>
@@ -1647,8 +1644,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/1777740809977-5kwfkw43mfh%20(1).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/1777740809977-5kwfkw43mfh%20(1).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Skate shot</strong>
@@ -1663,8 +1659,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260409_094417_ba8bf934-a387-4bf5-8a24-f34be2a65d46.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260409_094417_ba8bf934-a387-4bf5-8a24-f34be2a65d46.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Energy effect</strong>
@@ -1679,8 +1674,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260409_094601_f698d8f7-c96a-42c6-ad0c-8e830417201e.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260409_094601_f698d8f7-c96a-42c6-ad0c-8e830417201e.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Mirror scene</strong>
@@ -1696,8 +1690,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260331_203147_19ae6acb-3811-4522-b9ea-2edaf6c3f1ae.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260331_203147_19ae6acb-3811-4522-b9ea-2edaf6c3f1ae.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action shot</strong>
@@ -1712,8 +1705,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/ffe1c638abf6700aa2b6d55517837c80_1777146690%20(1).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/ffe1c638abf6700aa2b6d55517837c80_1777146690%20(1).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fantasy scene</strong>
@@ -1728,8 +1720,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260409_094439_fb5e2d77-8e7c-4420-9e77-bfc0347f2d92.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260409_094439_fb5e2d77-8e7c-4420-9e77-bfc0347f2d92.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fast motion</strong>
@@ -1746,8 +1737,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/1777740809977-5kwfkw43mfh%20(1).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/1777740809977-5kwfkw43mfh%20(1).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Skate shot</strong>
@@ -1762,8 +1752,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260331_203147_19ae6acb-3811-4522-b9ea-2edaf6c3f1ae.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260331_203147_19ae6acb-3811-4522-b9ea-2edaf6c3f1ae.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Energy effect</strong>
@@ -1779,8 +1768,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260409_094417_ba8bf934-a387-4bf5-8a24-f34be2a65d46.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260409_094417_ba8bf934-a387-4bf5-8a24-f34be2a65d46.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Mirror scene</strong>
@@ -1795,8 +1783,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/VID_20260507_221624_979.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/VID_20260507_221624_979.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action shot</strong>
@@ -1812,8 +1799,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/ffe1c638abf6700aa2b6d55517837c80_1777146690%20(1).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/ffe1c638abf6700aa2b6d55517837c80_1777146690%20(1).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fantasy scene</strong>
@@ -1828,8 +1814,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260409_094439_fb5e2d77-8e7c-4420-9e77-bfc0347f2d92.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260409_094439_fb5e2d77-8e7c-4420-9e77-bfc0347f2d92.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fast motion</strong>
@@ -1845,8 +1830,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260409_094601_f698d8f7-c96a-42c6-ad0c-8e830417201e.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/hf_20260409_094601_f698d8f7-c96a-42c6-ad0c-8e830417201e.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 07</strong>
@@ -1861,8 +1845,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/c2eaa9bb55f71c9e2b12bb8446ffd0fb_1775470976_mnfqzinh.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/c2eaa9bb55f71c9e2b12bb8446ffd0fb_1775470976_mnfqzinh.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 08</strong>
@@ -1884,11 +1867,11 @@
 <a class="btn btn-primary" href="/models.html" style="margin-top:24px;">Explore all</a>
 </div>
 <div class="feature-icons">
-<a class="feature-icon" href="/search-models.html"><video aria-label="Create image" autoplay="" loop="" muted="" playsinline="" preload="metadata" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_8DBDBBA9-01C8-4750-BB8C-C12CB3EE6505.MOV"></video><b>Create image</b></a>
-<a class="feature-icon" href="/search-models.html"><video aria-label="Create video" autoplay="" loop="" muted="" playsinline="" preload="metadata" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_BD0F755C-3C2D-4CCE-84C6-C6BC4230A3FB.MOV"></video><b>Create video</b></a>
-<a class="feature-icon" href="/search-models.html"><video aria-label="Motion control" autoplay="" loop="" muted="" playsinline="" preload="metadata" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/copy_AB468886-58F4-4799-BB3A-1D1273042AB4.MOV"></video><b>Motion control</b></a>
-<a class="feature-icon" href="/search-models.html"><video aria-label="Product ads" autoplay="" loop="" muted="" playsinline="" preload="metadata" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_6CD6B969-42E2-45ED-A794-9E05C1B7D3A9.MOV"></video><b>Product ads</b></a>
-<a class="feature-icon" href="/examples-prompts.html"><video aria-label="Templates" autoplay="" loop="" muted="" playsinline="" preload="metadata" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_ECE8BF19-272D-4F1B-8D85-66A482706227.MOV"></video><b>Templates</b></a>
+<a class="feature-icon" href="/search-models.html"><video aria-label="Create image" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_8DBDBBA9-01C8-4750-BB8C-C12CB3EE6505.MOV" data-lazy-video></video><b>Create image</b></a>
+<a class="feature-icon" href="/search-models.html"><video aria-label="Create video" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_BD0F755C-3C2D-4CCE-84C6-C6BC4230A3FB.MOV" data-lazy-video></video><b>Create video</b></a>
+<a class="feature-icon" href="/search-models.html"><video aria-label="Motion control" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/copy_AB468886-58F4-4799-BB3A-1D1273042AB4.MOV" data-lazy-video></video><b>Motion control</b></a>
+<a class="feature-icon" href="/search-models.html"><video aria-label="Product ads" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_6CD6B969-42E2-45ED-A794-9E05C1B7D3A9.MOV" data-lazy-video></video><b>Product ads</b></a>
+<a class="feature-icon" href="/examples-prompts.html"><video aria-label="Templates" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_ECE8BF19-272D-4F1B-8D85-66A482706227.MOV" data-lazy-video></video><b>Templates</b></a>
 </div>
 </div>
 </div>
@@ -1903,14 +1886,14 @@
 <a class="btn btn-ghost" href="/models.html">See all</a>
 </div>
 <div class="x-scroll model-rail">
-<a class="slot model-card" href="/search-models.html"><img alt="Nano Banana Pro preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/3.png"/><span class="slot-label"><strong>Nano Banana Pro</strong><span>Image</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="Kling 3.0 preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/4.png"/><span class="slot-label"><strong>Kling 3.0</strong><span>Video</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="GPT Image preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/5.png"/><span class="slot-label"><strong>GPT Image</strong><span>Image</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="Sora 2 preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/8.png"/><span class="slot-label"><strong>Sora 2</strong><span>Video</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="Veo preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/9.png"/><span class="slot-label"><strong>Veo</strong><span>Video</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="Midjourney preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/7.png"/><span class="slot-label"><strong>Midjourney</strong><span>Image</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="Flux preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/6.png"/><span class="slot-label"><strong>Flux</strong><span>Image</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="Grok preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/10.png"/><span class="slot-label"><strong>Grok</strong><span>Image</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Nano Banana Pro preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/3.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Nano Banana Pro</strong><span>Image</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Kling 3.0 preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/4.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Kling 3.0</strong><span>Video</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="GPT Image preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/5.png" loading="lazy" decoding="async"><span class="slot-label"><strong>GPT Image</strong><span>Image</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Sora 2 preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/8.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Sora 2</strong><span>Video</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Veo preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/9.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Veo</strong><span>Video</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Midjourney preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/7.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Midjourney</strong><span>Image</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Flux preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/6.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Flux</strong><span>Image</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Grok preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/10.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Grok</strong><span>Image</span></span></a>
 </div>
 </div>
 </section>
@@ -1920,7 +1903,7 @@
 <a class="slot model-info-card" href="/search-models.html">
   <img
     alt="Kling 3.0 info image"
-    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/13.png">
+    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/13.png" loading="lazy" decoding="async">
   <span class="slot-label">
     <span>Info image</span>
     <strong>Kling 3.0</strong>
@@ -1935,8 +1918,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Camera move</strong>
@@ -1951,8 +1933,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(2).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(2).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action scene</strong>
@@ -1967,8 +1948,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(3).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(3).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Vertical clip</strong>
@@ -1984,8 +1964,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(5).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(5).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Product motion</strong>
@@ -2000,8 +1979,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/eba0ecb6bb24c493792c9a1b7eced7a0_1_1776535941_5446.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/eba0ecb6bb24c493792c9a1b7eced7a0_1_1776535941_5446.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Social crop</strong>
@@ -2016,8 +1994,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(4).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(4).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Film scene</strong>
@@ -2034,8 +2011,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/eba0ecb6bb24c493792c9a1b7eced7a0_1_1776535941_5446.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/eba0ecb6bb24c493792c9a1b7eced7a0_1_1776535941_5446.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Camera move</strong>
@@ -2050,8 +2026,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(3).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(3).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action scene</strong>
@@ -2067,8 +2042,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(5).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(5).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Vertical clip</strong>
@@ -2083,8 +2057,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/1c435e5d80f4aeba93949d11e0895cf9_1_1777466557_4826.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/1c435e5d80f4aeba93949d11e0895cf9_1_1777466557_4826.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Product motion</strong>
@@ -2100,8 +2073,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video.mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Social crop</strong>
@@ -2116,8 +2088,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(2).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(2).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Film scene</strong>
@@ -2133,8 +2104,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(4).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(4).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 07</strong>
@@ -2149,8 +2119,7 @@
         loop
         muted
         playsinline
-        preload="metadata"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(1).mp4">
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(1).mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 08</strong>
@@ -2169,7 +2138,7 @@
 <!-- Mobile banner image: replace this srcset with your smaller mobile banner URL. -->
 <source media="(max-width: 740px)" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(2).png"/>
 <!-- Desktop banner image. -->
-<img alt="USA AI marketing and ads banner" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(1).png"/>
+<img alt="USA AI marketing and ads banner" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(1).png" loading="lazy" decoding="async">
 </picture>
 </a>
 </div>
@@ -2229,7 +2198,7 @@
 <footer class="footer">
 <div class="shell footer-inner">
 <a aria-label="HANSORA AI home" class="brand" href="/">
-<img alt="" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png"/>
+<img alt="" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" loading="lazy" decoding="async">
 <span>HANSORA AI</span>
 </a>
 <div class="footer-links">
@@ -2240,8 +2209,49 @@
 </div>
 </div>
 </footer>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/header.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="/header.js"></script>
+<script>
+    (() => {
+      const videos = Array.from(document.querySelectorAll('video[data-lazy-video]'));
+      const loadVideo = (video) => {
+        if (!video.dataset.src || video.src) return;
+        video.src = video.dataset.src;
+        video.load();
+      };
+      const pauseVideo = (video) => {
+        if (!video.paused) video.pause();
+      };
+
+      if ('IntersectionObserver' in window) {
+        const loadObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            loadVideo(entry.target);
+            loadObserver.unobserve(entry.target);
+          });
+        }, { rootMargin: '520px 0px', threshold: 0.01 });
+
+        const playObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            const video = entry.target;
+            if (entry.isIntersecting && video.autoplay && video.src && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+              video.play().catch(() => {});
+              return;
+            }
+            pauseVideo(video);
+          });
+        }, { rootMargin: '0px', threshold: 0.12 });
+
+        videos.forEach((video) => {
+          loadObserver.observe(video);
+          playObserver.observe(video);
+        });
+      } else {
+        videos.forEach(loadVideo);
+      }
+    })();
+  </script>
 <script>
     document.querySelectorAll('[data-scroll-target]').forEach((button) => {
       button.addEventListener('click', () => {
