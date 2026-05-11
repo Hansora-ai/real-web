@@ -368,9 +368,817 @@
       object-fit: contain;
     }
 
+    /* Workspace redesign: left creation panel + model browser */
+    :root{
+      --tool-bg:#090b0f;
+      --tool-panel:#111318;
+      --tool-panel-2:#171a20;
+      --tool-line:rgba(255,255,255,.08);
+      --tool-muted:rgba(239,244,255,.58);
+      --tool-lime:#ddff37;
+    }
+    body.workspace-redesign{
+      min-height:100vh;
+      overflow:hidden;
+      background:#08090c !important;
+      color:#f4f6fb;
+    }
+    body.workspace-redesign header{
+      position:sticky;
+      top:0;
+      height:58px;
+      border-color:var(--tool-line) !important;
+      background:rgba(8,9,12,.86) !important;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    body.workspace-redesign header > div{ height:58px; max-width:none; }
+    body.workspace-redesign header nav{ gap:22px; color:rgba(255,255,255,.55); }
+    body.workspace-redesign #generatorDock{
+      position:fixed !important;
+      left:14px;
+      top:74px;
+      bottom:14px;
+      right:auto;
+      width:336px;
+      z-index:24;
+      display:block !important;
+      padding:0 !important;
+    }
+    body.workspace-redesign #generatorCard{
+      width:100% !important;
+      height:100%;
+      max-width:none !important;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      overflow:auto;
+      padding:14px !important;
+      border-radius:18px !important;
+      border:1px solid var(--tool-line) !important;
+      background:rgba(16,18,23,.96) !important;
+      box-shadow:none !important;
+      backdrop-filter:none !important;
+    }
+    body.workspace-redesign #generatorCard::before{
+      content:'Create';
+      display:block;
+      font-size:20px;
+      line-height:1.1;
+      font-weight:760;
+      letter-spacing:0;
+      color:#fff;
+      margin:2px 0 0;
+    }
+    body.workspace-redesign #generatorCard > .flex:first-child{
+      flex-direction:column !important;
+      gap:12px !important;
+      align-items:stretch !important;
+    }
+    body.workspace-redesign #generatorCard > .flex:first-child > .flex:first-child{
+      width:100% !important;
+      justify-content:flex-start !important;
+    }
+    body.workspace-redesign #btnModeImage,
+    body.workspace-redesign #btnModeVideo{
+      min-width:88px;
+      padding:8px 12px !important;
+      border-radius:12px !important;
+      font-size:13px !important;
+    }
+    body.workspace-redesign #generatorCard .rounded-2xl:has(#promptBox){
+      min-height:188px;
+      border-radius:14px !important;
+      border-color:var(--tool-line) !important;
+      background:rgba(24,26,31,.9) !important;
+      padding:14px !important;
+    }
+    body.workspace-redesign #promptBox{
+      min-height:160px;
+      font-size:14px !important;
+      line-height:1.45 !important;
+    }
+    body.workspace-redesign #modelButton{
+      order:-1;
+      width:100%;
+      justify-content:space-between !important;
+      border-radius:12px !important;
+      border:1px solid var(--tool-line) !important;
+      background:rgba(255,255,255,.045) !important;
+      box-shadow:none !important;
+      min-height:54px;
+      padding:0 14px !important;
+      color:#fff;
+    }
+    body.workspace-redesign #modelButton::before{
+      content:'Model';
+      font-size:12px;
+      color:var(--tool-muted);
+      margin-right:8px;
+    }
+    body.workspace-redesign #modelButton > span:first-child{ display:none !important; }
+    body.workspace-redesign #modelButtonLabel{ max-width:180px !important; font-size:15px; }
+    body.workspace-redesign #generatorCard > .flex:nth-of-type(2){
+      flex:1;
+      flex-direction:column !important;
+      align-items:stretch !important;
+      gap:12px !important;
+      font-size:12px !important;
+    }
+    body.workspace-redesign #generatorCard > .flex:nth-of-type(2) > .md\:w-1\/3,
+    body.workspace-redesign #generatorCard > .flex:nth-of-type(2) > .flex-1,
+    body.workspace-redesign #generatorCard > .flex:nth-of-type(2) > .md\:w-1\/3:last-child{
+      width:100% !important;
+    }
+    body.workspace-redesign #generatorCard > .flex:nth-of-type(2) > .flex-1{ display:none !important; }
+    body.workspace-redesign #generatorCard > .flex:nth-of-type(2) > .flex-col:first-child{
+      width:100% !important;
+      border-radius:14px;
+      border:1px solid var(--tool-line);
+      background:rgba(24,26,31,.72);
+      padding:12px;
+    }
+    body.workspace-redesign #generatorCard > .flex:nth-of-type(2) > .flex-col:last-child{
+      margin-top:auto;
+      align-items:stretch !important;
+      gap:12px !important;
+    }
+    body.workspace-redesign #costLabel{
+      width:100%;
+      color:rgba(221,255,55,.88) !important;
+      text-align:left;
+      min-height:18px;
+    }
+    body.workspace-redesign #runBtn{
+      width:100%;
+      min-height:54px;
+      border-radius:14px !important;
+      background:var(--tool-lime) !important;
+      color:#090b0f !important;
+      box-shadow:0 8px 0 rgba(0,0,0,.28) !important;
+      font-size:16px !important;
+      font-weight:850 !important;
+    }
+    body.workspace-redesign #runBtn::after{ content:' ✦'; margin-left:4px; }
+    body.workspace-redesign .btn-soft{
+      border-radius:12px;
+      border-color:var(--tool-line);
+      background:rgba(255,255,255,.045);
+    }
+    body.workspace-redesign .chip{
+      border-radius:10px !important;
+      background:rgba(255,255,255,.045) !important;
+      border-color:var(--tool-line) !important;
+    }
+    body.workspace-redesign .chip-active{
+      background:rgba(221,255,55,.16) !important;
+      color:#efffb2 !important;
+      border-color:rgba(221,255,55,.5) !important;
+      box-shadow:none !important;
+    }
+    body.workspace-redesign #veoQualityBlock,
+    body.workspace-redesign #soraTierBlock,
+    body.workspace-redesign #klingSoundBlock,
+    body.workspace-redesign #durationBlock,
+    body.workspace-redesign #resolutionBlock,
+    body.workspace-redesign #aspectBlock{
+      width:100%;
+      justify-content:space-between;
+      border-radius:14px;
+      border:1px solid var(--tool-line);
+      background:rgba(24,26,31,.72);
+      padding:10px;
+    }
+    body.workspace-redesign #veoQualityBlock > div,
+    body.workspace-redesign #soraTierBlock > div,
+    body.workspace-redesign #klingSoundBlock > div,
+    body.workspace-redesign #durationBlock > div,
+    body.workspace-redesign #resolutionBlock > div,
+    body.workspace-redesign #aspectBlock > div{
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      border-radius:10px !important;
+      background:transparent !important;
+      border:0 !important;
+      gap:6px;
+    }
+    body.workspace-redesign #generatorCard .w-full.flex.justify-end > .flex{
+      width:100%;
+      flex-direction:column;
+      align-items:stretch;
+      gap:8px;
+    }
+    body.workspace-redesign main{
+      margin-left:364px;
+      height:calc(100vh - 58px);
+      overflow:auto;
+      padding:18px 18px 34px !important;
+      padding-bottom:34px !important;
+    }
+    body.workspace-redesign #heroSection{
+      max-width:none !important;
+      padding:0 !important;
+      text-align:left !important;
+    }
+    body.workspace-redesign #heroSection > h1,
+    body.workspace-redesign #heroSection > p,
+    body.workspace-redesign #heroSection > .mt-8{ display:none !important; }
+    .workspace-board{
+      min-height:calc(100vh - 110px);
+      border:1px solid var(--tool-line);
+      border-radius:18px;
+      background:#0d0f13;
+      overflow:hidden;
+    }
+    .workspace-toolbar{
+      display:flex;
+      align-items:center;
+      gap:18px;
+      min-height:72px;
+      padding:14px 20px;
+      border-bottom:1px solid var(--tool-line);
+      background:rgba(255,255,255,.018);
+    }
+    .model-rail{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width:0;
+      flex:1;
+      overflow:auto;
+      scrollbar-width:none;
+    }
+    .model-rail::-webkit-scrollbar{ display:none; }
+    .model-tab{
+      display:inline-flex;
+      align-items:center;
+      gap:9px;
+      min-height:42px;
+      padding:0 13px;
+      border:0;
+      border-bottom:2px solid transparent;
+      background:transparent;
+      color:rgba(255,255,255,.54);
+      white-space:nowrap;
+      cursor:pointer;
+      font-weight:720;
+    }
+    .model-tab:hover{ color:rgba(255,255,255,.84); }
+    .model-tab.active{
+      color:#fff;
+      border-bottom-color:rgba(221,255,55,.95);
+    }
+    .model-tab .glyph{ font-size:18px; opacity:.9; }
+    .workspace-search{
+      width:260px;
+      min-height:44px;
+      border-radius:14px;
+      border:1px solid transparent;
+      background:rgba(255,255,255,.055);
+      color:#fff;
+      outline:none;
+      padding:0 14px;
+      font-size:14px;
+    }
+    .workspace-content{
+      padding:22px;
+    }
+    .current-model-panel{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:18px;
+      margin-bottom:20px;
+    }
+    .current-model-panel h1{
+      margin:0;
+      font-size:clamp(24px,3.4vw,44px);
+      line-height:1.02;
+      font-weight:850;
+      letter-spacing:0;
+    }
+    .current-model-panel p{
+      margin:8px 0 0;
+      max-width:620px;
+      color:var(--tool-muted);
+      font-size:14px;
+    }
+    .preset-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(160px,1fr));
+      gap:14px;
+    }
+    .preset-card{
+      position:relative;
+      min-height:260px;
+      border-radius:16px;
+      overflow:hidden;
+      border:1px solid var(--tool-line);
+      background:#171a20;
+      cursor:pointer;
+    }
+    .preset-card::after{
+      content:'';
+      position:absolute;
+      inset:0;
+      background:linear-gradient(180deg,transparent 35%,rgba(0,0,0,.72));
+    }
+    .preset-card img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      filter:saturate(.92) contrast(1.02);
+    }
+    .preset-card strong{
+      position:absolute;
+      left:14px;
+      bottom:14px;
+      z-index:1;
+      font-size:20px;
+      line-height:1;
+      font-weight:900;
+      text-transform:uppercase;
+    }
+    .preset-card.selected{ border-color:rgba(221,255,55,.72); box-shadow:0 0 0 1px rgba(221,255,55,.24); }
+    body.workspace-redesign #resultsSection{
+      display:block !important;
+      max-width:none !important;
+      padding:20px 0 0 !important;
+    }
+    body.workspace-redesign #resultsSection h2{ padding-top:0 !important; }
+    body.workspace-redesign #resultsStrip{
+      min-height:128px;
+      border:1px solid var(--tool-line);
+      border-radius:16px;
+      background:rgba(255,255,255,.018);
+      padding:12px;
+    }
+    @media (max-width: 900px){
+      body.workspace-redesign{ overflow:auto; }
+      body.workspace-redesign #heroSection{ display:block !important; }
+      body.workspace-redesign #generatorDock{
+        position:static !important;
+        width:auto;
+        padding:12px !important;
+      }
+      body.workspace-redesign #generatorCard{ height:auto; max-height:none; }
+      body.workspace-redesign main{ margin-left:0; height:auto; padding:0 12px 28px !important; }
+      .workspace-toolbar{ flex-direction:column; align-items:stretch; gap:10px; }
+      .workspace-search{ width:100%; }
+      .current-model-panel{ align-items:flex-start; flex-direction:column; }
+      .preset-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .preset-card{ min-height:210px; }
+    }
+
+    /* Correction pass */
+    body.workspace-redesign #generatorCard > .flex:first-child > .flex:first-child{ order:-2; }
+    body.workspace-redesign #modelButton{ order:-1; }
+    body.workspace-redesign #runBtn{
+      background:linear-gradient(135deg,#6366f1,#8b5cf6) !important;
+      color:#fff !important;
+      box-shadow:0 14px 38px rgba(99,102,241,.42) !important;
+    }
+    body.workspace-redesign #costLabel{ display:none !important; }
+    body.workspace-redesign #runBtn::after{ content:'' !important; }
+    body.workspace-redesign .workspace-board{
+      min-height:auto;
+      border-radius:18px;
+      background:rgba(13,15,19,.92);
+    }
+    body.workspace-redesign .workspace-content{ display:none !important; }
+    body.workspace-redesign main{
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+    }
+    body.workspace-redesign #heroSection{ order:0; }
+    body.workspace-redesign #resultsSection{
+      order:1;
+      display:block !important;
+      padding-top:0 !important;
+      padding-bottom:0 !important;
+    }
+    body.workspace-redesign #resultsStrip{
+      display:grid !important;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      gap:12px !important;
+      overflow:visible !important;
+      min-height:220px;
+      padding:12px !important;
+    }
+    body.workspace-redesign #resultsStrip.empty{
+      display:flex !important;
+      min-height:180px;
+    }
+    body.workspace-redesign #resultsStrip .result-thumb{
+      width:100%;
+      aspect-ratio:1 / 1;
+      min-width:0;
+      border-radius:14px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.1);
+      background:rgba(15,23,42,.55);
+    }
+    body.workspace-redesign #resultsStrip .result-thumb img,
+    body.workspace-redesign #resultsStrip .result-thumb video{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+    }
+    body.workspace-redesign #resultsStrip .thumb-status-extended{
+      background:linear-gradient(180deg,transparent,rgba(0,0,0,.72));
+      border:0;
+      border-radius:0;
+    }
+    @media (max-width: 900px){
+      body.workspace-redesign header{ height:auto; }
+      body.workspace-redesign header > div{ height:64px; }
+      body.workspace-redesign #generatorDock{ order:0; }
+      body.workspace-redesign main{ order:1; gap:12px; }
+      body.workspace-redesign #generatorCard > .flex:first-child > .flex:first-child{ order:-2; }
+      body.workspace-redesign #modelButton{ order:-1; }
+      body.workspace-redesign #generatorCard .rounded-2xl:has(#promptBox){ min-height:170px; }
+      body.workspace-redesign #promptBox{ min-height:140px; }
+      body.workspace-redesign #veoQualityBlock:not(.hidden),
+      body.workspace-redesign #soraTierBlock:not(.hidden),
+      body.workspace-redesign #klingSoundBlock:not(.hidden),
+      body.workspace-redesign #durationBlock:not(.hidden),
+      body.workspace-redesign #resolutionBlock:not(.hidden),
+      body.workspace-redesign #aspectBlock:not(.hidden){
+        display:flex !important;
+      }
+      body.workspace-redesign #heroSection{ display:block !important; }
+      body.workspace-redesign #resultsSection{ display:block !important; }
+      body.workspace-redesign #resultsStrip{
+        display:flex !important;
+        grid-template-columns:none;
+        min-height:0;
+        aspect-ratio:2 / 3;
+        overflow-x:auto !important;
+        overflow-y:hidden !important;
+        padding:10px !important;
+        padding-right:22% !important;
+        scroll-snap-type:x mandatory;
+      }
+      body.workspace-redesign #resultsStrip.empty{ display:flex !important; }
+      body.workspace-redesign #resultsStrip .result-thumb{
+        flex:0 0 78%;
+        aspect-ratio:2 / 3;
+        scroll-snap-align:start;
+      }
+    }
+
+    /* Repair pass: remove duplicated mobile controls, stabilize mobile, clean upload/results */
+    body.workspace-redesign{ overflow:hidden; }
+    body.workspace-redesign #mobileQuickOptions{ display:none !important; }
+    body.workspace-redesign #generatorCard{ scrollbar-width:thin; }
+    body.workspace-redesign #generatorCard > .flex:nth-of-type(2) > .flex-col:first-child.upload-panel-empty{
+      display:none !important;
+    }
+    body.workspace-redesign #generatorCard > .flex:nth-of-type(2) > .flex-col:first-child:not(.upload-panel-empty){
+      min-height:104px;
+    }
+    body.workspace-redesign #imageThumbs.hidden,
+    body.workspace-redesign #uploadBtn.hidden,
+    body.workspace-redesign #framesUploadWrap.hidden,
+    body.workspace-redesign #alephUploadWrap.hidden{ display:none !important; }
+    body.workspace-redesign #framesUploadWrap.flex,
+    body.workspace-redesign #alephUploadWrap.flex{
+      display:grid !important;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      width:100%;
+      align-items:stretch;
+    }
+    body.workspace-redesign #framesUploadWrap > .flex,
+    body.workspace-redesign #alephUploadWrap > .flex{
+      position:relative;
+      min-height:142px;
+      border-radius:16px;
+      border:1px dashed rgba(255,255,255,.16);
+      background:rgba(255,255,255,.035);
+      display:flex !important;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    body.workspace-redesign #startFrameBtn,
+    body.workspace-redesign #lastFrameBtn,
+    body.workspace-redesign #alephVideoBtn,
+    body.workspace-redesign #alephImageBtn{
+      width:100%;
+      height:100%;
+      min-height:142px;
+      border:0;
+      border-radius:0;
+      background:transparent;
+      flex-direction:column;
+      justify-content:center;
+      color:rgba(255,255,255,.72);
+    }
+    body.workspace-redesign #startFrameBtn span:first-child,
+    body.workspace-redesign #lastFrameBtn span:first-child,
+    body.workspace-redesign #alephVideoBtn span:first-child,
+    body.workspace-redesign #alephImageBtn span:first-child{
+      width:44px;
+      height:44px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(255,255,255,.08);
+      margin-bottom:8px;
+    }
+    body.workspace-redesign #startFrameThumb,
+    body.workspace-redesign #lastFrameThumb,
+    body.workspace-redesign #alephVideoThumb,
+    body.workspace-redesign #alephImageThumb{
+      position:absolute;
+      inset:0;
+      z-index:2;
+    }
+    body.workspace-redesign #startFrameThumb > div,
+    body.workspace-redesign #lastFrameThumb > div,
+    body.workspace-redesign #alephVideoThumb > div,
+    body.workspace-redesign #alephImageThumb > div{
+      width:100% !important;
+      height:100% !important;
+      border-radius:16px !important;
+      border:0 !important;
+    }
+    body.workspace-redesign #resultsSection.hidden{ display:none !important; }
+    body.workspace-redesign #resultsSection:not(.hidden){ display:block !important; }
+    body.workspace-redesign #resultsSection > .flex{
+      align-items:center;
+      gap:12px;
+    }
+    body.workspace-redesign #resultsSection h2,
+    body.workspace-redesign #resultsSection p{ white-space:nowrap; }
+    body.workspace-redesign #resultsStrip.empty{ display:none !important; }
+    body.workspace-redesign #resultsStrip{
+      width:100%;
+      min-height:0;
+    }
+    @media (min-width:901px){
+      body.workspace-redesign main{ overflow-x:hidden; }
+      body.workspace-redesign #heroSection,
+      body.workspace-redesign #resultsSection{ width:100%; max-width:none !important; }
+      body.workspace-redesign #resultsStrip{
+        grid-template-columns:repeat(10,minmax(0,1fr));
+        min-height:138px;
+      }
+      body.workspace-redesign #resultsStrip .result-thumb{ aspect-ratio:1 / 1.12; }
+    }
+    @media (max-width:900px){
+      html, body.workspace-redesign{ width:100%; max-width:100%; overflow-x:hidden !important; }
+      body.workspace-redesign{ display:block !important; overflow-y:auto !important; }
+      body.workspace-redesign header{ position:sticky; top:0; z-index:40; }
+      body.workspace-redesign header nav{ display:none !important; }
+      body.workspace-redesign header > div{ padding-left:18px; padding-right:18px; }
+      body.workspace-redesign #generatorDock{
+        position:static !important;
+        width:100% !important;
+        max-width:100% !important;
+        padding:12px !important;
+      }
+      body.workspace-redesign #generatorCard{
+        width:100% !important;
+        max-width:100% !important;
+        overflow:visible !important;
+        border-radius:18px !important;
+      }
+      body.workspace-redesign main{
+        width:100% !important;
+        max-width:100% !important;
+        margin-left:0 !important;
+        height:auto !important;
+        overflow:visible !important;
+        padding:0 12px 28px !important;
+      }
+      body.workspace-redesign #heroSection,
+      body.workspace-redesign #resultsSection{
+        width:100% !important;
+        max-width:100% !important;
+        padding-left:0 !important;
+        padding-right:0 !important;
+      }
+      body.workspace-redesign .workspace-board{ width:100%; overflow:hidden; }
+      body.workspace-redesign .workspace-toolbar{ padding:10px; min-height:60px; }
+      body.workspace-redesign .model-rail{ max-width:100%; }
+      body.workspace-redesign .model-tab{ min-height:38px; padding:0 10px; font-size:14px; }
+      body.workspace-redesign .workspace-search{ display:none; }
+      body.workspace-redesign #resultsSection:not(.hidden){ margin-top:0; }
+      body.workspace-redesign #resultsSection > .flex{ margin-bottom:8px; }
+      body.workspace-redesign #resultsStrip{
+        width:100% !important;
+        border-radius:18px !important;
+      }
+      body.workspace-redesign #resultsStrip.empty{ display:none !important; }
+      body.workspace-redesign #durationBlock,
+      body.workspace-redesign #resolutionBlock,
+      body.workspace-redesign #aspectBlock,
+      body.workspace-redesign #veoQualityBlock,
+      body.workspace-redesign #soraTierBlock,
+      body.workspace-redesign #klingSoundBlock{
+        margin-top:0 !important;
+      }
+    }
+
+    /* Upload interaction repair */
+    body.workspace-redesign #startFrameBtn,
+    body.workspace-redesign #lastFrameBtn,
+    body.workspace-redesign #alephVideoBtn,
+    body.workspace-redesign #alephImageBtn{
+      position:absolute;
+      inset:0;
+      z-index:1;
+      cursor:pointer;
+    }
+    body.workspace-redesign #startFrameThumb,
+    body.workspace-redesign #lastFrameThumb,
+    body.workspace-redesign #alephVideoThumb,
+    body.workspace-redesign #alephImageThumb{
+      pointer-events:none;
+    }
+    body.workspace-redesign #startFrameThumb > div,
+    body.workspace-redesign #lastFrameThumb > div,
+    body.workspace-redesign #alephVideoThumb > div,
+    body.workspace-redesign #alephImageThumb > div{
+      pointer-events:auto;
+    }
+    body.workspace-redesign #startFrameThumb button,
+    body.workspace-redesign #lastFrameThumb button,
+    body.workspace-redesign #alephVideoThumb button,
+    body.workspace-redesign #alephImageThumb button,
+    body.workspace-redesign #imageThumbs button{
+      width:24px;
+      height:24px;
+      top:6px;
+      right:6px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(0,0,0,.72);
+      backdrop-filter:blur(8px);
+      -webkit-backdrop-filter:blur(8px);
+    }
+    body.workspace-redesign #imageThumbs{
+      display:grid !important;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:8px !important;
+      flex:1 1 auto;
+      overflow:visible !important;
+      max-width:none !important;
+      padding:0 !important;
+    }
+    body.workspace-redesign #imageThumbs:empty{ display:none !important; }
+    body.workspace-redesign #imageThumbs > div{
+      width:100% !important;
+      height:auto !important;
+      aspect-ratio:1 / 1;
+      min-width:0 !important;
+      border-radius:12px !important;
+      flex:initial !important;
+    }
+    body.workspace-redesign #imageThumbs img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+    }
+    body.workspace-redesign #uploadBtn:not(.hidden){
+      min-width:128px;
+      min-height:62px;
+      white-space:normal;
+      justify-content:center;
+    }
+    body.workspace-redesign #generatorCard > .flex:nth-of-type(2) > .flex-col:first-child:not(.upload-panel-empty) > .flex:first-child{
+      display:flex !important;
+      align-items:center;
+      gap:10px;
+      width:100%;
+    }
+    @media (max-width:900px){
+      body.workspace-redesign #imageThumbs{ grid-template-columns:repeat(4,minmax(0,1fr)); }
+      body.workspace-redesign #uploadBtn:not(.hidden){ min-width:120px; }
+      body.workspace-redesign #framesUploadWrap.flex,
+      body.workspace-redesign #alephUploadWrap.flex{ grid-template-columns:1fr 1fr; }
+      body.workspace-redesign #framesUploadWrap > .flex,
+      body.workspace-redesign #alephUploadWrap > .flex,
+      body.workspace-redesign #startFrameBtn,
+      body.workspace-redesign #lastFrameBtn,
+      body.workspace-redesign #alephVideoBtn,
+      body.workspace-redesign #alephImageBtn{ min-height:156px; }
+    }
+
+    /* Larger, inspectable upload previews */
+    body.workspace-redesign #generatorCard > .flex:nth-of-type(2) > .flex-col:first-child:not(.upload-panel-empty){
+      min-height:148px;
+    }
+    body.workspace-redesign #generatorCard > .flex:nth-of-type(2) > .flex-col:first-child:not(.upload-panel-empty) > .flex:first-child{
+      align-items:stretch;
+    }
+    body.workspace-redesign #uploadBtn:not(.hidden){
+      min-width:132px;
+      min-height:104px;
+      border-radius:16px;
+      flex-direction:column;
+      gap:8px;
+    }
+    body.workspace-redesign #uploadBtn:not(.hidden) span:first-child{
+      font-size:22px;
+      line-height:1;
+    }
+    body.workspace-redesign #imageThumbs{
+      display:flex !important;
+      flex:1 1 auto;
+      gap:10px !important;
+      overflow-x:auto !important;
+      overflow-y:hidden !important;
+      max-width:100% !important;
+      padding:0 2px 4px !important;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:thin;
+    }
+    body.workspace-redesign #imageThumbs:empty{ display:none !important; }
+    body.workspace-redesign #imageThumbs > div{
+      flex:0 0 96px !important;
+      width:96px !important;
+      height:104px !important;
+      aspect-ratio:auto !important;
+      border-radius:16px !important;
+      border:1px solid rgba(255,255,255,.16) !important;
+    }
+    body.workspace-redesign #imageThumbs img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+    }
+    body.workspace-redesign #imageThumbs button{
+      width:24px;
+      height:24px;
+      font-size:13px;
+    }
+    body.workspace-redesign #framesUploadWrap > .flex.drag-over,
+    body.workspace-redesign #alephUploadWrap > .flex.drag-over{
+      border-color:rgba(139,92,246,.95);
+      background:rgba(99,102,241,.15);
+      box-shadow:0 0 0 1px rgba(139,92,246,.35) inset;
+    }
+    @media (max-width:900px){
+      body.workspace-redesign #imageThumbs > div{
+        flex-basis:92px !important;
+        width:92px !important;
+        height:104px !important;
+      }
+      body.workspace-redesign #uploadBtn:not(.hidden){
+        min-width:128px;
+        min-height:104px;
+      }
+    }
+
+    /* Keep the normal image uploader small; previews live below it */
+    body.workspace-redesign #generatorCard > .flex:nth-of-type(2) > .flex-col:first-child:not(.upload-panel-empty) > .flex:first-child{
+      flex-direction:column !important;
+      align-items:flex-start !important;
+      justify-content:flex-start !important;
+      gap:10px !important;
+    }
+    body.workspace-redesign #uploadBtn:not(.hidden){
+      min-width:112px !important;
+      min-height:42px !important;
+      height:42px !important;
+      width:auto !important;
+      padding:0 12px !important;
+      border-radius:12px !important;
+      flex-direction:row !important;
+      gap:7px !important;
+      font-size:12px !important;
+      line-height:1 !important;
+    }
+    body.workspace-redesign #uploadBtn:not(.hidden) span:first-child{
+      font-size:17px !important;
+      width:auto !important;
+      height:auto !important;
+      margin:0 !important;
+    }
+    body.workspace-redesign #uploadBtn:not(.hidden) #uploadBtnLabel{
+      font-size:12px !important;
+      white-space:nowrap !important;
+    }
+    body.workspace-redesign #imageThumbs{
+      width:100% !important;
+      flex:none !important;
+      margin-top:0 !important;
+    }
+    @media (max-width:900px){
+      body.workspace-redesign #uploadBtn:not(.hidden){
+        min-width:108px !important;
+        min-height:40px !important;
+        height:40px !important;
+      }
+    }
+
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col workspace-redesign">
   <!-- HEADER (Nano Banana style) -->
   <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -598,33 +1406,21 @@
 
   <!-- MAIN HERO -->
   <main class="flex-1 overflow-y-auto pb-40">
+    <section id="heroSection" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-10 text-center">
+      <div class="workspace-board">
+        <div class="workspace-toolbar">
+          <div id="modelRail" class="model-rail" aria-label="Model chooser"></div>
+          <input id="workspaceModelSearch" class="workspace-search" type="search" placeholder="Search models" />
+        </div>
+      </div>
+    </section>
+
     <section id="resultsSection" class="hidden mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm pt-8 font-semibold text-white/80">Recent generations</h2>
-        <p class="text-[11px] text-white/45">Last 7 jobs from this account</p>
+        <p class="text-[11px] text-white/45">Last 10 jobs from this account</p>
       </div>
       <div id="resultsStrip" class="flex gap-3 overflow-x-auto pb-2"></div>
-    </section>
-
-    <section id="heroSection" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-10 text-center">
-      <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold">
-        Let’s start with some image &amp; video magic
-      </h1>
-      <p class="mt-2 text-sm sm:text-base text-zinc-300 max-w-xl mx-auto">
-        Type your idea once, then choose any model to generate images or videos — all from one clean bar.
-      </p>
-
-      <div class="mt-8 mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl">
-        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
-          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/ChatGPT%20Image%20Dec%206,%202025,%2011_11_06%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 1" class="h-full w-full object-cover" />
-        </div>
-        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9]">
-          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2022,%202025,%2010_42_41%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 2" class="h-full w-full object-cover" />
-        </div>
-        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 aspect-[16/9] hidden sm:block">
-          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2022,%202025,%2010_39_01%20PM.png?auto=compress&cs=tinysrgb&w=1200" alt="Preset 3" class="h-full w-full object-cover" />
-        </div>
-      </div>
     </section>
 
     <!-- RESULTS STRIP -->
@@ -854,7 +1650,7 @@ async function __mjFetchNbCheck(params){
             <div class="inner">
               <div class="icon">H</div>
               <div style="font-weight:700; margin-bottom:6px;">No generations yet</div>
-              <div style="font-size:12px; line-height:1.35;">Your last 7 results will appear here after you run your first job.</div>
+              <div style="font-size:12px; line-height:1.35;">Your last 10 results will appear here after you run your first job.</div>
             </div>
           </div>
         `;
@@ -1207,7 +2003,7 @@ function createResultCard(data) {
       else strip.appendChild(card);
 
       // keep at most 7
-      const __max = 7;
+      const __max = 10;
       while (strip.children.length > __max) strip.removeChild(strip.lastElementChild);
 
       return built;
@@ -1222,7 +2018,7 @@ function createResultCard(data) {
           .select('provider, kind, prompt, result_url, meta, created_at')
           .eq('user_id', currentUser.id)
           .order('created_at', { ascending: false })
-          .limit(7);
+          .limit(10);
 
         if (error) {
           console.warn('loadRecentHistory error', error);
@@ -1231,23 +2027,11 @@ function createResultCard(data) {
 
         const strip = document.getElementById('resultsStrip');
         if (strip) strip.innerHTML = '';
-
-        const hero = document.getElementById('heroSection');
         const resultsSection = document.getElementById('resultsSection');
         const hasItems = (data || []).length > 0;
-
-        if (hero) {
-          if (hasItems) hero.classList.add('hidden');
-          else hero.classList.remove('hidden');
-        }
         if (resultsSection) {
-          if (isMobileUI()) {
-            // mobile always shows the 2:3 results viewport (empty placeholder if needed)
-            resultsSection.classList.remove('hidden');
-          } else {
-            if (hasItems) resultsSection.classList.remove('hidden');
-            else resultsSection.classList.add('hidden');
-          }
+          if (hasItems) resultsSection.classList.remove('hidden');
+          else resultsSection.classList.add('hidden');
         }
 
         (async () => {
@@ -1843,6 +2627,96 @@ let currentKlingSound = false;
     let currentResolution = '1K';
     let currentSoraTier = 'base';
 
+
+
+    function getWorkspaceModelItems() {
+      const source = MODELS.filter((m) => currentMode === 'image' ? m.category === 'image' : m.category === 'video');
+      if (currentMode !== 'video') return source;
+      const items = [];
+      const hasVeo31 = source.some((m) => m.id === 'veo31-fast' || m.id === 'veo31');
+      const hasVeo3 = source.some((m) => m.id === 'veo3-fast' || m.id === 'veo3');
+      if (hasVeo31) items.push({ id: 'veo31-fast', name: 'Veo 3.1', emoji: '🎥', subtitle: 'Fast / Quality', category: 'video' });
+      if (hasVeo3) items.push({ id: 'veo3-fast', name: 'Veo 3', emoji: '🎥', subtitle: 'Fast / Quality', category: 'video' });
+      source.filter((m) => !['veo31-fast','veo31','veo3-fast','veo3'].includes(m.id)).forEach((m) => items.push(m));
+      return items;
+    }
+
+    function selectWorkspaceModel(id) {
+      const next = MODELS.find((m) => m.id === id);
+      if (!next) return;
+      currentModel = next;
+      currentMode = next.category === 'video' ? 'video' : 'image';
+      const btnImage = document.getElementById('btnModeImage');
+      const btnVideo = document.getElementById('btnModeVideo');
+      if (btnImage && btnVideo) {
+        btnImage.classList.toggle('bg-gradient-to-r', currentMode === 'image');
+        btnImage.classList.toggle('from-indigo-500', currentMode === 'image');
+        btnImage.classList.toggle('to-violet-500', currentMode === 'image');
+        btnImage.classList.toggle('text-white', currentMode === 'image');
+        btnImage.classList.toggle('font-semibold', currentMode === 'image');
+        btnVideo.classList.toggle('bg-gradient-to-r', currentMode === 'video');
+        btnVideo.classList.toggle('from-indigo-500', currentMode === 'video');
+        btnVideo.classList.toggle('to-violet-500', currentMode === 'video');
+        btnVideo.classList.toggle('text-white', currentMode === 'video');
+        btnVideo.classList.toggle('font-semibold', currentMode === 'video');
+      }
+      updateModelButtonLabels();
+      configureControlsForModel();
+      renderWorkspaceModelRail();
+    }
+
+    function renderWorkspaceModelRail() {
+      const rail = document.getElementById('modelRail');
+      if (!rail || !Array.isArray(MODELS)) return;
+      const search = (document.getElementById('workspaceModelSearch')?.value || '').trim().toLowerCase();
+      const items = getWorkspaceModelItems().filter((m) => {
+        if (!search) return true;
+        return String(m.name || '').toLowerCase().includes(search) || String(m.subtitle || '').toLowerCase().includes(search);
+      });
+      rail.innerHTML = '';
+      items.forEach((model) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const active = currentModel && (currentModel.id === model.id || (model.id === 'veo31-fast' && ['veo31-fast','veo31'].includes(currentModel.id)) || (model.id === 'veo3-fast' && ['veo3-fast','veo3'].includes(currentModel.id)));
+        btn.className = 'model-tab' + (active ? ' active' : '');
+        btn.innerHTML = '<span class="glyph">' + (model.emoji || '✦') + '</span><span>' + model.name + '</span>';
+        btn.addEventListener('click', () => selectWorkspaceModel(model.id));
+        rail.appendChild(btn);
+      });
+    }
+
+    function syncWorkspaceModelSummary() {
+      const title = document.getElementById('workspaceModelTitle');
+      const description = document.getElementById('workspaceModelDescription');
+      if (title && currentModel) title.textContent = currentModel.name;
+      if (description && currentModel) description.textContent = currentModel.description || currentModel.subtitle || '';
+    }
+
+    function wireWorkspaceRedesign() {
+      const search = document.getElementById('workspaceModelSearch');
+      if (search && !search.dataset.wired) {
+        search.dataset.wired = 'true';
+        search.addEventListener('input', renderWorkspaceModelRail);
+      }
+      const open = document.getElementById('workspaceOpenModels');
+      if (open && !open.dataset.wired) {
+        open.dataset.wired = 'true';
+        open.addEventListener('click', openModelOverlay);
+      }
+      document.querySelectorAll('.preset-card').forEach((card) => {
+        if (card.dataset.wired) return;
+        card.dataset.wired = 'true';
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.preset-card').forEach((c) => c.classList.remove('selected'));
+          card.classList.add('selected');
+          const prompt = document.getElementById('promptBox');
+          if (prompt && !prompt.value.trim()) prompt.value = card.dataset.prompt || '';
+        });
+      });
+      renderWorkspaceModelRail();
+      syncWorkspaceModelSummary();
+    }
+
     function setMode(mode) {
       currentMode = mode;
       const btnImage = document.getElementById('btnModeImage');
@@ -1865,6 +2739,7 @@ let currentKlingSound = false;
         currentModel = def;
         updateModelButtonLabels();
         configureControlsForModel();
+        renderWorkspaceModelRail();
       }
     }
 
@@ -1878,12 +2753,43 @@ let currentKlingSound = false;
       if (costLabelEl && currentModel && currentModel.costLabel) {
         costLabelEl.textContent = currentModel.costLabel;
       }
+      syncWorkspaceModelSummary();
+      renderWorkspaceModelRail();
+      updateRunButtonLabel();
+    }
+
+    function getRunCreditLabel() {
+      if (!currentModel) return '';
+      if (currentModel.id === 'kling26') {
+        const dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
+        return String(currentKlingSound ? (dur === 10 ? 16 : 9) : (dur === 10 ? 9 : 5));
+      }
+      if (currentModel.id === 'sora2') return currentSoraTier === 'pro' ? '20' : '3';
+      if (typeof currentModel.minCredits === 'number') return String(currentModel.minCredits);
+      const match = String(currentModel.costLabel || '').match(/(\d+(?:\.\d+)?)/);
+      return match ? match[1] : '';
+    }
+
+    function updateRunButtonLabel() {
+      const runBtn = document.getElementById('runBtn');
+      if (!runBtn) return;
+      const credits = getRunCreditLabel();
+      runBtn.textContent = credits ? `Run ${credits} ⚡` : 'Run';
+    }
+
+    function updateUploadPanelState() {
+      const uploadBtn = document.getElementById('uploadBtn');
+      const uploadPanel = uploadBtn ? uploadBtn.closest('.md\:w-1\/3, .flex-col') : null;
+      if (!uploadPanel || !currentModel) return;
+      const hasUpload = !!currentModel.useFrames || !!currentModel.needsVideo || Number(currentModel.maxFiles || 0) > 0;
+      uploadPanel.classList.toggle('upload-panel-empty', !hasUpload);
     }
     function updateCostLabelForKling26() {
       if (!currentModel || currentModel.id !== 'kling26') return;
       const costLabelEl = document.getElementById('costLabel');
       if (!costLabelEl) return;
       costLabelEl.textContent = currentKlingSound ? 'Credits 5s-9⚡ 10s-16⚡' : 'Credits 5s-5⚡ 10s-9⚡';
+      updateRunButtonLabel();
     }
 
 
@@ -2027,6 +2933,7 @@ let currentKlingSound = false;
           closeModelOverlay();
           updateModelButtonLabels();
           configureControlsForModel();
+          renderWorkspaceModelRail();
         });
 
         listEl.appendChild(row);
@@ -2118,6 +3025,7 @@ let currentKlingSound = false;
               currentSoraTier = val;
               Array.from(soraTierPills.querySelectorAll('button')).forEach(x => x.classList.remove('chip-active'));
               b.classList.add('chip-active');
+              updateRunButtonLabel();
             });
             return b;
           };
@@ -2250,6 +3158,7 @@ let currentKlingSound = false;
               child.classList.remove('chip-active');
             });
             btn.classList.add('chip-active');
+            updateRunButtonLabel();
           });
           durationPills.appendChild(btn);
         });
@@ -2339,6 +3248,9 @@ let currentKlingSound = false;
     
       // Mobile quick options (UI only)
       updateMobileQuickOptions();
+      updateUploadPanelState();
+      syncWorkspaceModelSummary();
+      renderWorkspaceModelRail();
 }
     // ------------------------------------------------------------
     // Mobile quick options (UI only): AR / Duration compact pickers
@@ -2424,6 +3336,7 @@ let currentKlingSound = false;
             }
           } else if (type === 'duration') {
             currentDuration = opt;
+            updateRunButtonLabel();
             const durationPills = document.getElementById('durationPills');
             if (durationPills) {
               Array.from(durationPills.children).forEach((child) => {
@@ -2558,6 +3471,54 @@ let currentKlingSound = false;
     })();
 
 
+
+
+    function wireUploadTileClicks() {
+      const pairs = [
+        ['framesUploadWrap', 'startFrameInput', 0],
+        ['framesUploadWrap', 'lastFrameInput', 1],
+        ['alephUploadWrap', 'alephVideoInput', 0],
+        ['alephUploadWrap', 'alephImageInput', 1],
+      ];
+      pairs.forEach(([wrapId, inputId, index]) => {
+        const wrap = document.getElementById(wrapId);
+        const input = document.getElementById(inputId);
+        const tile = wrap && wrap.children ? wrap.children[index] : null;
+        if (!tile || !input || tile.dataset.tileWired) return;
+        tile.dataset.tileWired = 'true';
+        tile.addEventListener('click', (event) => {
+          if (event.target && event.target.closest && event.target.closest('button')) return;
+          input.click();
+        });
+        if (wrapId === 'framesUploadWrap') {
+          const frameKind = index === 0 ? 'start' : 'last';
+          ['dragenter', 'dragover'].forEach((type) => {
+            tile.addEventListener(type, (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              tile.classList.add('drag-over');
+            });
+          });
+          ['dragleave', 'drop'].forEach((type) => {
+            tile.addEventListener(type, (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              tile.classList.remove('drag-over');
+            });
+          });
+          tile.addEventListener('drop', (event) => {
+            const files = Array.from((event.dataTransfer && event.dataTransfer.files) || []);
+            const file = files.find((item) => item && item.type && item.type.startsWith('image/'));
+            if (!file) {
+              showStatus('Drop an image file here.', 'error');
+              return;
+            }
+            applyFrameFile(frameKind, file);
+          });
+        }
+      });
+    }
+
     // START / LAST FRAME (Veo 3.1 + Kling 2.1)
     document.getElementById('startFrameBtn').addEventListener('click', () => {
       document.getElementById('startFrameInput').click();
@@ -2590,32 +3551,45 @@ let currentKlingSound = false;
       containerEl.appendChild(wrapper);
     }
 
-    document.getElementById('startFrameInput').addEventListener('change', (e) => {
-      const file = (e.target.files || [])[0] || null;
-      startFrameFile = file;
-      renderSingleThumb(startFrameFile, document.getElementById('startFrameThumb'), () => {
-        startFrameFile = null;
-        document.getElementById('startFrameInput').value = '';
-        // If start is cleared, last is not allowed
-        lastFrameFile = null;
-        document.getElementById('lastFrameInput').value = '';
-        document.getElementById('lastFrameThumb').innerHTML = '';
-      });
-    });
+    function clearLastFrame() {
+      lastFrameFile = null;
+      document.getElementById('lastFrameInput').value = '';
+      document.getElementById('lastFrameThumb').innerHTML = '';
+    }
 
-    document.getElementById('lastFrameInput').addEventListener('change', (e) => {
-      const file = (e.target.files || [])[0] || null;
-      // Enforce: last cannot be used without start
+    function applyFrameFile(kind, file) {
+      if (kind === 'start') {
+        startFrameFile = file;
+        document.getElementById('startFrameInput').value = '';
+        renderSingleThumb(startFrameFile, document.getElementById('startFrameThumb'), () => {
+          startFrameFile = null;
+          document.getElementById('startFrameInput').value = '';
+          clearLastFrame();
+        });
+        return;
+      }
+
       if (!startFrameFile && file) {
         document.getElementById('lastFrameInput').value = '';
         showStatus('Last frame requires a Start frame first.', 'error');
         return;
       }
+
       lastFrameFile = file;
+      document.getElementById('lastFrameInput').value = '';
       renderSingleThumb(lastFrameFile, document.getElementById('lastFrameThumb'), () => {
-        lastFrameFile = null;
-        document.getElementById('lastFrameInput').value = '';
+        clearLastFrame();
       });
+    }
+
+    document.getElementById('startFrameInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      applyFrameFile('start', file);
+    });
+
+    document.getElementById('lastFrameInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      applyFrameFile('last', file);
     });
 
     // ALEPH: VIDEO REQUIRED + OPTIONAL IMAGE
@@ -3108,9 +4082,13 @@ for (let i = 0; i < expectedOutputs; i++) {
     // boot
     (async () => {
       await loadUser();
+      wireWorkspaceRedesign();
+      wireUploadTileClicks();
       setMode('image');
       updateModelButtonLabels();
       configureControlsForModel();
+      wireWorkspaceRedesign();
+      wireUploadTileClicks();
     })();
   </script>
 
