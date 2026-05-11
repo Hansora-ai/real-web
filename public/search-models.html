@@ -1352,6 +1352,87 @@
       }
     }
 
+    /* Desktop-only recent generations: calm 4-column scrollable gallery */
+    @media (min-width:901px){
+      body.workspace-redesign .workspace-board{
+        position:relative !important;
+        z-index:3 !important;
+      }
+      body.workspace-redesign #heroSection{
+        position:relative !important;
+        z-index:3 !important;
+      }
+      body.workspace-redesign #resultsSection{
+        min-height:0 !important;
+        position:relative !important;
+        z-index:1 !important;
+        overflow:hidden !important;
+        isolation:isolate !important;
+      }
+      body.workspace-redesign #resultsStrip:not(.empty){
+        display:grid !important;
+        grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+        grid-auto-rows:330px !important;
+        gap:14px !important;
+        max-height:min(720px, calc(100vh - 360px)) !important;
+        overflow-x:hidden !important;
+        overflow-y:auto !important;
+        overscroll-behavior:contain !important;
+        padding:14px !important;
+        align-items:start !important;
+        scrollbar-width:thin;
+        position:relative !important;
+        z-index:1 !important;
+        contain:layout paint !important;
+        clip-path:inset(0 round 18px) !important;
+      }
+      body.workspace-redesign #resultsStrip .result-card{
+        width:100% !important;
+        min-width:0 !important;
+        height:330px !important;
+        max-height:330px !important;
+        display:flex !important;
+        flex-direction:column !important;
+        overflow:hidden !important;
+      }
+      body.workspace-redesign #resultsStrip .result-card .result-media{
+        height:254px !important;
+        min-height:254px !important;
+        max-height:254px !important;
+        flex:0 0 254px !important;
+        background:rgba(2,6,23,.78) !important;
+      }
+      body.workspace-redesign #resultsStrip .result-card .result-media img,
+      body.workspace-redesign #resultsStrip .result-card .result-media video{
+        width:100% !important;
+        height:100% !important;
+        max-width:none !important;
+        max-height:none !important;
+        object-fit:contain !important;
+        background:rgba(2,6,23,.78) !important;
+      }
+      body.workspace-redesign #resultsStrip .result-card > div:last-child{
+        height:76px !important;
+        min-height:76px !important;
+        padding:9px 10px !important;
+        display:flex !important;
+        flex-direction:column !important;
+        justify-content:center !important;
+        gap:5px !important;
+      }
+      body.workspace-redesign #resultsStrip .result-card > div:last-child p{
+        display:block !important;
+        white-space:nowrap !important;
+        overflow:hidden !important;
+        text-overflow:ellipsis !important;
+      }
+      body.workspace-redesign #resultsStrip .result-card a{
+        height:30px !important;
+        min-width:46px !important;
+        padding:0 11px !important;
+      }
+    }
+
     </style>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
