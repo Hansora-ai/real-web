@@ -213,7 +213,7 @@
   .site-header .nav-links { display: none; }
   .site-header .nav { min-height: 64px; }
   .site-header .brand span { font-size: .95rem; }
-  .site-header #btnLoginSignup { display: none; }
+  .site-header #btnLoginSignup { display: inline-flex; }
   .site-header .nav-actions .btn-primary { display: none; }
 }
 
