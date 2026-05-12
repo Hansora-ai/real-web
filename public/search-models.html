@@ -2381,12 +2381,14 @@ function createResultCard(data) {
           else resultsSection.classList.add('hidden');
         }
 
+        const resumePairs = [];
         (async () => {
         for (const row of (data || [])) {
           const runId = row && row.meta && row.meta.run_id ? row.meta.run_id : '';
+          const taskId = row && row.meta && (row.meta.task_id || row.meta.taskId) ? (row.meta.task_id || row.meta.taskId) : '';
           const status = row && row.meta && row.meta.status ? row.meta.status : (row && row.result_url ? 'ready' : 'processing');
 
-          addResultCard({
+          const controller = addResultCard({
             run_id: runId,
             provider: row.provider || 'Model',
             kind: row.kind || 'image',
@@ -2394,7 +2396,12 @@ function createResultCard(data) {
             result_url: row.result_url,
             status
           }, { prepend: false });
+          const statusLower = String(status || '').toLowerCase();
+          if (controller && runId && taskId && !row.result_url && (statusLower === 'processing' || statusLower === 'pending' || !statusLower)) {
+            resumePairs.push({ row, controller, runId, taskId });
+          }
         }
+        resumeProcessingChecks(resumePairs);
       })();
       if (isMobileUI()) ensureResultsEmptyState();
       } catch (e) {
@@ -2477,8 +2484,48 @@ function createResultCard(data) {
     return (urls || []).slice(0, 4);
   } catch (e) {
     return [];
-  }
-}
+      }
+    }
+
+    function resumeProcessingChecks(pairs) {
+      if (!pairs || !pairs.length || !currentUser) return;
+      for (const item of pairs) {
+        const key = `resume:${item.runId}`;
+        if (__activePolls.has(key)) continue;
+        __activePolls.set(key, { cancelled: false });
+        (async () => {
+          try {
+            const nb = await __mjFetchNbCheck({
+              taskId: item.taskId,
+              uid: currentUser.id,
+              runId: item.runId
+            });
+            const js = nb && nb.js ? nb.js : {};
+            const statusText = String(js.status || '').toLowerCase();
+            const failed = !!js.failed || statusText.includes('fail') || statusText.includes('error') || statusText.includes('cancel');
+            if (failed) {
+              item.controller.apply({ status: 'failed', result_url: null });
+              await refreshCredits();
+              return;
+            }
+            if (js.ok || statusText.includes('success') || statusText.includes('done') || statusText.includes('complete')) {
+              const urls = __mjTryExtractAllImageUrls(js);
+              if (urls && urls.length) {
+                item.controller.apply({ status: 'ready', result_url: urls[0] });
+                await refreshCredits();
+                return;
+              }
+            }
+            startPollGeneration(item.runId, [item.controller], item.taskId);
+          } catch (error) {
+            console.warn('resumeProcessingChecks failed', error);
+            startPollGeneration(item.runId, [item.controller], item.taskId);
+          } finally {
+            __activePolls.delete(key);
+          }
+        })();
+      }
+    }
 
 
 
