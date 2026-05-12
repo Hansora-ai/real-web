@@ -10,8 +10,7 @@ const API_KEY    = process.env.KIE_API_KEY || "";
 const SUPABASE_URL  = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-const SITE_BASE   = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/, "");
-const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/kie-callback`;
+const CALLBACK_URL = "https://hansora.co/.netlify/functions/kie-callback";
 
 const VERSION_TAG  = "nb_pro_fn_kling26_style_v1";
 
@@ -238,7 +237,7 @@ exports.handler = async (event) => {
     const size   = normalizeImageSize(body.size);
     const resolution = normalizeResolution(body.resolution);
 
-    const cost = 2;
+    const cost = (resolution === "4K") ? 2 : 1.5;
 
     // Seed user_generations row (pending)
     const seeded = await seedUserGeneration(uid, run_id, prompt, { size, resolution });
