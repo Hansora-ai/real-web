@@ -5,6 +5,10 @@
   left: 0;
   right: 0;
   z-index: 9999;
+  min-height: 68px;
+  background: rgba(11,13,19,.74);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 .site-header {
   position: relative;
@@ -158,7 +162,7 @@
 }
 .site-header.auth-checking #btnLoginSignup,
 .site-header.auth-checking #navCredits,
-.site-header.auth-checking #navAvatar { visibility: hidden !important; }
+.site-header.auth-checking #navAvatar { visibility: visible !important; }
 .hansora-auth-modal {
   position: fixed;
   inset: 0;
