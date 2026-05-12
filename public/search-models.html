@@ -631,6 +631,36 @@
       border-bottom-color:rgba(221,255,55,.95);
     }
     .model-tab .glyph{ font-size:18px; opacity:.9; }
+    .model-logo{
+      width:24px;
+      height:24px;
+      border-radius:8px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      flex:0 0 auto;
+      border:1px solid rgba(255,255,255,.16);
+      background:linear-gradient(135deg, rgba(99,102,241,.95), rgba(56,189,248,.85));
+      color:#fff;
+      font-size:11px;
+      font-weight:900;
+      line-height:1;
+      box-shadow:0 8px 18px rgba(0,0,0,.28);
+      letter-spacing:0;
+    }
+    .model-logo.openai{ background:linear-gradient(135deg,#f8fafc,#94a3b8); color:#08111f; }
+    .model-logo.nano{ background:linear-gradient(135deg,#ffe66d,#7c3aed); color:#111827; }
+    .model-logo.seedream{ background:linear-gradient(135deg,#22d3ee,#a78bfa,#f472b6); color:#061018; }
+    .model-logo.grok{ background:#f8fafc; color:#050714; font-size:15px; }
+    .model-logo.wan{ background:linear-gradient(135deg,#14b8a6,#2563eb); }
+    .model-logo.qwen{ background:linear-gradient(135deg,#60a5fa,#312e81); }
+    .model-logo.z{ background:linear-gradient(135deg,#f59e0b,#ef4444); }
+    .model-logo.video{ background:linear-gradient(135deg,#38bdf8,#8b5cf6); }
+    .chip:disabled{
+      opacity:.38;
+      cursor:not-allowed;
+      filter:saturate(.55);
+    }
     .workspace-search{
       width:260px;
       min-height:44px;
@@ -2335,6 +2365,8 @@ function createResultCard(data) {
     function addResultCard(data, options) {
       const strip = document.getElementById('resultsStrip');
       if (!strip) return null;
+      const resultsSection = document.getElementById('resultsSection');
+      if (resultsSection) resultsSection.classList.remove('hidden');
 
       // if empty placeholder exists, clear it
       if (strip.classList.contains('empty')) {
@@ -2812,20 +2844,55 @@ async function pollGeneration(runId, controllers, token, taskId) {
         minCredits: 0.5
       },
       {
-        id: 'imagen',
-        name: 'Imagen Ultra',
-        emoji: '🌈',
-        subtitle: 'Text → Image',
+        id: 'wan-2-7-image',
+        name: 'Wan 2.7 Image',
+        emoji: 'W',
+        subtitle: 'Text / (Image) → Image',
         category: 'image',
-        description: 'Google Imagen Ultra for high-quality text-to-image.',
-        endpoint: '/.netlify/functions/run-imagen',
+        description: 'Wan 2.7 Image with Normal / Pro quality.',
+        endpoint: '/.netlify/functions/run-wan-2-7-image',
         needsImage: false,
-        maxFiles: 0,
+        maxFiles: 4,
+        uploadMaxMB: 10,
         aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
         defaultAspect: '1:1',
         durations: null,
-        costLabel: '1⚡ per job',
-        minCredits: 1
+        costLabel: '0.5⚡ per job',
+        minCredits: 0.5
+      },
+      {
+        id: 'qwen-2',
+        name: 'Qwen 2',
+        emoji: 'Q',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'Qwen image generation with PNG output.',
+        endpoint: '/.netlify/functions/run-qwen-2',
+        needsImage: false,
+        maxFiles: 4,
+        uploadMaxMB: 10,
+        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: null,
+        costLabel: '0.5⚡ per job',
+        minCredits: 0.5
+      },
+      {
+        id: 'z-image',
+        name: 'Z-Image',
+        emoji: 'Z',
+        subtitle: 'Text → Image',
+        category: 'image',
+        description: 'Lightweight text-to-image generation.',
+        endpoint: '/.netlify/functions/run-z-image',
+        needsImage: false,
+        maxFiles: 0,
+        uploadMaxMB: 10,
+        aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: null,
+        costLabel: '0.2⚡ per job',
+        minCredits: 0.2
       },
       {
         id: 'midjourney',
@@ -3038,7 +3105,58 @@ async function pollGeneration(runId, controllers, token, taskId) {
     let currentVeoVariant = 'fast'; // 'fast' | 'quality'
     let uploadedFiles = [];
     // Models that should APPEND images when user uploads again (multi-image support)
-    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'grok-image']);
+    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'grok-image', 'wan-2-7-image', 'qwen-2']);
+    const IMAGE_MODEL_ORDER = ['gpt-image-2', 'nano-banana-2', 'nano-banana-pro', 'seedream-5-lite', 'grok-image'];
+
+    function sortModelsForCurrentMode(items) {
+      if (currentMode !== 'image') return items;
+      return [...items].sort((a, b) => {
+        const ia = IMAGE_MODEL_ORDER.indexOf(a.id);
+        const ib = IMAGE_MODEL_ORDER.indexOf(b.id);
+        if (ia !== -1 || ib !== -1) {
+          if (ia === -1) return 1;
+          if (ib === -1) return -1;
+          return ia - ib;
+        }
+        return 0;
+      });
+    }
+
+    function getModelLogoText(model) {
+      const id = String(model?.id || '');
+      if (id === 'gpt-image-2') return 'G2';
+      if (id.includes('gpt')) return 'AI';
+      if (id === 'nano-banana-2') return 'N2';
+      if (id === 'nano-banana-pro') return 'NP';
+      if (id.includes('nano')) return 'NB';
+      if (id.includes('seedream')) return 'S';
+      if (id.includes('grok')) return '𝕏';
+      if (id.includes('wan')) return 'W';
+      if (id.includes('qwen')) return 'Q';
+      if (id.includes('z-image')) return 'Z';
+      if (id.includes('kling')) return 'K';
+      if (id.includes('veo')) return 'V';
+      if (id.includes('sora')) return 'S2';
+      if (id.includes('runway')) return 'R';
+      if (id.includes('aleph')) return 'A';
+      return 'AI';
+    }
+
+    function getModelLogoClass(model) {
+      const id = String(model?.id || '');
+      if (id.includes('gpt')) return 'openai';
+      if (id.includes('nano')) return 'nano';
+      if (id.includes('seedream')) return 'seedream';
+      if (id.includes('grok')) return 'grok';
+      if (id.includes('wan')) return 'wan';
+      if (id.includes('qwen')) return 'qwen';
+      if (id.includes('z-image')) return 'z';
+      return model?.category === 'video' ? 'video' : '';
+    }
+
+    function modelLogoHTML(model) {
+      return '<span class="model-logo ' + getModelLogoClass(model) + '">' + getModelLogoText(model) + '</span>';
+    }
 
     function __renderImageThumbs() {
       const thumbs = document.getElementById('imageThumbs');
@@ -3078,15 +3196,16 @@ async function pollGeneration(runId, controllers, token, taskId) {
 
     let currentAspect = null;
     let currentDuration = null;
-let currentKlingSound = false;
+    let currentKlingSound = false;
     let currentResolution = '1K';
     let currentSoraTier = 'base';
+    let currentWanTier = 'normal';
 
 
 
     function getWorkspaceModelItems() {
       const source = MODELS.filter((m) => !m.hidden && (currentMode === 'image' ? m.category === 'image' : m.category === 'video'));
-      if (currentMode !== 'video') return source;
+      if (currentMode !== 'video') return sortModelsForCurrentMode(source);
       const items = [];
       const hasVeo31 = source.some((m) => m.id === 'veo31-fast' || m.id === 'veo31');
       const hasVeo3 = source.some((m) => m.id === 'veo3-fast' || m.id === 'veo3');
@@ -3134,7 +3253,7 @@ let currentKlingSound = false;
         btn.type = 'button';
         const active = currentModel && (currentModel.id === model.id || (model.id === 'veo31-fast' && ['veo31-fast','veo31'].includes(currentModel.id)) || (model.id === 'veo3-fast' && ['veo3-fast','veo3'].includes(currentModel.id)));
         btn.className = 'model-tab' + (active ? ' active' : '');
-        btn.innerHTML = '<span class="glyph">' + (model.emoji || '✦') + '</span><span>' + model.name + '</span>';
+        btn.innerHTML = modelLogoHTML(model) + '<span>' + model.name + '</span>';
         btn.addEventListener('click', () => selectWorkspaceModel(model.id));
         rail.appendChild(btn);
       });
@@ -3188,7 +3307,7 @@ let currentKlingSound = false;
       }
 
       // Default model per mode
-      const defaultId = mode === 'image' ? 'nano-banana-pro' : 'veo31-fast';
+      const defaultId = mode === 'image' ? 'gpt-image-2' : 'veo31-fast';
       const def = MODELS.find(m => m.id === defaultId);
       if (def) {
         currentModel = def;
@@ -3218,6 +3337,7 @@ let currentKlingSound = false;
       if (model.id === 'nano-banana-pro') return currentResolution === '4K' ? 2 : 1.5;
       if (model.id === 'nano-banana-2') return currentResolution === '4K' ? 1.5 : 1;
       if (model.id === 'gpt-image-2') return currentResolution === '4K' ? 1.5 : 1;
+      if (model.id === 'wan-2-7-image') return currentWanTier === 'pro' ? 1 : 0.5;
       if (model.id === 'kling26') {
         const dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
         return currentKlingSound ? (dur === 10 ? 16 : 9) : (dur === 10 ? 9 : 5);
@@ -3259,14 +3379,19 @@ let currentKlingSound = false;
     function getResolutionOptionsForCurrentModel() {
       if (!currentModel) return [];
       if (currentModel.id === 'gpt-image-2') {
-        if (currentAspect === 'auto') return ['1K'];
-        if (currentAspect === '1:1') return ['1K', '2K'];
         return ['1K', '2K', '4K'];
       }
       if (currentModel.id === 'nano-banana-pro' || currentModel.id === 'nano-banana-2') {
         return ['1K', '2K', '4K'];
       }
       return [];
+    }
+
+    function isResolutionAllowedForCurrentModel(val) {
+      if (!currentModel || currentModel.id !== 'gpt-image-2') return true;
+      if (currentAspect === 'auto') return val === '1K';
+      if (currentAspect === '1:1') return val === '1K' || val === '2K';
+      return true;
     }
 
     function renderResolutionControls() {
@@ -3284,14 +3409,20 @@ let currentKlingSound = false;
       if (resolutionBlock) resolutionBlock.classList.remove('hidden');
       if (!resolutionPills) return;
       resolutionPills.innerHTML = '';
-      if (!currentResolution || !opts.includes(currentResolution)) currentResolution = opts[0];
+      if (!currentResolution || !opts.includes(currentResolution) || !isResolutionAllowedForCurrentModel(currentResolution)) {
+        currentResolution = opts.find(isResolutionAllowedForCurrentModel) || opts[0];
+      }
       opts.forEach((val) => {
+        const disabled = !isResolutionAllowedForCurrentModel(val);
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.textContent = val;
         btn.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
-        if (val === currentResolution) btn.classList.add('chip-active');
+        btn.disabled = disabled;
+        if (disabled) btn.title = 'Not available for this aspect ratio';
+        if (!disabled && val === currentResolution) btn.classList.add('chip-active');
         btn.addEventListener('click', () => {
+          if (disabled) return;
           currentResolution = val;
           Array.from(resolutionPills.children).forEach((child) => child.classList.remove('chip-active'));
           btn.classList.add('chip-active');
@@ -3362,6 +3493,7 @@ let currentKlingSound = false;
           (m.subtitle && m.subtitle.toLowerCase().includes(searchValue));
         return matchesMode && matchesSearch;
       });
+      if (currentMode === 'image') filtered = sortModelsForCurrentMode(filtered);
 
       // Professionalize Veo list: show only "Veo 3" and "Veo 3.1" in the picker.
       // Fast / Quality is selected in the bottom bar.
@@ -3389,7 +3521,7 @@ let currentKlingSound = false;
           overlayModels.push({
             id: '__veo31',
             name: 'Veo 3.1',
-            emoji: '🎥',
+            emoji: 'V',
             subtitle: 'Text → Video (Fast / Quality in bottom)',
             category: 'video',
             __veoFamily: 'veo31',
@@ -3401,7 +3533,7 @@ let currentKlingSound = false;
           overlayModels.push({
             id: '__veo3',
             name: 'Veo 3',
-            emoji: '🎥',
+            emoji: 'V',
             subtitle: 'Text / (Image) → Video (Fast / Quality in bottom)',
             category: 'video',
             __veoFamily: 'veo3',
@@ -3414,7 +3546,7 @@ let currentKlingSound = false;
           overlayModels.push({
             id: '__kling-motion-control',
             name: 'Kling Motion Control',
-            emoji: '⚡',
+            emoji: 'K',
             subtitle: 'Open motion control',
             category: 'video',
             __navTo: '/kling-motion-control.html',
@@ -3430,7 +3562,7 @@ let currentKlingSound = false;
         row.className =
           'w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-slate-900/90 border-b border-white/5 last:border-b-0';
         row.innerHTML = `
-          <div class="w-7 h-7 flex items-center justify-center text-lg">${model.emoji}</div>
+          <div class="w-7 h-7 flex items-center justify-center">${modelLogoHTML(model)}</div>
           <div class="flex-1">
             <div class="flex items-center gap-2">
               <span class="text-sm font-medium">${model.name}</span>
@@ -3494,7 +3626,34 @@ let currentKlingSound = false;
       // Veo Fast / Quality toggle (only for Veo 3 and Veo 3.1)
       const isVeo3 = currentModel.id === 'veo3-fast' || currentModel.id === 'veo3';
       const isVeo31 = currentModel.id === 'veo31-fast' || currentModel.id === 'veo31';
-      if (isVeo3 || isVeo31) {
+      const isWan27 = currentModel.id === 'wan-2-7-image';
+      if (isWan27) {
+        currentVeoFamily = null;
+        currentVeoVariant = 'fast';
+        currentWanTier = currentWanTier === 'pro' ? 'pro' : 'normal';
+        if (veoQualityBlock) veoQualityBlock.classList.remove('hidden');
+        if (veoQualityPills) {
+          veoQualityPills.innerHTML = '';
+          const makeBtn = (label, tier) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = label;
+            b.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+            if (tier === currentWanTier) b.classList.add('chip-active');
+            b.addEventListener('click', () => {
+              currentWanTier = tier;
+              Array.from(veoQualityPills.querySelectorAll('button')).forEach(x => x.classList.remove('chip-active'));
+              b.classList.add('chip-active');
+              updateCostDisplay();
+              updateRunButtonLabel();
+            });
+            return b;
+          };
+          veoQualityPills.appendChild(makeBtn('Normal', 'normal'));
+          veoQualityPills.appendChild(makeBtn('Pro', 'pro'));
+        }
+      } else if (isVeo3 || isVeo31) {
+        currentWanTier = 'normal';
         currentVeoFamily = isVeo31 ? 'veo31' : 'veo3';
         currentVeoVariant = (currentModel.id.endsWith('-fast') ? 'fast' : 'quality');
 
@@ -3526,6 +3685,7 @@ let currentKlingSound = false;
           veoQualityPills.appendChild(makeBtn('Quality', 'quality'));
         }
       } else {
+        currentWanTier = 'normal';
         currentVeoFamily = null;
         currentVeoVariant = 'fast';
         if (veoQualityBlock) veoQualityBlock.classList.add('hidden');
@@ -4258,8 +4418,12 @@ let currentKlingSound = false;
           return { urls, prompt: prompt || '.', format: 'png', aspect_ratio: aspect || 'auto', size: aspect || 'auto', resolution: (resolution || '1K'), run_id: runId };
         case 'grok-image':
           return { urls, prompt: prompt || '.', aspect_ratio: aspect || '1:1', resolution: '720p', run_id: runId };
-        case 'imagen':
-          return { prompt, model: 'ultra', aspect_ratio: aspect || '1:1', run_id: runId };
+        case 'wan-2-7-image':
+          return { urls, prompt: prompt || '.', format: 'png', output_format: 'png', aspect_ratio: aspect || '1:1', size: aspect || '1:1', quality: currentWanTier || 'normal', tier: currentWanTier || 'normal', enable_sequential: true, run_id: runId };
+        case 'qwen-2':
+          return { urls, prompt: prompt || '.', format: 'png', output_format: 'png', aspect_ratio: aspect || '1:1', size: aspect || '1:1', run_id: runId };
+        case 'z-image':
+          return { prompt: prompt || '.', format: 'png', output_format: 'png', aspect_ratio: aspect || '1:1', size: aspect || '1:1', run_id: runId };
         case 'midjourney':
           return {
             prompt,
