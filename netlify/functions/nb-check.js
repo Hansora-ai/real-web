@@ -11,7 +11,7 @@ const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : '';
 const PROFILES_URL  = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : '';
 
-const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
+const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'file.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
 
 exports.handler = async (event) => {
   try {
