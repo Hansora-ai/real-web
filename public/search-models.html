@@ -1780,8 +1780,13 @@ async function __mjFetchNbCheck(params){
       return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
     }
 
+    function parseCredits(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : 0;
+    }
+
     function setCreditsEverywhere(value) {
-      const n = Number(value || 0);
+      const n = parseCredits(value);
       currentCredits = n;
       document.querySelectorAll('#navCredits').forEach((node) => {
         node.textContent = formatCredits(n);
@@ -1839,7 +1844,7 @@ async function __mjFetchNbCheck(params){
           .select('credits, avatar_url')
           .eq('user_id', userRes.user.id)
           .maybeSingle();
-        currentCredits = profile && typeof profile.credits === 'number' ? profile.credits : 0;
+        currentCredits = parseCredits(profile && profile.credits);
         setCreditsEverywhere(currentCredits);
 
         const navUser = document.getElementById('navUser');
@@ -4181,7 +4186,9 @@ let currentKlingSound = false;
         return;
       }
 
-      if (typeof currentModel.minCredits === 'number' && currentCredits < currentModel.minCredits) {
+      await refreshCredits();
+
+      if (typeof currentModel.minCredits === 'number' && parseCredits(currentCredits) < currentModel.minCredits) {
         showStatus('Not enough credits for this model.', 'error');
         return;
       }
@@ -4190,7 +4197,7 @@ let currentKlingSound = false;
       if (currentModel && currentModel.id === 'kling26') {
         const __dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
         const __need = (currentKlingSound ? (__dur === 10 ? 16 : 9) : (__dur === 10 ? 9 : 5));
-        if (typeof currentCredits === 'number' && currentCredits < __need) {
+        if (parseCredits(currentCredits) < __need) {
           showStatus('Not enough credits for this selection.', 'error');
           return;
         }
