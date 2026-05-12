@@ -1781,7 +1781,7 @@ async function __mjFetchNbCheck(params){
     }
 
     function parseCredits(value) {
-      const n = Number(value);
+      const n = Number(String(value ?? '').replace(/[^\d.-]/g, ''));
       return Number.isFinite(n) ? n : 0;
     }
 
@@ -1800,6 +1800,52 @@ async function __mjFetchNbCheck(params){
       if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') {
         window.HansoraHeader.startCreditsPolling(durationMs, 1500);
       }
+    }
+
+    function getVisibleHeaderCredits() {
+      let best = 0;
+      document.querySelectorAll('#navCredits').forEach((node) => {
+        const value = parseCredits(node.textContent || '');
+        if (value > best) best = value;
+      });
+      return best;
+    }
+
+    function getSharedHeaderCredits() {
+      try {
+        if (window.HansoraHeader && typeof window.HansoraHeader.getCurrentCredits === 'function') {
+          return parseCredits(window.HansoraHeader.getCurrentCredits());
+        }
+      } catch (_) {}
+      return 0;
+    }
+
+    async function readSupabaseCredits() {
+      const { data: userRes } = await supabaseClient.auth.getUser();
+      const user = userRes && userRes.user ? userRes.user : null;
+      if (!user) return { user: null, profile: null, credits: 0 };
+      const { data: profile, error } = await supabaseClient
+        .from('profiles')
+        .select('credits, avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return { user, profile, credits: parseCredits(profile && profile.credits) };
+    }
+
+    async function getAvailableCredits() {
+      let supabaseCredits = 0;
+      try {
+        const result = await readSupabaseCredits();
+        supabaseCredits = parseCredits(result.credits);
+      } catch (error) {
+        console.warn('credit read failed; falling back to header value', error);
+      }
+      const headerCredits = getSharedHeaderCredits();
+      const visibleCredits = getVisibleHeaderCredits();
+      const best = Math.max(supabaseCredits, headerCredits, visibleCredits, parseCredits(currentCredits));
+      setCreditsEverywhere(best);
+      return best;
     }
 
     async function downloadAsset(url, kind = 'image', provider = 'hansora') {
@@ -1837,14 +1883,10 @@ async function __mjFetchNbCheck(params){
 
     async function refreshCredits() {
       try {
-        const { data: userRes } = await supabaseClient.auth.getUser();
-        if (!userRes || !userRes.user) return;
-        const { data: profile } = await supabaseClient
-          .from('profiles')
-          .select('credits, avatar_url')
-          .eq('user_id', userRes.user.id)
-          .maybeSingle();
-        currentCredits = parseCredits(profile && profile.credits);
+        const { user, profile, credits } = await readSupabaseCredits();
+        if (!user) return parseCredits(currentCredits);
+        currentUser = user;
+        currentCredits = Math.max(parseCredits(credits), getSharedHeaderCredits(), getVisibleHeaderCredits());
         setCreditsEverywhere(currentCredits);
 
         const navUser = document.getElementById('navUser');
@@ -1863,7 +1905,10 @@ async function __mjFetchNbCheck(params){
 
       } catch (e) {
         console.warn('refreshCredits failed', e);
+        currentCredits = Math.max(parseCredits(currentCredits), getSharedHeaderCredits(), getVisibleHeaderCredits());
+        setCreditsEverywhere(currentCredits);
       }
+      return parseCredits(currentCredits);
     }
 
     async function loadUser() {
@@ -4186,9 +4231,17 @@ let currentKlingSound = false;
         return;
       }
 
-      await refreshCredits();
+      const availableCredits = await getAvailableCredits();
 
-      if (typeof currentModel.minCredits === 'number' && parseCredits(currentCredits) < currentModel.minCredits) {
+      if (typeof currentModel.minCredits === 'number' && availableCredits < currentModel.minCredits) {
+        console.warn('Credit gate blocked run', {
+          model: currentModel.id,
+          required: currentModel.minCredits,
+          available: availableCredits,
+          cached: currentCredits,
+          header: getVisibleHeaderCredits(),
+          shared: getSharedHeaderCredits()
+        });
         showStatus('Not enough credits for this model.', 'error');
         return;
       }
@@ -4197,7 +4250,15 @@ let currentKlingSound = false;
       if (currentModel && currentModel.id === 'kling26') {
         const __dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
         const __need = (currentKlingSound ? (__dur === 10 ? 16 : 9) : (__dur === 10 ? 9 : 5));
-        if (parseCredits(currentCredits) < __need) {
+        if (availableCredits < __need) {
+          console.warn('Credit gate blocked Kling run', {
+            model: currentModel.id,
+            required: __need,
+            available: availableCredits,
+            cached: currentCredits,
+            header: getVisibleHeaderCredits(),
+            shared: getSharedHeaderCredits()
+          });
           showStatus('Not enough credits for this selection.', 'error');
           return;
         }
