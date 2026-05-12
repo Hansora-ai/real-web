@@ -1399,10 +1399,10 @@
         overflow:hidden !important;
       }
       body.workspace-redesign #resultsStrip .result-card .result-media{
-        height:254px !important;
-        min-height:254px !important;
-        max-height:254px !important;
-        flex:0 0 254px !important;
+        height:238px !important;
+        min-height:238px !important;
+        max-height:238px !important;
+        flex:0 0 238px !important;
         background:rgba(2,6,23,.78) !important;
       }
       body.workspace-redesign #resultsStrip .result-card .result-media img,
@@ -1415,8 +1415,8 @@
         background:rgba(2,6,23,.78) !important;
       }
       body.workspace-redesign #resultsStrip .result-card > div:last-child{
-        height:76px !important;
-        min-height:76px !important;
+        height:92px !important;
+        min-height:92px !important;
         padding:9px 10px !important;
         display:flex !important;
         flex-direction:column !important;
@@ -1428,6 +1428,10 @@
         white-space:nowrap !important;
         overflow:hidden !important;
         text-overflow:ellipsis !important;
+        color:rgba(255,255,255,.72) !important;
+        font-size:11px !important;
+        line-height:1.2 !important;
+        margin:0 !important;
       }
       body.workspace-redesign #resultsStrip .result-card a,
       body.workspace-redesign #resultsStrip .result-card button{
@@ -1833,19 +1837,22 @@ async function __mjFetchNbCheck(params){
       return { user, profile, credits: parseCredits(profile && profile.credits) };
     }
 
-    async function getAvailableCredits() {
-      let supabaseCredits = 0;
+    async function getAvailableCredits(required = 0) {
+      const localBest = Math.max(getSharedHeaderCredits(), getVisibleHeaderCredits(), parseCredits(currentCredits));
+      if (localBest >= Number(required || 0)) return localBest;
+
       try {
         const result = await readSupabaseCredits();
-        supabaseCredits = parseCredits(result.credits);
+        const supabaseCredits = parseCredits(result.credits);
+        if (result.user) {
+          currentUser = result.user;
+          setCreditsEverywhere(supabaseCredits);
+        }
+        return Math.max(supabaseCredits, localBest);
       } catch (error) {
         console.warn('credit read failed; falling back to header value', error);
       }
-      const headerCredits = getSharedHeaderCredits();
-      const visibleCredits = getVisibleHeaderCredits();
-      const best = Math.max(supabaseCredits, headerCredits, visibleCredits, parseCredits(currentCredits));
-      setCreditsEverywhere(best);
-      return best;
+      return localBest;
     }
 
     async function downloadAsset(url, kind = 'image', provider = 'hansora') {
@@ -1886,7 +1893,7 @@ async function __mjFetchNbCheck(params){
         const { user, profile, credits } = await readSupabaseCredits();
         if (!user) return parseCredits(currentCredits);
         currentUser = user;
-        currentCredits = Math.max(parseCredits(credits), getSharedHeaderCredits(), getVisibleHeaderCredits());
+        currentCredits = parseCredits(credits);
         setCreditsEverywhere(currentCredits);
 
         const navUser = document.getElementById('navUser');
@@ -1905,8 +1912,6 @@ async function __mjFetchNbCheck(params){
 
       } catch (e) {
         console.warn('refreshCredits failed', e);
-        currentCredits = Math.max(parseCredits(currentCredits), getSharedHeaderCredits(), getVisibleHeaderCredits());
-        setCreditsEverywhere(currentCredits);
       }
       return parseCredits(currentCredits);
     }
@@ -2254,6 +2259,8 @@ function createResultCard(data) {
       const promptEl = document.createElement('p');
       promptEl.className = 'text-[10px] text-white/60 clamp-2';
       promptEl.textContent = prompt;
+      promptEl.title = prompt;
+      promptEl.style.display = 'block';
 
       const bottomRow = document.createElement('div');
       bottomRow.className = 'flex items-center justify-between gap-2 mt-1';
@@ -4231,7 +4238,8 @@ let currentKlingSound = false;
         return;
       }
 
-      const availableCredits = await getAvailableCredits();
+      const requiredCredits = typeof currentModel.minCredits === 'number' ? currentModel.minCredits : 0;
+      let availableCredits = await getAvailableCredits(requiredCredits);
 
       if (typeof currentModel.minCredits === 'number' && availableCredits < currentModel.minCredits) {
         console.warn('Credit gate blocked run', {
@@ -4250,6 +4258,7 @@ let currentKlingSound = false;
       if (currentModel && currentModel.id === 'kling26') {
         const __dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
         const __need = (currentKlingSound ? (__dur === 10 ? 16 : 9) : (__dur === 10 ? 9 : 5));
+        availableCredits = await getAvailableCredits(__need);
         if (availableCredits < __need) {
           console.warn('Credit gate blocked Kling run', {
             model: currentModel.id,
@@ -4288,7 +4297,7 @@ let currentKlingSound = false;
 
       const runBtn = document.getElementById('runBtn');
       runBtn.disabled = true;
-      showStatus('Preparing your request…');
+      showStatus('Uploading input files…');
 
       try {
         const urls = currentModel.useFrames
@@ -4296,6 +4305,7 @@ let currentKlingSound = false;
           : currentModel.needsVideo
           ? await uploadImagesAndGetUrls([alephVideoFile, alephImageFile].filter(Boolean))
           : await uploadImagesAndGetUrls(uploadedFiles);
+        showStatus('Submitting to ' + currentModel.name + '…');
         const uid = currentUser.id;
         const runId = `${uid}-${Date.now()}`;
 
