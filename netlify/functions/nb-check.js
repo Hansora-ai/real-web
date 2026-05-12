@@ -8,6 +8,8 @@ const KIE_KEY  = process.env.KIE_API_KEY;
 
 const SUPABASE_URL  = process.env.SUPABASE_URL || '';
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : '';
+const PROFILES_URL  = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : '';
 
 const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
 
@@ -26,19 +28,11 @@ exports.handler = async (event) => {
     // Fetch once across endpoints (the page will poll repeatedly)
     const probe = await fetchAll(taskId);
 
-    if (probe.failed) {
-      const fail = await markFailedAndRefund({ uid, run_id, taskId, reason: probe.error || 'kie_failed' }).catch((e)=>({ error: String(e) }));
-      return json(200, {
-        ok:false,
-        status:'failed',
-        failed:true,
-        error: probe.error || 'kie_failed',
-        refunded: !!fail.refunded,
-        refund_amount: fail.refund_amount || null
-      });
-    }
-
     if (!probe.ok) {
+      if (probe.status === 'failed') {
+        await markFailedAndRefundOnce({ uid, run_id, taskId, reason: probe.error || 'kie_failed' }).catch(()=>{});
+        return json(200, { ok:false, failed:true, status:'failed', error: probe.error || 'kie_failed' });
+      }
       return json(200, { ok:false, status: probe.status || 'pending' });
     }
 
@@ -67,7 +61,6 @@ function kieHeaders(){ return { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 
 // Merge images from *all* success endpoints instead of returning at the first success.
 async function fetchAll(taskId){
   const endpoints = [
-    `${KIE_BASE}/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`,
     // MJ endpoints first (usually contain full set for MidJourney)
     `${KIE_BASE}/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
     `${KIE_BASE}/api/v1/mj/result?taskId=${encodeURIComponent(taskId)}`,
@@ -79,7 +72,8 @@ async function fetchAll(taskId){
 
   let merged = [];         // merged image urls
   let sawSuccess = false;  // did any endpoint report success?
-  let failed = null;
+  let sawFailed = false;
+  let failReason = '';
 
   for (const url of endpoints) {
     try {
@@ -89,8 +83,8 @@ async function fetchAll(taskId){
       const status = normalizeStatus(data);
 
       if (status === 'failed') {
-        failed = data;
-        continue;
+        sawFailed = true;
+        failReason = failReason || failureReason(data);
       }
 
       if (status === 'success') {
@@ -107,34 +101,30 @@ async function fetchAll(taskId){
     // Return a data shape that downstream understands (contains images array)
     return { ok: true, status: 'success', data: { images: merged } };
   }
-  if (failed) {
-    return { ok: false, status: 'failed', failed: true, error: extractError(failed), data: failed };
-  }
+  if (sawFailed) return { ok: false, status: 'failed', error: failReason || 'kie_failed' };
   return { ok: false, status: 'pending' };
 }
 
 function normalizeStatus(d){
-  const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || d?.data?.state || '').toLowerCase();
-  if (['success','succeeded','completed','done'].includes(s)) return 'success';
-  if (['failed','fail','failure','error','canceled','cancelled'].includes(s)) return 'failed';
+  const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || d?.data?.state || d?.data?.result?.status || '').toLowerCase();
+  if (['success','succeeded','completed','done'].includes(s) || /(success|succeeded|completed|done)/i.test(s)) return 'success';
+  if (['failed','fail','error','errored','cancelled','canceled','rejected'].includes(s) || /(fail|error|cancel|reject|moderation|blocked)/i.test(s)) return 'failed';
+  if (d?.failed === true || d?.data?.failed === true) return 'failed';
+  const err = String(d?.error || d?.message || d?.data?.error || d?.data?.message || '').toLowerCase();
+  if (err && /(fail|error|cancel|reject|policy|moderation|unsafe|forbidden|blocked)/i.test(err)) return 'failed';
   return 'pending';
 }
 
-function extractError(d){
-  const msg =
+function failureReason(d){
+  return String(
     d?.error ||
     d?.message ||
-    d?.msg ||
     d?.data?.error ||
     d?.data?.message ||
-    d?.data?.failMsg ||
-    d?.data?.failCode ||
+    d?.data?.reason ||
     d?.result?.error ||
-    d?.result?.message ||
-    d?.raw;
-  if (typeof msg === 'string' && msg.trim()) return msg.slice(0, 500);
-  try { return JSON.stringify(d).slice(0, 500); } catch {}
-  return 'kie_failed';
+    'kie_failed'
+  );
 }
 
 function isUrl(x){ try { new URL(x); return true; } catch { return false; } }
@@ -143,7 +133,7 @@ function allowed(u){
   if (!isUrl(u)) return false;
   const h = host(u);
   if (!ALLOWED_HOSTS.has(h)) return false;
-  if (!/\/(m|f|workers|r|h)\//i.test(u)) return false;
+  if (!/\.(?:png|jpe?g|webp)(?:[?#].*)?$/i.test(u)) return false;
   return true;
 }
 
@@ -197,106 +187,88 @@ async function backfillAll({ uid, run_id, taskId, images }){
   });
 }
 
-async function markFailedAndRefund({ uid, run_id, taskId, reason }){
-  if (!SUPABASE_URL || !SERVICE_KEY) return { refunded:false };
-
-  const row = await findGeneration({ uid, run_id, taskId });
-  if (!row) return { refunded:false };
-
-  const meta = row.meta || {};
-  const now = new Date().toISOString();
-  const refundAmount = Number(meta.charged_cost || meta.cost || 0) || 0;
-  const failedMeta = {
-    ...meta,
-    status: 'failed',
-    state: 'failed',
-    fail_reason: reason || meta.fail_reason || 'kie_failed',
-    failed_reason: reason || meta.failed_reason || 'kie_failed',
-    failed_at: meta.failed_at || now
-  };
-
-  if (meta.refunded === true) {
-    await patchGeneration(row.id, { meta: { ...failedMeta, refunded: true } });
-    return { refunded:true, refund_amount: Number(meta.refund_amount || refundAmount || 0) };
-  }
-
-  if (refundAmount > 0 && row.user_id) {
-    const claim = `rf_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    const claimed = await claimRefund(row.id, { ...failedMeta, refund_claim: claim });
-    if (!claimed) {
-      return { refunded:false, refund_amount: 0 };
-    }
-    await refundCredits(row.user_id, refundAmount);
-    await patchGeneration(row.id, {
-      meta: {
-        ...failedMeta,
-        refunded: true,
-        refund_amount: refundAmount,
-        refunded_at: meta.refunded_at || now
-      }
-    });
-    return { refunded:true, refund_amount: refundAmount };
-  }
-
-  await patchGeneration(row.id, { meta: failedMeta });
-  return { refunded:false, refund_amount: 0 };
-}
+function sb(){ return { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }; }
 
 async function findGeneration({ uid, run_id, taskId }){
-  const base = `${SUPABASE_URL}/rest/v1/user_generations`;
-  const headers = sbHeaders();
-  const queries = [];
-  if (uid && run_id) queries.push(`user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`);
-  if (run_id) queries.push(`meta->>run_id=eq.${encodeURIComponent(run_id)}`);
-  if (taskId) queries.push(`meta->>task_id=eq.${encodeURIComponent(taskId)}`);
+  if (!UG_URL || !SERVICE_KEY) return null;
+  const filters = [];
+  if (uid) filters.push(`user_id=eq.${encodeURIComponent(uid)}`);
+  if (run_id) filters.push(`meta->>run_id=eq.${encodeURIComponent(run_id)}`);
+  else if (taskId) filters.push(`meta->>task_id=eq.${encodeURIComponent(taskId)}`);
+  if (!filters.length) return null;
+  const url = `${UG_URL}?select=id,user_id,meta,created_at&${filters.join('&')}&limit=1`;
+  const r = await fetch(url, { headers: sb() });
+  if (!r.ok) return null;
+  const arr = await r.json().catch(()=>[]);
+  return Array.isArray(arr) && arr[0] ? arr[0] : null;
+}
 
-  for (const q of queries) {
-    const r = await fetch(`${base}?select=id,user_id,meta&${q}&order=created_at.desc&limit=1`, { headers });
-    if (!r.ok) continue;
-    const rows = await r.json().catch(()=>[]);
-    if (Array.isArray(rows) && rows[0]) return rows[0];
+async function patchGenerationMeta(id, meta){
+  if (!UG_URL || !SERVICE_KEY || !id) return false;
+  const r = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ result_url: null, meta })
+  });
+  return r.ok;
+}
+
+async function markFailedAndRefundOnce({ uid, run_id, taskId, reason }){
+  const row = await findGeneration({ uid, run_id, taskId });
+  if (!row) return { ok:false, error:'generation_not_found' };
+
+  const meta = row.meta || {};
+  const nextMetaBase = {
+    ...meta,
+    run_id: meta.run_id || run_id || null,
+    task_id: meta.task_id || taskId || null,
+    status: 'failed',
+    failed_at: meta.failed_at || new Date().toISOString(),
+    fail_reason: reason || meta.fail_reason || 'kie_failed'
+  };
+
+  if (String(meta.refunded || '').toLowerCase() === 'true') {
+    await patchGenerationMeta(row.id, nextMetaBase);
+    return { ok:true, already_refunded:true };
   }
-  return null;
-}
 
-async function patchGeneration(id, patch){
-  await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(id)}`, {
+  const charged = String(meta.charged || '').toLowerCase() === 'true';
+  const cost = Number(meta.charged_cost || meta.cost || 0);
+  if (!charged || !Number.isFinite(cost) || cost <= 0) {
+    await patchGenerationMeta(row.id, nextMetaBase);
+    return { ok:true, refunded:false, reason:'not_charged' };
+  }
+
+  const claim = `r_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const claimMeta = { ...nextMetaBase, refund_claim: claim };
+  const claimUrl = `${UG_URL}?id=eq.${encodeURIComponent(row.id)}&meta->>refunded=is.null&meta->>refund_claim=is.null&select=id`;
+  const claimRes = await fetch(claimUrl, {
     method: 'PATCH',
-    headers: { ...sbHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify(patch)
+    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+    body: JSON.stringify({ result_url: null, meta: claimMeta })
   });
-}
+  const claimArr = await claimRes.json().catch(()=>[]);
+  const claimed = claimRes.ok && Array.isArray(claimArr) && claimArr.length > 0;
+  if (!claimed) return { ok:true, already_claimed:true };
 
-async function claimRefund(id, meta){
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(id)}&meta->>refunded=is.null&meta->>refund_claim=is.null&select=id`, {
+  const userId = row.user_id || uid;
+  const p0 = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(userId)}&select=credits`, { headers: sb() });
+  const parr = await p0.json().catch(()=>[]);
+  const current = Number(Array.isArray(parr) && parr[0] ? parr[0].credits : 0);
+  const nextCredits = current + cost;
+  const p1 = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(userId)}`, {
     method: 'PATCH',
-    headers: { ...sbHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-    body: JSON.stringify({ meta })
+    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ credits: nextCredits })
   });
-  const rows = await r.json().catch(()=>[]);
-  return r.ok && Array.isArray(rows) && rows.length > 0;
-}
+  if (!p1.ok) return { ok:false, error:'profile_refund_failed' };
 
-async function refundCredits(userId, amount){
-  const rpc = await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_profile_credits`, {
-    method: 'POST',
-    headers: { ...sbHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ p_user_id: userId, p_delta: amount })
-  });
-  if (rpc.ok) return;
-
-  const prof = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=credits`, {
-    headers: sbHeaders()
-  });
-  const rows = await prof.json().catch(()=>[]);
-  const cur = Array.isArray(rows) && rows[0] && typeof rows[0].credits === 'number' ? rows[0].credits : 0;
-  await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}`, {
-    method: 'PATCH',
-    headers: { ...sbHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ credits: cur + amount })
-  });
-}
-
-function sbHeaders(){
-  return { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` };
+  const refundedMeta = {
+    ...claimMeta,
+    refunded: 'true',
+    refunded_cost: cost,
+    refunded_at: new Date().toISOString()
+  };
+  await patchGenerationMeta(row.id, refundedMeta);
+  return { ok:true, refunded:true, credits: nextCredits };
 }
