@@ -7,6 +7,8 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="/header.css" rel="stylesheet" />
+  <script defer src="/header.js"></script>
   <script src="/kie-upload-bridge.js"></script>
   <style>
     :root{
@@ -1239,7 +1241,8 @@
       body.workspace-redesign #resultsStrip .result-card > div:last-child p{
         display:none !important;
       }
-      body.workspace-redesign #resultsStrip .result-card a{
+      body.workspace-redesign #resultsStrip .result-card a,
+      body.workspace-redesign #resultsStrip .result-card button{
         height:28px !important;
         min-width:42px !important;
         padding:0 10px !important;
@@ -1426,7 +1429,8 @@
         overflow:hidden !important;
         text-overflow:ellipsis !important;
       }
-      body.workspace-redesign #resultsStrip .result-card a{
+      body.workspace-redesign #resultsStrip .result-card a,
+      body.workspace-redesign #resultsStrip .result-card button{
         height:30px !important;
         min-width:46px !important;
         padding:0 11px !important;
@@ -1436,41 +1440,7 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
-  <!-- HEADER (Nano Banana style) -->
-  <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
-        <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora Logo" class="h-9 w-9 rounded-full object-cover" />
-        <span class="font-semibold tracking-wide">HANSORA AI</span>
-      </a>
-      <nav class="hidden md:flex items-center gap-8 text-sm">
-        <a href="models.html" class="hover:text-white/90">Models</a>
-        <a href="examples-prompts.html" class="hover:text-white/90">Examples/Prompts</a>
-        <a href="templates.html" class="hover:text-white/90">Templates</a>
-        <a href="pricing.html" class="hover:text-white/90">Pricing</a>
-        <a href="index.html#faq" class="hover:text-white/90">FAQ</a>
-      </nav>
-      <div class="flex items-center gap-3">
-        <a id="btnLoginSignup" href="login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold">
-          Login / Signup
-        </a>
-        <div id="navUser" class="hidden items-center gap-2">
-          <span id="navCredits" class="text-sm text-white/80 mr-2">0⚡</span>
-          <div class="relative">
-            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
-              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden" />
-            </button>
-            <div id="navMenu" class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm hidden">
-              <a href="profile.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Profile</a>
-              <a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">History</a>
-              <a href="pricing.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscription</a>
-              <button id="btnLogout" class="w-full text-left rounded-lg px-3 py-2 hover:bg-white/5">Log out</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </header>
+  <div id="sharedHeader"></div>
 
   <div id="generatorDock" class="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-6 px-3">
     <div id="generatorCard" class="w-full max-w-5xl rounded-3xl bg-black/80 border border-white/15 shadow-soft px-4 py-4 space-y-3 backdrop-blur-xl">
@@ -1799,9 +1769,66 @@ async function __mjFetchNbCheck(params){
     const SUPABASE_ANON_KEY =
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__HANSORA_SB__ = supabaseClient;
+    window.hansoraSupabase = supabaseClient;
     let currentUser = null;
     let currentCredits = 0;
+
+    function formatCredits(value) {
+      const n = Number(value || 0);
+      return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
+    }
+
+    function setCreditsEverywhere(value) {
+      const n = Number(value || 0);
+      currentCredits = n;
+      document.querySelectorAll('#navCredits').forEach((node) => {
+        node.textContent = formatCredits(n);
+      });
+      if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') {
+        window.HansoraHeader.setCredits(n);
+      }
+    }
+
+    function watchCreditsLive(durationMs = 90000) {
+      if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') {
+        window.HansoraHeader.startCreditsPolling(durationMs, 1500);
+      }
+    }
+
+    async function downloadAsset(url, kind = 'image', provider = 'hansora') {
+      if (!url) return;
+      const cleanProvider = String(provider || 'hansora').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'hansora';
+      const fallbackExt = String(kind).toLowerCase() === 'video' ? 'mp4' : 'png';
+      const urlExt = (String(url).split('?')[0].match(/\.([a-z0-9]{2,5})$/i) || [])[1];
+      const ext = urlExt || fallbackExt;
+      const filename = `${cleanProvider}-${Date.now()}.${ext}`;
+
+      try {
+        const response = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-store' });
+        if (!response.ok) throw new Error('download_fetch_failed');
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 2500);
+      } catch (error) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.rel = 'noopener noreferrer';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+    }
 
     async function refreshCredits() {
       try {
@@ -1813,9 +1840,7 @@ async function __mjFetchNbCheck(params){
           .eq('user_id', userRes.user.id)
           .maybeSingle();
         currentCredits = profile && typeof profile.credits === 'number' ? profile.credits : 0;
-
-        const navCredits = document.getElementById('navCredits');
-        if (navCredits) navCredits.textContent = currentCredits + '⚡';
+        setCreditsEverywhere(currentCredits);
 
         const navUser = document.getElementById('navUser');
         const btnLogin = document.getElementById('btnLoginSignup');
@@ -2027,9 +2052,11 @@ async function __mjFetchNbCheck(params){
       };
 
       getBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         e.stopPropagation();
-        if (!url) return;
-        downloadUrl(url);
+        const targetUrl = __thumb_url || url;
+        if (!targetUrl) return;
+        downloadAsset(targetUrl, __thumb_kind || kind, provider);
       });
 
       actions.appendChild(state);
@@ -2182,11 +2209,16 @@ function createResultCard(data) {
       bottomRow.className = 'flex items-center justify-between gap-2 mt-1';
       const statusText = document.createElement('span');
       statusText.className = 'text-[10px] text-indigo-200/80';
-      const downloadBtn = document.createElement('a');
+      const downloadBtn = document.createElement('button');
+      downloadBtn.type = 'button';
       downloadBtn.className = 'text-[12px] px-4 py-2 rounded-full bg-indigo-500/90 hover:bg-indigo-400 text-white hidden';
-      downloadBtn.target = '_blank';
-      downloadBtn.rel = 'noopener noreferrer';
       downloadBtn.textContent = 'GET';
+      downloadBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const downloadUrl = downloadBtn.dataset.downloadUrl || '';
+        if (downloadUrl) downloadAsset(downloadUrl, kind, provider);
+      });
       bottomRow.appendChild(statusText);
       bottomRow.appendChild(downloadBtn);
 
@@ -2205,12 +2237,13 @@ function createResultCard(data) {
         if (hasUrlNow) {
           mediaEl.src = newData.result_url;
           mediaEl.classList.remove('hidden');
-          downloadBtn.href = newData.result_url;
+          downloadBtn.dataset.downloadUrl = newData.result_url;
           downloadBtn.classList.remove('hidden');
           loader.style.display = 'none';
         } else {
           mediaEl.classList.add('hidden');
           downloadBtn.classList.add('hidden');
+          downloadBtn.dataset.downloadUrl = '';
           loader.style.display = st.includes('fail') ? 'none' : 'block';
         }
 
@@ -2510,10 +2543,17 @@ async function pollGeneration(runId, controllers, token, taskId) {
       // - Single-output: stop when we have any URL
       // - Multi-output: stop only when we have all expected URLs
       const isFail = status.toLowerCase().includes('fail') || status.toLowerCase().includes('error');
-      if (isFail) return;
+      if (isFail) {
+        await refreshCredits();
+        watchCreditsLive(30000);
+        return;
+      }
 
       if (urls && urls.length) {
-        if (expected <= 1) return;
+        if (expected <= 1) {
+          await refreshCredits();
+          return;
+        }
 
         let filled = 0;
         for (let i = 0; i < expected; i++) if (urls[i]) filled++;
@@ -2522,6 +2562,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
           for (let i = 0; i < expected; i++) {
             controllers[i].apply({ status: status, result_url: urls[i] || null });
           }
+          await refreshCredits();
           return;
         }
       }
@@ -4247,6 +4288,7 @@ for (let i = 0; i < expectedOutputs; i++) {
   }, { prepend: true });
   if (c) placeholderControllers.push(c);
 }
+watchCreditsLive(120000);
 
         // Get Supabase access token (required by Netlify functions that validate auth)
         let __accessToken = '';
@@ -4279,6 +4321,7 @@ for (let i = 0; i < expectedOutputs; i++) {
               placeholderControllers[i].apply({ status: 'failed', result_url: null });
             }
           }
+          await refreshCredits();
         } else {
           // Some endpoints (e.g., Sora 2) return JSON with taskId/submitted flags
           let j = null;
@@ -4294,6 +4337,7 @@ for (let i = 0; i < expectedOutputs; i++) {
                   placeholderControllers[i].apply({ status: 'failed', result_url: null });
                 }
               }
+              await refreshCredits();
             } else {
               showStatus(
                 `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
@@ -4326,6 +4370,7 @@ for (let i = 0; i < expectedOutputs; i++) {
         } else {
           showStatus('Unexpected error while submitting the job.', 'error');
         }
+        await refreshCredits();
       } finally {
         runBtn.disabled = false;
       }
