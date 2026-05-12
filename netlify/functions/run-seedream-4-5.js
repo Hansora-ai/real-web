@@ -8,7 +8,7 @@ const API_KEY    = process.env.KIE_API_KEY || "";
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-const SITE_BASE   = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/, "");
+const SITE_BASE   = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/, "");
 const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/kie-callback`;
 
 const VERSION_TAG  = "seedream_4_5_fn_kling26_style_v1";
@@ -295,8 +295,8 @@ exports.handler = async (event) => {
     const seeded = await seedUserGeneration(uid, run_id, prompt, baseMeta);
     const row_id = seeded?.row_id || null;
 
-    // Charge exactly once per run_id (cost = 1)
-    const cost = 1;
+    // Charge exactly once per run_id (cost = 0.5)
+    const cost = 0.5;
     const charged = await chargeOnceForRun(uid, run_id, cost, row_id, { ...baseMeta, source:"seedream-4.5", model:"seedream-4.5" });
 
     if (!charged.ok){
