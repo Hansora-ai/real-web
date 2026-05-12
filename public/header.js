@@ -4,6 +4,7 @@
   const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
   const LOGO_URL = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png';
+  const CACHE_PREFIX = 'hansora.header.';
 
   let sb = null;
   let currentUser = null;
@@ -29,12 +30,41 @@
     return sb;
   }
 
+  function readCache(key, fallback = '') {
+    try {
+      const value = localStorage.getItem(CACHE_PREFIX + key);
+      return value == null ? fallback : value;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function writeCache(key, value) {
+    try {
+      localStorage.setItem(CACHE_PREFIX + key, String(value));
+    } catch (_) {}
+  }
+
+  function clearCache() {
+    try {
+      ['loggedIn', 'credits', 'avatar'].forEach((key) => localStorage.removeItem(CACHE_PREFIX + key));
+    } catch (_) {}
+  }
+
+  function formatCredits(value) {
+    const n = Number(value || 0);
+    return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
+  }
+
   function injectHeader() {
     const mount = document.getElementById('sharedHeader');
     if (!mount || mount.dataset.hansoraHeaderMounted === '1') return;
     mount.dataset.hansoraHeaderMounted = '1';
+    const cachedLoggedIn = readCache('loggedIn') === '1';
+    const cachedCredits = readCache('credits', '0');
+    const cachedAvatar = readCache('avatar', 'https://ui-avatars.com/api/?name=H&background=6366f1&color=fff');
     mount.innerHTML = `
-      <header class="site-header auth-checking" id="siteHeader">
+      <header class="site-header" id="siteHeader">
         <div class="shell nav">
           <a class="brand" href="/" aria-label="HANSORA AI home">
             <img src="${LOGO_URL}" alt="">
@@ -49,10 +79,10 @@
             <a href="#faq">FAQ</a>
           </nav>
           <div class="nav-actions">
-            <button class="btn btn-ghost" type="button" id="btnLoginSignup">Login</button>
-            <span class="credits-pill" id="navCredits">0⚡</span>
-            <button class="avatar-button" type="button" id="navAvatar" aria-label="Open account menu">
-              <img id="navAvatarImg" alt="" src="https://ui-avatars.com/api/?name=H&background=6366f1&color=fff">
+            <button class="btn btn-ghost" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Login</button>
+            <span class="credits-pill" id="navCredits" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}">${formatCredits(cachedCredits)}</span>
+            <button class="avatar-button" type="button" id="navAvatar" aria-label="Open account menu" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}">
+              <img id="navAvatarImg" alt="" src="${cachedAvatar}">
             </button>
             <a class="btn btn-primary" href="/search-models.html" id="btnGetStarted">Start creating</a>
           </div>
@@ -98,8 +128,9 @@
   function setCreditsDisplay(value) {
     const n = Number(value || 0);
     currentCredits = n;
+    writeCache('credits', n);
     const navCredits = el('navCredits');
-    if (navCredits) navCredits.textContent = `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
+    if (navCredits) navCredits.textContent = formatCredits(n);
   }
 
   function avatarUrlFor(user) {
@@ -119,7 +150,11 @@
     if (loginBtn) loginBtn.style.display = 'none';
     if (navCredits) navCredits.style.display = 'inline-flex';
     if (navAvatar) navAvatar.style.display = 'inline-flex';
-    if (navAvatarImg && user) navAvatarImg.src = avatarUrlFor(user);
+    if (navAvatarImg && user) {
+      navAvatarImg.src = avatarUrlFor(user);
+      writeCache('avatar', navAvatarImg.src);
+    }
+    writeCache('loggedIn', '1');
     setCreditsDisplay(profile && profile.credits != null ? profile.credits : 0);
   }
 
@@ -136,6 +171,7 @@
     if (navCredits) navCredits.style.display = 'none';
     if (navAvatar) navAvatar.style.display = 'none';
     if (navMenu) navMenu.classList.remove('is-open');
+    clearCache();
   }
 
   let authMode = 'login';
