@@ -12,7 +12,7 @@ const API_KEY    = process.env.KIE_API_KEY || "";
 const SUPABASE_URL  = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-const SITE_BASE   = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/, "");
+const SITE_BASE   = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/, "");
 const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/kie-callback`;
 
 const VERSION_TAG  = "gpt_image_15_kie_v1";
@@ -201,7 +201,7 @@ exports.handler = async (event) => {
     const isImageToImage = input_urls.length > 0;
     const model = isImageToImage ? "gpt-image/1.5-image-to-image" : "gpt-image/1.5-text-to-image";
 
-    const cost = 2;
+    const cost = 1.5;
 
     // Provider label: keep stable, include mode
     const provider = isImageToImage ? "GPT-Image-1.5" : "GPT-Image-1.5";
