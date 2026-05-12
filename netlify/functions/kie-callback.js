@@ -16,7 +16,7 @@ const PROFILES_URL  = `${SUPABASE_URL}/rest/v1/profiles`;
 const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,''); // no trailing slash
 const KIE_KEY  = process.env.KIE_API_KEY;
 
-const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
+const ALLOWED_HOSTS = new Set([ 'tempfile.aiquickdraw.com', 'file.aiquickdraw.com', 'tempfile.redpandaai.co' ]);
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
