@@ -11,6 +11,7 @@ const SUPABASE_URL  = process.env.SUPABASE_URL;
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
 const UG_URL        = `${SUPABASE_URL}/rest/v1/user_generations`;
+const PROFILES_URL  = `${SUPABASE_URL}/rest/v1/profiles`;
 
 const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/,''); // no trailing slash
 const KIE_KEY  = process.env.KIE_API_KEY;
@@ -72,16 +73,25 @@ exports.handler = async (event) => {
       } catch {}
     }
 
-    // 1) Collect URLs from webhook body
-    let urls = pickResultUrls(data, 4);
+	    // 1) Collect URLs from webhook body
+	    let urls = pickResultUrls(data, 4);
 
-    // 2) Verify via KIE to get full set when taskId is known
-    if (taskId && KIE_KEY) {
-      try {
-        const verified = await fetchMJorJobsAll(taskId, 4);
-        if (verified.length) urls = Array.from(new Set([...urls, ...verified])).slice(0,4);
-      } catch {}
-    }
+	    if (normalizeStatus(data) === 'failed') {
+	      const refunded = await markFailedAndRefundOnce({ uid, run_id, taskId, reason: failureReason(data) }).catch(e => ({ ok:false, error:String(e) }));
+	      return reply(200, { ok:true, saved:false, status:'failed', refunded });
+	    }
+
+	    // 2) Verify via KIE to get full set when taskId is known
+	    if (taskId && KIE_KEY) {
+	      try {
+	        const verified = await fetchMJorJobsAll(taskId, 4);
+	        if (verified.status === 'failed') {
+	          const refunded = await markFailedAndRefundOnce({ uid, run_id, taskId, reason: verified.error || 'kie_failed' }).catch(e => ({ ok:false, error:String(e) }));
+	          return reply(200, { ok:true, saved:false, status:'failed', refunded });
+	        }
+	        if (verified.urls.length) urls = Array.from(new Set([...urls, ...verified.urls])).slice(0,4);
+	      } catch {}
+	    }
 
     // 3) Filter allowed
     let finalUrls = urls.filter(isAllowedFinal).slice(0,4);
@@ -92,21 +102,9 @@ exports.handler = async (event) => {
       if (derived.length > 1) finalUrls = derived;
     }
 
-    if (!finalUrls.length) {
-      const failed = isFailureStatus(data) || (taskId && KIE_KEY ? await fetchKieFailure(taskId).catch(()=>null) : null);
-      if (failed) {
-        const fail = await markFailedAndRefund({ uid, run_id, taskId, reason: extractError(failed === true ? data : failed) }).catch((e)=>({ error:String(e) }));
-        return reply(200, {
-          ok:true,
-          saved:false,
-          failed:true,
-          status:'failed',
-          refunded: !!fail.refunded,
-          refund_amount: fail.refund_amount || null
-        });
-      }
-      return reply(200, { ok:true, saved:false, note:'no allowed final image_url; not inserting' });
-    }
+	    if (!finalUrls.length) {
+	      return reply(200, { ok:true, saved:false, note:'no allowed final image_url; not inserting' });
+	    }
 
     // Update user_generations with the first URL
     try {
@@ -114,10 +112,15 @@ exports.handler = async (event) => {
         const q = (uid && run_id)
           ? `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`
           : `?meta->>run_id=eq.${encodeURIComponent(run_id||'')}`;
-        const bodyJson = { result_url: finalUrls[0],kind: 'image', meta: { run_id, task_id: taskId, status: 'done' } };
-        const chk = await fetch(UG_URL + q + '&select=id', { headers: sb() });
-        let hasRow = false;
-        try { const arr = await chk.json(); hasRow = Array.isArray(arr) && arr.length > 0; } catch {}
+	        let existingMeta = {};
+	        const chk = await fetch(UG_URL + q + '&select=id,meta', { headers: sb() });
+	        let hasRow = false;
+	        try {
+	          const arr = await chk.json();
+	          hasRow = Array.isArray(arr) && arr.length > 0;
+	          existingMeta = hasRow && arr[0] && arr[0].meta ? arr[0].meta : {};
+	        } catch {}
+	        const bodyJson = { result_url: finalUrls[0], kind: 'image', meta: { ...existingMeta, run_id, task_id: taskId, status: 'done', completed_at: new Date().toISOString() } };
         await fetch(UG_URL + (hasRow ? q : ''), {
           method: hasRow ? 'PATCH' : 'POST',
           headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -161,14 +164,37 @@ async function fetchMJorJobsAll(id, limit=4){
     try{
       const r = await fetch(`${KIE_BASE}${path}`, { headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' } });
       const j = await r.json();
-      const s = String(j?.data?.status || j?.status || j?.state || '').toLowerCase();
-      const ok = ['success','succeeded','completed','done'].includes(s) || !!j?.data?.result || Array.isArray(j?.data?.images);
+      const s = normalizeStatus(j);
+      if (s === 'failed') return { status:'failed', urls: [], error: failureReason(j) };
+      const ok = s === 'success' || !!j?.data?.result || Array.isArray(j?.data?.images);
       if (!ok) continue;
       const urls = pickResultUrls(j, limit);
-      if (urls.length) return urls;
+      if (urls.length) return { status:'success', urls };
     }catch{}
   }
-  return [];
+  return { status:'pending', urls: [] };
+}
+
+function normalizeStatus(d){
+  const s = String(d?.status || d?.state || d?.result?.status || d?.data?.status || d?.data?.state || d?.data?.result?.status || '').toLowerCase();
+  if (['success','succeeded','completed','done'].includes(s) || /(success|succeeded|completed|done)/i.test(s)) return 'success';
+  if (['failed','fail','error','errored','cancelled','canceled','rejected'].includes(s) || /(fail|error|cancel|reject|moderation|blocked)/i.test(s)) return 'failed';
+  if (d?.failed === true || d?.data?.failed === true) return 'failed';
+  const err = String(d?.error || d?.message || d?.data?.error || d?.data?.message || '').toLowerCase();
+  if (err && /(fail|error|cancel|reject|policy|moderation|unsafe|forbidden|blocked)/i.test(err)) return 'failed';
+  return 'pending';
+}
+
+function failureReason(d){
+  return String(
+    d?.error ||
+    d?.message ||
+    d?.data?.error ||
+    d?.data?.message ||
+    d?.data?.reason ||
+    d?.result?.error ||
+    'kie_failed'
+  );
 }
 
 function deduceMJ4(u){
@@ -188,31 +214,93 @@ function cors(){ return {'Access-Control-Allow-Origin':'*','Access-Control-Allow
 function lowerKeys(obj){const out={}; for(const k in obj) out[k.toLowerCase()]=obj[k]; return out;}
 function parseFormLike(s){const out={}; try{ for(const part of s.split('&')){ const [k,v]=part.split('='); if(!k) continue; out[decodeURIComponent(k)]=decodeURIComponent(v||''); } }catch{} return out;}
 function get(o,p){ try{ return p.split('.').reduce((a,k)=> (a && k in a ? a[k] : undefined), o); } catch { return undefined; } }
-function isFailureStatus(d){
-  const s = String(get(d,'status') || get(d,'state') || get(d,'result.status') || get(d,'data.status') || get(d,'data.state') || '').toLowerCase();
-  return ['failed','error','canceled','cancelled'].includes(s);
-}
-function extractError(d){
-  const msg =
-    get(d,'error') ||
-    get(d,'message') ||
-    get(d,'msg') ||
-    get(d,'data.error') ||
-    get(d,'data.message') ||
-    get(d,'result.error') ||
-    get(d,'result.message') ||
-    get(d,'raw');
-  if (typeof msg === 'string' && msg.trim()) return msg.slice(0, 500);
-  try { return JSON.stringify(d).slice(0, 500); } catch {}
-  return 'kie_failed';
-}
 function isUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u); }
 function host(u){ try{ return new URL(u).hostname; } catch { return ''; } }
 function isAllowedFinal(u){
   if (!isUrl(u)) return false;
   const h = host(u);
   if (!ALLOWED_HOSTS.has(h)) return false;
+  if (!/\.(?:png|jpe?g|webp)(?:[?#].*)?$/i.test(u)) return false;
   return true;
+}
+
+async function findGeneration({ uid, run_id, taskId }){
+  if (!UG_URL || !SERVICE_KEY) return null;
+  const filters = [];
+  if (uid) filters.push(`user_id=eq.${encodeURIComponent(uid)}`);
+  if (run_id) filters.push(`meta->>run_id=eq.${encodeURIComponent(run_id)}`);
+  else if (taskId) filters.push(`meta->>task_id=eq.${encodeURIComponent(taskId)}`);
+  if (!filters.length) return null;
+  const r = await fetch(`${UG_URL}?select=id,user_id,meta,created_at&${filters.join('&')}&limit=1`, { headers: sb() });
+  if (!r.ok) return null;
+  const arr = await r.json().catch(()=>[]);
+  return Array.isArray(arr) && arr[0] ? arr[0] : null;
+}
+
+async function patchGenerationMeta(id, meta){
+  if (!UG_URL || !SERVICE_KEY || !id) return false;
+  const r = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ result_url: null, meta })
+  });
+  return r.ok;
+}
+
+async function markFailedAndRefundOnce({ uid, run_id, taskId, reason }){
+  const row = await findGeneration({ uid, run_id, taskId });
+  if (!row) return { ok:false, error:'generation_not_found' };
+  const meta = row.meta || {};
+  const nextMetaBase = {
+    ...meta,
+    run_id: meta.run_id || run_id || null,
+    task_id: meta.task_id || taskId || null,
+    status: 'failed',
+    failed_at: meta.failed_at || new Date().toISOString(),
+    fail_reason: reason || meta.fail_reason || 'kie_failed'
+  };
+
+  if (String(meta.refunded || '').toLowerCase() === 'true') {
+    await patchGenerationMeta(row.id, nextMetaBase);
+    return { ok:true, already_refunded:true };
+  }
+
+  const charged = String(meta.charged || '').toLowerCase() === 'true';
+  const cost = Number(meta.charged_cost || meta.cost || 0);
+  if (!charged || !Number.isFinite(cost) || cost <= 0) {
+    await patchGenerationMeta(row.id, nextMetaBase);
+    return { ok:true, refunded:false, reason:'not_charged' };
+  }
+
+  const claim = `r_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const claimMeta = { ...nextMetaBase, refund_claim: claim };
+  const claimRes = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}&meta->>refunded=is.null&meta->>refund_claim=is.null&select=id`, {
+    method: 'PATCH',
+    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+    body: JSON.stringify({ result_url: null, meta: claimMeta })
+  });
+  const claimArr = await claimRes.json().catch(()=>[]);
+  if (!claimRes.ok || !Array.isArray(claimArr) || !claimArr.length) return { ok:true, already_claimed:true };
+
+  const userId = row.user_id || uid;
+  const p0 = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(userId)}&select=credits`, { headers: sb() });
+  const parr = await p0.json().catch(()=>[]);
+  const current = Number(Array.isArray(parr) && parr[0] ? parr[0].credits : 0);
+  const nextCredits = current + cost;
+  const p1 = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ credits: nextCredits })
+  });
+  if (!p1.ok) return { ok:false, error:'profile_refund_failed' };
+
+  await patchGenerationMeta(row.id, {
+    ...claimMeta,
+    refunded: 'true',
+    refunded_cost: cost,
+    refunded_at: new Date().toISOString()
+  });
+  return { ok:true, refunded:true, credits: nextCredits };
 }
 
 // Collect up to N URLs from common MJ shapes or deep scan
@@ -248,118 +336,4 @@ function pickResultUrls(obj, limit=4){
     }
   }
   return out;
-}
-
-async function fetchKieFailure(id){
-  const endpoints = [
-    `/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(id)}`,
-    `/api/v1/mj/result?taskId=${encodeURIComponent(id)}`,
-    `/api/v1/mj/getTask?taskId=${encodeURIComponent(id)}`,
-    `/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(id)}`,
-    `/api/v1/jobs/result?taskId=${encodeURIComponent(id)}`
-  ];
-  for (const path of endpoints){
-    try{
-      const r = await fetch(`${KIE_BASE}${path}`, { headers: { 'Authorization': `Bearer ${KIE_KEY}`, 'Accept': 'application/json' } });
-      const j = await r.json().catch(()=>null);
-      if (isFailureStatus(j)) return j;
-    }catch{}
-  }
-  return null;
-}
-
-async function markFailedAndRefund({ uid, run_id, taskId, reason }){
-  if (!SUPABASE_URL || !SERVICE_KEY) return { refunded:false };
-
-  const row = await findGeneration({ uid, run_id, taskId });
-  if (!row) return { refunded:false };
-
-  const meta = row.meta || {};
-  const now = new Date().toISOString();
-  const refundAmount = Number(meta.charged_cost || meta.cost || 0) || 0;
-  const failedMeta = {
-    ...meta,
-    status: 'failed',
-    state: 'failed',
-    fail_reason: reason || meta.fail_reason || 'kie_failed',
-    failed_reason: reason || meta.failed_reason || 'kie_failed',
-    failed_at: meta.failed_at || now
-  };
-
-  if (meta.refunded === true) {
-    await patchGeneration(row.id, { ...failedMeta, refunded: true });
-    return { refunded:true, refund_amount: Number(meta.refund_amount || refundAmount || 0) };
-  }
-
-  if (refundAmount > 0 && row.user_id) {
-    const claim = `rf_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    const claimed = await claimRefund(row.id, { ...failedMeta, refund_claim: claim });
-    if (!claimed) {
-      return { refunded:false, refund_amount: 0 };
-    }
-    await refundCredits(row.user_id, refundAmount);
-    await patchGeneration(row.id, {
-      ...failedMeta,
-      refunded: true,
-      refund_amount: refundAmount,
-      refunded_at: meta.refunded_at || now
-    });
-    return { refunded:true, refund_amount: refundAmount };
-  }
-
-  await patchGeneration(row.id, failedMeta);
-  return { refunded:false, refund_amount: 0 };
-}
-
-async function patchGeneration(id, meta){
-  await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ meta })
-  });
-}
-
-async function claimRefund(id, meta){
-  const r = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}&meta->>refunded=is.null&meta->>refund_claim=is.null&select=id`, {
-    method: 'PATCH',
-    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-    body: JSON.stringify({ meta })
-  });
-  const rows = await r.json().catch(()=>[]);
-  return r.ok && Array.isArray(rows) && rows.length > 0;
-}
-
-async function findGeneration({ uid, run_id, taskId }){
-  const queries = [];
-  if (uid && run_id) queries.push(`user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`);
-  if (run_id) queries.push(`meta->>run_id=eq.${encodeURIComponent(run_id)}`);
-  if (taskId) queries.push(`meta->>task_id=eq.${encodeURIComponent(taskId)}`);
-
-  for (const q of queries) {
-    const r = await fetch(`${UG_URL}?select=id,user_id,meta&${q}&order=created_at.desc&limit=1`, { headers: sb() });
-    if (!r.ok) continue;
-    const rows = await r.json().catch(()=>[]);
-    if (Array.isArray(rows) && rows[0]) return rows[0];
-  }
-  return null;
-}
-
-async function refundCredits(userId, amount){
-  const rpc = await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_profile_credits`, {
-    method: 'POST',
-    headers: { ...sb(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ p_user_id: userId, p_delta: amount })
-  });
-  if (rpc.ok) return;
-
-  const prof = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=credits`, {
-    headers: sb()
-  });
-  const rows = await prof.json().catch(()=>[]);
-  const cur = Array.isArray(rows) && rows[0] && typeof rows[0].credits === 'number' ? rows[0].credits : 0;
-  await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}`, {
-    method: 'PATCH',
-    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ credits: cur + amount })
-  });
 }
