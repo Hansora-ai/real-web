@@ -385,7 +385,7 @@
       background:#08090c !important;
       color:#f4f6fb;
     }
-    body.workspace-redesign header{
+    body.workspace-redesign header:not(.site-header){
       position:sticky;
       top:0;
       height:58px;
@@ -394,8 +394,8 @@
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
     }
-    body.workspace-redesign header > div{ height:58px; max-width:none; }
-    body.workspace-redesign header nav{ gap:22px; color:rgba(255,255,255,.55); }
+    body.workspace-redesign header:not(.site-header) > div{ height:58px; max-width:none; }
+    body.workspace-redesign header:not(.site-header) nav{ gap:22px; color:rgba(255,255,255,.55); }
     body.workspace-redesign #generatorDock{
       position:fixed !important;
       left:14px;
@@ -793,8 +793,8 @@
       border-radius:0;
     }
     @media (max-width: 900px){
-      body.workspace-redesign header{ height:auto; }
-      body.workspace-redesign header > div{ height:64px; }
+      body.workspace-redesign header:not(.site-header){ height:auto; }
+      body.workspace-redesign header:not(.site-header) > div{ height:64px; }
       body.workspace-redesign #generatorDock{ order:0; }
       body.workspace-redesign main{ order:1; gap:12px; }
       body.workspace-redesign #generatorCard > .flex:first-child > .flex:first-child{ order:-2; }
@@ -934,9 +934,9 @@
     @media (max-width:900px){
       html, body.workspace-redesign{ width:100%; max-width:100%; overflow-x:hidden !important; }
       body.workspace-redesign{ display:block !important; overflow-y:auto !important; }
-      body.workspace-redesign header{ position:sticky; top:0; z-index:40; }
-      body.workspace-redesign header nav{ display:none !important; }
-      body.workspace-redesign header > div{ padding-left:18px; padding-right:18px; }
+      body.workspace-redesign header:not(.site-header){ position:sticky; top:0; z-index:40; }
+      body.workspace-redesign header:not(.site-header) nav{ display:none !important; }
+      body.workspace-redesign header:not(.site-header) > div{ padding-left:18px; padding-right:18px; }
       body.workspace-redesign #generatorDock{
         position:static !important;
         width:100% !important;
