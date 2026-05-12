@@ -1649,7 +1649,7 @@
     <section id="resultsSection" class="hidden mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm pt-8 font-semibold text-white/80">Recent generations</h2>
-        <p class="text-[11px] text-white/45">Last 10 jobs from this account</p>
+        <p class="text-[11px] text-white/45">Latest jobs from this account</p>
       </div>
       <div id="resultsStrip" class="flex gap-3 overflow-x-auto pb-2"></div>
     </section>
@@ -2349,8 +2349,7 @@ function createResultCard(data) {
       if (options && options.prepend) strip.prepend(card);
       else strip.appendChild(card);
 
-      // keep at most 7
-      const __max = 10;
+      const __max = window.matchMedia('(min-width: 901px)').matches ? 12 : 10;
       while (strip.children.length > __max) strip.removeChild(strip.lastElementChild);
 
       return built;
@@ -2359,13 +2358,14 @@ function createResultCard(data) {
     async function loadRecentHistory() {
       if (!currentUser) return;
       const uid = currentUser.id;
+      const recentLimit = window.matchMedia('(min-width: 901px)').matches ? 12 : 10;
       try {
         const { data, error } = await supabaseClient
           .from('user_generations')
           .select('provider, kind, prompt, result_url, meta, created_at')
           .eq('user_id', currentUser.id)
           .order('created_at', { ascending: false })
-          .limit(10);
+          .limit(recentLimit);
 
         if (error) {
           console.warn('loadRecentHistory error', error);
@@ -2708,8 +2708,8 @@ async function pollGeneration(runId, controllers, token, taskId) {
         aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
         defaultAspect: '1:1',
         durations: null,
-        costLabel: '2⚡ per job',
-        minCredits: 2
+        costLabel: '1.5⚡ per job',
+        minCredits: 1.5
       },
       {
         id: 'nano-banana-2',
@@ -2724,8 +2724,8 @@ async function pollGeneration(runId, controllers, token, taskId) {
         aspectOptions: ['auto', '1:1', '1:4', '1:8', '2:3', '3:2', '3:4', '4:1', '4:3', '4:5', '5:4', '8:1', '9:16', '16:9', '21:9'],
         defaultAspect: 'auto',
         durations: null,
-        costLabel: '1.5⚡ per job',
-        minCredits: 1.5
+        costLabel: '1⚡ per job',
+        minCredits: 1
       },
 
       {
@@ -2741,8 +2741,8 @@ async function pollGeneration(runId, controllers, token, taskId) {
         aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
         defaultAspect: '1:1',
         durations: null,
-        costLabel: '1⚡ per job',
-        minCredits: 1
+        costLabel: '0.5⚡ per job',
+        minCredits: 0.5
       },
       {
         id: 'gpt-image-1.5',
@@ -2757,8 +2757,59 @@ async function pollGeneration(runId, controllers, token, taskId) {
         aspectOptions: ['1:1', '2:3', '3:2'],
         defaultAspect: '1:1',
         durations: null,
-        costLabel: '2⚡ per job',
-        minCredits: 4
+        costLabel: '1.5⚡ per job',
+        minCredits: 1.5
+      },
+      {
+        id: 'gpt-image-2',
+        name: 'GPT Image 2.0',
+        emoji: '🧠',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'GPT Image 2.0 with Kie resolution rules.',
+        endpoint: '/.netlify/functions/run-gpt-image-2',
+        needsImage: false,
+        maxFiles: 4,
+        uploadMaxMB: 10,
+        aspectOptions: ['auto', '1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'],
+        defaultAspect: 'auto',
+        durations: null,
+        costLabel: '1⚡ per job',
+        minCredits: 1
+      },
+      {
+        id: 'seedream-5-lite',
+        name: 'Seedream 5.0 Lite',
+        emoji: '🎨',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'Seedream 5.0 Lite with high quality enabled.',
+        endpoint: '/.netlify/functions/run-seedream-5-lite',
+        needsImage: false,
+        maxFiles: 8,
+        uploadMaxMB: 10,
+        aspectOptions: ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'],
+        defaultAspect: '1:1',
+        durations: null,
+        costLabel: '0.5⚡ per job',
+        minCredits: 0.5
+      },
+      {
+        id: 'grok-image',
+        name: 'Grok Image',
+        emoji: '𝕏',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'Grok image generation at fixed 720p.',
+        endpoint: '/.netlify/functions/run-grok-image',
+        needsImage: false,
+        maxFiles: 4,
+        uploadMaxMB: 10,
+        aspectOptions: ['1:1', '2:3', '3:2', '3:4', '4:3', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        durations: null,
+        costLabel: '0.5⚡ per job',
+        minCredits: 0.5
       },
       {
         id: 'imagen',
@@ -2783,6 +2834,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
         subtitle: 'Text / Image → Image',
         category: 'image',
         description: 'MidJourney-style image generation.',
+        hidden: true,
         endpoint: '/.netlify/functions/run-midjourney',
         needsImage: false,
         maxFiles: 1,
@@ -2799,6 +2851,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
         subtitle: 'Image → Video',
         category: 'video',
         description: 'Turn an image into a MidJourney-style motion.',
+        hidden: true,
         endpoint: '/.netlify/functions/run-mj-video',
         needsImage: true,
         maxFiles: 1,
@@ -2985,7 +3038,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
     let currentVeoVariant = 'fast'; // 'fast' | 'quality'
     let uploadedFiles = [];
     // Models that should APPEND images when user uploads again (multi-image support)
-    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana', 'gpt-image-1', 'seedream-4-5']);
+    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'grok-image']);
 
     function __renderImageThumbs() {
       const thumbs = document.getElementById('imageThumbs');
@@ -3032,7 +3085,7 @@ let currentKlingSound = false;
 
 
     function getWorkspaceModelItems() {
-      const source = MODELS.filter((m) => currentMode === 'image' ? m.category === 'image' : m.category === 'video');
+      const source = MODELS.filter((m) => !m.hidden && (currentMode === 'image' ? m.category === 'image' : m.category === 'video'));
       if (currentMode !== 'video') return source;
       const items = [];
       const hasVeo31 = source.some((m) => m.id === 'veo31-fast' || m.id === 'veo31');
@@ -3152,24 +3205,48 @@ let currentKlingSound = false;
       if (btnLabel) btnLabel.textContent = labelText;
 
       const costLabelEl = document.getElementById('costLabel');
-      if (costLabelEl && currentModel && currentModel.costLabel) {
-        costLabelEl.textContent = currentModel.costLabel;
+      if (costLabelEl && currentModel) {
+        costLabelEl.textContent = getCurrentCostLabel();
       }
       syncWorkspaceModelSummary();
       renderWorkspaceModelRail();
       updateRunButtonLabel();
     }
 
-    function getRunCreditLabel() {
-      if (!currentModel) return '';
-      if (currentModel.id === 'kling26') {
+    function getModelCreditValue(model = currentModel) {
+      if (!model) return null;
+      if (model.id === 'nano-banana-pro') return currentResolution === '4K' ? 2 : 1.5;
+      if (model.id === 'nano-banana-2') return currentResolution === '4K' ? 1.5 : 1;
+      if (model.id === 'gpt-image-2') return currentResolution === '4K' ? 1.5 : 1;
+      if (model.id === 'kling26') {
         const dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
-        return String(currentKlingSound ? (dur === 10 ? 16 : 9) : (dur === 10 ? 9 : 5));
+        return currentKlingSound ? (dur === 10 ? 16 : 9) : (dur === 10 ? 9 : 5);
       }
-      if (currentModel.id === 'sora2') return currentSoraTier === 'pro' ? '20' : '3';
-      if (typeof currentModel.minCredits === 'number') return String(currentModel.minCredits);
-      const match = String(currentModel.costLabel || '').match(/(\d+(?:\.\d+)?)/);
-      return match ? match[1] : '';
+      if (model.id === 'sora2') return currentSoraTier === 'pro' ? 20 : 3;
+      if (typeof model.minCredits === 'number') return model.minCredits;
+      const match = String(model.costLabel || '').match(/(\d+(?:\.\d+)?)/);
+      return match ? Number(match[1]) : null;
+    }
+
+    function formatCreditValue(value) {
+      if (value === null || value === undefined || value === '') return '';
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? String(numeric) : String(value);
+    }
+
+    function getCurrentCostLabel() {
+      const value = getModelCreditValue();
+      const formatted = formatCreditValue(value);
+      return formatted ? `${formatted}⚡ per job` : (currentModel?.costLabel || '');
+    }
+
+    function updateCostDisplay() {
+      const costLabelEl = document.getElementById('costLabel');
+      if (costLabelEl && currentModel) costLabelEl.textContent = getCurrentCostLabel();
+    }
+
+    function getRunCreditLabel() {
+      return formatCreditValue(getModelCreditValue());
     }
 
     function updateRunButtonLabel() {
@@ -3177,6 +3254,54 @@ let currentKlingSound = false;
       if (!runBtn) return;
       const credits = getRunCreditLabel();
       runBtn.textContent = credits ? `Run ${credits} ⚡` : 'Run';
+    }
+
+    function getResolutionOptionsForCurrentModel() {
+      if (!currentModel) return [];
+      if (currentModel.id === 'gpt-image-2') {
+        if (currentAspect === 'auto') return ['1K'];
+        if (currentAspect === '1:1') return ['1K', '2K'];
+        return ['1K', '2K', '4K'];
+      }
+      if (currentModel.id === 'nano-banana-pro' || currentModel.id === 'nano-banana-2') {
+        return ['1K', '2K', '4K'];
+      }
+      return [];
+    }
+
+    function renderResolutionControls() {
+      const resolutionBlock = document.getElementById('resolutionBlock');
+      const resolutionPills = document.getElementById('resolutionPills');
+      const opts = getResolutionOptionsForCurrentModel();
+      if (!opts.length) {
+        if (resolutionBlock) resolutionBlock.classList.add('hidden');
+        if (resolutionPills) resolutionPills.innerHTML = '';
+        currentResolution = '1K';
+        updateCostDisplay();
+        updateRunButtonLabel();
+        return;
+      }
+      if (resolutionBlock) resolutionBlock.classList.remove('hidden');
+      if (!resolutionPills) return;
+      resolutionPills.innerHTML = '';
+      if (!currentResolution || !opts.includes(currentResolution)) currentResolution = opts[0];
+      opts.forEach((val) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = val;
+        btn.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+        if (val === currentResolution) btn.classList.add('chip-active');
+        btn.addEventListener('click', () => {
+          currentResolution = val;
+          Array.from(resolutionPills.children).forEach((child) => child.classList.remove('chip-active'));
+          btn.classList.add('chip-active');
+          updateCostDisplay();
+          updateRunButtonLabel();
+        });
+        resolutionPills.appendChild(btn);
+      });
+      updateCostDisplay();
+      updateRunButtonLabel();
     }
 
     function updateUploadPanelState() {
@@ -3230,7 +3355,7 @@ let currentKlingSound = false;
       listEl.innerHTML = '';
 
       let filtered = MODELS.filter((m) => {
-        const matchesMode = currentMode === 'image' ? m.category === 'image' : m.category === 'video';
+        const matchesMode = !m.hidden && (currentMode === 'image' ? m.category === 'image' : m.category === 'video');
         const matchesSearch =
           !searchValue ||
           m.name.toLowerCase().includes(searchValue) ||
@@ -3360,9 +3485,6 @@ let currentKlingSound = false;
       const klingSoundBlock = document.getElementById('klingSoundBlock');
       const klingSoundPills = document.getElementById('klingSoundPills');
 
-      const resolutionBlock = document.getElementById('resolutionBlock');
-      const resolutionPills = document.getElementById('resolutionPills');
-
       const veoQualityBlock = document.getElementById('veoQualityBlock');
       const veoQualityPills = document.getElementById('veoQualityPills');
 
@@ -3449,34 +3571,6 @@ let currentKlingSound = false;
 
       
 
-      // Resolution pills (Nano Banana Pro only) — shown only for nano-banana-pro
-      if (currentModel.id === 'nano-banana-pro' || currentModel.id === 'nano-banana-2') {
-        if (resolutionBlock) resolutionBlock.classList.remove('hidden');
-        if (resolutionPills) {
-          resolutionPills.innerHTML = '';
-          const opts = ['1K', '2K', '4K'];
-          if (!currentResolution || !opts.includes(currentResolution)) currentResolution = '1K';
-          opts.forEach((val) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.textContent = val;
-            btn.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
-            if (val === currentResolution) btn.classList.add('chip-active');
-            btn.addEventListener('click', () => {
-              currentResolution = val;
-              Array.from(resolutionPills.children).forEach((child) => child.classList.remove('chip-active'));
-              btn.classList.add('chip-active');
-            });
-            resolutionPills.appendChild(btn);
-          });
-        }
-      } else {
-        if (resolutionBlock) resolutionBlock.classList.add('hidden');
-        if (resolutionPills) resolutionPills.innerHTML = '';
-        currentResolution = '1K';
-      }
-
-
       // Aspect pills
       if (currentModel.aspectOptions && currentModel.aspectOptions.length) {
         aspectBlock.classList.remove('hidden');
@@ -3493,6 +3587,7 @@ let currentKlingSound = false;
               child.classList.remove('chip-active');
             });
             btn.classList.add('chip-active');
+            renderResolutionControls();
           });
           aspectPills.appendChild(btn);
         });
@@ -3509,6 +3604,8 @@ let currentKlingSound = false;
         aspectBlock.classList.add('hidden');
         aspectPills.innerHTML = '';
       }
+
+      renderResolutionControls();
 
       
       // Kling 2.6 sound toggle (default: no sound)
@@ -4125,7 +4222,9 @@ let currentKlingSound = false;
         throw new Error('upload_bridge_missing');
       }
       const urls = [];
-      const maxUploadMB = (typeof currentModel !== 'undefined' && currentModel && (currentModel.id === 'nano-banana-pro' || currentModel.id === 'nano-banana-2')) ? (currentModel.id === 'nano-banana-2' ? 30 : 25) : 10;
+      const maxUploadMB = (typeof currentModel !== 'undefined' && currentModel && currentModel.uploadMaxMB)
+        ? Number(currentModel.uploadMaxMB)
+        : ((typeof currentModel !== 'undefined' && currentModel && (currentModel.id === 'nano-banana-pro' || currentModel.id === 'nano-banana-2')) ? (currentModel.id === 'nano-banana-2' ? 30 : 25) : 10);
       const maxUploadBytes = maxUploadMB * 1024 * 1024;
       for (const file of list) {
         if (file.size > maxUploadBytes) {
@@ -4151,8 +4250,14 @@ let currentKlingSound = false;
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || 'auto', resolution: (resolution || '1K'), google_search: true, run_id: runId };
         case 'seedream-4-5':
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', run_id: runId };
+        case 'seedream-5-lite':
+          return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', quality: 'high', run_id: runId };
         case 'gpt-image-1':
           return { prompt, aspect_ratio: aspect || '1:1', image_urls: urls && urls.length ? urls : undefined, run_id: runId };
+        case 'gpt-image-2':
+          return { urls, prompt: prompt || '.', format: 'png', aspect_ratio: aspect || 'auto', size: aspect || 'auto', resolution: (resolution || '1K'), run_id: runId };
+        case 'grok-image':
+          return { urls, prompt: prompt || '.', aspect_ratio: aspect || '1:1', resolution: '720p', run_id: runId };
         case 'imagen':
           return { prompt, model: 'ultra', aspect_ratio: aspect || '1:1', run_id: runId };
         case 'midjourney':
@@ -4285,13 +4390,13 @@ let currentKlingSound = false;
         return;
       }
 
-      const requiredCredits = typeof currentModel.minCredits === 'number' ? currentModel.minCredits : 0;
+      const requiredCredits = Number(getModelCreditValue(currentModel) || 0);
       let availableCredits = await getAvailableCredits(requiredCredits);
 
-      if (typeof currentModel.minCredits === 'number' && availableCredits < currentModel.minCredits) {
+      if (requiredCredits > 0 && availableCredits < requiredCredits) {
         console.warn('Credit gate blocked run', {
           model: currentModel.id,
-          required: currentModel.minCredits,
+          required: requiredCredits,
           available: availableCredits,
           cached: currentCredits,
           header: getVisibleHeaderCredits(),
@@ -4488,7 +4593,9 @@ watchCreditsLive(120000);
       } catch (err) {
         console.error(err);
         if (err && err.message === 'file_too_large') {
-          const limitMb = (typeof currentModel !== 'undefined' && currentModel && currentModel.id === 'nano-banana-pro') ? 25 : 10;
+          const limitMb = (typeof currentModel !== 'undefined' && currentModel && currentModel.uploadMaxMB)
+            ? Number(currentModel.uploadMaxMB)
+            : ((typeof currentModel !== 'undefined' && currentModel && currentModel.id === 'nano-banana-pro') ? 25 : 10);
           showStatus(`One of the images is larger than ${limitMb}MB.`, 'error');
         } else if (err && err.message === 'upload_bridge_missing') {
           showStatus('Upload bridge is missing on this page.', 'error');
