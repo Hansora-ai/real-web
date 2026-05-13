@@ -9,8 +9,8 @@ const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+
 const KIE_KEY  = process.env.KIE_API_KEY || '';
 const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const SITE_BASE = (process.env.SITE_BASE || 'https://webhansora.netlify.app').replace(/\/+$/,'');
-const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-callback`; // your existing callback
+const SITE_BASE = (process.env.SITE_BASE || 'https://hansora.co').replace(/\/+$/,'');
+const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-check`; // your existing callback
 
 const VERSION_TAG  = "nb_fn_kling26_style_v1";
 
@@ -84,7 +84,7 @@ async function seedUserGeneration(uid, run_id, prompt){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { row_id:null };
   try{
     const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-    const meta = { source:'nano-banana', run_id, model:'nano-banana', status:'pending' };
+    const meta = { source:'nano-banana', run_id, model:'nano-banana', status:'pending', refund_amount: 0.5 };
     const rIns = await fetch(ug, {
       method: 'POST',
       headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
@@ -153,7 +153,7 @@ async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
 
     // Claim
     const claim = `c_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    const mergedForClaim = { ...(meta0||{}), ...(baseMeta||{}), charge_claim: claim };
+    const mergedForClaim = { ...(meta0||{}), ...(baseMeta||{}), refund_amount: cost, charge_claim: claim };
 
     // Only one request can set charge_claim when it's null and charged is null
     const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
@@ -189,7 +189,7 @@ async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
     }
 
     // Mark charged
-    const chargedMeta = { ...(mergedForClaim||{}), charged:'true', charged_cost: cost, charged_at: (new Date()).toISOString() };
+    const chargedMeta = { ...(mergedForClaim||{}), charged:'true', charged_cost: cost, refund_amount: cost, charged_at: (new Date()).toISOString() };
     await patchUserGenerationMetaById(row_id || (Array.isArray(claimedArr)&&claimedArr[0]?.id) || (existing?.id), chargedMeta);
 
     return { ok:true, debit, idempotent:true, already:false };
@@ -283,7 +283,7 @@ exports.handler = async (event) => {
           await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(row_id)}`, {
             method:'PATCH',
             headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
-            body: JSON.stringify({ meta: { source:'nano-banana', run_id, model:'nano-banana', status:'create_failed', task_id: taskId, raw: js } }),
+            body: JSON.stringify({ meta: { source:'nano-banana', run_id, model:'nano-banana', status:'create_failed', task_id: taskId, raw: js, refund_amount: cost } }),
           });
         }
       }catch{}
@@ -296,13 +296,13 @@ exports.handler = async (event) => {
         await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(row_id)}`, {
           method:'PATCH',
           headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
-          body: JSON.stringify({ meta: { source:'nano-banana', run_id, model:'nano-banana', status:'processing', task_id: taskId } }),
+          body: JSON.stringify({ meta: { source:'nano-banana', run_id, model:'nano-banana', status:'processing', task_id: taskId, refund_amount: cost } }),
         });
       }
     }catch{}
 
     // Debit credits AFTER provider accepted the task and exactly once per (uid, run_id)
-    const baseMeta = { source:'nano-banana', run_id, model:'nano-banana', status:'processing', task_id: taskId };
+    const baseMeta = { source:'nano-banana', run_id, model:'nano-banana', status:'processing', task_id: taskId, refund_amount: cost };
     const charge = await chargeOnceForRun(uid, run_id, cost, row_id, baseMeta);
 
     if (!charge.ok){
