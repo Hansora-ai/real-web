@@ -359,6 +359,13 @@ function normalizeComparableUrl(url) {
     .trim();
 }
 
+function isUploadedInputUrl(url) {
+  const value = String(url || "").toLowerCase();
+  return value.includes("/storage/v1/object/public/") ||
+    value.includes(".supabase.co/storage/v1/object/") ||
+    value.includes(".supabase.in/storage/v1/object/");
+}
+
 function collectKnownInputUrls(row) {
   const meta = row?.meta && typeof row.meta === "object" ? row.meta : {};
   const urls = [];
@@ -485,6 +492,7 @@ function collectResultUrls(value, excludeUrls = []) {
     const clean = normalizeComparableUrl(url);
     if (!/^https?:\/\/.+/i.test(clean)) return;
     if (excluded.has(clean)) return;
+    if (isUploadedInputUrl(clean)) return;
     if (seen.has(clean)) return;
     seen.add(clean);
     urls.push(clean);
@@ -503,7 +511,7 @@ function collectResultUrls(value, excludeUrls = []) {
       return;
     }
     if (Array.isArray(x)) {
-      for (const item of x) walk(item, depth + 1, trusted);
+      for (const item of x) walk(item, depth + 1, trusted || depth === 0);
       return;
     }
     if (typeof x === "object") {
