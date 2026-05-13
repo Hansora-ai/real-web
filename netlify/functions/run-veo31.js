@@ -15,7 +15,7 @@ const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` 
 
 // Your site base for callback (same style as Runway)
 const SITE_BASE = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/,'');
-const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/video-kie-callback`;
+const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-check`;
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return ok({});
@@ -45,6 +45,23 @@ exports.handler = async (event) => {
 
     const clientRunId = (body.run_id || "").toString().trim();
     const run_id = clientRunId || `${uid}-${Date.now()}`;
+    const cost = veo31Cost(model, quality);
+
+    // Idempotency: if this run_id already has a task_id, return it and avoid double-debit.
+    const existing = await findUserGeneration(uid, run_id);
+    if (existing && existing.meta && (existing.meta.task_id || existing.meta.taskId)) {
+      if (!isCharged(existing.meta)) {
+        const chargeExisting = await chargeOnceForRun(uid, run_id, cost, existing.id, { ...existing.meta, refund_amount: cost });
+        if (!chargeExisting.ok) return ok({ submitted:false, error: chargeExisting.error || "charge_failed", details: chargeExisting });
+      }
+      return ok({ submitted:true, run_id, taskId: existing.meta.task_id || existing.meta.taskId, reused:true, already_submitted:true });
+    }
+
+    // Pre-check credits before creating provider job. Debit still happens only after KIE returns taskId.
+    const currentCredits = await getCredits(uid);
+    if (currentCredits < cost) {
+      return ok({ submitted:false, error:"insufficient_credits", need: cost, have: currentCredits });
+    }
 
     const callBackUrl = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
 
@@ -62,7 +79,7 @@ exports.handler = async (event) => {
           kind: "video",
           prompt,
           result_url: null,
-          meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality, duration: 8, model }
+          meta: { run_id, status: "pending", aspect_ratio: aspectRatio, quality, duration: 8, model, charged: "false", charge_cost: cost, refund_amount: cost }
         };
 
         if (idToPatch) {
@@ -154,13 +171,32 @@ if (imageUrls.length) {
           await fetch(`${UG_URL}?id=eq.${encodeURIComponent(arr[0].id)}`, {
             method: "PATCH",
             headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
-            body: JSON.stringify({ meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality, duration: 8, task_id: taskId, model } })
+            body: JSON.stringify({ meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality, duration: 8, task_id: taskId, model, charged: "false", charge_cost: cost, refund_amount: cost } })
           });
         }
       }
     } catch {}
 
-    return ok({ submitted: true, run_id, taskId, status: resp.status, data });
+
+    const foundForCharge = await findUserGeneration(uid, run_id);
+    const rowId = foundForCharge?.id || null;
+    const baseMeta = {
+      ...(foundForCharge?.meta || {}),
+      run_id,
+      status: "processing",
+      aspect_ratio: aspectRatio,
+      quality,
+      duration: 8,
+      task_id: taskId,
+      model,
+      refund_amount: cost
+    };
+    const charge = await chargeOnceForRun(uid, run_id, cost, rowId, baseMeta);
+    if (!charge.ok) {
+      return ok({ submitted:false, error: charge.error || "charge_failed", details: charge, taskId, run_id });
+    }
+
+    return ok({ submitted: true, run_id, taskId, status: resp.status, data, debited: cost, credits: charge.debit?.credits, already_charged: !!charge.already });
   } catch (e) {
     return ok({ submitted:false, error:String(e) });
   }
@@ -183,6 +219,131 @@ function normalizeAspect(a){ a=String(a||"").trim(); return /^(16:9|9:16)$/.test
 function normalizeQuality(q){ q=String(q||"").trim().toLowerCase(); return q === "4k" || q === "4K" ? "4K" : "1080p"; }
 function normalizeUrl(u){ try{ const url=new URL(String(u||"")); return url.href; } catch { return ""; } }
 function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` }; }
+
+function veo31Cost(model, quality){
+  const isFast = String(model || "").toLowerCase().includes("fast");
+  const q = normalizeQuality(quality);
+  // Prices requested: Fast 1080p=5, Fast 4K=12, Quality 1080p=17, Quality 4K=2.
+  if (isFast) return q === "4K" ? 12 : 5;
+  return q === "4K" ? 2 : 17;
+}
+
+function isCharged(meta){
+  if (!meta || typeof meta !== "object") return false;
+  return meta.charged === true || String(meta.charged).toLowerCase() === "true";
+}
+
+async function findUserGeneration(uid, run_id){
+  if (!UG_URL || !uid || !run_id) return null;
+  try{
+    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id,meta`;
+    const r = await fetch(UG_URL + q, { headers: sb() });
+    const arr = await r.json().catch(()=>[]);
+    return (Array.isArray(arr) && arr[0]) ? arr[0] : null;
+  }catch{ return null; }
+}
+
+async function getCredits(uid){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid) return 0;
+  try{
+    const url = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
+    const r = await fetch(url, { headers: sb() });
+    const arr = await r.json().catch(()=>[]);
+    const credits = (Array.isArray(arr) && arr[0] && typeof arr[0].credits !== "undefined") ? Number(arr[0].credits) : 0;
+    return Number.isFinite(credits) ? credits : 0;
+  }catch{ return 0; }
+}
+
+async function debitCredits(uid, cost){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { ok:false, error:"missing_env_or_uid" };
+  try{
+    const profUrl = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
+    const r0 = await fetch(profUrl, { headers: sb() });
+    if (!r0.ok) return { ok:false, error:"profile_fetch_failed", status:r0.status };
+    const arr = await r0.json().catch(()=>null);
+    const cur = (Array.isArray(arr) && arr[0] && typeof arr[0].credits !== "undefined") ? Number(arr[0].credits) : 0;
+    if (!Number.isFinite(cur) || cur < cost) return { ok:false, error:"insufficient_credits", credits: cur };
+    const newCredits = Math.max(0, Number((cur - cost).toFixed(4)));
+    const updUrl = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`;
+    const r1 = await fetch(updUrl, {
+      method:"PATCH",
+      headers:{ ...sb(), "Content-Type":"application/json", "Prefer":"return=representation" },
+      body: JSON.stringify({ credits: newCredits })
+    });
+    if (!r1.ok) return { ok:false, error:"profile_update_failed", status:r1.status };
+    return { ok:true, credits:newCredits };
+  }catch(e){ return { ok:false, error:"server_exception", details:String(e && e.message || e) }; }
+}
+
+async function patchUserGenerationMetaById(id, meta){
+  if (!UG_URL || !SERVICE_KEY || !id) return false;
+  try{
+    const r = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}`, {
+      method:"PATCH",
+      headers:{ ...sb(), "Content-Type":"application/json", "Prefer":"return=minimal" },
+      body: JSON.stringify({ meta })
+    });
+    return !!r.ok;
+  }catch{ return false; }
+}
+
+async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) {
+    const debit = await debitCredits(uid, cost);
+    return { ok: !!debit.ok, debit, idempotent:false, already:false };
+  }
+
+  try{
+    const existing = await findUserGeneration(uid, run_id);
+    const meta0 = existing?.meta || baseMeta || {};
+    if (isCharged(meta0)){
+      return { ok:true, debit:{ ok:true, credits:null }, idempotent:true, already:true };
+    }
+
+    const claim = `c_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const mergedForClaim = { ...(meta0||{}), ...(baseMeta||{}), charge_claim: claim, refund_amount: cost };
+
+    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&meta->>charged=is.null&meta->>charge_claim=is.null&select=id`;
+    const rClaim = await fetch(UG_URL + q, {
+      method:"PATCH",
+      headers:{ ...sb(), "Content-Type":"application/json", "Prefer":"return=representation" },
+      body: JSON.stringify({ meta: mergedForClaim })
+    });
+
+    const claimedArr = await rClaim.json().catch(()=>[]);
+    const claimed = (rClaim.ok && Array.isArray(claimedArr) && claimedArr.length > 0);
+    if (!claimed){
+      const after = await findUserGeneration(uid, run_id);
+      if (isCharged(after?.meta)){
+        return { ok:true, debit:{ ok:true, credits:null }, idempotent:true, already:true };
+      }
+      return { ok:false, error:"charge_in_progress", idempotent:true, already:false };
+    }
+
+    const debit = await debitCredits(uid, cost);
+    if (!debit.ok){
+      const rollbackMeta = { ...(mergedForClaim||{}) };
+      delete rollbackMeta.charge_claim;
+      await patchUserGenerationMetaById(row_id || claimedArr[0]?.id || existing?.id, rollbackMeta);
+      return { ok:false, debit, idempotent:true, already:false };
+    }
+
+    const chargedMeta = {
+      ...(mergedForClaim||{}),
+      charged:"true",
+      charged_cost: cost,
+      charge_cost: cost,
+      charged_at: new Date().toISOString(),
+      debited: cost,
+      refund_amount: cost
+    };
+    await patchUserGenerationMetaById(row_id || claimedArr[0]?.id || existing?.id, chargedMeta);
+    return { ok:true, debit, idempotent:true, already:false };
+  }catch(e){
+    const debit = await debitCredits(uid, cost);
+    return { ok: !!debit.ok, debit, idempotent:false, already:false, error:String(e && e.message || e) };
+  }
+}
 
 // Searches the JSON object for common taskId locations or any property named "taskId".
 function extractTaskId(data){
