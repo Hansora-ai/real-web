@@ -5655,6 +5655,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (kling30ElementsDrawer) kling30ElementsDrawer.classList.add('hidden');
       const kling30ElementsCount = document.getElementById('kling30ElementsCount');
       if (kling30ElementsCount) kling30ElementsCount.textContent = '0';
+      if (typeof syncKling30InputLocks === 'function') syncKling30InputLocks();
       if (seedanceAudioToggle) {
         seedanceAudioToggle.textContent = 'Audio on';
         seedanceAudioToggle.classList.add('chip-active');
@@ -6401,14 +6402,24 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       renderSingleThumb(kling30FirstFrameFile, document.getElementById('kling30FirstThumb'), () => {
         kling30FirstFrameFile = null;
         document.getElementById('kling30FirstInput').value = '';
+        syncKling30InputLocks();
       });
+      syncKling30InputLocks();
     });
     document.getElementById('kling30LastInput').addEventListener('change', (e) => {
+      if (kling30MultiShots) {
+        e.target.value = '';
+        syncKling30InputLocks();
+        showStatus('Kling 3.0 multi-shot supports First frame only.', 'error');
+        return;
+      }
       kling30LastFrameFile = (e.target.files || [])[0] || null;
       renderSingleThumb(kling30LastFrameFile, document.getElementById('kling30LastThumb'), () => {
         kling30LastFrameFile = null;
         document.getElementById('kling30LastInput').value = '';
+        syncKling30InputLocks();
       });
+      syncKling30InputLocks();
     });
     function makeKling30Shot(index) {
       const num = Math.max(1, Number(index || 0) + 1);
@@ -6462,6 +6473,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (!currentModel || currentModel.id !== 'kling30') return { ok:true, message:'' };
       ensureKling30Shots();
       if (kling30MultiShots) {
+        if (kling30LastFrameFile) {
+          return { ok:false, message:'Kling 3.0 multi-shot supports First frame only. Remove Last frame.' };
+        }
+        let elementCount = 0;
         for (let i = 0; i < kling30Shots.length; i++) {
           if (!String(kling30Shots[i].prompt || '').trim()) {
             return { ok:false, message:'Shot ' + (i + 1) + ': prompt is required.' };
@@ -6472,7 +6487,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           }
           const ev = getKling30ElementValidation(kling30Shots[i], i);
           if (!ev.ok) return ev;
+          if (kling30ElementHasValidMedia(kling30Shots[i].element)) elementCount += 1;
         }
+        if (elementCount > 3) return { ok:false, message:'Kling 3.0 supports up to 3 element references per request.' };
         const total = kling30Shots.reduce((sum, s) => sum + Math.max(3, Math.min(12, Number(s.duration || 3))), 0);
         if (total > 15) return { ok:false, message:'Kling 3.0 multi-shot total duration must be 15 seconds or less.' };
       }
@@ -6517,6 +6534,46 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       return s.slice(0, 32) || fallback || 'element';
     }
 
+    function kling30ElementHasValidMedia(el) {
+      if (!el) return false;
+      const files = Array.isArray(el.files) ? el.files.filter(Boolean) : [];
+      if (el.type === 'video') {
+        return files.length === 1 && String(files[0]?.type || '').startsWith('video/');
+      }
+      const imageFiles = files.filter((file) => String(file?.type || '').startsWith('image/'));
+      return imageFiles.length === files.length && imageFiles.length >= 2 && imageFiles.length <= 4;
+    }
+
+    function appendKling30ElementReference(promptText, elementName) {
+      const base = String(promptText || '').trim();
+      const cleanName = sanitizeKling30ElementName(elementName || '', 'element');
+      if (!cleanName) return base;
+      const ref = '@' + cleanName;
+      const escaped = cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const refRegex = new RegExp('(^|\\s)@' + escaped + '(?=\\s|$)', 'i');
+      if (refRegex.test(base)) return base;
+      return (base ? base + ' ' : '') + ref;
+    }
+
+    function syncKling30InputLocks() {
+      const lastBtn = document.getElementById('kling30LastBtn');
+      const lastInput = document.getElementById('kling30LastInput');
+      const lastCard = lastBtn ? lastBtn.closest('.upload-drop-card') : null;
+      const lockLast = !!kling30MultiShots;
+      if (lockLast && kling30LastFrameFile) {
+        kling30LastFrameFile = null;
+        const lastThumb = document.getElementById('kling30LastThumb');
+        if (lastThumb) lastThumb.innerHTML = '';
+        if (lastInput) lastInput.value = '';
+      }
+      if (lastBtn) {
+        lastBtn.disabled = lockLast;
+        lastBtn.title = lockLast ? 'Kling 3.0 multi-shot supports only First frame, not Last frame.' : '';
+      }
+      if (lastInput) lastInput.disabled = lockLast;
+      if (lastCard) lastCard.classList.toggle('control-disabled', lockLast);
+    }
+
     function syncKling30LegacyData() {
       ensureKling30Shots();
       const flatFiles = [];
@@ -6537,7 +6594,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           });
         });
         const shotPrompt = String(shot.prompt || '').trim();
-        lines.push((shotPrompt || ('Shot ' + (shotIndex + 1) + ' with @' + cleanName)) + ', ' + durationValue + 's');
+        const promptForDelivery = kling30ElementHasValidMedia(el)
+          ? appendKling30ElementReference(shotPrompt || ('Shot ' + (shotIndex + 1)), cleanName)
+          : (shotPrompt || ('Shot ' + (shotIndex + 1)));
+        lines.push(promptForDelivery + ', ' + durationValue + 's');
       });
       kling30ElementFiles = flatFiles.slice(0, 12);
       kling30ElementMeta = meta.slice(0, 12);
@@ -6795,6 +6855,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       } else {
         closeKling30ElementsDrawer();
       }
+      syncKling30InputLocks();
       syncKling30LegacyData();
     });
     document.getElementById('kling30ShotsBox').addEventListener('input', () => {
@@ -7242,7 +7303,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         case 'kling30': {
           let cursor = 0;
           const firstFrameUrl = kling30FirstFrameFile ? (urls || [])[cursor++] : '';
-          const lastFrameUrl = kling30LastFrameFile ? (urls || [])[cursor++] : '';
+          const lastFrameUrl = (!kling30MultiShots && kling30LastFrameFile) ? (urls || [])[cursor++] : '';
           const elementUrls = (urls || []).slice(cursor, cursor + kling30ElementFiles.length).slice(0, 12);
           const elements = buildKling30ElementGroups(elementUrls);
           const elementNames = Array.from(new Set(elements.map((element) => element.name).filter(Boolean)));
@@ -7253,9 +7314,19 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           const multiPrompt = kling30MultiShots
             ? shotsText.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 5).map((line, index) => {
                 const durationMatch = line.match(/(?:,|\s)(\d+(?:\.\d+)?)\s*s$/i);
-                const shotDuration = durationMatch ? Number(durationMatch[1]) : Math.max(1, Math.min(5, Math.round(Number(duration || 5) / 2)));
+                const shotDuration = durationMatch ? Number(durationMatch[1]) : Math.max(3, Math.min(12, Math.round(Number(duration || 5) / 2)));
                 const shotPrompt = durationMatch ? line.replace(/(?:,|\s)\d+(?:\.\d+)?\s*s$/i, '').trim() : line;
-                return { prompt: shotPrompt || `${promptWithElements} shot ${index + 1}`, duration: shotDuration };
+                const shot = kling30Shots[index] || null;
+                const shotElement = shot && shot.element ? shot.element : null;
+                const shotElementName = shotElement && kling30ElementHasValidMedia(shotElement)
+                  ? sanitizeKling30ElementName(shotElement.name, 'element_' + (index + 1))
+                  : '';
+                return {
+                  prompt: shotElementName
+                    ? appendKling30ElementReference(shotPrompt || `${prompt || 'Shot'} ${index + 1}`, shotElementName)
+                    : (shotPrompt || `${promptWithElements} shot ${index + 1}`),
+                  duration: shotDuration
+                };
               })
             : undefined;
           const totalDuration = multiPrompt && multiPrompt.length
@@ -7272,8 +7343,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             sound: !!currentKlingSound,
             multi_shots: !!kling30MultiShots,
             first_frame_url: firstFrameUrl || undefined,
-            last_frame_url: lastFrameUrl || undefined,
-            image_urls: [firstFrameUrl, lastFrameUrl].filter(Boolean),
+            last_frame_url: kling30MultiShots ? undefined : (lastFrameUrl || undefined),
+            image_urls: kling30MultiShots ? [firstFrameUrl].filter(Boolean) : [firstFrameUrl, lastFrameUrl].filter(Boolean),
             element_input_urls: elements.flatMap((element) => element.element_input_urls || []),
             element_input_video_urls: elements.flatMap((element) => element.element_input_video_urls || []),
             kling_elements: elements,
@@ -7450,7 +7521,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           : currentModel.specificUpload === 'seedance'
           ? await uploadImagesAndGetUrls([seedanceFirstFrameFile, seedanceLastFrameFile, ...seedanceImageRefFiles, ...seedanceVideoRefFiles, ...seedanceAudioRefFiles].filter(Boolean))
           : currentModel.specificUpload === 'kling30'
-          ? (syncKling30LegacyData(), await uploadImagesAndGetUrls([kling30FirstFrameFile, kling30LastFrameFile, ...kling30ElementFiles].filter(Boolean)))
+          ? (syncKling30LegacyData(), await uploadImagesAndGetUrls([kling30FirstFrameFile, ...(kling30MultiShots ? [] : [kling30LastFrameFile]), ...kling30ElementFiles].filter(Boolean)))
           : ['wan27', 'happyhorse', 'grokVideo'].includes(currentModel.specificUpload)
           ? await uploadImagesAndGetUrls([videoFirstFrameFile, videoLastFrameFile, videoSourceFile, ...videoRefImageFiles, ...videoRefVideoFiles, ...videoRefAudioFiles].filter(Boolean))
           : await uploadImagesAndGetUrls(uploadedFiles);
