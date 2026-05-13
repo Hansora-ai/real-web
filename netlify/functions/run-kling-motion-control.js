@@ -16,7 +16,7 @@ const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` 
 const PROFILES_URL  = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
 
 // Your site base for callback (same style as Veo 3)
-const SITE_BASE = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/,'');
+const SITE_BASE = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/,'');
 const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/video-kie-callback`;
 
 
@@ -48,16 +48,17 @@ exports.handler = async (event) => {
     const videoUrl = normalizeUrl(body.videoUrl || body.video_url || "");
     const imageUrl = normalizeUrl(body.imageUrl || body.referenceImageUrl || body.fileUrl || "");
 
-    if (!prompt)  return ok({ submitted:false, error:"empty_prompt" });
     if (!videoUrl) return ok({ submitted:false, error:"missing_videoUrl" });
+    if (!imageUrl) return ok({ submitted:false, error:"missing_reference_image" });
 
     const aspectRatio = normalizeAspect(body.aspectRatio || "16:9");
 
     const mode = normalizeMode(body.mode || body.resolution || "720p");
+    const motionModel = normalizeMotionModel(body.motionModel || body.motion_model || "kling26");
     const billedSeconds = billedSecondsFromDuration(body.duration_seconds || body.duration || body.seconds);
     if (!billedSeconds) return ok({ submitted:false, error:"missing_or_invalid_duration" });
     if (billedSeconds > 30) return ok({ submitted:false, error:"video_too_long" });
-    const COST = computeCost(mode, billedSeconds);
+    const COST = computeCost(motionModel, mode, billedSeconds);
 
 
     const clientRunId = (body.run_id || "").toString().trim();
@@ -89,23 +90,24 @@ exports.handler = async (event) => {
       status: "processing",
       aspect_ratio: aspectRatio,
       mode: mode,
+      motion_model: motionModel,
       duration: billedSeconds,
       video_url: videoUrl,
       charged: false,
       charge_cost: COST
     };
-    ugId = await upsertPlaceholder(uid, prompt, baseMeta, ugId);
+    ugId = await upsertPlaceholder(uid, prompt || "Kling Motion Control", baseMeta, ugId);
 
     // Build KIE payload (KIE Jobs API)
     const kiePayload = {
-      model: "kling-2.6/motion-control",
+      model: motionModel === "kling30" ? "kling-3.0/motion-control" : "kling-2.6/motion-control",
       callBackUrl,
       input: {
-        prompt,
+        prompt: prompt || "Kling Motion Control",
         mode,
         character_orientation: "image",
         video_urls: [videoUrl],
-        ...(imageUrl ? { input_urls: [imageUrl] } : {})
+        input_urls: [imageUrl]
       }
     };
 
@@ -172,9 +174,16 @@ function billedSecondsFromDuration(d){
   if (!Number.isFinite(n) || n <= 0) return null;
   return Math.min(30, Math.max(1, Math.ceil(n)));
 }
-function computeCost(mode, billedSeconds){
+function normalizeMotionModel(m){
+  m = String(m||"").trim().toLowerCase();
+  return m === "kling30" || m === "3.0" || m === "kling-3.0" ? "kling30" : "kling26";
+}
+function computeCost(motionModel, mode, billedSeconds){
   const m = normalizeMode(mode);
-  const rate = (m === "1080p") ? 1 : 0.5;
+  const model = normalizeMotionModel(motionModel);
+  const rate = model === "kling30"
+    ? (m === "1080p" ? 1.8 : 1.5)
+    : (m === "1080p" ? 1.5 : 1);
   return Number((Number(billedSeconds) * rate).toFixed(1));
 }
 
