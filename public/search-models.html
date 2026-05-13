@@ -2372,6 +2372,15 @@
     body.workspace-redesign #videoRefsUploadWrap.video-refs-grok #videoRefImagesControl{
       min-height:156px !important;
     }
+    body.workspace-redesign #videoRefsUploadWrap #videoFirstFrameControl.hidden,
+    body.workspace-redesign #videoRefsUploadWrap #videoLastFrameControl.hidden,
+    body.workspace-redesign #videoRefsUploadWrap #videoSourceControl.hidden,
+    body.workspace-redesign #videoRefsUploadWrap #videoRefImagesControl.hidden,
+    body.workspace-redesign #videoRefsUploadWrap #videoRefVideosControl.hidden,
+    body.workspace-redesign #videoRefsUploadWrap #videoRefAudioControl.hidden,
+    body.workspace-redesign #videoRefsUploadWrap #wanPromptExtendControl.hidden{
+      display:none !important;
+    }
     body.workspace-redesign #videoRefsUploadWrap #wanPromptExtendControl{
       display:none !important;
     }
@@ -4542,10 +4551,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         specificUpload: 'grokVideo',
         aspectOptions: ['16:9', '9:16', '1:1'],
         defaultAspect: '16:9',
-        resolutionOptions: ['720p', '1080p'],
+        resolutionOptions: [],
         defaultResolution: '720p',
-        durations: [6],
-        costLabel: '0.3⚡/s',
+        durations: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+        costLabel: '720p only · 0.3⚡/s',
         minCredits: 1.8
       },
       {
@@ -5799,9 +5808,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         if (kind === 'happyhorse') wrap.classList.add('video-refs-happyhorse');
         if (kind === 'grokVideo') wrap.classList.add('video-refs-grok');
       }
+      const imageInput = document.getElementById('videoRefImagesInput');
       if (title) title.textContent = kind === 'grokVideo' ? 'Grok inputs' : '';
-      if (hint) hint.textContent = kind === 'grokVideo' ? 'Optional image input, normal mode only' : '';
-      if (imageLabel) imageLabel.textContent = kind === 'grokVideo' ? 'Image input' : 'Image refs';
+      if (hint) hint.textContent = kind === 'grokVideo' ? 'Optional : '';
+      if (imageLabel) imageLabel.textContent = kind === 'grokVideo' ? 'Image input (up to 7)' : 'Image refs';
+      if (imageInput) imageInput.multiple = true;
       show('videoFirstFrameControl', kind === 'wan27' || kind === 'happyhorse');
       show('videoLastFrameControl', kind === 'wan27');
       show('videoSourceControl', kind === 'wan27' || kind === 'happyhorse');
@@ -7284,7 +7295,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             prompt,
             aspect_ratio: aspect || '16:9',
             duration: duration ? Number(duration) : 6,
-            resolution: currentResolution || '720p',
+            resolution: '720p',
             mode: 'normal',
             image_url: imageRefUrls[0] || undefined,
             image_urls: imageRefUrls,
@@ -7532,7 +7543,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           : currentModel.specificUpload === 'kling30'
           ? (syncKling30LegacyData(), await uploadImagesAndGetUrls([kling30FirstFrameFile, ...(kling30MultiShots ? [] : [kling30LastFrameFile]), ...kling30ElementFiles].filter(Boolean)))
           : ['wan27', 'happyhorse', 'grokVideo'].includes(currentModel.specificUpload)
-          ? await uploadImagesAndGetUrls([videoFirstFrameFile, videoLastFrameFile, videoSourceFile, ...videoRefImageFiles, ...videoRefVideoFiles, ...videoRefAudioFiles].filter(Boolean))
+          ? await uploadImagesAndGetUrls((currentModel.specificUpload === 'grokVideo'
+            ? videoRefImageFiles
+            : [videoFirstFrameFile, videoLastFrameFile, videoSourceFile, ...videoRefImageFiles, ...videoRefVideoFiles, ...videoRefAudioFiles]).filter(Boolean))
           : await uploadImagesAndGetUrls(uploadedFiles);
         showStatus('Submitting to ' + currentModel.name + '…');
         const uid = currentUser.id;
