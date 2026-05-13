@@ -12,90 +12,10 @@ const API_KEY = process.env.KIE_API_KEY;
 const SUPABASE_URL  = process.env.SUPABASE_URL || "";
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
-const PROF_URL      = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
 
 // Your site base for callback (same style as Runway)
 const SITE_BASE = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/,'');
 const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/video-kie-callback`;
-
-
-async function verifyAuth(headers, uid){
-  const auth = headers["authorization"] || headers["Authorization"] || "";
-  const m = String(auth).match(/^Bearer\s+(.+)$/i);
-  if (!m) return { ok:false, error:"missing_auth" };
-  const token = m[1].trim();
-  // Verify token against Supabase Auth and ensure it matches uid
-  try{
-    const url = `${SUPABASE_URL}/auth/v1/user`;
-    const r = await fetch(url, { headers: { "apikey": SERVICE_KEY, "Authorization": `Bearer ${token}` } });
-    if (!r.ok) return { ok:false, error:"invalid_auth" };
-    const u = await r.json().catch(()=>null);
-    const id = u && u.id ? String(u.id) : "";
-    if (!id || id !== uid) return { ok:false, error:"uid_mismatch" };
-    return { ok:true, tokenUserId:id };
-  }catch(e){
-    return { ok:false, error:"auth_verify_failed" };
-  }
-}
-
-function costForModel(model){
-  return (String(model||"").includes("veo3") && !String(model||"").includes("fast")) ? 20 : 7;
-}
-
-async function getOrCreateCredits(uid){
-  // Read credits; if profile missing, create server-side (safe) with default 3.0
-  const q = `?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
-  const r = await fetch(PROF_URL + q, { headers: sb() });
-  const arr = await r.json().catch(()=>[]);
-  if (Array.isArray(arr) && arr.length){
-    return Number(arr[0].credits || 0);
-  }
-  // Create missing profile row (server-side only)
-  try{
-    await fetch(PROF_URL, {
-      method:"POST",
-      headers:{ ...sb(), "Content-Type":"application/json", "Prefer":"return=minimal" },
-      body: JSON.stringify({ user_id: uid, credits: 3.0 })
-    });
-  }catch{}
-  return 3.0;
-}
-
-async function debitOnce(uid, run_id, cost){
-  // Idempotency key: (uid + run_id) tracked in user_generations.meta.charged
-  if (!UG_URL || !SERVICE_KEY) return { ok:false, error:"missing_supabase" };
-
-  // Find generation row
-  const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id,meta`;
-  const chk = await fetch(UG_URL + q, { headers: sb() });
-  const arr = await chk.json().catch(()=>[]);
-  const row = (Array.isArray(arr) && arr.length) ? arr[0] : null;
-  const already = row && row.meta && (row.meta.charged === true || row.meta.charged === "true");
-  if (already) return { ok:true, charged:false, already:true };
-
-  // Atomically debit credits: fetch current credits, ensure sufficient, PATCH subtract
-  const cur = await getOrCreateCredits(uid);
-  if (cur < cost) return { ok:false, error:"insufficient_credits", credits:cur, cost };
-
-  const next = Math.round((cur - cost) * 10) / 10;
-  const pr = await fetch(`${PROF_URL}?user_id=eq.${encodeURIComponent(uid)}`, {
-    method:"PATCH",
-    headers:{ ...sb(), "Content-Type":"application/json", "Prefer":"return=minimal" },
-    body: JSON.stringify({ credits: next })
-  });
-  if (!pr.ok) return { ok:false, error:"debit_failed" };
-
-  // Mark charged in user_generations
-  if (row && row.id){
-    const metaNext = Object.assign({}, row.meta || {}, { charged:true, charged_cost: cost, charged_at: new Date().toISOString() });
-    await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
-      method:"PATCH",
-      headers:{ ...sb(), "Content-Type":"application/json", "Prefer":"return=minimal" },
-      body: JSON.stringify({ meta: metaNext })
-    });
-  }
-  return { ok:true, charged:true, already:false };
-}
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return ok({});
@@ -109,10 +29,6 @@ exports.handler = async (event) => {
     const uid = (body.uid || body.user_id || "").toString().trim();
     if (!uid) return ok({ submitted:false, error:"missing_user_id" });
 
-    // Auth: require a valid Supabase session token matching uid
-    const authChk = await verifyAuth(headers, uid);
-    if (!authChk.ok) return ok({ submitted:false, error: authChk.error });
-
     const promptRaw = (body.prompt || "").toString();
     const prompt = promptRaw.trim();
     if (!prompt && !body.fileUrl && !body.imageUrl && !body.imageUrls) {
@@ -121,20 +37,16 @@ exports.handler = async (event) => {
 
     const model = normalizeModel(body.model || "veo3_fast");
     const aspectRatio = normalizeAspect(body.aspectRatio || "16:9");
-    const cost = costForModel(model);
+    const quality = normalizeQuality(body.quality || body.resolution || "1080p");
 
     // Accept a single URL, convert to array as imageUrls
-    const imageUrl      = body.imageUrl || body.fileUrl || "";
+    const imageUrl = normalizeUrl(body.imageUrl || body.fileUrl || "");
     const imageUrls = imageUrl ? [ imageUrl ] : [];
 
     const clientRunId = (body.run_id || "").toString().trim();
     const run_id = clientRunId || `${uid}-${Date.now()}`;
 
     const callBackUrl = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
-
-    // Pre-check credits (no deduction yet; deduction happens after KIE accepts)
-    const curCredits = await getOrCreateCredits(uid);
-    if (curCredits < cost) return ok({ submitted:false, error:"insufficient_credits", credits: curCredits, cost });
 
     // Seed placeholder row in user_generations
     if (UG_URL && SERVICE_KEY) {
@@ -150,7 +62,7 @@ exports.handler = async (event) => {
           kind: "video",
           prompt,
           result_url: null,
-          meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality: "1080p", duration: 5, model, cost, charged: false }
+          meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality, duration: 8, model }
         };
 
         if (idToPatch) {
@@ -178,39 +90,28 @@ const kiePayload = {
   prompt,
   model,
   aspectRatio,
+  quality,
   callBackUrl
 };
 // Veo 3.1 generationType handling
-// Your UI sends firstFrameUrl and/or lastFrameUrl (from KIE signed uploads).
-// IMPORTANT:
-// - If ONLY firstFrameUrl is provided, this must be treated as image-to-video (not text-to-video).
-// - If BOTH firstFrameUrl + lastFrameUrl are provided, use FIRST_AND_LAST_FRAMES_2_VIDEO.
-const firstFrameUrl = (body.firstFrameUrl || "").toString().trim();
-const lastFrameUrl  = (body.lastFrameUrl  || "").toString().trim();
-
-if (firstFrameUrl && lastFrameUrl) {
-  // First + Last frames
+const firstFrameUrl = normalizeUrl(body.firstFrameUrl || "");
+const lastFrameUrl  = normalizeUrl(body.lastFrameUrl  || "");
+if (firstFrameUrl && lastFrameUrl){
   kiePayload.generationType = "FIRST_AND_LAST_FRAMES_2_VIDEO";
   kiePayload.firstFrameUrl = firstFrameUrl;
   kiePayload.lastFrameUrl  = lastFrameUrl;
-  // Keep imageUrls aligned with frames for KIE visibility/debugging.
   kiePayload.imageUrls = [firstFrameUrl, lastFrameUrl];
-} else if (firstFrameUrl && !lastFrameUrl) {
-  // First frame only
-  // KIE expects this to behave as image-to-video.
-  // We send generationType + firstFrameUrl and ALSO imageUrls for robustness.
+} else if (firstFrameUrl) {
   kiePayload.generationType = "FIRST_FRAME_2_VIDEO";
   kiePayload.firstFrameUrl = firstFrameUrl;
   kiePayload.imageUrls = [firstFrameUrl];
-} else if (!firstFrameUrl && lastFrameUrl) {
-  // Edge case: last frame provided without first.
-  // Treat it as first-frame input to avoid silently falling back to TEXT_2_VIDEO.
-  kiePayload.generationType = "FIRST_FRAME_2_VIDEO";
-  kiePayload.firstFrameUrl = lastFrameUrl;
-  kiePayload.imageUrls = [lastFrameUrl];
 } else {
-  // Text only
   kiePayload.generationType = "TEXT_2_VIDEO";
+}
+
+const referenceImageUrls = Array.isArray(body.referenceImageUrls) ? body.referenceImageUrls.map(normalizeUrl).filter(Boolean) : [];
+if (referenceImageUrls.length) {
+  kiePayload.referenceImageUrls = referenceImageUrls.slice(0, 3);
 }
 
 // Optional spec keys
@@ -253,36 +154,13 @@ if (imageUrls.length) {
           await fetch(`${UG_URL}?id=eq.${encodeURIComponent(arr[0].id)}`, {
             method: "PATCH",
             headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
-            body: JSON.stringify({ meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality: "1080p", duration: 5, task_id: taskId, model, cost } })
+            body: JSON.stringify({ meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality, duration: 8, task_id: taskId, model } })
           });
         }
       }
     } catch {}
 
-        // Deduct credits server-side AFTER KIE accepted (Submitted)
-    const debit = await debitOnce(uid, run_id, cost);
-    if (!debit.ok) {
-      // Do not expose task if debit failed; mark status in user_generations if possible
-      try {
-        if (UG_URL && SERVICE_KEY) {
-          const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id,meta`;
-          const chk = await fetch(UG_URL + q, { headers: sb() });
-          const arr = await chk.json().catch(()=>[]);
-          if (Array.isArray(arr) && arr.length) {
-            const id = arr[0].id;
-            const meta = Object.assign({}, arr[0].meta || {}, { status: "failed", error: debit.error });
-            await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}`, {
-              method: "PATCH",
-              headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
-              body: JSON.stringify({ meta })
-            });
-          }
-        }
-      } catch {}
-      return ok({ submitted:false, error: debit.error, cost });
-    }
-
-    return ok({ submitted: true, run_id, taskId, status: resp.status, data, data, charged: debit.charged, already_charged: !!debit.already });
+    return ok({ submitted: true, run_id, taskId, status: resp.status, data });
   } catch (e) {
     return ok({ submitted:false, error:String(e) });
   }
@@ -302,6 +180,7 @@ function normalizeModel(m){
   return "veo3_fast";
 }
 function normalizeAspect(a){ a=String(a||"").trim(); return /^(16:9|9:16)$/.test(a)?a:"16:9"; }
+function normalizeQuality(q){ q=String(q||"").trim().toLowerCase(); return q === "4k" || q === "4K" ? "4K" : "1080p"; }
 function normalizeUrl(u){ try{ const url=new URL(String(u||"")); return url.href; } catch { return ""; } }
 function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` }; }
 
