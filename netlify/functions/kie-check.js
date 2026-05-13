@@ -174,6 +174,7 @@ async function fetchKieState(taskId, excludeUrls = []) {
   if (!KIE_KEY) return { pending: true, error: "missing_kie_key" };
 
   const endpoints = [
+    `/api/v1/veo/record-info?taskId=${encodeURIComponent(taskId)}`,
     `/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
     `/api/v1/jobs/result?taskId=${encodeURIComponent(taskId)}`,
     `/api/v1/jobs/getTask?taskId=${encodeURIComponent(taskId)}`,
@@ -312,6 +313,9 @@ async function patchGeneration(id, payload) {
 }
 
 function normalizeStatus(value) {
+  const flag = value?.data?.successFlag ?? value?.successFlag ?? value?.result?.successFlag;
+  if (flag === 1 || flag === "1") return "done";
+  if (flag === 2 || flag === "2" || flag === 3 || flag === "3") return "failed";
   const text = [];
   collectStatusText(value, text);
   const joined = text.join(" ").toLowerCase();
@@ -446,6 +450,10 @@ function collectResultUrls(value, excludeUrls = []) {
     "resultUrl",
     "result_urls",
     "resultUrls",
+    "fullResultUrls",
+    "full_result_urls",
+    "resultImageUrl",
+    "result_image_url",
     "result_json",
     "resultJson",
     "response_json",
@@ -480,6 +488,7 @@ function collectResultUrls(value, excludeUrls = []) {
     "result",
     "results",
     "response",
+    "info",
     "task_result",
     "taskResult",
     "output",
