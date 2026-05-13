@@ -3075,19 +3075,22 @@ function __mjSaveCached(runId, urls){
 function __mjTryExtractAllImageUrls(obj){
   const out=[]; const seen=new Set();
   const push=(u)=>{ if(typeof u!=='string') return; if(!/^https?:\/\//i.test(u)) return;
+    const low = u.toLowerCase();
+    if(low.includes('/storage/v1/object/public/') || low.includes('.supabase.co/storage/v1/object/') || low.includes('.supabase.in/storage/v1/object/')) return;
     if(seen.has(u)) return; seen.add(u); out.push(u); };
   const walk=(x,depth=0)=>{
     if(!x || depth>7) return;
     if(typeof x==='string'){ push(x); return; }
     if(Array.isArray(x)){ for(const it of x) walk(it, depth+1); return; }
     if(typeof x==='object'){
-      for(const k of ['image_urls','images','result_urls','results','output','outputs','data','urls','url']){
+      for(const k of ['images','result_urls','results','output','outputs','data']){
         if(Object.prototype.hasOwnProperty.call(x,k)) walk(x[k], depth+1);
       }
       let n=0;
       for(const k in x){
         if(!Object.prototype.hasOwnProperty.call(x,k)) continue;
         if(n++>60) break;
+        if(/input|inputs|reference|references|source|first|last|tail|start|end|frame|frames|image_urls|video_urls|audio_urls|video_url|image_url|audio_url|payload|params|parameters|request/i.test(k)) continue;
         walk(x[k], depth+1);
       }
     }
@@ -3855,15 +3858,21 @@ function createResultCard(data) {
       if (cached && cached.length) return cached.slice(0, 4);
     }
 
-    // --- Extract from meta (deep walk)
     let urls = [];
+
+    // For KIE video/image jobs, the DB row result_url is the real finished output.
+    // Meta fields can contain uploaded/reference files and must not render as results.
+    if (!isMJ && row && typeof row.result_url === 'string' && row.result_url.trim()) {
+      return dedupe([row.result_url]).slice(0, 4);
+    }
+
+    // --- Extract from meta (deep walk)
     try {
       if (meta) {
         // Prefer explicit arrays in common fields
         const candidates = [];
         const pushMany = (arr) => { if (Array.isArray(arr)) arr.forEach((u) => candidates.push(u)); };
         pushMany(meta.images);
-        pushMany(meta.image_urls);
         pushMany(meta.result_urls);
         // Some providers store arrays nested
         if (meta.result && meta.result.images) pushMany(meta.result.images);
