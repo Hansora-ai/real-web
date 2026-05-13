@@ -8,8 +8,8 @@ const API_KEY    = process.env.KIE_API_KEY || "";
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-const SITE_BASE   = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/, "");
-const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/kie-callback`;
+const SITE_BASE   = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/, "");
+const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/kie-check`;
 
 const VERSION_TAG  = "seedream_5_lite_fn_v1";
 
@@ -58,7 +58,7 @@ async function seedUserGeneration(uid, run_id, prompt, metaExtra){
   try{
     const url = `${SUPABASE_URL}/rest/v1/user_generations`;
     const meta = Object.assign(
-      { source:"seedream-5-lite", run_id, model:"seedream-5-lite", status:"pending", charged:"false" },
+      { source:"seedream-5-lite", run_id, model:"seedream-5-lite", status:"pending", charged:"false", refund_amount: metaExtra?.refund_amount },
       (metaExtra||{})
     );
     const r = await fetch(url, {
@@ -196,7 +196,7 @@ async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
   if (!before.ok) return { ok:false, error:"credits_fetch_failed" };
   if (before.credits < cost){
     // mark insufficient
-    const failMeta = { ...(claimedMeta||{}), charged:"false", charge_error:"insufficient_credits", charge_cost: cost, credits_before: before.credits };
+    const failMeta = { ...(claimedMeta||{}), charged:"false", charge_error:"insufficient_credits", charge_cost: cost, refund_amount: cost, credits_before: before.credits };
     await patchUserGenerationMetaById(claimId, failMeta);
     return { ok:false, error:"insufficient_credits", credits: before.credits };
   }
@@ -204,7 +204,7 @@ async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
   const afterCredits = Number((before.credits - cost).toFixed(4));
   const wrote = await setCredits(uid, afterCredits);
   if (!wrote.ok){
-    const failMeta = { ...(claimedMeta||{}), charged:"false", charge_error:"debit_failed", charge_cost: cost, credits_before: before.credits };
+    const failMeta = { ...(claimedMeta||{}), charged:"false", charge_error:"debit_failed", charge_cost: cost, refund_amount: cost, credits_before: before.credits };
     await patchUserGenerationMetaById(claimId, failMeta);
     return { ok:false, error:"debit_failed" };
   }
@@ -214,6 +214,7 @@ async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
     ...(claimedMeta||{}),
     charged: "true",
     charged_cost: cost,
+    refund_amount: cost,
     charged_at: (new Date()).toISOString(),
     credits_before: before.credits,
     credits_after: afterCredits
@@ -290,14 +291,15 @@ exports.handler = async (event) => {
       return json(create.status || 500, { ok:false, submitted:false, error:"create_failed", status:create.status, response: js, version: VERSION_TAG });
     }
 
+    // Charge exactly once per run_id (cost = 0.5)
+    const cost = 0.5;
+
     // Seed placeholder row
-    const baseMeta = { run_id, task_id: taskId, size, status:"processing" };
+    const baseMeta = { run_id, task_id: taskId, size, status:"processing", refund_amount: cost };
     const seeded = await seedUserGeneration(uid, run_id, prompt, baseMeta);
     const row_id = seeded?.row_id || null;
 
-    // Charge exactly once per run_id (cost = 0.5)
-    const cost = 0.5;
-    const charged = await chargeOnceForRun(uid, run_id, cost, row_id, { ...baseMeta, source:"seedream-5-lite", model:"seedream-5-lite" });
+    const charged = await chargeOnceForRun(uid, run_id, cost, row_id, { ...baseMeta, source:"seedream-5-lite", model:"seedream-5-lite", refund_amount: cost });
 
     if (!charged.ok){
       if (charged.error === "insufficient_credits"){
