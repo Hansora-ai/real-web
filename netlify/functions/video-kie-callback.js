@@ -1,134 +1,495 @@
 // netlify/functions/video-kie-callback.js
-// Robust KIE webhook handler for Runway results.
-// - Works whether the user stays on the page or leaves.
-// - Extracts mp4 URL from payload, verifies host, and patches Supabase row.
-// - If the mp4 isn't present yet, returns 200 (so KIE retries later).
-// - Optional `?debug=1` to inspect behavior (no secrets are leaked).
+// Robust KIE video webhook + polling checker.
+// - POST: receives KIE callbacks and saves success/failure.
+// - GET: lets the page re-check a task if the user left and came back.
+// - Refunds once, using meta.refunded/refund_claim as the guard.
 
-const VERSION = "video-kie-callback-2025-09-28+robust";
+const VERSION = "video-kie-callback-2026-05-13+failure-check";
 
-const SUPABASE_URL  = process.env.SUPABASE_URL || "";
-const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
-const TABLE_URL     = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/nb_results` : "";
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const KIE_API_KEY = process.env.KIE_API_KEY || process.env.KIEAI_API_KEY || "";
+const KIE_BASE = (process.env.KIE_BASE_URL || "https://api.kie.ai").replace(/\/+$/, "");
 
-// Accept these result hosts by default. Expand if your provider changes.
-const ALLOWED = new Set(["tempfile.aiquickdraw.com","tempfile.redpandaai.co"]);
+const UG_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
+const PROFILES_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
+const TABLE_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/nb_results` : "";
+
+const ALLOWED = new Set([
+  "tempfile.aiquickdraw.com",
+  "tempfile.redpandaai.co",
+  "file.aiquickdraw.com"
+]);
 
 exports.handler = async (event) => {
-  // KIE will POST JSON to us
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors(), body: "" };
-  if (event.httpMethod !== "POST") return json(405, { ok:false, error:"Use POST", version: VERSION });
 
   const qs = event.queryStringParameters || {};
   const debug = qs.debug === "1" || qs.debug === "true";
 
-  let uid  = (qs.uid || "").toString().trim();
-  let run_id = (qs.run_id || "").toString().trim();
-  let taskId = "";
-
   try {
-    const body = safeJson(event.body);
-    // provider payloads vary; gather all URLs & find mp4
-    const urls = collectUrls(body);
-    let video_url = "";
-
-    // Pass 1: strict allowlist hosts
-    for (const u of urls) {
-      if (!isAllowed(u)) continue;
-      if (/\.mp4(\?|#|$)/i.test(u)) { video_url = u; break; }
-    }
-
-    // Pass 2: fallback for Aleph/other providers — accept HTTPS direct mp4 even if host changes
-    if (!video_url) {
-      for (const u of urls) {
-        if (!isHttpsUrl(u)) continue;
-        if (/\.mp4(\?|#|$)/i.test(u)) { video_url = u; break; }
-      }
-    }
-
-    // Try to read taskId from common places
-    taskId = body?.data?.taskId || body?.taskId || body?.result?.taskId || body?.id || "";
-
-    // If URL not ready yet, respond 200 so KIE can retry later
-    if (!video_url) {
-      return json(200, { ok:false, status:"pending", version: VERSION, taskId: taskId || null });
-    }
-
-    // If uid/run_id missing from query, try to get from payload (meta passthroughs)
-    if (!uid) uid = (body?.data?.uid || body?.uid || "").toString().trim();
-    if (!run_id) run_id = (body?.data?.run_id || body?.run_id || "").toString().trim();
-
-    // Persist to Supabase
-    let idToPatch = null, patched = false, patchError = null;
-    try {
-      if (SUPABASE_URL && SERVICE_KEY) {
-        const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id`;
-        const chk = await fetch(UG_URL + q, { headers: sb() });
-        const arr = await chk.json().catch(()=>[]);
-        idToPatch = Array.isArray(arr) && arr.length ? arr[0].id : null;
-
-        const payload = { result_url: video_url, meta: { run_id, task_id: taskId, status: "done" } };
-        if (idToPatch) {
-          const pr = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(idToPatch)}`, {
-            method: "PATCH",
-            headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
-            body: JSON.stringify(payload)
-          });
-          patched = pr.ok;
-          if (!patched) patchError = `PATCH ${pr.status}`;
-        } else {
-          const ir = await fetch(UG_URL, {
-            method: "POST",
-            headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
-            body: JSON.stringify({ user_id: uid || "00000000-0000-0000-0000-000000000000", provider:"runway", kind:"video", prompt:null, result_url: video_url, meta: { run_id, task_id: taskId, status: "done" } })
-          });
-          patched = ir.ok;
-          if (!patched) patchError = `POST ${ir.status}`;
-        }
-      } else {
-        patchError = "Missing SUPABASE_URL or SERVICE_KEY";
-      }
-    } catch (e) {
-      patchError = (e && e.message) ? e.message : String(e);
-    }
-
-    // Mirror to nb_results (best-effort)
-    try {
-      if (TABLE_URL) {
-        await fetch(TABLE_URL, {
-          method: "POST",
-          headers: { ...sb(), "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
-          body: JSON.stringify([{ user_id: uid || "00000000-0000-0000-0000-000000000000", run_id, task_id: taskId, image_url: video_url }])
-        });
-      }
-    } catch {}
-
-    const out = { ok:true, status:"saved", version: VERSION };
-    if (debug) out.debug = { idToPatch, patched, patchError, urlHost: host(video_url) };
-    return json(200, out);
-
-  } catch (e) {
-    return json(200, { ok:false, error: String(e && e.message ? e.message : e), version: VERSION });
+    if (event.httpMethod === "GET") return await handleGet(qs, debug);
+    if (event.httpMethod === "POST") return await handlePost(event, qs, debug);
+    return json(405, { ok: false, error: "Use GET or POST", version: VERSION });
+  } catch (error) {
+    return json(200, { ok: false, status: "error", error: messageOf(error), version: VERSION });
   }
 };
 
-// ---- helpers ----
-function cors(){
+async function handlePost(event, qs, debug) {
+  const body = safeJson(event.body);
+  const ids = extractIds(body, qs);
+  const status = normalizeStatus(body);
+  const row = await findGeneration(ids);
+
+  if (status === "failed") {
+    const reason = failureReason(body);
+    const result = row ? await markFailedAndRefundOnce({ row, ids, reason }) : { refunded: false, reason: "row not found" };
+    return json(200, {
+      ok: false,
+      failed: true,
+      status: "failed",
+      error: reason,
+      refunded: !!result.refunded,
+      version: VERSION,
+      ...(debug ? { debug: { ids, result } } : {})
+    });
+  }
+
+  const videoUrl = pickVideoUrl(collectUrls(body));
+  if (!videoUrl) {
+    return json(200, {
+      ok: false,
+      status: "pending",
+      taskId: ids.taskId || null,
+      version: VERSION,
+      ...(debug ? { debug: { ids, normalizedStatus: status } } : {})
+    });
+  }
+
+  const saved = await markDone({ row, ids, videoUrl, provider: "kie-video" });
+  await mirrorNbResult({ ids, url: videoUrl });
+
+  return json(200, {
+    ok: true,
+    status: "done",
+    video_url: videoUrl,
+    result_url: videoUrl,
+    version: VERSION,
+    ...(debug ? { debug: { ids, saved } } : {})
+  });
+}
+
+async function handleGet(qs, debug) {
+  let ids = {
+    uid: String(qs.uid || "").trim(),
+    run_id: String(qs.run_id || "").trim(),
+    taskId: String(qs.taskId || qs.task_id || "").trim()
+  };
+
+  let row = await findGeneration(ids);
+  if (row) {
+    const meta = row.meta || {};
+    ids = {
+      uid: ids.uid || row.user_id || "",
+      run_id: ids.run_id || meta.run_id || "",
+      taskId: ids.taskId || meta.task_id || meta.taskId || ""
+    };
+
+    if (row.result_url) {
+      return json(200, {
+        ok: true,
+        status: "done",
+        video_url: row.result_url,
+        result_url: row.result_url,
+        version: VERSION
+      });
+    }
+
+    const rowStatus = String(meta.status || row.status || "").toLowerCase();
+    if (rowStatus.includes("fail") || meta.failed) {
+      return json(200, {
+        ok: false,
+        failed: true,
+        status: "failed",
+        error: meta.error || "Generation failed.",
+        refunded: !!meta.refunded,
+        version: VERSION
+      });
+    }
+  }
+
+  if (!ids.taskId) {
+    return json(200, { ok: false, status: "pending", error: "Missing taskId", version: VERSION });
+  }
+
+  const state = await fetchKieState(ids.taskId);
+  if (state.failed) {
+    row = row || await findGeneration(ids);
+    const result = row ? await markFailedAndRefundOnce({ row, ids, reason: state.error || "Generation failed." }) : null;
+    return json(200, {
+      ok: false,
+      failed: true,
+      status: "failed",
+      error: state.error || "Generation failed.",
+      refunded: !!(result && result.refunded),
+      version: VERSION,
+      ...(debug ? { debug: { ids, state, result } } : {})
+    });
+  }
+
+  if (state.done && state.url) {
+    row = row || await findGeneration(ids);
+    const saved = await markDone({ row, ids, videoUrl: state.url, provider: "kie-video" });
+    await mirrorNbResult({ ids, url: state.url });
+    return json(200, {
+      ok: true,
+      status: "done",
+      video_url: state.url,
+      result_url: state.url,
+      version: VERSION,
+      ...(debug ? { debug: { ids, state, saved } } : {})
+    });
+  }
+
+  return json(200, {
+    ok: false,
+    status: "pending",
+    taskId: ids.taskId,
+    version: VERSION,
+    ...(debug ? { debug: { ids, state } } : {})
+  });
+}
+
+async function fetchKieState(taskId) {
+  if (!KIE_API_KEY) return { pending: true, error: "Missing KIE_API_KEY" };
+
+  const endpoints = [
+    `/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+    `/api/v1/jobs/result?taskId=${encodeURIComponent(taskId)}`,
+    `/api/v1/jobs/getTask?taskId=${encodeURIComponent(taskId)}`,
+    `/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+    `/api/v1/mj/result?taskId=${encodeURIComponent(taskId)}`,
+    `/api/v1/mj/getTask?taskId=${encodeURIComponent(taskId)}`
+  ];
+
+  let last = null;
+  for (const path of endpoints) {
+    try {
+      const res = await fetch(KIE_BASE + path, {
+        headers: {
+          "Accept": "application/json",
+          "Authorization": `Bearer ${KIE_API_KEY}`
+        }
+      });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      last = { http: res.status, data };
+      if (!res.ok && res.status !== 404) continue;
+
+      const status = normalizeStatus(data);
+      if (status === "failed") return { failed: true, error: failureReason(data), rawStatus: status };
+
+      const urls = collectUrls(data);
+      const videoUrl = pickVideoUrl(urls);
+      if (status === "done" && videoUrl) return { done: true, url: videoUrl, rawStatus: status };
+      if (videoUrl) return { done: true, url: videoUrl, rawStatus: status || "done" };
+    } catch (error) {
+      last = { error: messageOf(error) };
+    }
+  }
+
+  return { pending: true, last };
+}
+
+async function findGeneration(ids) {
+  if (!UG_URL || !SERVICE_KEY) return null;
+
+  const select = "select=id,user_id,provider,kind,prompt,result_url,meta";
+  const queries = [];
+
+  if (ids.uid && ids.run_id) {
+    queries.push(`?user_id=eq.${encodeURIComponent(ids.uid)}&meta->>run_id=eq.${encodeURIComponent(ids.run_id)}&${select}&limit=1`);
+  }
+  if (ids.taskId) {
+    queries.push(`?meta->>task_id=eq.${encodeURIComponent(ids.taskId)}&${select}&limit=1`);
+    queries.push(`?meta->>taskId=eq.${encodeURIComponent(ids.taskId)}&${select}&limit=1`);
+  }
+
+  for (const q of queries) {
+    const res = await fetch(UG_URL + q, { headers: sb() });
+    const arr = await res.json().catch(() => []);
+    if (Array.isArray(arr) && arr[0]) return arr[0];
+  }
+  return null;
+}
+
+async function markDone({ row, ids, videoUrl, provider }) {
+  if (!UG_URL || !SERVICE_KEY) return { ok: false, error: "Missing Supabase env" };
+
+  const meta = {
+    ...(row && row.meta && typeof row.meta === "object" ? row.meta : {}),
+    run_id: ids.run_id || (row && row.meta && row.meta.run_id) || "",
+    task_id: ids.taskId || (row && row.meta && (row.meta.task_id || row.meta.taskId)) || "",
+    status: "done",
+    completed_at: new Date().toISOString()
+  };
+
+  const payload = { result_url: videoUrl, meta };
+  if (row && row.id) {
+    const res = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
+      method: "PATCH",
+      headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
+      body: JSON.stringify(payload)
+    });
+    return { ok: res.ok, status: res.status, mode: "patch" };
+  }
+
+  const res = await fetch(UG_URL, {
+    method: "POST",
+    headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
+    body: JSON.stringify({
+      user_id: ids.uid || "00000000-0000-0000-0000-000000000000",
+      provider,
+      kind: "video",
+      prompt: null,
+      result_url: videoUrl,
+      meta
+    })
+  });
+  return { ok: res.ok, status: res.status, mode: "insert" };
+}
+
+async function markFailedAndRefundOnce({ row, ids, reason }) {
+  if (!row || !row.id || !UG_URL || !SERVICE_KEY) return { refunded: false, reason: "missing row/env" };
+
+  const existingMeta = row.meta && typeof row.meta === "object" ? row.meta : {};
+  const cost = Number(existingMeta.charged_cost ?? existingMeta.charge_cost ?? existingMeta.cost ?? existingMeta.debit_cost ?? 0) || 0;
+  const charged = existingMeta.charged === true || existingMeta.charged === "true" || cost > 0;
+  const failedMeta = {
+    ...existingMeta,
+    run_id: ids.run_id || existingMeta.run_id || "",
+    task_id: ids.taskId || existingMeta.task_id || existingMeta.taskId || "",
+    status: "failed",
+    failed: true,
+    error: reason || "Generation failed.",
+    failed_at: new Date().toISOString()
+  };
+
+  if (existingMeta.refunded || !charged || cost <= 0) {
+    await patchGeneration(row.id, { meta: failedMeta });
+    return { refunded: false, already: !!existingMeta.refunded, cost };
+  }
+
+  const claim = `refund-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const claimMeta = { ...failedMeta, refund_claim: claim };
+  const claimRes = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}&meta->>refunded=is.null&meta->>refund_claim=is.null`, {
+    method: "PATCH",
+    headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=representation" },
+    body: JSON.stringify({ meta: claimMeta })
+  });
+  const claimedRows = await claimRes.json().catch(() => []);
+  const claimed = claimRes.ok && Array.isArray(claimedRows) && claimedRows.length > 0;
+
+  if (!claimed) {
+    await patchGeneration(row.id, { meta: failedMeta });
+    return { refunded: false, already: true, cost };
+  }
+
+  let profileCredited = false;
+  try {
+    const pRes = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(row.user_id)}&select=user_id,credits&limit=1`, { headers: sb() });
+    const profiles = await pRes.json().catch(() => []);
+    const profile = Array.isArray(profiles) ? profiles[0] : null;
+    if (profile) {
+      const currentCredits = Number(profile.credits || 0);
+      const nextCredits = Math.round((currentCredits + cost) * 100) / 100;
+      const uRes = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(row.user_id)}`, {
+        method: "PATCH",
+        headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ credits: nextCredits })
+      });
+      profileCredited = uRes.ok;
+    }
+  } catch {}
+
+  const refundedMeta = {
+    ...failedMeta,
+    refunded: profileCredited,
+    refunded_at: profileCredited ? new Date().toISOString() : undefined,
+    refund_amount: profileCredited ? cost : undefined,
+    refund_claim: claim
+  };
+  await patchGeneration(row.id, { meta: refundedMeta });
+  return { refunded: profileCredited, cost };
+}
+
+async function patchGeneration(id, payload) {
+  const res = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
+    body: JSON.stringify(payload)
+  });
+  return res.ok;
+}
+
+async function mirrorNbResult({ ids, url }) {
+  try {
+    if (!TABLE_URL || !url) return;
+    await fetch(TABLE_URL, {
+      method: "POST",
+      headers: { ...sb(), "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify([{
+        user_id: ids.uid || "00000000-0000-0000-0000-000000000000",
+        run_id: ids.run_id || "",
+        task_id: ids.taskId || "",
+        image_url: url
+      }])
+    });
+  } catch {}
+}
+
+function extractIds(body, qs) {
+  const meta = body?.meta || body?.metadata || body?.data?.meta || body?.data?.metadata || body?.result?.meta || {};
+  return {
+    uid: String(qs.uid || body?.uid || body?.data?.uid || meta.uid || "").trim(),
+    run_id: String(qs.run_id || body?.run_id || body?.data?.run_id || meta.run_id || "").trim(),
+    taskId: String(qs.taskId || qs.task_id || body?.taskId || body?.task_id || body?.data?.taskId || body?.data?.task_id || body?.result?.taskId || body?.id || "").trim()
+  };
+}
+
+function normalizeStatus(x) {
+  const values = [];
+  collectStatusValues(x, values);
+  const joined = values.join(" ").toLowerCase();
+  if (/(fail|failed|failure|error|cancel|canceled|cancelled|rejected|sensitive|flagged|blocked|moderation)/.test(joined)) return "failed";
+  if (/(success|succeeded|completed|complete|finish|finished|done)/.test(joined)) return "done";
+  return "pending";
+}
+
+function collectStatusValues(x, out) {
+  if (!x || out.length > 32) return;
+  if (typeof x === "string") {
+    if (/fail|error|success|complete|finish|done|pending|process|sensitive|flagged|rejected|blocked|cancel/i.test(x)) out.push(x);
+    return;
+  }
+  if (Array.isArray(x)) {
+    x.forEach((v) => collectStatusValues(v, out));
+    return;
+  }
+  if (typeof x === "object") {
+    for (const [key, value] of Object.entries(x)) {
+      if (/status|state|error|message|msg|reason|code/i.test(key)) collectStatusValues(value, out);
+    }
+  }
+}
+
+function failureReason(x) {
+  const messages = [];
+  collectFailureMessages(x, messages);
+  const preferred = messages.find((msg) => msg && !/^(fail|failed|failure|error|cancel|cancelled|rejected)$/i.test(msg.trim()));
+  return preferred || messages.find(Boolean) || "Generation failed.";
+}
+
+function collectFailureMessages(x, out) {
+  if (!x || out.length > 24) return;
+  if (typeof x === "string") {
+    if (/fail|error|sensitive|flagged|rejected|blocked|cancel/i.test(x)) out.push(x.slice(0, 500));
+    return;
+  }
+  if (Array.isArray(x)) {
+    x.forEach((v) => collectFailureMessages(v, out));
+    return;
+  }
+  if (typeof x === "object") {
+    const entries = Object.entries(x);
+    for (const [key, value] of entries) {
+      if (/error|message|msg|reason/i.test(key)) collectFailureMessages(value, out);
+    }
+    for (const [key, value] of entries) {
+      if (/code|status|state/i.test(key)) collectFailureMessages(value, out);
+    }
+  }
+}
+
+function pickVideoUrl(urls) {
+  for (const url of urls) {
+    if (isAllowed(url) && /\.mp4(\?|#|$)/i.test(url)) return cleanUrl(url);
+  }
+  for (const url of urls) {
+    if (isHttpsUrl(url) && /\.mp4(\?|#|$)/i.test(url)) return cleanUrl(url);
+  }
+  return "";
+}
+
+function cors() {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization"
   };
 }
-function json(code, obj){
-  return { statusCode: code, headers: { ...cors(), "Content-Type": "application/json" }, body: JSON.stringify(obj) };
+
+function json(code, obj) {
+  return {
+    statusCode: code,
+    headers: { ...cors(), "Content-Type": "application/json" },
+    body: JSON.stringify(obj)
+  };
 }
-function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` }; }
-function safeJson(s){ try{ return JSON.parse(s||"{}"); } catch { return {}; } }
-function isHttpsUrl(u){ return typeof u === "string" && /^https:\/\//i.test(u); }
-function isUrl(u){ return typeof u === "string" && /^https?:\/\//i.test(u); }
-function host(u){ try { return new URL(u).hostname; } catch { return ""; } }
-function isAllowed(u){ if (!isUrl(u)) return false; const h = host(u); return ALLOWED.has(h); }
-function collect(x, out){ if (!x) return; if (typeof x === "string"){ const m=x.match(/https?:\/\/[^\"\'\s]+/ig); if (m) for (const u of m) out.push(u); return; } if (Array.isArray(x)){ for (const v of x) collect(v,out); return; } if (typeof x === "object"){ for (const v of Object.values(x)) collect(v,out); return; } }
-function collectUrls(x){ const a=[]; collect(x,a); const seen=new Set(); const out=[]; for (const u of a){ if(!seen.has(u)){ seen.add(u); out.push(u); } } return out; }
+
+function sb() {
+  return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` };
+}
+
+function safeJson(s) {
+  try { return JSON.parse(s || "{}"); } catch { return {}; }
+}
+
+function isHttpsUrl(u) {
+  return typeof u === "string" && /^https:\/\//i.test(u);
+}
+
+function isUrl(u) {
+  return typeof u === "string" && /^https?:\/\//i.test(u);
+}
+
+function host(u) {
+  try { return new URL(u).hostname; } catch { return ""; }
+}
+
+function isAllowed(u) {
+  if (!isUrl(u)) return false;
+  return ALLOWED.has(host(u));
+}
+
+function cleanUrl(u) {
+  return String(u || "").replace(/[)\],.]+$/g, "");
+}
+
+function collect(x, out) {
+  if (!x) return;
+  if (typeof x === "string") {
+    const matches = x.match(/https?:\/\/[^"'\s\])]+/ig);
+    if (matches) matches.forEach((u) => out.push(cleanUrl(u)));
+    return;
+  }
+  if (Array.isArray(x)) {
+    x.forEach((v) => collect(v, out));
+    return;
+  }
+  if (typeof x === "object") {
+    Object.values(x).forEach((v) => collect(v, out));
+  }
+}
+
+function collectUrls(x) {
+  const urls = [];
+  collect(x, urls);
+  return Array.from(new Set(urls));
+}
+
+function messageOf(error) {
+  return error && error.message ? error.message : String(error);
+}
