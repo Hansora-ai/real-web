@@ -7,6 +7,8 @@
 //
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, KIE_API_KEY, (optional) KIE_BASE_URL
 
+const { refundGenerationOnce } = require("./_refunds");
+
 const SUPABASE_URL  = process.env.SUPABASE_URL;
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const TABLE_URL     = `${SUPABASE_URL}/rest/v1/nb_results`;
@@ -265,42 +267,12 @@ async function markFailedAndRefundOnce({ uid, run_id, taskId, reason }){
     return { ok:true, already_refunded:true };
   }
 
-  const charged = String(meta.charged || '').toLowerCase() === 'true';
-  const cost = Number(meta.charged_cost || meta.cost || 0);
-  if (!charged || !Number.isFinite(cost) || cost <= 0) {
-    await patchGenerationMeta(row.id, nextMetaBase);
-    return { ok:true, refunded:false, reason:'not_charged' };
-  }
-
-  const claim = `r_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-  const claimMeta = { ...nextMetaBase, refund_claim: claim };
-  const claimRes = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}&meta->>refunded=is.null&meta->>refund_claim=is.null&select=id`, {
-    method: 'PATCH',
-    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-    body: JSON.stringify({ result_url: null, meta: claimMeta })
+  await patchGenerationMeta(row.id, nextMetaBase);
+  return await refundGenerationOnce({
+    generationId: row.id,
+    reason: reason || 'kie_failed',
+    source: 'kie-callback'
   });
-  const claimArr = await claimRes.json().catch(()=>[]);
-  if (!claimRes.ok || !Array.isArray(claimArr) || !claimArr.length) return { ok:true, already_claimed:true };
-
-  const userId = row.user_id || uid;
-  const p0 = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(userId)}&select=credits`, { headers: sb() });
-  const parr = await p0.json().catch(()=>[]);
-  const current = Number(Array.isArray(parr) && parr[0] ? parr[0].credits : 0);
-  const nextCredits = current + cost;
-  const p1 = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(userId)}`, {
-    method: 'PATCH',
-    headers: { ...sb(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ credits: nextCredits })
-  });
-  if (!p1.ok) return { ok:false, error:'profile_refund_failed' };
-
-  await patchGenerationMeta(row.id, {
-    ...claimMeta,
-    refunded: 'true',
-    refunded_cost: cost,
-    refunded_at: new Date().toISOString()
-  });
-  return { ok:true, refunded:true, credits: nextCredits };
 }
 
 // Collect up to N URLs from common MJ shapes or deep scan
