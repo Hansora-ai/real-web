@@ -16,10 +16,10 @@ const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` 
 const PROFILES_URL  = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
 
 // Your site base for callback (same style as Veo 3)
-const SITE_BASE = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/,'');
-const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/video-kie-callback`;
+const SITE_BASE = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/,'');
+const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-check`;
 
-const COST = 9; // Aleph cost in credits
+const COST = 8; // Aleph cost in credits
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return ok({});
@@ -85,7 +85,8 @@ exports.handler = async (event) => {
       duration: 5,
       video_url: videoUrl,
       charged: false,
-      charge_cost: COST
+      charge_cost: COST,
+      refund_amount: COST
     };
     ugId = await upsertPlaceholder(uid, prompt, baseMeta, ugId);
 
@@ -264,7 +265,7 @@ async function debitCreditsOnce(uid, cost, ugId, ugMeta){
     const idToPatch = existing?.id || ugId;
     if (idToPatch) {
       const now = new Date().toISOString();
-      const nextMeta = { ...(existing?.meta || ugMeta || {}), charged: true, charge_cost: cost, charged_at: now };
+      const nextMeta = { ...(existing?.meta || ugMeta || {}), charged: true, charge_cost: cost, charged_cost: cost, debited: cost, refund_amount: cost, charged_at: now };
       await patchUG(idToPatch, { meta: nextMeta });
     }
 
