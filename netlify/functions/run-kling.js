@@ -11,7 +11,7 @@ const KIE_KEY  = process.env.KIE_API_KEY || '';
 const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'downloads';
-const SITE_BASE = (process.env.SITE_BASE || 'https://webhansora.netlify.app').replace(/\/+$/,'');
+const SITE_BASE = (process.env.SITE_BASE || 'https://hansora.co').replace(/\/+$/,'');
 const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/video-kie-callback`;
 
 function cors(){ return {
