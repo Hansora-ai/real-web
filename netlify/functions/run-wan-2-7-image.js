@@ -12,8 +12,8 @@ const API_KEY    = process.env.KIE_API_KEY || "";
 const SUPABASE_URL  = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-const SITE_BASE   = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/, "");
-const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/kie-callback`;
+const SITE_BASE   = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/, "");
+const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/kie-check`;
 
 const VERSION_TAG  = "wan_2_7_image_kie_v1";
 
@@ -168,7 +168,7 @@ async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
       return { ok:false, debit, idempotent:true, already:false };
     }
 
-    const chargedMeta = { ...(mergedForClaim||{}), charged:'true', charged_cost: cost, charged_at: (new Date()).toISOString() };
+    const chargedMeta = { ...(mergedForClaim||{}), charged:'true', charged_cost: cost, charged_at: (new Date()).toISOString(), refund_amount: cost };
     await patchUserGenerationMetaById(row_id || (Array.isArray(claimedArr)&&claimedArr[0]?.id) || (existing?.id), chargedMeta);
 
     return { ok:true, debit, idempotent:true, already:false };
@@ -213,7 +213,7 @@ exports.handler = async (event) => {
     const provider = "Wan 2.7 Image";
 
     // Seed user_generations row (pending)
-    const seeded = await seedUserGeneration(uid, run_id, prompt, provider, { aspect_ratio, tier, mode: isImageToImage ? "image-to-image" : "text-to-image" });
+    const seeded = await seedUserGeneration(uid, run_id, prompt, provider, { aspect_ratio, tier, mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: cost });
     const row_id = seeded?.row_id || null;
 
     // callback must include uid & run_id
@@ -261,7 +261,7 @@ exports.handler = async (event) => {
               "Content-Type": "application/json",
               "Prefer": "return=minimal"
             },
-            body: JSON.stringify({ meta: { source:"wan-2-7-image", run_id, model, status:"create_failed", task_id: id, raw: js } })
+            body: JSON.stringify({ meta: { source:"wan-2-7-image", run_id, model, status:"create_failed", task_id: id, raw: js, refund_amount: cost } })
           });
         }
       } catch {}
@@ -279,13 +279,13 @@ exports.handler = async (event) => {
             "Content-Type": "application/json",
             "Prefer": "return=minimal"
           },
-          body: JSON.stringify({ meta: { source:"wan-2-7-image", run_id, model, status:"processing", task_id: id, aspect_ratio, tier, resolution:"1K", mode: isImageToImage ? "image-to-image" : "text-to-image" } })
+          body: JSON.stringify({ meta: { source:"wan-2-7-image", run_id, model, status:"processing", task_id: id, aspect_ratio, tier, resolution:"1K", mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: cost } })
         });
       }
     } catch {}
 
     // Debit credits AFTER provider accepted and exactly once per (uid, run_id)
-    const baseMeta = { source:"wan-2-7-image", run_id, model, status:"processing", task_id: id, aspect_ratio, tier, resolution:"1K", mode: isImageToImage ? "image-to-image" : "text-to-image" };
+    const baseMeta = { source:"wan-2-7-image", run_id, model, status:"processing", task_id: id, aspect_ratio, tier, resolution:"1K", mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: cost };
     const charged = await chargeOnceForRun(uid, run_id, cost, row_id, baseMeta);
 
     if (!charged.ok) {
