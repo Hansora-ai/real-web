@@ -5810,7 +5810,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       const imageInput = document.getElementById('videoRefImagesInput');
       if (title) title.textContent = kind === 'grokVideo' ? 'Grok inputs' : '';
-      if (hint) hint.textContent = kind === 'grokVideo' ? 'Optional : '';
+      if (hint) hint.textContent = kind === 'grokVideo' ? 'Optional image input, normal mode only' : '';
       if (imageLabel) imageLabel.textContent = kind === 'grokVideo' ? 'Image input (up to 7)' : 'Image refs';
       if (imageInput) imageInput.multiple = true;
       show('videoFirstFrameControl', kind === 'wan27' || kind === 'happyhorse');
