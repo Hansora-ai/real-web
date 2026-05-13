@@ -2,9 +2,7 @@
 // Robust KIE video webhook + polling checker.
 // - POST: receives KIE callbacks and saves success/failure.
 // - GET: lets the page re-check a task if the user left and came back.
-// - Refunds once through the refund_ledger-backed Supabase RPC.
-
-const { refundGenerationOnce } = require("./_refunds");
+// - Refunds once, using meta.refunded/refund_claim as the guard.
 
 const VERSION = "video-kie-callback-2026-05-13+failure-check";
 
@@ -267,6 +265,8 @@ async function markFailedAndRefundOnce({ row, ids, reason }) {
   if (!row || !row.id || !UG_URL || !SERVICE_KEY) return { refunded: false, reason: "missing row/env" };
 
   const existingMeta = row.meta && typeof row.meta === "object" ? row.meta : {};
+  const cost = Number(existingMeta.charged_cost ?? existingMeta.charge_cost ?? existingMeta.cost ?? existingMeta.debit_cost ?? 0) || 0;
+  const charged = existingMeta.charged === true || existingMeta.charged === "true" || cost > 0;
   const failedMeta = {
     ...existingMeta,
     run_id: ids.run_id || existingMeta.run_id || "",
@@ -277,17 +277,52 @@ async function markFailedAndRefundOnce({ row, ids, reason }) {
     failed_at: new Date().toISOString()
   };
 
-  if (existingMeta.refunded) {
+  if (existingMeta.refunded || !charged || cost <= 0) {
     await patchGeneration(row.id, { meta: failedMeta });
-    return { refunded: false, already_refunded: true };
+    return { refunded: false, already: !!existingMeta.refunded, cost };
   }
 
-  await patchGeneration(row.id, { meta: failedMeta });
-  return await refundGenerationOnce({
-    generationId: row.id,
-    reason: reason || "Generation failed.",
-    source: "video-kie-callback"
+  const claim = `refund-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const claimMeta = { ...failedMeta, refund_claim: claim };
+  const claimRes = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}&meta->>refunded=is.null&meta->>refund_claim=is.null`, {
+    method: "PATCH",
+    headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=representation" },
+    body: JSON.stringify({ meta: claimMeta })
   });
+  const claimedRows = await claimRes.json().catch(() => []);
+  const claimed = claimRes.ok && Array.isArray(claimedRows) && claimedRows.length > 0;
+
+  if (!claimed) {
+    await patchGeneration(row.id, { meta: failedMeta });
+    return { refunded: false, already: true, cost };
+  }
+
+  let profileCredited = false;
+  try {
+    const pRes = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(row.user_id)}&select=user_id,credits&limit=1`, { headers: sb() });
+    const profiles = await pRes.json().catch(() => []);
+    const profile = Array.isArray(profiles) ? profiles[0] : null;
+    if (profile) {
+      const currentCredits = Number(profile.credits || 0);
+      const nextCredits = Math.round((currentCredits + cost) * 100) / 100;
+      const uRes = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(row.user_id)}`, {
+        method: "PATCH",
+        headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify({ credits: nextCredits })
+      });
+      profileCredited = uRes.ok;
+    }
+  } catch {}
+
+  const refundedMeta = {
+    ...failedMeta,
+    refunded: profileCredited,
+    refunded_at: profileCredited ? new Date().toISOString() : undefined,
+    refund_amount: profileCredited ? cost : undefined,
+    refund_claim: claim
+  };
+  await patchGeneration(row.id, { meta: refundedMeta });
+  return { refunded: profileCredited, cost };
 }
 
 async function patchGeneration(id, payload) {
