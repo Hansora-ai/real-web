@@ -364,7 +364,18 @@ function collectResultUrls(value) {
     "resultUrl",
     "result_urls",
     "resultUrls",
+    "result_json",
+    "resultJson",
+    "response_json",
+    "responseJson",
     "url",
+    "download_url",
+    "downloadUrl",
+    "media_url",
+    "mediaUrl",
+    "asset_url",
+    "assetUrl",
+    "file",
     "output",
     "outputs",
     "images",
@@ -378,13 +389,17 @@ function collectResultUrls(value) {
     "file_url",
     "fileUrl",
     "file_urls",
-    "fileUrls"
+    "fileUrls",
+    "generate_url",
+    "generateUrl"
   ]);
   const containerKeys = new Set([
     "data",
     "result",
     "results",
     "response",
+    "task_result",
+    "taskResult",
     "output",
     "outputs"
   ]);
@@ -393,7 +408,7 @@ function collectResultUrls(value) {
   function push(url) {
     if (typeof url !== "string" || !/^https?:\/\//i.test(url)) return;
     const clean = url.replace(/[)"'\\\]}]+$/g, "");
-    if (!/\.(?:png|jpe?g|webp|gif|mp4|mov)(?:[?#].*)?$/i.test(clean)) return;
+    if (!/^https?:\/\/.+/i.test(clean)) return;
     if (seen.has(clean)) return;
     seen.add(clean);
     urls.push(clean);
@@ -402,6 +417,11 @@ function collectResultUrls(value) {
     if (!x || depth > 8 || urls.length >= 4) return;
     if (typeof x === "string") {
       if (!trusted) return;
+      const parsed = safeJson(x);
+      if (parsed && typeof parsed === "object" && Object.keys(parsed).length) {
+        walk(parsed, depth + 1, true);
+        return;
+      }
       const matches = x.match(/https?:\/\/[^\s"'<>]+/gi);
       if (matches) matches.forEach(push);
       return;
