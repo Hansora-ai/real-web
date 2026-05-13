@@ -13,7 +13,7 @@ const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` 
 
 // Your site base for callback (keep your current casing used by your working flow)
 const SITE_BASE = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/,'');
-const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/video-kie-callback`;
+const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-check`;
 
 exports.handler = async (event) => {
   // CORS + method guard
