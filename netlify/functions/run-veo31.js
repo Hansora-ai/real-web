@@ -223,9 +223,9 @@ function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVIC
 function veo31Cost(model, quality){
   const isFast = String(model || "").toLowerCase().includes("fast");
   const q = normalizeQuality(quality);
-  // Prices requested: Fast 1080p=5, Fast 4K=12, Quality 1080p=17, Quality 4K=2.
+  // Prices requested: Fast 1080p=5, Fast 4K=12, Quality 1080p=17, Quality 4K=22.
   if (isFast) return q === "4K" ? 12 : 5;
-  return q === "4K" ? 2 : 17;
+  return q === "4K" ? 22 : 17;
 }
 
 function isCharged(meta){
