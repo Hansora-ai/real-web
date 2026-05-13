@@ -551,6 +551,13 @@
       background:rgba(24,26,31,.72);
       padding:10px;
     }
+    body.workspace-redesign .control-label{
+      flex:0 0 auto;
+      font-size:12px;
+      font-weight:700;
+      color:var(--tool-muted);
+      margin-right:8px;
+    }
     body.workspace-redesign #veoQualityBlock > div,
     body.workspace-redesign #soraTierBlock > div,
     body.workspace-redesign #klingSoundBlock > div,
@@ -873,17 +880,29 @@
     body.workspace-redesign #imageThumbs.hidden,
     body.workspace-redesign #uploadBtn.hidden,
     body.workspace-redesign #framesUploadWrap.hidden,
-    body.workspace-redesign #alephUploadWrap.hidden{ display:none !important; }
+    body.workspace-redesign #veoReferenceWrap.hidden,
+    body.workspace-redesign #alephUploadWrap.hidden,
+    body.workspace-redesign #klingMotionUploadWrap.hidden{ display:none !important; }
     body.workspace-redesign #framesUploadWrap.flex,
-    body.workspace-redesign #alephUploadWrap.flex{
+    body.workspace-redesign #veoReferenceWrap.flex,
+    body.workspace-redesign #alephUploadWrap.flex,
+    body.workspace-redesign #klingMotionUploadWrap.flex{
       display:grid !important;
       grid-template-columns:1fr 1fr;
       gap:10px;
       width:100%;
       align-items:stretch;
     }
+    body.workspace-redesign #alephUploadWrap.flex{
+      grid-template-columns:1fr !important;
+    }
+    body.workspace-redesign #veoReferenceWrap.flex{
+      grid-template-columns:1fr !important;
+    }
     body.workspace-redesign #framesUploadWrap > .flex,
-    body.workspace-redesign #alephUploadWrap > .flex{
+    body.workspace-redesign #veoReferenceWrap > .flex,
+    body.workspace-redesign #alephUploadWrap > .flex,
+    body.workspace-redesign #klingMotionUploadWrap > .flex{
       position:relative;
       min-height:142px;
       border-radius:16px;
@@ -896,8 +915,11 @@
     }
     body.workspace-redesign #startFrameBtn,
     body.workspace-redesign #lastFrameBtn,
+    body.workspace-redesign #veoReferenceBtn,
     body.workspace-redesign #alephVideoBtn,
-    body.workspace-redesign #alephImageBtn{
+    body.workspace-redesign #alephImageBtn,
+    body.workspace-redesign #motionVideoBtn,
+    body.workspace-redesign #motionImageBtn{
       width:100%;
       height:100%;
       min-height:142px;
@@ -910,8 +932,11 @@
     }
     body.workspace-redesign #startFrameBtn span:first-child,
     body.workspace-redesign #lastFrameBtn span:first-child,
+    body.workspace-redesign #veoReferenceBtn span:first-child,
     body.workspace-redesign #alephVideoBtn span:first-child,
-    body.workspace-redesign #alephImageBtn span:first-child{
+    body.workspace-redesign #alephImageBtn span:first-child,
+    body.workspace-redesign #motionVideoBtn span:first-child,
+    body.workspace-redesign #motionImageBtn span:first-child{
       width:44px;
       height:44px;
       border-radius:999px;
@@ -923,20 +948,28 @@
     }
     body.workspace-redesign #startFrameThumb,
     body.workspace-redesign #lastFrameThumb,
+    body.workspace-redesign #veoReferenceThumbs,
     body.workspace-redesign #alephVideoThumb,
-    body.workspace-redesign #alephImageThumb{
+    body.workspace-redesign #alephImageThumb,
+    body.workspace-redesign #motionVideoThumb,
+    body.workspace-redesign #motionImageThumb{
       position:absolute;
       inset:0;
       z-index:2;
+      pointer-events:none;
     }
     body.workspace-redesign #startFrameThumb > div,
     body.workspace-redesign #lastFrameThumb > div,
+    body.workspace-redesign #veoReferenceThumbs > div,
     body.workspace-redesign #alephVideoThumb > div,
-    body.workspace-redesign #alephImageThumb > div{
+    body.workspace-redesign #alephImageThumb > div,
+    body.workspace-redesign #motionVideoThumb > div,
+    body.workspace-redesign #motionImageThumb > div{
       width:100% !important;
       height:100% !important;
       border-radius:16px !important;
       border:0 !important;
+      pointer-events:auto;
     }
     body.workspace-redesign #resultsSection.hidden{ display:none !important; }
     body.workspace-redesign #resultsSection:not(.hidden){ display:block !important; }
@@ -1020,7 +1053,9 @@
     body.workspace-redesign #startFrameBtn,
     body.workspace-redesign #lastFrameBtn,
     body.workspace-redesign #alephVideoBtn,
-    body.workspace-redesign #alephImageBtn{
+    body.workspace-redesign #alephImageBtn,
+    body.workspace-redesign #motionVideoBtn,
+    body.workspace-redesign #motionImageBtn{
       position:absolute;
       inset:0;
       z-index:1;
@@ -1029,19 +1064,25 @@
     body.workspace-redesign #startFrameThumb,
     body.workspace-redesign #lastFrameThumb,
     body.workspace-redesign #alephVideoThumb,
-    body.workspace-redesign #alephImageThumb{
+    body.workspace-redesign #alephImageThumb,
+    body.workspace-redesign #motionVideoThumb,
+    body.workspace-redesign #motionImageThumb{
       pointer-events:none;
     }
     body.workspace-redesign #startFrameThumb > div,
     body.workspace-redesign #lastFrameThumb > div,
     body.workspace-redesign #alephVideoThumb > div,
-    body.workspace-redesign #alephImageThumb > div{
+    body.workspace-redesign #alephImageThumb > div,
+    body.workspace-redesign #motionVideoThumb > div,
+    body.workspace-redesign #motionImageThumb > div{
       pointer-events:auto;
     }
     body.workspace-redesign #startFrameThumb button,
     body.workspace-redesign #lastFrameThumb button,
     body.workspace-redesign #alephVideoThumb button,
     body.workspace-redesign #alephImageThumb button,
+    body.workspace-redesign #motionVideoThumb button,
+    body.workspace-redesign #motionImageThumb button,
     body.workspace-redesign #imageThumbs button{
       width:24px;
       height:24px;
@@ -1091,13 +1132,17 @@
       body.workspace-redesign #imageThumbs{ grid-template-columns:repeat(4,minmax(0,1fr)); }
       body.workspace-redesign #uploadBtn:not(.hidden){ min-width:120px; }
       body.workspace-redesign #framesUploadWrap.flex,
-      body.workspace-redesign #alephUploadWrap.flex{ grid-template-columns:1fr 1fr; }
+      body.workspace-redesign #klingMotionUploadWrap.flex{ grid-template-columns:1fr 1fr; }
+      body.workspace-redesign #alephUploadWrap.flex{ grid-template-columns:1fr; }
       body.workspace-redesign #framesUploadWrap > .flex,
       body.workspace-redesign #alephUploadWrap > .flex,
+      body.workspace-redesign #klingMotionUploadWrap > .flex,
       body.workspace-redesign #startFrameBtn,
       body.workspace-redesign #lastFrameBtn,
       body.workspace-redesign #alephVideoBtn,
-      body.workspace-redesign #alephImageBtn{ min-height:156px; }
+      body.workspace-redesign #alephImageBtn,
+      body.workspace-redesign #motionVideoBtn,
+      body.workspace-redesign #motionImageBtn{ min-height:156px; }
     }
 
     /* Larger, inspectable upload previews */
@@ -1149,7 +1194,8 @@
       font-size:13px;
     }
     body.workspace-redesign #framesUploadWrap > .flex.drag-over,
-    body.workspace-redesign #alephUploadWrap > .flex.drag-over{
+    body.workspace-redesign #alephUploadWrap > .flex.drag-over,
+    body.workspace-redesign #klingMotionUploadWrap > .flex.drag-over{
       border-color:rgba(139,92,246,.95);
       background:rgba(99,102,241,.15);
       box-shadow:0 0 0 1px rgba(139,92,246,.35) inset;
@@ -1544,6 +1590,7 @@
               <button id="startFrameBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
                 <span class="text-lg leading-none">➕</span>
                 <span>Start</span>
+                <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
               </button>
               <div id="startFrameThumb" class="flex gap-1.5"></div>
             </div>
@@ -1553,8 +1600,22 @@
               <button id="lastFrameBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
                 <span class="text-lg leading-none">➕</span>
                 <span>Last</span>
+                <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
               </button>
               <div id="lastFrameThumb" class="flex gap-1.5"></div>
+            </div>
+          </div>
+
+          <!-- Veo 3.1 optional reference images -->
+          <div id="veoReferenceWrap" class="hidden items-center gap-2">
+            <div class="flex items-center gap-2">
+              <input id="veoReferenceInput" type="file" accept="image/*" class="hidden" multiple />
+              <button id="veoReferenceBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">📎</span>
+                <span>References</span>
+                <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
+              </button>
+              <div id="veoReferenceThumbs" class="flex gap-1.5"></div>
             </div>
           </div>
 
@@ -1574,8 +1635,29 @@
               <button id="alephImageBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
                 <span class="text-lg leading-none">📎</span>
                 <span>Upload image</span>
+                <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
               </button>
               <div id="alephImageThumb" class="flex gap-1.5"></div>
+            </div>
+          </div>
+
+          <!-- Kling Motion Control: source video required + reference image required -->
+          <div id="klingMotionUploadWrap" class="hidden items-center gap-2">
+            <div class="flex items-center gap-2">
+              <input id="motionVideoInput" type="file" accept="video/*" class="hidden" />
+              <button id="motionVideoBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">📎</span>
+                <span>Upload video</span>
+              </button>
+              <div id="motionVideoThumb" class="flex gap-1.5"></div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input id="motionImageInput" type="file" accept="image/*" class="hidden" />
+              <button id="motionImageBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
+                <span class="text-lg leading-none">📎</span>
+                <span>Reference</span>
+              </button>
+              <div id="motionImageThumb" class="flex gap-1.5"></div>
             </div>
           </div>
           </div>
@@ -1602,6 +1684,7 @@
           <div class="w-full flex justify-end">
             <div class="flex items-center gap-3">
               <div id="veoQualityBlock" class="flex items-center gap-1.5 hidden">
+                <span id="veoQualityLabel" class="control-label">Quality</span>
                 <div id="veoQualityPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
               </div>
 
@@ -1726,15 +1809,16 @@ function __mjTryExtractAllImageUrls(obj){
   return out.slice(0,4);
 }
 async function __mjFetchNbCheck(params){
-  // params: { taskId?, uid?, runId? }
+  // params: { taskId?, uid?, runId?, checker? }
   const taskId = params && params.taskId ? String(params.taskId) : '';
   const uid = params && params.uid ? String(params.uid) : '';
   const runId = params && params.runId ? String(params.runId) : '';
+  const checker = params && params.checker ? String(params.checker) : 'nb-check';
   let url = '';
   if (taskId) {
-    url = `/.netlify/functions/nb-check?taskId=${encodeURIComponent(taskId)}&uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
+    url = `/.netlify/functions/${checker}?taskId=${encodeURIComponent(taskId)}&uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
   }
-  else url = `/.netlify/functions/nb-check?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
+  else url = `/.netlify/functions/${checker}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
   const r = await fetch(url, { method:'GET', headers:{ 'Accept':'application/json' } });
   const t = await r.text();
   let js; try{ js = JSON.parse(t); }catch{ js = { raw:t }; }
@@ -2465,6 +2549,18 @@ function createResultCard(data) {
     const runId = (row && row.meta && row.meta.run_id) ? row.meta.run_id : (row && row.run_id) ? row.run_id : '';
     const taskId = (row && row.meta && (row.meta.task_id || row.meta.taskId)) ? (row.meta.task_id || row.meta.taskId) : '';
     const meta = row && row.meta ? row.meta : null;
+    const provLower = prov.toLowerCase();
+    const metaStatus = meta && meta.status ? meta.status : '';
+    const rowStatus = row && row.status ? row.status : '';
+    const statusLower = String(metaStatus || rowStatus || '').toLowerCase();
+    const isProcessingStatus = statusLower === 'processing' || statusLower === 'pending' || !statusLower;
+    const isAleph = provLower.includes('aleph');
+
+    // Aleph stores the uploaded source video in meta.video_url. While the job is
+    // still processing, that is not a result and must never render as one.
+    if (isAleph && isProcessingStatus && !(row && row.result_url)) {
+      return [];
+    }
 
     // --- MidJourney: try cache first
     if (isMJ && runId) {
@@ -2519,6 +2615,45 @@ function createResultCard(data) {
       }
     }
 
+    function checkerForGenerationRow(row) {
+      const providerHint = String((row && (row.provider || row.model)) || '').toLowerCase();
+      const kindHint = String((row && row.kind) || '').toLowerCase();
+      if (providerHint.includes('aleph')) return 'aleph-check';
+      if (
+        kindHint === 'video' ||
+        providerHint.includes('video') ||
+        providerHint.includes('kling') ||
+        providerHint.includes('veo') ||
+        providerHint.includes('runway') ||
+        providerHint.includes('motion')
+      ) return 'video-kie-callback';
+      return 'nb-check';
+    }
+
+    function checkerForCurrentModel(model) {
+      if (!model) return 'nb-check';
+      if (model.id === 'aleph') return 'aleph-check';
+      if (model.category === 'video') return 'video-kie-callback';
+      return 'nb-check';
+    }
+
+    function directResultUrlFromCheck(js) {
+      if (!js) return '';
+      const candidates = [
+        js.video_url,
+        js.result_url,
+        js.url,
+        js.output,
+        Array.isArray(js.urls) ? js.urls[0] : '',
+        Array.isArray(js.result_urls) ? js.result_urls[0] : '',
+        Array.isArray(js.resultUrls) ? js.resultUrls[0] : ''
+      ];
+      for (const value of candidates) {
+        if (typeof value === 'string' && /^https?:\/\//i.test(value)) return value;
+      }
+      return '';
+    }
+
     function resumeProcessingChecks(pairs) {
       if (!pairs || !pairs.length || !currentUser) return;
       for (const item of pairs) {
@@ -2527,10 +2662,12 @@ function createResultCard(data) {
         __activePolls.set(key, { cancelled: false });
         (async () => {
           try {
+            const checker = checkerForGenerationRow(item.row);
             const nb = await __mjFetchNbCheck({
               taskId: item.taskId,
               uid: currentUser.id,
-              runId: item.runId
+              runId: item.runId,
+              checker
             });
             const js = nb && nb.js ? nb.js : {};
             const statusText = String(js.status || '').toLowerCase();
@@ -2541,14 +2678,15 @@ function createResultCard(data) {
               return;
             }
             if (js.ok || statusText.includes('success') || statusText.includes('done') || statusText.includes('complete')) {
-              const urls = __mjTryExtractAllImageUrls(js);
+              const directUrl = directResultUrlFromCheck(js);
+              const urls = directUrl ? [directUrl] : __mjTryExtractAllImageUrls(js);
               if (urls && urls.length) {
                 item.controller.apply({ status: 'ready', result_url: urls[0] });
                 await refreshCredits();
                 return;
               }
             }
-            startPollGeneration(item.runId, [item.controller], item.taskId);
+            startPollGeneration(item.runId, [item.controller], item.taskId, checker);
           } catch (error) {
             console.warn('resumeProcessingChecks failed', error);
             startPollGeneration(item.runId, [item.controller], item.taskId);
@@ -2563,13 +2701,13 @@ function createResultCard(data) {
 
 const __activePolls = new Map(); // runId -> token
 
-function startPollGeneration(runId, controllers, taskId) {
+function startPollGeneration(runId, controllers, taskId, checker) {
   if (!runId || !controllers || !controllers.length) return;
   if (__activePolls.has(runId)) return; // already polling this run
   const token = { cancelled: false };
   __activePolls.set(runId, token);
   // Fire and forget; cleanup when done
-  pollGeneration(runId, controllers, token, taskId)
+  pollGeneration(runId, controllers, token, taskId, checker)
     .catch((e) => console.warn('pollGeneration wrapper exception', e))
     .finally(() => {
       __activePolls.delete(runId);
@@ -2615,7 +2753,7 @@ async function sora2Poll(taskId, uid, runId, controllers, token) {
 }
 
 
-async function pollGeneration(runId, controllers, token, taskId) {
+async function pollGeneration(runId, controllers, token, taskId, checker) {
   if (!currentUser || !runId || !controllers || !controllers.length) return;
   const maxMs = 900000;
   const started = Date.now();
@@ -2624,7 +2762,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
     if (token && token.cancelled) return;
     try {
       if (taskId) {
-        const nb = await __mjFetchNbCheck({ taskId, uid: currentUser.id, runId });
+        const nb = await __mjFetchNbCheck({ taskId, uid: currentUser.id, runId, checker: checker || 'nb-check' });
         const nbStatus = String(nb?.js?.status || '').toLowerCase();
         const nbFailed = !!nb?.js?.failed || nbStatus.includes('fail') || nbStatus.includes('error') || nbStatus.includes('cancel');
         if (nbFailed) {
@@ -2634,6 +2772,14 @@ async function pollGeneration(runId, controllers, token, taskId) {
           for (let i = 0; i < controllers.length; i++) {
             controllers[i].apply({ status: 'failed', result_url: null });
           }
+          return;
+        }
+        const directUrl = directResultUrlFromCheck(nb?.js);
+        if (directUrl) {
+          for (let i = 0; i < controllers.length; i++) {
+            controllers[i].apply({ status: 'ready', result_url: directUrl });
+          }
+          await refreshCredits();
           return;
         }
       }
@@ -2943,7 +3089,9 @@ async function pollGeneration(runId, controllers, token, taskId) {
         aspectOptions: ['16:9', '9:16'],
         defaultAspect: '16:9',
         durations: [8],
-        costLabel: 'Credits 7⚡-20⚡',
+        resolutionOptions: ['1080p', '4K'],
+        defaultResolution: '1080p',
+        costLabel: 'Credits Fast 5⚡ / 4K 12⚡',
         minCredits: 5
       },
       {
@@ -2961,8 +3109,10 @@ async function pollGeneration(runId, controllers, token, taskId) {
         aspectOptions: ['16:9', '9:16'],
         defaultAspect: '16:9',
         durations: [8],
-        costLabel: 'Credits 7⚡-20⚡',
-        minCredits: 5
+        resolutionOptions: ['1080p', '4K'],
+        defaultResolution: '1080p',
+        costLabel: 'Credits Quality 17⚡ / 4K 22⚡',
+        minCredits: 17
       },
       {
         id: 'veo3-fast',
@@ -3003,6 +3153,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
         subtitle: 'Text / (Image) → Video',
         category: 'video',
         description: 'Sora 2 video generation (10s / 15s).',
+        hidden: true,
         endpoint: '/.netlify/functions/run-sora2',
         needsImage: false,
         maxFiles: 1,
@@ -3024,9 +3175,11 @@ async function pollGeneration(runId, controllers, token, taskId) {
         maxFiles: 1,
         aspectOptions: ['3:4', '1:1', '4:3', '16:9', '9:16'],
         defaultAspect: '3:4',
-        durations: [5],
-        costLabel: 'Credits 4⚡',
-        minCredits: 4
+        resolutionOptions: ['720p', '1080p'],
+        defaultResolution: '720p',
+        durations: [5, 10],
+        costLabel: '720p 5s-1.5⚡ 10s-3⚡ / 1080p 5s-3⚡',
+        minCredits: 1.5
       },
       {
         id: 'kling25',
@@ -3059,8 +3212,8 @@ async function pollGeneration(runId, controllers, token, taskId) {
         aspectOptions: ['1:1', '9:16', '16:9'],
         defaultAspect: '1:1',
         durations: [5, 10],
-        costLabel: 'Credits 5s-5⚡ 10s-9⚡',
-        minCredits: 5
+        costLabel: 'Credits 5s-4⚡ 10s-8⚡',
+        minCredits: 4
       },
             {
         id: 'kling21',
@@ -3069,6 +3222,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
         subtitle: 'Image → Video (start / end frames)',
         category: 'video',
         description: 'Kling 2.1 Pro image-to-video with optional last frame.',
+        hidden: true,
         endpoint: '/.netlify/functions/run-kling21',
         needsImage: true,
         maxFiles: 0,
@@ -3079,6 +3233,25 @@ async function pollGeneration(runId, controllers, token, taskId) {
         durations: [5, 10],
         costLabel: 'Credits 5s-5⚡ 10s-9⚡',
         minCredits: 5
+      },
+      {
+        id: 'kling-motion-control',
+        name: 'Kling Motion Control',
+        emoji: 'K',
+        subtitle: 'Motion transfer from video',
+        category: 'video',
+        description: 'Kling motion control with source video and optional reference image.',
+        endpoint: '/.netlify/functions/run-kling-motion-control',
+        needsImage: false,
+        maxFiles: 0,
+        needsMotionVideo: true,
+        allowOptionalImage: true,
+        aspectOptions: [],
+        resolutionOptions: ['720p', '1080p'],
+        defaultResolution: '720p',
+        durations: null,
+        costLabel: 'Kling 2.6: 720p 1⚡/sec, 1080p 1.5⚡/sec',
+        minCredits: 1
       },
             {
         id: 'aleph',
@@ -3188,11 +3361,16 @@ async function pollGeneration(runId, controllers, token, taskId) {
     // Frames (Veo 3.1 + Kling 2.1)
     let startFrameFile = null;
     let lastFrameFile = null;
+    let veoReferenceFiles = [];
 
     // Aleph: video required + optional image
     let alephVideoFile = null;
     let alephImageFile = null;
     let __alephVideoObjURL = null;
+    let motionVideoFile = null;
+    let motionImageFile = null;
+    let __motionVideoObjURL = null;
+    let motionVideoSeconds = null;
 
     let currentAspect = null;
     let currentDuration = null;
@@ -3200,6 +3378,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
     let currentResolution = '1K';
     let currentSoraTier = 'base';
     let currentWanTier = 'normal';
+    let currentMotionModel = 'kling26';
 
 
 
@@ -3338,9 +3517,22 @@ async function pollGeneration(runId, controllers, token, taskId) {
       if (model.id === 'nano-banana-2') return currentResolution === '4K' ? 1.5 : 1;
       if (model.id === 'gpt-image-2') return currentResolution === '4K' ? 1.5 : 1;
       if (model.id === 'wan-2-7-image') return currentWanTier === 'pro' ? 1 : 0.5;
+      if (model.id === 'veo31-fast') return currentResolution === '4K' ? 12 : 5;
+      if (model.id === 'veo31') return currentResolution === '4K' ? 22 : 17;
+      if (model.id === 'runway') {
+        const dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
+        return currentResolution === '1080p' ? 3 : (dur === 10 ? 3 : 1.5);
+      }
+      if (model.id === 'kling-motion-control') {
+        const seconds = Math.max(1, Math.ceil(Number(motionVideoSeconds || currentDuration || 1)));
+        const rate = currentMotionModel === 'kling30'
+          ? (currentResolution === '1080p' ? 1.8 : 1.5)
+          : (currentResolution === '1080p' ? 1.5 : 1);
+        return Number((seconds * rate).toFixed(1));
+      }
       if (model.id === 'kling26') {
         const dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
-        return currentKlingSound ? (dur === 10 ? 16 : 9) : (dur === 10 ? 9 : 5);
+        return dur === 10 ? 8 : 4;
       }
       if (model.id === 'sora2') return currentSoraTier === 'pro' ? 20 : 3;
       if (typeof model.minCredits === 'number') return model.minCredits;
@@ -3384,6 +3576,9 @@ async function pollGeneration(runId, controllers, token, taskId) {
       if (currentModel.id === 'nano-banana-pro' || currentModel.id === 'nano-banana-2') {
         return ['1K', '2K', '4K'];
       }
+      if (currentModel.resolutionOptions && currentModel.resolutionOptions.length) {
+        return currentModel.resolutionOptions;
+      }
       return [];
     }
 
@@ -3410,7 +3605,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
       if (!resolutionPills) return;
       resolutionPills.innerHTML = '';
       if (!currentResolution || !opts.includes(currentResolution) || !isResolutionAllowedForCurrentModel(currentResolution)) {
-        currentResolution = opts.find(isResolutionAllowedForCurrentModel) || opts[0];
+        currentResolution = currentModel.defaultResolution || opts.find(isResolutionAllowedForCurrentModel) || opts[0];
       }
       opts.forEach((val) => {
         const disabled = !isResolutionAllowedForCurrentModel(val);
@@ -3426,6 +3621,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
           currentResolution = val;
           Array.from(resolutionPills.children).forEach((child) => child.classList.remove('chip-active'));
           btn.classList.add('chip-active');
+          renderDurationControls();
           updateCostDisplay();
           updateRunButtonLabel();
         });
@@ -3439,14 +3635,57 @@ async function pollGeneration(runId, controllers, token, taskId) {
       const uploadBtn = document.getElementById('uploadBtn');
       const uploadPanel = uploadBtn ? uploadBtn.closest('.md\:w-1\/3, .flex-col') : null;
       if (!uploadPanel || !currentModel) return;
-      const hasUpload = !!currentModel.useFrames || !!currentModel.needsVideo || Number(currentModel.maxFiles || 0) > 0;
+      const hasUpload = !!currentModel.useFrames || !!currentModel.needsVideo || !!currentModel.needsMotionVideo || Number(currentModel.maxFiles || 0) > 0;
       uploadPanel.classList.toggle('upload-panel-empty', !hasUpload);
     }
     function updateCostLabelForKling26() {
       if (!currentModel || currentModel.id !== 'kling26') return;
       const costLabelEl = document.getElementById('costLabel');
       if (!costLabelEl) return;
-      costLabelEl.textContent = currentKlingSound ? 'Credits 5s-9⚡ 10s-16⚡' : 'Credits 5s-5⚡ 10s-9⚡';
+      costLabelEl.textContent = 'Credits 5s-4⚡ 10s-8⚡';
+      updateRunButtonLabel();
+    }
+
+    function getDurationOptionsForCurrentModel() {
+      if (!currentModel || currentModel.category !== 'video' || !currentModel.durations) return [];
+      if (currentModel.id === 'runway' && currentResolution === '1080p') return [5];
+      return currentModel.durations;
+    }
+
+    function renderDurationControls() {
+      const durationBlock = document.getElementById('durationBlock');
+      const durationPills = document.getElementById('durationPills');
+      const opts = getDurationOptionsForCurrentModel();
+      if (!opts.length) {
+        if (durationBlock) durationBlock.classList.add('hidden');
+        if (durationPills) durationPills.innerHTML = '';
+        currentDuration = null;
+        updateCostDisplay();
+        updateRunButtonLabel();
+        return;
+      }
+      if (durationBlock) durationBlock.classList.remove('hidden');
+      if (!durationPills) return;
+      durationPills.innerHTML = '';
+      if (!currentDuration || !opts.some((v) => Number(v) === Number(currentDuration))) {
+        currentDuration = opts[0];
+      }
+      opts.forEach((val) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = val;
+        btn.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+        if (Number(val) === Number(currentDuration)) btn.classList.add('chip-active');
+        btn.addEventListener('click', () => {
+          currentDuration = val;
+          Array.from(durationPills.children).forEach((child) => child.classList.remove('chip-active'));
+          btn.classList.add('chip-active');
+          updateCostDisplay();
+          updateRunButtonLabel();
+        });
+        durationPills.appendChild(btn);
+      });
+      updateCostDisplay();
       updateRunButtonLabel();
     }
 
@@ -3542,17 +3781,6 @@ async function pollGeneration(runId, controllers, token, taskId) {
           });
         }
 
-        if (matchOther('Kling Motion Control')) {
-          overlayModels.push({
-            id: '__kling-motion-control',
-            name: 'Kling Motion Control',
-            emoji: 'K',
-            subtitle: 'Open motion control',
-            category: 'video',
-            __navTo: '/kling-motion-control.html',
-          });
-        }
-
         overlayModels.push(...filtered);
       }
 
@@ -3619,15 +3847,19 @@ async function pollGeneration(runId, controllers, token, taskId) {
 
       const veoQualityBlock = document.getElementById('veoQualityBlock');
       const veoQualityPills = document.getElementById('veoQualityPills');
+      const veoQualityLabel = document.getElementById('veoQualityLabel');
 
       currentAspect = currentModel.defaultAspect || (currentModel.aspectOptions && currentModel.aspectOptions[0]) || null;
       currentDuration = currentModel.durations && currentModel.durations.length ? currentModel.durations[0] : null;
+      currentResolution = currentModel.defaultResolution || (currentModel.category === 'image' ? '1K' : '720p');
 
       // Veo Fast / Quality toggle (only for Veo 3 and Veo 3.1)
       const isVeo3 = currentModel.id === 'veo3-fast' || currentModel.id === 'veo3';
       const isVeo31 = currentModel.id === 'veo31-fast' || currentModel.id === 'veo31';
       const isWan27 = currentModel.id === 'wan-2-7-image';
+      const isMotionControl = currentModel.id === 'kling-motion-control';
       if (isWan27) {
+        if (veoQualityLabel) veoQualityLabel.textContent = 'Quality';
         currentVeoFamily = null;
         currentVeoVariant = 'fast';
         currentWanTier = currentWanTier === 'pro' ? 'pro' : 'normal';
@@ -3652,7 +3884,35 @@ async function pollGeneration(runId, controllers, token, taskId) {
           veoQualityPills.appendChild(makeBtn('Normal', 'normal'));
           veoQualityPills.appendChild(makeBtn('Pro', 'pro'));
         }
+      } else if (isMotionControl) {
+        if (veoQualityLabel) veoQualityLabel.textContent = 'Model';
+        currentWanTier = 'normal';
+        currentVeoFamily = null;
+        currentVeoVariant = 'fast';
+        currentMotionModel = currentMotionModel === 'kling30' ? 'kling30' : 'kling26';
+        if (veoQualityBlock) veoQualityBlock.classList.remove('hidden');
+        if (veoQualityPills) {
+          veoQualityPills.innerHTML = '';
+          const makeBtn = (label, val) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = label;
+            b.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+            if (val === currentMotionModel) b.classList.add('chip-active');
+            b.addEventListener('click', () => {
+              currentMotionModel = val;
+              Array.from(veoQualityPills.querySelectorAll('button')).forEach(x => x.classList.remove('chip-active'));
+              b.classList.add('chip-active');
+              updateCostDisplay();
+              updateRunButtonLabel();
+            });
+            return b;
+          };
+          veoQualityPills.appendChild(makeBtn('Kling 2.6', 'kling26'));
+          veoQualityPills.appendChild(makeBtn('Kling 3.0', 'kling30'));
+        }
       } else if (isVeo3 || isVeo31) {
+        if (veoQualityLabel) veoQualityLabel.textContent = 'Quality';
         currentWanTier = 'normal';
         currentVeoFamily = isVeo31 ? 'veo31' : 'veo3';
         currentVeoVariant = (currentModel.id.endsWith('-fast') ? 'fast' : 'quality');
@@ -3801,45 +4061,18 @@ async function pollGeneration(runId, controllers, token, taskId) {
         if (klingSoundPills) klingSoundPills.innerHTML = '';
       }
 
-// Duration pills
-      if (currentModel.category === 'video' && currentModel.durations && currentModel.durations.length) {
-        durationBlock.classList.remove('hidden');
-        durationPills.innerHTML = '';
-        currentModel.durations.forEach((val) => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.textContent = val;
-          btn.className =
-            'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
-          btn.addEventListener('click', () => {
-            currentDuration = val;
-            Array.from(durationPills.children).forEach((child) => {
-              child.classList.remove('chip-active');
-            });
-            btn.classList.add('chip-active');
-            updateRunButtonLabel();
-          });
-          durationPills.appendChild(btn);
-        });
-
-        if (durationPills.children.length) {
-          Array.from(durationPills.children).forEach((child) => {
-            if (Number(child.textContent) === Number(currentDuration)) {
-              child.classList.add('chip-active');
-            }
-          });
-        }
-      } else {
-        durationBlock.classList.add('hidden');
-        durationPills.innerHTML = '';
-      }
+      renderDurationControls();
 
       // Reset previews when model changes
       uploadedFiles = [];
       startFrameFile = null;
       lastFrameFile = null;
+      veoReferenceFiles = [];
       alephVideoFile = null;
       alephImageFile = null;
+      motionVideoFile = null;
+      motionImageFile = null;
+      motionVideoSeconds = null;
 
       const thumbs = document.getElementById('imageThumbs');
       if (thumbs) thumbs.innerHTML = '';
@@ -3852,20 +4085,34 @@ async function pollGeneration(runId, controllers, token, taskId) {
       const lastThumb = document.getElementById('lastFrameThumb');
       const startInput = document.getElementById('startFrameInput');
       const lastInput = document.getElementById('lastFrameInput');
+      const veoReferenceWrap = document.getElementById('veoReferenceWrap');
+      const veoReferenceThumbs = document.getElementById('veoReferenceThumbs');
+      const veoReferenceInput = document.getElementById('veoReferenceInput');
       if (startThumb) startThumb.innerHTML = '';
       if (lastThumb) lastThumb.innerHTML = '';
+      if (veoReferenceThumbs) veoReferenceThumbs.innerHTML = '';
       if (startInput) startInput.value = '';
       if (lastInput) lastInput.value = '';
+      if (veoReferenceInput) veoReferenceInput.value = '';
 
       const alephWrap = document.getElementById('alephUploadWrap');
       const alephVideoThumb = document.getElementById('alephVideoThumb');
       const alephImageThumb = document.getElementById('alephImageThumb');
       const alephVideoInput = document.getElementById('alephVideoInput');
       const alephImageInput = document.getElementById('alephImageInput');
+      const motionWrap = document.getElementById('klingMotionUploadWrap');
+      const motionVideoThumb = document.getElementById('motionVideoThumb');
+      const motionImageThumb = document.getElementById('motionImageThumb');
+      const motionVideoInput = document.getElementById('motionVideoInput');
+      const motionImageInput = document.getElementById('motionImageInput');
       if (alephVideoThumb) alephVideoThumb.innerHTML = '';
       if (alephImageThumb) alephImageThumb.innerHTML = '';
       if (alephVideoInput) alephVideoInput.value = '';
       if (alephImageInput) alephImageInput.value = '';
+      if (motionVideoThumb) motionVideoThumb.innerHTML = '';
+      if (motionImageThumb) motionImageThumb.innerHTML = '';
+      if (motionVideoInput) motionVideoInput.value = '';
+      if (motionImageInput) motionImageInput.value = '';
 
       // Upload UI switching
       const uploadBtn = document.getElementById('uploadBtn');
@@ -3873,6 +4120,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
 
       const isFrames = !!currentModel.useFrames;
       const isAleph = !!currentModel.needsVideo;
+      const isMotion = !!currentModel.needsMotionVideo;
 
       // Default: hide everything, then enable what we need
       if (uploadBtn) uploadBtn.classList.add('hidden');
@@ -3881,9 +4129,17 @@ async function pollGeneration(runId, controllers, token, taskId) {
         startWrap.classList.add('hidden');
         startWrap.classList.remove('flex');
       }
+      if (veoReferenceWrap) {
+        veoReferenceWrap.classList.add('hidden');
+        veoReferenceWrap.classList.remove('flex');
+      }
       if (alephWrap) {
         alephWrap.classList.add('hidden');
         alephWrap.classList.remove('flex');
+      }
+      if (motionWrap) {
+        motionWrap.classList.add('hidden');
+        motionWrap.classList.remove('flex');
       }
 
       if (isFrames) {
@@ -3891,10 +4147,19 @@ async function pollGeneration(runId, controllers, token, taskId) {
           startWrap.classList.remove('hidden');
           startWrap.classList.add('flex');
         }
+        if (isVeo31 && veoReferenceWrap) {
+          veoReferenceWrap.classList.remove('hidden');
+          veoReferenceWrap.classList.add('flex');
+        }
       } else if (isAleph) {
         if (alephWrap) {
           alephWrap.classList.remove('hidden');
           alephWrap.classList.add('flex');
+        }
+      } else if (isMotion) {
+        if (motionWrap) {
+          motionWrap.classList.remove('hidden');
+          motionWrap.classList.add('flex');
         }
       } else {
         // General image upload for models that allow image input
@@ -3937,9 +4202,10 @@ async function pollGeneration(runId, controllers, token, taskId) {
       }
 
       // Duration (ONLY for video models that actually have durations)
-      if (currentModel.category === 'video' && Array.isArray(currentModel.durations) && currentModel.durations.length) {
+      const durationOptions = getDurationOptionsForCurrentModel();
+      if (currentModel.category === 'video' && durationOptions.length) {
         durBtn.classList.remove('hidden');
-        const val = (currentDuration != null ? String(currentDuration) : String(currentModel.durations[0]));
+        const val = (currentDuration != null ? String(currentDuration) : String(durationOptions[0]));
         durLabel.textContent = val + 's';
       } else {
         durBtn.classList.add('hidden');
@@ -3961,8 +4227,9 @@ async function pollGeneration(runId, controllers, token, taskId) {
         title.textContent = 'Aspect ratio';
       } else if (type === 'duration') {
         // Only allow for proper video models
-        if (!(currentModel.category === 'video' && Array.isArray(currentModel.durations) && currentModel.durations.length)) return;
-        options = currentModel.durations.map((v) => String(v));
+        const durationOptions = getDurationOptionsForCurrentModel();
+        if (!(currentModel.category === 'video' && durationOptions.length)) return;
+        options = durationOptions.map((v) => String(v));
         current = String(currentDuration != null ? currentDuration : '');
         title.textContent = 'Duration';
       } else {
@@ -3995,6 +4262,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
             }
           } else if (type === 'duration') {
             currentDuration = opt;
+            updateCostDisplay();
             updateRunButtonLabel();
             const durationPills = document.getElementById('durationPills');
             if (durationPills) {
@@ -4106,8 +4374,8 @@ async function pollGeneration(runId, controllers, token, taskId) {
           if (!dropped.length) return;
           if (!currentModel) return;
 
-          // Do not interfere with frame-based video models (start/last frame) or Aleph video upload UI
-          if (currentModel.useFrames || currentModel.needsVideo) return;
+          // Do not interfere with frame/video-specific upload UIs
+          if (currentModel.useFrames || currentModel.needsVideo || currentModel.needsMotionVideo) return;
 
           const max = currentModel.maxFiles || 1;
 
@@ -4136,8 +4404,11 @@ async function pollGeneration(runId, controllers, token, taskId) {
       const pairs = [
         ['framesUploadWrap', 'startFrameInput', 0],
         ['framesUploadWrap', 'lastFrameInput', 1],
+        ['veoReferenceWrap', 'veoReferenceInput', 0],
         ['alephUploadWrap', 'alephVideoInput', 0],
         ['alephUploadWrap', 'alephImageInput', 1],
+        ['klingMotionUploadWrap', 'motionVideoInput', 0],
+        ['klingMotionUploadWrap', 'motionImageInput', 1],
       ];
       pairs.forEach(([wrapId, inputId, index]) => {
         const wrap = document.getElementById(wrapId);
@@ -4149,7 +4420,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
           if (event.target && event.target.closest && event.target.closest('button')) return;
           input.click();
         });
-        if (wrapId === 'framesUploadWrap') {
+        if (wrapId === 'framesUploadWrap' || wrapId === 'klingMotionUploadWrap' || wrapId === 'veoReferenceWrap') {
           const frameKind = index === 0 ? 'start' : 'last';
           ['dragenter', 'dragover'].forEach((type) => {
             tile.addEventListener(type, (event) => {
@@ -4167,12 +4438,25 @@ async function pollGeneration(runId, controllers, token, taskId) {
           });
           tile.addEventListener('drop', (event) => {
             const files = Array.from((event.dataTransfer && event.dataTransfer.files) || []);
-            const file = files.find((item) => item && item.type && item.type.startsWith('image/'));
+            const wantsVideo = wrapId === 'klingMotionUploadWrap' && index === 0;
+            const file = files.find((item) => item && item.type && item.type.startsWith(wantsVideo ? 'video/' : 'image/'));
             if (!file) {
-              showStatus('Drop an image file here.', 'error');
+              showStatus(wantsVideo ? 'Drop a video file here.' : 'Drop an image file here.', 'error');
               return;
             }
-            applyFrameFile(frameKind, file);
+            if (wrapId === 'framesUploadWrap') {
+              applyFrameFile(frameKind, file);
+            } else {
+              const input = document.getElementById(inputId);
+              const dt = new DataTransfer();
+              if (wrapId === 'veoReferenceWrap') {
+                files.filter((item) => item && item.type && item.type.startsWith('image/')).slice(0, 3).forEach((item) => dt.items.add(item));
+              } else {
+                dt.items.add(file);
+              }
+              input.files = dt.files;
+              input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
           });
         }
       });
@@ -4208,6 +4492,35 @@ async function pollGeneration(runId, controllers, token, taskId) {
       wrapper.appendChild(img);
       wrapper.appendChild(closeBtn);
       containerEl.appendChild(wrapper);
+    }
+
+    function renderVeoReferenceThumbs() {
+      const container = document.getElementById('veoReferenceThumbs');
+      if (!container) return;
+      container.innerHTML = '';
+      veoReferenceFiles.forEach((file, index) => {
+        const url = URL.createObjectURL(file);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
+        const img = document.createElement('img');
+        img.src = url;
+        img.className = 'h-full w-full object-cover';
+        img.onload = () => { try { URL.revokeObjectURL(url); } catch {} };
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          veoReferenceFiles.splice(index, 1);
+          document.getElementById('veoReferenceInput').value = '';
+          renderVeoReferenceThumbs();
+        });
+        wrapper.appendChild(img);
+        wrapper.appendChild(closeBtn);
+        container.appendChild(wrapper);
+      });
     }
 
     function clearLastFrame() {
@@ -4249,6 +4562,16 @@ async function pollGeneration(runId, controllers, token, taskId) {
     document.getElementById('lastFrameInput').addEventListener('change', (e) => {
       const file = (e.target.files || [])[0] || null;
       applyFrameFile('last', file);
+    });
+
+    // VEO 3.1: OPTIONAL REFERENCE IMAGES
+    document.getElementById('veoReferenceBtn').addEventListener('click', () => {
+      document.getElementById('veoReferenceInput').click();
+    });
+    document.getElementById('veoReferenceInput').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files || []).filter(Boolean).slice(0, 3);
+      veoReferenceFiles = files;
+      renderVeoReferenceThumbs();
     });
 
     // ALEPH: VIDEO REQUIRED + OPTIONAL IMAGE
@@ -4374,6 +4697,77 @@ async function pollGeneration(runId, controllers, token, taskId) {
       });
     });
 
+    // KLING MOTION CONTROL: VIDEO REQUIRED + OPTIONAL REFERENCE IMAGE
+    document.getElementById('motionVideoBtn').addEventListener('click', () => {
+      document.getElementById('motionVideoInput').click();
+    });
+    document.getElementById('motionImageBtn').addEventListener('click', () => {
+      document.getElementById('motionImageInput').click();
+    });
+    document.getElementById('motionVideoInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      motionVideoFile = file;
+      motionVideoSeconds = null;
+      const container = document.getElementById('motionVideoThumb');
+      container.innerHTML = '';
+      try { if (__motionVideoObjURL) URL.revokeObjectURL(__motionVideoObjURL); } catch {}
+      __motionVideoObjURL = null;
+      if (!motionVideoFile) {
+        updateCostDisplay();
+        updateRunButtonLabel();
+        return;
+      }
+      const wrapper = document.createElement('div');
+      wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20 bg-slate-900 flex items-center justify-center';
+      const label = document.createElement('span');
+      label.className = 'absolute bottom-1 left-1 text-[9px] text-white/80 px-1.5 py-0.5 rounded bg-black/60';
+      label.textContent = 'VIDEO';
+      const icon = document.createElement('span');
+      icon.className = 'text-2xl text-white/60';
+      icon.textContent = '▶';
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
+      closeBtn.textContent = '×';
+      closeBtn.addEventListener('click', () => {
+        motionVideoFile = null;
+        motionVideoSeconds = null;
+        document.getElementById('motionVideoInput').value = '';
+        try { if (__motionVideoObjURL) URL.revokeObjectURL(__motionVideoObjURL); } catch {}
+        __motionVideoObjURL = null;
+        wrapper.remove();
+        updateCostDisplay();
+        updateRunButtonLabel();
+      });
+      wrapper.appendChild(icon);
+      wrapper.appendChild(label);
+      wrapper.appendChild(closeBtn);
+      container.appendChild(wrapper);
+      try {
+        const objUrl = URL.createObjectURL(motionVideoFile);
+        __motionVideoObjURL = objUrl;
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.src = objUrl;
+        v.addEventListener('loadedmetadata', () => {
+          motionVideoSeconds = Math.max(1, Math.ceil(Number(v.duration || 1)));
+          label.textContent = `${motionVideoSeconds}s`;
+          updateCostDisplay();
+          updateRunButtonLabel();
+        }, { once: true });
+        v.load();
+      } catch {}
+    });
+
+    document.getElementById('motionImageInput').addEventListener('change', (e) => {
+      const file = (e.target.files || [])[0] || null;
+      motionImageFile = file;
+      renderSingleThumb(motionImageFile, document.getElementById('motionImageThumb'), () => {
+        motionImageFile = null;
+        document.getElementById('motionImageInput').value = '';
+      });
+    });
+
 
     async function uploadImagesAndGetUrls(files) {
       const list = Array.isArray(files) ? files : (uploadedFiles || []);
@@ -4454,18 +4848,26 @@ async function pollGeneration(runId, controllers, token, taskId) {
             run_id: runId
           };
         case 'veo31-fast':
-        case 'veo31':
+        case 'veo31': {
+          const frameCount = [startFrameFile, lastFrameFile].filter(Boolean).length;
+          const frameUrls = (urls || []).slice(0, frameCount);
+          const referenceUrls = (urls || []).slice(frameCount);
           return {
             uid,
             prompt,
             aspectRatio: aspect || '16:9',
             duration: duration ? Number(duration) : 8,
-            firstFrameUrl: (urls && urls[0]) ? urls[0] : '',
-            lastFrameUrl: (urls && urls[1]) ? urls[1] : '',
+            firstFrameUrl: frameUrls[0] || '',
+            lastFrameUrl: frameUrls[1] || '',
+            imageUrls: frameUrls,
+            referenceImageUrls: referenceUrls,
+            resolution: currentResolution || '1080p',
+            quality: currentResolution || '1080p',
             imageUrl: '',
             model: model.id === 'veo31-fast' ? 'veo3_1_fast' : 'veo3_1',
             run_id: runId
           };
+        }
 
         case 'runway':
           return {
@@ -4473,6 +4875,8 @@ async function pollGeneration(runId, controllers, token, taskId) {
             prompt,
             aspectRatio: aspect || '16:9',
             duration: duration ? Number(duration) : 5,
+            quality: currentResolution || '720p',
+            resolution: currentResolution || '720p',
             imageUrl: (urls && urls[0]) ? urls[0] : '',
             run_id: runId
           };
@@ -4531,6 +4935,19 @@ async function pollGeneration(runId, controllers, token, taskId) {
             aspectRatio: '16:9',
             run_id: runId
           };
+        case 'kling-motion-control':
+          return {
+            uid,
+            user_id: uid,
+            prompt,
+            videoUrl: urls && urls[0] ? urls[0] : undefined,
+            imageUrl: urls && urls[1] ? urls[1] : undefined,
+            resolution: currentResolution || '720p',
+            mode: currentResolution || '720p',
+            motionModel: currentMotionModel || 'kling26',
+            duration_seconds: Math.max(1, Math.ceil(Number(motionVideoSeconds || 1))),
+            run_id: runId
+          };
         default:
           return { prompt, run_id: runId };
       }
@@ -4573,7 +4990,7 @@ async function pollGeneration(runId, controllers, token, taskId) {
       // Kling 2.6 dynamic credit requirement (depends on sound + duration)
       if (currentModel && currentModel.id === 'kling26') {
         const __dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
-        const __need = (currentKlingSound ? (__dur === 10 ? 16 : 9) : (__dur === 10 ? 9 : 5));
+        const __need = (__dur === 10 ? 8 : 4);
         availableCredits = await getAvailableCredits(__need);
         if (availableCredits < __need) {
           console.warn('Credit gate blocked Kling run', {
@@ -4606,6 +5023,15 @@ async function pollGeneration(runId, controllers, token, taskId) {
           showStatus('This model requires a video upload.', 'error');
           return;
         }
+      } else if (currentModel.needsMotionVideo) {
+        if (!motionVideoFile) {
+          showStatus('This model requires a source video upload.', 'error');
+          return;
+        }
+        if (!motionImageFile) {
+          showStatus('This model requires a reference image.', 'error');
+          return;
+        }
       } else if (currentModel.needsImage && !uploadedFiles.length) {
         showStatus('This model requires at least one image.', 'error');
         return;
@@ -4616,10 +5042,18 @@ async function pollGeneration(runId, controllers, token, taskId) {
       showStatus('Uploading input files…');
 
       try {
+        const frameFiles = currentModel.useFrames
+          ? [startFrameFile, lastFrameFile].filter(Boolean)
+          : [];
+        const veoRefs = currentModel.useFrames && (currentModel.id === 'veo31-fast' || currentModel.id === 'veo31')
+          ? (veoReferenceFiles || [])
+          : [];
         const urls = currentModel.useFrames
-          ? await uploadImagesAndGetUrls([startFrameFile, lastFrameFile].filter(Boolean))
+          ? await uploadImagesAndGetUrls([...frameFiles, ...veoRefs])
           : currentModel.needsVideo
           ? await uploadImagesAndGetUrls([alephVideoFile, alephImageFile].filter(Boolean))
+          : currentModel.needsMotionVideo
+          ? await uploadImagesAndGetUrls([motionVideoFile, motionImageFile].filter(Boolean))
           : await uploadImagesAndGetUrls(uploadedFiles);
         showStatus('Submitting to ' + currentModel.name + '…');
         const uid = currentUser.id;
@@ -4750,7 +5184,8 @@ watchCreditsLive(120000);
             await refreshCredits();
             if (placeholderControllers && placeholderControllers.length) {
               const taskId = j && (j.taskId || j.id || (j.data && (j.data.taskId || j.data.id)));
-              startPollGeneration(runId, placeholderControllers, taskId);
+              const checker = checkerForCurrentModel(currentModel);
+              startPollGeneration(runId, placeholderControllers, taskId, checker);
             }
           }
         }
