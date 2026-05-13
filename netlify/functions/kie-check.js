@@ -355,6 +355,31 @@ function failureReason(value) {
 function collectResultUrls(value) {
   const urls = [];
   const seen = new Set();
+  const outputKeys = new Set([
+    "video_url",
+    "image_url",
+    "result_url",
+    "result_urls",
+    "output",
+    "outputs",
+    "images",
+    "image_urls",
+    "videos",
+    "video_urls",
+    "urls",
+    "files",
+    "file_urls"
+  ]);
+  const containerKeys = new Set([
+    "data",
+    "result",
+    "results",
+    "response",
+    "output",
+    "outputs"
+  ]);
+  const blockedKeys = /(^|_)(input|inputs|reference|references|source|first|last|tail|start|end|frame|frames|image_urls|video_urls|audio_urls|request|payload|params|parameters|meta|metadata)(_|$)/i;
+
   function push(url) {
     if (typeof url !== "string" || !/^https?:\/\//i.test(url)) return;
     const clean = url.replace(/[)"'\\\]}]+$/g, "");
@@ -363,22 +388,25 @@ function collectResultUrls(value) {
     seen.add(clean);
     urls.push(clean);
   }
-  function walk(x, depth = 0) {
+  function walk(x, depth = 0, trusted = false) {
     if (!x || depth > 8 || urls.length >= 4) return;
     if (typeof x === "string") {
+      if (!trusted) return;
       const matches = x.match(/https?:\/\/[^\s"'<>]+/gi);
       if (matches) matches.forEach(push);
       return;
     }
     if (Array.isArray(x)) {
-      for (const item of x) walk(item, depth + 1);
+      for (const item of x) walk(item, depth + 1, trusted);
       return;
     }
     if (typeof x === "object") {
-      for (const key of ["video_url", "image_url", "result_url", "url", "output", "outputs", "images", "image_urls", "result_urls", "data", "result"]) {
-        if (x[key] != null) walk(x[key], depth + 1);
+      for (const [rawKey, child] of Object.entries(x)) {
+        const key = String(rawKey || "");
+        const nextTrusted = trusted || outputKeys.has(key);
+        if (!nextTrusted && !trusted && blockedKeys.test(key)) continue;
+        if (nextTrusted || containerKeys.has(key)) walk(child, depth + 1, nextTrusted);
       }
-      for (const key of Object.keys(x).slice(0, 80)) walk(x[key], depth + 1);
     }
   }
   walk(value);
