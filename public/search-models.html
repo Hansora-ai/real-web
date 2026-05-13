@@ -662,6 +662,12 @@
     .model-logo.wan{ background:linear-gradient(135deg,#14b8a6,#2563eb); }
     .model-logo.qwen{ background:linear-gradient(135deg,#60a5fa,#312e81); }
     .model-logo.z{ background:linear-gradient(135deg,#f59e0b,#ef4444); }
+    .model-logo.seedance{ background:linear-gradient(135deg,#38bdf8,#22c55e,#facc15); color:#061018; }
+    .model-logo.kling{ background:linear-gradient(135deg,#111827,#6366f1,#22d3ee); }
+    .model-logo.veo{ background:linear-gradient(135deg,#34d399,#2563eb); }
+    .model-logo.runway{ background:linear-gradient(135deg,#f8fafc,#111827); color:#050714; }
+    .model-logo.sora{ background:linear-gradient(135deg,#f8fafc,#64748b); color:#050714; }
+    .model-logo.aleph{ background:linear-gradient(135deg,#f97316,#ec4899); }
     .model-logo.video{ background:linear-gradient(135deg,#38bdf8,#8b5cf6); }
     .chip:disabled{
       opacity:.38;
@@ -1517,6 +1523,1044 @@
       }
     }
 
+
+    /* UI-only organization for Seedance 2.0 and Kling 3.0 advanced inputs */
+    body.workspace-redesign #seedanceUploadWrap:not(.hidden),
+    body.workspace-redesign #kling30UploadWrap:not(.hidden){
+      display:grid !important;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px !important;
+      width:100%;
+    }
+    body.workspace-redesign .upload-section-card{
+      min-width:0;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025));
+      padding:10px;
+      box-shadow:0 14px 32px rgba(0,0,0,.18) inset;
+    }
+    body.workspace-redesign .upload-section-wide{ grid-column:1 / -1; }
+    body.workspace-redesign .upload-section-head{
+      display:flex;
+      align-items:center;
+      gap:9px;
+      margin-bottom:9px;
+    }
+    body.workspace-redesign .upload-section-icon{
+      width:30px;
+      height:30px;
+      border-radius:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(99,102,241,.18);
+      border:1px solid rgba(255,255,255,.10);
+      flex:0 0 auto;
+    }
+    body.workspace-redesign .upload-section-head p{
+      margin:0;
+      font-size:12px;
+      font-weight:800;
+      color:rgba(255,255,255,.92);
+      line-height:1.1;
+    }
+    body.workspace-redesign .upload-section-head small{
+      display:block;
+      margin-top:2px;
+      color:rgba(255,255,255,.42);
+      font-size:10px;
+      line-height:1.15;
+    }
+    body.workspace-redesign .frame-pair-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+    body.workspace-redesign .upload-drop-card{
+      position:relative;
+      min-height:116px;
+      border-radius:16px;
+      overflow:hidden;
+      border:1px dashed rgba(255,255,255,.18);
+      background:radial-gradient(circle at 20% 0%,rgba(99,102,241,.16),transparent 52%),rgba(2,6,23,.42);
+    }
+    body.workspace-redesign .upload-drop-card-wide{ min-height:126px; }
+    body.workspace-redesign .upload-drop-btn{
+      position:absolute;
+      inset:0;
+      z-index:1;
+      width:100%;
+      height:100%;
+      border:0;
+      background:transparent;
+      color:rgba(255,255,255,.78);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:7px;
+      font-size:12px;
+      font-weight:750;
+      cursor:pointer;
+    }
+    body.workspace-redesign .upload-drop-btn:hover{
+      color:#fff;
+      background:rgba(99,102,241,.08);
+    }
+    body.workspace-redesign .upload-plus{
+      width:38px;
+      height:38px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      font-size:17px;
+    }
+    body.workspace-redesign .upload-thumb-zone{
+      position:absolute;
+      inset:0;
+      z-index:2;
+      pointer-events:none;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:8px;
+      overflow:auto;
+    }
+    body.workspace-redesign .upload-thumb-zone:empty{ display:none; }
+    body.workspace-redesign .upload-thumb-zone > div{
+      pointer-events:auto;
+      flex:0 0 auto;
+    }
+    body.workspace-redesign .upload-thumb-zone .relative,
+    body.workspace-redesign .upload-thumb-zone > div > .relative{
+      width:88px !important;
+      height:96px !important;
+      border-radius:14px !important;
+      border-color:rgba(255,255,255,.18) !important;
+    }
+    body.workspace-redesign .upload-thumb-list{
+      align-items:flex-start;
+      justify-content:flex-start;
+    }
+    body.workspace-redesign .upload-toggle-card{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      gap:8px;
+    }
+    body.workspace-redesign .duration-picker{
+      position:relative;
+      min-width:148px;
+      border:0 !important;
+      background:transparent !important;
+      padding:0 !important;
+    }
+    body.workspace-redesign .duration-menu{
+      width:100%;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:15px;
+      background:rgba(24,26,31,.86);
+      overflow:hidden;
+    }
+    body.workspace-redesign .duration-menu summary{
+      min-height:42px;
+      padding:0 10px;
+      display:flex;
+      align-items:center;
+      gap:7px;
+      list-style:none;
+      cursor:pointer;
+      user-select:none;
+    }
+    body.workspace-redesign .duration-menu summary::-webkit-details-marker{ display:none; }
+    body.workspace-redesign .duration-clock{
+      width:24px;
+      height:24px;
+      border-radius:9px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(99,102,241,.16);
+    }
+    body.workspace-redesign .duration-title{
+      color:rgba(255,255,255,.62);
+      font-size:11px;
+      font-weight:750;
+    }
+    body.workspace-redesign .duration-current{
+      margin-left:auto;
+      color:#fff;
+      font-size:12px;
+      font-weight:850;
+      white-space:nowrap;
+    }
+    body.workspace-redesign .duration-chev{
+      color:rgba(255,255,255,.45);
+      transition:transform .18s ease;
+    }
+    body.workspace-redesign .duration-menu[open] .duration-chev{ transform:rotate(180deg); }
+    body.workspace-redesign .duration-scroll-pills{
+      display:flex;
+      gap:7px;
+      padding:0 10px 10px;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:thin;
+    }
+    body.workspace-redesign .duration-scroll-pills .chip{
+      flex:0 0 auto;
+      min-width:42px;
+      border-radius:999px !important;
+      border-right:1px solid rgba(255,255,255,.10) !important;
+      padding:7px 12px !important;
+      font-size:11px !important;
+    }
+    @media (max-width:900px){
+      body.workspace-redesign #seedanceUploadWrap:not(.hidden),
+      body.workspace-redesign #kling30UploadWrap:not(.hidden){
+        grid-template-columns:1fr;
+      }
+      body.workspace-redesign .frame-pair-grid{ grid-template-columns:1fr 1fr; }
+      body.workspace-redesign .upload-drop-card{ min-height:128px; }
+      body.workspace-redesign .upload-section-card{ padding:9px; }
+      body.workspace-redesign .duration-picker{ width:100%; }
+    }
+
+
+    /* UI-only refinement: Seedance/Kling reference boxes stacked cleanly, uploaded media fills boxes */
+    body.workspace-redesign #seedanceUploadWrap:not(.hidden),
+    body.workspace-redesign #kling30UploadWrap:not(.hidden){
+      grid-template-columns:1fr !important;
+      gap:12px !important;
+    }
+    body.workspace-redesign .upload-section-card{
+      width:100%;
+    }
+    body.workspace-redesign .frame-pair-grid{
+      grid-template-columns:1fr 1fr !important;
+    }
+    body.workspace-redesign #seedanceAudioToggle,
+    body.workspace-redesign #seedanceNsfwToggle,
+    body.workspace-redesign [data-seedance-nsfw-toggle],
+    body.workspace-redesign .seedance-nsfw-toggle{
+      display:none !important;
+    }
+    body.workspace-redesign .upload-drop-card:has(.upload-thumb-zone:not(:empty)) .upload-drop-btn{
+      opacity:0 !important;
+      pointer-events:none !important;
+      visibility:hidden !important;
+    }
+    body.workspace-redesign .upload-drop-card:has(.upload-thumb-zone:not(:empty)){
+      border-style:solid !important;
+      border-color:rgba(99,102,241,.55) !important;
+      background:rgba(2,6,23,.72) !important;
+      box-shadow:0 0 0 1px rgba(99,102,241,.18) inset !important;
+    }
+    body.workspace-redesign #seedanceFirstThumb,
+    body.workspace-redesign #seedanceLastThumb,
+    body.workspace-redesign #kling30FirstThumb,
+    body.workspace-redesign #kling30LastThumb{
+      padding:0 !important;
+      overflow:hidden !important;
+    }
+    body.workspace-redesign #seedanceFirstThumb > div,
+    body.workspace-redesign #seedanceLastThumb > div,
+    body.workspace-redesign #kling30FirstThumb > div,
+    body.workspace-redesign #kling30LastThumb > div{
+      width:100% !important;
+      height:100% !important;
+      flex:1 1 100% !important;
+    }
+    body.workspace-redesign #seedanceFirstThumb .relative,
+    body.workspace-redesign #seedanceLastThumb .relative,
+    body.workspace-redesign #kling30FirstThumb .relative,
+    body.workspace-redesign #kling30LastThumb .relative{
+      width:100% !important;
+      height:100% !important;
+      border-radius:0 !important;
+      border:0 !important;
+    }
+    body.workspace-redesign .upload-thumb-zone img,
+    body.workspace-redesign .upload-thumb-zone video{
+      width:100% !important;
+      height:100% !important;
+      object-fit:cover !important;
+      display:block !important;
+    }
+    body.workspace-redesign .upload-thumb-list{
+      padding:10px !important;
+      overflow-x:auto !important;
+      overflow-y:hidden !important;
+      align-items:stretch !important;
+    }
+    body.workspace-redesign .upload-thumb-list > div{
+      height:100% !important;
+      min-height:104px !important;
+    }
+    body.workspace-redesign .upload-thumb-list .relative{
+      width:112px !important;
+      height:100% !important;
+      min-height:104px !important;
+      border-radius:14px !important;
+      overflow:hidden !important;
+    }
+    body.workspace-redesign #seedanceAudioRefsThumbs .relative{
+      width:100% !important;
+      min-width:140px !important;
+    }
+    body.workspace-redesign .upload-drop-card.control-disabled{
+      opacity:.42 !important;
+      filter:saturate(.45) !important;
+      pointer-events:none !important;
+    }
+    body.workspace-redesign .upload-drop-card.control-disabled .upload-drop-btn{
+      cursor:not-allowed !important;
+    }
+    @media (max-width:900px){
+      body.workspace-redesign .frame-pair-grid{ grid-template-columns:1fr 1fr !important; }
+      body.workspace-redesign .upload-thumb-list .relative{ width:104px !important; }
+    }
+
+
+    /* Kling 3.0 compact controls copied in spirit from the standalone Kling builder */
+    body.workspace-redesign #kling30UploadWrap:not(.hidden){
+      grid-template-columns:1fr !important;
+      gap:10px !important;
+    }
+    body.workspace-redesign .kling30-compact-card{
+      padding:10px !important;
+      border-radius:18px !important;
+      background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.026)) !important;
+    }
+    body.workspace-redesign .kling30-control-row{
+      width:100%;
+      min-height:54px;
+      border:0;
+      background:transparent;
+      color:#fff;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      text-align:left;
+      cursor:pointer;
+    }
+    body.workspace-redesign .kling30-control-copy{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      flex:1 1 auto;
+    }
+    body.workspace-redesign .kling30-control-copy strong{
+      font-size:13px;
+      font-weight:850;
+      color:rgba(255,255,255,.94);
+      line-height:1.1;
+    }
+    body.workspace-redesign .kling30-control-copy small{
+      font-size:10px;
+      line-height:1.15;
+      color:rgba(255,255,255,.45);
+    }
+    body.workspace-redesign .kling30-count-pill{
+      min-width:28px;
+      height:26px;
+      border-radius:999px;
+      padding:0 9px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid rgba(129,140,248,.42);
+      background:rgba(99,102,241,.18);
+      color:#e5e7ff;
+      font-size:11px;
+      font-weight:850;
+    }
+    body.workspace-redesign .kling30-row-chev{
+      width:24px;
+      height:24px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(255,255,255,.06);
+      color:rgba(255,255,255,.64);
+      font-size:20px;
+      line-height:1;
+      transform:translateY(-1px);
+    }
+    body.workspace-redesign #kling30MultiToggle.kling30-active .kling30-row-chev{ transform:rotate(90deg); }
+    body.workspace-redesign #kling30MultiToggle.kling30-active{
+      border-radius:14px;
+      background:rgba(99,102,241,.12);
+    }
+    body.workspace-redesign .kling30-panel{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:16px;
+      background:rgba(2,6,23,.48);
+      padding:10px;
+    }
+    body.workspace-redesign .kling30-panel-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      margin-bottom:8px;
+      color:rgba(255,255,255,.82);
+      font-size:12px;
+      font-weight:850;
+    }
+    body.workspace-redesign .kling30-panel-head button{
+      border:1px solid rgba(129,140,248,.35);
+      background:rgba(99,102,241,.14);
+      color:#eef2ff;
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:10px;
+      font-weight:750;
+    }
+    body.workspace-redesign .kling30-panel-note{
+      margin:7px 0 0;
+      font-size:10px;
+      line-height:1.25;
+      color:rgba(255,255,255,.45);
+    }
+    body.workspace-redesign .kling30-drawer{
+      position:fixed;
+      z-index:55;
+      left:18px;
+      top:88px;
+      width:min(340px,calc(100vw - 36px));
+      max-height:calc(100vh - 114px);
+      overflow:auto;
+    }
+    body.workspace-redesign .kling30-drawer-card{
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:20px;
+      background:rgba(17,19,24,.98);
+      box-shadow:0 28px 80px rgba(0,0,0,.62);
+      padding:12px;
+    }
+    body.workspace-redesign .kling30-drawer-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    body.workspace-redesign .kling30-close-btn{
+      width:32px;
+      height:32px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      color:rgba(255,255,255,.78);
+      font-size:20px;
+      line-height:1;
+      flex:0 0 auto;
+    }
+    body.workspace-redesign .kling30-elements-box{
+      min-height:168px !important;
+    }
+    body.workspace-redesign #kling30ElementsThumbs.upload-thumb-list{
+      display:grid !important;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px !important;
+      padding:8px !important;
+      align-items:stretch !important;
+      overflow:visible !important;
+    }
+    body.workspace-redesign #kling30ElementsThumbs.upload-thumb-list > div{
+      min-height:104px !important;
+      height:104px !important;
+      width:100% !important;
+    }
+    body.workspace-redesign #kling30ElementsThumbs.upload-thumb-list .relative{
+      width:100% !important;
+      height:104px !important;
+      min-height:104px !important;
+      border-radius:14px !important;
+      border:1px solid rgba(255,255,255,.16) !important;
+      overflow:hidden !important;
+    }
+    body.workspace-redesign #kling30ElementsThumbs video,
+    body.workspace-redesign #kling30ElementsThumbs img{
+      width:100% !important;
+      height:100% !important;
+      object-fit:cover !important;
+    }
+    body.workspace-redesign #kling30ElementsThumbs:empty + *{ display:none; }
+    @media (max-width:900px){
+      body.workspace-redesign .kling30-drawer{
+        position:fixed;
+        left:12px;
+        right:12px;
+        top:76px;
+        width:auto;
+        max-height:calc(100vh - 96px);
+      }
+      body.workspace-redesign .kling30-elements-box{ min-height:160px !important; }
+    }
+
+
+    /* Kling 3.0 corrected multi-shot UI: elements live inside shots */
+    body.workspace-redesign #kling30UploadWrap .kling30-control-row{ padding:0 2px; }
+    body.workspace-redesign #kling30ElementsDrawer{ display:block; }
+    body.workspace-redesign #kling30ElementsDrawer.hidden{ display:none !important; }
+    body.workspace-redesign .kling30-shot-list{ display:flex; flex-direction:column; gap:10px; }
+    body.workspace-redesign .kling30-shot-card{
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.035);
+      border-radius:15px;
+      padding:10px;
+      display:flex;
+      flex-direction:column;
+      gap:9px;
+    }
+    body.workspace-redesign .kling30-shot-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    body.workspace-redesign .kling30-shot-title{ font-size:12px; font-weight:850; color:rgba(255,255,255,.88); }
+    body.workspace-redesign .kling30-shot-remove{
+      border:1px solid rgba(244,63,94,.25);
+      background:rgba(244,63,94,.12);
+      color:#fecdd3;
+      border-radius:999px;
+      width:28px;
+      height:28px;
+      font-size:16px;
+      line-height:1;
+    }
+    body.workspace-redesign .kling30-shot-card textarea,
+    body.workspace-redesign .kling30-shot-card select,
+    body.workspace-redesign .kling30-element-editor input,
+    body.workspace-redesign .kling30-element-editor textarea{
+      width:100%;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(2,6,23,.56);
+      color:#fff;
+      border-radius:12px;
+      padding:9px 10px;
+      font-size:12px;
+      outline:none;
+    }
+    body.workspace-redesign .kling30-shot-card textarea::placeholder,
+    body.workspace-redesign .kling30-element-editor input::placeholder,
+    body.workspace-redesign .kling30-element-editor textarea::placeholder{ color:rgba(255,255,255,.34); }
+    body.workspace-redesign .kling30-shot-meta{ display:grid; grid-template-columns:98px 1fr; gap:8px; align-items:stretch; }
+    body.workspace-redesign .kling30-shot-label{ display:block; font-size:10px; font-weight:760; color:rgba(255,255,255,.54); margin:0 0 5px; }
+    body.workspace-redesign .kling30-shot-element-btn{
+      width:100%;
+      height:100%;
+      min-height:56px;
+      border-radius:14px;
+      border:1px solid rgba(129,140,248,.32);
+      background:rgba(99,102,241,.12);
+      color:#eef2ff;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      padding:9px 10px;
+      text-align:left;
+      font-size:11px;
+      font-weight:800;
+    }
+    body.workspace-redesign .kling30-shot-element-btn small{
+      display:block;
+      font-size:10px;
+      font-weight:650;
+      color:rgba(238,242,255,.62);
+      margin-top:2px;
+    }
+    body.workspace-redesign .kling30-editor-field{ margin-bottom:10px; }
+    body.workspace-redesign .kling30-editor-field label{
+      display:block;
+      font-size:11px;
+      font-weight:820;
+      color:rgba(255,255,255,.72);
+      margin-bottom:6px;
+    }
+    body.workspace-redesign .kling30-type-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    body.workspace-redesign .kling30-type-btn{
+      min-height:42px;
+      border-radius:13px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.045);
+      color:rgba(255,255,255,.78);
+      font-size:12px;
+      font-weight:850;
+    }
+    body.workspace-redesign .kling30-type-btn.active{
+      border-color:rgba(129,140,248,.82);
+      background:linear-gradient(135deg,rgba(79,70,229,.72),rgba(99,102,241,.25));
+      color:#fff;
+    }
+    body.workspace-redesign .kling30-elements-box .upload-drop-btn.has-media{ opacity:0; pointer-events:none; }
+    body.workspace-redesign #kling30ElementsThumbs.upload-thumb-list:empty{ display:none !important; }
+    body.workspace-redesign #kling30ElementsThumbs.upload-thumb-list:not(:empty){ margin-top:0; }
+
+
+    /* Kling 3.0 repair: centered element editor modal + compact shot card layout */
+    body.workspace-redesign #kling30ElementsDrawer.kling30-drawer{
+      position:fixed !important;
+      inset:0 !important;
+      z-index:80 !important;
+      width:100vw !important;
+      height:100vh !important;
+      max-width:none !important;
+      max-height:none !important;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
+      padding:18px !important;
+      overflow:hidden !important;
+      background:rgba(0,0,0,.58) !important;
+      backdrop-filter:blur(10px) !important;
+      -webkit-backdrop-filter:blur(10px) !important;
+      box-sizing:border-box !important;
+    }
+    body.workspace-redesign #kling30ElementsDrawer.hidden{
+      display:none !important;
+    }
+    body.workspace-redesign #kling30ElementsDrawer .kling30-drawer-card{
+      width:min(420px, calc(100vw - 36px)) !important;
+      max-width:420px !important;
+      max-height:min(680px, calc(100vh - 42px)) !important;
+      box-sizing:border-box !important;
+      overflow-y:auto !important;
+      overflow-x:hidden !important;
+      border-radius:22px !important;
+      box-shadow:0 30px 90px rgba(0,0,0,.72) !important;
+    }
+    body.workspace-redesign #kling30ElementsDrawer .kling30-element-editor,
+    body.workspace-redesign #kling30ElementsDrawer .kling30-editor-field{
+      min-width:0 !important;
+      width:100% !important;
+      box-sizing:border-box !important;
+    }
+    body.workspace-redesign #kling30ElementsDrawer .kling30-editor-field label.required::after{
+      content:' *';
+      color:#fda4af;
+    }
+    body.workspace-redesign #kling30ElementsDrawer .kling30-elements-box{
+      min-height:0 !important;
+      padding:8px !important;
+      overflow:visible !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:8px !important;
+    }
+    body.workspace-redesign #kling30ElementsDrawer #kling30ElementsBtn{
+      position:relative !important;
+      inset:auto !important;
+      z-index:1 !important;
+      width:100% !important;
+      height:42px !important;
+      min-height:42px !important;
+      border:1px dashed rgba(129,140,248,.38) !important;
+      border-radius:13px !important;
+      background:rgba(99,102,241,.10) !important;
+      flex-direction:row !important;
+      color:rgba(255,255,255,.86) !important;
+      opacity:1 !important;
+      visibility:visible !important;
+      pointer-events:auto !important;
+    }
+    body.workspace-redesign #kling30ElementsDrawer #kling30ElementsBtn.has-media{
+      opacity:1 !important;
+      visibility:visible !important;
+      pointer-events:auto !important;
+    }
+    body.workspace-redesign #kling30ElementsDrawer #kling30ElementsBtn .upload-plus{
+      width:26px !important;
+      height:26px !important;
+      font-size:13px !important;
+    }
+    body.workspace-redesign #kling30ElementsDrawer #kling30ElementsThumbs.upload-thumb-list{
+      position:relative !important;
+      inset:auto !important;
+      z-index:2 !important;
+      pointer-events:auto !important;
+      width:100% !important;
+      max-width:100% !important;
+      display:grid !important;
+      grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+      gap:8px !important;
+      padding:0 !important;
+      overflow:visible !important;
+      box-sizing:border-box !important;
+    }
+    body.workspace-redesign #kling30ElementsDrawer #kling30ElementsThumbs.upload-thumb-list > div,
+    body.workspace-redesign #kling30ElementsDrawer #kling30ElementsThumbs.upload-thumb-list .relative{
+      width:100% !important;
+      min-width:0 !important;
+      height:104px !important;
+      min-height:104px !important;
+      max-width:100% !important;
+      box-sizing:border-box !important;
+    }
+    body.workspace-redesign #kling30ElementsDrawer #kling30ElementsThumbs button{
+      pointer-events:auto !important;
+      z-index:30 !important;
+    }
+
+    body.workspace-redesign .kling30-shot-card{
+      padding:10px !important;
+      gap:8px !important;
+      overflow:hidden !important;
+    }
+    body.workspace-redesign .kling30-shot-card textarea{
+      min-height:64px !important;
+      height:76px !important;
+      resize:vertical !important;
+    }
+    body.workspace-redesign .kling30-shot-meta{
+      width:100%;
+      max-width:100%;
+      box-sizing:border-box;
+      display:grid !important;
+      grid-template-columns:minmax(0,88px) minmax(0,1fr) !important;
+      gap:8px !important;
+      align-items:start !important;
+      overflow:hidden;
+    }
+    body.workspace-redesign .kling30-shot-meta > div{
+      min-width:0;
+      max-width:100%;
+      box-sizing:border-box;
+    }
+    body.workspace-redesign .kling30-shot-card select{
+      height:48px !important;
+      min-height:48px !important;
+      padding:0 12px !important;
+    }
+    body.workspace-redesign .kling30-shot-element-btn{
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      min-height:64px !important;
+      height:64px !important;
+      padding:10px 10px !important;
+      box-sizing:border-box;
+      overflow:hidden;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:space-between !important;
+      gap:8px !important;
+    }
+    body.workspace-redesign .kling30-shot-element-btn > span:first-child{
+      min-width:0;
+      max-width:calc(100% - 18px);
+      overflow:hidden;
+      display:flex !important;
+      flex-direction:column !important;
+      justify-content:center !important;
+    }
+    body.workspace-redesign .kling30-shot-element-btn strong,
+    body.workspace-redesign .kling30-shot-element-btn small{
+      display:block;
+      max-width:100%;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      line-height:1.15 !important;
+    }
+    body.workspace-redesign .kling30-shot-element-btn .kling30-row-chev{
+      flex:0 0 auto;
+    }
+    body.workspace-redesign #kling30MultiPanel{
+      overflow:hidden !important;
+    }
+    body.workspace-redesign #kling30ShotsContainer{
+      overflow:visible !important;
+    }
+
+
+    /* Kling 3.0 v9: visible Done button for centered element editor */
+    body.workspace-redesign #kling30ElementsDrawer .kling30-drawer-card{
+      display:flex !important;
+      flex-direction:column !important;
+    }
+    body.workspace-redesign #kling30ElementsDrawer .kling30-element-editor{
+      overflow-y:auto !important;
+      overflow-x:hidden !important;
+      flex:1 1 auto !important;
+      min-height:0 !important;
+      padding-bottom:8px !important;
+    }
+    body.workspace-redesign #kling30ElementsDrawer .kling30-drawer-actions{
+      position:sticky !important;
+      bottom:0 !important;
+      z-index:5 !important;
+      display:flex !important;
+      justify-content:flex-end !important;
+      gap:10px !important;
+      padding:10px 0 0 !important;
+      margin-top:10px !important;
+      border-top:1px solid rgba(255,255,255,.10) !important;
+      background:linear-gradient(180deg,rgba(17,19,24,.78),rgba(17,19,24,.98) 34%) !important;
+      backdrop-filter:blur(10px) !important;
+      -webkit-backdrop-filter:blur(10px) !important;
+    }
+    body.workspace-redesign #kling30DoneElementsBtn{
+      min-height:42px !important;
+      min-width:112px !important;
+      border-radius:14px !important;
+      border:1px solid rgba(129,140,248,.65) !important;
+      background:linear-gradient(135deg,#6366f1,#8b5cf6) !important;
+      color:#fff !important;
+      font-size:13px !important;
+      font-weight:850 !important;
+      box-shadow:0 12px 28px rgba(99,102,241,.28) !important;
+    }
+    body.workspace-redesign #kling30DoneElementsBtn:active{ transform:translateY(1px); }
+
+
+    /* Final UI-only fixes for HappyHorse, Grok video, and Wan 2.7 inputs */
+    body.workspace-redesign #videoRefsUploadWrap:not(.hidden){
+      display:flex !important;
+      flex-direction:column !important;
+      gap:12px !important;
+      width:100%;
+    }
+    body.workspace-redesign #videoRefsUploadWrap .upload-section-title.video-refs-title-hidden,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan .upload-section-title,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse .upload-section-title{
+      display:none !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap .upload-grid{
+      display:grid !important;
+      grid-template-columns:1fr !important;
+      gap:12px !important;
+      width:100%;
+    }
+    body.workspace-redesign #videoRefsUploadWrap .upload-drop-card{
+      width:100% !important;
+      margin:0 !important;
+      min-height:128px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoFirstFrameControl,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoLastFrameControl{
+      min-height:118px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan .upload-grid{
+      display:grid !important;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+      gap:12px !important;
+      width:100% !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoFirstFrameControl{
+      grid-column:1 / 2 !important;
+      grid-row:1 !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoLastFrameControl{
+      grid-column:2 / 3 !important;
+      grid-row:1 !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoSourceControl,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoRefImagesControl,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoRefVideosControl,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoRefAudioControl{
+      grid-column:1 / -1 !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse .upload-grid{
+      gap:12px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-grok #videoRefImagesControl{
+      min-height:156px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap #wanPromptExtendControl{
+      display:none !important;
+    }
+
+
+    /* v12 targeted repair: keep add buttons visible after removal and make Wan 2.7 frame previews fill edges */
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-grok .upload-drop-card:has(.upload-thumb-zone:not(:empty)) .upload-drop-btn,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse .upload-drop-card:has(.upload-thumb-zone:not(:empty)) .upload-drop-btn,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan .upload-drop-card:has(.upload-thumb-zone:not(:empty)) .upload-drop-btn{
+      opacity:1 !important;
+      pointer-events:auto !important;
+      visibility:visible !important;
+      position:relative !important;
+      inset:auto !important;
+      width:100% !important;
+      min-height:42px !important;
+      height:42px !important;
+      flex-direction:row !important;
+      gap:8px !important;
+      border-radius:12px !important;
+      margin:8px !important;
+      width:calc(100% - 16px) !important;
+      background:rgba(99,102,241,.12) !important;
+      border:1px solid rgba(129,140,248,.32) !important;
+      z-index:4 !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-grok .upload-drop-card:has(.upload-thumb-zone:not(:empty)) .upload-plus,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse .upload-drop-card:has(.upload-thumb-zone:not(:empty)) .upload-plus,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan .upload-drop-card:has(.upload-thumb-zone:not(:empty)) .upload-plus{
+      width:26px !important;
+      height:26px !important;
+      margin:0 !important;
+      font-size:14px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-grok .upload-drop-card:has(.upload-thumb-zone:not(:empty)),
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse .upload-drop-card:has(.upload-thumb-zone:not(:empty)),
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan .upload-drop-card:has(.upload-thumb-zone:not(:empty)){
+      display:flex !important;
+      flex-direction:column !important;
+      min-height:156px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-grok .upload-thumb-list,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse .upload-thumb-list,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan .upload-thumb-list{
+      position:relative !important;
+      inset:auto !important;
+      flex:1 1 auto !important;
+      min-height:104px !important;
+      width:100% !important;
+      z-index:2 !important;
+      display:flex !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoFirstFrameThumb,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoLastFrameThumb{
+      padding:0 !important;
+      overflow:hidden !important;
+      align-items:stretch !important;
+      justify-content:stretch !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoFirstFrameThumb > div,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoLastFrameThumb > div{
+      width:100% !important;
+      height:100% !important;
+      flex:1 1 100% !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoFirstFrameThumb .relative,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoLastFrameThumb .relative{
+      width:100% !important;
+      height:100% !important;
+      border-radius:0 !important;
+      border:0 !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoFirstFrameThumb img,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoLastFrameThumb img{
+      width:100% !important;
+      height:100% !important;
+      object-fit:cover !important;
+      display:block !important;
+    }
+
+
+    /* v13 correction: upload buttons do NOT overlay uploaded media; they return only when all media is removed */
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-grok .upload-drop-card,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse .upload-drop-card,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan .upload-drop-card{
+      position:relative !important;
+      display:block !important;
+      overflow:hidden !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-grok .upload-drop-card:has(.upload-thumb-zone:not(:empty)),
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse .upload-drop-card:has(.upload-thumb-zone:not(:empty)),
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan .upload-drop-card:has(.upload-thumb-zone:not(:empty)){
+      display:block !important;
+      flex-direction:initial !important;
+      background:rgba(2,6,23,.72) !important;
+      border-style:solid !important;
+      border-color:rgba(99,102,241,.55) !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-grok .upload-drop-card:has(.upload-thumb-zone:not(:empty)) .upload-drop-btn,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse .upload-drop-card:has(.upload-thumb-zone:not(:empty)) .upload-drop-btn,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan .upload-drop-card:has(.upload-thumb-zone:not(:empty)) .upload-drop-btn{
+      opacity:0 !important;
+      pointer-events:none !important;
+      visibility:hidden !important;
+      position:absolute !important;
+      inset:0 !important;
+      width:100% !important;
+      height:100% !important;
+      min-height:100% !important;
+      margin:0 !important;
+      border:0 !important;
+      background:transparent !important;
+      z-index:1 !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-grok .upload-drop-card:has(.upload-thumb-zone:empty) .upload-drop-btn,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse .upload-drop-card:has(.upload-thumb-zone:empty) .upload-drop-btn,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan .upload-drop-card:has(.upload-thumb-zone:empty) .upload-drop-btn{
+      opacity:1 !important;
+      pointer-events:auto !important;
+      visibility:visible !important;
+      position:absolute !important;
+      inset:0 !important;
+      width:100% !important;
+      height:100% !important;
+      min-height:100% !important;
+      margin:0 !important;
+      border:0 !important;
+      background:transparent !important;
+      z-index:1 !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-grok .upload-thumb-zone,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse .upload-thumb-zone,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan .upload-thumb-zone{
+      position:absolute !important;
+      inset:0 !important;
+      width:100% !important;
+      height:100% !important;
+      min-height:0 !important;
+      z-index:2 !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-grok .upload-thumb-zone:empty,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse .upload-thumb-zone:empty,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan .upload-thumb-zone:empty{
+      display:none !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-grok .upload-thumb-list,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse .upload-thumb-list,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan .upload-thumb-list{
+      padding:8px !important;
+      overflow-x:auto !important;
+      overflow-y:hidden !important;
+      align-items:stretch !important;
+      justify-content:flex-start !important;
+      gap:8px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoFirstFrameThumb,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoLastFrameThumb,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse #videoFirstFrameThumb,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse #videoLastFrameThumb{
+      padding:0 !important;
+      overflow:hidden !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoFirstFrameThumb > div,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoLastFrameThumb > div,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse #videoFirstFrameThumb > div,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse #videoLastFrameThumb > div{
+      width:100% !important;
+      height:100% !important;
+      flex:1 1 100% !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoFirstFrameThumb .relative,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoLastFrameThumb .relative,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse #videoFirstFrameThumb .relative,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse #videoLastFrameThumb .relative{
+      width:100% !important;
+      height:100% !important;
+      border-radius:0 !important;
+      border:0 !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoFirstFrameThumb img,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-wan #videoLastFrameThumb img,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse #videoFirstFrameThumb img,
+    body.workspace-redesign #videoRefsUploadWrap.video-refs-happyhorse #videoLastFrameThumb img{
+      width:100% !important;
+      height:100% !important;
+      object-fit:cover !important;
+      display:block !important;
+    }
+
     </style>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
@@ -1660,6 +2704,242 @@
               <div id="motionImageThumb" class="flex gap-1.5"></div>
             </div>
           </div>
+
+          <!-- Seedance 2.0: specific frame/reference controls -->
+          <div id="seedanceUploadWrap" class="hidden flex-col gap-3 model-upload-grid seedance-upload-grid">
+            <div class="upload-section-card upload-section-wide">
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🎬</span>
+                <div>
+                  <p>Frames</p>
+                  <small>First and last frame stay together</small>
+                </div>
+              </div>
+              <div class="frame-pair-grid">
+                <div class="upload-drop-card">
+                  <input id="seedanceFirstInput" type="file" accept="image/*" class="hidden" />
+                  <button id="seedanceFirstBtn" class="upload-drop-btn" type="button">
+                    <span class="upload-plus">➕</span><span>First frame</span>
+                  </button>
+                  <div id="seedanceFirstThumb" class="upload-thumb-zone"></div>
+                </div>
+                <div class="upload-drop-card">
+                  <input id="seedanceLastInput" type="file" accept="image/*" class="hidden" />
+                  <button id="seedanceLastBtn" class="upload-drop-btn" type="button">
+                    <span class="upload-plus">➕</span><span>Last frame</span>
+                  </button>
+                  <div id="seedanceLastThumb" class="upload-thumb-zone"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="upload-section-card">
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🖼️</span>
+                <div>
+                  <p>Image references</p>
+                  <small>Image-only reference box</small>
+                </div>
+              </div>
+              <div class="upload-drop-card upload-drop-card-wide">
+                <input id="seedanceImageRefsInput" type="file" accept="image/*" class="hidden" multiple />
+                <button id="seedanceImageRefsBtn" class="upload-drop-btn" type="button">
+                  <span class="upload-plus">📎</span><span>Add image refs</span>
+                </button>
+                <div id="seedanceImageRefsThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+              </div>
+            </div>
+
+            <div class="upload-section-card">
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🎞️</span>
+                <div>
+                  <p>Video references</p>
+                  <small>Video-only reference box</small>
+                </div>
+              </div>
+              <div class="upload-drop-card upload-drop-card-wide">
+                <input id="seedanceVideoRefsInput" type="file" accept="video/*" class="hidden" multiple />
+                <button id="seedanceVideoRefsBtn" class="upload-drop-btn" type="button">
+                  <span class="upload-plus">📎</span><span>Add video refs</span>
+                </button>
+                <div id="seedanceVideoRefsThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+              </div>
+            </div>
+
+            <div class="upload-section-card">
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🔊</span>
+                <div>
+                  <p>Audio references</p>
+                  <small>Audio-only reference box</small>
+                </div>
+              </div>
+              <div class="upload-drop-card upload-drop-card-wide">
+                <input id="seedanceAudioRefsInput" type="file" accept="audio/*" class="hidden" multiple />
+                <button id="seedanceAudioRefsBtn" class="upload-drop-btn" type="button">
+                  <span class="upload-plus">📎</span><span>Add audio refs</span>
+                </button>
+                <div id="seedanceAudioRefsThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+              </div>
+            </div>
+
+            <div class="upload-section-card upload-toggle-card upload-section-wide">
+              <button id="seedanceAudioToggle" type="button" class="chip chip-active px-3 py-1 hidden">Audio on</button>
+              <button id="seedanceWebToggle" type="button" class="chip px-3 py-1">Web search off</button>
+            </div>
+          </div>
+
+          <!-- Kling 3.0: compact frames, elements drawer, and multi-shot controls -->
+          <div id="kling30UploadWrap" class="hidden flex-col gap-3 model-upload-grid kling30-upload-grid">
+            <div class="upload-section-card upload-section-wide kling30-compact-card">
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🎬</span>
+                <div>
+                  <p>Frames</p>
+                  <small>First and last frame stay together</small>
+                </div>
+              </div>
+              <div class="frame-pair-grid">
+                <div class="upload-drop-card kling30-frame-box">
+                  <input id="kling30FirstInput" type="file" accept="image/*" class="hidden" />
+                  <button id="kling30FirstBtn" class="upload-drop-btn" type="button">
+                    <span class="upload-plus">➕</span><span>First frame</span>
+                  </button>
+                  <div id="kling30FirstThumb" class="upload-thumb-zone"></div>
+                </div>
+                <div class="upload-drop-card kling30-frame-box">
+                  <input id="kling30LastInput" type="file" accept="image/*" class="hidden" />
+                  <button id="kling30LastBtn" class="upload-drop-btn" type="button">
+                    <span class="upload-plus">➕</span><span>Last frame</span>
+                  </button>
+                  <div id="kling30LastThumb" class="upload-thumb-zone"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="upload-section-card upload-section-wide kling30-compact-card">
+              <button id="kling30MultiToggle" type="button" class="kling30-control-row">
+                <span class="upload-section-icon">🎞️</span>
+                <span class="kling30-control-copy">
+                  <strong id="kling30MultiLabel">Single shot</strong>
+                  <small>Tap to open shots with prompt, duration and elements</small>
+                </span>
+                <span id="kling30ElementsCount" class="kling30-count-pill">0</span>
+                <span class="kling30-row-chev">›</span>
+              </button>
+              <div id="kling30MultiPanel" class="hidden kling30-panel mt-3">
+                <div class="kling30-panel-head">
+                  <span>Multi-shot storyboard</span>
+                  <button id="kling30AddShotBtn" type="button">+ Add shot</button>
+                </div>
+                <div id="kling30ShotsContainer" class="kling30-shot-list"></div>
+                <textarea id="kling30ShotsBox" rows="4" class="hidden" aria-hidden="true"></textarea>
+                <p class="kling30-panel-note">Each shot has its own prompt, duration and element. Total duration stays max 15s.</p>
+              </div>
+            </div>
+
+            <div id="kling30ElementsDrawer" class="hidden kling30-drawer upload-section-wide">
+              <div class="kling30-drawer-card">
+                <div class="kling30-drawer-head">
+                  <div class="upload-section-head">
+                    <span class="upload-section-icon">🧩</span>
+                    <div>
+                      <p id="kling30ElementDrawerTitle">Shot element</p>
+                      <small>Name, type, description and media for this shot</small>
+                    </div>
+                  </div>
+                  <button id="kling30CloseElementsBtn" type="button" class="kling30-close-btn">×</button>
+                </div>
+                <div class="kling30-element-editor">
+                  <div class="kling30-editor-field">
+                    <label for="kling30ElementNameInput" class="required">Name</label>
+                    <input id="kling30ElementNameInput" type="text" placeholder="character" />
+                  </div>
+                  <div class="kling30-editor-field">
+                    <label>Type</label>
+                    <div class="kling30-type-row">
+                      <button id="kling30ElementTypeImage" type="button" class="kling30-type-btn">🖼️ Image</button>
+                      <button id="kling30ElementTypeVideo" type="button" class="kling30-type-btn">🎞️ Video</button>
+                    </div>
+                  </div>
+                  <div class="kling30-editor-field">
+                    <label for="kling30ElementDescInput" class="required">Description</label>
+                    <textarea id="kling30ElementDescInput" rows="3" placeholder="Describe this character/object/environment"></textarea>
+                  </div>
+                  <div class="upload-drop-card upload-drop-card-wide kling30-elements-box">
+                    <input id="kling30ElementsInput" type="file" accept="image/*,video/*" class="hidden" multiple />
+                    <button id="kling30ElementsBtn" class="upload-drop-btn" type="button">
+                      <span class="upload-plus">📎</span><span id="kling30ElementsBtnLabel">Add element media</span>
+                    </button>
+                    <div id="kling30ElementsThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+                  </div>
+                  <p id="kling30ElementHelp" class="kling30-panel-note">Image type requires 2–4 images. Video type requires 1 video. Name and description are required when media is added.</p>
+                  <p id="kling30ElementError" class="hidden text-[10px] text-rose-300 mt-2"></p>
+                  <div class="kling30-drawer-actions">
+                    <button id="kling30DoneElementsBtn" type="button">Done</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- New KIE video models: Wan 2.7 / HappyHorse / Grok -->
+          <div id="videoRefsUploadWrap" class="hidden flex-col gap-3 model-upload-grid">
+            <div class="upload-section-card upload-section-wide">
+              <div class="upload-section-title">
+                <span id="videoRefsTitle">References</span>
+                <span id="videoRefsHint">Optional model inputs</span>
+              </div>
+              <div class="upload-grid">
+                <div id="videoFirstFrameControl" class="upload-drop-card">
+                  <input id="videoFirstFrameInput" type="file" accept="image/*" class="hidden" />
+                  <button id="videoFirstFrameBtn" class="upload-drop-btn" type="button">
+                    <span class="upload-plus">➕</span><span>First frame</span>
+                  </button>
+                  <div id="videoFirstFrameThumb" class="upload-thumb-zone"></div>
+                </div>
+                <div id="videoLastFrameControl" class="upload-drop-card">
+                  <input id="videoLastFrameInput" type="file" accept="image/*" class="hidden" />
+                  <button id="videoLastFrameBtn" class="upload-drop-btn" type="button">
+                    <span class="upload-plus">➕</span><span>Last frame</span>
+                  </button>
+                  <div id="videoLastFrameThumb" class="upload-thumb-zone"></div>
+                </div>
+                <div id="videoSourceControl" class="upload-drop-card">
+                  <input id="videoSourceInput" type="file" accept="video/*" class="hidden" />
+                  <button id="videoSourceBtn" class="upload-drop-btn" type="button">
+                    <span class="upload-plus">📎</span><span>Source video</span>
+                  </button>
+                  <div id="videoSourceThumb" class="upload-thumb-zone"></div>
+                </div>
+                <div id="videoRefImagesControl" class="upload-drop-card">
+                  <input id="videoRefImagesInput" type="file" accept="image/*" class="hidden" multiple />
+                  <button id="videoRefImagesBtn" class="upload-drop-btn" type="button">
+                    <span class="upload-plus">📎</span><span id="videoRefImagesLabel">Image refs</span>
+                  </button>
+                  <div id="videoRefImagesThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+                </div>
+                <div id="videoRefVideosControl" class="upload-drop-card">
+                  <input id="videoRefVideosInput" type="file" accept="video/*" class="hidden" multiple />
+                  <button id="videoRefVideosBtn" class="upload-drop-btn" type="button">
+                    <span class="upload-plus">📎</span><span>Video refs</span>
+                  </button>
+                  <div id="videoRefVideosThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+                </div>
+                <div id="videoRefAudioControl" class="upload-drop-card">
+                  <input id="videoRefAudioInput" type="file" accept="audio/*" class="hidden" multiple />
+                  <button id="videoRefAudioBtn" class="upload-drop-btn" type="button">
+                    <span class="upload-plus">📎</span><span>Audio ref</span>
+                  </button>
+                  <div id="videoRefAudioThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+                </div>
+              </div>
+              <div id="wanPromptExtendControl" class="flex items-center gap-2 mt-3 text-[11px] text-white/70">
+                <button id="wanPromptExtendToggle" type="button" class="chip chip-active px-3 py-1">Prompt extend on</button>
+              </div>
+            </div>
+          </div>
           </div>
           <div class="w-full">
             <p id="status" class="text-[11px] text-amber-200/80 min-h-[1.1rem]"></p>
@@ -1698,9 +2978,16 @@
                 <div id="klingSoundPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
               </div>
 
-              <div id="durationBlock" class="flex items-center gap-1.5 hidden">
-                <span class="text-white/50">Sec</span>
-                <div id="durationPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
+              <div id="durationBlock" class="duration-picker hidden">
+                <details class="duration-menu">
+                  <summary>
+                    <span class="duration-clock">⏱</span>
+                    <span class="duration-title">Duration</span>
+                    <span id="durationCurrentLabel" class="duration-current">Choose</span>
+                    <span class="duration-chev">▾</span>
+                  </summary>
+                  <div id="durationPills" class="duration-scroll-pills"></div>
+                </details>
               </div>
 
               <div id="resolutionBlock" class="flex items-center gap-1.5 hidden">
@@ -3109,6 +4396,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         subtitle: 'Text / (Image) → Video',
         category: 'video',
         description: 'Veo 3 Fast — 8s only, vertical/horizontal only.',
+        hidden: true,
         endpoint: '/.netlify/functions/run-veo3',
         needsImage: false,
         maxFiles: 1,
@@ -3125,6 +4413,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         subtitle: 'Text / (Image) → Video',
         category: 'video',
         description: 'Veo 3 — 8s only, vertical/horizontal only.',
+        hidden: true,
         endpoint: '/.netlify/functions/run-veo3',
         needsImage: false,
         maxFiles: 1,
@@ -3151,7 +4440,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         costLabel: 'Credits Sora -3⚡ Pro 20-25⚡',
         minCredits: 7
       },
-            {
+      {
         id: 'runway',
         name: 'Runway',
         emoji: '🎞️',
@@ -3168,6 +4457,87 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         durations: [5, 10],
         costLabel: '720p 5s-1.5⚡ 10s-3⚡ / 1080p 5s-3⚡',
         minCredits: 1.5
+      },
+      {
+        id: 'seedance20',
+        name: 'Seedance 2.0',
+        emoji: '🌱',
+        subtitle: 'Text / media references → Video',
+        category: 'video',
+        description: 'Seedance 2.0 / Fast with first/last frame, image, video, and audio references.',
+        endpoint: '/.netlify/functions/run-seedance-2',
+        needsImage: false,
+        maxFiles: 0,
+        uploadMaxMB: 50,
+        uploadLimitsMB: { image: 30, video: 50, audio: 50 },
+        specificUpload: 'seedance',
+        aspectOptions: ['16:9', '9:16', '1:1', '4:3', '3:4'],
+        defaultAspect: '16:9',
+        resolutionOptions: ['720p', '1080p'],
+        defaultResolution: '720p',
+        durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        costLabel: 'Standard 720p 3.5⚡/s · 1080p 7⚡/s · Fast 3⚡/s',
+        minCredits: 17.5
+      },
+      {
+        id: 'wan27-video',
+        name: 'Wan 2.7',
+        emoji: 'W',
+        subtitle: 'Text / Image / Video refs → Video',
+        category: 'video',
+        description: 'Wan 2.7 video with first/last frame, source video, image/video/audio references.',
+        endpoint: '/.netlify/functions/run-wan-27-video',
+        needsImage: false,
+        maxFiles: 0,
+        uploadMaxMB: 50,
+        specificUpload: 'wan27',
+        aspectOptions: ['16:9', '9:16', '1:1'],
+        defaultAspect: '16:9',
+        resolutionOptions: ['720p', '1080p'],
+        defaultResolution: '720p',
+        durations: [5, 10],
+        costLabel: '720p 1.5⚡/s · 1080p 2⚡/s',
+        minCredits: 7.5
+      },
+      {
+        id: 'happyhorse10',
+        name: 'HappyHorse 1.0',
+        emoji: 'HH',
+        subtitle: 'Text / Image / Reference → Video',
+        category: 'video',
+        description: 'HappyHorse 1.0 video with first frame, reference images, and source video edit.',
+        endpoint: '/.netlify/functions/run-happyhorse-1',
+        needsImage: false,
+        maxFiles: 0,
+        uploadMaxMB: 50,
+        specificUpload: 'happyhorse',
+        aspectOptions: ['16:9', '9:16', '1:1'],
+        defaultAspect: '16:9',
+        resolutionOptions: ['720p', '1080p'],
+        defaultResolution: '720p',
+        durations: [5, 10],
+        costLabel: '720p 2.5⚡/s · 1080p 3.5⚡/s',
+        minCredits: 12.5
+      },
+      {
+        id: 'grok-video',
+        name: 'Grok',
+        emoji: '𝕏',
+        subtitle: 'Text / Image → Video',
+        category: 'video',
+        description: 'Grok video in normal mode with optional image input.',
+        endpoint: '/.netlify/functions/run-grok-video',
+        needsImage: false,
+        maxFiles: 0,
+        uploadMaxMB: 20,
+        specificUpload: 'grokVideo',
+        aspectOptions: ['16:9', '9:16', '1:1'],
+        defaultAspect: '16:9',
+        resolutionOptions: ['720p', '1080p'],
+        defaultResolution: '720p',
+        durations: [6],
+        costLabel: '0.3⚡/s',
+        minCredits: 1.8
       },
       {
         id: 'kling25',
@@ -3202,6 +4572,26 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         durations: [5, 10],
         costLabel: 'Credits 5s-4⚡ 10s-8⚡',
         minCredits: 4
+      },
+      {
+        id: 'kling30',
+        name: 'Kling 3.0',
+        emoji: 'K3',
+        subtitle: 'Text / elements → Video (sound optional)',
+        category: 'video',
+        description: 'Kling 3.0 with optional image/video elements and sound generation.',
+        endpoint: '/.netlify/functions/run-kling-30',
+        needsImage: false,
+        maxFiles: 0,
+        uploadMaxMB: 50,
+        specificUpload: 'kling30',
+        aspectOptions: ['1:1', '9:16', '16:9'],
+        defaultAspect: '16:9',
+        resolutionOptions: ['720p', '1080p', '4K'],
+        defaultResolution: '720p',
+        durations: [5, 10, 15],
+        costLabel: '720p 1⚡/s · 1080p 1.5⚡/s · 4K 4⚡/s',
+        minCredits: 5
       },
             {
         id: 'kling21',
@@ -3268,12 +4658,14 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     // Models that should APPEND images when user uploads again (multi-image support)
     const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'grok-image', 'wan-2-7-image', 'qwen-2']);
     const IMAGE_MODEL_ORDER = ['gpt-image-2', 'nano-banana-2', 'nano-banana-pro', 'seedream-5-lite', 'grok-image'];
+    const VIDEO_MODEL_ORDER = ['kling30', 'seedance20', 'happyhorse10', 'grok-video', 'kling26', 'wan27-video'];
 
     function sortModelsForCurrentMode(items) {
-      if (currentMode !== 'image') return items;
+      const order = currentMode === 'video' ? VIDEO_MODEL_ORDER : IMAGE_MODEL_ORDER;
+      if (!order || !order.length) return items;
       return [...items].sort((a, b) => {
-        const ia = IMAGE_MODEL_ORDER.indexOf(a.id);
-        const ib = IMAGE_MODEL_ORDER.indexOf(b.id);
+        const ia = order.indexOf(a.id);
+        const ib = order.indexOf(b.id);
         if (ia !== -1 || ib !== -1) {
           if (ia === -1) return 1;
           if (ib === -1) return -1;
@@ -3293,8 +4685,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id.includes('seedream')) return 'S';
       if (id.includes('grok')) return '𝕏';
       if (id.includes('wan')) return 'W';
+      if (id.includes('happyhorse')) return 'HH';
       if (id.includes('qwen')) return 'Q';
       if (id.includes('z-image')) return 'Z';
+      if (id.includes('seedance20')) return 'S2';
+      if (id.includes('kling30')) return 'K3';
       if (id.includes('kling')) return 'K';
       if (id.includes('veo')) return 'V';
       if (id.includes('sora')) return 'S2';
@@ -3310,8 +4705,15 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id.includes('seedream')) return 'seedream';
       if (id.includes('grok')) return 'grok';
       if (id.includes('wan')) return 'wan';
+      if (id.includes('happyhorse')) return 'seedance';
       if (id.includes('qwen')) return 'qwen';
       if (id.includes('z-image')) return 'z';
+      if (id.includes('seedance20')) return 'seedance';
+      if (id.includes('kling')) return 'kling';
+      if (id.includes('veo')) return 'veo';
+      if (id.includes('runway')) return 'runway';
+      if (id.includes('sora')) return 'sora';
+      if (id.includes('aleph')) return 'aleph';
       return model?.category === 'video' ? 'video' : '';
     }
 
@@ -3327,9 +4729,22 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const url = URL.createObjectURL(file);
         const wrapper = document.createElement('div');
         wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
-        const img = document.createElement('img');
-        img.src = url;
-        img.className = 'h-full w-full object-cover';
+        let preview;
+        if (file && file.type && file.type.startsWith('video/')) {
+          preview = document.createElement('video');
+          preview.src = url;
+          preview.muted = true;
+          preview.playsInline = true;
+          preview.className = 'h-full w-full object-cover';
+        } else if (file && file.type && file.type.startsWith('audio/')) {
+          preview = document.createElement('div');
+          preview.className = 'h-full w-full flex items-center justify-center bg-white/10 text-[10px] font-bold text-white/80 px-1 text-center';
+          preview.textContent = 'AUDIO';
+        } else {
+          preview = document.createElement('img');
+          preview.src = url;
+          preview.className = 'h-full w-full object-cover';
+        }
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
         closeBtn.className = 'absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white/90 rounded-full h-5 w-5 text-[11px] leading-none flex items-center justify-center';
@@ -3339,10 +4754,19 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           uploadedFiles.splice(index, 1);
           __renderImageThumbs();
         });
-        wrapper.appendChild(img);
+        wrapper.appendChild(preview);
         wrapper.appendChild(closeBtn);
         thumbs.appendChild(wrapper);
       });
+    }
+
+    function acceptsMainUploadFile(file) {
+      if (!file || !file.type) return false;
+      const accept = String(currentModel?.acceptTypes || 'image/*');
+      if (accept.includes('video/*') && file.type.startsWith('video/')) return true;
+      if (accept.includes('audio/*') && file.type.startsWith('audio/')) return true;
+      if (accept.includes('image/*') && file.type.startsWith('image/')) return true;
+      return file.type.startsWith('image/');
     }
 
 
@@ -3367,6 +4791,28 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let currentSoraTier = 'base';
     let currentWanTier = 'normal';
     let currentMotionModel = 'kling26';
+    let currentSeedanceVariant = 'standard';
+    let seedanceFirstFrameFile = null;
+    let seedanceLastFrameFile = null;
+    let seedanceImageRefFiles = [];
+    let seedanceVideoRefFiles = [];
+    let seedanceAudioRefFiles = [];
+    let seedanceGenerateAudio = true;
+    let seedanceWebSearch = false;
+    let kling30FirstFrameFile = null;
+    let kling30LastFrameFile = null;
+    let kling30ElementFiles = [];
+    let kling30ElementMeta = [];
+    let kling30Shots = [];
+    let kling30ActiveShotIndex = -1;
+    let kling30MultiShots = false;
+    let videoFirstFrameFile = null;
+    let videoLastFrameFile = null;
+    let videoSourceFile = null;
+    let videoRefImageFiles = [];
+    let videoRefVideoFiles = [];
+    let videoRefAudioFiles = [];
+    let wanPromptExtend = true;
 
 
 
@@ -3375,10 +4821,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (currentMode !== 'video') return sortModelsForCurrentMode(source);
       const items = [];
       const hasVeo31 = source.some((m) => m.id === 'veo31-fast' || m.id === 'veo31');
-      const hasVeo3 = source.some((m) => m.id === 'veo3-fast' || m.id === 'veo3');
+      sortModelsForCurrentMode(source.filter((m) => !['veo31-fast','veo31','veo3-fast','veo3'].includes(m.id))).forEach((m) => items.push(m));
       if (hasVeo31) items.push({ id: 'veo31-fast', name: 'Veo 3.1', emoji: '🎥', subtitle: 'Fast / Quality', category: 'video' });
-      if (hasVeo3) items.push({ id: 'veo3-fast', name: 'Veo 3', emoji: '🎥', subtitle: 'Fast / Quality', category: 'video' });
-      source.filter((m) => !['veo31-fast','veo31','veo3-fast','veo3'].includes(m.id)).forEach((m) => items.push(m));
       return items;
     }
 
@@ -3418,7 +4862,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       items.forEach((model) => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        const active = currentModel && (currentModel.id === model.id || (model.id === 'veo31-fast' && ['veo31-fast','veo31'].includes(currentModel.id)) || (model.id === 'veo3-fast' && ['veo3-fast','veo3'].includes(currentModel.id)));
+        const active = currentModel && (currentModel.id === model.id || (model.id === 'veo31-fast' && ['veo31-fast','veo31'].includes(currentModel.id)));
         btn.className = 'model-tab' + (active ? ' active' : '');
         btn.innerHTML = modelLogoHTML(model) + '<span>' + model.name + '</span>';
         btn.addEventListener('click', () => selectWorkspaceModel(model.id));
@@ -3499,6 +4943,18 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       updateRunButtonLabel();
     }
 
+    function getKling30MultiShotDuration() {
+      if (!kling30MultiShots) return Math.max(1, Number(currentDuration || 5));
+      const text = String(document.getElementById('kling30ShotsBox')?.value || '');
+      const lines = text.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 5);
+      if (!lines.length) return Math.max(1, Number(currentDuration || 5));
+      const total = lines.reduce((sum, line) => {
+        const match = line.match(/(?:,|\s)(\d+(?:\.\d+)?)\s*s$/i);
+        return sum + (match ? Number(match[1]) : 3);
+      }, 0);
+      return Math.max(1, Math.min(15, total));
+    }
+
     function getModelCreditValue(model = currentModel) {
       if (!model) return null;
       if (model.id === 'nano-banana-pro') return currentResolution === '4K' ? 2 : 1.5;
@@ -3510,6 +4966,33 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (model.id === 'runway') {
         const dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
         return currentResolution === '1080p' ? 3 : (dur === 10 ? 3 : 1.5);
+      }
+      if (model.id === 'wan27-video') {
+        const seconds = Math.max(1, Number(currentDuration || 5));
+        const rate = currentResolution === '1080p' ? 2 : 1.5;
+        return Number((seconds * rate).toFixed(1));
+      }
+      if (model.id === 'happyhorse10') {
+        const seconds = Math.max(1, Number(currentDuration || 5));
+        const rate = currentResolution === '1080p' ? 3.5 : 2.5;
+        return Number((seconds * rate).toFixed(1));
+      }
+      if (model.id === 'grok-video') {
+        const seconds = Math.max(1, Number(currentDuration || 6));
+        return Number((seconds * 0.3).toFixed(1));
+      }
+      if (model.id === 'seedance20') {
+        const seconds = Math.max(1, Number(currentDuration || 5));
+        const rate = currentSeedanceVariant === 'fast' ? 3 : (currentResolution === '1080p' ? 7 : 3.5);
+        return Number((seconds * rate).toFixed(1));
+      }
+      if (model.id === 'kling30') {
+        const seconds = getKling30MultiShotDuration();
+        let rate = 1;
+        if (currentResolution === '4K') rate = 4;
+        else if (currentResolution === '1080p') rate = currentKlingSound ? 2 : 1.5;
+        else rate = currentKlingSound ? 1.5 : 1;
+        return Number((seconds * rate).toFixed(1));
       }
       if (model.id === 'kling-motion-control') {
         const seconds = Math.max(1, Math.ceil(Number(motionVideoSeconds || currentDuration || 1)));
@@ -3571,7 +5054,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function isResolutionAllowedForCurrentModel(val) {
-      if (!currentModel || currentModel.id !== 'gpt-image-2') return true;
+      if (!currentModel) return true;
+      if (currentModel.id === 'seedance20' && currentSeedanceVariant === 'fast') return val === '720p';
+      if (currentModel.id !== 'gpt-image-2') return true;
       if (currentAspect === 'auto') return val === '1K';
       if (currentAspect === '1:1') return val === '1K' || val === '2K';
       return true;
@@ -3623,14 +5108,14 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const uploadBtn = document.getElementById('uploadBtn');
       const uploadPanel = uploadBtn ? uploadBtn.closest('.md\:w-1\/3, .flex-col') : null;
       if (!uploadPanel || !currentModel) return;
-      const hasUpload = !!currentModel.useFrames || !!currentModel.needsVideo || !!currentModel.needsMotionVideo || Number(currentModel.maxFiles || 0) > 0;
+      const hasUpload = !!currentModel.useFrames || !!currentModel.needsVideo || !!currentModel.needsMotionVideo || !!currentModel.specificUpload || Number(currentModel.maxFiles || 0) > 0;
       uploadPanel.classList.toggle('upload-panel-empty', !hasUpload);
     }
-    function updateCostLabelForKling26() {
-      if (!currentModel || currentModel.id !== 'kling26') return;
+    function updateCostLabelForSoundModel() {
+      if (!currentModel || !['kling26', 'kling30'].includes(currentModel.id)) return;
       const costLabelEl = document.getElementById('costLabel');
       if (!costLabelEl) return;
-      costLabelEl.textContent = 'Credits 5s-4⚡ 10s-8⚡';
+      costLabelEl.textContent = getCurrentCostLabel();
       updateRunButtonLabel();
     }
 
@@ -3644,9 +5129,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const durationBlock = document.getElementById('durationBlock');
       const durationPills = document.getElementById('durationPills');
       const opts = getDurationOptionsForCurrentModel();
+      const durationCurrentLabel = document.getElementById('durationCurrentLabel');
       if (!opts.length) {
         if (durationBlock) durationBlock.classList.add('hidden');
         if (durationPills) durationPills.innerHTML = '';
+        if (durationCurrentLabel) durationCurrentLabel.textContent = 'Choose';
         currentDuration = null;
         updateCostDisplay();
         updateRunButtonLabel();
@@ -3658,6 +5145,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (!currentDuration || !opts.some((v) => Number(v) === Number(currentDuration))) {
         currentDuration = opts[0];
       }
+      if (durationCurrentLabel) durationCurrentLabel.textContent = `${currentDuration}s`;
       opts.forEach((val) => {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -3666,6 +5154,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         if (Number(val) === Number(currentDuration)) btn.classList.add('chip-active');
         btn.addEventListener('click', () => {
           currentDuration = val;
+          if (durationCurrentLabel) durationCurrentLabel.textContent = `${val}s`;
           Array.from(durationPills.children).forEach((child) => child.classList.remove('chip-active'));
           btn.classList.add('chip-active');
           updateCostDisplay();
@@ -3720,13 +5209,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           (m.subtitle && m.subtitle.toLowerCase().includes(searchValue));
         return matchesMode && matchesSearch;
       });
-      if (currentMode === 'image') filtered = sortModelsForCurrentMode(filtered);
+      filtered = sortModelsForCurrentMode(filtered);
 
       // Professionalize Veo list: show only "Veo 3" and "Veo 3.1" in the picker.
       // Fast / Quality is selected in the bottom bar.
       let overlayModels = filtered;
       if (currentMode === 'video') {
-        const hasVeo3 = filtered.some((m) => m.id === 'veo3-fast' || m.id === 'veo3');
         const hasVeo31 = filtered.some((m) => m.id === 'veo31-fast' || m.id === 'veo31');
 
         filtered = filtered.filter((m) => !['veo3-fast', 'veo3', 'veo31-fast', 'veo31'].includes(m.id));
@@ -3737,13 +5225,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           return l.includes(searchValue) || searchValue.includes('veo');
         };
 
-        const matchOther = (label) => {
-          if (!searchValue) return true;
-          const l = label.toLowerCase();
-          return l.includes(searchValue);
-        };
-
         overlayModels = [];
+        overlayModels.push(...filtered);
         if (hasVeo31 && matchGroup('Veo 3.1')) {
           overlayModels.push({
             id: '__veo31',
@@ -3756,20 +5239,6 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             __qualityId: 'veo31',
           });
         }
-        if (hasVeo3 && matchGroup('Veo 3')) {
-          overlayModels.push({
-            id: '__veo3',
-            name: 'Veo 3',
-            emoji: 'V',
-            subtitle: 'Text / (Image) → Video (Fast / Quality in bottom)',
-            category: 'video',
-            __veoFamily: 'veo3',
-            __fastId: 'veo3-fast',
-            __qualityId: 'veo3',
-          });
-        }
-
-        overlayModels.push(...filtered);
       }
 
       overlayModels.forEach((model) => {
@@ -3841,8 +5310,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       currentDuration = currentModel.durations && currentModel.durations.length ? currentModel.durations[0] : null;
       currentResolution = currentModel.defaultResolution || (currentModel.category === 'image' ? '1K' : '720p');
 
-      // Veo Fast / Quality toggle (only for Veo 3 and Veo 3.1)
-      const isVeo3 = currentModel.id === 'veo3-fast' || currentModel.id === 'veo3';
+      // Veo Fast / Quality toggle (only for Veo 3.1)
+      const isVeo3 = false;
       const isVeo31 = currentModel.id === 'veo31-fast' || currentModel.id === 'veo31';
       const isWan27 = currentModel.id === 'wan-2-7-image';
       const isMotionControl = currentModel.id === 'kling-motion-control';
@@ -3871,6 +5340,35 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           };
           veoQualityPills.appendChild(makeBtn('Normal', 'normal'));
           veoQualityPills.appendChild(makeBtn('Pro', 'pro'));
+        }
+      } else if (currentModel.id === 'seedance20') {
+        if (veoQualityLabel) veoQualityLabel.textContent = 'Model';
+        currentWanTier = 'normal';
+        currentVeoFamily = null;
+        currentVeoVariant = 'fast';
+        currentSeedanceVariant = currentSeedanceVariant === 'fast' ? 'fast' : 'standard';
+        if (veoQualityBlock) veoQualityBlock.classList.remove('hidden');
+        if (veoQualityPills) {
+          veoQualityPills.innerHTML = '';
+          const makeBtn = (label, val) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.textContent = label;
+            b.className = 'px-3 py-1 text-[11px] chip border-r border-white/10 last:border-r-0';
+            if (val === currentSeedanceVariant) b.classList.add('chip-active');
+            b.addEventListener('click', () => {
+              currentSeedanceVariant = val;
+              if (val === 'fast' && currentResolution === '1080p') currentResolution = '720p';
+              Array.from(veoQualityPills.querySelectorAll('button')).forEach(x => x.classList.remove('chip-active'));
+              b.classList.add('chip-active');
+              renderResolutionControls();
+              updateCostDisplay();
+              updateRunButtonLabel();
+            });
+            return b;
+          };
+          veoQualityPills.appendChild(makeBtn('Seedance 2.0', 'standard'));
+          veoQualityPills.appendChild(makeBtn('Fast', 'fast'));
         }
       } else if (isMotionControl) {
         if (veoQualityLabel) veoQualityLabel.textContent = 'Model';
@@ -3936,6 +5434,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         currentWanTier = 'normal';
         currentVeoFamily = null;
         currentVeoVariant = 'fast';
+        currentSeedanceVariant = 'standard';
         if (veoQualityBlock) veoQualityBlock.classList.add('hidden');
         if (veoQualityPills) veoQualityPills.innerHTML = '';
       }
@@ -4016,9 +5515,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       renderResolutionControls();
 
       
-      // Kling 2.6 sound toggle (default: no sound)
-      if (currentModel.id === 'kling26') {
-        currentKlingSound = false; // default no sound when switching to Kling 2.6
+      // Kling sound toggle (default: no sound)
+      if (['kling26', 'kling30'].includes(currentModel.id)) {
+        currentKlingSound = false; // default no sound when switching Kling models
         if (klingSoundBlock) klingSoundBlock.classList.remove('hidden');
         if (klingSoundPills) {
           klingSoundPills.innerHTML = '';
@@ -4032,7 +5531,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
               currentKlingSound = (String(val) === 'true');
               [...klingSoundPills.querySelectorAll('button')].forEach((x) => x.classList.remove('chip-active'));
               b.classList.add('chip-active');
-              updateCostLabelForKling26();
+              updateCostLabelForSoundModel();
             });
             return b;
           };
@@ -4042,7 +5541,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           klingSoundPills.appendChild(b1);
           b0.classList.add('chip-active');
         }
-        updateCostLabelForKling26();
+        updateCostLabelForSoundModel();
       } else {
         currentKlingSound = false;
         if (klingSoundBlock) klingSoundBlock.classList.add('hidden');
@@ -4061,12 +5560,36 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       motionVideoFile = null;
       motionImageFile = null;
       motionVideoSeconds = null;
+      seedanceFirstFrameFile = null;
+      seedanceLastFrameFile = null;
+      seedanceImageRefFiles = [];
+      seedanceVideoRefFiles = [];
+      seedanceAudioRefFiles = [];
+      seedanceGenerateAudio = true;
+      seedanceWebSearch = false;
+      kling30FirstFrameFile = null;
+      kling30LastFrameFile = null;
+      kling30ElementFiles = [];
+      kling30ElementMeta = [];
+      kling30Shots = [];
+      kling30ActiveShotIndex = -1;
+      kling30MultiShots = false;
+      videoFirstFrameFile = null;
+      videoLastFrameFile = null;
+      videoSourceFile = null;
+      videoRefImageFiles = [];
+      videoRefVideoFiles = [];
+      videoRefAudioFiles = [];
+      wanPromptExtend = true;
 
       const thumbs = document.getElementById('imageThumbs');
       if (thumbs) thumbs.innerHTML = '';
       const imageInput = document.getElementById('imageInput');
       if (imageInput) imageInput.value = '';
-      if (imageInput) imageInput.multiple = !!(currentModel.maxFiles && currentModel.maxFiles > 1);
+      if (imageInput) {
+        imageInput.multiple = !!(currentModel.maxFiles && currentModel.maxFiles > 1);
+        imageInput.accept = currentModel.acceptTypes || 'image/*';
+      }
 
       const startWrap = document.getElementById('framesUploadWrap');
       const startThumb = document.getElementById('startFrameThumb');
@@ -4093,6 +5616,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const motionImageThumb = document.getElementById('motionImageThumb');
       const motionVideoInput = document.getElementById('motionVideoInput');
       const motionImageInput = document.getElementById('motionImageInput');
+      const seedanceWrap = document.getElementById('seedanceUploadWrap');
+      const kling30Wrap = document.getElementById('kling30UploadWrap');
+      const videoRefsWrap = document.getElementById('videoRefsUploadWrap');
       if (alephVideoThumb) alephVideoThumb.innerHTML = '';
       if (alephImageThumb) alephImageThumb.innerHTML = '';
       if (alephVideoInput) alephVideoInput.value = '';
@@ -4101,6 +5627,56 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (motionImageThumb) motionImageThumb.innerHTML = '';
       if (motionVideoInput) motionVideoInput.value = '';
       if (motionImageInput) motionImageInput.value = '';
+      ['seedanceFirstThumb','seedanceLastThumb','seedanceImageRefsThumbs','seedanceVideoRefsThumbs','seedanceAudioRefsThumbs','kling30FirstThumb','kling30LastThumb','kling30ElementsThumbs'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+      });
+      ['seedanceFirstInput','seedanceLastInput','seedanceImageRefsInput','seedanceVideoRefsInput','seedanceAudioRefsInput','kling30FirstInput','kling30LastInput','kling30ElementsInput'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      const kling30ShotsBox = document.getElementById('kling30ShotsBox');
+      const kling30MultiToggle = document.getElementById('kling30MultiToggle');
+      const seedanceAudioToggle = document.getElementById('seedanceAudioToggle');
+      const seedanceWebToggle = document.getElementById('seedanceWebToggle');
+      if (kling30ShotsBox) {
+        kling30ShotsBox.value = '';
+        kling30ShotsBox.classList.add('hidden');
+      }
+      if (kling30MultiToggle) {
+        const multiLabel = document.getElementById('kling30MultiLabel');
+        if (multiLabel) multiLabel.textContent = 'Single shot';
+        kling30MultiToggle.classList.remove('chip-active');
+        kling30MultiToggle.classList.remove('kling30-active');
+      }
+      const kling30MultiPanel = document.getElementById('kling30MultiPanel');
+      if (kling30MultiPanel) kling30MultiPanel.classList.add('hidden');
+      const kling30ElementsDrawer = document.getElementById('kling30ElementsDrawer');
+      if (kling30ElementsDrawer) kling30ElementsDrawer.classList.add('hidden');
+      const kling30ElementsCount = document.getElementById('kling30ElementsCount');
+      if (kling30ElementsCount) kling30ElementsCount.textContent = '0';
+      if (seedanceAudioToggle) {
+        seedanceAudioToggle.textContent = 'Audio on';
+        seedanceAudioToggle.classList.add('chip-active');
+      }
+      if (seedanceWebToggle) {
+        seedanceWebToggle.textContent = 'Web search off';
+        seedanceWebToggle.classList.remove('chip-active');
+      }
+      if (typeof syncSeedanceInputLocks === 'function') syncSeedanceInputLocks();
+      ['videoFirstFrameThumb','videoLastFrameThumb','videoSourceThumb','videoRefImagesThumbs','videoRefVideosThumbs','videoRefAudioThumbs'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+      });
+      ['videoFirstFrameInput','videoLastFrameInput','videoSourceInput','videoRefImagesInput','videoRefVideosInput','videoRefAudioInput'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      const wanPromptExtendToggle = document.getElementById('wanPromptExtendToggle');
+      if (wanPromptExtendToggle) {
+        wanPromptExtendToggle.textContent = 'Prompt extend on';
+        wanPromptExtendToggle.classList.add('chip-active');
+      }
 
       // Upload UI switching
       const uploadBtn = document.getElementById('uploadBtn');
@@ -4129,6 +5705,19 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         motionWrap.classList.add('hidden');
         motionWrap.classList.remove('flex');
       }
+      if (seedanceWrap) {
+        seedanceWrap.classList.add('hidden');
+        seedanceWrap.classList.remove('flex');
+      }
+      if (kling30Wrap) {
+        kling30Wrap.classList.add('hidden');
+        kling30Wrap.classList.remove('flex');
+      }
+      if (videoRefsWrap) {
+        videoRefsWrap.classList.add('hidden');
+        videoRefsWrap.classList.remove('flex');
+        videoRefsWrap.classList.remove('video-refs-wan', 'video-refs-happyhorse', 'video-refs-grok');
+      }
 
       if (isFrames) {
         if (startWrap) {
@@ -4149,12 +5738,31 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           motionWrap.classList.remove('hidden');
           motionWrap.classList.add('flex');
         }
+      } else if (currentModel.specificUpload === 'seedance') {
+        if (seedanceWrap) {
+          seedanceWrap.classList.remove('hidden');
+          seedanceWrap.classList.add('flex');
+        }
+      } else if (currentModel.specificUpload === 'kling30') {
+        if (kling30Wrap) {
+          kling30Wrap.classList.remove('hidden');
+          kling30Wrap.classList.add('flex');
+        }
+      } else if (['wan27', 'happyhorse', 'grokVideo'].includes(currentModel.specificUpload)) {
+        if (videoRefsWrap) {
+          videoRefsWrap.classList.remove('hidden');
+          videoRefsWrap.classList.add('flex');
+        }
+        configureVideoRefsControls(currentModel.specificUpload);
       } else {
         // General image upload for models that allow image input
         if (currentModel && Number(currentModel.maxFiles || 0) > 0) {
           if (uploadBtn) uploadBtn.classList.remove('hidden');
           if (thumbs) thumbs.classList.remove('hidden');
-          if (uploadBtnLabel) uploadBtnLabel.textContent = (currentModel.category === 'video') ? 'Upload image' : 'Upload image';
+          if (uploadBtnLabel) {
+            const accept = String(currentModel.acceptTypes || 'image/*');
+            uploadBtnLabel.textContent = (accept.includes('video/*') || accept.includes('audio/*')) ? 'Upload media' : 'Upload image';
+          }
         }
       }
     
@@ -4164,6 +5772,34 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       syncWorkspaceModelSummary();
       renderWorkspaceModelRail();
 }
+
+    function configureVideoRefsControls(kind) {
+      const show = (id, visible) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.toggle('hidden', !visible);
+      };
+      const title = document.getElementById('videoRefsTitle');
+      const hint = document.getElementById('videoRefsHint');
+      const imageLabel = document.getElementById('videoRefImagesLabel');
+      const wrap = document.getElementById('videoRefsUploadWrap');
+      if (wrap) {
+        wrap.classList.remove('video-refs-wan', 'video-refs-happyhorse', 'video-refs-grok');
+        if (kind === 'wan27') wrap.classList.add('video-refs-wan');
+        if (kind === 'happyhorse') wrap.classList.add('video-refs-happyhorse');
+        if (kind === 'grokVideo') wrap.classList.add('video-refs-grok');
+      }
+      if (title) title.textContent = kind === 'grokVideo' ? 'Grok inputs' : '';
+      if (hint) hint.textContent = kind === 'grokVideo' ? 'Optional image input, normal mode only' : '';
+      if (imageLabel) imageLabel.textContent = kind === 'grokVideo' ? 'Image input' : 'Image refs';
+      show('videoFirstFrameControl', kind === 'wan27' || kind === 'happyhorse');
+      show('videoLastFrameControl', kind === 'wan27');
+      show('videoSourceControl', kind === 'wan27' || kind === 'happyhorse');
+      show('videoRefImagesControl', true);
+      show('videoRefVideosControl', kind === 'wan27');
+      show('videoRefAudioControl', kind === 'wan27');
+      show('wanPromptExtendControl', kind === 'wan27');
+    }
     // ------------------------------------------------------------
     // Mobile quick options (UI only): AR / Duration compact pickers
     // ------------------------------------------------------------
@@ -4322,7 +5958,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     });
 
     document.getElementById('imageInput').addEventListener('change', (e) => {
-      const files = Array.from(e.target.files || []).filter(f => (f && f.type && f.type.startsWith('image/')));
+      const files = Array.from(e.target.files || []).filter(acceptsMainUploadFile);
       if (!currentModel) { e.target.value = ''; return; }
       const max = currentModel.maxFiles || 1;
 
@@ -4339,7 +5975,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       e.target.value = '';
     });
 
-    // Drag & Drop support: drop images anywhere on the generator bar to upload
+    // Drag & Drop support: drop accepted media anywhere on the generator bar to upload
     (function __enableGeneratorDragDrop() {
       const dock = document.getElementById('generatorCard') || document.getElementById('generatorDock');
       if (!dock) return;
@@ -4356,9 +5992,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       dock.addEventListener('drop', (ev) => {
         try {
           const dt = ev.dataTransfer;
-          const dropped = Array.from((dt && dt.files) ? dt.files : []).filter(
-            (f) => (f && f.type && f.type.startsWith('image/'))
-          );
+          const dropped = Array.from((dt && dt.files) ? dt.files : []).filter(acceptsMainUploadFile);
           if (!dropped.length) return;
           if (!currentModel) return;
 
@@ -4466,9 +6100,22 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const url = URL.createObjectURL(file);
       const wrapper = document.createElement('div');
       wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
-      const img = document.createElement('img');
-      img.src = url;
-      img.className = 'h-full w-full object-cover';
+      let preview;
+      if (file.type && file.type.startsWith('video/')) {
+        preview = document.createElement('video');
+        preview.src = url;
+        preview.muted = true;
+        preview.playsInline = true;
+        preview.className = 'h-full w-full object-cover';
+      } else if (file.type && file.type.startsWith('audio/')) {
+        preview = document.createElement('div');
+        preview.className = 'h-full w-full flex items-center justify-center bg-white/10 text-[10px] font-bold text-white/80 px-1 text-center';
+        preview.textContent = 'AUDIO';
+      } else {
+        preview = document.createElement('img');
+        preview.src = url;
+        preview.className = 'h-full w-full object-cover';
+      }
       const closeBtn = document.createElement('button');
       closeBtn.type = 'button';
       closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
@@ -4477,9 +6124,48 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         onRemove();
         wrapper.remove();
       });
-      wrapper.appendChild(img);
+      wrapper.appendChild(preview);
       wrapper.appendChild(closeBtn);
       containerEl.appendChild(wrapper);
+    }
+
+    function renderFileListThumbs(files, containerEl, onRemove) {
+      if (!containerEl) return;
+      containerEl.innerHTML = '';
+      (files || []).forEach((file, index) => {
+        const holder = document.createElement('div');
+        containerEl.appendChild(holder);
+        renderSingleThumb(file, holder, () => {
+          if (typeof onRemove === 'function') onRemove(index);
+          renderFileListThumbs(files, containerEl, onRemove);
+          if (typeof syncSeedanceInputLocks === 'function') syncSeedanceInputLocks();
+        });
+      });
+      if (typeof syncSeedanceInputLocks === 'function') syncSeedanceInputLocks();
+    }
+
+    function setSeedanceControlDisabled(btnId, inputId, disabled, title) {
+      const btn = document.getElementById(btnId);
+      const input = document.getElementById(inputId);
+      const card = btn ? btn.closest('.upload-drop-card') : null;
+      if (btn) {
+        btn.disabled = !!disabled;
+        btn.title = disabled ? (title || '') : '';
+      }
+      if (input) input.disabled = !!disabled;
+      if (card) card.classList.toggle('control-disabled', !!disabled);
+    }
+
+    function syncSeedanceInputLocks() {
+      const hasFrames = !!(seedanceFirstFrameFile || seedanceLastFrameFile);
+      const hasReferences = !!((seedanceImageRefFiles && seedanceImageRefFiles.length) || (seedanceVideoRefFiles && seedanceVideoRefFiles.length) || (seedanceAudioRefFiles && seedanceAudioRefFiles.length));
+      const frameLockText = 'Remove reference images/videos/audio before using first or last frame.';
+      const referenceLockText = 'Remove first/last frame before using references.';
+      setSeedanceControlDisabled('seedanceFirstBtn', 'seedanceFirstInput', hasReferences, frameLockText);
+      setSeedanceControlDisabled('seedanceLastBtn', 'seedanceLastInput', hasReferences, frameLockText);
+      setSeedanceControlDisabled('seedanceImageRefsBtn', 'seedanceImageRefsInput', hasFrames, referenceLockText);
+      setSeedanceControlDisabled('seedanceVideoRefsBtn', 'seedanceVideoRefsInput', hasFrames, referenceLockText);
+      setSeedanceControlDisabled('seedanceAudioRefsBtn', 'seedanceAudioRefsInput', hasFrames, referenceLockText);
     }
 
     function renderVeoReferenceThumbs() {
@@ -4560,6 +6246,560 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const files = Array.from(e.target.files || []).filter(Boolean).slice(0, 3);
       veoReferenceFiles = files;
       renderVeoReferenceThumbs();
+    });
+
+    // SEEDANCE 2.0: FIRST/LAST + IMAGE/VIDEO/AUDIO REFERENCES
+    const bindClickToInput = (btnId, inputId) => {
+      const btn = document.getElementById(btnId);
+      const input = document.getElementById(inputId);
+      if (btn && input) btn.addEventListener('click', () => input.click());
+    };
+    bindClickToInput('seedanceFirstBtn', 'seedanceFirstInput');
+    bindClickToInput('seedanceLastBtn', 'seedanceLastInput');
+    bindClickToInput('seedanceImageRefsBtn', 'seedanceImageRefsInput');
+    bindClickToInput('seedanceVideoRefsBtn', 'seedanceVideoRefsInput');
+    bindClickToInput('seedanceAudioRefsBtn', 'seedanceAudioRefsInput');
+    bindClickToInput('kling30FirstBtn', 'kling30FirstInput');
+    bindClickToInput('kling30LastBtn', 'kling30LastInput');
+    bindClickToInput('kling30ElementsBtn', 'kling30ElementsInput');
+    bindClickToInput('videoFirstFrameBtn', 'videoFirstFrameInput');
+    bindClickToInput('videoLastFrameBtn', 'videoLastFrameInput');
+    bindClickToInput('videoSourceBtn', 'videoSourceInput');
+    bindClickToInput('videoRefImagesBtn', 'videoRefImagesInput');
+    bindClickToInput('videoRefVideosBtn', 'videoRefVideosInput');
+    bindClickToInput('videoRefAudioBtn', 'videoRefAudioInput');
+
+    document.getElementById('seedanceFirstInput').addEventListener('change', (e) => {
+      if ((seedanceImageRefFiles.length || seedanceVideoRefFiles.length || seedanceAudioRefFiles.length)) {
+        e.target.value = '';
+        syncSeedanceInputLocks();
+        return;
+      }
+      seedanceFirstFrameFile = (e.target.files || [])[0] || null;
+      renderSingleThumb(seedanceFirstFrameFile, document.getElementById('seedanceFirstThumb'), () => {
+        seedanceFirstFrameFile = null;
+        document.getElementById('seedanceFirstInput').value = '';
+        syncSeedanceInputLocks();
+      });
+      syncSeedanceInputLocks();
+    });
+    document.getElementById('seedanceLastInput').addEventListener('change', (e) => {
+      if ((seedanceImageRefFiles.length || seedanceVideoRefFiles.length || seedanceAudioRefFiles.length)) {
+        e.target.value = '';
+        syncSeedanceInputLocks();
+        return;
+      }
+      seedanceLastFrameFile = (e.target.files || [])[0] || null;
+      renderSingleThumb(seedanceLastFrameFile, document.getElementById('seedanceLastThumb'), () => {
+        seedanceLastFrameFile = null;
+        document.getElementById('seedanceLastInput').value = '';
+        syncSeedanceInputLocks();
+      });
+      syncSeedanceInputLocks();
+    });
+    document.getElementById('seedanceImageRefsInput').addEventListener('change', (e) => {
+      if (seedanceFirstFrameFile || seedanceLastFrameFile) {
+        e.target.value = '';
+        syncSeedanceInputLocks();
+        return;
+      }
+      seedanceImageRefFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, 9);
+      renderFileListThumbs(seedanceImageRefFiles, document.getElementById('seedanceImageRefsThumbs'), (index) => {
+        seedanceImageRefFiles.splice(index, 1);
+        document.getElementById('seedanceImageRefsInput').value = '';
+      });
+      syncSeedanceInputLocks();
+    });
+    document.getElementById('seedanceVideoRefsInput').addEventListener('change', (e) => {
+      if (seedanceFirstFrameFile || seedanceLastFrameFile) {
+        e.target.value = '';
+        syncSeedanceInputLocks();
+        return;
+      }
+      seedanceVideoRefFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, 3);
+      renderFileListThumbs(seedanceVideoRefFiles, document.getElementById('seedanceVideoRefsThumbs'), (index) => {
+        seedanceVideoRefFiles.splice(index, 1);
+        document.getElementById('seedanceVideoRefsInput').value = '';
+      });
+      syncSeedanceInputLocks();
+    });
+    document.getElementById('seedanceAudioRefsInput').addEventListener('change', (e) => {
+      if (seedanceFirstFrameFile || seedanceLastFrameFile) {
+        e.target.value = '';
+        syncSeedanceInputLocks();
+        return;
+      }
+      seedanceAudioRefFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, 3);
+      renderFileListThumbs(seedanceAudioRefFiles, document.getElementById('seedanceAudioRefsThumbs'), (index) => {
+        seedanceAudioRefFiles.splice(index, 1);
+        document.getElementById('seedanceAudioRefsInput').value = '';
+      });
+      syncSeedanceInputLocks();
+    });
+    document.getElementById('seedanceAudioToggle').addEventListener('click', (e) => {
+      seedanceGenerateAudio = !seedanceGenerateAudio;
+      e.currentTarget.textContent = seedanceGenerateAudio ? 'Audio on' : 'Audio off';
+      e.currentTarget.classList.toggle('chip-active', seedanceGenerateAudio);
+    });
+    document.getElementById('seedanceWebToggle').addEventListener('click', (e) => {
+      seedanceWebSearch = !seedanceWebSearch;
+      e.currentTarget.textContent = seedanceWebSearch ? 'Web search on' : 'Web search off';
+      e.currentTarget.classList.toggle('chip-active', seedanceWebSearch);
+    });
+
+    document.getElementById('videoFirstFrameInput').addEventListener('change', (e) => {
+      videoFirstFrameFile = (e.target.files || [])[0] || null;
+      renderSingleThumb(videoFirstFrameFile, document.getElementById('videoFirstFrameThumb'), () => {
+        videoFirstFrameFile = null;
+        document.getElementById('videoFirstFrameInput').value = '';
+      });
+    });
+    document.getElementById('videoLastFrameInput').addEventListener('change', (e) => {
+      videoLastFrameFile = (e.target.files || [])[0] || null;
+      renderSingleThumb(videoLastFrameFile, document.getElementById('videoLastFrameThumb'), () => {
+        videoLastFrameFile = null;
+        document.getElementById('videoLastFrameInput').value = '';
+      });
+    });
+    document.getElementById('videoSourceInput').addEventListener('change', (e) => {
+      videoSourceFile = (e.target.files || [])[0] || null;
+      renderSingleThumb(videoSourceFile, document.getElementById('videoSourceThumb'), () => {
+        videoSourceFile = null;
+        document.getElementById('videoSourceInput').value = '';
+      });
+    });
+    document.getElementById('videoRefImagesInput').addEventListener('change', (e) => {
+      const max = currentModel && currentModel.id === 'grok-video' ? 7 : 9;
+      videoRefImageFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, max);
+      renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
+        videoRefImageFiles.splice(index, 1);
+        document.getElementById('videoRefImagesInput').value = '';
+      });
+    });
+    document.getElementById('videoRefVideosInput').addEventListener('change', (e) => {
+      videoRefVideoFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, 3);
+      renderFileListThumbs(videoRefVideoFiles, document.getElementById('videoRefVideosThumbs'), (index) => {
+        videoRefVideoFiles.splice(index, 1);
+        document.getElementById('videoRefVideosInput').value = '';
+      });
+    });
+    document.getElementById('videoRefAudioInput').addEventListener('change', (e) => {
+      videoRefAudioFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, 1);
+      renderFileListThumbs(videoRefAudioFiles, document.getElementById('videoRefAudioThumbs'), (index) => {
+        videoRefAudioFiles.splice(index, 1);
+        document.getElementById('videoRefAudioInput').value = '';
+      });
+    });
+    document.getElementById('wanPromptExtendToggle').addEventListener('click', (e) => {
+      wanPromptExtend = !wanPromptExtend;
+      e.currentTarget.textContent = wanPromptExtend ? 'Prompt extend on' : 'Prompt extend off';
+      e.currentTarget.classList.toggle('chip-active', wanPromptExtend);
+    });
+
+    document.getElementById('kling30FirstInput').addEventListener('change', (e) => {
+      kling30FirstFrameFile = (e.target.files || [])[0] || null;
+      renderSingleThumb(kling30FirstFrameFile, document.getElementById('kling30FirstThumb'), () => {
+        kling30FirstFrameFile = null;
+        document.getElementById('kling30FirstInput').value = '';
+      });
+    });
+    document.getElementById('kling30LastInput').addEventListener('change', (e) => {
+      kling30LastFrameFile = (e.target.files || [])[0] || null;
+      renderSingleThumb(kling30LastFrameFile, document.getElementById('kling30LastThumb'), () => {
+        kling30LastFrameFile = null;
+        document.getElementById('kling30LastInput').value = '';
+      });
+    });
+    function makeKling30Shot(index) {
+      const num = Math.max(1, Number(index || 0) + 1);
+      return {
+        prompt: '',
+        duration: 3,
+        element: {
+          name: 'element_' + num,
+          type: 'image',
+          description: '',
+          files: []
+        }
+      };
+    }
+
+    function getKling30ElementValidation(shot, shotIndex) {
+      const el = shot && shot.element ? shot.element : null;
+      if (!el) return { ok:true, message:'' };
+      const files = Array.isArray(el.files) ? el.files.filter(Boolean) : [];
+      if (!files.length) return { ok:true, message:'' };
+      const cleanName = String(el.name || '').trim();
+      const cleanDescription = String(el.description || '').trim();
+      if (!cleanName) return { ok:false, message:'Shot ' + (shotIndex + 1) + ': element name is required.' };
+      if (!cleanDescription) return { ok:false, message:'Shot ' + (shotIndex + 1) + ': element description is required.' };
+      if (el.type === 'video') {
+        if (files.length !== 1 || !String(files[0].type || '').startsWith('video/')) {
+          return { ok:false, message:'Shot ' + (shotIndex + 1) + ': video element requires exactly 1 video.' };
+        }
+        return { ok:true, message:'' };
+      }
+      const imageFiles = files.filter((file) => String(file.type || '').startsWith('image/'));
+      if (imageFiles.length !== files.length || imageFiles.length < 2 || imageFiles.length > 4) {
+        return { ok:false, message:'Shot ' + (shotIndex + 1) + ': image element requires 2–4 images.' };
+      }
+      return { ok:true, message:'' };
+    }
+
+    function setKling30ElementError(message) {
+      const errorEl = document.getElementById('kling30ElementError');
+      if (!errorEl) return;
+      if (!message) {
+        errorEl.textContent = '';
+        errorEl.classList.add('hidden');
+        return;
+      }
+      errorEl.textContent = message;
+      errorEl.classList.remove('hidden');
+    }
+
+    function validateKling30BeforeRun() {
+      if (!currentModel || currentModel.id !== 'kling30') return { ok:true, message:'' };
+      ensureKling30Shots();
+      if (kling30MultiShots) {
+        for (let i = 0; i < kling30Shots.length; i++) {
+          if (!String(kling30Shots[i].prompt || '').trim()) {
+            return { ok:false, message:'Shot ' + (i + 1) + ': prompt is required.' };
+          }
+          const durationValue = Number(kling30Shots[i].duration || 0);
+          if (!Number.isFinite(durationValue) || durationValue < 3 || durationValue > 12) {
+            return { ok:false, message:'Shot ' + (i + 1) + ': duration must be 3–12 seconds.' };
+          }
+          const ev = getKling30ElementValidation(kling30Shots[i], i);
+          if (!ev.ok) return ev;
+        }
+        const total = kling30Shots.reduce((sum, s) => sum + Math.max(3, Math.min(12, Number(s.duration || 3))), 0);
+        if (total > 15) return { ok:false, message:'Kling 3.0 multi-shot total duration must be 15 seconds or less.' };
+      }
+      return { ok:true, message:'' };
+    }
+
+    function buildKling30ElementGroups(elementUrls) {
+      const groups = [];
+      const groupByKey = new Map();
+      (elementUrls || []).forEach((url, index) => {
+        const meta = kling30ElementMeta[index] || {};
+        const sourceFile = kling30ElementFiles[index];
+        const isVideo = (meta.type === 'video') || (sourceFile && sourceFile.type && sourceFile.type.startsWith('video/'));
+        const name = sanitizeKling30ElementName(meta.name || '', 'element_' + ((meta.shotIndex || 0) + 1));
+        const description = String(meta.description || '').trim();
+        const key = (meta.shotIndex ?? index) + ':' + name + ':' + (isVideo ? 'video' : 'image');
+        let group = groupByKey.get(key);
+        if (!group) {
+          group = isVideo
+            ? { name, description, element_input_video_urls: [] }
+            : { name, description, element_input_urls: [] };
+          groupByKey.set(key, group);
+          groups.push(group);
+        }
+        if (isVideo) group.element_input_video_urls.push(url);
+        else group.element_input_urls.push(url);
+      });
+      return groups.filter((group) => {
+        if (group.element_input_video_urls) return group.element_input_video_urls.length === 1 && group.name && group.description;
+        return group.element_input_urls && group.element_input_urls.length >= 2 && group.element_input_urls.length <= 4 && group.name && group.description;
+      });
+    }
+
+    function ensureKling30Shots() {
+      if (!Array.isArray(kling30Shots)) kling30Shots = [];
+      if (!kling30Shots.length) kling30Shots = [makeKling30Shot(0)];
+    }
+
+    function sanitizeKling30ElementName(name, fallback) {
+      let s = String(name || fallback || 'element').trim().replace(/[^a-zA-Z0-9_]/g, '_');
+      if (!/^[a-zA-Z_]/.test(s)) s = '_' + s;
+      return s.slice(0, 32) || fallback || 'element';
+    }
+
+    function syncKling30LegacyData() {
+      ensureKling30Shots();
+      const flatFiles = [];
+      const meta = [];
+      const lines = [];
+      kling30Shots.forEach((shot, shotIndex) => {
+        const durationValue = Math.max(3, Math.min(12, Number(shot.duration || 3)));
+        const el = shot.element || {};
+        const cleanName = sanitizeKling30ElementName(el.name, 'element_' + (shotIndex + 1));
+        const files = Array.isArray(el.files) ? el.files.filter(Boolean) : [];
+        files.forEach((file) => {
+          flatFiles.push(file);
+          meta.push({
+            name: cleanName,
+            description: String(el.description || '').trim(),
+            type: (el.type === 'video' || (file.type || '').startsWith('video/')) ? 'video' : 'image',
+            shotIndex
+          });
+        });
+        const shotPrompt = String(shot.prompt || '').trim();
+        lines.push((shotPrompt || ('Shot ' + (shotIndex + 1) + ' with @' + cleanName)) + ', ' + durationValue + 's');
+      });
+      kling30ElementFiles = flatFiles.slice(0, 12);
+      kling30ElementMeta = meta.slice(0, 12);
+      const box = document.getElementById('kling30ShotsBox');
+      if (box) box.value = lines.slice(0, 5).join('\n');
+      updateKling30ElementsCount();
+      updateCostDisplay();
+      updateRunButtonLabel();
+    }
+
+    function updateKling30ElementsCount() {
+      const countEl = document.getElementById('kling30ElementsCount');
+      if (countEl) countEl.textContent = String((kling30ElementFiles || []).length);
+    }
+
+    function renderKling30Shots() {
+      const container = document.getElementById('kling30ShotsContainer');
+      if (!container) return;
+      ensureKling30Shots();
+      container.innerHTML = '';
+      kling30Shots.slice(0, 5).forEach((shot, index) => {
+        const card = document.createElement('div');
+        card.className = 'kling30-shot-card';
+
+        const top = document.createElement('div');
+        top.className = 'kling30-shot-top';
+        const title = document.createElement('div');
+        title.className = 'kling30-shot-title';
+        title.textContent = 'Shot ' + (index + 1);
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'kling30-shot-remove';
+        remove.textContent = '×';
+        remove.disabled = kling30Shots.length <= 1;
+        remove.addEventListener('click', () => {
+          if (kling30Shots.length <= 1) return;
+          kling30Shots.splice(index, 1);
+          kling30Shots.forEach((s, i) => {
+            if (!s.element) s.element = { name: 'element_' + (i + 1), type: 'image', description: '', files: [] };
+            if (!String(s.element.name || '').trim()) s.element.name = 'element_' + (i + 1);
+          });
+          renderKling30Shots();
+          syncKling30LegacyData();
+        });
+        top.appendChild(title);
+        top.appendChild(remove);
+
+        const promptLabel = document.createElement('label');
+        promptLabel.className = 'kling30-shot-label';
+        promptLabel.textContent = 'Prompt';
+        const promptArea = document.createElement('textarea');
+        promptArea.rows = 3;
+        promptArea.placeholder = 'Describe this shot. Use @' + sanitizeKling30ElementName(shot.element?.name, 'element_' + (index + 1));
+        promptArea.value = shot.prompt || '';
+        promptArea.addEventListener('input', () => {
+          kling30Shots[index].prompt = promptArea.value;
+          syncKling30LegacyData();
+        });
+
+        const meta = document.createElement('div');
+        meta.className = 'kling30-shot-meta';
+
+        const durWrap = document.createElement('div');
+        const durLabel = document.createElement('label');
+        durLabel.className = 'kling30-shot-label';
+        durLabel.textContent = 'Duration';
+        const select = document.createElement('select');
+        const otherSum = kling30Shots.reduce((sum, s, i) => i === index ? sum : sum + Math.max(3, Math.min(12, Number(s.duration || 3))), 0);
+        const maxAllowed = Math.max(3, Math.min(12, 15 - otherSum));
+        const current = Math.max(3, Math.min(maxAllowed, Number(shot.duration || 3)));
+        kling30Shots[index].duration = current;
+        for (let sec = 3; sec <= maxAllowed; sec++) {
+          const opt = document.createElement('option');
+          opt.value = String(sec);
+          opt.textContent = sec + 's';
+          select.appendChild(opt);
+        }
+        select.value = String(current);
+        select.addEventListener('change', () => {
+          kling30Shots[index].duration = Number(select.value || 3);
+          renderKling30Shots();
+          syncKling30LegacyData();
+        });
+        durWrap.appendChild(durLabel);
+        durWrap.appendChild(select);
+
+        const elementWrap = document.createElement('div');
+        const elementLabel = document.createElement('label');
+        elementLabel.className = 'kling30-shot-label';
+        elementLabel.textContent = 'Element';
+        const elementBtn = document.createElement('button');
+        elementBtn.type = 'button';
+        elementBtn.className = 'kling30-shot-element-btn';
+        const el = shot.element || { name: 'element_' + (index + 1), type: 'image', files: [] };
+        const fileCount = Array.isArray(el.files) ? el.files.length : 0;
+        elementBtn.innerHTML = '<span>🧩 @' + sanitizeKling30ElementName(el.name, 'element_' + (index + 1)) + '<small>' + (el.type === 'video' ? 'Video' : 'Image') + ' • ' + fileCount + ' file' + (fileCount === 1 ? '' : 's') + '</small></span><span>›</span>';
+        elementBtn.addEventListener('click', () => openKling30ElementsDrawer(index));
+        elementWrap.appendChild(elementLabel);
+        elementWrap.appendChild(elementBtn);
+
+        meta.appendChild(durWrap);
+        meta.appendChild(elementWrap);
+
+        card.appendChild(top);
+        card.appendChild(promptLabel);
+        card.appendChild(promptArea);
+        card.appendChild(meta);
+        container.appendChild(card);
+      });
+      syncKling30LegacyData();
+    }
+
+    function renderKling30ElementEditor() {
+      ensureKling30Shots();
+      const shot = kling30Shots[kling30ActiveShotIndex];
+      if (!shot) return;
+      if (!shot.element) shot.element = { name: 'element_' + (kling30ActiveShotIndex + 1), type: 'image', description: '', files: [] };
+      const el = shot.element;
+      const title = document.getElementById('kling30ElementDrawerTitle');
+      if (title) title.textContent = 'Shot ' + (kling30ActiveShotIndex + 1) + ' element';
+      const nameInput = document.getElementById('kling30ElementNameInput');
+      const descInput = document.getElementById('kling30ElementDescInput');
+      const typeImage = document.getElementById('kling30ElementTypeImage');
+      const typeVideo = document.getElementById('kling30ElementTypeVideo');
+      const input = document.getElementById('kling30ElementsInput');
+      const btn = document.getElementById('kling30ElementsBtn');
+      const btnLabel = document.getElementById('kling30ElementsBtnLabel');
+      const thumbs = document.getElementById('kling30ElementsThumbs');
+      if (nameInput) nameInput.value = el.name || ('element_' + (kling30ActiveShotIndex + 1));
+      if (descInput) descInput.value = el.description || '';
+      if (typeImage) typeImage.classList.toggle('active', el.type !== 'video');
+      if (typeVideo) typeVideo.classList.toggle('active', el.type === 'video');
+      if (input) {
+        input.value = '';
+        input.accept = el.type === 'video' ? 'video/*' : 'image/*';
+        input.multiple = el.type !== 'video';
+      }
+      if (btnLabel) btnLabel.textContent = el.type === 'video' ? 'Add / replace video' : (Array.isArray(el.files) && el.files.length ? 'Add more images' : 'Add element images');
+      renderFileListThumbs(Array.isArray(el.files) ? el.files : [], thumbs, (fileIndex) => {
+        const files = Array.isArray(el.files) ? [...el.files] : [];
+        files.splice(fileIndex, 1);
+        el.files = files;
+        renderKling30ElementEditor();
+        renderKling30Shots();
+        syncKling30LegacyData();
+      });
+      if (btn) btn.classList.toggle('has-media', !!(el.files && el.files.length));
+      const validation = getKling30ElementValidation(shot, kling30ActiveShotIndex);
+      setKling30ElementError(validation.ok ? '' : validation.message);
+      syncKling30LegacyData();
+    }
+
+    function openKling30ElementsDrawer(shotIndex) {
+      ensureKling30Shots();
+      kling30ActiveShotIndex = Math.max(0, Math.min(kling30Shots.length - 1, Number.isFinite(Number(shotIndex)) ? Number(shotIndex) : 0));
+      const drawer = document.getElementById('kling30ElementsDrawer');
+      if (drawer) drawer.classList.remove('hidden');
+      renderKling30ElementEditor();
+    }
+
+    function closeKling30ElementsDrawer() {
+      const drawer = document.getElementById('kling30ElementsDrawer');
+      if (drawer) drawer.classList.add('hidden');
+      kling30ActiveShotIndex = -1;
+      renderKling30Shots();
+      syncKling30LegacyData();
+    }
+
+    const kling30AddShotBtn = document.getElementById('kling30AddShotBtn');
+    if (kling30AddShotBtn) kling30AddShotBtn.addEventListener('click', () => {
+      ensureKling30Shots();
+      if (kling30Shots.length >= 5) return;
+      const total = kling30Shots.reduce((sum, s) => sum + Math.max(3, Math.min(12, Number(s.duration || 3))), 0);
+      if (total > 12) return;
+      kling30Shots.push(makeKling30Shot(kling30Shots.length));
+      renderKling30Shots();
+      syncKling30LegacyData();
+    });
+
+    const kling30CloseElementsBtn = document.getElementById('kling30CloseElementsBtn');
+    if (kling30CloseElementsBtn) kling30CloseElementsBtn.addEventListener('click', closeKling30ElementsDrawer);
+
+    const kling30DoneElementsBtn = document.getElementById('kling30DoneElementsBtn');
+    if (kling30DoneElementsBtn) kling30DoneElementsBtn.addEventListener('click', closeKling30ElementsDrawer);
+
+    const kling30NameInput = document.getElementById('kling30ElementNameInput');
+    if (kling30NameInput) kling30NameInput.addEventListener('input', (e) => {
+      if (kling30ActiveShotIndex < 0) return;
+      ensureKling30Shots();
+      kling30Shots[kling30ActiveShotIndex].element.name = e.target.value;
+      renderKling30Shots();
+      syncKling30LegacyData();
+    });
+
+    const kling30DescInput = document.getElementById('kling30ElementDescInput');
+    if (kling30DescInput) kling30DescInput.addEventListener('input', (e) => {
+      if (kling30ActiveShotIndex < 0) return;
+      ensureKling30Shots();
+      kling30Shots[kling30ActiveShotIndex].element.description = e.target.value;
+      renderKling30ElementEditor();
+      renderKling30Shots();
+      syncKling30LegacyData();
+    });
+
+    const kling30TypeImage = document.getElementById('kling30ElementTypeImage');
+    if (kling30TypeImage) kling30TypeImage.addEventListener('click', () => {
+      if (kling30ActiveShotIndex < 0) return;
+      ensureKling30Shots();
+      kling30Shots[kling30ActiveShotIndex].element.type = 'image';
+      kling30Shots[kling30ActiveShotIndex].element.files = [];
+      renderKling30ElementEditor();
+      renderKling30Shots();
+    });
+
+    const kling30TypeVideo = document.getElementById('kling30ElementTypeVideo');
+    if (kling30TypeVideo) kling30TypeVideo.addEventListener('click', () => {
+      if (kling30ActiveShotIndex < 0) return;
+      ensureKling30Shots();
+      kling30Shots[kling30ActiveShotIndex].element.type = 'video';
+      kling30Shots[kling30ActiveShotIndex].element.files = [];
+      renderKling30ElementEditor();
+      renderKling30Shots();
+    });
+
+    document.getElementById('kling30ElementsInput').addEventListener('change', (e) => {
+      if (kling30ActiveShotIndex < 0) return;
+      ensureKling30Shots();
+      const el = kling30Shots[kling30ActiveShotIndex].element;
+      const nextFiles = Array.from(e.target.files || []).filter(Boolean);
+      if (el.type === 'video') {
+        el.files = nextFiles.filter((f) => String(f.type || '').startsWith('video/')).slice(0, 1);
+      } else {
+        const existing = Array.isArray(el.files) ? el.files.filter((f) => String(f.type || '').startsWith('image/')) : [];
+        el.files = existing.concat(nextFiles.filter((f) => String(f.type || '').startsWith('image/'))).slice(0, 4);
+      }
+      e.target.value = '';
+      renderKling30ElementEditor();
+      renderKling30Shots();
+      syncKling30LegacyData();
+    });
+
+    updateKling30ElementsCount();
+
+    document.getElementById('kling30MultiToggle').addEventListener('click', (e) => {
+      kling30MultiShots = !kling30MultiShots;
+      const label = document.getElementById('kling30MultiLabel');
+      if (label) label.textContent = kling30MultiShots ? 'Multi-shot' : 'Single shot';
+      e.currentTarget.classList.toggle('kling30-active', kling30MultiShots);
+      e.currentTarget.classList.toggle('chip-active', kling30MultiShots);
+      const panel = document.getElementById('kling30MultiPanel');
+      if (panel) panel.classList.toggle('hidden', !kling30MultiShots);
+      if (kling30MultiShots) {
+        ensureKling30Shots();
+        renderKling30Shots();
+      } else {
+        closeKling30ElementsDrawer();
+      }
+      syncKling30LegacyData();
+    });
+    document.getElementById('kling30ShotsBox').addEventListener('input', () => {
+      updateCostDisplay();
+      updateRunButtonLabel();
     });
 
     // ALEPH: VIDEO REQUIRED + OPTIONAL IMAGE
@@ -4767,8 +7007,15 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const maxUploadMB = (typeof currentModel !== 'undefined' && currentModel && currentModel.uploadMaxMB)
         ? Number(currentModel.uploadMaxMB)
         : ((typeof currentModel !== 'undefined' && currentModel && (currentModel.id === 'nano-banana-pro' || currentModel.id === 'nano-banana-2')) ? (currentModel.id === 'nano-banana-2' ? 30 : 25) : 10);
-      const maxUploadBytes = maxUploadMB * 1024 * 1024;
       for (const file of list) {
+        let fileMaxMB = maxUploadMB;
+        const limits = currentModel && currentModel.uploadLimitsMB ? currentModel.uploadLimitsMB : null;
+        if (limits && file && file.type) {
+          if (file.type.startsWith('image/')) fileMaxMB = Number(limits.image || fileMaxMB);
+          else if (file.type.startsWith('video/')) fileMaxMB = Number(limits.video || fileMaxMB);
+          else if (file.type.startsWith('audio/')) fileMaxMB = Number(limits.audio || fileMaxMB);
+        }
+        const maxUploadBytes = fileMaxMB * 1024 * 1024;
         if (file.size > maxUploadBytes) {
           throw new Error('file_too_large');
         }
@@ -4779,6 +7026,18 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         urls.push(up.publicUrl);
       }
       return urls;
+    }
+
+    function splitUploadedMediaUrls(urls) {
+      const media = { images: [], videos: [], audios: [] };
+      (urls || []).forEach((url, index) => {
+        const file = (uploadedFiles || [])[index];
+        const type = String(file?.type || '');
+        if (type.startsWith('video/')) media.videos.push(url);
+        else if (type.startsWith('audio/')) media.audios.push(url);
+        else media.images.push(url);
+      });
+      return media;
     }
 
     function buildBodyForModel(model, ctx) {
@@ -4868,6 +7127,100 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             imageUrl: (urls && urls[0]) ? urls[0] : '',
             run_id: runId
           };
+        case 'seedance20': {
+          let cursor = 0;
+          const firstFrameUrl = seedanceFirstFrameFile ? (urls || [])[cursor++] : '';
+          const lastFrameUrl = seedanceLastFrameFile ? (urls || [])[cursor++] : '';
+          const imageRefUrls = (urls || []).slice(cursor, cursor + seedanceImageRefFiles.length);
+          cursor += seedanceImageRefFiles.length;
+          const videoRefUrls = (urls || []).slice(cursor, cursor + seedanceVideoRefFiles.length);
+          cursor += seedanceVideoRefFiles.length;
+          const audioRefUrls = (urls || []).slice(cursor, cursor + seedanceAudioRefFiles.length);
+          return {
+            uid,
+            user_id: uid,
+            prompt,
+            variant: currentSeedanceVariant === 'fast' ? 'fast' : 'standard',
+            aspect_ratio: aspect || '16:9',
+            duration: duration ? Number(duration) : 5,
+            resolution: currentSeedanceVariant === 'fast' ? '720p' : (currentResolution || '720p'),
+            generate_audio: !!seedanceGenerateAudio,
+            enable_web_search: !!seedanceWebSearch,
+            web_search: !!seedanceWebSearch,
+            first_frame_url: firstFrameUrl || undefined,
+            last_frame_url: lastFrameUrl || undefined,
+            reference_image_urls: imageRefUrls,
+            reference_video_urls: videoRefUrls,
+            reference_audio_urls: audioRefUrls,
+            run_id: runId
+          };
+        }
+        case 'wan27-video': {
+          let cursor = 0;
+          const firstFrameUrl = videoFirstFrameFile ? (urls || [])[cursor++] : '';
+          const lastFrameUrl = videoLastFrameFile ? (urls || [])[cursor++] : '';
+          const sourceVideoUrl = videoSourceFile ? (urls || [])[cursor++] : '';
+          const imageRefUrls = (urls || []).slice(cursor, cursor + videoRefImageFiles.length);
+          cursor += videoRefImageFiles.length;
+          const videoRefUrls = (urls || []).slice(cursor, cursor + videoRefVideoFiles.length);
+          cursor += videoRefVideoFiles.length;
+          const audioRefUrls = (urls || []).slice(cursor, cursor + videoRefAudioFiles.length);
+          return {
+            uid,
+            user_id: uid,
+            prompt,
+            aspect_ratio: aspect || '16:9',
+            duration: duration ? Number(duration) : 5,
+            resolution: currentResolution || '720p',
+            prompt_extend: !!wanPromptExtend,
+            watermark: false,
+            first_frame_url: firstFrameUrl || undefined,
+            last_frame_url: lastFrameUrl || undefined,
+            video_url: sourceVideoUrl || undefined,
+            first_clip_url: sourceVideoUrl || undefined,
+            image_url: firstFrameUrl || imageRefUrls[0] || undefined,
+            image_urls: [firstFrameUrl, lastFrameUrl, ...imageRefUrls].filter(Boolean),
+            reference_image_urls: imageRefUrls,
+            reference_video_urls: videoRefUrls,
+            reference_audio_urls: audioRefUrls,
+            audio_url: audioRefUrls[0] || undefined,
+            run_id: runId
+          };
+        }
+        case 'happyhorse10': {
+          let cursor = 0;
+          const firstFrameUrl = videoFirstFrameFile ? (urls || [])[cursor++] : '';
+          const sourceVideoUrl = videoSourceFile ? (urls || [])[cursor++] : '';
+          const imageRefUrls = (urls || []).slice(cursor, cursor + videoRefImageFiles.length);
+          return {
+            uid,
+            user_id: uid,
+            prompt,
+            aspect_ratio: aspect || '16:9',
+            duration: duration ? Number(duration) : 5,
+            resolution: currentResolution || '720p',
+            image_url: firstFrameUrl || imageRefUrls[0] || undefined,
+            image_urls: [firstFrameUrl, ...imageRefUrls].filter(Boolean),
+            reference_image_urls: imageRefUrls,
+            video_url: sourceVideoUrl || undefined,
+            run_id: runId
+          };
+        }
+        case 'grok-video': {
+          const imageRefUrls = (urls || []).slice(0, videoRefImageFiles.length || 1);
+          return {
+            uid,
+            user_id: uid,
+            prompt,
+            aspect_ratio: aspect || '16:9',
+            duration: duration ? Number(duration) : 6,
+            resolution: currentResolution || '720p',
+            mode: 'normal',
+            image_url: imageRefUrls[0] || undefined,
+            image_urls: imageRefUrls,
+            run_id: runId
+          };
+        }
         case 'kling25':
           return {
             prompt,
@@ -4886,6 +7239,48 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             image_url: urls && urls[0] ? urls[0] : undefined,
             run_id: runId
           };
+        case 'kling30': {
+          let cursor = 0;
+          const firstFrameUrl = kling30FirstFrameFile ? (urls || [])[cursor++] : '';
+          const lastFrameUrl = kling30LastFrameFile ? (urls || [])[cursor++] : '';
+          const elementUrls = (urls || []).slice(cursor, cursor + kling30ElementFiles.length).slice(0, 12);
+          const elements = buildKling30ElementGroups(elementUrls);
+          const elementNames = Array.from(new Set(elements.map((element) => element.name).filter(Boolean)));
+          const promptWithElements = elementNames.length
+            ? `${prompt} ${elementNames.map((name) => `@${name}`).join(' ')}`.trim()
+            : prompt;
+          const shotsText = String(document.getElementById('kling30ShotsBox')?.value || '').trim();
+          const multiPrompt = kling30MultiShots
+            ? shotsText.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 5).map((line, index) => {
+                const durationMatch = line.match(/(?:,|\s)(\d+(?:\.\d+)?)\s*s$/i);
+                const shotDuration = durationMatch ? Number(durationMatch[1]) : Math.max(1, Math.min(5, Math.round(Number(duration || 5) / 2)));
+                const shotPrompt = durationMatch ? line.replace(/(?:,|\s)\d+(?:\.\d+)?\s*s$/i, '').trim() : line;
+                return { prompt: shotPrompt || `${promptWithElements} shot ${index + 1}`, duration: shotDuration };
+              })
+            : undefined;
+          const totalDuration = multiPrompt && multiPrompt.length
+            ? Math.min(15, multiPrompt.reduce((sum, shot) => sum + Math.max(1, Number(shot.duration || 1)), 0))
+            : (duration ? Number(duration) : 5);
+          return {
+            uid,
+            user_id: uid,
+            prompt: kling30MultiShots ? prompt : promptWithElements,
+            aspect_ratio: aspect || '16:9',
+            duration: totalDuration,
+            resolution: currentResolution || '720p',
+            mode: currentResolution === '4K' ? '4K' : (currentResolution === '1080p' ? 'pro' : 'std'),
+            sound: !!currentKlingSound,
+            multi_shots: !!kling30MultiShots,
+            first_frame_url: firstFrameUrl || undefined,
+            last_frame_url: lastFrameUrl || undefined,
+            image_urls: [firstFrameUrl, lastFrameUrl].filter(Boolean),
+            element_input_urls: elements.flatMap((element) => element.element_input_urls || []),
+            element_input_video_urls: elements.flatMap((element) => element.element_input_video_urls || []),
+            kling_elements: elements,
+            multi_prompt: multiPrompt,
+            run_id: runId
+          };
+        }
         case 'kling21':
           return {
             prompt,
@@ -4959,6 +7354,17 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         return;
       }
 
+      if (currentModel && currentModel.id === 'kling30') {
+        const klingValidation = validateKling30BeforeRun();
+        if (!klingValidation.ok) {
+          showStatus(klingValidation.message, 'error');
+          if (kling30MultiShots && kling30ActiveShotIndex >= 0) {
+            renderKling30ElementEditor();
+          }
+          return;
+        }
+      }
+
       const requiredCredits = Number(getModelCreditValue(currentModel) || 0);
       let availableCredits = await getAvailableCredits(requiredCredits);
 
@@ -4975,10 +7381,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         return;
       }
 
-      // Kling 2.6 dynamic credit requirement (depends on sound + duration)
-      if (currentModel && currentModel.id === 'kling26') {
-        const __dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
-        const __need = (__dur === 10 ? 8 : 4);
+      // Kling dynamic credit requirement (depends on model, resolution, sound, and duration)
+      if (currentModel && ['kling26', 'kling30'].includes(currentModel.id)) {
+        const __need = Number(getModelCreditValue(currentModel) || 0);
         availableCredits = await getAvailableCredits(__need);
         if (availableCredits < __need) {
           console.warn('Credit gate blocked Kling run', {
@@ -5042,6 +7447,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           ? await uploadImagesAndGetUrls([alephVideoFile, alephImageFile].filter(Boolean))
           : currentModel.needsMotionVideo
           ? await uploadImagesAndGetUrls([motionVideoFile, motionImageFile].filter(Boolean))
+          : currentModel.specificUpload === 'seedance'
+          ? await uploadImagesAndGetUrls([seedanceFirstFrameFile, seedanceLastFrameFile, ...seedanceImageRefFiles, ...seedanceVideoRefFiles, ...seedanceAudioRefFiles].filter(Boolean))
+          : currentModel.specificUpload === 'kling30'
+          ? (syncKling30LegacyData(), await uploadImagesAndGetUrls([kling30FirstFrameFile, kling30LastFrameFile, ...kling30ElementFiles].filter(Boolean)))
+          : ['wan27', 'happyhorse', 'grokVideo'].includes(currentModel.specificUpload)
+          ? await uploadImagesAndGetUrls([videoFirstFrameFile, videoLastFrameFile, videoSourceFile, ...videoRefImageFiles, ...videoRefVideoFiles, ...videoRefAudioFiles].filter(Boolean))
           : await uploadImagesAndGetUrls(uploadedFiles);
         showStatus('Submitting to ' + currentModel.name + '…');
         const uid = currentUser.id;
