@@ -11,7 +11,7 @@ const SUPABASE_URL  = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const SITE_BASE   = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/, "");
-const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/kie-callback`;
+const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/kie-check`;
 
 const VERSION_TAG  = "nb_2_fn_kling26_style_v1";
 
@@ -206,7 +206,7 @@ async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
     }
 
     // Mark charged
-    const chargedMeta = { ...(mergedForClaim||{}), charged:'true', charged_cost: cost, charged_at: (new Date()).toISOString() };
+    const chargedMeta = { ...(mergedForClaim||{}), charged:'true', charged_cost: cost, charged_at: (new Date()).toISOString(), refund_amount: cost };
     await patchUserGenerationMetaById(row_id || (Array.isArray(claimedArr)&&claimedArr[0]?.id) || (existing?.id), chargedMeta);
 
     return { ok:true, debit, idempotent:true, already:false };
@@ -245,7 +245,7 @@ exports.handler = async (event) => {
     const cost = (resolution === "4K") ? 1.5 : 1;
 
     // Seed user_generations row (pending)
-    const seeded = await seedUserGeneration(uid, run_id, prompt, { size, resolution });
+    const seeded = await seedUserGeneration(uid, run_id, prompt, { size, resolution, refund_amount: cost });
     const row_id = seeded?.row_id || null;
 
     // callback must include uid & run_id
@@ -306,7 +306,7 @@ exports.handler = async (event) => {
               "Content-Type": "application/json",
               "Prefer": "return=minimal"
             },
-            body: JSON.stringify({ meta: { source:"nano-banana-2", run_id, model:"nano-banana-2", status:"create_failed", task_id: taskId, raw: js } })
+            body: JSON.stringify({ meta: { source:"nano-banana-2", run_id, model:"nano-banana-2", status:"create_failed", task_id: taskId, raw: js, refund_amount: cost } })
           });
         }
       } catch {}
@@ -324,13 +324,13 @@ exports.handler = async (event) => {
             "Content-Type": "application/json",
             "Prefer": "return=minimal"
           },
-          body: JSON.stringify({ meta: { source:"nano-banana-2", run_id, model:"nano-banana-2", status:"processing", task_id: taskId, size, resolution } })
+          body: JSON.stringify({ meta: { source:"nano-banana-2", run_id, model:"nano-banana-2", status:"processing", task_id: taskId, size, resolution, refund_amount: cost } })
         });
       }
     } catch {}
 
     // Debit credits AFTER provider accepted and exactly once per (uid, run_id)
-    const baseMeta = { source:"nano-banana-2", run_id, model:"nano-banana-2", status:"processing", task_id: taskId, size, resolution };
+    const baseMeta = { source:"nano-banana-2", run_id, model:"nano-banana-2", status:"processing", task_id: taskId, size, resolution, refund_amount: cost };
     const charged = await chargeOnceForRun(uid, run_id, cost, row_id, baseMeta);
 
     if (!charged.ok) {
