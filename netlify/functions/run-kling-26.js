@@ -11,8 +11,8 @@ const KIE_KEY  = process.env.KIE_API_KEY || '';
 const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'downloads';
-const SITE_BASE = (process.env.SITE_BASE || 'https://webhansora.netlify.app').replace(/\/+$/,'');
-const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/video-kie-callback`;
+const SITE_BASE = (process.env.SITE_BASE || 'https://hansora.co').replace(/\/+$/,'');
+const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-check`;
 
 function cors(){ return {
   'Access-Control-Allow-Origin': '*',
@@ -45,7 +45,7 @@ async function getUidFromBearer(event){
   }catch(_e){ return ''; }
 }
 
-// ---- server-side debit (no sound: 5⚡/9⚡, with sound: 9⚡/16⚡) ----
+// ---- server-side debit (5s -> 4⚡, 10s -> 8⚡) ----
 async function debitCredits(uid, cost){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { ok:false, error:'missing_env_or_uid' };
   try{
@@ -84,7 +84,7 @@ async function seedUserGeneration(uid, run_id, duration, sound, prompt){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { row_id:null };
   try{
     const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-    const meta = { source:'kling', run_id, model:'kling2.6', status:'pending' };
+    const meta = { source:'kling', run_id, model:'kling2.6', status:'pending', refund_amount: (duration === 10 ? 8 : 4) };
     const rIns = await fetch(ug, {
       method: 'POST',
       headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
@@ -163,7 +163,7 @@ async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
     }
 
     // Mark charged
-    const chargedMeta = { ...(mergedForClaim||{}), charged:'true', charged_cost: cost, charged_at: (new Date()).toISOString() };
+    const chargedMeta = { ...(mergedForClaim||{}), charged:'true', charged_cost: cost, charged_at: (new Date()).toISOString(), refund_amount: cost };
     await patchUserGenerationMetaById(row_id || (Array.isArray(claimedArr)&&claimedArr[0]?.id) || (existing?.id), chargedMeta);
 
     return { ok:true, debit, idempotent:true, already:false };
@@ -223,8 +223,8 @@ exports.handler = async (event) => {
       return json(400, { ok:false, error:'missing_input', details:'Provide a prompt or an image_url.' });
     }
 
-    // Costs: 5s -> 9⚡, 10s -> 16⚡ (Kling 2.6 with sound)
-    const cost = sound ? ((duration === 10) ? 16 : 9) : ((duration === 10) ? 9 : 5);
+    // Costs: 5s -> 4⚡, 10s -> 8⚡
+    const cost = (duration === 10) ? 8 : 4;
     const run_id = (body.run_id && String(body.run_id).trim()) || `${uid || 'anon'}-${Date.now()}`;
 
     // If this run_id was already submitted before, return the same taskId (no re-debit)
@@ -282,14 +282,14 @@ exports.handler = async (event) => {
           await fetch(`${ug}?id=eq.${encodeURIComponent(arr[0].id)}`, {
             method: 'PATCH',
             headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-            body: JSON.stringify({ meta: { source:'kling', run_id, model, status:'processing', task_id: taskId } }),
+            body: JSON.stringify({ meta: { source:'kling', run_id, model, status:'processing', task_id: taskId, refund_amount: cost } }),
           });
         }
       }
     } catch {}
 
             // Debit credits AFTER provider accepted the task (after 'submitted') and exactly once per (uid, run_id)
-    const baseMeta = { source:'kling', run_id, model, status:'processing', task_id: taskId , sound: sound };
+    const baseMeta = { source:'kling', run_id, model, status:'processing', task_id: taskId, sound: sound, refund_amount: cost };
     const charge = await chargeOnceForRun(uid, run_id, cost, row_id, baseMeta);
     if (!charge.ok){
       if (charge.debit && !charge.debit.ok && (charge.debit.error === 'insufficient_credits' || charge.debit.error === 'insufficient')){
