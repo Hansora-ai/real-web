@@ -33,7 +33,8 @@ exports.handler = async (event) => {
 
     if (!ids.taskId) return json(200, { ok: false, status: "pending", error: "missing_task_id" });
 
-    const state = await fetchKieState(ids.taskId);
+    const inputUrls = collectKnownInputUrls(row);
+    const state = await fetchKieState(ids.taskId, inputUrls);
 
     if (state.failed) {
       const refund = await failAndRefundOnce({ row, ids, reason: state.error || "kie_failed" });
@@ -97,7 +98,7 @@ async function handlePost(event) {
     });
   }
 
-  const urls = collectResultUrls(body);
+  const urls = collectResultUrls(body, collectKnownInputUrls(row));
   if (urls.length) {
     await markDone({ row, ids, urls });
     return json(200, {
@@ -169,7 +170,7 @@ async function findProcessingGeneration(ids) {
   return null;
 }
 
-async function fetchKieState(taskId) {
+async function fetchKieState(taskId, excludeUrls = []) {
   if (!KIE_KEY) return { pending: true, error: "missing_kie_key" };
 
   const endpoints = [
@@ -199,7 +200,7 @@ async function fetchKieState(taskId) {
         continue;
       }
 
-      const urls = collectResultUrls(data);
+      const urls = collectResultUrls(data, excludeUrls);
       if (status === "done" && urls.length) return { done: true, urls };
       if (urls.length) return { done: true, urls };
     } catch (error) {
@@ -352,9 +353,83 @@ function failureReason(value) {
   );
 }
 
-function collectResultUrls(value) {
+function normalizeComparableUrl(url) {
+  return String(url || "")
+    .replace(/[)"'\\\]}]+$/g, "")
+    .trim();
+}
+
+function collectKnownInputUrls(row) {
+  const meta = row?.meta && typeof row.meta === "object" ? row.meta : {};
   const urls = [];
   const seen = new Set();
+  const inputKeys = new Set([
+    "input_url",
+    "input_urls",
+    "source_url",
+    "source_urls",
+    "reference_url",
+    "reference_urls",
+    "reference_image_urls",
+    "reference_video_urls",
+    "reference_audio_urls",
+    "first_frame_url",
+    "last_frame_url",
+    "tail_image_url",
+    "video_url",
+    "image_url",
+    "audio_url",
+    "image_urls",
+    "video_urls",
+    "audio_urls",
+    "element_input_urls",
+    "element_input_video_urls"
+  ]);
+
+  function push(url) {
+    if (typeof url !== "string" || !/^https?:\/\//i.test(url)) return;
+    const clean = normalizeComparableUrl(url);
+    if (!clean || seen.has(clean)) return;
+    seen.add(clean);
+    urls.push(clean);
+  }
+
+  function walk(value, trusted = false, depth = 0) {
+    if (!value || depth > 8) return;
+    if (typeof value === "string") {
+      if (!trusted) return;
+      const parsed = safeJson(value);
+      if (parsed && typeof parsed === "object" && Object.keys(parsed).length) {
+        walk(parsed, trusted, depth + 1);
+        return;
+      }
+      const matches = value.match(/https?:\/\/[^\s"'<>]+/gi);
+      if (matches) matches.forEach(push);
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) walk(item, trusted, depth + 1);
+      return;
+    }
+    if (typeof value === "object") {
+      for (const [rawKey, child] of Object.entries(value)) {
+        const key = String(rawKey || "");
+        walk(child, trusted || inputKeys.has(key), depth + 1);
+      }
+    }
+  }
+
+  walk(meta.input_urls, true);
+  walk(meta.source_urls, true);
+  walk(meta.reference_urls, true);
+  walk(meta, false);
+  return urls;
+}
+
+function collectResultUrls(value, excludeUrls = []) {
+  const urls = [];
+  const seen = new Set();
+  const excluded = new Set(excludeUrls.map(normalizeComparableUrl).filter(Boolean));
   const outputKeys = new Set([
     "video_url",
     "videoUrl",
@@ -407,8 +482,9 @@ function collectResultUrls(value) {
 
   function push(url) {
     if (typeof url !== "string" || !/^https?:\/\//i.test(url)) return;
-    const clean = url.replace(/[)"'\\\]}]+$/g, "");
+    const clean = normalizeComparableUrl(url);
     if (!/^https?:\/\/.+/i.test(clean)) return;
+    if (excluded.has(clean)) return;
     if (seen.has(clean)) return;
     seen.add(clean);
     urls.push(clean);
