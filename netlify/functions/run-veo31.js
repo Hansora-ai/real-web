@@ -79,7 +79,7 @@ exports.handler = async (event) => {
           kind: "video",
           prompt,
           result_url: null,
-          meta: { run_id, status: "pending", aspect_ratio: aspectRatio, quality, duration: 8, model, charged: "false", charge_cost: cost, refund_amount: cost }
+          meta: { run_id, status: "pending", aspect_ratio: aspectRatio, quality, duration: 8, model, charge_cost: cost, refund_amount: cost }
         };
 
         if (idToPatch) {
@@ -171,7 +171,7 @@ if (imageUrls.length) {
           await fetch(`${UG_URL}?id=eq.${encodeURIComponent(arr[0].id)}`, {
             method: "PATCH",
             headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
-            body: JSON.stringify({ meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality, duration: 8, task_id: taskId, model, charged: "false", charge_cost: cost, refund_amount: cost } })
+            body: JSON.stringify({ meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality, duration: 8, task_id: taskId, model, charge_cost: cost, refund_amount: cost } })
           });
         }
       }
