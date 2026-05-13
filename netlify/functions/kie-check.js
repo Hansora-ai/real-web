@@ -357,18 +357,28 @@ function collectResultUrls(value) {
   const seen = new Set();
   const outputKeys = new Set([
     "video_url",
+    "videoUrl",
     "image_url",
+    "imageUrl",
     "result_url",
+    "resultUrl",
     "result_urls",
+    "resultUrls",
+    "url",
     "output",
     "outputs",
     "images",
     "image_urls",
+    "imageUrls",
     "videos",
     "video_urls",
+    "videoUrls",
     "urls",
     "files",
-    "file_urls"
+    "file_url",
+    "fileUrl",
+    "file_urls",
+    "fileUrls"
   ]);
   const containerKeys = new Set([
     "data",
