@@ -1773,7 +1773,7 @@
 
   <!-- BOTTOM BAR -->
   <script>
-// --- MidJourney multi-image support via nb-check (no callback changes) ---
+// --- KIE result support through one checker ---
 function __mjCacheKey(runId){ return `mj_urls_${runId}`; }
 function __mjLoadCached(runId){
   try{ const v = localStorage.getItem(__mjCacheKey(runId)); if(!v) return null;
@@ -1813,7 +1813,7 @@ async function __mjFetchNbCheck(params){
   const taskId = params && params.taskId ? String(params.taskId) : '';
   const uid = params && params.uid ? String(params.uid) : '';
   const runId = params && params.runId ? String(params.runId) : '';
-  const checker = params && params.checker ? String(params.checker) : 'nb-check';
+  const checker = params && params.checker ? String(params.checker) : 'kie-check';
   let url = '';
   if (taskId) {
     url = `/.netlify/functions/${checker}?taskId=${encodeURIComponent(taskId)}&uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
@@ -1824,7 +1824,7 @@ async function __mjFetchNbCheck(params){
   let js; try{ js = JSON.parse(t); }catch{ js = { raw:t }; }
   return { ok:r.ok, status:r.status, js };
 }
-// --- end MidJourney support ---
+// --- end KIE checker support ---
 
 // === Fullscreen preview overlay (download only via Get) ===
 (function(){
@@ -2526,7 +2526,7 @@ function createResultCard(data) {
     }
 
     async function __extractResultUrls(row) {
-  // MidJourney: if DB row doesn't carry all 4 URLs, use nb-check (taskId preferred) + local cache.
+  // MidJourney: if DB row doesn't carry all 4 URLs, use the one KIE checker + local cache.
   // For all models: attempt to extract multiple URLs from meta in a best-effort way.
   const dedupe = (arr) => {
     const out = [];
@@ -2593,7 +2593,7 @@ function createResultCard(data) {
       urls = dedupe([row.result_url]);
     }
 
-    // --- MidJourney: if still missing URLs, call nb-check and merge
+    // --- MidJourney: if still missing URLs, call the one KIE checker and merge
     if (isMJ && runId && (!urls || urls.length < 4)) {
       try {
         const nb = await __mjFetchNbCheck({ taskId, uid: (currentUser ? currentUser.id : ''), runId });
@@ -2618,23 +2618,11 @@ function createResultCard(data) {
     function checkerForGenerationRow(row) {
       const providerHint = String((row && (row.provider || row.model)) || '').toLowerCase();
       const kindHint = String((row && row.kind) || '').toLowerCase();
-      if (providerHint.includes('aleph')) return 'aleph-check';
-      if (
-        kindHint === 'video' ||
-        providerHint.includes('video') ||
-        providerHint.includes('kling') ||
-        providerHint.includes('veo') ||
-        providerHint.includes('runway') ||
-        providerHint.includes('motion')
-      ) return 'video-kie-callback';
-      return 'nb-check';
+      return 'kie-check';
     }
 
     function checkerForCurrentModel(model) {
-      if (!model) return 'nb-check';
-      if (model.id === 'aleph') return 'aleph-check';
-      if (model.category === 'video') return 'video-kie-callback';
-      return 'nb-check';
+      return 'kie-check';
     }
 
     function directResultUrlFromCheck(js) {
@@ -2762,7 +2750,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     if (token && token.cancelled) return;
     try {
       if (taskId) {
-        const nb = await __mjFetchNbCheck({ taskId, uid: currentUser.id, runId, checker: checker || 'nb-check' });
+        const nb = await __mjFetchNbCheck({ taskId, uid: currentUser.id, runId, checker: checker || 'kie-check' });
         const nbStatus = String(nb?.js?.status || '').toLowerCase();
         const nbFailed = !!nb?.js?.failed || nbStatus.includes('fail') || nbStatus.includes('error') || nbStatus.includes('cancel');
         if (nbFailed) {
