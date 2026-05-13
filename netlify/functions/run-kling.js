@@ -12,7 +12,7 @@ const SUPABASE_URL  = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'downloads';
 const SITE_BASE = (process.env.SITE_BASE || 'https://hansora.co').replace(/\/+$/,'');
-const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/video-kie-callback`;
+const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-check`;
 
 function cors(){ return {
   'Access-Control-Allow-Origin': '*',
@@ -173,7 +173,7 @@ exports.handler = async (event) => {
     try {
       if (SUPABASE_URL && SERVICE_KEY && uid){
         const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-        const meta = { source:'kling', run_id, model:'kling', status:'pending' };
+        const meta = { source:'kling', run_id, model:'kling', status:'pending', refund_amount: cost };
         const rIns = await fetch(ug, {
           method: 'POST',
           headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
@@ -225,7 +225,7 @@ exports.handler = async (event) => {
           await fetch(`${ug}?id=eq.${encodeURIComponent(arr[0].id)}`, {
             method: 'PATCH',
             headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-            body: JSON.stringify({ meta: { source:'kling', run_id, model, status:'processing', task_id: taskId } }),
+            body: JSON.stringify({ meta: { source:'kling', run_id, model, status:'processing', task_id: taskId, refund_amount: cost } }),
           });
         }
       }
@@ -247,7 +247,7 @@ exports.handler = async (event) => {
         const arr = await chk.json().catch(()=>[]);
         if (Array.isArray(arr) && arr.length){
           const meta0 = arr[0].meta || {};
-          const meta = { ...meta0, charged: true, charged_at: new Date().toISOString(), debited: cost };
+          const meta = { ...meta0, charged: true, charged_at: new Date().toISOString(), charged_cost: cost, debited: cost, refund_amount: cost };
           await fetch(`${ug}?id=eq.${encodeURIComponent(arr[0].id)}`, {
             method:'PATCH',
             headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
