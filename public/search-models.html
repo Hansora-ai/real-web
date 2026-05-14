@@ -6194,7 +6194,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       closeBtn.type = 'button';
       closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
       closeBtn.textContent = '×';
-      closeBtn.addEventListener('click', () => {
+      closeBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
         onRemove();
         wrapper.remove();
       });
@@ -6841,9 +6843,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       if (btnLabel) btnLabel.textContent = el.type === 'video' ? 'Add / replace video' : (Array.isArray(el.files) && el.files.length ? 'Add more images' : 'Add element images');
       renderFileListThumbs(Array.isArray(el.files) ? el.files : [], thumbs, (fileIndex) => {
-        const files = Array.isArray(el.files) ? [...el.files] : [];
-        files.splice(fileIndex, 1);
-        el.files = files;
+        if (!Array.isArray(el.files)) el.files = [];
+        el.files.splice(fileIndex, 1);
+        if (input) input.value = '';
         renderKling30ElementEditor();
         renderKling30Shots();
         syncKling30LegacyData();
