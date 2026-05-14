@@ -7798,9 +7798,18 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       }
     }
 
+    let runSubmitLocked = false;
     document.getElementById('runBtn').addEventListener('click', (e) => {
       e.preventDefault();
-      runCurrentModel();
+      const btn = e.currentTarget;
+      if (runSubmitLocked || (btn && btn.disabled)) return;
+      runSubmitLocked = true;
+      if (btn) btn.disabled = true;
+      Promise.resolve(runCurrentModel()).finally(() => {
+        runSubmitLocked = false;
+        if (btn) btn.disabled = false;
+        updateRunButtonLabel();
+      });
     });
 
     // boot
