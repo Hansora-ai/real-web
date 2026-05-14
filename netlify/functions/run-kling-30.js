@@ -101,6 +101,44 @@ function appendElementReference(prompt, elementName) {
   return (base ? base + ' ' : '') + '@' + cleanName;
 }
 
+function isUnsupportedModelResponse(status, data) {
+  const text = JSON.stringify(data || {}).toLowerCase();
+  return status === 422 && /model name|model.*not supported|not supported.*model|unsupported model/.test(text);
+}
+
+function getKling30ModelCandidates() {
+  const envModel = String(process.env.KLING_30_MODEL || '').trim();
+  const candidates = [
+    envModel,
+    'kling-v3',
+    'kling-v3-pro',
+    'kling-3-0',
+    'kling_3_0',
+    'kling30',
+    'kling-30',
+    'kling-3.0'
+  ].filter(Boolean);
+  return [...new Set(candidates)];
+}
+
+async function createKieTaskWithModelFallback(input, callback) {
+  const candidates = getKling30ModelCandidates();
+  let last = null;
+  for (const model of candidates) {
+    const res = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${KIE_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, input, callBackUrl: callback }),
+    });
+    const data = await res.json().catch(() => ({}));
+    last = { res, data, model };
+    if (isUnsupportedModelResponse(res.status, data)) continue;
+    return last;
+  }
+  return last;
+}
+
+
 function normalizeAndValidateKlingElements(rawElements) {
   const elements = Array.isArray(rawElements) ? rawElements : [];
   if (elements.length > 3) {
@@ -278,14 +316,11 @@ exports.handler = async (event) => {
       ...(klingElements.length ? { kling_elements: klingElements } : {}),
       ...(multiPrompt.length ? { multi_prompt: multiPrompt } : {}),
     };
-    const model = process.env.KLING_30_MODEL || 'kling-3.0';
     const callback = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
-    const kieRes = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${KIE_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, input, callBackUrl: callback }),
-    });
-    const data = await kieRes.json().catch(() => ({}));
+    const createResult = await createKieTaskWithModelFallback(input, callback);
+    const kieRes = createResult?.res || { ok: false, status: 502 };
+    const data = createResult?.data || {};
+    const model = createResult?.model || String(process.env.KLING_30_MODEL || 'kling-v3');
     if (!kieRes.ok) {
       await patchGeneration(rowId, { ...metaBase, status: 'failed', error: data });
       return json(kieRes.status || 502, { ok: false, error: 'kie_create_failed', details: data });
