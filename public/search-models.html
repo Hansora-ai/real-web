@@ -3676,11 +3676,18 @@ function createResultCard(data) {
 
       const mediaEl = document.createElement(kind === 'video' ? 'video' : 'img');
       mediaEl.className = 'max-h-full max-w-full object-contain hidden';
+      mediaEl.style.cursor = 'pointer';
       if (kind === 'video') {
         mediaEl.controls = true;
         mediaEl.muted = true;
         mediaEl.playsInline = true;
       }
+      mediaEl.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const previewUrl = mediaEl.dataset.previewUrl || mediaEl.src || '';
+        if (previewUrl && window.openPreview) window.openPreview(previewUrl, kind);
+      });
       media.appendChild(mediaEl);
 
       const statusChip = document.createElement('div');
@@ -3737,12 +3744,14 @@ function createResultCard(data) {
 
         if (hasUrlNow) {
           mediaEl.src = newData.result_url;
+          mediaEl.dataset.previewUrl = newData.result_url;
           mediaEl.classList.remove('hidden');
           downloadBtn.dataset.downloadUrl = newData.result_url;
           downloadBtn.classList.remove('hidden');
           loader.style.display = 'none';
         } else {
           mediaEl.classList.add('hidden');
+          mediaEl.dataset.previewUrl = '';
           downloadBtn.classList.add('hidden');
           downloadBtn.dataset.downloadUrl = '';
           loader.style.display = st.includes('fail') ? 'none' : 'block';
