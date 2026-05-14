@@ -4632,7 +4632,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         defaultAspect: '16:9',
         resolutionOptions: ['720p', '1080p', '4K'],
         defaultResolution: '720p',
-        durations: [5, 10, 15],
+        durations: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
         costLabel: '720p 1⚡/s · 1080p 1.5⚡/s · 4K 4⚡/s',
         minCredits: 5
       },
@@ -4960,7 +4960,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
 
       // Default model per mode
-      const defaultId = mode === 'image' ? 'gpt-image-2' : 'veo31-fast';
+      const defaultId = mode === 'image' ? 'gpt-image-2' : 'kling30';
       const def = MODELS.find(m => m.id === defaultId);
       if (def) {
         currentModel = def;
@@ -7804,10 +7804,18 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       const btn = e.currentTarget;
       if (runSubmitLocked || (btn && btn.disabled)) return;
       runSubmitLocked = true;
-      if (btn) btn.disabled = true;
+      if (btn) {
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+        btn.classList.add('opacity-60', 'cursor-not-allowed');
+      }
       Promise.resolve(runCurrentModel()).finally(() => {
         runSubmitLocked = false;
-        if (btn) btn.disabled = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.removeAttribute('aria-busy');
+          btn.classList.remove('opacity-60', 'cursor-not-allowed');
+        }
         updateRunButtonLabel();
       });
     });
