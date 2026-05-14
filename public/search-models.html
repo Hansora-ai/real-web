@@ -2328,6 +2328,13 @@
       box-shadow:0 12px 28px rgba(99,102,241,.28) !important;
     }
     body.workspace-redesign #kling30DoneElementsBtn:active{ transform:translateY(1px); }
+    body.workspace-redesign #kling30DoneElementsBtn:disabled{
+      opacity:.45 !important;
+      cursor:not-allowed !important;
+      filter:grayscale(.35) !important;
+      box-shadow:none !important;
+      transform:none !important;
+    }
 
 
     /* Final UI-only fixes for HappyHorse, Grok video, and Wan 2.7 inputs */
@@ -2873,7 +2880,7 @@
                     <span class="upload-section-icon">🧩</span>
                     <div>
                       <p id="kling30ElementDrawerTitle">Shot element</p>
-                      <small>Name, type, description and media for this shot</small>
+                      <small>Name, description and 2–4 images for this shot</small>
                     </div>
                   </div>
                   <button id="kling30CloseElementsBtn" type="button" class="kling30-close-btn">×</button>
@@ -2886,8 +2893,7 @@
                   <div class="kling30-editor-field">
                     <label>Type</label>
                     <div class="kling30-type-row">
-                      <button id="kling30ElementTypeImage" type="button" class="kling30-type-btn">🖼️ Image</button>
-                      <button id="kling30ElementTypeVideo" type="button" class="kling30-type-btn">🎞️ Video</button>
+                      <button id="kling30ElementTypeImage" type="button" class="kling30-type-btn active">🖼️ Image</button>
                     </div>
                   </div>
                   <div class="kling30-editor-field">
@@ -2895,14 +2901,14 @@
                     <textarea id="kling30ElementDescInput" rows="3" placeholder="Describe this character/object/environment"></textarea>
                   </div>
                   <div class="upload-drop-card upload-drop-card-wide kling30-elements-box">
-                    <input id="kling30ElementsInput" type="file" accept="image/*,video/*" class="hidden" multiple />
+                    <input id="kling30ElementsInput" type="file" accept="image/*" class="hidden" multiple />
                     <button id="kling30ElementsBtn" class="upload-drop-btn" type="button">
-                      <span class="upload-plus">📎</span><span id="kling30ElementsBtnLabel">Add element media</span>
+                      <span class="upload-plus">📎</span><span id="kling30ElementsBtnLabel">Add element images</span>
                       <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
                     </button>
                     <div id="kling30ElementsThumbs" class="upload-thumb-zone upload-thumb-list"></div>
                   </div>
-                  <p id="kling30ElementHelp" class="kling30-panel-note">Image type requires 2–4 images. Video type requires 1 video. Name and description are required when media is added.</p>
+                  <p id="kling30ElementHelp" class="kling30-panel-note">Image element requires 2–4 images. Name and description are required when images are added.</p>
                   <p id="kling30ElementError" class="hidden text-[10px] text-rose-300 mt-2"></p>
                   <div class="kling30-drawer-actions">
                     <button id="kling30DoneElementsBtn" type="button">Done</button>
@@ -4622,7 +4628,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         emoji: 'K3',
         subtitle: 'Text / elements → Video (sound optional)',
         category: 'video',
-        description: 'Kling 3.0 with optional image/video elements and sound generation.',
+        description: 'Kling 3.0 with optional image elements and sound generation.',
         endpoint: '/.netlify/functions/run-kling-30',
         needsImage: false,
         maxFiles: 0,
@@ -6550,12 +6556,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const cleanDescription = String(el.description || '').trim();
       if (!cleanName) return { ok:false, message:'Shot ' + (shotIndex + 1) + ': element name is required.' };
       if (!cleanDescription) return { ok:false, message:'Shot ' + (shotIndex + 1) + ': element description is required.' };
-      if (el.type === 'video') {
-        if (files.length !== 1 || !String(files[0].type || '').startsWith('video/')) {
-          return { ok:false, message:'Shot ' + (shotIndex + 1) + ': video element requires exactly 1 video.' };
-        }
-        return { ok:true, message:'' };
-      }
+      el.type = 'image';
       const imageFiles = files.filter((file) => String(file.type || '').startsWith('image/'));
       if (imageFiles.length !== files.length || imageFiles.length < 2 || imageFiles.length > 4) {
         return { ok:false, message:'Shot ' + (shotIndex + 1) + ': image element requires 2–4 images.' };
@@ -6573,6 +6574,14 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       errorEl.textContent = message;
       errorEl.classList.remove('hidden');
+    }
+
+    function syncKling30ElementDoneState(validation) {
+      const doneBtn = document.getElementById('kling30DoneElementsBtn');
+      if (!doneBtn) return;
+      const isValid = !validation || validation.ok;
+      doneBtn.disabled = !isValid;
+      doneBtn.setAttribute('aria-disabled', isValid ? 'false' : 'true');
     }
 
     function validateKling30BeforeRun() {
@@ -6607,26 +6616,18 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const groupByKey = new Map();
       (elementUrls || []).forEach((url, index) => {
         const meta = kling30ElementMeta[index] || {};
-        const sourceFile = kling30ElementFiles[index];
-        const isVideo = (meta.type === 'video') || (sourceFile && sourceFile.type && sourceFile.type.startsWith('video/'));
         const name = sanitizeKling30ElementName(meta.name || '', 'element_' + ((meta.shotIndex || 0) + 1));
         const description = String(meta.description || '').trim();
-        const key = (meta.shotIndex ?? index) + ':' + name + ':' + (isVideo ? 'video' : 'image');
+        const key = (meta.shotIndex ?? index) + ':' + name + ':image';
         let group = groupByKey.get(key);
         if (!group) {
-          group = isVideo
-            ? { name, description, element_input_video_urls: [] }
-            : { name, description, element_input_urls: [] };
+          group = { name, description, element_input_urls: [] };
           groupByKey.set(key, group);
           groups.push(group);
         }
-        if (isVideo) group.element_input_video_urls.push(url);
-        else group.element_input_urls.push(url);
+        group.element_input_urls.push(url);
       });
-      return groups.filter((group) => {
-        if (group.element_input_video_urls) return group.element_input_video_urls.length === 1 && group.name && group.description;
-        return group.element_input_urls && group.element_input_urls.length >= 2 && group.element_input_urls.length <= 4 && group.name && group.description;
-      });
+      return groups.filter((group) => group.element_input_urls && group.element_input_urls.length >= 2 && group.element_input_urls.length <= 4 && group.name && group.description);
     }
 
     function ensureKling30Shots() {
@@ -6643,9 +6644,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     function kling30ElementHasValidMedia(el) {
       if (!el) return false;
       const files = Array.isArray(el.files) ? el.files.filter(Boolean) : [];
-      if (el.type === 'video') {
-        return files.length === 1 && String(files[0]?.type || '').startsWith('video/');
-      }
+      el.type = 'image';
       const imageFiles = files.filter((file) => String(file?.type || '').startsWith('image/'));
       return imageFiles.length === files.length && imageFiles.length >= 2 && imageFiles.length <= 4;
     }
@@ -6695,7 +6694,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           meta.push({
             name: cleanName,
             description: String(el.description || '').trim(),
-            type: (el.type === 'video' || (file.type || '').startsWith('video/')) ? 'video' : 'image',
+            type: 'image',
             shotIndex
           });
         });
@@ -6799,7 +6798,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         elementBtn.className = 'kling30-shot-element-btn';
         const el = shot.element || { name: 'element_' + (index + 1), type: 'image', files: [] };
         const fileCount = Array.isArray(el.files) ? el.files.length : 0;
-        elementBtn.innerHTML = '<span>🧩 @' + sanitizeKling30ElementName(el.name, 'element_' + (index + 1)) + '<small>' + (el.type === 'video' ? 'Video' : 'Image') + ' • ' + fileCount + ' file' + (fileCount === 1 ? '' : 's') + '</small></span><span>›</span>';
+        elementBtn.innerHTML = '<span>🧩 @' + sanitizeKling30ElementName(el.name, 'element_' + (index + 1)) + '<small>Image • ' + fileCount + ' file' + (fileCount === 1 ? '' : 's') + '</small></span><span>›</span>';
         elementBtn.addEventListener('click', () => openKling30ElementsDrawer(index));
         elementWrap.appendChild(elementLabel);
         elementWrap.appendChild(elementBtn);
@@ -6827,21 +6826,20 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const nameInput = document.getElementById('kling30ElementNameInput');
       const descInput = document.getElementById('kling30ElementDescInput');
       const typeImage = document.getElementById('kling30ElementTypeImage');
-      const typeVideo = document.getElementById('kling30ElementTypeVideo');
       const input = document.getElementById('kling30ElementsInput');
       const btn = document.getElementById('kling30ElementsBtn');
       const btnLabel = document.getElementById('kling30ElementsBtnLabel');
       const thumbs = document.getElementById('kling30ElementsThumbs');
       if (nameInput) nameInput.value = el.name || ('element_' + (kling30ActiveShotIndex + 1));
       if (descInput) descInput.value = el.description || '';
-      if (typeImage) typeImage.classList.toggle('active', el.type !== 'video');
-      if (typeVideo) typeVideo.classList.toggle('active', el.type === 'video');
+      el.type = 'image';
+      if (typeImage) typeImage.classList.add('active');
       if (input) {
         input.value = '';
-        input.accept = el.type === 'video' ? 'video/*' : 'image/*';
-        input.multiple = el.type !== 'video';
+        input.accept = 'image/*';
+        input.multiple = true;
       }
-      if (btnLabel) btnLabel.textContent = el.type === 'video' ? 'Add / replace video' : (Array.isArray(el.files) && el.files.length ? 'Add more images' : 'Add element images');
+      if (btnLabel) btnLabel.textContent = Array.isArray(el.files) && el.files.length ? 'Add more images' : 'Add element images';
       renderFileListThumbs(Array.isArray(el.files) ? el.files : [], thumbs, (fileIndex) => {
         if (!Array.isArray(el.files)) el.files = [];
         el.files.splice(fileIndex, 1);
@@ -6853,6 +6851,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (btn) btn.classList.toggle('has-media', !!(el.files && el.files.length));
       const validation = getKling30ElementValidation(shot, kling30ActiveShotIndex);
       setKling30ElementError(validation.ok ? '' : validation.message);
+      syncKling30ElementDoneState(validation);
       syncKling30LegacyData();
     }
 
@@ -6864,10 +6863,20 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       renderKling30ElementEditor();
     }
 
-    function closeKling30ElementsDrawer() {
+    function closeKling30ElementsDrawer(forceClose) {
+      if (!forceClose && kling30ActiveShotIndex >= 0) {
+        ensureKling30Shots();
+        const validation = getKling30ElementValidation(kling30Shots[kling30ActiveShotIndex], kling30ActiveShotIndex);
+        if (!validation.ok) {
+          setKling30ElementError(validation.message);
+          syncKling30ElementDoneState(validation);
+          return;
+        }
+      }
       const drawer = document.getElementById('kling30ElementsDrawer');
       if (drawer) drawer.classList.add('hidden');
       kling30ActiveShotIndex = -1;
+      syncKling30ElementDoneState({ ok:true, message:'' });
       renderKling30Shots();
       syncKling30LegacyData();
     }
@@ -6884,10 +6893,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     });
 
     const kling30CloseElementsBtn = document.getElementById('kling30CloseElementsBtn');
-    if (kling30CloseElementsBtn) kling30CloseElementsBtn.addEventListener('click', closeKling30ElementsDrawer);
+    if (kling30CloseElementsBtn) kling30CloseElementsBtn.addEventListener('click', () => closeKling30ElementsDrawer(true));
 
     const kling30DoneElementsBtn = document.getElementById('kling30DoneElementsBtn');
-    if (kling30DoneElementsBtn) kling30DoneElementsBtn.addEventListener('click', closeKling30ElementsDrawer);
+    if (kling30DoneElementsBtn) kling30DoneElementsBtn.addEventListener('click', () => closeKling30ElementsDrawer(false));
 
     const kling30NameInput = document.getElementById('kling30ElementNameInput');
     if (kling30NameInput) kling30NameInput.addEventListener('input', (e) => {
@@ -6918,27 +6927,15 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       renderKling30Shots();
     });
 
-    const kling30TypeVideo = document.getElementById('kling30ElementTypeVideo');
-    if (kling30TypeVideo) kling30TypeVideo.addEventListener('click', () => {
-      if (kling30ActiveShotIndex < 0) return;
-      ensureKling30Shots();
-      kling30Shots[kling30ActiveShotIndex].element.type = 'video';
-      kling30Shots[kling30ActiveShotIndex].element.files = [];
-      renderKling30ElementEditor();
-      renderKling30Shots();
-    });
 
     document.getElementById('kling30ElementsInput').addEventListener('change', (e) => {
       if (kling30ActiveShotIndex < 0) return;
       ensureKling30Shots();
       const el = kling30Shots[kling30ActiveShotIndex].element;
       const nextFiles = Array.from(e.target.files || []).filter(Boolean);
-      if (el.type === 'video') {
-        el.files = nextFiles.filter((f) => String(f.type || '').startsWith('video/')).slice(0, 1);
-      } else {
-        const existing = Array.isArray(el.files) ? el.files.filter((f) => String(f.type || '').startsWith('image/')) : [];
-        el.files = existing.concat(nextFiles.filter((f) => String(f.type || '').startsWith('image/'))).slice(0, 4);
-      }
+      el.type = 'image';
+      const existing = Array.isArray(el.files) ? el.files.filter((f) => String(f.type || '').startsWith('image/')) : [];
+      el.files = existing.concat(nextFiles.filter((f) => String(f.type || '').startsWith('image/'))).slice(0, 4);
       e.target.value = '';
       renderKling30ElementEditor();
       renderKling30Shots();
@@ -6959,7 +6956,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         ensureKling30Shots();
         renderKling30Shots();
       } else {
-        closeKling30ElementsDrawer();
+        closeKling30ElementsDrawer(true);
       }
       syncKling30InputLocks();
       syncKling30LegacyData();
@@ -7444,7 +7441,6 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             last_frame_url: kling30MultiShots ? undefined : (lastFrameUrl || undefined),
             image_urls: kling30MultiShots ? [firstFrameUrl].filter(Boolean) : [firstFrameUrl, lastFrameUrl].filter(Boolean),
             element_input_urls: elements.flatMap((element) => element.element_input_urls || []),
-            element_input_video_urls: elements.flatMap((element) => element.element_input_video_urls || []),
             kling_elements: elements,
             multi_prompt: multiPrompt,
             run_id: runId
