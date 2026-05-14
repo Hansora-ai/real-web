@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA • Audio Creation</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="/header.css" rel="stylesheet" />
+  <script defer src="/header.js"></script>
+  <style>
+    :root{
+      --base-bg:#050714;
+      --base-line:#15182a;
+      --brand:#6366f1;
+      --brand-2:#8b5cf6;
+      --cyan:#38bdf8;
+      --good:#86efac;
+      --muted:rgba(226,232,240,.66);
+      --card:rgba(15,23,42,.72);
+    }
+    *{box-sizing:border-box}
+    body{
+      min-height:100vh;
+      margin:0;
+      background:
+        radial-gradient(900px 520px at 15% -10%, rgba(99,102,241,.28), transparent 60%),
+        radial-gradient(900px 520px at 88% 10%, rgba(56,189,248,.18), transparent 58%),
+        radial-gradient(800px 560px at 55% 100%, rgba(168,85,247,.16), transparent 62%),
+        var(--base-bg);
+      color:#e5e7eb;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+    }
+    button,input,textarea,select{font:inherit}
+    .glass{border:1px solid rgba(255,255,255,.11); background:rgba(8,11,25,.68); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); box-shadow:0 22px 70px rgba(0,0,0,.45)}
+    .panel{border:1px solid rgba(255,255,255,.10); background:linear-gradient(180deg,rgba(15,23,42,.86),rgba(2,6,23,.78)); box-shadow:0 18px 55px rgba(0,0,0,.38)}
+    .btn-brand{border:0; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; box-shadow:0 14px 38px rgba(99,102,241,.38)}
+    .btn-brand:hover{filter:brightness(1.08)}
+    .btn-brand:disabled{opacity:.55; cursor:not-allowed; filter:saturate(.6)}
+    .btn-soft{border:1px solid rgba(148,163,184,.28); background:rgba(15,23,42,.72); color:#e5e7eb}
+    .btn-soft:hover{border-color:rgba(129,140,248,.82); background:rgba(15,23,42,.9)}
+    .chip{border:1px solid rgba(148,163,184,.32); background:rgba(15,23,42,.65); color:#dbeafe; border-radius:999px; padding:8px 12px; font-size:12px; line-height:1; white-space:nowrap}
+    .chip-active{border-color:transparent; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; box-shadow:0 10px 25px rgba(99,102,241,.38)}
+    .field{width:100%; border:1px solid rgba(148,163,184,.22); background:rgba(2,6,23,.58); color:#fff; outline:none; border-radius:16px; padding:12px 14px}
+    .field:focus{border-color:rgba(129,140,248,.9); box-shadow:0 0 0 3px rgba(99,102,241,.18)}
+    .small-label{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:rgba(226,232,240,.58); font-weight:750}
+    .model-card{position:relative; overflow:hidden; border-radius:22px; border:1px solid rgba(255,255,255,.10); background:rgba(15,23,42,.58); transition:.18s ease; cursor:pointer}
+    .model-card:hover{transform:translateY(-2px); border-color:rgba(129,140,248,.72)}
+    .model-card.active{border-color:rgba(139,92,246,.96); box-shadow:0 0 0 1px rgba(139,92,246,.5), 0 22px 55px rgba(79,70,229,.22)}
+    .model-card::before{content:''; position:absolute; inset:-60% -40% auto auto; width:180px; height:180px; border-radius:50%; background:rgba(99,102,241,.22); filter:blur(8px)}
+    .dialogue-line{border:1px solid rgba(255,255,255,.10); background:rgba(2,6,23,.42); border-radius:20px; padding:14px}
+    .dialogue-text{min-height:74px; resize:vertical}
+    .remove-line{width:34px;height:34px;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(15,23,42,.7);color:#fff}
+    .remove-line:disabled{opacity:.35; cursor:not-allowed}
+    .upload-drop{position:relative; min-height:160px; border:1px dashed rgba(148,163,184,.34); background:rgba(2,6,23,.48); border-radius:22px; display:flex; align-items:center; justify-content:center; text-align:center; padding:18px; cursor:pointer}
+    .upload-drop.drag{border-color:#a78bfa; background:rgba(99,102,241,.16)}
+    .audio-card{border:1px solid rgba(255,255,255,.10); background:rgba(15,23,42,.68); border-radius:20px; overflow:hidden}
+    .audio-card audio{width:100%}
+    .status-dot{width:9px;height:9px;border-radius:999px;background:#fbbf24;box-shadow:0 0 0 5px rgba(251,191,36,.14)}
+    .status-dot.ready{background:#86efac; box-shadow:0 0 0 5px rgba(134,239,172,.14)}
+    .status-dot.failed{background:#f87171; box-shadow:0 0 0 5px rgba(248,113,113,.14)}
+    .range-wrap input{width:100%}
+    .mode-note{border:1px solid rgba(129,140,248,.22); background:rgba(99,102,241,.08); border-radius:18px; padding:12px 14px; color:rgba(226,232,240,.78); font-size:12px; line-height:1.55}
+    .voice-picker{position:relative}
+    .voice-picker-button{width:100%; min-height:50px; text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .voice-menu{position:absolute; top:calc(100% + 8px); right:0; width:100%; z-index:40; border:1px solid rgba(148,163,184,.28); background:rgba(8,11,25,.98); border-radius:18px; padding:10px; box-shadow:0 22px 55px rgba(0,0,0,.62); display:none}
+    .voice-menu.open{display:block}
+    .voice-search{width:100%; border:1px solid rgba(148,163,184,.25); background:rgba(2,6,23,.8); color:#fff; outline:none; border-radius:12px; padding:10px 12px; font-size:13px; margin-bottom:8px}
+    .voice-list{max-height:220px; overflow-y:auto; padding-right:4px}
+    .voice-option{width:100%; display:block; text-align:left; border:0; background:transparent; color:#dbeafe; border-radius:12px; padding:9px 10px; font-size:13px}
+    .voice-option:hover,.voice-option.active{background:rgba(99,102,241,.18); color:#fff}
+    @media (max-width:900px){
+      .desktop-grid{grid-template-columns:1fr!important}.sticky-side{position:static!important}.hero-title{font-size:34px!important}.model-card{min-height:132px}.compact-stack{grid-template-columns:1fr!important}
+    }
+  </style>
+</head>
+<body>
+  <div id="sharedHeader"></div>
+
+  <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
+    <section class="grid desktop-grid grid-cols-[360px_1fr] gap-6 items-start">
+      <aside class="sticky-side sticky top-5 space-y-4">
+        <div class="glass rounded-[28px] p-5">
+          <div class="flex items-center justify-between gap-3 mb-5">
+            <div>
+              <p class="small-label">Hansora Audio</p>
+              <h1 class="hero-title text-4xl font-black tracking-tight leading-none mt-1">Create audio</h1>
+            </div>
+            <div class="h-12 w-12 rounded-2xl bg-indigo-500/20 border border-indigo-300/20 grid place-items-center text-2xl">🎧</div>
+          </div>
+          <p class="text-sm text-slate-300/80 leading-6 mb-5">Generate voices, clean noisy recordings, or create full music tracks in one clean workspace.</p>
+          <div id="modelList" class="space-y-3"></div>
+        </div>
+        <div class="panel rounded-[24px] p-4">
+          <p class="small-label mb-2">Current cost</p>
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p id="costText" class="text-lg font-extrabold text-white">—</p>
+              <p id="creditHint" class="text-xs text-slate-400 mt-1">Credits update after KIE accepts the task.</p>
+            </div>
+            <button id="refreshCreditsBtn" type="button" class="btn-soft rounded-full px-3 py-2 text-xs">Refresh</button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="space-y-5">
+        <div class="glass rounded-[32px] p-5 sm:p-6">
+          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
+            <div>
+              <p id="activeSubtitle" class="small-label">Text to Voice</p>
+              <h2 id="activeTitle" class="text-2xl sm:text-3xl font-black tracking-tight">Natural voice creator</h2>
+              <p id="activeDescription" class="text-sm text-slate-300/75 mt-2 max-w-2xl">Write one voice line, or add more lines to create a conversation with different voices.</p>
+            </div>
+            <span id="modelBadge" class="chip chip-active self-start sm:self-auto">ElevenLabs</span>
+          </div>
+
+          <form id="audioForm" class="space-y-5">
+            <section id="voicePanel" class="space-y-4">
+              <div class="mode-note">Add one line for normal text-to-voice. Add more lines when you want a conversation with different voices.</div>
+              <div id="dialogueLines" class="space-y-3"></div>
+              <button id="addDialogueLineBtn" type="button" class="btn-soft rounded-2xl w-full py-3 font-bold">+ Add another voice line</button>
+              <div class="panel rounded-2xl p-4 range-wrap">
+                <div class="flex justify-between gap-2 mb-2"><span class="small-label">Stability</span><span id="stabilityValue" class="text-xs text-slate-300">0.50</span></div>
+                <input id="stability" type="range" min="0" max="1" step="0.05" value="0.5" />
+              </div>
+            </section>
+
+            <section id="isolationPanel" class="hidden space-y-4">
+              <input id="audioFileInput" type="file" accept="audio/*,video/*" class="hidden" />
+              <div id="dropZone" class="upload-drop">
+                <div>
+                  <div class="mx-auto h-14 w-14 rounded-2xl bg-indigo-500/15 border border-indigo-300/20 grid place-items-center text-2xl mb-3">🎙️</div>
+                  <p id="dropTitle" class="font-bold text-white">Upload audio or video</p>
+                  <p id="dropMeta" class="text-xs text-slate-400 mt-1">Noise and background sound will be cleaned from the voice.</p>
+                </div>
+              </div>
+              <div id="selectedFileBox" class="hidden panel rounded-2xl p-4">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <p id="selectedFileName" class="font-bold truncate">—</p>
+                    <p id="selectedFileSize" class="text-xs text-slate-400 mt-1">—</p>
+                  </div>
+                  <button id="clearFileBtn" type="button" class="btn-soft rounded-full px-3 py-2 text-xs">Remove</button>
+                </div>
+              </div>
+            </section>
+
+            <section id="musicPanel" class="hidden space-y-4">
+              <div class="grid compact-stack grid-cols-3 gap-3">
+                <div class="panel rounded-2xl p-4">
+                  <p class="small-label mb-3">Mode</p>
+                  <div class="flex flex-wrap gap-2">
+                    <button type="button" data-custom-mode="false" class="chip chip-active">Simple</button>
+                    <button type="button" data-custom-mode="true" class="chip">Custom</button>
+                  </div>
+                </div>
+                <div class="panel rounded-2xl p-4">
+                  <p class="small-label mb-3">Music type</p>
+                  <div class="flex flex-wrap gap-2">
+                    <button type="button" data-instrumental="false" class="chip chip-active">Song with lyrics</button>
+                    <button type="button" data-instrumental="true" class="chip">Instrumental only</button>
+                  </div>
+                </div>
+                <div class="panel rounded-2xl p-4">
+                  <p class="small-label mb-3">Model</p>
+                  <select id="sunoModel" class="field !py-2 !rounded-xl">
+                    <option value="V5_5">V5.5</option>
+                    <option value="V5">V5</option>
+                    <option value="V4_5PLUS">V4.5 Plus</option>
+                    <option value="V4_5">V4.5</option>
+                    <option value="V4_5ALL">V4.5 All</option>
+                    <option value="V4">V4</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="musicPromptWrap">
+                <label id="musicPromptLabel" class="small-label block mb-2" for="musicPrompt">Music prompt</label>
+                <textarea id="musicPrompt" class="field min-h-[150px] resize-none" maxlength="5000" placeholder="Example: cinematic Armenian duduk melody with deep drums, emotional build, modern trailer feel"></textarea>
+              </div>
+              <div class="grid compact-stack grid-cols-2 gap-3">
+                <div>
+                  <label class="small-label block mb-2" for="musicTitle">Title</label>
+                  <input id="musicTitle" class="field" maxlength="80" placeholder="Track title" />
+                </div>
+                <div>
+                  <label class="small-label block mb-2" for="musicStyle">Style</label>
+                  <input id="musicStyle" class="field" maxlength="1000" placeholder="Pop, cinematic, piano, drill..." />
+                </div>
+              </div>
+              <div class="grid compact-stack grid-cols-2 gap-3">
+                <div id="vocalGenderWrap">
+                  <label class="small-label block mb-2" for="vocalGender">Vocal gender</label>
+                  <select id="vocalGender" class="field">
+                    <option value="">Auto</option>
+                    <option value="m">Male</option>
+                    <option value="f">Female</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="small-label block mb-2" for="negativeTags">Avoid</label>
+                  <input id="negativeTags" class="field" maxlength="500" placeholder="Low quality, noisy, off-key..." />
+                </div>
+              </div>
+              <div class="grid compact-stack grid-cols-3 gap-3">
+                <div class="panel rounded-2xl p-4 range-wrap">
+                  <div class="flex justify-between gap-2 mb-2"><span class="small-label">Style weight</span><span id="styleWeightValue" class="text-xs text-slate-300">0.65</span></div>
+                  <input id="styleWeight" type="range" min="0" max="1" step="0.05" value="0.65" />
+                </div>
+                <div class="panel rounded-2xl p-4 range-wrap">
+                  <div class="flex justify-between gap-2 mb-2"><span class="small-label">Weirdness</span><span id="weirdnessConstraintValue" class="text-xs text-slate-300">0.65</span></div>
+                  <input id="weirdnessConstraint" type="range" min="0" max="1" step="0.05" value="0.65" />
+                </div>
+                <div class="panel rounded-2xl p-4 range-wrap">
+                  <div class="flex justify-between gap-2 mb-2"><span class="small-label">Audio weight</span><span id="audioWeightValue" class="text-xs text-slate-300">0.65</span></div>
+                  <input id="audioWeight" type="range" min="0" max="1" step="0.05" value="0.65" />
+                </div>
+              </div>
+              <div id="musicModeNote" class="mode-note">Simple mode only needs the music prompt. Custom mode uses title, style, and exact lyrics when creating a song.</div>
+            </section>
+
+            <div id="errorBox" class="hidden rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100"></div>
+            <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between pt-1">
+              <p id="formHint" class="text-xs text-slate-400">Your API key stays server-side. Results appear below when the callback arrives.</p>
+              <button id="runBtn" type="submit" class="btn-brand rounded-2xl px-6 py-4 font-black min-w-[180px]">Create audio</button>
+            </div>
+          </form>
+        </div>
+
+        <section class="panel rounded-[28px] p-5 sm:p-6">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <p class="small-label">History</p>
+              <h3 class="text-xl font-black mt-1">Recent audio</h3>
+            </div>
+            <button id="refreshResultsBtn" type="button" class="btn-soft rounded-full px-4 py-2 text-sm">Refresh</button>
+          </div>
+          <div id="resultsList" class="grid md:grid-cols-2 gap-3"></div>
+          <div id="emptyResults" class="rounded-2xl border border-dashed border-white/14 p-8 text-center text-slate-400">No audio generations yet.</div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const supabaseClient = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__HANSORA_SB__ = supabaseClient;
+    window.hansoraSupabase = supabaseClient;
+
+    const MODELS = [
+      { id:'voice', title:'Text to Voice', subtitle:'Speech or conversation', icon:'🗣️', badge:'ElevenLabs', baseCostLabel:'1+⚡', description:'Write one voice line, or add more lines to create a conversation with different voices.' },
+      { id:'isolation', title:'Voice Isolation', subtitle:'Clean noisy audio', icon:'🎙️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Upload audio or video and isolate the voice from background noise.' },
+      { id:'music', title:'Suno Music', subtitle:'Songs, lyrics, and instrumentals', icon:'🎵', badge:'Suno', baseCostLabel:'1.5⚡', description:'Create music with custom mode, lyrics, title, style, gender control, and instrumental control.' }
+    ];
+    const VOICES = [
+      { label:'Rachel — calm female', value:'21m00Tcm4TlvDq8ikWAM' },
+      { label:'Drew — well-rounded male', value:'29vD33N1CtxCmqQRPOHJ' },
+      { label:'Clyde — warm male', value:'2EiwWnXFnvU5JabPnv8n' },
+      { label:'Paul — casual male', value:'5Q0t7uMcjvnagumLfvZi' },
+      { label:'Domi — energetic female', value:'AZnzlk1XvdvUeBnXmlld' },
+      { label:'Dave — conversational male', value:'CYw3kZ02Hs0563khs1Fj' },
+      { label:'Fin — British male', value:'D38z5RcWu1voky8WS1ja' },
+      { label:'Sarah — clear female', value:'EXAVITQu4vr4xnSDxMaL' },
+      { label:'Antoni — deep male', value:'ErXwobaYiN019PkySvjV' },
+      { label:'Thomas — calm male', value:'GBv7mTt0atIp3Br8iCZE' },
+      { label:'Charlie — confident male', value:'IKne3meq5aSn9XLyUdCD' },
+      { label:'George — mature male', value:'JBFqnCBsd6RMkjVDRZzb' },
+      { label:'Emily — female', value:'LcfcDJNUP1GQjkzn1xUU' },
+      { label:'Elli — young female', value:'MF3mGyEYCl7XYWbV9V6O' },
+      { label:'Callum — gravelly male', value:'N2lVS1w4EtoT3dr4eOWO' },
+      { label:'Patrick — male', value:'ODq5zmih8GrVes37Dizd' },
+      { label:'Harry — male', value:'SOYHLrjzK2X1ezoPC6cr' },
+      { label:'Liam — male', value:'TX3LPaxmHKxFdv7VOQHJ' },
+      { label:'Dorothy — British female', value:'ThT5KcBeYPX3keUQqHPh' },
+      { label:'Josh — friendly male', value:'TxGEqnHWrfWFTfGW9XjX' },
+      { label:'Arnold — strong male', value:'VR6AewLTigWG4xSOukaG' },
+      { label:'Charlotte — British female', value:'XB0fDUnXU5powFXDhCwa' },
+      { label:'Alice — British female', value:'Xb7hH8MSUJpSbSDYk0k2' },
+      { label:'Matilda — female', value:'XrExE9yKIg1WjnnlVkGX' },
+      { label:'James — British male', value:'ZQe5CZNOzWyzPSCn5a3c' },
+      { label:'Joseph — British male', value:'Zlb1dXrM653N07WRdFW3' },
+      { label:'Jeremy — American male', value:'bVMeCyTHy58xNoL34h3p' },
+      { label:'Michael — American male', value:'flq6f7yk4E4fJM5XTYuZ' },
+      { label:'Ethan — American male', value:'g5CIjZEefAph4nQFvHAz' },
+      { label:'Chris — natural male', value:'iP95p4xoKVk53GoZ742B' },
+      { label:'Gigi — female', value:'jBpfuIE2acCO8z3wKNLl' },
+      { label:'Freya — female', value:'jsCqWAovK2LkecY7zXl4' },
+      { label:'Brian — resonant male', value:'nPczCjzI2devNBz1zQrb' },
+      { label:'Grace — neutral', value:'oWAxZDx7w5VEj9dCyTzz' },
+      { label:'Daniel — professional male', value:'onwK4e9ZLuTAKqWW03F9' },
+      { label:'Lily — female', value:'pFZP5JQG7iQjIQuC4Bku' },
+      { label:'Serena — female', value:'pMsXgVXv3BLzUgSXRplE' },
+      { label:'Adam — male', value:'pNInz6obpgDQGcFmaJgB' },
+      { label:'Nicole — female', value:'piTKgcLEGmPE4e6mEKli' },
+      { label:'Bill — comforting male', value:'pqHfZKP75CvOlQylNhV4' },
+      { label:'Jessie — male', value:'t0jbNlBVZ17f02VDIeMI' },
+      { label:'Sam — neutral', value:'yoZ06aMxZJJ28mfd3POQ' },
+      { label:'Glinda — female', value:'z9fAnlkpzviPz146aGWa' },
+      { label:'Giovanni — French male', value:'zcAOhNBS3c14rBihAFp1' },
+      { label:'Mimi — Australian female', value:'zrHiDhphv9ZnVXBqCLjz' }
+    ];
+
+    let currentUser = null;
+    let currentCredits = 0;
+    let currentModelId = 'voice';
+    let customMode = false;
+    let instrumental = false;
+    let selectedAudioFile = null;
+    let selectedAudioDurationSeconds = 0;
+    let pollTimer = null;
+
+    const $ = (id) => document.getElementById(id);
+    function activeModel(){ return MODELS.find(m => m.id === currentModelId) || MODELS[0]; }
+    function parseCredits(value){ const n = Number(String(value ?? '').replace(/[^\d.-]/g,'')); return Number.isFinite(n) ? n : 0; }
+    function formatCredits(value){ const n = Number(value || 0); return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`; }
+    function setCreditsEverywhere(value){
+      currentCredits = parseCredits(value);
+      document.querySelectorAll('#navCredits').forEach((node)=>{ node.textContent = formatCredits(currentCredits); });
+      if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') window.HansoraHeader.setCredits(currentCredits);
+    }
+    function watchCreditsLive(durationMs = 90000){
+      if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') window.HansoraHeader.startCreditsPolling(durationMs, 1500);
+    }
+    function showError(msg){ const box=$('errorBox'); box.textContent=msg; box.classList.remove('hidden'); }
+    function clearError(){ const box=$('errorBox'); box.textContent=''; box.classList.add('hidden'); }
+
+    function renderModels(){
+      const list = $('modelList');
+      list.innerHTML = '';
+      MODELS.forEach((m)=>{
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `model-card w-full p-4 text-left min-h-[118px] ${m.id === currentModelId ? 'active' : ''}`;
+        btn.innerHTML = `<div class="relative z-10 flex items-start justify-between gap-3"><div><div class="text-3xl mb-3">${m.icon}</div><p class="text-lg font-black text-white">${m.title}</p><p class="text-xs text-slate-400 mt-1">${m.subtitle}</p></div><span class="chip ${m.id === currentModelId ? 'chip-active' : ''}">${modelBadgeCost(m)}</span></div>`;
+        btn.addEventListener('click',()=>{ currentModelId = m.id; renderModels(); syncPanels(); });
+        list.appendChild(btn);
+      });
+    }
+
+    function voiceLabel(value){
+      const found = VOICES.find((v)=>v.value === value) || VOICES[0];
+      return found ? found.label : 'Choose voice';
+    }
+    function voiceValueByIndex(index){
+      return (VOICES[index] || VOICES[0]).value;
+    }
+    function renderVoiceList(picker, query = ''){
+      const list = picker.querySelector('.voice-list');
+      const hidden = picker.querySelector('.dialogue-voice');
+      const q = String(query || '').trim().toLowerCase();
+      const matches = VOICES.filter((v)=>v.label.toLowerCase().includes(q));
+      list.innerHTML = matches.length ? matches.map((v)=>`<button type="button" class="voice-option ${v.value === hidden.value ? 'active' : ''}" data-voice-value="${escapeHtml(v.value)}">${escapeHtml(v.label)}</button>`).join('') : '<div class="px-3 py-3 text-xs text-slate-400">No voice found.</div>';
+      list.querySelectorAll('.voice-option').forEach((btn)=>{
+        btn.addEventListener('click',()=>{
+          hidden.value = btn.dataset.voiceValue || VOICES[0].value;
+          picker.querySelector('.voice-label').textContent = voiceLabel(hidden.value);
+          picker.querySelector('.voice-menu').classList.remove('open');
+          renderVoiceList(picker, picker.querySelector('.voice-search').value);
+        });
+      });
+    }
+    function closeVoiceMenus(except){
+      document.querySelectorAll('.voice-menu.open').forEach((menu)=>{
+        if (!except || !except.contains(menu)) menu.classList.remove('open');
+      });
+    }
+    function wireVoicePicker(picker){
+      const button = picker.querySelector('.voice-picker-button');
+      const search = picker.querySelector('.voice-search');
+      renderVoiceList(picker, '');
+      button.addEventListener('click',()=>{
+        const menu = picker.querySelector('.voice-menu');
+        const willOpen = !menu.classList.contains('open');
+        closeVoiceMenus(picker);
+        menu.classList.toggle('open', willOpen);
+        if (willOpen) setTimeout(()=>search.focus(), 0);
+      });
+      search.addEventListener('input',()=>renderVoiceList(picker, search.value));
+    }
+    document.addEventListener('click',(e)=>{
+      if (!e.target.closest('.voice-picker')) closeVoiceMenus();
+    });
+    function addDialogueLine(text = '', selectedIndex = 0){
+      const wrap = document.createElement('div');
+      const selectedVoice = voiceValueByIndex(selectedIndex);
+      wrap.className = 'dialogue-line';
+      wrap.innerHTML = `<div class="flex items-center justify-between gap-3 mb-3"><p class="small-label">Voice line</p><button type="button" class="remove-line" aria-label="Remove line">×</button></div><div class="grid compact-stack grid-cols-[1fr_270px] gap-3"><textarea class="field dialogue-text" maxlength="4200" placeholder="Write what this voice should say..."></textarea><div class="voice-picker"><input type="hidden" class="dialogue-voice" value="${escapeHtml(selectedVoice)}" /><button type="button" class="field voice-picker-button"><span class="voice-label truncate">${escapeHtml(voiceLabel(selectedVoice))}</span><span class="text-slate-400">⌄</span></button><div class="voice-menu"><input type="text" class="voice-search" placeholder="Search voice name..." /><div class="voice-list"></div></div></div></div>`;
+      wrap.querySelector('.dialogue-text').value = text;
+      wrap.querySelector('.dialogue-text').addEventListener('input', updateCostUI);
+      wrap.querySelector('.remove-line').addEventListener('click',()=>{ wrap.remove(); updateDialogueButtons(); updateCostUI(); });
+      $('dialogueLines').appendChild(wrap);
+      wireVoicePicker(wrap.querySelector('.voice-picker'));
+      updateDialogueButtons();
+      updateCostUI();
+    }
+    function updateDialogueButtons(){
+      const rows = Array.from(document.querySelectorAll('.dialogue-line'));
+      rows.forEach((row)=>{ row.querySelector('.remove-line').disabled = rows.length <= 1; });
+    }
+
+    function formatCostNumber(value){
+      const n = Number(value || 0);
+      return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
+    }
+    function voiceCharacterCount(){
+      return Array.from(document.querySelectorAll('.dialogue-text')).reduce((sum, el)=>sum + String(el.value || '').length, 0);
+    }
+    function voiceCost(){
+      return Math.max(1, Math.ceil(Math.max(voiceCharacterCount(), 1) / 1000));
+    }
+    function isolationCost(){
+      if (!selectedAudioDurationSeconds || selectedAudioDurationSeconds <= 0) return 1;
+      return Math.max(0.5, Math.ceil((selectedAudioDurationSeconds / 60) * 2) / 2);
+    }
+    function estimatedCostFor(kind){
+      if (kind === 'music') return 1.5;
+      if (kind === 'isolation') return isolationCost();
+      return voiceCost();
+    }
+    function modelBadgeCost(model){
+      if (model.id === currentModelId) return `${formatCostNumber(estimatedCostFor(model.id))}⚡`;
+      return model.baseCostLabel;
+    }
+    function updateCostUI(){
+      const m = activeModel();
+      const cost = estimatedCostFor(m.id);
+      $('costText').textContent = `${formatCostNumber(cost)} ${cost === 1 ? 'credit' : 'credits'}`;
+      if (m.id === 'voice') $('creditHint').textContent = `${voiceCharacterCount()} characters • 1 credit per 1000 characters.`;
+      else if (m.id === 'isolation') $('creditHint').textContent = selectedAudioDurationSeconds ? `${formatDuration(selectedAudioDurationSeconds)} detected • rounded up by 30 seconds.` : '1 credit per minute. Upload audio so the page can read duration.';
+      else $('creditHint').textContent = 'Suno music costs 1.5 credits per generation.';
+    }
+    function formatDuration(seconds){
+      const total = Math.max(0, Math.round(Number(seconds || 0)));
+      const m = Math.floor(total / 60);
+      const s = total % 60;
+      return `${m}:${String(s).padStart(2,'0')}`;
+    }
+
+    function syncPanels(){
+      const m = activeModel();
+      $('activeSubtitle').textContent = m.title;
+      $('activeTitle').textContent = m.id === 'voice' ? 'Natural voice creator' : m.id === 'isolation' ? 'Clean voice from audio' : 'Music generator';
+      $('activeDescription').textContent = m.description;
+      $('modelBadge').textContent = m.badge;
+      updateCostUI();
+      $('runBtn').textContent = m.id === 'isolation' ? 'Clean audio' : m.id === 'music' ? 'Create music' : 'Create voice';
+      $('voicePanel').classList.toggle('hidden', m.id !== 'voice');
+      $('isolationPanel').classList.toggle('hidden', m.id !== 'isolation');
+      $('musicPanel').classList.toggle('hidden', m.id !== 'music');
+      syncMusicControls();
+      clearError();
+    }
+
+    function syncMusicControls(){
+      const prompt = $('musicPrompt');
+      const label = $('musicPromptLabel');
+      const wrap = $('musicPromptWrap');
+      const genderWrap = $('vocalGenderWrap');
+      if (!customMode) {
+        label.textContent = 'Music prompt';
+        prompt.placeholder = 'Describe the song you want. Example: cinematic Armenian duduk melody with deep drums, emotional build, modern trailer feel';
+        prompt.maxLength = 500;
+        wrap.classList.remove('hidden');
+        genderWrap.classList.toggle('hidden', instrumental);
+        $('musicModeNote').textContent = 'Simple mode only needs the music prompt. Other detailed fields are only sent in Custom mode.';
+      } else if (instrumental) {
+        label.textContent = 'Optional prompt';
+        prompt.placeholder = 'Optional details for the instrumental track. Title and style are required.';
+        prompt.maxLength = 5000;
+        wrap.classList.remove('hidden');
+        genderWrap.classList.add('hidden');
+        $('musicModeNote').textContent = 'Custom instrumental mode sends title, style, and instrumental=true. Lyrics are not required.';
+      } else {
+        label.textContent = 'Lyrics';
+        prompt.placeholder = 'Paste the exact lyrics here. Example:\n[Verse]\n...\n[Chorus]\n...';
+        prompt.maxLength = 5000;
+        wrap.classList.remove('hidden');
+        genderWrap.classList.remove('hidden');
+        $('musicModeNote').textContent = 'Custom song mode sends title, style, exact lyrics, and optional vocal gender.';
+      }
+    }
+
+    function wireChips(){
+      document.querySelectorAll('[data-custom-mode]').forEach((btn)=>{
+        btn.addEventListener('click',()=>{
+          customMode = btn.dataset.customMode === 'true';
+          document.querySelectorAll('[data-custom-mode]').forEach((b)=>b.classList.toggle('chip-active', b === btn));
+          syncMusicControls();
+        });
+      });
+      document.querySelectorAll('[data-instrumental]').forEach((btn)=>{
+        btn.addEventListener('click',()=>{
+          instrumental = btn.dataset.instrumental === 'true';
+          document.querySelectorAll('[data-instrumental]').forEach((b)=>b.classList.toggle('chip-active', b === btn));
+          syncMusicControls();
+        });
+      });
+      ['stability','styleWeight','weirdnessConstraint','audioWeight'].forEach((id)=>{
+        const input = $(id), label = $(id + 'Value');
+        input.addEventListener('input',()=>{ label.textContent = Number(input.value).toFixed(2); });
+      });
+      $('addDialogueLineBtn').addEventListener('click',()=>addDialogueLine('', 1));
+    }
+
+    function wireUpload(){
+      const input = $('audioFileInput');
+      const drop = $('dropZone');
+      drop.addEventListener('click',()=>input.click());
+      input.addEventListener('change',()=>setAudioFile(input.files && input.files[0]));
+      ['dragenter','dragover'].forEach((eventName)=>drop.addEventListener(eventName,(e)=>{ e.preventDefault(); drop.classList.add('drag'); }));
+      ['dragleave','drop'].forEach((eventName)=>drop.addEventListener(eventName,(e)=>{ e.preventDefault(); drop.classList.remove('drag'); }));
+      drop.addEventListener('drop',(e)=>setAudioFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]));
+      $('clearFileBtn').addEventListener('click',()=>setAudioFile(null));
+    }
+
+    function setAudioFile(file){
+      selectedAudioFile = file || null;
+      selectedAudioDurationSeconds = 0;
+      $('audioFileInput').value = '';
+      $('selectedFileBox').classList.toggle('hidden', !selectedAudioFile);
+      if (selectedAudioFile) {
+        $('selectedFileName').textContent = selectedAudioFile.name;
+        $('selectedFileSize').textContent = `${(selectedAudioFile.size / 1024 / 1024).toFixed(2)} MB • reading duration...`;
+        $('dropTitle').textContent = 'File ready';
+        $('dropMeta').textContent = 'Click to replace it, or press Remove below.';
+        readMediaDuration(selectedAudioFile).then((seconds)=>{
+          if (selectedAudioFile === file) {
+            selectedAudioDurationSeconds = seconds || 0;
+            $('selectedFileSize').textContent = `${(selectedAudioFile.size / 1024 / 1024).toFixed(2)} MB • ${selectedAudioFile.type || 'audio'}${selectedAudioDurationSeconds ? ` • ${formatDuration(selectedAudioDurationSeconds)}` : ' • duration not detected'}`;
+            updateCostUI();
+            renderModels();
+          }
+        });
+      } else {
+        $('selectedFileName').textContent = '—';
+        $('selectedFileSize').textContent = '—';
+        $('dropTitle').textContent = 'Upload audio or video';
+        $('dropMeta').textContent = 'Noise and background sound will be cleaned from the voice.';
+      }
+      updateCostUI();
+      renderModels();
+    }
+
+    function readMediaDuration(file){
+      return new Promise((resolve)=>{
+        try{
+          const url = URL.createObjectURL(file);
+          const media = document.createElement((file.type || '').startsWith('video/') ? 'video' : 'audio');
+          media.preload = 'metadata';
+          media.onloadedmetadata = ()=>{
+            const duration = Number(media.duration || 0);
+            URL.revokeObjectURL(url);
+            resolve(Number.isFinite(duration) ? duration : 0);
+          };
+          media.onerror = ()=>{ URL.revokeObjectURL(url); resolve(0); };
+          media.src = url;
+        }catch{ resolve(0); }
+      });
+    }
+
+    function fileToDataURL(file){
+      return new Promise((resolve,reject)=>{
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('file_read_failed'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function buildDialogue(){
+      const rows = Array.from(document.querySelectorAll('.dialogue-line'));
+      const dialogue = rows.map((row)=>({
+        text: row.querySelector('.dialogue-text').value.trim(),
+        voice: row.querySelector('.dialogue-voice').value.trim()
+      })).filter((item)=>item.text && item.voice);
+      if (!dialogue.length) throw new Error('Please write at least one voice line.');
+      return dialogue;
+    }
+
+    function buildMusicPayload(){
+      const prompt = $('musicPrompt').value.trim();
+      const model = $('sunoModel').value;
+      if (!customMode) {
+        if (!prompt) throw new Error('Please write the music prompt.');
+        return { prompt, customMode:false, instrumental, model };
+      }
+      const title = $('musicTitle').value.trim();
+      const style = $('musicStyle').value.trim();
+      if (!title) throw new Error('Custom mode needs a title.');
+      if (!style) throw new Error('Custom mode needs a style.');
+      if (!instrumental && !prompt) throw new Error('Custom song mode needs lyrics.');
+      const payload = {
+        customMode:true,
+        instrumental,
+        model,
+        title,
+        style,
+        styleWeight:Number($('styleWeight').value),
+        weirdnessConstraint:Number($('weirdnessConstraint').value),
+        audioWeight:Number($('audioWeight').value)
+      };
+      if (!instrumental) payload.prompt = prompt;
+      else if (prompt) payload.prompt = prompt;
+      const negativeTags = $('negativeTags').value.trim();
+      const vocalGender = $('vocalGender').value.trim();
+      if (negativeTags) payload.negativeTags = negativeTags;
+      if (!instrumental && vocalGender) payload.vocalGender = vocalGender;
+      return payload;
+    }
+
+    async function ensureUser(){
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      currentUser = user || null;
+      if (!currentUser) throw new Error('Please log in first.');
+      return currentUser;
+    }
+
+    async function refreshCredits(){
+      if (!currentUser) return;
+      const { data, error } = await supabaseClient.from('profiles').select('credits').eq('user_id', currentUser.id).maybeSingle();
+      if (!error && data) setCreditsEverywhere(data.credits || 0);
+    }
+
+    async function submitTask(e){
+      e.preventDefault();
+      clearError();
+      const button = $('runBtn');
+      const oldText = button.textContent;
+      try{
+        const user = await ensureUser();
+        const sessionRes = await supabaseClient.auth.getSession();
+        const token = sessionRes?.data?.session?.access_token || '';
+        if (!token) throw new Error('Please log in again.');
+        const model = activeModel();
+        const estimatedCost = estimatedCostFor(model.id);
+        if (currentCredits < estimatedCost) throw new Error(`Not enough credits. This needs ${formatCostNumber(estimatedCost)} credits.`);
+
+        const body = { uid:user.id, run_id:`${user.id}-audio-${Date.now()}`, kind:model.id };
+        if (model.id === 'voice') {
+          body.dialogue = buildDialogue();
+          body.stability = Number($('stability').value);
+          body.prompt = body.dialogue.map((line)=>line.text).join('\n');
+        } else if (model.id === 'isolation') {
+          if (!selectedAudioFile) throw new Error('Please upload audio or video first.');
+          if (selectedAudioFile.size > 10 * 1024 * 1024) throw new Error('Please use a file under 10MB for this page upload.');
+          body.fileName = selectedAudioFile.name || 'audio-file';
+          body.fileType = selectedAudioFile.type || 'audio/mpeg';
+          body.fileBase64 = await fileToDataURL(selectedAudioFile);
+          body.durationSeconds = selectedAudioDurationSeconds || 0;
+          body.prompt = `Voice isolation: ${body.fileName}`;
+        } else if (model.id === 'music') {
+          Object.assign(body, buildMusicPayload());
+          body.prompt = body.prompt || body.title || 'Instrumental music';
+        }
+
+        button.disabled = true;
+        button.textContent = 'Submitting...';
+        addPendingResult(body.run_id, model, body.prompt || body.title || 'Audio task');
+        const resp = await fetch('/.netlify/functions/run-audio', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+          body: JSON.stringify(body)
+        });
+        const data = await resp.json().catch(()=>({}));
+        if (!data.submitted) throw new Error(data.error || 'submit_failed');
+        await refreshCredits();
+        watchCreditsLive();
+        startPolling();
+      }catch(err){
+        showError(String(err.message || err));
+      }finally{
+        button.disabled = false;
+        button.textContent = oldText;
+      }
+    }
+
+    function addPendingResult(runId, model, prompt){
+      const list = $('resultsList');
+      $('emptyResults').classList.add('hidden');
+      const div = document.createElement('div');
+      div.className = 'audio-card p-4';
+      div.dataset.runId = runId;
+      div.innerHTML = `<div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-sm font-black truncate">${escapeHtml(model.title)}</p><p class="text-xs text-slate-400 truncate mt-1">${escapeHtml(prompt || '')}</p></div><span class="status-dot"></span></div><div class="mt-4 rounded-2xl bg-slate-950/55 border border-white/10 p-4 text-sm text-slate-300">Processing...</div>`;
+      list.prepend(div);
+    }
+
+    function escapeHtml(str){ return String(str || '').replace(/[&<>'"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+    function firstAudioUrl(row){
+      const meta = row.meta || {};
+      if (row.result_url) return row.result_url;
+      if (meta.audio_url) return meta.audio_url;
+      if (Array.isArray(meta.audio_urls) && meta.audio_urls[0]) return meta.audio_urls[0];
+      if (Array.isArray(meta.results) && meta.results[0]) return meta.results[0].audio_url || meta.results[0].url || '';
+      return '';
+    }
+
+    async function loadRecentHistory(){
+      if (!currentUser) return;
+      const { data, error } = await supabaseClient
+        .from('user_generations')
+        .select('provider, kind, prompt, result_url, meta, created_at')
+        .eq('user_id', currentUser.id)
+        .eq('kind', 'audio')
+        .order('created_at', { ascending:false })
+        .limit(12);
+      if (error) return;
+      const list = $('resultsList');
+      list.innerHTML = '';
+      const rows = data || [];
+      $('emptyResults').classList.toggle('hidden', rows.length > 0);
+      rows.forEach((row)=>{
+        const meta = row.meta || {};
+        const url = firstAudioUrl(row);
+        const status = (meta.status || (url ? 'ready' : 'processing')).toString();
+        const div = document.createElement('div');
+        div.className = 'audio-card p-4';
+        const name = meta.title || row.provider || 'Audio';
+        const prompt = row.prompt || meta.prompt || '';
+        const dotClass = status === 'ready' || status === 'complete' || status === 'SUCCESS' ? 'ready' : status === 'failed' ? 'failed' : '';
+        div.innerHTML = `<div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-sm font-black truncate">${escapeHtml(name)}</p><p class="text-xs text-slate-400 truncate mt-1">${escapeHtml(prompt)}</p></div><span class="status-dot ${dotClass}"></span></div>${url ? `<div class="mt-4"><audio controls src="${escapeHtml(url)}"></audio><a class="btn-soft rounded-full px-3 py-2 text-xs inline-flex mt-3" href="${escapeHtml(url)}" download>Get</a></div>` : `<div class="mt-4 rounded-2xl bg-slate-950/55 border border-white/10 p-4 text-sm text-slate-300">${status === 'failed' ? 'Failed' : 'Processing...'}</div>`}`;
+        list.appendChild(div);
+      });
+    }
+
+    function startPolling(){
+      if (pollTimer) clearInterval(pollTimer);
+      let ticks = 0;
+      pollTimer = setInterval(async()=>{
+        ticks += 1;
+        await loadRecentHistory();
+        if (ticks > 60) clearInterval(pollTimer);
+      }, 3000);
+    }
+
+    async function init(){
+      renderModels(); wireChips(); wireUpload(); addDialogueLine('', 0); syncPanels(); updateCostUI();
+      $('audioForm').addEventListener('submit', submitTask);
+      $('refreshResultsBtn').addEventListener('click', loadRecentHistory);
+      $('refreshCreditsBtn').addEventListener('click', refreshCredits);
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      currentUser = user || null;
+      if (currentUser) { await refreshCredits(); await loadRecentHistory(); }
+      if (window.HansoraHeader && typeof window.HansoraHeader.init === 'function') {
+        try { window.HansoraHeader.init({ supabaseClient }); } catch(e) {}
+      }
+    }
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
