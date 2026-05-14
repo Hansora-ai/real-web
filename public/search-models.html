@@ -1820,6 +1820,17 @@
     body.workspace-redesign .upload-drop-card.control-disabled .upload-drop-btn{
       cursor:not-allowed !important;
     }
+    body.workspace-redesign #framesUploadWrap > .flex.control-disabled,
+    body.workspace-redesign #veoReferenceWrap > .flex.control-disabled{
+      opacity:.42 !important;
+      filter:saturate(.45) brightness(.72) !important;
+      cursor:not-allowed !important;
+      box-shadow:0 0 0 1px rgba(255,255,255,.06) inset !important;
+    }
+    body.workspace-redesign #framesUploadWrap > .flex.control-disabled button,
+    body.workspace-redesign #veoReferenceWrap > .flex.control-disabled button{
+      cursor:not-allowed !important;
+    }
     @media (max-width:900px){
       body.workspace-redesign .frame-pair-grid{ grid-template-columns:1fr 1fr !important; }
       body.workspace-redesign .upload-thumb-list .relative{ width:104px !important; }
@@ -4367,45 +4378,23 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         costLabel: '2⚡ per job',
         minCredits: 2
       },
-            {
-        id: 'veo31-fast',
-        name: 'Veo 3.1 Fast',
-        emoji: '🎥',
-        subtitle: 'Text → Video (start / last frames optional)',
-        category: 'video',
-        description: 'Veo 3.1 Fast — 8s only, vertical/horizontal only.',
-        endpoint: '/.netlify/functions/run-veo31',
-        needsImage: false,
-        maxFiles: 0,
-        useFrames: true,
-        startOptional: true,
-        aspectOptions: ['16:9', '9:16'],
-        defaultAspect: '16:9',
-        durations: [8],
-        resolutionOptions: ['1080p', '4K'],
-        defaultResolution: '1080p',
-        costLabel: 'Credits Fast 5⚡ / 4K 12⚡',
-        minCredits: 5
-      },
       {
-        id: 'veo31',
-        name: 'Veo 3.1 Quality',
-        emoji: '🎥',
-        subtitle: 'Text → Video (start / last frames optional)',
+        id: 'runway',
+        name: 'Runway',
+        emoji: '🎞️',
+        subtitle: 'Text / (Image) → Video',
         category: 'video',
-        description: 'Veo 3.1 — 8s only, vertical/horizontal only.',
-        endpoint: '/.netlify/functions/run-veo31',
+        description: 'Runway video generation (5s).',
+        endpoint: '/.netlify/functions/run-runway',
         needsImage: false,
-        maxFiles: 0,
-        useFrames: true,
-        startOptional: true,
-        aspectOptions: ['16:9', '9:16'],
-        defaultAspect: '16:9',
-        durations: [8],
-        resolutionOptions: ['1080p', '4K'],
-        defaultResolution: '1080p',
-        costLabel: 'Credits Quality 17⚡ / 4K 22⚡',
-        minCredits: 17
+        maxFiles: 1,
+        aspectOptions: ['3:4', '1:1', '4:3', '16:9', '9:16'],
+        defaultAspect: '3:4',
+        resolutionOptions: ['720p', '1080p'],
+        defaultResolution: '720p',
+        durations: [5, 10],
+        costLabel: '720p 5s-1.5⚡ 10s-3⚡ / 1080p 5s-3⚡',
+        minCredits: 1.5
       },
       {
         id: 'veo3-fast',
@@ -4458,23 +4447,45 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         costLabel: 'Credits Sora -3⚡ Pro 20-25⚡',
         minCredits: 7
       },
-      {
-        id: 'runway',
-        name: 'Runway',
-        emoji: '🎞️',
-        subtitle: 'Text / (Image) → Video',
+            {
+        id: 'veo31-fast',
+        name: 'Veo 3.1 Fast',
+        emoji: '🎥',
+        subtitle: 'Text → Video (start / last frames optional)',
         category: 'video',
-        description: 'Runway video generation (5s).',
-        endpoint: '/.netlify/functions/run-runway',
+        description: 'Veo 3.1 Fast — 8s only, vertical/horizontal only.',
+        endpoint: '/.netlify/functions/run-veo31',
         needsImage: false,
-        maxFiles: 1,
-        aspectOptions: ['3:4', '1:1', '4:3', '16:9', '9:16'],
-        defaultAspect: '3:4',
-        resolutionOptions: ['720p', '1080p'],
-        defaultResolution: '720p',
-        durations: [5, 10],
-        costLabel: '720p 5s-1.5⚡ 10s-3⚡ / 1080p 5s-3⚡',
-        minCredits: 1.5
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: true,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [8],
+        resolutionOptions: ['1080p', '4K'],
+        defaultResolution: '1080p',
+        costLabel: 'Credits Fast 5⚡ / 4K 12⚡',
+        minCredits: 5
+      },
+      {
+        id: 'veo31',
+        name: 'Veo 3.1 Quality',
+        emoji: '🎥',
+        subtitle: 'Text → Video (start / last frames optional)',
+        category: 'video',
+        description: 'Veo 3.1 — 8s only, vertical/horizontal only.',
+        endpoint: '/.netlify/functions/run-veo31',
+        needsImage: false,
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: true,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [8],
+        resolutionOptions: ['1080p', '4K'],
+        defaultResolution: '1080p',
+        costLabel: 'Credits Quality 17⚡ / 4K 22⚡',
+        minCredits: 17
       },
       {
         id: 'seedance20',
@@ -4676,7 +4687,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     // Models that should APPEND images when user uploads again (multi-image support)
     const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'grok-image', 'wan-2-7-image', 'qwen-2']);
     const IMAGE_MODEL_ORDER = ['gpt-image-2', 'nano-banana-2', 'nano-banana-pro', 'seedream-5-lite', 'grok-image'];
-    const VIDEO_MODEL_ORDER = ['kling30', 'seedance20', 'happyhorse10', 'grok-video', 'kling26', 'wan27-video'];
+    const VIDEO_MODEL_ORDER = ['kling30', 'seedance20', 'happyhorse10', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function sortModelsForCurrentMode(items) {
       const order = currentMode === 'video' ? VIDEO_MODEL_ORDER : IMAGE_MODEL_ORDER;
@@ -4837,11 +4848,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     function getWorkspaceModelItems() {
       const source = MODELS.filter((m) => !m.hidden && (currentMode === 'image' ? m.category === 'image' : m.category === 'video'));
       if (currentMode !== 'video') return sortModelsForCurrentMode(source);
-      const items = [];
       const hasVeo31 = source.some((m) => m.id === 'veo31-fast' || m.id === 'veo31');
-      sortModelsForCurrentMode(source.filter((m) => !['veo31-fast','veo31','veo3-fast','veo3'].includes(m.id))).forEach((m) => items.push(m));
+      const items = source.filter((m) => !['veo31-fast','veo31','veo3-fast','veo3'].includes(m.id));
       if (hasVeo31) items.push({ id: 'veo31-fast', name: 'Veo 3.1', emoji: '🎥', subtitle: 'Fast / Quality', category: 'video' });
-      return items;
+      return sortModelsForCurrentMode(items);
     }
 
     function selectWorkspaceModel(id) {
@@ -5267,7 +5277,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         overlayModels.push(...filtered);
         if (hasVeo31 && matchGroup('Veo 3.1')) {
           overlayModels.push({
-            id: '__veo31',
+            id: 'veo31-fast',
             name: 'Veo 3.1',
             emoji: 'V',
             subtitle: 'Text → Video (Fast / Quality in bottom)',
@@ -5277,6 +5287,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             __qualityId: 'veo31',
           });
         }
+        overlayModels = sortModelsForCurrentMode(overlayModels);
       }
 
       overlayModels.forEach((model) => {
