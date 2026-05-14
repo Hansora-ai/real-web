@@ -113,7 +113,9 @@ function normalizeAndValidateKlingElements(rawElements) {
     const name = sanitizeElementName(item.name);
     const description = String(item.description || '').trim();
     const imageUrls = Array.isArray(item.element_input_urls) ? item.element_input_urls.map(String).filter(Boolean) : [];
-    const videoUrls = Array.isArray(item.element_input_video_urls) ? item.element_input_video_urls.map(String).filter(Boolean) : [];
+    const videoUrls = Array.isArray(item.element_input_video_urls)
+      ? item.element_input_video_urls.map(String).filter(Boolean)
+      : (item.element_input_video_url ? [String(item.element_input_video_url)].filter(Boolean) : []);
     if (!name) return { ok: false, error: 'invalid_kling_element', details: `Element ${i + 1}: name is required.` };
     if (!description) return { ok: false, error: 'invalid_kling_element', details: `Element ${i + 1}: description is required.` };
     if (seen.has(name)) return { ok: false, error: 'duplicate_kling_element_name', details: `Duplicate element name: ${name}` };
@@ -273,8 +275,6 @@ exports.handler = async (event) => {
       ...(body.first_frame_url ? { first_frame_url: String(body.first_frame_url) } : {}),
       ...(!body.multi_shots && body.last_frame_url ? { last_frame_url: String(body.last_frame_url) } : {}),
       ...(safeImageUrls.length ? { image_urls: safeImageUrls } : {}),
-      ...(Array.isArray(body.element_input_urls) && body.element_input_urls.length ? { element_input_urls: body.element_input_urls } : {}),
-      ...(Array.isArray(body.element_input_video_urls) && body.element_input_video_urls.length ? { element_input_video_urls: body.element_input_video_urls } : {}),
       ...(klingElements.length ? { kling_elements: klingElements } : {}),
       ...(multiPrompt.length ? { multi_prompt: multiPrompt } : {}),
     };
