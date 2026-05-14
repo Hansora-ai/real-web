@@ -324,6 +324,50 @@
     function watchCreditsLive(durationMs = 90000){
       if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') window.HansoraHeader.startCreditsPolling(durationMs, 1500);
     }
+    function getVisibleHeaderCredits(){
+      let best = 0;
+      document.querySelectorAll('#navCredits').forEach((node)=>{
+        const value = parseCredits(node.textContent || '');
+        if (value > best) best = value;
+      });
+      return best;
+    }
+    function getSharedHeaderCredits(){
+      try{
+        if (window.HansoraHeader && typeof window.HansoraHeader.getCurrentCredits === 'function') {
+          return parseCredits(window.HansoraHeader.getCurrentCredits());
+        }
+      }catch(_){ }
+      return 0;
+    }
+    async function readSupabaseCredits(){
+      const { data: userRes } = await supabaseClient.auth.getUser();
+      const user = userRes && userRes.user ? userRes.user : null;
+      if (!user) return { user:null, profile:null, credits:0 };
+      const { data: profile, error } = await supabaseClient
+        .from('profiles')
+        .select('credits, avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return { user, profile, credits:parseCredits(profile && profile.credits) };
+    }
+    async function getAvailableCredits(required = 0){
+      const localBest = Math.max(getSharedHeaderCredits(), getVisibleHeaderCredits(), parseCredits(currentCredits));
+      if (localBest >= Number(required || 0)) return localBest;
+      try{
+        const result = await readSupabaseCredits();
+        const supabaseCredits = parseCredits(result.credits);
+        if (result.user) {
+          currentUser = result.user;
+          setCreditsEverywhere(supabaseCredits);
+        }
+        return Math.max(supabaseCredits, localBest);
+      }catch(error){
+        console.warn('credit read failed; falling back to header value', error);
+      }
+      return localBest;
+    }
     function showError(msg){ const box=$('errorBox'); box.textContent=msg; box.classList.remove('hidden'); }
     function clearError(){ const box=$('errorBox'); box.textContent=''; box.classList.add('hidden'); }
 
@@ -619,9 +663,15 @@
     }
 
     async function refreshCredits(){
-      if (!currentUser) return;
-      const { data, error } = await supabaseClient.from('profiles').select('credits').eq('user_id', currentUser.id).maybeSingle();
-      if (!error && data) setCreditsEverywhere(data.credits || 0);
+      try{
+        const { user, credits } = await readSupabaseCredits();
+        if (!user) return parseCredits(currentCredits);
+        currentUser = user;
+        setCreditsEverywhere(credits);
+      }catch(e){
+        console.warn('refreshCredits failed', e);
+      }
+      return parseCredits(currentCredits);
     }
 
     async function submitTask(e){
@@ -636,7 +686,8 @@
         if (!token) throw new Error('Please log in again.');
         const model = activeModel();
         const estimatedCost = estimatedCostFor(model.id);
-        if (currentCredits < estimatedCost) throw new Error(`Not enough credits. This needs ${formatCostNumber(estimatedCost)} credits.`);
+        const availableCredits = await getAvailableCredits(estimatedCost);
+        if (availableCredits < estimatedCost) throw new Error(`Not enough credits. This needs ${formatCostNumber(estimatedCost)} credits.`);
 
         const body = { uid:user.id, run_id:`${user.id}-audio-${Date.now()}`, kind:model.id };
         if (model.id === 'voice') {
