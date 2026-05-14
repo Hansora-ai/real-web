@@ -4663,8 +4663,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         allowOptionalImage: true,
         aspectOptions: [],
         durations: [5],
-        costLabel: 'Credits 9⚡',
-        minCredits: 4
+        costLabel: 'Credits 8⚡',
+        minCredits: 8
       }
     ];;
 
@@ -5055,6 +5055,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (!runBtn) return;
       const credits = getRunCreditLabel();
       runBtn.textContent = credits ? `Run ${credits} ⚡` : 'Run';
+      syncKlingMotionRunState(false);
     }
 
     function getResolutionOptionsForCurrentModel() {
@@ -5196,6 +5197,25 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           : tone === 'success'
           ? 'text-emerald-300'
           : 'text-amber-200/80');
+    }
+
+    function getKlingMotionVideoError() {
+      if (!currentModel || currentModel.id !== 'kling-motion-control') return '';
+      if (!motionVideoFile || !Number.isFinite(Number(motionVideoSeconds))) return '';
+      const seconds = Number(motionVideoSeconds);
+      if (seconds <= 3 || seconds > 30) return 'Video must be longer than 3 seconds and no more than 30 seconds.';
+      return '';
+    }
+
+    function syncKlingMotionRunState(showMessage = false) {
+      const runBtn = document.getElementById('runBtn');
+      const error = getKlingMotionVideoError();
+      if (runBtn) {
+        runBtn.disabled = !!error;
+        runBtn.title = error || '';
+      }
+      if (error && showMessage) showStatus(error, 'error');
+      return !error;
     }
 
     function openModelOverlay() {
@@ -5674,6 +5694,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const kling30ElementsCount = document.getElementById('kling30ElementsCount');
       if (kling30ElementsCount) kling30ElementsCount.textContent = '0';
       if (typeof syncKling30InputLocks === 'function') syncKling30InputLocks();
+      if (typeof syncVeo31InputLocks === 'function') syncVeo31InputLocks();
       if (seedanceAudioToggle) {
         seedanceAudioToggle.textContent = 'Audio on';
         seedanceAudioToggle.classList.add('chip-active');
@@ -5788,6 +5809,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       // Mobile quick options (UI only)
       updateMobileQuickOptions();
       updateUploadPanelState();
+      syncKlingMotionRunState(false);
       syncWorkspaceModelSummary();
       renderWorkspaceModelRail();
 }
@@ -5809,8 +5831,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         if (kind === 'grokVideo') wrap.classList.add('video-refs-grok');
       }
       const imageInput = document.getElementById('videoRefImagesInput');
-      if (title) title.textContent = kind === 'grokVideo' ? 'Grok inputs' : '';
-      if (hint) hint.textContent = kind === 'grokVideo' ? 'Optional image input, normal mode only' : '';
+      if (title) title.textContent = '';
+      if (hint) hint.textContent = '';
       if (imageLabel) imageLabel.textContent = kind === 'grokVideo' ? 'Image input (up to 7)' : 'Image refs';
       if (imageInput) imageInput.multiple = true;
       show('videoFirstFrameControl', kind === 'wan27' || kind === 'happyhorse');
@@ -6127,7 +6149,13 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         preview.src = url;
         preview.muted = true;
         preview.playsInline = true;
+        preview.preload = 'metadata';
         preview.className = 'h-full w-full object-cover';
+        preview.addEventListener('loadedmetadata', () => {
+          try {
+            preview.currentTime = Math.min(0.1, Math.max(0, (preview.duration || 1) - 0.1));
+          } catch {}
+        }, { once: true });
       } else if (file.type && file.type.startsWith('audio/')) {
         preview = document.createElement('div');
         preview.className = 'h-full w-full flex items-center justify-center bg-white/10 text-[10px] font-bold text-white/80 px-1 text-center';
@@ -6189,6 +6217,30 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       setSeedanceControlDisabled('seedanceAudioRefsBtn', 'seedanceAudioRefsInput', hasFrames, referenceLockText);
     }
 
+    function setVeoControlDisabled(btnId, inputId, disabled, title) {
+      const btn = document.getElementById(btnId);
+      const input = document.getElementById(inputId);
+      const card = btn ? btn.closest('.flex') : null;
+      if (btn) {
+        btn.disabled = !!disabled;
+        btn.title = disabled ? (title || '') : '';
+      }
+      if (input) input.disabled = !!disabled;
+      if (card) card.classList.toggle('control-disabled', !!disabled);
+    }
+
+    function syncVeo31InputLocks() {
+      const isVeo31Model = currentModel && (currentModel.id === 'veo31-fast' || currentModel.id === 'veo31');
+      if (!isVeo31Model) return;
+      const hasFrames = !!(startFrameFile || lastFrameFile);
+      const hasReferences = !!(veoReferenceFiles && veoReferenceFiles.length);
+      const frameLockText = 'Remove reference images before using first or last frame.';
+      const referenceLockText = 'Remove first/last frame before using reference images.';
+      setVeoControlDisabled('startFrameBtn', 'startFrameInput', hasReferences, frameLockText);
+      setVeoControlDisabled('lastFrameBtn', 'lastFrameInput', hasReferences, frameLockText);
+      setVeoControlDisabled('veoReferenceBtn', 'veoReferenceInput', hasFrames, referenceLockText);
+    }
+
     function renderVeoReferenceThumbs() {
       const container = document.getElementById('veoReferenceThumbs');
       if (!container) return;
@@ -6211,11 +6263,13 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           veoReferenceFiles.splice(index, 1);
           document.getElementById('veoReferenceInput').value = '';
           renderVeoReferenceThumbs();
+          syncVeo31InputLocks();
         });
         wrapper.appendChild(img);
         wrapper.appendChild(closeBtn);
         container.appendChild(wrapper);
       });
+      syncVeo31InputLocks();
     }
 
     function clearLastFrame() {
@@ -6232,7 +6286,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           startFrameFile = null;
           document.getElementById('startFrameInput').value = '';
           clearLastFrame();
+          syncVeo31InputLocks();
         });
+        syncVeo31InputLocks();
         return;
       }
 
@@ -6246,7 +6302,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       document.getElementById('lastFrameInput').value = '';
       renderSingleThumb(lastFrameFile, document.getElementById('lastFrameThumb'), () => {
         clearLastFrame();
+        syncVeo31InputLocks();
       });
+      syncVeo31InputLocks();
     }
 
     document.getElementById('startFrameInput').addEventListener('change', (e) => {
@@ -6267,6 +6325,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const files = Array.from(e.target.files || []).filter(Boolean).slice(0, 3);
       veoReferenceFiles = files;
       renderVeoReferenceThumbs();
+      syncVeo31InputLocks();
     });
 
     // SEEDANCE 2.0: FIRST/LAST + IMAGE/VIDEO/AUDIO REFERENCES
@@ -7024,34 +7083,24 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (!motionVideoFile) {
         updateCostDisplay();
         updateRunButtonLabel();
+        syncKlingMotionRunState(false);
         return;
       }
-      const wrapper = document.createElement('div');
-      wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20 bg-slate-900 flex items-center justify-center';
-      const label = document.createElement('span');
-      label.className = 'absolute bottom-1 left-1 text-[9px] text-white/80 px-1.5 py-0.5 rounded bg-black/60';
-      label.textContent = 'VIDEO';
-      const icon = document.createElement('span');
-      icon.className = 'text-2xl text-white/60';
-      icon.textContent = '▶';
-      const closeBtn = document.createElement('button');
-      closeBtn.type = 'button';
-      closeBtn.className = 'absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-[11px] leading-none flex items-center justify-center z-20';
-      closeBtn.textContent = '×';
-      closeBtn.addEventListener('click', () => {
+      renderSingleThumb(motionVideoFile, container, () => {
         motionVideoFile = null;
         motionVideoSeconds = null;
         document.getElementById('motionVideoInput').value = '';
         try { if (__motionVideoObjURL) URL.revokeObjectURL(__motionVideoObjURL); } catch {}
         __motionVideoObjURL = null;
-        wrapper.remove();
         updateCostDisplay();
         updateRunButtonLabel();
+        syncKlingMotionRunState(false);
       });
-      wrapper.appendChild(icon);
-      wrapper.appendChild(label);
-      wrapper.appendChild(closeBtn);
-      container.appendChild(wrapper);
+      const label = document.createElement('span');
+      label.className = 'absolute bottom-1 left-1 text-[9px] text-white/80 px-1.5 py-0.5 rounded bg-black/60 z-20';
+      label.textContent = 'VIDEO';
+      const previewWrapper = container.querySelector('.relative');
+      if (previewWrapper) previewWrapper.appendChild(label);
       try {
         const objUrl = URL.createObjectURL(motionVideoFile);
         __motionVideoObjURL = objUrl;
@@ -7063,12 +7112,14 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           label.textContent = `${motionVideoSeconds}s`;
           updateCostDisplay();
           updateRunButtonLabel();
+          syncKlingMotionRunState(true);
         }, { once: true });
         v.load();
       } catch {}
     });
 
-    document.getElementById('motionImageInput').addEventListener('change', (e) => {
+
+document.getElementById('motionImageInput').addEventListener('change', (e) => {
       const file = (e.target.files || [])[0] || null;
       motionImageFile = file;
       renderSingleThumb(motionImageFile, document.getElementById('motionImageThumb'), () => {
@@ -7435,7 +7486,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const promptBox = document.getElementById('promptBox');
       const rawPrompt = promptBox.value || '';
       const prompt = rawPrompt.trim();
-      if (!prompt) {
+      if (!prompt && (!currentModel || currentModel.id !== 'kling-motion-control')) {
         showStatus('Please enter a prompt.', 'error');
         return;
       }
@@ -7510,6 +7561,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       } else if (currentModel.needsMotionVideo) {
         if (!motionVideoFile) {
           showStatus('This model requires a source video upload.', 'error');
+          return;
+        }
+        if (!syncKlingMotionRunState(true)) {
           return;
         }
         if (!motionImageFile) {
@@ -7595,20 +7649,39 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         }
 
 
-                const expectedOutputs = 1;
-const placeholderControllers = [];
-for (let i = 0; i < expectedOutputs; i++) {
-  const c = addResultCard({
-    run_id: runId,
-    provider: currentModel.name,
-    kind: currentModel.category,
-    prompt,
-    result_url: null,
-    status: 'processing'
-  }, { prepend: true });
-  if (c) placeholderControllers.push(c);
-}
-watchCreditsLive(120000);
+        const placeholderControllers = [];
+        const createProcessingPlaceholders = () => {
+          if (placeholderControllers.length) return placeholderControllers;
+          const expectedOutputs = 1;
+          for (let i = 0; i < expectedOutputs; i++) {
+            const c = addResultCard({
+              run_id: runId,
+              provider: currentModel.name,
+              kind: currentModel.category,
+              prompt,
+              result_url: null,
+              status: 'processing'
+            }, { prepend: true });
+            if (c) placeholderControllers.push(c);
+          }
+          return placeholderControllers;
+        };
+        const extractProviderError = (payload) => {
+          if (!payload || typeof payload !== 'object') return '';
+          const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
+          const nested = data.result && typeof data.result === 'object' ? data.result : {};
+          const directError = payload.error || data.error || nested.error || payload.error_message || data.error_message || nested.error_message;
+          if (directError) return String(directError);
+          const directMessage = payload.message || data.message || nested.message || payload.msg || data.msg || nested.msg;
+          const statusText = String(payload.status || data.status || nested.status || payload.state || data.state || nested.state || '').toLowerCase();
+          const codeText = String(payload.code || data.code || nested.code || '').toLowerCase();
+          const successValue = payload.success ?? data.success ?? nested.success ?? payload.ok ?? data.ok ?? nested.ok;
+          const submittedValue = payload.submitted ?? data.submitted ?? nested.submitted;
+          if (successValue === false || submittedValue === false) return directMessage ? String(directMessage) : 'Request rejected by provider.';
+          if (/(fail|failed|error|reject|rejected|invalid|denied)/i.test(statusText)) return directMessage ? String(directMessage) : statusText;
+          if (/(fail|failed|error|reject|rejected|invalid|denied)/i.test(codeText)) return directMessage ? String(directMessage) : codeText;
+          return '';
+        };
 
         // Get Supabase access token (required by Netlify functions that validate auth)
         let __accessToken = '';
@@ -7633,52 +7706,50 @@ watchCreditsLive(120000);
           let msg = txt || `status ${res.status}`;
           try {
             const j = JSON.parse(txt);
-            if (j && (j.error || j.message)) msg = j.error || j.message;
+            const parsedMsg = extractProviderError(j) || j.error || j.message;
+            if (parsedMsg) msg = parsedMsg;
           } catch {}
           showStatus('Error from model: ' + msg, 'error');
-          if (placeholderControllers && placeholderControllers.length) {
-            for (let i = 0; i < placeholderControllers.length; i++) {
-              placeholderControllers[i].apply({ status: 'failed', result_url: null });
-            }
-          }
           await refreshCredits();
         } else {
           // Some endpoints (e.g., Sora 2) return JSON with taskId/submitted flags
           let j = null;
           try { j = await res.json(); } catch { j = null; }
 
+          const providerError = extractProviderError(j);
+          if (providerError) {
+            showStatus('Error from model: ' + providerError, 'error');
+            await refreshCredits();
+            return;
+          }
+
           // Sora 2: require submitted + taskId, then poll sora2-check
           if (currentModel && currentModel.id === 'sora2') {
             if (!j || !j.submitted || !j.taskId) {
-              const errMsg = (j && j.error) ? j.error : 'unknown_error';
+              const errMsg = extractProviderError(j) || (j && (j.error || j.message)) || 'unknown_error';
               showStatus('Error from model: ' + errMsg, 'error');
-              if (placeholderControllers && placeholderControllers.length) {
-                for (let i = 0; i < placeholderControllers.length; i++) {
-                  placeholderControllers[i].apply({ status: 'failed', result_url: null });
-                }
-              }
               await refreshCredits();
             } else {
+              createProcessingPlaceholders();
+              watchCreditsLive(120000);
               showStatus(
                 `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
                 'success'
               );
               await refreshCredits();
-              if (placeholderControllers && placeholderControllers.length) {
-                startSora2Poll(j.taskId, uid, runId, placeholderControllers);
-              }
+              startSora2Poll(j.taskId, uid, runId, placeholderControllers);
             }
           } else {
+            createProcessingPlaceholders();
+            watchCreditsLive(120000);
             showStatus(
               `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
               'success'
             );
             await refreshCredits();
-            if (placeholderControllers && placeholderControllers.length) {
-              const taskId = j && (j.taskId || j.id || (j.data && (j.data.taskId || j.data.id)));
-              const checker = checkerForCurrentModel(currentModel);
-              startPollGeneration(runId, placeholderControllers, taskId, checker);
-            }
+            const taskId = j && (j.taskId || j.id || (j.data && (j.data.taskId || j.data.id)));
+            const checker = checkerForCurrentModel(currentModel);
+            startPollGeneration(runId, placeholderControllers, taskId, checker);
           }
         }
       } catch (err) {
@@ -7696,6 +7767,7 @@ watchCreditsLive(120000);
         await refreshCredits();
       } finally {
         runBtn.disabled = false;
+        updateRunButtonLabel();
       }
     }
 
