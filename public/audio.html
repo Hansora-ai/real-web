@@ -62,14 +62,14 @@
     .status-dot.failed{background:#f87171; box-shadow:0 0 0 5px rgba(248,113,113,.14)}
     .range-wrap input{width:100%}
     .mode-note{border:1px solid rgba(129,140,248,.22); background:rgba(99,102,241,.08); border-radius:18px; padding:12px 14px; color:rgba(226,232,240,.78); font-size:12px; line-height:1.55}
-    .voice-picker{position:relative}
-    .voice-picker-button{width:100%; min-height:50px; text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px}
-    .voice-menu{position:absolute; top:calc(100% + 8px); right:0; width:100%; z-index:40; border:1px solid rgba(148,163,184,.28); background:rgba(8,11,25,.98); border-radius:18px; padding:10px; box-shadow:0 22px 55px rgba(0,0,0,.62); display:none}
-    .voice-menu.open{display:block}
-    .voice-search{width:100%; border:1px solid rgba(148,163,184,.25); background:rgba(2,6,23,.8); color:#fff; outline:none; border-radius:12px; padding:10px 12px; font-size:13px; margin-bottom:8px}
-    .voice-list{max-height:220px; overflow-y:auto; padding-right:4px}
-    .voice-option{width:100%; display:block; text-align:left; border:0; background:transparent; color:#dbeafe; border-radius:12px; padding:9px 10px; font-size:13px}
-    .voice-option:hover,.voice-option.active{background:rgba(99,102,241,.18); color:#fff}
+    .voice-picker,.language-picker{position:relative}
+    .voice-picker-button,.language-picker-button{width:100%; min-height:50px; text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .voice-menu,.language-menu{position:absolute; top:calc(100% + 8px); right:0; width:100%; z-index:40; border:1px solid rgba(148,163,184,.28); background:rgba(8,11,25,.98); border-radius:18px; padding:10px; box-shadow:0 22px 55px rgba(0,0,0,.62); display:none}
+    .voice-menu.open,.language-menu.open{display:block}
+    .voice-search,.language-search{width:100%; border:1px solid rgba(148,163,184,.25); background:rgba(2,6,23,.8); color:#fff; outline:none; border-radius:12px; padding:10px 12px; font-size:13px; margin-bottom:8px}
+    .voice-list,.language-list{max-height:220px; overflow-y:auto; padding-right:4px}
+    .voice-option,.language-option{width:100%; display:block; text-align:left; border:0; background:transparent; color:#dbeafe; border-radius:12px; padding:9px 10px; font-size:13px}
+    .voice-option:hover,.voice-option.active,.language-option:hover,.language-option.active{background:rgba(99,102,241,.18); color:#fff}
     @media (max-width:900px){
       .desktop-grid{grid-template-columns:1fr!important}.sticky-side{position:static!important}.hero-title{font-size:34px!important}.model-card{min-height:132px}.compact-stack{grid-template-columns:1fr!important}
     }
@@ -118,6 +118,20 @@
           <form id="audioForm" class="space-y-5">
             <section id="voicePanel" class="space-y-4">
               <div class="mode-note">Add one line for normal text-to-voice. Add more lines when you want a conversation with different voices.</div>
+              <div class="panel rounded-2xl p-4">
+                <p class="small-label mb-2">Language</p>
+                <div id="languagePicker" class="language-picker">
+                  <input id="voiceLanguage" type="hidden" value="" />
+                  <button id="languagePickerButton" type="button" class="field language-picker-button !py-3 !rounded-xl">
+                    <span id="languagePickerLabel" class="truncate">Auto detect</span>
+                    <span class="text-slate-400">⌄</span>
+                  </button>
+                  <div id="languageMenu" class="language-menu">
+                    <input id="languageSearch" type="text" class="language-search" placeholder="Search language..." autocomplete="off" />
+                    <div id="languageList" class="language-list"></div>
+                  </div>
+                </div>
+              </div>
               <div id="dialogueLines" class="space-y-3"></div>
               <button id="addDialogueLineBtn" type="button" class="btn-soft rounded-2xl w-full py-3 font-bold">+ Add another voice line</button>
               <div class="panel rounded-2xl p-4 range-wrap">
@@ -260,6 +274,42 @@
       { label:'Arabella — emotive female (KIE supported)', value:'Z3R5wn05IrDiVCyEkUrK' },
       { label:'Narrator — bright voice (KIE supported)', value:'NNl6r8mD7vthiJatiJt1' }
     ];
+    const LANGUAGES = [
+      { label:'Auto detect', value:'' },
+      { label:'English', value:'en' },
+      { label:'Japanese', value:'ja' },
+      { label:'Chinese', value:'zh' },
+      { label:'German', value:'de' },
+      { label:'Hindi', value:'hi' },
+      { label:'French', value:'fr' },
+      { label:'Korean', value:'ko' },
+      { label:'Portuguese', value:'pt' },
+      { label:'Italian', value:'it' },
+      { label:'Spanish', value:'es' },
+      { label:'Indonesian', value:'id' },
+      { label:'Dutch', value:'nl' },
+      { label:'Turkish', value:'tr' },
+      { label:'Filipino', value:'fil' },
+      { label:'Polish', value:'pl' },
+      { label:'Swedish', value:'sv' },
+      { label:'Bulgarian', value:'bg' },
+      { label:'Romanian', value:'ro' },
+      { label:'Arabic', value:'ar' },
+      { label:'Czech', value:'cs' },
+      { label:'Greek', value:'el' },
+      { label:'Finnish', value:'fi' },
+      { label:'Croatian', value:'hr' },
+      { label:'Malay', value:'ms' },
+      { label:'Slovak', value:'sk' },
+      { label:'Danish', value:'da' },
+      { label:'Tamil', value:'ta' },
+      { label:'Ukrainian', value:'uk' },
+      { label:'Russian', value:'ru' },
+      { label:'Hungarian', value:'hu' },
+      { label:'Norwegian', value:'no' },
+      { label:'Vietnamese', value:'vi' },
+      { label:'Armenian', value:'hy' }
+    ];
 
     let currentUser = null;
     let currentCredits = 0;
@@ -384,7 +434,47 @@
     }
     document.addEventListener('click',(e)=>{
       if (!e.target.closest('.voice-picker')) closeVoiceMenus();
+      if (!e.target.closest('.language-picker')) closeLanguageMenu();
     });
+    function languageLabel(value){
+      const found = LANGUAGES.find((language)=>language.value === value) || LANGUAGES[0];
+      return found.label;
+    }
+    function renderLanguageList(query = ''){
+      const list = $('languageList');
+      const current = $('voiceLanguage').value;
+      const q = String(query || '').trim().toLowerCase();
+      const matches = LANGUAGES.filter((language)=>{
+        return language.label.toLowerCase().includes(q) || String(language.value || '').toLowerCase().includes(q);
+      });
+      list.innerHTML = matches.length ? matches.map((language)=>`<button type="button" class="language-option ${language.value === current ? 'active' : ''}" data-language-value="${escapeHtml(language.value)}">${escapeHtml(language.label)}${language.value ? ` <span class="text-slate-500">${escapeHtml(language.value)}</span>` : ''}</button>`).join('') : '<div class="px-3 py-3 text-xs text-slate-400">No language found.</div>';
+      list.querySelectorAll('.language-option').forEach((btn)=>{
+        btn.addEventListener('click',()=>{
+          const value = btn.dataset.languageValue || '';
+          $('voiceLanguage').value = value;
+          $('languagePickerLabel').textContent = languageLabel(value);
+          closeLanguageMenu();
+          renderLanguageList($('languageSearch').value);
+        });
+      });
+    }
+    function closeLanguageMenu(){
+      const menu = $('languageMenu');
+      if (menu) menu.classList.remove('open');
+    }
+    function wireLanguagePicker(){
+      const button = $('languagePickerButton');
+      const menu = $('languageMenu');
+      const search = $('languageSearch');
+      renderLanguageList('');
+      button.addEventListener('click',()=>{
+        const willOpen = !menu.classList.contains('open');
+        closeVoiceMenus();
+        menu.classList.toggle('open', willOpen);
+        if (willOpen) setTimeout(()=>search.focus(), 0);
+      });
+      search.addEventListener('input',()=>renderLanguageList(search.value));
+    }
     function addDialogueLine(text = '', selectedIndex = 0){
       const wrap = document.createElement('div');
       const selectedVoice = voiceValueByIndex(selectedIndex);
@@ -673,6 +763,7 @@
         if (model.id === 'voice') {
           body.dialogue = buildDialogue();
           body.stability = Number($('stability').value);
+          body.language_code = $('voiceLanguage').value.trim();
           body.prompt = body.dialogue.map((line)=>line.text).join('\n');
         } else if (model.id === 'isolation') {
           if (!selectedAudioFile) throw new Error('Please upload audio first.');
@@ -719,13 +810,21 @@
     }
 
     function escapeHtml(str){ return String(str || '').replace(/[&<>'"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+    function isUsableAudioUrl(url){
+      const value = String(url || '').trim();
+      const lower = value.toLowerCase();
+      if (!/^https?:\/\//i.test(value)) return false;
+      if (lower.includes('/.netlify/functions/audio-kie-callback') || lower.includes('/.netlify/functions/run-audio') || lower.includes('/api/callback') || lower.includes('callback')) return false;
+      return true;
+    }
     function firstAudioUrl(row){
       const meta = row.meta || {};
-      if (row.result_url) return row.result_url;
-      if (meta.audio_url) return meta.audio_url;
-      if (Array.isArray(meta.audio_urls) && meta.audio_urls[0]) return meta.audio_urls[0];
-      if (Array.isArray(meta.results) && meta.results[0]) return meta.results[0].audio_url || meta.results[0].url || '';
-      return '';
+      const candidates = [];
+      if (row.result_url) candidates.push(row.result_url);
+      if (meta.audio_url) candidates.push(meta.audio_url);
+      if (Array.isArray(meta.audio_urls)) candidates.push(...meta.audio_urls);
+      if (Array.isArray(meta.results)) meta.results.forEach((item)=>candidates.push(item && (item.audio_url || item.audioUrl || item.url || item.downloadUrl)));
+      return candidates.find(isUsableAudioUrl) || '';
     }
 
     async function loadRecentHistory(){
@@ -745,7 +844,7 @@
       rows.forEach((row)=>{
         const meta = row.meta || {};
         const url = firstAudioUrl(row);
-        const status = (meta.status || (url ? 'ready' : 'processing')).toString();
+        const status = (url ? 'ready' : (meta.status || 'processing')).toString();
         const div = document.createElement('div');
         div.className = 'audio-card p-4';
         const name = meta.title || row.provider || 'Audio';
@@ -790,7 +889,7 @@
     }
 
     async function init(){
-      renderModels(); wireChips(); wireUpload(); addDialogueLine('', 0); syncPanels(); updateCostUI();
+      renderModels(); wireChips(); wireUpload(); wireLanguagePicker(); addDialogueLine('', 0); syncPanels(); updateCostUI();
       $('audioForm').addEventListener('submit', submitTask);
       $('refreshResultsBtn').addEventListener('click', async()=>{ await checkPendingAudioRows(); await loadRecentHistory(); });
       $('refreshCreditsBtn').addEventListener('click', refreshCredits);
