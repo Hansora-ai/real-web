@@ -141,7 +141,7 @@
               <button id="addDialogueLineBtn" type="button" class="btn-soft rounded-2xl w-full py-3 font-bold">+ Add another voice line</button>
               <div class="panel rounded-2xl p-4 range-wrap">
                 <div class="flex justify-between gap-2 mb-2"><span class="small-label">Stability</span><span id="stabilityValue" class="text-xs text-slate-300">0.50</span></div>
-                <input id="stability" type="range" min="0" max="1" step="0.05" value="0.5" />
+                <input id="stability" type="range" min="0" max="1" step="0.5" value="0.5" />
               </div>
             </section>
 
@@ -859,7 +859,7 @@
         const body = { uid:user.id, run_id:`${user.id}-audio-${Date.now()}`, kind:model.id };
         if (model.id === 'voice') {
           body.dialogue = buildDialogue();
-          body.stability = Number($('stability').value);
+          body.stability = Math.round(Number($('stability').value || 0.5) * 2) / 2;
           body.language_code = $('voiceLanguage').value.trim();
           body.prompt = body.dialogue.map((line)=>line.text).join('\n');
         } else if (model.id === 'isolation') {
