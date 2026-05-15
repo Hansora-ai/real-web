@@ -98,11 +98,18 @@ async function fetchSunoState(taskId, excludeUrls) {
       const text = await res.text();
       let data;
       try { data = JSON.parse(text); } catch { data = { raw: text }; }
-      const audioUrls = collectSunoDownloadUrls(data, excludeUrls);
-      const imageUrls = collectImageUrls(data, excludeUrls);
-      if (audioUrls.length) return { done: true, audioUrls, imageUrls, raw: data };
-      const status = normalizeStatus(data);
-      if (status === "failed" && isFinalFailure(data, res.status)) terminalFailure = terminalFailure || failureReason(data);
+
+      const status = normalizeSunoStatus(data);
+      if (status === "success") {
+        const audioUrls = collectSunoFinalAudioUrls(data, excludeUrls);
+        const imageUrls = collectImageUrls(data, excludeUrls);
+        if (audioUrls.length) return { done: true, audioUrls, imageUrls, raw: data, suno_complete: true };
+        return { pending: true };
+      }
+
+      if (status === "failed" && isFinalFailure(data, res.status)) {
+        terminalFailure = terminalFailure || failureReason(data);
+      }
     } catch (error) {
       console.warn("[audio-check] suno poll failed:", messageOf(error));
     }
@@ -148,6 +155,7 @@ async function markDone({ row, ids, state }) {
     audio_url: state.audioUrls[0],
     audio_urls: state.audioUrls,
     image_urls: state.imageUrls || [],
+    suno_complete: !!state.suno_complete,
     completed_at: new Date().toISOString()
   };
   await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
@@ -208,6 +216,19 @@ function normalizeStatus(value) {
   const state = String(raw).trim().toLowerCase();
   if (["1", "success", "succeeded", "completed", "complete", "done", "ready", "finished"].includes(state)) return "done";
   if (["2", "3", "fail", "failed", "failure", "error", "errored", "canceled", "cancelled", "rejected", "blocked", "moderation_failed", "sensitive_word_error", "generate_audio_failed", "create_task_failed"].includes(state)) return "failed";
+  return "pending";
+}
+
+function normalizeSunoStatus(value) {
+  const data = value?.data || value || {};
+  const raw = data?.status || data?.state || value?.status || value?.state || "";
+  const status = String(raw).trim().toUpperCase();
+  if (status === "SUCCESS") return "success";
+  if (status === "FIRST_SUCCESS" || status === "TEXT_SUCCESS" || status === "PENDING" || status === "SUBMITTED" || status === "RUNNING" || status === "PROCESSING") return "pending";
+  if (["CREATE_TASK_FAILED", "GENERATE_AUDIO_FAILED", "CALLBACK_EXCEPTION", "SENSITIVE_WORD_ERROR", "FAILED", "FAIL", "ERROR", "CANCELED", "CANCELLED", "REJECTED", "BLOCKED"].includes(status)) return "failed";
+  const flag = data?.successFlag ?? value?.successFlag;
+  if (flag === 1 || flag === "1") return "success";
+  if (flag === 2 || flag === "2" || flag === 3 || flag === "3") return "failed";
   return "pending";
 }
 
@@ -276,32 +297,35 @@ function collectKnownInputUrls(row) {
   return urls;
 }
 
-function collectSunoDownloadUrls(value, excludeUrls = []) {
+function collectSunoFinalAudioUrls(value, excludeUrls = []) {
   const urls = [];
   const seen = new Set();
-  const preferredKeys = new Set(["sourceAudioUrl", "source_audio_url", "downloadUrl", "download_url", "originAudioUrl", "origin_audio_url"]);
+  const finalAudioKeys = new Set(["audioUrl", "audio_url", "downloadUrl", "download_url", "sourceAudioUrl", "source_audio_url", "originAudioUrl", "origin_audio_url"]);
   const containerKeys = new Set(["data", "result", "results", "response", "sunoData", "tracks", "songs", "items"]);
   function add(url) {
     if (typeof url !== "string" || !/^https?:\/\//i.test(url)) return;
     const clean = normalizeComparableUrl(url);
+    const lower = clean.toLowerCase();
     if (!clean || isBlockedUrl(clean) || isKnownInputUrl(clean, excludeUrls) || seen.has(clean)) return;
+    if (lower.includes("streamaudiourl") || lower.includes("stream_audio")) return;
     seen.add(clean);
     urls.push(clean);
   }
-  function walk(x, trusted = false, depth = 0) {
+  function walk(x, trusted = false, depth = 0, keyPath = "") {
     if (!x || depth > 10 || urls.length >= 4) return;
     if (typeof x === "string") {
       const parsed = safeJson(x);
-      if (parsed && typeof parsed === "object" && Object.keys(parsed).length) return walk(parsed, trusted, depth + 1);
+      if (parsed && typeof parsed === "object" && Object.keys(parsed).length) return walk(parsed, trusted, depth + 1, keyPath);
       if (trusted) (x.match(/https?:\/\/[^\s"'<>]+/gi) || []).forEach(add);
       return;
     }
-    if (Array.isArray(x)) return x.forEach((item) => walk(item, trusted, depth + 1));
+    if (Array.isArray(x)) return x.forEach((item) => walk(item, trusted, depth + 1, keyPath));
     if (typeof x === "object") {
       for (const [rawKey, child] of Object.entries(x)) {
         const key = String(rawKey || "");
-        const nextTrusted = trusted || preferredKeys.has(key);
-        if (nextTrusted || containerKeys.has(key)) walk(child, nextTrusted, depth + 1);
+        if (/streamAudioUrl|stream_audio_url/i.test(key)) continue;
+        const nextTrusted = trusted || finalAudioKeys.has(key);
+        if (nextTrusted || containerKeys.has(key)) walk(child, nextTrusted, depth + 1, keyPath ? `${keyPath}.${key}` : key);
       }
     }
   }
