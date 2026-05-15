@@ -343,7 +343,7 @@ function normalizeComparableUrl(url) { return String(url || "").replace(/[)"'\\\
 function isUrl(url) { return typeof url === "string" && /^https?:\/\//i.test(url); }
 function isCallbackOrApiUrl(url) {
   const lower = String(url || "").toLowerCase();
-  return lower.includes("callback") || lower.includes("/.netlify/functions/run-upscale") || lower.includes("/.netlify/functions/image-tools-check") || lower.includes("/.netlify/functions/upscale-kie-callback") || lower.includes("api.kie.ai/api/");
+  return lower.includes("callback") || lower.includes("/.netlify/functions/run-image-tools") || lower.includes("/.netlify/functions/image-tools-check") || lower.includes("/.netlify/functions/image-tools-kie-callback") || lower.includes("api.kie.ai/api/");
 }
 function isLikelyMediaUrl(url) {
   const lower = String(url || "").toLowerCase().split("?")[0].split("#")[0];
