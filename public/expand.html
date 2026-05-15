@@ -20,15 +20,26 @@
     #previewOverlay{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);padding:18px}#previewOverlay.show{display:flex}.preview-card{width:min(1040px,100%);max-height:88vh;border:1px solid rgba(255,255,255,.14);border-radius:22px;background:rgba(2,6,23,.88);position:relative;overflow:hidden}.preview-close{position:absolute;right:12px;top:12px;width:40px;height:40px;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(0,0,0,.45);color:#fff;font-size:24px;z-index:2}.preview-card img{width:100%;max-height:88vh;object-fit:contain;display:block;background:#000}
     @media(max-width:900px){body{overflow:auto}.shell{display:flex;flex-direction:column;height:auto;padding:12px}.left{overflow:visible}.right{overflow:visible}.board-head{align-items:flex-start;flex-direction:column}.examples{grid-template-columns:1fr}.result-grid{display:flex;overflow-x:auto;gap:12px;scroll-snap-type:x mandatory;padding-bottom:10px}.result-card{flex:0 0 78%;scroll-snap-align:start}.upload-grid{grid-template-columns:1fr}.upload-grid.two{grid-template-columns:1fr 1fr}.drop{min-height:132px}.thumb{min-height:132px}}
 
+
+    /* Shared header must stay normal height on this page */
+    #sharedHeader{position:relative!important;z-index:50!important;width:100%!important;height:58px!important;min-height:58px!important;max-height:58px!important;margin:0!important;overflow:visible!important}
+    #sharedHeader header,#sharedHeader .site-header{position:relative!important;top:0!important;left:0!important;right:0!important;bottom:auto!important;transform:none!important;width:100%!important;height:58px!important;min-height:58px!important;max-height:58px!important;margin:0!important;display:flex!important;align-items:center!important}
+    #sharedHeader header>div,#sharedHeader .site-header>div{height:58px!important;min-height:58px!important;max-height:58px!important}
+    @media(max-width:900px){#sharedHeader{height:64px!important;min-height:64px!important;max-height:64px!important}#sharedHeader header,#sharedHeader .site-header{height:64px!important;min-height:64px!important;max-height:64px!important}#sharedHeader header>div,#sharedHeader .site-header>div{height:64px!important;min-height:64px!important;max-height:64px!important}}
+
     /* Header override: keep shared header compact on this tool page */
-    body.workspace-redesign header:not(.site-header){position:sticky;top:0;z-index:50;height:58px;border-color:var(--line)!important;background:rgba(8,9,12,.86)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
-    body.workspace-redesign header:not(.site-header)>div{height:58px!important;max-width:none!important}
-    body.workspace-redesign header:not(.site-header) nav{gap:22px;color:rgba(255,255,255,.55)}
-    body.workspace-redesign #sharedHeader{min-height:58px}
-    @media(max-width:900px){body.workspace-redesign header:not(.site-header){height:auto}body.workspace-redesign header:not(.site-header)>div{height:64px!important}body.workspace-redesign #sharedHeader{min-height:64px}}
+    body.workspace-redesign{min-height:100vh!important;display:block!important;overflow:hidden!important}
+    body.workspace-redesign #sharedHeader{position:relative!important;z-index:50!important;width:100%!important;height:58px!important;min-height:58px!important;max-height:58px!important;overflow:visible!important;margin:0!important;flex:0 0 58px!important}
+    body.workspace-redesign #sharedHeader header,
+    body.workspace-redesign #sharedHeader .site-header{position:relative!important;top:0!important;left:0!important;right:0!important;bottom:auto!important;transform:none!important;width:100%!important;height:58px!important;min-height:58px!important;max-height:58px!important;margin:0!important;display:flex!important;align-items:center!important;border-color:var(--line)!important;background:rgba(8,9,12,.86)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+    body.workspace-redesign #sharedHeader header>div,
+    body.workspace-redesign #sharedHeader .site-header>div{height:58px!important;min-height:58px!important;max-height:58px!important;max-width:none!important}
+    body.workspace-redesign #sharedHeader nav{gap:22px;color:rgba(255,255,255,.55)}
+    body.workspace-redesign .shell{height:calc(100vh - 58px)!important}
+    @media(max-width:900px){body.workspace-redesign{overflow:auto!important}body.workspace-redesign #sharedHeader{height:64px!important;min-height:64px!important;max-height:64px!important;flex-basis:64px!important}body.workspace-redesign #sharedHeader header,body.workspace-redesign #sharedHeader .site-header{height:64px!important;min-height:64px!important;max-height:64px!important}body.workspace-redesign #sharedHeader header>div,body.workspace-redesign #sharedHeader .site-header>div{height:64px!important;min-height:64px!important;max-height:64px!important}body.workspace-redesign #sharedHeader nav{display:none!important}body.workspace-redesign .shell{height:auto!important}}
   </style>
 </head>
-<body class="workspace-redesign">
+<body>
   <div id="sharedHeader"></div>
   <main class="shell">
     <section class="panel left" id="generatorCard">
