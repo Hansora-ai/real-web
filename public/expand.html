@@ -21,22 +21,6 @@
     @media(max-width:900px){body{overflow:auto}.shell{display:flex;flex-direction:column;height:auto;padding:12px}.left{overflow:visible}.right{overflow:visible}.board-head{align-items:flex-start;flex-direction:column}.examples{grid-template-columns:1fr}.result-grid{display:flex;overflow-x:auto;gap:12px;scroll-snap-type:x mandatory;padding-bottom:10px}.result-card{flex:0 0 78%;scroll-snap-align:start}.upload-grid{grid-template-columns:1fr}.upload-grid.two{grid-template-columns:1fr 1fr}.drop{min-height:132px}.thumb{min-height:132px}}
 
 
-    /* Shared header must stay normal height on this page */
-    #sharedHeader{position:relative!important;z-index:50!important;width:100%!important;height:58px!important;min-height:58px!important;max-height:58px!important;margin:0!important;overflow:visible!important}
-    #sharedHeader header,#sharedHeader .site-header{position:relative!important;top:0!important;left:0!important;right:0!important;bottom:auto!important;transform:none!important;width:100%!important;height:58px!important;min-height:58px!important;max-height:58px!important;margin:0!important;display:flex!important;align-items:center!important}
-    #sharedHeader header>div,#sharedHeader .site-header>div{height:58px!important;min-height:58px!important;max-height:58px!important}
-    @media(max-width:900px){#sharedHeader{height:64px!important;min-height:64px!important;max-height:64px!important}#sharedHeader header,#sharedHeader .site-header{height:64px!important;min-height:64px!important;max-height:64px!important}#sharedHeader header>div,#sharedHeader .site-header>div{height:64px!important;min-height:64px!important;max-height:64px!important}}
-
-    /* Header override: keep shared header compact on this tool page */
-    body.workspace-redesign{min-height:100vh!important;display:block!important;overflow:hidden!important}
-    body.workspace-redesign #sharedHeader{position:relative!important;z-index:50!important;width:100%!important;height:58px!important;min-height:58px!important;max-height:58px!important;overflow:visible!important;margin:0!important;flex:0 0 58px!important}
-    body.workspace-redesign #sharedHeader header,
-    body.workspace-redesign #sharedHeader .site-header{position:relative!important;top:0!important;left:0!important;right:0!important;bottom:auto!important;transform:none!important;width:100%!important;height:58px!important;min-height:58px!important;max-height:58px!important;margin:0!important;display:flex!important;align-items:center!important;border-color:var(--line)!important;background:rgba(8,9,12,.86)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
-    body.workspace-redesign #sharedHeader header>div,
-    body.workspace-redesign #sharedHeader .site-header>div{height:58px!important;min-height:58px!important;max-height:58px!important;max-width:none!important}
-    body.workspace-redesign #sharedHeader nav{gap:22px;color:rgba(255,255,255,.55)}
-    body.workspace-redesign .shell{height:calc(100vh - 58px)!important}
-    @media(max-width:900px){body.workspace-redesign{overflow:auto!important}body.workspace-redesign #sharedHeader{height:64px!important;min-height:64px!important;max-height:64px!important;flex-basis:64px!important}body.workspace-redesign #sharedHeader header,body.workspace-redesign #sharedHeader .site-header{height:64px!important;min-height:64px!important;max-height:64px!important}body.workspace-redesign #sharedHeader header>div,body.workspace-redesign #sharedHeader .site-header>div{height:64px!important;min-height:64px!important;max-height:64px!important}body.workspace-redesign #sharedHeader nav{display:none!important}body.workspace-redesign .shell{height:auto!important}}
   </style>
 </head>
 <body>
