@@ -12,7 +12,7 @@ const AUTH_USER_URL = SUPABASE_URL ? `${SUPABASE_URL}/auth/v1/user` : "";
 const SITE_BASE = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/, "");
 const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/upscale-kie-callback`;
 
-const IMAGE_PROMPT = "Upscale and enhance this image with Nano Banana Pro. Preserve the original composition, identity, colors, and style. Improve resolution, natural detail, texture clarity, edge sharpness, lighting balance, and overall quality. Do not add new objects, text, logos, watermarks, or change the subject.";
+const IMAGE_PROMPT = "Ultra-photorealistic enhancement of the provided image, preserving the subject’s identity exactly with no changes to the face, facial structure, proportions, expression, skin tone, hairstyle, pose, camera angle, framing, lighting, background, clothing, or composition; upscale to very high resolution with crisp but natural sharpness, enhanced fine detail, realistic human skin texture with visible pores and subtle natural texture, eliminate plastic, waxy, over-smoothed, fake AI-looking skin, improve eyes, eyelashes, eyebrows, lips, hair strands, and all facial details carefully, remove blur, noise, compression artifacts, pixelation, banding, and distortions, recover lost detail while keeping the image clean and realistic, maintain balanced exposure and soft natural contrast, and make the final result look like a real premium high-end professional camera photo, not overprocessed or artificially retouched.";
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return ok({});
