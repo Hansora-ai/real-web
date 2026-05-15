@@ -172,7 +172,16 @@ async function fetchKieState(taskId, excludeUrls = [], debug = false) {
 
   for (const attempt of attempts) {
     const result = await fetchJsonAny(attempt.method, KIE_BASE + attempt.path, attempt.body);
-    debugTries.push({ method: attempt.method, path: attempt.path, status: result.status, ok: result.ok, urls: collectRawUrls(result.data).slice(0, 5) });
+    debugTries.push({
+      method: attempt.method,
+      path: attempt.path,
+      status: result.status,
+      ok: result.ok,
+      state: normalizeStatus(result.data),
+      kie_state: result.data?.data?.state || result.data?.state || result.data?.data?.status || result.data?.status || "",
+      failMsg: result.data?.data?.failMsg || result.data?.failMsg || "",
+      urls: collectRawUrls(result.data).slice(0, 5)
+    });
 
     const urls = collectResultUrls(result.data, excludeUrls);
     if (urls.length) return { done: true, urls, debug: debug ? { attempts: debugTries } : undefined };
@@ -324,10 +333,10 @@ function isFinalFailurePayload(value) {
   const flag = value?.data?.successFlag ?? value?.successFlag ?? value?.result?.successFlag;
   if (flag === 2 || flag === "2" || flag === 3 || flag === "3") return true;
   const explicit = String(value?.data?.status || value?.status || value?.result?.status || value?.data?.state || value?.state || "").toLowerCase();
-  return /^(failed|failure|error|errored|cancelled|canceled|rejected)$/.test(explicit);
+  return /^(fail|failed|failure|error|errored|cancelled|canceled|rejected)$/.test(explicit);
 }
 function failureReason(value) {
-  return String(value?.error || value?.message || value?.msg || value?.data?.error || value?.data?.message || value?.data?.msg || value?.data?.reason || value?.result?.error || value?.result?.message || "kie_failed");
+  return String(value?.error || value?.message || value?.msg || value?.failMsg || value?.data?.error || value?.data?.message || value?.data?.msg || value?.data?.reason || value?.data?.failMsg || value?.data?.failCode || value?.result?.error || value?.result?.message || value?.result?.failMsg || "kie_failed");
 }
 
 function normalizeComparableUrl(url) { return String(url || "").replace(/[)"'\\\]}]+$/g, "").trim(); }
@@ -338,7 +347,7 @@ function isCallbackOrApiUrl(url) {
 }
 function isLikelyMediaUrl(url) {
   const lower = String(url || "").toLowerCase().split("?")[0].split("#")[0];
-  return /\.(png|jpe?g|webp|gif|mp4|mov|webm|m4v)$/i.test(lower) || lower.includes("tempfile.redpandaai.co") || lower.includes("tempfile.aiquickdraw.com") || lower.includes("aiquickdraw.com/workers/") || lower.includes("storage.googleapis.com") || lower.includes("s3.") || lower.includes("r2.cloudflarestorage.com");
+  return /\.(png|jpe?g|webp|gif|mp4|mov|webm|m4v)$/i.test(lower) || lower.includes("tempfile.redpandaai.co") || lower.includes("storage.googleapis.com") || lower.includes("s3.") || lower.includes("r2.cloudflarestorage.com");
 }
 function collectRawUrls(value) {
   const urls = [];
@@ -383,6 +392,7 @@ function collectResultUrls(value, excludeUrls = []) {
   const excluded = new Set(excludeUrls.map(normalizeComparableUrl).filter(Boolean));
   const outputKeys = new Set([
     "video_url", "videoUrl", "image_url", "imageUrl", "result_url", "resultUrl", "result_urls", "resultUrls", "fullResultUrls", "full_result_urls",
+    "resultJson", "result_json", "resultJSON",
     "resultImageUrl", "result_image_url", "url", "download_url", "downloadUrl", "media_url", "mediaUrl", "asset_url", "assetUrl", "file", "output", "outputs",
     "images", "image_urls", "imageUrls", "videos", "video_urls", "videoUrls", "urls", "files", "file_url", "fileUrl", "file_urls", "fileUrls", "generate_url", "generateUrl"
   ]);
