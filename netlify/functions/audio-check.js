@@ -30,7 +30,8 @@ exports.handler = async (event) => {
     if (!ids.taskId) return json(200, { ok: false, status: "pending", error: "missing_task_id" });
 
     const audioKind = String(row.meta?.audio_kind || row.meta?.kind || "").toLowerCase();
-    const state = audioKind === "music" ? await fetchSunoState(ids.taskId) : await fetchMarketState(ids.taskId);
+    const inputUrls = collectKnownInputUrls(row);
+    const state = audioKind === "music" ? await fetchSunoState(ids.taskId, inputUrls) : await fetchMarketState(ids.taskId, inputUrls);
 
     if (state.failed) {
       const refund = await failAndRefundOnce({ row, ids, reason: state.error || "kie_failed" });
@@ -48,9 +49,7 @@ exports.handler = async (event) => {
   }
 };
 
-function cors() {
-  return { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*", "Access-Control-Allow-Methods": "GET,OPTIONS" };
-}
+function cors() { return { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*", "Access-Control-Allow-Methods": "GET,OPTIONS" }; }
 function json(statusCode, body) { return { statusCode, headers: { "Content-Type": "application/json", ...cors() }, body: JSON.stringify(body) }; }
 function sb() { return { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` }; }
 function safeJson(raw) { if (!raw) return {}; try { return JSON.parse(raw); } catch { return {}; } }
@@ -74,49 +73,50 @@ async function findAudioGeneration(ids) {
   return null;
 }
 
-async function fetchMarketState(taskId) {
+async function fetchMarketState(taskId, excludeUrls) {
   if (!KIE_KEY) return { pending: true, error: "missing_kie_key" };
   const paths = [
     `/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`,
+    `/api/v1/jobs/recordInfo?task_id=${encodeURIComponent(taskId)}`,
     `/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
     `/api/v1/jobs/result?taskId=${encodeURIComponent(taskId)}`,
     `/api/v1/jobs/getTask?taskId=${encodeURIComponent(taskId)}`
   ];
-  return await fetchFirstFinished(paths);
+  return await fetchFirstFinished(paths, excludeUrls);
 }
 
-async function fetchSunoState(taskId) {
+async function fetchSunoState(taskId, excludeUrls) {
   if (!KIE_KEY) return { pending: true, error: "missing_kie_key" };
   const paths = [
     `/api/v1/generate/record-info?taskId=${encodeURIComponent(taskId)}`,
     `/api/v1/generate/record-info?task_id=${encodeURIComponent(taskId)}`
   ];
-  return await fetchFirstFinished(paths);
+  return await fetchFirstFinished(paths, excludeUrls);
 }
 
-async function fetchFirstFinished(paths) {
-  let sawFailed = false;
-  let failReason = "";
+async function fetchFirstFinished(paths, excludeUrls = []) {
+  let terminalFailure = "";
   for (const path of paths) {
     try {
       const res = await fetch(KIE_BASE + path, { headers: { Accept: "application/json", Authorization: `Bearer ${KIE_KEY}` } });
       const text = await res.text();
       let data;
       try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+      const audioUrls = collectAudioUrls(data, excludeUrls);
+      const imageUrls = collectImageUrls(data, excludeUrls);
+      if (audioUrls.length) return { done: true, audioUrls, imageUrls, raw: data };
+
       const status = normalizeStatus(data);
-      if (status === "failed") {
-        sawFailed = true;
-        failReason = failReason || failureReason(data);
-        continue;
+      if (status === "failed" && isFinalFailure(data, res.status)) {
+        terminalFailure = terminalFailure || failureReason(data);
       }
-      const audioUrls = collectAudioUrls(data);
-      const imageUrls = collectImageUrls(data);
-      if ((status === "done" || audioUrls.length) && audioUrls.length) return { done: true, audioUrls, imageUrls, raw: data };
     } catch (error) {
-      failReason = failReason || messageOf(error);
+      // A polling/network error is not a final generation failure.
+      console.warn("[audio-check] poll failed:", messageOf(error));
     }
   }
-  if (sawFailed) return { failed: true, error: failReason || "kie_failed" };
+  if (terminalFailure) return { failed: true, error: terminalFailure };
   return { pending: true };
 }
 
@@ -126,6 +126,8 @@ async function markDone({ row, ids, state }) {
     run_id: ids.run_id || row.meta?.run_id || "",
     task_id: ids.taskId || row.meta?.task_id || row.meta?.taskId || "",
     status: "ready",
+    failed: false,
+    error: null,
     audio_url: state.audioUrls[0],
     audio_urls: state.audioUrls,
     image_urls: state.imageUrls || [],
@@ -184,71 +186,136 @@ async function patchGeneration(id, payload) {
 }
 
 function normalizeStatus(value) {
-  const data = value?.data || value;
-  const state = String(data?.state || data?.status || value?.status || "").toLowerCase();
-  if (["success", "succeeded", "completed", "complete", "done", "ready"].includes(state)) return "done";
-  if (String(data?.status || "").toUpperCase() === "SUCCESS") return "done";
-  if (/(create_task_failed|generate_audio_failed|callback_exception|sensitive_word_error|fail|failed|error|cancel|rejected|blocked)/i.test(state)) return "failed";
-  const flag = value?.data?.successFlag ?? value?.successFlag ?? value?.result?.successFlag;
-  if (flag === 1 || flag === "1") return "done";
-  if (flag === 2 || flag === "2" || flag === 3 || flag === "3") return "failed";
-  const text = JSON.stringify(value || {}).toLowerCase();
-  if (/(fail|failed|failure|error|errored|cancel|canceled|cancelled|rejected|moderation|blocked|sensitive|flagged)/.test(text)) return "failed";
-  if (/(success|succeeded|completed|complete|finished|done)/.test(text)) return "done";
+  const data = value?.data || value || {};
+  const raw = data?.state ?? data?.status ?? value?.status ?? value?.state ?? data?.successFlag ?? value?.successFlag ?? "";
+  const state = String(raw).trim().toLowerCase();
+  if (["1", "success", "succeeded", "completed", "complete", "done", "ready", "finished"].includes(state)) return "done";
+  if (["2", "3", "fail", "failed", "failure", "error", "errored", "canceled", "cancelled", "rejected", "blocked", "moderation_failed", "sensitive_word_error", "generate_audio_failed", "create_task_failed"].includes(state)) return "failed";
   return "pending";
 }
 
-function failureReason(value) {
-  return String(value?.error || value?.message || value?.msg || value?.data?.errorMessage || value?.data?.failMsg || value?.data?.error || value?.data?.message || value?.result?.error || value?.result?.message || "kie_failed");
+function isFinalFailure(value, httpStatus) {
+  const data = value?.data || value || {};
+  const flag = data?.successFlag ?? value?.successFlag;
+  if (flag === 2 || flag === "2" || flag === 3 || flag === "3") return true;
+  const state = String(data?.state || data?.status || value?.state || value?.status || "").trim().toLowerCase();
+  if (["fail", "failed", "failure", "error", "errored", "canceled", "cancelled", "rejected", "blocked", "moderation_failed", "sensitive_word_error", "generate_audio_failed", "create_task_failed"].includes(state)) return true;
+  const code = Number(value?.code);
+  const msg = String(value?.msg || value?.message || value?.error || data?.msg || data?.message || data?.error || "").toLowerCase();
+  if (Number.isFinite(code) && code !== 200 && /(fail|failed|rejected|blocked|moderation|sensitive|invalid|not supported)/i.test(msg)) return true;
+  return false;
 }
 
-function collectAudioUrls(value) {
+function failureReason(value) {
+  return String(
+    value?.error || value?.message || value?.msg ||
+    value?.data?.errorMessage || value?.data?.failMsg || value?.data?.error || value?.data?.message || value?.data?.msg ||
+    value?.result?.error || value?.result?.message || "kie_failed"
+  );
+}
+
+function normalizeComparableUrl(url) { return String(url || "").replace(/[)"'\\\]}]+$/g, "").trim(); }
+function isBlockedUrl(url) {
+  const clean = normalizeComparableUrl(url).toLowerCase();
+  return !clean ||
+    clean.includes("/.netlify/functions/audio-kie-callback") ||
+    clean.includes("/.netlify/functions/run-audio") ||
+    clean.includes("/api/callback") ||
+    clean.includes("callbackurl=") ||
+    clean.includes("callback");
+}
+function isKnownInputUrl(url, excludeUrls) {
+  const clean = normalizeComparableUrl(url);
+  return excludeUrls.map(normalizeComparableUrl).filter(Boolean).includes(clean);
+}
+function collectKnownInputUrls(row) {
+  const meta = row?.meta && typeof row.meta === "object" ? row.meta : {};
   const urls = [];
   const seen = new Set();
-  const keys = /^(audioUrl|audio_url|streamAudioUrl|stream_audio_url|sourceAudioUrl|source_audio_url|result_url|url|downloadUrl|download_url|fileUrl|file_url)$/i;
   function add(url) {
     if (typeof url !== "string" || !/^https?:\/\//i.test(url)) return;
-    const clean = url.replace(/[)"'\\\]}]+$/g, "").trim();
-    if (!/\.(mp3|wav|m4a|aac|ogg|flac)(\?|#|$)/i.test(clean) && !/audio/i.test(clean)) return;
-    if (!seen.has(clean)) { seen.add(clean); urls.push(clean); }
+    const clean = normalizeComparableUrl(url);
+    if (!clean || seen.has(clean)) return;
+    seen.add(clean);
+    urls.push(clean);
   }
-  function walk(x, trusted = false, depth = 0) {
-    if (!x || depth > 10 || urls.length >= 6) return;
-    if (typeof x === "string") {
-      const parsed = safeJson(x);
+  function walk(value, trusted = false, depth = 0) {
+    if (!value || depth > 8) return;
+    if (typeof value === "string") {
+      const parsed = safeJson(value);
       if (parsed && typeof parsed === "object" && Object.keys(parsed).length) return walk(parsed, trusted, depth + 1);
-      if (trusted) (x.match(/https?:\/\/[^\s"'<>]+/gi) || []).forEach(add);
+      if (trusted) (value.match(/https?:\/\/[^\s"'<>]+/gi) || []).forEach(add);
       return;
     }
-    if (Array.isArray(x)) { x.forEach((item) => walk(item, trusted, depth + 1)); return; }
-    if (typeof x === "object") {
-      for (const [k, v] of Object.entries(x)) walk(v, trusted || keys.test(k) || /sunoData|response|resultJson|data|output|outputs|files/i.test(k), depth + 1);
+    if (Array.isArray(value)) return value.forEach((item) => walk(item, trusted, depth + 1));
+    if (typeof value === "object") {
+      for (const [key, child] of Object.entries(value)) {
+        walk(child, trusted || /^(input|request|source|reference|audio_url|audioUrl|fileUrl|file_url)$/i.test(key), depth + 1);
+      }
     }
   }
-  walk(value);
+  walk(meta.request, true);
+  walk(meta.input, true);
   return urls;
 }
 
-function collectImageUrls(value) {
+function collectAudioUrls(value, excludeUrls = []) {
+  const urls = [];
+  const seen = new Set();
+  const outputKeys = new Set(["audio_url", "audioUrl", "audioURL", "sourceAudioUrl", "streamAudioUrl", "downloadUrl", "download_url", "fileUrl", "file_url", "mediaUrl", "media_url", "resultUrl", "result_url", "url", "urls", "output", "outputs", "audio", "audios", "sunoData", "tracks", "data"]);
+  const containerKeys = new Set(["data", "result", "results", "response", "task", "job", "output", "outputs", "sunoData", "tracks"]);
+  const blockedKey = /(callback|callBackUrl|callbackUrl|input|request|payload|params|parameters|metadata|meta|reference)/i;
+  function add(url) {
+    if (typeof url !== "string" || !/^https?:\/\//i.test(url)) return;
+    const clean = normalizeComparableUrl(url);
+    if (!clean || isBlockedUrl(clean) || isKnownInputUrl(clean, excludeUrls) || seen.has(clean)) return;
+    seen.add(clean);
+    urls.push(clean);
+  }
+  function walk(x, trusted = false, depth = 0, keyPath = "") {
+    if (!x || depth > 10 || urls.length >= 8) return;
+    if (typeof x === "string") {
+      const parsed = safeJson(x);
+      if (parsed && typeof parsed === "object" && Object.keys(parsed).length) return walk(parsed, trusted, depth + 1, keyPath);
+      if (trusted) (x.match(/https?:\/\/[^\s"'<>]+/gi) || []).forEach(add);
+      return;
+    }
+    if (Array.isArray(x)) return x.forEach((item) => walk(item, trusted, depth + 1, keyPath));
+    if (typeof x === "object") {
+      for (const [rawKey, child] of Object.entries(x)) {
+        const key = String(rawKey || "");
+        if (blockedKey.test(key) && !/^(audio_url|audioUrl|audioURL|sourceAudioUrl|streamAudioUrl)$/i.test(key)) continue;
+        const nextTrusted = trusted || outputKeys.has(key);
+        if (nextTrusted || containerKeys.has(key)) walk(child, nextTrusted, depth + 1, keyPath ? `${keyPath}.${key}` : key);
+      }
+    }
+  }
+  walk(value);
+  return urls.slice(0, 4);
+}
+
+function collectImageUrls(value, excludeUrls = []) {
   const urls = [];
   const seen = new Set();
   function add(url) {
     if (typeof url !== "string" || !/^https?:\/\//i.test(url)) return;
-    const clean = url.replace(/[)"'\\\]}]+$/g, "").trim();
+    const clean = normalizeComparableUrl(url);
+    if (!clean || isBlockedUrl(clean) || isKnownInputUrl(clean, excludeUrls) || seen.has(clean)) return;
     if (!/\.(png|jpe?g|webp)(\?|#|$)/i.test(clean) && !/image/i.test(clean)) return;
-    if (!seen.has(clean)) { seen.add(clean); urls.push(clean); }
+    seen.add(clean);
+    urls.push(clean);
   }
-  function walk(x, depth = 0) {
-    if (!x || depth > 10 || urls.length >= 6) return;
+  function scan(x, depth = 0) {
+    if (!x || depth > 10) return;
     if (typeof x === "string") {
       const parsed = safeJson(x);
-      if (parsed && typeof parsed === "object" && Object.keys(parsed).length) return walk(parsed, depth + 1);
+      if (parsed && typeof parsed === "object" && Object.keys(parsed).length) return scan(parsed, depth + 1);
       (x.match(/https?:\/\/[^\s"'<>]+/gi) || []).forEach(add);
       return;
     }
-    if (Array.isArray(x)) { x.forEach((item) => walk(item, depth + 1)); return; }
-    if (typeof x === "object") Object.values(x).forEach((v) => walk(v, depth + 1));
+    if (Array.isArray(x)) return x.forEach((item) => scan(item, depth + 1));
+    if (typeof x === "object") Object.values(x).forEach((v) => scan(v, depth + 1));
   }
-  walk(value);
+  scan(value);
   return urls;
 }
