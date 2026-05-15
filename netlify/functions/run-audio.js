@@ -7,6 +7,8 @@ const API_KEY = process.env.KIE_API_KEY || "";
 const MARKET_TASK_URL = "https://api.kie.ai/api/v1/jobs/createTask";
 const SUNO_GENERATE_URL = "https://api.kie.ai/api/v1/generate";
 const KIE_BASE64_UPLOAD_URL = "https://kieai.redpandaai.co/api/file-base64-upload";
+const SUPPORTED_DIALOGUE_VOICES = new Set(["EkK5I93UQWFDigLMpZcX", "Z3R5wn05IrDiVCyEkUrK", "NNl6r8mD7vthiJatiJt1"]);
+const DEFAULT_DIALOGUE_VOICE = "EkK5I93UQWFDigLMpZcX";
 
 const SUPABASE_URL  = (process.env.SUPABASE_URL || "").replace(/\/+$/,"");
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -71,6 +73,8 @@ exports.handler = async (event) => {
         const fileBase64 = String(body.fileBase64 || body.base64Data || "");
         if (!fileBase64) return ok({ submitted:false, error:"missing_audio_file", run_id });
         const fileName = sanitizeFileName(body.fileName || `audio-${Date.now()}.mp3`);
+        const fileType = String(body.fileType || "").toLowerCase();
+        if (!isSupportedAudioFile(fileName, fileType)) return ok({ submitted:false, error:"unsupported_file_type_audio_only", run_id });
         const upload = await uploadBase64(fileBase64, fileName);
         audioUrl = normalizeUrl(upload.downloadUrl || upload.fileUrl || upload.url || "");
       }
@@ -93,9 +97,19 @@ exports.handler = async (event) => {
     }
 
     const data = resp.data;
+    const kieCode = Number(data && data.code);
+    const kieMessage = String((data && (data.msg || data.message || data.error)) || "").trim();
     const taskId = extractTaskId(data);
-    if (!resp.ok) return ok({ submitted:false, error:`kie_${resp.status}`, data, run_id });
-    if (!taskId) return ok({ submitted:false, error:"missing_taskId", data, run_id });
+    if (!resp.ok || (Number.isFinite(kieCode) && kieCode !== 200)) {
+      const reason = kieMessage || `kie_${resp.status}`;
+      await patchTaskMeta(uid, run_id, { status:"failed", failed:true, error:reason, kind, provider:providerTitle(kind), cost, request:stripLargeFields(kiePayload), response:data });
+      return ok({ submitted:false, error:reason, data, run_id });
+    }
+    if (!taskId) {
+      const reason = kieMessage || "missing_taskId";
+      await patchTaskMeta(uid, run_id, { status:"failed", failed:true, error:reason, kind, provider:providerTitle(kind), cost, request:stripLargeFields(kiePayload), response:data });
+      return ok({ submitted:false, error:reason, data, run_id });
+    }
 
     if (!charged) {
       const debited = await debitCredits(uid, cost);
@@ -121,6 +135,13 @@ function providerTitle(kind){ return kind === "music" ? "Suno Music" : kind === 
 function normalizeUrl(u){ try { const url = new URL(String(u || "")); return url.href; } catch { return ""; } }
 function clampNumber(value, min, max, fallback){ const n=Number(value); if (!Number.isFinite(n)) return fallback; return Math.max(min, Math.min(max, n)); }
 function sanitizeFileName(name){ return String(name || "audio.mp3").replace(/[^a-zA-Z0-9._-]+/g,"-").slice(0,90) || "audio.mp3"; }
+function isSupportedAudioFile(fileName, fileType){
+  const type = String(fileType || "").toLowerCase();
+  const name = String(fileName || "").toLowerCase();
+  if (type.startsWith("video/")) return false;
+  if (type.startsWith("audio/")) return true;
+  return /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(name);
+}
 
 function calculateCost(kind, body){
   if (kind === "music") return 1.5;
@@ -135,7 +156,12 @@ function calculateCost(kind, body){
 
 function normalizeDialogue(input){
   const arr = Array.isArray(input) ? input : [];
-  return arr.map((item)=>({ text:String(item && item.text || "").trim(), voice:String(item && item.voice || "Rachel").trim() || "Rachel" })).filter((item)=>item.text);
+  return arr.map((item)=>{
+    const text = String(item && item.text || "").trim();
+    const requestedVoice = String(item && item.voice || "").trim();
+    const voice = SUPPORTED_DIALOGUE_VOICES.has(requestedVoice) ? requestedVoice : DEFAULT_DIALOGUE_VOICE;
+    return { text, voice };
+  }).filter((item)=>item.text);
 }
 function normalizeMusicPayload(body){
   const customMode = body.customMode === true || body.customMode === "true";
@@ -206,7 +232,7 @@ async function seedPlaceholder(uid, run_id, { kind, prompt, cost, title }){
     if (!UG_URL || !SERVICE_KEY) return;
     const existing = await getExistingTask(uid, run_id);
     if (existing) return;
-    await fetch(UG_URL, { method:"POST", headers:{ ...sb(), "Content-Type":"application/json", "Prefer":"return=minimal" }, body:JSON.stringify({ user_id:uid, provider:title, kind:"audio", prompt, result_url:null, meta:{ run_id, status:"processing", audio_kind:kind, charged:false, estimated_cost:cost, title } }) });
+    await fetch(UG_URL, { method:"POST", headers:{ ...sb(), "Content-Type":"application/json", "Prefer":"return=minimal" }, body:JSON.stringify({ user_id:uid, provider:title, kind:"audio", prompt, result_url:null, meta:{ run_id, status:"processing", audio_kind:kind, charged:false, estimated_cost:cost, refund_amount:cost, title } }) });
   } catch(e){ console.warn("[run-audio] placeholder write failed", e); }
 }
 async function patchTaskMeta(uid, run_id, extraMeta){
@@ -266,7 +292,7 @@ async function isCharged(uid, run_id){
   return !!(meta && (meta.charged === true || meta.charged === "true"));
 }
 async function markCharged(uid, run_id, cost, taskId){
-  await patchTaskMeta(uid, run_id, { charged:true, charged_cost:cost, task_id:taskId });
+  await patchTaskMeta(uid, run_id, { charged:true, charged_cost:cost, refund_amount:cost, task_id:taskId });
 }
 function extractTaskId(data){
   if (!data || typeof data !== "object") return "";
