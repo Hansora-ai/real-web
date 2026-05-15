@@ -1,5 +1,5 @@
 // netlify/functions/run-image-tools.js
-// Submit Hansora Image Tools tasks to KIE: different-angles => gpt-image-2-image-to-image, expand => nano-banana-pro.
+// Submit Hansora Image Tools tasks to KIE: different-angles => gpt-image-2-image-to-image, expand/face-swap => nano-banana-pro.
 // Env: KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SITE_BASE
 
 const KIE_URL = "https://api.kie.ai/api/v1/jobs/createTask";
@@ -47,6 +47,17 @@ Ultra-detailed, photorealistic skin texture, realistic fabric texture, realistic
 
 const EXPAND_PROMPT = "Expand the canvas size of the provided image by generating new realistic content only outside the original image borders, while keeping the entire original uploaded image completely unchanged and untouched; do not edit, repaint, crop, stretch, resize, move, retouch, sharpen, smooth, recolor, relight, or modify anything that already exists inside the original frame; this is strictly an image expansion/outpainting task to make the image larger by naturally extending the surrounding scene, not creating a new version; preserve the subject exactly with the same identity, face, facial structure, expression, skin tone, natural skin texture, pores, hair, body, pose, clothing, accessories, lighting, shadows, camera angle, perspective, depth, colors, and photographic style; do not beautify the subject or make the face plastic, waxy, over-smoothed, AI-looking, younger, cleaner, or different in any way; only fill the newly added outer canvas area with realistic details that logically continue from the original image, perfectly matching the original background, environment, texture, lighting direction, shadow behavior, color balance, lens look, perspective, depth of field, and overall realism; the final result must look like the exact same real photo captured with a larger frame, with no visible seams between the original image and the expanded area; do not add text, logos, watermarks, random objects, extra people, duplicated body parts, repeated patterns, warped anatomy, distorted clothing, broken edges, mismatched lighting, or anything that does not naturally belong in the original scene.";
 
+const FACE_SWAP_PROMPT = `Use image 1 as the target photo and image 2 as the new face / identity reference. Create a realistic face swap result by replacing only the visible person's face and identity in image 1 with the person from image 2.
+
+Critical rules:
+Keep image 1 exactly the same everywhere except the face identity. Preserve the original target photo's body, pose, hands, clothing, accessories, background, camera angle, lens perspective, framing, composition, lighting direction, shadows, color grade, depth of field, and image quality.
+Use image 2 only as the identity and facial reference. Transfer the real facial structure, face shape, eyes, nose, lips, eyebrows, skin tone, age impression, natural asymmetry, and recognizable identity from image 2 into the target person in image 1.
+Make the result photorealistic and natural. Skin must have realistic pores, texture, fine detail, natural highlights, natural shadows, and believable color blending. Do not create plastic skin, waxy skin, over-smoothed skin, doll-like skin, airbrushed skin, fake AI texture, or an overly beautified face.
+Match the target photo lighting perfectly: the swapped face must follow the same light direction, contrast, shadow softness, color temperature, exposure, grain, sharpness, and perspective as image 1. The face must look physically present in the original photo, not pasted on.
+Keep the original facial expression, head angle, gaze direction, mouth position, and emotion from image 1 as much as possible while changing the identity to image 2. Blend the jawline, cheeks, forehead, ears, hairline, neck, and skin boundary naturally with no seams.
+Do not change the outfit, hair style, body shape, background, scene, framing, or any non-face area unless a tiny blend adjustment is required to make the face replacement realistic. Do not add text, logos, watermarks, extra people, duplicate faces, warped anatomy, distorted eyes, broken teeth, melted skin, mismatched hair, or mismatched lighting.
+Final output: one clean finished image, same composition as image 1, with only the character identity/face replaced by image 2 in a convincing high-end realistic face swap.`;
+
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return ok({});
   if (event.httpMethod !== "POST") return err(405, "Use POST");
@@ -67,6 +78,7 @@ exports.handler = async (event) => {
     if (!imageUrls.length) return ok({ submitted: false, error: "missing_image_url" });
     if (tool === "different_angles" && imageUrls.length > 2) return ok({ submitted: false, error: "different_angles_accepts_1_to_2_images" });
     if (tool === "expand" && imageUrls.length > 1) return ok({ submitted: false, error: "expand_accepts_1_image" });
+    if (tool === "face_swap" && imageUrls.length !== 2) return ok({ submitted: false, error: "face_swap_requires_target_and_face_images" });
 
     const run_id = String(body.run_id || body.runId || `${uid}-image-tools-${Date.now()}`).trim();
     const fileName = String(body.fileName || body.file_name || "uploaded-image").trim().slice(0, 180);
@@ -74,7 +86,7 @@ exports.handler = async (event) => {
     const aspectRatio = normalizeAspectRatio(body.aspectRatio || body.aspect_ratio || (tool === "different_angles" ? "16:9" : "auto"), tool);
     const resolution = "2K";
     const cost = FIXED_COST;
-    const prompt = tool === "different_angles" ? ANGLES_PROMPT : EXPAND_PROMPT;
+    const prompt = tool === "different_angles" ? ANGLES_PROMPT : tool === "face_swap" ? FACE_SWAP_PROMPT : EXPAND_PROMPT;
     const provider = tool === "different_angles" ? "gpt-image-2-image-to-image" : "nano-banana-pro";
     const kieModel = tool === "different_angles" ? "gpt-image-2-image-to-image" : "nano-banana-pro";
     const callBackUrl = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
@@ -134,7 +146,10 @@ exports.handler = async (event) => {
 
     if (!(await isCharged(uid, run_id))) {
       const debited = await debitCredits(uid, cost);
-      if (!debited) return ok({ submitted: false, error: "debit_failed", run_id, taskId });
+      if (!debited) {
+        await markCreateFailed(uid, run_id, "debit_failed", { taskId });
+        return ok({ submitted: false, error: "debit_failed", run_id, taskId });
+      }
       await markCharged(uid, run_id, cost, taskId);
     }
     await patchTaskMeta(uid, run_id, { task_id: taskId, status: "processing", kie_model: kiePayload.model });
@@ -146,6 +161,7 @@ exports.handler = async (event) => {
 
 function normalizeTool(value) {
   const s = String(value || "").toLowerCase().replace(/[-\s]+/g, "_");
+  if (s.includes("face") || s.includes("swap")) return "face_swap";
   if (s.includes("expand")) return "expand";
   return "different_angles";
 }
@@ -155,6 +171,7 @@ function normalizeImageUrls(value) {
 }
 function normalizeAspectRatio(value, tool) {
   if (tool === "different_angles") return "16:9";
+  if (tool === "face_swap") return "auto";
   const allowed = new Set(["auto", "1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "21:9"]);
   const s = String(value || "auto").trim();
   return allowed.has(s) ? s : "auto";
