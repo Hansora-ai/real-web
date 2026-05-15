@@ -70,6 +70,11 @@
     .voice-list,.language-list{max-height:220px; overflow-y:auto; padding-right:4px}
     .voice-option,.language-option{width:100%; display:block; text-align:left; border:0; background:transparent; color:#dbeafe; border-radius:12px; padding:9px 10px; font-size:13px}
     .voice-option:hover,.voice-option.active,.language-option:hover,.language-option.active{background:rgba(99,102,241,.18); color:#fff}
+
+    .cost-panel-hidden{display:none!important}
+    .audio-actions .get-btn{min-width:86px; justify-content:center; border:0; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; box-shadow:0 10px 24px rgba(99,102,241,.32)}
+    .file-name-safe{display:block; max-width:10ch; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    .file-meta-safe{display:block; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
     @media (max-width:900px){
       .desktop-grid{grid-template-columns:1fr!important}.sticky-side{position:static!important}.hero-title{font-size:34px!important}.model-card{min-height:132px}.compact-stack{grid-template-columns:1fr!important}
     }
@@ -92,7 +97,7 @@
           <p class="text-sm text-slate-300/80 leading-6 mb-5">Generate voices, clean noisy recordings, or create full music tracks in one clean workspace.</p>
           <div id="modelList" class="space-y-3"></div>
         </div>
-        <div class="panel rounded-[24px] p-4">
+        <div class="panel rounded-[24px] p-4 cost-panel-hidden">
           <p class="small-label mb-2">Current cost</p>
           <div class="flex items-center justify-between gap-3">
             <div>
@@ -227,9 +232,9 @@
             </section>
 
             <div id="errorBox" class="hidden rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100"></div>
-            <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between pt-1">
-              <p id="formHint" class="text-xs text-slate-400">Your API key stays server-side. Results appear below when the callback arrives.</p>
-              <button id="runBtn" type="submit" class="btn-brand rounded-2xl px-6 py-4 font-black min-w-[180px]">Create audio</button>
+            <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-end pt-1">
+              <p id="formHint" class="hidden"></p>
+              <button id="runBtn" type="submit" class="btn-brand rounded-2xl px-6 py-4 font-black min-w-[180px] sm:ml-auto">Create audio</button>
             </div>
           </form>
         </div>
@@ -480,7 +485,7 @@
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = `model-card w-full p-4 text-left min-h-[118px] ${m.id === currentModelId ? 'active' : ''}`;
-        btn.innerHTML = `<div class="relative z-10 flex items-start justify-between gap-3"><div><div class="text-3xl mb-3">${m.icon}</div><p class="text-lg font-black text-white">${m.title}</p><p class="text-xs text-slate-400 mt-1">${m.subtitle}</p></div><span class="chip ${m.id === currentModelId ? 'chip-active' : ''}">${modelBadgeCost(m)}</span></div>`;
+        btn.innerHTML = `<div class="relative z-10 flex items-start justify-between gap-3"><div><div class="text-3xl mb-3">${m.icon}</div><p class="text-lg font-black text-white">${m.title}</p><p class="text-xs text-slate-400 mt-1">${m.subtitle}</p></div></div>`;
         btn.addEventListener('click',()=>{ currentModelId = m.id; renderModels(); syncPanels(); });
         list.appendChild(btn);
       });
@@ -617,12 +622,21 @@
       if (m.id === 'voice') $('creditHint').textContent = `${voiceCharacterCount()} characters • 1 credit per 1000 characters.`;
       else if (m.id === 'isolation') $('creditHint').textContent = selectedAudioDurationSeconds ? `${formatDuration(selectedAudioDurationSeconds)} detected • rounded up by 30 seconds.` : '1 credit per minute. Upload audio so the page can read duration.';
       else $('creditHint').textContent = 'Suno music costs 1.5 credits per generation.';
+      const runBtn = $('runBtn');
+      if (runBtn && !runBtn.disabled) {
+        const label = m.id === 'isolation' ? 'Clean audio' : m.id === 'music' ? 'Create music' : 'Create voice';
+        runBtn.textContent = `${label} • ${formatCostNumber(cost)}⚡`;
+      }
     }
     function formatDuration(seconds){
       const total = Math.max(0, Math.round(Number(seconds || 0)));
       const m = Math.floor(total / 60);
       const s = total % 60;
       return `${m}:${String(s).padStart(2,'0')}`;
+    }
+    function shortFileName(name){
+      const clean = String(name || 'audio-file');
+      return clean.length > 10 ? `${clean.slice(0, 10)}....` : clean;
     }
 
     function syncPanels(){
@@ -632,7 +646,7 @@
       $('activeDescription').textContent = m.description;
       $('modelBadge').textContent = m.badge;
       updateCostUI();
-      $('runBtn').textContent = m.id === 'isolation' ? 'Clean audio' : m.id === 'music' ? 'Create music' : 'Create voice';
+      $('runBtn').textContent = `${m.id === 'isolation' ? 'Clean audio' : m.id === 'music' ? 'Create music' : 'Create voice'} • ${formatCostNumber(estimatedCostFor(m.id))}⚡`;
       $('voicePanel').classList.toggle('hidden', m.id !== 'voice');
       $('isolationPanel').classList.toggle('hidden', m.id !== 'isolation');
       $('musicPanel').classList.toggle('hidden', m.id !== 'music');
@@ -708,7 +722,8 @@
       $('audioFileInput').value = '';
       $('selectedFileBox').classList.toggle('hidden', !selectedAudioFile);
       if (selectedAudioFile) {
-        $('selectedFileName').textContent = selectedAudioFile.name;
+        $('selectedFileName').textContent = shortFileName(selectedAudioFile.name);
+        $('selectedFileName').title = selectedAudioFile.name;
         $('selectedFileSize').textContent = `${(selectedAudioFile.size / 1024 / 1024).toFixed(2)} MB • reading duration...`;
         $('dropTitle').textContent = 'File ready';
         $('dropMeta').textContent = 'Click to replace it, or press Remove below.';
@@ -722,6 +737,7 @@
         });
       } else {
         $('selectedFileName').textContent = '—';
+        $('selectedFileName').title = '';
         $('selectedFileSize').textContent = '—';
         $('dropTitle').textContent = 'Upload audio';
         $('dropMeta').textContent = 'Upload audio only. Video files are not accepted by KIE voice isolation.';
@@ -876,7 +892,8 @@
         showError(String(err.message || err));
       }finally{
         button.disabled = false;
-        button.textContent = oldText;
+        const finalModel = activeModel();
+        button.textContent = `${finalModel.id === 'isolation' ? 'Clean audio' : finalModel.id === 'music' ? 'Create music' : 'Create voice'} • ${formatCostNumber(estimatedCostFor(finalModel.id))}⚡`;
       }
     }
 
@@ -928,7 +945,7 @@
       const playerUrl = audioPlayerUrl(url);
       const label = index ? `Track ${index + 1}` : '';
       const downloadUrl = audioDownloadUrl(url, index ? `${name}-track-${index + 1}` : name);
-      return `<div class="mt-4"><div class="text-xs text-slate-400 mb-2">${escapeHtml(label)}</div><audio controls preload="metadata" data-base-src="${escapeHtml(url)}" src="${escapeHtml(playerUrl)}"></audio><div class="audio-actions mt-3"><a class="btn-soft rounded-full px-3 py-2 text-xs inline-flex" href="${escapeHtml(downloadUrl)}">Get</a></div></div>`;
+      return `<div class="mt-4"><div class="text-xs text-slate-400 mb-2">${escapeHtml(label)}</div><audio controls preload="metadata" data-base-src="${escapeHtml(url)}" src="${escapeHtml(playerUrl)}"></audio><div class="audio-actions mt-3"><a class="get-btn rounded-full px-5 py-2 text-xs font-bold inline-flex" href="${escapeHtml(downloadUrl)}">Get</a></div></div>`;
     }
     function renderAllAudioControls(urls, name){
       return (urls || []).map((url, index)=>renderAudioControls(url, name, index)).join('');
