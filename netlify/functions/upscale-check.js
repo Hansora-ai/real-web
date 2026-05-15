@@ -338,7 +338,7 @@ function isCallbackOrApiUrl(url) {
 }
 function isLikelyMediaUrl(url) {
   const lower = String(url || "").toLowerCase().split("?")[0].split("#")[0];
-  return /\.(png|jpe?g|webp|gif|mp4|mov|webm|m4v)$/i.test(lower) || lower.includes("tempfile.redpandaai.co") || lower.includes("storage.googleapis.com") || lower.includes("s3.") || lower.includes("r2.cloudflarestorage.com");
+  return /\.(png|jpe?g|webp|gif|mp4|mov|webm|m4v)$/i.test(lower) || lower.includes("tempfile.redpandaai.co") || lower.includes("tempfile.aiquickdraw.com") || lower.includes("aiquickdraw.com/workers/") || lower.includes("storage.googleapis.com") || lower.includes("s3.") || lower.includes("r2.cloudflarestorage.com");
 }
 function collectRawUrls(value) {
   const urls = [];
