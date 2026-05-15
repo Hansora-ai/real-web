@@ -1,5 +1,5 @@
 // netlify/functions/run-image-tools.js
-// Submit Hansora Image Tools tasks to KIE: different-angles => gpt-image-2, expand => nano-banana-pro.
+// Submit Hansora Image Tools tasks to KIE: different-angles => gpt-image-2-image-to-image, expand => nano-banana-pro.
 // Env: KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SITE_BASE
 
 const KIE_URL = "https://api.kie.ai/api/v1/jobs/createTask";
@@ -75,8 +75,8 @@ exports.handler = async (event) => {
     const resolution = "2K";
     const cost = FIXED_COST;
     const prompt = tool === "different_angles" ? ANGLES_PROMPT : EXPAND_PROMPT;
-    const provider = tool === "different_angles" ? "gpt-image-2" : "nano-banana-pro";
-    const kieModel = tool === "different_angles" ? "gpt-image-2" : "nano-banana-pro";
+    const provider = tool === "different_angles" ? "gpt-image-2-image-to-image" : "nano-banana-pro";
+    const kieModel = tool === "different_angles" ? "gpt-image-2-image-to-image" : "nano-banana-pro";
     const callBackUrl = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
 
     const existing = await getExistingTask(uid, run_id);
@@ -97,13 +97,19 @@ exports.handler = async (event) => {
     const kiePayload = {
       model: kieModel,
       callBackUrl,
-      input: {
-        prompt,
-        image_input: imageUrls,
-        aspect_ratio: aspectRatio,
-        resolution,
-        output_format: "png"
-      }
+      input: tool === "different_angles"
+        ? {
+            prompt,
+            input_urls: imageUrls,
+            aspect_ratio: aspectRatio
+          }
+        : {
+            prompt,
+            image_input: imageUrls,
+            aspect_ratio: aspectRatio,
+            resolution,
+            output_format: "png"
+          }
     };
 
     const resp = await fetch(KIE_URL, {
@@ -113,8 +119,18 @@ exports.handler = async (event) => {
     });
     const data = await resp.json().catch(() => ({}));
     const taskId = extractTaskId(data);
-    if (!resp.ok) return ok({ submitted: false, error: `kie_${resp.status}`, data, run_id });
-    if (!taskId) return ok({ submitted: false, error: "missing_taskId", data, run_id });
+    if (!resp.ok) {
+      await markCreateFailed(uid, run_id, `kie_${resp.status}`, data);
+      return ok({ submitted: false, error: `kie_${resp.status}`, data, run_id });
+    }
+    if (data && typeof data === "object" && data.code && Number(data.code) !== 200) {
+      await markCreateFailed(uid, run_id, data.msg || "kie_create_failed", data);
+      return ok({ submitted: false, error: "kie_create_failed", data, run_id });
+    }
+    if (!taskId) {
+      await markCreateFailed(uid, run_id, "missing_taskId", data);
+      return ok({ submitted: false, error: "missing_taskId", data, run_id });
+    }
 
     if (!(await isCharged(uid, run_id))) {
       const debited = await debitCredits(uid, cost);
@@ -197,6 +213,15 @@ async function patchTaskMeta(uid, run_id, extraMeta) {
     const meta = { ...(current && current.meta && typeof current.meta === "object" ? current.meta : {}), run_id, ...extraMeta };
     await fetch(`${UG_URL}?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`, { method: "PATCH", headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=minimal" }, body: JSON.stringify({ meta }) });
   } catch {}
+}
+async function markCreateFailed(uid, run_id, reason, data) {
+  await patchTaskMeta(uid, run_id, {
+    status: "failed",
+    failed: true,
+    error: reason,
+    kie_error: data || null,
+    failed_at: new Date().toISOString()
+  });
 }
 async function getRow(uid, run_id) {
   try {
