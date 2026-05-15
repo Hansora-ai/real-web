@@ -1,422 +1,225 @@
-// netlify/functions/upscale-check.js
-// Robust checker/refunder for Hansora Upscale KIE jobs.
-// Handles Nano Banana Pro image upscale and Topaz video upscale results.
-
-const VERSION_TAG = "upscale-check-robust-2026-05-15+multi-endpoint-jsonurl";
-
-const KIE_BASE = (process.env.KIE_BASE_URL || "https://api.kie.ai").replace(/\/+$/, "");
-const KIE_KEY = process.env.KIE_API_KEY || process.env.KIEAI_API_KEY || "";
-const SUPABASE_URL = process.env.SUPABASE_URL || "";
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const UG_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
-const PROFILES_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
-
-exports.handler = async (event) => {
-  try {
-    if (event.httpMethod === "OPTIONS") return json(204, {});
-    if (event.httpMethod === "POST") return await handlePost(event);
-    if (event.httpMethod !== "GET") return json(405, { ok: false, error: "Use GET or POST", version: VERSION_TAG });
-
-    const qs = event.queryStringParameters || {};
-    const ids = {
-      uid: String(qs.uid || "").trim(),
-      run_id: String(qs.run_id || qs.runId || "").trim(),
-      taskId: String(qs.taskId || qs.task_id || qs.id || "").trim()
-    };
-    const debug = qs.debug === "1" || qs.debug === "true";
-
-    const row = await findProcessingGeneration(ids);
-    if (!row) return json(200, { ok: false, status: "ignored", reason: "not_processing", version: VERSION_TAG });
-
-    ids.uid = ids.uid || row.user_id || "";
-    ids.run_id = ids.run_id || row.meta?.run_id || "";
-    ids.taskId = ids.taskId || row.meta?.task_id || row.meta?.taskId || "";
-
-    if (!ids.taskId) return json(200, { ok: false, status: "pending", error: "missing_task_id", version: VERSION_TAG });
-
-    const inputUrls = collectKnownInputUrls(row);
-    const state = await fetchKieState(ids.taskId, inputUrls, debug);
-
-    if (state.done && state.urls.length) {
-      await markDone({ row, ids, urls: state.urls });
-      return json(200, {
-        ok: true,
-        status: "done",
-        state: "succeeded",
-        result_url: state.urls[0],
-        image_url: state.urls[0],
-        video_url: state.urls[0],
-        urls: state.urls,
-        version: VERSION_TAG,
-        ...(debug ? { debug: state.debug || {} } : {})
-      });
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA • Upscale</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="/header.css" rel="stylesheet" />
+  <script defer src="/header.js"></script>
+  <script src="/kie-upload-bridge.js"></script>
+  <style>
+    :root{
+      --base-bg:#050714;
+      --base-line:#15182a;
+      --brand:#6366f1;
+      --brand-2:#8b5cf6;
+      --cyan:#38bdf8;
+      --muted:rgba(226,232,240,.66);
+      --card:rgba(15,23,42,.72);
     }
-
-    if (state.failed) {
-      const refund = await failAndRefundOnce({ row, ids, reason: state.error || "kie_failed" });
-      return json(200, {
-        ok: false,
-        failed: true,
-        status: "failed",
-        error: state.error || "kie_failed",
-        refunded: !!refund.refunded,
-        refund_amount: refund.amount || 0,
-        already_claimed: !!refund.already_claimed,
-        version: VERSION_TAG,
-        ...(debug ? { debug: state.debug || {} } : {})
-      });
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      color:#e5e7eb;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      background:
+        radial-gradient(1000px 560px at 15% -10%, rgba(99,102,241,.24), transparent 60%),
+        radial-gradient(900px 520px at 90% 8%, rgba(56,189,248,.15), transparent 56%),
+        radial-gradient(800px 560px at 50% 100%, rgba(139,92,246,.13), transparent 64%),
+        var(--base-bg);
     }
-
-    return json(200, { ok: false, status: "pending", version: VERSION_TAG, ...(debug ? { debug: state.debug || {} } : {}) });
-  } catch (error) {
-    return json(200, { ok: false, status: "error", error: messageOf(error), version: VERSION_TAG });
-  }
-};
-
-async function handlePost(event) {
-  const qs = event.queryStringParameters || {};
-  const body = safeJson(event.body);
-  const bodyIds = extractIds(body);
-  const ids = {
-    uid: String(qs.uid || bodyIds.uid || "").trim(),
-    run_id: String(qs.run_id || qs.runId || bodyIds.run_id || "").trim(),
-    taskId: String(qs.taskId || qs.task_id || qs.id || bodyIds.taskId || "").trim()
-  };
-
-  const row = await findProcessingGeneration(ids);
-  if (!row) return json(200, { ok: false, status: "ignored", reason: "not_processing", version: VERSION_TAG });
-
-  ids.uid = ids.uid || row.user_id || "";
-  ids.run_id = ids.run_id || row.meta?.run_id || "";
-  ids.taskId = ids.taskId || row.meta?.task_id || row.meta?.taskId || "";
-
-  const urls = collectResultUrls(body, collectKnownInputUrls(row));
-  if (urls.length) {
-    await markDone({ row, ids, urls });
-    return json(200, { ok: true, status: "done", result_url: urls[0], image_url: urls[0], video_url: urls[0], urls, version: VERSION_TAG });
-  }
-
-  const status = normalizeStatus(body);
-  if (status === "failed") {
-    const refund = await failAndRefundOnce({ row, ids, reason: failureReason(body) });
-    return json(200, { ok: false, failed: true, status: "failed", error: failureReason(body), refunded: !!refund.refunded, refund_amount: refund.amount || 0, version: VERSION_TAG });
-  }
-
-  return json(200, { ok: false, status: "pending", version: VERSION_TAG });
-}
-
-function cors() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "*",
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
-  };
-}
-function json(statusCode, body) {
-  return { statusCode, headers: { "Content-Type": "application/json", ...cors() }, body: statusCode === 204 ? "" : JSON.stringify(body) };
-}
-function sb() { return { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` }; }
-function safeJson(raw) { try { return JSON.parse(raw || "{}"); } catch { return {}; } }
-function messageOf(error) { return error && error.message ? error.message : String(error); }
-
-function extractIds(body) {
-  const meta = body?.meta || body?.metadata || body?.data?.meta || body?.data?.metadata || body?.result?.meta || {};
-  return {
-    uid: String(body?.uid || body?.user_id || body?.data?.uid || meta.uid || "").trim(),
-    run_id: String(body?.run_id || body?.runId || body?.data?.run_id || body?.data?.runId || meta.run_id || meta.runId || "").trim(),
-    taskId: String(body?.taskId || body?.task_id || body?.data?.taskId || body?.data?.task_id || body?.result?.taskId || body?.id || "").trim()
-  };
-}
-
-async function findProcessingGeneration(ids) {
-  if (!UG_URL || !SERVICE_KEY) return null;
-  const select = "select=id,user_id,provider,kind,result_url,meta,created_at";
-  const queries = [];
-  if (ids.uid && ids.run_id) {
-    queries.push(`?user_id=eq.${encodeURIComponent(ids.uid)}&kind=eq.upscale&meta->>run_id=eq.${encodeURIComponent(ids.run_id)}&${select}&limit=1`);
-    queries.push(`?user_id=eq.${encodeURIComponent(ids.uid)}&run_id=eq.${encodeURIComponent(ids.run_id)}&${select}&limit=1`);
-  }
-  if (ids.taskId) {
-    queries.push(`?kind=eq.upscale&meta->>task_id=eq.${encodeURIComponent(ids.taskId)}&${select}&limit=1`);
-    queries.push(`?kind=eq.upscale&meta->>taskId=eq.${encodeURIComponent(ids.taskId)}&${select}&limit=1`);
-  }
-
-  for (const query of queries) {
-    const res = await fetch(UG_URL + query, { headers: sb() });
-    const arr = await res.json().catch(() => []);
-    const row = Array.isArray(arr) ? arr[0] : null;
-    if (!row) continue;
-    if (row.result_url) return row;
-    const status = String(row.meta?.status || "").toLowerCase();
-    if (status === "processing" || status === "pending" || !status || status === "submitted") return row;
-  }
-  return null;
-}
-
-async function fetchKieState(taskId, excludeUrls = [], debug = false) {
-  if (!KIE_KEY) return { pending: true, error: "missing_kie_key" };
-
-  const attempts = [
-    { method: "GET", path: `/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}` },
-    { method: "GET", path: `/api/v1/jobs/getTask?taskId=${encodeURIComponent(taskId)}` },
-    { method: "POST", path: `/api/v1/jobs/getTask`, body: { taskId } },
-    { method: "GET", path: `/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}` },
-    { method: "GET", path: `/api/v1/jobs/getResult?taskId=${encodeURIComponent(taskId)}` },
-    { method: "GET", path: `/api/v1/jobs/result?taskId=${encodeURIComponent(taskId)}` },
-    { method: "GET", path: `/api/v1/jobs/getTaskDetails?taskId=${encodeURIComponent(taskId)}` }
-  ];
-
-  const debugTries = [];
-  let sawFinalFailed = false;
-  let failReason = "";
-
-  for (const attempt of attempts) {
-    const result = await fetchJsonAny(attempt.method, KIE_BASE + attempt.path, attempt.body);
-    debugTries.push({ method: attempt.method, path: attempt.path, status: result.status, ok: result.ok, urls: collectRawUrls(result.data).slice(0, 5) });
-
-    const urls = collectResultUrls(result.data, excludeUrls);
-    if (urls.length) return { done: true, urls, debug: debug ? { attempts: debugTries } : undefined };
-
-    const jsonUrl = pickJsonUrl(result.data);
-    if (jsonUrl) {
-      const nested = await fetchNestedResultJson(jsonUrl, excludeUrls);
-      debugTries[debugTries.length - 1].jsonUrl = jsonUrl;
-      debugTries[debugTries.length - 1].nestedUrls = nested.urls.slice(0, 5);
-      if (nested.urls.length) return { done: true, urls: nested.urls, debug: debug ? { attempts: debugTries } : undefined };
+    button,input,select{font:inherit}
+    .page-shell{max-width:1180px;margin:0 auto;padding:32px 18px 42px}
+    .hero{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:22px;align-items:start}
+    .glass,.panel{
+      border:1px solid rgba(255,255,255,.10);
+      background:linear-gradient(180deg,rgba(15,23,42,.86),rgba(2,6,23,.78));
+      backdrop-filter:blur(18px);
+      -webkit-backdrop-filter:blur(18px);
+      box-shadow:0 22px 70px rgba(0,0,0,.45);
     }
-
-    const status = normalizeStatus(result.data);
-    if (status === "failed" && isFinalFailurePayload(result.data)) {
-      sawFinalFailed = true;
-      failReason = failReason || failureReason(result.data);
+    .pill{
+      border:1px solid rgba(148,163,184,.32);
+      background:rgba(15,23,42,.65);
+      border-radius:999px;
+      color:#dbeafe;
     }
-  }
-
-  if (sawFinalFailed) return { failed: true, error: failReason || "kie_failed", debug: debug ? { attempts: debugTries } : undefined };
-  return { pending: true, debug: debug ? { attempts: debugTries } : undefined };
-}
-
-async function fetchJsonAny(method, url, body) {
-  try {
-    const res = await fetch(url, {
-      method,
-      headers: { Accept: "application/json", Authorization: `Bearer ${KIE_KEY}`, ...(method === "POST" ? { "Content-Type": "application/json" } : {}) },
-      body: body ? JSON.stringify(body) : undefined
-    });
-    const text = await res.text();
-    let data;
-    try { data = JSON.parse(text); } catch { data = { raw: text }; }
-    return { ok: res.ok, status: res.status, data, text };
-  } catch (error) {
-    return { ok: false, status: 0, data: { error: messageOf(error) }, text: "" };
-  }
-}
-
-async function fetchNestedResultJson(jsonUrl, excludeUrls) {
-  try {
-    const res = await fetch(jsonUrl);
-    const text = await res.text();
-    let data;
-    try { data = JSON.parse(text); } catch { data = { raw: text }; }
-    return { urls: collectResultUrls(data, excludeUrls), data };
-  } catch {
-    return { urls: [] };
-  }
-}
-
-async function markDone({ row, ids, urls }) {
-  if (!UG_URL || !SERVICE_KEY) return;
-  const meta = {
-    ...(row.meta && typeof row.meta === "object" ? row.meta : {}),
-    run_id: ids.run_id || row.meta?.run_id || "",
-    task_id: ids.taskId || row.meta?.task_id || row.meta?.taskId || "",
-    status: "done",
-    result_urls: urls,
-    completed_at: new Date().toISOString()
-  };
-  await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
-    method: "PATCH",
-    headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=minimal" },
-    body: JSON.stringify({ result_url: urls[0], meta })
-  });
-}
-
-async function failAndRefundOnce({ row, ids, reason }) {
-  const meta = row.meta && typeof row.meta === "object" ? row.meta : {};
-  const amount = Number(meta.refund_amount || meta.charged_cost || 0);
-  const failedMeta = {
-    ...meta,
-    run_id: ids.run_id || meta.run_id || "",
-    task_id: ids.taskId || meta.task_id || meta.taskId || "",
-    status: "failed",
-    failed: true,
-    error: reason,
-    failed_at: new Date().toISOString()
-  };
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    await patchGeneration(row.id, { meta: { ...failedMeta, refund_skipped_reason: "missing_refund_amount" } });
-    return { refunded: false, amount: 0, reason: "missing_refund_amount" };
-  }
-
-  const claim = `r_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-  const claimMeta = { ...failedMeta, refund_claim: claim };
-  const claimRes = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}&result_url=is.null&meta->>refunded=is.null&meta->>refund_claim=is.null&select=id`, {
-    method: "PATCH",
-    headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=representation" },
-    body: JSON.stringify({ result_url: null, meta: claimMeta })
-  });
-  const claimed = await claimRes.json().catch(() => []);
-  if (!claimRes.ok || !Array.isArray(claimed) || !claimed.length) return { refunded: false, amount, already_claimed: true };
-
-  const profileRes = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(row.user_id)}&select=credits&limit=1`, { headers: sb() });
-  const profiles = await profileRes.json().catch(() => []);
-  const currentCredits = Number(Array.isArray(profiles) && profiles[0] ? profiles[0].credits : 0);
-  const nextCredits = Math.round((currentCredits + amount) * 100) / 100;
-  const updateRes = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(row.user_id)}`, {
-    method: "PATCH",
-    headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=minimal" },
-    body: JSON.stringify({ credits: nextCredits })
-  });
-
-  if (!updateRes.ok) {
-    await patchGeneration(row.id, { meta: { ...claimMeta, refund_error: "profile_refund_failed" } });
-    return { refunded: false, amount, error: "profile_refund_failed" };
-  }
-
-  await patchGeneration(row.id, { meta: { ...claimMeta, refunded: true, refunded_cost: amount, refunded_at: new Date().toISOString() } });
-  return { refunded: true, amount, credits: nextCredits };
-}
-
-async function patchGeneration(id, payload) {
-  const res = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=minimal" },
-    body: JSON.stringify(payload)
-  });
-  return res.ok;
-}
-
-function normalizeStatus(value) {
-  const flag = value?.data?.successFlag ?? value?.successFlag ?? value?.result?.successFlag;
-  if (flag === 1 || flag === "1") return "done";
-  if (flag === 2 || flag === "2" || flag === 3 || flag === "3") return "failed";
-  const text = [];
-  collectStatusText(value, text);
-  const joined = text.join(" ").toLowerCase();
-  if (/(success|succeeded|completed|complete|finish|finished|done)/.test(joined)) return "done";
-  if (/(fail|failed|failure|errored|cancel|canceled|cancelled|rejected|moderation|blocked|sensitive|flagged)/.test(joined)) return "failed";
-  return "pending";
-}
-function collectStatusText(value, out) {
-  if (!value || out.length > 80) return;
-  if (typeof value === "string") {
-    if (/fail|error|success|complete|finish|done|pending|process|cancel|reject|blocked|moderation|sensitive|flag/i.test(value)) out.push(value);
-    return;
-  }
-  if (Array.isArray(value)) { for (const item of value) collectStatusText(item, out); return; }
-  if (typeof value === "object") {
-    for (const key of ["status", "state", "message", "msg", "error", "reason", "description"]) if (value[key] != null) collectStatusText(value[key], out);
-    for (const key of ["data", "result", "response", "task", "job"]) if (value[key]) collectStatusText(value[key], out);
-  }
-}
-function isFinalFailurePayload(value) {
-  const flag = value?.data?.successFlag ?? value?.successFlag ?? value?.result?.successFlag;
-  if (flag === 2 || flag === "2" || flag === 3 || flag === "3") return true;
-  const explicit = String(value?.data?.status || value?.status || value?.result?.status || value?.data?.state || value?.state || "").toLowerCase();
-  return /^(failed|failure|error|errored|cancelled|canceled|rejected)$/.test(explicit);
-}
-function failureReason(value) {
-  return String(value?.error || value?.message || value?.msg || value?.data?.error || value?.data?.message || value?.data?.msg || value?.data?.reason || value?.result?.error || value?.result?.message || "kie_failed");
-}
-
-function normalizeComparableUrl(url) { return String(url || "").replace(/[)"'\\\]}]+$/g, "").trim(); }
-function isUrl(url) { return typeof url === "string" && /^https?:\/\//i.test(url); }
-function isCallbackOrApiUrl(url) {
-  const lower = String(url || "").toLowerCase();
-  return lower.includes("callback") || lower.includes("/.netlify/functions/run-upscale") || lower.includes("/.netlify/functions/upscale-check") || lower.includes("/.netlify/functions/upscale-kie-callback") || lower.includes("api.kie.ai/api/");
-}
-function isLikelyMediaUrl(url) {
-  const lower = String(url || "").toLowerCase().split("?")[0].split("#")[0];
-  return /\.(png|jpe?g|webp|gif|mp4|mov|webm|m4v)$/i.test(lower) || lower.includes("tempfile.redpandaai.co") || lower.includes("storage.googleapis.com") || lower.includes("s3.") || lower.includes("r2.cloudflarestorage.com");
-}
-function collectRawUrls(value) {
-  const urls = [];
-  const seen = new Set();
-  function walk(x, depth = 0) {
-    if (!x || depth > 8) return;
-    if (typeof x === "string") {
-      const matches = x.match(/https?:\/\/[^\s"'<>]+/gi);
-      if (matches) matches.forEach((u) => { const clean = normalizeComparableUrl(u); if (isUrl(clean) && !seen.has(clean)) { seen.add(clean); urls.push(clean); } });
-      return;
+    .pill.active{
+      border-color:transparent;
+      color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      box-shadow:0 14px 34px rgba(99,102,241,.30);
     }
-    if (Array.isArray(x)) { x.forEach((v) => walk(v, depth + 1)); return; }
-    if (typeof x === "object") Object.values(x).forEach((v) => walk(v, depth + 1));
-  }
-  walk(value);
-  return urls;
-}
-function collectKnownInputUrls(row) {
-  const meta = row?.meta && typeof row.meta === "object" ? row.meta : {};
-  const urls = [];
-  const keys = ["input_url", "file_url", "image_url", "video_url", "source_url", "uploaded_url"];
-  for (const key of keys) if (typeof meta[key] === "string") urls.push(normalizeComparableUrl(meta[key]));
-  return urls.filter(Boolean);
-}
-function pickJsonUrl(value) {
-  if (!value || typeof value !== "object") return "";
-  const keys = ["jsonUrl", "jsonurl", "json_url", "resultJson", "result_json"];
-  const stack = [value];
-  const seen = new Set();
-  while (stack.length) {
-    const item = stack.pop();
-    if (!item || typeof item !== "object" || seen.has(item)) continue;
-    seen.add(item);
-    for (const key of keys) if (isUrl(item[key])) return normalizeComparableUrl(item[key]);
-    for (const child of Object.values(item)) if (child && typeof child === "object") stack.push(child);
-  }
-  return "";
-}
-function collectResultUrls(value, excludeUrls = []) {
-  const urls = [];
-  const seen = new Set();
-  const excluded = new Set(excludeUrls.map(normalizeComparableUrl).filter(Boolean));
-  const outputKeys = new Set([
-    "video_url", "videoUrl", "image_url", "imageUrl", "result_url", "resultUrl", "result_urls", "resultUrls", "fullResultUrls", "full_result_urls",
-    "resultImageUrl", "result_image_url", "url", "download_url", "downloadUrl", "media_url", "mediaUrl", "asset_url", "assetUrl", "file", "output", "outputs",
-    "images", "image_urls", "imageUrls", "videos", "video_urls", "videoUrls", "urls", "files", "file_url", "fileUrl", "file_urls", "fileUrls", "generate_url", "generateUrl"
-  ]);
-  const containerKeys = new Set(["data", "result", "results", "response", "info", "task_result", "taskResult", "output", "outputs"]);
-  const blockedKeys = /(^|_)(input|inputs|reference|references|source|first|last|tail|start|end|frame|frames|request|payload|params|parameters|meta|metadata|callback)(_|$)/i;
-
-  function push(url, trusted = false) {
-    if (!isUrl(url)) return;
-    const clean = normalizeComparableUrl(url);
-    if (!clean || excluded.has(clean) || seen.has(clean) || isCallbackOrApiUrl(clean)) return;
-    if (!trusted && !isLikelyMediaUrl(clean)) return;
-    seen.add(clean);
-    urls.push(clean);
-  }
-  function walk(x, depth = 0, trusted = false) {
-    if (!x || depth > 8 || urls.length >= 8) return;
-    if (typeof x === "string") {
-      const parsed = safeJson(x);
-      if (parsed && typeof parsed === "object" && Object.keys(parsed).length) { walk(parsed, depth + 1, trusted); return; }
-      if (!trusted && !isLikelyMediaUrl(x)) return;
-      const matches = x.match(/https?:\/\/[^\s"'<>]+/gi);
-      if (matches) matches.forEach((u) => push(u, trusted));
-      return;
+    .pill:disabled{
+      opacity:.34;
+      cursor:not-allowed;
+      filter:saturate(.45);
+      background:rgba(15,23,42,.38);
+      border-color:rgba(148,163,184,.16);
+      box-shadow:none;
     }
-    if (Array.isArray(x)) { for (const item of x) walk(item, depth + 1, trusted || depth === 0); return; }
-    if (typeof x === "object") {
-      for (const [rawKey, child] of Object.entries(x)) {
-        const key = String(rawKey || "");
-        const nextTrusted = trusted || outputKeys.has(key);
-        if (!nextTrusted && !trusted && blockedKeys.test(key)) continue;
-        if (nextTrusted || containerKeys.has(key)) walk(child, depth + 1, nextTrusted);
-      }
+    .btn-main{
+      border:0;
+      color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      border-radius:20px;
+      box-shadow:0 18px 40px rgba(99,102,241,.36);
     }
-  }
-  walk(value);
-  return urls.slice(0, 8);
-}
+    .btn-main:disabled{opacity:.55;cursor:not-allowed}
+    .btn-soft{border:1px solid rgba(148,163,184,.28);background:rgba(15,23,42,.72);color:#e5e7eb;border-radius:999px}
+    .btn-soft:hover{border-color:rgba(129,140,248,.82);background:rgba(15,23,42,.9)}
+    .field{width:100%;border:1px solid rgba(148,163,184,.22);background:rgba(2,6,23,.58);outline:none;border-radius:18px;padding:13px 14px;color:#fff}
+    .field:focus{border-color:rgba(129,140,248,.9);box-shadow:0 0 0 4px rgba(99,102,241,.16)}
+    .small-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:rgba(226,232,240,.58);font-weight:850}
+    .drop{
+      min-height:300px;
+      border:1px dashed rgba(148,163,184,.34);
+      border-radius:30px;
+      background:rgba(2,6,23,.48);
+      display:grid;
+      place-items:center;
+      text-align:center;
+      padding:24px;
+      cursor:pointer;
+      transition:.18s ease;
+    }
+    .drop.drag{border-color:#a78bfa;background:rgba(99,102,241,.16);transform:translateY(-2px)}
+    .preview{border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,.10);background:rgba(2,6,23,.58)}
+    .preview img,.preview video{width:100%;max-height:330px;object-fit:contain;background:rgba(2,6,23,.82);display:block}
+    .safe-name{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .result-card{border:1px solid rgba(255,255,255,.10);background:rgba(15,23,42,.68);border-radius:22px;overflow:hidden}
+    .status-dot{width:9px;height:9px;border-radius:999px;background:#fbbf24;box-shadow:0 0 0 5px rgba(251,191,36,.14)}
+    .status-dot.ready{background:#86efac;box-shadow:0 0 0 5px rgba(134,239,172,.14)}
+    .status-dot.failed{background:#f87171;box-shadow:0 0 0 5px rgba(248,113,113,.14)}
+    .result-media{width:100%;height:190px;background:rgba(2,6,23,.58);display:grid;place-items:center;overflow:hidden}
+    .result-media img,.result-media video{width:100%;height:100%;object-fit:contain}
+    .get-btn{display:inline-flex;min-width:96px;justify-content:center;align-items:center;padding:10px 18px;border-radius:999px;color:#fff;background:linear-gradient(135deg,#7c3aed,#6366f1);font-size:12px;font-weight:900}
+    .mobile-bottom-space{height:0}
+    @media(max-width:900px){.page-shell{padding:18px 12px 28px}.hero{grid-template-columns:1fr}.drop{min-height:240px}.mobile-bottom-space{height:70px}.safe-name{max-width:240px}.desktop-title{font-size:42px!important}}
+    @media(max-width:430px){.safe-name{max-width:180px}.controls-grid{grid-template-columns:1fr!important}.run-row{justify-content:stretch!important}.run-row button{width:100%}}
+  </style>
+</head>
+<body>
+  <div id="sharedHeader"></div>
+  <main class="page-shell">
+    <section class="hero">
+      <div class="glass rounded-[34px] p-6 sm:p-8">
+        <div class="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <p class="small-label">Hansora Upscale</p>
+            <h1 class="desktop-title text-5xl font-black tracking-tight leading-none mt-2">Make it sharper</h1>
+            <p class="text-slate-300/80 mt-4 max-w-2xl">Upload one image or video.</p>
+          </div>
+        </div>
+        <input id="mediaInput" type="file" accept="image/*,video/*" class="hidden" />
+        <div id="dropZone" class="drop">
+          <div id="dropEmpty">
+            <div class="mx-auto h-16 w-16 rounded-3xl bg-indigo-100 text-indigo-700 grid place-items-center text-3xl mb-4">⬆️</div>
+            <h2 class="text-2xl font-black">Upload image or video</h2>
+            <p class="text-sm text-slate-400 mt-2">One image or video</p>
+          </div>
+          <div id="previewWrap" class="hidden w-full">
+            <div id="previewBox" class="preview mb-4"></div>
+            <div class="flex items-center justify-between gap-3 text-left">
+              <div class="min-w-0">
+                <p id="fileName" class="safe-name font-black">—</p>
+                <p id="fileMeta" class="text-xs text-slate-400 mt-1">—</p>
+              </div>
+              <button id="removeFileBtn" type="button" class="btn-soft px-4 py-2 text-sm shrink-0">Remove</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <aside class="space-y-4">
+        <div class="panel rounded-[30px] p-5">
+          <p class="small-label mb-3">Mode</p>
+          <div class="grid grid-cols-2 gap-2 mb-5">
+            <button id="imageModeBtn" type="button" class="pill active px-4 py-3 font-bold">Image</button>
+            <button id="videoModeBtn" type="button" class="pill px-4 py-3 font-bold">Video</button>
+          </div>
+          <div id="imageControls" class="space-y-4">
+            <div>
+              <p class="small-label mb-2">Output size</p>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" data-image-resolution="2K" class="pill active px-4 py-3 font-bold">2K</button>
+                <button type="button" data-image-resolution="4K" class="pill px-4 py-3 font-bold">4K</button>
+              </div>
+            </div>
+          </div>
+          <div id="videoControls" class="hidden space-y-4">
+            <div>
+              <p class="small-label mb-2">Scale</p>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" data-video-scale="2" class="pill active px-4 py-3 font-bold">2×</button>
+                <button type="button" data-video-scale="4" class="pill px-4 py-3 font-bold">4×</button>
+              </div>
+            </div>
+          </div>
+          <form id="upscaleForm" class="mt-5 space-y-3">
+            <div id="errorBox" class="hidden rounded-2xl border border-red-400/30 bg-red-500/10 text-red-100 px-4 py-3 text-sm"></div>
+            <button id="runBtn" type="submit" class="btn-main w-full px-8 py-4 font-black">Upscale • —⚡</button>
+          </form>
+        </div>
+        <div class="hidden" aria-hidden="true">
+          <p id="costText">—</p>
+          <p id="costHint">Upload a file to calculate exact cost.</p>
+        </div>
+      </aside>
+    </section>
+    <section class="panel rounded-[30px] p-5 sm:p-6 mt-5">
+      <div class="flex items-center justify-between gap-3 mb-4"><div><p class="small-label">History</p><h3 class="text-xl font-black mt-1">Recent upscales</h3></div><button id="refreshResultsBtn" class="btn-soft px-4 py-2 text-sm" type="button">Refresh</button></div>
+      <div id="resultsList" class="grid md:grid-cols-3 gap-3"></div>
+      <div id="emptyResults" class="rounded-2xl border border-dashed border-white/14 p-8 text-center text-slate-400">No upscale generations yet.</div>
+    </section>
+    <div class="mobile-bottom-space"></div>
+  </main>
+<script>
+  const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+  const supabaseClient = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  window.__HANSORA_SB__ = supabaseClient; window.hansoraSupabase = supabaseClient;
+  const $ = (id)=>document.getElementById(id);
+  let currentUser=null,currentCredits=0,selectedFile=null,selectedKind='image',imageResolution='2K',videoScale='2',videoDuration=0,pollTimer=null;
+  const IMAGE_PROMPT = 'Upscale and enhance this image with Nano Banana Pro. Preserve the original composition, identity, colors, and style. Improve resolution, natural detail, texture clarity, edge sharpness, lighting balance, and overall quality. Do not add new objects, text, logos, watermarks, or change the subject.';
+  function parseCredits(value){const n=Number(String(value??'').replace(/[^\d.-]/g,''));return Number.isFinite(n)?n:0}
+  function formatCredit(n){n=Number(n||0);return Number.isInteger(n)?String(n):n.toFixed(1).replace(/\.0$/,'')}
+  function setCreditsEverywhere(value){currentCredits=parseCredits(value);document.querySelectorAll('#navCredits').forEach(n=>{n.textContent=`${formatCredit(currentCredits)}⚡`});if(window.HansoraHeader&&typeof window.HansoraHeader.setCredits==='function')window.HansoraHeader.setCredits(currentCredits)}
+  function getVisibleHeaderCredits(){let best=0;document.querySelectorAll('#navCredits').forEach(n=>{best=Math.max(best,parseCredits(n.textContent||''))});return best}
+  function getSharedHeaderCredits(){try{return window.HansoraHeader&&typeof window.HansoraHeader.getCurrentCredits==='function'?parseCredits(window.HansoraHeader.getCurrentCredits()):0}catch{return 0}}
+  async function readSupabaseCredits(){const {data:{user}}=await supabaseClient.auth.getUser();if(!user)return{user:null,credits:0};const {data:profile,error}=await supabaseClient.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(error)throw error;return{user,credits:parseCredits(profile&&profile.credits)}}
+  async function getAvailableCredits(required=0){const localBest=Math.max(getSharedHeaderCredits(),getVisibleHeaderCredits(),parseCredits(currentCredits));if(localBest>=Number(required||0))return localBest;try{const r=await readSupabaseCredits();if(r.user){currentUser=r.user;setCreditsEverywhere(r.credits)}return Math.max(localBest,parseCredits(r.credits))}catch(e){console.warn(e)}return localBest}
+  async function refreshCredits(){try{const r=await readSupabaseCredits();if(r.user){currentUser=r.user;setCreditsEverywhere(r.credits)}}catch(e){console.warn(e)}return currentCredits}
+  function showError(msg){$('errorBox').textContent=msg;$('errorBox').classList.remove('hidden')}
+  function clearError(){$('errorBox').textContent='';$('errorBox').classList.add('hidden')}
+  function isImage(file){return String(file&&file.type||'').startsWith('image/')||/\.(png|jpe?g|webp)$/i.test(String(file&&file.name||''))}
+  function isVideo(file){return String(file&&file.type||'').startsWith('video/')||/\.(mp4|mov|webm|m4v)$/i.test(String(file&&file.name||''))}
+  function formatDuration(seconds){const total=Math.max(0,Math.round(Number(seconds||0)));return `${Math.floor(total/60)}:${String(total%60).padStart(2,'0')}`}
+  function estimateCost(){if(selectedKind==='image')return imageResolution==='4K'?3:2;const seconds=Math.max(0,videoDuration||0);if(!seconds)return videoScale==='4'?1:0.7;return Math.ceil(seconds)*(videoScale==='4'?1:0.7)}
+  function updateCostUI(){const cost=estimateCost();$('costText').textContent=`${formatCredit(cost)} ${cost===1?'credit':'credits'}`;$('runBtn').textContent=`Upscale • ${formatCredit(cost)}⚡`;if(selectedKind==='image')$('costHint').textContent=`Image ${imageResolution} upscale.`;else $('costHint').textContent=videoDuration?`${formatDuration(videoDuration)} detected • ${videoScale}× video upscale.`:`Video price uses real duration.`}
+  function selectedFileKind(){if(!selectedFile)return '';return isVideo(selectedFile)?'video':isImage(selectedFile)?'image':''}
+  function updateModeAvailability(){const locked=selectedFileKind();$('imageModeBtn').disabled=locked==='video';$('videoModeBtn').disabled=locked==='image';}
+  function syncMode(kind){const locked=selectedFileKind();if(locked&&kind!==locked)kind=locked;selectedKind=kind;$('imageModeBtn').classList.toggle('active',kind==='image');$('videoModeBtn').classList.toggle('active',kind==='video');$('imageControls').classList.toggle('hidden',kind!=='image');$('videoControls').classList.toggle('hidden',kind!=='video');updateModeAvailability();updateCostUI()}
+  function readVideoDuration(file){return new Promise(resolve=>{try{const url=URL.createObjectURL(file);const v=document.createElement('video');v.preload='metadata';v.onloadedmetadata=()=>{const d=Number(v.duration||0);URL.revokeObjectURL(url);resolve(Number.isFinite(d)?d:0)};v.onerror=()=>{URL.revokeObjectURL(url);resolve(0)};v.src=url}catch{resolve(0)}})}
+  function shortName(name){const s=String(name||'file');return s.length>22?s.slice(0,10)+'....'+s.slice(-8):s}
+  async function setFile(file){clearError();selectedFile=file||null;videoDuration=0;if(!selectedFile){$('previewWrap').classList.add('hidden');$('dropEmpty').classList.remove('hidden');updateModeAvailability();updateCostUI();return}if(!isImage(selectedFile)&&!isVideo(selectedFile)){selectedFile=null;updateModeAvailability();showError('Upload one image or one video.');return}if(isVideo(selectedFile)&&selectedFile.size>50*1024*1024){selectedFile=null;updateModeAvailability();showError('Video must be under 50MB.');return}selectedKind=isVideo(selectedFile)?'video':'image';syncMode(selectedKind);$('dropEmpty').classList.add('hidden');$('previewWrap').classList.remove('hidden');$('fileName').textContent=shortName(selectedFile.name);$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} MB • reading...`;const url=URL.createObjectURL(selectedFile);$('previewBox').innerHTML=isVideo(selectedFile)?`<video src="${url}" controls muted playsinline></video>`:`<img src="${url}" alt="preview" />`;if(isVideo(selectedFile)){videoDuration=await readVideoDuration(selectedFile);if(videoDuration<4||videoDuration>30){showError('Video duration must be from 4 to 30 seconds.');}$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} MB • video • ${formatDuration(videoDuration)}`;}else{$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} MB • image`;}updateCostUI()}
+  function wireUpload(){const input=$('mediaInput'),drop=$('dropZone');drop.addEventListener('click',(e)=>{if(e.target.closest('#removeFileBtn'))return;input.click()});input.addEventListener('change',()=>setFile(input.files&&input.files[0]));['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>setFile(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]));$('removeFileBtn').addEventListener('click',e=>{e.stopPropagation();input.value='';setFile(null)})}
+  function wireControls(){$('imageModeBtn').addEventListener('click',()=>syncMode('image'));$('videoModeBtn').addEventListener('click',()=>syncMode('video'));document.querySelectorAll('[data-image-resolution]').forEach(b=>b.addEventListener('click',()=>{imageResolution=b.dataset.imageResolution;document.querySelectorAll('[data-image-resolution]').forEach(x=>x.classList.toggle('active',x===b));updateCostUI()}));document.querySelectorAll('[data-video-scale]').forEach(b=>b.addEventListener('click',()=>{videoScale=b.dataset.videoScale;document.querySelectorAll('[data-video-scale]').forEach(x=>x.classList.toggle('active',x===b));updateCostUI()}))}
+  async function ensureUser(){const {data:{user}}=await supabaseClient.auth.getUser();currentUser=user||null;if(!currentUser)throw new Error('Please log in first.');return currentUser}
+  async function submit(e){e.preventDefault();clearError();const btn=$('runBtn'),old=btn.textContent;try{const user=await ensureUser();if(!selectedFile)throw new Error('Please upload one image or video first.');if(selectedKind==='video'){if(selectedFile.size>50*1024*1024)throw new Error('Video must be under 50MB.');if(videoDuration<4||videoDuration>30)throw new Error('Video duration must be from 4 to 30 seconds.')}const cost=estimateCost();const available=await getAvailableCredits(cost);if(available<cost)throw new Error(`Not enough credits. This needs ${formatCredit(cost)} credits.`);if(!window.kieUploadBridge||typeof window.kieUploadBridge.upload!=='function')throw new Error('upload_bridge_missing');const session=await supabaseClient.auth.getSession();const token=session?.data?.session?.access_token||'';if(!token)throw new Error('Please log in again.');btn.disabled=true;btn.textContent='Uploading...';const uploaded=await window.kieUploadBridge.upload(selectedFile);if(!uploaded||!uploaded.publicUrl)throw new Error('upload_failed');const runId=`${user.id}-upscale-${Date.now()}`;const body={uid:user.id,run_id:runId,kind:selectedKind,fileUrl:uploaded.publicUrl,fileName:selectedFile.name,fileType:selectedFile.type,durationSeconds:videoDuration,imageResolution,videoScale,prompt:IMAGE_PROMPT};addPending(runId);btn.textContent='Submitting...';const resp=await fetch('/.netlify/functions/run-upscale',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify(body)});const data=await resp.json().catch(()=>({}));if(!data.submitted)throw new Error(data.error||'submit_failed');await refreshCredits();if(window.HansoraHeader&&typeof window.HansoraHeader.startCreditsPolling==='function')window.HansoraHeader.startCreditsPolling(90000,1500);startPolling()}catch(err){showError(String(err.message||err))}finally{btn.disabled=false;btn.textContent=old;updateCostUI()}}
+  function addPending(runId){$('emptyResults').classList.add('hidden');const div=document.createElement('div');div.className='result-card p-4';div.dataset.runId=runId;div.innerHTML='<div class="flex items-start justify-between gap-3"><div><p class="font-black">Upscale</p><p class="text-xs text-slate-400 mt-1">Processing...</p></div><span class="status-dot"></span></div><div class="mt-4 rounded-2xl bg-slate-950/55 border border-white/10 p-4 text-sm text-slate-300">Processing...</div>';$('resultsList').prepend(div)}
+  function isUsableUrl(url){const v=String(url||'').trim().toLowerCase();return /^https?:\/\//.test(v)&&!v.includes('callback')}
+  function collectUrls(row){const meta=row.meta||{};const arr=[];if(row.result_url)arr.push(row.result_url);if(meta.result_url)arr.push(meta.result_url);if(Array.isArray(meta.result_urls))arr.push(...meta.result_urls);if(Array.isArray(meta.urls))arr.push(...meta.urls);return [...new Set(arr.filter(isUsableUrl))]}
+  function downloadUrl(url,name){return `/.netlify/functions/upscale-download?url=${encodeURIComponent(url)}&name=${encodeURIComponent((name||'hansora-upscale').replace(/[^a-z0-9._-]+/gi,'-').slice(0,80))}`}
+  async function loadRecentHistory(){if(!currentUser)return;const {data,error}=await supabaseClient.from('user_generations').select('provider,kind,prompt,result_url,meta,created_at').eq('user_id',currentUser.id).eq('kind','upscale').order('created_at',{ascending:false}).limit(12);if(error)return;const rows=data||[];$('resultsList').innerHTML='';$('emptyResults').classList.toggle('hidden',rows.length>0);rows.forEach(row=>{const meta=row.meta||{},urls=collectUrls(row),url=urls[0]||'',type=String(meta.media_type||'image'),status=url?'ready':String(meta.status||'processing'),name=type==='video'?'Video Upscale':'Image Upscale';const media=url?`<div class="result-media">${type==='video'?`<video src="${url}" controls playsinline></video>`:`<img src="${url}" alt="result" />`}</div>`:`<div class="mt-4 rounded-2xl bg-slate-950/55 border border-white/10 p-4 text-sm text-slate-300">${status==='failed'?'Failed':'Processing...'}</div>`;const div=document.createElement('div');div.className='result-card p-4';div.innerHTML=`<div class="flex items-start justify-between gap-3 mb-3"><div class="min-w-0"><p class="font-black safe-name">${escapeHtml(name)}</p><p class="text-xs text-slate-400 mt-1 safe-name">${escapeHtml(meta.file_name||row.prompt||'')}</p></div><span class="status-dot ${url?'ready':status==='failed'?'failed':''}"></span></div>${media}${url?`<div class="mt-3"><a class="get-btn" href="${escapeHtml(downloadUrl(url,name))}">Get</a></div>`:''}`;$('resultsList').appendChild(div)})}
+  async function checkPending(){if(!currentUser)return 0;const {data,error}=await supabaseClient.from('user_generations').select('meta,created_at').eq('user_id',currentUser.id).eq('kind','upscale').is('result_url',null).order('created_at',{ascending:false}).limit(30);if(error)return 0;let checked=0;await Promise.all((data||[]).map(async row=>{const meta=row.meta||{},runId=meta.run_id||'',taskId=meta.task_id||meta.taskId||'';const status=String(meta.status||'').toLowerCase();if(!runId||!taskId||status==='failed'||status==='done'||status==='ready'||status==='succeeded')return;checked++;try{await fetch(`/.netlify/functions/upscale-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId)}`)}catch{}}));return checked}
+  function startPolling(){if(pollTimer)clearInterval(pollTimer);let ticks=0;pollTimer=setInterval(async()=>{ticks++;const p=await checkPending();await loadRecentHistory();if((p===0&&ticks>2)||ticks>80){clearInterval(pollTimer);pollTimer=null}},3000)}
+  function escapeHtml(str){return String(str||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+  async function init(){wireUpload();wireControls();syncMode('image');$('upscaleForm').addEventListener('submit',submit);$('refreshResultsBtn').addEventListener('click',async()=>{const p=await checkPending();await loadRecentHistory();if(p>0)startPolling()});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser){checkPending().then(()=>loadRecentHistory()).then(()=>startPolling()).catch(()=>{})}});window.addEventListener('focus',()=>{if(currentUser){checkPending().then(()=>loadRecentHistory()).then(()=>startPolling()).catch(()=>{})}});const {data:{user}}=await supabaseClient.auth.getUser();currentUser=user||null;if(currentUser){await refreshCredits();const pending=await checkPending();await loadRecentHistory();if(pending>0)startPolling()}if(window.HansoraHeader&&typeof window.HansoraHeader.init==='function'){try{window.HansoraHeader.init({supabaseClient})}catch{}}}
+  document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
