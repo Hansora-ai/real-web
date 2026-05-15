@@ -127,11 +127,11 @@
             </section>
 
             <section id="isolationPanel" class="hidden space-y-4">
-              <input id="audioFileInput" type="file" accept="audio/*,video/*" class="hidden" />
+              <input id="audioFileInput" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" class="hidden" />
               <div id="dropZone" class="upload-drop">
                 <div>
                   <div class="mx-auto h-14 w-14 rounded-2xl bg-indigo-500/15 border border-indigo-300/20 grid place-items-center text-2xl mb-3">🎙️</div>
-                  <p id="dropTitle" class="font-bold text-white">Upload audio or video</p>
+                  <p id="dropTitle" class="font-bold text-white">Upload audio</p>
                   <p id="dropMeta" class="text-xs text-slate-400 mt-1">Noise and background sound will be cleaned from the voice.</p>
                 </div>
               </div>
@@ -252,55 +252,13 @@
 
     const MODELS = [
       { id:'voice', title:'Text to Voice', subtitle:'Speech or conversation', icon:'🗣️', badge:'ElevenLabs', baseCostLabel:'1+⚡', description:'Write one voice line, or add more lines to create a conversation with different voices.' },
-      { id:'isolation', title:'Voice Isolation', subtitle:'Clean noisy audio', icon:'🎙️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Upload audio or video and isolate the voice from background noise.' },
+      { id:'isolation', title:'Voice Isolation', subtitle:'Clean noisy audio', icon:'🎙️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Upload an audio file and isolate the voice from background noise.' },
       { id:'music', title:'Suno Music', subtitle:'Songs, lyrics, and instrumentals', icon:'🎵', badge:'Suno', baseCostLabel:'1.5⚡', description:'Create music with custom mode, lyrics, title, style, gender control, and instrumental control.' }
     ];
     const VOICES = [
-      { label:'Rachel — calm female', value:'21m00Tcm4TlvDq8ikWAM' },
-      { label:'Drew — well-rounded male', value:'29vD33N1CtxCmqQRPOHJ' },
-      { label:'Clyde — warm male', value:'2EiwWnXFnvU5JabPnv8n' },
-      { label:'Paul — casual male', value:'5Q0t7uMcjvnagumLfvZi' },
-      { label:'Domi — energetic female', value:'AZnzlk1XvdvUeBnXmlld' },
-      { label:'Dave — conversational male', value:'CYw3kZ02Hs0563khs1Fj' },
-      { label:'Fin — British male', value:'D38z5RcWu1voky8WS1ja' },
-      { label:'Sarah — clear female', value:'EXAVITQu4vr4xnSDxMaL' },
-      { label:'Antoni — deep male', value:'ErXwobaYiN019PkySvjV' },
-      { label:'Thomas — calm male', value:'GBv7mTt0atIp3Br8iCZE' },
-      { label:'Charlie — confident male', value:'IKne3meq5aSn9XLyUdCD' },
-      { label:'George — mature male', value:'JBFqnCBsd6RMkjVDRZzb' },
-      { label:'Emily — female', value:'LcfcDJNUP1GQjkzn1xUU' },
-      { label:'Elli — young female', value:'MF3mGyEYCl7XYWbV9V6O' },
-      { label:'Callum — gravelly male', value:'N2lVS1w4EtoT3dr4eOWO' },
-      { label:'Patrick — male', value:'ODq5zmih8GrVes37Dizd' },
-      { label:'Harry — male', value:'SOYHLrjzK2X1ezoPC6cr' },
-      { label:'Liam — male', value:'TX3LPaxmHKxFdv7VOQHJ' },
-      { label:'Dorothy — British female', value:'ThT5KcBeYPX3keUQqHPh' },
-      { label:'Josh — friendly male', value:'TxGEqnHWrfWFTfGW9XjX' },
-      { label:'Arnold — strong male', value:'VR6AewLTigWG4xSOukaG' },
-      { label:'Charlotte — British female', value:'XB0fDUnXU5powFXDhCwa' },
-      { label:'Alice — British female', value:'Xb7hH8MSUJpSbSDYk0k2' },
-      { label:'Matilda — female', value:'XrExE9yKIg1WjnnlVkGX' },
-      { label:'James — British male', value:'ZQe5CZNOzWyzPSCn5a3c' },
-      { label:'Joseph — British male', value:'Zlb1dXrM653N07WRdFW3' },
-      { label:'Jeremy — American male', value:'bVMeCyTHy58xNoL34h3p' },
-      { label:'Michael — American male', value:'flq6f7yk4E4fJM5XTYuZ' },
-      { label:'Ethan — American male', value:'g5CIjZEefAph4nQFvHAz' },
-      { label:'Chris — natural male', value:'iP95p4xoKVk53GoZ742B' },
-      { label:'Gigi — female', value:'jBpfuIE2acCO8z3wKNLl' },
-      { label:'Freya — female', value:'jsCqWAovK2LkecY7zXl4' },
-      { label:'Brian — resonant male', value:'nPczCjzI2devNBz1zQrb' },
-      { label:'Grace — neutral', value:'oWAxZDx7w5VEj9dCyTzz' },
-      { label:'Daniel — professional male', value:'onwK4e9ZLuTAKqWW03F9' },
-      { label:'Lily — female', value:'pFZP5JQG7iQjIQuC4Bku' },
-      { label:'Serena — female', value:'pMsXgVXv3BLzUgSXRplE' },
-      { label:'Adam — male', value:'pNInz6obpgDQGcFmaJgB' },
-      { label:'Nicole — female', value:'piTKgcLEGmPE4e6mEKli' },
-      { label:'Bill — comforting male', value:'pqHfZKP75CvOlQylNhV4' },
-      { label:'Jessie — male', value:'t0jbNlBVZ17f02VDIeMI' },
-      { label:'Sam — neutral', value:'yoZ06aMxZJJ28mfd3POQ' },
-      { label:'Glinda — female', value:'z9fAnlkpzviPz146aGWa' },
-      { label:'Giovanni — French male', value:'zcAOhNBS3c14rBihAFp1' },
-      { label:'Mimi — Australian female', value:'zrHiDhphv9ZnVXBqCLjz' }
+      { label:'James — husky male (KIE supported)', value:'EkK5I93UQWFDigLMpZcX' },
+      { label:'Arabella — emotive female (KIE supported)', value:'Z3R5wn05IrDiVCyEkUrK' },
+      { label:'Narrator — bright voice (KIE supported)', value:'NNl6r8mD7vthiJatiJt1' }
     ];
 
     let currentUser = null;
@@ -561,6 +519,11 @@
     }
 
     function setAudioFile(file){
+      if (file && !isSupportedAudioFile(file)) {
+        showError('Voice Isolation accepts audio files only. Please upload MP3, WAV, M4A, AAC, OGG, or FLAC.');
+        return;
+      }
+      clearError();
       selectedAudioFile = file || null;
       selectedAudioDurationSeconds = 0;
       $('audioFileInput').value = '';
@@ -581,8 +544,8 @@
       } else {
         $('selectedFileName').textContent = '—';
         $('selectedFileSize').textContent = '—';
-        $('dropTitle').textContent = 'Upload audio or video';
-        $('dropMeta').textContent = 'Noise and background sound will be cleaned from the voice.';
+        $('dropTitle').textContent = 'Upload audio';
+        $('dropMeta').textContent = 'Upload audio only. Video files are not accepted by KIE voice isolation.';
       }
       updateCostUI();
       renderModels();
@@ -603,6 +566,23 @@
           media.src = url;
         }catch{ resolve(0); }
       });
+    }
+
+    function isSupportedAudioFile(file){
+      const type = String(file && file.type || '').toLowerCase();
+      const name = String(file && file.name || '').toLowerCase();
+      if (type.startsWith('video/')) return false;
+      if (type.startsWith('audio/')) return true;
+      return /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(name);
+    }
+    function guessAudioMimeType(name){
+      const lower = String(name || '').toLowerCase();
+      if (lower.endsWith('.wav')) return 'audio/wav';
+      if (lower.endsWith('.m4a')) return 'audio/mp4';
+      if (lower.endsWith('.aac')) return 'audio/aac';
+      if (lower.endsWith('.ogg')) return 'audio/ogg';
+      if (lower.endsWith('.flac')) return 'audio/flac';
+      return 'audio/mpeg';
     }
 
     function fileToDataURL(file){
@@ -695,10 +675,10 @@
           body.stability = Number($('stability').value);
           body.prompt = body.dialogue.map((line)=>line.text).join('\n');
         } else if (model.id === 'isolation') {
-          if (!selectedAudioFile) throw new Error('Please upload audio or video first.');
+          if (!selectedAudioFile) throw new Error('Please upload audio first.');
           if (selectedAudioFile.size > 10 * 1024 * 1024) throw new Error('Please use a file under 10MB for this page upload.');
           body.fileName = selectedAudioFile.name || 'audio-file';
-          body.fileType = selectedAudioFile.type || 'audio/mpeg';
+          body.fileType = selectedAudioFile.type || guessAudioMimeType(selectedAudioFile.name);
           body.fileBase64 = await fileToDataURL(selectedAudioFile);
           body.durationSeconds = selectedAudioDurationSeconds || 0;
           body.prompt = `Voice isolation: ${body.fileName}`;
@@ -776,20 +756,43 @@
       });
     }
 
+    async function checkPendingAudioRows(){
+      if (!currentUser) return;
+      const { data, error } = await supabaseClient
+        .from('user_generations')
+        .select('meta')
+        .eq('user_id', currentUser.id)
+        .eq('kind', 'audio')
+        .is('result_url', null)
+        .limit(8);
+      if (error) return;
+      const rows = data || [];
+      await Promise.all(rows.map(async(row)=>{
+        const meta = row.meta || {};
+        const runId = meta.run_id || '';
+        const taskId = meta.task_id || meta.taskId || '';
+        if (!runId || !taskId) return;
+        try{
+          await fetch(`/.netlify/functions/audio-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId)}`, { method:'GET' });
+        }catch(_){ }
+      }));
+    }
+
     function startPolling(){
       if (pollTimer) clearInterval(pollTimer);
       let ticks = 0;
       pollTimer = setInterval(async()=>{
         ticks += 1;
+        await checkPendingAudioRows();
         await loadRecentHistory();
-        if (ticks > 60) clearInterval(pollTimer);
+        if (ticks > 80) clearInterval(pollTimer);
       }, 3000);
     }
 
     async function init(){
       renderModels(); wireChips(); wireUpload(); addDialogueLine('', 0); syncPanels(); updateCostUI();
       $('audioForm').addEventListener('submit', submitTask);
-      $('refreshResultsBtn').addEventListener('click', loadRecentHistory);
+      $('refreshResultsBtn').addEventListener('click', async()=>{ await checkPendingAudioRows(); await loadRecentHistory(); });
       $('refreshCreditsBtn').addEventListener('click', refreshCredits);
       const { data: { user } } = await supabaseClient.auth.getUser();
       currentUser = user || null;
