@@ -898,52 +898,52 @@
       if (lower.includes('/.netlify/functions/audio-kie-callback') || lower.includes('/.netlify/functions/run-audio') || lower.includes('/api/callback') || lower.includes('callback')) return false;
       return true;
     }
-    function firstAudioUrl(row){
+    function allAudioUrls(row){
       const meta = row.meta || {};
+      if (String(meta.audio_kind || '').toLowerCase() === 'music' && meta.suno_complete !== true && meta.status !== 'ready') return [];
       const candidates = [];
       if (row.result_url) candidates.push(row.result_url);
       if (meta.audio_url) candidates.push(meta.audio_url);
       if (Array.isArray(meta.audio_urls)) candidates.push(...meta.audio_urls);
-      if (Array.isArray(meta.results)) meta.results.forEach((item)=>candidates.push(item && (item.sourceAudioUrl || item.downloadUrl || item.audio_url || item.audioUrl || item.url)));
-      return candidates.find(isUsableAudioUrl) || '';
+      if (Array.isArray(meta.results)) meta.results.forEach((item)=>candidates.push(item && (item.audioUrl || item.sourceAudioUrl || item.downloadUrl || item.audio_url || item.audioUrl || item.url)));
+      const seen = new Set();
+      return candidates.filter(isUsableAudioUrl).filter((url)=>{
+        const key = String(url || '').trim();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     }
+    function firstAudioUrl(row){
+      return allAudioUrls(row)[0] || '';
+    }
+
     function audioPlayerUrl(url){
-      const value = String(url || '').trim();
-      if (!value) return '';
-      const joiner = value.includes('?') ? '&' : '?';
-      return `${value}${joiner}hansora_audio=${Date.now()}`;
+      return String(url || '').trim();
     }
     function audioDownloadUrl(url, name){
       return `/.netlify/functions/audio-download?url=${encodeURIComponent(url)}&name=${encodeURIComponent((name || 'hansora-audio').replace(/[^a-z0-9._-]+/gi,'-').slice(0,80) || 'hansora-audio')}`;
     }
-    function renderAudioControls(url, name){
+    function renderAudioControls(url, name, index){
       const playerUrl = audioPlayerUrl(url);
-      const downloadUrl = audioDownloadUrl(url, name);
-      return `<div class="mt-4"><audio controls preload="metadata" data-base-src="${escapeHtml(url)}" src="${escapeHtml(playerUrl)}"></audio><div class="audio-actions mt-3"><a class="btn-soft rounded-full px-3 py-2 text-xs inline-flex" href="${escapeHtml(downloadUrl)}">Get</a></div></div>`;
+      const label = index ? `Track ${index + 1}` : '';
+      const downloadUrl = audioDownloadUrl(url, index ? `${name}-track-${index + 1}` : name);
+      return `<div class="mt-4"><div class="text-xs text-slate-400 mb-2">${escapeHtml(label)}</div><audio controls preload="metadata" data-base-src="${escapeHtml(url)}" src="${escapeHtml(playerUrl)}"></audio><div class="audio-actions mt-3"><a class="btn-soft rounded-full px-3 py-2 text-xs inline-flex" href="${escapeHtml(downloadUrl)}">Get</a></div></div>`;
     }
+    function renderAllAudioControls(urls, name){
+      return (urls || []).map((url, index)=>renderAudioControls(url, name, index)).join('');
+    }
+
     function wireAudioPlayers(root){
       (root || document).querySelectorAll('audio[data-base-src]').forEach((audio)=>{
         if (audio.dataset.wired === '1') return;
         audio.dataset.wired = '1';
-        let retries = 0;
-        const reload = ()=>{
-          if (retries >= 2) return;
-          retries += 1;
-          const base = audio.dataset.baseSrc || '';
-          if (!base) return;
-          const wasPaused = audio.paused;
-          audio.src = audioPlayerUrl(base);
-          audio.load();
-          if (!wasPaused) audio.play().catch(()=>{});
-        };
-        audio.addEventListener('loadedmetadata',()=>{
-          const d = Number(audio.duration || 0);
-          if (!Number.isFinite(d) || d <= 0) setTimeout(reload, 1200);
-        });
-        audio.addEventListener('stalled',()=>setTimeout(reload, 900));
-        audio.addEventListener('error',()=>setTimeout(reload, 900));
       });
     }
+    function isAnyAudioPlaying(){
+      return Array.from(document.querySelectorAll('audio')).some((audio)=>!audio.paused && !audio.ended);
+    }
+
 
     async function loadRecentHistory(){
       if (!currentUser) return;
@@ -961,14 +961,15 @@
       $('emptyResults').classList.toggle('hidden', rows.length > 0);
       rows.forEach((row)=>{
         const meta = row.meta || {};
-        const url = firstAudioUrl(row);
+        const urls = allAudioUrls(row);
+        const url = urls[0] || '';
         const status = (url ? 'ready' : (meta.status || 'processing')).toString();
         const div = document.createElement('div');
         div.className = 'audio-card p-4';
         const name = meta.title || row.provider || 'Audio';
         const prompt = row.prompt || meta.prompt || '';
         const dotClass = status === 'ready' || status === 'complete' || status === 'SUCCESS' ? 'ready' : status === 'failed' ? 'failed' : '';
-        div.innerHTML = `<div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-sm font-black truncate">${escapeHtml(name)}</p><p class="text-xs text-slate-400 truncate mt-1">${escapeHtml(prompt)}</p></div><span class="status-dot ${dotClass}"></span></div>${url ? renderAudioControls(url, name) : `<div class="mt-4 rounded-2xl bg-slate-950/55 border border-white/10 p-4 text-sm text-slate-300">${status === 'failed' ? 'Failed' : 'Processing...'}</div>`}`;
+        div.innerHTML = `<div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-sm font-black truncate">${escapeHtml(name)}</p><p class="text-xs text-slate-400 truncate mt-1">${escapeHtml(prompt)}</p></div><span class="status-dot ${dotClass}"></span></div>${url ? renderAllAudioControls(urls, name) : `<div class="mt-4 rounded-2xl bg-slate-950/55 border border-white/10 p-4 text-sm text-slate-300">${status === 'failed' ? 'Failed' : 'Processing...'}</div>`}`;
         list.appendChild(div);
       });
       wireAudioPlayers(list);
@@ -994,6 +995,7 @@
           await fetch(`/.netlify/functions/audio-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId)}`, { method:'GET' });
         }catch(_){ }
       }));
+      return rows.length;
     }
 
     function startPolling(){
@@ -1001,11 +1003,12 @@
       let ticks = 0;
       pollTimer = setInterval(async()=>{
         ticks += 1;
-        await checkPendingAudioRows();
-        await loadRecentHistory();
-        if (ticks > 80) clearInterval(pollTimer);
+        const pendingCount = await checkPendingAudioRows();
+        if (!isAnyAudioPlaying()) await loadRecentHistory();
+        if ((Number(pendingCount || 0) === 0 && ticks > 2) || ticks > 80) clearInterval(pollTimer);
       }, 3000);
     }
+
 
     async function init(){
       renderModels(); wireChips(); wireUpload(); wireLanguagePicker(); addDialogueLine('', 0); syncPanels(); updateCostUI();
