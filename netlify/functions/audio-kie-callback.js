@@ -21,9 +21,10 @@ exports.handler = async (event) => {
 
     const oldRow = await readGenerationRow(uid, run_id);
     const oldMeta = oldRow?.meta || {};
-    const failed = isFailure(body);
     const taskId = extractTaskId(body) || oldMeta.task_id || oldMeta.taskId || "";
-    const urls = String(kind).toLowerCase() === "music" ? extractSunoDownloadUrls(body, oldMeta) : extractAudioUrls(body, oldMeta);
+    const normalizedKind = String(kind).toLowerCase();
+    const sunoStatus = normalizedKind === "music" ? normalizeSunoStatus(body) : "";
+    const failed = normalizedKind === "music" ? sunoStatus === "failed" : isFailure(body);
     const imageUrls = extractImageUrls(body);
     const title = extractTitle(body) || oldMeta.title || providerTitle(kind);
 
@@ -33,6 +34,22 @@ exports.handler = async (event) => {
       return ok({ received:true, status:"failed", run_id, taskId, refunded:!!refund.refunded, refund_amount:refund.amount || 0, error:reason });
     }
 
+    if (normalizedKind === "music" && sunoStatus !== "success") {
+      const meta = {
+        ...(oldMeta || {}),
+        run_id,
+        status: "processing",
+        task_id: taskId,
+        audio_kind: kind,
+        title,
+        suno_stage: sunoStatus || "processing",
+        callback: body
+      };
+      await patchGeneration(uid, run_id, { meta });
+      return ok({ received:true, status:"processing", run_id, taskId, audioCount:0 });
+    }
+
+    const urls = normalizedKind === "music" ? extractSunoFinalAudioUrls(body, oldMeta) : extractAudioUrls(body, oldMeta);
     const firstUrl = urls[0] || "";
     const status = firstUrl ? "ready" : "processing";
     const meta = {
@@ -45,6 +62,7 @@ exports.handler = async (event) => {
       audio_url: firstUrl,
       audio_urls: urls,
       image_urls: imageUrls,
+      suno_complete: normalizedKind === "music" && status === "ready",
       callback: body
     };
 
@@ -68,6 +86,19 @@ function isFailure(body){
   const status = String(data?.status || data?.state || body?.status || body?.state || "").trim().toLowerCase();
   return ["fail", "failed", "failure", "error", "errored", "canceled", "cancelled", "rejected", "blocked", "moderation_failed", "sensitive_word_error", "generate_audio_failed", "create_task_failed"].includes(status);
 }
+function normalizeSunoStatus(body){
+  const data = body?.data || body || {};
+  const raw = data?.status || data?.state || body?.status || body?.state || "";
+  const status = String(raw).trim().toUpperCase();
+  if (status === "SUCCESS") return "success";
+  if (status === "FIRST_SUCCESS" || status === "TEXT_SUCCESS" || status === "PENDING" || status === "SUBMITTED" || status === "RUNNING" || status === "PROCESSING") return "pending";
+  if (["CREATE_TASK_FAILED", "GENERATE_AUDIO_FAILED", "CALLBACK_EXCEPTION", "SENSITIVE_WORD_ERROR", "FAILED", "FAIL", "ERROR", "CANCELED", "CANCELLED", "REJECTED", "BLOCKED"].includes(status)) return "failed";
+  const flag = data?.successFlag ?? body?.successFlag;
+  if (flag === 1 || flag === "1") return "success";
+  if (flag === 2 || flag === "2" || flag === 3 || flag === "3") return "failed";
+  return "pending";
+}
+
 async function readGenerationRow(uid, run_id){
   try{
     if (!UG_URL || !SERVICE_KEY) return null;
@@ -165,16 +196,18 @@ function collectKnownInputUrls(meta){
   walk(meta?.input, true);
   return urls;
 }
-function extractSunoDownloadUrls(data, oldMeta = {}){
+function extractSunoFinalAudioUrls(data, oldMeta = {}){
   const urls = [];
   const seen = new Set();
   const excluded = collectKnownInputUrls(oldMeta).map(normalizeComparableUrl).filter(Boolean);
-  const preferredKeys = new Set(["sourceAudioUrl", "source_audio_url", "downloadUrl", "download_url", "originAudioUrl", "origin_audio_url"]);
+  const finalAudioKeys = new Set(["audioUrl", "audio_url", "downloadUrl", "download_url", "sourceAudioUrl", "source_audio_url", "originAudioUrl", "origin_audio_url"]);
   const containerKeys = new Set(["data", "result", "results", "response", "sunoData", "tracks", "songs", "items"]);
   function add(url){
     if (!url || typeof url !== "string" || !/^https?:\/\//i.test(url)) return;
     const clean = normalizeComparableUrl(url);
+    const lower = clean.toLowerCase();
     if (!clean || isBlockedUrl(clean) || excluded.includes(clean) || seen.has(clean)) return;
+    if (lower.includes("streamaudiourl") || lower.includes("stream_audio")) return;
     seen.add(clean); urls.push(clean);
   }
   function scan(x, trusted=false, depth=0){
@@ -188,7 +221,8 @@ function extractSunoDownloadUrls(data, oldMeta = {}){
     if (Array.isArray(x)) return x.forEach((item)=>scan(item, trusted, depth + 1));
     if (typeof x === "object") {
       for (const [key, child] of Object.entries(x)) {
-        const nextTrusted = trusted || preferredKeys.has(String(key || ""));
+        if (/streamAudioUrl|stream_audio_url/i.test(key)) continue;
+        const nextTrusted = trusted || finalAudioKeys.has(String(key || ""));
         if (nextTrusted || containerKeys.has(String(key || ""))) scan(child, nextTrusted, depth + 1);
       }
     }
@@ -196,6 +230,7 @@ function extractSunoDownloadUrls(data, oldMeta = {}){
   scan(data);
   return urls.slice(0,4);
 }
+
 
 function extractAudioUrls(data, oldMeta = {}){
   const urls = [];
