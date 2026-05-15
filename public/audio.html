@@ -108,16 +108,16 @@
         <div class="glass rounded-[32px] p-5 sm:p-6">
           <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
             <div>
-              <p id="activeSubtitle" class="small-label">Text to Voice</p>
-              <h2 id="activeTitle" class="text-2xl sm:text-3xl font-black tracking-tight">Natural voice creator</h2>
-              <p id="activeDescription" class="text-sm text-slate-300/75 mt-2 max-w-2xl">Write one voice line, or add more lines to create a conversation with different voices.</p>
+              <p id="activeSubtitle" class="small-label">Text to Dialogue</p>
+              <h2 id="activeTitle" class="text-2xl sm:text-3xl font-black tracking-tight">Natural dialogue creator</h2>
+              <p id="activeDescription" class="text-sm text-slate-300/75 mt-2 max-w-2xl">Write one voice line, or add more lines to create a conversation with different character voices.</p>
             </div>
             <span id="modelBadge" class="chip chip-active self-start sm:self-auto">ElevenLabs</span>
           </div>
 
           <form id="audioForm" class="space-y-5">
             <section id="voicePanel" class="space-y-4">
-              <div class="mode-note">Add one line for normal text-to-voice. Add more lines when you want a conversation with different voices.</div>
+              <div class="mode-note">Add one line for simple voice audio. Add more lines when you want a conversation with different character voices.</div>
               <div class="panel rounded-2xl p-4">
                 <p class="small-label mb-2">Language</p>
                 <div id="languagePicker" class="language-picker">
@@ -152,21 +152,21 @@
               <div id="selectedFileBox" class="hidden panel rounded-2xl p-4">
                 <div class="flex items-center justify-between gap-3">
                   <div class="min-w-0">
-                    <p id="selectedFileName" class="font-bold truncate">—</p>
-                    <p id="selectedFileSize" class="text-xs text-slate-400 mt-1">—</p>
+                    <p id="selectedFileName" class="font-bold file-name-safe">—</p>
+                    <p id="selectedFileSize" class="text-xs text-slate-400 mt-1 file-meta-safe">—</p>
                   </div>
-                  <button id="clearFileBtn" type="button" class="btn-soft rounded-full px-3 py-2 text-xs">Remove</button>
+                  <button id="clearFileBtn" type="button" class="btn-soft rounded-full px-3 py-2 text-xs shrink-0">Remove</button>
                 </div>
               </div>
             </section>
 
             <section id="musicPanel" class="hidden space-y-4">
               <div class="grid compact-stack grid-cols-3 gap-3">
-                <div class="panel rounded-2xl p-4">
+                <div class="panel rounded-2xl p-4 hidden">
                   <p class="small-label mb-3">Mode</p>
                   <div class="flex flex-wrap gap-2">
-                    <button type="button" data-custom-mode="false" class="chip chip-active">Simple</button>
-                    <button type="button" data-custom-mode="true" class="chip">Custom</button>
+                    <button type="button" data-custom-mode="false" class="chip">Simple</button>
+                    <button type="button" data-custom-mode="true" class="chip chip-active">Custom</button>
                   </div>
                 </div>
                 <div class="panel rounded-2xl p-4">
@@ -191,19 +191,15 @@
 
               <div id="musicPromptWrap">
                 <label id="musicPromptLabel" class="small-label block mb-2" for="musicPrompt">Music prompt</label>
-                <textarea id="musicPrompt" class="field min-h-[150px] resize-none" maxlength="5000" placeholder="Example: cinematic Armenian duduk melody with deep drums, emotional build, modern trailer feel"></textarea>
+                <textarea id="musicPrompt" class="field min-h-[150px] resize-none" maxlength="5000" placeholder="Write the lyrics here what you want the AI model to sing."></textarea>
               </div>
+              <input id="musicTitle" class="hidden" maxlength="80" value="SONG" aria-hidden="true" tabindex="-1" />
+              <input id="negativeTags" class="hidden" maxlength="500" value="" aria-hidden="true" tabindex="-1" />
               <div class="grid compact-stack grid-cols-2 gap-3">
-                <div>
-                  <label class="small-label block mb-2" for="musicTitle">Title</label>
-                  <input id="musicTitle" class="field" maxlength="80" placeholder="Track title" />
-                </div>
                 <div>
                   <label class="small-label block mb-2" for="musicStyle">Style</label>
                   <input id="musicStyle" class="field" maxlength="1000" placeholder="Pop, cinematic, piano, drill..." />
                 </div>
-              </div>
-              <div class="grid compact-stack grid-cols-2 gap-3">
                 <div id="vocalGenderWrap">
                   <label class="small-label block mb-2" for="vocalGender">Vocal gender</label>
                   <select id="vocalGender" class="field">
@@ -211,10 +207,6 @@
                     <option value="m">Male</option>
                     <option value="f">Female</option>
                   </select>
-                </div>
-                <div>
-                  <label class="small-label block mb-2" for="negativeTags">Avoid</label>
-                  <input id="negativeTags" class="field" maxlength="500" placeholder="Low quality, noisy, off-key..." />
                 </div>
               </div>
               <div class="grid compact-stack grid-cols-3 gap-3">
@@ -265,14 +257,116 @@
     window.hansoraSupabase = supabaseClient;
 
     const MODELS = [
-      { id:'voice', title:'Text to Voice', subtitle:'Speech or conversation', icon:'🗣️', badge:'ElevenLabs', baseCostLabel:'1+⚡', description:'Write one voice line, or add more lines to create a conversation with different voices.' },
+      { id:'voice', title:'Text to Dialogue', subtitle:'Speech or conversation', icon:'🗣️', badge:'ElevenLabs', baseCostLabel:'1+⚡', description:'Write one voice line, or add more lines to create a conversation with different character voices.' },
       { id:'isolation', title:'Voice Isolation', subtitle:'Clean noisy audio', icon:'🎙️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Upload an audio file and isolate the voice from background noise.' },
       { id:'music', title:'Suno Music', subtitle:'Songs, lyrics, and instrumentals', icon:'🎵', badge:'Suno', baseCostLabel:'1.5⚡', description:'Create music with custom mode, lyrics, title, style, gender control, and instrumental control.' }
     ];
     const VOICES = [
-      { label:'James — husky male (KIE supported)', value:'EkK5I93UQWFDigLMpZcX' },
-      { label:'Arabella — emotive female (KIE supported)', value:'Z3R5wn05IrDiVCyEkUrK' },
-      { label:'Narrator — bright voice (KIE supported)', value:'NNl6r8mD7vthiJatiJt1' }
+      { label:'James', value:'EkK5I93UQWFDigLMpZcX' },
+      { label:'Arabella', value:'Z3R5wn05IrDiVCyEkUrK' },
+      { label:'Bradford', value:'NNl6r8mD7vthiJatiJt1' },
+      { label:'Gaming Announcer', value:'YOq2y2Up4RgXP2HyXjE5' },
+      { label:'Monika', value:'2zRM7PkgwBPiau2jvVXc' },
+      { label:'Mark', value:'1SM7GgM6IMuvQlz2BwM3' },
+      { label:'Grandpa Spuds', value:'NOpBlnGInO9m6vDvFkFC' },
+      { label:'Eve', value:'BZgkqPqms7Kj9ulSkVzn' },
+      { label:'British Football Announcer', value:'gU0LNdkMOQCOrPrwtbee' },
+      { label:'Drill Sergeant', value:'DGzg6RaUqxGRTHSBjfgF' },
+      { label:'Harry', value:'SOYHLrjzK2X1ezoPC6cr' },
+      { label:'Bella', value:'hpp4J3VqNfWAUOO0d1Us' },
+      { label:'Adam', value:'pNInz6obpgDQGcFmaJgB' },
+      { label:'Jessica', value:'flHkNRp1BlvT73UL6gyz' },
+      { label:'Lutz Laugh', value:'9yzdeviXkFddZ4Oz8Mok' },
+      { label:'Michael', value:'U1Vk2oyatMdYs096Ety7' },
+      { label:'Austin', value:'Bj9UqZbhQsanLzgalpEG' },
+      { label:'Blondie', value:'exsUS4vynmxd379XN4yO' },
+      { label:'Priyanka', value:'BpjGufoPiobT79j2vtj4' },
+      { label:'Grimblewood', value:'ouL9IsyrSnUkCmfnD02u' },
+      { label:'Jane', value:'RILOU7YmBhvwJGDGjNmP' },
+      { label:'Juniper', value:'aMSt68OGf4xUZAnLpTU8' },
+      { label:'Hope', value:'tnSpp4vdxKPjI9w0GnoV' },
+      { label:'Clyde', value:'wyWA56cQNU2KqUW4eCsI' },
+      { label:'Charles', value:'zNsotODqUhvbJ5wMG7Ei' },
+      { label:'Amanda', value:'QzgYVYSNBgksoEWDkpKt' },
+      { label:'Alexandra', value:'kdmDKE6EkgrWrrykO9Qt' },
+      { label:'Lucas Reed', value:'M0IvLNu6hH3cNnETNLEP' },
+      { label:'Ivanna', value:'bMxLr8fP6hzNRRi9nJxU' },
+      { label:'Carter', value:'bU2VfAdiOb2Gv2eZWlFq' },
+      { label:'Andrew', value:'gUABw7pXQjhjt0kNFBTF' },
+      { label:'Rachel', value:'Rachel' },
+      { label:'Aria', value:'Aria' },
+      { label:'Roger', value:'Roger' },
+      { label:'Sarah', value:'Sarah' },
+      { label:'Laura', value:'Laura' },
+      { label:'Charlie', value:'Charlie' },
+      { label:'George', value:'George' },
+      { label:'Callum', value:'Callum' },
+      { label:'River', value:'River' },
+      { label:'Liam', value:'Liam' },
+      { label:'Charlotte', value:'Charlotte' },
+      { label:'Alice', value:'Alice' },
+      { label:'Matilda', value:'Matilda' },
+      { label:'Will', value:'Will' },
+      { label:'Eric', value:'Eric' },
+      { label:'Chris', value:'Chris' },
+      { label:'Brian', value:'Brian' },
+      { label:'Daniel', value:'Daniel' },
+      { label:'Lily', value:'Lily' },
+      { label:'Bill', value:'Bill' },
+      { label:'Character 01', value:'B8gJV1IhpuegLxdpXFOE' },
+      { label:'Character 02', value:'5l5f8iK3YPeGga21rQIX' },
+      { label:'Character 03', value:'wo6udizrrtpIxWGp2qJk' },
+      { label:'Character 04', value:'x70vRnQBMBu4FAYhjJbO' },
+      { label:'Character 05', value:'P1bg08DkjqiVEzOn76yG' },
+      { label:'Character 06', value:'qDuRKMlYmrm8trt5QyBn' },
+      { label:'Character 07', value:'qXpMhyvQqiRxWQs4qSSB' },
+      { label:'Character 08', value:'TX3LPaxmHKxFdv7VOQHJ' },
+      { label:'Character 09', value:'N2lVS1w4EtoT3dr4eOWO' },
+      { label:'Character 10', value:'FGY2WhTYpPnrIDTdsKH5' },
+      { label:'Character 11', value:'kPzsL2i3teMYv0FxEYQ6' },
+      { label:'Character 12', value:'nPczCjzI2devNBz1zQrb' },
+      { label:'Character 13', value:'uYXf8XasLslADfZ2MB4u' },
+      { label:'Character 14', value:'gs0tAILXbY5DNrJrsM6F' },
+      { label:'Character 15', value:'DTKMou8ccj1ZaWGBiotd' },
+      { label:'Character 16', value:'vBKc2FfBKJfcZNyEt1n6' },
+      { label:'Character 17', value:'DYkrAHD8iwork3YSUBbs' },
+      { label:'Character 18', value:'56AoDkrOh6qfVPDXZ7Pt' },
+      { label:'Character 19', value:'eR40ATw9ArzDf9h3v7t7' },
+      { label:'Character 20', value:'g6xIsTj2HwM6VR4iXFCw' },
+      { label:'Character 21', value:'lcMyyd2HUfFzxdCaC4Ta' },
+      { label:'Character 22', value:'6aDn1KB0hjpdcocrUkmq' },
+      { label:'Character 23', value:'Sq93GQT4X1lKDXsQcixO' },
+      { label:'Character 24', value:'pPdl9cQBQq4p6mRkZy2Z' },
+      { label:'Character 25', value:'zYcjlYFOd3taleS0gkk3' },
+      { label:'Character 26', value:'nzeAacJi50IvxcyDnMXa' },
+      { label:'Character 27', value:'ruirxsoakN0GWmGNIo04' },
+      { label:'Character 28', value:'TC0Zp7WVFzhA8zpTlRqV' },
+      { label:'Character 29', value:'ljo9gAlSqKOvF6D8sOsX' },
+      { label:'Character 30', value:'PPzYpIqttlTYA83688JI' },
+      { label:'Character 31', value:'8JVbfL6oEdmuxKn5DK2C' },
+      { label:'Character 32', value:'iCrDUkL56s3C8sCRl7wb' },
+      { label:'Character 33', value:'wJqPPQ618aTW29mptyoc' },
+      { label:'Character 34', value:'EiNlNiXeDU1pqqOPrYMO' },
+      { label:'Character 35', value:'4YYIPFl9wE5c4L2eu2Gb' },
+      { label:'Character 36', value:'6F5Zhi321D3Oq7v1oNT4' },
+      { label:'Character 37', value:'YXpFCvM1S3JbWEJhoskW' },
+      { label:'Character 38', value:'LG95yZDEHg6fCZdQjLqj' },
+      { label:'Character 39', value:'CeNX9CMwmxDxUF5Q2Inm' },
+      { label:'Character 40', value:'aD6riP1btT197c6dACmy' },
+      { label:'Character 41', value:'mtrellq69YZsNwzUSyXh' },
+      { label:'Character 42', value:'dHd5gvgSOzSfduK4CvEg' },
+      { label:'Character 43', value:'eVItLK1UvXctxuaRV2Oq' },
+      { label:'Character 44', value:'esy0r39YPLQjOczyOib8' },
+      { label:'Character 45', value:'D2jw4N9m4xePLTQ3IHjU' },
+      { label:'Character 46', value:'Tsns2HvNFKfGiNjllgqo' },
+      { label:'Character 47', value:'1U02n4nD6AdIZ9CjF053' },
+      { label:'Character 48', value:'AeRdCCKzvd23BpJoofzx' },
+      { label:'Character 49', value:'LruHrtVF6PSyGItzMNHS' },
+      { label:'Character 50', value:'1wGbFxmAM3Fgw63G1zZJ' },
+      { label:'Character 51', value:'hqfrgApggtO1785R4Fsn' },
+      { label:'Character 52', value:'MJ0RnG71ty4LH3dvNfSd' },
+      { label:'Character 53', value:'scOwDtmlUjD3prqpp97I' },
+      { label:'Character 54', value:'Sm1seazb4gs7RSlUVw7c' }
     ];
     const LANGUAGES = [
       { label:'Auto detect', value:'' },
@@ -314,7 +408,7 @@
     let currentUser = null;
     let currentCredits = 0;
     let currentModelId = 'voice';
-    let customMode = false;
+    let customMode = true;
     let instrumental = false;
     let selectedAudioFile = null;
     let selectedAudioDurationSeconds = 0;
@@ -479,7 +573,7 @@
       const wrap = document.createElement('div');
       const selectedVoice = voiceValueByIndex(selectedIndex);
       wrap.className = 'dialogue-line';
-      wrap.innerHTML = `<div class="flex items-center justify-between gap-3 mb-3"><p class="small-label">Voice line</p><button type="button" class="remove-line" aria-label="Remove line">×</button></div><div class="grid compact-stack grid-cols-[1fr_270px] gap-3"><textarea class="field dialogue-text" maxlength="4200" placeholder="Write what this voice should say..."></textarea><div class="voice-picker"><input type="hidden" class="dialogue-voice" value="${escapeHtml(selectedVoice)}" /><button type="button" class="field voice-picker-button"><span class="voice-label truncate">${escapeHtml(voiceLabel(selectedVoice))}</span><span class="text-slate-400">⌄</span></button><div class="voice-menu"><input type="text" class="voice-search" placeholder="Search voice name..." /><div class="voice-list"></div></div></div></div>`;
+      wrap.innerHTML = `<div class="flex items-center justify-between gap-3 mb-3"><p class="small-label">Voice line</p><button type="button" class="remove-line" aria-label="Remove line">×</button></div><div class="grid compact-stack grid-cols-[1fr_270px] gap-3"><textarea class="field dialogue-text" maxlength="4200" placeholder="Write what this voice should say..."></textarea><div class="voice-picker"><input type="hidden" class="dialogue-voice" value="${escapeHtml(selectedVoice)}" /><button type="button" class="field voice-picker-button"><span class="voice-label truncate">${escapeHtml(voiceLabel(selectedVoice))}</span><span class="text-slate-400">⌄</span></button><div class="voice-menu"><input type="text" class="voice-search" placeholder="Search character voice..." /><div class="voice-list"></div></div></div></div>`;
       wrap.querySelector('.dialogue-text').value = text;
       wrap.querySelector('.dialogue-text').addEventListener('input', updateCostUI);
       wrap.querySelector('.remove-line').addEventListener('click',()=>{ wrap.remove(); updateDialogueButtons(); updateCostUI(); });
@@ -534,7 +628,7 @@
     function syncPanels(){
       const m = activeModel();
       $('activeSubtitle').textContent = m.title;
-      $('activeTitle').textContent = m.id === 'voice' ? 'Natural voice creator' : m.id === 'isolation' ? 'Clean voice from audio' : 'Music generator';
+      $('activeTitle').textContent = m.id === 'voice' ? 'Natural dialogue creator' : m.id === 'isolation' ? 'Clean voice from audio' : 'Music generator';
       $('activeDescription').textContent = m.description;
       $('modelBadge').textContent = m.badge;
       updateCostUI();
@@ -547,39 +641,34 @@
     }
 
     function syncMusicControls(){
+      customMode = true;
       const prompt = $('musicPrompt');
       const label = $('musicPromptLabel');
       const wrap = $('musicPromptWrap');
       const genderWrap = $('vocalGenderWrap');
-      if (!customMode) {
+      $('musicTitle').value = 'SONG';
+      if (instrumental) {
         label.textContent = 'Music prompt';
-        prompt.placeholder = 'Describe the song you want. Example: cinematic Armenian duduk melody with deep drums, emotional build, modern trailer feel';
-        prompt.maxLength = 500;
-        wrap.classList.remove('hidden');
-        genderWrap.classList.toggle('hidden', instrumental);
-        $('musicModeNote').textContent = 'Simple mode only needs the music prompt. Other detailed fields are only sent in Custom mode.';
-      } else if (instrumental) {
-        label.textContent = 'Optional prompt';
-        prompt.placeholder = 'Optional details for the instrumental track. Title and style are required.';
+        prompt.placeholder = 'Describe the instrumental track. Example: cinematic Armenian duduk melody with deep drums, emotional build, modern trailer feel';
         prompt.maxLength = 5000;
         wrap.classList.remove('hidden');
         genderWrap.classList.add('hidden');
-        $('musicModeNote').textContent = 'Custom instrumental mode sends title, style, and instrumental=true. Lyrics are not required.';
+        $('musicModeNote').textContent = 'Instrumental mode sends your prompt, style, and instrumental=true.';
       } else {
         label.textContent = 'Lyrics';
-        prompt.placeholder = 'Paste the exact lyrics here. Example:\n[Verse]\n...\n[Chorus]\n...';
+        prompt.placeholder = 'Write the lyrics here what you want the AI model to sing.';
         prompt.maxLength = 5000;
         wrap.classList.remove('hidden');
         genderWrap.classList.remove('hidden');
-        $('musicModeNote').textContent = 'Custom song mode sends title, style, exact lyrics, and optional vocal gender.';
+        $('musicModeNote').textContent = 'Song mode sends your lyrics or song idea, style, and optional vocal gender.';
       }
     }
 
     function wireChips(){
       document.querySelectorAll('[data-custom-mode]').forEach((btn)=>{
         btn.addEventListener('click',()=>{
-          customMode = btn.dataset.customMode === 'true';
-          document.querySelectorAll('[data-custom-mode]').forEach((b)=>b.classList.toggle('chip-active', b === btn));
+          customMode = true;
+          document.querySelectorAll('[data-custom-mode]').forEach((b)=>b.classList.toggle('chip-active', b.dataset.customMode === 'true'));
           syncMusicControls();
         });
       });
@@ -697,30 +786,22 @@
     function buildMusicPayload(){
       const prompt = $('musicPrompt').value.trim();
       const model = $('sunoModel').value;
-      if (!customMode) {
-        if (!prompt) throw new Error('Please write the music prompt.');
-        return { prompt, customMode:false, instrumental, model };
-      }
-      const title = $('musicTitle').value.trim();
       const style = $('musicStyle').value.trim();
-      if (!title) throw new Error('Custom mode needs a title.');
-      if (!style) throw new Error('Custom mode needs a style.');
-      if (!instrumental && !prompt) throw new Error('Custom song mode needs lyrics.');
+      if (!style) throw new Error('Please write the music style.');
+      if (!instrumental && !prompt) throw new Error('Please write lyrics or a song idea.');
+      if (instrumental && !prompt) throw new Error('Please write the instrumental music prompt.');
       const payload = {
         customMode:true,
         instrumental,
         model,
-        title,
+        title:'SONG',
         style,
+        prompt,
         styleWeight:Number($('styleWeight').value),
         weirdnessConstraint:Number($('weirdnessConstraint').value),
         audioWeight:Number($('audioWeight').value)
       };
-      if (!instrumental) payload.prompt = prompt;
-      else if (prompt) payload.prompt = prompt;
-      const negativeTags = $('negativeTags').value.trim();
       const vocalGender = $('vocalGender').value.trim();
-      if (negativeTags) payload.negativeTags = negativeTags;
       if (!instrumental && vocalGender) payload.vocalGender = vocalGender;
       return payload;
     }
@@ -823,8 +904,45 @@
       if (row.result_url) candidates.push(row.result_url);
       if (meta.audio_url) candidates.push(meta.audio_url);
       if (Array.isArray(meta.audio_urls)) candidates.push(...meta.audio_urls);
-      if (Array.isArray(meta.results)) meta.results.forEach((item)=>candidates.push(item && (item.audio_url || item.audioUrl || item.url || item.downloadUrl)));
+      if (Array.isArray(meta.results)) meta.results.forEach((item)=>candidates.push(item && (item.sourceAudioUrl || item.downloadUrl || item.audio_url || item.audioUrl || item.url)));
       return candidates.find(isUsableAudioUrl) || '';
+    }
+    function audioPlayerUrl(url){
+      const value = String(url || '').trim();
+      if (!value) return '';
+      const joiner = value.includes('?') ? '&' : '?';
+      return `${value}${joiner}hansora_audio=${Date.now()}`;
+    }
+    function audioDownloadUrl(url, name){
+      return `/.netlify/functions/audio-download?url=${encodeURIComponent(url)}&name=${encodeURIComponent((name || 'hansora-audio').replace(/[^a-z0-9._-]+/gi,'-').slice(0,80) || 'hansora-audio')}`;
+    }
+    function renderAudioControls(url, name){
+      const playerUrl = audioPlayerUrl(url);
+      const downloadUrl = audioDownloadUrl(url, name);
+      return `<div class="mt-4"><audio controls preload="metadata" data-base-src="${escapeHtml(url)}" src="${escapeHtml(playerUrl)}"></audio><div class="audio-actions mt-3"><a class="btn-soft rounded-full px-3 py-2 text-xs inline-flex" href="${escapeHtml(downloadUrl)}">Get</a></div></div>`;
+    }
+    function wireAudioPlayers(root){
+      (root || document).querySelectorAll('audio[data-base-src]').forEach((audio)=>{
+        if (audio.dataset.wired === '1') return;
+        audio.dataset.wired = '1';
+        let retries = 0;
+        const reload = ()=>{
+          if (retries >= 2) return;
+          retries += 1;
+          const base = audio.dataset.baseSrc || '';
+          if (!base) return;
+          const wasPaused = audio.paused;
+          audio.src = audioPlayerUrl(base);
+          audio.load();
+          if (!wasPaused) audio.play().catch(()=>{});
+        };
+        audio.addEventListener('loadedmetadata',()=>{
+          const d = Number(audio.duration || 0);
+          if (!Number.isFinite(d) || d <= 0) setTimeout(reload, 1200);
+        });
+        audio.addEventListener('stalled',()=>setTimeout(reload, 900));
+        audio.addEventListener('error',()=>setTimeout(reload, 900));
+      });
     }
 
     async function loadRecentHistory(){
@@ -850,9 +968,10 @@
         const name = meta.title || row.provider || 'Audio';
         const prompt = row.prompt || meta.prompt || '';
         const dotClass = status === 'ready' || status === 'complete' || status === 'SUCCESS' ? 'ready' : status === 'failed' ? 'failed' : '';
-        div.innerHTML = `<div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-sm font-black truncate">${escapeHtml(name)}</p><p class="text-xs text-slate-400 truncate mt-1">${escapeHtml(prompt)}</p></div><span class="status-dot ${dotClass}"></span></div>${url ? `<div class="mt-4"><audio controls src="${escapeHtml(url)}"></audio><a class="btn-soft rounded-full px-3 py-2 text-xs inline-flex mt-3" href="${escapeHtml(url)}" download>Get</a></div>` : `<div class="mt-4 rounded-2xl bg-slate-950/55 border border-white/10 p-4 text-sm text-slate-300">${status === 'failed' ? 'Failed' : 'Processing...'}</div>`}`;
+        div.innerHTML = `<div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-sm font-black truncate">${escapeHtml(name)}</p><p class="text-xs text-slate-400 truncate mt-1">${escapeHtml(prompt)}</p></div><span class="status-dot ${dotClass}"></span></div>${url ? renderAudioControls(url, name) : `<div class="mt-4 rounded-2xl bg-slate-950/55 border border-white/10 p-4 text-sm text-slate-300">${status === 'failed' ? 'Failed' : 'Processing...'}</div>`}`;
         list.appendChild(div);
       });
+      wireAudioPlayers(list);
     }
 
     async function checkPendingAudioRows(){
