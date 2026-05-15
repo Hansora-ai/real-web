@@ -7,8 +7,8 @@ const API_KEY = process.env.KIE_API_KEY || "";
 const MARKET_TASK_URL = "https://api.kie.ai/api/v1/jobs/createTask";
 const SUNO_GENERATE_URL = "https://api.kie.ai/api/v1/generate";
 const KIE_BASE64_UPLOAD_URL = "https://kieai.redpandaai.co/api/file-base64-upload";
-const SUPPORTED_DIALOGUE_VOICES = new Set(["EkK5I93UQWFDigLMpZcX", "Z3R5wn05IrDiVCyEkUrK", "NNl6r8mD7vthiJatiJt1"]);
-const DEFAULT_DIALOGUE_VOICE = "EkK5I93UQWFDigLMpZcX";
+const SUPPORTED_DIALOGUE_VOICES = new Set(['EkK5I93UQWFDigLMpZcX', 'Z3R5wn05IrDiVCyEkUrK', 'NNl6r8mD7vthiJatiJt1', 'YOq2y2Up4RgXP2HyXjE5', '2zRM7PkgwBPiau2jvVXc', '1SM7GgM6IMuvQlz2BwM3', 'NOpBlnGInO9m6vDvFkFC', 'BZgkqPqms7Kj9ulSkVzn', 'gU0LNdkMOQCOrPrwtbee', 'DGzg6RaUqxGRTHSBjfgF', 'SOYHLrjzK2X1ezoPC6cr', 'hpp4J3VqNfWAUOO0d1Us', 'pNInz6obpgDQGcFmaJgB', 'flHkNRp1BlvT73UL6gyz', '9yzdeviXkFddZ4Oz8Mok', 'U1Vk2oyatMdYs096Ety7', 'Bj9UqZbhQsanLzgalpEG', 'exsUS4vynmxd379XN4yO', 'BpjGufoPiobT79j2vtj4', 'ouL9IsyrSnUkCmfnD02u', 'RILOU7YmBhvwJGDGjNmP', 'aMSt68OGf4xUZAnLpTU8', 'tnSpp4vdxKPjI9w0GnoV', 'wyWA56cQNU2KqUW4eCsI', 'zNsotODqUhvbJ5wMG7Ei', 'QzgYVYSNBgksoEWDkpKt', 'kdmDKE6EkgrWrrykO9Qt', 'M0IvLNu6hH3cNnETNLEP', 'bMxLr8fP6hzNRRi9nJxU', 'bU2VfAdiOb2Gv2eZWlFq', 'gUABw7pXQjhjt0kNFBTF', 'Rachel', 'Aria', 'Roger', 'Sarah', 'Laura', 'Charlie', 'George', 'Callum', 'River', 'Liam', 'Charlotte', 'Alice', 'Matilda', 'Will', 'Eric', 'Chris', 'Brian', 'Daniel', 'Lily', 'Bill', 'B8gJV1IhpuegLxdpXFOE', '5l5f8iK3YPeGga21rQIX', 'wo6udizrrtpIxWGp2qJk', 'x70vRnQBMBu4FAYhjJbO', 'P1bg08DkjqiVEzOn76yG', 'qDuRKMlYmrm8trt5QyBn', 'qXpMhyvQqiRxWQs4qSSB', 'TX3LPaxmHKxFdv7VOQHJ', 'N2lVS1w4EtoT3dr4eOWO', 'FGY2WhTYpPnrIDTdsKH5', 'kPzsL2i3teMYv0FxEYQ6', 'nPczCjzI2devNBz1zQrb', 'uYXf8XasLslADfZ2MB4u', 'gs0tAILXbY5DNrJrsM6F', 'DTKMou8ccj1ZaWGBiotd', 'vBKc2FfBKJfcZNyEt1n6', 'DYkrAHD8iwork3YSUBbs', '56AoDkrOh6qfVPDXZ7Pt', 'eR40ATw9ArzDf9h3v7t7', 'g6xIsTj2HwM6VR4iXFCw', 'lcMyyd2HUfFzxdCaC4Ta', '6aDn1KB0hjpdcocrUkmq', 'Sq93GQT4X1lKDXsQcixO', 'pPdl9cQBQq4p6mRkZy2Z', 'zYcjlYFOd3taleS0gkk3', 'nzeAacJi50IvxcyDnMXa', 'ruirxsoakN0GWmGNIo04', 'TC0Zp7WVFzhA8zpTlRqV', 'ljo9gAlSqKOvF6D8sOsX', 'PPzYpIqttlTYA83688JI', '8JVbfL6oEdmuxKn5DK2C', 'iCrDUkL56s3C8sCRl7wb', 'wJqPPQ618aTW29mptyoc', 'EiNlNiXeDU1pqqOPrYMO', '4YYIPFl9wE5c4L2eu2Gb', '6F5Zhi321D3Oq7v1oNT4', 'YXpFCvM1S3JbWEJhoskW', 'LG95yZDEHg6fCZdQjLqj', 'CeNX9CMwmxDxUF5Q2Inm', 'aD6riP1btT197c6dACmy', 'mtrellq69YZsNwzUSyXh', 'dHd5gvgSOzSfduK4CvEg', 'eVItLK1UvXctxuaRV2Oq', 'esy0r39YPLQjOczyOib8', 'D2jw4N9m4xePLTQ3IHjU', 'Tsns2HvNFKfGiNjllgqo', '1U02n4nD6AdIZ9CjF053', 'AeRdCCKzvd23BpJoofzx', 'LruHrtVF6PSyGItzMNHS', '1wGbFxmAM3Fgw63G1zZJ', 'hqfrgApggtO1785R4Fsn', 'MJ0RnG71ty4LH3dvNfSd', 'scOwDtmlUjD3prqpp97I', 'Sm1seazb4gs7RSlUVw7c']);
+const DEFAULT_DIALOGUE_VOICE = 'EkK5I93UQWFDigLMpZcX';
 
 const SUPABASE_URL  = (process.env.SUPABASE_URL || "").replace(/\/+$/,"");
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -61,13 +61,13 @@ exports.handler = async (event) => {
       const dialogue = normalizeDialogue(body.dialogue);
       if (!dialogue.length) return ok({ submitted:false, error:"empty_dialogue", run_id });
       const stability = clampNumber(body.stability, 0, 1, 0.5);
-      const languageCode = normalizeLanguageCode(body.language_code || body.languageCode || body.language || "");
-      const input = { dialogue, stability };
-      if (languageCode) input.language_code = languageCode;
       kiePayload = {
         model: "elevenlabs/text-to-dialogue-v3",
         callBackUrl,
-        input
+        input: {
+          dialogue,
+          stability
+        }
       };
       resp = await postJson(MARKET_TASK_URL, kiePayload);
     } else if (kind === "isolation") {
@@ -134,7 +134,7 @@ function safeJson(s){ try { return JSON.parse(s || "{}"); } catch { return {}; }
 function lowerKeys(h){ const o={}; for (const k in h) o[k.toLowerCase()] = h[k]; return o; }
 function sb(){ return { "apikey":SERVICE_KEY, "Authorization":`Bearer ${SERVICE_KEY}` }; }
 function normalizeKind(k){ const s=String(k||"").toLowerCase(); if (["voice","isolation","music"].includes(s)) return s; return "voice"; }
-function providerTitle(kind){ return kind === "music" ? "Suno Music" : kind === "isolation" ? "Voice Isolation" : "Text to Voice"; }
+function providerTitle(kind){ return kind === "music" ? "Suno Music" : kind === "isolation" ? "Voice Isolation" : "Text to Dialogue"; }
 function normalizeLanguageCode(value){
   const raw = String(value || "").trim().toLowerCase();
   const allowed = new Set(["en","ja","zh","de","hi","fr","ko","pt","it","es","id","nl","tr","fil","pl","sv","bg","ro","ar","cs","el","fi","hr","ms","sk","da","ta","uk","ru","hu","no","vi","hy"]);
@@ -184,14 +184,12 @@ function normalizeMusicPayload(body){
     instrumental,
     model,
     style:String(body.style || "").trim().slice(0,1000),
-    title:String(body.title || "").trim().slice(0,80)
+    title:(String(body.title || "SONG").trim().slice(0,80) || "SONG")
   };
   if (!instrumental || prompt) payload.prompt = prompt;
-  const negativeTags = String(body.negativeTags || "").trim();
   const vocalGender = String(body.vocalGender || "").trim().toLowerCase();
   const personaId = String(body.personaId || "").trim();
   const personaModel = String(body.personaModel || "").trim();
-  if (negativeTags) payload.negativeTags = negativeTags.slice(0,500);
   if (!instrumental && (vocalGender === "m" || vocalGender === "f")) payload.vocalGender = vocalGender;
   if (personaId) payload.personaId = personaId.slice(0,120);
   if (personaModel) payload.personaModel = personaModel.slice(0,80);
