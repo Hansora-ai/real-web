@@ -61,10 +61,13 @@ exports.handler = async (event) => {
       const dialogue = normalizeDialogue(body.dialogue);
       if (!dialogue.length) return ok({ submitted:false, error:"empty_dialogue", run_id });
       const stability = clampNumber(body.stability, 0, 1, 0.5);
+      const languageCode = normalizeLanguageCode(body.language_code || body.languageCode || body.language || "");
+      const input = { dialogue, stability };
+      if (languageCode) input.language_code = languageCode;
       kiePayload = {
         model: "elevenlabs/text-to-dialogue-v3",
         callBackUrl,
-        input: { dialogue, stability }
+        input
       };
       resp = await postJson(MARKET_TASK_URL, kiePayload);
     } else if (kind === "isolation") {
@@ -132,6 +135,11 @@ function lowerKeys(h){ const o={}; for (const k in h) o[k.toLowerCase()] = h[k];
 function sb(){ return { "apikey":SERVICE_KEY, "Authorization":`Bearer ${SERVICE_KEY}` }; }
 function normalizeKind(k){ const s=String(k||"").toLowerCase(); if (["voice","isolation","music"].includes(s)) return s; return "voice"; }
 function providerTitle(kind){ return kind === "music" ? "Suno Music" : kind === "isolation" ? "Voice Isolation" : "Text to Voice"; }
+function normalizeLanguageCode(value){
+  const raw = String(value || "").trim().toLowerCase();
+  const allowed = new Set(["en","ja","zh","de","hi","fr","ko","pt","it","es","id","nl","tr","fil","pl","sv","bg","ro","ar","cs","el","fi","hr","ms","sk","da","ta","uk","ru","hu","no","vi","hy"]);
+  return allowed.has(raw) ? raw : "";
+}
 function normalizeUrl(u){ try { const url = new URL(String(u || "")); return url.href; } catch { return ""; } }
 function clampNumber(value, min, max, fallback){ const n=Number(value); if (!Number.isFinite(n)) return fallback; return Math.max(min, Math.min(max, n)); }
 function sanitizeFileName(name){ return String(name || "audio.mp3").replace(/[^a-zA-Z0-9._-]+/g,"-").slice(0,90) || "audio.mp3"; }
