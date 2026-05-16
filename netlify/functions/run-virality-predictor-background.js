@@ -1,5 +1,5 @@
-// netlify/functions/run-virality-predictor.js
-// Analyze a short video with KIE Gemini 3.1 Pro and return strict virality scores.
+// netlify/functions/run-virality-predictor-background.js
+// Background worker: analyze a short video with KIE Gemini 3.1 Pro and save strict virality scores.
 // Env: KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 const KIE_URL = "https://api.kie.ai/gemini-3.1-pro/v1/chat/completions";
@@ -91,14 +91,18 @@ exports.handler = async (event) => {
 
   let debited = false;
   let uid = "";
+  let runId = "";
+  let fileName = "";
+  let videoUrl = "";
+  let duration = 0;
   try {
     const headers = lowerKeys(event.headers || {});
     const body = safeJson(event.body);
     uid = String(body.uid || body.user_id || "").trim();
-    const videoUrl = normalizeUrl(body.videoUrl || body.video_url || body.url);
-    const runId = String(body.run_id || body.runId || `${uid}-virality-${Date.now()}`).trim();
-    const fileName = String(body.fileName || body.file_name || "uploaded-video").trim().slice(0, 180);
-    const duration = Number(body.duration || body.durationSeconds || 0);
+    videoUrl = normalizeUrl(body.videoUrl || body.video_url || body.url);
+    runId = String(body.run_id || body.runId || `${uid}-virality-${Date.now()}`).trim();
+    fileName = String(body.fileName || body.file_name || "uploaded-video").trim().slice(0, 180);
+    duration = Number(body.duration || body.durationSeconds || 0);
 
     if (!API_KEY) return json(200, { ok: false, error: "missing_kie_key" });
     if (!uid) return json(200, { ok: false, error: "missing_uid" });
@@ -116,6 +120,7 @@ exports.handler = async (event) => {
     if (credits < COST) return json(200, { ok: false, error: "not_enough_credits", cost: COST, credits });
     debited = await updateCredits(uid, -COST);
     if (!debited) return json(200, { ok: false, error: "debit_failed" });
+    await saveProcessingGeneration({ uid, runId, fileName, videoUrl, duration });
 
     const kiePayload = {
       model: "gemini-3.1-pro",
@@ -148,7 +153,7 @@ exports.handler = async (event) => {
     analysis.cost = COST;
     analysis.model = "gemini-3.1-pro";
 
-    await saveGeneration({
+    await patchGenerationDone({
       uid,
       runId,
       fileName,
@@ -161,6 +166,17 @@ exports.handler = async (event) => {
     return json(200, { ok: true, run_id: runId, cost: COST, analysis });
   } catch (error) {
     if (debited && uid) await updateCredits(uid, COST);
+    if (uid && runId) {
+      await patchGenerationFailed({
+        uid,
+        runId,
+        fileName,
+        videoUrl,
+        duration,
+        error: messageOf(error) || "analysis_failed",
+        refunded: !!debited
+      });
+    }
     return json(200, {
       ok: false,
       error: messageOf(error) || "analysis_failed",
@@ -222,32 +238,79 @@ async function updateCredits(uid, delta) {
   return res.ok;
 }
 
-async function saveGeneration({ uid, runId, fileName, videoUrl, duration, analysis, raw }) {
+async function saveProcessingGeneration({ uid, runId, fileName, videoUrl, duration }) {
   if (!UG_URL || !SERVICE_KEY) return;
+  const existing = await fetch(`${UG_URL}?select=id&user_id=eq.${encodeURIComponent(uid)}&kind=eq.virality_predictor&meta->>run_id=eq.${encodeURIComponent(runId)}&limit=1`, { headers: sb() });
+  const arr = await existing.json().catch(() => []);
+  if (Array.isArray(arr) && arr.length) return;
   const payload = {
     user_id: uid,
     provider: "gemini-3.1-pro",
     kind: "virality_predictor",
     prompt: "viral potential predictor",
-    result_url: videoUrl,
+    result_url: null,
     meta: {
       run_id: runId,
-      status: "done",
+      status: "processing",
       media_type: "video",
       file_name: fileName,
       input_url: videoUrl,
       duration,
       cost: COST,
       charged: true,
-      analysis,
-      raw_id: raw && raw.id ? raw.id : "",
-      completed_at: new Date().toISOString()
+      started_at: new Date().toISOString()
     }
   };
   await fetch(UG_URL, {
     method: "POST",
     headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=minimal" },
     body: JSON.stringify(payload)
+  });
+}
+
+async function patchGenerationDone({ uid, runId, fileName, videoUrl, duration, analysis, raw }) {
+  if (!UG_URL || !SERVICE_KEY) return;
+  const meta = {
+    run_id: runId,
+    status: "done",
+    media_type: "video",
+    file_name: fileName,
+    input_url: videoUrl,
+    duration,
+    cost: COST,
+    charged: true,
+    analysis,
+    raw_id: raw && raw.id ? raw.id : "",
+    completed_at: new Date().toISOString()
+  };
+  await fetch(`${UG_URL}?user_id=eq.${encodeURIComponent(uid)}&kind=eq.virality_predictor&meta->>run_id=eq.${encodeURIComponent(runId)}`, {
+    method: "PATCH",
+    headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify({ result_url: videoUrl, meta })
+  });
+}
+
+async function patchGenerationFailed({ uid, runId, fileName, videoUrl, duration, error, refunded }) {
+  if (!UG_URL || !SERVICE_KEY) return;
+  const meta = {
+    run_id: runId,
+    status: "failed",
+    failed: true,
+    error,
+    media_type: "video",
+    file_name: fileName,
+    input_url: videoUrl,
+    duration,
+    cost: COST,
+    charged: true,
+    refunded: !!refunded,
+    refunded_cost: refunded ? COST : 0,
+    failed_at: new Date().toISOString()
+  };
+  await fetch(`${UG_URL}?user_id=eq.${encodeURIComponent(uid)}&kind=eq.virality_predictor&meta->>run_id=eq.${encodeURIComponent(runId)}`, {
+    method: "PATCH",
+    headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify({ result_url: null, meta })
   });
 }
 
