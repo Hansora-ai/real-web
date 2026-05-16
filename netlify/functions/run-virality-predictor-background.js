@@ -12,7 +12,7 @@ const AUTH_USER_URL = SUPABASE_URL ? `${SUPABASE_URL}/auth/v1/user` : "";
 const COST = 0.3;
 const MAX_DURATION = 15;
 
-const ANALYSIS_PROMPT = `You are a strict short-form video performance analyst for TikTok, Instagram Reels, and YouTube Shorts.
+const ANALYSIS_PROMPT_EN = `You are a strict short-form video performance analyst for TikTok, Instagram Reels, and YouTube Shorts.
 
 Your job is NOT to be encouraging. Your job is to predict retention risk and viral potential as honestly as possible.
 
@@ -83,6 +83,79 @@ Return ONLY valid JSON with this exact schema:
     "specific actionable improvement 3",
     "specific actionable improvement 4"
   ]
+`;
+
+const ANALYSIS_PROMPT_RU = `Ты строгий аналитик эффективности коротких видео для TikTok, Instagram Reels и YouTube Shorts.
+
+Твоя задача — НЕ подбадривать автора. Твоя задача — максимально честно предсказать риск падения удержания и вирусный потенциал.
+
+Глубоко проанализируй загруженное видео. Оценивай только то, что видно и слышно в видео. Не предполагай, что у автора есть подписчики, тренд, платный трафик, внешний контекст или преимущество от платформы.
+
+Оценивай строго:
+- 90-100 = исключительное видео, моментально останавливает скролл, очень редкий уровень
+- 75-89 = сильное видео, вероятно покажет хороший результат
+- 55-74 = среднее/хорошее видео, но с явными слабостями
+- 35-54 = слабое видео, нужны серьезные улучшения
+- 0-34 = плохое видео, скорее всего не удержит внимание
+
+Жесткие ограничения:
+- Если в видео нет понятной истории, сильного движения, хорошего аудио, текстового хука, ясного объекта внимания или динамичного темпа, viral_potential должен быть ниже 55.
+- Если hold_rate ниже 40, viral_potential не должен превышать 55.
+- Если auditory_cortex ниже 25 и нет сильной визуальной истории, viral_potential не должен превышать 60.
+- Если language_network ниже 20 и для понимания видео нужен контекст, viral_potential не должен превышать 55.
+- Если focus_drift выше 65, viral_potential не должен превышать 50, кроме случая, когда hook_score выше 90 и hold_rate выше 70.
+
+Проанализируй эти параметры:
+1. hook_score: первые 1-2 секунды, визуальная неожиданность, любопытство, мгновенная причина смотреть дальше.
+2. hold_rate: вероятность, что зрители досмотрят видео до конца.
+3. visual_cortex: композиция, движение, четкость, контраст, привлекательность объекта, визуальная новизна.
+4. auditory_cortex: музыка, голос, ритм, саунд-дизайн, эмоциональное влияние аудио.
+5. attention_control: темп, изменения, монтажные склейки, движение, новизна по ходу видео.
+6. focus_drift: риск, что внимание зрителя упадет или ему станет скучно. Чем выше показатель, тем хуже.
+7. language_network: субтитры, текстовые надписи, озвучка, ясность истории, смысловой хук.
+8. viral_potential: итоговый реалистичный балл на основе взвешенного качества всех категорий.
+
+Важно:
+- Не ставь высокий viral_potential только потому, что первый кадр выглядит хорошо.
+- Сильный хук при слабом удержании должен давать средний или низкий итоговый балл.
+- Статичное видео нужно строго штрафовать, если в нем нет исключительного напряжения, эмоции или истории.
+- Отсутствие аудио или слабое аудио должно сильно снижать auditory_cortex.
+- Отсутствие текста/голоса/контекста должно снижать language_network.
+- Итоговый балл должен совпадать со слабыми местами, которые ты указываешь.
+- Будь конкретным. Упоминай точный темп, видимые смены сцен, проблемы текста/аудио/истории и риски ухода зрителей.
+
+Верни ТОЛЬКО валидный JSON с этой точной схемой. Ключи JSON должны оставаться на английском, но все текстовые объяснения, top_issues и improvements должны быть на русском:
+{
+  "viral_potential": number,
+  "hook_score": number,
+  "hold_rate": number,
+  "visual_cortex": number,
+  "auditory_cortex": number,
+  "attention_control": number,
+  "focus_drift": number,
+  "language_network": number,
+  "score_reasoning": {
+    "viral_potential": "почему именно этот балл оправдан",
+    "hook_score": "конкретные доказательства из первых 1-2 секунд",
+    "hold_rate": "конкретные риски или сильные стороны удержания",
+    "visual_cortex": "конкретные визуальные доказательства",
+    "auditory_cortex": "конкретные доказательства по аудио",
+    "attention_control": "конкретные доказательства темпа/движения",
+    "focus_drift": "конкретные доказательства скуки/риска ухода",
+    "language_network": "конкретные доказательства по тексту/истории/контексту"
+  },
+  "top_issues": [
+    "конкретная проблема 1",
+    "конкретная проблема 2",
+    "конкретная проблема 3",
+    "конкретная проблема 4"
+  ],
+  "improvements": [
+    "конкретное практическое улучшение 1",
+    "конкретное практическое улучшение 2",
+    "конкретное практическое улучшение 3",
+    "конкретное практическое улучшение 4"
+  ]
 }`;
 
 exports.handler = async (event) => {
@@ -103,6 +176,8 @@ exports.handler = async (event) => {
     runId = String(body.run_id || body.runId || `${uid}-virality-${Date.now()}`).trim();
     fileName = String(body.fileName || body.file_name || "uploaded-video").trim().slice(0, 180);
     duration = Number(body.duration || body.durationSeconds || 0);
+    const language = String(body.language || body.lang || "en").toLowerCase() === "ru" ? "ru" : "en";
+    const analysisPrompt = language === "ru" ? ANALYSIS_PROMPT_RU : ANALYSIS_PROMPT_EN;
 
     if (!API_KEY) return json(200, { ok: false, error: "missing_kie_key" });
     if (!uid) return json(200, { ok: false, error: "missing_uid" });
@@ -120,7 +195,7 @@ exports.handler = async (event) => {
     if (credits < COST) return json(200, { ok: false, error: "not_enough_credits", cost: COST, credits });
     debited = await updateCredits(uid, -COST);
     if (!debited) return json(200, { ok: false, error: "debit_failed" });
-    await saveProcessingGeneration({ uid, runId, fileName, videoUrl, duration });
+    await saveProcessingGeneration({ uid, runId, fileName, videoUrl, duration, language });
 
     const kiePayload = {
       model: "gemini-3.1-pro",
@@ -131,7 +206,7 @@ exports.handler = async (event) => {
         {
           role: "user",
           content: [
-            { type: "text", text: ANALYSIS_PROMPT },
+            { type: "text", text: analysisPrompt },
             { type: "image_url", image_url: { url: videoUrl } }
           ]
         }
@@ -159,6 +234,7 @@ exports.handler = async (event) => {
       fileName,
       videoUrl,
       duration,
+      language,
       analysis,
       raw
     });
@@ -173,6 +249,7 @@ exports.handler = async (event) => {
         fileName,
         videoUrl,
         duration,
+        language,
         error: messageOf(error) || "analysis_failed",
         refunded: !!debited
       });
@@ -238,7 +315,7 @@ async function updateCredits(uid, delta) {
   return res.ok;
 }
 
-async function saveProcessingGeneration({ uid, runId, fileName, videoUrl, duration }) {
+async function saveProcessingGeneration({ uid, runId, fileName, videoUrl, duration, language }) {
   if (!UG_URL || !SERVICE_KEY) return;
   const existing = await fetch(`${UG_URL}?select=id&user_id=eq.${encodeURIComponent(uid)}&kind=eq.virality_predictor&meta->>run_id=eq.${encodeURIComponent(runId)}&limit=1`, { headers: sb() });
   const arr = await existing.json().catch(() => []);
@@ -256,6 +333,7 @@ async function saveProcessingGeneration({ uid, runId, fileName, videoUrl, durati
       file_name: fileName,
       input_url: videoUrl,
       duration,
+      language,
       cost: COST,
       charged: true,
       started_at: new Date().toISOString()
@@ -268,7 +346,7 @@ async function saveProcessingGeneration({ uid, runId, fileName, videoUrl, durati
   });
 }
 
-async function patchGenerationDone({ uid, runId, fileName, videoUrl, duration, analysis, raw }) {
+async function patchGenerationDone({ uid, runId, fileName, videoUrl, duration, language, analysis, raw }) {
   if (!UG_URL || !SERVICE_KEY) return;
   const meta = {
     run_id: runId,
@@ -277,6 +355,7 @@ async function patchGenerationDone({ uid, runId, fileName, videoUrl, duration, a
     file_name: fileName,
     input_url: videoUrl,
     duration,
+    language,
     cost: COST,
     charged: true,
     analysis,
@@ -290,7 +369,7 @@ async function patchGenerationDone({ uid, runId, fileName, videoUrl, duration, a
   });
 }
 
-async function patchGenerationFailed({ uid, runId, fileName, videoUrl, duration, error, refunded }) {
+async function patchGenerationFailed({ uid, runId, fileName, videoUrl, duration, language, error, refunded }) {
   if (!UG_URL || !SERVICE_KEY) return;
   const meta = {
     run_id: runId,
@@ -301,6 +380,7 @@ async function patchGenerationFailed({ uid, runId, fileName, videoUrl, duration,
     file_name: fileName,
     input_url: videoUrl,
     duration,
+    language,
     cost: COST,
     charged: true,
     refunded: !!refunded,
