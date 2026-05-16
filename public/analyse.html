@@ -96,6 +96,9 @@
   let predictorPoll = null;
   let currentLanguage = 'en';
   let lastAnalysis = null;
+  let lastAnalysisLanguage = 'en';
+  let analysisTranslations = { en: null, ru: null };
+  let translationBusy = false;
 
   const labels = {
     en: {
@@ -154,7 +157,7 @@
     $('langRu').classList.toggle('active',currentLanguage==='ru');
     $('topIssuesTitle').textContent=t('topIssues');
     $('improvementsTitle').textContent=t('improvements');
-    if(lastAnalysis)renderAnalysis(lastAnalysis);
+    if(lastAnalysis)showAnalysisForCurrentLanguage();
     else{
       renderEmptyStats();
       renderEmptyInsights();
@@ -231,20 +234,76 @@
     renderList('topIssuesList',[],t('noIssues'));
     renderList('improvementsList',[],t('noImprovements'));
   }
-  function renderAnalysis(analysis){
-    lastAnalysis=analysis||{};
-    const score=Number(lastAnalysis.viral_potential||0);
+  function detectAnalysisLanguage(analysis){
+    const lang=String(analysis&&analysis.analysis_language||analysis&&analysis.language||'').toLowerCase();
+    if(lang.startsWith('ru'))return 'ru';
+    if(lang.startsWith('en'))return 'en';
+    return currentLanguage;
+  }
+
+  function renderAnalysisView(analysis){
+    const view=analysis||{};
+    const score=Number(view.viral_potential||0);
     $('viralScore').innerHTML=`${Math.round(score)}<span>/100</span>`;
     $('statsGrid').innerHTML=statDefs.map(([key,name])=>{
-      const value=Math.max(0,Math.min(100,Math.round(Number(lastAnalysis[key]||0))));
+      const value=Math.max(0,Math.min(100,Math.round(Number(view[key]||0))));
       return `<div class="stat-row"><div class="stat-name">${statLabel(key,name)}</div><div class="stat-value">${value}%</div><div class="bar"><div class="fill ${key==='focus_drift'?'danger':''}" style="width:${value}%"></div></div></div>`;
     }).join('');
-    renderList('topIssuesList',lastAnalysis.top_issues,t('noIssues'));
-    renderList('improvementsList',lastAnalysis.improvements,t('noImprovements'));
+    renderList('topIssuesList',view.top_issues,t('noIssues'));
+    renderList('improvementsList',view.improvements,t('noImprovements'));
+  }
+
+  function renderAnalysis(analysis){
+    lastAnalysis=analysis||{};
+    lastAnalysisLanguage=detectAnalysisLanguage(lastAnalysis);
+    analysisTranslations={en:null,ru:null};
+    analysisTranslations[lastAnalysisLanguage]=lastAnalysis;
+    renderAnalysisView(lastAnalysis);
+  }
+
+  async function translateLastAnalysis(targetLanguage){
+    if(!lastAnalysis||translationBusy)return null;
+    if(analysisTranslations[targetLanguage])return analysisTranslations[targetLanguage];
+    const source=analysisTranslations[lastAnalysisLanguage]||lastAnalysis;
+    try{
+      translationBusy=true;
+      const session=await supabaseClient.auth.getSession();
+      const token=session?.data?.session?.access_token||'';
+      if(!token)throw new Error('Please log in again.');
+      $('statusText').textContent=targetLanguage==='ru'?'Перевод результата':'Translating result';
+      const resp=await fetch('/.netlify/functions/translate-virality-analysis',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+        body:JSON.stringify({target_language:targetLanguage,source_language:lastAnalysisLanguage,analysis:source})
+      });
+      const data=await resp.json().catch(()=>({}));
+      if(!resp.ok||!data.ok||!data.analysis)throw new Error(data.error||`translation_failed_${resp.status}`);
+      analysisTranslations[targetLanguage]=data.analysis;
+      return data.analysis;
+    }catch(err){
+      showError(String(err.message||err));
+      return null;
+    }finally{
+      translationBusy=false;
+      if(lastAnalysis)$('statusText').textContent=currentLanguage==='ru'?'Анализ завершён':'Analysis complete';
+    }
+  }
+
+  async function showAnalysisForCurrentLanguage(){
+    if(!lastAnalysis)return;
+    if(analysisTranslations[currentLanguage]){
+      renderAnalysisView(analysisTranslations[currentLanguage]);
+      return;
+    }
+    renderAnalysisView(lastAnalysis);
+    const translated=await translateLastAnalysis(currentLanguage);
+    if(translated&&currentLanguage===detectAnalysisLanguage(translated))renderAnalysisView(translated);
   }
 
   function resetResult(){
     lastAnalysis=null;
+    lastAnalysisLanguage=currentLanguage;
+    analysisTranslations={en:null,ru:null};
     setState('idle',t('ready'));
     $('viralScore').innerHTML='--<span>/100</span>';
     renderEmptyStats();
@@ -322,7 +381,7 @@
     if(!currentUser||!runId)return;
     predictorPoll=setTimeout(async()=>{
       try{
-        setState('processing',attempt<10?'Neural model reading attention curve':'Still analyzing with Gemini');
+        setState('processing',currentLanguage==='ru'?(attempt<10?'Нейромодель читает удержание внимания':'Анализ всё ещё выполняется'):(attempt<10?'Neural model reading attention curve':'Still analyzing with Gemini'));
         const url=`/.netlify/functions/virality-predictor-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}`;
         const resp=await fetch(url,{headers:{Authorization:`Bearer ${token}`}});
         const data=await resp.json().catch(()=>({}));
@@ -330,7 +389,7 @@
           renderAnalysis(data.analysis||{});
           await refreshCredits();
           if(window.HansoraHeader&&typeof window.HansoraHeader.startCreditsPolling==='function')window.HansoraHeader.startCreditsPolling(45000,1500);
-          setState('done','Analysis complete');
+          setState('done',currentLanguage==='ru'?'Анализ завершён':'Analysis complete');
           completeRun();
           return;
         }
@@ -365,11 +424,11 @@
       if(!token)throw new Error('Please log in again.');
       $('runBtn').disabled=true;
       $('runBtn').textContent='Uploading...';
-      setState('processing','Uploading clip');
+      setState('processing',currentLanguage==='ru'?'Загрузка видео':'Uploading clip');
       const up=await window.kieUploadBridge.upload(currentVideo.file);
       if(!up||!up.publicUrl)throw new Error('upload_failed');
       $('runBtn').textContent='Analyzing...';
-      setState('processing','Neural model reading attention curve');
+      setState('processing',currentLanguage==='ru'?'Нейромодель читает удержание внимания':'Neural model reading attention curve');
       const runId=`${user.id}-virality-${Date.now()}`;
       const resp=await fetch('/.netlify/functions/run-virality-predictor-background',{
         method:'POST',
@@ -385,11 +444,11 @@
         renderAnalysis(data.analysis||{});
         await refreshCredits();
         if(window.HansoraHeader&&typeof window.HansoraHeader.startCreditsPolling==='function')window.HansoraHeader.startCreditsPolling(45000,1500);
-        setState('done','Analysis complete');
+        setState('done',currentLanguage==='ru'?'Анализ завершён':'Analysis complete');
         completeRun();
         return;
       }
-      setState('processing','Analysis running in background');
+      setState('processing',currentLanguage==='ru'?'Анализ выполняется в фоне':'Analysis running in background');
       pollViralityResult(runId,token);
     }catch(err){
       setState('error','There was an error. Please try later.');
