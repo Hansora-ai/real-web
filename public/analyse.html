@@ -12,12 +12,12 @@
   <style>
     :root{--bg:#07080b;--panel:#121419;--panel2:#181b21;--line:rgba(255,255,255,.09);--muted:rgba(241,245,249,.58);--soft:rgba(255,255,255,.74);--brand:#8b5cf6;--cyan:#67e8f9;--lime:#dfff45;--rose:#fb7185;--amber:#f59e0b}
     *{box-sizing:border-box}html,body{min-height:100%;margin:0}body{overflow:hidden;background:radial-gradient(circle at 78% 13%,rgba(139,92,246,.18),transparent 32%),radial-gradient(circle at 34% 88%,rgba(103,232,249,.08),transparent 32%),var(--bg);color:#f8fafc;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif}button,input{font:inherit}.hidden{display:none!important}
-    .page{height:calc(100vh - 68px);display:grid;grid-template-columns:minmax(340px,520px) minmax(0,1fr);gap:18px;padding:18px}.panel{border:1px solid var(--line);background:linear-gradient(180deg,rgba(24,27,33,.98),rgba(13,15,20,.98));border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.28);overflow:hidden}.left{display:flex;flex-direction:column;padding:28px;gap:20px}.kicker{font-size:12px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--lime)}.title{font-size:clamp(36px,5vw,58px);line-height:.9;font-weight:950;letter-spacing:0}.sub{color:var(--muted);font-size:16px;line-height:1.45;max-width:520px}.drop{min-height:340px;border:1px dashed rgba(255,255,255,.18);border-radius:22px;background:rgba(255,255,255,.035);display:grid;place-items:center;text-align:center;padding:24px;cursor:pointer;transition:.18s}.drop.drag,.drop:hover{border-color:rgba(223,255,69,.72);background:rgba(223,255,69,.055)}.plus{width:54px;height:54px;border-radius:999px;display:grid;place-items:center;margin:0 auto 16px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);font-size:30px}.video-card{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#05070b}.video-card video{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#000}.video-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;color:var(--soft);font-size:13px}.remove{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:999px;color:#fff;padding:7px 10px;font-size:12px;font-weight:800}.run{width:100%;min-height:58px;border:0;border-radius:16px;background:linear-gradient(135deg,#7c3aed,#38bdf8);color:white;font-weight:950;font-size:17px;cursor:pointer;box-shadow:0 18px 48px rgba(124,58,237,.34)}.run:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}.note{font-size:12px;color:var(--muted);text-align:center}.err{border:1px solid rgba(248,113,113,.38);background:rgba(127,29,29,.28);color:#fecaca;border-radius:14px;padding:11px 12px;font-size:13px}
+    .page{height:calc(100vh - 68px);display:grid;grid-template-columns:minmax(340px,520px) minmax(0,1fr);gap:18px;padding:18px}.panel{border:1px solid var(--line);background:linear-gradient(180deg,rgba(24,27,33,.98),rgba(13,15,20,.98));border-radius:22px;box-shadow:0 24px 70px rgba(0,0,0,.28);overflow:hidden}.left{display:flex;flex-direction:column;padding:28px;gap:20px}.kicker{font-size:12px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--lime)}.title{font-size:clamp(36px,5vw,58px);line-height:.9;font-weight:950;letter-spacing:0}.sub{color:var(--muted);font-size:16px;line-height:1.45;max-width:520px}.drop{min-height:340px;border:1px dashed rgba(255,255,255,.18);border-radius:22px;background:rgba(255,255,255,.035);display:grid;place-items:center;text-align:center;padding:24px;cursor:pointer;transition:.18s}.drop.drag,.drop:hover{border-color:rgba(223,255,69,.72);background:rgba(223,255,69,.055)}.plus{width:54px;height:54px;border-radius:999px;display:grid;place-items:center;margin:0 auto 16px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);font-size:30px}.video-card{width:min(280px,100%);margin:0 auto;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#05070b}.main-preview-frame{width:100%;aspect-ratio:9/16;overflow:hidden;background:#000}.main-preview-frame video{width:100%;height:100%;object-fit:cover;display:block;background:#000}.video-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;color:var(--soft);font-size:13px}.remove{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:999px;color:#fff;padding:7px 10px;font-size:12px;font-weight:800}.run{width:100%;min-height:58px;border:0;border-radius:16px;background:linear-gradient(135deg,#7c3aed,#38bdf8);color:white;font-weight:950;font-size:17px;cursor:pointer;box-shadow:0 18px 48px rgba(124,58,237,.34)}.run:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}.note{font-size:12px;color:var(--muted);text-align:center}.err{border:1px solid rgba(248,113,113,.38);background:rgba(127,29,29,.28);color:#fecaca;border-radius:14px;padding:11px 12px;font-size:13px}
     .right{position:relative;display:grid;grid-template-rows:minmax(360px,1fr) auto}.stage{position:relative;min-height:392px;padding:30px 32px 94px;display:grid;grid-template-columns:1fr;align-items:center;gap:0;background:#05070b}.stage:before{content:"";position:absolute;inset:0;border-radius:0;background:radial-gradient(circle at 50% 42%,rgba(103,232,249,.13),transparent 34%),radial-gradient(circle at 50% 48%,rgba(139,92,246,.07),transparent 46%);opacity:1;pointer-events:none;z-index:0}.brain-wrap{position:relative;min-height:260px;display:grid;place-items:center;isolation:isolate;overflow:hidden;z-index:1}.brain-wrap:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 0 38%,rgba(5,7,11,.28) 54%,#05070b 76%);pointer-events:none;z-index:3}.brain-glow{position:absolute;width:470px;height:310px;border-radius:50%;background:radial-gradient(circle,rgba(103,232,249,.30),rgba(139,92,246,.13) 42%,transparent 72%);filter:blur(30px);opacity:.84}.brain-ring{position:absolute;width:390px;height:250px;border:1px solid rgba(103,232,249,.10);border-radius:50%;transform:rotate(-10deg);box-shadow:inset 0 0 55px rgba(103,232,249,.10),0 0 42px rgba(103,232,249,.08)}.brain-ring:after{content:"";position:absolute;inset:24px;border:1px solid rgba(223,255,69,.12);border-radius:50%;transform:rotate(18deg)}.brain-video{position:relative;width:min(360px,70vw);max-width:100%;aspect-ratio:1/1;object-fit:cover;border:0;background:transparent;mix-blend-mode:lighten;filter:brightness(.86) contrast(1.34) saturate(1.35) drop-shadow(0 0 24px rgba(103,232,249,.38)) drop-shadow(0 28px 46px rgba(0,0,0,.50));transform:translateZ(0);opacity:.88;-webkit-mask-image:radial-gradient(ellipse at center,#000 0 43%,rgba(0,0,0,.82) 55%,transparent 73%);mask-image:radial-gradient(ellipse at center,#000 0 43%,rgba(0,0,0,.82) 55%,transparent 73%)}.processing .brain-video{animation:brainFloat 2.2s ease-in-out infinite alternate;filter:brightness(.92) contrast(1.45) saturate(1.45) drop-shadow(0 0 34px rgba(103,232,249,.62)) drop-shadow(0 0 30px rgba(223,255,69,.16)) drop-shadow(0 30px 54px rgba(0,0,0,.52))}.processing .brain-glow{animation:breath 1.2s ease-in-out infinite}.processing .brain-ring{animation:slowSpin 6s linear infinite}.error-state .brain-video{filter:brightness(.85) contrast(1.30) saturate(1.10) drop-shadow(0 0 28px rgba(248,113,113,.55)) drop-shadow(0 28px 46px rgba(0,0,0,.50));opacity:.82}.error-state .brain-glow{background:radial-gradient(circle,rgba(248,113,113,.28),transparent 66%)}@keyframes brainFloat{from{transform:translateY(4px) scale(.985)}to{transform:translateY(-8px) scale(1.025)}}@keyframes breath{0%,100%{transform:scale(.92);opacity:.50}50%{transform:scale(1.08);opacity:.96}}@keyframes slowSpin{to{transform:rotate(350deg)}}
-    .score-box{position:absolute;left:32px;right:32px;bottom:24px;z-index:4;display:grid;grid-template-columns:minmax(0,1fr) 180px;grid-template-rows:auto auto;column-gap:24px;align-items:end;text-align:right}.score-label{grid-column:2;grid-row:1;color:var(--muted);font-weight:850;margin-top:0!important}.score{grid-column:2;grid-row:2;font-size:54px;font-weight:950;line-height:.92}.score span{color:rgba(255,255,255,.44);font-size:.55em}.meter{grid-column:1;grid-row:1;height:7px;width:100%;border-radius:999px;background:linear-gradient(90deg,#ef4444,#f59e0b,#dfff45);margin:0 0 12px 0;box-shadow:0 0 25px rgba(223,255,69,.12)}.scale{grid-column:1;grid-row:2;display:flex;justify-content:space-between;width:100%;margin-left:0;color:#fff;font-size:11px;font-weight:900}.clip-mini{position:absolute;left:34px;bottom:30px;width:178px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.14);background:#080b10;box-shadow:0 18px 42px rgba(0,0,0,.34);z-index:5}.clip-mini video{width:100%;aspect-ratio:16/9;display:block;object-fit:cover}.clip-mini .duration{position:absolute;right:8px;bottom:8px;padding:4px 7px;border-radius:999px;background:rgba(0,0,0,.72);font-size:12px;font-weight:900}
+    .score-box{position:absolute;left:32px;right:32px;bottom:24px;z-index:4;display:grid;grid-template-columns:minmax(0,1fr) 180px;grid-template-rows:auto auto;column-gap:24px;align-items:end;text-align:right}.score-label{grid-column:2;grid-row:1;color:var(--muted);font-weight:850;margin-top:0!important}.score{grid-column:2;grid-row:2;font-size:54px;font-weight:950;line-height:.92}.score span{color:rgba(255,255,255,.44);font-size:.55em}.meter{grid-column:1;grid-row:1;height:7px;width:100%;border-radius:999px;background:linear-gradient(90deg,#ef4444,#f59e0b,#dfff45);margin:0 0 12px 0;box-shadow:0 0 25px rgba(223,255,69,.12)}.scale{grid-column:1;grid-row:2;display:flex;justify-content:space-between;width:100%;margin-left:0;color:#fff;font-size:11px;font-weight:900}.clip-mini{position:absolute;left:34px;bottom:118px;width:178px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.14);background:#080b10;box-shadow:0 18px 42px rgba(0,0,0,.34);z-index:5}.clip-mini video{width:100%;aspect-ratio:16/9;display:block;object-fit:cover}.clip-mini .duration{position:absolute;right:8px;bottom:8px;padding:4px 7px;border-radius:999px;background:rgba(0,0,0,.72);font-size:12px;font-weight:900}
     .stats{border-top:1px solid var(--line);padding:18px 24px 14px;background:rgba(255,255,255,.025);overflow:visible}.stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 26px}.stat-row{display:grid;grid-template-columns:minmax(110px,1fr) 48px;gap:8px 12px;align-items:center}.stat-name{font-weight:850;color:#f8fafc}.stat-value{text-align:right;font-weight:900}.bar{grid-column:1/-1;height:8px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden}.fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#dfff45,#67e8f9);width:0;transition:width .8s ease}.fill.danger{background:linear-gradient(90deg,#fb7185,#f59e0b)}.processing .fill{animation:thinkingBar 1.15s ease-in-out infinite alternate}.processing .fill.danger{animation-delay:.18s}@keyframes thinkingBar{0%{width:18%;opacity:.50}45%{width:72%;opacity:.95}100%{width:38%;opacity:.70}}
     .insights{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:0 24px 24px;background:rgba(255,255,255,.025)}.insight{border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:18px;padding:16px}.insight h3{font-size:15px;margin:0 0 12px;font-weight:950}.insight ul{margin:0;padding-left:18px;color:var(--soft);font-size:13px;line-height:1.45}.insight li+li{margin-top:8px}.empty{color:var(--muted)}.status-line{position:absolute;top:26px;left:30px;z-index:6;font-size:13px;color:#f8fafc;font-weight:850;text-shadow:0 0 16px rgba(0,0,0,.88),0 0 18px rgba(223,255,69,.18);background:rgba(5,7,11,.34);border:1px solid rgba(255,255,255,.06);border-radius:999px;padding:7px 11px;backdrop-filter:blur(8px)}.status-dot{display:inline-block;width:8px;height:8px;border-radius:999px;background:var(--lime);box-shadow:0 0 22px var(--lime);margin-right:8px}.processing .status-dot{animation:blink .8s ease-in-out infinite alternate}.error-state .status-dot{background:#ef4444;box-shadow:0 0 22px #ef4444}@keyframes blink{from{opacity:.35}to{opacity:1}}
-    @media(max-width:980px){body{overflow:auto}.page{height:auto;display:flex;flex-direction:column;padding:12px}.left{padding:18px;gap:14px}.title{font-size:36px}.drop{min-height:260px}.stage{min-height:auto;padding:24px 24px 118px}.brain-wrap{min-height:240px}.brain-glow{width:300px;height:220px}.brain-ring{width:270px;height:200px}.brain-video{width:min(300px,86vw)}.score-box{left:24px;right:24px;bottom:22px;grid-template-columns:1fr 112px;column-gap:14px;text-align:right}.score{font-size:40px}.clip-mini{position:relative;left:auto;bottom:auto;margin-top:-12px}.stat-grid,.insights{grid-template-columns:1fr}}
+    @media(max-width:980px){body{overflow:auto}.page{height:auto;display:flex;flex-direction:column;padding:12px}.left{padding:18px;gap:14px}.title{font-size:36px}.drop{min-height:260px}.stage{min-height:auto;padding:24px 24px 118px}.brain-wrap{min-height:240px}.brain-glow{width:300px;height:220px}.brain-ring{width:270px;height:200px}.brain-video{width:min(300px,86vw)}.score-box{left:24px;right:24px;bottom:22px;grid-template-columns:1fr 112px;column-gap:14px;text-align:right}.score{font-size:40px}.clip-mini{left:24px;bottom:118px;width:150px;margin-top:0}.stat-grid,.insights{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -50,7 +50,7 @@
         <div class="brain-wrap">
           <div class="brain-glow"></div>
           <div class="brain-ring"></div>
-          <video id="brainVideo" class="brain-video" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/Untitled%20folder/download%20(1).mp4" muted playsinline preload="auto" aria-label="Glowing neural analysis brain"></video>
+          <video id="brainVideo" class="brain-video" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/Untitled%20folder/0516.mp4" muted playsinline loop autoplay preload="auto" aria-label="Glowing neural analysis brain"></video>
         </div>
         <div class="score-box">
           <div class="meter"></div>
@@ -78,6 +78,7 @@
   let currentUser = null;
   let currentVideo = null;
   let currentCredits = 0;
+  let predictorPoll = null;
 
   const statDefs = [
     ["visual_cortex","Visual Cortex"],
@@ -109,8 +110,10 @@
   function setBrainMotion(state){
     const video=$('brainVideo');
     if(!video)return;
-    video.dataset.speed=state==='processing'?'1.65':'0.85';
-    if(!video.dataset.reversing)video.playbackRate=Number(video.dataset.speed||0.85);
+    video.loop=true;
+    video.muted=true;
+    video.playsInline=true;
+    video.playbackRate=state==='processing'?1.35:0.85;
     video.play().catch(()=>{});
   }
 
@@ -125,39 +128,23 @@
   function setupBrainVideo(){
     const video=$('brainVideo');
     if(!video)return;
-    let reverseFrame=null;
-    let lastFrameTime=0;
-    function playForward(){
-      video.dataset.reversing='';
-      video.playbackRate=Number(video.dataset.speed||0.85);
-      video.play().catch(()=>{});
-    }
-    function reverseStep(timestamp){
-      if(video.dataset.reversing!=='1')return;
-      if(!lastFrameTime)lastFrameTime=timestamp;
-      const delta=Math.min((timestamp-lastFrameTime)/1000,0.05);
-      lastFrameTime=timestamp;
-      const speed=Number(video.dataset.speed||0.85);
-      video.currentTime=Math.max(0,video.currentTime-(delta*speed));
-      if(video.currentTime<=0.04){
-        lastFrameTime=0;
-        playForward();
-        return;
+    video.loop=true;
+    video.muted=true;
+    video.playsInline=true;
+    video.preload='auto';
+    video.playbackRate=0.85;
+    const playBrain=()=>video.play().catch(()=>{});
+    const seamlessRestart=()=>{
+      const duration=Number(video.duration||0);
+      if(Number.isFinite(duration)&&duration>0&&duration-video.currentTime<=0.06){
+        try{video.currentTime=0.001}catch{}
+        playBrain();
       }
-      reverseFrame=requestAnimationFrame(reverseStep);
-    }
-    video.addEventListener('ended',()=>{
-      if(reverseFrame)cancelAnimationFrame(reverseFrame);
-      video.dataset.reversing='1';
-      video.pause();
-      lastFrameTime=0;
-      reverseFrame=requestAnimationFrame(reverseStep);
-    });
-    video.addEventListener('loadedmetadata',()=>{
-      if(video.currentTime<=0.02)video.currentTime=Math.min(0.06,Number(video.duration||0));
-      playForward();
-    });
-    playForward();
+    };
+    ['ended','pause','stalled','waiting','canplay','loadeddata'].forEach(ev=>video.addEventListener(ev,playBrain));
+    video.addEventListener('timeupdate',seamlessRestart);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)playBrain()});
+    playBrain();
   }
 
   function renderEmptyStats(){
@@ -183,7 +170,26 @@
     renderEmptyStats();
   }
 
+  function forceVideoPreview(video){
+    if(!video)return;
+    video.muted=true;
+    video.loop=true;
+    video.playsInline=true;
+    video.preload='auto';
+    video.load();
+    const start=()=>{
+      const duration=Number(video.duration||0);
+      const target=Number.isFinite(duration)&&duration>0?Math.min(0.35,Math.max(0.08,duration*0.04)):0.08;
+      try{if(video.currentTime<0.04)video.currentTime=target}catch{}
+      video.play().catch(()=>{});
+    };
+    video.addEventListener('loadedmetadata',start,{once:true});
+    video.addEventListener('canplay',start,{once:true});
+    setTimeout(start,180);
+  }
+
   function clearVideo(){
+    if(predictorPoll){clearTimeout(predictorPoll);predictorPoll=null}
     if(currentVideo&&currentVideo.preview)URL.revokeObjectURL(currentVideo.preview);
     currentVideo=null;
     $('videoPreview').classList.add('hidden');
@@ -199,26 +205,70 @@
     clearError();
     if(!isVideo(file)){showError('Upload a video file.');return}
     const preview=URL.createObjectURL(file);
+    const probeUrl=URL.createObjectURL(file);
     const probe=document.createElement('video');
     probe.preload='metadata';
     probe.onloadedmetadata=()=>{
       const duration=Number(probe.duration||0);
-      URL.revokeObjectURL(probe.src);
-      if(!Number.isFinite(duration)||duration<=0){showError('Could not read video duration.');return}
+      URL.revokeObjectURL(probeUrl);
+      if(!Number.isFinite(duration)||duration<=0){showError('Could not read video duration.');URL.revokeObjectURL(preview);return}
       if(duration>MAX_DURATION+0.25){showError(`Video is ${Math.round(duration)}s. Max is ${MAX_DURATION}s.`);URL.revokeObjectURL(preview);return}
       if(currentVideo&&currentVideo.preview)URL.revokeObjectURL(currentVideo.preview);
       currentVideo={file,preview,duration};
       $('dropZone').classList.add('hidden');
       $('videoPreview').classList.remove('hidden');
-      $('videoPreview').innerHTML=`<video src="${preview}" muted playsinline controls></video><div class="video-meta"><span>${escapeHtml(shortName(file.name))}</span><span>${fmtDuration(duration)}</span><button class="remove" type="button" id="removeVideo">Remove</button></div>`;
+      $('videoPreview').innerHTML=`<div class="main-preview-frame"><video id="mainVideoPreview" src="${preview}" muted playsinline autoplay loop controls preload="auto"></video></div><div class="video-meta"><span>${escapeHtml(shortName(file.name))}</span><span>${fmtDuration(duration)}</span><button class="remove" type="button" id="removeVideo">Remove</button></div>`;
       $('miniClip').classList.remove('hidden');
-      $('miniClip').innerHTML=`<video src="${preview}" muted playsinline loop autoplay></video><div class="duration">${fmtDuration(duration)}</div>`;
+      $('miniClip').innerHTML=`<video id="miniVideoPreview" src="${preview}" muted playsinline loop autoplay preload="auto"></video><div class="duration">${fmtDuration(duration)}</div>`;
+      forceVideoPreview($('mainVideoPreview'));
+      forceVideoPreview($('miniVideoPreview'));
       $('removeVideo').addEventListener('click',clearVideo);
       $('runBtn').disabled=false;
       setState('idle','Clip loaded');
     };
-    probe.onerror=()=>{showError('Could not read this video.');URL.revokeObjectURL(preview)};
-    probe.src=preview;
+    probe.onerror=()=>{showError('Could not read this video.');URL.revokeObjectURL(preview);URL.revokeObjectURL(probeUrl)};
+    probe.src=probeUrl;
+  }
+
+  function completeRun(){
+    if(predictorPoll){clearTimeout(predictorPoll);predictorPoll=null}
+    $('runBtn').disabled=!currentVideo;
+    $('runBtn').textContent='Predict Viral Potential • 0.3⚡';
+  }
+
+  function pollViralityResult(runId,token,attempt=0){
+    if(predictorPoll){clearTimeout(predictorPoll);predictorPoll=null}
+    if(!currentUser||!runId)return;
+    predictorPoll=setTimeout(async()=>{
+      try{
+        setState('processing',attempt<10?'Neural model reading attention curve':'Still analyzing with Gemini');
+        const url=`/.netlify/functions/virality-predictor-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}`;
+        const resp=await fetch(url,{headers:{Authorization:`Bearer ${token}`}});
+        const data=await resp.json().catch(()=>({}));
+        if(data.status==='done'&&data.analysis){
+          renderAnalysis(data.analysis||{});
+          await refreshCredits();
+          if(window.HansoraHeader&&typeof window.HansoraHeader.startCreditsPolling==='function')window.HansoraHeader.startCreditsPolling(45000,1500);
+          setState('done','Analysis complete');
+          completeRun();
+          return;
+        }
+        if(data.status==='failed'||data.status==='error'){
+          setState('error','There was an error. Please try later.');
+          showError(data.refunded?'Analysis failed. Your 0.3 credit was refunded.':'Analysis failed. Please try later.');
+          await refreshCredits();
+          completeRun();
+          return;
+        }
+        if(attempt>=120)throw new Error('analysis_timeout');
+        pollViralityResult(runId,token,attempt+1);
+      }catch(err){
+        setState('error','There was an error. Please try later.');
+        showError(String(err.message||err));
+        await refreshCredits();
+        completeRun();
+      }
+    },attempt===0?1200:2500);
   }
 
   async function runPrediction(){
@@ -240,24 +290,31 @@
       $('runBtn').textContent='Analyzing...';
       setState('processing','Neural model reading attention curve');
       const runId=`${user.id}-virality-${Date.now()}`;
-      const resp=await fetch('/.netlify/functions/run-virality-predictor',{
+      const resp=await fetch('/.netlify/functions/run-virality-predictor-background',{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
         body:JSON.stringify({uid:user.id,run_id:runId,videoUrl:up.publicUrl,fileName:currentVideo.file.name,duration:currentVideo.duration})
       });
-      const data=await resp.json().catch(()=>({}));
-      if(!data.ok)throw new Error(data.error||'analysis_failed');
-      renderAnalysis(data.analysis||{});
-      await refreshCredits();
-      if(window.HansoraHeader&&typeof window.HansoraHeader.startCreditsPolling==='function')window.HansoraHeader.startCreditsPolling(45000,1500);
-      setState('done','Analysis complete');
+      const text=await resp.text().catch(()=>'');
+      let data={};
+      if(text){try{data=JSON.parse(text)}catch{data={}}}
+      if(!resp.ok&&resp.status!==202)throw new Error(data.error||`request_failed_${resp.status}`);
+      if(data&&data.ok===false)throw new Error(data.error||'analysis_failed');
+      if(data&&data.ok&&data.analysis){
+        renderAnalysis(data.analysis||{});
+        await refreshCredits();
+        if(window.HansoraHeader&&typeof window.HansoraHeader.startCreditsPolling==='function')window.HansoraHeader.startCreditsPolling(45000,1500);
+        setState('done','Analysis complete');
+        completeRun();
+        return;
+      }
+      setState('processing','Analysis running in background');
+      pollViralityResult(runId,token);
     }catch(err){
       setState('error','There was an error. Please try later.');
       showError(String(err.message||err));
       await refreshCredits();
-    }finally{
-      $('runBtn').disabled=!currentVideo;
-      $('runBtn').textContent='Predict Viral Potential • 0.3⚡';
+      completeRun();
     }
   }
 
