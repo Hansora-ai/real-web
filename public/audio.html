@@ -50,7 +50,8 @@
     .model-card.active{border-color:rgba(139,92,246,.96); box-shadow:0 0 0 1px rgba(139,92,246,.5), 0 22px 55px rgba(79,70,229,.22)}
     .model-card::before{content:''; position:absolute; inset:-60% -40% auto auto; width:180px; height:180px; border-radius:50%; background:rgba(99,102,241,.22); filter:blur(8px)}
     .dialogue-line{border:1px solid rgba(255,255,255,.10); background:rgba(2,6,23,.42); border-radius:20px; padding:14px}
-    .dialogue-text{min-height:74px; resize:vertical}
+    .dialogue-entry{display:flex; flex-direction:column; gap:12px}
+    .dialogue-text{min-height:150px; resize:vertical}
     .remove-line{width:34px;height:34px;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(15,23,42,.7);color:#fff}
     .remove-line:disabled{opacity:.35; cursor:not-allowed}
     .upload-drop{position:relative; min-height:160px; border:1px dashed rgba(148,163,184,.34); background:rgba(2,6,23,.48); border-radius:22px; display:flex; align-items:center; justify-content:center; text-align:center; padding:18px; cursor:pointer}
@@ -82,6 +83,12 @@
     .audio-actions .get-btn{min-width:86px; justify-content:center; border:0; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; box-shadow:0 10px 24px rgba(99,102,241,.32)}
     .file-name-safe{display:block; max-width:10ch; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
     .file-meta-safe{display:block; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    @media (min-width:901px){
+      .voice-label,.voice-option-name{white-space:normal; overflow:visible; text-overflow:clip; line-height:1.25}
+      .voice-picker-button{align-items:flex-start}
+      .voice-menu{min-width:min(440px, calc(100vw - 32px))}
+      .voice-option-row{align-items:start}
+    }
     @media (max-width:900px){
       .desktop-grid{grid-template-columns:1fr!important}.sticky-side{position:static!important}.hero-title{font-size:34px!important}.model-card{min-height:132px}.compact-stack{grid-template-columns:1fr!important}
     }
@@ -159,7 +166,7 @@
                 <div id="changerVoicePicker" class="voice-picker">
                   <input type="hidden" class="dialogue-voice" value="pNInz6obpgDQGcFmaJgB" />
                   <button type="button" class="field voice-picker-button !py-3 !rounded-xl">
-                    <span class="voice-label truncate">Adam - Dominant, Firm</span>
+                    <span class="voice-label" title="Adam - Dominant, Firm">Adam - Dominant, Firm</span>
                     <span class="text-slate-400">⌄</span>
                   </button>
                   <div class="voice-menu">
@@ -421,7 +428,22 @@
       }
       return localBest;
     }
-    function showError(msg){ const box=$('errorBox'); box.textContent=msg; box.classList.remove('hidden'); }
+    function userFacingError(msg){
+      const raw = String(msg || 'Something went wrong.');
+      if (/eleven|background|invoke|internal error|500|audio-isolation|speech-to-speech/i.test(raw)) {
+        return 'Internal error from ElevenLabs. Please try again later.';
+      }
+      if (/kie.*500|internal error/i.test(raw)) return 'Internal error from the audio provider. Please try again later.';
+      return raw;
+    }
+    function showError(msg){
+      const box=$('errorBox');
+      const raw = String(msg || '');
+      box.textContent=userFacingError(raw);
+      box.title=raw && raw !== box.textContent ? raw : '';
+      if (raw && raw !== box.textContent) console.warn('Audio error detail:', raw);
+      box.classList.remove('hidden');
+    }
     function clearError(){ const box=$('errorBox'); box.textContent=''; box.classList.add('hidden'); }
 
     function renderModels(){
@@ -441,13 +463,19 @@
       const found = VOICES.find((v)=>v.value === value) || VOICES[0];
       return found ? found.label : 'Choose voice';
     }
+    function rawVoiceLabel(valueOrLabel){
+      return VOICES.find((v)=>v.value === valueOrLabel)?.label || String(valueOrLabel || 'Choose voice');
+    }
     function shortVoiceLabel(valueOrLabel){
-      const raw = VOICES.find((v)=>v.value === valueOrLabel)?.label || String(valueOrLabel || 'Choose voice');
+      const raw = rawVoiceLabel(valueOrLabel);
       const parts = raw.split(/\s+-\s+/);
       if (parts.length < 2) return raw.length > 22 ? `${raw.slice(0, 22)}...` : raw;
       const name = parts.shift().trim();
       const info = parts.join(' - ').trim();
       return info ? `${name} - ${info.slice(0, 5)}${info.length > 5 ? '...' : ''}` : name;
+    }
+    function displayVoiceLabel(valueOrLabel){
+      return window.matchMedia('(max-width: 900px)').matches ? shortVoiceLabel(valueOrLabel) : rawVoiceLabel(valueOrLabel);
     }
     function voiceById(value){
       return VOICES.find((v)=>v.value === value) || null;
@@ -461,7 +489,7 @@
         const label = picker.querySelector('.voice-label');
         if (hidden && !voiceById(hidden.value) && VOICES[0]) hidden.value = VOICES[0].value;
         if (label && hidden) {
-          label.textContent = shortVoiceLabel(hidden.value);
+          label.textContent = displayVoiceLabel(hidden.value);
           label.title = voiceLabel(hidden.value);
         }
         const search = picker.querySelector('.voice-search');
@@ -552,13 +580,13 @@
       const hidden = picker.querySelector('.dialogue-voice');
       const q = String(query || '').trim().toLowerCase();
       const matches = VOICES.filter((v)=>v.label.toLowerCase().includes(q));
-      list.innerHTML = matches.length ? matches.map((v)=>`<div class="voice-option-row ${v.value === hidden.value ? 'active' : ''}" data-voice-value="${escapeHtml(v.value)}"><button type="button" class="voice-option-name" title="${escapeHtml(v.label)}">${escapeHtml(shortVoiceLabel(v.label))}</button><button type="button" class="voice-play-btn" aria-label="Play ${escapeHtml(v.label)} preview" title="Play ElevenLabs preview_url">▶</button></div>`).join('') : '<div class="px-3 py-3 text-xs text-slate-400">No ElevenLabs previews loaded.</div>';
+      list.innerHTML = matches.length ? matches.map((v)=>`<div class="voice-option-row ${v.value === hidden.value ? 'active' : ''}" data-voice-value="${escapeHtml(v.value)}"><button type="button" class="voice-option-name" title="${escapeHtml(v.label)}">${escapeHtml(displayVoiceLabel(v.label))}</button><button type="button" class="voice-play-btn" aria-label="Play ${escapeHtml(v.label)} preview" title="Play ElevenLabs preview_url">▶</button></div>`).join('') : '<div class="px-3 py-3 text-xs text-slate-400">No ElevenLabs previews loaded.</div>';
       list.querySelectorAll('.voice-option-name').forEach((btn)=>{
         btn.addEventListener('click',()=>{
           const row = btn.closest('.voice-option-row');
           hidden.value = row && row.dataset.voiceValue || VOICES[0].value;
           const visibleLabel = picker.querySelector('.voice-label');
-          visibleLabel.textContent = shortVoiceLabel(hidden.value);
+          visibleLabel.textContent = displayVoiceLabel(hidden.value);
           visibleLabel.title = voiceLabel(hidden.value);
           stopVoicePreview();
           picker.querySelector('.voice-menu').classList.remove('open');
@@ -596,6 +624,7 @@
       if (!e.target.closest('.voice-picker')) closeVoiceMenus();
       if (!e.target.closest('.language-picker')) closeLanguageMenu();
     });
+    window.addEventListener('resize', refreshVoicePickers);
     function languageLabel(value){
       const found = LANGUAGES.find((language)=>language.value === value) || LANGUAGES[0];
       return found.label;
@@ -639,7 +668,7 @@
       const wrap = document.createElement('div');
       const selectedVoice = voiceValueByIndex(selectedIndex);
       wrap.className = 'dialogue-line';
-      wrap.innerHTML = `<div class="flex items-center justify-between gap-3 mb-3"><p class="small-label">Voice line</p><button type="button" class="remove-line" aria-label="Remove line">×</button></div><div class="grid compact-stack grid-cols-[1fr_270px] gap-3"><textarea class="field dialogue-text" maxlength="4200" placeholder="Write what this voice should say..."></textarea><div class="voice-picker"><input type="hidden" class="dialogue-voice" value="${escapeHtml(selectedVoice)}" /><button type="button" class="field voice-picker-button"><span class="voice-label" title="${escapeHtml(voiceLabel(selectedVoice))}">${escapeHtml(shortVoiceLabel(selectedVoice))}</span><span class="text-slate-400">⌄</span></button><div class="voice-menu"><input type="text" class="voice-search" placeholder="Search character voice..." /><div class="voice-list"></div></div></div></div>`;
+      wrap.innerHTML = `<div class="flex items-center justify-between gap-3 mb-3"><p class="small-label">Voice line</p><button type="button" class="remove-line" aria-label="Remove line">×</button></div><div class="dialogue-entry"><div class="voice-picker"><input type="hidden" class="dialogue-voice" value="${escapeHtml(selectedVoice)}" /><button type="button" class="field voice-picker-button"><span class="voice-label" title="${escapeHtml(voiceLabel(selectedVoice))}">${escapeHtml(displayVoiceLabel(selectedVoice))}</span><span class="text-slate-400">⌄</span></button><div class="voice-menu"><input type="text" class="voice-search" placeholder="Search character voice..." /><div class="voice-list"></div></div></div><textarea class="field dialogue-text" maxlength="4200" placeholder="Write what this voice should say..."></textarea></div>`;
       wrap.querySelector('.dialogue-text').value = text;
       wrap.querySelector('.dialogue-text').addEventListener('input', updateCostUI);
       wrap.querySelector('.remove-line').addEventListener('click',()=>{ wrap.remove(); updateDialogueButtons(); updateCostUI(); });
