@@ -2,7 +2,7 @@
 // Submit Hansora audio jobs and seed user_generations placeholders.
 // Voice, isolation, and voice changer use ElevenLabs directly. Music stays on KIE/Suno.
 // Env: KIE_API_KEY, Elevan_labs_api1 (or ELEVENLABS_API_KEY), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-// Opt: SITE_BASE (default https://webhansora.netlify.app)
+// Opt: SITE_BASE (otherwise the current request domain is used)
 
 const API_KEY = process.env.KIE_API_KEY || "";
 const ELEVENLABS_API_KEY = process.env.Elevan_labs_api1 || process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_LABS_API_KEY || process.env.Eleven_labs_api || process.env.eleven_labs_api || process.env.XI_API_KEY || "";
@@ -29,9 +29,7 @@ const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` 
 const PROFILES_URL  = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
 const AUTH_USER_URL = SUPABASE_URL ? `${SUPABASE_URL}/auth/v1/user` : "";
 
-const SITE_BASE = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/,"");
-const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/audio-kie-callback`;
-const ELEVEN_BACKGROUND_URL = `${SITE_BASE}/.netlify/functions/audio-eleven-background`;
+const SITE_BASE_ENV = (process.env.SITE_BASE || "").replace(/\/+$/,"");
 
 
 exports.handler = async (event) => {
@@ -43,6 +41,9 @@ exports.handler = async (event) => {
     const headers = lowerKeys(event.headers || {});
     const body = safeJson(event.body);
     const kind = normalizeKind(body.kind || "voice");
+    const siteBase = resolveSiteBase(headers);
+    const callbackBase = `${siteBase}/.netlify/functions/audio-kie-callback`;
+    const elevenBackgroundUrl = `${siteBase}/.netlify/functions/audio-eleven-background`;
     if (kind === "voice-list") {
       if (!ELEVENLABS_API_KEY) return ok({ submitted:false, error:"missing_elevenlabs_key", voices:[] });
       const voices = await listElevenVoices();
@@ -93,7 +94,7 @@ exports.handler = async (event) => {
     await seedPlaceholder(uid, run_id, { kind, prompt, cost, title: providerTitle(kind) });
     failureContext = { uid, run_id, kind, cost };
 
-    const callBackUrl = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}&kind=${encodeURIComponent(kind)}`;
+    const callBackUrl = `${callbackBase}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}&kind=${encodeURIComponent(kind)}`;
     let resp;
     let kiePayload;
 
@@ -110,7 +111,7 @@ exports.handler = async (event) => {
         failureContext.charged = true;
       }
       const workerBody = { dialogue, stability, language_code:languageCode, prompt:body.prompt || "" };
-      await invokeElevenBackground({ uid, run_id, kind, cost, body:workerBody });
+      await invokeElevenBackground({ uid, run_id, kind, cost, body:workerBody }, elevenBackgroundUrl);
       await patchTaskMeta(uid, run_id, { status:"processing", task_id:run_id, kind, provider:providerTitle(kind), cost, background:true, request:stripLargeFields(workerBody) });
       return ok({ submitted:true, run_id, taskId:run_id, status:202, data:{ provider:"elevenlabs", kind, background:true } });
     } else if (kind === "isolation") {
@@ -127,7 +128,7 @@ exports.handler = async (event) => {
         failureContext.charged = true;
       }
       const workerBody = { audio_url:audioUrl, fileBase64:body.fileBase64 || body.base64Data || "", fileName, fileType };
-      await invokeElevenBackground({ uid, run_id, kind, cost, body:workerBody });
+      await invokeElevenBackground({ uid, run_id, kind, cost, body:workerBody }, elevenBackgroundUrl);
       await patchTaskMeta(uid, run_id, { status:"processing", task_id:run_id, kind, provider:providerTitle(kind), cost, background:true, request:stripLargeFields({ input:{ audio_url:audioUrl || fileName } }) });
       return ok({ submitted:true, run_id, taskId:run_id, status:202, data:{ provider:"elevenlabs", kind, background:true } });
     } else if (kind === "voice-change") {
@@ -147,7 +148,7 @@ exports.handler = async (event) => {
         failureContext.charged = true;
       }
       const workerBody = { audio_url:audioUrl, fileBase64:body.fileBase64 || body.base64Data || "", fileName, fileType, voice:voiceId, remove_background_noise:removeNoise };
-      await invokeElevenBackground({ uid, run_id, kind, cost, body:workerBody });
+      await invokeElevenBackground({ uid, run_id, kind, cost, body:workerBody }, elevenBackgroundUrl);
       await patchTaskMeta(uid, run_id, { status:"processing", task_id:run_id, kind, provider:providerTitle(kind), cost, background:true, request:stripLargeFields({ input:{ audio_url:audioUrl || fileName, voice_id:voiceId, remove_background_noise:removeNoise } }) });
       return ok({ submitted:true, run_id, taskId:run_id, status:202, data:{ provider:"elevenlabs", kind, background:true } });
     } else if (kind === "music") {
@@ -210,6 +211,12 @@ function err(code, message){ return { statusCode:code, headers:cors(), body:JSON
 function cors(){ return { "Access-Control-Allow-Origin":"*", "Access-Control-Allow-Methods":"GET,POST,OPTIONS", "Access-Control-Allow-Headers":"Content-Type, Authorization, X-USER-ID" }; }
 function safeJson(s){ try { return JSON.parse(s || "{}"); } catch { return {}; } }
 function lowerKeys(h){ const o={}; for (const k in h) o[k.toLowerCase()] = h[k]; return o; }
+function resolveSiteBase(headers){
+  if (SITE_BASE_ENV) return SITE_BASE_ENV;
+  const host = String(headers["x-forwarded-host"] || headers.host || "hansora.co").trim();
+  const proto = String(headers["x-forwarded-proto"] || "https").split(",")[0].trim() || "https";
+  return `${proto}://${host}`.replace(/\/+$/,"");
+}
 function sb(){ return { "apikey":SERVICE_KEY, "Authorization":`Bearer ${SERVICE_KEY}` }; }
 function normalizeKind(k){
   const s=String(k||"").toLowerCase().replace(/_/g,"-");
@@ -307,15 +314,16 @@ async function postJson(url, payload){
   const data = await r.json().catch(()=>({}));
   return { ok:r.ok, status:r.status, data };
 }
-async function invokeElevenBackground(payload){
+async function invokeElevenBackground(payload, elevenBackgroundUrl){
   if (!WORKER_SECRET) throw new Error("missing_worker_secret");
-  const r = await fetch(ELEVEN_BACKGROUND_URL, {
+  const r = await fetch(elevenBackgroundUrl, {
     method:"POST",
     headers:{ "Content-Type":"application/json", "X-Hansora-Worker-Secret":WORKER_SECRET },
     body:JSON.stringify(payload)
   });
   if (![200,202,204].includes(r.status)) {
     const text = await r.text().catch(()=>"");
+    if (r.status === 404) throw new Error(`missing_deployed_background_function: ${elevenBackgroundUrl}`);
     throw new Error(`eleven_background_invoke_failed_${r.status}${text ? `: ${text.slice(0,160)}` : ""}`);
   }
   return true;
