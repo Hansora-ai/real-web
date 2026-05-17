@@ -63,7 +63,7 @@
     .range-wrap input{width:100%}
     .mode-note{border:1px solid rgba(129,140,248,.22); background:rgba(99,102,241,.08); border-radius:18px; padding:12px 14px; color:rgba(226,232,240,.78); font-size:12px; line-height:1.55}
     .voice-picker,.language-picker{position:relative}
-    .voice-picker-button,.language-picker-button{width:100%; min-height:50px; text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .voice-picker-button,.language-picker-button{width:100%; min-height:50px; min-width:0; text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px}
     .voice-menu,.language-menu{position:absolute; top:calc(100% + 8px); right:0; width:100%; z-index:40; border:1px solid rgba(148,163,184,.28); background:rgba(8,11,25,.98); border-radius:18px; padding:10px; box-shadow:0 22px 55px rgba(0,0,0,.62); display:none}
     .voice-menu.open,.language-menu.open{display:block}
     .voice-search,.language-search{width:100%; border:1px solid rgba(148,163,184,.25); background:rgba(2,6,23,.8); color:#fff; outline:none; border-radius:12px; padding:10px 12px; font-size:13px; margin-bottom:8px}
@@ -72,7 +72,8 @@
     .language-option:hover,.language-option.active{background:rgba(99,102,241,.18); color:#fff}
     .voice-option-row{display:grid; grid-template-columns:1fr 34px; align-items:center; gap:6px; border-radius:12px}
     .voice-option-row:hover,.voice-option-row.active{background:rgba(99,102,241,.18)}
-    .voice-option-name{min-width:0; border:0; background:transparent; color:#dbeafe; text-align:left; border-radius:12px; padding:9px 10px; font-size:13px}
+    .voice-label,.voice-option-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .voice-option-name{min-width:0; max-width:100%; border:0; background:transparent; color:#dbeafe; text-align:left; border-radius:12px; padding:9px 10px; font-size:13px}
     .voice-option-row:hover .voice-option-name,.voice-option-row.active .voice-option-name{color:#fff}
     .voice-play-btn{width:30px;height:30px;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(148,163,184,.26);background:rgba(15,23,42,.72);color:#dff6ff;font-size:11px;line-height:1}
     .voice-play-btn:hover,.voice-play-btn.playing{border-color:rgba(56,189,248,.75);background:rgba(56,189,248,.16);color:#fff}
@@ -440,6 +441,14 @@
       const found = VOICES.find((v)=>v.value === value) || VOICES[0];
       return found ? found.label : 'Choose voice';
     }
+    function shortVoiceLabel(valueOrLabel){
+      const raw = VOICES.find((v)=>v.value === valueOrLabel)?.label || String(valueOrLabel || 'Choose voice');
+      const parts = raw.split(/\s+-\s+/);
+      if (parts.length < 2) return raw.length > 22 ? `${raw.slice(0, 22)}...` : raw;
+      const name = parts.shift().trim();
+      const info = parts.join(' - ').trim();
+      return info ? `${name} - ${info.slice(0, 5)}${info.length > 5 ? '...' : ''}` : name;
+    }
     function voiceById(value){
       return VOICES.find((v)=>v.value === value) || null;
     }
@@ -451,7 +460,10 @@
         const hidden = picker.querySelector('.dialogue-voice');
         const label = picker.querySelector('.voice-label');
         if (hidden && !voiceById(hidden.value) && VOICES[0]) hidden.value = VOICES[0].value;
-        if (label && hidden) label.textContent = voiceLabel(hidden.value);
+        if (label && hidden) {
+          label.textContent = shortVoiceLabel(hidden.value);
+          label.title = voiceLabel(hidden.value);
+        }
         const search = picker.querySelector('.voice-search');
         renderVoiceList(picker, search ? search.value : '');
       });
@@ -540,12 +552,14 @@
       const hidden = picker.querySelector('.dialogue-voice');
       const q = String(query || '').trim().toLowerCase();
       const matches = VOICES.filter((v)=>v.label.toLowerCase().includes(q));
-      list.innerHTML = matches.length ? matches.map((v)=>`<div class="voice-option-row ${v.value === hidden.value ? 'active' : ''}" data-voice-value="${escapeHtml(v.value)}"><button type="button" class="voice-option-name truncate" title="${escapeHtml(v.label)}">${escapeHtml(v.label)}</button><button type="button" class="voice-play-btn" aria-label="Play ${escapeHtml(v.label)} preview" title="Play ElevenLabs preview_url">▶</button></div>`).join('') : '<div class="px-3 py-3 text-xs text-slate-400">No ElevenLabs previews loaded.</div>';
+      list.innerHTML = matches.length ? matches.map((v)=>`<div class="voice-option-row ${v.value === hidden.value ? 'active' : ''}" data-voice-value="${escapeHtml(v.value)}"><button type="button" class="voice-option-name" title="${escapeHtml(v.label)}">${escapeHtml(shortVoiceLabel(v.label))}</button><button type="button" class="voice-play-btn" aria-label="Play ${escapeHtml(v.label)} preview" title="Play ElevenLabs preview_url">▶</button></div>`).join('') : '<div class="px-3 py-3 text-xs text-slate-400">No ElevenLabs previews loaded.</div>';
       list.querySelectorAll('.voice-option-name').forEach((btn)=>{
         btn.addEventListener('click',()=>{
           const row = btn.closest('.voice-option-row');
           hidden.value = row && row.dataset.voiceValue || VOICES[0].value;
-          picker.querySelector('.voice-label').textContent = voiceLabel(hidden.value);
+          const visibleLabel = picker.querySelector('.voice-label');
+          visibleLabel.textContent = shortVoiceLabel(hidden.value);
+          visibleLabel.title = voiceLabel(hidden.value);
           stopVoicePreview();
           picker.querySelector('.voice-menu').classList.remove('open');
           renderVoiceList(picker, picker.querySelector('.voice-search').value);
@@ -625,7 +639,7 @@
       const wrap = document.createElement('div');
       const selectedVoice = voiceValueByIndex(selectedIndex);
       wrap.className = 'dialogue-line';
-      wrap.innerHTML = `<div class="flex items-center justify-between gap-3 mb-3"><p class="small-label">Voice line</p><button type="button" class="remove-line" aria-label="Remove line">×</button></div><div class="grid compact-stack grid-cols-[1fr_270px] gap-3"><textarea class="field dialogue-text" maxlength="4200" placeholder="Write what this voice should say..."></textarea><div class="voice-picker"><input type="hidden" class="dialogue-voice" value="${escapeHtml(selectedVoice)}" /><button type="button" class="field voice-picker-button"><span class="voice-label truncate">${escapeHtml(voiceLabel(selectedVoice))}</span><span class="text-slate-400">⌄</span></button><div class="voice-menu"><input type="text" class="voice-search" placeholder="Search character voice..." /><div class="voice-list"></div></div></div></div>`;
+      wrap.innerHTML = `<div class="flex items-center justify-between gap-3 mb-3"><p class="small-label">Voice line</p><button type="button" class="remove-line" aria-label="Remove line">×</button></div><div class="grid compact-stack grid-cols-[1fr_270px] gap-3"><textarea class="field dialogue-text" maxlength="4200" placeholder="Write what this voice should say..."></textarea><div class="voice-picker"><input type="hidden" class="dialogue-voice" value="${escapeHtml(selectedVoice)}" /><button type="button" class="field voice-picker-button"><span class="voice-label" title="${escapeHtml(voiceLabel(selectedVoice))}">${escapeHtml(shortVoiceLabel(selectedVoice))}</span><span class="text-slate-400">⌄</span></button><div class="voice-menu"><input type="text" class="voice-search" placeholder="Search character voice..." /><div class="voice-list"></div></div></div></div>`;
       wrap.querySelector('.dialogue-text').value = text;
       wrap.querySelector('.dialogue-text').addEventListener('input', updateCostUI);
       wrap.querySelector('.remove-line').addEventListener('click',()=>{ wrap.remove(); updateDialogueButtons(); updateCostUI(); });
