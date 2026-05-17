@@ -2273,24 +2273,25 @@
       }
     }
 
-    /* Final banner repair: match the working search page's calmer header/background behavior. */
-    body{
-      background:
-        radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.18), transparent 60%),
-        radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.14), transparent 60%),
-        var(--base-bg) !important;
+    /* Empty history repair: keep the page colors, but do not show a huge broken empty banner. */
+    #sharedHeader,
+    #sharedHeader > *{
+      margin-top:0 !important;
     }
-    body::before,
-    .creator-stage::before,
-    .top-results::before,
-    .top-results::after{
-      display:none !important;
+    .history-rail.is-empty{
+      height:auto !important;
+      min-height:0 !important;
+      max-height:none !important;
+      padding:0 2px 8px !important;
+      overflow:visible !important;
     }
-    #sharedHeader{
-      position:relative !important;
-      top:auto !important;
-      margin:0 !important;
-      z-index:80 !important;
+    .history-rail.is-empty .history-empty{
+      width:100% !important;
+      height:56px !important;
+      min-height:56px !important;
+      max-height:56px !important;
+      border-radius:18px !important;
+      padding:0 16px !important;
     }
 
   </style>
@@ -2718,12 +2719,18 @@
       `;
     }
 
+    function setHistoryEmpty(message){
+      els.historyRail.classList.add('is-empty');
+      els.historyRail.innerHTML = `<div class="history-empty">${escapeHtml(message)}</div>`;
+    }
+
     function renderHistoryRows(rows){
       if (!rows || !rows.length) {
-        els.historyRail.innerHTML = '<div class="history-empty">No character results yet. Generate one and it will appear here.</div>';
+        setHistoryEmpty('No character results yet. Generate one and it will appear here.');
         return;
       }
 
+      els.historyRail.classList.remove('is-empty');
       els.historyRail.innerHTML = rows.slice(0,12).map((row, index) => {
         const meta = row.meta || {};
         const status = String(meta.status || (row.result_url ? 'ready' : 'processing')).toLowerCase();
@@ -2756,7 +2763,7 @@
 
     async function loadRecentCharacters(){
       if (!state.currentUser) {
-        els.historyRail.innerHTML = '<div class="history-empty">Log in to see the last 12 characters created from this page.</div>';
+        setHistoryEmpty('Log in to see the last 12 characters created from this page.');
         return;
       }
 
@@ -2772,7 +2779,7 @@
 
       if (error) {
         console.warn('loadRecentCharacters failed', error);
-        els.historyRail.innerHTML = '<div class="history-empty">Could not load character history right now.</div>';
+        setHistoryEmpty('Could not load character history right now.');
         return;
       }
 
