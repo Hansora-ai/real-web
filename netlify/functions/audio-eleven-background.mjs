@@ -74,8 +74,10 @@ export default async (req) => {
     const row = await readGenerationRow(uid, run_id);
     if (row) await failAndRefundOnce({ row, ids:{ uid, run_id, taskId:run_id }, reason:messageOf(error) });
     else await patchTaskMeta(uid, run_id, { status:"failed", failed:true, error:messageOf(error), failed_at:new Date().toISOString() });
-    throw error;
+    return json({ ok:false, error:messageOf(error) }, 200);
   }
+
+  return json({ ok:true }, 200);
 };
 
 function normalizeKind(k){ const s=String(k||"").toLowerCase().replace(/_/g,"-"); return s === "voice-changer" ? "voice-change" : s; }
@@ -136,11 +138,30 @@ async function postElevenJsonAudio(path, payload){
   return await elevenAudioResponse(r);
 }
 async function postElevenMultipartAudio(path, source, fields){
-  const form = new FormData();
-  form.append("audio", new Blob([source.bytes], { type:source.contentType || "audio/mpeg" }), source.fileName || "audio.mp3");
-  for (const [key, value] of Object.entries(fields || {})) if (value !== undefined && value !== null && value !== "") form.append(key, String(value));
-  const r = await fetch(ELEVENLABS_BASE + path, { method:"POST", headers:{ "xi-api-key":ELEVENLABS_API_KEY, Accept:"audio/mpeg" }, body:form });
+  const { body, contentType } = buildMultipartBody(source, fields);
+  const r = await fetch(ELEVENLABS_BASE + path, {
+    method:"POST",
+    headers:{ "xi-api-key":ELEVENLABS_API_KEY, Accept:"audio/mpeg", "Content-Type":contentType },
+    body
+  });
   return await elevenAudioResponse(r);
+}
+function buildMultipartBody(source, fields){
+  const boundary = `----hansora-eleven-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`;
+  const chunks = [];
+  const push = (value)=>chunks.push(Buffer.isBuffer(value) ? value : Buffer.from(String(value), "utf8"));
+  for (const [key, value] of Object.entries(fields || {})) {
+    if (value === undefined || value === null || value === "") continue;
+    push(`--${boundary}\r\n`);
+    push(`Content-Disposition: form-data; name="${String(key).replace(/"/g, "")}"\r\n\r\n`);
+    push(`${String(value)}\r\n`);
+  }
+  push(`--${boundary}\r\n`);
+  push(`Content-Disposition: form-data; name="audio"; filename="${sanitizeFileName(source.fileName || "audio.mp3")}"\r\n`);
+  push(`Content-Type: ${source.contentType || "audio/mpeg"}\r\n\r\n`);
+  push(source.bytes);
+  push(`\r\n--${boundary}--\r\n`);
+  return { body:Buffer.concat(chunks), contentType:`multipart/form-data; boundary=${boundary}` };
 }
 async function elevenAudioResponse(r){
   const contentType = r.headers.get("content-type") || "audio/mpeg";
@@ -233,4 +254,7 @@ async function failAndRefundOnce({ row, ids, reason }){
   }
   await patchGenerationById(row.id, { meta:{ ...failedMeta, refund_claim:claim, refunded:true, refunded_cost:amount, refunded_at:new Date().toISOString() } });
   return { refunded:true, amount, credits:nextCredits };
+}
+function json(body, status = 200){
+  return new Response(JSON.stringify(body), { status, headers:{ "Content-Type":"application/json" } });
 }
