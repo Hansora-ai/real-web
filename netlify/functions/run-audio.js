@@ -1,14 +1,26 @@
 // netlify/functions/run-audio.js
-// Submit Hansora audio jobs to KIE and seed user_generations placeholders.
-// Env: KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// Submit Hansora audio jobs and seed user_generations placeholders.
+// Voice, isolation, and voice changer use ElevenLabs directly. Music stays on KIE/Suno.
+// Env: KIE_API_KEY, ELEVENLABS_API_KEY (or Eleven_labs_api), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // Opt: SITE_BASE (default https://webhansora.netlify.app)
 
 const API_KEY = process.env.KIE_API_KEY || "";
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_LABS_API_KEY || process.env.Eleven_labs_api || process.env.eleven_labs_api || process.env.XI_API_KEY || "";
+const ELEVENLABS_BASE = (process.env.ELEVENLABS_BASE_URL || "https://api.elevenlabs.io").replace(/\/+$/,"");
 const MARKET_TASK_URL = "https://api.kie.ai/api/v1/jobs/createTask";
 const SUNO_GENERATE_URL = "https://api.kie.ai/api/v1/generate";
 const KIE_BASE64_UPLOAD_URL = "https://kieai.redpandaai.co/api/file-base64-upload";
+const SUPABASE_AUDIO_BUCKET = process.env.SUPABASE_AUDIO_BUCKET || process.env.SUPABASE_BUCKET || "downloads";
 const SUPPORTED_DIALOGUE_VOICES = new Set(['EkK5I93UQWFDigLMpZcX', 'Z3R5wn05IrDiVCyEkUrK', 'NNl6r8mD7vthiJatiJt1', 'YOq2y2Up4RgXP2HyXjE5', '2zRM7PkgwBPiau2jvVXc', '1SM7GgM6IMuvQlz2BwM3', 'NOpBlnGInO9m6vDvFkFC', 'BZgkqPqms7Kj9ulSkVzn', 'gU0LNdkMOQCOrPrwtbee', 'DGzg6RaUqxGRTHSBjfgF', 'SOYHLrjzK2X1ezoPC6cr', 'hpp4J3VqNfWAUOO0d1Us', 'pNInz6obpgDQGcFmaJgB', 'flHkNRp1BlvT73UL6gyz', '9yzdeviXkFddZ4Oz8Mok', 'U1Vk2oyatMdYs096Ety7', 'Bj9UqZbhQsanLzgalpEG', 'exsUS4vynmxd379XN4yO', 'BpjGufoPiobT79j2vtj4', 'ouL9IsyrSnUkCmfnD02u', 'RILOU7YmBhvwJGDGjNmP', 'aMSt68OGf4xUZAnLpTU8', 'tnSpp4vdxKPjI9w0GnoV', 'wyWA56cQNU2KqUW4eCsI', 'zNsotODqUhvbJ5wMG7Ei', 'QzgYVYSNBgksoEWDkpKt', 'kdmDKE6EkgrWrrykO9Qt', 'M0IvLNu6hH3cNnETNLEP', 'bMxLr8fP6hzNRRi9nJxU', 'bU2VfAdiOb2Gv2eZWlFq', 'gUABw7pXQjhjt0kNFBTF', 'Rachel', 'Aria', 'Roger', 'Sarah', 'Laura', 'Charlie', 'George', 'Callum', 'River', 'Liam', 'Charlotte', 'Alice', 'Matilda', 'Will', 'Eric', 'Chris', 'Brian', 'Daniel', 'Lily', 'Bill', 'B8gJV1IhpuegLxdpXFOE', '5l5f8iK3YPeGga21rQIX', 'wo6udizrrtpIxWGp2qJk', 'x70vRnQBMBu4FAYhjJbO', 'P1bg08DkjqiVEzOn76yG', 'qDuRKMlYmrm8trt5QyBn', 'qXpMhyvQqiRxWQs4qSSB', 'TX3LPaxmHKxFdv7VOQHJ', 'N2lVS1w4EtoT3dr4eOWO', 'FGY2WhTYpPnrIDTdsKH5', 'kPzsL2i3teMYv0FxEYQ6', 'nPczCjzI2devNBz1zQrb', 'uYXf8XasLslADfZ2MB4u', 'gs0tAILXbY5DNrJrsM6F', 'DTKMou8ccj1ZaWGBiotd', 'vBKc2FfBKJfcZNyEt1n6', 'DYkrAHD8iwork3YSUBbs', '56AoDkrOh6qfVPDXZ7Pt', 'eR40ATw9ArzDf9h3v7t7', 'g6xIsTj2HwM6VR4iXFCw', 'lcMyyd2HUfFzxdCaC4Ta', '6aDn1KB0hjpdcocrUkmq', 'Sq93GQT4X1lKDXsQcixO', 'pPdl9cQBQq4p6mRkZy2Z', 'zYcjlYFOd3taleS0gkk3', 'nzeAacJi50IvxcyDnMXa', 'ruirxsoakN0GWmGNIo04', 'TC0Zp7WVFzhA8zpTlRqV', 'ljo9gAlSqKOvF6D8sOsX', 'PPzYpIqttlTYA83688JI', '8JVbfL6oEdmuxKn5DK2C', 'iCrDUkL56s3C8sCRl7wb', 'wJqPPQ618aTW29mptyoc', 'EiNlNiXeDU1pqqOPrYMO', '4YYIPFl9wE5c4L2eu2Gb', '6F5Zhi321D3Oq7v1oNT4', 'YXpFCvM1S3JbWEJhoskW', 'LG95yZDEHg6fCZdQjLqj', 'CeNX9CMwmxDxUF5Q2Inm', 'aD6riP1btT197c6dACmy', 'mtrellq69YZsNwzUSyXh', 'dHd5gvgSOzSfduK4CvEg', 'eVItLK1UvXctxuaRV2Oq', 'esy0r39YPLQjOczyOib8', 'D2jw4N9m4xePLTQ3IHjU', 'Tsns2HvNFKfGiNjllgqo', '1U02n4nD6AdIZ9CjF053', 'AeRdCCKzvd23BpJoofzx', 'LruHrtVF6PSyGItzMNHS', '1wGbFxmAM3Fgw63G1zZJ', 'hqfrgApggtO1785R4Fsn', 'MJ0RnG71ty4LH3dvNfSd', 'scOwDtmlUjD3prqpp97I', 'Sm1seazb4gs7RSlUVw7c']);
 const DEFAULT_DIALOGUE_VOICE = 'EkK5I93UQWFDigLMpZcX';
+const VOICE_ALIASES = {
+  Rachel:"21m00Tcm4TlvDq8ikWAM", Aria:"9BWtsMINqrJLrRacOk9x", Roger:"CwhRBWXzGAHq8TQ4Fs17", Sarah:"EXAVITQu4vr4xnSDxMaL",
+  Laura:"FGY2WhTYpPnrIDTdsKH5", Charlie:"IKne3meq5aSn9XLyUdCD", George:"JBFqnCBsd6RMkjVDRZzb", Callum:"N2lVS1w4EtoT3dr4eOWO",
+  River:"SAz9YHcvj6GT2YYXdXww", Liam:"TX3LPaxmHKxFdv7VOQHJ", Charlotte:"XB0fDUnXU5powFXDhCwa", Alice:"Xb7hH8MSUJpSbSDYk0k2",
+  Matilda:"XrExE9yKIg1WjnnlVkGX", Will:"bIHbv24MWmeRgasZH58o", Eric:"cjVigY5qzO86Huf0OWal", Chris:"iP95p4xoKVk53GoZ742B",
+  Brian:"nPczCjzI2devNBz1zQrb", Daniel:"onwK4e9ZLuTAKqWW03F9", Lily:"pFZP5JQG7iQjIQuC4Bku", Bill:"pqHfZKP75CvOlQylNhV4"
+};
+Object.values(VOICE_ALIASES).forEach((id)=>SUPPORTED_DIALOGUE_VOICES.add(id));
 
 const SUPABASE_URL  = (process.env.SUPABASE_URL || "").replace(/\/+$/,"");
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -21,12 +33,38 @@ const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/audio-kie-callback`;
 
 
 exports.handler = async (event) => {
+  let failureContext = null;
   if (event.httpMethod === "OPTIONS") return ok({});
   if (event.httpMethod !== "POST") return err(405, "Use POST");
 
   try {
     const headers = lowerKeys(event.headers || {});
     const body = safeJson(event.body);
+    const kind = normalizeKind(body.kind || "voice");
+    if (kind === "voice-list") {
+      if (!ELEVENLABS_API_KEY) return ok({ submitted:false, error:"missing_elevenlabs_key", voices:[] });
+      const voices = await listElevenVoices();
+      return ok({ submitted:true, voices });
+    }
+    if (kind === "voice-preview") {
+      if (!ELEVENLABS_API_KEY) return ok({ submitted:false, error:"missing_elevenlabs_key" });
+      const voiceId = normalizeVoiceId(body.voice || body.voice_id || body.voiceId || "");
+      if (!voiceId) return ok({ submitted:false, error:"missing_voice" });
+      const previewText = String(body.text || "This is a preview of this voice on Hansora.").trim().slice(0, 180) || "This is a preview of this voice on Hansora.";
+      const stability = clampNumber(body.stability, 0, 1, 0.5);
+      const audio = await postElevenJsonAudio(`/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
+        text: previewText,
+        model_id: "eleven_v3",
+        voice_settings: { stability, similarity_boost:0.85, style:0, use_speaker_boost:true }
+      });
+      return ok({
+        submitted:true,
+        preview:true,
+        content_type:audio.contentType || "audio/mpeg",
+        audio_base64:audio.bytes.toString("base64"),
+        audio_data_url:`data:${audio.contentType || "audio/mpeg"};base64,${audio.bytes.toString("base64")}`
+      });
+    }
     const uid = (body.uid || body.user_id || "").toString().trim();
     if (!uid) return ok({ submitted:false, error:"missing_uid" });
 
@@ -37,12 +75,11 @@ exports.handler = async (event) => {
     const authedUid = await verifyUser(token);
     if (!authedUid || authedUid !== uid) return ok({ submitted:false, error:"auth_mismatch" });
 
-    const kind = normalizeKind(body.kind || "voice");
     const cost = calculateCost(kind, body);
     const clientRunId = (body.run_id || body.runId || "").toString().trim();
     const run_id = clientRunId || `${uid}-audio-${Date.now()}`;
     const existing = await getExistingTask(uid, run_id);
-    if (existing && existing.taskId) return ok({ submitted:true, run_id, taskId:existing.taskId, already:true });
+    if (existing && (existing.taskId || existing.resultUrl)) return ok({ submitted:true, run_id, taskId:existing.taskId, result_url:existing.resultUrl, already:true });
 
     const charged = await isCharged(uid, run_id);
     if (!charged) {
@@ -52,42 +89,72 @@ exports.handler = async (event) => {
 
     const prompt = buildPromptForRow(kind, body);
     await seedPlaceholder(uid, run_id, { kind, prompt, cost, title: providerTitle(kind) });
+    failureContext = { uid, run_id, kind, cost };
 
     const callBackUrl = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}&kind=${encodeURIComponent(kind)}`;
     let resp;
     let kiePayload;
 
     if (kind === "voice") {
+      if (!ELEVENLABS_API_KEY) return ok({ submitted:false, error:"missing_elevenlabs_key", run_id });
       const dialogue = normalizeDialogue(body.dialogue);
       if (!dialogue.length) return ok({ submitted:false, error:"empty_dialogue", run_id });
       const stability = clampNumber(body.stability, 0, 1, 0.5);
-      kiePayload = {
-        model: "elevenlabs/text-to-dialogue-v3",
-        callBackUrl,
-        input: {
-          dialogue,
-          stability
-        }
+      const languageCode = normalizeLanguageCode(body.language_code || body.languageCode || "");
+      const elevenPayload = dialogue.length === 1 ? {
+        text: dialogue[0].text,
+        model_id: "eleven_v3",
+        voice_settings: { stability, similarity_boost:0.85, style:0, use_speaker_boost:true }
+      } : {
+        inputs: dialogue.map((item)=>({ text:item.text, voice_id:item.voice })),
+        model_id: "eleven_v3",
+        settings: { stability }
       };
-      resp = await postJson(MARKET_TASK_URL, kiePayload);
-    } else if (kind === "isolation") {
-      let audioUrl = normalizeUrl(body.audio_url || body.audioUrl || "");
-      if (!audioUrl) {
-        const fileBase64 = String(body.fileBase64 || body.base64Data || "");
-        if (!fileBase64) return ok({ submitted:false, error:"missing_audio_file", run_id });
-        const fileName = sanitizeFileName(body.fileName || `audio-${Date.now()}.mp3`);
-        const fileType = String(body.fileType || "").toLowerCase();
-        if (!isSupportedAudioFile(fileName, fileType)) return ok({ submitted:false, error:"unsupported_file_type_audio_only", run_id });
-        const upload = await uploadBase64(fileBase64, fileName);
-        audioUrl = normalizeUrl(upload.downloadUrl || upload.fileUrl || upload.url || "");
+      if (languageCode) elevenPayload.language_code = languageCode;
+      const audioPath = dialogue.length === 1 ? `/v1/text-to-speech/${encodeURIComponent(dialogue[0].voice)}?output_format=mp3_44100_128` : "/v1/text-to-dialogue?output_format=mp3_44100_128";
+      const audio = await postElevenJsonAudio(audioPath, elevenPayload);
+      const resultUrl = await storeGeneratedAudio({ uid, run_id, kind, bytes:audio.bytes, contentType:audio.contentType, fileName:"dialogue.mp3" });
+      if (!charged) {
+        const debited = await debitCredits(uid, cost);
+        if (!debited) return ok({ submitted:false, error:"debit_failed", run_id });
+        await markCharged(uid, run_id, cost, run_id);
       }
-      if (!audioUrl) return ok({ submitted:false, error:"upload_failed", run_id });
-      kiePayload = {
-        model: "elevenlabs/audio-isolation",
-        callBackUrl,
-        input: { audio_url: audioUrl }
-      };
-      resp = await postJson(MARKET_TASK_URL, kiePayload);
+      await markDirectReady(uid, run_id, { kind, provider:providerTitle(kind), cost, resultUrl, request:stripLargeFields(elevenPayload) });
+      return ok({ submitted:true, run_id, taskId:run_id, result_url:resultUrl, status:200, data:{ provider:"elevenlabs", kind } });
+    } else if (kind === "isolation") {
+      if (!ELEVENLABS_API_KEY) return ok({ submitted:false, error:"missing_elevenlabs_key", run_id });
+      let audioUrl = normalizeUrl(body.audio_url || body.audioUrl || "");
+      const source = await readInputAudio(body, audioUrl);
+      if (!source.bytes.length) return ok({ submitted:false, error:"missing_audio_file", run_id });
+      const audio = await postElevenMultipartAudio("/v1/audio-isolation", source, {});
+      const resultUrl = await storeGeneratedAudio({ uid, run_id, kind, bytes:audio.bytes, contentType:audio.contentType, fileName:"voice-isolated.mp3" });
+      if (!charged) {
+        const debited = await debitCredits(uid, cost);
+        if (!debited) return ok({ submitted:false, error:"debit_failed", run_id });
+        await markCharged(uid, run_id, cost, run_id);
+      }
+      await markDirectReady(uid, run_id, { kind, provider:providerTitle(kind), cost, resultUrl, request:stripLargeFields({ input:{ audio_url:audioUrl || source.fileName } }) });
+      return ok({ submitted:true, run_id, taskId:run_id, result_url:resultUrl, status:200, data:{ provider:"elevenlabs", kind } });
+    } else if (kind === "voice-change") {
+      if (!ELEVENLABS_API_KEY) return ok({ submitted:false, error:"missing_elevenlabs_key", run_id });
+      const voiceId = normalizeVoiceId(body.voice || body.voice_id || body.voiceId || "");
+      if (!voiceId) return ok({ submitted:false, error:"missing_voice", run_id });
+      let audioUrl = normalizeUrl(body.audio_url || body.audioUrl || "");
+      const source = await readInputAudio(body, audioUrl);
+      if (!source.bytes.length) return ok({ submitted:false, error:"missing_audio_file", run_id });
+      const removeNoise = body.remove_background_noise !== false && body.removeBackgroundNoise !== false;
+      const audio = await postElevenMultipartAudio(`/v1/speech-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, source, {
+        model_id: "eleven_multilingual_sts_v2",
+        remove_background_noise: String(removeNoise)
+      });
+      const resultUrl = await storeGeneratedAudio({ uid, run_id, kind, bytes:audio.bytes, contentType:audio.contentType, fileName:"voice-changed.mp3" });
+      if (!charged) {
+        const debited = await debitCredits(uid, cost);
+        if (!debited) return ok({ submitted:false, error:"debit_failed", run_id });
+        await markCharged(uid, run_id, cost, run_id);
+      }
+      await markDirectReady(uid, run_id, { kind, provider:providerTitle(kind), cost, resultUrl, request:stripLargeFields({ input:{ audio_url:audioUrl || source.fileName, voice_id:voiceId, remove_background_noise:removeNoise } }) });
+      return ok({ submitted:true, run_id, taskId:run_id, result_url:resultUrl, status:200, data:{ provider:"elevenlabs", kind } });
     } else if (kind === "music") {
       const music = normalizeMusicPayload(body);
       if (!music.customMode && !music.prompt) return ok({ submitted:false, error:"empty_prompt", run_id });
@@ -123,6 +190,16 @@ exports.handler = async (event) => {
     await patchTaskMeta(uid, run_id, { status:"processing", task_id:taskId, kind, provider:providerTitle(kind), cost, request:stripLargeFields(kiePayload) });
     return ok({ submitted:true, run_id, taskId, status:resp.status, data });
   } catch (e) {
+    if (failureContext) {
+      await patchTaskMeta(failureContext.uid, failureContext.run_id, {
+        status:"failed",
+        failed:true,
+        error:String(e && e.message ? e.message : e),
+        kind:failureContext.kind,
+        provider:providerTitle(failureContext.kind),
+        cost:failureContext.cost
+      });
+    }
     return ok({ submitted:false, error:String(e && e.message ? e.message : e) });
   }
 };
@@ -133,8 +210,12 @@ function cors(){ return { "Access-Control-Allow-Origin":"*", "Access-Control-All
 function safeJson(s){ try { return JSON.parse(s || "{}"); } catch { return {}; } }
 function lowerKeys(h){ const o={}; for (const k in h) o[k.toLowerCase()] = h[k]; return o; }
 function sb(){ return { "apikey":SERVICE_KEY, "Authorization":`Bearer ${SERVICE_KEY}` }; }
-function normalizeKind(k){ const s=String(k||"").toLowerCase(); if (["voice","isolation","music"].includes(s)) return s; return "voice"; }
-function providerTitle(kind){ return kind === "music" ? "Suno Music" : kind === "isolation" ? "Voice Isolation" : "Text to Dialogue"; }
+function normalizeKind(k){
+  const s=String(k||"").toLowerCase().replace(/_/g,"-");
+  if (["voice","isolation","music","voice-change","voice-changer","voice-preview","voice-list"].includes(s)) return s === "voice-changer" ? "voice-change" : s;
+  return "voice";
+}
+function providerTitle(kind){ return kind === "music" ? "Suno Music" : kind === "isolation" ? "Voice Isolation" : kind === "voice-change" ? "Voice Changer" : "Text to Dialogue"; }
 function normalizeLanguageCode(value){
   const raw = String(value || "").trim().toLowerCase();
   const allowed = new Set(["en","ja","zh","de","hi","fr","ko","pt","it","es","id","nl","tr","fil","pl","sv","bg","ro","ar","cs","el","fi","hr","ms","sk","da","ta","uk","ru","hu","no","vi","hy"]);
@@ -150,10 +231,16 @@ function isSupportedAudioFile(fileName, fileType){
   if (type.startsWith("audio/")) return true;
   return /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(name);
 }
+function normalizeVoiceId(value){
+  const requestedVoice = String(value || "").trim();
+  const aliased = VOICE_ALIASES[requestedVoice] || requestedVoice;
+  if (SUPPORTED_DIALOGUE_VOICES.has(aliased)) return aliased;
+  return /^[A-Za-z0-9_-]{8,}$/.test(aliased) ? aliased : "";
+}
 
 function calculateCost(kind, body){
   if (kind === "music") return 1.5;
-  if (kind === "isolation") {
+  if (kind === "isolation" || kind === "voice-change") {
     const seconds = clampNumber(body.durationSeconds || body.duration || body.audioDurationSeconds, 0, 86400, 0);
     if (!seconds) return 1;
     return Math.max(0.5, Math.ceil((seconds / 60) * 2) / 2);
@@ -167,7 +254,7 @@ function normalizeDialogue(input){
   return arr.map((item)=>{
     const text = String(item && item.text || "").trim();
     const requestedVoice = String(item && item.voice || "").trim();
-    const voice = SUPPORTED_DIALOGUE_VOICES.has(requestedVoice) ? requestedVoice : DEFAULT_DIALOGUE_VOICE;
+    const voice = normalizeVoiceId(requestedVoice) || DEFAULT_DIALOGUE_VOICE;
     return { text, voice };
   }).filter((item)=>item.text);
 }
@@ -206,6 +293,7 @@ function normalizeSunoModel(model){
 function buildPromptForRow(kind, body){
   if (kind === "voice") return normalizeDialogue(body.dialogue).map((x)=>x.text).join("\n").slice(0,500);
   if (kind === "isolation") return `Voice isolation${body.fileName ? `: ${body.fileName}` : ""}`;
+  if (kind === "voice-change") return `Voice changer${body.fileName ? `: ${body.fileName}` : ""}`;
   return String(body.prompt || body.title || "Music generation").slice(0,500);
 }
 function stripLargeFields(obj){
@@ -217,6 +305,145 @@ async function postJson(url, payload){
   const r = await fetch(url, { method:"POST", headers:{ "Authorization":`Bearer ${API_KEY}`, "Content-Type":"application/json" }, body:JSON.stringify(payload) });
   const data = await r.json().catch(()=>({}));
   return { ok:r.ok, status:r.status, data };
+}
+async function getElevenJson(path){
+  const r = await fetch(ELEVENLABS_BASE + path, {
+    method:"GET",
+    headers:{ "xi-api-key":ELEVENLABS_API_KEY, "Accept":"application/json" }
+  });
+  const data = await r.json().catch(()=>({}));
+  if (!r.ok) throw new Error(data?.detail?.message || data?.detail || data?.message || data?.error || `elevenlabs_${r.status}`);
+  return data;
+}
+async function listElevenVoices(){
+  const voices = [];
+  const seen = new Set();
+  let token = "";
+  for (let page = 0; page < 20; page += 1) {
+    const params = new URLSearchParams({ page_size:"100", sort:"name", sort_direction:"asc", include_total_count:"false" });
+    if (token) params.set("next_page_token", token);
+    const data = await getElevenJson(`/v2/voices?${params.toString()}`);
+    const pageVoices = Array.isArray(data.voices) ? data.voices : [];
+    for (const voice of pageVoices) {
+      const id = String(voice.voice_id || "").trim();
+      const name = String(voice.name || "").trim();
+      if (!id || !name || seen.has(id)) continue;
+      seen.add(id);
+      voices.push({
+        label:name,
+        value:id,
+        preview_url:String(voice.preview_url || voice.sharing?.preview_url || "").trim(),
+        category:String(voice.category || voice.sharing?.category || "").trim(),
+        description:String(voice.description || voice.sharing?.description || "").trim()
+      });
+    }
+    if (!data.has_more || !data.next_page_token) break;
+    token = String(data.next_page_token || "");
+  }
+  voices.sort((a,b)=>a.label.localeCompare(b.label));
+  return voices;
+}
+async function postElevenJsonAudio(path, payload){
+  const r = await fetch(ELEVENLABS_BASE + path, {
+    method:"POST",
+    headers:{ "xi-api-key":ELEVENLABS_API_KEY, "Content-Type":"application/json", "Accept":"audio/mpeg" },
+    body:JSON.stringify(payload)
+  });
+  return await elevenAudioResponse(r);
+}
+async function postElevenMultipartAudio(path, source, fields){
+  const form = new FormData();
+  const blob = new Blob([source.bytes], { type:source.contentType || "audio/mpeg" });
+  form.append("audio", blob, source.fileName || "audio.mp3");
+  for (const [key, value] of Object.entries(fields || {})) {
+    if (value !== undefined && value !== null && value !== "") form.append(key, String(value));
+  }
+  const r = await fetch(ELEVENLABS_BASE + path, {
+    method:"POST",
+    headers:{ "xi-api-key":ELEVENLABS_API_KEY, "Accept":"audio/mpeg" },
+    body:form
+  });
+  return await elevenAudioResponse(r);
+}
+async function elevenAudioResponse(r){
+  const contentType = r.headers.get("content-type") || "audio/mpeg";
+  const bytes = Buffer.from(await r.arrayBuffer());
+  if (!r.ok) {
+    let message = `elevenlabs_${r.status}`;
+    if (/json|text/i.test(contentType)) {
+      const text = bytes.toString("utf8");
+      try {
+        const json = JSON.parse(text);
+        message = json?.detail?.message || json?.detail || json?.message || json?.error || message;
+      } catch {
+        message = text.slice(0,240) || message;
+      }
+    }
+    throw new Error(String(message));
+  }
+  if (!bytes.length) throw new Error("elevenlabs_empty_audio");
+  return { bytes, contentType };
+}
+async function readInputAudio(body, audioUrl){
+  const fileName = sanitizeFileName(body.fileName || `audio-${Date.now()}.mp3`);
+  const fileType = String(body.fileType || guessMimeFromName(fileName) || "audio/mpeg").toLowerCase();
+  if (!isSupportedAudioFile(fileName, fileType)) throw new Error("unsupported_file_type_audio_only");
+  if (audioUrl) {
+    const r = await fetch(audioUrl);
+    if (!r.ok) throw new Error("audio_url_fetch_failed");
+    return { bytes:Buffer.from(await r.arrayBuffer()), contentType:r.headers.get("content-type") || fileType, fileName };
+  }
+  const fileBase64 = String(body.fileBase64 || body.base64Data || "");
+  if (!fileBase64) return { bytes:Buffer.alloc(0), contentType:fileType, fileName };
+  const comma = fileBase64.indexOf(",");
+  const raw = comma >= 0 ? fileBase64.slice(comma + 1) : fileBase64;
+  return { bytes:Buffer.from(raw, "base64"), contentType:fileType, fileName };
+}
+function guessMimeFromName(name){
+  const lower = String(name || "").toLowerCase();
+  if (lower.endsWith(".wav")) return "audio/wav";
+  if (lower.endsWith(".m4a")) return "audio/mp4";
+  if (lower.endsWith(".aac")) return "audio/aac";
+  if (lower.endsWith(".ogg")) return "audio/ogg";
+  if (lower.endsWith(".flac")) return "audio/flac";
+  return "audio/mpeg";
+}
+async function storeGeneratedAudio({ uid, run_id, kind, bytes, contentType, fileName }){
+  if (!SUPABASE_URL || !SERVICE_KEY) throw new Error("missing_supabase_storage_env");
+  const safeName = sanitizeFileName(fileName || "audio.mp3");
+  const objectPath = `audio/generated/${encodeURIComponent(uid).replace(/%/g,"")}/${encodeURIComponent(run_id).replace(/%/g,"")}/${Date.now()}-${safeName}`;
+  const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_AUDIO_BUCKET)}/${objectPath}`;
+  const r = await fetch(uploadUrl, {
+    method:"POST",
+    headers:{ ...sb(), "Content-Type":contentType || "audio/mpeg", "x-upsert":"true" },
+    body:bytes
+  });
+  if (!r.ok) {
+    const text = await r.text().catch(()=>"");
+    throw new Error(`supabase_audio_upload_failed${text ? `: ${text.slice(0,180)}` : ""}`);
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(SUPABASE_AUDIO_BUCKET)}/${objectPath}`;
+}
+async function markDirectReady(uid, run_id, { kind, provider, cost, resultUrl, request }){
+  const meta = {
+    ...(await readGenerationMeta(uid, run_id) || {}),
+    run_id,
+    status:"ready",
+    failed:false,
+    error:null,
+    task_id:run_id,
+    audio_kind:kind,
+    provider,
+    title:provider,
+    audio_url:resultUrl,
+    audio_urls:[resultUrl],
+    completed_at:new Date().toISOString(),
+    estimated_cost:cost,
+    refund_amount:cost,
+    request
+  };
+  const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}`;
+  await fetch(UG_URL + q, { method:"PATCH", headers:{ ...sb(), "Content-Type":"application/json", "Prefer":"return=minimal" }, body:JSON.stringify({ result_url:resultUrl, provider, meta }) });
 }
 async function uploadBase64(base64Data, fileName){
   const r = await fetch(KIE_BASE64_UPLOAD_URL, { method:"POST", headers:{ "Authorization":`Bearer ${API_KEY}`, "Content-Type":"application/json" }, body:JSON.stringify({ base64Data, uploadPath:"audio/hansora", fileName }) });
@@ -281,14 +508,14 @@ async function debitCredits(uid, cost){
 async function getExistingTask(uid, run_id){
   try{
     if (!UG_URL) return null;
-    const q = `?select=id,meta&user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&limit=1`;
+    const q = `?select=id,result_url,meta&user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&limit=1`;
     const r = await fetch(UG_URL + q, { headers:sb() });
     if (!r.ok) return null;
     const arr = await r.json().catch(()=>[]);
     if (Array.isArray(arr) && arr.length) {
       const meta = arr[0].meta || {};
       const taskId = meta.task_id || meta.taskId || "";
-      return { id:arr[0].id, taskId:taskId ? String(taskId) : "" };
+      return { id:arr[0].id, taskId:taskId ? String(taskId) : "", resultUrl:arr[0].result_url || meta.audio_url || "" };
     }
     return null;
   } catch { return null; }
