@@ -188,7 +188,7 @@ exports.handler = async (event) => {
   } catch (e) {
     if (failureContext) {
       let refundMeta = {};
-      if (failureContext.charged) {
+      if (failureContext.charged && !(e && e.backgroundHandled)) {
         const refunded = await refundCredits(failureContext.uid, failureContext.cost);
         refundMeta = refunded ? { refunded:true, refunded_cost:failureContext.cost, refunded_at:new Date().toISOString() } : { refund_error:"refund_failed" };
       }
@@ -321,10 +321,20 @@ async function invokeElevenBackground(payload, elevenBackgroundUrl){
     headers:{ "Content-Type":"application/json", "X-Hansora-Worker-Secret":WORKER_SECRET },
     body:JSON.stringify(payload)
   });
+  const contentType = r.headers.get("content-type") || "";
+  const bodyText = await r.text().catch(()=>"");
+  let bodyJson = null;
+  if (bodyText && /json/i.test(contentType)) {
+    try { bodyJson = JSON.parse(bodyText); } catch {}
+  }
+  if (bodyJson && bodyJson.ok === false) {
+    const error = new Error(bodyJson.error || "eleven_background_failed");
+    error.backgroundHandled = true;
+    throw error;
+  }
   if (![200,202,204].includes(r.status)) {
-    const text = await r.text().catch(()=>"");
     if (r.status === 404) throw new Error(`missing_deployed_background_function: ${elevenBackgroundUrl}`);
-    throw new Error(`eleven_background_invoke_failed_${r.status}${text ? `: ${text.slice(0,160)}` : ""}`);
+    throw new Error(`eleven_background_invoke_failed_${r.status}${bodyText ? `: ${bodyText.slice(0,160)}` : ""}`);
   }
   return true;
 }
