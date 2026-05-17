@@ -12,18 +12,23 @@ const UG_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
 const PROFILES_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
 
 export default async (req) => {
-  const secret = req.headers.get("x-hansora-worker-secret") || "";
-  if (!WORKER_SECRET || secret !== WORKER_SECRET) throw new Error("unauthorized_worker");
-
-  const payload = await req.json().catch(() => ({}));
-  const uid = String(payload.uid || "").trim();
-  const run_id = String(payload.run_id || payload.runId || "").trim();
-  const kind = normalizeKind(payload.kind || "");
-  const cost = Number(payload.cost || 0);
-  const body = payload.body && typeof payload.body === "object" ? payload.body : {};
-  if (!uid || !run_id || !kind) throw new Error("missing_worker_ids");
-
+  let uid = "";
+  let run_id = "";
+  let kind = "";
+  let body = {};
+  let cost = 0;
   try {
+    const secret = req.headers.get("x-hansora-worker-secret") || "";
+    if (!WORKER_SECRET || secret !== WORKER_SECRET) throw new Error("unauthorized_worker");
+
+    const payload = await req.json().catch(() => ({}));
+    uid = String(payload.uid || "").trim();
+    run_id = String(payload.run_id || payload.runId || "").trim();
+    kind = normalizeKind(payload.kind || "");
+    cost = Number(payload.cost || 0);
+    body = payload.body && typeof payload.body === "object" ? payload.body : {};
+    if (!uid || !run_id || !kind) throw new Error("missing_worker_ids");
+
     await patchTaskMeta(uid, run_id, { status:"processing", worker_started_at:new Date().toISOString() });
     let resultUrl = "";
     let request = {};
@@ -71,10 +76,21 @@ export default async (req) => {
 
     await markReady(uid, run_id, { kind, provider:providerTitle(kind), cost, resultUrl, request:stripLargeFields(request) });
   } catch (error) {
-    const row = await readGenerationRow(uid, run_id);
-    if (row) await failAndRefundOnce({ row, ids:{ uid, run_id, taskId:run_id }, reason:messageOf(error) });
-    else await patchTaskMeta(uid, run_id, { status:"failed", failed:true, error:messageOf(error), failed_at:new Date().toISOString() });
-    return json({ ok:false, error:messageOf(error) }, 200);
+    const reason = messageOf(error);
+    const failure = { ok:false, error:reason };
+    try {
+      if (uid && run_id) {
+        const row = await readGenerationRow(uid, run_id);
+        if (row) failure.refund = await failAndRefundOnce({ row, ids:{ uid, run_id, taskId:run_id }, reason });
+        else await patchTaskMeta(uid, run_id, { status:"failed", failed:true, error:reason, failed_at:new Date().toISOString() });
+      }
+    } catch (refundError) {
+      failure.refund_error = messageOf(refundError);
+      try {
+        if (uid && run_id) await patchTaskMeta(uid, run_id, { status:"failed", failed:true, error:reason, refund_error:failure.refund_error, failed_at:new Date().toISOString() });
+      } catch {}
+    }
+    return json(failure, 200);
   }
 
   return json({ ok:true }, 200);
