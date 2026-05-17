@@ -77,7 +77,7 @@ function ok(obj){ return { statusCode:200, headers:cors(), body:JSON.stringify(o
 function cors(){ return { "Access-Control-Allow-Origin":"*", "Access-Control-Allow-Methods":"GET,POST,OPTIONS", "Access-Control-Allow-Headers":"Content-Type, Authorization" }; }
 function safeJson(s){ try { return JSON.parse(s || "{}"); } catch { return {}; } }
 function sb(){ return { "apikey":SERVICE_KEY, "Authorization":`Bearer ${SERVICE_KEY}` }; }
-function providerTitle(kind){ return kind === "music" ? "Suno Music" : kind === "isolation" ? "Voice Isolation" : "Text to Voice"; }
+function providerTitle(kind){ return kind === "music" ? "Suno Music" : kind === "isolation" ? "Voice Isolation" : kind === "voice-change" ? "Voice Changer" : "Text to Voice"; }
 function failureReason(body){ return String(body?.error || body?.message || body?.msg || body?.data?.errorMessage || body?.data?.failMsg || body?.data?.error || body?.data?.message || body?.data?.msg || "kie_failed"); }
 function isFailure(body){
   const data = body?.data || body || {};
