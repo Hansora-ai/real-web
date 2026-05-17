@@ -30,6 +30,20 @@ exports.handler = async (event) => {
     if (!ids.taskId) return json(200, { ok: false, status: "pending", error: "missing_task_id" });
 
     const audioKind = String(row.meta?.audio_kind || row.meta?.kind || "").toLowerCase();
+    if (audioKind && audioKind !== "music") {
+      const state = readElevenState(row);
+      if (state.failed) {
+        return json(200, { ok: false, failed: true, status: "failed", error: state.error || "elevenlabs_failed", refunded: !!row.meta?.refunded, refund_amount: Number(row.meta?.refunded_cost || 0) });
+      }
+      if (state.done && state.audioUrls.length) {
+        return json(200, { ok: true, status: "done", result_url: state.audioUrls[0], audio_url: state.audioUrls[0], audio_urls: state.audioUrls, image_urls: [] });
+      }
+      if (isElevenStale(row)) {
+        const refund = await failAndRefundOnce({ row, ids, reason: "elevenlabs_timeout" });
+        return json(200, { ok: false, failed: true, status: "failed", error: "elevenlabs_timeout", refunded: !!refund.refunded, refund_amount: refund.amount || 0 });
+      }
+      return json(200, { ok: false, status: "pending" });
+    }
     const inputUrls = collectKnownInputUrls(row);
     const state = audioKind === "music" ? await fetchSunoState(ids.taskId, inputUrls) : await fetchMarketState(ids.taskId, inputUrls);
 
@@ -54,6 +68,29 @@ function json(statusCode, body) { return { statusCode, headers: { "Content-Type"
 function sb() { return { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` }; }
 function safeJson(raw) { if (!raw) return {}; try { return JSON.parse(raw); } catch { return {}; } }
 function messageOf(error) { return error && error.message ? error.message : String(error); }
+
+function readElevenState(row) {
+  const meta = row?.meta && typeof row.meta === "object" ? row.meta : {};
+  if (meta.failed === true || meta.status === "failed") return { failed: true, error: meta.error || "elevenlabs_failed" };
+  const audioUrls = [];
+  if (row?.result_url) audioUrls.push(row.result_url);
+  if (meta.audio_url) audioUrls.push(meta.audio_url);
+  if (Array.isArray(meta.audio_urls)) audioUrls.push(...meta.audio_urls);
+  const cleanUrls = [...new Set(audioUrls.map(normalizeComparableUrl).filter((url) => /^https?:\/\//i.test(url)))];
+  if ((meta.status === "ready" || meta.status === "done" || meta.status === "complete") && cleanUrls.length) {
+    return { done: true, audioUrls: cleanUrls };
+  }
+  return { pending: true, audioUrls: cleanUrls };
+}
+
+function isElevenStale(row) {
+  const meta = row?.meta && typeof row.meta === "object" ? row.meta : {};
+  const rawTime = meta.worker_started_at || meta.submitted_at || row?.created_at || "";
+  const started = Date.parse(rawTime);
+  if (!Number.isFinite(started)) return false;
+  const maxPendingMs = Number(process.env.ELEVENLABS_AUDIO_TIMEOUT_MS || 30 * 60 * 1000);
+  return Date.now() - started > maxPendingMs;
+}
 
 async function findAudioGeneration(ids) {
   if (!UG_URL || !SERVICE_KEY) return null;
