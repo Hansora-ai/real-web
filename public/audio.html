@@ -68,8 +68,14 @@
     .voice-menu.open,.language-menu.open{display:block}
     .voice-search,.language-search{width:100%; border:1px solid rgba(148,163,184,.25); background:rgba(2,6,23,.8); color:#fff; outline:none; border-radius:12px; padding:10px 12px; font-size:13px; margin-bottom:8px}
     .voice-list,.language-list{max-height:220px; overflow-y:auto; padding-right:4px}
-    .voice-option,.language-option{width:100%; display:block; text-align:left; border:0; background:transparent; color:#dbeafe; border-radius:12px; padding:9px 10px; font-size:13px}
-    .voice-option:hover,.voice-option.active,.language-option:hover,.language-option.active{background:rgba(99,102,241,.18); color:#fff}
+    .language-option{width:100%; display:block; text-align:left; border:0; background:transparent; color:#dbeafe; border-radius:12px; padding:9px 10px; font-size:13px}
+    .language-option:hover,.language-option.active{background:rgba(99,102,241,.18); color:#fff}
+    .voice-option-row{display:grid; grid-template-columns:1fr 34px; align-items:center; gap:6px; border-radius:12px}
+    .voice-option-row:hover,.voice-option-row.active{background:rgba(99,102,241,.18)}
+    .voice-option-name{min-width:0; border:0; background:transparent; color:#dbeafe; text-align:left; border-radius:12px; padding:9px 10px; font-size:13px}
+    .voice-option-row:hover .voice-option-name,.voice-option-row.active .voice-option-name{color:#fff}
+    .voice-play-btn{width:30px;height:30px;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(148,163,184,.26);background:rgba(15,23,42,.72);color:#dff6ff;font-size:11px;line-height:1}
+    .voice-play-btn:hover,.voice-play-btn.playing{border-color:rgba(56,189,248,.75);background:rgba(56,189,248,.16);color:#fff}
 
     .cost-panel-hidden{display:none!important}
     .audio-actions .get-btn{min-width:86px; justify-content:center; border:0; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; box-shadow:0 10px 24px rgba(99,102,241,.32)}
@@ -102,7 +108,7 @@
           <div class="flex items-center justify-between gap-3">
             <div>
               <p id="costText" class="text-lg font-extrabold text-white">—</p>
-              <p id="creditHint" class="text-xs text-slate-400 mt-1">Credits update after KIE accepts the task.</p>
+              <p id="creditHint" class="text-xs text-slate-400 mt-1">Credits update after the provider accepts the task.</p>
             </div>
             <button id="refreshCreditsBtn" type="button" class="btn-soft rounded-full px-3 py-2 text-xs">Refresh</button>
           </div>
@@ -147,6 +153,24 @@
 
             <section id="isolationPanel" class="hidden space-y-4">
               <input id="audioFileInput" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" class="hidden" />
+              <div id="voiceChangerOptions" class="hidden panel rounded-2xl p-4">
+                <p class="small-label mb-2">Target voice</p>
+                <div id="changerVoicePicker" class="voice-picker">
+                  <input type="hidden" class="dialogue-voice" value="pNInz6obpgDQGcFmaJgB" />
+                  <button type="button" class="field voice-picker-button !py-3 !rounded-xl">
+                    <span class="voice-label truncate">Adam - Dominant, Firm</span>
+                    <span class="text-slate-400">⌄</span>
+                  </button>
+                  <div class="voice-menu">
+                    <input type="text" class="voice-search" placeholder="Search target voice..." />
+                    <div class="voice-list"></div>
+                  </div>
+                </div>
+                <label class="mt-3 flex items-center gap-3 text-sm text-slate-300">
+                  <input id="removeBackgroundNoise" type="checkbox" checked class="h-4 w-4 accent-indigo-500" />
+                  Remove background noise while changing voice
+                </label>
+              </div>
               <div id="dropZone" class="upload-drop">
                 <div>
                   <div class="mx-auto h-14 w-14 rounded-2xl bg-indigo-500/15 border border-indigo-300/20 grid place-items-center text-2xl mb-3">🎙️</div>
@@ -264,114 +288,31 @@
     const MODELS = [
       { id:'voice', title:'Text to Dialogue', subtitle:'Speech or conversation', icon:'🗣️', badge:'ElevenLabs', baseCostLabel:'1+⚡', description:'Write one voice line, or add more lines to create a conversation with different character voices.' },
       { id:'isolation', title:'Voice Isolation', subtitle:'Clean noisy audio', icon:'🎙️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Upload an audio file and isolate the voice from background noise.' },
+      { id:'voice-change', title:'Voice Changer', subtitle:'Transform uploaded speech', icon:'🎚️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Upload speech audio, choose a target voice, and keep the original performance with a new voice.' },
       { id:'music', title:'Suno Music', subtitle:'Songs, lyrics, and instrumentals', icon:'🎵', badge:'Suno', baseCostLabel:'1.5⚡', description:'Create music with custom mode, lyrics, title, style, gender control, and instrumental control.' }
     ];
-    const VOICES = [
-      { label:'James', value:'EkK5I93UQWFDigLMpZcX' },
-      { label:'Arabella', value:'Z3R5wn05IrDiVCyEkUrK' },
-      { label:'Bradford', value:'NNl6r8mD7vthiJatiJt1' },
-      { label:'Gaming Announcer', value:'YOq2y2Up4RgXP2HyXjE5' },
-      { label:'Monika', value:'2zRM7PkgwBPiau2jvVXc' },
-      { label:'Mark', value:'1SM7GgM6IMuvQlz2BwM3' },
-      { label:'Grandpa Spuds', value:'NOpBlnGInO9m6vDvFkFC' },
-      { label:'Eve', value:'BZgkqPqms7Kj9ulSkVzn' },
-      { label:'British Football Announcer', value:'gU0LNdkMOQCOrPrwtbee' },
-      { label:'Drill Sergeant', value:'DGzg6RaUqxGRTHSBjfgF' },
-      { label:'Harry', value:'SOYHLrjzK2X1ezoPC6cr' },
-      { label:'Bella', value:'hpp4J3VqNfWAUOO0d1Us' },
-      { label:'Adam', value:'pNInz6obpgDQGcFmaJgB' },
-      { label:'Jessica', value:'flHkNRp1BlvT73UL6gyz' },
-      { label:'Lutz Laugh', value:'9yzdeviXkFddZ4Oz8Mok' },
-      { label:'Michael', value:'U1Vk2oyatMdYs096Ety7' },
-      { label:'Austin', value:'Bj9UqZbhQsanLzgalpEG' },
-      { label:'Blondie', value:'exsUS4vynmxd379XN4yO' },
-      { label:'Priyanka', value:'BpjGufoPiobT79j2vtj4' },
-      { label:'Grimblewood', value:'ouL9IsyrSnUkCmfnD02u' },
-      { label:'Jane', value:'RILOU7YmBhvwJGDGjNmP' },
-      { label:'Juniper', value:'aMSt68OGf4xUZAnLpTU8' },
-      { label:'Hope', value:'tnSpp4vdxKPjI9w0GnoV' },
-      { label:'Clyde', value:'wyWA56cQNU2KqUW4eCsI' },
-      { label:'Charles', value:'zNsotODqUhvbJ5wMG7Ei' },
-      { label:'Amanda', value:'QzgYVYSNBgksoEWDkpKt' },
-      { label:'Alexandra', value:'kdmDKE6EkgrWrrykO9Qt' },
-      { label:'Lucas Reed', value:'M0IvLNu6hH3cNnETNLEP' },
-      { label:'Ivanna', value:'bMxLr8fP6hzNRRi9nJxU' },
-      { label:'Carter', value:'bU2VfAdiOb2Gv2eZWlFq' },
-      { label:'Andrew', value:'gUABw7pXQjhjt0kNFBTF' },
-      { label:'Rachel', value:'Rachel' },
-      { label:'Aria', value:'Aria' },
-      { label:'Roger', value:'Roger' },
-      { label:'Sarah', value:'Sarah' },
-      { label:'Laura', value:'Laura' },
-      { label:'Charlie', value:'Charlie' },
-      { label:'George', value:'George' },
-      { label:'Callum', value:'Callum' },
-      { label:'River', value:'River' },
-      { label:'Liam', value:'Liam' },
-      { label:'Charlotte', value:'Charlotte' },
-      { label:'Alice', value:'Alice' },
-      { label:'Matilda', value:'Matilda' },
-      { label:'Will', value:'Will' },
-      { label:'Eric', value:'Eric' },
-      { label:'Chris', value:'Chris' },
-      { label:'Brian', value:'Brian' },
-      { label:'Daniel', value:'Daniel' },
-      { label:'Lily', value:'Lily' },
-      { label:'Bill', value:'Bill' },
-      { label:'Character 01', value:'B8gJV1IhpuegLxdpXFOE' },
-      { label:'Character 02', value:'5l5f8iK3YPeGga21rQIX' },
-      { label:'Character 03', value:'wo6udizrrtpIxWGp2qJk' },
-      { label:'Character 04', value:'x70vRnQBMBu4FAYhjJbO' },
-      { label:'Character 05', value:'P1bg08DkjqiVEzOn76yG' },
-      { label:'Character 06', value:'qDuRKMlYmrm8trt5QyBn' },
-      { label:'Character 07', value:'qXpMhyvQqiRxWQs4qSSB' },
-      { label:'Character 08', value:'TX3LPaxmHKxFdv7VOQHJ' },
-      { label:'Character 09', value:'N2lVS1w4EtoT3dr4eOWO' },
-      { label:'Character 10', value:'FGY2WhTYpPnrIDTdsKH5' },
-      { label:'Character 11', value:'kPzsL2i3teMYv0FxEYQ6' },
-      { label:'Character 12', value:'nPczCjzI2devNBz1zQrb' },
-      { label:'Character 13', value:'uYXf8XasLslADfZ2MB4u' },
-      { label:'Character 14', value:'gs0tAILXbY5DNrJrsM6F' },
-      { label:'Character 15', value:'DTKMou8ccj1ZaWGBiotd' },
-      { label:'Character 16', value:'vBKc2FfBKJfcZNyEt1n6' },
-      { label:'Character 17', value:'DYkrAHD8iwork3YSUBbs' },
-      { label:'Character 18', value:'56AoDkrOh6qfVPDXZ7Pt' },
-      { label:'Character 19', value:'eR40ATw9ArzDf9h3v7t7' },
-      { label:'Character 20', value:'g6xIsTj2HwM6VR4iXFCw' },
-      { label:'Character 21', value:'lcMyyd2HUfFzxdCaC4Ta' },
-      { label:'Character 22', value:'6aDn1KB0hjpdcocrUkmq' },
-      { label:'Character 23', value:'Sq93GQT4X1lKDXsQcixO' },
-      { label:'Character 24', value:'pPdl9cQBQq4p6mRkZy2Z' },
-      { label:'Character 25', value:'zYcjlYFOd3taleS0gkk3' },
-      { label:'Character 26', value:'nzeAacJi50IvxcyDnMXa' },
-      { label:'Character 27', value:'ruirxsoakN0GWmGNIo04' },
-      { label:'Character 28', value:'TC0Zp7WVFzhA8zpTlRqV' },
-      { label:'Character 29', value:'ljo9gAlSqKOvF6D8sOsX' },
-      { label:'Character 30', value:'PPzYpIqttlTYA83688JI' },
-      { label:'Character 31', value:'8JVbfL6oEdmuxKn5DK2C' },
-      { label:'Character 32', value:'iCrDUkL56s3C8sCRl7wb' },
-      { label:'Character 33', value:'wJqPPQ618aTW29mptyoc' },
-      { label:'Character 34', value:'EiNlNiXeDU1pqqOPrYMO' },
-      { label:'Character 35', value:'4YYIPFl9wE5c4L2eu2Gb' },
-      { label:'Character 36', value:'6F5Zhi321D3Oq7v1oNT4' },
-      { label:'Character 37', value:'YXpFCvM1S3JbWEJhoskW' },
-      { label:'Character 38', value:'LG95yZDEHg6fCZdQjLqj' },
-      { label:'Character 39', value:'CeNX9CMwmxDxUF5Q2Inm' },
-      { label:'Character 40', value:'aD6riP1btT197c6dACmy' },
-      { label:'Character 41', value:'mtrellq69YZsNwzUSyXh' },
-      { label:'Character 42', value:'dHd5gvgSOzSfduK4CvEg' },
-      { label:'Character 43', value:'eVItLK1UvXctxuaRV2Oq' },
-      { label:'Character 44', value:'esy0r39YPLQjOczyOib8' },
-      { label:'Character 45', value:'D2jw4N9m4xePLTQ3IHjU' },
-      { label:'Character 46', value:'Tsns2HvNFKfGiNjllgqo' },
-      { label:'Character 47', value:'1U02n4nD6AdIZ9CjF053' },
-      { label:'Character 48', value:'AeRdCCKzvd23BpJoofzx' },
-      { label:'Character 49', value:'LruHrtVF6PSyGItzMNHS' },
-      { label:'Character 50', value:'1wGbFxmAM3Fgw63G1zZJ' },
-      { label:'Character 51', value:'hqfrgApggtO1785R4Fsn' },
-      { label:'Character 52', value:'MJ0RnG71ty4LH3dvNfSd' },
-      { label:'Character 53', value:'scOwDtmlUjD3prqpp97I' },
-      { label:'Character 54', value:'Sm1seazb4gs7RSlUVw7c' }
+    let VOICES = [
+      {"label":"Adam - Dominant, Firm","value":"pNInz6obpgDQGcFmaJgB","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/pNInz6obpgDQGcFmaJgB/d6905d7a-dd26-4187-bfff-1bd3a5ea7cac.mp3"},
+      {"label":"Alice - Clear, Engaging Educator","value":"Xb7hH8MSUJpSbSDYk0k2","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/Xb7hH8MSUJpSbSDYk0k2/d10f7534-11f6-41fe-a012-2de1e482d336.mp3"},
+      {"label":"Bella - Professional, Bright, Warm","value":"hpp4J3VqNfWAUOO0d1Us","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/hpp4J3VqNfWAUOO0d1Us/dab0f5ba-3aa4-48a8-9fad-f138fea1126d.mp3"},
+      {"label":"Bill - Wise, Mature, Balanced","value":"pqHfZKP75CvOlQylNhV4","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/pqHfZKP75CvOlQylNhV4/d782b3ff-84ba-4029-848c-acf01285524d.mp3"},
+      {"label":"Brian - Deep, Resonant and Comforting","value":"nPczCjzI2devNBz1zQrb","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/nPczCjzI2devNBz1zQrb/2dd3e72c-4fd3-42f1-93ea-abc5d4e5aa1d.mp3"},
+      {"label":"Callum - Husky Trickster","value":"N2lVS1w4EtoT3dr4eOWO","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/N2lVS1w4EtoT3dr4eOWO/ac833bd8-ffda-4938-9ebc-b0f99ca25481.mp3"},
+      {"label":"Charlie - Deep, Confident, Energetic","value":"IKne3meq5aSn9XLyUdCD","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/IKne3meq5aSn9XLyUdCD/102de6f2-22ed-43e0-a1f1-111fa75c5481.mp3"},
+      {"label":"Chris - Charming, Down-to-Earth","value":"iP95p4xoKVk53GoZ742B","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/iP95p4xoKVk53GoZ742B/3f4bde72-cc48-40dd-829f-57fbf906f4d7.mp3"},
+      {"label":"Daniel - Steady Broadcaster","value":"onwK4e9ZLuTAKqWW03F9","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/onwK4e9ZLuTAKqWW03F9/7eee0236-1a72-4b86-b303-5dcadc007ba9.mp3"},
+      {"label":"Eric - Smooth, Trustworthy","value":"cjVigY5qzO86Huf0OWal","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/cjVigY5qzO86Huf0OWal/d098fda0-6456-4030-b3d8-63aa048c9070.mp3"},
+      {"label":"George - Warm, Captivating Storyteller","value":"JBFqnCBsd6RMkjVDRZzb","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/JBFqnCBsd6RMkjVDRZzb/e6206d1a-0721-4787-aafb-06a6e705cac5.mp3"},
+      {"label":"Harry - Fierce Warrior","value":"SOYHLrjzK2X1ezoPC6cr","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/SOYHLrjzK2X1ezoPC6cr/86d178f6-f4b6-4e0e-85be-3de19f490794.mp3"},
+      {"label":"Jessica - Playful, Bright, Warm","value":"cgSgspJ2msm6clMCkdW9","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/cgSgspJ2msm6clMCkdW9/56a97bf8-b69b-448f-846c-c3a11683d45a.mp3"},
+      {"label":"Laura - Enthusiast, Quirky Attitude","value":"FGY2WhTYpPnrIDTdsKH5","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/FGY2WhTYpPnrIDTdsKH5/67341759-ad08-41a5-be6e-de12fe448618.mp3"},
+      {"label":"Liam - Energetic, Social Media Creator","value":"TX3LPaxmHKxFdv7VOQHJ","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/TX3LPaxmHKxFdv7VOQHJ/63148076-6363-42db-aea8-31424308b92c.mp3"},
+      {"label":"Lily - Velvety Actress","value":"pFZP5JQG7iQjIQuC4Bku","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/pFZP5JQG7iQjIQuC4Bku/89b68b35-b3dd-4348-a84a-a3c13a3c2b30.mp3"},
+      {"label":"Matilda - Knowledgable, Professional","value":"XrExE9yKIg1WjnnlVkGX","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/XrExE9yKIg1WjnnlVkGX/b930e18d-6b4d-466e-bab2-0ae97c6d8535.mp3"},
+      {"label":"River - Relaxed, Neutral, Informative","value":"SAz9YHcvj6GT2YYXdXww","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/SAz9YHcvj6GT2YYXdXww/e6c95f0b-2227-491a-b3d7-2249240decb7.mp3"},
+      {"label":"Roger - Laid-Back, Casual, Resonant","value":"CwhRBWXzGAHq8TQ4Fs17","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/CwhRBWXzGAHq8TQ4Fs17/58ee3ff5-f6f2-4628-93b8-e38eb31806b0.mp3"},
+      {"label":"Sarah - Mature, Reassuring, Confident","value":"EXAVITQu4vr4xnSDxMaL","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/EXAVITQu4vr4xnSDxMaL/01a3e33c-6e99-4ee7-8543-ff2216a32186.mp3"},
+      {"label":"Will - Relaxed Optimist","value":"bIHbv24MWmeRgasZH58o","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/bIHbv24MWmeRgasZH58o/8caf8f3d-ad29-4980-af41-53f20c72d7a4.mp3"}
     ];
     const LANGUAGES = [
       { label:'Auto detect', value:'' },
@@ -418,8 +359,12 @@
     let selectedAudioFile = null;
     let selectedAudioDurationSeconds = 0;
     let pollTimer = null;
+    let voicePreviewAudio = null;
+    let activeVoicePlayButton = null;
 
     const $ = (id) => document.getElementById(id);
+    const FUNCTION_ORIGIN = window.location.protocol === 'file:' ? 'https://webhansora.netlify.app' : '';
+    function functionUrl(path){ return `${FUNCTION_ORIGIN}${path}`; }
     function activeModel(){ return MODELS.find(m => m.id === currentModelId) || MODELS[0]; }
     function parseCredits(value){ const n = Number(String(value ?? '').replace(/[^\d.-]/g,'')); return Number.isFinite(n) ? n : 0; }
     function formatCredits(value){ const n = Number(value || 0); return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`; }
@@ -495,21 +440,123 @@
       const found = VOICES.find((v)=>v.value === value) || VOICES[0];
       return found ? found.label : 'Choose voice';
     }
+    function voiceById(value){
+      return VOICES.find((v)=>v.value === value) || null;
+    }
     function voiceValueByIndex(index){
       return (VOICES[index] || VOICES[0]).value;
+    }
+    function refreshVoicePickers(){
+      document.querySelectorAll('.voice-picker').forEach((picker)=>{
+        const hidden = picker.querySelector('.dialogue-voice');
+        const label = picker.querySelector('.voice-label');
+        if (hidden && !voiceById(hidden.value) && VOICES[0]) hidden.value = VOICES[0].value;
+        if (label && hidden) label.textContent = voiceLabel(hidden.value);
+        const search = picker.querySelector('.voice-search');
+        renderVoiceList(picker, search ? search.value : '');
+      });
+    }
+    async function loadElevenVoices(){
+      try{
+        const user = currentUser;
+        const sessionRes = await supabaseClient.auth.getSession();
+        const token = sessionRes?.data?.session?.access_token || '';
+        const resp = await fetch(functionUrl('/.netlify/functions/run-audio'), {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', ...(token ? { 'Authorization':`Bearer ${token}` } : {}) },
+          body: JSON.stringify({ uid:user && user.id || '', kind:'voice-list' })
+        });
+        const data = await resp.json().catch(()=>({}));
+        const liveVoices = Array.isArray(data.voices) ? data.voices : [];
+        if (!data.submitted || !liveVoices.length) {
+          return;
+        }
+        const seen = new Set();
+        VOICES = liveVoices.filter((voice)=>{
+          const value = String(voice.value || '').trim();
+          const label = String(voice.label || '').trim();
+          const previewUrl = String(voice.preview_url || voice.previewUrl || '').trim();
+          if (!value || !label || !previewUrl || seen.has(value)) return false;
+          seen.add(value);
+          voice.value = value;
+          voice.label = label;
+          voice.preview_url = previewUrl;
+          return true;
+        });
+        if (!VOICES.length) {
+          showError('ElevenLabs returned voices, but none included preview_url samples.');
+          return;
+        }
+        refreshVoicePickers();
+      }catch(error){
+        console.warn('voice list load failed; using built-in ElevenLabs previews', error);
+      }
+    }
+    function stopVoicePreview(){
+      if (voicePreviewAudio) {
+        voicePreviewAudio.pause();
+        voicePreviewAudio.currentTime = 0;
+      }
+      if (activeVoicePlayButton) {
+        activeVoicePlayButton.textContent = '▶';
+        activeVoicePlayButton.classList.remove('playing');
+        activeVoicePlayButton.disabled = false;
+      }
+      activeVoicePlayButton = null;
+    }
+    async function playVoiceOptionPreview(voice, button){
+      clearError();
+      try{
+        const sameButtonPlaying = activeVoicePlayButton === button && voicePreviewAudio && !voicePreviewAudio.paused;
+        stopVoicePreview();
+        if (sameButtonPlaying) return;
+        if (!voicePreviewAudio) {
+          voicePreviewAudio = new Audio();
+          voicePreviewAudio.addEventListener('ended', stopVoicePreview);
+          voicePreviewAudio.addEventListener('pause', ()=>{
+            if (activeVoicePlayButton && voicePreviewAudio && voicePreviewAudio.ended) stopVoicePreview();
+          });
+        }
+        activeVoicePlayButton = button;
+        button.classList.add('playing');
+        button.textContent = '…';
+        let src = String(voice && voice.preview_url || '').trim();
+        if (!src) {
+          throw new Error('This voice was not loaded from ElevenLabs with a preview_url.');
+        }
+        voicePreviewAudio.src = src;
+        button.textContent = '❚❚';
+        await voicePreviewAudio.play();
+      }catch(err){
+        const message = String(err.message || err);
+        stopVoicePreview();
+        button.title = message;
+        button.textContent = '▶';
+        showError(message);
+      }
     }
     function renderVoiceList(picker, query = ''){
       const list = picker.querySelector('.voice-list');
       const hidden = picker.querySelector('.dialogue-voice');
       const q = String(query || '').trim().toLowerCase();
       const matches = VOICES.filter((v)=>v.label.toLowerCase().includes(q));
-      list.innerHTML = matches.length ? matches.map((v)=>`<button type="button" class="voice-option ${v.value === hidden.value ? 'active' : ''}" data-voice-value="${escapeHtml(v.value)}">${escapeHtml(v.label)}</button>`).join('') : '<div class="px-3 py-3 text-xs text-slate-400">No voice found.</div>';
-      list.querySelectorAll('.voice-option').forEach((btn)=>{
+      list.innerHTML = matches.length ? matches.map((v)=>`<div class="voice-option-row ${v.value === hidden.value ? 'active' : ''}" data-voice-value="${escapeHtml(v.value)}"><button type="button" class="voice-option-name truncate" title="${escapeHtml(v.label)}">${escapeHtml(v.label)}</button><button type="button" class="voice-play-btn" aria-label="Play ${escapeHtml(v.label)} preview" title="Play ElevenLabs preview_url">▶</button></div>`).join('') : '<div class="px-3 py-3 text-xs text-slate-400">No ElevenLabs previews loaded.</div>';
+      list.querySelectorAll('.voice-option-name').forEach((btn)=>{
         btn.addEventListener('click',()=>{
-          hidden.value = btn.dataset.voiceValue || VOICES[0].value;
+          const row = btn.closest('.voice-option-row');
+          hidden.value = row && row.dataset.voiceValue || VOICES[0].value;
           picker.querySelector('.voice-label').textContent = voiceLabel(hidden.value);
+          stopVoicePreview();
           picker.querySelector('.voice-menu').classList.remove('open');
           renderVoiceList(picker, picker.querySelector('.voice-search').value);
+        });
+      });
+      list.querySelectorAll('.voice-play-btn').forEach((btn)=>{
+        btn.addEventListener('click',(event)=>{
+          event.stopPropagation();
+          const row = btn.closest('.voice-option-row');
+          const voice = row ? voiceById(row.dataset.voiceValue) : null;
+          if (voice) playVoiceOptionPreview(voice, btn);
         });
       });
     }
@@ -608,24 +655,29 @@
     }
     function estimatedCostFor(kind){
       if (kind === 'music') return 1.5;
-      if (kind === 'isolation') return isolationCost();
+      if (kind === 'isolation' || kind === 'voice-change') return isolationCost();
       return voiceCost();
     }
     function modelBadgeCost(model){
       if (model.id === currentModelId) return `${formatCostNumber(estimatedCostFor(model.id))}⚡`;
       return model.baseCostLabel;
     }
+    function actionLabel(kind){
+      if (kind === 'isolation') return 'Clean audio';
+      if (kind === 'voice-change') return 'Change voice';
+      if (kind === 'music') return 'Create music';
+      return 'Create voice';
+    }
     function updateCostUI(){
       const m = activeModel();
       const cost = estimatedCostFor(m.id);
       $('costText').textContent = `${formatCostNumber(cost)} ${cost === 1 ? 'credit' : 'credits'}`;
       if (m.id === 'voice') $('creditHint').textContent = `${voiceCharacterCount()} characters • 1 credit per 1000 characters.`;
-      else if (m.id === 'isolation') $('creditHint').textContent = selectedAudioDurationSeconds ? `${formatDuration(selectedAudioDurationSeconds)} detected • rounded up by 30 seconds.` : '1 credit per minute. Upload audio so the page can read duration.';
+      else if (m.id === 'isolation' || m.id === 'voice-change') $('creditHint').textContent = selectedAudioDurationSeconds ? `${formatDuration(selectedAudioDurationSeconds)} detected • rounded up by 30 seconds.` : '1 credit per minute. Upload audio so the page can read duration.';
       else $('creditHint').textContent = 'Suno music costs 1.5 credits per generation.';
       const runBtn = $('runBtn');
       if (runBtn && !runBtn.disabled) {
-        const label = m.id === 'isolation' ? 'Clean audio' : m.id === 'music' ? 'Create music' : 'Create voice';
-        runBtn.textContent = `${label} • ${formatCostNumber(cost)}⚡`;
+        runBtn.textContent = `${actionLabel(m.id)} • ${formatCostNumber(cost)}⚡`;
       }
     }
     function formatDuration(seconds){
@@ -642,14 +694,22 @@
     function syncPanels(){
       const m = activeModel();
       $('activeSubtitle').textContent = m.title;
-      $('activeTitle').textContent = m.id === 'voice' ? 'Natural dialogue creator' : m.id === 'isolation' ? 'Clean voice from audio' : 'Music generator';
+      $('activeTitle').textContent = m.id === 'voice' ? 'Natural dialogue creator' : m.id === 'isolation' ? 'Clean voice from audio' : m.id === 'voice-change' ? 'Voice changer' : 'Music generator';
       $('activeDescription').textContent = m.description;
       $('modelBadge').textContent = m.badge;
       updateCostUI();
-      $('runBtn').textContent = `${m.id === 'isolation' ? 'Clean audio' : m.id === 'music' ? 'Create music' : 'Create voice'} • ${formatCostNumber(estimatedCostFor(m.id))}⚡`;
+      $('runBtn').textContent = `${actionLabel(m.id)} • ${formatCostNumber(estimatedCostFor(m.id))}⚡`;
       $('voicePanel').classList.toggle('hidden', m.id !== 'voice');
-      $('isolationPanel').classList.toggle('hidden', m.id !== 'isolation');
+      $('isolationPanel').classList.toggle('hidden', !(m.id === 'isolation' || m.id === 'voice-change'));
+      $('voiceChangerOptions').classList.toggle('hidden', m.id !== 'voice-change');
       $('musicPanel').classList.toggle('hidden', m.id !== 'music');
+      if (m.id === 'isolation') {
+        $('dropTitle').textContent = selectedAudioFile ? 'File ready' : 'Upload audio';
+        $('dropMeta').textContent = selectedAudioFile ? 'Click to replace it, or press Remove below.' : 'Noise and background sound will be cleaned from the voice.';
+      } else if (m.id === 'voice-change') {
+        $('dropTitle').textContent = selectedAudioFile ? 'File ready' : 'Upload speech audio';
+        $('dropMeta').textContent = selectedAudioFile ? 'Click to replace it, or press Remove below.' : 'Choose the audio you want to transform into the selected voice.';
+      }
       syncMusicControls();
       clearError();
     }
@@ -698,6 +758,7 @@
         input.addEventListener('input',()=>{ label.textContent = Number(input.value).toFixed(2); });
       });
       $('addDialogueLineBtn').addEventListener('click',()=>addDialogueLine('', 1));
+      wireVoicePicker($('changerVoicePicker'));
     }
 
     function wireUpload(){
@@ -739,8 +800,8 @@
         $('selectedFileName').textContent = '—';
         $('selectedFileName').title = '';
         $('selectedFileSize').textContent = '—';
-        $('dropTitle').textContent = 'Upload audio';
-        $('dropMeta').textContent = 'Upload audio only. Video files are not accepted by KIE voice isolation.';
+        $('dropTitle').textContent = currentModelId === 'voice-change' ? 'Upload speech audio' : 'Upload audio';
+        $('dropMeta').textContent = currentModelId === 'voice-change' ? 'Choose the audio you want to transform into the selected voice.' : 'Noise and background sound will be cleaned from the voice.';
       }
       updateCostUI();
       renderModels();
@@ -862,14 +923,20 @@
           body.stability = Math.round(Number($('stability').value || 0.5) * 2) / 2;
           body.language_code = $('voiceLanguage').value.trim();
           body.prompt = body.dialogue.map((line)=>line.text).join('\n');
-        } else if (model.id === 'isolation') {
+        } else if (model.id === 'isolation' || model.id === 'voice-change') {
           if (!selectedAudioFile) throw new Error('Please upload audio first.');
           if (selectedAudioFile.size > 10 * 1024 * 1024) throw new Error('Please use a file under 10MB for this page upload.');
           body.fileName = selectedAudioFile.name || 'audio-file';
           body.fileType = selectedAudioFile.type || guessAudioMimeType(selectedAudioFile.name);
           body.fileBase64 = await fileToDataURL(selectedAudioFile);
           body.durationSeconds = selectedAudioDurationSeconds || 0;
-          body.prompt = `Voice isolation: ${body.fileName}`;
+          if (model.id === 'voice-change') {
+            body.voice = $('changerVoicePicker').querySelector('.dialogue-voice').value.trim();
+            body.remove_background_noise = $('removeBackgroundNoise').checked;
+            body.prompt = `Voice changer: ${body.fileName}`;
+          } else {
+            body.prompt = `Voice isolation: ${body.fileName}`;
+          }
         } else if (model.id === 'music') {
           Object.assign(body, buildMusicPayload());
           body.prompt = body.prompt || body.title || 'Instrumental music';
@@ -878,7 +945,7 @@
         button.disabled = true;
         button.textContent = 'Submitting...';
         addPendingResult(body.run_id, model, body.prompt || body.title || 'Audio task');
-        const resp = await fetch('/.netlify/functions/run-audio', {
+        const resp = await fetch(functionUrl('/.netlify/functions/run-audio'), {
           method:'POST',
           headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
           body: JSON.stringify(body)
@@ -893,7 +960,7 @@
       }finally{
         button.disabled = false;
         const finalModel = activeModel();
-        button.textContent = `${finalModel.id === 'isolation' ? 'Clean audio' : finalModel.id === 'music' ? 'Create music' : 'Create voice'} • ${formatCostNumber(estimatedCostFor(finalModel.id))}⚡`;
+        button.textContent = `${actionLabel(finalModel.id)} • ${formatCostNumber(estimatedCostFor(finalModel.id))}⚡`;
       }
     }
 
@@ -1009,7 +1076,7 @@
         const taskId = meta.task_id || meta.taskId || '';
         if (!runId || !taskId) return;
         try{
-          await fetch(`/.netlify/functions/audio-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId)}`, { method:'GET' });
+          await fetch(functionUrl(`/.netlify/functions/audio-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId)}`), { method:'GET' });
         }catch(_){ }
       }));
       return rows.length;
@@ -1034,6 +1101,7 @@
       $('refreshCreditsBtn').addEventListener('click', refreshCredits);
       const { data: { user } } = await supabaseClient.auth.getUser();
       currentUser = user || null;
+      await loadElevenVoices();
       if (currentUser) { await refreshCredits(); await loadRecentHistory(); }
       if (window.HansoraHeader && typeof window.HansoraHeader.init === 'function') {
         try { window.HansoraHeader.init({ supabaseClient }); } catch(e) {}
