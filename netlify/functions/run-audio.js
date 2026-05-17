@@ -1,11 +1,11 @@
 // netlify/functions/run-audio.js
 // Submit Hansora audio jobs and seed user_generations placeholders.
 // Voice, isolation, and voice changer use ElevenLabs directly. Music stays on KIE/Suno.
-// Env: KIE_API_KEY, ELEVENLABS_API_KEY (or Eleven_labs_api), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// Env: KIE_API_KEY, Elevan_labs_api1 (or ELEVENLABS_API_KEY), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // Opt: SITE_BASE (default https://webhansora.netlify.app)
 
 const API_KEY = process.env.KIE_API_KEY || "";
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_LABS_API_KEY || process.env.Eleven_labs_api || process.env.eleven_labs_api || process.env.XI_API_KEY || "";
+const ELEVENLABS_API_KEY = process.env.Elevan_labs_api1 || process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_LABS_API_KEY || process.env.Eleven_labs_api || process.env.eleven_labs_api || process.env.XI_API_KEY || "";
 const ELEVENLABS_BASE = (process.env.ELEVENLABS_BASE_URL || "https://api.elevenlabs.io").replace(/\/+$/,"");
 const MARKET_TASK_URL = "https://api.kie.ai/api/v1/jobs/createTask";
 const SUNO_GENERATE_URL = "https://api.kie.ai/api/v1/generate";
@@ -24,12 +24,14 @@ Object.values(VOICE_ALIASES).forEach((id)=>SUPPORTED_DIALOGUE_VOICES.add(id));
 
 const SUPABASE_URL  = (process.env.SUPABASE_URL || "").replace(/\/+$/,"");
 const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const WORKER_SECRET = process.env.AUDIO_WORKER_SECRET || SERVICE_KEY;
 const UG_URL        = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
 const PROFILES_URL  = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
 const AUTH_USER_URL = SUPABASE_URL ? `${SUPABASE_URL}/auth/v1/user` : "";
 
 const SITE_BASE = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/,"");
 const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/audio-kie-callback`;
+const ELEVEN_BACKGROUND_URL = `${SITE_BASE}/.netlify/functions/audio-eleven-background`;
 
 
 exports.handler = async (event) => {
@@ -101,60 +103,53 @@ exports.handler = async (event) => {
       if (!dialogue.length) return ok({ submitted:false, error:"empty_dialogue", run_id });
       const stability = clampNumber(body.stability, 0, 1, 0.5);
       const languageCode = normalizeLanguageCode(body.language_code || body.languageCode || "");
-      const elevenPayload = dialogue.length === 1 ? {
-        text: dialogue[0].text,
-        model_id: "eleven_v3",
-        voice_settings: { stability, similarity_boost:0.85, style:0, use_speaker_boost:true }
-      } : {
-        inputs: dialogue.map((item)=>({ text:item.text, voice_id:item.voice })),
-        model_id: "eleven_v3",
-        settings: { stability }
-      };
-      if (languageCode) elevenPayload.language_code = languageCode;
-      const audioPath = dialogue.length === 1 ? `/v1/text-to-speech/${encodeURIComponent(dialogue[0].voice)}?output_format=mp3_44100_128` : "/v1/text-to-dialogue?output_format=mp3_44100_128";
-      const audio = await postElevenJsonAudio(audioPath, elevenPayload);
-      const resultUrl = await storeGeneratedAudio({ uid, run_id, kind, bytes:audio.bytes, contentType:audio.contentType, fileName:"dialogue.mp3" });
       if (!charged) {
         const debited = await debitCredits(uid, cost);
         if (!debited) return ok({ submitted:false, error:"debit_failed", run_id });
         await markCharged(uid, run_id, cost, run_id);
+        failureContext.charged = true;
       }
-      await markDirectReady(uid, run_id, { kind, provider:providerTitle(kind), cost, resultUrl, request:stripLargeFields(elevenPayload) });
-      return ok({ submitted:true, run_id, taskId:run_id, result_url:resultUrl, status:200, data:{ provider:"elevenlabs", kind } });
+      const workerBody = { dialogue, stability, language_code:languageCode, prompt:body.prompt || "" };
+      await invokeElevenBackground({ uid, run_id, kind, cost, body:workerBody });
+      await patchTaskMeta(uid, run_id, { status:"processing", task_id:run_id, kind, provider:providerTitle(kind), cost, background:true, request:stripLargeFields(workerBody) });
+      return ok({ submitted:true, run_id, taskId:run_id, status:202, data:{ provider:"elevenlabs", kind, background:true } });
     } else if (kind === "isolation") {
       if (!ELEVENLABS_API_KEY) return ok({ submitted:false, error:"missing_elevenlabs_key", run_id });
       let audioUrl = normalizeUrl(body.audio_url || body.audioUrl || "");
-      const source = await readInputAudio(body, audioUrl);
-      if (!source.bytes.length) return ok({ submitted:false, error:"missing_audio_file", run_id });
-      const audio = await postElevenMultipartAudio("/v1/audio-isolation", source, {});
-      const resultUrl = await storeGeneratedAudio({ uid, run_id, kind, bytes:audio.bytes, contentType:audio.contentType, fileName:"voice-isolated.mp3" });
+      if (!audioUrl && !String(body.fileBase64 || body.base64Data || "")) return ok({ submitted:false, error:"missing_audio_file", run_id });
+      const fileName = sanitizeFileName(body.fileName || `audio-${Date.now()}.mp3`);
+      const fileType = String(body.fileType || "").toLowerCase();
+      if (!isSupportedAudioFile(fileName, fileType)) return ok({ submitted:false, error:"unsupported_file_type_audio_only", run_id });
       if (!charged) {
         const debited = await debitCredits(uid, cost);
         if (!debited) return ok({ submitted:false, error:"debit_failed", run_id });
         await markCharged(uid, run_id, cost, run_id);
+        failureContext.charged = true;
       }
-      await markDirectReady(uid, run_id, { kind, provider:providerTitle(kind), cost, resultUrl, request:stripLargeFields({ input:{ audio_url:audioUrl || source.fileName } }) });
-      return ok({ submitted:true, run_id, taskId:run_id, result_url:resultUrl, status:200, data:{ provider:"elevenlabs", kind } });
+      const workerBody = { audio_url:audioUrl, fileBase64:body.fileBase64 || body.base64Data || "", fileName, fileType };
+      await invokeElevenBackground({ uid, run_id, kind, cost, body:workerBody });
+      await patchTaskMeta(uid, run_id, { status:"processing", task_id:run_id, kind, provider:providerTitle(kind), cost, background:true, request:stripLargeFields({ input:{ audio_url:audioUrl || fileName } }) });
+      return ok({ submitted:true, run_id, taskId:run_id, status:202, data:{ provider:"elevenlabs", kind, background:true } });
     } else if (kind === "voice-change") {
       if (!ELEVENLABS_API_KEY) return ok({ submitted:false, error:"missing_elevenlabs_key", run_id });
       const voiceId = normalizeVoiceId(body.voice || body.voice_id || body.voiceId || "");
       if (!voiceId) return ok({ submitted:false, error:"missing_voice", run_id });
       let audioUrl = normalizeUrl(body.audio_url || body.audioUrl || "");
-      const source = await readInputAudio(body, audioUrl);
-      if (!source.bytes.length) return ok({ submitted:false, error:"missing_audio_file", run_id });
+      if (!audioUrl && !String(body.fileBase64 || body.base64Data || "")) return ok({ submitted:false, error:"missing_audio_file", run_id });
+      const fileName = sanitizeFileName(body.fileName || `audio-${Date.now()}.mp3`);
+      const fileType = String(body.fileType || "").toLowerCase();
+      if (!isSupportedAudioFile(fileName, fileType)) return ok({ submitted:false, error:"unsupported_file_type_audio_only", run_id });
       const removeNoise = body.remove_background_noise !== false && body.removeBackgroundNoise !== false;
-      const audio = await postElevenMultipartAudio(`/v1/speech-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, source, {
-        model_id: "eleven_multilingual_sts_v2",
-        remove_background_noise: String(removeNoise)
-      });
-      const resultUrl = await storeGeneratedAudio({ uid, run_id, kind, bytes:audio.bytes, contentType:audio.contentType, fileName:"voice-changed.mp3" });
       if (!charged) {
         const debited = await debitCredits(uid, cost);
         if (!debited) return ok({ submitted:false, error:"debit_failed", run_id });
         await markCharged(uid, run_id, cost, run_id);
+        failureContext.charged = true;
       }
-      await markDirectReady(uid, run_id, { kind, provider:providerTitle(kind), cost, resultUrl, request:stripLargeFields({ input:{ audio_url:audioUrl || source.fileName, voice_id:voiceId, remove_background_noise:removeNoise } }) });
-      return ok({ submitted:true, run_id, taskId:run_id, result_url:resultUrl, status:200, data:{ provider:"elevenlabs", kind } });
+      const workerBody = { audio_url:audioUrl, fileBase64:body.fileBase64 || body.base64Data || "", fileName, fileType, voice:voiceId, remove_background_noise:removeNoise };
+      await invokeElevenBackground({ uid, run_id, kind, cost, body:workerBody });
+      await patchTaskMeta(uid, run_id, { status:"processing", task_id:run_id, kind, provider:providerTitle(kind), cost, background:true, request:stripLargeFields({ input:{ audio_url:audioUrl || fileName, voice_id:voiceId, remove_background_noise:removeNoise } }) });
+      return ok({ submitted:true, run_id, taskId:run_id, status:202, data:{ provider:"elevenlabs", kind, background:true } });
     } else if (kind === "music") {
       const music = normalizeMusicPayload(body);
       if (!music.customMode && !music.prompt) return ok({ submitted:false, error:"empty_prompt", run_id });
@@ -191,13 +186,19 @@ exports.handler = async (event) => {
     return ok({ submitted:true, run_id, taskId, status:resp.status, data });
   } catch (e) {
     if (failureContext) {
+      let refundMeta = {};
+      if (failureContext.charged) {
+        const refunded = await refundCredits(failureContext.uid, failureContext.cost);
+        refundMeta = refunded ? { refunded:true, refunded_cost:failureContext.cost, refunded_at:new Date().toISOString() } : { refund_error:"refund_failed" };
+      }
       await patchTaskMeta(failureContext.uid, failureContext.run_id, {
         status:"failed",
         failed:true,
         error:String(e && e.message ? e.message : e),
         kind:failureContext.kind,
         provider:providerTitle(failureContext.kind),
-        cost:failureContext.cost
+        cost:failureContext.cost,
+        ...refundMeta
       });
     }
     return ok({ submitted:false, error:String(e && e.message ? e.message : e) });
@@ -305,6 +306,19 @@ async function postJson(url, payload){
   const r = await fetch(url, { method:"POST", headers:{ "Authorization":`Bearer ${API_KEY}`, "Content-Type":"application/json" }, body:JSON.stringify(payload) });
   const data = await r.json().catch(()=>({}));
   return { ok:r.ok, status:r.status, data };
+}
+async function invokeElevenBackground(payload){
+  if (!WORKER_SECRET) throw new Error("missing_worker_secret");
+  const r = await fetch(ELEVEN_BACKGROUND_URL, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json", "X-Hansora-Worker-Secret":WORKER_SECRET },
+    body:JSON.stringify(payload)
+  });
+  if (![200,202,204].includes(r.status)) {
+    const text = await r.text().catch(()=>"");
+    throw new Error(`eleven_background_invoke_failed_${r.status}${text ? `: ${text.slice(0,160)}` : ""}`);
+  }
+  return true;
 }
 async function getElevenJson(path){
   const r = await fetch(ELEVENLABS_BASE + path, {
@@ -501,6 +515,15 @@ async function debitCredits(uid, cost){
     const cur = await getCredits(uid);
     if (cur < cost) return false;
     const next = Math.round((cur - cost) * 10) / 10;
+    const r = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(uid)}`, { method:"PATCH", headers:{ ...sb(), "Content-Type":"application/json", "Prefer":"return=minimal" }, body:JSON.stringify({ credits:next }) });
+    return r.ok;
+  } catch { return false; }
+}
+async function refundCredits(uid, cost){
+  try{
+    if (!PROFILES_URL) return false;
+    const cur = await getCredits(uid);
+    const next = Math.round((cur + Number(cost || 0)) * 100) / 100;
     const r = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(uid)}`, { method:"PATCH", headers:{ ...sb(), "Content-Type":"application/json", "Prefer":"return=minimal" }, body:JSON.stringify({ credits:next }) });
     return r.ok;
   } catch { return false; }
