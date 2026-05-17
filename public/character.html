@@ -47,7 +47,13 @@
       opacity:.45;
       z-index:0;
     }
-    #sharedHeader{ position:relative; z-index:50; }
+    #sharedHeader{
+      position:fixed;
+      top:0;
+      left:0;
+      right:0;
+      z-index:80;
+    }
     .page-shell{
       position:relative;
       z-index:1;
@@ -2273,10 +2279,38 @@
       }
     }
 
-    /* Empty history repair: keep the page colors, but do not show a huge broken empty banner. */
+    /* Header/empty-history repair: keep the page colors, remove the broken top spacer. */
     #sharedHeader,
     #sharedHeader > *{
       margin-top:0 !important;
+      padding-top:0 !important;
+    }
+    #sharedHeader{
+      display:block !important;
+      min-height:0 !important;
+      position:fixed !important;
+      top:0 !important;
+      left:0 !important;
+      right:0 !important;
+      z-index:80 !important;
+    }
+    #sharedHeader .site-header{
+      position:relative !important;
+      top:0 !important;
+      margin-top:0 !important;
+      height:58px !important;
+      min-height:58px !important;
+      max-height:58px !important;
+      z-index:80 !important;
+    }
+    #sharedHeader .site-header .nav,
+    #sharedHeader .site-header > div{
+      height:58px !important;
+      min-height:58px !important;
+      max-height:58px !important;
+    }
+    body > .page-shell{
+      padding-top:78px !important;
     }
     .history-rail.is-empty{
       height:auto !important;
