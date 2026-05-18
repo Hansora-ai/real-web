@@ -397,6 +397,52 @@
     function escapeHtml(value) {
       return String(value || '').replace(/[&<>"]/g, (ch) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[ch]));
     }
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/'/g, '&#39;');
+    }
+    function renderPlayableVideo(url) {
+      const src = url || '';
+      return `<video src="${escapeAttr(src)}" controls muted playsinline preload="metadata"></video>`;
+    }
+    function firstVideoUrl(value) {
+      const seen = new Set();
+      const priorityKeys = new Set(['result_url', 'video_url', 'url', 'download_url', 'file_url', 'output_url']);
+      function clean(url) {
+        if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return '';
+        return url.replace(/[)"'\]}]+$/g, '').trim();
+      }
+      function acceptable(url) {
+        return /\.(mp4|webm|mov)(?:[?#].*)?$/i.test(url) || /files\.heygen\.com|resource2\.heygen\.ai|heygen/i.test(url);
+      }
+      function walk(node, trusted, depth) {
+        if (!node || depth > 10) return '';
+        if (typeof node === 'string') {
+          const direct = clean(node);
+          if (trusted && direct && acceptable(direct) && !seen.has(direct)) return direct;
+          const matches = node.match(/https?:\/\/[^\s"'<>]+/gi) || [];
+          for (const match of matches) {
+            const url = clean(match);
+            if (url && acceptable(url) && !seen.has(url)) return url;
+          }
+          return '';
+        }
+        if (Array.isArray(node)) {
+          for (const item of node) {
+            const url = walk(item, trusted, depth + 1);
+            if (url) return url;
+          }
+          return '';
+        }
+        if (typeof node === 'object') {
+          for (const [key, child] of Object.entries(node)) {
+            const url = walk(child, trusted || priorityKeys.has(String(key || '')), depth + 1);
+            if (url) return url;
+          }
+        }
+        return '';
+      }
+      return walk(value, false, 0);
+    }
     function getAudioDuration(file) {
       return new Promise((resolve, reject) => {
         const audio = document.createElement('audio');
@@ -489,18 +535,20 @@
       const runId = meta.run_id || row.run_id || '';
       const taskId = meta.task_id || meta.video_id || '';
       const status = String(meta.status || (row.result_url ? 'done' : 'processing')).toLowerCase();
-      const url = row.result_url || '';
+      const url = row.result_url || firstVideoUrl(meta);
       const modelLabel = String(row.provider || '').includes('iii') ? 'Avatar III' : 'Avatar V';
       const card = document.createElement('article');
       card.className = 'result-card';
       card.dataset.runId = runId;
       card.dataset.taskId = taskId;
+      card.dataset.resultUrl = url;
       card.innerHTML = `
         <div class="badge">${status.includes('fail') ? 'Failed' : (url ? 'Ready' : 'Processing')}</div>
-        <div class="result-media ${url ? '' : 'pending'}">${url ? `<video src="${url}" muted playsinline preload="metadata"></video>` : '<div class="processing-orb"></div><span>Creating...</span>'}</div>
+        <div class="result-media ${url ? '' : 'pending'}">${url ? renderPlayableVideo(url) : '<div class="processing-orb"></div><span>Creating...</span>'}</div>
         <div class="result-info"><div><strong>${modelLabel}</strong><span>${meta.billable_seconds ? meta.billable_seconds + 's' : 'HeyGen video'}</span></div>${url ? '<button class="get-btn" type="button">Get</button>' : ''}</div>`;
       const media = card.querySelector('video');
       if (media) media.addEventListener('click', () => openPreview(url));
+      if (media) media.addEventListener('error', () => markVideoUnplayable(card, url));
       const get = card.querySelector('.get-btn');
       if (get) get.addEventListener('click', (event) => { event.stopPropagation(); downloadAsset(url, 'heygen-avatar'); });
       if (prepend) grid.prepend(card); else grid.appendChild(card);
@@ -508,14 +556,17 @@
       return {
         card,
         apply(next) {
-          const nextUrl = next.result_url || next.video_url || '';
+          const nextUrl = next.result_url || next.video_url || firstVideoUrl(next);
           const nextStatus = String(next.status || (nextUrl ? 'done' : 'processing')).toLowerCase();
           card.querySelector('.badge').textContent = nextStatus.includes('fail') ? 'Failed' : (nextUrl ? 'Ready' : 'Processing');
           const mediaWrap = card.querySelector('.result-media');
           if (nextUrl) {
+            card.dataset.resultUrl = nextUrl;
             mediaWrap.className = 'result-media';
-            mediaWrap.innerHTML = `<video src="${nextUrl}" muted playsinline preload="metadata"></video>`;
-            mediaWrap.querySelector('video').addEventListener('click', () => openPreview(nextUrl));
+            mediaWrap.innerHTML = renderPlayableVideo(nextUrl);
+            const video = mediaWrap.querySelector('video');
+            video.addEventListener('click', () => openPreview(nextUrl));
+            video.addEventListener('error', () => markVideoUnplayable(card, nextUrl));
             const info = card.querySelector('.result-info');
             if (!info.querySelector('.get-btn')) {
               const btn = document.createElement('button');
@@ -528,6 +579,20 @@
           }
         }
       };
+    }
+
+    function markVideoUnplayable(card, url) {
+      if (!card || !url) return;
+      const mediaWrap = card.querySelector('.result-media');
+      if (!mediaWrap || mediaWrap.dataset.fallbackShown === 'true') return;
+      mediaWrap.dataset.fallbackShown = 'true';
+      mediaWrap.className = 'result-media pending';
+      mediaWrap.innerHTML = '<span>Video ready</span><button class="get-btn" type="button">Open</button>';
+      const btn = mediaWrap.querySelector('button');
+      btn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        openPreview(url);
+      });
     }
 
     async function loadRecentHistory() {
@@ -546,23 +611,35 @@
           const controller = createResultCard(row, false);
           const meta = row.meta || {};
           const st = String(meta.status || '').toLowerCase();
-          if (controller && !row.result_url && (st === 'processing' || st === 'pending' || !st)) pending.push({ controller, runId: meta.run_id, taskId: meta.task_id || meta.video_id });
+          const hasUrl = !!(row.result_url || firstVideoUrl(meta));
+          if (controller && !hasUrl && (st === 'processing' || st === 'pending' || !st)) pending.push({ controller, runId: meta.run_id, taskId: meta.task_id || meta.video_id });
         });
-        pending.forEach((item) => pollResult(item.runId, item.taskId, item.controller));
+        pending.forEach((item) => startPollResult(item.runId, item.taskId, item.controller));
       } catch (error) { console.warn('loadRecentHistory failed', error); }
     }
 
-    async function pollResult(runId, taskId, controller) {
+    const activePolls = new Map();
+    function startPollResult(runId, taskId, controller) {
+      const key = runId || taskId;
+      if (!key || activePolls.has(key)) return;
+      const token = { cancelled: false };
+      activePolls.set(key, token);
+      pollResult(runId, taskId, controller, token).finally(() => activePolls.delete(key));
+    }
+
+    async function pollResult(runId, taskId, controller, token) {
       if (!runId && !taskId) return;
       const started = Date.now();
       while (Date.now() - started < 20 * 60 * 1000) {
-        await delay(4500);
+        await delay(2500);
+        if (token && token.cancelled) return;
         try {
           const params = new URLSearchParams({ uid: currentUser.id, run_id: runId || '', taskId: taskId || '' });
           const res = await fetch('/.netlify/functions/heygen-check?' + params.toString(), { cache: 'no-store' });
           const data = await res.json().catch(() => ({}));
-          if (data.status === 'done' || data.result_url || data.video_url) {
-            controller.apply({ status: 'done', result_url: data.result_url || data.video_url });
+          const resultUrl = data.result_url || data.video_url || firstVideoUrl(data);
+          if (data.status === 'done' || resultUrl) {
+            controller.apply({ status: 'done', result_url: resultUrl });
             await refreshCredits();
             return;
           }
@@ -612,7 +689,7 @@
         showStatus('Submitted. Waiting for result…', 'good');
         await refreshCredits();
         watchCreditsLive();
-        pollResult(runId, data.taskId || data.video_id || '', placeholder);
+        startPollResult(runId, data.taskId || data.video_id || '', placeholder);
       } catch (error) {
         showStatus(readableError(error), 'error');
       } finally {
