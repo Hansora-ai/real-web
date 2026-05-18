@@ -10,6 +10,27 @@
   let currentUser = null;
   let currentCredits = 0;
 
+  const IMAGE_MENU_MODELS = [
+    { label: 'GPT Image 2', id: 'gpt-image-2', icon: 'G2', note: 'Latest image generation' },
+    { label: 'Nano Banana 2', id: 'nano-banana-2', icon: 'N2', note: 'Fast image edits' },
+    { label: 'Seedream 5.0 Lite', id: 'seedream-5-lite', icon: 'S', note: 'Light creative images' },
+    { label: 'Grok Image', id: 'grok-image', icon: 'X', note: 'Stylized image model' },
+    { label: 'Seedream 4.5', id: 'seedream-4-5', icon: 'S4', note: 'Image generator' },
+    { label: 'Wan 2.7', id: 'wan-2-7', icon: 'W', note: 'Image and frame work' },
+    { label: 'Qwen 2', id: 'qwen-2', icon: 'Q2', note: 'Image generation' },
+    { label: 'Z Image', id: 'z-image', icon: 'Z', note: 'Creative image model' },
+    { label: 'GPT Image 1.5', id: 'gpt-image-1-5', icon: 'G1', note: 'OpenAI image model' },
+    { label: 'Nano Banana', id: 'nano-banana', icon: 'NB', note: 'Image editing' },
+  ];
+
+  const IMAGE_MENU_TOOLS = [
+    { label: 'Upscale', href: '/upscale.html', icon: 'UP', note: 'Increase image quality' },
+    { label: 'Full angles', href: '/expand.html?mode=angles', icon: 'FA', note: 'Different angles chosen' },
+    { label: 'Expand', href: '/expand.html?mode=expand', icon: 'EX', note: 'Extend image edges' },
+    { label: 'Face swap', href: '/expand.html?mode=face-swap', icon: 'FS', note: 'Chosen face swap' },
+    { label: 'Character', href: '/character.html', icon: 'CH', note: 'Character creator' },
+  ];
+
   function ready(fn) {
     if (document.readyState !== 'loading') fn();
     else document.addEventListener('DOMContentLoaded', fn);
@@ -56,6 +77,140 @@
     return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
   }
 
+  function modelHref(id) {
+    return `/search-models.html?model=${encodeURIComponent(id)}`;
+  }
+
+  function menuIconClass(index) {
+    return index % 4 === 0 ? 'blue' : index % 4 === 1 ? 'violet' : index % 4 === 2 ? 'lime' : 'pink';
+  }
+
+  function renderImageMegaMenu() {
+    const modelItems = IMAGE_MENU_MODELS.map((item, index) => `
+      <a class="hansora-mega-item" href="${modelHref(item.id)}" data-hansora-model="${item.id}">
+        <span class="hansora-mega-icon ${menuIconClass(index)}">${item.icon}</span>
+        <span>
+          <strong>${item.label}</strong>
+          <em>${item.note}</em>
+        </span>
+      </a>`).join('');
+    const toolItems = IMAGE_MENU_TOOLS.map((item, index) => `
+      <a class="hansora-mega-item" href="${item.href}">
+        <span class="hansora-mega-icon ${menuIconClass(index + 2)}">${item.icon}</span>
+        <span>
+          <strong>${item.label}</strong>
+          <em>${item.note}</em>
+        </span>
+      </a>`).join('');
+    return `
+      <div class="hansora-mega-menu" id="hansoraImageMega" role="menu" aria-label="Image tools and models">
+        <section>
+          <div class="hansora-mega-eyebrow">Image models</div>
+          <div class="hansora-mega-grid">${modelItems}</div>
+        </section>
+        <section>
+          <div class="hansora-mega-eyebrow">Image tools</div>
+          <div class="hansora-mega-grid">${toolItems}</div>
+        </section>
+      </div>`;
+  }
+
+  function injectHeaderStyles() {
+    if (document.getElementById('hansoraHeaderMegaStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'hansoraHeaderMegaStyles';
+    style.textContent = `
+      .nav-links .hansora-nav-item{ position:relative; display:inline-flex; align-items:center; }
+      .nav-links .hansora-nav-trigger{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; color:inherit; }
+      .nav-links .hansora-nav-trigger::after{ content:""; width:6px; height:6px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); opacity:.55; margin-top:-3px; transition:transform .18s ease, opacity .18s ease; }
+      .nav-links .hansora-nav-item:hover .hansora-nav-trigger::after,
+      .nav-links .hansora-nav-item:focus-within .hansora-nav-trigger::after{ transform:rotate(225deg); margin-top:3px; opacity:.9; }
+      .hansora-mega-menu{
+        position:absolute;
+        top:calc(100% + 18px);
+        left:50%;
+        width:min(760px,calc(100vw - 28px));
+        transform:translateX(-26%) translateY(8px);
+        display:grid;
+        grid-template-columns:1.1fr .9fr;
+        gap:18px;
+        padding:18px;
+        border:1px solid rgba(255,255,255,.10);
+        border-radius:24px;
+        background:linear-gradient(145deg,rgba(22,24,31,.98),rgba(10,12,18,.98));
+        box-shadow:0 26px 80px rgba(0,0,0,.46), inset 0 1px 0 rgba(255,255,255,.08);
+        backdrop-filter:blur(22px);
+        opacity:0;
+        visibility:hidden;
+        pointer-events:none;
+        transition:opacity .18s ease, transform .18s ease, visibility .18s ease;
+        z-index:1000;
+      }
+      .hansora-mega-menu::before{ content:""; position:absolute; left:0; right:0; top:-22px; height:22px; }
+      .nav-links .hansora-nav-item:hover .hansora-mega-menu,
+      .nav-links .hansora-nav-item:focus-within .hansora-mega-menu{
+        opacity:1;
+        visibility:visible;
+        pointer-events:auto;
+        transform:translateX(-26%) translateY(0);
+      }
+      .hansora-mega-eyebrow{
+        margin:0 0 10px;
+        color:rgba(255,255,255,.48);
+        font-size:11px;
+        font-weight:850;
+        letter-spacing:.12em;
+        text-transform:uppercase;
+      }
+      .hansora-mega-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+      .hansora-mega-item{
+        display:flex;
+        align-items:center;
+        gap:12px;
+        min-height:64px;
+        padding:10px;
+        border:1px solid rgba(255,255,255,.08);
+        border-radius:16px;
+        background:rgba(255,255,255,.035);
+        color:#fff;
+        text-decoration:none;
+        transition:transform .16s ease, border-color .16s ease, background .16s ease;
+      }
+      .hansora-mega-item:hover,
+      .hansora-mega-item:focus-visible{
+        transform:translateY(-1px);
+        border-color:rgba(125,211,252,.42);
+        background:rgba(125,211,252,.08);
+        outline:none;
+      }
+      .hansora-mega-icon{
+        width:42px;
+        height:42px;
+        flex:0 0 42px;
+        display:grid;
+        place-items:center;
+        border-radius:13px;
+        color:#071018;
+        font-size:13px;
+        font-weight:950;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.65), 0 12px 26px rgba(0,0,0,.22);
+      }
+      .hansora-mega-icon.blue{ background:linear-gradient(135deg,#dbeafe,#7dd3fc); }
+      .hansora-mega-icon.violet{ background:linear-gradient(135deg,#fde68a,#a78bfa,#f472b6); }
+      .hansora-mega-icon.lime{ background:linear-gradient(135deg,#ecfccb,#bef264); }
+      .hansora-mega-icon.pink{ background:linear-gradient(135deg,#67e8f9,#c084fc,#f472b6); }
+      .hansora-mega-item strong{ display:block; color:rgba(255,255,255,.94); font-size:13px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .hansora-mega-item em{ display:block; margin-top:4px; color:rgba(255,255,255,.48); font-size:11px; font-style:normal; line-height:1.25; }
+      @media (max-width:900px){
+        .hansora-mega-menu{ left:0; transform:translateX(-16px) translateY(8px); grid-template-columns:1fr; width:min(92vw,520px); max-height:72vh; overflow:auto; }
+        .nav-links .hansora-nav-item:hover .hansora-mega-menu,
+        .nav-links .hansora-nav-item:focus-within .hansora-mega-menu{ transform:translateX(-16px) translateY(0); }
+      }
+      @media (max-width:560px){ .hansora-mega-grid{ grid-template-columns:1fr; } }
+    `;
+    document.head.appendChild(style);
+  }
+
   function injectHeader() {
     const mount = document.getElementById('sharedHeader');
     if (!mount || mount.dataset.hansoraHeaderMounted === '1') return;
@@ -71,7 +226,10 @@
             <span>HANSORA AI</span>
           </a>
           <nav class="nav-links" aria-label="Primary navigation">
-            <a href="/search-models.html">Image</a>
+            <span class="hansora-nav-item">
+              <a class="hansora-nav-trigger" href="/search-models.html">Image</a>
+              ${renderImageMegaMenu()}
+            </span>
             <a href="/search-models.html">Video</a>
             <a href="/models.html">Features</a>
             <a href="/pricing.html">Pricing</a>
@@ -298,6 +456,14 @@
     const btnGoogleLogin = el('btnGoogleLogin');
     const modal = el('authModal');
 
+    document.querySelectorAll('[data-hansora-model]').forEach(function (link) {
+      link.addEventListener('click', function () {
+        try {
+          localStorage.setItem('hansora.search.selectedModel', link.getAttribute('data-hansora-model') || '');
+        } catch (_) {}
+      });
+    });
+
     if (navAvatar && navMenu) {
       navAvatar.addEventListener('click', function (event) {
         event.stopPropagation();
@@ -408,6 +574,7 @@
   }
 
   ready(function () {
+    injectHeaderStyles();
     injectHeader();
     injectAuthModal();
     ensureSupabaseClient();
