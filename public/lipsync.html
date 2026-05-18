@@ -93,9 +93,9 @@
     .hero-board p{ color:var(--muted); max-width:610px; font-size:14px; line-height:1.55; margin-top:12px; }
     .preview-orb{ width:190px; height:190px; border-radius:42px; border:1px solid rgba(255,255,255,.1); background:radial-gradient(circle at 32% 20%,rgba(255,255,255,.32),transparent 28%),linear-gradient(145deg,rgba(99,102,241,.68),rgba(14,165,233,.2)); display:flex; align-items:center; justify-content:center; font-size:64px; flex:0 0 auto; box-shadow:0 25px 70px rgba(99,102,241,.18); }
     .results-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 10px; }
-    .results-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
-    .result-card{ position:relative; border:1px solid var(--line); background:rgba(17,19,24,.88); border-radius:16px; overflow:hidden; min-height:310px; display:flex; flex-direction:column; }
-    .result-media{ height:228px; background:rgba(0,0,0,.3); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .results-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .result-card{ position:relative; border:1px solid var(--line); background:rgba(17,19,24,.88); border-radius:16px; overflow:hidden; min-height:0; display:flex; flex-direction:column; }
+    .result-media{ aspect-ratio:9 / 16; background:rgba(0,0,0,.3); display:flex; align-items:center; justify-content:center; overflow:hidden; }
     .result-media video{ width:100%; height:100%; object-fit:cover; display:block; }
     .result-media.pending{ flex-direction:column; gap:12px; color:rgba(255,255,255,.65); }
     .loader{ width:28px; height:28px; border-radius:999px; border:3px solid rgba(148,163,184,.35); border-top-color:#a855f7; animation:spin 1s linear infinite; }
@@ -140,9 +140,9 @@
       .left-panel{ padding:14px; }
       .hero-board{ min-height:180px; align-items:flex-start; }
       .preview-orb{ display:none; }
-      .results-grid{ display:flex; gap:12px; overflow-x:auto; padding-right:22%; scroll-snap-type:x mandatory; }
-      .result-card{ flex:0 0 78%; min-height:0; aspect-ratio:9/16; scroll-snap-align:start; }
-      .result-media{ height:auto; flex:1; }
+      .results-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding-right:0; }
+      .result-card{ min-height:0; scroll-snap-align:start; }
+      .result-media{ height:auto; }
       .model-grid{ grid-template-columns:1fr; }
     }
   </style>
@@ -402,7 +402,7 @@
     }
     function renderPlayableVideo(url) {
       const src = url || '';
-      return `<video src="${escapeAttr(src)}" controls muted playsinline preload="metadata"></video>`;
+      return `<video src="${escapeAttr(src)}" muted playsinline preload="metadata"></video>`;
     }
     function firstVideoUrl(value) {
       const seen = new Set();
@@ -465,17 +465,40 @@
         audio.src = url;
       });
     }
-    async function acceptAudioFile(file, sourceLabel) {
+    async function acceptAudioFile(file, sourceLabel, sourceKind) {
       if (!file) return;
-      const duration = await getAudioDuration(file);
-      if (!duration) { showStatus('Could not read audio duration.', 'error'); return; }
-      if (duration < 5) { showStatus('Audio must be at least 5 seconds.', 'error'); return; }
-      if (duration > 90.25) { showStatus('Audio must be 90 seconds or shorter.', 'error'); return; }
+      let duration = 0;
+      try {
+        duration = await getAudioDuration(file);
+      } catch (_) {
+        resetAudioSelection();
+        showStatus('Could not read audio duration.', 'error');
+        return;
+      }
+      if (!duration) { resetAudioSelection(); showStatus('Could not read audio duration.', 'error'); return; }
+      if (duration < 5) { resetAudioSelection(); showStatus('Audio must be at least 5 seconds.', 'error'); return; }
+      if (duration > 90.25) { resetAudioSelection(); showStatus('Audio must be 90 seconds or shorter.', 'error'); return; }
+      if (sourceKind === 'recording') {
+        recordedAudioFile = file;
+        audioFile = null;
+      } else {
+        audioFile = file;
+        recordedAudioFile = null;
+      }
       audioDuration = duration;
       renderAudioPreview(file, sourceLabel || file.name || 'Audio');
       syncAudioLocks();
       updateCost();
       showStatus('Audio ready.', 'good');
+    }
+    function resetAudioSelection() {
+      audioFile = null;
+      recordedAudioFile = null;
+      audioDuration = 0;
+      $('audioInput').value = '';
+      renderAudioPreview(null);
+      syncAudioLocks();
+      updateCost();
     }
 
     function bindDrop(dropEl, inputEl, onFile) {
@@ -517,8 +540,8 @@
         $('stopRecordBtn').classList.add('hidden');
         $('recordBtn').classList.remove('hidden');
         const blob = new Blob(recordedChunks, { type: mimeType || 'audio/webm' });
-        recordedAudioFile = new File([blob], `heygen-recording-${Date.now()}.webm`, { type: blob.type || 'audio/webm' });
-        await acceptAudioFile(recordedAudioFile, 'Microphone recording');
+        const candidate = new File([blob], `heygen-recording-${Date.now()}.webm`, { type: blob.type || 'audio/webm' });
+        await acceptAudioFile(candidate, 'Microphone recording', 'recording');
       };
       mediaRecorder.start();
       recordingStartedAt = Date.now();
@@ -556,7 +579,7 @@
         <div class="result-media ${url ? '' : 'pending'}">${url ? renderPlayableVideo(url) : (failed ? '<span>Failed</span>' : '<div class="processing-orb"></div><span>Creating...</span>')}</div>
         <div class="result-info"><div><strong>${modelLabel}</strong><span>${detailLabel}</span></div>${url ? '<button class="get-btn" type="button">Get</button>' : ''}</div>`;
       const media = card.querySelector('video');
-      if (media) media.addEventListener('click', () => openPreview(url));
+      if (media) bindPreviewVideo(media, url);
       if (media) media.addEventListener('error', () => markVideoUnplayable(card, url));
       const get = card.querySelector('.get-btn');
       if (get) get.addEventListener('click', (event) => { event.stopPropagation(); downloadAsset(url, 'heygen-avatar'); });
@@ -576,6 +599,8 @@
             mediaWrap.innerHTML = '<span>Failed</span>';
             const detail = card.querySelector('.result-info span');
             if (detail) detail.textContent = 'Failed';
+            const get = card.querySelector('.result-info .get-btn');
+            if (get) get.remove();
             return;
           }
           if (nextUrl) {
@@ -583,7 +608,7 @@
             mediaWrap.className = 'result-media';
             mediaWrap.innerHTML = renderPlayableVideo(nextUrl);
             const video = mediaWrap.querySelector('video');
-            video.addEventListener('click', () => openPreview(nextUrl));
+            bindPreviewVideo(video, nextUrl);
             video.addEventListener('error', () => markVideoUnplayable(card, nextUrl));
             const info = card.querySelector('.result-info');
             if (!info.querySelector('.get-btn')) {
@@ -597,6 +622,23 @@
           }
         }
       };
+    }
+
+    function bindPreviewVideo(video, url) {
+      if (!video || !url) return;
+      video.addEventListener('click', () => openPreview(url));
+      video.addEventListener('dblclick', (event) => {
+        event.preventDefault();
+        openPreview(url);
+      });
+      video.addEventListener('fullscreenchange', () => {
+        if (document.fullscreenElement === video) document.exitFullscreen().catch(() => {});
+      });
+      video.addEventListener('webkitbeginfullscreen', (event) => {
+        event.preventDefault();
+        try { video.webkitExitFullscreen(); } catch (_) {}
+        openPreview(url);
+      });
     }
 
     function markVideoUnplayable(card, url) {
@@ -682,12 +724,13 @@
       if (availableCredits < cost) { showStatus(`Not enough credits. Needed ${cost}⚡.`, 'error'); return; }
 
       $('runBtn').disabled = true;
+      let placeholder = null;
       try {
         showStatus('Uploading files…');
         const imageUrl = await uploadFile(imageFile);
         const audioUrl = await uploadFile(audio);
         const runId = `${currentUser.id}-${Date.now()}`;
-        const placeholder = createResultCard({ provider: currentModel === 'avatar_v' ? 'heygen-avatar-v' : 'heygen-avatar-iii', kind: 'video', result_url: null, meta: { run_id: runId, status: 'processing', billable_seconds: getBillableSeconds() } }, true);
+        placeholder = createResultCard({ provider: currentModel === 'avatar_v' ? 'heygen-avatar-v' : 'heygen-avatar-iii', kind: 'video', result_url: null, meta: { run_id: runId, status: 'processing', billable_seconds: getBillableSeconds() } }, true);
         showStatus(`Submitting ${currentModel === 'avatar_v' ? 'Avatar V via Avatar IV' : 'Avatar III'} to HeyGen…`);
         const { data: sessionData } = await supabaseClient.auth.getSession();
         const token = sessionData && sessionData.session ? sessionData.session.access_token : '';
@@ -709,6 +752,7 @@
         watchCreditsLive();
         startPollResult(runId, data.taskId || data.video_id || '', placeholder);
       } catch (error) {
+        if (placeholder && typeof placeholder.apply === 'function') placeholder.apply({ status: 'failed' });
         showStatus(readableError(error), 'error');
       } finally {
         $('runBtn').disabled = false;
@@ -787,7 +831,7 @@
       audioFile = file;
       recordedAudioFile = null;
       syncAudioLocks();
-      await acceptAudioFile(audioFile, file.name);
+      await acceptAudioFile(file, file.name, 'upload');
     });
     $('recordBtn').addEventListener('click', () => startRecording().catch((error) => showStatus(readableError(error), 'error')));
     $('stopRecordBtn').addEventListener('click', stopRecording);
@@ -802,6 +846,12 @@
     $('refreshBtn').addEventListener('click', loadRecentHistory);
     $('previewClose').addEventListener('click', closePreview);
     $('previewOverlay').addEventListener('click', (event) => { if (event.target === $('previewOverlay')) closePreview(); });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && currentUser) loadRecentHistory();
+    });
+    window.addEventListener('pageshow', () => {
+      if (currentUser) loadRecentHistory();
+    });
 
     document.addEventListener('DOMContentLoaded', () => {
       updateCost();
