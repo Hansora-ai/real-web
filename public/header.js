@@ -112,7 +112,11 @@
       '/pricing.html',
       '/examples-prompts.html',
       '/privacy.html',
-      '/terms.html'
+      '/terms.html',
+      '/termsofuse.html',
+      '/policy.html',
+      '/affilate.html',
+      '/contact.html'
     ]);
     return !publicPages.has(path);
   }
@@ -595,7 +599,7 @@
       btnGetStarted.addEventListener('click', function (event) {
         if (!currentUser) {
           event.preventDefault();
-          window.location.href = '/login.html?mode=signup';
+          window.location.href = '/login.html';
         }
       });
     }
