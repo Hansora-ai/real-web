@@ -412,7 +412,13 @@
         return url.replace(/[)"'\]}]+$/g, '').trim();
       }
       function acceptable(url) {
-        return /\.(mp4|webm|mov)(?:[?#].*)?$/i.test(url) || /files\.heygen\.com|resource2\.heygen\.ai|heygen/i.test(url);
+        if (!url) return false;
+        try {
+          const parsed = new URL(url);
+          const host = parsed.hostname.toLowerCase();
+          if (host === 'app.heygen.com' && /^\/videos\//i.test(parsed.pathname)) return false;
+        } catch (_) {}
+        return /\.(mp4|webm|mov)(?:[?#].*)?$/i.test(url) || /files\.heygen\.com|resource2\.heygen\.ai/i.test(url);
       }
       function walk(node, trusted, depth) {
         if (!node || depth > 10) return '';
@@ -536,7 +542,8 @@
       const taskId = meta.task_id || meta.video_id || '';
       const status = String(meta.status || (row.result_url ? 'done' : 'processing')).toLowerCase();
       const failed = status.includes('fail') || status.includes('error') || status.includes('cancel');
-      const url = failed ? '' : (row.result_url || firstVideoUrl(meta));
+      const savedUrl = firstVideoUrl(row.result_url);
+      const url = failed ? '' : (savedUrl || firstVideoUrl(meta));
       const modelLabel = String(row.provider || '').includes('iii') ? 'Avatar III' : 'Avatar V';
       const detailLabel = failed ? 'Failed' : (meta.billable_seconds ? meta.billable_seconds + 's' : 'HeyGen video');
       const card = document.createElement('article');
@@ -622,7 +629,7 @@
           const controller = createResultCard(row, false);
           const meta = row.meta || {};
           const st = String(meta.status || '').toLowerCase();
-          const hasUrl = !!(row.result_url || firstVideoUrl(meta));
+          const hasUrl = !!(firstVideoUrl(row.result_url) || firstVideoUrl(meta));
           if (controller && !hasUrl && (st === 'processing' || st === 'pending' || !st)) pending.push({ controller, runId: meta.run_id, taskId: meta.task_id || meta.video_id });
         });
         pending.forEach((item) => startPollResult(item.runId, item.taskId, item.controller));
@@ -681,7 +688,7 @@
         const audioUrl = await uploadFile(audio);
         const runId = `${currentUser.id}-${Date.now()}`;
         const placeholder = createResultCard({ provider: currentModel === 'avatar_v' ? 'heygen-avatar-v' : 'heygen-avatar-iii', kind: 'video', result_url: null, meta: { run_id: runId, status: 'processing', billable_seconds: getBillableSeconds() } }, true);
-        showStatus('Submitting to HeyGen…');
+        showStatus(`Submitting ${currentModel === 'avatar_v' ? 'Avatar V via Avatar IV' : 'Avatar III'} to HeyGen…`);
         const { data: sessionData } = await supabaseClient.auth.getSession();
         const token = sessionData && sessionData.session ? sessionData.session.access_token : '';
         const resp = await fetch('/.netlify/functions/run-heygen-avatar', {
@@ -697,7 +704,7 @@
         });
         const data = await resp.json().catch(() => ({}));
         if (!data.submitted) throw new Error(data.error || 'submit_failed');
-        showStatus('Submitted. Waiting for result…', 'good');
+        showStatus(`Submitted ${data.heygen_engine || (currentModel === 'avatar_v' ? 'AvatarIV' : 'AvatarIII')}. Waiting for result…`, 'good');
         await refreshCredits();
         watchCreditsLive();
         startPollResult(runId, data.taskId || data.video_id || '', placeholder);
