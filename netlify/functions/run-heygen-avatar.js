@@ -130,50 +130,6 @@ exports.handler = async (event) => {
 };
 
 async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, callbackUrl }) {
-  if (model === "avatar_v") {
-    const avatarPayload = {
-      type: "photo",
-      name: `Hansora Avatar V ${run_id}`,
-      file: { type: "url", url: imageUrl }
-    };
-    const avatarResp = await heygenFetch("/v3/avatars", {
-      method: "POST",
-      body: JSON.stringify(avatarPayload)
-    });
-    const avatarData = avatarResp.data;
-    if (!avatarResp.ok) {
-      return { ok: false, error: `heygen_avatar_create_${avatarResp.status}`, data: avatarData, apiVersion: "v3" };
-    }
-    const avatarId = extractAvatarId(avatarData);
-    if (!avatarId) return { ok: false, error: "missing_avatar_id", data: avatarData, apiVersion: "v3" };
-
-    const videoPayload = {
-      type: "avatar",
-      avatar_id: avatarId,
-      audio_url: audioUrl,
-      title: `Hansora Avatar V ${new Date().toISOString()}`,
-      resolution: "1080p",
-      aspect_ratio: aspectRatio,
-      callback_url: callbackUrl,
-      callback_id: run_id,
-      engine: { type: "avatar_v" }
-    };
-    const videoResp = await heygenFetch("/v3/videos", {
-      method: "POST",
-      body: JSON.stringify(videoPayload)
-    });
-    const videoData = videoResp.data;
-    return {
-      ok: videoResp.ok,
-      error: videoResp.ok ? "" : `heygen_video_${videoResp.status}`,
-      videoId: extractVideoId(videoData),
-      data: videoData,
-      apiVersion: "v3",
-      avatarId,
-      avatarCreateData: avatarData
-    };
-  }
-
   const talkingPhoto = await uploadTalkingPhoto(imageUrl);
   if (!talkingPhoto.ok) {
     return { ok: false, error: `heygen_talking_photo_${talkingPhoto.status || "failed"}`, data: talkingPhoto.data, apiVersion: "v2" };
@@ -182,12 +138,14 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
   if (!talkingPhotoId) return { ok: false, error: "missing_talking_photo_id", data: talkingPhoto.data, apiVersion: "v2" };
 
   const dimension = aspectRatio === "16:9" ? { width: 1920, height: 1080 } : { width: 1080, height: 1920 };
+  const isAvatarV = model === "avatar_v";
   const payload = {
-    title: `Hansora Avatar III ${new Date().toISOString()}`,
+    title: `Hansora ${isAvatarV ? "Avatar IV" : "Avatar III"} ${new Date().toISOString()}`,
     callback_url: callbackUrl,
     callback_id: run_id,
     caption: false,
     test: false,
+    ...(isAvatarV ? { avatar_engine: "AvatarIV" } : {}),
     dimension,
     video_inputs: [
       {
