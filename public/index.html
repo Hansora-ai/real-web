@@ -752,6 +752,7 @@
     }
 
     .price-card {
+      position: relative;
       padding: 22px;
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -761,6 +762,31 @@
     .price-card.popular {
       border-color: rgba(167,139,250,.58);
       box-shadow: inset 0 0 0 1px rgba(167,139,250,.14), 0 20px 60px rgba(99,102,241,.16);
+    }
+
+    .plan-badge {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: linear-gradient(135deg, rgba(124, 92, 255, .95), rgba(192, 132, 252, .88));
+      color: #fff;
+      font-size: .78rem;
+      font-weight: 900;
+      white-space: nowrap;
+      box-shadow: 0 12px 34px rgba(124, 92, 255, .28);
+    }
+
+    .plan-badge.best-value {
+      background: linear-gradient(135deg, rgba(56, 189, 248, .95), rgba(124, 92, 255, .9));
+      box-shadow: 0 12px 34px rgba(56, 189, 248, .22);
     }
 
     .price-card small {
@@ -830,6 +856,12 @@
       flex-wrap: wrap;
     }
 
+    .footer-copy {
+      margin: 0;
+      color: var(--muted);
+      font-weight: 760;
+    }
+
     @media (max-width: 1120px) {
       .x-scroll { grid-auto-columns: calc((100% - var(--gap)) / 2); }
       .model-rail { grid-auto-columns: calc((100% - (var(--gap) * 2)) / 3); }
@@ -853,7 +885,6 @@
       .nav-links { display: none; }
       .nav { min-height: 64px; }
       .brand span { font-size: .95rem; }
-      #btnLoginSignup { display: inline-flex !important; }
       .nav-actions .btn-primary {
         display: none;
       }
@@ -1197,10 +1228,10 @@
 </div>
 <div class="x-scroll" id="topVideos">
 <!-- Replace each media placeholder with a 16:9 video or image. Keep the link href for click target. -->
-<a class="slot aspect-16x9" href="/search-models.html"><video aria-label="New inputs" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/16-GPT%20IMAGE%20X%20SEEDANCE%202.0-compressed.mp4" data-lazy-video></video><span class="slot-label"><strong>New inputs</strong><span>Video 01</span></span></a>
-<a class="slot aspect-16x9" href="/search-models.html"><video aria-label="Marketing studio hooks" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0%20copy%202.mp4" data-lazy-video></video><span class="slot-label"><strong>Marketing studio hooks</strong><span>Video 02</span></span></a>
-<a class="slot aspect-16x9" href="/search-models.html"><video aria-label="HANSORA CLI" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0%20(2).mp4" data-lazy-video></video><span class="slot-label"><strong>HANSORA CLI</strong><span>Video 03</span></span></a>
-<a class="slot aspect-16x9" href="/search-models.html"><video aria-label="Image to video" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/21-GPT%20IMAGE%20X%20SEEDANCE%202.0%20copy-compressed.mp4" data-lazy-video></video><span class="slot-label"><strong>Image to video</strong><span>Video 04</span></span></a>
+<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video aria-label="New inputs" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/16-GPT%20IMAGE%20X%20SEEDANCE%202.0-compressed.mp4" data-lazy-video></video><span class="slot-label"><strong>New inputs</strong><span>Video 01</span></span></a>
+<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video aria-label="Marketing studio hooks" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0%20copy%202.mp4" data-lazy-video></video><span class="slot-label"><strong>Marketing studio hooks</strong><span>Video 02</span></span></a>
+<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video aria-label="HANSORA CLI" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0%20(2).mp4" data-lazy-video></video><span class="slot-label"><strong>HANSORA CLI</strong><span>Video 03</span></span></a>
+<a class="slot aspect-16x9" href="/analyse.html"><video aria-label="Image to video" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/Untitled%20folder/Untitled%20(16%20x%209%20in)%20(1).mp4" data-lazy-video></video><span class="slot-label"><strong>Image to video</strong><span>Video 04</span></span></a>
 </div>
 </div>
 </section>
@@ -1208,7 +1239,7 @@
 <div class="shell">
 <h1>HANSORA AI</h1>
 <p>All-in-one AI workspace for images, videos, ads, posters, audio, and creative workflows from one simple place.</p>
-<a class="btn btn-primary" href="/search-models.html">Start creating</a>
+<a class="btn btn-primary start-creating-link" href="/login.html">Start creating</a>
 </div>
 </section>
 <section class="section">
@@ -1228,7 +1259,7 @@
 <section class="section" id="image-models">
 <div class="shell">
 <div class="model-section">
-<a class="slot model-info-card" href="/search-models.html">
+<a class="slot model-info-card" href="/search-models.html?type=image">
   <img
     alt="Image models info image"
     src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/1.png" loading="lazy" decoding="async">
@@ -1392,7 +1423,7 @@
 <section class="section" id="video-models">
 <div class="shell">
 <div class="model-section">
-<a class="slot model-info-card" href="/search-models.html">
+<a class="slot model-info-card" href="/search-models.html?model=seedance-2">
   <img
     alt="Video models info image"
     src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/2.png" loading="lazy" decoding="async">
@@ -1403,7 +1434,7 @@
 </a>
 <div class="model-grid video-grid media-mosaic mobile-mosaic-only">
   <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html">
+    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Text to video"
         autoplay
@@ -1418,7 +1449,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Image to video"
         autoplay
@@ -1433,7 +1464,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Vertical ad"
         autoplay
@@ -1449,7 +1480,7 @@
     </a>
   </div>
   <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Cinematic scene"
         autoplay
@@ -1464,7 +1495,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-tall" href="/search-models.html">
+    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Social crop"
         autoplay
@@ -1479,7 +1510,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Video edit"
         autoplay
@@ -1496,7 +1527,7 @@
   </div>
 </div><div class="model-grid video-grid media-mosaic-desktop desktop-mosaic-only">
   <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html">
+    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Text to video"
         autoplay
@@ -1511,7 +1542,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Image to video"
         autoplay
@@ -1527,7 +1558,7 @@
     </a>
   </div>
   <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Vertical ad"
         autoplay
@@ -1542,7 +1573,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-tall" href="/search-models.html">
+    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Cinematic scene"
         autoplay
@@ -1558,7 +1589,7 @@
     </a>
   </div>
   <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html">
+    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Social crop"
         autoplay
@@ -1573,7 +1604,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Video edit"
         autoplay
@@ -1589,7 +1620,7 @@
     </a>
   </div>
   <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Preview 07"
         autoplay
@@ -1604,7 +1635,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-tall" href="/search-models.html">
+    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Preview 08"
         autoplay
@@ -1626,7 +1657,7 @@
 <section class="section">
 <div class="shell">
 <div class="model-section">
-<a class="slot model-info-card" href="/search-models.html">
+<a class="slot model-info-card" href="/search-models.html?model=seedance-2">
   <img
     alt="Seedance 2.0 info image"
     src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/12.png" loading="lazy" decoding="async">
@@ -1637,7 +1668,7 @@
 </a>
 <div class="model-grid video-grid media-mosaic mobile-mosaic-only">
   <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html">
+    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Skate shot"
         autoplay
@@ -1652,7 +1683,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Energy effect"
         autoplay
@@ -1667,7 +1698,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Mirror scene"
         autoplay
@@ -1683,7 +1714,7 @@
     </a>
   </div>
   <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Action shot"
         autoplay
@@ -1698,7 +1729,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-tall" href="/search-models.html">
+    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Fantasy scene"
         autoplay
@@ -1713,7 +1744,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Fast motion"
         autoplay
@@ -1730,7 +1761,7 @@
   </div>
 </div><div class="model-grid video-grid media-mosaic-desktop desktop-mosaic-only">
   <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html">
+    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Skate shot"
         autoplay
@@ -1745,7 +1776,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Energy effect"
         autoplay
@@ -1761,7 +1792,7 @@
     </a>
   </div>
   <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Mirror scene"
         autoplay
@@ -1776,7 +1807,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-tall" href="/search-models.html">
+    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Action shot"
         autoplay
@@ -1792,7 +1823,7 @@
     </a>
   </div>
   <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html">
+    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Fantasy scene"
         autoplay
@@ -1807,7 +1838,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Fast motion"
         autoplay
@@ -1823,7 +1854,7 @@
     </a>
   </div>
   <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html">
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Preview 07"
         autoplay
@@ -1838,7 +1869,7 @@
       </span>
     </a>
 
-    <a class="slot aspect-tall" href="/search-models.html">
+    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
       <video
         aria-label="Preview 08"
         autoplay
@@ -1867,11 +1898,11 @@
 <a class="btn btn-primary" href="/models.html" style="margin-top:24px;">Explore all</a>
 </div>
 <div class="feature-icons">
-<a class="feature-icon" href="/search-models.html"><video aria-label="Create image" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_8DBDBBA9-01C8-4750-BB8C-C12CB3EE6505.MOV" data-lazy-video></video><b>Create image</b></a>
-<a class="feature-icon" href="/search-models.html"><video aria-label="Create video" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/08-copy_BD0F755C-3C2D-4CCE-84C6-C6BC4230A3FB-compressed.mp4" data-lazy-video></video><b>Create video</b></a>
-<a class="feature-icon" href="/search-models.html"><video aria-label="Motion control" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/copy_AB468886-58F4-4799-BB3A-1D1273042AB4.MOV" data-lazy-video></video><b>Motion control</b></a>
-<a class="feature-icon" href="/search-models.html"><video aria-label="Product ads" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/03-copy_6CD6B969-42E2-45ED-A794-9E05C1B7D3A9-compressed.mp4" data-lazy-video></video><b>Product ads</b></a>
-<a class="feature-icon" href="/examples-prompts.html"><video aria-label="Templates" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_ECE8BF19-272D-4F1B-8D85-66A482706227.MOV" data-lazy-video></video><b>Templates</b></a>
+<a class="feature-icon" href="/search-models.html?type=image"><video aria-label="Create image" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_8DBDBBA9-01C8-4750-BB8C-C12CB3EE6505.MOV" data-lazy-video></video><b>Create image</b></a>
+<a class="feature-icon" href="/search-models.html?model=seedance-2"><video aria-label="Create video" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/08-copy_BD0F755C-3C2D-4CCE-84C6-C6BC4230A3FB-compressed.mp4" data-lazy-video></video><b>Create video</b></a>
+<a class="feature-icon" href="/search-models.html?model=kling-motion-control"><video aria-label="Motion control" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/copy_AB468886-58F4-4799-BB3A-1D1273042AB4.MOV" data-lazy-video></video><b>Motion control</b></a>
+<a class="feature-icon" href="/upscale.html"><video aria-label="Upscale" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/03-copy_6CD6B969-42E2-45ED-A794-9E05C1B7D3A9-compressed.mp4" data-lazy-video></video><b>Upscale</b></a>
+<a class="feature-icon" href="/audio.html"><video aria-label="Create audio" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_ECE8BF19-272D-4F1B-8D85-66A482706227.MOV" data-lazy-video></video><b>Create audio</b></a>
 </div>
 </div>
 </div>
@@ -2155,6 +2186,7 @@
 <a class="btn btn-primary" href="https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
 </article>
 <article class="price-card popular">
+<span class="plan-badge">Popular</span>
 <small>200 + 20 credits</small>
 <h3>220</h3>
 <p>$19.90</p>
@@ -2166,7 +2198,8 @@
 <p>$59.90</p>
 <a class="btn btn-primary" href="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
 </article>
-<article class="price-card">
+<article class="price-card popular">
+<span class="plan-badge best-value">Best value</span>
 <small>1000 + 100 credits</small>
 <h3>1100</h3>
 <p>$99.90</p>
@@ -2201,16 +2234,47 @@
 <img alt="" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" loading="lazy" decoding="async">
 <span>HANSORA AI</span>
 </a>
+<p class="footer-copy">All rights reserved.</p>
 <div class="footer-links">
-<a href="/search-models.html">Create</a>
-<a href="/templates.html">Templates</a>
-<a href="/pricing.html">Pricing</a>
-<a href="#faq">FAQ</a>
+<a href="/termsofuse.html">Terms of use</a>
+<a href="/policy.html">Policy</a>
+<a href="/affilate.html">Affiliate program</a>
+<a href="/contact.html">Contact</a>
 </div>
 </div>
 </footer>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer src="/header.js"></script>
+<script>
+    (() => {
+      const targetForStart = () => {
+        let loggedIn = false;
+        try {
+          loggedIn = localStorage.getItem('hansora.header.loggedIn') === '1';
+        } catch (_) {}
+        if (window.HansoraHeader && typeof window.HansoraHeader.getCurrentUser === 'function') {
+          loggedIn = !!window.HansoraHeader.getCurrentUser();
+        }
+        return loggedIn ? '/search-models.html' : '/login.html';
+      };
+
+      const updateStartLinks = () => {
+        document.querySelectorAll('.start-creating-link').forEach((link) => {
+          link.setAttribute('href', targetForStart());
+        });
+      };
+
+      document.addEventListener('DOMContentLoaded', () => {
+        updateStartLinks();
+        setTimeout(updateStartLinks, 350);
+        setTimeout(updateStartLinks, 1200);
+      });
+      document.addEventListener('click', (event) => {
+        if (!event.target.closest('.start-creating-link')) return;
+        updateStartLinks();
+      }, true);
+    })();
+  </script>
 <script>
     (() => {
       const videos = Array.from(document.querySelectorAll('video[data-lazy-video]'));
