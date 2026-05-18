@@ -2,7 +2,8 @@
 // Polls HeyGen v3/v2 talking-avatar jobs, updates user_generations, and refunds once on failure.
 // Env: HeyGen_api or HEYGEN_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
-const HEYGEN_API_KEY = pickEnv("HEYGEN_API_KEY", "HeyGen_api", "HEYGEN_API", "HeyGen_API");
+const HEYGEN_API_ENV = pickEnv("HEYGEN_API_KEY", "HeyGen_api", "HEYGEN_API", "HeyGen_API");
+const HEYGEN_API_KEY = HEYGEN_API_ENV.value;
 const HEYGEN_BASE = (process.env.HEYGEN_BASE_URL || "https://api.heygen.com").replace(/\/+$/, "");
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
@@ -25,7 +26,13 @@ exports.handler = async (event) => {
     };
 
     const row = await findGeneration(ids);
-    if (!row) return json(200, { ok: false, status: "ignored", reason: "not_processing" });
+    if (!row) {
+      if (!ids.taskId) return json(200, { ok: false, status: "ignored", reason: "not_processing" });
+      const state = await fetchHeyGenStateAny(ids.taskId);
+      if (state.failed) return json(200, { ok: false, failed: true, status: "failed", error: state.error || "heygen_failed" });
+      if (state.done && state.urls.length) return json(200, { ok: true, status: "done", result_url: state.urls[0], video_url: state.urls[0], urls: state.urls });
+      return json(200, { ok: false, status: "pending", fallback: true, error: state.error || "" });
+    }
 
     ids.uid = ids.uid || row.user_id || "";
     ids.run_id = ids.run_id || row.meta?.run_id || "";
@@ -73,14 +80,15 @@ function json(statusCode, body) {
 function pickEnv(...names) {
   for (const name of names) {
     const value = cleanApiKey(process.env[name]);
-    if (value) return value;
+    if (value) return { name, value };
   }
-  return "";
+  return { name: "", value: "" };
 }
 function cleanApiKey(value) {
   let text = String(value || "").trim();
   text = text.replace(/^['"]|['"]$/g, "").trim();
   text = text.replace(/^bearer\s+/i, "").trim();
+  text = text.replace(/\s+/g, "");
   return text;
 }
 function sb() { return { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` }; }
@@ -136,7 +144,7 @@ async function fetchHeyGenState(videoId, apiVersion) {
   for (const path of paths) {
     try {
       const res = await fetch(`${HEYGEN_BASE}${path}`, {
-        headers: { "x-api-key": HEYGEN_API_KEY, "X-Api-Key": HEYGEN_API_KEY, Accept: "application/json" }
+        headers: { "x-api-key": HEYGEN_API_KEY, Accept: "application/json" }
       });
       const text = await res.text();
       let data;
@@ -154,6 +162,14 @@ async function fetchHeyGenState(videoId, apiVersion) {
     }
   }
   return { pending: true, error: lastError };
+}
+
+async function fetchHeyGenStateAny(videoId) {
+  const v2 = await fetchHeyGenState(videoId, "v2");
+  if (v2.done || v2.failed) return v2;
+  const v3 = await fetchHeyGenState(videoId, "v3");
+  if (v3.done || v3.failed) return v3;
+  return { pending: true, error: v2.error || v3.error || "" };
 }
 
 function normalizeStatus(value) {
