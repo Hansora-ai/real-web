@@ -31,6 +31,37 @@
     { label: 'Character', href: '/character.html', icon: 'CH', note: 'Character creator' },
   ];
 
+  const VIDEO_MENU_ITEMS = [
+    { label: 'Seedance 2.0', id: 'seedance-2', icon: 'S2', note: 'Cinematic video model' },
+    { label: 'Kling 3.0', id: 'kling-3', icon: 'K3', note: 'Advanced video generation' },
+    { label: 'HappyHorse 1.0', id: 'happyhorse-1', icon: 'HH', note: 'Video and audio model' },
+    { label: 'Veo 3.1', id: 'veo31', icon: 'V3', note: 'Google video model' },
+    { label: 'Grok', id: 'grok-video', icon: 'GX', note: 'Cinematic video' },
+    { label: 'Kling 2.6', id: 'kling26', icon: 'K2', note: 'Video with sound' },
+    { label: 'Wan 2.7', id: 'wan-2-7-video', icon: 'W', note: 'First and last frame control' },
+    { label: 'Kling Motion Control', id: 'kling-motion-control', icon: 'KM', note: 'Motion transfer' },
+    { label: 'Aleph', id: 'aleph', icon: 'A', note: 'Video transformation' },
+    { label: 'Video upscale', href: '/upscale.html?mode=video', icon: 'VU', note: 'Increase video quality' },
+    { label: 'Lips sync / Avatar', href: '/lip-lipsync.html', icon: 'LS', note: 'Talking avatar video' },
+  ];
+
+  const AUDIO_MENU_ITEMS = [
+    { label: 'Text to speech', href: '/audio.html?tool=text-to-speech', icon: 'T2', note: 'Generate voice from text' },
+    { label: 'Voice isolater', href: '/audio.html?tool=voice-isolater', icon: 'VI', note: 'Separate clean vocals' },
+    { label: 'Voice changer', href: '/audio.html?tool=voice-changer', icon: 'VC', note: 'Transform a voice' },
+    { label: 'Song Creation', href: '/audio.html?tool=song-creation', icon: 'SC', note: 'Create music tracks' },
+  ];
+
+  const FEATURE_MENU_ITEMS = [
+    ...IMAGE_MENU_TOOLS,
+    { label: 'Video upscale', href: '/upscale.html?mode=video', icon: 'VU', note: 'Increase video quality' },
+    { label: 'Lipsync Avatar', href: '/lip-lipsync.html', icon: 'LA', note: 'Talking avatar video' },
+    { label: 'Text to speech', href: '/audio.html?tool=text-to-speech', icon: 'T2', note: 'Generate voice from text' },
+    { label: 'Voice isolater', href: '/audio.html?tool=voice-isolater', icon: 'VI', note: 'Separate clean vocals' },
+    { label: 'Song Creation', href: '/audio.html?tool=song-creation', icon: 'SC', note: 'Create music tracks' },
+    { label: 'Hook analyse', href: '/analyse.html', icon: 'HA', note: 'Analyse hooks and ideas' },
+  ];
+
   function ready(fn) {
     if (document.readyState !== 'loading') fn();
     else document.addEventListener('DOMContentLoaded', fn);
@@ -85,34 +116,43 @@
     return index % 4 === 0 ? 'blue' : index % 4 === 1 ? 'violet' : index % 4 === 2 ? 'lime' : 'pink';
   }
 
-  function renderImageMegaMenu() {
-    const modelItems = IMAGE_MENU_MODELS.map((item, index) => `
-      <a class="hansora-mega-item" href="${modelHref(item.id)}" data-hansora-model="${item.id}">
-        <span class="hansora-mega-icon ${menuIconClass(index)}">${item.icon}</span>
-        <span>
+  function itemHref(item) {
+    return item.href || modelHref(item.id);
+  }
+
+  function itemData(item) {
+    return item.id && !item.href ? ` data-hansora-model="${item.id}"` : '';
+  }
+
+  function renderMegaItems(items, offset) {
+    return items.map((item, index) => `
+      <a class="hansora-mega-item" href="${itemHref(item)}"${itemData(item)}>
+        <span class="hansora-mega-icon ${menuIconClass(index + (offset || 0))}">${item.icon}</span>
+        <span class="hansora-mega-copy">
           <strong>${item.label}</strong>
           <em>${item.note}</em>
         </span>
       </a>`).join('');
-    const toolItems = IMAGE_MENU_TOOLS.map((item, index) => `
-      <a class="hansora-mega-item" href="${item.href}">
-        <span class="hansora-mega-icon ${menuIconClass(index + 2)}">${item.icon}</span>
-        <span>
-          <strong>${item.label}</strong>
-          <em>${item.note}</em>
-        </span>
-      </a>`).join('');
+  }
+
+  function renderMegaMenu(config) {
+    const sections = config.sections.map((section, sectionIndex) => `
+      <section>
+        <div class="hansora-mega-eyebrow">${section.title}</div>
+        <div class="hansora-mega-grid">${renderMegaItems(section.items, sectionIndex * 2)}</div>
+      </section>`).join('');
     return `
-      <div class="hansora-mega-menu" id="hansoraImageMega" role="menu" aria-label="Image tools and models">
-        <section>
-          <div class="hansora-mega-eyebrow">Image models</div>
-          <div class="hansora-mega-grid">${modelItems}</div>
-        </section>
-        <section>
-          <div class="hansora-mega-eyebrow">Image tools</div>
-          <div class="hansora-mega-grid">${toolItems}</div>
-        </section>
+      <div class="hansora-mega-menu ${config.className || ''}" role="menu" aria-label="${config.label}">
+        ${sections}
       </div>`;
+  }
+
+  function renderNavMenu(label, href, config) {
+    return `
+      <span class="hansora-nav-item">
+        <a class="hansora-nav-trigger" href="${href}">${label}</a>
+        ${renderMegaMenu(config)}
+      </span>`;
   }
 
   function injectHeaderStyles() {
@@ -121,6 +161,8 @@
     style.id = 'hansoraHeaderMegaStyles';
     style.textContent = `
       .nav-links .hansora-nav-item{ position:relative; display:inline-flex; align-items:center; }
+      .site-header .shell.nav{ position:relative; }
+      .site-header .nav-links{ position:absolute; left:50%; transform:translateX(-50%); }
       .nav-links .hansora-nav-trigger{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; color:inherit; }
       .nav-links .hansora-nav-trigger::after{ content:""; width:6px; height:6px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); opacity:.55; margin-top:-3px; transition:transform .18s ease, opacity .18s ease; }
       .nav-links .hansora-nav-item:hover .hansora-nav-trigger::after,
@@ -129,10 +171,10 @@
         position:absolute;
         top:calc(100% + 18px);
         left:50%;
-        width:min(760px,calc(100vw - 28px));
-        transform:translateX(-26%) translateY(8px);
+        width:min(940px,calc(100vw - 32px));
+        transform:translateX(-50%) translateY(8px);
         display:grid;
-        grid-template-columns:1.1fr .9fr;
+        grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);
         gap:18px;
         padding:18px;
         border:1px solid rgba(255,255,255,.10);
@@ -152,7 +194,7 @@
         opacity:1;
         visibility:visible;
         pointer-events:auto;
-        transform:translateX(-26%) translateY(0);
+        transform:translateX(-50%) translateY(0);
       }
       .hansora-mega-eyebrow{
         margin:0 0 10px;
@@ -162,12 +204,13 @@
         letter-spacing:.12em;
         text-transform:uppercase;
       }
-      .hansora-mega-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+      .hansora-mega-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
       .hansora-mega-item{
         display:flex;
         align-items:center;
         gap:12px;
-        min-height:64px;
+        height:70px;
+        min-width:0;
         padding:10px;
         border:1px solid rgba(255,255,255,.08);
         border-radius:16px;
@@ -184,9 +227,9 @@
         outline:none;
       }
       .hansora-mega-icon{
-        width:42px;
-        height:42px;
-        flex:0 0 42px;
+        width:44px;
+        height:44px;
+        flex:0 0 44px;
         display:grid;
         place-items:center;
         border-radius:13px;
@@ -199,9 +242,32 @@
       .hansora-mega-icon.violet{ background:linear-gradient(135deg,#fde68a,#a78bfa,#f472b6); }
       .hansora-mega-icon.lime{ background:linear-gradient(135deg,#ecfccb,#bef264); }
       .hansora-mega-icon.pink{ background:linear-gradient(135deg,#67e8f9,#c084fc,#f472b6); }
-      .hansora-mega-item strong{ display:block; color:rgba(255,255,255,.94); font-size:13px; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      .hansora-mega-item em{ display:block; margin-top:4px; color:rgba(255,255,255,.48); font-size:11px; font-style:normal; line-height:1.25; }
+      .hansora-mega-copy{ display:block; min-width:0; overflow:hidden; }
+      .hansora-mega-item strong{
+        display:-webkit-box;
+        color:rgba(255,255,255,.94);
+        font-size:13px;
+        line-height:1.12;
+        font-weight:900;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        -webkit-line-clamp:2;
+        -webkit-box-orient:vertical;
+      }
+      .hansora-mega-item em{
+        display:-webkit-box;
+        margin-top:4px;
+        color:rgba(255,255,255,.48);
+        font-size:11px;
+        font-style:normal;
+        line-height:1.18;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        -webkit-line-clamp:2;
+        -webkit-box-orient:vertical;
+      }
       @media (max-width:900px){
+        .site-header .nav-links{ position:static; transform:none; }
         .hansora-mega-menu{ left:0; transform:translateX(-16px) translateY(8px); grid-template-columns:1fr; width:min(92vw,520px); max-height:72vh; overflow:auto; }
         .nav-links .hansora-nav-item:hover .hansora-mega-menu,
         .nav-links .hansora-nav-item:focus-within .hansora-mega-menu{ transform:translateX(-16px) translateY(0); }
@@ -226,15 +292,36 @@
             <span>HANSORA AI</span>
           </a>
           <nav class="nav-links" aria-label="Primary navigation">
-            <span class="hansora-nav-item">
-              <a class="hansora-nav-trigger" href="/search-models.html">Image</a>
-              ${renderImageMegaMenu()}
-            </span>
-            <a href="/search-models.html">Video</a>
-            <a href="/models.html">Features</a>
+            ${renderNavMenu('Image', '/search-models.html', {
+              label: 'Image tools and models',
+              sections: [
+                { title: 'Image models', items: IMAGE_MENU_MODELS },
+                { title: 'Image tools', items: IMAGE_MENU_TOOLS },
+              ]
+            })}
+            ${renderNavMenu('Video', '/search-models.html?type=video', {
+              label: 'Video models',
+              className: 'hansora-mega-wide',
+              sections: [
+                { title: 'Video models', items: VIDEO_MENU_ITEMS },
+              ]
+            })}
+            ${renderNavMenu('Features', '/models.html', {
+              label: 'Feature tools',
+              className: 'hansora-mega-wide',
+              sections: [
+                { title: 'Image tools', items: IMAGE_MENU_TOOLS },
+                { title: 'Video and audio tools', items: FEATURE_MENU_ITEMS.slice(5) },
+              ]
+            })}
+            ${renderNavMenu('Audio', '/audio.html', {
+              label: 'Audio tools',
+              className: 'hansora-mega-compact',
+              sections: [
+                { title: 'Audio tools', items: AUDIO_MENU_ITEMS },
+              ]
+            })}
             <a href="/pricing.html">Pricing</a>
-            <a href="/examples-prompts.html">Examples/Prompts</a>
-            <a href="#faq">FAQ</a>
           </nav>
           <div class="nav-actions">
             <button class="btn btn-ghost" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Login</button>
