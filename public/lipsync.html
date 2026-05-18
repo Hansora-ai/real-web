@@ -268,6 +268,42 @@
     function watchCreditsLive(durationMs = 90000) {
       if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') window.HansoraHeader.startCreditsPolling(durationMs, 1500);
     }
+    function getVisibleHeaderCredits() {
+      let best = 0;
+      document.querySelectorAll('#navCredits').forEach((node) => {
+        const value = parseCredits(node.textContent || '');
+        if (value > best) best = value;
+      });
+      return best;
+    }
+    function getSharedHeaderCredits() {
+      try {
+        if (window.HansoraHeader && typeof window.HansoraHeader.getCurrentCredits === 'function') {
+          return parseCredits(window.HansoraHeader.getCurrentCredits());
+        }
+      } catch (_) {}
+      return 0;
+    }
+    async function getAvailableCredits(required = 0) {
+      const localBest = Math.max(getSharedHeaderCredits(), getVisibleHeaderCredits(), parseCredits(currentCredits));
+      if (localBest >= Number(required || 0)) {
+        currentCredits = localBest;
+        return localBest;
+      }
+
+      try {
+        const result = await readSupabaseCredits();
+        const supabaseCredits = parseCredits(result.credits);
+        if (result.user) {
+          currentUser = result.user;
+          setCreditsEverywhere(supabaseCredits);
+        }
+        return Math.max(supabaseCredits, localBest);
+      } catch (error) {
+        console.warn('credit read failed; falling back to header value', error);
+      }
+      return localBest;
+    }
     async function readSupabaseCredits() {
       const { data: userRes } = await supabaseClient.auth.getUser();
       const user = userRes && userRes.user ? userRes.user : null;
@@ -547,8 +583,8 @@
       if (!audio) { showStatus('Upload audio or record with microphone first.', 'error'); return; }
       if (!audioDuration || audioDuration < 5 || audioDuration > 90.25) { showStatus('Audio must be 5–90 seconds.', 'error'); return; }
       const cost = getCost();
-      if (currentCredits < cost) await refreshCredits();
-      if (currentCredits < cost) { showStatus(`Not enough credits. Needed ${cost}⚡.`, 'error'); return; }
+      const availableCredits = await getAvailableCredits(cost);
+      if (availableCredits < cost) { showStatus(`Not enough credits. Needed ${cost}⚡.`, 'error'); return; }
 
       $('runBtn').disabled = true;
       try {
