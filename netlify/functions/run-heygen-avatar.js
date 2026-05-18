@@ -118,12 +118,24 @@ exports.handler = async (event) => {
     await markCharged(uid, run_id, cost, taskId, {
       model,
       provider_api: heygenResult.apiVersion,
+      requested_model: heygenResult.requestedModel || model,
+      heygen_engine: heygenResult.heygenEngine || "",
       avatar_id: heygenResult.avatarId || "",
       avatar_create_response: heygenResult.avatarCreateData || null,
       submit_response: heygenResult.data || null
     });
 
-    return ok({ submitted: true, run_id, taskId, video_id: taskId, cost, billable_seconds: billableSeconds, data: heygenResult.data });
+    return ok({
+      submitted: true,
+      run_id,
+      taskId,
+      video_id: taskId,
+      cost,
+      billable_seconds: billableSeconds,
+      requested_model: heygenResult.requestedModel || model,
+      heygen_engine: heygenResult.heygenEngine || "",
+      data: heygenResult.data
+    });
   } catch (error) {
     return ok({ submitted: false, error: messageOf(error) });
   }
@@ -139,13 +151,15 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
 
   const dimension = aspectRatio === "16:9" ? { width: 1920, height: 1080 } : { width: 1080, height: 1920 };
   const isAvatarV = model === "avatar_v";
+  const heygenEngine = isAvatarV ? "AvatarIV" : "AvatarIII";
+  const publicLabel = isAvatarV ? "Avatar V via Avatar IV" : "Avatar III";
   const payload = {
-    title: `Hansora ${isAvatarV ? "Avatar IV" : "Avatar III"} ${new Date().toISOString()}`,
+    title: `Hansora ${publicLabel} ${new Date().toISOString()}`,
     callback_url: callbackUrl,
     callback_id: run_id,
     caption: false,
     test: false,
-    ...(isAvatarV ? { avatar_engine: "AvatarIV" } : {}),
+    avatar_engine: heygenEngine,
     dimension,
     video_inputs: [
       {
@@ -181,6 +195,8 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
     videoId: extractVideoId(data),
     data,
     apiVersion: "v2",
+    requestedModel: model,
+    heygenEngine,
     avatarId: talkingPhotoId,
     avatarCreateData: talkingPhoto.data
   };
