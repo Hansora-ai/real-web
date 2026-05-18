@@ -1,10 +1,10 @@
-// netlify/functions/run-heygen-avatar.js
+\// netlify/functions/run-heygen-avatar.js
 // HeyGen talking-avatar submitter for one image + one audio file.
 // Server-side Supabase auth, placeholder row, idempotent charge per (uid + run_id), and HeyGen submit.
 // Env: HeyGen_api or HEYGEN_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // Opt: SITE_BASE (default https://webhansora.netlify.app)
 
-const HEYGEN_API_KEY = process.env.HeyGen_api || process.env.HEYGEN_API_KEY || process.env.HEYGEN_API || process.env.HeyGen_API || "";
+const HEYGEN_API_KEY = pickEnv("HEYGEN_API_KEY", "HeyGen_api", "HEYGEN_API", "HeyGen_API");
 const HEYGEN_BASE = (process.env.HEYGEN_BASE_URL || "https://api.heygen.com").replace(/\/+$/, "");
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
@@ -123,69 +123,32 @@ exports.handler = async (event) => {
 };
 
 async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, callbackUrl }) {
-  if (model === "avatar_v") {
-    // Avatar V requires a registered avatar/look. For one uploaded image we first create a Photo Avatar, then request Avatar V.
-    const avatarPayload = {
-      type: "photo",
-      name: `Hansora HeyGen ${run_id}`,
-      file: { type: "url", url: imageUrl }
-    };
-    const avatarResp = await heygenFetch("/v3/avatars", {
-      method: "POST",
-      body: JSON.stringify(avatarPayload)
-    });
-    const avatarData = avatarResp.data;
-    if (!avatarResp.ok) {
-      return { ok: false, error: `heygen_avatar_create_${avatarResp.status}`, data: avatarData };
-    }
-    const avatarId = extractAvatarId(avatarData);
-    if (!avatarId) return { ok: false, error: "missing_avatar_id", data: avatarData };
-
-    const videoPayload = {
-      type: "avatar",
-      avatar_id: avatarId,
-      audio_url: audioUrl,
-      title: `Hansora Avatar V ${new Date().toISOString()}`,
-      resolution: "1080p",
-      aspect_ratio: aspectRatio,
-      callback_url: callbackUrl,
-      callback_id: run_id,
-      engine: { type: "avatar_v" }
-    };
-    const videoResp = await heygenFetch("/v3/videos", {
-      method: "POST",
-      body: JSON.stringify(videoPayload)
-    });
-    const videoData = videoResp.data;
-    return {
-      ok: videoResp.ok,
-      error: videoResp.ok ? "" : `heygen_video_${videoResp.status}`,
-      videoId: extractVideoId(videoData),
-      data: videoData,
-      apiVersion: "v3",
-      avatarId,
-      avatarCreateData: avatarData
-    };
-  }
-
-  // Avatar III is a legacy option. HeyGen's maintained legacy image/audio endpoint is /v2/videos.
-  const v2Payload = {
+  // HeyGen's documented direct image + audio lip-sync endpoint is /v2/videos.
+  // It accepts a public image_url and audio_url directly, avoiding the v3 avatar/video flow
+  // that can return 401 when the key is not enabled for that product surface.
+  const payload = {
     image_url: imageUrl,
     audio_url: audioUrl,
-    title: `Hansora Avatar III ${new Date().toISOString()}`,
+    title: `Hansora ${model === "avatar_v" ? "Photo Avatar" : "Avatar III"} ${new Date().toISOString()}`,
     resolution: "1080p",
-    aspect_ratio: aspectRatio
+    aspect_ratio: aspectRatio,
+    callback_url: callbackUrl,
+    callback_id: run_id
   };
-  const v2Resp = await heygenFetch("/v2/videos", {
+  if (model === "avatar_v") {
+    payload.expressiveness = "medium";
+  }
+
+  const resp = await heygenFetch("/v2/videos", {
     method: "POST",
-    body: JSON.stringify(v2Payload)
+    body: JSON.stringify(payload)
   });
-  const v2Data = v2Resp.data;
+  const data = resp.data;
   return {
-    ok: v2Resp.ok,
-    error: v2Resp.ok ? "" : `heygen_video_${v2Resp.status}`,
-    videoId: extractVideoId(v2Data),
-    data: v2Data,
+    ok: resp.ok,
+    error: resp.ok ? "" : `heygen_video_${resp.status}`,
+    videoId: extractVideoId(data),
+    data,
     apiVersion: "v2"
   };
 }
@@ -209,6 +172,19 @@ async function heygenFetch(path, options = {}) {
 
 function ok(obj) { return { statusCode: 200, headers: cors(), body: JSON.stringify(obj) }; }
 function err(code, message) { return { statusCode: code, headers: cors(), body: JSON.stringify({ submitted: false, error: message }) }; }
+function pickEnv(...names) {
+  for (const name of names) {
+    const value = cleanApiKey(process.env[name]);
+    if (value) return value;
+  }
+  return "";
+}
+function cleanApiKey(value) {
+  let text = String(value || "").trim();
+  text = text.replace(/^['"]|['"]$/g, "").trim();
+  text = text.replace(/^bearer\s+/i, "").trim();
+  return text;
+}
 function cors() {
   return {
     "Access-Control-Allow-Origin": "*",
