@@ -186,7 +186,8 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
     title: `Hansora Avatar III ${new Date().toISOString()}`,
     callback_url: callbackUrl,
     callback_id: run_id,
-    avatar_engine: "AvatarIII",
+    caption: false,
+    test: false,
     dimension,
     video_inputs: [
       {
@@ -194,6 +195,7 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
           type: "talking_photo",
           talking_photo_id: talkingPhotoId,
           scale: 1,
+          offset: { x: 0, y: 0 },
           talking_style: "stable",
           expression: "default",
           matting: false
