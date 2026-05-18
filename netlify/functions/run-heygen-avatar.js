@@ -1,4 +1,4 @@
-\// netlify/functions/run-heygen-avatar.js
+// netlify/functions/run-heygen-avatar.js
 // HeyGen talking-avatar submitter for one image + one audio file.
 // Server-side Supabase auth, placeholder row, idempotent charge per (uid + run_id), and HeyGen submit.
 // Env: HeyGen_api or HEYGEN_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
