@@ -2,7 +2,7 @@
 // Polls HeyGen v3/v2 talking-avatar jobs, updates user_generations, and refunds once on failure.
 // Env: HeyGen_api or HEYGEN_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
-const HEYGEN_API_KEY = process.env.HeyGen_api || process.env.HEYGEN_API_KEY || process.env.HEYGEN_API || process.env.HeyGen_API || "";
+const HEYGEN_API_KEY = pickEnv("HEYGEN_API_KEY", "HeyGen_api", "HEYGEN_API", "HeyGen_API");
 const HEYGEN_BASE = (process.env.HEYGEN_BASE_URL || "https://api.heygen.com").replace(/\/+$/, "");
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
@@ -69,6 +69,19 @@ function cors() {
 }
 function json(statusCode, body) {
   return { statusCode, headers: { "Content-Type": "application/json", ...cors() }, body: JSON.stringify(body) };
+}
+function pickEnv(...names) {
+  for (const name of names) {
+    const value = cleanApiKey(process.env[name]);
+    if (value) return value;
+  }
+  return "";
+}
+function cleanApiKey(value) {
+  let text = String(value || "").trim();
+  text = text.replace(/^['"]|['"]$/g, "").trim();
+  text = text.replace(/^bearer\s+/i, "").trim();
+  return text;
 }
 function sb() { return { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` }; }
 function messageOf(error) { return error && error.message ? error.message : String(error); }
