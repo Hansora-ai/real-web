@@ -142,6 +142,33 @@ exports.handler = async (event) => {
 };
 
 async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, callbackUrl }) {
+  if (model === "avatar_v") {
+    const payload = {
+      image_url: imageUrl,
+      audio_url: audioUrl,
+      title: `Hansora Avatar V via Avatar IV ${new Date().toISOString()}`,
+      resolution: "1080p",
+      aspect_ratio: aspectRatio,
+      callback_url: callbackUrl,
+      callback_id: run_id,
+      expressiveness: "medium"
+    };
+    const resp = await heygenFetch("/v2/videos", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    const data = resp.data;
+    return {
+      ok: resp.ok,
+      error: resp.ok ? "" : `heygen_video_${resp.status}`,
+      videoId: extractVideoId(data),
+      data,
+      apiVersion: "v2",
+      requestedModel: model,
+      heygenEngine: "AvatarIV"
+    };
+  }
+
   const talkingPhoto = await uploadTalkingPhoto(imageUrl);
   if (!talkingPhoto.ok) {
     return { ok: false, error: `heygen_talking_photo_${talkingPhoto.status || "failed"}`, data: talkingPhoto.data, apiVersion: "v2" };
@@ -150,9 +177,8 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
   if (!talkingPhotoId) return { ok: false, error: "missing_talking_photo_id", data: talkingPhoto.data, apiVersion: "v2" };
 
   const dimension = aspectRatio === "16:9" ? { width: 1920, height: 1080 } : { width: 1080, height: 1920 };
-  const isAvatarV = model === "avatar_v";
-  const heygenEngine = isAvatarV ? "AvatarIV" : "AvatarIII";
-  const publicLabel = isAvatarV ? "Avatar V via Avatar IV" : "Avatar III";
+  const heygenEngine = "AvatarIII";
+  const publicLabel = "Avatar III";
   const payload = {
     title: `Hansora ${publicLabel} ${new Date().toISOString()}`,
     callback_url: callbackUrl,
