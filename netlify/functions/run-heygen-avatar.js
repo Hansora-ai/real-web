@@ -4,7 +4,8 @@
 // Env: HeyGen_api or HEYGEN_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // Opt: SITE_BASE (default https://webhansora.netlify.app)
 
-const HEYGEN_API_KEY = pickEnv("HEYGEN_API_KEY", "HeyGen_api", "HEYGEN_API", "HeyGen_API");
+const HEYGEN_API_ENV = pickEnv("HEYGEN_API_KEY", "HeyGen_api", "HEYGEN_API", "HeyGen_API");
+const HEYGEN_API_KEY = HEYGEN_API_ENV.value;
 const HEYGEN_BASE = (process.env.HEYGEN_BASE_URL || "https://api.heygen.com").replace(/\/+$/, "");
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
@@ -90,7 +91,13 @@ exports.handler = async (event) => {
         error: heygenResult.error || "heygen_submit_failed",
         heygen_response: heygenResult.data || null
       });
-      return ok({ submitted: false, error: heygenResult.error || "heygen_submit_failed", data: heygenResult.data, run_id });
+      return ok({
+        submitted: false,
+        error: heygenResult.error || "heygen_submit_failed",
+        data: heygenResult.data,
+        run_id,
+        heygen_auth_debug: safeHeyGenAuthDebug()
+      });
     }
 
     const taskId = String(heygenResult.videoId || "").trim();
@@ -158,7 +165,6 @@ async function heygenFetch(path, options = {}) {
     ...options,
     headers: {
       "x-api-key": HEYGEN_API_KEY,
-      "X-Api-Key": HEYGEN_API_KEY,
       "Content-Type": "application/json",
       Accept: "application/json",
       ...(options.headers || {})
@@ -175,15 +181,25 @@ function err(code, message) { return { statusCode: code, headers: cors(), body: 
 function pickEnv(...names) {
   for (const name of names) {
     const value = cleanApiKey(process.env[name]);
-    if (value) return value;
+    if (value) return { name, value };
   }
-  return "";
+  return { name: "", value: "" };
 }
 function cleanApiKey(value) {
   let text = String(value || "").trim();
   text = text.replace(/^['"]|['"]$/g, "").trim();
   text = text.replace(/^bearer\s+/i, "").trim();
+  text = text.replace(/\s+/g, "");
   return text;
+}
+function safeHeyGenAuthDebug() {
+  return {
+    env: HEYGEN_API_ENV.name || "missing",
+    key_length: HEYGEN_API_KEY.length,
+    key_prefix: HEYGEN_API_KEY ? HEYGEN_API_KEY.slice(0, 5) : "",
+    key_suffix: HEYGEN_API_KEY ? HEYGEN_API_KEY.slice(-4) : "",
+    base: HEYGEN_BASE
+  };
 }
 function cors() {
   return {
