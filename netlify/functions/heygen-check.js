@@ -1,6 +1,5 @@
-// netlify/functions/heygen-check.js
-// Polls HeyGen v3/v2 talking-avatar jobs, updates user_generations, and refunds once on failure.
-// Env: HeyGen_api or HEYGEN_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// netlify/functions/heygen-check-fixed.js
+// Polls HeyGen jobs, saves only real video file URLs, and refunds once on failure.
 
 const HEYGEN_API_ENV = pickEnv("HEYGEN_API_KEY", "HeyGen_api", "HEYGEN_API", "HeyGen_API");
 const HEYGEN_API_KEY = HEYGEN_API_ENV.value;
@@ -26,20 +25,13 @@ exports.handler = async (event) => {
     };
 
     const row = await findGeneration(ids);
-    if (!row) {
-      if (!ids.taskId) return json(200, { ok: false, status: "ignored", reason: "not_processing" });
-      const state = await fetchHeyGenStateAny(ids.taskId);
-      if (state.failed) return json(200, { ok: false, failed: true, status: "failed", error: state.error || "heygen_failed" });
-      if (state.done && state.urls.length) return json(200, { ok: true, status: "done", result_url: state.urls[0], video_url: state.urls[0], urls: state.urls });
-      return json(200, { ok: false, status: "pending", fallback: true, error: state.error || "" });
+    if (row) {
+      ids.uid = ids.uid || row.user_id || "";
+      ids.run_id = ids.run_id || row.meta?.run_id || "";
+      ids.taskId = ids.taskId || row.meta?.task_id || row.meta?.taskId || row.meta?.video_id || "";
     }
 
-    ids.uid = ids.uid || row.user_id || "";
-    ids.run_id = ids.run_id || row.meta?.run_id || "";
-    ids.taskId = ids.taskId || row.meta?.task_id || row.meta?.taskId || row.meta?.video_id || "";
-    if (!ids.taskId) return json(200, { ok: false, status: "pending", error: "missing_task_id" });
-
-    if (event.httpMethod === "POST") {
+    if (event.httpMethod === "POST" && row) {
       const callbackStatus = normalizeStatus(body);
       const callbackUrls = collectResultUrls(body);
       if (callbackStatus === "failed") {
@@ -47,21 +39,30 @@ exports.handler = async (event) => {
         return json(200, { ok: false, failed: true, status: "failed", refunded: !!refund.refunded, refund_amount: refund.amount || 0, error: failureReason(body) });
       }
       if (callbackUrls.length) {
-        await markDone({ row, ids, urls: callbackUrls });
+        await markDone({ row, ids, urls: callbackUrls, raw: body });
         return json(200, { ok: true, status: "done", result_url: callbackUrls[0], video_url: callbackUrls[0], urls: callbackUrls });
       }
     }
 
-    const state = await fetchHeyGenState(ids.taskId, row.meta?.provider_api || row.meta?.api_version || (row.meta?.model === "avatar_iii" ? "v2" : "v3"));
+    if (!ids.taskId) return json(200, { ok: false, status: row ? "pending" : "ignored", reason: "missing_task_id" });
+
+    const preferredApi = row?.meta?.provider_api || row?.meta?.api_version || "v2";
+    const state = await fetchHeyGenStateAny(ids.taskId, preferredApi);
+
     if (state.failed) {
-      const refund = await failAndRefundOnce({ row, ids, reason: state.error || "heygen_failed" });
-      return json(200, { ok: false, failed: true, status: "failed", error: state.error || "heygen_failed", refunded: !!refund.refunded, refund_amount: refund.amount || 0, already_claimed: !!refund.already_claimed });
+      if (row) {
+        const refund = await failAndRefundOnce({ row, ids, reason: state.error || "heygen_failed" });
+        return json(200, { ok: false, failed: true, status: "failed", error: state.error || "heygen_failed", refunded: !!refund.refunded, refund_amount: refund.amount || 0 });
+      }
+      return json(200, { ok: false, failed: true, status: "failed", error: state.error || "heygen_failed" });
     }
+
     if (state.done && state.urls.length) {
-      await markDone({ row, ids, urls: state.urls, raw: state.raw });
+      if (row) await markDone({ row, ids, urls: state.urls, raw: state.raw });
       return json(200, { ok: true, status: "done", result_url: state.urls[0], video_url: state.urls[0], urls: state.urls });
     }
-    return json(200, { ok: false, status: "pending" });
+
+    return json(200, { ok: false, status: "pending", error: state.error || "" });
   } catch (error) {
     return json(200, { ok: false, status: "error", error: messageOf(error) });
   }
@@ -126,26 +127,32 @@ async function findGeneration(ids) {
     const res = await fetch(UG_URL + query, { headers: sb() });
     const arr = await res.json().catch(() => []);
     const row = Array.isArray(arr) ? arr[0] : null;
-    if (!row) continue;
-    const status = String(row.meta?.status || "").toLowerCase();
-    if (!row.result_url || status === "processing" || status === "pending" || status === "failed") return row;
+    if (row) return row;
   }
   return null;
 }
 
+async function fetchHeyGenStateAny(videoId, preferredApi) {
+  const first = String(preferredApi || "v2").toLowerCase() === "v3" ? "v3" : "v2";
+  const second = first === "v2" ? "v3" : "v2";
+  const a = await fetchHeyGenState(videoId, first);
+  if (a.done || a.failed) return a;
+  const b = await fetchHeyGenState(videoId, second);
+  if (b.done || b.failed) return b;
+  return { pending: true, error: a.error || b.error || "" };
+}
+
 async function fetchHeyGenState(videoId, apiVersion) {
   if (!HEYGEN_API_KEY) return { pending: true, error: "missing_heygen_api_key" };
-  const version = String(apiVersion || "v3").toLowerCase() === "v2" ? "v2" : "v3";
+  const version = String(apiVersion || "v2").toLowerCase() === "v3" ? "v3" : "v2";
   const paths = version === "v2"
-    ? [`/v2/videos/${encodeURIComponent(videoId)}`, `/v1/video_status.get?video_id=${encodeURIComponent(videoId)}`]
+    ? [`/v1/video_status.get?video_id=${encodeURIComponent(videoId)}`, `/v2/videos/${encodeURIComponent(videoId)}`]
     : [`/v3/videos/${encodeURIComponent(videoId)}`];
 
   let lastError = "";
   for (const path of paths) {
     try {
-      const res = await fetch(`${HEYGEN_BASE}${path}`, {
-        headers: { "x-api-key": HEYGEN_API_KEY, Accept: "application/json" }
-      });
+      const res = await fetch(`${HEYGEN_BASE}${path}`, { headers: { "x-api-key": HEYGEN_API_KEY, Accept: "application/json" } });
       const text = await res.text();
       let data;
       try { data = JSON.parse(text || "{}"); } catch { data = { raw: text }; }
@@ -162,14 +169,6 @@ async function fetchHeyGenState(videoId, apiVersion) {
     }
   }
   return { pending: true, error: lastError };
-}
-
-async function fetchHeyGenStateAny(videoId) {
-  const v2 = await fetchHeyGenState(videoId, "v2");
-  if (v2.done || v2.failed) return v2;
-  const v3 = await fetchHeyGenState(videoId, "v3");
-  if (v3.done || v3.failed) return v3;
-  return { pending: true, error: v2.error || v3.error || "" };
 }
 
 function normalizeStatus(value) {
@@ -207,7 +206,8 @@ function collectResultUrls(value) {
   function push(url) {
     if (typeof url !== "string" || !/^https?:\/\//i.test(url)) return;
     const clean = url.replace(/[)"'\]}]+$/g, "").trim();
-    if (!/\.(mp4|webm|mov)(?:[?#].*)?$/i.test(clean) && !/files\.heygen\.com|resource2\.heygen\.ai|heygen/i.test(clean)) return;
+    if (isHeyGenPageUrl(clean)) return;
+    if (!/\.(mp4|webm|mov)(?:[?#].*)?$/i.test(clean) && !/files\.heygen\.com|resource2\.heygen\.ai/i.test(clean)) return;
     if (seen.has(clean)) return;
     seen.add(clean);
     urls.push(clean);
@@ -222,13 +222,19 @@ function collectResultUrls(value) {
     }
     if (Array.isArray(node)) { node.forEach((item) => walk(item, trusted, depth + 1)); return; }
     if (typeof node === "object") {
-      for (const [key, child] of Object.entries(node)) {
-        walk(child, trusted || priorityKeys.has(String(key || "")), depth + 1);
-      }
+      for (const [key, child] of Object.entries(node)) walk(child, trusted || priorityKeys.has(String(key || "")), depth + 1);
     }
   }
   walk(value);
   return urls.slice(0, 4);
+}
+function isHeyGenPageUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return url.hostname.toLowerCase() === "app.heygen.com" && /^\/videos\//i.test(url.pathname);
+  } catch {
+    return false;
+  }
 }
 
 async function markDone({ row, ids, urls, raw }) {
@@ -278,7 +284,7 @@ async function failAndRefundOnce({ row, ids, reason }) {
   }
   if (!Number.isFinite(amount) || amount <= 0) {
     await patchGeneration(row.id, { result_url: null, meta: { ...failedMeta, refund_skipped_reason: "missing_refund_amount" } });
-    return { refunded: false, amount: 0, reason: "missing_refund_amount" };
+    return { refunded: false, amount: 0 };
   }
 
   const claim = `r_${Date.now()}_${Math.random().toString(16).slice(2)}`;
