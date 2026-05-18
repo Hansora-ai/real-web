@@ -73,8 +73,24 @@ function extractTaskId(data) {
   return scan(data);
 }
 
+function clampDuration(value) {
+  const duration = Number(value || 5);
+  if (!Number.isFinite(duration)) return 5;
+  return Math.min(15, Math.max(4, Math.round(duration)));
+}
+
+function normalizeSeedanceModel(value, variant) {
+  const raw = String(value || '').trim();
+  const key = raw.toLowerCase();
+  const fallback = variant === 'fast' ? 'bytedance/seedance-2-fast' : 'bytedance/seedance-2';
+  if (!raw) return fallback;
+  if (key === 'seedance-2.0' || key === 'seedance-2' || key === 'bytedance/seedance-2') return 'bytedance/seedance-2';
+  if (key === 'seedance-2.0-fast' || key === 'seedance-2-fast' || key === 'seedance-2.0-lite' || key === 'seedance-2-lite' || key === 'bytedance/seedance-2-fast') return 'bytedance/seedance-2-fast';
+  return raw.includes('/') ? raw : fallback;
+}
+
 function costFor(body) {
-  const duration = Math.max(1, Number(body.duration || 5));
+  const duration = clampDuration(body.duration);
   const variant = String(body.variant || '').toLowerCase();
   const resolution = String(body.resolution || '720p');
   if (variant === 'fast' || variant === 'lite') return Number((duration * 3).toFixed(1));
@@ -183,22 +199,31 @@ exports.handler = async (event) => {
     }
 
     const model = variant === 'fast'
-      ? (process.env.SEEDANCE_20_FAST_MODEL || process.env.SEEDANCE_20_LITE_MODEL || 'seedance-2.0-fast')
-      : (process.env.SEEDANCE_20_MODEL || 'seedance-2.0');
+      ? normalizeSeedanceModel(process.env.SEEDANCE_20_FAST_MODEL || process.env.SEEDANCE_20_LITE_MODEL, 'fast')
+      : normalizeSeedanceModel(process.env.SEEDANCE_20_MODEL, 'standard');
+    const firstFrameUrl = String(body.first_frame_url || '').trim();
+    const lastFrameUrl = String(body.last_frame_url || '').trim();
+    const referenceImageUrls = Array.isArray(body.reference_image_urls) ? body.reference_image_urls.filter(Boolean).map(String) : [];
+    const referenceVideoUrls = Array.isArray(body.reference_video_urls) ? body.reference_video_urls.filter(Boolean).map(String) : [];
+    const referenceAudioUrls = Array.isArray(body.reference_audio_urls) ? body.reference_audio_urls.filter(Boolean).map(String) : [];
+    const hasFrameMode = !!(firstFrameUrl || lastFrameUrl);
+    const resolution = variant === 'fast'
+      ? (['480p', '720p'].includes(String(body.resolution || '720p')) ? String(body.resolution || '720p') : '720p')
+      : (['480p', '720p', '1080p'].includes(String(body.resolution || '720p')) ? String(body.resolution || '720p') : '720p');
     const input = {
       prompt,
-      resolution: variant === 'lite' ? '720p' : String(body.resolution || '720p'),
-      duration: Math.max(1, Number(body.duration || 5)),
+      resolution,
+      duration: clampDuration(body.duration),
       aspect_ratio: String(body.aspect_ratio || '16:9'),
       generate_audio: body.generate_audio !== false,
       return_last_frame: !!body.return_last_frame,
-      enable_web_search: !!(body.enable_web_search || body.web_search),
       web_search: !!(body.enable_web_search || body.web_search),
-      ...(body.first_frame_url ? { first_frame_url: String(body.first_frame_url) } : {}),
-      ...(body.last_frame_url ? { last_frame_url: String(body.last_frame_url) } : {}),
-      ...(Array.isArray(body.reference_image_urls) && body.reference_image_urls.length ? { reference_image_urls: body.reference_image_urls } : {}),
-      ...(Array.isArray(body.reference_video_urls) && body.reference_video_urls.length ? { reference_video_urls: body.reference_video_urls } : {}),
-      ...(Array.isArray(body.reference_audio_urls) && body.reference_audio_urls.length ? { reference_audio_urls: body.reference_audio_urls } : {}),
+      nsfw_checker: body.nsfw_checker === undefined ? false : !!body.nsfw_checker,
+      ...(firstFrameUrl ? { first_frame_url: firstFrameUrl } : {}),
+      ...(lastFrameUrl ? { last_frame_url: lastFrameUrl } : {}),
+      ...(!hasFrameMode && referenceImageUrls.length ? { reference_image_urls: referenceImageUrls.slice(0, 9) } : {}),
+      ...(!hasFrameMode && referenceVideoUrls.length ? { reference_video_urls: referenceVideoUrls.slice(0, 3) } : {}),
+      ...(!hasFrameMode && referenceAudioUrls.length ? { reference_audio_urls: referenceAudioUrls.slice(0, 3) } : {}),
     };
     const callback = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
     const kieRes = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
@@ -211,8 +236,15 @@ exports.handler = async (event) => {
       await patchGeneration(rowId, { ...metaBase, status: 'failed', error: data });
       return json(kieRes.status || 502, { ok: false, error: 'kie_create_failed', details: data });
     }
+    if (data && data.code && Number(data.code) !== 200) {
+      await patchGeneration(rowId, { ...metaBase, status: 'failed', error: data });
+      return json(422, { ok: false, error: 'kie_create_failed', details: data });
+    }
     const taskId = extractTaskId(data);
-    if (!taskId) return json(502, { ok: false, error: 'missing_task_id', details: data });
+    if (!taskId) {
+      await patchGeneration(rowId, { ...metaBase, status: 'failed', error: data || 'missing_task_id' });
+      return json(502, { ok: false, error: 'missing_task_id', details: data });
+    }
 
     const debit = await debitCredits(uid, cost);
     if (!debit.ok) return json(402, { ok: false, error: debit.error, details: debit });
