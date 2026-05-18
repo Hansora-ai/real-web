@@ -103,6 +103,26 @@
     } catch (_) {}
   }
 
+  function shouldRedirectWhenLoggedOut() {
+    const path = String(location.pathname || '/').toLowerCase();
+    const publicPages = new Set([
+      '/',
+      '/index.html',
+      '/login.html',
+      '/pricing.html',
+      '/examples-prompts.html',
+      '/privacy.html',
+      '/terms.html'
+    ]);
+    return !publicPages.has(path);
+  }
+
+  function redirectLoggedOutHome() {
+    if (!shouldRedirectWhenLoggedOut()) return;
+    const target = location.origin ? `${location.origin}/index.html` : '/index.html';
+    if (location.href !== target) location.href = target;
+  }
+
   function formatCredits(value) {
     const n = Number(value || 0);
     return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
@@ -187,6 +207,14 @@
         pointer-events:none;
         transition:opacity .18s ease, transform .18s ease, visibility .18s ease;
         z-index:1000;
+      }
+      .hansora-mega-wide{
+        width:min(700px,calc(100vw - 32px));
+        grid-template-columns:1fr;
+      }
+      .hansora-mega-compact{
+        width:min(560px,calc(100vw - 32px));
+        grid-template-columns:1fr;
       }
       .hansora-mega-menu::before{ content:""; position:absolute; left:0; right:0; top:-22px; height:22px; }
       .nav-links .hansora-nav-item:hover .hansora-mega-menu,
@@ -417,6 +445,7 @@
     if (navAvatar) navAvatar.style.display = 'none';
     if (navMenu) navMenu.classList.remove('is-open');
     clearCache();
+    redirectLoggedOutHome();
   }
 
   let authMode = 'login';
