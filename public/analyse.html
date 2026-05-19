@@ -175,7 +175,7 @@
   function clearError(){$('errorBox').classList.add('hidden');$('errorBox').textContent=''}
   function showError(msg){$('errorBox').textContent=msg;$('errorBox').classList.remove('hidden')}
   function escapeHtml(str){return String(str||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-  function shortName(name){const s=String(name||'video');return s.length>34?s.slice(0,18)+'...'+s.slice(-10):s}
+  function shortName(name){const s=String(name||'video');return s.length>5?s.slice(0,5):s}
   function fmtDuration(seconds){seconds=Number(seconds||0);return `0:${String(Math.max(0,Math.round(seconds))).padStart(2,'0')}`}
   function isVideo(file){return String(file&&file.type||'').startsWith('video/')||/\.(mp4|mov|webm|m4v)$/i.test(String(file&&file.name||''))}
 
