@@ -24,35 +24,71 @@
     .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
     #navMenu{display:none; position:absolute; right:0; top:44px; background:#0e0f14; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:8px; width:180px;}
     #navMenu.show{display:block;}
+
+    /* Shared index-style footer */
+    .shell {
+      width: min(1440px, calc(100% - 48px));
+      margin: 0 auto;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      min-width: max-content;
+      font-weight: 900;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .brand img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 14px rgba(56,189,248,.45));
+    }
+
+    .footer {
+      padding: 36px 0;
+      color: rgba(247,247,251,.42);
+      border-top: 1px solid rgba(255,255,255,.11);
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      font-size: .92rem;
+      font-weight: 760;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .footer-copy {
+      margin: 0;
+      color: rgba(247,247,251,.62);
+      font-weight: 760;
+    }
+
+    @media (max-width: 740px) {
+      .shell { width: min(100% - 28px, 1440px); }
+      .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
   </style>
+  <link href="/header.css" rel="stylesheet"/>
 </head>
 <body>
-  <!-- Header (match index layout/IDs) -->
-  <header class="border-b border-base-line">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-      <a href="/" class="font-semibold text-lg"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora logo" class="inline-block h-9 w-9 object-contain mr-3 align-middle"/><span class="align-middle">HANSORA AI</span></a>
-      <nav class="hidden md:flex items-center gap-6 text-sm">
-<a href="models.html" class="hover:opacity-80">Models</a>
-<a href="examples-prompts.html" class="hover:opacity-80">Examples/Prompts</a>
-<a href="templates.html" class="hover:opacity-80">Templates</a>
-<a href="pricing.html" class="hover:opacity-80">Pricing</a>
-<a href="index.html#faq" class="hover:opacity-80">FAQ</a>
-</nav>
-      <div class="flex items-center gap-3">
-        <a id="btnLoginNav" class="btn text-sm" href="login.html">Login / Signup</a>
-<a class="hidden" href="#" id="btnGetStarted" aria-hidden="true" tabindex="-1"></a>
-        <div id="navUser" class="hidden items-center gap-3 relative">
-          <span id="navCredits" class="text-sm text-zinc-300">0⚡</span>
-          <button id="navAvatar" class="w-9 h-9 rounded-full overflow-hidden border border-white/10">
-            <img id="navAvatarImg" alt="User avatar" class="w-full h-full object-cover hidden"/>
-          </button>
-          <div id="navMenu" class="glass"><a href="profile.html" class="block px-3 py-2 rounded hover:bg-white/5 text-sm">Profile</a><a href="usage.html" class="block px-3 py-2 rounded hover:bg-white/5 text-sm">History</a><a href="pricing.html" class="block px-3 py-2 rounded hover:bg-white/5 text-sm">Subscription</a><button id="btnLogout" class="block w-full text-left px-3 py-2 rounded hover:bg-white/5 text-sm">Log out</button></div>
-        </div>
-      </div>
-    </div>
-  </header>
+  <div id="sharedHeader"></div>
 
-  <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+<main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     <h1 class="text-3xl font-bold mb-2">Contact</h1>
     <p class="text-zinc-400 mb-8">Send us a message and we’ll get back to you. You can also reach us via Telegram or Instagram below.</p>
 
@@ -91,12 +127,22 @@
       <div id="errorBanner" class="hidden mt-4 text-sm text-rose-300">❌ Failed to send. Please try again.</div>
     </form>
   </main>
-
-  <footer class="border-t border-base-line mt-16"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-sm text-zinc-400 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">  <span>© <span id="year"></span> HANSORA AI</span>  <div class="flex items-center gap-4 sm:ml-auto">    <a class="hover:text-white/80" href="terms.html">Terms</a>    <a class="hover:text-white/80" href="policy.html">Privacy</a>    <a class="hover:text-white/80" href="contact.html">Contact</a>  </div></div></footer>
-
-  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-
-  <!-- Success banner on redirect (kept; harmless) -->
+  <footer class="footer">
+<div class="shell footer-inner">
+<a aria-label="HANSORA AI home" class="brand" href="/">
+<img alt="" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
+<span>HANSORA AI</span>
+</a>
+<p class="footer-copy">© HANSORA AI — All rights reserved.</p>
+<div class="footer-links">
+<a href="/termsofuse.html">Terms of use</a>
+<a href="/policy.html">Policy</a>
+<a href="/affilate.html">Affiliate program</a>
+<a href="/contact.html">Contact</a>
+</div>
+</div>
+</footer>
+<!-- Success banner on redirect (kept; harmless) -->
   <script>
     const params = new URLSearchParams(window.location.search);
     if (params.get('sent') === '1') {
@@ -104,139 +150,7 @@
       if (el) el.classList.remove('hidden');
     }
   </script>
-
-  <!-- Supabase auth header logic (same as index) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>  // Supabase auth header logic (stable; prevents false "logged out" on page load)
-  (function(){
-    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
-
-    const $ = (id)=>document.getElementById(id);
-
-    const $btnLoginNav = $('btnLoginNav');
-    const $btnGetStarted = $('btnGetStarted');
-    const $btnLoginSignup = $('btnLoginSignup');
-    const $navUser = $('navUser');
-    const $navCredits = $('navCredits');
-    const $navAvatar = $('navAvatar');
-    const $navMenu = $('navMenu');
-    const $btnLogout = $('btnLogout');
-    const $navAvatarImg = $('navAvatarImg');
-
-    function showLoggedInUI(profile, user){
-      try{ $btnLoginNav && $btnLoginNav.classList.add('hidden'); }catch(e){}
-      try{ $btnGetStarted && $btnGetStarted.classList.add('hidden'); }catch(e){}
-      try{ if($btnLoginSignup) $btnLoginSignup.style.display = 'none'; }catch(e){}
-      if($navUser){ $navUser.classList.remove('hidden'); $navUser.classList.add('flex'); }
-      if($navCredits) $navCredits.textContent = (profile?.credits ?? 0) + '⚡';
-
-      if($navAvatarImg){
-        const url = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
-        if(url){
-          $navAvatarImg.src = url;
-          $navAvatarImg.classList.remove('hidden');
-        } else {
-          // fallback initials avatar (keeps layout consistent)
-          const initials = ((user?.email || 'U').trim()[0] || 'U').toUpperCase();
-          const svg = encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'>
-            <rect width='100%' height='100%' fill='#111827'/>
-            <text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' fill='#93c5fd' font-family='Inter,Arial' font-size='28'>${initials}</text>
-          </svg>`);
-          $navAvatarImg.src = 'data:image/svg+xml;charset=utf-8,' + svg;
-          $navAvatarImg.classList.remove('hidden');
-        }
-      }
-    }
-
-    function showLoggedOutUI(){
-      try{ $btnLoginNav && $btnLoginNav.classList.remove('hidden'); }catch(e){}
-      try{ $btnGetStarted && $btnGetStarted.classList.remove('hidden'); }catch(e){}
-      try{ if($btnLoginSignup) $btnLoginSignup.style.display = ''; }catch(e){}
-      if($navUser){ $navUser.classList.add('hidden'); $navUser.classList.remove('flex'); }
-      if($navMenu) $navMenu.classList.remove('show');
-    }
-
-    async function getOrCreateProfile(user){
-      const { data, error } = await sb.from('profiles')
-        .select('user_id,email,credits')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if(error) throw error;
-      if(!data){
-        const ins = await sb.from('profiles').insert({
-          user_id: user.id, email: user.email, credits: 3
-        }).select().single();
-        if(ins.error) throw ins.error;
-        return ins.data;
-      }
-      return data;
-    }
-
-    function initHeaderMenu(){
-      if($navAvatar){
-        $navAvatar.addEventListener('click', ()=>{ if($navMenu) $navMenu.classList.toggle('show'); });
-      }
-      document.addEventListener('click', (e)=>{
-        if(!e.target.closest('#navAvatar') && !e.target.closest('#navMenu')){ if($navMenu) $navMenu.classList.remove('show'); }
-      });
-      if($btnLogout){
-        $btnLogout.addEventListener('click', async ()=>{
-          await sb.auth.signOut();
-          showLoggedOutUI();
-        });
-      }
-    }
-
-    // Wait for the initial auth session to be restored before first render
-    function waitForInitialSession(timeoutMs = 2000){
-      return new Promise((resolve)=>{
-        let done = false;
-        const timer = setTimeout(()=>{
-          if(done) return;
-          done = true;
-          resolve(null);
-        }, timeoutMs);
-
-        const { data: { subscription } } = sb.auth.onAuthStateChange((event, session)=>{
-          if(event !== 'INITIAL_SESSION') return;
-          if(done) return;
-          done = true;
-          clearTimeout(timer);
-          try{ subscription?.unsubscribe(); }catch(e){}
-          resolve(session || null);
-        });
-      });
-    }
-
-    async function reflectHeader(){
-      try{
-        const { data } = await sb.auth.getUser();
-        const user = data?.user || null;
-        if(!user){ showLoggedOutUI(); return; }
-        const prof = await getOrCreateProfile(user);
-        showLoggedInUI(prof, user);
-      } catch (e) {
-        showLoggedOutUI();
-      }
-    }
-
-    (async ()=>{
-      await waitForInitialSession();
-      await reflectHeader();
-      initHeaderMenu();
-
-      // Keep header correct if session changes while staying on the page
-      sb.auth.onAuthStateChange((event)=>{
-        if(event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'SIGNED_OUT') {
-          reflectHeader();
-        }
-      });
-    })();
-  })();</script>
-
-  <!-- Submit handler: calls Netlify Function, no redirect -->
+<!-- Submit handler: calls Netlify Function, no redirect -->
   <script>
     const formEl = document.getElementById('contactForm');
     formEl?.addEventListener('submit', async (e) => {
