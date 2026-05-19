@@ -38,11 +38,12 @@
     { label: 'Veo 3.1', id: 'veo31', icon: 'V3', note: 'Google video model' },
     { label: 'Grok', id: 'grok-video', icon: 'GX', note: 'Cinematic video' },
     { label: 'Kling 2.6', id: 'kling26', icon: 'K2', note: 'Video with sound' },
+    { label: 'Kling 2.5 Turbo', id: 'kling-2-5-turbo', icon: 'KT', note: 'Fast Kling video model' },
     { label: 'Wan 2.7', id: 'wan-2-7-video', icon: 'W', note: 'First and last frame control' },
     { label: 'Kling Motion Control', id: 'kling-motion-control', icon: 'KM', note: 'Motion transfer' },
     { label: 'Aleph', id: 'aleph', icon: 'A', note: 'Video transformation' },
     { label: 'Video upscale', href: '/upscale.html?mode=video', icon: 'VU', note: 'Increase video quality' },
-    { label: 'Lips sync / Avatar', href: '/lip-lipsync.html', icon: 'LS', note: 'Talking avatar video' },
+    { label: 'Lips sync / Avatar', href: '/lipsync.html', icon: 'LS', note: 'Talking avatar video' },
   ];
 
   const AUDIO_MENU_ITEMS = [
@@ -55,7 +56,7 @@
   const FEATURE_MENU_ITEMS = [
     ...IMAGE_MENU_TOOLS,
     { label: 'Video upscale', href: '/upscale.html?mode=video', icon: 'VU', note: 'Increase video quality' },
-    { label: 'Lipsync Avatar', href: '/lip-lipsync.html', icon: 'LA', note: 'Talking avatar video' },
+    { label: 'Lipsync Avatar', href: '/lipsync.html', icon: 'LA', note: 'Talking avatar video' },
     { label: 'Text to speech', href: '/audio.html?tool=text-to-speech', icon: 'T2', note: 'Generate voice from text' },
     { label: 'Voice isolater', href: '/audio.html?tool=voice-isolater', icon: 'VI', note: 'Separate clean vocals' },
     { label: 'Song Creation', href: '/audio.html?tool=song-creation', icon: 'SC', note: 'Create music tracks' },
