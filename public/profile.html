@@ -172,8 +172,20 @@
 
     .usage-modal-body {
       padding: 16px 22px 22px;
-      max-height: 560px;
+      max-height: 490px;
       overflow: auto;
+    }
+
+    .usage-modal-head .usage-history-icon {
+      width: 40px;
+      height: 40px;
+      flex: 0 0 40px;
+      border-radius: 13px;
+    }
+
+    .usage-modal-head .usage-history-icon svg {
+      width: 20px;
+      height: 20px;
     }
 
     .usage-close-btn {
@@ -218,16 +230,19 @@
       .usage-modal { padding: 12px; }
       .usage-modal-head { padding: 18px; }
       .usage-modal-head .usage-history-icon {
-        width: 32px;
-        height: 32px;
-        flex: 0 0 32px;
-        border-radius: 11px;
+        width: 30px;
+        height: 30px;
+        flex: 0 0 30px;
+        border-radius: 10px;
       }
       .usage-modal-head .usage-history-icon svg {
-        width: 17px;
-        height: 17px;
+        width: 15px;
+        height: 15px;
       }
-      .usage-modal-body { padding: 12px 18px 18px; }
+      .usage-modal-body {
+        padding: 12px 18px 18px;
+        max-height: 420px;
+      }
       .usage-row { grid-template-columns: auto 1fr; }
       .usage-delta { grid-column: 2; justify-self: start; }
     }
