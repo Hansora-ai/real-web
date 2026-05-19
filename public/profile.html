@@ -20,54 +20,241 @@
     .btn:hover{background:rgba(255,255,255,.1)}
     .btn-brand{background:var(--brand); border-color:transparent; color:white}
     .btn-brand:hover{background:#7c7ff6}
-    .menu{ display:none; }
-    .menu.show{ display:block; }
+
+
+    /* Shared index-style footer */
+    .shell {
+      width: min(1440px, calc(100% - 48px));
+      margin: 0 auto;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      min-width: max-content;
+      font-weight: 900;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .brand img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 14px rgba(56,189,248,.45));
+    }
+
+    .footer {
+      padding: 36px 0;
+      color: rgba(247,247,251,.42);
+      border-top: 1px solid rgba(255,255,255,.11);
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      font-size: .92rem;
+      font-weight: 760;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .footer-copy {
+      margin: 0;
+      color: rgba(247,247,251,.62);
+      font-weight: 760;
+    }
+
+
+
+    /* Usage History card and modal */
+    .usage-history-card {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid rgba(121, 231, 255, .22);
+      border-radius: 16px;
+      background:
+        radial-gradient(120px 80px at 20% 0%, rgba(56,189,248,.18), transparent 70%),
+        linear-gradient(135deg, rgba(99,102,241,.16), rgba(255,255,255,.045));
+      color: #f7f7fb;
+      text-align: left;
+      cursor: pointer;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.035), 0 14px 36px rgba(56,189,248,.08);
+    }
+
+    .usage-history-card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(121, 231, 255, .48);
+      background:
+        radial-gradient(140px 90px at 20% 0%, rgba(56,189,248,.26), transparent 70%),
+        linear-gradient(135deg, rgba(99,102,241,.22), rgba(255,255,255,.07));
+    }
+
+    .usage-history-icon {
+      width: 46px;
+      height: 46px;
+      flex: 0 0 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      border: 1px solid rgba(121, 231, 255, .3);
+      background: rgba(121, 231, 255, .1);
+      color: #79e7ff;
+      box-shadow: 0 0 24px rgba(56,189,248,.12);
+    }
+
+    .usage-history-arrow {
+      width: 30px;
+      height: 30px;
+      flex: 0 0 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      color: rgba(247,247,251,.72);
+    }
+
+    .usage-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .usage-modal.is-open { display: flex; }
+
+    .usage-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      border: 0;
+      background: rgba(0,0,0,.68);
+      backdrop-filter: blur(10px);
+      cursor: pointer;
+    }
+
+    .usage-modal-panel {
+      position: relative;
+      width: min(720px, 100%);
+      max-height: min(760px, calc(100vh - 40px));
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 24px;
+      background:
+        radial-gradient(650px 260px at 10% 0%, rgba(56,189,248,.14), transparent 65%),
+        radial-gradient(650px 260px at 90% 0%, rgba(167,139,250,.12), transparent 65%),
+        #10131d;
+      box-shadow: 0 30px 90px rgba(0,0,0,.55);
+    }
+
+    .usage-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 22px;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+    }
+
+    .usage-modal-body {
+      padding: 16px 22px 22px;
+      max-height: 560px;
+      overflow: auto;
+    }
+
+    .usage-close-btn {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .usage-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 13px;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    .usage-row:last-child { border-bottom: 0; }
+
+    .usage-dot {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(255,255,255,.07);
+      font-weight: 900;
+    }
+
+    .usage-dot.positive { color: #86efac; background: rgba(34,197,94,.12); }
+    .usage-dot.negative { color: #fca5a5; background: rgba(239,68,68,.12); }
+    .usage-delta.positive { color: #86efac; }
+    .usage-delta.negative { color: #fca5a5; }
+
+    @media (max-width: 740px) {
+      .usage-modal { padding: 12px; }
+      .usage-modal-head { padding: 18px; }
+      .usage-modal-body { padding: 12px 18px 18px; }
+      .usage-row { grid-template-columns: auto 1fr; }
+      .usage-delta { grid-column: 2; justify-self: start; }
+    }
+
+    @media (max-width: 740px) {
+      .shell { width: min(100% - 28px, 1440px); }
+      .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="/header.css" rel="stylesheet"/>
 </head>
-<body class="min-h-screen">
-  <!-- HEADER -->
-  <header class="sticky top-0 z-40 border-b border-base-line/60 bg-base-bg/70 backdrop-blur">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <a href="index.html" class="flex items-center gap-3 hover:opacity-90">
-          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" alt="Hansora logo" class="h-9 w-9 object-contain"/>
-          <span class="font-semibold tracking-wide">HANSORA AI</span>
-        </a>
-      </div>
-      <nav class="hidden md:flex items-center gap-8 text-sm">
-<a href="models.html" class="hover:text-white/90">Models</a>
-<a href="examples-prompts.html" class="hover:text-white/90">Examples/Prompts</a>
-<a href="templates.html" class="hover:text-white/90">Templates</a>
-<a href="pricing.html" class="hover:text-white/90">Pricing</a>
-<a href="index.html#faq" class="hover:text-white/90">FAQ</a>
-</nav>
-      <div class="flex items-center gap-3">
-        <a href="gptimage.html" class="hidden">EN / RU</a>
-        <!-- pre-login -->
-        <a id="btnLoginSignup" href="/login.html" class="rounded-xl btn-brand px-3 py-2 text-sm font-semibold shadow-soft">Login / Signup</a>
-        <a id="btnLoginNav" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Log in</a>
-        <a id="btnGetStarted" href="/login.html" class="hidden" style="display:none!important;visibility:hidden" aria-hidden="true" tabindex="-1">Get Started</a>
-        <!-- after login -->
-        <div id="navUser" class="hidden flex items-center gap-2 flex-nowrap">
-          <span id="navCredits" class="text-sm text-white/80 mr-2 whitespace-nowrap inline-flex items-center">0⚡</span>
-          <div class="relative">
-            <button id="navAvatar" class="h-9 w-9 rounded-full bg-white/10 border border-white/10 overflow-hidden">
-              <img id="navAvatarImg" alt="profile" class="h-full w-full object-cover hidden">
-            </button>
-            <div id="navMenu" class="menu absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-base-bg shadow-soft p-1 text-sm"><a href="profile.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Profile</a><a href="usage.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">History</a><a href="pricing.html" class="block rounded-lg px-3 py-2 hover:bg-white/5">Subscription</a><button id="btnLogout" class="w-full text-left block rounded-lg px-3 py-2 hover:bg-white/5">Log out</button></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </header>
+<body class="min-h-screen flex flex-col">
+  <div id="sharedHeader"></div>
 
   <!-- PAGE -->
-  <main class="mx-auto max-w-6xl px-4 py-10">
+  <main class="flex-1 mx-auto w-full max-w-6xl px-4 py-10">
     <h1 class="text-3xl md:text-4xl font-semibold mb-8">Your Profile</h1>
     <div class="grid md:grid-cols-3 gap-6">
       <section class="md:col-span-1 p-5 rounded-2xl glass border border-base-line shadow-soft">
-        <h2 class="text-lg font-medium mb-4">Creator Dashboard</h2>
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <h2 class="text-lg font-medium">Creator Dashboard</h2>
+          <button id="btnUsageHistoryTop" data-usage-history-open type="button" class="inline-flex items-center gap-2 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-300/15" aria-label="Open usage history">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M7 3v18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M3 7h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M3 17h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16 6h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M18.5 3.5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16 17h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Usage
+          </button>
+        </div>
         <div class="text-sm space-y-4">
           <div class="flex items-center gap-2 opacity-80">
             <svg width="16" height="16" fill="currentColor" class="opacity-70"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4zm2 0v8h8V4H4z"/></svg>
@@ -87,6 +274,23 @@
             <div class="text-xs opacity-70 mb-1">Available Credits</div>
             <div class="text-2xl font-semibold leading-none" id="totalCredits">—</div>
           </div>
+          <button id="btnUsageHistory" data-usage-history-open type="button" class="usage-history-card" aria-label="Open usage history">
+            <span class="usage-history-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 3v18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M3 7h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M3 17h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M16 6h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M18.5 3.5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M16 17h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="min-w-0">
+              <span class="block text-sm font-semibold">Usage History</span>
+              <span class="block text-xs text-white/60 mt-1">View credit + and − activity</span>
+            </span>
+            <span class="usage-history-arrow" aria-hidden="true">›</span>
+          </button>
         </div>
       </section>
 
@@ -112,30 +316,46 @@
       </section>
     </div>
   </main>
+
+
+  <div id="usageHistoryModal" class="usage-modal" aria-hidden="true">
+    <button id="usageHistoryBackdrop" class="usage-modal-backdrop" type="button" aria-label="Close usage history"></button>
+    <section class="usage-modal-panel" role="dialog" aria-modal="true" aria-labelledby="usageHistoryTitle">
+      <div class="usage-modal-head">
+        <div class="flex items-center gap-3">
+          <span class="usage-history-icon" aria-hidden="true">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 19V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M8 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <div>
+            <h2 id="usageHistoryTitle" class="text-xl font-semibold leading-tight">Usage History</h2>
+            <p class="text-sm text-white/55 mt-1">Your latest credit changes</p>
+          </div>
+        </div>
+        <button id="usageHistoryClose" class="usage-close-btn" type="button" aria-label="Close usage history">×</button>
+      </div>
+      <div class="usage-modal-body">
+        <div id="usageHistoryStatus" class="text-sm text-white/60 py-6">Loading credit history…</div>
+        <div id="usageHistoryRows" class="hidden"></div>
+      </div>
+    </section>
+  </div>
+
   <div class="h-10"></div>
 
-    <script>
-    // === Supabase client (same as index) ===
+  <script>
+    // === Supabase client for profile content ===
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    // Shared client (same pattern as working pages) to avoid duplicate init and session timing issues
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
     const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
 
-    // === Helpers ===
     const $ = (id) => document.getElementById(id);
     const setText = (id, v) => { const el = $(id); if (el) el.textContent = v ?? '—'; };
     const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}); } catch { return '—'; } };
 
-    function toggleMenu() {
-      const m = $('navMenu');
-      if (!m) return;
-      m.classList.toggle('show');
-      document.addEventListener('click', (e) => {
-        if (!m.contains(e.target) && !$('navAvatar')?.contains(e.target)) m.classList.remove('show');
-      }, { once:true });
-    }
-
-    // Wait for Supabase to restore the initial session (prevents "logged out" flash / wrong state)
     function waitForInitialSession(timeoutMs = 2000) {
       return new Promise((resolve) => {
         let done = false;
@@ -156,73 +376,154 @@
       });
     }
 
-    // === Header auth and avatar (same UI behavior as before) ===
-    async function reflectHeader() {
-      const { data: { user } } = await sb.auth.getUser();
-      const pre = $('btnLoginSignup');
-      const navUser = $('navUser');
-      if (!user) {
-        pre?.classList.remove('hidden');
-        navUser?.classList.add('hidden');
-        return;
-      }
-      pre?.classList.add('hidden');
-      navUser?.classList.remove('hidden');
-
-      const img = $('navAvatarImg');
-      const url = user.user_metadata?.avatar_url || user.user_metadata?.picture;
-      if (url && img) {
-        img.src = url;
-        img.classList.remove('hidden');
-      }
-    }
-
     async function ensureAuth() {
       const { data: { user } } = await sb.auth.getUser();
       return user ?? null;
     }
 
-    // === CREDITS: identical to index (plus: also update the card) ===
-    async function startCreditsParity() {
-      const navCreditsEl = document.getElementById('navCredits');
-      const runBtn = document.getElementById('runBtn'); // may not exist on this page; kept as-is for parity
+    async function loadProfileInfo() {
+      const user = await ensureAuth();
+      if (!user) return null;
+      setText('userEmail', user.email || '—');
+      setText('joinedDate', fmtDate(user.created_at));
+      return user;
+    }
 
-      const R = (c) => {
-        if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
-        const tc = document.getElementById('totalCredits'); if (tc) tc.textContent = String(c ?? 0);
-        if (runBtn) {
-          const ok = (c ?? 0) > 0;
-          runBtn.disabled = !ok;
-          runBtn.classList.toggle('opacity-50', !ok);
-          runBtn.classList.toggle('cursor-not-allowed', !ok);
-        }
-      };
-
-      const ures = await sb.auth.getUser();
-      const user = ures?.data?.user;
+    async function loadCredits() {
+      const user = await ensureAuth();
       if (!user) return;
+      try {
+        const { data: prof } = await sb.from('profiles')
+          .select('credits').eq('user_id', user.id).maybeSingle();
+        const c = prof?.credits ?? 0;
+        const totalCredits = document.getElementById('totalCredits');
+        if (totalCredits) totalCredits.textContent = String(c);
+      } catch (e) {
+        console.warn('credits read failed', e);
+      }
+    }
 
-      async function loadCreditsOnce() {
-        try {
-          const { data: prof } = await sb.from('profiles')
-            .select('credits').eq('user_id', user.id).maybeSingle();
-          const c = prof?.credits ?? 0;
-          R(c);
-          return c;
-        } catch (e) {
-          console.warn('credits poll read failed', e);
-          return null;
-        }
+    function startCreditsParity() {
+      loadCredits();
+      if (!window.__profileCreditsPoll) {
+        window.__profileCreditsPoll = setInterval(loadCredits, 15000);
+      }
+    }
+
+
+
+    function formatCreditNumber(value) {
+      const n = Number(value || 0);
+      if (!Number.isFinite(n)) return '0';
+      return Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
+    }
+
+    function formatUsageDate(value) {
+      if (!value) return 'Recent activity';
+      try {
+        return new Date(value).toLocaleString(undefined, {
+          year: 'numeric', month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+      } catch {
+        return 'Recent activity';
+      }
+    }
+
+    function renderUsageRows(rows) {
+      const status = document.getElementById('usageHistoryStatus');
+      const holder = document.getElementById('usageHistoryRows');
+      if (!status || !holder) return;
+
+      holder.innerHTML = '';
+      if (!Array.isArray(rows) || rows.length === 0) {
+        status.textContent = 'No credit history yet.';
+        status.classList.remove('hidden');
+        holder.classList.add('hidden');
+        return;
       }
 
-      await loadCreditsOnce();
+      status.classList.add('hidden');
+      holder.classList.remove('hidden');
 
-      const intervalMs = 15000;
-      if (!window.__creditsPoll) {
-        window.__creditsPoll = setInterval(async () => {
-          await loadCreditsOnce();
-        }, intervalMs);
+      rows.forEach((row) => {
+        const delta = Number(row.delta || 0);
+        const positive = delta > 0;
+        const negative = delta < 0;
+        const sign = positive ? '+' : '';
+        const label = row.label || (positive ? 'Credits added' : negative ? 'Credits used' : 'Balance updated');
+        const oldCredits = formatCreditNumber(row.old_credits);
+        const newCredits = formatCreditNumber(row.new_credits);
+
+        const item = document.createElement('div');
+        item.className = 'usage-row';
+        item.innerHTML = `
+          <div class="usage-dot ${positive ? 'positive' : negative ? 'negative' : ''}">${positive ? '+' : negative ? '−' : '•'}</div>
+          <div class="min-w-0">
+            <div class="font-semibold text-sm">${label}</div>
+            <div class="text-xs text-white/50 mt-1">${formatUsageDate(row.changed_at)} · ${oldCredits}⚡ → ${newCredits}⚡</div>
+          </div>
+          <div class="usage-delta ${positive ? 'positive' : negative ? 'negative' : ''} text-base font-bold whitespace-nowrap">${sign}${formatCreditNumber(delta)}⚡</div>
+        `;
+        holder.appendChild(item);
+      });
+    }
+
+    async function loadUsageHistory() {
+      const status = document.getElementById('usageHistoryStatus');
+      const holder = document.getElementById('usageHistoryRows');
+      if (status) {
+        status.textContent = 'Loading credit history…';
+        status.classList.remove('hidden');
       }
+      if (holder) {
+        holder.innerHTML = '';
+        holder.classList.add('hidden');
+      }
+
+      try {
+        const { data: sessionData } = await sb.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        if (!token) throw new Error('missing_session');
+
+        const res = await fetch('/.netlify/functions/credit-history?limit=60', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || 'credit_history_failed');
+        renderUsageRows(json.rows || []);
+      } catch (error) {
+        if (status) status.textContent = 'Could not load usage history. Please refresh and try again.';
+        console.warn('usage history failed', error);
+      }
+    }
+
+    function openUsageHistory() {
+      const modal = document.getElementById('usageHistoryModal');
+      if (!modal) return;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      loadUsageHistory();
+    }
+
+    function closeUsageHistory() {
+      const modal = document.getElementById('usageHistoryModal');
+      if (!modal) return;
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    function initUsageHistory() {
+      document.querySelectorAll('[data-usage-history-open]').forEach((btn) => btn.addEventListener('click', openUsageHistory));
+      document.getElementById('usageHistoryClose')?.addEventListener('click', closeUsageHistory);
+      document.getElementById('usageHistoryBackdrop')?.addEventListener('click', closeUsageHistory);
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeUsageHistory();
+      });
     }
 
     function initActions() {
@@ -230,40 +531,36 @@
       document.getElementById('btnBuyCredits')?.addEventListener('click', () => { window.location.href = 'pricing.html'; });
     }
 
-    function initHeaderMenu() {
-      $('navAvatar')?.addEventListener('click', toggleMenu);
-      $('btnLogout')?.addEventListener('click', async () => {
-        await sb.auth.signOut();
-        window.location.href = 'index.html';
-      });
-    }
-
     (async () => {
-      // ensure session is restored before first render
       await waitForInitialSession();
-
-      await reflectHeader();
-      const user = await ensureAuth();
-      if (user) {
-        setText('userEmail', user.email || '—');
-        setText('joinedDate', fmtDate(user.created_at));
-      }
-      await startCreditsParity();
-      initHeaderMenu();
+      await loadProfileInfo();
+      startCreditsParity();
+      initUsageHistory();
       initActions();
 
-      // Keep header correct if session changes while staying on the page
       sb.auth.onAuthStateChange((event) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'SIGNED_OUT') {
-          reflectHeader();
-          startCreditsParity();
+          loadProfileInfo();
+          loadCredits();
         }
       });
     })();
   </script>
-
-
-  <footer class="border-t border-base-line mt-16"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-sm text-zinc-400 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">  <span>© 2025 HANSORA AI — All rights reserved.</span>  <div class="flex items-center gap-4 sm:ml-auto">    <a class="hover:text-white/80" href="terms.html">Terms</a>    <a class="hover:text-white/80" href="policy.html">Privacy</a>    <a class="hover:text-white/80" href="contact.html">Contact</a>  </div></div></footer>
-
+  <footer class="footer">
+<div class="shell footer-inner">
+<a aria-label="HANSORA AI home" class="brand" href="/">
+<img alt="" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
+<span>HANSORA AI</span>
+</a>
+<p class="footer-copy">© HANSORA AI — All rights reserved.</p>
+<div class="footer-links">
+<a href="/termsofuse.html">Terms of use</a>
+<a href="/policy.html">Policy</a>
+<a href="/affilate.html">Affiliate program</a>
+<a href="/contact.html">Contact</a>
+</div>
+</div>
+</footer>
+<script defer src="/header.js"></script>
 </body>
 </html>
