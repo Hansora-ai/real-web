@@ -256,6 +256,14 @@
     renderEmptyInsights();
   }
 
+  function clearResultForNewRun(msg){
+    lastAnalysis=null;
+    $('viralScore').innerHTML='--<span>/100</span>';
+    renderEmptyStats();
+    renderEmptyInsights();
+    setState('processing',msg||'Preparing analysis');
+  }
+
   function forceVideoPreview(video){
     if(!video)return;
     video.muted=true;
@@ -379,7 +387,7 @@
       if(!token)throw new Error('Please log in again.');
       $('runBtn').disabled=true;
       $('runBtn').textContent='Uploading...';
-      setState('processing','Uploading clip');
+      clearResultForNewRun('Uploading clip');
       const up=await window.kieUploadBridge.upload(currentVideo.file);
       if(!up||!up.publicUrl)throw new Error('upload_failed');
       $('runBtn').textContent='Analyzing...';
