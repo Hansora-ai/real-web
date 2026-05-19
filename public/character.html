@@ -542,6 +542,19 @@
       background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(15,23,42,.95));
       box-shadow:0 12px 26px rgba(0,0,0,.28);
     }
+    .card-art.image-card{
+      background:#020617;
+    }
+    .card-art.image-card::before,
+    .card-art.image-card::after{
+      display:none;
+    }
+    .card-art img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
     .art-icon{
       position:absolute;
       right:10px;
@@ -2403,6 +2416,40 @@
   </script>
   <script>
     const CHARACTER_STEPS = [{"id":"vibe","label":"Vibe","title":"Select Look Vibe","subtitle":"Choose the overall style direction. The AI stays creative inside the vibe you choose.","options":[{"id":"casual","title":"Casual","icon":"☕","colors":["#8b5cf6","#22d3ee","#111827"],"prompt":"Style direction: casual everyday realism. Create a naturally styled character with relaxed modern clothing and believable daily-life styling. Keep it clean, wearable, and photorealistic, but vary the outfit pieces, layers, textures, colors, accessories, hairstyle, pose, and setting from one generation to another."},{"id":"street","title":"Street","icon":"🛹","colors":["#ec4899","#f97316","#111827"],"prompt":"Style direction: streetwear-inspired realism. Create a character with urban fashion energy, stylish layered clothing, and modern street attitude. Keep it fashionable and realistic, but vary the garments, silhouettes, color combinations, accessories, attitude, pose, and city mood in each generation."},{"id":"fashion","title":"Fashion","icon":"🕶️","colors":["#c084fc","#f8fafc","#0f172a"],"prompt":"Style direction: editorial fashion realism. Create a premium fashion-forward character with refined styling and strong visual presence. Keep it elegant and high-end, but vary the wardrobe concept, materials, silhouette, styling details, accessories, lighting, and editorial mood across generations."},{"id":"y2k","title":"2000s","icon":"💿","colors":["#38bdf8","#f472b6","#1e1b4b"],"prompt":"Style direction: early-2000s-inspired realism. Create a character influenced by 2000s fashion and pop-culture styling, while keeping the image photorealistic and premium. Vary the clothing pieces, colors, accessories, hairstyle, attitude, and nostalgic cues from one generation to the next."},{"id":"dystopian","title":"Dystopian","icon":"⛓️","colors":["#f59e0b","#64748b","#020617"],"prompt":"Style direction: dystopian realism. Create a character with a survivalist, futuristic, or worn-world feeling. Keep it believable and cinematic, but vary the outfit construction, utility elements, layering, textures, accessories, environment mood, and intensity of the dystopian styling each time."},{"id":"vintage_glam","title":"Vintage Glam","icon":"💎","colors":["#f0abfc","#facc15","#3b0764"],"prompt":"Style direction: vintage glamour realism. Create a stylish character with classic glamour influence and elegant visual richness. Keep it luxurious and refined, but vary the era influence, fabrics, accessories, hairstyle, color mood, and setting details across generations."},{"id":"avant_garde","title":"Avant Garde","icon":"🪐","colors":["#14b8a6","#a78bfa","#020617"],"prompt":"Style direction: avant-garde fashion realism. Create a bold, artistic character with unusual but believable high-fashion styling. Keep it premium and creative, but vary shapes, layering, materials, accessories, pose, and dramatic styling choices in every generation."},{"id":"cyber_noir","title":"Cyber Noir","icon":"🌃","colors":["#22d3ee","#e879f9","#020617"],"prompt":"Style direction: cyber-noir realism. Create a character with futuristic urban atmosphere and cinematic visual mood. Keep it sleek and realistic, but vary the tech-fashion details, neon influence, shadows, city cues, palette, and styling across generations."},{"id":"royal_era","title":"Royal Era","icon":"👑","colors":["#fbbf24","#a855f7","#111827"],"prompt":"Style direction: royal or aristocratic realism. Create a character with regal presence and elevated styling. Keep it rich and cinematic, but vary the historical influence, embroidery, structure, adornment, posture, lighting, and luxury details across generations."},{"id":"minimal_luxury","title":"Minimal Luxury","icon":"◒","colors":["#f8fafc","#94a3b8","#020617"],"prompt":"Style direction: minimal luxury realism. Create a sophisticated character with understated premium styling. Keep it elegant and clean, but vary the cuts, materials, color palette, subtle accessories, hairstyle, and studio or environmental mood each time."}]},{"id":"gender","label":"Gender","title":"Select Gender","subtitle":"Choose male or female. This guides the character identity but does not lock a repeated look.","options":[{"id":"male","title":"Male","icon":"♂","colors":["#60a5fa","#94a3b8","#020617"],"prompt":"Gender direction: male. Create a believable male character with natural masculine features, realistic anatomy, and age-appropriate styling. Keep the styling open and varied according to the selected vibe."},{"id":"female","title":"Female","icon":"♀","colors":["#f472b6","#c084fc","#111827"],"prompt":"Gender direction: female. Create a believable female character with natural feminine features, realistic anatomy, and age-appropriate styling. Keep the styling open and varied according to the selected vibe, with no exaggerated or sexualized styling."}]},{"id":"ethnicity","label":"Ethnicity","title":"Select Ethnicity","subtitle":"Choose one ethnicity direction, or type a custom background direction. It should guide identity, not create the exact same face every time.","options":[{"id":"caucasian","title":"Caucasian","icon":"◌","colors":["#fde68a","#93c5fd","#0f172a"],"prompt":"Ethnicity direction: Caucasian. Use believable Caucasian facial features, natural skin undertones, and realistic human variation."},{"id":"african","title":"African","icon":"◍","colors":["#f97316","#451a03","#020617"],"prompt":"Ethnicity direction: African. Use believable African facial features, natural melanin-rich skin undertones, and realistic human variation."},{"id":"east_asian","title":"East Asian","icon":"◐","colors":["#facc15","#ef4444","#111827"],"prompt":"Ethnicity direction: East Asian. Use believable East Asian facial features, natural skin undertones, and realistic human variation."},{"id":"latino","title":"Latino","icon":"◑","colors":["#fb7185","#f59e0b","#111827"],"prompt":"Ethnicity direction: Latino. Use believable Latino facial features, warm skin undertones, and realistic human variation."},{"id":"south_asian","title":"South Asian","icon":"●","colors":["#f59e0b","#14b8a6","#020617"],"prompt":"Ethnicity direction: South Asian. Use believable South Asian facial features, natural warm undertones, and realistic human variation."},{"id":"middle_eastern","title":"Middle Eastern","icon":"◒","colors":["#fbbf24","#a16207","#020617"],"prompt":"Ethnicity direction: Middle Eastern. Use believable Middle Eastern facial features, natural olive or warm undertones, and realistic human variation."},{"id":"mixed","title":"Mixed Heritage","icon":"◎","colors":["#22d3ee","#f472b6","#0f172a"],"prompt":"Ethnicity direction: mixed heritage. Use subtle combined traits, natural human variation, and believable skin undertones and facial structure."},{"id":"custom","title":"Custom","icon":"✎","colors":["#94a3b8","#e879f9","#111827"],"prompt":"Ethnicity direction based on the text typed by the user. Represent it naturally and respectfully with believable facial structure, skin undertones, and realistic human variation."}]},{"id":"age","label":"Age","title":"Select Age Range","subtitle":"Choose the age direction. This guides the life stage while keeping the result natural and creative.","options":[{"id":"teen","title":"Teen","icon":"✧","colors":["#a7f3d0","#60a5fa","#020617"],"prompt":"Age direction: teen. Create a believable teenage character with age-appropriate non-sexual styling, natural youthful features, and realistic human variation."},{"id":"young_adult","title":"Young Adult","icon":"✦","colors":["#38bdf8","#a78bfa","#020617"],"prompt":"Age direction: young adult. Create a believable young adult character with natural age-appropriate styling, realistic features, and confident but varied presentation."},{"id":"middle_aged","title":"Middle-aged","icon":"✺","colors":["#f59e0b","#8b5cf6","#111827"],"prompt":"Age direction: middle-aged. Create a believable middle-aged character with realistic maturity in facial structure and styling, while keeping natural human variation."},{"id":"senior","title":"Senior","icon":"✹","colors":["#e5e7eb","#94a3b8","#020617"],"prompt":"Age direction: senior. Create a believable senior character with realistic mature facial detail, dignified styling, and natural human variation."}]}];
+    const OPTION_CARD_IMAGES = {
+      vibe: {
+        casual: "",
+        street: "",
+        fashion: "",
+        y2k: "",
+        dystopian: "",
+        vintage_glam: "",
+        avant_garde: "",
+        cyber_noir: "",
+        royal_era: "",
+        minimal_luxury: ""
+      },
+      gender: {
+        male: "",
+        female: ""
+      },
+      ethnicity: {
+        caucasian: "",
+        african: "",
+        east_asian: "",
+        latino: "",
+        south_asian: "",
+        middle_eastern: "",
+        mixed: "",
+        custom: ""
+      },
+      age: {
+        teen: "",
+        young_adult: "",
+        middle_aged: "",
+        senior: ""
+      }
+    };
     const BASE_PROMPT = "HANSORA_CHARACTER_CREATOR. Create one original super photorealistic human character image in vertical 3:4 aspect ratio composition. Frame the character from above the legs, around knee-to-thigh level upward, like a premium 3/4 character portrait. The character must look directly at the camera with a natural believable gaze. The person must look like a real human captured with a high-end camera. Use ultra high-end realism: natural human anatomy, believable body proportions, accurate hands when visible, realistic skin pores, fine texture variation, natural facial asymmetry, realistic hair strands, clean eyes, believable fabric texture, physically consistent lighting, coherent shadows, and polished premium detail. The selected categories are creative style guides, not fixed templates. Keep every generation fresh by varying wardrobe details, styling, silhouette, layering, accessories, hair styling, pose, camera nuance, expression, color palette, lighting mood, and background atmosphere while staying faithful to the selected options. Avoid repeated template-looking results. Avoid plastic skin, waxy AI look, distorted face, extra limbs, extra fingers, broken hands, blur, low detail, text, watermark, logo, copied celebrity, copied existing character, nudity, or sexualized styling. Deliver one clean polished portfolio-ready PNG image.";
     const CUSTOM_PROMPT_WRAP = "HANSORA_CHARACTER_CREATOR. Create one original super photorealistic human character image from the user's prompt in vertical 3:4 aspect ratio composition. Frame the character from above the legs, around knee-to-thigh level upward, like a premium 3/4 character portrait. The character must look directly at the camera with a natural believable gaze. Follow the user's description as the main creative direction while enforcing realism: natural human anatomy, believable body proportions, accurate hands when visible, realistic skin pores, natural facial asymmetry, realistic hair strands, believable fabric texture, physically consistent lighting, coherent shadows, and premium detail. Do not repeat a fixed template. Keep the result fresh by creatively varying styling details, silhouette, accessories, pose, camera nuance, lighting mood, and background atmosphere while staying faithful to the user's prompt. Avoid plastic skin, waxy AI look, distorted face, extra limbs, extra fingers, broken hands, text, watermark, logo, copied celebrity, copied existing character, nudity, or sexualized styling. User prompt:";
 
@@ -2564,6 +2611,7 @@
       els.optionRail.innerHTML = step.options.map((option) => {
         const selected = state.selections[step.id] && state.selections[step.id].id === option.id;
         const colors = option.colors || ['#8b5cf6','#ec4899','#020617'];
+        const imageUrl = option.imageUrl || (OPTION_CARD_IMAGES[step.id] && OPTION_CARD_IMAGES[step.id][option.id]) || '';
         if (step.id === 'ethnicity' && option.id === 'custom') {
           const value = selected && state.selections.ethnicity.customValue ? state.selections.ethnicity.customValue : '';
           return `
@@ -2576,8 +2624,8 @@
         }
         return `
           <button class="option-card ${selected ? 'selected' : ''}" type="button" data-option-id="${escapeHtml(option.id)}" aria-label="${escapeHtml(option.title)}">
-            <div class="card-art" style="--c1:${escapeHtml(colors[0])};--c2:${escapeHtml(colors[1])};--c3:${escapeHtml(colors[2])};">
-              <span class="art-icon">${escapeHtml(option.icon || '✦')}</span>
+            <div class="card-art ${imageUrl ? 'image-card' : ''}" style="--c1:${escapeHtml(colors[0])};--c2:${escapeHtml(colors[1])};--c3:${escapeHtml(colors[2])};">
+              ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(option.title)} card image" loading="lazy" />` : `<span class="art-icon">${escapeHtml(option.icon || '✦')}</span>`}
             </div>
             <div class="card-title">${escapeHtml(option.title)}</div>
           </button>
