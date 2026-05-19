@@ -381,25 +381,17 @@
       z-index: 2;
     }
 
-        .slot:has(> img)::before,
-    .slot:has(> img)::after,
-    .slot:has(> video)::before,
-    .slot:has(> video)::after,
-    .wide-banner:has(> img)::after,
-    .wide-banner:has(> video)::after,
-    .feature-icon:has(> img)::before,
-    .feature-icon:has(> img)::after,
-    .feature-icon:has(> video)::before,
-    .feature-icon:has(> video)::after {
+    .slot.is-media-ready::before,
+    .slot.is-media-ready::after,
+    .wide-banner.is-media-ready::after,
+    .feature-icon.is-media-ready::before,
+    .feature-icon.is-media-ready::after {
       display: none !important;
     }
 
-    .slot:has(> img) .slot-label,
-    .slot:has(> video) .slot-label,
-    .wide-banner:has(> img) .banner-content,
-    .wide-banner:has(> video) .banner-content,
-    .feature-icon:has(> img) b,
-    .feature-icon:has(> video) b {
+    .slot.is-media-ready .slot-label,
+    .wide-banner.is-media-ready .banner-content,
+    .feature-icon.is-media-ready b {
       display: none !important;
     }
 
@@ -1228,10 +1220,10 @@
 </div>
 <div class="x-scroll" id="topVideos">
 <!-- Replace each media placeholder with a 16:9 video or image. Keep the link href for click target. -->
-<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video aria-label="New inputs" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/16-GPT%20IMAGE%20X%20SEEDANCE%202.0-compressed.mp4" data-lazy-video></video><span class="slot-label"><strong>New inputs</strong><span>Video 01</span></span></a>
-<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video aria-label="Marketing studio hooks" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0%20copy%202.mp4" data-lazy-video></video><span class="slot-label"><strong>Marketing studio hooks</strong><span>Video 02</span></span></a>
-<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video aria-label="HANSORA CLI" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/HEADER/GPT%20IMAGE%20X%20SEEDANCE%202.0%20(2).mp4" data-lazy-video></video><span class="slot-label"><strong>HANSORA CLI</strong><span>Video 03</span></span></a>
-<a class="slot aspect-16x9" href="/analyse.html"><video aria-label="Image to video" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/Untitled%20folder/Untitled%20(16%20x%209%20in)%20(1).mp4" data-lazy-video></video><span class="slot-label"><strong>Image to video</strong><span>Video 04</span></span></a>
+<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-01.webp" aria-label="New inputs" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-01.mp4" data-lazy-video></video><span class="slot-label"><strong>New inputs</strong><span>Video 01</span></span></a>
+<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-02.webp" aria-label="Marketing studio hooks" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-02.mp4" data-lazy-video></video><span class="slot-label"><strong>Marketing studio hooks</strong><span>Video 02</span></span></a>
+<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-03.webp" aria-label="HANSORA CLI" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-03.mp4" data-lazy-video></video><span class="slot-label"><strong>HANSORA CLI</strong><span>Video 03</span></span></a>
+<a class="slot aspect-16x9" href="/analyse.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-04.webp" aria-label="Image to video" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-04.mp4" data-lazy-video></video><span class="slot-label"><strong>Image to video</strong><span>Video 04</span></span></a>
 </div>
 </div>
 </section>
@@ -1246,7 +1238,7 @@
 <div class="shell">
 <!-- Wide clickable image/banner slot. Replace the background/media inside this link later. -->
 <a class="wide-banner aspect-wide" href="/search-models.html">
-<video aria-label="One canvas banner" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/11-IMG_7661-compressed.mp4" data-lazy-video></video>
+<video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-05.webp" aria-label="One canvas banner" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-05.mp4" data-lazy-video></video>
 <div class="banner-content">
 <span class="kicker">New feature</span>
 <h2>One canvas.<br/>Every workflow.</h2>
@@ -1262,7 +1254,7 @@
 <a class="slot model-info-card" href="/search-models.html?type=image">
   <img
     alt="Image models info image"
-    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/1.png" loading="lazy" decoding="async">
+    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/1.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/1.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/1.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/1.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/1.png?width=1200&amp;quality=62&amp;format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
   <span class="slot-label">
     <span>Info image</span>
     <strong>Image models</strong>
@@ -1273,7 +1265,7 @@
     <a class="slot aspect-tall" href="/search-models.html">
       <img
         alt="Main image model"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Main image model</strong>
         <span>Hero</span>
@@ -1283,7 +1275,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="16:9 result"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>16:9 result</strong>
         <span>Image</span>
@@ -1293,7 +1285,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="9:16 result"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>9:16 result</strong>
         <span>Image</span>
@@ -1304,7 +1296,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="Square"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Square</strong>
         <span>Image</span>
@@ -1314,7 +1306,7 @@
     <a class="slot aspect-tall" href="/search-models.html">
       <img
         alt="Campaign visual"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Campaign visual</strong>
         <span>Image</span>
@@ -1324,7 +1316,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="Poster set"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Poster set</strong>
         <span>Image</span>
@@ -1336,7 +1328,7 @@
     <a class="slot aspect-tall" href="/search-models.html">
       <img
         alt="Main image model"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Main image model</strong>
         <span>Hero</span>
@@ -1346,7 +1338,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="16:9 result"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>16:9 result</strong>
         <span>Image</span>
@@ -1357,7 +1349,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="9:16 result"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>9:16 result</strong>
         <span>Image</span>
@@ -1367,7 +1359,7 @@
     <a class="slot aspect-tall" href="/search-models.html">
       <img
         alt="Square"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Square</strong>
         <span>Image</span>
@@ -1378,7 +1370,7 @@
     <a class="slot aspect-tall" href="/search-models.html">
       <img
         alt="Campaign visual"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Campaign visual</strong>
         <span>Image</span>
@@ -1388,7 +1380,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="Poster set"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Poster set</strong>
         <span>Image</span>
@@ -1399,7 +1391,7 @@
     <a class="slot aspect-16x9" href="/search-models.html">
       <img
         alt="Preview 07"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Preview 07</strong>
         <span>Image</span>
@@ -1409,7 +1401,7 @@
     <a class="slot aspect-tall" href="/search-models.html">
       <img
         alt="Preview 08"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png" loading="lazy" decoding="async">
+        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png?width=1280&amp;quality=62&amp;format=webp 1280w" sizes="(max-width: 740px) 50vw, 24vw" loading="lazy" decoding="async">
       <span class="slot-label">
         <strong>Preview 08</strong>
         <span>Image</span>
@@ -1426,7 +1418,7 @@
 <a class="slot model-info-card" href="/search-models.html?model=seedance-2">
   <img
     alt="Video models info image"
-    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/2.png" loading="lazy" decoding="async">
+    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/2.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/2.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/2.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/2.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/2.png?width=1200&amp;quality=62&amp;format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
   <span class="slot-label">
     <span>Info image</span>
     <strong>Video models</strong>
@@ -1435,13 +1427,13 @@
 <div class="model-grid video-grid media-mosaic mobile-mosaic-only">
   <div class="mosaic-column">
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-06.webp"
         aria-label="Text to video"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/22-generated_video-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-06.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Text to video</strong>
@@ -1450,13 +1442,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-07.webp"
         aria-label="Image to video"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/15-generated_video%20(4)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-07.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Image to video</strong>
@@ -1465,13 +1457,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-08.webp"
         aria-label="Vertical ad"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/07-generated_video%20(5)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-08.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Vertical ad</strong>
@@ -1481,13 +1473,13 @@
   </div>
   <div class="mosaic-column">
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-09.webp"
         aria-label="Cinematic scene"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(7).mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-09.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Cinematic scene</strong>
@@ -1496,13 +1488,13 @@
     </a>
 
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-10.webp"
         aria-label="Social crop"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(1).mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-10.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Social crop</strong>
@@ -1511,13 +1503,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-11.webp"
         aria-label="Video edit"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(6).mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-11.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Video edit</strong>
@@ -1528,13 +1520,13 @@
 </div><div class="model-grid video-grid media-mosaic-desktop desktop-mosaic-only">
   <div class="mosaic-column">
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-06.webp"
         aria-label="Text to video"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/22-generated_video-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-06.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Text to video</strong>
@@ -1543,13 +1535,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-08.webp"
         aria-label="Image to video"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/07-generated_video%20(5)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-08.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Image to video</strong>
@@ -1559,13 +1551,13 @@
   </div>
   <div class="mosaic-column">
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-07.webp"
         aria-label="Vertical ad"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/15-generated_video%20(4)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-07.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Vertical ad</strong>
@@ -1574,13 +1566,13 @@
     </a>
 
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-10.webp"
         aria-label="Cinematic scene"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(1).mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-10.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Cinematic scene</strong>
@@ -1590,13 +1582,13 @@
   </div>
   <div class="mosaic-column">
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-12.webp"
         aria-label="Social crop"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/12-generated_video%20(2)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-12.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Social crop</strong>
@@ -1605,13 +1597,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-11.webp"
         aria-label="Video edit"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(6).mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-11.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Video edit</strong>
@@ -1621,13 +1613,13 @@
   </div>
   <div class="mosaic-column">
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-09.webp"
         aria-label="Preview 07"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/generated_video%20(7).mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-09.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 07</strong>
@@ -1636,13 +1628,13 @@
     </a>
 
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-13.webp"
         aria-label="Preview 08"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/19-generated_video%20(3)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-13.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 08</strong>
@@ -1660,7 +1652,7 @@
 <a class="slot model-info-card" href="/search-models.html?model=seedance-2">
   <img
     alt="Seedance 2.0 info image"
-    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/12.png" loading="lazy" decoding="async">
+    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/12.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/12.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/12.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/12.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/12.png?width=1200&amp;quality=62&amp;format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
   <span class="slot-label">
     <span>Info image</span>
     <strong>Seedance 2.0</strong>
@@ -1669,13 +1661,13 @@
 <div class="model-grid video-grid media-mosaic mobile-mosaic-only">
   <div class="mosaic-column">
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-14.webp"
         aria-label="Skate shot"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/06-1777740809977-5kwfkw43mfh%20(1)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-14.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Skate shot</strong>
@@ -1684,13 +1676,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-15.webp"
         aria-label="Energy effect"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/20-hf_20260409_094417_ba8bf934-a387-4bf5-8a24-f34be2a65d46-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-15.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Energy effect</strong>
@@ -1699,13 +1691,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-16.webp"
         aria-label="Mirror scene"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/13-hf_20260409_094601_f698d8f7-c96a-42c6-ad0c-8e830417201e-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-16.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Mirror scene</strong>
@@ -1715,13 +1707,13 @@
   </div>
   <div class="mosaic-column">
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-17.webp"
         aria-label="Action shot"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/14-hf_20260331_203147_19ae6acb-3811-4522-b9ea-2edaf6c3f1ae-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-17.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action shot</strong>
@@ -1730,13 +1722,13 @@
     </a>
 
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-18.webp"
         aria-label="Fantasy scene"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/10-ffe1c638abf6700aa2b6d55517837c80_1777146690%20(1)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-18.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fantasy scene</strong>
@@ -1745,13 +1737,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-19.webp"
         aria-label="Fast motion"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/01-hf_20260409_094439_fb5e2d77-8e7c-4420-9e77-bfc0347f2d92-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-19.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fast motion</strong>
@@ -1762,13 +1754,13 @@
 </div><div class="model-grid video-grid media-mosaic-desktop desktop-mosaic-only">
   <div class="mosaic-column">
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-14.webp"
         aria-label="Skate shot"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/06-1777740809977-5kwfkw43mfh%20(1)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-14.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Skate shot</strong>
@@ -1777,13 +1769,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-17.webp"
         aria-label="Energy effect"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/14-hf_20260331_203147_19ae6acb-3811-4522-b9ea-2edaf6c3f1ae-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-17.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Energy effect</strong>
@@ -1793,13 +1785,13 @@
   </div>
   <div class="mosaic-column">
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-15.webp"
         aria-label="Mirror scene"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/20-hf_20260409_094417_ba8bf934-a387-4bf5-8a24-f34be2a65d46-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-15.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Mirror scene</strong>
@@ -1808,13 +1800,13 @@
     </a>
 
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-20.webp"
         aria-label="Action shot"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/18-VID_20260507_221624_979-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-20.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action shot</strong>
@@ -1824,13 +1816,13 @@
   </div>
   <div class="mosaic-column">
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-18.webp"
         aria-label="Fantasy scene"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/10-ffe1c638abf6700aa2b6d55517837c80_1777146690%20(1)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-18.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fantasy scene</strong>
@@ -1839,13 +1831,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-19.webp"
         aria-label="Fast motion"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/01-hf_20260409_094439_fb5e2d77-8e7c-4420-9e77-bfc0347f2d92-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-19.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fast motion</strong>
@@ -1855,13 +1847,13 @@
   </div>
   <div class="mosaic-column">
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-16.webp"
         aria-label="Preview 07"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/13-hf_20260409_094601_f698d8f7-c96a-42c6-ad0c-8e830417201e-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-16.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 07</strong>
@@ -1870,13 +1862,13 @@
     </a>
 
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-21.webp"
         aria-label="Preview 08"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/17-c2eaa9bb55f71c9e2b12bb8446ffd0fb_1775470976_mnfqzinh-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-21.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 08</strong>
@@ -1898,11 +1890,11 @@
 <a class="btn btn-primary" href="/models.html" style="margin-top:24px;">Explore all</a>
 </div>
 <div class="feature-icons">
-<a class="feature-icon" href="/search-models.html?type=image"><video aria-label="Create image" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_8DBDBBA9-01C8-4750-BB8C-C12CB3EE6505.MOV" data-lazy-video></video><b>Create image</b></a>
-<a class="feature-icon" href="/search-models.html?model=seedance-2"><video aria-label="Create video" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/08-copy_BD0F755C-3C2D-4CCE-84C6-C6BC4230A3FB-compressed.mp4" data-lazy-video></video><b>Create video</b></a>
-<a class="feature-icon" href="/search-models.html?model=kling-motion-control"><video aria-label="Motion control" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/copy_AB468886-58F4-4799-BB3A-1D1273042AB4.MOV" data-lazy-video></video><b>Motion control</b></a>
-<a class="feature-icon" href="/upscale.html"><video aria-label="Upscale" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/03-copy_6CD6B969-42E2-45ED-A794-9E05C1B7D3A9-compressed.mp4" data-lazy-video></video><b>Upscale</b></a>
-<a class="feature-icon" href="/audio.html"><video aria-label="Create audio" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/creator%20choices/copy_ECE8BF19-272D-4F1B-8D85-66A482706227.MOV" data-lazy-video></video><b>Create audio</b></a>
+<a class="feature-icon" href="/search-models.html?type=image"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-22.webp" aria-label="Create image" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-22.mp4" data-lazy-video></video><b>Create image</b></a>
+<a class="feature-icon" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-23.webp" aria-label="Create video" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-23.mp4" data-lazy-video></video><b>Create video</b></a>
+<a class="feature-icon" href="/search-models.html?model=kling-motion-control"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-24.webp" aria-label="Motion control" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-24.mp4" data-lazy-video></video><b>Motion control</b></a>
+<a class="feature-icon" href="/upscale.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-25.webp" aria-label="Upscale" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-25.mp4" data-lazy-video></video><b>Upscale</b></a>
+<a class="feature-icon" href="/audio.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-26.webp" aria-label="Create audio" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-26.mp4" data-lazy-video></video><b>Create audio</b></a>
 </div>
 </div>
 </div>
@@ -1917,14 +1909,14 @@
 <a class="btn btn-ghost" href="/models.html">See all</a>
 </div>
 <div class="x-scroll model-rail">
-<a class="slot model-card" href="/search-models.html"><img alt="Nano Banana Pro preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/3.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Nano Banana Pro</strong><span>Image</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="Kling 3.0 preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/4.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Kling 3.0</strong><span>Video</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="GPT Image preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/5.png" loading="lazy" decoding="async"><span class="slot-label"><strong>GPT Image</strong><span>Image</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="Sora 2 preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/8.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Sora 2</strong><span>Video</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="Veo preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/9.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Veo</strong><span>Video</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="Midjourney preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/7.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Midjourney</strong><span>Image</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="Flux preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/6.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Flux</strong><span>Image</span></span></a>
-<a class="slot model-card" href="/search-models.html"><img alt="Grok preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/10.png" loading="lazy" decoding="async"><span class="slot-label"><strong>Grok</strong><span>Image</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Nano Banana Pro preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/3.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/3.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/3.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/3.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/3.png?width=960&amp;quality=62&amp;format=webp 960w" sizes="(max-width: 740px) 64vw, 20vw" loading="lazy" decoding="async"><span class="slot-label"><strong>Nano Banana Pro</strong><span>Image</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Kling 3.0 preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/4.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/4.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/4.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/4.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/4.png?width=960&amp;quality=62&amp;format=webp 960w" sizes="(max-width: 740px) 64vw, 20vw" loading="lazy" decoding="async"><span class="slot-label"><strong>Kling 3.0</strong><span>Video</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="GPT Image preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/5.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/5.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/5.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/5.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/5.png?width=960&amp;quality=62&amp;format=webp 960w" sizes="(max-width: 740px) 64vw, 20vw" loading="lazy" decoding="async"><span class="slot-label"><strong>GPT Image</strong><span>Image</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Sora 2 preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/8.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/8.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/8.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/8.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/8.png?width=960&amp;quality=62&amp;format=webp 960w" sizes="(max-width: 740px) 64vw, 20vw" loading="lazy" decoding="async"><span class="slot-label"><strong>Sora 2</strong><span>Video</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Veo preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/9.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/9.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/9.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/9.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/9.png?width=960&amp;quality=62&amp;format=webp 960w" sizes="(max-width: 740px) 64vw, 20vw" loading="lazy" decoding="async"><span class="slot-label"><strong>Veo</strong><span>Video</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Midjourney preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/7.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/7.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/7.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/7.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/7.png?width=960&amp;quality=62&amp;format=webp 960w" sizes="(max-width: 740px) 64vw, 20vw" loading="lazy" decoding="async"><span class="slot-label"><strong>Midjourney</strong><span>Image</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Flux preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/6.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/6.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/6.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/6.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/6.png?width=960&amp;quality=62&amp;format=webp 960w" sizes="(max-width: 740px) 64vw, 20vw" loading="lazy" decoding="async"><span class="slot-label"><strong>Flux</strong><span>Image</span></span></a>
+<a class="slot model-card" href="/search-models.html"><img alt="Grok preview image" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/10.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/10.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/10.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/10.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/10.png?width=960&amp;quality=62&amp;format=webp 960w" sizes="(max-width: 740px) 64vw, 20vw" loading="lazy" decoding="async"><span class="slot-label"><strong>Grok</strong><span>Image</span></span></a>
 </div>
 </div>
 </section>
@@ -1934,7 +1926,7 @@
 <a class="slot model-info-card" href="/search-models.html">
   <img
     alt="Kling 3.0 info image"
-    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/13.png" loading="lazy" decoding="async">
+    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/13.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/13.png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/13.png?width=720&amp;quality=62&amp;format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/13.png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/13.png?width=1200&amp;quality=62&amp;format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
   <span class="slot-label">
     <span>Info image</span>
     <strong>Kling 3.0</strong>
@@ -1943,13 +1935,13 @@
 <div class="model-grid video-grid media-mosaic mobile-mosaic-only">
   <div class="mosaic-column">
     <a class="slot aspect-tall" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-27.webp"
         aria-label="Camera move"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-27.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Camera move</strong>
@@ -1958,13 +1950,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-28.webp"
         aria-label="Action scene"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/09-generated_video%20(2)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-28.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action scene</strong>
@@ -1973,13 +1965,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-29.webp"
         aria-label="Vertical clip"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/04-generated_video%20(3)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-29.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Vertical clip</strong>
@@ -1989,13 +1981,13 @@
   </div>
   <div class="mosaic-column">
     <a class="slot aspect-16x9" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-30.webp"
         aria-label="Product motion"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(5).mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-30.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Product motion</strong>
@@ -2004,13 +1996,13 @@
     </a>
 
     <a class="slot aspect-tall" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-31.webp"
         aria-label="Social crop"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/02-eba0ecb6bb24c493792c9a1b7eced7a0_1_1776535941_5446-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-31.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Social crop</strong>
@@ -2019,13 +2011,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-32.webp"
         aria-label="Film scene"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/05-generated_video%20(4)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-32.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Film scene</strong>
@@ -2036,13 +2028,13 @@
 </div><div class="model-grid video-grid media-mosaic-desktop desktop-mosaic-only">
   <div class="mosaic-column">
     <a class="slot aspect-tall" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-31.webp"
         aria-label="Camera move"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/02-eba0ecb6bb24c493792c9a1b7eced7a0_1_1776535941_5446-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-31.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Camera move</strong>
@@ -2051,13 +2043,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-29.webp"
         aria-label="Action scene"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/04-generated_video%20(3)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-29.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action scene</strong>
@@ -2067,13 +2059,13 @@
   </div>
   <div class="mosaic-column">
     <a class="slot aspect-16x9" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-30.webp"
         aria-label="Vertical clip"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(5).mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-30.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Vertical clip</strong>
@@ -2082,13 +2074,13 @@
     </a>
 
     <a class="slot aspect-tall" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-33.webp"
         aria-label="Product motion"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/1c435e5d80f4aeba93949d11e0895cf9_1_1777466557_4826.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-33.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Product motion</strong>
@@ -2098,13 +2090,13 @@
   </div>
   <div class="mosaic-column">
     <a class="slot aspect-tall" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-27.webp"
         aria-label="Social crop"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-27.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Social crop</strong>
@@ -2113,13 +2105,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-28.webp"
         aria-label="Film scene"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/09-generated_video%20(2)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-28.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Film scene</strong>
@@ -2129,13 +2121,13 @@
   </div>
   <div class="mosaic-column">
     <a class="slot aspect-16x9" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-32.webp"
         aria-label="Preview 07"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20litgher%20basket/05-generated_video%20(4)-compressed.mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-32.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 07</strong>
@@ -2144,13 +2136,13 @@
     </a>
 
     <a class="slot aspect-tall" href="/search-models.html">
-      <video
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-34.webp"
         aria-label="Preview 08"
         autoplay
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/generated_video%20(1).mp4" data-lazy-video>
+        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-34.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 08</strong>
@@ -2167,9 +2159,9 @@
 <a class="wide-banner design-only-banner aspect-wide" href="/search-models.html">
 <picture>
 <!-- Mobile banner image: replace this srcset with your smaller mobile banner URL. -->
-<source media="(max-width: 740px)" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(2).png"/>
+<source media="(max-width: 740px)" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(2).png?width=480&amp;quality=62&amp;format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(2).png?width=740&amp;quality=62&amp;format=webp 740w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(2).png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(2).png?width=1200&amp;quality=62&amp;format=webp 1200w" sizes="calc(100vw - 36px)"/>
 <!-- Desktop banner image. -->
-<img alt="USA AI marketing and ads banner" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(1).png" loading="lazy" decoding="async">
+<img alt="USA AI marketing and ads banner" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(1).png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(1).png?width=640&amp;quality=62&amp;format=webp 640w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(1).png?width=960&amp;quality=62&amp;format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(1).png?width=1400&amp;quality=62&amp;format=webp 1400w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(1).png?width=1800&amp;quality=62&amp;format=webp 1800w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(1).png?width=2400&amp;quality=62&amp;format=webp 2400w" sizes="(max-width: 740px) calc(100vw - 36px), min(1392px, calc(100vw - 48px))" loading="lazy" decoding="async">
 </picture>
 </a>
 </div>
@@ -2231,7 +2223,7 @@
 <footer class="footer">
 <div class="shell footer-inner">
 <a aria-label="HANSORA AI home" class="brand" href="/">
-<img alt="" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" loading="lazy" decoding="async">
+<img alt="" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=160&amp;quality=62&amp;format=webp 160w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=320&amp;quality=62&amp;format=webp 320w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=640&amp;quality=62&amp;format=webp 640w" sizes="160px" loading="lazy" decoding="async">
 <span>HANSORA AI</span>
 </a>
 <p class="footer-copy">All rights reserved.</p>
@@ -2278,13 +2270,44 @@
 <script>
     (() => {
       const videos = Array.from(document.querySelectorAll('video[data-lazy-video]'));
+      const isMobile = window.matchMedia('(max-width: 740px)');
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+      const markMediaReady = (media) => {
+        media.closest('.slot, .wide-banner, .feature-icon')?.classList.add('is-media-ready');
+      };
+
+      document.querySelectorAll('img').forEach((img) => {
+        if (img.complete && img.naturalWidth > 0) {
+          markMediaReady(img);
+          return;
+        }
+        img.addEventListener('load', () => markMediaReady(img), { once: true });
+      });
+
+      videos.forEach((video) => {
+        video.addEventListener('loadeddata', () => markMediaReady(video), { once: true });
+      });
+
       const loadVideo = (video) => {
         if (!video.dataset.src || video.src) return;
+        video.preload = 'auto';
         video.src = video.dataset.src;
         video.load();
       };
+
       const pauseVideo = (video) => {
         if (!video.paused) video.pause();
+      };
+
+      const playVideo = (video) => {
+        if (reduceMotion.matches || !video.autoplay) return;
+        if (!video.src) {
+          loadVideo(video);
+        }
+        video.play().catch(() => {
+          video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
+        });
       };
 
       if ('IntersectionObserver' in window) {
@@ -2294,13 +2317,16 @@
             loadVideo(entry.target);
             loadObserver.unobserve(entry.target);
           });
-        }, { rootMargin: '520px 0px', threshold: 0.01 });
+        }, {
+          rootMargin: isMobile.matches ? '1800px 0px' : '1100px 0px',
+          threshold: 0.01
+        });
 
         const playObserver = new IntersectionObserver((entries) => {
           entries.forEach((entry) => {
             const video = entry.target;
-            if (entry.isIntersecting && video.autoplay && video.src && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-              video.play().catch(() => {});
+            if (entry.isIntersecting) {
+              playVideo(video);
               return;
             }
             pauseVideo(video);
