@@ -105,21 +105,7 @@
   }
 
   function shouldRedirectWhenLoggedOut() {
-    const path = String(location.pathname || '/').toLowerCase();
-    const publicPages = new Set([
-      '/',
-      '/index.html',
-      '/login.html',
-      '/pricing.html',
-      '/examples-prompts.html',
-      '/privacy.html',
-      '/terms.html',
-      '/termsofuse.html',
-      '/policy.html',
-      '/affilate.html',
-      '/contact.html'
-    ]);
-    return !publicPages.has(path);
+    return false;
   }
 
   function redirectLoggedOutHome() {
@@ -597,12 +583,7 @@
 
     if (btnLoginSignup) btnLoginSignup.addEventListener('click', function (event) { event.preventDefault(); openAuth('login'); });
     if (btnGetStarted) {
-      btnGetStarted.addEventListener('click', function (event) {
-        if (!currentUser) {
-          event.preventDefault();
-          window.location.href = '/login.html';
-        }
-      });
+      btnGetStarted.addEventListener('click', function () {});
     }
     if (authClose) authClose.addEventListener('click', closeAuth);
     if (modal) {
