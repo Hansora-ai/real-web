@@ -317,14 +317,26 @@
     $('runBtn').textContent='Predict Viral Potential • 0.3⚡';
   }
 
+  function isFailedStatus(value){
+    return /^(fail|failed|failure|error|errored|rejected|cancelled|canceled|timeout|timed_out|blocked|moderation|sensitive|flagged)$/.test(String(value||'').trim().toLowerCase().replace(/[\s-]+/g,'_'));
+  }
+
+  async function failRun(data,msg){
+    const refunded=!!(data&&data.refunded);
+    setState('error','Analysis failed. Please try again.');
+    showError(refunded?'Analysis failed. Your 0.3 credit was refunded. Please try again.':(msg||'Analysis failed. Please try again.'));
+    await refreshCredits();
+    completeRun();
+  }
+
   function pollViralityResult(runId,token,attempt=0){
     if(predictorPoll){clearTimeout(predictorPoll);predictorPoll=null}
     if(!currentUser||!runId)return;
     predictorPoll=setTimeout(async()=>{
       try{
         setState('processing',attempt<10?'Neural model reading attention curve':'Still analyzing');
-        const url=`/.netlify/functions/virality-predictor-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}`;
-        const resp=await fetch(url,{headers:{Authorization:`Bearer ${token}`}});
+        const url=`/.netlify/functions/virality-predictor-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}&_=${Date.now()}`;
+        const resp=await fetch(url,{cache:'no-store',headers:{Authorization:`Bearer ${token}`}});
         const data=await resp.json().catch(()=>({}));
         if(data.status==='done'&&data.analysis){
           renderAnalysis(data.analysis||{});
@@ -334,11 +346,8 @@
           completeRun();
           return;
         }
-        if(data.status==='failed'||data.status==='error'){
-          setState('error','There was an error. Please try later.');
-          showError(data.refunded?'Analysis failed. Your 0.3 credit was refunded.':'Analysis failed. Please try later.');
-          await refreshCredits();
-          completeRun();
+        if(isFailedStatus(data.status)||data.failed||data.error){
+          await failRun(data);
           return;
         }
         if(attempt>=120)throw new Error('analysis_timeout');
@@ -380,7 +389,10 @@
       let data={};
       if(text){try{data=JSON.parse(text)}catch{data={}}}
       if(!resp.ok&&resp.status!==202)throw new Error(data.error||`request_failed_${resp.status}`);
-      if(data&&data.ok===false)throw new Error(data.error||'analysis_failed');
+      if(data&&data.ok===false){
+        await failRun(data,data.error||'Analysis failed. Please try again.');
+        return;
+      }
       if(data&&data.ok&&data.analysis){
         renderAnalysis(data.analysis||{});
         await refreshCredits();
