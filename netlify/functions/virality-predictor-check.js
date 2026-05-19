@@ -5,8 +5,8 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const UG_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
 const AUTH_USER_URL = SUPABASE_URL ? `${SUPABASE_URL}/auth/v1/user` : "";
-const MAX_MISSING_ROW_MS = 45000;
-const MAX_PROCESSING_MS = 120000;
+const MAX_MISSING_ROW_MS = 200000;
+const MAX_PROCESSING_MS = 200000;
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return json(204, {});
