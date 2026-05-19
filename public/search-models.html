@@ -1891,6 +1891,30 @@
       font-size:11px;
       font-weight:850;
     }
+    body.workspace-redesign .kling30-switch{
+      width:46px;
+      height:26px;
+      border-radius:999px;
+      padding:2px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:flex-start;
+      border:3px solid rgba(132,204,22,.82);
+      background:rgba(100,116,139,.72);
+      flex:0 0 auto;
+      box-shadow:inset 0 0 0 1px rgba(0,0,0,.24);
+    }
+    body.workspace-redesign .kling30-switch-knob{
+      width:18px;
+      height:18px;
+      border-radius:999px;
+      background:#fff;
+      box-shadow:0 2px 8px rgba(0,0,0,.28);
+      transition:transform .18s ease;
+    }
+    body.workspace-redesign #kling30MultiToggle.kling30-active .kling30-switch-knob{
+      transform:translateX(20px);
+    }
     body.workspace-redesign .kling30-row-chev{
       width:24px;
       height:24px;
@@ -2852,15 +2876,27 @@
               </div>
             </div>
 
+            <div id="kling30SingleElementCard" class="upload-section-card upload-section-wide kling30-compact-card">
+              <button id="kling30SingleElementBtn" type="button" class="kling30-control-row">
+                <span class="upload-section-icon">🧩</span>
+                <span class="kling30-control-copy">
+                  <strong>Elements</strong>
+                  <small>Add an image element for this single-shot video</small>
+                </span>
+                <span id="kling30SingleElementCount" class="kling30-count-pill">0</span>
+                <span class="kling30-row-chev">›</span>
+              </button>
+            </div>
+
             <div class="upload-section-card upload-section-wide kling30-compact-card">
               <button id="kling30MultiToggle" type="button" class="kling30-control-row">
                 <span class="upload-section-icon">🎞️</span>
                 <span class="kling30-control-copy">
-                  <strong id="kling30MultiLabel">Single shot</strong>
-                  <small>Tap to open shots with prompt, duration and elements</small>
+                  <strong id="kling30MultiLabel">Multi-shot inactive</strong>
+                  <small>Activate multi-shot storyboard with prompt, duration and elements</small>
                 </span>
                 <span id="kling30ElementsCount" class="kling30-count-pill">0</span>
-                <span class="kling30-row-chev">›</span>
+                <span id="kling30MultiState" class="kling30-switch" aria-hidden="true"><span class="kling30-switch-knob"></span></span>
               </button>
               <div id="kling30MultiPanel" class="hidden kling30-panel mt-3">
                 <div class="kling30-panel-head">
@@ -2880,7 +2916,7 @@
                     <span class="upload-section-icon">🧩</span>
                     <div>
                       <p id="kling30ElementDrawerTitle">Shot element</p>
-                      <small>Name, description and 2–4 images for this shot</small>
+                      <small>Name, element description and 2–4 images</small>
                     </div>
                   </div>
                   <button id="kling30CloseElementsBtn" type="button" class="kling30-close-btn">×</button>
@@ -2888,7 +2924,7 @@
                 <div class="kling30-element-editor">
                   <div class="kling30-editor-field">
                     <label for="kling30ElementNameInput" class="required">Name</label>
-                    <input id="kling30ElementNameInput" type="text" placeholder="character" />
+                    <input id="kling30ElementNameInput" type="text" placeholder="element_character" />
                   </div>
                   <div class="kling30-editor-field">
                     <label>Type</label>
@@ -2898,7 +2934,7 @@
                   </div>
                   <div class="kling30-editor-field">
                     <label for="kling30ElementDescInput" class="required">Description</label>
-                    <textarea id="kling30ElementDescInput" rows="3" placeholder="Describe this character/object/environment"></textarea>
+                    <textarea id="kling30ElementDescInput" rows="3" placeholder="Element: describe this character, object, or environment">Element: </textarea>
                   </div>
                   <div class="upload-drop-card upload-drop-card-wide kling30-elements-box">
                     <input id="kling30ElementsInput" type="file" accept="image/*" class="hidden" multiple />
@@ -3438,7 +3474,21 @@ async function __mjFetchNbCheck(params){
       }
     }
 
+    function shouldShowResultGeneration(data) {
+      if (!data) return false;
+      const provider = String(data.provider || data.model || '').trim().toLowerCase();
+      const kind = String(data.kind || '').trim().toLowerCase();
+      const normalizedKind = kind.replace(/[-\s]+/g, '_');
+      const url = String(data.result_url || '').trim().toLowerCase();
+      if (provider === 'gemini-3.1-pro' && normalizedKind.includes('virality_predictor')) return false;
+      if (normalizedKind.includes('virality_predictor')) return false;
+      if (kind && kind !== 'image' && kind !== 'video') return false;
+      if (/\.(mp3|wav|m4a|aac|ogg|oga|flac)(?:[?#]|$)/i.test(url)) return false;
+      return true;
+    }
+
     function createResultThumb(data) {
+      if (!shouldShowResultGeneration(data)) return null;
       const provider = data.provider || 'Model';
       const kind = (data.kind || 'image').toLowerCase();
       const prompt = (data.prompt || '').toString();
@@ -3657,6 +3707,7 @@ async function __mjFetchNbCheck(params){
     }
 
 function createResultCard(data) {
+      if (!shouldShowResultGeneration(data)) return null;
       const provider = data.provider || 'Model';
       const kind = (data.kind || 'image').toLowerCase();
       const prompt = data.prompt || '';
@@ -3820,7 +3871,7 @@ function createResultCard(data) {
           .select('provider, kind, prompt, result_url, meta, created_at')
           .eq('user_id', currentUser.id)
           .order('created_at', { ascending: false })
-          .limit(recentLimit);
+          .limit(Math.max(40, recentLimit * 4));
 
         if (error) {
           console.warn('loadRecentHistory error', error);
@@ -3830,7 +3881,8 @@ function createResultCard(data) {
         const strip = document.getElementById('resultsStrip');
         if (strip) strip.innerHTML = '';
         const resultsSection = document.getElementById('resultsSection');
-        const hasItems = (data || []).length > 0;
+        const visibleRows = (data || []).filter(shouldShowResultGeneration).slice(0, recentLimit);
+        const hasItems = visibleRows.length > 0;
         if (resultsSection) {
           if (hasItems) resultsSection.classList.remove('hidden');
           else resultsSection.classList.add('hidden');
@@ -3838,7 +3890,7 @@ function createResultCard(data) {
 
         const resumePairs = [];
         (async () => {
-        for (const row of (data || [])) {
+        for (const row of visibleRows) {
           const runId = row && row.meta && row.meta.run_id ? row.meta.run_id : '';
           const taskId = row && row.meta && (row.meta.task_id || row.meta.taskId) ? (row.meta.task_id || row.meta.taskId) : '';
           const status = row && row.meta && row.meta.status ? row.meta.status : (row && row.result_url ? 'ready' : 'processing');
@@ -5602,8 +5654,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           const makeBtn = (label, val) => {
             const b = document.createElement('button');
             b.type = 'button';
-            b.className = 'chip px-2 py-0.5 text-xs font-semibold text-white/80 hover:text-white hover:bg-white/5';
-            b.textContent = label;
+            b.className = 'chip px-2 py-0.5 text-xs font-semibold text-white/80 hover:text-white hover:bg-white/5 inline-flex items-center gap-1.5';
+            b.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg><span>' + label + '</span>';
+            b.setAttribute('aria-label', 'Sound ' + label);
             b.dataset.value = String(val);
             b.addEventListener('click', () => {
               currentKlingSound = (String(val) === 'true');
@@ -5613,8 +5666,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             });
             return b;
           };
-          const b0 = makeBtn('No sound', false);
-          const b1 = makeBtn('With sound', true);
+          const b0 = makeBtn('Off', false);
+          const b1 = makeBtn('On', true);
           klingSoundPills.appendChild(b0);
           klingSoundPills.appendChild(b1);
           b0.classList.add('chip-active');
@@ -5723,16 +5776,22 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       if (kling30MultiToggle) {
         const multiLabel = document.getElementById('kling30MultiLabel');
-        if (multiLabel) multiLabel.textContent = 'Single shot';
+        if (multiLabel) multiLabel.textContent = 'Multi-shot inactive';
+        const multiState = document.getElementById('kling30MultiState');
+        if (multiState) multiState.setAttribute('aria-label', 'Activate multi-shot');
         kling30MultiToggle.classList.remove('chip-active');
         kling30MultiToggle.classList.remove('kling30-active');
       }
       const kling30MultiPanel = document.getElementById('kling30MultiPanel');
       if (kling30MultiPanel) kling30MultiPanel.classList.add('hidden');
+      const kling30SingleElementCard = document.getElementById('kling30SingleElementCard');
+      if (kling30SingleElementCard) kling30SingleElementCard.classList.remove('hidden');
       const kling30ElementsDrawer = document.getElementById('kling30ElementsDrawer');
       if (kling30ElementsDrawer) kling30ElementsDrawer.classList.add('hidden');
       const kling30ElementsCount = document.getElementById('kling30ElementsCount');
       if (kling30ElementsCount) kling30ElementsCount.textContent = '0';
+      const kling30SingleElementCount = document.getElementById('kling30SingleElementCount');
+      if (kling30SingleElementCount) kling30SingleElementCount.textContent = '0';
       if (typeof syncKling30InputLocks === 'function') syncKling30InputLocks();
       if (typeof syncVeo31InputLocks === 'function') syncVeo31InputLocks();
       if (seedanceAudioToggle) {
@@ -6550,7 +6609,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         element: {
           name: 'element_' + num,
           type: 'image',
-          description: '',
+          description: 'Element: ',
           files: []
         }
       };
@@ -6596,6 +6655,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     function validateKling30BeforeRun() {
       if (!currentModel || currentModel.id !== 'kling30') return { ok:true, message:'' };
       ensureKling30Shots();
+      if (!kling30MultiShots) {
+        const ev = getKling30ElementValidation(kling30Shots[0], 0);
+        if (!ev.ok) return ev;
+      }
       if (kling30MultiShots) {
         if (kling30LastFrameFile) {
           return { ok:false, message:'Kling 3.0 multi-shot supports First frame only. Remove Last frame.' };
@@ -6626,7 +6689,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       (elementUrls || []).forEach((url, index) => {
         const meta = kling30ElementMeta[index] || {};
         const name = sanitizeKling30ElementName(meta.name || '', 'element_' + ((meta.shotIndex || 0) + 1));
-        const description = String(meta.description || '').trim();
+        const rawDescription = String(meta.description || '').trim();
+        const description = rawDescription && !/\belement\b/i.test(rawDescription) ? ('element: ' + rawDescription) : rawDescription;
         const key = (meta.shotIndex ?? index) + ':' + name + ':image';
         let group = groupByKey.get(key);
         if (!group) {
@@ -6693,7 +6757,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const flatFiles = [];
       const meta = [];
       const lines = [];
-      kling30Shots.forEach((shot, shotIndex) => {
+      const activeShots = kling30MultiShots ? kling30Shots : [kling30Shots[0]].filter(Boolean);
+      activeShots.forEach((shot, shotIndex) => {
         const durationValue = Math.max(3, Math.min(12, Number(shot.duration || 3)));
         const el = shot.element || {};
         const cleanName = sanitizeKling30ElementName(el.name, 'element_' + (shotIndex + 1));
@@ -6725,6 +6790,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     function updateKling30ElementsCount() {
       const countEl = document.getElementById('kling30ElementsCount');
       if (countEl) countEl.textContent = String((kling30ElementFiles || []).length);
+      const singleCountEl = document.getElementById('kling30SingleElementCount');
+      if (singleCountEl) {
+        const shot = Array.isArray(kling30Shots) && kling30Shots[0] ? kling30Shots[0] : null;
+        const files = shot && shot.element && Array.isArray(shot.element.files) ? shot.element.files.filter(Boolean) : [];
+        singleCountEl.textContent = String(files.length);
+      }
     }
 
     function renderKling30Shots() {
@@ -6750,8 +6821,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           if (kling30Shots.length <= 1) return;
           kling30Shots.splice(index, 1);
           kling30Shots.forEach((s, i) => {
-            if (!s.element) s.element = { name: 'element_' + (i + 1), type: 'image', description: '', files: [] };
+            if (!s.element) s.element = { name: 'element_' + (i + 1), type: 'image', description: 'Element: ', files: [] };
             if (!String(s.element.name || '').trim()) s.element.name = 'element_' + (i + 1);
+            if (!String(s.element.description || '').trim()) s.element.description = 'Element: ';
           });
           renderKling30Shots();
           syncKling30LegacyData();
@@ -6828,10 +6900,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       ensureKling30Shots();
       const shot = kling30Shots[kling30ActiveShotIndex];
       if (!shot) return;
-      if (!shot.element) shot.element = { name: 'element_' + (kling30ActiveShotIndex + 1), type: 'image', description: '', files: [] };
+      if (!shot.element) shot.element = { name: 'element_' + (kling30ActiveShotIndex + 1), type: 'image', description: 'Element: ', files: [] };
       const el = shot.element;
       const title = document.getElementById('kling30ElementDrawerTitle');
-      if (title) title.textContent = 'Shot ' + (kling30ActiveShotIndex + 1) + ' element';
+      if (title) title.textContent = kling30MultiShots ? ('Shot ' + (kling30ActiveShotIndex + 1) + ' element') : 'Elements';
       const nameInput = document.getElementById('kling30ElementNameInput');
       const descInput = document.getElementById('kling30ElementDescInput');
       const typeImage = document.getElementById('kling30ElementTypeImage');
@@ -6840,7 +6912,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const btnLabel = document.getElementById('kling30ElementsBtnLabel');
       const thumbs = document.getElementById('kling30ElementsThumbs');
       if (nameInput) nameInput.value = el.name || ('element_' + (kling30ActiveShotIndex + 1));
-      if (descInput) descInput.value = el.description || '';
+      if (!String(el.description || '').trim()) el.description = 'Element: ';
+      else if (!/\belement\b/i.test(String(el.description || ''))) el.description = 'Element: ' + String(el.description || '').trim();
+      if (descInput) descInput.value = el.description || 'Element: ';
       el.type = 'image';
       if (typeImage) typeImage.classList.add('active');
       if (input) {
@@ -6907,6 +6981,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     const kling30DoneElementsBtn = document.getElementById('kling30DoneElementsBtn');
     if (kling30DoneElementsBtn) kling30DoneElementsBtn.addEventListener('click', () => closeKling30ElementsDrawer(false));
 
+    const kling30SingleElementBtn = document.getElementById('kling30SingleElementBtn');
+    if (kling30SingleElementBtn) kling30SingleElementBtn.addEventListener('click', () => {
+      ensureKling30Shots();
+      openKling30ElementsDrawer(0);
+    });
+
     const kling30NameInput = document.getElementById('kling30ElementNameInput');
     if (kling30NameInput) kling30NameInput.addEventListener('input', (e) => {
       if (kling30ActiveShotIndex < 0) return;
@@ -6956,11 +7036,15 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     document.getElementById('kling30MultiToggle').addEventListener('click', (e) => {
       kling30MultiShots = !kling30MultiShots;
       const label = document.getElementById('kling30MultiLabel');
-      if (label) label.textContent = kling30MultiShots ? 'Multi-shot' : 'Single shot';
+      if (label) label.textContent = kling30MultiShots ? 'Multi-shot active' : 'Multi-shot inactive';
+      const state = document.getElementById('kling30MultiState');
+      if (state) state.setAttribute('aria-label', kling30MultiShots ? 'Deactivate multi-shot' : 'Activate multi-shot');
       e.currentTarget.classList.toggle('kling30-active', kling30MultiShots);
       e.currentTarget.classList.toggle('chip-active', kling30MultiShots);
       const panel = document.getElementById('kling30MultiPanel');
       if (panel) panel.classList.toggle('hidden', !kling30MultiShots);
+      const singleElementCard = document.getElementById('kling30SingleElementCard');
+      if (singleElementCard) singleElementCard.classList.toggle('hidden', kling30MultiShots);
       if (kling30MultiShots) {
         ensureKling30Shots();
         renderKling30Shots();
