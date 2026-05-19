@@ -5,6 +5,8 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const UG_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
 const AUTH_USER_URL = SUPABASE_URL ? `${SUPABASE_URL}/auth/v1/user` : "";
+const MAX_MISSING_ROW_MS = 45000;
+const MAX_PROCESSING_MS = 120000;
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return json(204, {});
@@ -24,7 +26,7 @@ exports.handler = async (event) => {
 
     const row = await findGeneration(uid, runId);
     if (!row) {
-      if (isExpiredRun(runId, 120000)) {
+      if (isExpiredRun(runId, MAX_MISSING_ROW_MS)) {
         return json(200, { ok: false, status: "failed", error: "analysis_job_not_recorded", refunded: false, refund_amount: 0 });
       }
       return json(200, { ok: false, status: "pending" });
@@ -50,11 +52,21 @@ exports.handler = async (event) => {
       });
     }
 
-    if (isFailureStatus(status) || meta.failed || hasError(meta)) {
+    if (isFailureStatus(status) || meta.failed || meta.refunded || Number(meta.refunded_cost || 0) > 0 || hasError(meta)) {
       return json(200, {
         ok: false,
         status: "failed",
         error: getError(meta) || "analysis_failed",
+        refunded: !!meta.refunded,
+        refund_amount: meta.refunded_cost || 0
+      });
+    }
+
+    if ((status === "processing" || status === "pending" || !status) && isExpiredRun(runId, MAX_PROCESSING_MS, row.created_at || meta.started_at)) {
+      return json(200, {
+        ok: false,
+        status: "failed",
+        error: "analysis_timeout",
         refunded: !!meta.refunded,
         refund_amount: meta.refunded_cost || 0
       });
@@ -70,7 +82,8 @@ function cors() {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-USER-ID",
-    "Access-Control-Allow-Methods": "GET,OPTIONS"
+    "Access-Control-Allow-Methods": "GET,OPTIONS",
+    "Cache-Control": "no-store, max-age=0"
   };
 }
 function json(statusCode, body) {
@@ -121,10 +134,9 @@ function getError(meta) {
 function hasError(meta) {
   return !!getError(meta);
 }
-function isExpiredRun(runId, maxPendingMs) {
+function isExpiredRun(runId, maxPendingMs, fallbackDate) {
   const match = String(runId || "").match(/-(\d{13})$/);
-  if (!match) return false;
-  const startedAt = Number(match[1]);
+  const startedAt = match ? Number(match[1]) : Date.parse(fallbackDate || "");
   return Number.isFinite(startedAt) && Date.now() - startedAt > maxPendingMs;
 }
 
