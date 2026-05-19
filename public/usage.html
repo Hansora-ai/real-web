@@ -65,6 +65,7 @@
     .usage-card.disabled:hover{transform:none;border-color:rgba(255,255,255,.10)}
     .safe-name{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .media-box{
+      position:relative;
       width:100%;
       aspect-ratio:3/4;
       border-radius:14px;
@@ -76,6 +77,19 @@
     }
     .media-box img,.media-box video{width:100%;height:100%;object-fit:cover;display:block}
     .media-box audio{width:88%;max-width:220px}
+    .video-badge{
+      position:absolute;
+      left:10px;
+      bottom:10px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(2,6,23,.72);
+      color:#fff;
+      border-radius:999px;
+      padding:5px 9px;
+      font-size:11px;
+      font-weight:900;
+      pointer-events:none;
+    }
     .audio-box{
       padding:16px;
       background:
@@ -210,9 +224,9 @@
 
     const $ = (id) => document.getElementById(id);
     const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-    const isAudioUrl = (url) => /\.(mp3|wav|m4a|aac|ogg|oga|flac)(?:[?#]|$)/i.test(String(url || ''));
-    const isVideoUrl = (url) => /\.(mp4|mov|webm|m4v)(?:[?#]|$)/i.test(String(url || ''));
-    const isImageUrl = (url) => /\.(png|jpe?g|webp|gif|avif|svg)(?:[?#]|$)/i.test(String(url || ''));
+    const isAudioUrl = (url) => /\.(mp3|wav|m4a|aac|ogg|oga|flac)(?:[?#]|$)/i.test(String(url || '')) || /audio|%2emp3|%2ewav|%2em4a|%2eaac|%2eogg|%2eflac/i.test(String(url || ''));
+    const isVideoUrl = (url) => /\.(mp4|mov|webm|m4v)(?:[?#]|$)/i.test(String(url || '')) || /video|%2emp4|%2emov|%2ewebm|%2em4v/i.test(String(url || ''));
+    const isImageUrl = (url) => /\.(png|jpe?g|webp|gif|avif|svg)(?:[?#]|$)/i.test(String(url || '')) || /image|%2epng|%2ejpg|%2ejpeg|%2ewebp|%2egif|%2eavif/i.test(String(url || ''));
 
     function parseMeta(raw){
       if (!raw) return {};
@@ -233,16 +247,27 @@
       const urls = [];
       const seen = new Set();
       const push = (value) => {
-        if (!isUsableUrl(value)) return;
-        const url = value.trim();
-        if (seen.has(url)) return;
-        seen.add(url);
-        urls.push(url);
+        if (typeof value !== 'string') return;
+        const matches = value.match(/https?:\/\/[^\s"'<>\\)]+/gi) || [value];
+        matches.forEach((candidate) => {
+          if (!isUsableUrl(candidate)) return;
+          const url = candidate.trim().replace(/[.,;]+$/,'');
+          if (seen.has(url)) return;
+          seen.add(url);
+          urls.push(url);
+        });
       };
       push(row.result_url);
-      const preferredKeys = ['audio_url','video_url','image_url','result_url','file_url','download_url','output_url','url'];
+      const preferredKeys = [
+        'audio_url','audioUrl','audio','audio_url_signed',
+        'video_url','videoUrl','video','video_url_signed',
+        'image_url','imageUrl','image','image_url_signed',
+        'result_url','resultUrl','result','file_url','fileUrl',
+        'download_url','downloadUrl','output_url','outputUrl','media_url','mediaUrl',
+        'input_url','inputUrl','source_url','sourceUrl','url'
+      ];
       preferredKeys.forEach((key) => push(meta[key]));
-      ['result_urls','output_urls','urls','images','videos','audios','files','output','outputs','results'].forEach((key) => {
+      ['result_urls','resultUrls','output_urls','outputUrls','urls','images','imageUrls','videos','videoUrls','audios','audioUrls','files','fileUrls','output','outputs','results','data','items'].forEach((key) => {
         const value = meta[key];
         if (Array.isArray(value)) value.forEach((item) => typeof item === 'string' ? push(item) : walk(item, key));
         else walk(value, key);
@@ -268,11 +293,24 @@
 
     function mediaKind(url, row){
       const meta = parseMeta(row.meta);
-      const hint = String(meta.media_type || meta.type || row.kind || '').toLowerCase();
-      if (isAudioUrl(url) || hint.includes('audio') || hint.includes('music') || hint.includes('song')) return 'audio';
-      if (isVideoUrl(url) || hint.includes('video')) return 'video';
-      if (isImageUrl(url) || hint.includes('image')) return 'image';
+      const hint = [
+        meta.media_type, meta.mediaType, meta.type, meta.mime_type, meta.mimeType,
+        meta.file_type, meta.fileType, meta.file_name, meta.fileName,
+        meta.original_file_name, meta.originalFileName, meta.input_type, meta.inputType,
+        meta.input_mime_type, meta.inputMimeType, meta.output_type, meta.outputType,
+        meta.output_mime_type, meta.outputMimeType, row.kind, row.provider
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (isAudioUrl(url) || /\.(mp3|wav|m4a|aac|ogg|oga|flac)\b/i.test(hint) || hint.includes('audio') || hint.includes('music') || hint.includes('song')) return 'audio';
+      if (isVideoUrl(url) || /\.(mp4|mov|webm|m4v)\b/i.test(hint) || hint.includes('video')) return 'video';
+      if (isImageUrl(url) || /\.(png|jpe?g|webp|gif|avif|svg)\b/i.test(hint) || hint.includes('image')) return 'image';
       return 'file';
+    }
+
+    function shouldHideRow(row){
+      const provider = String(row.provider || '').trim().toLowerCase();
+      const kind = String(row.kind || '').trim().toLowerCase();
+      const normalizedKind = kind.replace(/[-\s]+/g, '_');
+      return provider === 'gemini-3.1-pro' && normalizedKind.includes('virality_predictor');
     }
 
     function titleForRow(row){
@@ -313,9 +351,10 @@
         return `<div class="media-box audio-box"><div class="w-full"><div class="audio-disc"></div><audio src="${safeUrl}" controls preload="none"></audio></div></div>`;
       }
       if (kind === 'video') {
+        const videoSrc = preview ? safeUrl : `${safeUrl}#t=0.1`;
         return preview
           ? `<video src="${safeUrl}" controls autoplay playsinline preload="metadata"></video>`
-          : `<div class="media-box"><video src="${safeUrl}" muted playsinline preload="metadata"></video></div>`;
+          : `<div class="media-box"><video src="${videoSrc}" muted playsinline preload="auto"></video><div class="video-badge">Video</div></div>`;
       }
       if (kind === 'image') {
         return preview
@@ -400,6 +439,7 @@
         .from('user_generations')
         .select('id,created_at,provider,kind,prompt,result_url,meta', { count:'exact' })
         .eq('user_id', currentUser.id)
+        .not('kind', 'ilike', '%virality%')
         .gte('created_at', since)
         .order('created_at', { ascending:false })
         .range(from, to);
@@ -413,7 +453,7 @@
         return;
       }
 
-      const rows = data || [];
+      const rows = (data || []).filter((row) => !shouldHideRow(row));
       totalRows = count || 0;
       const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE));
       if (currentPage > totalPages) return loadUsage(totalPages);
@@ -460,7 +500,7 @@
 
     function bindEvents(){
       $('usageList').addEventListener('click', (event) => {
-        if (event.target.closest('.download-btn,audio,video')) return;
+        if (event.target.closest('.download-btn,audio')) return;
         const card = event.target.closest('.usage-card[data-url]');
         if (!card) return;
         openPreview(card.dataset.url, card.dataset.kind, card.dataset.title);
