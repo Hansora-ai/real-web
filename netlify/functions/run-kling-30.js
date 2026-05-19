@@ -101,6 +101,12 @@ function appendElementReference(prompt, elementName) {
   return (base ? base + ' ' : '') + '@' + cleanName;
 }
 
+function normalizeElementDescription(description) {
+  const raw = String(description || '').trim();
+  if (!raw) return '';
+  return /\belement\b/i.test(raw) ? raw : `element: ${raw}`;
+}
+
 function normalizeAndValidateKlingElements(rawElements) {
   const elements = Array.isArray(rawElements) ? rawElements : [];
   if (elements.length > 3) {
@@ -111,7 +117,7 @@ function normalizeAndValidateKlingElements(rawElements) {
   for (let i = 0; i < elements.length; i += 1) {
     const item = elements[i] || {};
     const name = sanitizeElementName(item.name);
-    const description = String(item.description || '').trim();
+    const description = normalizeElementDescription(item.description);
     const imageUrls = Array.isArray(item.element_input_urls) ? item.element_input_urls.map(String).filter(Boolean) : [];
     const videoUrls = Array.isArray(item.element_input_video_urls)
       ? item.element_input_video_urls.map(String).filter(Boolean)
