@@ -13,7 +13,7 @@ exports.handler = async (event) => {
     const qs = event.queryStringParameters || {};
     const uid = String(qs.uid || "").trim();
     const runId = String(qs.run_id || qs.runId || "").trim();
-    if (!uid || !runId) return json(200, { ok: false, status: "pending", error: "missing_ids" });
+    if (!uid || !runId) return json(200, { ok: false, status: "error", error: "missing_ids" });
 
     const token = String(headers.authorization || "").toLowerCase().startsWith("bearer ")
       ? String(headers.authorization || "").slice(7).trim()
@@ -23,11 +23,25 @@ exports.handler = async (event) => {
     if (!authedUid || authedUid !== uid) return json(200, { ok: false, status: "error", error: "auth_mismatch" });
 
     const row = await findGeneration(uid, runId);
-    if (!row) return json(200, { ok: false, status: "pending" });
+    if (!row) {
+      if (isExpiredRun(runId, 120000)) {
+        return json(200, { ok: false, status: "failed", error: "analysis_job_not_recorded", refunded: false, refund_amount: 0 });
+      }
+      return json(200, { ok: false, status: "pending" });
+    }
     const meta = row.meta && typeof row.meta === "object" ? row.meta : {};
-    const status = String(meta.status || "").toLowerCase();
+    const status = normalizeStatus(firstValue(
+      meta.status,
+      meta.state,
+      meta.task_status,
+      meta.taskStatus,
+      meta.raw && meta.raw.status,
+      meta.raw && meta.raw.state,
+      meta.raw && meta.raw.data && meta.raw.data.status,
+      meta.raw && meta.raw.data && meta.raw.data.state
+    ));
 
-    if (status === "done" && meta.analysis) {
+    if ((status === "done" || status === "success" || status === "completed") && meta.analysis) {
       return json(200, {
         ok: true,
         status: "done",
@@ -36,11 +50,11 @@ exports.handler = async (event) => {
       });
     }
 
-    if (status === "failed" || meta.failed) {
+    if (isFailureStatus(status) || meta.failed || hasError(meta)) {
       return json(200, {
         ok: false,
         status: "failed",
-        error: meta.error || "analysis_failed",
+        error: getError(meta) || "analysis_failed",
         refunded: !!meta.refunded,
         refund_amount: meta.refunded_cost || 0
       });
@@ -65,6 +79,54 @@ function json(statusCode, body) {
 function lowerKeys(h) { const out = {}; for (const k in h) out[k.toLowerCase()] = h[k]; return out; }
 function sb() { return { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` }; }
 function messageOf(error) { return error && error.message ? error.message : String(error); }
+function firstValue(...values) {
+  return values.find(value => value !== undefined && value !== null && String(value).trim() !== "");
+}
+function normalizeStatus(value) {
+  return String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+function isFailureStatus(status) {
+  if (/(^|_)(fail|failed|failure|error|errored|cancel|canceled|cancelled|rejected|moderation|blocked|sensitive|flagged|timeout|timed_out)(_|$)/.test(status)) {
+    return true;
+  }
+  return [
+    "fail",
+    "failed",
+    "failure",
+    "error",
+    "errored",
+    "rejected",
+    "cancelled",
+    "canceled",
+    "timeout",
+    "timed_out",
+    "create_failed",
+    "analysis_failed"
+  ].includes(status);
+}
+function getError(meta) {
+  return firstValue(
+    meta.error,
+    meta.error_message,
+    meta.errorMessage,
+    meta.message,
+    meta.raw && meta.raw.error,
+    meta.raw && meta.raw.msg,
+    meta.raw && meta.raw.message,
+    meta.raw && meta.raw.data && meta.raw.data.error,
+    meta.raw && meta.raw.data && meta.raw.data.msg,
+    meta.raw && meta.raw.data && meta.raw.data.message
+  );
+}
+function hasError(meta) {
+  return !!getError(meta);
+}
+function isExpiredRun(runId, maxPendingMs) {
+  const match = String(runId || "").match(/-(\d{13})$/);
+  if (!match) return false;
+  const startedAt = Number(match[1]);
+  return Number.isFinite(startedAt) && Date.now() - startedAt > maxPendingMs;
+}
 
 async function verifyUser(token) {
   try {
@@ -78,8 +140,9 @@ async function verifyUser(token) {
 
 async function findGeneration(uid, runId) {
   if (!UG_URL || !SERVICE_KEY) return null;
-  const query = `?select=id,user_id,result_url,meta,created_at&user_id=eq.${encodeURIComponent(uid)}&kind=eq.virality_predictor&meta->>run_id=eq.${encodeURIComponent(runId)}&limit=1`;
+  const query = `?select=id,user_id,result_url,meta,created_at&user_id=eq.${encodeURIComponent(uid)}&kind=eq.virality_predictor&meta->>run_id=eq.${encodeURIComponent(runId)}&order=created_at.desc&limit=1`;
   const res = await fetch(UG_URL + query, { headers: sb() });
+  if (!res.ok) throw new Error(`supabase_${res.status}`);
   const arr = await res.json().catch(() => []);
   return Array.isArray(arr) && arr[0] ? arr[0] : null;
 }
