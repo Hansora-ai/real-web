@@ -171,6 +171,11 @@
   async function getAvailableCredits(required=0){const localBest=Math.max(getSharedHeaderCredits(),getVisibleHeaderCredits(),parseCredits(currentCredits));if(localBest>=Number(required||0))return localBest;try{const r=await readSupabaseCredits();if(r.user){currentUser=r.user;setCreditsEverywhere(r.credits)}return Math.max(localBest,parseCredits(r.credits))}catch(e){console.warn(e)}return localBest}
   async function refreshCredits(){try{const r=await readSupabaseCredits();if(r.user){currentUser=r.user;setCreditsEverywhere(r.credits)}}catch(e){console.warn(e)}return currentCredits}
   async function ensureUser(){const {data:{user}}=await supabaseClient.auth.getUser();currentUser=user||null;if(!currentUser)throw new Error('Please log in first.');return currentUser}
+  function startCreditSync(ms=45000,interval=1500){
+    if(window.HansoraHeader&&typeof window.HansoraHeader.startCreditsPolling==='function')window.HansoraHeader.startCreditsPolling(ms,interval);
+    setTimeout(()=>refreshCredits().catch(()=>{}),900);
+    setTimeout(()=>refreshCredits().catch(()=>{}),2500);
+  }
 
   function clearError(){$('errorBox').classList.add('hidden');$('errorBox').textContent=''}
   function showError(msg){$('errorBox').textContent=msg;$('errorBox').classList.remove('hidden')}
@@ -393,10 +398,11 @@
         await failRun(data,data.error||'Analysis failed. Please try again.');
         return;
       }
+      setCreditsEverywhere(Math.max(0, available-COST));
+      startCreditSync();
       if(data&&data.ok&&data.analysis){
         renderAnalysis(data.analysis||{});
         await refreshCredits();
-        if(window.HansoraHeader&&typeof window.HansoraHeader.startCreditsPolling==='function')window.HansoraHeader.startCreditsPolling(45000,1500);
         setState('done','Analysis complete');
         completeRun();
         return;
