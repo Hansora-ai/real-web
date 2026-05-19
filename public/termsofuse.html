@@ -34,6 +34,68 @@
 
     /* Info-only page: hide auth controls */
     #btnLoginNav, #navUser{display:none !important;}
+
+    /* Footer copied to match the homepage/index bottom section. */
+    .shell {
+      width: min(1440px, calc(100% - 48px));
+      margin: 0 auto;
+    }
+
+    .footer {
+      padding: 36px 0;
+      color: rgba(247,247,251,.42);
+      border-top: 1px solid var(--base-line);
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      font-size: .92rem;
+      font-weight: 760;
+    }
+
+    .footer .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      min-width: max-content;
+      font-weight: 900;
+      color: rgba(247,247,251,.42);
+      text-decoration: none;
+    }
+
+    .footer .brand img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 14px rgba(56,189,248,.45));
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .footer-copy {
+      margin: 0;
+      color: rgba(247,247,251,.62);
+      font-weight: 760;
+    }
+
+    @media (max-width: 740px) {
+      .shell {
+        width: min(100% - 28px, 1440px);
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
 </style>
 <link href="/header.css" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -76,10 +138,20 @@
 <h2 class="text-xl font-semibold mt-8 mb-3">Contact</h2>
 <p>Questions about these Terms? Contact us at <a class="underline" href="mailto:hansora.ai.bot@gmail.com">hansora.ai.bot@gmail.com</a>.</p>
 </main>
-<footer class="border-t border-base-line mt-16">
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-sm text-zinc-400">
-    © 2025 HANSORA AI
-  </div>
+<footer class="footer">
+<div class="shell footer-inner">
+<a aria-label="HANSORA AI home" class="brand" href="/">
+<img alt="" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
+<span>HANSORA AI</span>
+</a>
+<p class="footer-copy">© HANSORA AI — All rights reserved.</p>
+<div class="footer-links">
+<a href="/termsofuse.html">Terms of use</a>
+<a href="/policy.html">Policy</a>
+<a href="/affilate.html">Affiliate program</a>
+<a href="/contact.html">Contact</a>
+</div>
+</div>
 </footer>
 <script defer src="/header.js"></script>
 </body>
