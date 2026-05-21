@@ -1236,69 +1236,10 @@
     }
 
 
-    /* Stable model promo image cards: keep the full embedded design visible on every screen size. */
-    .model-section > .model-info-card {
-      display: block !important;
-      height: auto !important;
-      min-height: 0 !important;
-      aspect-ratio: auto !important;
-      overflow: visible !important;
-      background: transparent !important;
-    }
-
     .model-section > .model-info-card::before,
     .model-section > .model-info-card::after,
     .model-section > .model-info-card .slot-label {
       display: none !important;
-    }
-
-    .model-section > .model-info-card > img {
-      position: static !important;
-      inset: auto !important;
-      display: block !important;
-      width: 100% !important;
-      height: auto !important;
-      max-width: 100% !important;
-      max-height: none !important;
-      object-fit: contain !important;
-      object-position: center !important;
-    }
-
-    @media (min-width: 741px) {
-      .model-section {
-        grid-template-columns: minmax(380px, 440px) minmax(0, 1fr) !important;
-        align-items: center !important;
-        min-height: 0 !important;
-      }
-
-      .model-section > .model-info-card {
-        width: 100% !important;
-        max-width: 440px !important;
-        justify-self: center !important;
-        align-self: center !important;
-      }
-
-      .model-grid.desktop-mosaic-only {
-        align-self: center !important;
-      }
-    }
-
-    @media (min-width: 741px) and (max-width: 1180px) {
-      .model-section {
-        grid-template-columns: minmax(330px, 38%) minmax(0, 1fr) !important;
-      }
-
-      .model-section > .model-info-card {
-        max-width: 390px !important;
-      }
-    }
-
-    @media (max-width: 740px) {
-      .model-section > .model-info-card {
-        min-height: 0 !important;
-        aspect-ratio: auto !important;
-        align-self: start !important;
-      }
     }
 
 </style>
@@ -1366,6 +1307,24 @@
 
 <style id="hansora-final-model-section-geometry-fix">
   /* Final geometry: keep promo art and mosaic at the same height on desktop/laptop. */
+  @media (min-width: 741px) {
+    .model-section > .model-info-card:has(> img[src*="/images/1.png"]) {
+      --promo-art: url("https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/fdf/Copy%20of%20WEBSITE%20(1200%20x%201200%20px)/1.png");
+    }
+
+    .model-section > .model-info-card:has(> img[src*="/images/2.png"]) {
+      --promo-art: url("https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/fdf/Copy%20of%20WEBSITE%20(1200%20x%201200%20px)/2.png");
+    }
+
+    .model-section > .model-info-card:has(> img[src*="/images/12.png"]) {
+      --promo-art: url("https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/fdf/Copy%20of%20WEBSITE%20(1200%20x%201200%20px)/3.png");
+    }
+
+    .model-section > .model-info-card:has(> img[src*="/images/13.png"]) {
+      --promo-art: url("https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/fdf/Copy%20of%20WEBSITE%20(1200%20x%201200%20px)/4.png");
+    }
+  }
+
   @media (min-width: 1021px) {
     .model-section {
       grid-template-columns: minmax(360px, 36%) minmax(0, 1fr) !important;
@@ -1375,6 +1334,7 @@
     }
 
     .model-section > .model-info-card {
+      --promo-pad: clamp(16px, 1.4vw, 24px);
       position: relative !important;
       width: 100% !important;
       max-width: none !important;
@@ -1385,22 +1345,23 @@
       justify-self: stretch !important;
       margin: 0 !important;
       overflow: hidden !important;
-      background:
+      background-color: transparent !important;
+      background-image:
+        var(--promo-art),
         radial-gradient(520px 320px at 42% 45%, rgba(99,102,241,.2), transparent 68%),
         radial-gradient(520px 320px at 62% 62%, rgba(56,189,248,.14), transparent 70%),
-        linear-gradient(135deg, rgba(15,19,32,.86), rgba(10,13,22,.58)),
-        transparent !important;
+        linear-gradient(135deg, rgba(15,19,32,.86), rgba(10,13,22,.58)) !important;
+      background-position: center, center, center, center !important;
+      background-repeat: no-repeat, no-repeat, no-repeat, no-repeat !important;
+      background-size: contain, cover, cover, cover !important;
     }
 
     .model-section > .model-info-card > img {
       position: absolute !important;
-      inset: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      max-width: none !important;
-      max-height: none !important;
-      object-fit: contain !important;
-      object-position: center !important;
+      width: 1px !important;
+      height: 1px !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
 
     .model-grid.desktop-mosaic-only {
@@ -1426,6 +1387,7 @@
     }
 
     .model-section > .model-info-card {
+      --promo-pad: 18px;
       position: relative !important;
       width: min(100%, 560px) !important;
       max-width: 560px !important;
@@ -1435,20 +1397,23 @@
       justify-self: center !important;
       margin: 0 auto !important;
       overflow: hidden !important;
-      background:
+      background-color: transparent !important;
+      background-image:
+        var(--promo-art),
         radial-gradient(520px 320px at 42% 45%, rgba(99,102,241,.2), transparent 68%),
         radial-gradient(520px 320px at 62% 62%, rgba(56,189,248,.14), transparent 70%),
-        linear-gradient(135deg, rgba(15,19,32,.86), rgba(10,13,22,.58)),
-        transparent !important;
+        linear-gradient(135deg, rgba(15,19,32,.86), rgba(10,13,22,.58)) !important;
+      background-position: center, center, center, center !important;
+      background-repeat: no-repeat, no-repeat, no-repeat, no-repeat !important;
+      background-size: contain, cover, cover, cover !important;
     }
 
     .model-section > .model-info-card > img {
       position: absolute !important;
-      inset: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: contain !important;
-      object-position: center !important;
+      width: 1px !important;
+      height: 1px !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
 
     .model-grid.desktop-mosaic-only {
