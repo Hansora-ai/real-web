@@ -254,8 +254,8 @@
       #resultsStrip .thumb-state.failed{ color: rgba(248,113,113,.95); }
       #resultsStrip .thumb-get{
         font-size: 10px;
-        min-width:58px;
-        padding: 5px 10px;
+        min-width:74px;
+        padding: 6px 16px;
         border-radius: 999px;
         border: 1px solid rgba(255,255,255,.14);
         background: rgba(99,102,241,.22);
@@ -320,7 +320,7 @@
     #previewOverlay{
       position:fixed;
       inset:0;
-      z-index:100;
+      z-index:2147483647 !important;
       display:none;
       align-items:center;
       justify-content:center;
@@ -330,6 +330,22 @@
       padding: 18px;
     }
     #previewOverlay.show{ display:flex; }
+    body.preview-open #sharedHeader,
+    body.preview-open #sharedHeader *,
+    body.preview-open header,
+    body.preview-open header *,
+    body.preview-open .site-header,
+    body.preview-open .site-header *,
+    body:has(#previewOverlay.show) #sharedHeader,
+    body:has(#previewOverlay.show) #sharedHeader *,
+    body:has(#previewOverlay.show) header,
+    body:has(#previewOverlay.show) header *,
+    body:has(#previewOverlay.show) .site-header,
+    body:has(#previewOverlay.show) .site-header *{
+      z-index:0 !important;
+      visibility:hidden !important;
+      pointer-events:none !important;
+    }
     #previewOverlay .preview-card{
       width: min(920px, 100%);
       max-height: min(88vh, 900px);
@@ -356,6 +372,16 @@
       font-size: 22px;
       line-height: 1;
       cursor:pointer;
+      z-index:5;
+    }
+    .result-get{
+      min-width:96px !important;
+      height:34px !important;
+      padding-left:26px !important;
+      padding-right:26px !important;
+      display:inline-flex !important;
+      align-items:center !important;
+      justify-content:center !important;
     }
     #previewOverlay .preview-media{
       width:100%;
@@ -1388,9 +1414,9 @@
         display:inline-flex !important;
         align-items:center !important;
         justify-content:center !important;
-        min-width:58px !important;
+        min-width:74px !important;
         height:28px !important;
-        padding:0 14px !important;
+        padding:0 18px !important;
         font-size:10px !important;
       }
     }
@@ -3214,22 +3240,25 @@ async function __mjFetchNbCheck(params){
 
 // === Fullscreen preview overlay (download only via Get) ===
 (function(){
-  if (document.getElementById('previewOverlay')) return;
-  const overlay = document.createElement('div');
-  overlay.id = 'previewOverlay';
+  let overlay = document.getElementById('previewOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'previewOverlay';
+    document.body.appendChild(overlay);
+  }
   overlay.innerHTML = `
     <div class="preview-card">
       <button type="button" class="preview-close" aria-label="Close preview">&times;</button>
       <div class="preview-media" id="previewMedia"></div>
     </div>
   `;
-  document.body.appendChild(overlay);
 
   const mediaHost = overlay.querySelector('#previewMedia');
   const closeBtn = overlay.querySelector('.preview-close');
 
   function close(){
     overlay.classList.remove('show');
+    document.body.classList.remove('preview-open');
     // clear media
     mediaHost.innerHTML = '';
     document.body.style.overflow = '';
@@ -3253,6 +3282,7 @@ async function __mjFetchNbCheck(params){
       img.alt = 'Preview';
       mediaHost.appendChild(img);
     }
+    document.body.classList.add('preview-open');
     overlay.classList.add('show');
     document.body.style.overflow = 'hidden';
   }
@@ -3797,7 +3827,7 @@ function createResultCard(data) {
       statusText.className = 'text-[10px] text-indigo-200/80';
       const downloadBtn = document.createElement('button');
       downloadBtn.type = 'button';
-      downloadBtn.className = 'text-[12px] min-w-[64px] px-5 py-2 rounded-full bg-indigo-500/90 hover:bg-indigo-400 text-white hidden';
+      downloadBtn.className = 'result-get text-[12px] px-5 py-2 rounded-full bg-indigo-500/90 hover:bg-indigo-400 text-white hidden';
       downloadBtn.textContent = 'GET';
       downloadBtn.addEventListener('click', (event) => {
         event.preventDefault();
