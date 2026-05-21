@@ -69,17 +69,20 @@
     textarea#promptBox{
       resize:none;
     }
-    .result-card-loader{
-      width:24px;
-      height:24px;
-      border-radius:9999px;
-      border:3px solid rgba(148,163,184,.5);
-      border-top-color:#a855f7;
-      animation:spin 1s linear infinite;
+    .result-card-loader,
+    .processing-orb{
+      width:48px;
+      height:48px;
+      border-radius:18px;
+      border:0;
+      background:linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8);
+      box-shadow:0 0 30px rgba(139,92,246,.52);
+      animation:orbSpin 1.35s linear infinite;
     }
     @keyframes spin{
       to{ transform:rotate(360deg); }
     }
+    @keyframes orbSpin{ to{ transform:rotate(360deg); } }
     .clamp-2{
       display:-webkit-box;
       -webkit-line-clamp:2;
@@ -251,6 +254,7 @@
       #resultsStrip .thumb-state.failed{ color: rgba(248,113,113,.95); }
       #resultsStrip .thumb-get{
         font-size: 10px;
+        min-width:58px;
         padding: 5px 10px;
         border-radius: 999px;
         border: 1px solid rgba(255,255,255,.14);
@@ -289,10 +293,9 @@
       }
       #resultsStrip .result-card-loader{
         position:absolute;
-        inset:0;
-        display:flex;
-        align-items:center;
-        justify-content:center;
+        inset:auto;
+        left:calc(50% - 24px);
+        top:calc(50% - 24px);
       }
 
 }
@@ -317,7 +320,7 @@
     #previewOverlay{
       position:fixed;
       inset:0;
-      z-index:60;
+      z-index:100;
       display:none;
       align-items:center;
       justify-content:center;
@@ -339,8 +342,8 @@
     }
     #previewOverlay .preview-close{
       position:absolute;
-      top:72px;
-      right:10px;
+      top:12px;
+      right:12px;
       width:40px;
       height:40px;
       border-radius:999px;
@@ -1385,9 +1388,9 @@
         display:inline-flex !important;
         align-items:center !important;
         justify-content:center !important;
-        min-width:42px !important;
+        min-width:58px !important;
         height:28px !important;
-        padding:0 9px !important;
+        padding:0 14px !important;
         font-size:10px !important;
       }
     }
@@ -2611,6 +2614,23 @@
       object-fit:cover !important;
       display:block !important;
     }
+    body.workspace-redesign .upload-drop-card.drag-over{
+      border-color:rgba(129,140,248,.95) !important;
+      background:rgba(99,102,241,.16) !important;
+      box-shadow:0 0 0 1px rgba(129,140,248,.5) inset, 0 18px 42px rgba(79,70,229,.22) !important;
+    }
+    #modelOverlay{
+      overscroll-behavior:contain;
+      touch-action:none;
+    }
+    #modelOverlay > div{
+      overscroll-behavior:contain;
+    }
+    #overlayModelList{
+      overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;
+      touch-action:pan-y;
+    }
 
     </style>
 </head>
@@ -3523,11 +3543,18 @@ async function __mjFetchNbCheck(params){
         ph.style.width = '100%';
         ph.style.height = '100%';
         ph.style.display = 'flex';
+        ph.style.flexDirection = 'column';
         ph.style.alignItems = 'center';
         ph.style.justifyContent = 'center';
+        ph.style.gap = '10px';
         ph.style.color = 'rgba(255,255,255,.55)';
         ph.style.fontSize = '12px';
-        ph.textContent = 'Processing';
+        const orb = document.createElement('div');
+        orb.className = 'processing-orb';
+        const label = document.createElement('div');
+        label.textContent = 'Creating...';
+        ph.appendChild(orb);
+        ph.appendChild(label);
         card.appendChild(ph);
       }
 
@@ -3770,7 +3797,7 @@ function createResultCard(data) {
       statusText.className = 'text-[10px] text-indigo-200/80';
       const downloadBtn = document.createElement('button');
       downloadBtn.type = 'button';
-      downloadBtn.className = 'text-[12px] px-4 py-2 rounded-full bg-indigo-500/90 hover:bg-indigo-400 text-white hidden';
+      downloadBtn.className = 'text-[12px] min-w-[64px] px-5 py-2 rounded-full bg-indigo-500/90 hover:bg-indigo-400 text-white hidden';
       downloadBtn.textContent = 'GET';
       downloadBtn.addEventListener('click', (event) => {
         event.preventDefault();
@@ -4085,6 +4112,7 @@ function createResultCard(data) {
 
 
 const __activePolls = new Map(); // runId -> token
+const GENERATION_FAILED_MESSAGE = 'Sorry, your generation failed. Please try again, and make sure your prompt follows the content guidelines.';
 
 function startPollGeneration(runId, controllers, taskId, checker) {
   if (!runId || !controllers || !controllers.length) return;
@@ -4151,8 +4179,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const nbStatus = String(nb?.js?.status || '').toLowerCase();
         const nbFailed = !!nb?.js?.failed || nbStatus.includes('fail') || nbStatus.includes('error') || nbStatus.includes('cancel');
         if (nbFailed) {
-          const message = nb?.js?.error ? `❌ Generation failed: ${nb.js.error}` : '❌ Generation failed. Credits refunded.';
-          showStatus(message, 'error');
+          showGenerationFailedStatus();
           await refreshCredits();
           for (let i = 0; i < controllers.length; i++) {
             controllers[i].apply({ status: 'failed', result_url: null });
@@ -5216,7 +5243,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
     function updateUploadPanelState() {
       const uploadBtn = document.getElementById('uploadBtn');
-      const uploadPanel = uploadBtn ? uploadBtn.closest('.md\:w-1\/3, .flex-col') : null;
+      const uploadPanel = uploadBtn ? uploadBtn.closest('.flex-col') : null;
       if (!uploadPanel || !currentModel) return;
       const hasUpload = !!currentModel.useFrames || !!currentModel.needsVideo || !!currentModel.needsMotionVideo || !!currentModel.specificUpload || Number(currentModel.maxFiles || 0) > 0;
       uploadPanel.classList.toggle('upload-panel-empty', !hasUpload);
@@ -5290,6 +5317,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           : 'text-amber-200/80');
     }
 
+    function showGenerationFailedStatus() {
+      showStatus(GENERATION_FAILED_MESSAGE, 'error');
+    }
+
     function getKlingMotionVideoError() {
       if (!currentModel || currentModel.id !== 'kling-motion-control') return '';
       if (!motionVideoFile || !Number.isFinite(Number(motionVideoSeconds))) return '';
@@ -5309,13 +5340,42 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       return !error;
     }
 
+    let modelOverlayScrollY = 0;
+    function lockModelOverlayScroll() {
+      if (!window.matchMedia || !window.matchMedia('(max-width: 767px)').matches) return;
+      if (document.body.dataset.modelOverlayLocked === 'true') return;
+      modelOverlayScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      document.body.dataset.modelOverlayLocked = 'true';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${modelOverlayScrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function unlockModelOverlayScroll() {
+      if (document.body.dataset.modelOverlayLocked !== 'true') return;
+      document.body.dataset.modelOverlayLocked = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, modelOverlayScrollY || 0);
+    }
+
     function openModelOverlay() {
       const overlay = document.getElementById('modelOverlay');
       overlay.classList.remove('hidden');
-      renderOverlayModels();
       const input = document.getElementById('overlayModelSearch');
       if (input) {
         input.value = '';
+      }
+      lockModelOverlayScroll();
+      renderOverlayModels();
+      if (input && (!window.matchMedia || !window.matchMedia('(max-width: 767px)').matches)) {
         input.focus();
       }
     }
@@ -5323,6 +5383,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     function closeModelOverlay() {
       const overlay = document.getElementById('modelOverlay');
       overlay.classList.add('hidden');
+      unlockModelOverlayScroll();
     }
 
     function renderOverlayModels() {
@@ -5941,6 +6002,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       show('videoRefVideosControl', kind === 'wan27');
       show('videoRefAudioControl', kind === 'wan27');
       show('wanPromptExtendControl', kind === 'wan27');
+      if (typeof syncVideoRefsInputLocks === 'function') syncVideoRefsInputLocks();
     }
     // ------------------------------------------------------------
     // Mobile quick options (UI only): AR / Duration compact pickers
@@ -6093,6 +6155,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     document.getElementById('modelOverlay').addEventListener('click', (e) => {
       if (e.target.id === 'modelOverlay') closeModelOverlay();
     });
+    document.getElementById('modelOverlay').addEventListener('touchmove', (e) => {
+      if (!e.target.closest || !e.target.closest('#overlayModelList')) e.preventDefault();
+    }, { passive: false });
 
     // UPLOAD + PREVIEW
     document.getElementById('uploadBtn').addEventListener('click', () => {
@@ -6190,6 +6255,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             tile.addEventListener(type, (event) => {
               event.preventDefault();
               event.stopPropagation();
+              if (tile.classList.contains('control-disabled')) return;
               tile.classList.add('drag-over');
             });
           });
@@ -6201,6 +6267,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             });
           });
           tile.addEventListener('drop', (event) => {
+            if (tile.classList.contains('control-disabled')) return;
             const files = Array.from((event.dataTransfer && event.dataTransfer.files) || []);
             const wantsVideo = wrapId === 'klingMotionUploadWrap' && index === 0;
             const file = files.find((item) => item && item.type && item.type.startsWith(wantsVideo ? 'video/' : 'image/'));
@@ -6307,12 +6374,14 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function syncSeedanceInputLocks() {
+      if (!seedanceFirstFrameFile && seedanceLastFrameFile && typeof clearSeedanceLastFrame === 'function') clearSeedanceLastFrame();
       const hasFrames = !!(seedanceFirstFrameFile || seedanceLastFrameFile);
       const hasReferences = !!((seedanceImageRefFiles && seedanceImageRefFiles.length) || (seedanceVideoRefFiles && seedanceVideoRefFiles.length) || (seedanceAudioRefFiles && seedanceAudioRefFiles.length));
       const frameLockText = 'Remove reference images/videos/audio before using first or last frame.';
+      const lastNeedsFirstText = 'Choose a First frame before adding a Last frame.';
       const referenceLockText = 'Remove first/last frame before using references.';
       setSeedanceControlDisabled('seedanceFirstBtn', 'seedanceFirstInput', hasReferences, frameLockText);
-      setSeedanceControlDisabled('seedanceLastBtn', 'seedanceLastInput', hasReferences, frameLockText);
+      setSeedanceControlDisabled('seedanceLastBtn', 'seedanceLastInput', hasReferences || !seedanceFirstFrameFile, hasReferences ? frameLockText : lastNeedsFirstText);
       setSeedanceControlDisabled('seedanceImageRefsBtn', 'seedanceImageRefsInput', hasFrames, referenceLockText);
       setSeedanceControlDisabled('seedanceVideoRefsBtn', 'seedanceVideoRefsInput', hasFrames, referenceLockText);
       setSeedanceControlDisabled('seedanceAudioRefsBtn', 'seedanceAudioRefsInput', hasFrames, referenceLockText);
@@ -6331,15 +6400,18 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function syncVeo31InputLocks() {
+      const isFrameModel = currentModel && currentModel.useFrames;
       const isVeo31Model = currentModel && (currentModel.id === 'veo31-fast' || currentModel.id === 'veo31');
-      if (!isVeo31Model) return;
+      if (!isFrameModel) return;
+      if (!startFrameFile && lastFrameFile && typeof clearLastFrame === 'function') clearLastFrame();
       const hasFrames = !!(startFrameFile || lastFrameFile);
       const hasReferences = !!(veoReferenceFiles && veoReferenceFiles.length);
       const frameLockText = 'Remove reference images before using first or last frame.';
+      const lastNeedsFirstText = 'Choose a Start frame before adding a Last frame.';
       const referenceLockText = 'Remove first/last frame before using reference images.';
-      setVeoControlDisabled('startFrameBtn', 'startFrameInput', hasReferences, frameLockText);
-      setVeoControlDisabled('lastFrameBtn', 'lastFrameInput', hasReferences, frameLockText);
-      setVeoControlDisabled('veoReferenceBtn', 'veoReferenceInput', hasFrames, referenceLockText);
+      setVeoControlDisabled('startFrameBtn', 'startFrameInput', isVeo31Model && hasReferences, frameLockText);
+      setVeoControlDisabled('lastFrameBtn', 'lastFrameInput', (isVeo31Model && hasReferences) || !startFrameFile, (isVeo31Model && hasReferences) ? frameLockText : lastNeedsFirstText);
+      if (isVeo31Model) setVeoControlDisabled('veoReferenceBtn', 'veoReferenceInput', hasFrames, referenceLockText);
     }
 
     function renderVeoReferenceThumbs() {
@@ -6435,6 +6507,64 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const input = document.getElementById(inputId);
       if (btn && input) btn.addEventListener('click', () => input.click());
     };
+    const fileMatchesAccept = (file, accept) => {
+      if (!file) return false;
+      const rules = String(accept || '').split(',').map((item) => item.trim()).filter(Boolean);
+      if (!rules.length) return true;
+      const type = String(file.type || '').toLowerCase();
+      const name = String(file.name || '').toLowerCase();
+      return rules.some((rule) => {
+        const normalized = rule.toLowerCase();
+        if (normalized.endsWith('/*')) return type.startsWith(normalized.slice(0, -1));
+        if (normalized.startsWith('.')) return name.endsWith(normalized);
+        return type === normalized;
+      });
+    };
+    const bindDropToInput = (inputId) => {
+      const input = document.getElementById(inputId);
+      const card = input ? input.closest('.upload-drop-card') : null;
+      if (!input || !card || card.dataset.dropWired) return;
+      card.dataset.dropWired = 'true';
+
+      ['dragenter', 'dragover'].forEach((type) => {
+        card.addEventListener(type, (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (card.classList.contains('control-disabled')) return;
+          card.classList.add('drag-over');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach((type) => {
+        card.addEventListener(type, (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          card.classList.remove('drag-over');
+        });
+      });
+
+      card.addEventListener('drop', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        card.classList.remove('drag-over');
+        if (card.classList.contains('control-disabled')) return;
+        const files = Array.from((event.dataTransfer && event.dataTransfer.files) || [])
+          .filter((file) => fileMatchesAccept(file, input.accept));
+        if (!files.length) {
+          showStatus('Please drop a supported file for this input.', 'error');
+          return;
+        }
+        try {
+          const dt = new DataTransfer();
+          files.slice(0, input.multiple ? files.length : 1).forEach((file) => dt.items.add(file));
+          input.files = dt.files;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        } catch (error) {
+          console.warn('drop upload failed', error);
+          showStatus('We could not attach that file. Please try again.', 'error');
+        }
+      });
+    };
     bindClickToInput('seedanceFirstBtn', 'seedanceFirstInput');
     bindClickToInput('seedanceLastBtn', 'seedanceLastInput');
     bindClickToInput('seedanceImageRefsBtn', 'seedanceImageRefsInput');
@@ -6449,6 +6579,57 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     bindClickToInput('videoRefImagesBtn', 'videoRefImagesInput');
     bindClickToInput('videoRefVideosBtn', 'videoRefVideosInput');
     bindClickToInput('videoRefAudioBtn', 'videoRefAudioInput');
+    [
+      'seedanceFirstInput',
+      'seedanceLastInput',
+      'seedanceImageRefsInput',
+      'seedanceVideoRefsInput',
+      'seedanceAudioRefsInput',
+      'kling30FirstInput',
+      'kling30LastInput',
+      'kling30ElementsInput',
+      'videoFirstFrameInput',
+      'videoLastFrameInput',
+      'videoSourceInput',
+      'videoRefImagesInput',
+      'videoRefVideosInput',
+      'videoRefAudioInput'
+    ].forEach(bindDropToInput);
+
+    function clearSeedanceLastFrame() {
+      seedanceLastFrameFile = null;
+      const input = document.getElementById('seedanceLastInput');
+      const thumb = document.getElementById('seedanceLastThumb');
+      if (input) input.value = '';
+      if (thumb) thumb.innerHTML = '';
+    }
+
+    function clearVideoLastFrame() {
+      videoLastFrameFile = null;
+      const input = document.getElementById('videoLastFrameInput');
+      const thumb = document.getElementById('videoLastFrameThumb');
+      if (input) input.value = '';
+      if (thumb) thumb.innerHTML = '';
+    }
+
+    function setVideoRefsControlDisabled(btnId, inputId, disabled, title) {
+      const btn = document.getElementById(btnId);
+      const input = document.getElementById(inputId);
+      const card = btn ? btn.closest('.upload-drop-card') : null;
+      if (btn) {
+        btn.disabled = !!disabled;
+        btn.title = disabled ? (title || '') : '';
+      }
+      if (input) input.disabled = !!disabled;
+      if (card) card.classList.toggle('control-disabled', !!disabled);
+    }
+
+    function syncVideoRefsInputLocks() {
+      const lastControl = document.getElementById('videoLastFrameControl');
+      if (!lastControl || lastControl.classList.contains('hidden')) return;
+      if (!videoFirstFrameFile && videoLastFrameFile) clearVideoLastFrame();
+      setVideoRefsControlDisabled('videoLastFrameBtn', 'videoLastFrameInput', !videoFirstFrameFile, 'Choose a First frame before adding a Last frame.');
+    }
 
     document.getElementById('seedanceFirstInput').addEventListener('change', (e) => {
       if ((seedanceImageRefFiles.length || seedanceVideoRefFiles.length || seedanceAudioRefFiles.length)) {
@@ -6457,9 +6638,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         return;
       }
       seedanceFirstFrameFile = (e.target.files || [])[0] || null;
+      if (!seedanceFirstFrameFile) clearSeedanceLastFrame();
       renderSingleThumb(seedanceFirstFrameFile, document.getElementById('seedanceFirstThumb'), () => {
         seedanceFirstFrameFile = null;
         document.getElementById('seedanceFirstInput').value = '';
+        clearSeedanceLastFrame();
         syncSeedanceInputLocks();
       });
       syncSeedanceInputLocks();
@@ -6468,6 +6651,13 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if ((seedanceImageRefFiles.length || seedanceVideoRefFiles.length || seedanceAudioRefFiles.length)) {
         e.target.value = '';
         syncSeedanceInputLocks();
+        return;
+      }
+      if (!seedanceFirstFrameFile) {
+        e.target.value = '';
+        clearSeedanceLastFrame();
+        syncSeedanceInputLocks();
+        showStatus('Last frame requires a First frame first.', 'error');
         return;
       }
       seedanceLastFrameFile = (e.target.files || [])[0] || null;
@@ -6530,17 +6720,30 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
     document.getElementById('videoFirstFrameInput').addEventListener('change', (e) => {
       videoFirstFrameFile = (e.target.files || [])[0] || null;
+      if (!videoFirstFrameFile) clearVideoLastFrame();
       renderSingleThumb(videoFirstFrameFile, document.getElementById('videoFirstFrameThumb'), () => {
         videoFirstFrameFile = null;
         document.getElementById('videoFirstFrameInput').value = '';
+        clearVideoLastFrame();
+        syncVideoRefsInputLocks();
       });
+      syncVideoRefsInputLocks();
     });
     document.getElementById('videoLastFrameInput').addEventListener('change', (e) => {
+      if (!videoFirstFrameFile) {
+        e.target.value = '';
+        clearVideoLastFrame();
+        syncVideoRefsInputLocks();
+        showStatus('Last frame requires a First frame first.', 'error');
+        return;
+      }
       videoLastFrameFile = (e.target.files || [])[0] || null;
       renderSingleThumb(videoLastFrameFile, document.getElementById('videoLastFrameThumb'), () => {
         videoLastFrameFile = null;
         document.getElementById('videoLastFrameInput').value = '';
+        syncVideoRefsInputLocks();
       });
+      syncVideoRefsInputLocks();
     });
     document.getElementById('videoSourceInput').addEventListener('change', (e) => {
       videoSourceFile = (e.target.files || [])[0] || null;
@@ -6587,6 +6790,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       syncKling30InputLocks();
     });
     document.getElementById('kling30LastInput').addEventListener('change', (e) => {
+      if (!kling30FirstFrameFile) {
+        e.target.value = '';
+        syncKling30InputLocks();
+        showStatus('Last frame requires a First frame first.', 'error');
+        return;
+      }
       if (kling30MultiShots) {
         e.target.value = '';
         syncKling30InputLocks();
@@ -6737,7 +6946,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const lastBtn = document.getElementById('kling30LastBtn');
       const lastInput = document.getElementById('kling30LastInput');
       const lastCard = lastBtn ? lastBtn.closest('.upload-drop-card') : null;
-      const lockLast = !!kling30MultiShots;
+      const lockLast = !!kling30MultiShots || !kling30FirstFrameFile;
       if (lockLast && kling30LastFrameFile) {
         kling30LastFrameFile = null;
         const lastThumb = document.getElementById('kling30LastThumb');
@@ -6746,7 +6955,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       if (lastBtn) {
         lastBtn.disabled = lockLast;
-        lastBtn.title = lockLast ? 'Kling 3.0 multi-shot supports only First frame, not Last frame.' : '';
+        lastBtn.title = lockLast
+          ? (kling30MultiShots ? 'Kling 3.0 multi-shot supports only First frame, not Last frame.' : 'Choose a First frame before adding a Last frame.')
+          : '';
       }
       if (lastInput) lastInput.disabled = lockLast;
       if (lastCard) lastCard.classList.toggle('control-disabled', lockLast);
@@ -7669,6 +7880,15 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           showStatus('Last frame requires a Start frame first.', 'error');
           return;
         }
+      } else if (currentModel.specificUpload === 'seedance' && seedanceLastFrameFile && !seedanceFirstFrameFile) {
+        showStatus('Last frame requires a First frame first.', 'error');
+        return;
+      } else if (currentModel.specificUpload === 'wan27' && videoLastFrameFile && !videoFirstFrameFile) {
+        showStatus('Last frame requires a First frame first.', 'error');
+        return;
+      } else if (currentModel.specificUpload === 'kling30' && kling30LastFrameFile && !kling30FirstFrameFile) {
+        showStatus('Last frame requires a First frame first.', 'error');
+        return;
       } else if (currentModel.needsVideo) {
         if (!alephVideoFile) {
           showStatus('This model requires a video upload.', 'error');
@@ -7825,7 +8045,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             const parsedMsg = extractProviderError(j) || j.error || j.message;
             if (parsedMsg) msg = parsedMsg;
           } catch {}
-          showStatus('Error from model: ' + msg, 'error');
+          console.warn('model request failed', msg);
+          showGenerationFailedStatus();
           await refreshCredits();
         } else {
           // Some endpoints (e.g., Sora 2) return JSON with taskId/submitted flags
@@ -7834,7 +8055,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
           const providerError = extractProviderError(j);
           if (providerError) {
-            showStatus('Error from model: ' + providerError, 'error');
+            console.warn('provider rejected generation', providerError);
+            showGenerationFailedStatus();
             await refreshCredits();
             return;
           }
@@ -7843,7 +8065,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           if (currentModel && currentModel.id === 'sora2') {
             if (!j || !j.submitted || !j.taskId) {
               const errMsg = extractProviderError(j) || (j && (j.error || j.message)) || 'unknown_error';
-              showStatus('Error from model: ' + errMsg, 'error');
+              console.warn('sora2 submission missing task id', errMsg);
+              showGenerationFailedStatus();
               await refreshCredits();
             } else {
               createProcessingPlaceholders();
@@ -7874,11 +8097,13 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           const limitMb = (typeof currentModel !== 'undefined' && currentModel && currentModel.uploadMaxMB)
             ? Number(currentModel.uploadMaxMB)
             : ((typeof currentModel !== 'undefined' && currentModel && currentModel.id === 'nano-banana-pro') ? 25 : 10);
-          showStatus(`One of the images is larger than ${limitMb}MB.`, 'error');
+          showStatus(`One of the selected files is larger than ${limitMb}MB.`, 'error');
         } else if (err && err.message === 'upload_bridge_missing') {
-          showStatus('Upload bridge is missing on this page.', 'error');
+          showGenerationFailedStatus();
+        } else if (err && err.message === 'upload_failed') {
+          showGenerationFailedStatus();
         } else {
-          showStatus('Unexpected error while submitting the job.', 'error');
+          showGenerationFailedStatus();
         }
         await refreshCredits();
       } finally {
