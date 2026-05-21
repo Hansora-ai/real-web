@@ -1235,6 +1235,38 @@
       }
     }
 
+
+    /* Stable model promo image cards: keep the full embedded design visible on every screen size. */
+    .model-section > .model-info-card {
+      height: auto !important;
+      min-height: 0 !important;
+      aspect-ratio: auto !important;
+      align-self: start !important;
+    }
+
+    .model-section > .model-info-card::before,
+    .model-section > .model-info-card::after,
+    .model-section > .model-info-card .slot-label {
+      display: none !important;
+    }
+
+    .model-section > .model-info-card > img {
+      position: static !important;
+      inset: auto !important;
+      width: 100% !important;
+      height: auto !important;
+      max-width: 100% !important;
+      object-fit: contain !important;
+      object-position: center !important;
+    }
+
+    @media (max-width: 740px) {
+      .model-section > .model-info-card {
+        min-height: 0 !important;
+        aspect-ratio: auto !important;
+      }
+    }
+
 </style>
 <link href="/header.css" rel="stylesheet"/>
 <style id="hansora-mobile-header-creator-fix">
