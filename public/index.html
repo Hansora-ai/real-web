@@ -1238,10 +1238,12 @@
 
     /* Stable model promo image cards: keep the full embedded design visible on every screen size. */
     .model-section > .model-info-card {
+      display: block !important;
       height: auto !important;
       min-height: 0 !important;
       aspect-ratio: auto !important;
-      align-self: start !important;
+      overflow: visible !important;
+      background: transparent !important;
     }
 
     .model-section > .model-info-card::before,
@@ -1253,17 +1255,49 @@
     .model-section > .model-info-card > img {
       position: static !important;
       inset: auto !important;
+      display: block !important;
       width: 100% !important;
       height: auto !important;
       max-width: 100% !important;
+      max-height: none !important;
       object-fit: contain !important;
       object-position: center !important;
+    }
+
+    @media (min-width: 741px) {
+      .model-section {
+        grid-template-columns: minmax(380px, 440px) minmax(0, 1fr) !important;
+        align-items: center !important;
+        min-height: 0 !important;
+      }
+
+      .model-section > .model-info-card {
+        width: 100% !important;
+        max-width: 440px !important;
+        justify-self: center !important;
+        align-self: center !important;
+      }
+
+      .model-grid.desktop-mosaic-only {
+        align-self: center !important;
+      }
+    }
+
+    @media (min-width: 741px) and (max-width: 1180px) {
+      .model-section {
+        grid-template-columns: minmax(330px, 38%) minmax(0, 1fr) !important;
+      }
+
+      .model-section > .model-info-card {
+        max-width: 390px !important;
+      }
     }
 
     @media (max-width: 740px) {
       .model-section > .model-info-card {
         min-height: 0 !important;
         aspect-ratio: auto !important;
+        align-self: start !important;
       }
     }
 
