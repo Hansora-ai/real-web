@@ -1364,6 +1364,102 @@
   }
 </style>
 
+<style id="hansora-final-model-section-geometry-fix">
+  /* Final geometry: keep promo art and mosaic at the same height on desktop/laptop. */
+  @media (min-width: 1021px) {
+    .model-section {
+      grid-template-columns: minmax(360px, 36%) minmax(0, 1fr) !important;
+      align-items: stretch !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+
+    .model-section > .model-info-card {
+      position: relative !important;
+      width: 100% !important;
+      max-width: none !important;
+      height: clamp(430px, 36vw, 540px) !important;
+      min-height: 0 !important;
+      aspect-ratio: auto !important;
+      align-self: stretch !important;
+      justify-self: stretch !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+      background:
+        radial-gradient(520px 320px at 42% 45%, rgba(99,102,241,.2), transparent 68%),
+        radial-gradient(520px 320px at 62% 62%, rgba(56,189,248,.14), transparent 70%),
+        linear-gradient(135deg, rgba(15,19,32,.86), rgba(10,13,22,.58)),
+        transparent !important;
+    }
+
+    .model-section > .model-info-card > img {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
+      object-fit: contain !important;
+      object-position: center !important;
+    }
+
+    .model-grid.desktop-mosaic-only {
+      width: 100% !important;
+      max-width: none !important;
+      height: clamp(430px, 36vw, 540px) !important;
+      align-self: stretch !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+
+    .model-grid.desktop-mosaic-only .mosaic-column {
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+  }
+
+  @media (min-width: 741px) and (max-width: 1020px) {
+    .model-section {
+      grid-template-columns: 1fr !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+
+    .model-section > .model-info-card {
+      position: relative !important;
+      width: min(100%, 560px) !important;
+      max-width: 560px !important;
+      height: clamp(360px, 58vw, 520px) !important;
+      min-height: 0 !important;
+      aspect-ratio: auto !important;
+      justify-self: center !important;
+      margin: 0 auto !important;
+      overflow: hidden !important;
+      background:
+        radial-gradient(520px 320px at 42% 45%, rgba(99,102,241,.2), transparent 68%),
+        radial-gradient(520px 320px at 62% 62%, rgba(56,189,248,.14), transparent 70%),
+        linear-gradient(135deg, rgba(15,19,32,.86), rgba(10,13,22,.58)),
+        transparent !important;
+    }
+
+    .model-section > .model-info-card > img {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+      object-position: center !important;
+    }
+
+    .model-grid.desktop-mosaic-only {
+      width: 100% !important;
+      max-width: 920px !important;
+      height: auto !important;
+      margin: 0 auto !important;
+    }
+  }
+</style>
+
 </head>
 <body>
 <noscript><img alt="" height="1" src="https://www.facebook.com/tr?id=1336278884948294&amp;ev=PageView&amp;noscript=1" style="display:none" width="1" loading="lazy" decoding="async"></noscript>
