@@ -1321,6 +1321,49 @@
   }
 </style>
 
+<style id="hansora-cross-device-model-layout-fix">
+  /* Keep the model promo sections stable on smaller desktop/laptop screens and browser zoom. */
+  @media (min-width: 741px) {
+    .model-section {
+      grid-template-columns: minmax(300px, clamp(320px, 30vw, 440px)) minmax(0, 1fr) !important;
+      max-width: 100% !important;
+      overflow: hidden !important;
+    }
+
+    .model-section > .model-info-card,
+    .model-section > .model-grid {
+      min-width: 0 !important;
+    }
+
+    .model-section > .model-info-card {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    .model-grid.desktop-mosaic-only {
+      width: 100% !important;
+      max-width: min(920px, 100%) !important;
+    }
+  }
+
+  @media (min-width: 741px) and (max-width: 1020px) {
+    .model-section {
+      grid-template-columns: 1fr !important;
+    }
+
+    .model-section > .model-info-card {
+      width: min(440px, calc(100% - 20px)) !important;
+      max-width: 440px !important;
+      margin: 10px auto 0 !important;
+    }
+
+    .model-grid.desktop-mosaic-only {
+      margin: 0 auto !important;
+      max-width: 920px !important;
+    }
+  }
+</style>
+
 </head>
 <body>
 <noscript><img alt="" height="1" src="https://www.facebook.com/tr?id=1336278884948294&amp;ev=PageView&amp;noscript=1" style="display:none" width="1" loading="lazy" decoding="async"></noscript>
