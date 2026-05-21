@@ -119,11 +119,11 @@ export default async (request, context) => {
       position:absolute;
       left:50%;
       bottom:0;
-      width:min(104vw,560px);
-      height:min(58vh,390px);
+      width:min(94vw,430px);
+      height:min(44vh,310px);
       transform:translateX(-50%) translateY(26px) scale(.96);
       transform-origin:bottom center;
-      border-radius:52% 52% 0 0 / 28% 28% 0 0;
+      border-radius:50% 50% 0 0 / 30% 30% 0 0;
       border:1px solid rgba(255,255,255,.12);
       background:rgba(20,21,25,.98);
       box-shadow:0 -18px 80px rgba(0,0,0,.45);
@@ -136,37 +136,38 @@ export default async (request, context) => {
     }
     .hs-radial-item{
       position:absolute;
-      width:88px;
+      width:78px;
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:9px;
+      gap:7px;
       border:0;
       background:transparent;
       color:#d7dbe4;
       text-decoration:none;
-      font:800 14px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      transform:translate(-50%,-50%);
+      font:800 13px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
     }
     .hs-radial-icon{
-      width:56px;
-      height:56px;
+      width:50px;
+      height:50px;
       display:grid;
       place-items:center;
       border-radius:50%;
       background:#30333b;
       color:#fff;
     }
-    .hs-radial-image{ left:22%; top:25%; }
-    .hs-radial-video{ left:50%; top:12%; transform:translateX(-50%); }
-    .hs-radial-audio{ right:22%; top:25%; }
-    .hs-radial-character{ left:8%; bottom:23%; }
-    .hs-radial-more{ right:8%; bottom:23%; }
+    .hs-radial-image{ left:28%; top:33%; }
+    .hs-radial-video{ left:50%; top:21%; }
+    .hs-radial-audio{ left:72%; top:33%; }
+    .hs-radial-character{ left:18%; top:67%; }
+    .hs-radial-more{ left:82%; top:67%; }
     .hs-radial-close{
       position:absolute;
       left:50%;
-      bottom:22%;
-      width:70px;
-      height:70px;
+      bottom:16%;
+      width:62px;
+      height:62px;
       transform:translateX(-50%);
       border:0;
       border-radius:50%;
@@ -175,7 +176,7 @@ export default async (request, context) => {
       background:#30333b;
       color:#b9bec9;
     }
-    .hs-radial-close svg{ width:36px; height:36px; stroke-width:2.6; }
+    .hs-radial-close svg{ width:32px; height:32px; stroke-width:2.6; }
     .hs-overlay{
       position:fixed;
       inset:0;
@@ -284,9 +285,9 @@ export default async (request, context) => {
       <span>Features</span>
     </a>
     <div class="hs-fab-wrap">
-      <button aria-label="Open models" class="hs-fab" id="hs-models-btn" type="button">
+      <button aria-label="Open create menu" class="hs-fab" id="hs-models-btn" type="button">
         <svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"></path></svg>
-        <span>Models</span>
+        <span>Create</span>
       </button>
     </div>
     <a aria-label="History" class="hs-btn" href="/usage.html">
