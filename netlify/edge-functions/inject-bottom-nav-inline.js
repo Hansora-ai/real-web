@@ -96,12 +96,21 @@ export default async (request, context) => {
       box-shadow:0 18px 42px rgba(92,82,255,.42), 0 8px 24px rgba(56,189,248,.28);
       color:#fff;
     }
-    .hs-fab svg{ width:29px; height:29px; }
-    .hs-fab span{
+    .hs-fab .hs-fab-plus{
+      position:absolute;
+      left:0;
+      right:0;
+      top:11px;
+      z-index:2;
+      font:300 32px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      color:#fff;
+    }
+    .hs-fab .hs-fab-label{
       position:absolute;
       left:0;
       right:0;
       bottom:10px;
+      z-index:2;
       font:800 12px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
     }
     .hs-radial{
@@ -216,16 +225,26 @@ export default async (request, context) => {
       font:850 20px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
     }
     #hs-close{
-      width:44px;
-      height:44px;
+      flex:0 0 50px;
+      width:50px;
+      height:50px;
+      padding:0;
       border-radius:50%;
       border:1px solid rgba(255,255,255,.12);
       background:#282a32;
       color:#fff;
-      display:grid;
-      place-items:center;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-sizing:border-box;
+      line-height:1;
     }
-    #hs-close svg{ width:25px; height:25px; }
+    #hs-close svg{
+      width:28px;
+      height:28px;
+      display:block;
+      margin:auto;
+    }
     .hs-overlay .links{
       display:flex;
       flex-direction:column;
@@ -286,8 +305,8 @@ export default async (request, context) => {
     </a>
     <div class="hs-fab-wrap">
       <button aria-label="Open create menu" class="hs-fab" id="hs-models-btn" type="button">
-        <svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"></path></svg>
-        <span>Create</span>
+        <span aria-hidden="true" class="hs-fab-plus">+</span>
+        <span class="hs-fab-label">Create</span>
       </button>
     </div>
     <a aria-label="History" class="hs-btn" href="/usage.html">
@@ -320,10 +339,10 @@ export default async (request, context) => {
       <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg></span>
       <b>Character</b>
     </a>
-    <button class="hs-radial-item hs-radial-more" id="hs-radial-more" type="button">
+    <a class="hs-radial-item hs-radial-more" href="/models.html">
       <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"></path><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14z"></path></svg></span>
       <b>See more</b>
-    </button>
+    </a>
     <button class="hs-radial-close" id="hs-radial-close" type="button" aria-label="Close models menu">
       <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg>
     </button>
