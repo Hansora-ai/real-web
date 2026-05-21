@@ -5022,6 +5022,62 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       renderWorkspaceModelRail();
     }
 
+    function getModelIdFromUrl() {
+      let raw = '';
+      try {
+        raw = new URLSearchParams(window.location.search).get('model') || '';
+      } catch {
+        raw = '';
+      }
+      const value = raw.trim();
+      if (!value) return '';
+
+      const alias = {
+        'gpt-image-1-5': 'gpt-image-1.5',
+        'wan-2-7': 'wan-2-7-image',
+        'seedance-2': 'seedance20',
+        'seedance-2.0': 'seedance20',
+        'seedance20': 'seedance20',
+        'veo31': 'veo31-fast',
+        'veo-31': 'veo31-fast',
+        'veo-3.1': 'veo31-fast',
+        'veo3.1': 'veo31-fast',
+        'wan27': 'wan27-video',
+        'wan-27': 'wan27-video',
+        'wan-2.7': 'wan27-video',
+        'happyhorse': 'happyhorse10',
+        'happyhorse-1': 'happyhorse10',
+        'happyhorse-1.0': 'happyhorse10',
+        'grok': 'grok-video',
+        'kling3': 'kling30',
+        'kling-3': 'kling30',
+        'kling-3.0': 'kling30',
+        'kling-2-5-turbo': 'kling25',
+        'wan-2-7-video': 'wan27-video'
+      };
+
+      const normalized = value.toLowerCase();
+      if (alias[normalized]) return alias[normalized];
+      const exact = MODELS.find((m) => m.id.toLowerCase() === normalized);
+      if (exact) return exact.id;
+
+      const compact = normalized.replace(/[^a-z0-9]/g, '');
+      if (alias[compact]) return alias[compact];
+      const byCompactId = MODELS.find((m) => m.id.toLowerCase().replace(/[^a-z0-9]/g, '') === compact);
+      if (byCompactId) return byCompactId.id;
+      const byName = MODELS.find((m) => m.name.toLowerCase().replace(/[^a-z0-9]/g, '') === compact);
+      return byName ? byName.id : '';
+    }
+
+    function applyModelFromUrl() {
+      const id = getModelIdFromUrl();
+      if (!id) return false;
+      const model = MODELS.find((m) => m.id === id);
+      if (!model) return false;
+      selectWorkspaceModel(id);
+      return true;
+    }
+
     function renderWorkspaceModelRail() {
       const rail = document.getElementById('modelRail');
       if (!rail || !Array.isArray(MODELS)) return;
@@ -8205,6 +8261,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       wireWorkspaceRedesign();
       wireUploadTileClicks();
       setMode('image');
+      applyModelFromUrl();
       updateModelButtonLabels();
       configureControlsForModel();
       wireWorkspaceRedesign();
