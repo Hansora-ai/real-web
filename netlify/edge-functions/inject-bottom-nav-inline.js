@@ -1,144 +1,424 @@
 // netlify/edge-functions/inject-bottom-nav-inline.js
-// EXACT 1:1 injection of the mobile bottom navigation + overlay from index.html
-// No other behavior changed. HTML & CSS copied verbatim from uploaded index file.
+// Injects the shared mobile bottom navigation into HTML responses.
 
 export default async (request, context) => {
   const res = await context.next();
 
-  // Only operate on HTML
   const ct = res.headers.get('content-type') || '';
   if (!ct.includes('text/html')) return res;
 
   const html = await res.text();
 
-  // Avoid duplicate injection if the page already includes it
   if (html.includes('class="hs-bottom-nav"') || html.includes("class='hs-bottom-nav'")) {
     return new Response(html, { status: res.status, headers: res.headers });
   }
 
   const STYLE = `<style>
-  .hs-bottom-nav, .hs-overlay { display: none; }
+  .hs-bottom-nav,
+  .hs-overlay,
+  .hs-radial { display: none; }
+
   @media (max-width: 768px){
     :root{
-      --hs-bg: rgba(12,14,20,.88);
-      --hs-ink: #e5e7eb;
-      --hs-muted: #9ca3af;
-      --hs-line: rgba(255,255,255,.08);
-      --hs-grad-a: #8b5cf6;
-      --hs-grad-b: #60a5fa;
+      --hs-ink:#e5e7eb;
+      --hs-muted:#a9afbd;
+      --hs-line:rgba(255,255,255,.10);
+      --hs-panel:#111217;
+      --hs-panel-2:#171820;
+      --hs-grad-a:#8b5cf6;
+      --hs-grad-b:#4f9cff;
     }
-    body{ padding-bottom: 84px; }
+    body{ padding-bottom:94px; }
     .hs-bottom-nav{
-      position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
-      background: var(--hs-bg); border-top: 1px solid var(--hs-line);
-      backdrop-filter: saturate(120%) blur(12px); display:block;
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:0;
+      z-index:60;
+      display:block;
+      background:linear-gradient(180deg,rgba(11,13,18,.78),rgba(8,10,15,.96));
+      border-top:1px solid var(--hs-line);
+      backdrop-filter:blur(14px);
+      -webkit-backdrop-filter:blur(14px);
+      padding:10px 10px calc(12px + env(safe-area-inset-bottom));
     }
     .hs-bottom-rail{
-      max-width: 980px; margin: 0 auto; height: 64px;
-      display: grid; grid-template-columns: 1fr 1fr auto 1fr 1fr;
-      align-items: center; padding: 0 14px;
+      max-width:780px;
+      height:72px;
+      margin:0 auto;
+      display:grid;
+      grid-template-columns:1fr 1fr auto 1fr 1fr;
+      align-items:center;
+      padding:0 10px;
+      gap:4px;
     }
     .hs-btn{
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 4px; text-decoration: none; color: var(--hs-muted); font-size: 11px; padding: 8px 4px;
-      border-radius: 12px;
+      width:100%;
+      min-width:0;
+      height:64px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      border:0;
+      border-radius:16px;
+      background:transparent;
+      color:var(--hs-muted);
+      font:700 12px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      text-decoration:none;
     }
-    .hs-btn:active{ background: rgba(255,255,255,.06); }
-    .hs-btn svg{ width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; }
-    .hs-fab-wrap{ display: flex; justify-content: center; align-items: center; }
+    .hs-btn:active{ background:rgba(255,255,255,.06); color:#fff; }
+    .hs-btn svg,
+    .hs-overlay svg,
+    .hs-radial svg{
+      width:26px;
+      height:26px;
+      stroke:currentColor;
+      fill:none;
+      stroke-width:2.25;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+    .hs-fab-wrap{ display:flex; justify-content:center; align-items:center; }
     .hs-fab{
-      width: 64px; height: 64px; margin-top: -28px; border-radius: 16px;
-      display: flex; align-items: center; justify-content: center; position: relative;
-      text-decoration: none; color: #fff; font-weight: 700; font-size: 12px;
-      background: radial-gradient(120% 120% at 20% 10%, var(--hs-grad-a) 0%, #6d28d9 50%, transparent 60%),
-                  radial-gradient(140% 140% at 80% 80%, var(--hs-grad-b) 0%, #1d4ed8 55%, transparent 65%),
-                  linear-gradient(180deg, #7c3aed, #2563eb);
-      box-shadow: 0 10px 30px rgba(139,92,246,.35), 0 6px 14px rgba(37,99,235,.25);
-      border: 1px solid rgba(255,255,255,.08);
+      position:relative;
+      width:78px;
+      height:78px;
+      margin-top:-36px;
+      display:grid;
+      place-items:center;
+      border-radius:24px;
+      border:1px solid rgba(255,255,255,.18);
+      background:
+        radial-gradient(circle at 74% 20%, rgba(71,215,255,.9), transparent 24%),
+        linear-gradient(145deg,var(--hs-grad-a),#7c3aed 48%,var(--hs-grad-b));
+      box-shadow:0 18px 42px rgba(92,82,255,.42), 0 8px 24px rgba(56,189,248,.28);
+      color:#fff;
     }
-    .hs-fab svg{ width: 26px; height: 26px; stroke: #fff; }
-    .hs-fab span{ position: absolute; bottom: 6px; font-size: 10px; }
-    .hs-overlay{ position: fixed; inset: 0; z-index: 70; display: none; }
-    .hs-overlay.is-open{ display: block; }
-    .hs-overlay .backdrop{ position: absolute; inset: 0; background: rgba(0,0,0,.6); }
-    .hs-overlay .panel{ position: absolute; inset: 0; background: rgba(12,14,20,.98); display: flex; flex-direction: column; }
-    .hs-overlay .panel header{ display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--hs-line); color: var(--hs-ink); }
-    .hs-overlay .panel header h3{ font-size: 16px; font-weight: 700; letter-spacing: .2px; margin: 0; }
-    .hs-overlay .panel header button{ width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--hs-line); background: rgba(255,255,255,.04); color: var(--hs-ink); }
-    .hs-overlay .links{ padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-    .hs-overlay .links a{ display: flex; align-items: center; gap: 10px; padding: 14px 12px; border-radius: 12px; text-decoration: none; color: var(--hs-ink); border: 1px solid var(--hs-line); background: rgba(255,255,255,.04); font-size: 15px; }
-    .hs-overlay .links a:active{ background: rgba(255,255,255,.06); }
-    .hs-overlay .links svg{ width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .hs-fab svg{ width:29px; height:29px; }
+    .hs-fab span{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:10px;
+      font:800 12px/1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+    }
+    .hs-radial{
+      position:fixed;
+      inset:0;
+      z-index:72;
+    }
+    .hs-radial.is-open{ display:block; }
+    .hs-radial-backdrop{
+      position:absolute;
+      inset:0;
+      background:rgba(0,0,0,.58);
+    }
+    .hs-radial-panel{
+      position:absolute;
+      left:50%;
+      bottom:0;
+      width:min(104vw,560px);
+      height:min(58vh,390px);
+      transform:translateX(-50%) translateY(26px) scale(.96);
+      transform-origin:bottom center;
+      border-radius:52% 52% 0 0 / 28% 28% 0 0;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(20,21,25,.98);
+      box-shadow:0 -18px 80px rgba(0,0,0,.45);
+      opacity:0;
+      transition:opacity .22s ease, transform .22s ease;
+    }
+    .hs-radial.is-open .hs-radial-panel{
+      opacity:1;
+      transform:translateX(-50%) translateY(0) scale(1);
+    }
+    .hs-radial-item{
+      position:absolute;
+      width:88px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:9px;
+      border:0;
+      background:transparent;
+      color:#d7dbe4;
+      text-decoration:none;
+      font:800 14px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+    }
+    .hs-radial-icon{
+      width:56px;
+      height:56px;
+      display:grid;
+      place-items:center;
+      border-radius:50%;
+      background:#30333b;
+      color:#fff;
+    }
+    .hs-radial-image{ left:22%; top:25%; }
+    .hs-radial-video{ left:50%; top:12%; transform:translateX(-50%); }
+    .hs-radial-audio{ right:22%; top:25%; }
+    .hs-radial-character{ left:8%; bottom:23%; }
+    .hs-radial-more{ right:8%; bottom:23%; }
+    .hs-radial-close{
+      position:absolute;
+      left:50%;
+      bottom:22%;
+      width:70px;
+      height:70px;
+      transform:translateX(-50%);
+      border:0;
+      border-radius:50%;
+      display:grid;
+      place-items:center;
+      background:#30333b;
+      color:#b9bec9;
+    }
+    .hs-radial-close svg{ width:36px; height:36px; stroke-width:2.6; }
+    .hs-overlay{
+      position:fixed;
+      inset:0;
+      z-index:70;
+    }
+    .hs-overlay.is-open{ display:block; }
+    .hs-overlay .backdrop{
+      position:absolute;
+      inset:0;
+      background:rgba(3,5,10,.74);
+      backdrop-filter:blur(4px);
+      -webkit-backdrop-filter:blur(4px);
+    }
+    .hs-overlay .panel{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      max-height:88vh;
+      overflow:auto;
+      padding:18px 18px calc(26px + env(safe-area-inset-bottom));
+      border-radius:28px 28px 0 0;
+      border-top:1px solid rgba(255,255,255,.12);
+      background:rgba(16,17,23,.98);
+      box-shadow:0 -20px 70px rgba(0,0,0,.46);
+    }
+    .hs-overlay .panel header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:14px;
+      color:var(--hs-ink);
+    }
+    .hs-overlay .panel h3{
+      margin:0;
+      font:850 20px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+    }
+    #hs-close{
+      width:44px;
+      height:44px;
+      border-radius:50%;
+      border:1px solid rgba(255,255,255,.12);
+      background:#282a32;
+      color:#fff;
+      display:grid;
+      place-items:center;
+    }
+    #hs-close svg{ width:25px; height:25px; }
+    .hs-overlay .links{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .hs-overlay .links a,
+    .hs-feature-toggle{
+      min-height:62px;
+      display:flex;
+      align-items:center;
+      gap:14px;
+      padding:0 18px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.04);
+      color:var(--hs-ink);
+      font:750 16px/1.1 system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      text-decoration:none;
+    }
+    .hs-feature-toggle{
+      width:100%;
+      justify-content:space-between;
+    }
+    .hs-feature-toggle span{
+      display:flex;
+      align-items:center;
+      gap:14px;
+    }
+    .hs-chev{ transition:transform .18s ease; }
+    .hs-overlay.features-open .hs-chev{ transform:rotate(180deg); }
+    .hs-feature-list{
+      display:none;
+      grid-template-columns:1fr;
+      gap:8px;
+      padding:2px 0 6px 18px;
+    }
+    .hs-overlay.features-open .hs-feature-list{ display:grid; }
+    .hs-feature-list a{
+      min-height:46px !important;
+      border-radius:14px !important;
+      padding:0 14px !important;
+      background:rgba(125,211,252,.06) !important;
+      font-size:14px !important;
+      color:#d8ecff !important;
+    }
   }
 </style>`;
-  const NAV = `<nav aria-label="Mobile bottom navigation" class="hs-bottom-nav">
-<div class="hs-bottom-rail">
-<a aria-label="Home" class="hs-btn" href="index.html">
-<svg viewbox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
-<span>Home</span>
-</a>
-<a aria-label="Templates" class="hs-btn" href="templates.html">
-<svg viewbox="0 0 24 24">
-<rect height="7" rx="2" width="7" x="3" y="3"></rect><rect height="7" rx="2" width="7" x="14" y="3"></rect>
-<rect height="7" rx="2" width="7" x="3" y="14"></rect><rect height="7" rx="2" width="7" x="14" y="14"></rect>
-</svg>
-<span>Templates</span>
-</a>
-<div class="hs-fab-wrap">
-<a aria-label="Models" class="hs-fab" href="search-models.html">
-<svg viewbox="0 0 24 24"><path d="M12 6v12M6 12h12"></path></svg>
-<span>Models</span>
-</a>
-</div>
-<a aria-label="History" class="hs-btn" href="usage.html">
-<svg viewbox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.708"></path><path d="M3 3v6h6"></path><path d="M12 7v6l4 2"></path></svg>
-<span>History</span>
-</a>
-<button aria-label="Menu" class="hs-btn" id="hs-menu-btn" type="button">
-<svg viewbox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
-<span>Menu</span>
-</button>
-</div>
-</nav>
-<div class="hs-overlay" id="hs-overlay">
-<div class="backdrop" id="hs-backdrop"></div>
-<div aria-labelledby="hs-ol-title" aria-modal="true" class="panel" role="dialog">
-<header>
-<h3 id="hs-ol-title">Quick Links</h3>
-<button aria-label="Close" id="hs-close">
-<svg viewBox="0 0 24 24"><path d="M6 6l12 12M6 18L18 6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-</button>
-</header>
-<div class="links">
-<a href="models.html"><svg viewbox="0 0 24 24"><path d="M12 6v12M6 12h12"></path></svg> Models</a>
-<a href="templates.html"><svg viewbox="0 0 24 24">
-<rect height="7" rx="2" width="7" x="3" y="3"></rect><rect height="7" rx="2" width="7" x="14" y="3"></rect>
-<rect height="7" rx="2" width="7" x="3" y="14"></rect><rect height="7" rx="2" width="7" x="14" y="14"></rect>
-</svg> Templates</a>
-<a href="examples-prompts.html"><svg viewbox="0 0 24 24"><path d="M4 4h16v12H4z"></path><path d="M8 20h8"></path></svg> Examples/Prompts</a>
-<a href="pricing.html"><svg viewbox="0 0 24 24"><path d="M6 6h12v12H6z"></path><path d="M8 10h8M8 14h8"></path></svg> Pricing</a>
-<a href="index.html#faq"><svg viewbox="0 0 24 24"><path d="M12 18v.01"></path><path d="M9.09 9a3 3 0 1 1 5.91 1c0 2-3 2-3 4"></path></svg> FAQ</a>
 
-      <a href="contact.html"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 8l8 6 8-6"/></svg> Contact</a>
+  const NAV = `<nav aria-label="Mobile bottom navigation" class="hs-bottom-nav">
+  <div class="hs-bottom-rail">
+    <a aria-label="Home" class="hs-btn" href="/index.html">
+      <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
+      <span>Home</span>
+    </a>
+    <a aria-label="Features" class="hs-btn" href="/models.html#featuresSection">
+      <svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"></path></svg>
+      <span>Features</span>
+    </a>
+    <div class="hs-fab-wrap">
+      <button aria-label="Open models" class="hs-fab" id="hs-models-btn" type="button">
+        <svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"></path></svg>
+        <span>Models</span>
+      </button>
+    </div>
+    <a aria-label="History" class="hs-btn" href="/usage.html">
+      <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.708"></path><path d="M3 3v6h6"></path><path d="M12 7v6l4 2"></path></svg>
+      <span>History</span>
+    </a>
+    <button aria-label="Menu" class="hs-btn" id="hs-menu-btn" type="button">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      <span>Menu</span>
+    </button>
+  </div>
+</nav>
+
+<div class="hs-radial" id="hs-radial" aria-hidden="true">
+  <div class="hs-radial-backdrop" id="hs-radial-backdrop"></div>
+  <div class="hs-radial-panel" role="dialog" aria-modal="true" aria-label="Choose model type">
+    <a class="hs-radial-item hs-radial-image" href="/search-models.html">
+      <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path><circle cx="8" cy="8" r="1.5"></circle></svg></span>
+      <b>Image</b>
+    </a>
+    <a class="hs-radial-item hs-radial-video" href="/search-models.html?type=video">
+      <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg></span>
+      <b>Video</b>
+    </a>
+    <a class="hs-radial-item hs-radial-audio" href="/audio.html">
+      <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M5 10v4"></path><path d="M9 7v10"></path><path d="M13 5v14"></path><path d="M17 8v8"></path><path d="M21 11v2"></path></svg></span>
+      <b>Audio</b>
+    </a>
+    <a class="hs-radial-item hs-radial-character" href="/character.html">
+      <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg></span>
+      <b>Character</b>
+    </a>
+    <button class="hs-radial-item hs-radial-more" id="hs-radial-more" type="button">
+      <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"></path><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14z"></path></svg></span>
+      <b>See more</b>
+    </button>
+    <button class="hs-radial-close" id="hs-radial-close" type="button" aria-label="Close models menu">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+    </button>
+  </div>
 </div>
+
+<div class="hs-overlay" id="hs-overlay" aria-hidden="true">
+  <div class="backdrop" id="hs-backdrop"></div>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="hs-ol-title">
+    <header>
+      <h3 id="hs-ol-title">Menu</h3>
+      <button id="hs-close" aria-label="Close menu" type="button">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </header>
+    <div class="links">
+      <a href="/search-models.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path></svg> Image</a>
+      <a href="/search-models.html?type=video"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg> Video</a>
+      <a href="/audio.html"><svg viewBox="0 0 24 24"><path d="M5 10v4"></path><path d="M9 7v10"></path><path d="M13 5v14"></path><path d="M17 8v8"></path></svg> Audio</a>
+      <button class="hs-feature-toggle" id="hs-feature-toggle" type="button">
+        <span><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path></svg> Features</span>
+        <svg class="hs-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      <div class="hs-feature-list" id="hs-feature-list">
+        <a href="/upscale.html">Image upscale</a>
+        <a href="/expand.html?mode=angles">Full angles</a>
+        <a href="/expand.html?mode=expand">Expand</a>
+        <a href="/expand.html?mode=face-swap">Face swap</a>
+        <a href="/character.html">Character</a>
+        <a href="/upscale.html?mode=video">Video upscale</a>
+        <a href="/lipsync.html">Lipsync Avatar</a>
+        <a href="/audio.html?tool=text-to-speech">Text to speech</a>
+        <a href="/audio.html?tool=voice-isolater">Voice isolater</a>
+        <a href="/audio.html?tool=voice-changer">Voice changer</a>
+        <a href="/audio.html?tool=song-creation">Song Creation</a>
+        <a href="/analyse.html">Hook analyse</a>
+      </div>
+      <a href="/pricing.html"><svg viewBox="0 0 24 24"><path d="M3 7h18v10H3z"></path><path d="M8 10h8M8 14h8"></path></svg> Pricing</a>
+      <a href="/index.html#faq"><svg viewBox="0 0 24 24"><path d="M12 17h.01"></path><path d="M9.09 9a3 3 0 1 1 5.91 1c0 2-3 2-3 4"></path></svg> FAQ</a>
+      <a href="/contact.html"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"></path><path d="M4 8l8 6 8-6"></path></svg> Contact</a>
+    </div>
+  </div>
 </div>
-</div>
+
 <script>
   (function(){
-    const openBtn = document.getElementById('hs-menu-btn');
+    const menuBtn = document.getElementById('hs-menu-btn');
     const overlay = document.getElementById('hs-overlay');
     const closeBtn = document.getElementById('hs-close');
     const backdrop = document.getElementById('hs-backdrop');
-    function open(){ overlay.classList.add('is-open'); }
-    function close(){ overlay.classList.remove('is-open'); }
-    openBtn && openBtn.addEventListener('click', open);
-    closeBtn && closeBtn.addEventListener('click', close);
-    backdrop && backdrop.addEventListener('click', close);
-    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') close(); });
+    const modelsBtn = document.getElementById('hs-models-btn');
+    const radial = document.getElementById('hs-radial');
+    const radialBackdrop = document.getElementById('hs-radial-backdrop');
+    const radialClose = document.getElementById('hs-radial-close');
+    const radialMore = document.getElementById('hs-radial-more');
+    const featureToggle = document.getElementById('hs-feature-toggle');
+    const openMenu = (expandFeatures) => {
+      if (!overlay) return;
+      overlay.classList.add('is-open');
+      overlay.setAttribute('aria-hidden', 'false');
+      if (expandFeatures) overlay.classList.add('features-open');
+    };
+    const closeMenu = () => {
+      if (!overlay) return;
+      overlay.classList.remove('is-open');
+      overlay.setAttribute('aria-hidden', 'true');
+    };
+    const openRadial = () => {
+      if (!radial) return;
+      closeMenu();
+      radial.classList.add('is-open');
+      radial.setAttribute('aria-hidden', 'false');
+    };
+    const closeRadial = () => {
+      if (!radial) return;
+      radial.classList.remove('is-open');
+      radial.setAttribute('aria-hidden', 'true');
+    };
+    menuBtn && menuBtn.addEventListener('click', () => { closeRadial(); openMenu(false); });
+    closeBtn && closeBtn.addEventListener('click', closeMenu);
+    backdrop && backdrop.addEventListener('click', closeMenu);
+    modelsBtn && modelsBtn.addEventListener('click', openRadial);
+    radialBackdrop && radialBackdrop.addEventListener('click', closeRadial);
+    radialClose && radialClose.addEventListener('click', closeRadial);
+    radialMore && radialMore.addEventListener('click', () => { closeRadial(); openMenu(true); });
+    featureToggle && featureToggle.addEventListener('click', () => overlay && overlay.classList.toggle('features-open'));
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeRadial();
+        closeMenu();
+      }
+    });
   })();
 </script>`;
 
   let out = html.replace(/<\/body>/i, STYLE + NAV + '</body>');
-  if (out === html) { out = html + STYLE + NAV; }
+  if (out === html) out = html + STYLE + NAV;
   return new Response(out, { status: res.status, headers: res.headers });
 };
