@@ -1067,7 +1067,7 @@
 
       .model-info-card {
         aspect-ratio: 3 / 4;
-        min-height: 0;
+        min-height: clamp(270px, 76vw, 430px);
         height: auto;
         border-right: 0;
         border-bottom: 0;
@@ -1217,6 +1217,17 @@
       height: 100%;
       object-fit: cover;
       z-index: 0;
+    }
+
+    @media (max-width: 740px) {
+      .model-section .model-info-card {
+        min-height: clamp(270px, 76vw, 430px) !important;
+        aspect-ratio: 3 / 4;
+      }
+
+      .wide-banner.design-only-banner {
+        min-height: clamp(430px, 128vw, 660px);
+      }
     }
 
 </style>
