@@ -3464,7 +3464,9 @@ async function __mjFetchNbCheck(params){
         }
 
         await refreshCredits();
-        await loadRecentHistory();
+        setTimeout(() => {
+          loadRecentHistory().catch((error) => console.warn('loadRecentHistory deferred failed', error));
+        }, 100);
       } catch (e) {
         console.warn('loadUser failed', e);
       }
@@ -3789,6 +3791,10 @@ function createResultCard(data) {
         mediaEl.controls = true;
         mediaEl.muted = true;
         mediaEl.playsInline = true;
+        mediaEl.preload = 'metadata';
+      } else {
+        mediaEl.loading = 'lazy';
+        mediaEl.decoding = 'async';
       }
       mediaEl.addEventListener('click', (event) => {
         event.preventDefault();
@@ -7493,11 +7499,10 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
         throw new Error('upload_bridge_missing');
       }
-      const urls = [];
       const maxUploadMB = (typeof currentModel !== 'undefined' && currentModel && currentModel.uploadMaxMB)
         ? Number(currentModel.uploadMaxMB)
         : ((typeof currentModel !== 'undefined' && currentModel && (currentModel.id === 'nano-banana-pro' || currentModel.id === 'nano-banana-2')) ? (currentModel.id === 'nano-banana-2' ? 30 : 25) : 10);
-      for (const file of list) {
+      const getFileMaxMB = (file) => {
         let fileMaxMB = maxUploadMB;
         const limits = currentModel && currentModel.uploadLimitsMB ? currentModel.uploadLimitsMB : null;
         if (limits && file && file.type) {
@@ -7505,16 +7510,47 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           else if (file.type.startsWith('video/')) fileMaxMB = Number(limits.video || fileMaxMB);
           else if (file.type.startsWith('audio/')) fileMaxMB = Number(limits.audio || fileMaxMB);
         }
+        return fileMaxMB;
+      };
+
+      list.forEach((file) => {
+        const fileMaxMB = getFileMaxMB(file);
         const maxUploadBytes = fileMaxMB * 1024 * 1024;
         if (file.size > maxUploadBytes) {
           throw new Error('file_too_large');
         }
+      });
+
+      const urls = new Array(list.length);
+      const hasLargeMedia = list.some((file) => {
+        const type = String(file?.type || '');
+        return type.startsWith('video/') || type.startsWith('audio/');
+      });
+      const concurrency = Math.min(list.length, hasLargeMedia ? 2 : 4);
+      let nextIndex = 0;
+      let completed = 0;
+
+      const uploadOne = async (index) => {
+        const file = list[index];
         const up = await window.kieUploadBridge.upload(file);
         if (!up || !up.publicUrl) {
           throw new Error('upload_failed');
         }
-        urls.push(up.publicUrl);
-      }
+        urls[index] = up.publicUrl;
+        completed += 1;
+        showStatus(`Uploading input files (${completed}/${list.length})…`);
+      };
+
+      const worker = async () => {
+        while (nextIndex < list.length) {
+          const index = nextIndex;
+          nextIndex += 1;
+          await uploadOne(index);
+        }
+      };
+
+      showStatus(`Uploading input files (0/${list.length})…`);
+      await Promise.all(Array.from({ length: concurrency }, worker));
       return urls;
     }
 
@@ -8166,7 +8202,6 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
     // boot
     (async () => {
-      await loadUser();
       wireWorkspaceRedesign();
       wireUploadTileClicks();
       setMode('image');
@@ -8174,6 +8209,9 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       configureControlsForModel();
       wireWorkspaceRedesign();
       wireUploadTileClicks();
+      setTimeout(() => {
+        loadUser().catch((error) => console.warn('loadUser deferred failed', error));
+      }, 0);
     })();
   </script>
 
