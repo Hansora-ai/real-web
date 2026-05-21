@@ -180,6 +180,43 @@
       'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/11.png',
       'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/12.png'
     ];
+    const MODEL_IMAGE_BASE = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/IMAGEVIDEO%20UPSCALE';
+    const MODEL_IMAGE_URLS = {
+      'gpt-image-2': `${MODEL_IMAGE_BASE}/2.png`,
+      'nano-banana-2': `${MODEL_IMAGE_BASE}/4.png`,
+      'nano-banana-pro': `${MODEL_IMAGE_BASE}/3.png`,
+      'seedream-5-lite': `${MODEL_IMAGE_BASE}/6.png`,
+      'grok-image': `${MODEL_IMAGE_BASE}/7.png`,
+      'seedream-4-5': `${MODEL_IMAGE_BASE}/8.png`,
+      'wan-2-7': `${MODEL_IMAGE_BASE}/10.png`,
+      'qwen-2': `${MODEL_IMAGE_BASE}/11.png`,
+      'z-image': `${MODEL_IMAGE_BASE}/13.png`,
+      'gpt-image-1-5': `${MODEL_IMAGE_BASE}/12.png`,
+      'nano-banana': `${MODEL_IMAGE_BASE}/5.png`,
+      'seedance-2': `${MODEL_IMAGE_BASE}/14.png`,
+      'kling-3': `${MODEL_IMAGE_BASE}/1.png`,
+      'gemini-omni': `${MODEL_IMAGE_BASE}/15.png`,
+      'happyhorse-1': `${MODEL_IMAGE_BASE}/16.png`,
+      'veo31': `${MODEL_IMAGE_BASE}/17.png`,
+      'grok-video': `${MODEL_IMAGE_BASE}/7.png`,
+      'kling26': `${MODEL_IMAGE_BASE}/18.png`,
+      'kling-2-5-turbo': `${MODEL_IMAGE_BASE}/19.png`,
+      'wan-2-7-video': `${MODEL_IMAGE_BASE}/10.png`,
+      'kling-motion-control': `${MODEL_IMAGE_BASE}/20.png`,
+      'aleph': `${MODEL_IMAGE_BASE}/21.png`,
+      '/upscale.html': `${MODEL_IMAGE_BASE}/22.png`,
+      '/expand.html?mode=angles': `${MODEL_IMAGE_BASE}/24.png`,
+      '/expand.html?mode=expand': `${MODEL_IMAGE_BASE}/25.png`,
+      '/expand.html?mode=face-swap': `${MODEL_IMAGE_BASE}/26.png`,
+      '/character.html': `${MODEL_IMAGE_BASE}/27.png`,
+      '/upscale.html?mode=video': `${MODEL_IMAGE_BASE}/22.png`,
+      '/lipsync.html': `${MODEL_IMAGE_BASE}/23.png`,
+      '/analyse.html': `${MODEL_IMAGE_BASE}/29.png`,
+      '/audio.html?tool=text-to-speech': `${MODEL_IMAGE_BASE}/28.png`,
+      '/audio.html?tool=voice-isolater': `${MODEL_IMAGE_BASE}/28.png`,
+      '/audio.html?tool=voice-changer': `${MODEL_IMAGE_BASE}/28.png`,
+      '/audio.html?tool=song-creation': `${MODEL_IMAGE_BASE}/30.png`
+    };
 
     function modelHref(id) {
       return `/search-models.html?model=${encodeURIComponent(id)}`;
@@ -191,13 +228,14 @@
         id: item.id || '',
         name: item.label,
         href: item.href || modelHref(item.id),
-        thumbnail: MODEL_PLACEHOLDERS[(index + offset) % MODEL_PLACEHOLDERS.length]
+        thumbnail: MODEL_IMAGE_URLS[item.id || item.href || item.label] || MODEL_PLACEHOLDERS[(index + offset) % MODEL_PLACEHOLDERS.length]
       }));
     }
 
     const IMAGE_MODELS = fromHeaderItems([
       { label: 'GPT Image 2', id: 'gpt-image-2' },
       { label: 'Nano Banana 2', id: 'nano-banana-2' },
+      { label: 'Nano Banana Pro', id: 'nano-banana-pro' },
       { label: 'Seedream 5.0 Lite', id: 'seedream-5-lite' },
       { label: 'Grok Image', id: 'grok-image' },
       { label: 'Seedream 4.5', id: 'seedream-4-5' },
