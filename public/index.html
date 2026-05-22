@@ -1425,6 +1425,167 @@
   }
 </style>
 
+<style id="hansora-wide-phone-layout-fix">
+  @media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-width: 1020px) {
+    html,
+    body {
+      width: 100% !important;
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+
+    body {
+      min-width: 0 !important;
+    }
+
+    main {
+      width: 100% !important;
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+
+    .shell {
+      width: min(calc(100% - 28px), 560px) !important;
+      max-width: 560px !important;
+      margin-inline: auto !important;
+    }
+
+    .nav {
+      min-height: 64px !important;
+    }
+
+    .nav-links {
+      display: none !important;
+    }
+
+    .brand span {
+      font-size: .95rem !important;
+    }
+
+    .nav-actions .btn-primary {
+      display: none !important;
+    }
+
+    .top-reel {
+      padding-top: 16px !important;
+    }
+
+    .x-scroll {
+      grid-auto-columns: min(330px, 82%) !important;
+      gap: 12px !important;
+    }
+
+    .model-rail {
+      grid-auto-columns: min(260px, 64%) !important;
+      gap: 12px !important;
+    }
+
+    .hero-intro {
+      padding: 34px 0 42px !important;
+      text-align: center !important;
+    }
+
+    .hero-intro h1 {
+      font-size: clamp(2.8rem, 18vw, 5.3rem) !important;
+      line-height: .86 !important;
+    }
+
+    .wide-banner .banner-content {
+      padding: 26px !important;
+    }
+
+    .aspect-wide {
+      aspect-ratio: auto !important;
+      min-height: 360px !important;
+    }
+
+    .section {
+      padding: 26px 0 !important;
+    }
+
+    .model-section {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-height: 0 !important;
+      margin-inline: auto !important;
+      overflow: hidden !important;
+    }
+
+    .model-section > * {
+      min-width: 0 !important;
+    }
+
+    .model-section > .model-info-card {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: auto !important;
+      min-height: 360px !important;
+      aspect-ratio: 2 / 3 !important;
+      justify-self: stretch !important;
+      margin: 0 !important;
+      border-right: 0 !important;
+      border-bottom: 0 !important;
+      overflow: hidden !important;
+      background-position: center, center, center, center !important;
+      background-size: contain, cover, cover, cover !important;
+    }
+
+    .model-grid.desktop-mosaic-only {
+      display: none !important;
+    }
+
+    .model-grid.mobile-mosaic-only,
+    .model-grid.video-grid.mobile-mosaic-only {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      height: auto !important;
+      gap: 10px !important;
+      padding: 10px !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+
+    .model-grid.mobile-mosaic-only img,
+    .model-grid.mobile-mosaic-only video,
+    .model-grid.video-grid.mobile-mosaic-only img,
+    .model-grid.video-grid.mobile-mosaic-only video {
+      max-width: 100% !important;
+    }
+
+    .model-grid.mobile-mosaic-only .mosaic-column,
+    .model-grid.video-grid.mobile-mosaic-only .mosaic-column {
+      min-width: 0 !important;
+      min-height: 0 !important;
+      gap: 10px !important;
+      overflow: hidden !important;
+    }
+
+    .model-grid.mobile-mosaic-only .slot,
+    .model-grid.video-grid.mobile-mosaic-only .slot {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: auto !important;
+      min-height: 0 !important;
+      grid-column: auto !important;
+      grid-row: auto !important;
+    }
+
+    .model-grid.mobile-mosaic-only .slot.aspect-tall,
+    .model-grid.video-grid.mobile-mosaic-only .slot.aspect-tall {
+      aspect-ratio: 9 / 16 !important;
+    }
+
+    .model-grid.mobile-mosaic-only .slot.aspect-16x9,
+    .model-grid.video-grid.mobile-mosaic-only .slot.aspect-16x9 {
+      aspect-ratio: 16 / 9 !important;
+    }
+  }
+</style>
+
 </head>
 <body>
 <noscript><img alt="" height="1" src="https://www.facebook.com/tr?id=1336278884948294&amp;ev=PageView&amp;noscript=1" style="display:none" width="1" loading="lazy" decoding="async"></noscript>
