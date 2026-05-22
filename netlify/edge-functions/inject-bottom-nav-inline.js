@@ -127,7 +127,7 @@ export default async (request, context) => {
     .hs-radial-panel{
       position:absolute;
       left:50%;
-      bottom:calc(54px + env(safe-area-inset-bottom));
+      bottom:0;
       width:min(112vw,520px);
       height:245px;
       transform:translateX(-50%) translateY(32px) scale(.96);
