@@ -1486,8 +1486,18 @@
     }
 
     .hero-intro h1 {
-      font-size: clamp(2.8rem, 18vw, 5.3rem) !important;
-      line-height: .86 !important;
+      max-width: 100% !important;
+      font-size: clamp(2.35rem, 13vw, 3.35rem) !important;
+      line-height: .92 !important;
+      white-space: nowrap !important;
+      overflow-wrap: normal !important;
+      word-break: keep-all !important;
+    }
+
+    @media (max-width: 380px) {
+      .hero-intro h1 {
+        font-size: clamp(2.1rem, 12vw, 2.75rem) !important;
+      }
     }
 
     .wide-banner .banner-content {
