@@ -402,7 +402,7 @@
     }
     function renderPlayableVideo(url) {
       const src = url || '';
-      return `<video src="${escapeAttr(src)}" muted playsinline preload="metadata"></video>`;
+      return `<video src="${escapeAttr(src)}" muted playsinline webkit-playsinline autoplay loop preload="auto"></video>`;
     }
     function firstVideoUrl(value) {
       const seen = new Set();
@@ -626,6 +626,7 @@
 
     function bindPreviewVideo(video, url) {
       if (!video || !url) return;
+      prepareInlinePreviewVideo(video);
       video.addEventListener('click', () => openPreview(url));
       video.addEventListener('dblclick', (event) => {
         event.preventDefault();
@@ -639,6 +640,33 @@
         try { video.webkitExitFullscreen(); } catch (_) {}
         openPreview(url);
       });
+    }
+
+    function prepareInlinePreviewVideo(video) {
+      if (!video) return;
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+      video.autoplay = true;
+      video.loop = true;
+      video.preload = 'auto';
+      video.setAttribute('muted', '');
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      video.setAttribute('autoplay', '');
+      video.setAttribute('loop', '');
+      video.setAttribute('preload', 'auto');
+      const tryPaintFrame = () => {
+        if (!video || video.readyState < 2) return;
+        try {
+          if (!video.currentTime || video.currentTime < 0.04) video.currentTime = 0.05;
+        } catch (_) {}
+        video.play().catch(() => {});
+      };
+      video.addEventListener('loadeddata', tryPaintFrame, { once: true });
+      video.addEventListener('canplay', tryPaintFrame, { once: true });
+      video.load();
+      setTimeout(tryPaintFrame, 120);
     }
 
     function markVideoUnplayable(card, url) {
