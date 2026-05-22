@@ -122,17 +122,17 @@ export default async (request, context) => {
     .hs-radial-backdrop{
       position:absolute;
       inset:0;
-      background:rgba(0,0,0,.58);
+      background:rgba(0,0,0,.50);
     }
     .hs-radial-panel{
       position:absolute;
       left:50%;
-      bottom:0;
-      width:min(94vw,430px);
-      height:min(44vh,310px);
-      transform:translateX(-50%) translateY(26px) scale(.96);
+      bottom:calc(54px + env(safe-area-inset-bottom));
+      width:min(112vw,520px);
+      height:245px;
+      transform:translateX(-50%) translateY(32px) scale(.96);
       transform-origin:bottom center;
-      border-radius:50% 50% 0 0 / 30% 30% 0 0;
+      border-radius:999px 999px 0 0 / 360px 360px 0 0;
       border:1px solid rgba(255,255,255,.12);
       background:rgba(20,21,25,.98);
       box-shadow:0 -18px 80px rgba(0,0,0,.45);
@@ -166,17 +166,17 @@ export default async (request, context) => {
       background:#30333b;
       color:#fff;
     }
-    .hs-radial-image{ left:28%; top:33%; }
-    .hs-radial-video{ left:50%; top:21%; }
-    .hs-radial-audio{ left:72%; top:33%; }
-    .hs-radial-character{ left:18%; top:67%; }
-    .hs-radial-more{ left:82%; top:67%; }
+    .hs-radial-image{ left:28%; top:38%; }
+    .hs-radial-video{ left:50%; top:24%; }
+    .hs-radial-audio{ left:72%; top:38%; }
+    .hs-radial-character{ left:16%; top:70%; }
+    .hs-radial-more{ left:84%; top:70%; }
     .hs-radial-close{
       position:absolute;
       left:50%;
-      bottom:16%;
-      width:62px;
-      height:62px;
+      bottom:15%;
+      width:58px;
+      height:58px;
       transform:translateX(-50%);
       border:0;
       border-radius:50%;
