@@ -3685,6 +3685,8 @@ async function __mjFetchNbCheck(params){
       const statusRaw = (data.status || '').toString();
       const statusLower = statusRaw.toLowerCase();
       const url = data.result_url || '';
+      const initialFailed = statusLower.includes('fail') || statusLower.includes('error');
+      const initialReady = !!url;
 
       const card = document.createElement('div');
       card.className = 'result-thumb';
@@ -3710,6 +3712,7 @@ async function __mjFetchNbCheck(params){
         }
       } else {
         const ph = document.createElement('div');
+        ph.className = 'result-thumb-placeholder';
         ph.style.width = '100%';
         ph.style.height = '100%';
         ph.style.display = 'flex';
@@ -3719,11 +3722,14 @@ async function __mjFetchNbCheck(params){
         ph.style.gap = '10px';
         ph.style.color = 'rgba(255,255,255,.55)';
         ph.style.fontSize = '12px';
-        const orb = document.createElement('div');
-        orb.className = 'processing-orb';
+        if (!initialFailed) {
+          const orb = document.createElement('div');
+          orb.className = 'processing-orb';
+          ph.appendChild(orb);
+        }
         const label = document.createElement('div');
-        label.textContent = 'Creating...';
-        ph.appendChild(orb);
+        label.className = 'result-thumb-placeholder-label';
+        label.textContent = initialFailed ? 'Failed' : 'Creating...';
         ph.appendChild(label);
         card.appendChild(ph);
       }
@@ -3759,8 +3765,8 @@ async function __mjFetchNbCheck(params){
 
       const state = document.createElement('span');
       state.className = 'thumb-state';
-      const isFailed = statusLower.includes('fail') || statusLower.includes('error');
-      const isReady = !!url;
+      const isFailed = initialFailed;
+      const isReady = initialReady;
       if (isFailed) {
         state.textContent = 'Failed';
         state.classList.add('failed');
@@ -3842,6 +3848,22 @@ async function __mjFetchNbCheck(params){
           } else {
             state.textContent = 'Processing';
             state.classList.add('processing');
+          }
+
+          const placeholder = card.querySelector('.result-thumb-placeholder');
+          if (placeholder && failed && !ready) {
+            placeholder.innerHTML = '<div class="result-thumb-placeholder-label">Failed</div>';
+            placeholder.style.color = 'rgba(248,113,113,.9)';
+          } else if (placeholder && !failed && !ready && !placeholder.querySelector('.processing-orb')) {
+            placeholder.innerHTML = '';
+            const orb = document.createElement('div');
+            orb.className = 'processing-orb';
+            const label = document.createElement('div');
+            label.className = 'result-thumb-placeholder-label';
+            label.textContent = 'Creating...';
+            placeholder.appendChild(orb);
+            placeholder.appendChild(label);
+            placeholder.style.color = 'rgba(255,255,255,.55)';
           }
 
           // update Get button visibility/enable
