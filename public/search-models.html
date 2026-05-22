@@ -5236,6 +5236,27 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       return byName ? byName.id : '';
     }
 
+    function getModeFromUrl() {
+      let raw = '';
+      try {
+        const qs = new URLSearchParams(window.location.search);
+        raw = qs.get('type') || qs.get('mode') || qs.get('category') || '';
+      } catch {
+        raw = '';
+      }
+      const value = String(raw || '').trim().toLowerCase();
+      if (value === 'video' || value === 'videos') return 'video';
+      if (value === 'image' || value === 'images') return 'image';
+      return '';
+    }
+
+    function applyModeFromUrl() {
+      const mode = getModeFromUrl();
+      if (!mode) return false;
+      setMode(mode);
+      return true;
+    }
+
     function applyModelFromUrl() {
       const id = getModelIdFromUrl();
       if (!id) return false;
@@ -8488,7 +8509,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       wireWorkspaceRedesign();
       wireUploadTileClicks();
       setMode('image');
-      applyModelFromUrl();
+      const modelAppliedFromUrl = applyModelFromUrl();
+      if (!modelAppliedFromUrl) applyModeFromUrl();
       updateModelButtonLabels();
       configureControlsForModel();
       wireWorkspaceRedesign();
