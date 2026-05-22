@@ -13,6 +13,7 @@
   const IMAGE_MENU_MODELS = [
     { label: 'GPT Image 2', id: 'gpt-image-2', icon: 'G2', note: 'Latest image generation' },
     { label: 'Nano Banana 2', id: 'nano-banana-2', icon: 'N2', note: 'Fast image edits' },
+    { label: 'Nano Banana Pro', id: 'nano-banana-pro', icon: 'NP', note: 'Pro image generation' },
     { label: 'Seedream 5.0 Lite', id: 'seedream-5-lite', icon: 'S', note: 'Light creative images' },
     { label: 'Grok Image', id: 'grok-image', icon: 'X', note: 'Stylized image model' },
     { label: 'Seedream 4.5', id: 'seedream-4-5', icon: 'S4', note: 'Image generator' },
@@ -33,6 +34,7 @@
 
   const VIDEO_MENU_ITEMS = [
     { label: 'Seedance 2.0', id: 'seedance-2', icon: 'S2', note: 'Cinematic video model' },
+    { label: 'Gemini Omni', id: 'gemini-omni-video', icon: 'GO', note: 'Prompt, image, and video inputs' },
     { label: 'Kling 3.0', id: 'kling-3', icon: 'K3', note: 'Advanced video generation' },
     { label: 'HappyHorse 1.0', id: 'happyhorse-1', icon: 'HH', note: 'Video and audio model' },
     { label: 'Veo 3.1', id: 'veo31', icon: 'V3', note: 'Google video model' },
