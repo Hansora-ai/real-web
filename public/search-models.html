@@ -262,6 +262,10 @@
         color: rgba(255,255,255,.92);
       }
       #resultsStrip .thumb-get:active{ transform: translateY(1px); }
+      #resultsStrip .thumb-get.hidden,
+      body.workspace-redesign #resultsStrip .thumb-get.hidden{
+        display:none !important;
+      }
 
       #resultsStrip .empty-placeholder{
         width:100%;
@@ -382,6 +386,10 @@
       display:inline-flex !important;
       align-items:center !important;
       justify-content:center !important;
+    }
+    .result-get.hidden,
+    body.workspace-redesign #resultsStrip .result-card button.result-get.hidden{
+      display:none !important;
     }
     #previewOverlay .preview-media{
       width:100%;
@@ -3677,6 +3685,23 @@ async function __mjFetchNbCheck(params){
       return true;
     }
 
+    function isFailedResultStatus(status) {
+      return /(fail|failed|error|reject|rejected|cancel|cancelled|denied)/i.test(String(status || ''));
+    }
+
+    function isReadyResultStatus(status) {
+      const value = String(status || '').toLowerCase();
+      return /(ready|success|succeeded|done|complete|completed|finished)/i.test(value);
+    }
+
+    function canGetResult(status, url) {
+      const cleanUrl = String(url || '').trim();
+      const cleanStatus = String(status || '').trim();
+      if (!cleanUrl || isFailedResultStatus(cleanStatus)) return false;
+      if (!cleanStatus) return true;
+      return isReadyResultStatus(cleanStatus);
+    }
+
     function createResultThumb(data) {
       if (!shouldShowResultGeneration(data)) return null;
       const provider = data.provider || 'Model';
@@ -3685,8 +3710,8 @@ async function __mjFetchNbCheck(params){
       const statusRaw = (data.status || '').toString();
       const statusLower = statusRaw.toLowerCase();
       const url = data.result_url || '';
-      const initialFailed = statusLower.includes('fail') || statusLower.includes('error');
-      const initialReady = !!url;
+      const initialFailed = isFailedResultStatus(statusLower);
+      const initialReady = canGetResult(statusLower, url);
 
       const card = document.createElement('div');
       card.className = 'result-thumb';
@@ -3834,8 +3859,8 @@ async function __mjFetchNbCheck(params){
           const nextStatusRaw = (next && next.status != null) ? String(next.status) : statusRaw;
           const nextStatusLower = String(nextStatusRaw || '').toLowerCase();
           const nextUrl = (next && next.result_url) ? String(next.result_url) : (__thumb_url || '');
-          const failed = nextStatusLower.includes('fail') || nextStatusLower.includes('error');
-          const ready = !!nextUrl;
+          const failed = isFailedResultStatus(nextStatusLower);
+          const ready = canGetResult(nextStatusLower, nextUrl);
 
           // update state chip
           state.classList.remove('failed', 'processing', 'ready');
@@ -3871,6 +3896,7 @@ async function __mjFetchNbCheck(params){
             getBtn.classList.remove('hidden');
             getBtn.disabled = false;
           } else {
+            getBtn.classList.add('hidden');
             getBtn.disabled = true;
           }
 
@@ -4015,31 +4041,39 @@ function createResultCard(data) {
         const stRaw = (newData.status || '').toString();
         const st = stRaw.toLowerCase();
         const hasUrlNow = !!newData.result_url;
+        const failedNow = isFailedResultStatus(st);
+        const readyNow = canGetResult(st, newData.result_url);
 
         if (hasUrlNow) {
           mediaEl.src = newData.result_url;
           mediaEl.dataset.previewUrl = newData.result_url;
           mediaEl.classList.remove('hidden');
-          downloadBtn.dataset.downloadUrl = newData.result_url;
-          downloadBtn.classList.remove('hidden');
           loader.style.display = 'none';
         } else {
           mediaEl.classList.add('hidden');
           mediaEl.dataset.previewUrl = '';
+          loader.style.display = st.includes('fail') ? 'none' : 'block';
+        }
+
+        if (readyNow) {
+          downloadBtn.dataset.downloadUrl = newData.result_url;
+          downloadBtn.classList.remove('hidden');
+          downloadBtn.disabled = false;
+        } else {
           downloadBtn.classList.add('hidden');
           downloadBtn.dataset.downloadUrl = '';
-          loader.style.display = st.includes('fail') ? 'none' : 'block';
+          downloadBtn.disabled = true;
         }
 
         let label = 'Processing…';
         let pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-black/70 text-white/80';
         let statusClass = 'text-[10px] text-indigo-200/80';
 
-        if (st.includes('fail') || st.includes('error')) {
+        if (failedNow) {
           label = 'Failed';
           pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-red-500/85 text-white';
           statusClass = 'text-[10px] text-red-300';
-        } else if (hasUrlNow) {
+        } else if (readyNow) {
           label = 'Ready';
           pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/85 text-white';
           statusClass = 'text-[10px] text-emerald-300';
