@@ -82,6 +82,89 @@ function normalizeResolution(value) {
   return key === '4k' ? '4k' : '1080p';
 }
 
+const GEMINI_VOICE_PRESETS = {
+  achernar: { label: 'Achernar', description: 'female, soft, high pitch', sample: 'Hello, I am achernar.' },
+  achird: { label: 'Achird', description: 'male, friendly, mid pitch', sample: 'Hello, I am achird.' },
+  algenib: { label: 'Algenib', description: 'male, raspy, low pitch', sample: 'Hello, I am algenib.' },
+  algieba: { label: 'Algieba', description: 'male, easygoing, mid-low pitch', sample: 'Hello, I am algieba.' },
+  alnilam: { label: 'Alnilam', description: 'male, steady, mid-low pitch', sample: 'Hello, I am alnilam.' },
+  aoede: { label: 'Aoede', description: 'female, brisk, mid pitch', sample: 'Hello, I am aoede.' },
+  autonoe: { label: 'Autonoe', description: 'female, bright, mid pitch', sample: 'Hello, I am autonoe.' },
+  callirrhoe: { label: 'Callirrhoe', description: 'female, easygoing, mid pitch', sample: 'Hello, I am callirrhoe.' },
+  charon: { label: 'Charon', description: 'male, intellectual, low pitch', sample: 'Hello, I am charon.' },
+  despina: { label: 'Despina', description: 'female, smooth, mid pitch', sample: 'Hello, I am despina.' },
+  enceladus: { label: 'Enceladus', description: 'male, breathy, low pitch', sample: 'Hello, I am enceladus.' },
+  erinome: { label: 'Erinome', description: 'female, clear, mid pitch', sample: 'Hello, I am erinome.' },
+  fenrir: { label: 'Fenrir', description: 'male, lively, younger pitch', sample: 'Hello, I am fenrir.' },
+  gacrux: { label: 'Gacrux', description: 'female, mature, mid pitch', sample: 'Hello, I am gacrux.' },
+  iapetus: { label: 'Iapetus', description: 'male, clear, mid-low pitch', sample: 'Hello, I am iapetus.' },
+  kore: { label: 'Kore', description: 'female, capable, mid pitch', sample: 'Hello, I am kore.' },
+  laomedeia: { label: 'Laomedeia', description: 'female, cheerful, mid-high pitch', sample: 'Hello, I am laomedeia.' },
+  leda: { label: 'Leda', description: 'female, young, mid-high pitch', sample: 'Hello, I am leda.' },
+  orus: { label: 'Orus', description: 'male, steady, mid-low pitch', sample: 'Hello, I am orus.' },
+  puck: { label: 'Puck', description: 'male, cheerful, mid pitch', sample: 'Hello, I am puck.' },
+  pulcherrima: { label: 'Pulcherrima', description: 'genderless, forward, mid-high pitch', sample: 'Hello, I am pulcherrima.' },
+  rasalgethi: { label: 'Rasalgethi', description: 'male, intellectual, mid pitch', sample: 'Hello, I am rasalgethi.' },
+  sadachbia: { label: 'Sadachbia', description: 'male, vivid, low pitch', sample: 'Hello, I am sadachbia.' },
+  sadaltager: { label: 'Sadaltager', description: 'male, knowledgeable, mid pitch', sample: 'Hello, I am sadaltager.' },
+  schedar: { label: 'Schedar', description: 'male, smooth, mid-low pitch', sample: 'Hello, I am schedar.' },
+  sulafat: { label: 'Sulafat', description: 'female, warm, mid pitch', sample: 'Hello, I am sulafat.' },
+  umbriel: { label: 'Umbriel', description: 'male, smooth, low pitch', sample: 'Hello, I am umbriel.' },
+  vindemiatrix: { label: 'Vindemiatrix', description: 'female, gentle, mid pitch', sample: 'Hello, I am vindemiatrix.' },
+  zephyr: { label: 'Zephyr', description: 'female, bright, mid-high pitch', sample: 'Hello, I am zephyr.' },
+  zubenelgenubi: { label: 'Zubenelgenubi', description: 'male, casual, mid-low pitch', sample: 'Hello, I am zubenelgenubi.' },
+};
+
+function normalizeVoicePreset(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+}
+
+function extractKieAudioId(data) {
+  const values = [
+    data?.data?.kieAudioId,
+    data?.data?.audioId,
+    data?.data?.audio_id,
+    data?.kieAudioId,
+    data?.audioId,
+    data?.audio_id,
+  ];
+  return values.map((value) => (value == null ? '' : String(value).trim())).find(Boolean) || '';
+}
+
+async function createGeminiOmniAudioId(presetId) {
+  const preset = GEMINI_VOICE_PRESETS[presetId];
+  if (!preset) return presetId;
+  const res = await fetch(`${KIE_BASE}/api/v1/omni/audio/create`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${KIE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      audio_id: presetId,
+      name: `${preset.label} voice`,
+      voice_description: preset.description,
+      example_dialogue: preset.sample,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || (data && data.code && Number(data.code) !== 0 && Number(data.code) !== 200)) {
+    const message = data?.msg || data?.message || `audio_create_failed_${res.status}`;
+    throw new Error(message);
+  }
+  const id = extractKieAudioId(data);
+  if (!id) throw new Error('missing_kie_audio_id');
+  return id;
+}
+
+async function resolveGeminiOmniAudioIds(values) {
+  const ids = [];
+  for (const value of values) {
+    const raw = String(value || '').trim();
+    if (!raw) continue;
+    const presetId = normalizeVoicePreset(raw);
+    ids.push(await createGeminiOmniAudioId(presetId || raw));
+  }
+  return ids.slice(0, 1);
+}
+
 function costFor(body) {
   const resolution = normalizeResolution(body.resolution);
   const hasVideo = !!String(body.video_url || '').trim();
@@ -178,7 +261,7 @@ exports.handler = async (event) => {
 
     const imageUrls = Array.isArray(body.image_urls) ? body.image_urls.filter(Boolean).map(String).slice(0, 7) : [];
     const videoUrl = String(body.video_url || '').trim();
-    const audioIds = Array.isArray(body.audio_ids)
+    const requestedAudioIds = Array.isArray(body.audio_ids)
       ? body.audio_ids.filter(Boolean).map(String)
       : String(body.audio_ids || '').split(/[\n,]+/).map((item) => item.trim()).filter(Boolean);
     const quotaUnits = imageUrls.length + (videoUrl ? 2 : 0);
@@ -200,6 +283,14 @@ exports.handler = async (event) => {
     const currentCredits = await getCredits(uid);
     if (currentCredits < cost) {
       return json(402, { ok: false, error: 'not_enough_credits', credits: currentCredits, need: cost });
+    }
+
+    let audioIds = [];
+    try {
+      audioIds = await resolveGeminiOmniAudioIds(requestedAudioIds);
+    } catch (error) {
+      await patchGeneration(rowId, { ...metaBase, status: 'failed', error: `voice_setup_failed: ${String(error && error.message || error)}` });
+      return json(422, { ok: false, error: 'voice_setup_failed' });
     }
 
     const input = {
