@@ -160,123 +160,9 @@
     const linkForgot = document.getElementById('linkForgot');
     const rowEmail = document.getElementById('rowEmail');
     const inputEmail = document.getElementById('email');
-    const AFFILIATE_REF_STORAGE_KEY = 'hansora_affiliate_ref';
-    const AFFILIATE_PENDING_STORAGE_KEY = 'hansora_pending_affiliate_ref';
-    const AFFILIATE_DONE_PREFIX = 'hansora_affiliate_registered.';
-    const AFFILIATE_COMMISSION_RATE = 0.15;
-
-    function normalizeAffiliateRef(value) {
-      return String(value || '')
-        .trim()
-        .replace(/[^a-zA-Z0-9_-]/g, '')
-        .toUpperCase()
-        .slice(0, 64);
-    }
-
-    function captureAffiliateRefFromUrl() {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const code = normalizeAffiliateRef(params.get('ref') || params.get('affiliate') || params.get('affiliate_ref'));
-        if (code) localStorage.setItem(AFFILIATE_REF_STORAGE_KEY, code);
-        return code;
-      } catch (_) {
-        return '';
-      }
-    }
-
-    function getStoredAffiliateRef() {
-      try {
-        return normalizeAffiliateRef(localStorage.getItem(AFFILIATE_REF_STORAGE_KEY));
-      } catch (_) {
-        return '';
-      }
-    }
-
-    function rememberPendingAffiliate(user, code) {
-      const ref = normalizeAffiliateRef(code);
-      if (!ref || !user || !user.id) return;
-      try {
-        localStorage.setItem(AFFILIATE_PENDING_STORAGE_KEY, JSON.stringify({
-          code: ref,
-          user_id: user.id,
-          email: user.email || '',
-          created_at: new Date().toISOString()
-        }));
-      } catch (_) {}
-    }
-
-    function getPendingAffiliateRef(user) {
-      try {
-        const pending = JSON.parse(localStorage.getItem(AFFILIATE_PENDING_STORAGE_KEY) || '{}');
-        if (!pending || !pending.code) return '';
-        if (user && pending.user_id && pending.user_id !== user.id) return '';
-        return normalizeAffiliateRef(pending.code);
-      } catch (_) {
-        return '';
-      }
-    }
-
-    function markAffiliateRegistered(user, code) {
-      const ref = normalizeAffiliateRef(code);
-      if (!user || !user.id || !ref) return;
-      try {
-        localStorage.setItem(`${AFFILIATE_DONE_PREFIX}${user.id}.${ref}`, '1');
-        const pending = JSON.parse(localStorage.getItem(AFFILIATE_PENDING_STORAGE_KEY) || '{}');
-        if (!pending.user_id || pending.user_id === user.id) {
-          localStorage.removeItem(AFFILIATE_PENDING_STORAGE_KEY);
-        }
-      } catch (_) {}
-    }
-
-    async function registerAffiliateReferral(user, code) {
-      const ref = normalizeAffiliateRef(code || getPendingAffiliateRef(user) || getStoredAffiliateRef());
-      if (!sb || !user || !user.id || !ref) return;
-
-      try {
-        if (localStorage.getItem(`${AFFILIATE_DONE_PREFIX}${user.id}.${ref}`)) return;
-      } catch (_) {}
-
-      try {
-        const { data: referrer, error: accountError } = await sb
-          .from('affiliate_accounts')
-          .select('user_id, affiliate_code')
-          .eq('affiliate_code', ref)
-          .maybeSingle();
-
-        if (accountError) throw accountError;
-        if (!referrer || !referrer.user_id || referrer.user_id === user.id) return;
-
-        const { data: existing, error: existingError } = await sb
-          .from('affiliate_referrals')
-          .select('id')
-          .eq('referred_user_id', user.id)
-          .maybeSingle();
-
-        if (existingError) throw existingError;
-        if (existing) {
-          markAffiliateRegistered(user, ref);
-          return;
-        }
-
-        const { error: insertError } = await sb.from('affiliate_referrals').insert({
-          referrer_user_id: referrer.user_id,
-          referred_user_id: user.id,
-          affiliate_code: ref,
-          status: 'registered'
-        });
-
-        if (insertError) throw insertError;
-        markAffiliateRegistered(user, ref);
-      } catch (affiliateError) {
-        console.warn('Affiliate referral registration failed', affiliateError);
-      }
-    }
-
-    captureAffiliateRefFromUrl();
 
     // Mode machine
     const mode = { value: 'login' }; // 'login' | 'signup' | 'reset' | 'set-new-password'
-    let alreadyRegistered = false;
 
     function setMode(next) {
       mode.value = next;
@@ -369,16 +255,12 @@
         }).catch(()=>{});
         setMode('set-new-password');
       }
-      const { data } = await sb.auth.getUser().catch(() => ({ data: null }));
-      const user = data && data.user ? data.user : null;
-      if (user) await registerAffiliateReferral(user);
     })();
 
     // Form submit
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       err.textContent = '';
-      alreadyRegistered = false;
       successPanel.classList.add('hidden');
 
       const email = document.getElementById('email').value.trim();
@@ -424,15 +306,9 @@
         if (password.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
         try {
           // v2 signature with options
-          const affiliateRef = getStoredAffiliateRef();
-          const signUpOptions = { emailRedirectTo: `${location.origin}/login.html` };
-          if (affiliateRef) {
-            signUpOptions.data = { affiliate_ref: affiliateRef, affiliate_commission_rate: AFFILIATE_COMMISSION_RATE };
-          }
-
           const { data, error } = await sb.auth.signUp({
             email, password,
-            options: signUpOptions
+            options: { emailRedirectTo: `${location.origin}/login.html` }
           });
 
           // Guard: Supabase may return success for already-registered emails (identities===0)
@@ -449,13 +325,9 @@
 
 
           if (error) throw error;
-          if (data && data.user && affiliateRef) {
-            rememberPendingAffiliate(data.user, affiliateRef);
-          }
 
           // If session created immediately, go in; else prompt to confirm
           if (data && data.session && data.session.user) {
-            await registerAffiliateReferral(data.session.user, affiliateRef);
             window.location.href = '/index.html';
           } else {
             form.classList.add('hidden');
@@ -472,9 +344,8 @@
 
       // login
       try {
-        const { data, error } = await sb.auth.signInWithPassword({ email, password });
+        const { error } = await sb.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        if (data && data.user) await registerAffiliateReferral(data.user);
         window.location.href = '/index.html';
       } catch (e) { err.textContent = 'Incorrect email or password.'; }
     });
