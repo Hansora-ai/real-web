@@ -160,6 +160,36 @@
     const linkForgot = document.getElementById('linkForgot');
     const rowEmail = document.getElementById('rowEmail');
     const inputEmail = document.getElementById('email');
+    const AFFILIATE_REF_STORAGE_KEY = 'hansora_affiliate_ref';
+
+    function normalizeAffiliateRef(value) {
+      return String(value || '')
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]/g, '')
+        .toUpperCase()
+        .slice(0, 64);
+    }
+
+    function captureAffiliateRefFromUrl() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const code = normalizeAffiliateRef(params.get('ref') || params.get('affiliate') || params.get('affiliate_ref'));
+        if (code) localStorage.setItem(AFFILIATE_REF_STORAGE_KEY, code);
+        return code;
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function getStoredAffiliateRef() {
+      try {
+        return normalizeAffiliateRef(localStorage.getItem(AFFILIATE_REF_STORAGE_KEY));
+      } catch (_) {
+        return '';
+      }
+    }
+
+    captureAffiliateRefFromUrl();
 
     // Mode machine
     const mode = { value: 'login' }; // 'login' | 'signup' | 'reset' | 'set-new-password'
@@ -306,9 +336,15 @@
         if (password.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
         try {
           // v2 signature with options
+          const affiliateRef = getStoredAffiliateRef();
+          const signUpOptions = { emailRedirectTo: `${location.origin}/login.html` };
+          if (affiliateRef) {
+            signUpOptions.data = { affiliate_ref: affiliateRef };
+          }
+
           const { data, error } = await sb.auth.signUp({
             email, password,
-            options: { emailRedirectTo: `${location.origin}/login.html` }
+            options: signUpOptions
           });
 
           // Guard: Supabase may return success for already-registered emails (identities===0)
