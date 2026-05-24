@@ -6,6 +6,8 @@
   const LOGO_URL = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png';
   const CACHE_PREFIX = 'hansora.header.';
   const AFFILIATE_REF_KEY = 'hansora_affiliate_ref';
+  const AFFILIATE_PENDING_KEY = 'hansora_pending_affiliate_ref';
+  const AFFILIATE_DONE_PREFIX = 'hansora_affiliate_registered.';
 
   let sb = null;
   let currentUser = null;
@@ -114,6 +116,85 @@
       const ref = String(rawRef || '').trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64).toUpperCase();
       if (ref) localStorage.setItem(AFFILIATE_REF_KEY, ref);
     } catch (_) {}
+  }
+
+  function normalizeAffiliateRef(value) {
+    return String(value || '').trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64).toUpperCase();
+  }
+
+  function getStoredAffiliateRef() {
+    try {
+      return normalizeAffiliateRef(localStorage.getItem(AFFILIATE_REF_KEY));
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function getPendingAffiliateRef(user) {
+    try {
+      const pending = JSON.parse(localStorage.getItem(AFFILIATE_PENDING_KEY) || '{}');
+      if (!pending || !pending.code) return '';
+      if (user && pending.user_id && pending.user_id !== user.id) return '';
+      return normalizeAffiliateRef(pending.code);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function markAffiliateRegistered(user, code) {
+    const ref = normalizeAffiliateRef(code);
+    if (!user || !user.id || !ref) return;
+    try {
+      localStorage.setItem(`${AFFILIATE_DONE_PREFIX}${user.id}.${ref}`, '1');
+      const pending = JSON.parse(localStorage.getItem(AFFILIATE_PENDING_KEY) || '{}');
+      if (!pending.user_id || pending.user_id === user.id) {
+        localStorage.removeItem(AFFILIATE_PENDING_KEY);
+      }
+    } catch (_) {}
+  }
+
+  async function registerAffiliateReferral(user, code) {
+    const ref = normalizeAffiliateRef(code || getPendingAffiliateRef(user) || getStoredAffiliateRef());
+    if (!sb || !user || !user.id || !ref) return;
+
+    try {
+      if (localStorage.getItem(`${AFFILIATE_DONE_PREFIX}${user.id}.${ref}`)) return;
+    } catch (_) {}
+
+    try {
+      const { data: referrer, error: accountError } = await sb
+        .from('affiliate_accounts')
+        .select('user_id, affiliate_code')
+        .eq('affiliate_code', ref)
+        .maybeSingle();
+
+      if (accountError) throw accountError;
+      if (!referrer || !referrer.user_id || referrer.user_id === user.id) return;
+
+      const { data: existing, error: existingError } = await sb
+        .from('affiliate_referrals')
+        .select('id')
+        .eq('referred_user_id', user.id)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+      if (existing) {
+        markAffiliateRegistered(user, ref);
+        return;
+      }
+
+      const { error: insertError } = await sb.from('affiliate_referrals').insert({
+        referrer_user_id: referrer.user_id,
+        referred_user_id: user.id,
+        affiliate_code: ref,
+        status: 'registered'
+      });
+
+      if (insertError) throw insertError;
+      markAffiliateRegistered(user, ref);
+    } catch (affiliateError) {
+      console.warn('Affiliate referral registration failed', affiliateError);
+    }
   }
 
   function shouldRedirectWhenLoggedOut() {
@@ -634,6 +715,7 @@
           const { data, error } = await sb.auth.signInWithPassword({ email: emailIn.value.trim(), password: passIn.value.trim() });
           if (error) { if (msg) msg.textContent = error.message; return; }
           const profile = await getOrCreateProfile(data.user);
+          await registerAffiliateReferral(data.user);
           showLoggedInUI(profile, data.user);
           closeAuth();
         } catch (error) {
@@ -663,6 +745,7 @@
         return;
       }
       const profile = await getOrCreateProfile(user);
+      await registerAffiliateReferral(user);
       showLoggedInUI(profile, user);
     } catch (error) {
       console.warn('Hansora header session restore failed', error);
