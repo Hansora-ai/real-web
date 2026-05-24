@@ -272,6 +272,26 @@
       }
     }
 
+    function showEmailSent(title, text) {
+      form.classList.add('hidden');
+      successTitle.textContent = title;
+      successText.textContent = text;
+      successPanel.classList.remove('hidden');
+    }
+
+    async function resendSignupConfirmation(email) {
+      const { error } = await sb.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: `${location.origin}/login.html` }
+      });
+      if (error) throw error;
+      showEmailSent(
+        'Check your email to confirm',
+        'We sent a new confirmation link to your inbox. After confirming, return here to log in.'
+      );
+    }
+
     captureAffiliateRefFromUrl();
 
     // Mode machine
@@ -437,14 +457,23 @@
 
           // Guard: Supabase may return success for already-registered emails (identities===0)
           if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-            err.textContent = 'Email is already registered.';
+            await resendSignupConfirmation(email);
             return;
           }
-          // If user exists already: show inline red error (no resend, no success panel).
+          // If an existing unconfirmed account tries again, request a fresh confirmation email.
           const signupErrorMessage = String(error && error.message ? error.message : '').toLowerCase();
           if (error && (signupErrorMessage.includes('already registered') || signupErrorMessage.includes('already exists'))) {
             alreadyRegistered = true;
-            err.textContent = 'Email is already registered.';
+            try {
+              await resendSignupConfirmation(email);
+            } catch (resendError) {
+              const resendMessage = String(resendError && resendError.message ? resendError.message : '').toLowerCase();
+              if (resendMessage.includes('already confirmed') || resendMessage.includes('confirmed')) {
+                err.textContent = 'This email is already registered. Please log in.';
+                return;
+              }
+              throw resendError;
+            }
             return;
           }
 
@@ -459,11 +488,11 @@
             registerAffiliateReferral(data.session.user, affiliateRef);
             window.location.href = '/index.html';
           } else {
-            form.classList.add('hidden');
-            successTitle.textContent = 'Check your email to confirm';
-            successText.textContent = 'We sent a confirmation link to your inbox. After confirming, return here to log in.';
             if (typeof alreadyRegistered !== 'undefined' && alreadyRegistered) { return; }
-            successPanel.classList.remove('hidden');
+            showEmailSent(
+              'Check your email to confirm',
+              'We sent a confirmation link to your inbox. After confirming, return here to log in.'
+            );
           }
         } catch (e) {
           err.textContent = e.message || 'Sign up failed. Please try again.';
