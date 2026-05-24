@@ -172,7 +172,9 @@ async function buildSummaryFallback(userId, limit, rest, sjson) {
     total_payments: totalPayments,
     total_credits_bought: round2(totalCreditsBought),
     total_amount_cents: totalAmountCents,
-    estimated_15_percent_reward_credits: round2(totalCreditsBought * 0.15),
+    estimated_15_percent_reward_credits: rewardUsdFromAmountCents(totalAmountCents),
+    estimated_15_percent_reward_usd: rewardUsdFromAmountCents(totalAmountCents),
+    estimated_15_percent_reward_cents: Math.round(totalAmountCents * 0.15),
     conversion_rate: totalBrought ? round2((paidUsers / totalBrought) * 100) : 0,
     last_payment_at: lastPaymentAt
   };
@@ -190,7 +192,9 @@ async function buildSummaryFallback(userId, limit, rest, sjson) {
       credits_bought: round2(pay.credits_bought),
       total_amount_cents: pay.total_amount_cents,
       last_payment_at: pay.last_payment_at,
-      estimated_15_percent_reward_credits: round2(pay.credits_bought * 0.15)
+      estimated_15_percent_reward_credits: rewardUsdFromAmountCents(pay.total_amount_cents),
+      estimated_15_percent_reward_usd: rewardUsdFromAmountCents(pay.total_amount_cents),
+      estimated_15_percent_reward_cents: Math.round(pay.total_amount_cents * 0.15)
     };
   });
 
@@ -261,19 +265,31 @@ function emptyPaymentAggregate() {
 }
 
 function normalizeSummary(row) {
+  const totalAmountCents = Number(row?.total_amount_cents || 0);
+  const amountBasedRewardUsd = rewardUsdFromAmountCents(totalAmountCents);
+  const fallbackRewardUsd = round2(row?.estimated_15_percent_reward_usd || row?.estimated_15_percent_reward_credits || 0);
+  const rewardUsd = totalAmountCents > 0 ? amountBasedRewardUsd : fallbackRewardUsd;
+
   return {
     total_brought: Number(row?.total_brought || 0),
     paid_users: Number(row?.paid_users || 0),
     total_payments: Number(row?.total_payments || 0),
     total_credits_bought: round2(row?.total_credits_bought || 0),
-    total_amount_cents: Number(row?.total_amount_cents || 0),
-    estimated_15_percent_reward_credits: round2(row?.estimated_15_percent_reward_credits || 0),
+    total_amount_cents: totalAmountCents,
+    estimated_15_percent_reward_credits: rewardUsd,
+    estimated_15_percent_reward_usd: rewardUsd,
+    estimated_15_percent_reward_cents: Math.round(totalAmountCents * 0.15),
     conversion_rate: round2(row?.conversion_rate || 0),
     last_payment_at: row?.last_payment_at || null
   };
 }
 
 function normalizeReferralRow(row) {
+  const totalAmountCents = Number(row.total_amount_cents || 0);
+  const amountBasedRewardUsd = rewardUsdFromAmountCents(totalAmountCents);
+  const fallbackRewardUsd = round2(row.estimated_15_percent_reward_usd || row.estimated_15_percent_reward_credits || 0);
+  const rewardUsd = totalAmountCents > 0 ? amountBasedRewardUsd : fallbackRewardUsd;
+
   return {
     id: row.id || null,
     affiliate_code: row.affiliate_code || null,
@@ -283,9 +299,11 @@ function normalizeReferralRow(row) {
     has_paid: Boolean(row.has_paid),
     payment_count: Number(row.payment_count || 0),
     credits_bought: round2(row.credits_bought || 0),
-    total_amount_cents: Number(row.total_amount_cents || 0),
+    total_amount_cents: totalAmountCents,
     last_payment_at: row.last_payment_at || null,
-    estimated_15_percent_reward_credits: round2(row.estimated_15_percent_reward_credits || 0)
+    estimated_15_percent_reward_credits: rewardUsd,
+    estimated_15_percent_reward_usd: rewardUsd,
+    estimated_15_percent_reward_cents: Math.round(totalAmountCents * 0.15)
   };
 }
 
@@ -306,6 +324,10 @@ function clampInt(value, min, max, fallback) {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.max(min, Math.min(max, Math.trunc(n)));
+}
+
+function rewardUsdFromAmountCents(amountCents) {
+  return round2((Number(amountCents || 0) / 100) * 0.15);
 }
 
 function round2(value) {
