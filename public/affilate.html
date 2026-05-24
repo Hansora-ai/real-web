@@ -191,6 +191,74 @@
       animation:shine 1.4s infinite;
     }
     @keyframes shine{100%{transform:translateX(100%)}}
+    .payout-card{
+      min-height:100%;
+      position:relative;
+      overflow:hidden;
+    }
+    .payout-card::after{
+      content:"";
+      position:absolute;
+      right:-80px;
+      top:-80px;
+      width:220px;
+      height:220px;
+      border-radius:999px;
+      background:rgba(121,231,255,.08);
+      pointer-events:none;
+    }
+    .payout-modal{
+      position:fixed;
+      inset:0;
+      z-index:120;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    .payout-modal.is-open{display:flex}
+    .payout-backdrop{
+      position:absolute;
+      inset:0;
+      border:0;
+      background:rgba(0,0,0,.68);
+      backdrop-filter:blur(10px);
+      cursor:pointer;
+    }
+    .payout-panel{
+      position:relative;
+      width:min(560px,100%);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:26px;
+      background:
+        radial-gradient(520px 250px at 10% 0%, rgba(121,231,255,.16), transparent 68%),
+        radial-gradient(520px 250px at 90% 0%, rgba(167,139,250,.14), transparent 68%),
+        #10131d;
+      box-shadow:0 30px 90px rgba(0,0,0,.55);
+      overflow:hidden;
+    }
+    .payout-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding:22px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .payout-body{padding:22px}
+    .payout-close{
+      width:38px;
+      height:38px;
+      display:grid;
+      place-items:center;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      color:#fff;
+      cursor:pointer;
+      font-size:20px;
+      line-height:1;
+    }
     .toast{
       position:fixed;
       left:50%;
@@ -235,10 +303,10 @@
       <section class="hero-card p-6 md:p-9">
         <div class="hero-content grid lg:grid-cols-[1.1fr_.9fr] gap-8 items-center">
           <div>
-            <div class="chip mb-5">15% CREDIT REWARD</div>
+            <div class="chip mb-5">15% AFFILIATE REWARD</div>
             <h1 class="text-4xl md:text-6xl font-black tracking-tight leading-[.95]">Affiliate Program</h1>
             <p class="mt-5 max-w-2xl text-base md:text-lg text-white/68 font-medium leading-relaxed">
-              Share HANSORA AI with creators. Track how many users you brought, who bought credits, and your estimated 15% credit reward.
+              Share HANSORA AI with creators. When someone registers and buys credits through your affiliate link, you earn 15% of that purchase.
             </p>
             <div class="mt-7 flex flex-wrap gap-3">
               <button id="copyHeroBtn" type="button" class="btn-primary">Copy affiliate link</button>
@@ -258,7 +326,7 @@
               <button id="copyLinkBtn" type="button" class="btn-primary shrink-0">Copy</button>
             </div>
             <p class="mt-3 text-sm text-white/52 leading-relaxed">
-              The link can go to the homepage. If the user moves around the site before signing up, the referral code can stay saved in the browser.
+              Take your link and make money.
             </p>
           </div>
         </div>
@@ -303,51 +371,45 @@
           <article class="stat-card p-5">
             <div class="relative z-10 text-sm text-white/52 font-bold">Estimated Reward</div>
             <div id="rewardCredits" class="relative z-10 mt-4 text-4xl font-black">0</div>
-            <div class="relative z-10 mt-3 text-xs text-white/42">15% in credits</div>
+            <div class="relative z-10 mt-3 text-xs text-white/42">15% estimate</div>
           </article>
         </div>
 
-        <div class="grid lg:grid-cols-[.82fr_1.18fr] gap-6">
+        <div class="grid lg:grid-cols-2 gap-6">
           <section class="glass-card p-5 md:p-6">
             <div class="flex items-start gap-4">
               <span class="mini-icon">1</span>
               <div>
                 <h2 class="text-xl font-black">How it works</h2>
-                <p class="mt-1 text-sm text-white/58 leading-relaxed">Simple tracking without touching the payment webhook.</p>
+                <p class="mt-1 text-sm text-white/58 leading-relaxed">Two simple steps to earn from your link.</p>
               </div>
             </div>
             <div class="mt-6 space-y-4">
               <div class="flex gap-3">
                 <span class="status-pill">Step 1</span>
-                <p class="text-sm text-white/70">You share your affiliate link.</p>
+                <p class="text-sm text-white/70">A user registers and buys credits through your affiliate link.</p>
               </div>
               <div class="flex gap-3">
                 <span class="status-pill">Step 2</span>
-                <p class="text-sm text-white/70">The new user registers under your code.</p>
-              </div>
-              <div class="flex gap-3">
-                <span class="status-pill">Step 3</span>
-                <p class="text-sm text-white/70">This page checks the payments table to see if that user bought credits.</p>
-              </div>
-              <div class="flex gap-3">
-                <span class="status-pill">Step 4</span>
-                <p class="text-sm text-white/70">Reward estimate = referred credits bought × 15%.</p>
+                <p class="text-sm text-white/70">You get paid 15% of that purchase once your payout balance reaches at least $50.</p>
               </div>
             </div>
           </section>
 
-          <section class="glass-card p-5 md:p-6">
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <section class="glass-card payout-card p-5 md:p-6">
+            <div class="relative z-10 flex items-start gap-4">
+              <span class="mini-icon">$</span>
               <div>
-                <h2 class="text-xl font-black">Recent referrals</h2>
-                <p class="text-sm text-white/50 mt-1">Latest users under your affiliate link and whether they paid.</p>
+                <h2 class="text-xl font-black">Get paid</h2>
+                <p class="mt-1 text-sm text-white/58 leading-relaxed">When your affiliate earnings reach at least $50, request payment and we will collect your payment details safely.</p>
               </div>
-              <button id="refreshBtn" type="button" class="btn-soft">Refresh</button>
             </div>
-            <div id="recentRows" class="mt-2"></div>
-            <div id="emptyRows" class="hidden py-10 text-center text-white/48">
-              No referrals yet. Copy your link and share it.
+            <div class="relative z-10 mt-6 rounded-2xl border border-white/10 bg-white/[.045] p-4">
+              <div class="text-xs font-black uppercase tracking-[.16em] text-white/42">Minimum payout</div>
+              <div class="mt-2 text-4xl font-black">$50</div>
+              <p class="mt-2 text-sm text-white/56 leading-relaxed">Different countries support different payment providers, so contact us first. We usually answer within hours.</p>
             </div>
+            <button id="getPaidBtn" type="button" class="btn-primary relative z-10 mt-5 w-full">Get paid</button>
           </section>
         </div>
       </section>
@@ -355,6 +417,31 @@
   </main>
 
   <div id="toast" class="toast">Affiliate link copied</div>
+
+  <div id="payoutModal" class="payout-modal" aria-hidden="true">
+    <button id="payoutBackdrop" class="payout-backdrop" type="button" aria-label="Close payout information"></button>
+    <section class="payout-panel" role="dialog" aria-modal="true" aria-labelledby="payoutTitle">
+      <div class="payout-head">
+        <div class="flex items-center gap-3">
+          <span class="mini-icon">$</span>
+          <div>
+            <h2 id="payoutTitle" class="text-xl font-black leading-tight">Request affiliate payment</h2>
+            <p class="text-sm text-white/50 mt-1">Minimum payout: $50</p>
+          </div>
+        </div>
+        <button id="payoutClose" class="payout-close" type="button" aria-label="Close payout information">×</button>
+      </div>
+      <div class="payout-body">
+        <p class="text-sm text-white/68 leading-relaxed">
+          Because payment providers are different in many countries, please contact us first. We will answer within hours and ask for the best payment information for your country.
+        </p>
+        <div class="mt-6 grid sm:grid-cols-2 gap-3">
+          <a class="btn-primary" href="https://t.me/Hansora_support" target="_self">Hansora support Telegram</a>
+          <a id="payoutContactBtn" class="btn-soft" href="/contact.html">Contact form</a>
+        </div>
+      </div>
+    </section>
+  </div>
 
   <footer class="footer">
     <div class="shell footer-inner">
@@ -379,6 +466,7 @@
 
     const $ = (id) => document.getElementById(id);
     let currentAffiliateLink = '';
+    let currentUserEmail = '';
 
     function setText(id, value) {
       const el = $(id);
@@ -462,7 +550,6 @@
       setText('creditsBought', numberText(summary.total_credits_bought));
       setText('rewardCredits', numberText(summary.estimated_15_percent_reward_credits));
 
-      renderRecentRows(data.recent_referrals || []);
     }
 
     function renderRecentRows(rows) {
@@ -502,19 +589,51 @@
       });
     }
 
+    function buildPayoutContactLink() {
+      const message = 'Hi, my affiliate rewards have reached $50. Please help me receive my affiliate payment.';
+      const params = new URLSearchParams();
+      if (currentUserEmail) params.set('email', currentUserEmail);
+      params.set('message', message);
+      return `/contact.html?${params.toString()}`;
+    }
+
+    function updatePayoutContactLink() {
+      const link = $('payoutContactBtn');
+      if (link) link.href = buildPayoutContactLink();
+    }
+
+    function openPayoutModal() {
+      updatePayoutContactLink();
+      const modal = $('payoutModal');
+      if (!modal) return;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closePayoutModal() {
+      const modal = $('payoutModal');
+      if (!modal) return;
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
     async function loadDashboard() {
       $('errorPanel')?.classList.add('hidden');
       setLoading(true);
       try {
         const { data: sessionData } = await sb.auth.getSession();
         const token = sessionData?.session?.access_token;
+        currentUserEmail = sessionData?.session?.user?.email || '';
+        updatePayoutContactLink();
         if (!token) {
           setLoggedOut();
           setLoading(false);
           return;
         }
 
-        const res = await fetch('/.netlify/functions/affiliate-dashboard?limit=50', {
+        const res = await fetch('/.netlify/functions/affiliate-dashboard?limit=1', {
           method: 'GET',
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -533,7 +652,12 @@
 
     $('copyHeroBtn')?.addEventListener('click', copyAffiliateLink);
     $('copyLinkBtn')?.addEventListener('click', copyAffiliateLink);
-    $('refreshBtn')?.addEventListener('click', loadDashboard);
+    $('getPaidBtn')?.addEventListener('click', openPayoutModal);
+    $('payoutClose')?.addEventListener('click', closePayoutModal);
+    $('payoutBackdrop')?.addEventListener('click', closePayoutModal);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closePayoutModal();
+    });
 
     loadDashboard();
   </script>
