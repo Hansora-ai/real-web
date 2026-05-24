@@ -152,6 +152,18 @@
       if (el) el.classList.remove('hidden');
     }
   </script>
+<!-- Auto-fill contact form from URL params -->
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const email = params.get('email') || '';
+      const message = params.get('message') || '';
+      const emailInput = document.querySelector('input[name="email"]');
+      const messageInput = document.querySelector('textarea[name="message"]');
+      if (email && emailInput) emailInput.value = email;
+      if (message && messageInput) messageInput.value = message;
+    })();
+  </script>
 <!-- Submit handler: calls Netlify Function, no redirect -->
   <script>
     const formEl = document.getElementById('contactForm');
