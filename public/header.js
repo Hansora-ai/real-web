@@ -1,4 +1,4 @@
-=(function () {
+(function () {
   'use strict';
 
   const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
@@ -107,38 +107,13 @@
     } catch (_) {}
   }
 
-  function normalizeAffiliateRef(value) {
-    return String(value || '').trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64).toUpperCase();
-  }
-
-  function readAffiliateRef() {
-    try {
-      return normalizeAffiliateRef(localStorage.getItem(AFFILIATE_REF_KEY));
-    } catch (_) {
-      return '';
-    }
-  }
-
-  function writeAffiliateRef(value) {
-    const ref = normalizeAffiliateRef(value);
-    if (!ref) return '';
-    try {
-      localStorage.setItem(AFFILIATE_REF_KEY, ref);
-    } catch (_) {}
-    return ref;
-  }
-
   function captureAffiliateRef() {
     try {
       const params = new URLSearchParams(window.location.search || '');
-      writeAffiliateRef(params.get('ref') || params.get('affiliate') || params.get('affiliate_ref') || '');
+      const rawRef = params.get('ref') || params.get('affiliate') || params.get('affiliate_ref') || '';
+      const ref = String(rawRef || '').trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64).toUpperCase();
+      if (ref) localStorage.setItem(AFFILIATE_REF_KEY, ref);
     } catch (_) {}
-  }
-
-  function signupHrefWithAffiliateRef() {
-    const ref = readAffiliateRef();
-    if (!ref) return '/login.html?mode=signup';
-    return `/login.html?mode=signup&ref=${encodeURIComponent(ref)}`;
   }
 
   function shouldRedirectWhenLoggedOut() {
@@ -416,7 +391,7 @@
             <input id="authPass" placeholder="Password" required type="password" autocomplete="current-password">
             <div class="hansora-auth-actions">
               <button class="btn btn-brand" id="btnDoLogin" type="button">Log in</button>
-              <a class="btn" id="btnGoSignup" href="${signupHrefWithAffiliateRef()}">Sign up</a>
+              <a class="btn" id="btnGoSignup" href="/login.html?mode=signup">Sign up</a>
             </div>
             <p class="hansora-auth-msg" id="authMsg"></p>
           </form>
