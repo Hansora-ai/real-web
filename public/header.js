@@ -1,10 +1,11 @@
-(function () {
+=(function () {
   'use strict';
 
   const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
   const LOGO_URL = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/downloads/2025/ChatGPT%20Image%20Oct%2020,%202025,%2011_50_37%20AM.png';
   const CACHE_PREFIX = 'hansora.header.';
+  const AFFILIATE_REF_KEY = 'hansora_affiliate_ref';
 
   let sb = null;
   let currentUser = null;
@@ -104,6 +105,40 @@
     try {
       ['loggedIn', 'credits', 'avatar'].forEach((key) => localStorage.removeItem(CACHE_PREFIX + key));
     } catch (_) {}
+  }
+
+  function normalizeAffiliateRef(value) {
+    return String(value || '').trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64).toUpperCase();
+  }
+
+  function readAffiliateRef() {
+    try {
+      return normalizeAffiliateRef(localStorage.getItem(AFFILIATE_REF_KEY));
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function writeAffiliateRef(value) {
+    const ref = normalizeAffiliateRef(value);
+    if (!ref) return '';
+    try {
+      localStorage.setItem(AFFILIATE_REF_KEY, ref);
+    } catch (_) {}
+    return ref;
+  }
+
+  function captureAffiliateRef() {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      writeAffiliateRef(params.get('ref') || params.get('affiliate') || params.get('affiliate_ref') || '');
+    } catch (_) {}
+  }
+
+  function signupHrefWithAffiliateRef() {
+    const ref = readAffiliateRef();
+    if (!ref) return '/login.html?mode=signup';
+    return `/login.html?mode=signup&ref=${encodeURIComponent(ref)}`;
   }
 
   function shouldRedirectWhenLoggedOut() {
@@ -381,7 +416,7 @@
             <input id="authPass" placeholder="Password" required type="password" autocomplete="current-password">
             <div class="hansora-auth-actions">
               <button class="btn btn-brand" id="btnDoLogin" type="button">Log in</button>
-              <a class="btn" id="btnGoSignup" href="/login.html?mode=signup">Sign up</a>
+              <a class="btn" id="btnGoSignup" href="${signupHrefWithAffiliateRef()}">Sign up</a>
             </div>
             <p class="hansora-auth-msg" id="authMsg"></p>
           </form>
@@ -678,6 +713,7 @@
   }
 
   ready(function () {
+    captureAffiliateRef();
     injectHeaderStyles();
     injectHeader();
     injectAuthModal();
