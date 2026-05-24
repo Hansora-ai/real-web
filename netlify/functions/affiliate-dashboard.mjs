@@ -55,7 +55,7 @@ export async function handler(event) {
     const account = await ensureAffiliateAccount(user.id, rest, sjson);
 
     // Build the dashboard directly from the payments table so the Credits Bought card
-    // uses payment amount_cents only, not the credits column or old RPC credit totals.
+    // uses payment amount only, not the credits column, amount_cents column, or old RPC credit totals.
     const fallback = await buildSummaryFallback(user.id, limit, rest, sjson);
     const summary = fallback.summary;
     const recent = fallback.recent;
@@ -142,13 +142,13 @@ async function buildSummaryFallback(userId, limit, rest, sjson) {
 
   let totalPayments = 0;
   let totalCreditsBought = 0;
-  let totalAmountCents = 0;
+  let totalAmount = 0;
   let lastPaymentAt = null;
 
   paymentsByUser.forEach((value) => {
     totalPayments += value.payment_count;
     totalCreditsBought += value.credits_bought;
-    totalAmountCents += value.total_amount_cents;
+    totalAmount += value.total_amount;
     if (!lastPaymentAt || (value.last_payment_at && new Date(value.last_payment_at) > new Date(lastPaymentAt))) {
       lastPaymentAt = value.last_payment_at;
     }
@@ -161,10 +161,11 @@ async function buildSummaryFallback(userId, limit, rest, sjson) {
     paid_users: paidUsers,
     total_payments: totalPayments,
     total_credits_bought: round2(totalCreditsBought),
-    total_amount_cents: totalAmountCents,
-    estimated_15_percent_reward_credits: rewardUsdFromAmountCents(totalAmountCents),
-    estimated_15_percent_reward_usd: rewardUsdFromAmountCents(totalAmountCents),
-    estimated_15_percent_reward_cents: Math.round(totalAmountCents * 0.15),
+    total_amount: round2(totalAmount),
+    total_amount_cents: Math.round(totalAmount * 100),
+    estimated_15_percent_reward_credits: rewardUsdFromAmount(totalAmount),
+    estimated_15_percent_reward_usd: rewardUsdFromAmount(totalAmount),
+    estimated_15_percent_reward_cents: Math.round(totalAmount * 100 * 0.15),
     conversion_rate: totalBrought ? round2((paidUsers / totalBrought) * 100) : 0,
     last_payment_at: lastPaymentAt
   };
@@ -179,12 +180,13 @@ async function buildSummaryFallback(userId, limit, rest, sjson) {
       referred_at: row.created_at,
       has_paid: pay.payment_count > 0,
       payment_count: pay.payment_count,
-      credits_bought: pay.total_amount_cents,
-      total_amount_cents: pay.total_amount_cents,
+      credits_bought: round2(pay.total_amount),
+      total_amount: round2(pay.total_amount),
+      total_amount_cents: Math.round(pay.total_amount * 100),
       last_payment_at: pay.last_payment_at,
-      estimated_15_percent_reward_credits: rewardUsdFromAmountCents(pay.total_amount_cents),
-      estimated_15_percent_reward_usd: rewardUsdFromAmountCents(pay.total_amount_cents),
-      estimated_15_percent_reward_cents: Math.round(pay.total_amount_cents * 0.15)
+      estimated_15_percent_reward_credits: rewardUsdFromAmount(pay.total_amount),
+      estimated_15_percent_reward_usd: rewardUsdFromAmount(pay.total_amount),
+      estimated_15_percent_reward_cents: Math.round(pay.total_amount * 100 * 0.15)
     };
   });
 
@@ -217,7 +219,7 @@ async function fetchPaymentsForUsers(userIds, rest, sjson) {
     const inList = batch.map((id) => encodeURIComponent(id)).join(',');
     for (let from = 0; from < 50000; from += pageSize) {
       const to = from + pageSize - 1;
-      const path = `payments?uid=in.(${inList})&status=in.(succeeded,paid)&select=id,uid,amount_cents,currency,paid_at,status`;
+      const path = `payments?uid=in.(${inList})&status=in.(succeeded,paid)&select=id,uid,amount,currency,paid_at,status`;
       const res = await rest(path, { headers: { Range: `${from}-${to}` } });
       const body = await sjson(res);
       if (!res.ok || !Array.isArray(body)) throw new Error('payments fetch failed');
@@ -235,8 +237,8 @@ function aggregatePaymentsByUser(payments) {
     if (!payment.uid) return;
     const current = map.get(payment.uid) || emptyPaymentAggregate();
     current.payment_count += 1;
-    current.credits_bought += Number(payment.amount_cents || 0);
-    current.total_amount_cents += Number(payment.amount_cents || 0);
+    current.credits_bought += Number(payment.amount || 0);
+    current.total_amount += Number(payment.amount || 0);
     if (!current.last_payment_at || (payment.paid_at && new Date(payment.paid_at) > new Date(current.last_payment_at))) {
       current.last_payment_at = payment.paid_at || null;
     }
@@ -249,36 +251,33 @@ function emptyPaymentAggregate() {
   return {
     payment_count: 0,
     credits_bought: 0,
-    total_amount_cents: 0,
+    total_amount: 0,
     last_payment_at: null
   };
 }
 
 function normalizeSummary(row) {
-  const totalAmountCents = Number(row?.total_amount_cents || 0);
-  const amountBasedRewardUsd = rewardUsdFromAmountCents(totalAmountCents);
-  const fallbackRewardUsd = round2(row?.estimated_15_percent_reward_usd || row?.estimated_15_percent_reward_credits || 0);
-  const rewardUsd = totalAmountCents > 0 ? amountBasedRewardUsd : fallbackRewardUsd;
+  const totalAmount = Number(row?.total_amount || row?.total_credits_bought || 0);
+  const rewardUsd = rewardUsdFromAmount(totalAmount);
 
   return {
     total_brought: Number(row?.total_brought || 0),
     paid_users: Number(row?.paid_users || 0),
     total_payments: Number(row?.total_payments || 0),
-    total_credits_bought: totalAmountCents,
-    total_amount_cents: totalAmountCents,
+    total_credits_bought: round2(totalAmount),
+    total_amount: round2(totalAmount),
+    total_amount_cents: Math.round(totalAmount * 100),
     estimated_15_percent_reward_credits: rewardUsd,
     estimated_15_percent_reward_usd: rewardUsd,
-    estimated_15_percent_reward_cents: Math.round(totalAmountCents * 0.15),
+    estimated_15_percent_reward_cents: Math.round(totalAmount * 100 * 0.15),
     conversion_rate: round2(row?.conversion_rate || 0),
     last_payment_at: row?.last_payment_at || null
   };
 }
 
 function normalizeReferralRow(row) {
-  const totalAmountCents = Number(row.total_amount_cents || 0);
-  const amountBasedRewardUsd = rewardUsdFromAmountCents(totalAmountCents);
-  const fallbackRewardUsd = round2(row.estimated_15_percent_reward_usd || row.estimated_15_percent_reward_credits || 0);
-  const rewardUsd = totalAmountCents > 0 ? amountBasedRewardUsd : fallbackRewardUsd;
+  const totalAmount = Number(row.total_amount || row.credits_bought || 0);
+  const rewardUsd = rewardUsdFromAmount(totalAmount);
 
   return {
     id: row.id || null,
@@ -288,12 +287,13 @@ function normalizeReferralRow(row) {
     referred_at: row.referred_at || row.created_at || null,
     has_paid: Boolean(row.has_paid),
     payment_count: Number(row.payment_count || 0),
-    credits_bought: totalAmountCents,
-    total_amount_cents: totalAmountCents,
+    credits_bought: round2(totalAmount),
+    total_amount: round2(totalAmount),
+    total_amount_cents: Math.round(totalAmount * 100),
     last_payment_at: row.last_payment_at || null,
     estimated_15_percent_reward_credits: rewardUsd,
     estimated_15_percent_reward_usd: rewardUsd,
-    estimated_15_percent_reward_cents: Math.round(totalAmountCents * 0.15)
+    estimated_15_percent_reward_cents: Math.round(totalAmount * 100 * 0.15)
   };
 }
 
@@ -316,8 +316,8 @@ function clampInt(value, min, max, fallback) {
   return Math.max(min, Math.min(max, Math.trunc(n)));
 }
 
-function rewardUsdFromAmountCents(amountCents) {
-  return round2((Number(amountCents || 0) / 100) * 0.15);
+function rewardUsdFromAmount(amount) {
+  return round2(Number(amount || 0) * 0.15);
 }
 
 function round2(value) {
