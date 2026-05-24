@@ -191,8 +191,10 @@
       animation:shine 1.4s infinite;
     }
     @keyframes shine{100%{transform:translateX(100%)}}
+    .affiliate-info-grid{align-items:start}
+    .compact-info-card{align-self:start}
     .payout-card{
-      min-height:100%;
+      min-height:0;
       position:relative;
       overflow:hidden;
     }
@@ -326,7 +328,7 @@
               <button id="copyLinkBtn" type="button" class="btn-primary shrink-0">Copy</button>
             </div>
             <p class="mt-3 text-sm text-white/52 leading-relaxed">
-              Take your link and make money.
+              The link can go to the homepage. If the user moves around the site before signing up, the referral code can stay saved in the browser.
             </p>
           </div>
         </div>
@@ -375,8 +377,8 @@
           </article>
         </div>
 
-        <div class="grid lg:grid-cols-2 gap-6">
-          <section class="glass-card p-5 md:p-6">
+        <div class="affiliate-info-grid grid lg:grid-cols-2 gap-6">
+          <section class="glass-card compact-info-card p-5">
             <div class="flex items-start gap-4">
               <span class="mini-icon">1</span>
               <div>
@@ -396,7 +398,7 @@
             </div>
           </section>
 
-          <section class="glass-card payout-card p-5 md:p-6">
+          <section class="glass-card compact-info-card payout-card p-5">
             <div class="relative z-10 flex items-start gap-4">
               <span class="mini-icon">$</span>
               <div>
@@ -404,12 +406,14 @@
                 <p class="mt-1 text-sm text-white/58 leading-relaxed">When your affiliate earnings reach at least $50, request payment and we will collect your payment details safely.</p>
               </div>
             </div>
-            <div class="relative z-10 mt-6 rounded-2xl border border-white/10 bg-white/[.045] p-4">
-              <div class="text-xs font-black uppercase tracking-[.16em] text-white/42">Minimum payout</div>
-              <div class="mt-2 text-4xl font-black">$50</div>
-              <p class="mt-2 text-sm text-white/56 leading-relaxed">Different countries support different payment providers, so contact us first. We usually answer within hours.</p>
+            <div class="relative z-10 mt-4 flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[.045] p-4">
+              <div class="min-w-0">
+                <div class="text-xs font-black uppercase tracking-[.16em] text-white/42">Minimum payout</div>
+                <p class="mt-1 text-sm text-white/56 leading-relaxed">Contact us first. We usually answer within hours.</p>
+              </div>
+              <div class="shrink-0 text-4xl font-black">$50</div>
             </div>
-            <button id="getPaidBtn" type="button" class="btn-primary relative z-10 mt-5 w-full">Get paid</button>
+            <button id="getPaidBtn" type="button" class="btn-primary relative z-10 mt-4 w-full">Get paid</button>
           </section>
         </div>
       </section>
@@ -436,8 +440,8 @@
           Because payment providers are different in many countries, please contact us first. We will answer within hours and ask for the best payment information for your country.
         </p>
         <div class="mt-6 grid sm:grid-cols-2 gap-3">
-          <a class="btn-primary" href="https://t.me/Hansora_support" target="_self">Hansora support Telegram</a>
-          <a id="payoutContactBtn" class="btn-soft" href="/contact.html">Contact form</a>
+          <a class="btn-soft" href="https://t.me/Hansora_support" target="_self">Hansora support Telegram</a>
+          <a id="payoutContactBtn" class="btn-primary" href="/contact.html">Contact</a>
         </div>
       </div>
     </section>
