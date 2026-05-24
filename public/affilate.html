@@ -372,8 +372,8 @@
           </article>
           <article class="stat-card p-5">
             <div class="relative z-10 text-sm text-white/52 font-bold">Estimated Reward</div>
-            <div id="rewardCredits" class="relative z-10 mt-4 text-4xl font-black">0</div>
-            <div class="relative z-10 mt-3 text-xs text-white/42">15% estimate</div>
+            <div id="rewardCredits" class="relative z-10 mt-4 text-4xl font-black">$0</div>
+            <div class="relative z-10 mt-3 text-xs text-white/42">15% from payment amount</div>
           </article>
         </div>
 
@@ -482,6 +482,11 @@
       return Number.isInteger(n) ? n.toLocaleString() : n.toLocaleString(undefined, { maximumFractionDigits: 2 });
     }
 
+    function moneyText(value) {
+      const n = Number(value || 0);
+      return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
     function formatDate(value) {
       if (!value) return '—';
       try {
@@ -552,7 +557,7 @@
       setText('paidUsers', numberText(summary.paid_users));
       setText('conversionRate', `${numberText(summary.conversion_rate)}% conversion`);
       setText('creditsBought', numberText(summary.total_credits_bought));
-      setText('rewardCredits', numberText(summary.estimated_15_percent_reward_credits));
+      setText('rewardCredits', moneyText(summary.estimated_15_percent_reward_usd ?? summary.estimated_15_percent_reward_credits));
 
     }
 
@@ -585,7 +590,7 @@
             <div class="text-xs text-white/42 mt-1">Bought</div>
           </div>
           <div>
-            <div class="text-sm font-black">${numberText(row.estimated_15_percent_reward_credits)}⚡</div>
+            <div class="text-sm font-black">${moneyText(row.estimated_15_percent_reward_usd ?? row.estimated_15_percent_reward_credits)}</div>
             <div class="text-xs text-white/42 mt-1">15% estimate</div>
           </div>
         `;
