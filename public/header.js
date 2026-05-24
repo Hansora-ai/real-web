@@ -715,8 +715,8 @@
           const { data, error } = await sb.auth.signInWithPassword({ email: emailIn.value.trim(), password: passIn.value.trim() });
           if (error) { if (msg) msg.textContent = error.message; return; }
           const profile = await getOrCreateProfile(data.user);
-          await registerAffiliateReferral(data.user);
           showLoggedInUI(profile, data.user);
+          registerAffiliateReferral(data.user);
           closeAuth();
         } catch (error) {
           if (msg) msg.textContent = error.message || 'Login failed.';
@@ -745,8 +745,8 @@
         return;
       }
       const profile = await getOrCreateProfile(user);
-      await registerAffiliateReferral(user);
       showLoggedInUI(profile, user);
+      registerAffiliateReferral(user);
     } catch (error) {
       console.warn('Hansora header session restore failed', error);
       showLoggedOutUI();
