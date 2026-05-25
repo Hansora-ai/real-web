@@ -4421,7 +4421,7 @@ async function sora2Poll(taskId, uid, runId, controllers, token) {
 
 async function pollGeneration(runId, controllers, token, taskId, checker) {
   if (!currentUser || !runId || !controllers || !controllers.length) return;
-  const maxMs = 900000;
+  const maxMs = 1800000;
   const started = Date.now();
   while (Date.now() - started < maxMs) {
     await new Promise((r) => setTimeout(r, 3000));
