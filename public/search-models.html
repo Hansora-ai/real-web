@@ -4299,6 +4299,9 @@ function createResultCard(data) {
       if (model && model.id === 'seedance20' && String(endpoint || '').includes('run-seedance-cheap')) {
         return 'seedance-cheap-check';
       }
+      if (model && model.id === 'grok-video' && Number(currentDuration || 0) > 0 && Number(currentDuration || 0) < 10) {
+        return 'unifically-grok-check';
+      }
       return 'kie-check';
     }
 
@@ -4421,7 +4424,7 @@ async function sora2Poll(taskId, uid, runId, controllers, token) {
 
 async function pollGeneration(runId, controllers, token, taskId, checker) {
   if (!currentUser || !runId || !controllers || !controllers.length) return;
-  const maxMs = 1800000;
+  const maxMs = 900000;
   const started = Date.now();
   while (Date.now() - started < maxMs) {
     await new Promise((r) => setTimeout(r, 3000));
@@ -8528,7 +8531,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             );
             await refreshCredits();
             const taskId = j && (j.taskId || j.id || (j.data && (j.data.taskId || j.data.id)));
-            const checker = checkerForCurrentModel(currentModel, runEndpoint);
+            const checker = (j && j.checker) || checkerForCurrentModel(currentModel, runEndpoint);
             startPollGeneration(runId, placeholderControllers, taskId, checker);
           }
         }
