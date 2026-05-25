@@ -19,7 +19,6 @@
   <link href="/header.css" rel="stylesheet" />
   <link href="header.css" rel="stylesheet" />
   <script defer src="/header.js"></script>
-  <script defer src="header (4).js"></script>
   <style>
     :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
     body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
@@ -344,21 +343,21 @@
       </nav>
     </div>
   </footer>
-<div id="authModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4">
-    <div id="authCard" class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft">
+<div id="legacyAuthModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4">
+    <div id="legacyAuthCard" class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft">
       <div class="mb-4 flex items-center justify-between">
-        <h3 id="authTitle" class="text-lg font-semibold">Log in</h3>
-        <button id="authClose" class="rounded-lg btn px-2 py-1 text-sm">✕</button>
+        <h3 id="legacyAuthTitle" class="text-lg font-semibold">Log in</h3>
+        <button id="legacyAuthClose" class="rounded-lg btn px-2 py-1 text-sm">✕</button>
       </div>
-      <form id="authForm" class="space-y-3">
-        <input id="authEmail" type="email" placeholder="Email" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
-        <input id="authPass" type="password" placeholder="Password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
-        <input id="authPass2" type="password" placeholder="Repeat password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden">
+      <form id="legacyAuthForm" class="space-y-3">
+        <input id="legacyAuthEmail" type="email" placeholder="Email" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
+        <input id="legacyAuthPass" type="password" placeholder="Password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
+        <input id="legacyAuthPass2" type="password" placeholder="Repeat password" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden">
         <div class="flex gap-2">
-          <button id="btnDoLogin" type="button" class="w-1/2 rounded-lg btn px-3 py-2 font-semibold">Log in</button>
-          <button id="btnDoSignup" type="button" class="w-1/2 rounded-lg btn px-3 py-2">Sign up</button>
+          <button id="legacyBtnDoLogin" type="button" class="w-1/2 rounded-lg btn px-3 py-2 font-semibold">Log in</button>
+          <button id="legacyBtnDoSignup" type="button" class="w-1/2 rounded-lg btn px-3 py-2">Sign up</button>
         </div>
-        <p id="authMsg" class="text-xs text-zinc-400"></p>
+        <p id="legacyAuthMsg" class="text-xs text-zinc-400"></p>
       </form>
     </div>
   </div>
@@ -390,15 +389,15 @@ const $navAvatarImg = null;
     const $btnLogin = document.getElementById('btnLogin');
 
     // Modal elements
-    const $modal = document.getElementById('authModal');
-    const $close = document.getElementById('authClose');
-    const $title = document.getElementById('authTitle');
-    const $emailIn = document.getElementById('authEmail');
-    const $passIn = document.getElementById('authPass');
-    const $pass2In = document.getElementById('authPass2');
-    const $msg = document.getElementById('authMsg');
-    const $doLogin = document.getElementById('btnDoLogin');
-    const $doSignup = document.getElementById('btnDoSignup');
+    const $modal = document.getElementById('legacyAuthModal');
+    const $close = document.getElementById('legacyAuthClose');
+    const $title = document.getElementById('legacyAuthTitle');
+    const $emailIn = document.getElementById('legacyAuthEmail');
+    const $passIn = document.getElementById('legacyAuthPass');
+    const $pass2In = document.getElementById('legacyAuthPass2');
+    const $msg = document.getElementById('legacyAuthMsg');
+    const $doLogin = document.getElementById('legacyBtnDoLogin');
+    const $doSignup = document.getElementById('legacyBtnDoSignup');
 
     let authMode = 'login';
     function openAuth(){ $modal.classList.remove('hidden'); $msg.textContent=''; }
