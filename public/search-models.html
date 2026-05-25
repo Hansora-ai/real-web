@@ -6847,8 +6847,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       document.getElementById('veoReferenceInput').click();
     });
     document.getElementById('veoReferenceInput').addEventListener('change', (e) => {
-      const files = Array.from(e.target.files || []).filter(Boolean).slice(0, 3);
-      veoReferenceFiles = files;
+      veoReferenceFiles = appendFilesWithLimit(veoReferenceFiles, e.target.files, 3, 'image/*');
+      e.target.value = '';
       renderVeoReferenceThumbs();
       syncVeo31InputLocks();
     });
@@ -6872,6 +6872,19 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         return type === normalized;
       });
     };
+    function appendFilesWithLimit(existingFiles, incomingFiles, max, accept) {
+      const limit = Math.max(1, Number(max || 1));
+      const seen = new Set();
+      return [...(existingFiles || []), ...Array.from(incomingFiles || [])]
+        .filter((file) => fileMatchesAccept(file, accept))
+        .filter((file) => {
+          const key = [file.name, file.size, file.lastModified, file.type].join('|');
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .slice(0, limit);
+    }
     const bindDropToInput = (inputId) => {
       const input = document.getElementById(inputId);
       const card = input ? input.closest('.upload-drop-card') : null;
@@ -7026,7 +7039,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         syncSeedanceInputLocks();
         return;
       }
-      seedanceImageRefFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, 9);
+      seedanceImageRefFiles = appendFilesWithLimit(seedanceImageRefFiles, e.target.files, 9, 'image/*');
+      e.target.value = '';
       renderFileListThumbs(seedanceImageRefFiles, document.getElementById('seedanceImageRefsThumbs'), (index) => {
         seedanceImageRefFiles.splice(index, 1);
         document.getElementById('seedanceImageRefsInput').value = '';
@@ -7110,7 +7124,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     });
     document.getElementById('videoRefImagesInput').addEventListener('change', (e) => {
       const max = currentModel && currentModel.id === 'grok-video' ? 7 : (currentModel && currentModel.id === 'gemini-omni-video' ? 7 : 9);
-      videoRefImageFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, max);
+      videoRefImageFiles = appendFilesWithLimit(videoRefImageFiles, e.target.files, max, 'image/*');
+      e.target.value = '';
       renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
         videoRefImageFiles.splice(index, 1);
         document.getElementById('videoRefImagesInput').value = '';
