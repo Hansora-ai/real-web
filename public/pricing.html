@@ -218,25 +218,6 @@ fbq('track', 'PageView');
 </nav>
 </div>
 </footer>
-<!-- AUTH MODAL -->
-<div class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4" id="authModal">
-<div class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft" id="authCard">
-<div class="mb-4 flex items-center justify-between">
-<h3 class="text-lg font-semibold" id="authTitle">Log in</h3>
-<button class="rounded-lg btn px-2 py-1 text-sm" id="authClose">✕</button>
-</div>
-<form class="space-y-3" id="authForm">
-<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" id="authEmail" placeholder="Email" required="" type="email"/>
-<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" id="authPass" placeholder="Password" required="" type="password"/>
-<input class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden" id="authPass2" placeholder="Repeat password" type="password"/>
-<div class="flex gap-2">
-<button class="w-1/2 rounded-lg btn px-3 py-2 font-semibold" id="btnDoLogin" type="button">Log in</button>
-<button class="w-1/2 rounded-lg btn px-3 py-2" id="btnDoSignup" type="button">Sign up</button>
-</div>
-<p class="text-xs text-zinc-400" id="authMsg"></p>
-</form>
-</div>
-</div>
 <script>
   // Guard: only set footer year element if present
   (function(){ const y = document.getElementById('y'); if (y) y.textContent = new Date().getFullYear(); })();
