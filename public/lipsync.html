@@ -128,8 +128,24 @@
     .result-info strong{ display:block; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; }
     .result-info span{ display:block; font-size:10px; color:rgba(255,255,255,.52); margin-top:3px; }
     .get-btn{ min-height:30px; border-radius:999px; border:1px solid rgba(255,255,255,.15); background:rgba(99,102,241,.22); color:#fff; padding:0 12px; font-size:11px; }
-    #previewOverlay{ position:fixed; inset:0; z-index:80; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.85); backdrop-filter:blur(6px); padding:18px; }
+    #previewOverlay{ position:fixed; inset:0; z-index:2147483647 !important; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.85); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); padding:18px; }
     #previewOverlay.show{ display:flex; }
+    body.preview-open #sharedHeader,
+    body.preview-open #sharedHeader *,
+    body.preview-open header,
+    body.preview-open header *,
+    body.preview-open .site-header,
+    body.preview-open .site-header *,
+    body:has(#previewOverlay.show) #sharedHeader,
+    body:has(#previewOverlay.show) #sharedHeader *,
+    body:has(#previewOverlay.show) header,
+    body:has(#previewOverlay.show) header *,
+    body:has(#previewOverlay.show) .site-header,
+    body:has(#previewOverlay.show) .site-header *{
+      z-index:0 !important;
+      visibility:hidden !important;
+      pointer-events:none !important;
+    }
     .preview-card{ position:relative; width:min(920px,100%); max-height:88vh; border:1px solid rgba(255,255,255,.14); background:rgba(2,6,23,.88); border-radius:22px; overflow:hidden; }
     .preview-close{ position:absolute; top:10px; right:10px; width:40px; height:40px; border-radius:999px; border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.55); color:#fff; font-size:24px; z-index:3; }
     .preview-card video{ width:100%; max-height:88vh; object-fit:contain; display:block; background:#000; }
@@ -834,7 +850,9 @@
     function openPreview(url) {
       if (!url) return;
       $('previewVideo').src = url;
+      document.body.classList.add('preview-open');
       $('previewOverlay').classList.add('show');
+      document.body.style.overflow = 'hidden';
       $('previewVideo').play().catch(() => {});
     }
     function closePreview() {
@@ -842,6 +860,8 @@
       $('previewVideo').removeAttribute('src');
       $('previewVideo').load();
       $('previewOverlay').classList.remove('show');
+      document.body.classList.remove('preview-open');
+      document.body.style.overflow = '';
     }
 
     $('modelAvatarV').addEventListener('click', () => setModel('avatar_v'));
