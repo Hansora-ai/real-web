@@ -67,11 +67,15 @@
       <!-- Google -->
       <button id="btnGoogle" class="w-full btn border-white/10 py-3 rounded-xl flex items-center justify-center gap-3 mb-5">
         <img alt="G" class="h-5 w-5" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
-        <span class="font-medium">Sign in with Google</span>
+        <span class="font-medium">Continue with Google</span>
       </button>
 
+      <div class="rounded-xl border border-white/10 bg-white/5 p-4 mb-5 text-sm text-zinc-300 leading-relaxed">
+        For account safety, sign up and login are currently available only with a Google account.
+      </div>
+
       <!-- Divider -->
-      <div class="flex items-center gap-3 my-5">
+      <div class="hidden flex items-center gap-3 my-5">
         <div class="flex-1 h-px bg-white/10"></div>
         <span class="text-xs text-zinc-400">or</span>
         <div class="flex-1 h-px bg-white/10"></div>
@@ -93,7 +97,7 @@
       </section>
 
       <!-- Email / Password form -->
-      <form id="formAuth" class="space-y-4" autocomplete="on">
+      <form id="formAuth" class="hidden space-y-4" autocomplete="on">
         <div id="rowEmail">
           <label class="block text-sm mb-1" for="email">Email</label>
           <input id="email" name="email" type="email" required class="w-full rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/40" placeholder="you@example.com" />
