@@ -465,12 +465,15 @@
           <form class="hansora-auth-form" id="authForm">
             <button class="btn hansora-google-btn" id="btnGoogleLogin" type="button">
               <img alt="G" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
-              <span>Log in with Google</span>
+              <span>Continue with Google</span>
             </button>
-            <div class="hansora-auth-divider"><span>or</span></div>
-            <input id="authEmail" placeholder="Email" required type="email" autocomplete="email">
-            <input id="authPass" placeholder="Password" required type="password" autocomplete="current-password">
-            <div class="hansora-auth-actions">
+            <p class="hansora-auth-msg" style="margin:12px 0 0;color:rgba(255,255,255,.72);line-height:1.45;">
+              For account safety, sign up and login are currently available only with a Google account.
+            </p>
+            <div class="hansora-auth-divider" style="display:none;"><span>or</span></div>
+            <input id="authEmail" style="display:none;" placeholder="Email" type="email" autocomplete="email">
+            <input id="authPass" style="display:none;" placeholder="Password" type="password" autocomplete="current-password">
+            <div class="hansora-auth-actions" style="display:none;">
               <button class="btn btn-brand" id="btnDoLogin" type="button">Log in</button>
               <a class="btn" id="btnGoSignup" href="/login.html?mode=signup">Sign up</a>
             </div>
