@@ -70,6 +70,55 @@ function imageUrlsFromBody(body) {
   if (body.image_url) return [String(body.image_url)];
   return [];
 }
+function safeJson(value, maxLength = 4000) {
+  try {
+    const text = JSON.stringify(value);
+    return text && text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+  } catch {
+    return '';
+  }
+}
+function summarizeProviderError(data) {
+  if (!data) return '';
+  if (typeof data === 'string') return data.slice(0, 500);
+  if (typeof data !== 'object') return '';
+  const seen = new Set();
+  const keyPattern = /^(error|error_message|message|msg|reason|fail_reason|failure_reason|failed_reason|detail|details|code|status|state)$/i;
+  const ignored = /^(ok|success|succeeded|done|complete|completed|processing|pending|ready)$/i;
+  const stringify = (value) => {
+    if (value == null) return '';
+    if (typeof value === 'string') return value.trim();
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    return safeJson(value, 800);
+  };
+  const walk = (value, depth = 0) => {
+    if (!value || depth > 5 || typeof value !== 'object' || seen.has(value)) return '';
+    seen.add(value);
+    for (const [key, inner] of Object.entries(value)) {
+      if (!keyPattern.test(key)) continue;
+      const text = stringify(inner);
+      if (text && !ignored.test(text)) return text.slice(0, 500);
+    }
+    for (const inner of Object.values(value)) {
+      const nested = walk(inner, depth + 1);
+      if (nested) return nested;
+    }
+    return '';
+  };
+  return walk(data);
+}
+function requestDiagnostic(event, body, duration) {
+  const images = imageUrlsFromBody(body);
+  return {
+    aspect_ratio: String(body.aspect_ratio || '16:9'),
+    duration,
+    resolution: String(body.resolution || '720p'),
+    image_count: images.length,
+    image_urls: images.slice(0, 7),
+    client: body.client_diagnostic || null,
+    user_agent: getHeader(event, 'user-agent') || '',
+  };
+}
 async function fetchGeneration(uid, runId) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/user_generations?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(runId)}&select=id,meta`, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } });
   const rows = await res.json().catch(() => []);
@@ -186,28 +235,74 @@ exports.handler = async (event) => {
 
     const cost = costFor(body);
     const source = useUnificAlly ? 'unifically' : 'kie';
-    const metaBase = { source, engine: 'grok', run_id: runId, status: 'pending', refund_amount: cost, checker };
+    const diagnostic = requestDiagnostic(event, body, duration);
+    const metaBase = { source, engine: 'grok', run_id: runId, status: 'pending', refund_amount: cost, checker, diagnostic };
     const rowId = existing?.id || await insertGeneration(uid, runId, prompt, metaBase);
     const credits = await getCredits(uid);
-    if (credits < cost) return json(402, { ok: false, error: 'not_enough_credits', credits, need: cost });
+    if (credits < cost) {
+      await patchGeneration(rowId, {
+        ...metaBase,
+        status: 'failed',
+        error_summary: 'not_enough_credits',
+        credits,
+        need: cost,
+        failed_at: new Date().toISOString(),
+      });
+      return json(402, { ok: false, error: 'not_enough_credits', message: 'not_enough_credits', credits, need: cost, run_id: runId });
+    }
 
     const created = useUnificAlly
       ? await createUnificAllyTask({ body, prompt, duration })
       : await createKieTask({ body, prompt, duration, uid, runId });
 
     if (!created.res.ok) {
-      await patchGeneration(rowId, { ...metaBase, status: 'failed', error: created.data });
+      const errorSummary = summarizeProviderError(created.data) || `${source}_http_${created.res.status}`;
+      await patchGeneration(rowId, {
+        ...metaBase,
+        status: 'failed',
+        error: created.data,
+        error_summary: errorSummary,
+        provider_http_status: created.res.status,
+        provider_response: created.data,
+        request_input: created.input,
+        failed_at: new Date().toISOString(),
+      });
       return json(created.res.status || 502, {
         ok: false,
         error: useUnificAlly ? 'unifically_create_failed' : 'kie_create_failed',
+        message: errorSummary,
         details: created.data,
+        run_id: runId,
       });
     }
 
     const taskId = extractTaskId(created.data);
-    if (!taskId) return json(502, { ok: false, error: 'missing_task_id', details: created.data });
+    if (!taskId) {
+      const errorSummary = summarizeProviderError(created.data) || 'provider_response_missing_task_id';
+      await patchGeneration(rowId, {
+        ...metaBase,
+        status: 'failed',
+        error_summary: errorSummary,
+        provider_response: created.data,
+        request_input: created.input,
+        failed_at: new Date().toISOString(),
+      });
+      return json(502, { ok: false, error: 'missing_task_id', message: errorSummary, details: created.data, run_id: runId });
+    }
     const debit = await debitCredits(uid, cost);
-    if (!debit.ok) return json(402, { ok: false, error: debit.error, details: debit });
+    if (!debit.ok) {
+      await patchGeneration(rowId, {
+        ...metaBase,
+        status: 'failed',
+        task_id: taskId,
+        error_summary: debit.error || 'credit_debit_failed',
+        details: debit,
+        request_input: created.input,
+        provider_create_response: created.data,
+        failed_at: new Date().toISOString(),
+      });
+      return json(402, { ok: false, error: debit.error, message: debit.error || 'credit_debit_failed', details: debit, run_id: runId });
+    }
 
     await patchGeneration(rowId, {
       ...metaBase,
@@ -220,6 +315,7 @@ exports.handler = async (event) => {
       debited: cost,
       refund_amount: cost,
       request_input: created.input,
+      provider_create_response: created.data,
     });
 
     return json(201, {
