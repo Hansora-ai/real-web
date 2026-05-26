@@ -4417,6 +4417,14 @@ function extractGenerationFailureReason(payload) {
   return walk(payload);
 }
 
+function cleanGenerationFailureReason(reason) {
+  const text = String(reason || '').trim().replace(/\s+/g, ' ');
+  if (!text) return '';
+  if (/^(fail|failed|error|false|null|undefined)$/i.test(text)) return '';
+  if (/^status\s+(fail|failed|error)$/i.test(text)) return '';
+  return text.replace(/[.。]+$/g, '').slice(0, 220);
+}
+
 function startPollGeneration(runId, controllers, taskId, checker) {
   if (!runId || !controllers || !controllers.length) return;
   if (__activePolls.has(runId)) return; // already polling this run
@@ -4482,7 +4490,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const nbStatus = String(nb?.js?.status || '').toLowerCase();
         const nbFailed = !!nb?.js?.failed || nbStatus.includes('fail') || nbStatus.includes('error') || nbStatus.includes('cancel');
         if (nbFailed) {
-          const reason = extractGenerationFailureReason(nb?.js) || (nb?.status ? `checker status ${nb.status}` : '');
+          const reason = cleanGenerationFailureReason(extractGenerationFailureReason(nb?.js)) || (nb?.status ? `checker HTTP ${nb.status}` : '');
           console.warn('generation check failed', { runId, taskId, checker: checker || 'kie-check', reason, response: nb?.js });
           showGenerationFailedStatus(reason, runId);
           await refreshCredits();
@@ -4543,7 +4551,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       // - Multi-output: stop only when we have all expected URLs
       const isFail = status.toLowerCase().includes('fail') || status.toLowerCase().includes('error');
       if (isFail) {
-        const reason = extractGenerationFailureReason(data.meta);
+        const reason = cleanGenerationFailureReason(extractGenerationFailureReason(data.meta));
         console.warn('generation row failed', { runId, reason, meta: data.meta });
         showGenerationFailedStatus(reason, runId);
         await refreshCredits();
@@ -5713,9 +5721,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function showGenerationFailedStatus(reason, runId) {
-      const cleanReason = String(reason || '').trim();
+      const cleanReason = cleanGenerationFailureReason(reason);
       const suffix = shortRunId(runId) ? ` Run ID: ${shortRunId(runId)}.` : '';
-      showStatus(cleanReason ? `${GENERATION_FAILED_MESSAGE} ${cleanReason}.${suffix}` : `${GENERATION_FAILED_MESSAGE} Please try again.${suffix}`, 'error');
+      const message = cleanReason || 'The provider returned a failure without a detailed reason';
+      showStatus(`${GENERATION_FAILED_MESSAGE} ${message}.${suffix}`, 'error');
     }
 
     function getKlingMotionVideoError() {
@@ -8568,7 +8577,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           let msg = txt || `status ${res.status}`;
           try {
             const j = JSON.parse(txt);
-            const parsedMsg = j.message || extractGenerationFailureReason(j) || extractProviderError(j) || j.error;
+            const parsedMsg = cleanGenerationFailureReason(j.message || extractGenerationFailureReason(j) || extractProviderError(j) || j.error);
             if (parsedMsg) msg = parsedMsg;
           } catch {}
           console.warn('model request failed', { runId, model: currentModel.id, endpoint: runEndpoint, status: res.status, message: msg, raw: txt });
@@ -8579,7 +8588,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           let j = null;
           try { j = await res.json(); } catch { j = null; }
 
-          const providerError = extractProviderError(j);
+          const providerError = cleanGenerationFailureReason(extractProviderError(j) || extractGenerationFailureReason(j));
           if (providerError) {
             console.warn('provider rejected generation', providerError);
             showGenerationFailedStatus(providerError, runId);
