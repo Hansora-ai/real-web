@@ -1,413 +1,240 @@
-// netlify/functions/unifically-grok-check.js
-// Poll/refund checker for the short-duration UnificAlly Grok route.
+// netlify/functions/run-grok-video.js
+const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/, '');
+const KIE_KEY = process.env.KIE_API_KEY || '';
 const UNIFICALLY_BASE = (process.env.UNIFICALLY_BASE_URL || 'https://api.unifically.com').replace(/\/+$/, '');
 const UNIFICALLY_KEY = process.env.UnificAlly_API || process.env.UNIFICALLY_API || process.env.UNIFICALLY_API_KEY || '';
+const UNIFICALLY_GROK_MODEL = process.env.UNIFICALLY_GROK_MODEL || 'xai/grok-imagine-video';
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const UG_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : '';
-const PROFILES_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : '';
-
-exports.handler = async (event) => {
-  try {
-    if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
-    if (event.httpMethod !== 'GET') return json(405, { ok: false, error: 'Use GET' });
-    if (!UNIFICALLY_KEY || !UG_URL || !SERVICE_KEY) return json(200, { ok: false, status: 'pending', error: 'missing_env' });
-
-    const qs = event.queryStringParameters || {};
-    const ids = {
-      uid: String(qs.uid || '').trim(),
-      run_id: String(qs.run_id || '').trim(),
-      taskId: String(qs.taskId || qs.task_id || '').trim(),
-    };
-    const row = await findProcessingGeneration(ids);
-    if (!row) return json(200, { ok: false, status: 'ignored', reason: 'not_processing' });
-
-    ids.uid = ids.uid || row.user_id || '';
-    ids.run_id = ids.run_id || row.meta?.run_id || '';
-    ids.taskId = ids.taskId || row.meta?.task_id || row.meta?.taskId || '';
-    if (!ids.taskId) return json(200, { ok: false, status: 'pending', error: 'missing_task_id' });
-
-    const state = await fetchTaskState(ids.taskId);
-    if (state.failed) {
-      const refund = await failAndRefundOnce({ row, ids, reason: state.error || 'grok_generation_failed' });
-      return json(200, {
-        ok: false,
-        failed: true,
-        status: 'failed',
-        error: state.error || 'grok_generation_failed',
-        refunded: !!refund.refunded,
-        refund_amount: refund.amount || 0,
-        already_claimed: !!refund.already_claimed,
-      });
-    }
-
-    if (state.done && state.urls.length) {
-      await markDone({ row, ids, urls: state.urls });
-      return json(200, {
-        ok: true,
-        status: 'done',
-        result_url: state.urls[0],
-        video_url: state.urls[0],
-        urls: state.urls,
-      });
-    }
-
-    return json(200, { ok: false, status: 'pending' });
-  } catch (error) {
-    return json(200, { ok: false, status: 'error', error: messageOf(error) });
-  }
-};
+const SITE_BASE = (process.env.SITE_BASE || 'https://hansora.co').replace(/\/+$/, '');
+const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-check`;
 
 function cors() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': '*',
-    'Access-Control-Allow-Methods': 'GET,OPTIONS',
-  };
+  return { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': '*' };
 }
-function json(statusCode, body) {
-  return { statusCode, headers: { 'Content-Type': 'application/json', ...cors() }, body: JSON.stringify(body) };
+const json = (statusCode, body) => ({ statusCode, headers: { 'Content-Type': 'application/json', ...cors() }, body: JSON.stringify(body) });
+function getHeader(event, key) { return event.headers?.[key] || event.headers?.[key.toLowerCase()] || event.headers?.[key.toUpperCase()] || null; }
+function getUID(event, body) {
+  const qs = new URLSearchParams(event.queryStringParameters || {});
+  return String(getHeader(event, 'x-user-id') || body?.uid || body?.user_id || qs.get('uid') || '').trim();
 }
-function sb() {
-  return { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` };
+async function verifyAuth(event, uid) {
+  const token = ((getHeader(event, 'authorization') || '').match(/^Bearer\s+(.+)$/i) || [])[1] || '';
+  if (!token) return { ok: false, error: 'missing_auth' };
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${token}` } });
+  if (!res.ok) return { ok: false, error: 'bad_auth', status: res.status };
+  const user = await res.json().catch(() => null);
+  const id = user && (user.id || user.user?.id);
+  if (!id || String(id) !== String(uid)) return { ok: false, error: 'uid_mismatch' };
+  return { ok: true };
 }
-function safeJson(raw) {
-  if (!raw) return {};
-  try { return JSON.parse(raw); } catch { return {}; }
-}
-
-async function findProcessingGeneration(ids) {
-  const select = 'select=id,user_id,provider,kind,result_url,meta,created_at';
-  const queries = [];
-  if (ids.uid && ids.run_id) {
-    queries.push(`?user_id=eq.${encodeURIComponent(ids.uid)}&meta->>run_id=eq.${encodeURIComponent(ids.run_id)}&${select}&limit=1`);
-  }
-  if (ids.taskId) {
-    queries.push(`?meta->>task_id=eq.${encodeURIComponent(ids.taskId)}&${select}&limit=1`);
-    queries.push(`?meta->>taskId=eq.${encodeURIComponent(ids.taskId)}&${select}&limit=1`);
-  }
-  for (const query of queries) {
-    const res = await fetch(UG_URL + query, { headers: sb() });
-    const rows = await res.json().catch(() => []);
-    const row = Array.isArray(rows) ? rows[0] : null;
-    if (!row || row.result_url) continue;
-    const status = String(row.meta?.status || '').toLowerCase();
-    if (status === 'processing' || status === 'pending' || !status) return row;
-  }
-  return null;
-}
-
-async function fetchTaskState(taskId) {
-  const res = await fetch(`${UNIFICALLY_BASE}/v1/tasks/${encodeURIComponent(taskId)}`, {
-    headers: { Accept: 'application/json', Authorization: `Bearer ${UNIFICALLY_KEY}` },
-  });
-  const text = await res.text();
-  let data;
-  try { data = JSON.parse(text); } catch { data = { raw: text }; }
-
-  if (!res.ok) {
-    const error = failureReason(data) || `unifically_status_${res.status}`;
-    if (res.status === 429 || res.status >= 500) return { pending: true, error };
-    return { failed: true, error };
-  }
-
-  const status = normalizeStatus(data);
-  if (status === 'failed') return { failed: true, error: failureReason(data) };
-  const urls = collectResultUrls(data);
-  if (status === 'done' && urls.length) return { done: true, urls };
-  if (urls.length) return { done: true, urls };
-  return { pending: true };
-}
-
-async function markDone({ row, ids, urls }) {
-  const meta = {
-    ...(row.meta && typeof row.meta === 'object' ? row.meta : {}),
-    run_id: ids.run_id || row.meta?.run_id || '',
-    task_id: ids.taskId || row.meta?.task_id || row.meta?.taskId || '',
-    status: 'done',
-    completed_at: new Date().toISOString(),
-  };
-
-  await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
-    method: 'PATCH',
-    headers: { ...sb(), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-    body: JSON.stringify({ result_url: urls[0], meta }),
-  });
-}
-
-async function failAndRefundOnce({ row, ids, reason }) {
-  const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
-  const amount = Number(meta.refund_amount || meta.charged_cost || meta.debited || 0);
-  const failedMeta = {
-    ...meta,
-    run_id: ids.run_id || meta.run_id || '',
-    task_id: ids.taskId || meta.task_id || meta.taskId || '',
-    status: 'failed',
-    failed: true,
-    error: reason,
-    failed_at: new Date().toISOString(),
-  };
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    await patchGeneration(row.id, { meta: { ...failedMeta, refund_skipped_reason: 'missing_refund_amount' } });
-    return { refunded: false, amount: 0, reason: 'missing_refund_amount' };
-  }
-
-  const claim = `r_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-  const claimMeta = { ...failedMeta, refund_claim: claim };
-  const claimUrl = `${UG_URL}?id=eq.${encodeURIComponent(row.id)}&result_url=is.null&meta->>refunded=is.null&meta->>refund_claim=is.null&select=id`;
-  const claimRes = await fetch(claimUrl, {
-    method: 'PATCH',
-    headers: { ...sb(), 'Content-Type': 'application/json', Prefer: 'return=representation' },
-    body: JSON.stringify({ result_url: null, meta: claimMeta }),
-  });
-  const claimedRows = await claimRes.json().catch(() => []);
-  if (!claimRes.ok || !Array.isArray(claimedRows) || !claimedRows.length) {
-    return { refunded: false, amount, already_claimed: true };
-  }
-
-  const profileRes = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(row.user_id)}&select=credits&limit=1`, { headers: sb() });
-  const profiles = await profileRes.json().catch(() => []);
-  const currentCredits = Number(Array.isArray(profiles) && profiles[0] ? profiles[0].credits : 0);
-  const nextCredits = Math.round((currentCredits + amount) * 100) / 100;
-  const updateRes = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(row.user_id)}`, {
-    method: 'PATCH',
-    headers: { ...sb(), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-    body: JSON.stringify({ credits: nextCredits }),
-  });
-
-  if (!updateRes.ok) {
-    await patchGeneration(row.id, { meta: { ...claimMeta, refund_error: 'profile_refund_failed' } });
-    return { refunded: false, amount, error: 'profile_refund_failed' };
-  }
-
-  await patchGeneration(row.id, {
-    meta: {
-      ...claimMeta,
-      refunded: true,
-      refunded_cost: amount,
-      refunded_at: new Date().toISOString(),
-    },
-  });
-
-  return { refunded: true, amount, credits: nextCredits };
-}
-
-async function patchGeneration(id, payload) {
-  const res = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    headers: { ...sb(), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-    body: JSON.stringify(payload),
-  });
-  return res.ok;
-}
-
-function normalizeStatus(value) {
-  if (hasFailureSignal(value)) return 'failed';
-  if (hasDoneSignal(value)) return 'done';
-  return 'pending';
-}
-
-const FAILURE_RE = /(fail(?:ed|ure)?|error|errored|invalid|bad request|unauthori[sz]ed|forbidden|permission|payment|required|insufficient|balance|not found|rate limit|too many requests|quota|limit exceeded|timeout|timed out|cancel|canceled|cancelled|reject|rejected|denied|blocked|moderation|policy|safety|unsafe|sensitive|flagged|unavailable|retry later|temporarily unavailable|internal server|server error|service|overload|capacity|busy|maintenance|unsupported|not supported|malformed|missing|required field|forbidden content|content violation)/i;
-const FAILURE_STATUS_RE = /^(fail|failed|failure|error|errored|cancel|canceled|cancelled|rejected|denied|blocked|invalid|timeout|timed_out|expired|aborted)$/i;
-const FAILURE_KEY_RE = /(error|errors|error_message|errormessage|failure|failed|fail_reason|reason|message|detail|details|description|output|outputs|result|response|status_message|statusmessage|code|statuscode|http_status|httpstatus)/;
-
-function hasFailureSignal(value, depth = 0, keyHint = '') {
-  if (value == null || depth > 10) return false;
-  const key = String(keyHint || '').toLowerCase();
-
-  if (typeof value === 'string') {
-    const text = value.trim().toLowerCase();
-    if (!text || /^(none|null|undefined|false|ok|success|succeeded|completed|complete|done|no error|no errors)$/i.test(text)) return false;
-    if (/^(status|state)$/.test(key)) {
-      return FAILURE_STATUS_RE.test(text);
-    }
-    if (FAILURE_KEY_RE.test(key)) {
-      return FAILURE_RE.test(text);
-    }
-    return FAILURE_RE.test(text);
-  }
-
-  if (typeof value === 'number') {
-    if (/^(code|status|statuscode|http_status|httpstatus)$/.test(key)) return value >= 400;
-    return false;
-  }
-
-  if (typeof value === 'boolean') {
-    return /^(failed|failure|has_error|haserror|errored)$/.test(key) && value === true;
-  }
-
-  if (Array.isArray(value)) {
-    if (/(error|errors|failures|messages)/.test(key) && value.length > 0) return true;
-    return value.some((item) => hasFailureSignal(item, depth + 1, key));
-  }
-
-  if (typeof value === 'object') {
-    if (/(error|errors|failure|fail_reason|error_info|errorinfo|task_error|taskerror)/.test(key) && Object.keys(value).length > 0) return true;
-    for (const [childKey, child] of Object.entries(value)) {
-      if (hasFailureSignal(child, depth + 1, childKey)) return true;
-    }
-  }
-
-  return false;
-}
-
-function hasDoneSignal(value, depth = 0, keyHint = '') {
-  if (value == null || depth > 10) return false;
-  const key = String(keyHint || '').toLowerCase();
-
-  if (typeof value === 'string') {
-    const text = value.trim().toLowerCase();
-    if (/^(status|state)$/.test(key)) {
-      return /^(success|succeeded|completed|complete|finish|finished|done)$/i.test(text);
-    }
-    return false;
-  }
-
-  if (Array.isArray(value)) {
-    return value.some((item) => hasDoneSignal(item, depth + 1, key));
-  }
-
-  if (typeof value === 'object') {
-    for (const [childKey, child] of Object.entries(value)) {
-      if (hasDoneSignal(child, depth + 1, childKey)) return true;
-    }
-  }
-
-  return false;
-}
-
-function collectStatusText(value, out) {
-  if (!value || out.length > 80) return;
-  if (typeof value === 'string') {
-    if (/fail|error|success|complete|finish|done|pending|process|running|queued|cancel|reject|blocked|moderation|sensitive|flag|unavailable|retry later|temporarily unavailable/i.test(value)) out.push(value);
-    return;
-  }
-  if (Array.isArray(value)) {
-    for (const item of value) collectStatusText(item, out);
-    return;
-  }
-  if (typeof value === 'object') {
-    for (const key of ['status', 'state', 'message', 'error', 'reason', 'description']) {
-      if (value[key] != null) collectStatusText(value[key], out);
-    }
-    for (const key of ['data', 'result', 'response', 'task', 'job', 'content', 'output', 'outputs']) {
-      if (value[key]) collectStatusText(value[key], out);
-    }
-  }
-}
-
-function failureReason(value) {
-  return String(findFailureMessage(value) || 'grok_generation_failed');
-}
-
-function findFailureMessage(value, depth = 0, keyHint = '') {
-  if (value == null || depth > 10) return '';
-  const key = String(keyHint || '').toLowerCase();
-  if (typeof value === 'string') {
-    const text = value.trim();
-    if (!text) return '';
-    if (FAILURE_KEY_RE.test(key) || FAILURE_RE.test(text) || FAILURE_STATUS_RE.test(text)) return text;
-    return '';
-  }
-  if (typeof value === 'number') {
-    if (/^(code|status|statuscode|http_status|httpstatus)$/.test(key) && value >= 400) return `unifically_status_${value}`;
-    return '';
-  }
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const found = findFailureMessage(item, depth + 1, key);
-      if (found) return found;
-    }
-    return '';
-  }
-  if (typeof value === 'object') {
-    const preferred = [
-      'message', 'error_message', 'errorMessage', 'reason', 'detail', 'details',
-      'description', 'output', 'outputs', 'error', 'errors', 'failure', 'fail_reason',
-      'status_message', 'statusMessage',
-    ];
-    for (const childKey of preferred) {
-      if (Object.prototype.hasOwnProperty.call(value, childKey)) {
-        const found = findFailureMessage(value[childKey], depth + 1, childKey);
-        if (found) return found;
-      }
-    }
-    for (const [childKey, child] of Object.entries(value)) {
-      const found = findFailureMessage(child, depth + 1, childKey);
-      if (found) return found;
-    }
-  }
-  return '';
-}
-
-function collectResultUrls(value) {
-  const urls = [];
+function extractTaskId(data) {
+  const direct = [
+    data?.data?.taskId,
+    data?.taskId,
+    data?.result?.taskId,
+    data?.data?.task_id,
+    data?.task_id,
+    data?.data?.id,
+    data?.result?.id,
+    data?.id,
+  ].map((v) => (v == null ? '' : String(v))).find((v) => v.length > 3);
+  if (direct) return direct;
   const seen = new Set();
-  const outputKeys = new Set([
-    'video_url',
-    'videoUrl',
-    'result_url',
-    'resultUrl',
-    'download_url',
-    'downloadUrl',
-    'media_url',
-    'mediaUrl',
-    'asset_url',
-    'assetUrl',
-    'url',
-    'content',
-    'output',
-    'outputs',
-    'videos',
-    'video_urls',
-    'videoUrls',
-    'urls',
-    'file_url',
-    'fileUrl',
-  ]);
-  const containerKeys = new Set(['data', 'result', 'results', 'response', 'task', 'job', 'content', 'output', 'outputs']);
-  const blockedKeys = /(^|_)(input|inputs|reference|references|source|first|last|tail|start|end|frame|frames|request|payload|params|parameters|meta|metadata)(_|$)/i;
-
-  function push(url) {
-    if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return;
-    const clean = url.replace(/[)"'\\\]}]+$/g, '').trim();
-    if (!/^https?:\/\/.+/i.test(clean) || seen.has(clean)) return;
-    seen.add(clean);
-    urls.push(clean);
-  }
-
-  function walk(x, depth = 0, trusted = false) {
-    if (!x || depth > 8 || urls.length >= 4) return;
-    if (typeof x === 'string') {
-      if (!trusted) return;
-      const parsed = safeJson(x);
-      if (parsed && typeof parsed === 'object' && Object.keys(parsed).length) {
-        walk(parsed, depth + 1, true);
-        return;
+  const scan = (value) => {
+    if (!value || typeof value !== 'object' || seen.has(value)) return '';
+    seen.add(value);
+    for (const [key, inner] of Object.entries(value)) {
+      if (/^(task[_-]?id|request[_-]?id|job[_-]?id|id)$/i.test(key) && (typeof inner === 'string' || typeof inner === 'number')) {
+        const out = String(inner);
+        if (out.length > 3) return out;
       }
-      const matches = x.match(/https?:\/\/[^\s"'<>]+/gi);
-      if (matches) matches.forEach(push);
-      return;
+      const nested = scan(inner);
+      if (nested) return nested;
     }
-    if (Array.isArray(x)) {
-      for (const item of x) walk(item, depth + 1, trusted || depth === 0);
-      return;
-    }
-    if (typeof x === 'object') {
-      for (const [rawKey, child] of Object.entries(x)) {
-        const key = String(rawKey || '');
-        const nextTrusted = trusted || outputKeys.has(key);
-        if (!nextTrusted && !trusted && blockedKeys.test(key)) continue;
-        if (nextTrusted || containerKeys.has(key)) walk(child, depth + 1, nextTrusted);
-      }
-    }
-  }
-
-  walk(value);
-  return urls.slice(0, 4);
+    return '';
+  };
+  return scan(data);
+}
+function normalizeDuration(body) {
+  const value = Number(body.duration || 6);
+  return Math.max(1, Math.round(Number.isFinite(value) ? value : 6));
+}
+function costFor(body) {
+  const duration = normalizeDuration(body);
+  const rate = 0.3;
+  return Number((duration * rate).toFixed(1));
+}
+function imageUrlsFromBody(body) {
+  if (Array.isArray(body.image_urls)) return body.image_urls.filter(Boolean).map(String);
+  if (body.image_url) return [String(body.image_url)];
+  return [];
+}
+async function fetchGeneration(uid, runId) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/user_generations?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(runId)}&select=id,meta`, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } });
+  const rows = await res.json().catch(() => []);
+  return Array.isArray(rows) && rows[0] ? rows[0] : null;
+}
+async function insertGeneration(uid, runId, prompt, meta) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/user_generations`, {
+    method: 'POST',
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({ user_id: uid, provider: 'Grok', kind: 'video', prompt, result_url: null, meta }),
+  });
+  const rows = await res.json().catch(() => []);
+  return Array.isArray(rows) && rows[0] ? rows[0].id : null;
+}
+async function patchGeneration(rowId, meta) {
+  if (!rowId) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(rowId)}`, {
+    method: 'PATCH',
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({ meta }),
+  });
+}
+async function getCredits(uid) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } });
+  const rows = await res.json().catch(() => []);
+  return Number(Array.isArray(rows) && rows[0] ? rows[0].credits : 0);
+}
+async function debitCredits(uid, cost) {
+  const current = await getCredits(uid);
+  if (current < cost) return { ok: false, error: 'not_enough_credits', credits: current };
+  const next = Number((current - cost).toFixed(2));
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
+    method: 'PATCH',
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({ credits: next }),
+  });
+  if (!res.ok) return { ok: false, error: 'profile_update_failed', status: res.status };
+  return { ok: true, credits: next };
 }
 
-function messageOf(error) {
-  return error && error.message ? error.message : String(error);
+async function createUnificAllyTask({ body, prompt, duration }) {
+  const images = imageUrlsFromBody(body);
+  const input = {
+    prompt,
+    duration: Math.min(10, duration),
+    resolution: String(body.resolution || '720p') === '480p' ? '480p' : '720p',
+    aspect_ratio: String(body.aspect_ratio || '16:9'),
+    ...(images[0] ? { image_url: images[0] } : {}),
+  };
+
+  const res = await fetch(`${UNIFICALLY_BASE}/v1/tasks`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${UNIFICALLY_KEY}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ model: UNIFICALLY_GROK_MODEL, input }),
+  });
+  const data = await res.json().catch(() => ({}));
+  return { res, data, model: UNIFICALLY_GROK_MODEL, input };
 }
+
+async function createKieTask({ body, prompt, duration, uid, runId }) {
+  const images = imageUrlsFromBody(body);
+  const input = {
+    prompt,
+    aspect_ratio: String(body.aspect_ratio || '16:9'),
+    duration,
+    resolution: String(body.resolution || '720p'),
+    mode: 'normal',
+    ...(images.length ? { image_urls: images } : {}),
+  };
+  const model = images.length
+    ? (process.env.GROK_IMAGE_VIDEO_MODEL || 'grok-imagine/image-to-video')
+    : (process.env.GROK_TEXT_VIDEO_MODEL || 'grok-imagine/text-to-video');
+  const res = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${KIE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, input, callBackUrl: `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}` }),
+  });
+  const data = await res.json().catch(() => ({}));
+  return { res, data, model, input };
+}
+
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
+  if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'method_not_allowed' });
+  try {
+    if (!SUPABASE_URL || !SERVICE_KEY) return json(500, { ok: false, error: 'missing_env' });
+    const body = JSON.parse(event.body || '{}');
+    const duration = normalizeDuration(body);
+    const useUnificAlly = duration < 10;
+    const checker = useUnificAlly ? 'unifically-grok-check' : 'kie-check';
+    if (useUnificAlly && !UNIFICALLY_KEY) return json(500, { ok: false, error: 'missing_unifically_env' });
+    if (!useUnificAlly && !KIE_KEY) return json(500, { ok: false, error: 'missing_kie_env' });
+
+    const uid = getUID(event, body);
+    if (!uid) return json(401, { ok: false, error: 'missing_uid' });
+    const auth = await verifyAuth(event, uid);
+    if (!auth.ok) return json(401, { ok: false, error: auth.error, details: auth });
+    const prompt = String(body.prompt || '').trim();
+    if (!prompt) return json(400, { ok: false, error: 'missing_prompt' });
+
+    const runId = String(body.run_id || `${uid}-${Date.now()}`);
+    const existing = await fetchGeneration(uid, runId);
+    const existingTask = existing?.meta?.task_id || existing?.meta?.taskId || '';
+    if (existingTask) {
+      return json(200, {
+        ok: true,
+        submitted: true,
+        taskId: existingTask,
+        run_id: runId,
+        checker: existing?.meta?.checker || checker,
+        already_submitted: true,
+      });
+    }
+
+    const cost = costFor(body);
+    const source = useUnificAlly ? 'unifically' : 'kie';
+    const metaBase = { source, engine: 'grok', run_id: runId, status: 'pending', refund_amount: cost, checker };
+    const rowId = existing?.id || await insertGeneration(uid, runId, prompt, metaBase);
+    const credits = await getCredits(uid);
+    if (credits < cost) return json(402, { ok: false, error: 'not_enough_credits', credits, need: cost });
+
+    const created = useUnificAlly
+      ? await createUnificAllyTask({ body, prompt, duration })
+      : await createKieTask({ body, prompt, duration, uid, runId });
+
+    if (!created.res.ok) {
+      await patchGeneration(rowId, { ...metaBase, status: 'failed', error: created.data });
+      return json(created.res.status || 502, {
+        ok: false,
+        error: useUnificAlly ? 'unifically_create_failed' : 'kie_create_failed',
+        details: created.data,
+      });
+    }
+
+    const taskId = extractTaskId(created.data);
+    if (!taskId) return json(502, { ok: false, error: 'missing_task_id', details: created.data });
+    const debit = await debitCredits(uid, cost);
+    if (!debit.ok) return json(402, { ok: false, error: debit.error, details: debit });
+
+    await patchGeneration(rowId, {
+      ...metaBase,
+      status: 'processing',
+      model: created.model,
+      task_id: taskId,
+      charged: true,
+      charged_at: new Date().toISOString(),
+      charged_cost: cost,
+      debited: cost,
+      refund_amount: cost,
+      request_input: created.input,
+    });
+
+    return json(201, {
+      ok: true,
+      submitted: true,
+      taskId,
+      id: taskId,
+      run_id: runId,
+      row_id: rowId,
+      checker,
+      provider: source,
+      debited: cost,
+      credits: debit.credits,
+    });
+  } catch (error) {
+    return json(500, { ok: false, error: 'server_error', details: String(error && error.message || error) });
+  }
+};
