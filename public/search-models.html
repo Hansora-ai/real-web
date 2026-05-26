@@ -7990,10 +7990,86 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           const body = error && error.body ? (() => { try { return JSON.stringify(error.body); } catch { return ''; } })() : '';
           return [message, body].filter(Boolean).join(': ').slice(0, 180);
         };
+        const isRetryableUploadError = (error) => /upload_network_error|upload_timeout|upload_aborted|upload_failed_0/i.test(uploadErrorMessage(error));
+        const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const normalizeImageFile = async (sourceFile) => {
+          if (!sourceFile || !String(sourceFile.type || '').startsWith('image/') || sourceFile.type === 'image/gif') return sourceFile;
+          const objectUrl = URL.createObjectURL(sourceFile);
+          try {
+            const img = await new Promise((resolve, reject) => {
+              const el = new Image();
+              el.onload = () => resolve(el);
+              el.onerror = () => reject(new Error('image_decode_failed'));
+              el.src = objectUrl;
+            });
+            const maxSide = 2048;
+            const scale = Math.min(1, maxSide / Math.max(img.naturalWidth || img.width || 1, img.naturalHeight || img.height || 1));
+            const width = Math.max(1, Math.round((img.naturalWidth || img.width || 1) * scale));
+            const height = Math.max(1, Math.round((img.naturalHeight || img.height || 1) * scale));
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d', { alpha: false });
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+            if (!blob || !blob.size) return sourceFile;
+            const baseName = String(sourceFile.name || 'upload').replace(/\.[^.]+$/, '') || 'upload';
+            return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+          } catch (error) {
+            console.warn('image normalization skipped', error);
+            return sourceFile;
+          } finally {
+            try { URL.revokeObjectURL(objectUrl); } catch (_) {}
+          }
+        };
+        const uploadWithFreshSignedUrlRetries = async (sourceFile, label, attempts) => {
+          let lastError = null;
+          for (let attempt = 1; attempt <= attempts; attempt += 1) {
+            try {
+              showStatus(attempt === 1
+                ? `Uploading input files (${index + 1}/${list.length})…`
+                : `Retrying ${label} upload ${attempt}/${attempts} (${index + 1}/${list.length})…`);
+              return await window.kieUploadBridge.upload(sourceFile);
+            } catch (error) {
+              lastError = error;
+              if (attempt >= attempts || !isRetryableUploadError(error)) throw error;
+              await sleep(450 * attempt);
+            }
+          }
+          throw lastError || new Error('upload_failed');
+        };
         try {
-          up = await window.kieUploadBridge.upload(file);
+          up = await uploadWithFreshSignedUrlRetries(file, 'image', 3);
         } catch (error) {
           const bridgeMessage = uploadErrorMessage(error);
+          let retryMessage = '';
+          if (isRetryableUploadError(error) && file && String(file.type || '').startsWith('image/')) {
+            const retryFile = await normalizeImageFile(file);
+            if (retryFile && retryFile !== file) {
+              try {
+                up = await uploadWithFreshSignedUrlRetries(retryFile, 'cleaned image', 3);
+                if (up && up.publicUrl) {
+                  urls[index] = up.publicUrl;
+                  completed += 1;
+                  showStatus(`Uploading input files (${completed}/${list.length})…`);
+                  return;
+                }
+              } catch (retryError) {
+                console.warn('cleaned image upload retry failed', {
+                  model: currentModel && currentModel.id,
+                  index,
+                  name: file && file.name,
+                  type: file && file.type,
+                  size: file && file.size,
+                  originalError: error,
+                  retryError
+                });
+                retryMessage = uploadErrorMessage(retryError);
+              }
+            }
+          }
           console.warn('upload failed', {
             model: currentModel && currentModel.id,
             index,
@@ -8003,8 +8079,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             error
           });
           const detail = file
-            ? `Upload failed for ${file.type || 'file'} (${((Number(file.size || 0)) / 1024 / 1024).toFixed(1)}MB)${bridgeMessage ? `: ${bridgeMessage}` : ''}`
-            : `Upload failed${bridgeMessage ? `: ${bridgeMessage}` : ''}`;
+            ? `Upload failed for ${file.type || 'file'} (${((Number(file.size || 0)) / 1024 / 1024).toFixed(1)}MB)${bridgeMessage ? `: ${bridgeMessage}` : ''}${retryMessage ? `; cleaned retry: ${retryMessage}` : ''}`
+            : `Upload failed${bridgeMessage ? `: ${bridgeMessage}` : ''}${retryMessage ? `; cleaned retry: ${retryMessage}` : ''}`;
           throw new Error(detail);
         }
         if (!up || !up.publicUrl) {
