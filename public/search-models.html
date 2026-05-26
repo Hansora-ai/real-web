@@ -4384,6 +4384,7 @@ function extractGenerationFailureReason(payload) {
   const seen = new Set();
   const keyPattern = /^(error|error_message|message|msg|reason|fail_reason|failure_reason|failed_reason|detail|details|code|status|state)$/i;
   const badStatusPattern = /(fail|failed|error|reject|rejected|invalid|denied|blocked|unsafe|moderation|policy|cancel|cancelled)/i;
+  const genericErrorPattern = /^(server_error|internal_error|unknown_error|request_failed|provider_error|kie_create_failed|unifically_create_failed|failed|error)$/i;
 
   const stringifyValue = (value) => {
     if (value == null) return '';
@@ -4398,10 +4399,29 @@ function extractGenerationFailureReason(payload) {
     if (typeof value !== 'object' || seen.has(value)) return '';
     seen.add(value);
 
+    const detailCandidates = [
+      value.details,
+      value.detail,
+      value.message,
+      value.error_message,
+      value.errorMessage,
+      value.reason,
+      value.data && value.data.details,
+      value.data && value.data.detail,
+      value.data && value.data.message,
+    ];
+    for (const candidate of detailCandidates) {
+      const text = stringifyValue(candidate);
+      if (text && !genericErrorPattern.test(text) && !/^(ok|success|succeeded|done|complete|completed|processing|pending|ready)$/i.test(text)) {
+        return text.slice(0, 220);
+      }
+    }
+
     for (const [key, inner] of Object.entries(value)) {
       if (!keyPattern.test(key)) continue;
       const text = stringifyValue(inner);
       if (!text) continue;
+      if (genericErrorPattern.test(text)) continue;
       if (!/^(ok|success|succeeded|done|complete|completed|processing|pending|ready)$/i.test(text)) {
         return text.slice(0, 220);
       }
@@ -4420,7 +4440,7 @@ function extractGenerationFailureReason(payload) {
 function cleanGenerationFailureReason(reason) {
   const text = String(reason || '').trim().replace(/\s+/g, ' ');
   if (!text) return '';
-  if (/^(fail|failed|error|false|null|undefined)$/i.test(text)) return '';
+  if (/^(fail|failed|error|server_error|internal_error|unknown_error|request_failed|provider_error|false|null|undefined)$/i.test(text)) return '';
   if (/^status\s+(fail|failed|error)$/i.test(text)) return '';
   return text.replace(/[.。]+$/g, '').slice(0, 220);
 }
@@ -7965,9 +7985,15 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       const uploadOne = async (index) => {
         const file = list[index];
         let up = null;
+        const uploadErrorMessage = (error) => {
+          const message = String(error && error.message ? error.message : error || '').trim();
+          const body = error && error.body ? (() => { try { return JSON.stringify(error.body); } catch { return ''; } })() : '';
+          return [message, body].filter(Boolean).join(': ').slice(0, 180);
+        };
         try {
           up = await window.kieUploadBridge.upload(file);
         } catch (error) {
+          const bridgeMessage = uploadErrorMessage(error);
           console.warn('upload failed', {
             model: currentModel && currentModel.id,
             index,
@@ -7977,8 +8003,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             error
           });
           const detail = file
-            ? `Upload failed for ${file.type || 'file'} (${((Number(file.size || 0)) / 1024 / 1024).toFixed(1)}MB)`
-            : 'Upload failed';
+            ? `Upload failed for ${file.type || 'file'} (${((Number(file.size || 0)) / 1024 / 1024).toFixed(1)}MB)${bridgeMessage ? `: ${bridgeMessage}` : ''}`
+            : `Upload failed${bridgeMessage ? `: ${bridgeMessage}` : ''}`;
           throw new Error(detail);
         }
         if (!up || !up.publicUrl) {
