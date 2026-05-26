@@ -1596,6 +1596,264 @@
   }
 </style>
 
+
+<style id="hansora-home-feature-cards-section">
+  .home-features-section {
+    padding-top: 30px;
+  }
+
+  .home-features-head {
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .home-features-head > div {
+    min-width: 0;
+  }
+
+  .home-features-head h2 {
+    max-width: 760px;
+  }
+
+  .home-features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .home-feature-card {
+    position: relative;
+    min-height: 164px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 118px;
+    align-items: center;
+    gap: 16px;
+    overflow: hidden;
+    padding: 18px;
+    border: 1px solid rgba(121, 231, 255, .48);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(14, 17, 30, .96), rgba(6, 8, 16, .96));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.025), 0 0 28px rgba(99,102,241,.08);
+  }
+
+  .home-feature-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(260px 170px at 100% 0%, rgba(56,189,248,.2), transparent 62%),
+      radial-gradient(260px 170px at 0% 100%, rgba(167,139,250,.16), transparent 62%),
+      linear-gradient(180deg, rgba(255,255,255,.035), transparent 70%);
+    pointer-events: none;
+  }
+
+  .home-feature-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(167,139,250,.84);
+    background: linear-gradient(180deg, rgba(16, 20, 36, .98), rgba(8, 10, 19, .98));
+  }
+
+  .home-feature-copy,
+  .home-feature-media {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+  }
+
+  .home-feature-card h3 {
+    margin: 0;
+    color: #f7f7fb;
+    font-size: clamp(1.05rem, 1.45vw, 1.55rem);
+    line-height: 1.08;
+    font-weight: 950;
+    letter-spacing: -.03em;
+  }
+
+  .home-feature-card h3 span {
+    color: #79e7ff;
+    background: linear-gradient(90deg, #a78bfa, #38bdf8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .home-feature-card p {
+    margin: 10px 0 0;
+    max-width: 20ch;
+    color: rgba(247,247,251,.48);
+    font-size: .95rem;
+    line-height: 1.36;
+    font-weight: 780;
+  }
+
+  .home-feature-media {
+    width: 118px;
+    aspect-ratio: 1 / 1;
+    justify-self: end;
+    overflow: hidden;
+    border: 1px solid rgba(121,231,255,.18);
+    border-radius: 18px;
+    background: rgba(255,255,255,.04);
+  }
+
+  .home-feature-media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+  }
+
+  .home-features-more-desktop {
+    min-height: 34px;
+    padding: 0 14px;
+    border: 1px solid rgba(121,231,255,.28);
+    background: linear-gradient(90deg, rgba(99,102,241,.24), rgba(56,189,248,.18));
+    color: #eaf8ff;
+    box-shadow: 0 10px 28px rgba(99,102,241,.12);
+    font-size: .86rem;
+  }
+
+  .home-features-more-mobile {
+    display: none !important;
+  }
+
+  @media (max-width: 900px) {
+    .home-features-grid {
+      gap: 10px;
+    }
+
+    .home-feature-card {
+      min-height: 138px;
+      grid-template-columns: minmax(0, 1fr) 82px;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .home-feature-card h3 {
+      font-size: .98rem;
+    }
+
+    .home-feature-card p {
+      font-size: .76rem;
+      line-height: 1.28;
+    }
+
+    .home-feature-media {
+      width: 82px;
+      border-radius: 13px;
+    }
+  }
+
+  @media (max-width: 540px) {
+    .home-features-section {
+      padding-top: 18px !important;
+    }
+
+    .home-features-head {
+      align-items: center !important;
+      flex-direction: row !important;
+      margin-bottom: 12px;
+    }
+
+    .home-features-head h2 {
+      font-size: clamp(1.35rem, 6.5vw, 1.75rem);
+      line-height: 1.04;
+    }
+
+    .home-features-head .kicker {
+      margin-bottom: 7px;
+      font-size: .68rem;
+    }
+
+    .home-features-more-desktop {
+      display: inline-flex;
+      min-height: 30px;
+      padding: 0 10px;
+      font-size: .72rem;
+      flex: 0 0 auto;
+    }
+
+    .home-features-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .home-feature-card {
+      min-height: 124px;
+      display: flex;
+      flex-direction: column-reverse;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 10px;
+    }
+
+    .home-feature-card p {
+      display: none;
+    }
+
+    .home-feature-card h3 {
+      font-size: clamp(.68rem, 3.1vw, .82rem);
+      line-height: 1.05;
+      letter-spacing: -.02em;
+    }
+
+    .home-feature-media {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 9px;
+    }
+
+    .home-features-more-mobile {
+      display: none !important;
+    }
+  }
+</style>
+
+
+
+
+<style id="hansora-feature-image-no-crop-square-fix">
+  /* Feature thumbnails: keep the media box exactly square and show the original uploaded image without CSS crop, zoom, or distortion. */
+  .home-feature-media {
+    aspect-ratio: 1 / 1 !important;
+    flex: 0 0 auto !important;
+    overflow: hidden !important;
+  }
+
+  .home-feature-media img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+    transform: none !important;
+  }
+</style>
+
+<style id="hansora-mobile-hide-kling-promo-and-allfeatures">
+  /* Mobile only: hide the standalone Kling 3.0 promo section and the All Features section.
+     Keep the Video Models section visible. */
+  @media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-width: 1020px) {
+    section.mobile-hide-kling-promo,
+    section.mobile-hide-creative-studio-banner,
+    section#features {
+      display: none !important;
+      visibility: hidden !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      max-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
+  }
+</style>
+
 </head>
 <body>
 <noscript><img alt="" height="1" src="https://www.facebook.com/tr?id=1336278884948294&amp;ev=PageView&amp;noscript=1" style="display:none" width="1" loading="lazy" decoding="async"></noscript>
@@ -1640,167 +1898,69 @@
 </a>
 </div>
 </section>
-<section class="section" id="image-models">
+<section class="section home-features-section" id="image-models">
 <div class="shell">
-<div class="model-section">
-<a class="slot model-info-card" href="/search-models.html?type=image">
-  <img
-    alt="Image models info image"
-    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/1.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/1.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/1.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/1.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/1.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-  <span class="slot-label">
-    <span>Info image</span>
-    <strong>Image models</strong>
-  </span>
-</a>
-<div class="model-grid media-mosaic mobile-mosaic-only">
-  <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html">
-      <img
-        alt="Main image model"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>Main image model</strong>
-        <span>Hero</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <img
-        alt="16:9 result"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>16:9 result</strong>
-        <span>Image</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <img
-        alt="16:9 result"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718%20(1).png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718%20(1).png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718%20(1).png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718%20(1).png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718%20(1).png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>16:9 result</strong>
-        <span>Image</span>
-      </span>
-    </a>
-  </div>
-  <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <img
-        alt="Square"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>Square</strong>
-        <span>Image</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-tall" href="/search-models.html">
-      <img
-        alt="Campaign visual"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>Campaign visual</strong>
-        <span>Image</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <img
-        alt="Poster set"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>Poster set</strong>
-        <span>Image</span>
-      </span>
-    </a>
-  </div>
-</div><div class="model-grid media-mosaic-desktop desktop-mosaic-only">
-  <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html">
-      <img
-        alt="Main image model"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000c6cc71f8a6c15adca1e46491.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>Main image model</strong>
-        <span>Hero</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <img
-        alt="16:9 result"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/20181895b2624c938dc6212b60c1c7c3_7447a980956b4f8d8cf3e3407b9aee1.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>16:9 result</strong>
-        <span>Image</span>
-      </span>
-    </a>
-  </div>
-  <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <img
-        alt="16:9 result"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/b94bbe2f180767d0853f457fa0b6d341_74c653b68d2244ea8876112c0e6e0cd.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>16:9 result</strong>
-        <span>Image</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-tall" href="/search-models.html">
-      <img
-        alt="Square"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000353c71fda9cf1d7382919b74.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>Square</strong>
-        <span>Image</span>
-      </span>
-    </a>
-  </div>
-  <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html">
-      <img
-        alt="Campaign visual"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000008a3871fd80c823cda07c77f9.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>Campaign visual</strong>
-        <span>Image</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <img
-        alt="Poster set"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/IMAGE%202026-05-10%2022:29:45.jpg?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>Poster set</strong>
-        <span>Image</span>
-      </span>
-    </a>
-  </div>
-  <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <img
-        alt="Preview 07"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_00000000a1dc71f8bd1015e4ddcff718.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>Preview 07</strong>
-        <span>Image</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-tall" href="/search-models.html">
-      <img
-        alt="Preview 08"
-        src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/video%20models/file_000000000b7871fda0cdbeac20a6c6fd.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-      <span class="slot-label">
-        <strong>Preview 08</strong>
-        <span>Image</span>
-      </span>
-    </a>
-  </div>
+<div class="section-head home-features-head">
+<div>
+<h2>Top features</h2>
 </div>
+<a class="btn btn-ghost home-features-more-desktop" href="/models.html#featuresSection">See more</a>
+</div>
+<div class="home-features-grid">
+<a class="home-feature-card" href="https://hansora.co/search-models?model=kling-motion-control">
+<div class="home-feature-copy">
+<h3>Motion <span>Sync</span></h3>
+<p>Make an image follow video movement.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(25).png" alt="Motion Sync" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card" href="/expand.html?mode=angles">
+<div class="home-feature-copy">
+<h3>Full <span>angles</span></h3>
+<p>Create additional angle views.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/IMAGEVIDEO%20UPSCALE/24.png" alt="Full angles" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card" href="/character.html">
+<div class="home-feature-copy">
+<h3>Character</h3>
+<p>Build consistent AI characters.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/IMAGEVIDEO%20UPSCALE/27.png" alt="Character" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card" href="/upscale.html?mode=video">
+<div class="home-feature-copy">
+<h3>Video <span>upscale</span></h3>
+<p>Improve video clarity and detail.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/IMAGEVIDEO%20UPSCALE/22.png" alt="Video upscale" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card" href="/lipsync.html">
+<div class="home-feature-copy">
+<h3>Lipsync <span>Avatar</span></h3>
+<p>Sync voice with avatar video.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/IMAGEVIDEO%20UPSCALE/23.png" alt="Lipsync Avatar" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card" href="/analyse.html">
+<div class="home-feature-copy">
+<h3>Hook <span>analyse</span></h3>
+<p>Analyze hooks and improve videos.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/IMAGEVIDEO%20UPSCALE/29.png" alt="Hook analyse" loading="lazy" decoding="async">
+</div>
+</a>
 </div>
 </div>
 </section>
@@ -2312,7 +2472,7 @@
 </div>
 </div>
 </section>
-<section class="section">
+<section class="section mobile-hide-kling-promo">
 <div class="shell">
 <div class="model-section">
 <a class="slot model-info-card" href="/search-models.html">
@@ -2546,7 +2706,7 @@
 </div>
 </div>
 </section>
-<section class="section">
+<section class="section mobile-hide-creative-studio-banner">
 <div class="shell">
 <a class="wide-banner design-only-banner aspect-wide" href="/search-models.html">
 <picture>
