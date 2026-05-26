@@ -128,7 +128,19 @@ function objectPathFor(filename, mime) {
 
 function absolutize(base, pathOrUrl) {
   if (!pathOrUrl) return null;
-  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    try {
+      const parsed = new URL(pathOrUrl);
+      const path = parsed.pathname || '';
+      if (path.includes('/storage/v1/')) {
+        return `${base}${path}${parsed.search || ''}`;
+      }
+      if (path.includes('/object/upload/sign/')) {
+        return `${base}/storage/v1${path}${parsed.search || ''}`;
+      }
+    } catch {}
+    return pathOrUrl;
+  }
   // Ensure we include /storage/v1 if missing
   const needsPrefix = !/^\/storage\/v1\//.test(pathOrUrl);
   const p = needsPrefix ? `/storage/v1${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}` : pathOrUrl;
