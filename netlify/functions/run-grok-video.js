@@ -97,7 +97,7 @@ function summarizeProviderError(data) {
     for (const [key, inner] of Object.entries(value)) {
       if (!keyPattern.test(key)) continue;
       const text = stringify(inner);
-      if (text && !ignored.test(text)) return text.slice(0, 500);
+      if (text && !ignored.test(text) && !/^(fail|failed|error|false|null|undefined)$/i.test(text)) return text.slice(0, 500);
     }
     for (const inner of Object.values(value)) {
       const nested = walk(inner, depth + 1);
@@ -106,6 +106,9 @@ function summarizeProviderError(data) {
     return '';
   };
   return walk(data);
+}
+function genericProviderFailure(source, status) {
+  return `${source || 'provider'}_returned_failed_without_detail${status ? `_http_${status}` : ''}`;
 }
 function requestDiagnostic(event, body, duration) {
   const images = imageUrlsFromBody(body);
@@ -256,7 +259,7 @@ exports.handler = async (event) => {
       : await createKieTask({ body, prompt, duration, uid, runId });
 
     if (!created.res.ok) {
-      const errorSummary = summarizeProviderError(created.data) || `${source}_http_${created.res.status}`;
+      const errorSummary = summarizeProviderError(created.data) || genericProviderFailure(source, created.res.status);
       await patchGeneration(rowId, {
         ...metaBase,
         status: 'failed',
