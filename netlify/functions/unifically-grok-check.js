@@ -106,7 +106,9 @@ async function fetchTaskState(taskId) {
   try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
   if (!res.ok) {
-    return { pending: true, error: data?.error?.message || data?.message || `unifically_status_${res.status}` };
+    const error = failureReason(data) || `unifically_status_${res.status}`;
+    if (res.status === 429 || res.status >= 500) return { pending: true, error };
+    return { failed: true, error };
   }
 
   const status = normalizeStatus(data);
@@ -201,18 +203,84 @@ async function patchGeneration(id, payload) {
 }
 
 function normalizeStatus(value) {
-  const text = [];
-  collectStatusText(value, text);
-  const joined = text.join(' ').toLowerCase();
-  if (/(fail|failed|failure|error|errored|cancel|canceled|cancelled|rejected|moderation|blocked|sensitive|flagged)/.test(joined)) return 'failed';
-  if (/(success|succeeded|completed|complete|finish|finished|done)/.test(joined)) return 'done';
+  if (hasFailureSignal(value)) return 'failed';
+  if (hasDoneSignal(value)) return 'done';
   return 'pending';
+}
+
+const FAILURE_RE = /(fail(?:ed|ure)?|error|errored|invalid|bad request|unauthori[sz]ed|forbidden|permission|payment|required|insufficient|balance|not found|rate limit|too many requests|quota|limit exceeded|timeout|timed out|cancel|canceled|cancelled|reject|rejected|denied|blocked|moderation|policy|safety|unsafe|sensitive|flagged|unavailable|retry later|temporarily unavailable|internal server|server error|service|overload|capacity|busy|maintenance|unsupported|not supported|malformed|missing|required field|forbidden content|content violation)/i;
+const FAILURE_STATUS_RE = /^(fail|failed|failure|error|errored|cancel|canceled|cancelled|rejected|denied|blocked|invalid|timeout|timed_out|expired|aborted)$/i;
+const FAILURE_KEY_RE = /(error|errors|error_message|errormessage|failure|failed|fail_reason|reason|message|detail|details|description|output|outputs|result|response|status_message|statusmessage|code|statuscode|http_status|httpstatus)/;
+
+function hasFailureSignal(value, depth = 0, keyHint = '') {
+  if (value == null || depth > 10) return false;
+  const key = String(keyHint || '').toLowerCase();
+
+  if (typeof value === 'string') {
+    const text = value.trim().toLowerCase();
+    if (!text || /^(none|null|undefined|false|ok|success|succeeded|completed|complete|done|no error|no errors)$/i.test(text)) return false;
+    if (/^(status|state)$/.test(key)) {
+      return FAILURE_STATUS_RE.test(text);
+    }
+    if (FAILURE_KEY_RE.test(key)) {
+      return FAILURE_RE.test(text);
+    }
+    return FAILURE_RE.test(text);
+  }
+
+  if (typeof value === 'number') {
+    if (/^(code|status|statuscode|http_status|httpstatus)$/.test(key)) return value >= 400;
+    return false;
+  }
+
+  if (typeof value === 'boolean') {
+    return /^(failed|failure|has_error|haserror|errored)$/.test(key) && value === true;
+  }
+
+  if (Array.isArray(value)) {
+    if (/(error|errors|failures|messages)/.test(key) && value.length > 0) return true;
+    return value.some((item) => hasFailureSignal(item, depth + 1, key));
+  }
+
+  if (typeof value === 'object') {
+    if (/(error|errors|failure|fail_reason|error_info|errorinfo|task_error|taskerror)/.test(key) && Object.keys(value).length > 0) return true;
+    for (const [childKey, child] of Object.entries(value)) {
+      if (hasFailureSignal(child, depth + 1, childKey)) return true;
+    }
+  }
+
+  return false;
+}
+
+function hasDoneSignal(value, depth = 0, keyHint = '') {
+  if (value == null || depth > 10) return false;
+  const key = String(keyHint || '').toLowerCase();
+
+  if (typeof value === 'string') {
+    const text = value.trim().toLowerCase();
+    if (/^(status|state)$/.test(key)) {
+      return /^(success|succeeded|completed|complete|finish|finished|done)$/i.test(text);
+    }
+    return false;
+  }
+
+  if (Array.isArray(value)) {
+    return value.some((item) => hasDoneSignal(item, depth + 1, key));
+  }
+
+  if (typeof value === 'object') {
+    for (const [childKey, child] of Object.entries(value)) {
+      if (hasDoneSignal(child, depth + 1, childKey)) return true;
+    }
+  }
+
+  return false;
 }
 
 function collectStatusText(value, out) {
   if (!value || out.length > 80) return;
   if (typeof value === 'string') {
-    if (/fail|error|success|complete|finish|done|pending|process|running|queued|cancel|reject|blocked|moderation|sensitive|flag/i.test(value)) out.push(value);
+    if (/fail|error|success|complete|finish|done|pending|process|running|queued|cancel|reject|blocked|moderation|sensitive|flag|unavailable|retry later|temporarily unavailable/i.test(value)) out.push(value);
     return;
   }
   if (Array.isArray(value)) {
@@ -230,18 +298,47 @@ function collectStatusText(value, out) {
 }
 
 function failureReason(value) {
-  return String(
-    value?.error?.message ||
-    value?.error ||
-    value?.message ||
-    value?.data?.error?.message ||
-    value?.data?.error ||
-    value?.data?.message ||
-    value?.data?.reason ||
-    value?.result?.error ||
-    value?.result?.message ||
-    'grok_generation_failed'
-  );
+  return String(findFailureMessage(value) || 'grok_generation_failed');
+}
+
+function findFailureMessage(value, depth = 0, keyHint = '') {
+  if (value == null || depth > 10) return '';
+  const key = String(keyHint || '').toLowerCase();
+  if (typeof value === 'string') {
+    const text = value.trim();
+    if (!text) return '';
+    if (FAILURE_KEY_RE.test(key) || FAILURE_RE.test(text) || FAILURE_STATUS_RE.test(text)) return text;
+    return '';
+  }
+  if (typeof value === 'number') {
+    if (/^(code|status|statuscode|http_status|httpstatus)$/.test(key) && value >= 400) return `unifically_status_${value}`;
+    return '';
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findFailureMessage(item, depth + 1, key);
+      if (found) return found;
+    }
+    return '';
+  }
+  if (typeof value === 'object') {
+    const preferred = [
+      'message', 'error_message', 'errorMessage', 'reason', 'detail', 'details',
+      'description', 'output', 'outputs', 'error', 'errors', 'failure', 'fail_reason',
+      'status_message', 'statusMessage',
+    ];
+    for (const childKey of preferred) {
+      if (Object.prototype.hasOwnProperty.call(value, childKey)) {
+        const found = findFailureMessage(value[childKey], depth + 1, childKey);
+        if (found) return found;
+      }
+    }
+    for (const [childKey, child] of Object.entries(value)) {
+      const found = findFailureMessage(child, depth + 1, childKey);
+      if (found) return found;
+    }
+  }
+  return '';
 }
 
 function collectResultUrls(value) {
