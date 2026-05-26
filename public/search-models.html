@@ -4368,7 +4368,54 @@ function createResultCard(data) {
 
 
 const __activePolls = new Map(); // runId -> token
-const GENERATION_FAILED_MESSAGE = 'Sorry, your generation failed. Please try again, and make sure your prompt follows the content guidelines.';
+const GENERATION_FAILED_MESSAGE = 'Sorry, your generation failed.';
+
+function shortRunId(runId) {
+  const value = String(runId || '').trim();
+  if (!value) return '';
+  return value.slice(-8);
+}
+
+function extractGenerationFailureReason(payload) {
+  if (!payload) return '';
+  if (typeof payload === 'string') return payload.slice(0, 180);
+  if (typeof payload !== 'object') return '';
+
+  const seen = new Set();
+  const keyPattern = /^(error|error_message|message|msg|reason|fail_reason|failure_reason|failed_reason|detail|details|code|status|state)$/i;
+  const badStatusPattern = /(fail|failed|error|reject|rejected|invalid|denied|blocked|unsafe|moderation|policy|cancel|cancelled)/i;
+
+  const stringifyValue = (value) => {
+    if (value == null) return '';
+    if (typeof value === 'string') return value.trim();
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    try { return JSON.stringify(value); } catch { return ''; }
+  };
+
+  const walk = (value, depth = 0) => {
+    if (!value || depth > 5) return '';
+    if (typeof value === 'string') return badStatusPattern.test(value) ? value : '';
+    if (typeof value !== 'object' || seen.has(value)) return '';
+    seen.add(value);
+
+    for (const [key, inner] of Object.entries(value)) {
+      if (!keyPattern.test(key)) continue;
+      const text = stringifyValue(inner);
+      if (!text) continue;
+      if (!/^(ok|success|succeeded|done|complete|completed|processing|pending|ready)$/i.test(text)) {
+        return text.slice(0, 220);
+      }
+    }
+
+    for (const inner of Object.values(value)) {
+      const nested = walk(inner, depth + 1);
+      if (nested) return nested;
+    }
+    return '';
+  };
+
+  return walk(payload);
+}
 
 function startPollGeneration(runId, controllers, taskId, checker) {
   if (!runId || !controllers || !controllers.length) return;
@@ -4435,7 +4482,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const nbStatus = String(nb?.js?.status || '').toLowerCase();
         const nbFailed = !!nb?.js?.failed || nbStatus.includes('fail') || nbStatus.includes('error') || nbStatus.includes('cancel');
         if (nbFailed) {
-          showGenerationFailedStatus();
+          const reason = extractGenerationFailureReason(nb?.js) || (nb?.status ? `checker status ${nb.status}` : '');
+          console.warn('generation check failed', { runId, taskId, checker: checker || 'kie-check', reason, response: nb?.js });
+          showGenerationFailedStatus(reason, runId);
           await refreshCredits();
           for (let i = 0; i < controllers.length; i++) {
             controllers[i].apply({ status: 'failed', result_url: null });
@@ -4494,6 +4543,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       // - Multi-output: stop only when we have all expected URLs
       const isFail = status.toLowerCase().includes('fail') || status.toLowerCase().includes('error');
       if (isFail) {
+        const reason = extractGenerationFailureReason(data.meta);
+        console.warn('generation row failed', { runId, reason, meta: data.meta });
+        showGenerationFailedStatus(reason, runId);
         await refreshCredits();
         watchCreditsLive(30000);
         return;
@@ -5660,8 +5712,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           : 'text-amber-200/80');
     }
 
-    function showGenerationFailedStatus() {
-      showStatus(GENERATION_FAILED_MESSAGE, 'error');
+    function showGenerationFailedStatus(reason, runId) {
+      const cleanReason = String(reason || '').trim();
+      const suffix = shortRunId(runId) ? ` Run ID: ${shortRunId(runId)}.` : '';
+      showStatus(cleanReason ? `${GENERATION_FAILED_MESSAGE} ${cleanReason}.${suffix}` : `${GENERATION_FAILED_MESSAGE} Please try again.${suffix}`, 'error');
     }
 
     function getKlingMotionVideoError() {
@@ -7901,9 +7955,28 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
       const uploadOne = async (index) => {
         const file = list[index];
-        const up = await window.kieUploadBridge.upload(file);
+        let up = null;
+        try {
+          up = await window.kieUploadBridge.upload(file);
+        } catch (error) {
+          console.warn('upload failed', {
+            model: currentModel && currentModel.id,
+            index,
+            name: file && file.name,
+            type: file && file.type,
+            size: file && file.size,
+            error
+          });
+          const detail = file
+            ? `Upload failed for ${file.type || 'file'} (${((Number(file.size || 0)) / 1024 / 1024).toFixed(1)}MB)`
+            : 'Upload failed';
+          throw new Error(detail);
+        }
         if (!up || !up.publicUrl) {
-          throw new Error('upload_failed');
+          const detail = file
+            ? `Upload did not return a public URL for ${file.type || 'file'} (${((Number(file.size || 0)) / 1024 / 1024).toFixed(1)}MB)`
+            : 'Upload did not return a public URL';
+          throw new Error(detail);
         }
         urls[index] = up.publicUrl;
         completed += 1;
@@ -8353,6 +8426,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       }
 
       const runBtn = document.getElementById('runBtn');
+      const uid = currentUser.id;
+      const runId = `${uid}-${Date.now()}`;
       runBtn.disabled = true;
       showStatus('Uploading input files…');
 
@@ -8381,8 +8456,6 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             : [videoFirstFrameFile, videoLastFrameFile, videoSourceFile, ...videoRefImageFiles, ...videoRefVideoFiles, ...videoRefAudioFiles]).filter(Boolean))
           : await uploadImagesAndGetUrls(uploadedFiles);
         showStatus('Submitting to ' + currentModel.name + '…');
-        const uid = currentUser.id;
-        const runId = `${uid}-${Date.now()}`;
 
         // Sora 2 requires a seeded user_generations row id (1:1 with working sora2 page)
         let __genId = null;
@@ -8414,6 +8487,15 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           soraQuality: __soraQuality,
           resolution: currentResolution
         });
+        body.client_diagnostic = {
+          model_id: currentModel.id,
+          model_name: currentModel.name,
+          aspect_ratio: currentAspect,
+          duration: currentDuration,
+          resolution: currentResolution,
+          uploaded_url_count: Array.isArray(urls) ? urls.length : 0,
+          user_agent: navigator.userAgent || ''
+        };
 
         // --- GPT-Image-1.5 safeguard: always include aspect + any uploaded image URLs ---
         // Some older builds may not hit the correct buildBodyForModel() switch-case.
@@ -8486,11 +8568,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           let msg = txt || `status ${res.status}`;
           try {
             const j = JSON.parse(txt);
-            const parsedMsg = extractProviderError(j) || j.error || j.message;
+            const parsedMsg = j.message || extractGenerationFailureReason(j) || extractProviderError(j) || j.error;
             if (parsedMsg) msg = parsedMsg;
           } catch {}
-          console.warn('model request failed', msg);
-          showGenerationFailedStatus();
+          console.warn('model request failed', { runId, model: currentModel.id, endpoint: runEndpoint, status: res.status, message: msg, raw: txt });
+          showGenerationFailedStatus(msg, runId);
           await refreshCredits();
         } else {
           // Some endpoints (e.g., Sora 2) return JSON with taskId/submitted flags
@@ -8500,7 +8582,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           const providerError = extractProviderError(j);
           if (providerError) {
             console.warn('provider rejected generation', providerError);
-            showGenerationFailedStatus();
+            showGenerationFailedStatus(providerError, runId);
             await refreshCredits();
             return;
           }
@@ -8510,7 +8592,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             if (!j || !j.submitted || !j.taskId) {
               const errMsg = extractProviderError(j) || (j && (j.error || j.message)) || 'unknown_error';
               console.warn('sora2 submission missing task id', errMsg);
-              showGenerationFailedStatus();
+              showGenerationFailedStatus(errMsg, runId);
               await refreshCredits();
             } else {
               createProcessingPlaceholders();
@@ -8543,11 +8625,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             : ((typeof currentModel !== 'undefined' && currentModel && currentModel.id === 'nano-banana-pro') ? 25 : 10);
           showStatus(`One of the selected files is larger than ${limitMb}MB.`, 'error');
         } else if (err && err.message === 'upload_bridge_missing') {
-          showGenerationFailedStatus();
+          showGenerationFailedStatus('Upload service is not available on this page.', runId);
         } else if (err && err.message === 'upload_failed') {
-          showGenerationFailedStatus();
+          showGenerationFailedStatus('Upload failed before the model request was sent.', runId);
         } else {
-          showGenerationFailedStatus();
+          showGenerationFailedStatus(err && err.message ? err.message : '', runId);
         }
         await refreshCredits();
       } finally {
