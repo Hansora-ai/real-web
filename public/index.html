@@ -322,6 +322,8 @@
         #111520;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.035);
       scroll-snap-align: start;
+      background-position: center;
+      background-size: cover;
     }
 
     .slot::before {
@@ -362,6 +364,12 @@
       height: 100%;
       object-fit: cover;
       z-index: 0;
+    }
+
+    .slot.has-media-poster::before,
+    .wide-banner.has-media-poster::before,
+    .feature-icon.has-media-poster::before {
+      opacity: .18;
     }
 
     .wide-banner::after {
@@ -468,6 +476,8 @@
       background:
         linear-gradient(90deg, rgba(56,189,248,.28), rgba(99,102,241,.34)),
         var(--surface);
+      background-position: center;
+      background-size: cover;
       box-shadow: var(--shadow);
     }
 
@@ -671,6 +681,8 @@
       background:
         linear-gradient(180deg, rgba(99,102,241,.3), rgba(7,9,15,.72)),
         rgba(255,255,255,.045);
+      background-position: center;
+      background-size: cover;
       overflow: hidden;
       position: relative;
     }
@@ -1986,7 +1998,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-06.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-06.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Text to video</strong>
@@ -2001,7 +2013,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-07.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-07.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Image to video</strong>
@@ -2016,7 +2028,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-08.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-08.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Vertical ad</strong>
@@ -2032,7 +2044,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-09.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-09.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Cinematic scene</strong>
@@ -2047,7 +2059,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-10.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-10.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Social crop</strong>
@@ -2062,7 +2074,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-11.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-11.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Video edit</strong>
@@ -2079,7 +2091,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-06.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-06.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Text to video</strong>
@@ -2094,7 +2106,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-08.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-08.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Image to video</strong>
@@ -2110,7 +2122,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-07.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-07.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Vertical ad</strong>
@@ -2125,7 +2137,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-10.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-10.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Cinematic scene</strong>
@@ -2141,7 +2153,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-12.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-12.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Social crop</strong>
@@ -2156,7 +2168,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-11.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-11.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Video edit</strong>
@@ -2172,7 +2184,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-09.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-09.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 07</strong>
@@ -2187,7 +2199,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-13.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-13.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 08</strong>
@@ -2220,7 +2232,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-14.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-14.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Skate shot</strong>
@@ -2235,7 +2247,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-15.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-15.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Energy effect</strong>
@@ -2250,7 +2262,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-16.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-16.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Mirror scene</strong>
@@ -2266,7 +2278,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-17.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-17.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action shot</strong>
@@ -2281,7 +2293,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-18.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-18.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fantasy scene</strong>
@@ -2296,7 +2308,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-19.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-19.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fast motion</strong>
@@ -2313,7 +2325,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-14.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-14.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Skate shot</strong>
@@ -2328,7 +2340,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-17.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-17.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Energy effect</strong>
@@ -2344,7 +2356,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-15.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-15.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Mirror scene</strong>
@@ -2359,7 +2371,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-20.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-20.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action shot</strong>
@@ -2375,7 +2387,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-18.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-18.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fantasy scene</strong>
@@ -2390,7 +2402,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-19.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-19.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fast motion</strong>
@@ -2406,7 +2418,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-16.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-16.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 07</strong>
@@ -2421,7 +2433,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-21.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-21.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 08</strong>
@@ -2443,11 +2455,11 @@
 <a class="btn btn-primary" href="/models.html" style="margin-top:24px;">Explore all</a>
 </div>
 <div class="feature-icons">
-<a class="feature-icon" href="/search-models.html?type=image"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-22.webp" aria-label="Create image" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-22.mp4" data-lazy-video></video><b>Create image</b></a>
-<a class="feature-icon" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-23.webp" aria-label="Create video" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-23.mp4" data-lazy-video></video><b>Create video</b></a>
-<a class="feature-icon" href="/search-models.html?model=kling-motion-control"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-24.webp" aria-label="Motion control" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-24.mp4" data-lazy-video></video><b>Motion control</b></a>
-<a class="feature-icon" href="/upscale.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-25.webp" aria-label="Upscale" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-25.mp4" data-lazy-video></video><b>Upscale</b></a>
-<a class="feature-icon" href="/audio.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-26.webp" aria-label="Create audio" autoplay="" loop="" muted="" playsinline="" preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-26.mp4" data-lazy-video></video><b>Create audio</b></a>
+<a class="feature-icon" href="/search-models.html?type=image"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-22.webp" aria-label="Create image" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-22.mp4" data-lazy-video></video><b>Create image</b></a>
+<a class="feature-icon" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-23.webp" aria-label="Create video" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-23.mp4" data-lazy-video></video><b>Create video</b></a>
+<a class="feature-icon" href="/search-models.html?model=kling-motion-control"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-24.webp" aria-label="Motion control" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-24.mp4" data-lazy-video></video><b>Motion control</b></a>
+<a class="feature-icon" href="/upscale.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-25.webp" aria-label="Upscale" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-25.mp4" data-lazy-video></video><b>Upscale</b></a>
+<a class="feature-icon" href="/audio.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-26.webp" aria-label="Create audio" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-26.mp4" data-lazy-video></video><b>Create audio</b></a>
 </div>
 </div>
 </div>
@@ -2494,7 +2506,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-27.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-27.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Camera move</strong>
@@ -2509,7 +2521,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-28.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-28.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action scene</strong>
@@ -2524,7 +2536,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-29.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-29.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Vertical clip</strong>
@@ -2540,7 +2552,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-30.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-30.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Product motion</strong>
@@ -2555,7 +2567,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-31.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-31.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Social crop</strong>
@@ -2570,7 +2582,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-32.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-32.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Film scene</strong>
@@ -2587,7 +2599,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-31.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-31.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Camera move</strong>
@@ -2602,7 +2614,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-29.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-29.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action scene</strong>
@@ -2618,7 +2630,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-30.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-30.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Vertical clip</strong>
@@ -2633,7 +2645,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-33.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-33.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Product motion</strong>
@@ -2649,7 +2661,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-27.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-27.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Social crop</strong>
@@ -2664,7 +2676,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-28.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-28.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Film scene</strong>
@@ -2680,7 +2692,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-32.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-32.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 07</strong>
@@ -2695,7 +2707,7 @@
         loop
         muted
         playsinline
-        preload="none" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-34.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-34.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Preview 08</strong>
@@ -2826,16 +2838,19 @@
       const videos = Array.from(document.querySelectorAll('video[data-lazy-video]'));
       const isMobile = window.matchMedia('(max-width: 740px)');
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-      const loadMargin = isMobile.matches ? '300px 0px' : '500px 0px';
-      const maxPlayingVideos = isMobile.matches ? 1 : 3;
-      const loadQueue = [];
-      const activeVideos = new Set();
+      const loadMargin = isMobile.matches ? '1400px 0px' : '1800px 0px';
       const visibleVideos = new Set();
-      let loadingCount = 0;
-      const maxParallelLoads = isMobile.matches ? 1 : 2;
 
       const markMediaReady = (media) => {
         media.closest('.slot, .wide-banner, .feature-icon')?.classList.add('is-media-ready');
+      };
+
+      const setPosterBackground = (video) => {
+        if (!video.poster) return;
+        const mediaCard = video.closest('.slot, .wide-banner, .feature-icon');
+        if (!mediaCard) return;
+        mediaCard.classList.add('has-media-poster');
+        mediaCard.style.backgroundImage = `linear-gradient(180deg, rgba(5,6,11,.04), rgba(5,6,11,.28)), url("${video.poster}")`;
       };
 
       document.querySelectorAll('img').forEach((img) => {
@@ -2847,73 +2862,48 @@
       });
 
       videos.forEach((video) => {
+        setPosterBackground(video);
+        if (!video.getAttribute('preload') || video.getAttribute('preload') === 'none') {
+          video.setAttribute('preload', 'metadata');
+        }
+        video.addEventListener('loadedmetadata', () => markMediaReady(video), { once: true });
         video.addEventListener('loadeddata', () => markMediaReady(video), { once: true });
       });
 
-      const loadVideoNow = (video) => {
-        if (!video.dataset.src || video.src) return Promise.resolve();
-        loadingCount += 1;
-        video.preload = 'metadata';
-        video.src = video.dataset.src;
-        video.load();
-
-        return new Promise((resolve) => {
-          let settled = false;
-          const done = () => {
-            if (settled) return;
-            settled = true;
-            loadingCount = Math.max(0, loadingCount - 1);
-            resolve();
-            processLoadQueue();
-          };
-          if (video.readyState >= 1) {
-            window.setTimeout(done, 0);
-            return;
-          }
-          video.addEventListener('loadedmetadata', done, { once: true });
-          video.addEventListener('error', done, { once: true });
-        });
-      };
-
-      const processLoadQueue = () => {
-        while (loadingCount < maxParallelLoads && loadQueue.length) {
-          loadVideoNow(loadQueue.shift());
+      const loadVideoNow = (video, preload = 'metadata') => {
+        if (!video.dataset.src) return;
+        if (video.getAttribute('preload') !== 'auto') {
+          video.setAttribute('preload', preload);
         }
-      };
-
-      const loadVideo = (video, priority = false) => {
-        if (!video.dataset.src || video.src) return;
-        const queuedIndex = loadQueue.indexOf(video);
-        if (queuedIndex !== -1) {
-          if (priority) {
-            loadQueue.splice(queuedIndex, 1);
-            loadQueue.unshift(video);
-          }
+        if (video.src) {
+          if (preload === 'auto') video.load();
           return;
         }
-        if (priority) {
-          loadQueue.unshift(video);
-        } else {
-          loadQueue.push(video);
+        video.src = video.dataset.src;
+        video.load();
+      };
+
+      const scheduleSettledLoad = () => {
+        const loadAllVideos = () => videos.forEach((video) => loadVideoNow(video, 'metadata'));
+        if ('requestIdleCallback' in window) {
+          window.requestIdleCallback(loadAllVideos, { timeout: 1800 });
+          return;
         }
-        processLoadQueue();
+        window.setTimeout(loadAllVideos, 900);
       };
 
       const eagerVideos = videos.filter((video) => video.hasAttribute('data-eager-video'));
-      eagerVideos.forEach((video, index) => {
-        if (isMobile.matches && index > 0) return;
-        loadVideo(video);
-      });
+      eagerVideos.forEach((video) => loadVideoNow(video, 'auto'));
 
       const pauseVideo = (video) => {
-        activeVideos.delete(video);
         if (!video.paused) video.pause();
       };
 
       const playVideo = (video) => {
         if (reduceMotion.matches || !video.autoplay) return;
         if (!visibleVideos.has(video)) return;
-        if (!video.src) loadVideo(video, true);
+        if (!video.src) loadVideoNow(video, 'auto');
+        else if (video.getAttribute('preload') !== 'auto') loadVideoNow(video, 'auto');
         if (video.readyState < 2) {
           if (!video.dataset.playQueued) {
             video.dataset.playQueued = '1';
@@ -2924,12 +2914,6 @@
           }
           return;
         }
-        while (activeVideos.size >= maxPlayingVideos) {
-          const oldestVideo = activeVideos.values().next().value;
-          if (!oldestVideo) break;
-          pauseVideo(oldestVideo);
-        }
-        activeVideos.add(video);
         video.play().catch(() => {
           video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
         });
@@ -2939,7 +2923,7 @@
         const loadObserver = new IntersectionObserver((entries) => {
           entries.forEach((entry) => {
             if (!entry.isIntersecting) return;
-            loadVideo(entry.target);
+            loadVideoNow(entry.target, 'auto');
             loadObserver.unobserve(entry.target);
           });
         }, {
@@ -2965,8 +2949,9 @@
           playObserver.observe(video);
         });
       } else {
-        videos.forEach(loadVideo);
+        videos.forEach((video) => loadVideoNow(video, 'metadata'));
       }
+      scheduleSettledLoad();
     })();
   </script>
 <script>
