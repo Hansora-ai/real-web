@@ -1235,7 +1235,19 @@
       }
 
       .wide-banner.design-only-banner {
-        min-height: clamp(430px, 128vw, 660px);
+        aspect-ratio: 5 / 1 !important;
+        height: auto !important;
+        min-height: 0 !important;
+      }
+
+      .wide-banner.design-only-banner picture,
+      .wide-banner.design-only-banner picture img {
+        position: absolute !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important;
+        object-position: center !important;
       }
     }
 
@@ -1430,7 +1442,7 @@
 </style>
 
 <style id="hansora-wide-phone-layout-fix">
-  @media (max-width: 900px), (hover: none) and (pointer: coarse) and (max-width: 1020px) {
+  @media (max-width: 900px), (hover: none) and (pointer: coarse), (pointer: coarse) and (max-width: 1180px) {
     html,
     body {
       width: 100% !important;
@@ -1854,6 +1866,33 @@
       margin: 0 !important;
       padding: 0 !important;
       overflow: hidden !important;
+    }
+  }
+</style>
+
+<style id="hansora-final-mobile-banner-safety">
+  /* The marketing banner image is a wide 5:1 graphic, so phones should not render it as a tall cropped card. */
+  @media (max-width: 900px), (pointer: coarse) {
+    section.mobile-hide-creative-studio-banner {
+      display: none !important;
+      visibility: hidden !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      max-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
+
+    .wide-banner.design-only-banner {
+      aspect-ratio: 5 / 1 !important;
+      min-height: 0 !important;
+      height: auto !important;
+    }
+
+    .wide-banner.design-only-banner picture img {
+      object-fit: contain !important;
+      object-position: center !important;
     }
   }
 </style>
