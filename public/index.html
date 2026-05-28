@@ -8,13 +8,18 @@
 <meta content="Create AI images, videos, ads, and model-driven visuals in one workspace." name="description"/>
 <meta content="HANSORA AI" property="og:title"/>
 <meta content="All-in-one AI image, video, and marketing workspace." property="og:description"/>
+<meta content="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20May%2028,%202026,%2011_23_46%20AM.png" property="og:image"/>
 <meta content="website" property="og:type"/>
 <meta content="summary_large_image" name="twitter:card"/>
+<meta content="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20May%2028,%202026,%2011_23_46%20AM.png" name="twitter:image"/>
 <meta content="#0b0d13" name="theme-color"/>
 <link href="/favicon.png" rel="icon"/>
 <link href="https://cdn.jsdelivr.net" rel="preconnect"/>
 <link href="https://qmaealblegvcwodlmeht.supabase.co" rel="preconnect"/>
 <link rel="preload" as="image" href="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-01.webp" fetchpriority="high"/>
+<link rel="preload" as="image" href="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-02.webp" fetchpriority="high"/>
+<link rel="preload" as="image" href="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-03.webp" fetchpriority="high"/>
+<link rel="preload" as="image" href="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-04.webp" fetchpriority="high"/>
 <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
@@ -2838,8 +2843,9 @@
       const videos = Array.from(document.querySelectorAll('video[data-lazy-video]'));
       const isMobile = window.matchMedia('(max-width: 740px)');
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-      const loadMargin = isMobile.matches ? '1400px 0px' : '1800px 0px';
+      const loadMargin = isMobile.matches ? '600px 0px' : '850px 0px';
       const visibleVideos = new Set();
+      let warmTimer = null;
 
       const markMediaReady = (media) => {
         media.closest('.slot, .wide-banner, .feature-icon')?.classList.add('is-media-ready');
@@ -2851,6 +2857,15 @@
         if (!mediaCard) return;
         mediaCard.classList.add('has-media-poster');
         mediaCard.style.backgroundImage = `linear-gradient(180deg, rgba(5,6,11,.04), rgba(5,6,11,.28)), url("${video.poster}")`;
+      };
+
+      const getMediaCard = (video) => video.closest('.slot, .wide-banner, .feature-icon');
+
+      const isActiveLayoutVideo = (video) => {
+        const card = getMediaCard(video);
+        if (!card) return true;
+        const rect = card.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && getComputedStyle(card).display !== 'none';
       };
 
       document.querySelectorAll('img').forEach((img) => {
@@ -2884,12 +2899,24 @@
       };
 
       const scheduleSettledLoad = () => {
-        const loadAllVideos = () => videos.forEach((video) => loadVideoNow(video, 'metadata'));
+        if (warmTimer) return;
+        const warmVideos = () => {
+          warmTimer = null;
+          const pendingVideos = videos.filter((video) => !video.src && isActiveLayoutVideo(video));
+          const batchSize = isMobile.matches ? 1 : 2;
+          pendingVideos.slice(0, batchSize).forEach((video) => loadVideoNow(video, 'metadata'));
+          if (pendingVideos.length > batchSize) {
+            warmTimer = window.setTimeout(() => {
+              warmTimer = null;
+              scheduleSettledLoad();
+            }, isMobile.matches ? 1400 : 1000);
+          }
+        };
         if ('requestIdleCallback' in window) {
-          window.requestIdleCallback(loadAllVideos, { timeout: 1800 });
+          warmTimer = window.requestIdleCallback(warmVideos, { timeout: 1800 });
           return;
         }
-        window.setTimeout(loadAllVideos, 900);
+        warmTimer = window.setTimeout(warmVideos, 900);
       };
 
       const eagerVideos = videos.filter((video) => video.hasAttribute('data-eager-video'));
@@ -2949,9 +2976,10 @@
           playObserver.observe(video);
         });
       } else {
-        videos.forEach((video) => loadVideoNow(video, 'metadata'));
+        videos.filter(isActiveLayoutVideo).forEach((video) => loadVideoNow(video, 'metadata'));
       }
-      scheduleSettledLoad();
+      window.setTimeout(scheduleSettledLoad, 1600);
+      window.addEventListener('resize', () => window.setTimeout(scheduleSettledLoad, 250), { passive: true });
     })();
   </script>
 <script>
