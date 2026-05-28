@@ -4303,9 +4303,6 @@ function createResultCard(data) {
       if (model && model.id === 'seedance20' && String(endpoint || '').includes('run-seedance-cheap')) {
         return 'seedance-cheap-check';
       }
-      if (model && model.id === 'grok-video' && Number(currentDuration || 0) > 0 && Number(currentDuration || 0) < 10) {
-        return 'unifically-grok-check';
-      }
       return 'kie-check';
     }
 
