@@ -4372,7 +4372,7 @@ function createResultCard(data) {
 
 
 const __activePolls = new Map(); // runId -> token
-const GENERATION_FAILED_MESSAGE = 'Sorry, your generation failed.';
+const GENERATION_FAILED_MESSAGE = 'Generation failed. Please try again and make sure your prompt and image do not violate any policy.';
 
 function shortRunId(runId) {
   const value = String(runId || '').trim();
@@ -5745,10 +5745,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function showGenerationFailedStatus(reason, runId) {
-      const cleanReason = cleanGenerationFailureReason(reason);
-      const suffix = shortRunId(runId) ? ` Run ID: ${shortRunId(runId)}.` : '';
-      const message = cleanReason || 'The provider returned a failure without a detailed reason';
-      showStatus(`${GENERATION_FAILED_MESSAGE} ${message}.${suffix}`, 'error');
+      showStatus(GENERATION_FAILED_MESSAGE, 'error');
     }
 
     function getKlingMotionVideoError() {
