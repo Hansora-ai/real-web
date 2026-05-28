@@ -1,5 +1,5 @@
 // netlify/functions/run-seedance-2.js
-// Launches KIE Seedance 2.0 / Seedance 2.0 Lite jobs.
+// Launches KIE Seedance 2.0 / Seedance 2.0 Lite jobs DEMO DEMO DEMO.
 // The refund amount is written once by this run function as meta.refund_amount.
 const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/, '');
 const KIE_KEY = process.env.KIE_API_KEY || '';
