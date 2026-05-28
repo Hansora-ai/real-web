@@ -210,7 +210,8 @@ exports.handler = async (event) => {
     if (!SUPABASE_URL || !SERVICE_KEY) return json(500, { ok: false, error: 'missing_env' });
     const body = JSON.parse(event.body || '{}');
     const duration = normalizeDuration(body);
-    const useUnificAlly = duration < 10;
+    // Grok video must always route through KIE, regardless of duration.
+    const useUnificAlly = false;
     const checker = useUnificAlly ? 'unifically-grok-check' : 'kie-check';
     if (useUnificAlly && !UNIFICALLY_KEY) return json(500, { ok: false, error: 'missing_unifically_env' });
     if (!useUnificAlly && !KIE_KEY) return json(500, { ok: false, error: 'missing_kie_env' });
