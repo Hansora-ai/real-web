@@ -73,6 +73,45 @@
     else document.addEventListener('DOMContentLoaded', fn);
   }
 
+  function isTelegramWebView() {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    const ua = navigator.userAgent || '';
+    const search = `${window.location.search || ''}${window.location.hash || ''}`;
+    return !!tg || /\bTelegram\b/i.test(ua) || /tgWebApp/i.test(search);
+  }
+
+  function applyTelegramViewportFix() {
+    if (!isTelegramWebView()) return;
+
+    const root = document.documentElement;
+    const body = document.body;
+    const tg = window.Telegram && window.Telegram.WebApp;
+
+    root.classList.add('hansora-telegram-webview');
+    if (body) body.classList.add('hansora-telegram-webview');
+
+    function updateViewportVars() {
+      const viewportHeight = tg && Number(tg.viewportHeight) ? Number(tg.viewportHeight) : window.innerHeight;
+      const stableViewportHeight = tg && Number(tg.stableViewportHeight) ? Number(tg.stableViewportHeight) : viewportHeight;
+      root.style.setProperty('--hansora-tg-vh', `${Math.max(viewportHeight, stableViewportHeight)}px`);
+      root.style.setProperty('--hansora-tg-safe-top', '0px');
+      root.style.setProperty('--hansora-tg-safe-bottom', '0px');
+    }
+
+    try {
+      if (tg) {
+        tg.ready();
+        if (typeof tg.expand === 'function') tg.expand();
+        if (typeof tg.disableVerticalSwipes === 'function') tg.disableVerticalSwipes();
+        if (typeof tg.onEvent === 'function') tg.onEvent('viewportChanged', updateViewportVars);
+      }
+    } catch (_) {}
+
+    updateViewportVars();
+    window.addEventListener('resize', updateViewportVars, { passive: true });
+    window.addEventListener('orientationchange', updateViewportVars, { passive: true });
+  }
+
   function ensureSupabaseClient() {
     if (window.__HANSORA_SB__) {
       sb = window.__HANSORA_SB__;
@@ -383,6 +422,35 @@
         .hansora-mega-menu{ left:0; transform:translateX(-16px) translateY(8px); grid-template-columns:1fr; width:min(92vw,520px); max-height:72vh; overflow:auto; }
         .nav-links .hansora-nav-item:hover .hansora-mega-menu,
         .nav-links .hansora-nav-item:focus-within .hansora-mega-menu{ transform:translateX(-16px) translateY(0); }
+      }
+      html.hansora-telegram-webview,
+      html.hansora-telegram-webview body{
+        min-height:var(--hansora-tg-vh,100dvh);
+        height:auto;
+        overflow-x:hidden;
+      }
+      html.hansora-telegram-webview body{
+        margin-top:0 !important;
+        padding-top:0 !important;
+      }
+      html.hansora-telegram-webview #sharedHeader{
+        margin-top:0 !important;
+        padding-top:0 !important;
+        transform:none !important;
+      }
+      html.hansora-telegram-webview .site-header{
+        top:0 !important;
+        margin-top:0 !important;
+        padding-top:0 !important;
+        transform:none !important;
+      }
+      html.hansora-telegram-webview main{
+        min-height:auto;
+      }
+      @media (max-width:900px){
+        html.hansora-telegram-webview .site-header .shell.nav{
+          min-height:64px;
+        }
       }
       @media (max-width:560px){ .hansora-mega-grid{ grid-template-columns:1fr; } }
     `;
@@ -775,6 +843,7 @@
 
   ready(function () {
     captureAffiliateRef();
+    applyTelegramViewportFix();
     injectHeaderStyles();
     injectHeader();
     injectAuthModal();
