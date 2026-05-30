@@ -58,11 +58,17 @@
       padding:12px;
       cursor:pointer;
       overflow:hidden;
+      min-height:430px;
+      display:flex;
+      flex-direction:column;
       transition:border-color .16s ease,background .16s ease,transform .16s ease;
     }
     .usage-card:hover{border-color:rgba(129,140,248,.74);background:rgba(15,23,42,.88);transform:translateY(-1px)}
+    .usage-card.failed{border-color:rgba(248,113,113,.48);background:linear-gradient(180deg,rgba(127,29,29,.24),rgba(15,23,42,.72))}
+    .usage-card.failed:hover{border-color:rgba(248,113,113,.70);background:linear-gradient(180deg,rgba(127,29,29,.30),rgba(15,23,42,.82))}
     .usage-card.disabled{cursor:default}
     .usage-card.disabled:hover{transform:none;border-color:rgba(255,255,255,.10)}
+    .usage-card.disabled.failed:hover{border-color:rgba(248,113,113,.48)}
     .safe-name{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .media-box{
       position:relative;
@@ -105,9 +111,12 @@
       box-shadow:0 18px 45px rgba(99,102,241,.28);
     }
     .file-box{padding:14px;text-align:center;color:#cbd5e1;font-size:12px}
+    .failed-box{color:#fecaca;background:radial-gradient(circle at 50% 42%,rgba(248,113,113,.16),transparent 48%),rgba(2,6,23,.66)}
+    .failed-icon{width:52px;height:52px;border-radius:999px;display:grid;place-items:center;margin:0 auto 12px;border:1px solid rgba(248,113,113,.55);background:rgba(127,29,29,.34);color:#fecaca;font-size:28px;font-weight:950;box-shadow:0 0 34px rgba(248,113,113,.20)}
     .status-dot{width:9px;height:9px;border-radius:999px;background:#86efac;box-shadow:0 0 0 5px rgba(134,239,172,.14);flex:0 0 auto}
     .status-dot.failed{background:#f87171;box-shadow:0 0 0 5px rgba(248,113,113,.14)}
     .status-dot.processing{background:#fbbf24;box-shadow:0 0 0 5px rgba(251,191,36,.14)}
+    .card-actions{margin-top:auto;display:flex;flex-direction:column;gap:9px;padding-top:12px}
     .download-btn{
       display:inline-flex;
       width:100%;
@@ -122,6 +131,22 @@
       font-weight:900;
       text-decoration:none;
     }
+    .copy-prompt-btn{
+      display:inline-flex;
+      width:100%;
+      justify-content:center;
+      align-items:center;
+      padding:10px 14px;
+      border:1px solid rgba(148,163,184,.28);
+      border-radius:999px;
+      color:#e5e7eb;
+      background:rgba(15,23,42,.82);
+      font-size:12px;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .copy-prompt-btn:hover{border-color:rgba(129,140,248,.70);background:rgba(30,41,59,.92)}
+    .copy-prompt-btn:disabled{opacity:.42;cursor:not-allowed}
     #previewOverlay{
       position:fixed;
       inset:0;
@@ -318,6 +343,24 @@
       return meta.file_name || meta.title || row.prompt || [row.provider, row.kind].filter(Boolean).join(' - ') || 'Generation';
     }
 
+    function promptForRow(row){
+      const meta = parseMeta(row.meta);
+      const promptJson = parseMeta(meta.promptJson || meta.prompt_json || meta.param || meta.params || meta.input);
+      const candidates = [
+        row.prompt,
+        meta.prompt,
+        meta.input_prompt,
+        meta.inputPrompt,
+        meta.original_prompt,
+        meta.originalPrompt,
+        meta.params && meta.params.prompt,
+        meta.input && meta.input.prompt,
+        promptJson.prompt,
+        promptJson.input && promptJson.input.prompt
+      ];
+      return String(candidates.find((value) => typeof value === 'string' && value.trim()) || '').trim();
+    }
+
     function subtitleForRow(row){
       return [row.provider, row.kind].filter(Boolean).join(' - ') || 'Generation';
     }
@@ -325,6 +368,14 @@
     function statusForRow(row){
       const meta = parseMeta(row.meta);
       return String(meta.status || row.status || '').toLowerCase();
+    }
+
+    function isFailedRow(row){
+      const meta = parseMeta(row.meta);
+      const status = statusForRow(row);
+      return /fail|error|reject|blocked|moderation|sensitive|flagged|timeout|cancel/.test(status) ||
+        meta.failed === true ||
+        !!(meta.error || meta.error_message || meta.errorMessage || meta.refund_error);
     }
 
     function fileNameFromUrl(url, fallback){
@@ -339,6 +390,28 @@
     function downloadHref(url, row){
       const name = fileNameFromUrl(url, titleForRow(row));
       return `/.netlify/functions/download-proxy?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name)}`;
+    }
+
+    async function copyText(text){
+      const value = String(text || '');
+      if (!value) return false;
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(value);
+          return true;
+        }
+      } catch {}
+      const area = document.createElement('textarea');
+      area.value = value;
+      area.setAttribute('readonly','');
+      area.style.position = 'fixed';
+      area.style.left = '-9999px';
+      document.body.appendChild(area);
+      area.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch {}
+      area.remove();
+      return ok;
     }
 
     function renderMedia(url, kind, title, preview){
@@ -374,18 +447,19 @@
         const url = urls[0] || '';
         const title = titleForRow(row);
         const subtitle = subtitleForRow(row);
-        const status = statusForRow(row);
-        const failed = /fail|error|reject|blocked/.test(status);
+        const prompt = promptForRow(row);
+        const failed = isFailedRow(row);
         const processing = !url && !failed;
         const kind = url ? mediaKind(url, row) : 'file';
         const created = row.created_at ? new Date(row.created_at).toLocaleDateString([], {month:'short', day:'numeric'}) : '';
         const card = document.createElement('article');
-        card.className = `usage-card ${url ? '' : 'disabled'}`;
-        if (url) {
+        card.className = `usage-card ${failed || !url ? 'disabled' : ''} ${failed ? 'failed' : ''}`;
+        if (url && !failed) {
           card.dataset.url = url;
           card.dataset.kind = kind;
           card.dataset.title = title;
         }
+        if (prompt) card.dataset.prompt = prompt;
         card.innerHTML = `
           <div class="flex items-start justify-between gap-3 mb-3">
             <div class="min-w-0">
@@ -394,15 +468,29 @@
             </div>
             <span class="status-dot ${failed ? 'failed' : processing ? 'processing' : ''}"></span>
           </div>
-          ${url ? renderMedia(url, kind, title, false) : `<div class="media-box file-box">${failed ? 'Failed' : 'Processing'}</div>`}
+          ${failed ? `<div class="media-box file-box failed-box"><div><div class="failed-icon">!</div><div>Failed</div></div></div>` : url ? renderMedia(url, kind, title, false) : `<div class="media-box file-box">Processing</div>`}
           <div class="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
             <span>${escapeHtml(created)}</span>
             <span>${escapeHtml(kind)}</span>
           </div>
-          ${url ? `<a class="download-btn mt-3" href="${downloadHref(url, row)}" download>Download</a>` : ''}
+          <div class="card-actions">
+            ${url && !failed ? `<a class="download-btn" href="${downloadHref(url, row)}" download>Download</a>` : ''}
+            <button class="copy-prompt-btn" type="button" ${prompt ? '' : 'disabled'}>${prompt ? 'Copy prompt' : 'No prompt'}</button>
+          </div>
         `;
         const download = card.querySelector('.download-btn');
         if (download) download.addEventListener('click', (event) => event.stopPropagation());
+        const copyPrompt = card.querySelector('.copy-prompt-btn');
+        if (copyPrompt) {
+          copyPrompt.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            if (!prompt) return;
+            const original = copyPrompt.textContent;
+            const ok = await copyText(prompt);
+            copyPrompt.textContent = ok ? 'Copied' : 'Copy failed';
+            setTimeout(() => { copyPrompt.textContent = original; }, 1200);
+          });
+        }
         list.appendChild(card);
       });
     }
