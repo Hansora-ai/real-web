@@ -5283,6 +5283,69 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let kling30ActiveShotIndex = -1;
     let kling30MultiShots = false;
     let videoFirstFrameFile = null;
+
+    const EXPLICIT_BLOCK_WORDS = new Set([
+      'pussy',
+      'penis',
+      'dick',
+      'vagina',
+      'vergina',
+      'cock',
+      'clit',
+      'boob',
+      'boobs',
+      'tit',
+      'tits',
+      'milf',
+      'slut',
+      'whore',
+      'sex',
+      'sexual',
+      'xxx',
+      'fuck',
+      'fucking',
+      'fucked',
+      'masturbate',
+      'masturbating',
+      'masturbation',
+      'genital',
+      'genitals',
+      'topless',
+      'breast',
+      'breasts'
+    ]);
+
+    function promptHasBlockedSexualTerms(value) {
+      const text = String(value || '').toLowerCase();
+      if (!text.trim()) return false;
+      const normalized = text
+        .replace(/[^a-z\s]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (!normalized) return false;
+      if (normalized.includes('no clothes') || normalized.includes('without clothes') || normalized.includes('jerk off')) return true;
+      return normalized.split(' ').some((word) => EXPLICIT_BLOCK_WORDS.has(word));
+    }
+
+    function updatePromptSafetyState(showMessage = true) {
+      const runBtn = document.getElementById('runBtn');
+      const promptBox = document.getElementById('promptBox');
+      const blocked = promptHasBlockedSexualTerms(promptBox ? promptBox.value : '');
+      if (!runBtn) return !blocked;
+      if (blocked) {
+        runBtn.dataset.promptBlocked = '1';
+        runBtn.disabled = true;
+        runBtn.classList.add('opacity-60', 'cursor-not-allowed');
+        if (showMessage) showStatus('Explicit sexual prompts are not allowed.', 'error');
+        return false;
+      }
+      if (runBtn.dataset.promptBlocked === '1') {
+        delete runBtn.dataset.promptBlocked;
+        runBtn.disabled = false;
+        runBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+      }
+      return true;
+    }
     let videoLastFrameFile = null;
     let videoSourceFile = null;
     let videoRefImageFiles = [];
@@ -5564,6 +5627,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       if (model.id === 'kling26') {
         const dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
+        if (currentKlingSound) return dur === 10 ? 15 : 8;
+        return dur === 10 ? 8 : 4;
+      }
+      if (model.id === 'kling25') {
+        const dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
         return dur === 10 ? 8 : 4;
       }
       if (model.id === 'sora2') return currentSoraTier === 'pro' ? 20 : 3;
@@ -5599,6 +5667,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const credits = getRunCreditLabel();
       runBtn.textContent = credits ? `Run ${credits} ⚡` : 'Run';
       syncKlingMotionRunState(false);
+      updatePromptSafetyState(false);
     }
 
     function getResolutionOptionsForCurrentModel() {
@@ -6148,6 +6217,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
               [...klingSoundPills.querySelectorAll('button')].forEach((x) => x.classList.remove('chip-active'));
               b.classList.add('chip-active');
               updateCostLabelForSoundModel();
+              updateCostDisplay();
+              updateRunButtonLabel();
             });
             return b;
           };
@@ -8440,6 +8511,10 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         showStatus('Please enter a prompt.', 'error');
         return;
       }
+      if (promptHasBlockedSexualTerms(prompt)) {
+        updatePromptSafetyState(true);
+        return;
+      }
 
       if (!currentUser) {
         showStatus('Please log in first.', 'error');
@@ -8752,6 +8827,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       e.preventDefault();
       const btn = e.currentTarget;
       if (runSubmitLocked || (btn && btn.disabled)) return;
+      if (!updatePromptSafetyState(true)) return;
       runSubmitLocked = true;
       if (btn) {
         btn.disabled = true;
@@ -8768,6 +8844,13 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         updateRunButtonLabel();
       });
     });
+
+    const promptBoxForSafety = document.getElementById('promptBox');
+    if (promptBoxForSafety) {
+      promptBoxForSafety.addEventListener('input', () => updatePromptSafetyState(true));
+      promptBoxForSafety.addEventListener('change', () => updatePromptSafetyState(true));
+      promptBoxForSafety.addEventListener('paste', () => setTimeout(() => updatePromptSafetyState(true), 0));
+    }
 
     // boot
     (async () => {
