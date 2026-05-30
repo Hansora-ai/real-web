@@ -2350,7 +2350,102 @@
       padding:0 16px !important;
     }
 
-  </style>
+  
+
+    /* Requested desktop-only width patch: widen creator controls below Last 12 results, keep results rail unchanged */
+    @media (min-width:901px){
+      .page-shell{
+        width:min(1680px,100%) !important;
+      }
+      .creator-stage{
+        width:min(1520px,100%) !important;
+      }
+      .inline-history{
+        width:min(940px,100%) !important;
+      }
+      .selected-zone,
+      .step-head,
+      .prompt-only,
+      .prompt-only .action-row,
+      .action-row,
+      .details-panel{
+        width:min(1360px,100%) !important;
+      }
+      .options-frame{
+        width:min(1440px,100%) !important;
+        padding-left:48px !important;
+        padding-right:48px !important;
+      }
+      #promptOnly,
+      #extraDetails{
+        width:100% !important;
+      }
+    }
+
+
+    /* Requested follow-up: slightly narrower desktop controls, slightly larger option cards. Results rail unchanged. */
+    @media (min-width:901px){
+      .page-shell{
+        width:min(1600px,100%) !important;
+      }
+      .creator-stage{
+        width:min(1420px,100%) !important;
+      }
+      .inline-history{
+        width:min(940px,100%) !important;
+      }
+      .selected-zone,
+      .step-head,
+      .prompt-only,
+      .prompt-only .action-row,
+      .action-row,
+      .details-panel{
+        width:min(1280px,100%) !important;
+      }
+      .options-frame{
+        width:min(1320px,100%) !important;
+        min-height:162px !important;
+        padding-left:46px !important;
+        padding-right:46px !important;
+      }
+      .option-rail{
+        min-height:162px !important;
+        gap:11px !important;
+      }
+      .option-card{
+        flex:0 0 112px !important;
+        width:112px !important;
+        height:156px !important;
+      }
+      .card-art{
+        height:118px !important;
+      }
+      .card-title{
+        font-size:11.5px !important;
+        line-height:1.05 !important;
+      }
+    }
+
+
+    /* Requested patch: desktop hides unnecessary carousel arrows and centers small option sets. Results rail unchanged. */
+    @media (min-width:901px){
+      .options-frame{
+        padding-left:0 !important;
+        padding-right:0 !important;
+      }
+      .rail-arrow{
+        display:none !important;
+      }
+      .option-rail{
+        justify-content:center !important;
+        padding-left:0 !important;
+        padding-right:0 !important;
+        scroll-padding-left:0 !important;
+        scroll-padding-right:0 !important;
+      }
+    }
+
+</style>
 </head>
 <body>
   <div id="sharedHeader"></div>
