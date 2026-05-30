@@ -27,6 +27,21 @@ function getUID(event, body){
   return ((getHeader(event,'x-user-id')||'') || (body && (body.uid||'')) || (qs.get('uid')||'')).trim();
 }
 
+function normalizeDuration(value) {
+  return (value === 10 || String(value) === '10') ? 10 : 5;
+}
+
+function normalizeBoolean(value) {
+  return value === true || value === 'true' || value === 1 || value === '1';
+}
+
+function costFor(body) {
+  const duration = normalizeDuration(body && body.duration);
+  const sound = normalizeBoolean(body && body.sound);
+  if (sound) return duration === 10 ? 15 : 8;
+  return duration === 10 ? 8 : 4;
+}
+
 
 async function getUidFromBearer(event){
   const auth = (getHeader(event,'authorization')||'').trim();
@@ -80,11 +95,11 @@ async function fetchUserGenByRunId(uid, run_id){
   }catch(_e){ return null; }
 }
 
-async function seedUserGeneration(uid, run_id, duration, sound, prompt){
+async function seedUserGeneration(uid, run_id, duration, sound, prompt, cost){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { row_id:null };
   try{
     const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-    const meta = { source:'kling', run_id, model:'kling2.6', status:'pending', refund_amount: (duration === 10 ? 8 : 4) };
+    const meta = { source:'kling', run_id, model:'kling2.6', status:'pending', refund_amount: cost };
     const rIns = await fetch(ug, {
       method: 'POST',
       headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
@@ -214,8 +229,8 @@ exports.handler = async (event) => {
 
     const prompt = String(body.prompt || '').trim();
     const aspect_ratio = (body.aspect_ratio ? String(body.aspect_ratio) : '1:1').trim();
-    const duration = (body && (body.duration === 10 || String(body.duration) === '10')) ? 10 : 5;
-    const sound = (body && Object.prototype.hasOwnProperty.call(body, 'sound')) ? (body.sound === true || body.sound === 'true' || body.sound === 1 || body.sound === '1') : false;
+    const duration = normalizeDuration(body && body.duration);
+    const sound = (body && Object.prototype.hasOwnProperty.call(body, 'sound')) ? normalizeBoolean(body.sound) : false;
 
     // URL-only image intake (accept body.image_url OR body.imageUrl)
     const imageUrl = (body && (body.image_url || body.imageUrl)) ? String(body.image_url || body.imageUrl).trim() : '';
@@ -223,8 +238,7 @@ exports.handler = async (event) => {
       return json(400, { ok:false, error:'missing_input', details:'Provide a prompt or an image_url.' });
     }
 
-    // Costs: 5s -> 4⚡, 10s -> 8⚡
-    const cost = (duration === 10) ? 8 : 4;
+    const cost = costFor({ duration, sound });
     const run_id = (body.run_id && String(body.run_id).trim()) || `${uid || 'anon'}-${Date.now()}`;
 
     // If this run_id was already submitted before, return the same taskId (no re-debit)
@@ -235,7 +249,7 @@ exports.handler = async (event) => {
     }
 
     // Seed placeholder row early (used for idempotent charging)
-    const seed = await seedUserGeneration(uid, run_id, duration, sound, prompt);
+    const seed = await seedUserGeneration(uid, run_id, duration, sound, prompt, cost);
     let row_id = seed.row_id;
 
     // Choose model per mode
