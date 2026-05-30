@@ -73,7 +73,7 @@ exports.handler = async (event) => {
         const debit = await debitCreditsOnce(uid, COST, existing.id, existing.meta);
         if (!debit.ok) return ok({ submitted:false, error: debit.error || "debit_failed" });
       }
-      return ok({ submitted:true, run_id, taskId: existing.meta.task_id, reused:true });
+      return ok({ ok:true, submitted:true, run_id, task_id: existing.meta.task_id, reused:true });
     }
 
     // Pre-check credits (authoritative) to prevent free provider submissions
@@ -102,12 +102,29 @@ exports.handler = async (event) => {
     const kiePayload = {
       model: motionModel === "kling30" ? "kling-3.0/motion-control" : "kling-2.6/motion-control",
       callBackUrl,
+      callbackUrl: callBackUrl,
+      webhookUrl: callBackUrl,
+      webhook_url: callBackUrl,
+      notify_url: callBackUrl,
       input: {
         prompt: prompt || "Kling Motion Control",
+        aspect_ratio: aspectRatio,
         mode,
         character_orientation: "image",
         video_urls: [videoUrl],
         input_urls: [imageUrl]
+      },
+      meta: {
+        uid,
+        user_id: uid,
+        run_id,
+        cost: COST
+      },
+      metadata: {
+        uid,
+        user_id: uid,
+        run_id,
+        cost: COST
       }
     };
 
@@ -146,7 +163,7 @@ const resp = await fetch(KIE_URL, {
       return ok({ submitted:false, error: debit.error || "payment_failed_after_submit", taskId, run_id });
     }
 
-    return ok({ submitted:true, run_id, taskId, status: resp.status, data });
+    return ok({ ok:true, submitted:true, run_id, task_id: taskId });
   } catch (e) {
     return ok({ submitted:false, error:String(e) });
   }
