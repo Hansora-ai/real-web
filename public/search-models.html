@@ -5100,6 +5100,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         maxFiles: 0,
         needsMotionVideo: true,
         allowOptionalImage: true,
+        uploadMaxMB: 100,
+        uploadLimitsMB: { image: 10, video: 100 },
         aspectOptions: [],
         resolutionOptions: ['720p', '1080p'],
         defaultResolution: '720p',
