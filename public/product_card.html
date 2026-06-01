@@ -129,15 +129,15 @@
     .thumb-state.ready{color:rgba(110,231,183,.95)}
     .thumb-state.failed{color:rgba(248,113,113,.95)}
     .thumb-get,.thumb-animate{font-size:12px;min-width:86px;padding:8px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(99,102,241,.24);color:rgba(255,255,255,.94)}
-    .thumb-animate{background:rgba(221,255,55,.15);border-color:rgba(221,255,55,.36);color:#efffb2}
+    .thumb-animate{position:absolute;top:10px;right:10px;z-index:4;background:rgba(221,255,55,.18);border-color:rgba(221,255,55,.42);color:#efffb2;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
     .thumb-get.hidden,.thumb-animate.hidden{display:none !important}
     #previewOverlay{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.86);backdrop-filter:blur(7px);padding:18px}
     #previewOverlay.show{display:flex}.preview-card{position:relative;width:min(980px,100%);max-height:90vh;border-radius:24px;border:1px solid rgba(255,255,255,.14);background:#050714;overflow:hidden}.preview-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.58);color:#fff;font-size:24px;z-index:5}.preview-media{display:flex;align-items:center;justify-content:center;min-height:60vh}.preview-media img{max-width:100%;max-height:90vh;object-fit:contain}
     .preview-media video{max-width:100%;max-height:90vh;object-fit:contain}
     #animationOverlay{position:fixed;inset:0;z-index:2147483646;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.82);backdrop-filter:blur(7px);padding:18px}
     #animationOverlay.show{display:flex}
-    .animation-card{position:relative;width:min(980px,100%);display:grid;grid-template-columns:minmax(0,1.15fr) minmax(260px,.85fr);gap:16px;border:1px solid rgba(255,255,255,.14);border-radius:24px;background:#070914;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.44)}
-    .animation-preview{border:1px solid rgba(255,255,255,.1);border-radius:18px;background:#03050b;min-height:360px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .animation-card{position:relative;width:min(760px,100%);max-height:88vh;overflow:auto;display:grid;grid-template-columns:minmax(0,.9fr) minmax(260px,1fr);gap:16px;border:1px solid rgba(255,255,255,.14);border-radius:22px;background:#070914;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.44)}
+    .animation-preview{border:1px solid rgba(255,255,255,.1);border-radius:18px;background:#03050b;height:min(320px,42vh);min-height:180px;display:flex;align-items:center;justify-content:center;overflow:hidden}
     .animation-preview img{width:100%;height:100%;object-fit:contain}
     .animation-side{display:flex;flex-direction:column;justify-content:center;gap:14px;padding:8px}
     .animation-side h3{margin:0;font-size:24px;line-height:1.05}
@@ -147,7 +147,7 @@
     .animation-run:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
     .animation-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.58);color:#fff;font-size:24px;z-index:5}
     @media(max-width:1100px){.workspace{grid-template-columns:1fr}.creator{position:relative;top:auto}.result-panel{min-height:0}.results-strip{grid-template-columns:repeat(2,minmax(0,1fr));min-height:520px}.result-thumb{min-height:320px}}
-    @media(max-width:720px){.page-shell{padding:12px}.creator,.result-panel{padding:12px;border-radius:20px}.creator{max-height:none;overflow:visible}.workspace{gap:12px}.dropzone{min-height:180px}.upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.results-strip:not(.empty){display:flex;grid-template-columns:none;gap:12px;overflow-x:auto;overflow-y:hidden;min-height:0;max-height:none;aspect-ratio:auto;padding:10px 22% 10px 10px;scroll-snap-type:x mandatory}.result-thumb{flex:0 0 78%;aspect-ratio:9/16;min-height:0;scroll-snap-align:start}.animation-card{grid-template-columns:1fr}.animation-preview{min-height:260px}.actions{gap:8px}.btn-primary{font-size:17px}.seg button{min-height:36px;padding:0 14px;font-size:13px}.options-section .option-group{padding:8px}.options-section .option-label{flex-basis:48px}.options-section .seg button{min-height:32px;padding:0 10px;font-size:12px}}
+    @media(max-width:720px){.page-shell{padding:12px}.creator,.result-panel{padding:12px;border-radius:20px}.creator{max-height:none;overflow:visible}.workspace{gap:12px}.dropzone{min-height:180px}.upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.results-strip:not(.empty){display:flex;grid-template-columns:none;gap:12px;overflow-x:auto;overflow-y:hidden;min-height:0;max-height:none;aspect-ratio:auto;padding:10px 22% 10px 10px;scroll-snap-type:x mandatory}.result-thumb{flex:0 0 78%;aspect-ratio:9/16;min-height:0;scroll-snap-align:start}.animation-card{width:min(430px,calc(100% - 20px));grid-template-columns:1fr;padding:12px;gap:12px}.animation-preview{height:230px;min-height:0}.animation-side{gap:10px}.animation-side h3{font-size:22px}.animation-side p{font-size:14px}.actions{gap:8px}.btn-primary{font-size:17px}.seg button{min-height:36px;padding:0 14px;font-size:13px}.options-section .option-group{padding:8px}.options-section .option-label{flex-basis:48px}.options-section .seg button{min-height:32px;padding:0 10px;font-size:12px}}
 
     /* Requested compact product-card fixes */
     [hidden]{display:none!important}
@@ -1211,10 +1211,11 @@ Easy daily use"></textarea>
         const token = session && session.data && session.data.session ? session.data.session.access_token : '';
         const runId = `product-card-animation-${currentUser.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
         const prompt = [
-          'Create a simple smooth 6 second product selling card animation from this exact image.',
-          'Keep the product identity, text, typography, layout, colors, packaging, logo, and composition stable.',
-          'Add subtle premium motion only: gentle camera push-in, slight parallax, realistic light shimmer, and clean product emphasis.',
-          'Do not change the product, do not add new text, do not add fake logos, badges, ratings, discounts, watermarks, QR codes, or extra claims.'
+          'Simple animation only.',
+          'Do not change the image design, product, logo, layout, colors, or any text.',
+          'Keep all text exactly readable and stable.',
+          'Add only gentle camera movement and subtle light motion.',
+          'No new text, no new objects, no watermarks.'
         ].join(' ');
         const response = await fetch('/.netlify/functions/run-product-card-animation', {
           method:'POST',
@@ -1230,7 +1231,7 @@ Easy daily use"></textarea>
             prompt,
             duration: 6,
             resolution: '720p',
-            aspect_ratio: selectedAspect || '3:4',
+            aspect_ratio: '9:16',
             image_url: animationSource.url,
             image_urls: [animationSource.url],
             pricing_mode: 'product_card_animation',
