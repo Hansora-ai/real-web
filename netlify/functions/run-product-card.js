@@ -122,7 +122,7 @@ function styleGuide(style) {
 function humanGuide(mode) {
   const guides = {
     none: "Strict no-human mode: do not show any human, hands, faces, arms, legs, body parts, silhouettes, mannequins, or people-like figures. The product must remain the only hero subject with graphic callouts and a polished ad-card layout.",
-    holding: "With-human mode: include a realistic human hand or person only if it fits this exact product naturally. Keep the product dominant, fully visible, and label-readable. Do not cover important logos, labels, shape, or product details.",
+    holding: "With-human mode is mandatory: include a realistic human presence that naturally fits the exact product. First identify the product category, then choose the correct human interaction: shoes should be worn on feet or held naturally, clothing should be worn by a model or held to show fabric/fit, bags/accessories should be held/worn/carried, bottles/cosmetics/supplements should be held in a hand, food can be held or placed near a natural lifestyle human context, electronics can be held/used. Keep the product dominant, fully visible, label-readable, and not replaced. Do not cover important logos, labels, shape, or product details.",
     using: "Include a realistic human using the product in a believable way for its category. Keep the product clear, recognizable, and visually dominant.",
     beside: "Include a realistic human positioned beside or behind the product as a supporting lifestyle element. The product remains the main subject.",
   };
@@ -194,6 +194,7 @@ DESIGN REQUIREMENTS:
 - For phones/electronics: emphasize device details, screen/body, technical precision, and modern feature callouts.
 - For furniture/home/accessories: emphasize scale, material, use context, comfort, build, and realistic environment.
 - Keep the product clean, sharp, centered or intentionally composed, with realistic lighting and premium shadows.
+- Leave comfortable safe margins around the product and important text. The product must not touch or be cropped by the image edges; keep at least 8-12% breathing room unless the product is intentionally and professionally cropped without losing identity.
 - Avoid clutter, distorted product geometry, broken labels, bad typography, misspelled words, repeated letters, watermarks, QR codes, stock image marks, messy backgrounds, and unrelated props.
 - Make the final image look like a professional Amazon/ecommerce/social product ad card ready for selling.
 ${extraNotes ? `\nEXTRA USER NOTES:\n- ${extraNotes}` : ""}
