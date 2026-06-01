@@ -227,6 +227,8 @@ export default async (request, context) => {
       bottom:0;
       max-height:88vh;
       overflow:auto;
+      overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;
       padding:18px 18px calc(26px + env(safe-area-inset-bottom));
       border-radius:28px 28px 0 0;
       border-top:1px solid rgba(255,255,255,.12);
@@ -393,6 +395,7 @@ export default async (request, context) => {
         <a href="/expand.html?mode=expand">Expand</a>
         <a href="/expand.html?mode=face-swap">Face swap</a>
         <a href="/character.html">Character</a>
+        <a href="/product_card.html">Product Card</a>
         <a href="/upscale.html?mode=video">Video upscale</a>
         <a href="/lipsync.html">Lipsync Avatar</a>
         <a href="/audio.html?tool=text-to-speech">Text to speech</a>
@@ -420,27 +423,64 @@ export default async (request, context) => {
     const radialClose = document.getElementById('hs-radial-close');
     const radialMore = document.getElementById('hs-radial-more');
     const featureToggle = document.getElementById('hs-feature-toggle');
+    let lockedScrollY = 0;
+    let lockCount = 0;
+    const lockPageScroll = () => {
+      lockCount += 1;
+      if (lockCount > 1) return;
+      lockedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = '-' + lockedScrollY + 'px';
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+    };
+    const unlockPageScroll = () => {
+      lockCount = Math.max(0, lockCount - 1);
+      if (lockCount > 0) return;
+      document.documentElement.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, lockedScrollY || 0);
+    };
     const openMenu = (expandFeatures) => {
       if (!overlay) return;
+      if (overlay.classList.contains('is-open')) {
+        if (expandFeatures) overlay.classList.add('features-open');
+        return;
+      }
+      lockPageScroll();
       overlay.classList.add('is-open');
       overlay.setAttribute('aria-hidden', 'false');
       if (expandFeatures) overlay.classList.add('features-open');
     };
     const closeMenu = () => {
       if (!overlay) return;
+      if (!overlay.classList.contains('is-open')) return;
       overlay.classList.remove('is-open');
       overlay.setAttribute('aria-hidden', 'true');
+      unlockPageScroll();
     };
     const openRadial = () => {
       if (!radial) return;
+      if (radial.classList.contains('is-open')) return;
       closeMenu();
+      lockPageScroll();
       radial.classList.add('is-open');
       radial.setAttribute('aria-hidden', 'false');
     };
     const closeRadial = () => {
       if (!radial) return;
+      if (!radial.classList.contains('is-open')) return;
       radial.classList.remove('is-open');
       radial.setAttribute('aria-hidden', 'true');
+      unlockPageScroll();
     };
     menuBtn && menuBtn.addEventListener('click', () => { closeRadial(); openMenu(false); });
     closeBtn && closeBtn.addEventListener('click', closeMenu);
