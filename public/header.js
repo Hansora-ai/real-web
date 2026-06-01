@@ -28,7 +28,7 @@
   ];
 
   const IMAGE_MENU_TOOLS = [
-    { label: 'Upscale', href: '/upscale.html', icon: 'UP', note: 'Increase image quality' },
+    { label: 'Image Upscale', href: '/upscale.html', icon: 'UP', note: 'Increase image quality' },
     { label: 'Full angles', href: '/expand.html?mode=angles', icon: 'FA', note: 'Different angles chosen' },
     { label: 'Expand', href: '/expand.html?mode=expand', icon: 'EX', note: 'Extend image edges' },
     { label: 'Face swap', href: '/expand.html?mode=face-swap', icon: 'FS', note: 'Chosen face swap' },
