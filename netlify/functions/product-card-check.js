@@ -170,10 +170,15 @@ async function findGeneration(ids) {
     const res = await fetch(UG_URL + query, { headers: sb() });
     const arr = await res.json().catch(() => []);
     const row = Array.isArray(arr) ? arr[0] : null;
-    if (row) return row;
+    if (row && isProductCardRow(row)) return row;
   }
 
   return null;
+}
+
+function isProductCardRow(row) {
+  const source = String(row?.meta?.source || "").toLowerCase();
+  return source === "product-card" || source === "product-card-animation";
 }
 
 function storedRowResponse(row) {
