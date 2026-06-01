@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA • Product Selling Card</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="preconnect" href="https://qmaealblegvcwodlmeht.supabase.co" />
+  <link rel="dns-prefetch" href="//cdn.jsdelivr.net" />
+  <link rel="dns-prefetch" href="//qmaealblegvcwodlmeht.supabase.co" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="/header.css" rel="stylesheet" />
+  <script defer src="/header.js"></script>
+  <script defer src="/kie-upload-bridge.js"></script>
+  <style>
+    :root{
+      --bg:#08090f;
+      --panel:#11131b;
+      --panel-2:#171a25;
+      --line:rgba(255,255,255,.1);
+      --muted:rgba(239,244,255,.62);
+      --text:#f6f7fb;
+      --brand:#6366f1;
+      --brand-2:#8b5cf6;
+      --lime:#ddff37;
+      --danger:#fb7185;
+    }
+    *{box-sizing:border-box}
+    html,body{min-height:100%;margin:0}
+    body{
+      min-height:100vh;
+      background:
+        radial-gradient(1000px 520px at 10% -10%, rgba(99,102,241,.18), transparent 58%),
+        radial-gradient(900px 520px at 108% 12%, rgba(56,189,248,.10), transparent 56%),
+        var(--bg);
+      color:var(--text);
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",Arial,sans-serif;
+      overflow-x:hidden;
+    }
+    button,input,textarea,select{font:inherit}
+    button{cursor:pointer}
+    .page-shell{width:min(1500px,100%);margin:0 auto;padding:16px 18px 30px}
+    .workspace{display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:18px;align-items:start}
+    .panel{border:1px solid var(--line);background:rgba(17,19,27,.86);border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.34);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .creator{padding:14px;position:sticky;top:14px}
+    .panel-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .panel-title h2{margin:0;font-size:20px;letter-spacing:-.02em}
+    .cost-pill{border:1px solid rgba(221,255,55,.45);background:rgba(221,255,55,.12);color:#efffb2;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:850;white-space:nowrap}
+    .section{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);border-radius:18px;padding:12px;margin-top:10px}
+    .section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .section-head label,.section-head span{font-size:12px;color:rgba(255,255,255,.8);font-weight:850;text-transform:uppercase;letter-spacing:.05em}
+    .hint{font-size:11px;color:rgba(255,255,255,.46)}
+    .dropzone{position:relative;min-height:190px;border:1px dashed rgba(255,255,255,.2);border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.018));display:flex;align-items:center;justify-content:center;overflow:hidden;transition:.18s ease;padding:10px}
+    .dropzone.drag{border-color:rgba(221,255,55,.68);background:rgba(221,255,55,.08)}
+    .dropzone.has-file{border-style:solid;background:#070912;align-items:stretch;justify-content:center}
+    .upload-empty{text-align:center;padding:18px;color:rgba(255,255,255,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%}
+    .dropzone:not(.has-file) .upload-empty{position:absolute;inset:0;margin:auto}
+    .upload-empty .plus,.add-image-tile .plus{width:54px;height:54px;margin:0 auto 12px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:rgba(221,255,55,.12);border:1px solid rgba(221,255,55,.38);color:#efffb2;font-size:28px;box-shadow:0 0 24px rgba(221,255,55,.12)}
+    .upload-empty strong{display:block;font-size:15px;color:#fff;line-height:1.15}
+    .upload-empty small{display:block;margin-top:6px;color:rgba(255,255,255,.48);line-height:1.35}
+    .upload-grid{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-content:start}
+    .upload-thumb,.add-image-tile{position:relative;min-height:112px;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.12);background:#070912;display:flex;align-items:center;justify-content:center}
+    .upload-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+    .upload-index{position:absolute;top:7px;left:7px;min-width:26px;height:26px;padding:0 8px;border-radius:999px;background:rgba(0,0,0,.68);border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:850;color:#fff}
+    .remove-image{position:absolute;top:7px;right:7px;width:28px;height:28px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(0,0,0,.7);color:#fff;font-size:20px;line-height:1;z-index:3;display:flex;align-items:center;justify-content:center;font-weight:800}
+    .add-image-tile{background:rgba(255,255,255,.035);border-style:dashed;color:rgba(255,255,255,.55);text-align:center;flex-direction:column;font-size:12px;font-weight:760;min-height:112px}
+    .add-image-tile .plus{width:42px;height:42px;font-size:24px;margin-bottom:7px;border-radius:15px}
+    .field-grid{display:grid;grid-template-columns:1fr;gap:10px}
+    .field{display:flex;flex-direction:column;gap:7px}
+    .field label,.option-label{font-size:12px;color:rgba(255,255,255,.66);font-weight:780}
+    .option-group{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+    .option-group:first-child{margin-top:0}
+    .options-section{padding:10px}
+    .options-section .section-head{margin-bottom:8px}
+    .options-section .option-group{flex-direction:row;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;padding:8px 10px;border:1px solid rgba(255,255,255,.1);background:rgba(24,26,31,.72);border-radius:14px}
+    .options-section .option-label{flex:0 0 54px;font-size:12px;font-weight:800;color:rgba(239,244,255,.58);letter-spacing:.01em}
+    .options-section .seg{justify-content:flex-end;gap:6px}
+    .options-section .seg button{min-height:34px;padding:0 13px;border-radius:14px;font-size:13px}
+    .options-section #aspectGroup button,.options-section #resolutionGroup button{padding:0 12px}
+    .control{width:100%;border:1px solid rgba(255,255,255,.12);background:rgba(7,9,18,.72);color:#fff;border-radius:14px;min-height:42px;padding:0 12px;outline:none}
+    textarea.control{min-height:92px;padding:12px;resize:vertical;line-height:1.42}
+    .seg{display:flex;gap:8px;flex-wrap:wrap}
+    .seg button{border:1px solid rgba(255,255,255,.12);background:rgba(7,9,18,.72);color:rgba(255,255,255,.76);border-radius:999px;min-height:38px;padding:0 17px;font-size:14px;font-weight:850;transition:.16s ease}
+    .seg button:hover{border-color:rgba(221,255,55,.35);color:#fff}
+    .seg button.active{background:rgba(221,255,55,.14);border-color:rgba(221,255,55,.72);color:#efffb2;box-shadow:0 0 0 1px rgba(221,255,55,.14),0 0 28px rgba(221,255,55,.17)}
+    .seg button:disabled{opacity:.36;cursor:not-allowed;color:rgba(255,255,255,.35);border-color:rgba(255,255,255,.08);background:rgba(7,9,18,.42);box-shadow:none;filter:saturate(.55)}
+    .seg button:disabled:hover{border-color:rgba(255,255,255,.08);color:rgba(255,255,255,.35)}
+    .actions{display:flex;gap:10px;margin-top:14px;align-items:center}
+    .btn{border:0;border-radius:18px;min-height:52px;padding:0 18px;font-weight:900;letter-spacing:-.01em}
+    .btn-primary{flex:1;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 16px 38px rgba(99,102,241,.45);font-size:18px}
+    .btn-primary:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+    .btn-secondary{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:13px;min-height:48px;border-radius:16px}
+    .status{min-height:20px;margin:10px 2px 0;color:#fef3c7;font-size:12px;line-height:1.4}
+    .status.error{color:#fecdd3}.status.ok{color:#bbf7d0}
+    .result-panel{padding:14px;min-height:0}
+    .result-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .result-top h2{margin:0;font-size:20px;letter-spacing:-.02em}
+    .results-strip{position:relative;border:1px solid var(--line);border-radius:20px;min-height:325px;background:radial-gradient(520px 380px at 50% 30%,rgba(99,102,241,.12),transparent 60%),#0b0d14;overflow:hidden;padding:12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-content:start}
+    .results-strip.empty{display:flex;align-items:center;justify-content:center}
+    .empty-result{text-align:center;max-width:360px;padding:24px;color:rgba(255,255,255,.64)}
+    .empty-result .icon{width:74px;height:74px;margin:0 auto 14px;border-radius:24px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:34px}
+    .result-thumb{position:relative;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.1);background:rgba(15,23,42,.55);aspect-ratio:1/1.12;min-width:0}
+    .result-thumb img{width:100%;height:100%;object-fit:cover;display:block;background:rgba(2,6,23,.85)}
+    .result-thumb-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:rgba(255,255,255,.55);font-size:12px;background:rgba(2,6,23,.75)}
+    .processing-orb,.loader{width:48px;height:48px;border-radius:18px;background:linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8);box-shadow:0 0 30px rgba(139,92,246,.52);animation:spin 1.2s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .thumb-badge{position:absolute;top:8px;left:8px;font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(2,6,23,.7);color:rgba(255,255,255,.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+    .thumb-status{position:absolute;bottom:8px;left:8px;right:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;color:rgba(255,255,255,.78)}
+    .thumb-status-extended{flex-direction:column;align-items:stretch;padding:8px 10px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:rgba(2,6,23,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+    .thumb-row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+    .thumb-meta{display:flex;flex-direction:column;min-width:0;gap:2px}
+    .thumb-model{font-size:11px;font-weight:700;color:rgba(255,255,255,.88);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+    .thumb-prompt{font-size:10px;color:rgba(255,255,255,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+    .thumb-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-shrink:0}
+    .thumb-state{font-size:10px;color:rgba(255,255,255,.75)}
+    .thumb-state.ready{color:rgba(110,231,183,.95)}
+    .thumb-state.failed{color:rgba(248,113,113,.95)}
+    .thumb-get{font-size:10px;min-width:74px;padding:6px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(99,102,241,.22);color:rgba(255,255,255,.92)}
+    .thumb-get.hidden{display:none !important}
+    #previewOverlay{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.86);backdrop-filter:blur(7px);padding:18px}
+    #previewOverlay.show{display:flex}.preview-card{position:relative;width:min(980px,100%);max-height:90vh;border-radius:24px;border:1px solid rgba(255,255,255,.14);background:#050714;overflow:hidden}.preview-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.58);color:#fff;font-size:24px;z-index:5}.preview-media{display:flex;align-items:center;justify-content:center;min-height:60vh}.preview-media img{max-width:100%;max-height:90vh;object-fit:contain}
+    @media(max-width:1100px){.workspace{grid-template-columns:1fr}.creator{position:relative;top:auto}.results-strip{grid-template-columns:repeat(3,minmax(0,1fr));min-height:300px}}
+    @media(max-width:720px){.page-shell{padding:12px}.creator,.result-panel{padding:12px;border-radius:20px}.workspace{gap:12px}.dropzone{min-height:180px}.upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.results-strip{grid-template-columns:repeat(2,minmax(0,1fr));min-height:260px}.actions{gap:8px}.btn-primary{font-size:17px}.seg button{min-height:36px;padding:0 14px;font-size:13px}.options-section .option-group{padding:8px}.options-section .option-label{flex-basis:48px}.options-section .seg button{min-height:32px;padding:0 10px;font-size:12px}}
+
+    /* Requested compact product-card fixes */
+    [hidden]{display:none!important}
+    .panel-title .cost-pill{display:none!important}
+
+    .dropzone.has-file{
+      min-height:132px;
+      align-items:center;
+      justify-content:flex-start;
+      overflow-x:auto;
+      overflow-y:hidden;
+      padding:10px;
+      scrollbar-width:thin;
+    }
+    .dropzone.has-file .upload-grid{
+      display:flex!important;
+      align-items:center;
+      justify-content:flex-start;
+      gap:10px;
+      width:100%;
+      overflow:visible;
+      grid-template-columns:none;
+      align-content:center;
+    }
+    .dropzone.has-file .upload-thumb,
+    .dropzone.has-file .add-image-tile{
+      flex:0 0 96px;
+      width:96px;
+      height:108px;
+      min-height:108px;
+      border-radius:16px;
+    }
+    .dropzone.has-file .upload-index{display:none!important}
+    .dropzone.has-file .upload-thumb img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+    }
+    .dropzone.has-file .add-image-tile{
+      padding:8px;
+      background:rgba(255,255,255,.035);
+    }
+    .dropzone.has-file .add-image-tile .plus{
+      width:42px;
+      height:42px;
+      margin:0 auto 7px;
+    }
+
+    .options-section{padding:9px}
+    .options-section .section-head{margin-bottom:6px}
+    .options-section .option-group{
+      margin-top:6px;
+      padding:6px 8px;
+      gap:8px;
+      border-radius:12px;
+    }
+    .options-section .option-label{
+      flex:0 0 42px;
+      font-size:11px;
+      font-weight:800;
+    }
+    .options-section .seg{gap:5px}
+    .options-section .seg button{
+      min-height:30px;
+      padding:0 10px;
+      border-radius:12px;
+      font-size:12px;
+    }
+    .options-section #humanModeGroup button,
+    .options-section #countGroup button{
+      padding:0 11px;
+    }
+
+    .results-strip.show-examples{
+      display:block;
+      min-height:325px;
+      padding:14px;
+    }
+    .product-examples{
+      width:100%;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+    }
+    .product-example-card{
+      position:relative;
+      min-height:235px;
+      aspect-ratio:16/9;
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:18px;
+      overflow:hidden;
+      background:#171a20;
+      cursor:pointer;
+    }
+    .product-example-card img{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    .product-example-card::after{
+      content:'';
+      position:absolute;
+      inset:0;
+      background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.72));
+      pointer-events:none;
+    }
+    .product-example-label{
+      position:absolute;
+      left:14px;
+      right:14px;
+      bottom:14px;
+      z-index:1;
+    }
+    .product-example-label strong{
+      display:block;
+      font-size:17px;
+      font-weight:900;
+      line-height:1;
+      color:#fff;
+    }
+    .product-example-label span{
+      display:block;
+      margin-top:5px;
+      font-size:12px;
+      color:rgba(239,244,255,.7);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    @media(max-width:720px){
+      .dropzone.has-file{min-height:126px}
+      .dropzone.has-file .upload-thumb,
+      .dropzone.has-file .add-image-tile{
+        flex-basis:88px;
+        width:88px;
+        height:102px;
+        min-height:102px;
+      }
+      .options-section .option-group{padding:6px 7px}
+      .options-section .option-label{flex-basis:38px}
+      .options-section .seg button{min-height:30px;padding:0 9px;font-size:12px}
+      .product-examples{grid-template-columns:1fr}
+      .product-example-card{min-height:190px}
+    }
+
+  </style>
+</head>
+<body>
+  <div id="sharedHeader"></div>
+
+  <div class="page-shell">
+    <main class="workspace">
+      <section class="panel creator" aria-label="Product card creator">
+        <div class="panel-title">
+          <h2>Create card</h2>
+          <span class="cost-pill" id="costLabel">1⚡</span>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><label for="productImageInput">Product images</label><span class="hint">Max 5</span></div>
+          <input id="productImageInput" type="file" accept="image/*" multiple hidden />
+          <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="Upload product images">
+            <div id="uploadEmpty" class="upload-empty">
+              <div class="plus">＋</div>
+              <strong>Upload product<br>photos</strong>
+              <small>PNG, JPG or WEBP.<br>Max 5 images, 15MB each.</small>
+            </div>
+            <div id="imageThumbs" class="upload-grid" hidden></div>
+          </div>
+        </div>
+
+        <div class="section options-section">
+          <div class="section-head"><span>Options</span><span class="hint">Simple</span></div>
+          <div class="option-group">
+            <div class="option-label">Human</div>
+            <div class="seg" id="humanModeGroup">
+              <button type="button" class="active" data-human="none">No human</button>
+              <button type="button" data-human="holding">With human</button>
+            </div>
+          </div>
+          <div class="option-group">
+            <div class="option-label">Gen</div>
+            <div class="seg" id="countGroup">
+              <button type="button" class="active" data-count="1">1 image</button>
+              <button type="button" data-count="2">2 images</button>
+            </div>
+          </div>
+          <div class="option-group">
+            <div class="option-label">AR</div>
+            <div class="seg" id="aspectGroup">
+              <button type="button" data-aspect="1:1">1:1</button>
+              <button type="button" class="active" data-aspect="3:4">3:4</button>
+              <button type="button" data-aspect="4:5">4:5</button>
+              <button type="button" data-aspect="9:16">9:16</button>
+              <button type="button" data-aspect="16:9">16:9</button>
+            </div>
+          </div>
+          <div class="option-group">
+            <div class="option-label">Res</div>
+            <div class="seg" id="resolutionGroup">
+              <button type="button" class="active" data-resolution="1K">1K</button>
+              <button type="button" data-resolution="2K">2K</button>
+              <button type="button" data-resolution="4K">4K</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><span>Text on card</span><span class="hint">Only what you need</span></div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="headlineText">Headline</label>
+              <input id="headlineText" class="control" maxlength="90" placeholder="Example: Natural Apple Flavour" />
+            </div>
+            <div class="field">
+              <label for="benefitsText">Features</label>
+              <textarea id="benefitsText" class="control" maxlength="420" placeholder="Write each feature on a new line. Example:
+20g protein
+Smooth taste
+Easy daily use"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="generateBtn" class="btn btn-primary" type="button">Run 1 ⚡</button>
+          <button id="resetBtn" class="btn btn-secondary" type="button">Reset</button>
+        </div>
+        <div id="status" class="status"></div>
+      </section>
+
+      <section class="panel result-panel" aria-label="Product card results">
+        <div class="result-top">
+          <h2>Result</h2>
+          <span class="hint" id="resultHint">Waiting for product images</span>
+        </div>
+        <div id="resultStage" class="results-strip empty"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="previewOverlay">
+    <div class="preview-card">
+      <button type="button" id="previewClose" class="preview-close" aria-label="Close preview">&times;</button>
+      <div id="previewMedia" class="preview-media"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const WORKING_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXAiLCJyZWYiOiJxbWFlYWxibGVndmN3b2RsbWVodCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzU4NjI5MzczLCJleHAiOjIwNzQyMDUzNzN9.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+
+    const supabaseClient = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, WORKING_SUPABASE_ANON_KEY);
+    window.__HANSORA_SB__ = supabaseClient;
+    window.hansoraSupabase = supabaseClient;
+
+    let currentUser = null;
+    let currentCredits = 0;
+    let productFiles = [];
+    let selectedHuman = 'none';
+    let selectedAspect = '3:4';
+    let selectedResolution = '1K';
+    let selectedCount = 1;
+    let activeRuns = [];
+    let historyRows = [];
+
+    const els = {
+      costLabel: document.getElementById('costLabel'),
+      input: document.getElementById('productImageInput'),
+      dropzone: document.getElementById('dropzone'),
+      uploadEmpty: document.getElementById('uploadEmpty'),
+      imageThumbs: document.getElementById('imageThumbs'),
+      headlineText: document.getElementById('headlineText'),
+      benefitsText: document.getElementById('benefitsText'),
+      generateBtn: document.getElementById('generateBtn'),
+      resetBtn: document.getElementById('resetBtn'),
+      status: document.getElementById('status'),
+      resultStage: document.getElementById('resultStage'),
+      resultHint: document.getElementById('resultHint'),
+      overlay: document.getElementById('previewOverlay'),
+      previewMedia: document.getElementById('previewMedia'),
+      previewClose: document.getElementById('previewClose')
+    };
+
+    function parseCredits(value){
+      const n = Number(String(value ?? '').replace(/[^\d.-]/g, ''));
+      return Number.isFinite(n) ? n : 0;
+    }
+    function formatCredits(value){
+      const n = parseCredits(value);
+      return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
+    }
+    function formatCost(value){
+      const n = Number(value || 0);
+      return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
+    }
+    function setCreditsEverywhere(value){
+      const n = parseCredits(value);
+      currentCredits = n;
+      document.querySelectorAll('#navCredits').forEach((node) => { node.textContent = formatCredits(n); });
+      if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') window.HansoraHeader.setCredits(n);
+    }
+    function getUnitCost(){ return selectedResolution === '4K' ? 1.5 : 1; }
+    function getTotalCost(){ return getUnitCost() * selectedCount; }
+    function updateCost(){
+      const cost = formatCost(getTotalCost());
+      if (els.costLabel) els.costLabel.textContent = `${cost}⚡`;
+      els.generateBtn.textContent = `Run ${cost} ⚡`;
+    }
+    function showStatus(message, type){
+      els.status.textContent = message || '';
+      els.status.className = `status ${type || ''}`.trim();
+    }
+
+    async function readSupabaseCredits(){
+      const { data: userRes } = await supabaseClient.auth.getUser();
+      const user = userRes && userRes.user ? userRes.user : null;
+      if (!user) return { user:null, profile:null, credits:0 };
+      const { data: profile, error } = await supabaseClient
+        .from('profiles')
+        .select('credits, avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return { user, profile, credits: parseCredits(profile && profile.credits) };
+    }
+
+    async function refreshCredits(){
+      try{
+        const { user, profile, credits } = await readSupabaseCredits();
+        if (!user) return 0;
+        currentUser = user;
+        setCreditsEverywhere(credits);
+        const navUser = document.getElementById('navUser');
+        const btnLogin = document.getElementById('btnLoginSignup');
+        if (btnLogin && navUser) { btnLogin.classList.add('hidden'); navUser.classList.remove('hidden'); navUser.classList.add('flex'); }
+        const avatarImg = document.getElementById('navAvatarImg');
+        if (avatarImg && profile && profile.avatar_url) { avatarImg.src = profile.avatar_url; avatarImg.classList.remove('hidden'); }
+        return parseCredits(credits);
+      }catch(e){ console.warn('refreshCredits failed', e); }
+      return parseCredits(currentCredits);
+    }
+
+    async function loadUser(){
+      try{
+        const { data } = await supabaseClient.auth.getUser();
+        currentUser = data && data.user ? data.user : null;
+        if (!currentUser) {
+          setCreditsEverywhere(0);
+          renderResults();
+          return;
+        }
+        await refreshCredits();
+        await loadHistory();
+      }catch(e){ console.warn('loadUser failed', e); renderResults(); }
+    }
+
+    function setActive(group, key, attr){
+      group.querySelectorAll('button').forEach((btn) => {
+        const active = btn.dataset[attr] === String(key);
+        btn.classList.toggle('active', active);
+      });
+    }
+
+    function updateResolutionAvailability(){
+      const resolutionGroup = document.getElementById('resolutionGroup');
+      const fourKButton = resolutionGroup ? resolutionGroup.querySelector('button[data-resolution="4K"]') : null;
+      if (!fourKButton) return;
+      const disableFourK = selectedAspect === '1:1';
+      fourKButton.disabled = disableFourK;
+      fourKButton.setAttribute('aria-disabled', disableFourK ? 'true' : 'false');
+      if (disableFourK && selectedResolution === '4K') selectedResolution = '2K';
+      setActive(resolutionGroup, selectedResolution, 'resolution');
+    }
+
+    document.getElementById('humanModeGroup').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-human]');
+      if (!btn) return;
+      selectedHuman = btn.dataset.human;
+      setActive(document.getElementById('humanModeGroup'), selectedHuman, 'human');
+    });
+    document.getElementById('countGroup').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-count]');
+      if (!btn) return;
+      selectedCount = Number(btn.dataset.count) === 2 ? 2 : 1;
+      setActive(document.getElementById('countGroup'), selectedCount, 'count');
+      updateCost();
+    });
+    document.getElementById('aspectGroup').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-aspect]');
+      if (!btn) return;
+      const wasFourK = selectedResolution === '4K';
+      selectedAspect = btn.dataset.aspect;
+      setActive(document.getElementById('aspectGroup'), selectedAspect, 'aspect');
+      updateResolutionAvailability();
+      if (selectedAspect === '1:1' && wasFourK) {
+        showStatus('1:1 supports up to 2K here, so 4K was disabled and resolution was set to 2K.', 'ok');
+      }
+      updateCost();
+    });
+    document.getElementById('resolutionGroup').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-resolution]');
+      if (!btn || btn.disabled) return;
+      selectedResolution = btn.dataset.resolution;
+      setActive(document.getElementById('resolutionGroup'), selectedResolution, 'resolution');
+      updateResolutionAvailability();
+      updateCost();
+    });
+
+    function renderImageThumbs(){
+      els.input.value = '';
+      if (!productFiles.length) {
+        els.uploadEmpty.hidden = false;
+        els.imageThumbs.hidden = true;
+        els.imageThumbs.innerHTML = '';
+        els.dropzone.classList.remove('has-file');
+        els.resultHint.textContent = 'Waiting for product images';
+        return;
+      }
+
+      els.uploadEmpty.hidden = true;
+      els.imageThumbs.hidden = false;
+      els.dropzone.classList.add('has-file');
+      els.resultHint.textContent = 'Ready';
+      els.imageThumbs.innerHTML = '';
+
+      productFiles.forEach((item, index) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'upload-thumb';
+        const img = document.createElement('img');
+        img.src = item.url;
+        img.alt = `Uploaded product image ${index + 1}`;
+        const num = document.createElement('span');
+        num.className = 'upload-index';
+        num.textContent = String(index + 1);
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'remove-image';
+        remove.innerHTML = '&times;';
+        remove.setAttribute('aria-label', `Remove image ${index + 1}`);
+        remove.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          removeProductFile(index);
+        });
+        thumb.appendChild(img);
+        thumb.appendChild(num);
+        thumb.appendChild(remove);
+        els.imageThumbs.appendChild(thumb);
+      });
+
+      if (productFiles.length < 5) {
+        const add = document.createElement('button');
+        add.type = 'button';
+        add.className = 'add-image-tile';
+        add.innerHTML = '<div class="plus">＋</div><span>Add image</span>';
+        add.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); els.input.click(); });
+        els.imageThumbs.appendChild(add);
+      }
+    }
+
+    function addProductFiles(files){
+      const incoming = Array.from(files || []);
+      if (!incoming.length) return;
+      let added = 0;
+      let rejected = 0;
+      for (const file of incoming) {
+        if (productFiles.length >= 5) { rejected += 1; continue; }
+        if (!String(file.type || '').startsWith('image/')) { rejected += 1; continue; }
+        if (file.size > 15 * 1024 * 1024) { rejected += 1; continue; }
+        productFiles.push({ file, url: URL.createObjectURL(file) });
+        added += 1;
+      }
+      renderImageThumbs();
+      if (added) showStatus(`${productFiles.length} image${productFiles.length === 1 ? '' : 's'} loaded.`, 'ok');
+      if (rejected) showStatus('Some images were skipped. Max 5 images, 15MB each.', 'error');
+    }
+
+    function removeProductFile(index){
+      const [item] = productFiles.splice(index, 1);
+      if (item && item.url) URL.revokeObjectURL(item.url);
+      renderImageThumbs();
+      showStatus(productFiles.length ? `${productFiles.length} image${productFiles.length === 1 ? '' : 's'} loaded.` : '', productFiles.length ? 'ok' : '');
+    }
+
+    function clearProductFiles(){
+      productFiles.forEach((item) => { if (item.url) URL.revokeObjectURL(item.url); });
+      productFiles = [];
+      renderImageThumbs();
+    }
+
+    els.dropzone.addEventListener('click', (e) => {
+      if (e.target.closest('.remove-image') || e.target.closest('.add-image-tile')) return;
+      els.input.click();
+    });
+    els.dropzone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); els.input.click(); } });
+    els.input.addEventListener('change', (e) => addProductFiles(e.target.files || []));
+    ['dragenter','dragover'].forEach((eventName) => els.dropzone.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); els.dropzone.classList.add('drag'); }));
+    ['dragleave','drop'].forEach((eventName) => els.dropzone.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); els.dropzone.classList.remove('drag'); }));
+    els.dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      addProductFiles(e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files : []);
+    });
+
+    function normalizeLines(text){
+      return String(text || '').split(/\n|;|•/g).map((s) => s.trim()).filter(Boolean).slice(0, 6);
+    }
+
+    function getFormData(extraNotes){
+      return {
+        product_type: 'auto',
+        card_style: 'amazon',
+        human_mode: selectedHuman,
+        aspect_ratio: selectedAspect,
+        resolution: selectedResolution,
+        brand_name: '',
+        headline: els.headlineText.value.trim(),
+        subheadline: '',
+        benefits: normalizeLines(els.benefitsText.value),
+        cta: '',
+        extra_notes: extraNotes || ''
+      };
+    }
+
+    async function imageFromFile(file){
+      const objectUrl = URL.createObjectURL(file);
+      try{
+        return await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve({ img, objectUrl });
+          img.onerror = () => reject(new Error('image_decode_failed'));
+          img.src = objectUrl;
+        });
+      }catch(error){
+        try{ URL.revokeObjectURL(objectUrl); }catch(_e){}
+        throw error;
+      }
+    }
+
+    function drawContain(ctx, img, x, y, w, h){
+      const iw = img.naturalWidth || img.width || 1;
+      const ih = img.naturalHeight || img.height || 1;
+      const scale = Math.min(w / iw, h / ih);
+      const dw = iw * scale;
+      const dh = ih * scale;
+      const dx = x + (w - dw) / 2;
+      const dy = y + (h - dh) / 2;
+      ctx.drawImage(img, dx, dy, dw, dh);
+    }
+
+    async function createReferenceSheetFile(items){
+      const decoded = [];
+      try{
+        for (const item of items) decoded.push(await imageFromFile(item.file));
+        const count = decoded.length;
+        const cols = count <= 2 ? count : 3;
+        const rows = Math.ceil(count / cols);
+        const cell = 620;
+        const pad = 28;
+        const canvas = document.createElement('canvas');
+        canvas.width = cols * cell + (cols + 1) * pad;
+        canvas.height = rows * cell + (rows + 1) * pad;
+        const ctx = canvas.getContext('2d', { alpha:false });
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        decoded.forEach(({ img }, index) => {
+          const col = index % cols;
+          const row = Math.floor(index / cols);
+          const x = pad + col * (cell + pad);
+          const y = pad + row * (cell + pad);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(x, y, cell, cell);
+          ctx.strokeStyle = '#e5e7eb';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x, y, cell, cell);
+          drawContain(ctx, img, x + 18, y + 18, cell - 36, cell - 36);
+        });
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', .92));
+        if (!blob || !blob.size) throw new Error('reference_sheet_failed');
+        return new File([blob], 'product-reference-sheet.jpg', { type:'image/jpeg', lastModified:Date.now() });
+      }finally{
+        decoded.forEach((item) => { try{ URL.revokeObjectURL(item.objectUrl); }catch(_e){} });
+      }
+    }
+
+    async function normalizeImageFile(sourceFile){
+      if (!sourceFile || !String(sourceFile.type || '').startsWith('image/') || sourceFile.type === 'image/gif') return sourceFile;
+      const objectUrl = URL.createObjectURL(sourceFile);
+      try{
+        const img = await new Promise((resolve, reject) => {
+          const el = new Image();
+          el.onload = () => resolve(el);
+          el.onerror = () => reject(new Error('image_decode_failed'));
+          el.src = objectUrl;
+        });
+        const maxSide = 2048;
+        const scale = Math.min(1, maxSide / Math.max(img.naturalWidth || img.width || 1, img.naturalHeight || img.height || 1));
+        const width = Math.max(1, Math.round((img.naturalWidth || img.width || 1) * scale));
+        const height = Math.max(1, Math.round((img.naturalHeight || img.height || 1) * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d', { alpha:false });
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0,0,width,height);
+        ctx.drawImage(img,0,0,width,height);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', .92));
+        if (!blob || !blob.size) return sourceFile;
+        const baseName = String(sourceFile.name || 'product').replace(/\.[^.]+$/, '') || 'product';
+        return new File([blob], `${baseName}.jpg`, { type:'image/jpeg', lastModified:Date.now() });
+      }catch(e){
+        console.warn('image normalization skipped', e);
+        return sourceFile;
+      }finally{
+        try{ URL.revokeObjectURL(objectUrl); }catch(_e){}
+      }
+    }
+
+    async function uploadReferenceImage(){
+      if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') throw new Error('upload_bridge_missing');
+      showStatus('Preparing product images…');
+      const uploadFile = productFiles.length === 1 ? await normalizeImageFile(productFiles[0].file) : await createReferenceSheetFile(productFiles);
+      showStatus(productFiles.length === 1 ? 'Uploading product image…' : 'Uploading product reference sheet…');
+      const up = await window.kieUploadBridge.upload(uploadFile);
+      if (!up || !up.publicUrl) throw new Error('upload_no_public_url');
+      return up.publicUrl;
+    }
+
+    function openPreview(url){
+      if (!url) return;
+      els.previewMedia.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = 'Preview';
+      els.previewMedia.appendChild(img);
+      els.overlay.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+    function closePreview(){ els.overlay.classList.remove('show'); els.previewMedia.innerHTML = ''; document.body.style.overflow = ''; }
+    els.previewClose.addEventListener('click', closePreview);
+    els.overlay.addEventListener('click', (e) => { if (e.target === els.overlay) closePreview(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePreview(); });
+
+    async function downloadAsset(url){
+      if (!url) return;
+      const filename = `hansora-product-card-${Date.now()}.png`;
+      try{
+        const res = await fetch(url, { mode:'cors', credentials:'omit', cache:'no-store' });
+        if (!res.ok) throw new Error('download_fetch_failed');
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl; link.download = filename; link.style.display = 'none';
+        document.body.appendChild(link); link.click(); link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 2500);
+      }catch(_e){
+        const link = document.createElement('a');
+        link.href = url; link.download = filename; link.target = '_blank'; link.rel = 'noopener noreferrer';
+        document.body.appendChild(link); link.click(); link.remove();
+      }
+    }
+
+    const PRODUCT_CARD_EXAMPLES = {
+      before: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/Untitled%20folder/ChatGPT%20Image%20May%2015,%202026,%2009_12_38%20PM.png?auto=format&fit=crop&w=900&q=80',
+      after: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/Untitled%20folder/file_00000000f7e071f78f43a5f997a7ca2e.png?auto=format&fit=crop&w=1200&q=80'
+    };
+
+    function renderExampleCards(){
+      els.resultStage.innerHTML = `
+        <div class="product-examples">
+          <div class="product-example-card" data-preview="${PRODUCT_CARD_EXAMPLES.before}">
+            <img src="${PRODUCT_CARD_EXAMPLES.before}" alt="Before product example" />
+            <div class="product-example-label"><strong>Before</strong><span>Original product photo</span></div>
+          </div>
+          <div class="product-example-card" data-preview="${PRODUCT_CARD_EXAMPLES.after}">
+            <img src="${PRODUCT_CARD_EXAMPLES.after}" alt="After product card example" />
+            <div class="product-example-label"><strong>After</strong><span>Generated selling card appears here</span></div>
+          </div>
+        </div>`;
+      els.resultStage.querySelectorAll('[data-preview]').forEach((card) => {
+        card.addEventListener('click', () => openPreview(card.dataset.preview));
+      });
+    }
+
+    function buildResultCard(item){
+      const url = item.url || '';
+      const status = item.status || (url ? 'ready' : 'processing');
+      const failed = status === 'failed';
+      const ready = status === 'ready' && !!url;
+
+      const card = document.createElement('div');
+      card.className = 'result-thumb';
+      card.dataset.runId = item.runId || '';
+
+      if (url) {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = item.model || 'Product card';
+        img.loading = 'lazy';
+        card.appendChild(img);
+      } else {
+        const ph = document.createElement('div');
+        ph.className = 'result-thumb-placeholder';
+        if (!failed) {
+          const orb = document.createElement('div');
+          orb.className = 'processing-orb';
+          ph.appendChild(orb);
+        }
+        const label = document.createElement('div');
+        label.textContent = failed ? 'Failed' : 'Creating...';
+        ph.appendChild(label);
+        card.appendChild(ph);
+      }
+
+      const badge = document.createElement('div');
+      badge.className = 'thumb-badge';
+      badge.textContent = 'IMAGE';
+      card.appendChild(badge);
+
+      const panel = document.createElement('div');
+      panel.className = 'thumb-status thumb-status-extended';
+      const row = document.createElement('div');
+      row.className = 'thumb-row';
+      const meta = document.createElement('div');
+      meta.className = 'thumb-meta';
+      const modelLine = document.createElement('div');
+      modelLine.className = 'thumb-model';
+      modelLine.textContent = item.model || 'Product Selling Card';
+      const promptLine = document.createElement('div');
+      promptLine.className = 'thumb-prompt';
+      promptLine.textContent = item.prompt || 'Product card';
+      meta.appendChild(modelLine);
+      meta.appendChild(promptLine);
+
+      const actions = document.createElement('div');
+      actions.className = 'thumb-actions';
+      const state = document.createElement('span');
+      state.className = 'thumb-state';
+      if (failed) { state.textContent = 'Failed'; state.classList.add('failed'); }
+      else if (ready) { state.textContent = 'Ready'; state.classList.add('ready'); }
+      else { state.textContent = 'Processing'; }
+      const getBtn = document.createElement('button');
+      getBtn.type = 'button';
+      getBtn.className = 'thumb-get';
+      getBtn.textContent = 'Get';
+      if (!ready) getBtn.classList.add('hidden');
+      getBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (url) downloadAsset(url);
+      });
+      actions.appendChild(state);
+      actions.appendChild(getBtn);
+      row.appendChild(meta);
+      row.appendChild(actions);
+      panel.appendChild(row);
+      card.appendChild(panel);
+
+      if (url) {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', () => openPreview(url));
+      }
+      return card;
+    }
+
+    function renderResults(){
+      const activeIds = new Set(activeRuns.map((run) => run.runId).filter(Boolean));
+      const historyItems = historyRows
+        .filter((row) => row && row.result_url && !activeIds.has(row.meta && row.meta.run_id))
+        .map((row) => ({
+          runId: row.meta && row.meta.run_id,
+          url: row.result_url,
+          status: 'ready',
+          model: row.provider || 'Product Selling Card',
+          prompt: row.prompt || 'Product card'
+        }));
+      const items = [...activeRuns, ...historyItems].slice(0, 12);
+      els.resultStage.innerHTML = '';
+      const hasItems = items.length > 0;
+      els.resultStage.classList.toggle('empty', !hasItems);
+      els.resultStage.classList.toggle('show-examples', !hasItems);
+      if (!hasItems) {
+        renderExampleCards();
+        els.resultHint.textContent = 'Before / After examples';
+        return;
+      }
+      items.forEach((item) => els.resultStage.appendChild(buildResultCard(item)));
+      const processing = activeRuns.some((run) => run.status === 'processing');
+      els.resultHint.textContent = processing ? 'Processing' : 'Ready';
+    }
+
+    async function loadHistory(){
+      if (!currentUser) { historyRows = []; renderResults(); return; }
+      try{
+        const { data, error } = await supabaseClient
+          .from('user_generations')
+          .select('result_url,prompt,provider,meta,created_at')
+          .eq('user_id', currentUser.id)
+          .eq('kind', 'image')
+          .not('result_url', 'is', null)
+          .order('created_at', { ascending:false })
+          .limit(40);
+        if (error) throw error;
+        historyRows = (Array.isArray(data) ? data : []).filter((row) => row && row.result_url && row.meta && row.meta.source === 'product-card').slice(0, 12);
+      }catch(e){
+        console.warn('history load failed', e);
+      }
+      renderResults();
+    }
+
+    async function pollProductCard({ uid, runId, taskId }){
+      const started = Date.now();
+      const timeoutMs = 5 * 60 * 1000;
+      let delay = 2500;
+      while (Date.now() - started < timeoutMs) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        const url = `/.netlify/functions/product-card-check?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId || '')}`;
+        const res = await fetch(url, { headers:{ Accept:'application/json' } });
+        const js = await res.json().catch(() => ({}));
+        if (js && js.status === 'done' && (js.result_url || js.image_url || (Array.isArray(js.urls) && js.urls[0]))) {
+          return js.result_url || js.image_url || js.urls[0];
+        }
+        if (js && (js.failed || js.status === 'failed')) throw new Error(js.error || 'generation_failed');
+        delay = Math.min(6000, delay + 500);
+      }
+      throw new Error('generation_timeout');
+    }
+
+    function upsertActiveRun(run){
+      const index = activeRuns.findIndex((item) => item.runId === run.runId);
+      if (index >= 0) activeRuns[index] = { ...activeRuns[index], ...run };
+      else activeRuns.push(run);
+      activeRuns = activeRuns.slice(0, 12);
+      renderResults();
+    }
+
+    async function createGenerationRun({ index, referenceUrl, form, token }){
+      const runId = `product-card-${currentUser.id}-${Date.now()}-${index + 1}-${Math.random().toString(16).slice(2)}`;
+      const promptLabel = form.headline || `Product card ${index + 1}`;
+      const displayLabel = selectedCount > 1 ? `${promptLabel} #${index + 1}` : promptLabel;
+      upsertActiveRun({ runId, status:'processing', model:'Product Selling Card', prompt:displayLabel, url:'' });
+
+      try{
+        const response = await fetch('/.netlify/functions/run-product-card', {
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'Accept':'application/json',
+            'X-USER-ID': currentUser.id,
+            ...(token ? { Authorization:`Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({
+            uid: currentUser.id,
+            run_id: runId,
+            urls: [referenceUrl],
+            input_urls: [referenceUrl],
+            ...form
+          })
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || !body.ok) {
+          if (response.status === 402 || body.error === 'not_enough_credits') throw new Error('not_enough_credits');
+          throw new Error(body.error || body.message || 'start_failed');
+        }
+        if (body.credits_remaining !== undefined && body.credits_remaining !== null) {
+          setCreditsEverywhere(body.credits_remaining);
+        } else {
+          setCreditsEverywhere(Math.max(0, parseCredits(currentCredits) - parseCredits(body.cost || getUnitCost())));
+        }
+        if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') window.HansoraHeader.startCreditsPolling(90000, 1500);
+        return { runId, taskId: body.id || body.taskId, promptLabel: displayLabel };
+      }catch(error){
+        upsertActiveRun({ runId, status:'failed', model:'Product Selling Card', prompt:displayLabel, url:'' });
+        throw error;
+      }
+    }
+
+    async function waitForGenerationRun(run){
+      try{
+        const resultUrl = await pollProductCard({ uid: currentUser.id, runId: run.runId, taskId: run.taskId });
+        upsertActiveRun({ runId: run.runId, status:'ready', model:'Product Selling Card', prompt:run.promptLabel, url:resultUrl });
+        return resultUrl;
+      }catch(error){
+        upsertActiveRun({ runId: run.runId, status:'failed', model:'Product Selling Card', prompt:run.promptLabel, url:'' });
+        throw error;
+      }
+    }
+
+    async function generate(){
+      if (els.generateBtn.disabled) return;
+      if (!productFiles.length) { showStatus('Upload at least one product image first.', 'error'); return; }
+      await loadUser();
+      if (!currentUser) { showStatus('Please log in first.', 'error'); return; }
+      const totalCost = getTotalCost();
+      const latestCredits = await refreshCredits();
+      if (latestCredits < totalCost) { showStatus(`Not enough credits. This run needs ${formatCost(totalCost)}⚡.`, 'error'); return; }
+
+      els.generateBtn.disabled = true;
+      els.resetBtn.disabled = true;
+      let startedRuns = [];
+      try{
+        const referenceUrl = await uploadReferenceImage();
+        const extraNotes = productFiles.length > 1
+          ? `The uploaded reference image is a clean contact sheet made from ${productFiles.length} user-uploaded product/reference photos. Use all visible references only to understand the product identity, shape, color, label, person/reference angle and details. Do not copy the contact sheet layout into the final ad card.`
+          : '';
+        const form = getFormData(extraNotes);
+        const session = await supabaseClient.auth.getSession();
+        const token = session && session.data && session.data.session ? session.data.session.access_token : '';
+        showStatus(`Starting ${selectedCount} product card${selectedCount === 1 ? '' : 's'}…`);
+        for (let index = 0; index < selectedCount; index += 1) {
+          showStatus(`Starting product card ${index + 1} of ${selectedCount}…`);
+          startedRuns.push(await createGenerationRun({ index, referenceUrl, form, token }));
+        }
+        showStatus(`Creating ${startedRuns.length} product card${startedRuns.length === 1 ? '' : 's'}…`);
+        const results = await Promise.allSettled(startedRuns.map((run) => waitForGenerationRun(run)));
+        const failed = results.filter((r) => r.status === 'rejected');
+        if (failed.length) {
+          const first = String(failed[0].reason && failed[0].reason.message ? failed[0].reason.message : failed[0].reason || 'generation_failed');
+          if (first === 'not_enough_credits') showStatus('Not enough credits for all selected product cards.', 'error');
+          else if (first === 'generation_timeout') showStatus('Still processing. You can check the result cards shortly.', 'error');
+          else showStatus(`Some generations failed: ${first}`, 'error');
+        } else {
+          showStatus('Product card generation finished.', 'ok');
+        }
+        await loadHistory();
+        await refreshCredits();
+      }catch(error){
+        console.warn('generate failed', error);
+        const stillProcessing = startedRuns.filter((run) => {
+          const active = activeRuns.find((item) => item.runId === run.runId);
+          return active && active.status === 'processing';
+        });
+        if (stillProcessing.length) {
+          showStatus(`Finishing ${stillProcessing.length} product card${stillProcessing.length === 1 ? '' : 's'} that already started…`);
+          await Promise.allSettled(stillProcessing.map((run) => waitForGenerationRun(run)));
+          await loadHistory();
+        }
+        const msg = String(error && error.message ? error.message : error || 'generation_failed');
+        if (msg === 'upload_bridge_missing') showStatus('Upload bridge is missing. Make sure /kie-upload-bridge.js is deployed.', 'error');
+        else showStatus(`Generation failed: ${msg}`, 'error');
+        await refreshCredits();
+      }finally{
+        els.generateBtn.disabled = false;
+        els.resetBtn.disabled = false;
+        updateCost();
+      }
+    }
+
+    function resetForm(){
+      clearProductFiles();
+      els.headlineText.value = '';
+      els.benefitsText.value = '';
+      selectedHuman = 'none'; selectedAspect = '3:4'; selectedResolution = '1K'; selectedCount = 1;
+      setActive(document.getElementById('humanModeGroup'), selectedHuman, 'human');
+      setActive(document.getElementById('countGroup'), selectedCount, 'count');
+      setActive(document.getElementById('aspectGroup'), selectedAspect, 'aspect');
+      updateResolutionAvailability();
+      updateCost();
+      showStatus('');
+      renderResults();
+    }
+
+    els.generateBtn.addEventListener('click', generate);
+    els.resetBtn.addEventListener('click', resetForm);
+    updateResolutionAvailability();
+    updateCost();
+    renderImageThumbs();
+    renderResults();
+    loadUser();
+    setTimeout(() => refreshCredits(), 1200);
+  </script>
+</body>
+</html>
