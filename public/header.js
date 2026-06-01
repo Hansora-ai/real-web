@@ -33,6 +33,7 @@
     { label: 'Expand', href: '/expand.html?mode=expand', icon: 'EX', note: 'Extend image edges' },
     { label: 'Face swap', href: '/expand.html?mode=face-swap', icon: 'FS', note: 'Chosen face swap' },
     { label: 'Character', href: '/character.html', icon: 'CH', note: 'Character creator' },
+    { label: 'Product Card', href: '/product_card.html', icon: 'PC', note: 'Product selling cards' },
   ];
 
   const VIDEO_MENU_ITEMS = [
