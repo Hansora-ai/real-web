@@ -108,32 +108,32 @@
     .result-panel{padding:14px;min-height:0}
     .result-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
     .result-top h2{margin:0;font-size:20px;letter-spacing:-.02em}
-    .results-strip{position:relative;border:1px solid var(--line);border-radius:20px;min-height:325px;background:radial-gradient(520px 380px at 50% 30%,rgba(99,102,241,.12),transparent 60%),#0b0d14;overflow:hidden;padding:12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-content:start}
+    .results-strip{position:relative;border:1px solid var(--line);border-radius:20px;min-height:420px;max-height:min(840px,calc(100vh - 205px));background:radial-gradient(520px 380px at 50% 30%,rgba(99,102,241,.12),transparent 60%),#0b0d14;overflow-y:auto;overflow-x:hidden;padding:14px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-content:start;scrollbar-width:thin}
     .results-strip.empty{display:flex;align-items:center;justify-content:center}
     .empty-result{text-align:center;max-width:360px;padding:24px;color:rgba(255,255,255,.64)}
     .empty-result .icon{width:74px;height:74px;margin:0 auto 14px;border-radius:24px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:34px}
-    .result-thumb{position:relative;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.1);background:rgba(15,23,42,.55);aspect-ratio:1/1.12;min-width:0}
+    .result-thumb{position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);background:rgba(15,23,42,.55);aspect-ratio:3/4;min-width:0;min-height:330px}
     .result-thumb img{width:100%;height:100%;object-fit:cover;display:block;background:rgba(2,6,23,.85)}
-    .result-thumb-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:rgba(255,255,255,.55);font-size:12px;background:rgba(2,6,23,.75)}
-    .processing-orb,.loader{width:48px;height:48px;border-radius:18px;background:linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8);box-shadow:0 0 30px rgba(139,92,246,.52);animation:spin 1.2s linear infinite}
+    .result-thumb-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:rgba(255,255,255,.62);font-size:15px;font-weight:760;background:rgba(2,6,23,.75)}
+    .processing-orb,.loader{width:72px;height:72px;border-radius:26px;background:linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8);box-shadow:0 0 44px rgba(139,92,246,.58);animation:spin 1.2s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
-    .thumb-badge{position:absolute;top:8px;left:8px;font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(2,6,23,.7);color:rgba(255,255,255,.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+    .thumb-badge{position:absolute;top:10px;left:10px;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(2,6,23,.72);color:rgba(255,255,255,.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
     .thumb-status{position:absolute;bottom:8px;left:8px;right:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;color:rgba(255,255,255,.78)}
-    .thumb-status-extended{flex-direction:column;align-items:stretch;padding:8px 10px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:rgba(2,6,23,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+    .thumb-status-extended{flex-direction:column;align-items:stretch;padding:11px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:rgba(2,6,23,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
     .thumb-row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
     .thumb-meta{display:flex;flex-direction:column;min-width:0;gap:2px}
-    .thumb-model{font-size:11px;font-weight:700;color:rgba(255,255,255,.88);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
-    .thumb-prompt{font-size:10px;color:rgba(255,255,255,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+    .thumb-model{font-size:13px;font-weight:800;color:rgba(255,255,255,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+    .thumb-prompt{font-size:11px;color:rgba(255,255,255,.66);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
     .thumb-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-shrink:0}
-    .thumb-state{font-size:10px;color:rgba(255,255,255,.75)}
+    .thumb-state{font-size:12px;color:rgba(255,255,255,.75)}
     .thumb-state.ready{color:rgba(110,231,183,.95)}
     .thumb-state.failed{color:rgba(248,113,113,.95)}
-    .thumb-get{font-size:10px;min-width:74px;padding:6px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(99,102,241,.22);color:rgba(255,255,255,.92)}
+    .thumb-get{font-size:12px;min-width:86px;padding:8px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(99,102,241,.24);color:rgba(255,255,255,.94)}
     .thumb-get.hidden{display:none !important}
     #previewOverlay{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.86);backdrop-filter:blur(7px);padding:18px}
     #previewOverlay.show{display:flex}.preview-card{position:relative;width:min(980px,100%);max-height:90vh;border-radius:24px;border:1px solid rgba(255,255,255,.14);background:#050714;overflow:hidden}.preview-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.58);color:#fff;font-size:24px;z-index:5}.preview-media{display:flex;align-items:center;justify-content:center;min-height:60vh}.preview-media img{max-width:100%;max-height:90vh;object-fit:contain}
-    @media(max-width:1100px){.workspace{grid-template-columns:1fr}.creator{position:relative;top:auto}.results-strip{grid-template-columns:repeat(3,minmax(0,1fr));min-height:300px}}
-    @media(max-width:720px){.page-shell{padding:12px}.creator,.result-panel{padding:12px;border-radius:20px}.workspace{gap:12px}.dropzone{min-height:180px}.upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.results-strip{grid-template-columns:repeat(2,minmax(0,1fr));min-height:260px}.actions{gap:8px}.btn-primary{font-size:17px}.seg button{min-height:36px;padding:0 14px;font-size:13px}.options-section .option-group{padding:8px}.options-section .option-label{flex-basis:48px}.options-section .seg button{min-height:32px;padding:0 10px;font-size:12px}}
+    @media(max-width:1100px){.workspace{grid-template-columns:1fr}.creator{position:relative;top:auto}.results-strip{grid-template-columns:repeat(2,minmax(0,1fr));min-height:380px}.result-thumb{min-height:320px}}
+    @media(max-width:720px){.page-shell{padding:12px}.creator,.result-panel{padding:12px;border-radius:20px}.workspace{gap:12px}.dropzone{min-height:180px}.upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.results-strip:not(.empty){display:flex;grid-template-columns:none;gap:12px;overflow-x:auto;overflow-y:hidden;min-height:0;max-height:none;aspect-ratio:auto;padding:10px 22% 10px 10px;scroll-snap-type:x mandatory}.result-thumb{flex:0 0 78%;aspect-ratio:9/16;min-height:0;scroll-snap-align:start}.actions{gap:8px}.btn-primary{font-size:17px}.seg button{min-height:36px;padding:0 14px;font-size:13px}.options-section .option-group{padding:8px}.options-section .option-label{flex-basis:48px}.options-section .seg button{min-height:32px;padding:0 10px;font-size:12px}}
 
     /* Requested compact product-card fixes */
     [hidden]{display:none!important}
@@ -402,6 +402,7 @@ Easy daily use"></textarea>
     let selectedCount = 1;
     let activeRuns = [];
     let historyRows = [];
+    const resumedPolls = new Set();
 
     const els = {
       costLabel: document.getElementById('costLabel'),
@@ -948,17 +949,41 @@ Easy daily use"></textarea>
       return card;
     }
 
+    function statusFromRow(row){
+      const status = String(row && row.meta && row.meta.status ? row.meta.status : '').toLowerCase();
+      if (row && row.result_url) return 'ready';
+      if (/fail|failed|error|cancel|cancelled|reject|rejected|create_failed|charge_failed|insufficient/.test(status)) return 'failed';
+      return 'processing';
+    }
+
+    function taskIdFromRow(row){
+      const meta = row && row.meta && typeof row.meta === 'object' ? row.meta : {};
+      return meta.task_id || meta.taskId || meta.id || '';
+    }
+
+    function runIdFromRow(row){
+      const meta = row && row.meta && typeof row.meta === 'object' ? row.meta : {};
+      return meta.run_id || row.run_id || '';
+    }
+
+    function resultItemFromRow(row){
+      const meta = row && row.meta && typeof row.meta === 'object' ? row.meta : {};
+      const copy = meta.copy && typeof meta.copy === 'object' ? meta.copy : {};
+      return {
+        runId: runIdFromRow(row),
+        taskId: taskIdFromRow(row),
+        url: row.result_url || '',
+        status: statusFromRow(row),
+        model: row.provider || 'Product Selling Card',
+        prompt: copy.headline || row.prompt || 'Product card'
+      };
+    }
+
     function renderResults(){
       const activeIds = new Set(activeRuns.map((run) => run.runId).filter(Boolean));
       const historyItems = historyRows
-        .filter((row) => row && row.result_url && !activeIds.has(row.meta && row.meta.run_id))
-        .map((row) => ({
-          runId: row.meta && row.meta.run_id,
-          url: row.result_url,
-          status: 'ready',
-          model: row.provider || 'Product Selling Card',
-          prompt: row.prompt || 'Product card'
-        }));
+        .filter((row) => row && !activeIds.has(runIdFromRow(row)))
+        .map(resultItemFromRow);
       const items = [...activeRuns, ...historyItems].slice(0, 12);
       els.resultStage.innerHTML = '';
       const hasItems = items.length > 0;
@@ -970,7 +995,7 @@ Easy daily use"></textarea>
         return;
       }
       items.forEach((item) => els.resultStage.appendChild(buildResultCard(item)));
-      const processing = activeRuns.some((run) => run.status === 'processing');
+      const processing = items.some((run) => run.status === 'processing');
       els.resultHint.textContent = processing ? 'Processing' : 'Ready';
     }
 
@@ -979,28 +1004,30 @@ Easy daily use"></textarea>
       try{
         const { data, error } = await supabaseClient
           .from('user_generations')
-          .select('result_url,prompt,provider,meta,created_at')
+          .select('result_url,prompt,provider,kind,meta,created_at')
           .eq('user_id', currentUser.id)
           .eq('kind', 'image')
-          .not('result_url', 'is', null)
           .order('created_at', { ascending:false })
-          .limit(40);
+          .limit(80);
         if (error) throw error;
-        historyRows = (Array.isArray(data) ? data : []).filter((row) => row && row.result_url && row.meta && row.meta.source === 'product-card').slice(0, 12);
+        historyRows = (Array.isArray(data) ? data : [])
+          .filter((row) => row && row.meta && row.meta.source === 'product-card')
+          .slice(0, 12);
       }catch(e){
         console.warn('history load failed', e);
       }
       renderResults();
+      resumeProcessingProductCards();
     }
 
     async function pollProductCard({ uid, runId, taskId }){
       const started = Date.now();
-      const timeoutMs = 5 * 60 * 1000;
+      const timeoutMs = 15 * 60 * 1000;
       let delay = 2500;
       while (Date.now() - started < timeoutMs) {
         await new Promise((resolve) => setTimeout(resolve, delay));
         const url = `/.netlify/functions/product-card-check?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId || '')}`;
-        const res = await fetch(url, { headers:{ Accept:'application/json' } });
+        const res = await fetch(url, { headers:{ Accept:'application/json' }, cache:'no-store' });
         const js = await res.json().catch(() => ({}));
         if (js && js.status === 'done' && (js.result_url || js.image_url || (Array.isArray(js.urls) && js.urls[0]))) {
           return js.result_url || js.image_url || js.urls[0];
@@ -1009,6 +1036,31 @@ Easy daily use"></textarea>
         delay = Math.min(6000, delay + 500);
       }
       throw new Error('generation_timeout');
+    }
+
+    function resumeProcessingProductCards(){
+      if (!currentUser || !Array.isArray(historyRows) || !historyRows.length) return;
+      historyRows.forEach((row) => {
+        const item = resultItemFromRow(row);
+        if (!item.runId || item.status !== 'processing') return;
+        if (resumedPolls.has(item.runId)) return;
+        upsertActiveRun(item);
+        if (!item.taskId) return;
+        resumedPolls.add(item.runId);
+        waitForGenerationRun({
+          runId: item.runId,
+          taskId: item.taskId,
+          promptLabel: item.prompt
+        }).then(() => {
+          refreshCredits();
+          loadHistory();
+        }).catch((error) => {
+          if (String(error && error.message ? error.message : error) !== 'generation_timeout') console.warn('resume product-card poll failed', error);
+          refreshCredits();
+        }).finally(() => {
+          resumedPolls.delete(item.runId);
+        });
+      });
     }
 
     function upsertActiveRun(run){
@@ -1066,6 +1118,10 @@ Easy daily use"></textarea>
         upsertActiveRun({ runId: run.runId, status:'ready', model:'Product Selling Card', prompt:run.promptLabel, url:resultUrl });
         return resultUrl;
       }catch(error){
+        if (String(error && error.message ? error.message : error) === 'generation_timeout') {
+          upsertActiveRun({ runId: run.runId, status:'processing', model:'Product Selling Card', prompt:run.promptLabel, url:'' });
+          throw error;
+        }
         upsertActiveRun({ runId: run.runId, status:'failed', model:'Product Selling Card', prompt:run.promptLabel, url:'' });
         throw error;
       }
@@ -1073,17 +1129,17 @@ Easy daily use"></textarea>
 
     async function generate(){
       if (els.generateBtn.disabled) return;
-      if (!productFiles.length) { showStatus('Upload at least one product image first.', 'error'); return; }
-      await loadUser();
-      if (!currentUser) { showStatus('Please log in first.', 'error'); return; }
-      const totalCost = getTotalCost();
-      const latestCredits = await refreshCredits();
-      if (latestCredits < totalCost) { showStatus(`Not enough credits. This run needs ${formatCost(totalCost)}⚡.`, 'error'); return; }
-
       els.generateBtn.disabled = true;
       els.resetBtn.disabled = true;
       let startedRuns = [];
       try{
+        if (!productFiles.length) { showStatus('Upload at least one product image first.', 'error'); return; }
+        await loadUser();
+        if (!currentUser) { showStatus('Please log in first.', 'error'); return; }
+        const totalCost = getTotalCost();
+        const latestCredits = await refreshCredits();
+        if (latestCredits < totalCost) { showStatus(`Not enough credits. This run needs ${formatCost(totalCost)}⚡.`, 'error'); return; }
+
         const referenceUrl = await uploadReferenceImage();
         const extraNotes = productFiles.length > 1
           ? `The uploaded reference image is a clean contact sheet made from ${productFiles.length} user-uploaded product/reference photos. Use all visible references only to understand the product identity, shape, color, label, person/reference angle and details. Do not copy the contact sheet layout into the final ad card.`
