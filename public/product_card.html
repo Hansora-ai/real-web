@@ -55,7 +55,7 @@
     .page-shell{width:min(1500px,100%);margin:0 auto;padding:16px 18px 30px}
     .workspace{display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:18px;align-items:start}
     .panel{border:1px solid var(--line);background:rgba(17,19,27,.86);border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.34);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
-    .creator{padding:14px;position:sticky;top:14px}
+    .creator{padding:14px;position:sticky;top:14px;max-height:calc(100vh - 116px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
     .panel-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
     .panel-title h2{margin:0;font-size:20px;letter-spacing:-.02em}
     .cost-pill{border:1px solid rgba(221,255,55,.45);background:rgba(221,255,55,.12);color:#efffb2;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:850;white-space:nowrap}
@@ -113,7 +113,7 @@
     .empty-result{text-align:center;max-width:360px;padding:24px;color:rgba(255,255,255,.64)}
     .empty-result .icon{width:74px;height:74px;margin:0 auto 14px;border-radius:24px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:34px}
     .result-thumb{position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);background:rgba(15,23,42,.55);aspect-ratio:3/4;min-width:0;min-height:330px}
-    .result-thumb img{width:100%;height:100%;object-fit:cover;display:block;background:rgba(2,6,23,.85)}
+    .result-thumb img,.result-thumb video{width:100%;height:100%;object-fit:cover;display:block;background:rgba(2,6,23,.85)}
     .result-thumb-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:rgba(255,255,255,.62);font-size:15px;font-weight:760;background:rgba(2,6,23,.75)}
     .processing-orb,.loader{width:72px;height:72px;border-radius:26px;background:linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8);box-shadow:0 0 44px rgba(139,92,246,.58);animation:spin 1.2s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
@@ -128,12 +128,26 @@
     .thumb-state{font-size:12px;color:rgba(255,255,255,.75)}
     .thumb-state.ready{color:rgba(110,231,183,.95)}
     .thumb-state.failed{color:rgba(248,113,113,.95)}
-    .thumb-get{font-size:12px;min-width:86px;padding:8px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(99,102,241,.24);color:rgba(255,255,255,.94)}
-    .thumb-get.hidden{display:none !important}
+    .thumb-get,.thumb-animate{font-size:12px;min-width:86px;padding:8px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(99,102,241,.24);color:rgba(255,255,255,.94)}
+    .thumb-animate{background:rgba(221,255,55,.15);border-color:rgba(221,255,55,.36);color:#efffb2}
+    .thumb-get.hidden,.thumb-animate.hidden{display:none !important}
     #previewOverlay{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.86);backdrop-filter:blur(7px);padding:18px}
     #previewOverlay.show{display:flex}.preview-card{position:relative;width:min(980px,100%);max-height:90vh;border-radius:24px;border:1px solid rgba(255,255,255,.14);background:#050714;overflow:hidden}.preview-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.58);color:#fff;font-size:24px;z-index:5}.preview-media{display:flex;align-items:center;justify-content:center;min-height:60vh}.preview-media img{max-width:100%;max-height:90vh;object-fit:contain}
+    .preview-media video{max-width:100%;max-height:90vh;object-fit:contain}
+    #animationOverlay{position:fixed;inset:0;z-index:2147483646;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.82);backdrop-filter:blur(7px);padding:18px}
+    #animationOverlay.show{display:flex}
+    .animation-card{position:relative;width:min(980px,100%);display:grid;grid-template-columns:minmax(0,1.15fr) minmax(260px,.85fr);gap:16px;border:1px solid rgba(255,255,255,.14);border-radius:24px;background:#070914;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.44)}
+    .animation-preview{border:1px solid rgba(255,255,255,.1);border-radius:18px;background:#03050b;min-height:360px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .animation-preview img{width:100%;height:100%;object-fit:contain}
+    .animation-side{display:flex;flex-direction:column;justify-content:center;gap:14px;padding:8px}
+    .animation-side h3{margin:0;font-size:24px;line-height:1.05}
+    .animation-side p{margin:0;color:rgba(239,244,255,.66);line-height:1.45}
+    .animation-spec{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);border-radius:16px;padding:12px 14px;font-weight:850}
+    .animation-run{border:0;border-radius:18px;min-height:52px;padding:0 18px;font-weight:900;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 16px 38px rgba(99,102,241,.45)}
+    .animation-run:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+    .animation-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.58);color:#fff;font-size:24px;z-index:5}
     @media(max-width:1100px){.workspace{grid-template-columns:1fr}.creator{position:relative;top:auto}.result-panel{min-height:0}.results-strip{grid-template-columns:repeat(2,minmax(0,1fr));min-height:520px}.result-thumb{min-height:320px}}
-    @media(max-width:720px){.page-shell{padding:12px}.creator,.result-panel{padding:12px;border-radius:20px}.workspace{gap:12px}.dropzone{min-height:180px}.upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.results-strip:not(.empty){display:flex;grid-template-columns:none;gap:12px;overflow-x:auto;overflow-y:hidden;min-height:0;max-height:none;aspect-ratio:auto;padding:10px 22% 10px 10px;scroll-snap-type:x mandatory}.result-thumb{flex:0 0 78%;aspect-ratio:9/16;min-height:0;scroll-snap-align:start}.actions{gap:8px}.btn-primary{font-size:17px}.seg button{min-height:36px;padding:0 14px;font-size:13px}.options-section .option-group{padding:8px}.options-section .option-label{flex-basis:48px}.options-section .seg button{min-height:32px;padding:0 10px;font-size:12px}}
+    @media(max-width:720px){.page-shell{padding:12px}.creator,.result-panel{padding:12px;border-radius:20px}.creator{max-height:none;overflow:visible}.workspace{gap:12px}.dropzone{min-height:180px}.upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.results-strip:not(.empty){display:flex;grid-template-columns:none;gap:12px;overflow-x:auto;overflow-y:hidden;min-height:0;max-height:none;aspect-ratio:auto;padding:10px 22% 10px 10px;scroll-snap-type:x mandatory}.result-thumb{flex:0 0 78%;aspect-ratio:9/16;min-height:0;scroll-snap-align:start}.animation-card{grid-template-columns:1fr}.animation-preview{min-height:260px}.actions{gap:8px}.btn-primary{font-size:17px}.seg button{min-height:36px;padding:0 14px;font-size:13px}.options-section .option-group{padding:8px}.options-section .option-label{flex-basis:48px}.options-section .seg button{min-height:32px;padding:0 10px;font-size:12px}}
 
     /* Requested compact product-card fixes */
     [hidden]{display:none!important}
@@ -385,6 +399,21 @@ Easy daily use"></textarea>
     </div>
   </div>
 
+  <div id="animationOverlay">
+    <div class="animation-card">
+      <button type="button" id="animationClose" class="animation-close" aria-label="Close animation preview">&times;</button>
+      <div class="animation-preview">
+        <img id="animationImage" alt="Product card to animate" />
+      </div>
+      <div class="animation-side">
+        <h3>Simple animation</h3>
+        <div class="animation-spec"><span>Duration</span><strong>6s</strong></div>
+        <p>Creates a smooth product-card video while keeping the card, product, and text stable.</p>
+        <button type="button" id="animationRun" class="animation-run">Run 2 ⚡</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const WORKING_SUPABASE_ANON_KEY = window.HANSORA_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
@@ -419,7 +448,11 @@ Easy daily use"></textarea>
       resultHint: document.getElementById('resultHint'),
       overlay: document.getElementById('previewOverlay'),
       previewMedia: document.getElementById('previewMedia'),
-      previewClose: document.getElementById('previewClose')
+      previewClose: document.getElementById('previewClose'),
+      animationOverlay: document.getElementById('animationOverlay'),
+      animationImage: document.getElementById('animationImage'),
+      animationClose: document.getElementById('animationClose'),
+      animationRun: document.getElementById('animationRun')
     };
 
     function parseCredits(value){
@@ -812,24 +845,67 @@ Easy daily use"></textarea>
       return up.publicUrl;
     }
 
-    function openPreview(url){
+    function isVideoUrl(url){
+      return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(String(url || ''));
+    }
+    function isVideoItem(item){
+      return String(item && item.kind || '').toLowerCase() === 'video' || isVideoUrl(item && item.url);
+    }
+
+    function openPreview(url, kind){
       if (!url) return;
       els.previewMedia.innerHTML = '';
-      const img = document.createElement('img');
-      img.src = url;
-      img.alt = 'Preview';
-      els.previewMedia.appendChild(img);
+      const video = kind === 'video' || isVideoUrl(url);
+      if (video) {
+        const media = document.createElement('video');
+        media.src = url;
+        media.controls = true;
+        media.autoplay = true;
+        media.loop = true;
+        media.playsInline = true;
+        media.preload = 'metadata';
+        els.previewMedia.appendChild(media);
+      } else {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = 'Preview';
+        els.previewMedia.appendChild(img);
+      }
       els.overlay.classList.add('show');
       document.body.style.overflow = 'hidden';
     }
     function closePreview(){ els.overlay.classList.remove('show'); els.previewMedia.innerHTML = ''; document.body.style.overflow = ''; }
     els.previewClose.addEventListener('click', closePreview);
     els.overlay.addEventListener('click', (e) => { if (e.target === els.overlay) closePreview(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePreview(); });
 
-    async function downloadAsset(url){
+    let animationSource = null;
+    function openAnimationModal(item){
+      if (!item || !item.url || isVideoItem(item)) return;
+      animationSource = item;
+      els.animationImage.src = item.url;
+      els.animationOverlay.classList.add('show');
+      document.body.style.overflow = 'hidden';
+      els.animationRun.disabled = false;
+      els.animationRun.textContent = 'Run 2 ⚡';
+    }
+    function closeAnimationModal(){
+      els.animationOverlay.classList.remove('show');
+      els.animationImage.removeAttribute('src');
+      animationSource = null;
+      if (!els.overlay.classList.contains('show')) document.body.style.overflow = '';
+    }
+    els.animationClose.addEventListener('click', closeAnimationModal);
+    els.animationOverlay.addEventListener('click', (e) => { if (e.target === els.animationOverlay) closeAnimationModal(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (els.animationOverlay.classList.contains('show')) closeAnimationModal();
+      else closePreview();
+    });
+
+    async function downloadAsset(url, kind){
       if (!url) return;
-      const filename = `hansora-product-card-${Date.now()}.png`;
+      const video = kind === 'video' || isVideoUrl(url);
+      const filename = `hansora-product-${video ? 'animation' : 'card'}-${Date.now()}.${video ? 'mp4' : 'png'}`;
       try{
         const res = await fetch(url, { mode:'cors', credentials:'omit', cache:'no-store' });
         if (!res.ok) throw new Error('download_fetch_failed');
@@ -873,17 +949,29 @@ Easy daily use"></textarea>
       const status = item.status || (url ? 'ready' : 'processing');
       const failed = status === 'failed';
       const ready = status === 'ready' && !!url;
+      const video = isVideoItem(item);
 
       const card = document.createElement('div');
       card.className = 'result-thumb';
       card.dataset.runId = item.runId || '';
 
       if (url) {
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = item.model || 'Product card';
-        img.loading = 'lazy';
-        card.appendChild(img);
+        if (video) {
+          const media = document.createElement('video');
+          media.src = url;
+          media.controls = true;
+          media.muted = true;
+          media.loop = true;
+          media.playsInline = true;
+          media.preload = 'metadata';
+          card.appendChild(media);
+        } else {
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = item.model || 'Product card';
+          img.loading = 'lazy';
+          card.appendChild(img);
+        }
       } else {
         const ph = document.createElement('div');
         ph.className = 'result-thumb-placeholder';
@@ -900,7 +988,7 @@ Easy daily use"></textarea>
 
       const badge = document.createElement('div');
       badge.className = 'thumb-badge';
-      badge.textContent = 'IMAGE';
+      badge.textContent = video ? 'VIDEO' : 'IMAGE';
       card.appendChild(badge);
 
       const panel = document.createElement('div');
@@ -933,9 +1021,20 @@ Easy daily use"></textarea>
       getBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (url) downloadAsset(url);
+        if (url) downloadAsset(url, video ? 'video' : 'image');
+      });
+      const animateBtn = document.createElement('button');
+      animateBtn.type = 'button';
+      animateBtn.className = 'thumb-animate';
+      animateBtn.textContent = 'Animate';
+      if (!ready || video) animateBtn.classList.add('hidden');
+      animateBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openAnimationModal(item);
       });
       actions.appendChild(state);
+      actions.appendChild(animateBtn);
       actions.appendChild(getBtn);
       row.appendChild(meta);
       row.appendChild(actions);
@@ -944,7 +1043,7 @@ Easy daily use"></textarea>
 
       if (url) {
         card.style.cursor = 'pointer';
-        card.addEventListener('click', () => openPreview(url));
+        card.addEventListener('click', () => openPreview(url, video ? 'video' : 'image'));
       }
       return card;
     }
@@ -969,13 +1068,16 @@ Easy daily use"></textarea>
     function resultItemFromRow(row){
       const meta = row && row.meta && typeof row.meta === 'object' ? row.meta : {};
       const copy = meta.copy && typeof meta.copy === 'object' ? meta.copy : {};
+      const kind = row.kind || meta.kind || (meta.source === 'product-card-animation' ? 'video' : 'image');
       return {
         runId: runIdFromRow(row),
         taskId: taskIdFromRow(row),
         url: row.result_url || '',
         status: statusFromRow(row),
-        model: row.provider || 'Product Selling Card',
-        prompt: copy.headline || row.prompt || 'Product card'
+        model: kind === 'video' ? 'Product Animation' : (row.provider || 'Product Selling Card'),
+        prompt: copy.headline || row.prompt || (kind === 'video' ? 'Simple animation 6s' : 'Product card'),
+        kind,
+        checker: meta.checker || (kind === 'video' ? 'kie-check' : 'product-card-check')
       };
     }
 
@@ -1006,12 +1108,11 @@ Easy daily use"></textarea>
           .from('user_generations')
           .select('result_url,prompt,provider,kind,meta,created_at')
           .eq('user_id', currentUser.id)
-          .eq('kind', 'image')
           .order('created_at', { ascending:false })
           .limit(80);
         if (error) throw error;
         historyRows = (Array.isArray(data) ? data : [])
-          .filter((row) => row && row.meta && row.meta.source === 'product-card')
+          .filter((row) => row && row.meta && (row.meta.source === 'product-card' || row.meta.source === 'product-card-animation'))
           .slice(0, 12);
       }catch(e){
         console.warn('history load failed', e);
@@ -1020,17 +1121,18 @@ Easy daily use"></textarea>
       resumeProcessingProductCards();
     }
 
-    async function pollProductCard({ uid, runId, taskId }){
+    async function pollProductCard({ uid, runId, taskId, checker }){
       const started = Date.now();
       const timeoutMs = 15 * 60 * 1000;
       let delay = 2500;
+      const fn = checker || 'product-card-check';
       while (Date.now() - started < timeoutMs) {
         await new Promise((resolve) => setTimeout(resolve, delay));
-        const url = `/.netlify/functions/product-card-check?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId || '')}`;
+        const url = `/.netlify/functions/${encodeURIComponent(fn)}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId || '')}`;
         const res = await fetch(url, { headers:{ Accept:'application/json' }, cache:'no-store' });
         const js = await res.json().catch(() => ({}));
-        if (js && js.status === 'done' && (js.result_url || js.image_url || (Array.isArray(js.urls) && js.urls[0]))) {
-          return js.result_url || js.image_url || js.urls[0];
+        if (js && js.status === 'done' && (js.result_url || js.image_url || js.video_url || (Array.isArray(js.urls) && js.urls[0]))) {
+          return js.result_url || js.video_url || js.image_url || js.urls[0];
         }
         if (js && (js.failed || js.status === 'failed')) {
           const err = new Error(js.error || 'generation_failed');
@@ -1081,7 +1183,9 @@ Easy daily use"></textarea>
         startBackgroundPoll({
           runId: item.runId,
           taskId: item.taskId,
-          promptLabel: item.prompt
+          promptLabel: item.prompt,
+          kind: item.kind,
+          checker: item.checker
         });
       });
     }
@@ -1092,6 +1196,86 @@ Easy daily use"></textarea>
       else activeRuns.push(run);
       activeRuns = activeRuns.slice(0, 12);
       renderResults();
+    }
+
+    async function runAnimation(){
+      if (!animationSource || !animationSource.url || els.animationRun.disabled) return;
+      els.animationRun.disabled = true;
+      els.animationRun.textContent = 'Starting...';
+      try{
+        await loadUser();
+        if (!currentUser) throw new Error('login_required');
+        const latestCredits = await refreshCredits();
+        if (latestCredits < 2) throw new Error('not_enough_credits');
+        const session = await supabaseClient.auth.getSession();
+        const token = session && session.data && session.data.session ? session.data.session.access_token : '';
+        const runId = `product-card-animation-${currentUser.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const prompt = [
+          'Create a simple smooth 6 second product selling card animation from this exact image.',
+          'Keep the product identity, text, typography, layout, colors, packaging, logo, and composition stable.',
+          'Add subtle premium motion only: gentle camera push-in, slight parallax, realistic light shimmer, and clean product emphasis.',
+          'Do not change the product, do not add new text, do not add fake logos, badges, ratings, discounts, watermarks, QR codes, or extra claims.'
+        ].join(' ');
+        const response = await fetch('/.netlify/functions/run-grok-video', {
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'Accept':'application/json',
+            'X-USER-ID': currentUser.id,
+            ...(token ? { Authorization:`Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({
+            uid: currentUser.id,
+            run_id: runId,
+            prompt,
+            duration: 6,
+            resolution: '720p',
+            aspect_ratio: selectedAspect || '3:4',
+            image_url: animationSource.url,
+            image_urls: [animationSource.url],
+            pricing_mode: 'product_card_animation',
+            client_diagnostic: {
+              source: 'product-card-animation',
+              source_run_id: animationSource.runId || '',
+              source_url: animationSource.url
+            }
+          })
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || !body.ok) {
+          if (response.status === 402 || body.error === 'not_enough_credits') throw new Error('not_enough_credits');
+          throw new Error(body.message || body.error || 'animation_start_failed');
+        }
+        const taskId = body.taskId || body.id;
+        if (!taskId) throw new Error('animation_missing_task_id');
+        if (body.credits !== undefined && body.credits !== null) setCreditsEverywhere(body.credits);
+        else setCreditsEverywhere(Math.max(0, parseCredits(currentCredits) - 2));
+        if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') window.HansoraHeader.startCreditsPolling(90000, 1500);
+        const run = {
+          runId,
+          taskId,
+          status:'processing',
+          model:'Product Animation',
+          prompt:'Simple animation 6s',
+          url:'',
+          kind:'video',
+          checker: body.checker || 'kie-check'
+        };
+        upsertActiveRun(run);
+        closeAnimationModal();
+        startBackgroundPoll({ ...run, promptLabel: run.prompt });
+        showStatus('Animation submitted. Creating the 6s video in the result panel.', 'ok');
+      }catch(error){
+        console.warn('animation failed', error);
+        const msg = String(error && error.message ? error.message : error || 'animation_failed');
+        if (msg === 'login_required') showStatus('Please log in first.', 'error');
+        else if (msg === 'not_enough_credits') showStatus('Not enough credits. Animation needs 2⚡.', 'error');
+        else showStatus(`Animation failed: ${msg}`, 'error');
+        await refreshCredits();
+      }finally{
+        els.animationRun.disabled = false;
+        els.animationRun.textContent = 'Run 2 ⚡';
+      }
     }
 
     async function createGenerationRun({ index, referenceUrl, form, token }){
@@ -1127,8 +1311,8 @@ Easy daily use"></textarea>
           setCreditsEverywhere(Math.max(0, parseCredits(currentCredits) - parseCredits(body.cost || getUnitCost())));
         }
         if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') window.HansoraHeader.startCreditsPolling(90000, 1500);
-        upsertActiveRun({ runId, status:'processing', model:'Product Selling Card', prompt:displayLabel, url:'' });
-        return { runId, taskId: body.id || body.taskId, promptLabel: displayLabel };
+        upsertActiveRun({ runId, status:'processing', model:'Product Selling Card', prompt:displayLabel, url:'', kind:'image', checker:'product-card-check' });
+        return { runId, taskId: body.id || body.taskId, promptLabel: displayLabel, kind:'image', checker:'product-card-check' };
       }catch(error){
         throw error;
       }
@@ -1136,15 +1320,19 @@ Easy daily use"></textarea>
 
     async function waitForGenerationRun(run){
       try{
-        const resultUrl = await pollProductCard({ uid: currentUser.id, runId: run.runId, taskId: run.taskId });
-        upsertActiveRun({ runId: run.runId, status:'ready', model:'Product Selling Card', prompt:run.promptLabel, url:resultUrl });
+        const kind = run.kind || 'image';
+        const model = kind === 'video' ? 'Product Animation' : 'Product Selling Card';
+        const resultUrl = await pollProductCard({ uid: currentUser.id, runId: run.runId, taskId: run.taskId, checker: run.checker || (kind === 'video' ? 'kie-check' : 'product-card-check') });
+        upsertActiveRun({ runId: run.runId, status:'ready', model, prompt:run.promptLabel, url:resultUrl, kind, checker:run.checker });
         return resultUrl;
       }catch(error){
+        const kind = run.kind || 'image';
+        const model = kind === 'video' ? 'Product Animation' : 'Product Selling Card';
         if (String(error && error.message ? error.message : error) === 'generation_timeout') {
-          upsertActiveRun({ runId: run.runId, status:'processing', model:'Product Selling Card', prompt:run.promptLabel, url:'' });
+          upsertActiveRun({ runId: run.runId, status:'processing', model, prompt:run.promptLabel, url:'', kind, checker:run.checker });
           throw error;
         }
-        upsertActiveRun({ runId: run.runId, status:'failed', model:'Product Selling Card', prompt:run.promptLabel, url:'' });
+        upsertActiveRun({ runId: run.runId, status:'failed', model, prompt:run.promptLabel, url:'', kind, checker:run.checker });
         throw error;
       }
     }
@@ -1213,6 +1401,7 @@ Easy daily use"></textarea>
     }
 
     els.generateBtn.addEventListener('click', generate);
+    els.animationRun.addEventListener('click', runAnimation);
     els.resetBtn.addEventListener('click', resetForm);
     updateResolutionAvailability();
     updateCost();
