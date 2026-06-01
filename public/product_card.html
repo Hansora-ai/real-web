@@ -10,6 +10,18 @@
   <link rel="dns-prefetch" href="//cdn.jsdelivr.net" />
   <link rel="dns-prefetch" href="//qmaealblegvcwodlmeht.supabase.co" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (function () {
+      const url = 'https://qmaealblegvcwodlmeht.supabase.co';
+      const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+      window.HANSORA_SUPABASE_URL = url;
+      window.HANSORA_SUPABASE_ANON_KEY = key;
+      if (!window.__HANSORA_SB__ && window.supabase && window.supabase.createClient) {
+        window.__HANSORA_SB__ = window.supabase.createClient(url, key);
+        window.hansoraSupabase = window.__HANSORA_SB__;
+      }
+    })();
+  </script>
   <link href="/header.css" rel="stylesheet" />
   <script defer src="/header.js"></script>
   <script defer src="/kie-upload-bridge.js"></script>
@@ -375,7 +387,7 @@ Easy daily use"></textarea>
 
   <script>
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-    const WORKING_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXAiLCJyZWYiOiJxbWFlYWxibGVndmN3b2RsbWVodCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzU4NjI5MzczLCJleHAiOjIwNzQyMDUzNzN9.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const WORKING_SUPABASE_ANON_KEY = window.HANSORA_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
 
     const supabaseClient = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, WORKING_SUPABASE_ANON_KEY);
     window.__HANSORA_SB__ = supabaseClient;
@@ -421,9 +433,54 @@ Easy daily use"></textarea>
       const n = Number(value || 0);
       return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
     }
+    function writeHeaderCache(key, value){
+      try{ localStorage.setItem(`hansora.header.${key}`, String(value)); }catch(_e){}
+    }
+    function removeHeaderCache(){
+      try{
+        ['loggedIn','credits','avatar'].forEach((key) => localStorage.removeItem(`hansora.header.${key}`));
+      }catch(_e){}
+    }
+    function avatarUrlFor(user, profile){
+      if (profile && profile.avatar_url) return profile.avatar_url;
+      const meta = user && user.user_metadata ? user.user_metadata : {};
+      if (meta.avatar_url || meta.picture) return meta.avatar_url || meta.picture;
+      const seed = user && user.email ? user.email.slice(0, 1).toUpperCase() : 'H';
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(seed)}&background=6366f1&color=fff`;
+    }
+    function syncSharedHeaderLoggedIn(user, profile, credits){
+      writeHeaderCache('loggedIn', '1');
+      writeHeaderCache('credits', parseCredits(credits));
+      const avatarUrl = avatarUrlFor(user, profile);
+      writeHeaderCache('avatar', avatarUrl);
+
+      const loginBtn = document.getElementById('btnLoginSignup');
+      const navCredits = document.getElementById('navCredits');
+      const navAvatar = document.getElementById('navAvatar');
+      const navAvatarImg = document.getElementById('navAvatarImg');
+      if (loginBtn) loginBtn.style.display = 'none';
+      if (navCredits) {
+        navCredits.style.display = 'inline-flex';
+        navCredits.textContent = formatCredits(credits);
+      }
+      if (navAvatar) navAvatar.style.display = 'inline-flex';
+      if (navAvatarImg) navAvatarImg.src = avatarUrl;
+    }
+    function syncSharedHeaderLoggedOut(){
+      removeHeaderCache();
+      const loginBtn = document.getElementById('btnLoginSignup');
+      const navCredits = document.getElementById('navCredits');
+      const navAvatar = document.getElementById('navAvatar');
+      const navMenu = document.getElementById('navMenu');
+      if (loginBtn) loginBtn.style.display = 'inline-flex';
+      if (navCredits) navCredits.style.display = 'none';
+      if (navAvatar) navAvatar.style.display = 'none';
+      if (navMenu) navMenu.classList.remove('is-open');
+    }
     function setCreditsEverywhere(value){
       const n = parseCredits(value);
       currentCredits = n;
+      writeHeaderCache('credits', n);
       document.querySelectorAll('#navCredits').forEach((node) => { node.textContent = formatCredits(n); });
       if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') window.HansoraHeader.setCredits(n);
     }
@@ -455,14 +512,13 @@ Easy daily use"></textarea>
     async function refreshCredits(){
       try{
         const { user, profile, credits } = await readSupabaseCredits();
-        if (!user) return 0;
+        if (!user) {
+          syncSharedHeaderLoggedOut();
+          return 0;
+        }
         currentUser = user;
         setCreditsEverywhere(credits);
-        const navUser = document.getElementById('navUser');
-        const btnLogin = document.getElementById('btnLoginSignup');
-        if (btnLogin && navUser) { btnLogin.classList.add('hidden'); navUser.classList.remove('hidden'); navUser.classList.add('flex'); }
-        const avatarImg = document.getElementById('navAvatarImg');
-        if (avatarImg && profile && profile.avatar_url) { avatarImg.src = profile.avatar_url; avatarImg.classList.remove('hidden'); }
+        syncSharedHeaderLoggedIn(user, profile, credits);
         return parseCredits(credits);
       }catch(e){ console.warn('refreshCredits failed', e); }
       return parseCredits(currentCredits);
@@ -474,6 +530,7 @@ Easy daily use"></textarea>
         currentUser = data && data.user ? data.user : null;
         if (!currentUser) {
           setCreditsEverywhere(0);
+          syncSharedHeaderLoggedOut();
           renderResults();
           return;
         }
