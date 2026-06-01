@@ -24,12 +24,15 @@ exports.handler = async (event) => {
       taskId: String(qs.taskId || qs.task_id || "").trim()
     };
 
-    const row = await findProcessingGeneration(ids);
+    const row = await findGeneration(ids);
     if (!row) return json(200, { ok: false, status: "ignored", reason: "not_processing" });
 
     ids.uid = ids.uid || row.user_id || "";
     ids.run_id = ids.run_id || row.meta?.run_id || "";
     ids.taskId = ids.taskId || row.meta?.task_id || row.meta?.taskId || "";
+
+    const stored = storedRowResponse(row);
+    if (stored) return json(200, stored);
 
     if (!ids.taskId) return json(200, { ok: false, status: "pending", error: "missing_task_id" });
 
@@ -78,12 +81,15 @@ async function handlePost(event) {
     taskId: String(qs.taskId || qs.task_id || bodyIds.taskId || "").trim()
   };
 
-  const row = await findProcessingGeneration(ids);
+  const row = await findGeneration(ids);
   if (!row) return json(200, { ok: false, status: "ignored", reason: "not_processing" });
 
   ids.uid = ids.uid || row.user_id || "";
   ids.run_id = ids.run_id || row.meta?.run_id || "";
   ids.taskId = ids.taskId || row.meta?.task_id || row.meta?.taskId || "";
+
+  const stored = storedRowResponse(row);
+  if (stored) return json(200, stored);
 
   const status = normalizeStatus(body);
   if (status === "failed") {
@@ -145,7 +151,7 @@ function extractIds(body) {
   };
 }
 
-async function findProcessingGeneration(ids) {
+async function findGeneration(ids) {
   if (!UG_URL || !SERVICE_KEY) return null;
 
   const select = "select=id,user_id,provider,kind,result_url,meta,created_at";
@@ -162,9 +168,40 @@ async function findProcessingGeneration(ids) {
     const res = await fetch(UG_URL + query, { headers: sb() });
     const arr = await res.json().catch(() => []);
     const row = Array.isArray(arr) ? arr[0] : null;
-    if (!row || row.result_url) continue;
-    const status = String(row.meta?.status || "").toLowerCase();
-    if (status === "processing" || status === "pending" || !status) return row;
+    if (row) return row;
+  }
+
+  return null;
+}
+
+function storedRowResponse(row) {
+  if (!row) return null;
+  const meta = row.meta && typeof row.meta === "object" ? row.meta : {};
+  const resultUrl = typeof row.result_url === "string" ? row.result_url.trim() : "";
+  if (resultUrl) {
+    return {
+      ok: true,
+      status: "done",
+      result_url: resultUrl,
+      image_url: resultUrl,
+      video_url: resultUrl,
+      images: [resultUrl],
+      urls: [resultUrl],
+      already_done: true
+    };
+  }
+
+  const status = String(meta.status || "").toLowerCase();
+  if (/(fail|failed|error|cancel|cancelled|reject|rejected|create_failed|charge_failed|insufficient)/.test(status) || meta.failed === true) {
+    return {
+      ok: false,
+      failed: true,
+      status: "failed",
+      error: meta.error || meta.refund_error || status || "generation_failed",
+      refunded: meta.refunded === true || String(meta.refunded || "").toLowerCase() === "true",
+      refund_amount: Number(meta.refunded_cost || meta.refund_amount || 0) || 0,
+      already_failed: true
+    };
   }
 
   return null;
