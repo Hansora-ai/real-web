@@ -105,10 +105,10 @@
     .btn-secondary{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:13px;min-height:48px;border-radius:16px}
     .status{min-height:20px;margin:10px 2px 0;color:#fef3c7;font-size:12px;line-height:1.4}
     .status.error{color:#fecdd3}.status.ok{color:#bbf7d0}
-    .result-panel{padding:14px;min-height:0}
+    .result-panel{padding:14px;min-height:calc(100vh - 132px)}
     .result-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
     .result-top h2{margin:0;font-size:20px;letter-spacing:-.02em}
-    .results-strip{position:relative;border:1px solid var(--line);border-radius:20px;min-height:420px;max-height:min(840px,calc(100vh - 205px));background:radial-gradient(520px 380px at 50% 30%,rgba(99,102,241,.12),transparent 60%),#0b0d14;overflow-y:auto;overflow-x:hidden;padding:14px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-content:start;scrollbar-width:thin}
+    .results-strip{position:relative;border:1px solid var(--line);border-radius:20px;min-height:calc(100vh - 205px);background:radial-gradient(520px 380px at 50% 30%,rgba(99,102,241,.12),transparent 60%),#0b0d14;overflow-y:auto;overflow-x:hidden;padding:14px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-content:start;scrollbar-width:thin}
     .results-strip.empty{display:flex;align-items:center;justify-content:center}
     .empty-result{text-align:center;max-width:360px;padding:24px;color:rgba(255,255,255,.64)}
     .empty-result .icon{width:74px;height:74px;margin:0 auto 14px;border-radius:24px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:34px}
@@ -132,7 +132,7 @@
     .thumb-get.hidden{display:none !important}
     #previewOverlay{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.86);backdrop-filter:blur(7px);padding:18px}
     #previewOverlay.show{display:flex}.preview-card{position:relative;width:min(980px,100%);max-height:90vh;border-radius:24px;border:1px solid rgba(255,255,255,.14);background:#050714;overflow:hidden}.preview-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.58);color:#fff;font-size:24px;z-index:5}.preview-media{display:flex;align-items:center;justify-content:center;min-height:60vh}.preview-media img{max-width:100%;max-height:90vh;object-fit:contain}
-    @media(max-width:1100px){.workspace{grid-template-columns:1fr}.creator{position:relative;top:auto}.results-strip{grid-template-columns:repeat(2,minmax(0,1fr));min-height:380px}.result-thumb{min-height:320px}}
+    @media(max-width:1100px){.workspace{grid-template-columns:1fr}.creator{position:relative;top:auto}.result-panel{min-height:0}.results-strip{grid-template-columns:repeat(2,minmax(0,1fr));min-height:520px}.result-thumb{min-height:320px}}
     @media(max-width:720px){.page-shell{padding:12px}.creator,.result-panel{padding:12px;border-radius:20px}.workspace{gap:12px}.dropzone{min-height:180px}.upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.results-strip:not(.empty){display:flex;grid-template-columns:none;gap:12px;overflow-x:auto;overflow-y:hidden;min-height:0;max-height:none;aspect-ratio:auto;padding:10px 22% 10px 10px;scroll-snap-type:x mandatory}.result-thumb{flex:0 0 78%;aspect-ratio:9/16;min-height:0;scroll-snap-align:start}.actions{gap:8px}.btn-primary{font-size:17px}.seg button{min-height:36px;padding:0 14px;font-size:13px}.options-section .option-group{padding:8px}.options-section .option-label{flex-basis:48px}.options-section .seg button{min-height:32px;padding:0 10px;font-size:12px}}
 
     /* Requested compact product-card fixes */
@@ -1032,10 +1032,42 @@ Easy daily use"></textarea>
         if (js && js.status === 'done' && (js.result_url || js.image_url || (Array.isArray(js.urls) && js.urls[0]))) {
           return js.result_url || js.image_url || js.urls[0];
         }
-        if (js && (js.failed || js.status === 'failed')) throw new Error(js.error || 'generation_failed');
+        if (js && (js.failed || js.status === 'failed')) {
+          const err = new Error(js.error || 'generation_failed');
+          err.refunded = !!js.refunded;
+          err.refundAmount = js.refund_amount || 0;
+          err.credits = js.credits;
+          throw err;
+        }
         delay = Math.min(6000, delay + 500);
       }
       throw new Error('generation_timeout');
+    }
+
+    function failureMessage(error){
+      const msg = String(error && error.message ? error.message : error || 'generation_failed');
+      if (msg === 'generation_timeout') return 'Still processing. You can check the result cards shortly.';
+      const refundText = error && error.refunded ? ' Credits were refunded.' : '';
+      return `Generation failed: ${msg}.${refundText}`;
+    }
+
+    function startBackgroundPoll(run){
+      if (!run || !run.runId || !run.taskId) return;
+      if (resumedPolls.has(run.runId)) return;
+      resumedPolls.add(run.runId);
+      waitForGenerationRun(run).then(() => {
+        refreshCredits();
+        loadHistory();
+      }).catch((error) => {
+        if (String(error && error.message ? error.message : error) !== 'generation_timeout') {
+          showStatus(failureMessage(error), 'error');
+        }
+        if (error && error.credits !== undefined && error.credits !== null) setCreditsEverywhere(error.credits);
+        refreshCredits();
+        loadHistory();
+      }).finally(() => {
+        resumedPolls.delete(run.runId);
+      });
     }
 
     function resumeProcessingProductCards(){
@@ -1046,19 +1078,10 @@ Easy daily use"></textarea>
         if (resumedPolls.has(item.runId)) return;
         upsertActiveRun(item);
         if (!item.taskId) return;
-        resumedPolls.add(item.runId);
-        waitForGenerationRun({
+        startBackgroundPoll({
           runId: item.runId,
           taskId: item.taskId,
           promptLabel: item.prompt
-        }).then(() => {
-          refreshCredits();
-          loadHistory();
-        }).catch((error) => {
-          if (String(error && error.message ? error.message : error) !== 'generation_timeout') console.warn('resume product-card poll failed', error);
-          refreshCredits();
-        }).finally(() => {
-          resumedPolls.delete(item.runId);
         });
       });
     }
@@ -1075,7 +1098,6 @@ Easy daily use"></textarea>
       const runId = `product-card-${currentUser.id}-${Date.now()}-${index + 1}-${Math.random().toString(16).slice(2)}`;
       const promptLabel = form.headline || `Product card ${index + 1}`;
       const displayLabel = selectedCount > 1 ? `${promptLabel} #${index + 1}` : promptLabel;
-      upsertActiveRun({ runId, status:'processing', model:'Product Selling Card', prompt:displayLabel, url:'' });
 
       try{
         const response = await fetch('/.netlify/functions/run-product-card', {
@@ -1105,9 +1127,9 @@ Easy daily use"></textarea>
           setCreditsEverywhere(Math.max(0, parseCredits(currentCredits) - parseCredits(body.cost || getUnitCost())));
         }
         if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') window.HansoraHeader.startCreditsPolling(90000, 1500);
+        upsertActiveRun({ runId, status:'processing', model:'Product Selling Card', prompt:displayLabel, url:'' });
         return { runId, taskId: body.id || body.taskId, promptLabel: displayLabel };
       }catch(error){
-        upsertActiveRun({ runId, status:'failed', model:'Product Selling Card', prompt:displayLabel, url:'' });
         throw error;
       }
     }
@@ -1152,18 +1174,8 @@ Easy daily use"></textarea>
           showStatus(`Starting product card ${index + 1} of ${selectedCount}…`);
           startedRuns.push(await createGenerationRun({ index, referenceUrl, form, token }));
         }
-        showStatus(`Creating ${startedRuns.length} product card${startedRuns.length === 1 ? '' : 's'}…`);
-        const results = await Promise.allSettled(startedRuns.map((run) => waitForGenerationRun(run)));
-        const failed = results.filter((r) => r.status === 'rejected');
-        if (failed.length) {
-          const first = String(failed[0].reason && failed[0].reason.message ? failed[0].reason.message : failed[0].reason || 'generation_failed');
-          if (first === 'not_enough_credits') showStatus('Not enough credits for all selected product cards.', 'error');
-          else if (first === 'generation_timeout') showStatus('Still processing. You can check the result cards shortly.', 'error');
-          else showStatus(`Some generations failed: ${first}`, 'error');
-        } else {
-          showStatus('Product card generation finished.', 'ok');
-        }
-        await loadHistory();
+        startedRuns.forEach(startBackgroundPoll);
+        showStatus(`Request submitted. Creating ${startedRuns.length} product card${startedRuns.length === 1 ? '' : 's'} in the result panel.`, 'ok');
         await refreshCredits();
       }catch(error){
         console.warn('generate failed', error);
@@ -1172,12 +1184,11 @@ Easy daily use"></textarea>
           return active && active.status === 'processing';
         });
         if (stillProcessing.length) {
-          showStatus(`Finishing ${stillProcessing.length} product card${stillProcessing.length === 1 ? '' : 's'} that already started…`);
-          await Promise.allSettled(stillProcessing.map((run) => waitForGenerationRun(run)));
-          await loadHistory();
+          stillProcessing.forEach(startBackgroundPoll);
         }
         const msg = String(error && error.message ? error.message : error || 'generation_failed');
         if (msg === 'upload_bridge_missing') showStatus('Upload bridge is missing. Make sure /kie-upload-bridge.js is deployed.', 'error');
+        else if (msg === 'not_enough_credits') showStatus('Not enough credits for all selected product cards.', 'error');
         else showStatus(`Generation failed: ${msg}`, 'error');
         await refreshCredits();
       }finally{
