@@ -48,6 +48,7 @@ exports.handler = async (event) => {
         error: state.error || "kie_failed",
         refunded: !!refund.refunded,
         refund_amount: refund.amount || 0,
+        credits: refund.credits ?? null,
         already_claimed: !!refund.already_claimed
       });
     }
@@ -100,7 +101,8 @@ async function handlePost(event) {
       status: "failed",
       error: failureReason(body),
       refunded: !!refund.refunded,
-      refund_amount: refund.amount || 0
+      refund_amount: refund.amount || 0,
+      credits: refund.credits ?? null
     });
   }
 
