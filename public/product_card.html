@@ -1077,7 +1077,7 @@ Easy daily use"></textarea>
         model: kind === 'video' ? 'Product Animation' : (row.provider || 'Product Selling Card'),
         prompt: copy.headline || row.prompt || (kind === 'video' ? 'Simple animation 6s' : 'Product card'),
         kind,
-        checker: meta.checker || (kind === 'video' ? 'kie-check' : 'product-card-check')
+        checker: 'product-card-check'
       };
     }
 
@@ -1216,7 +1216,7 @@ Easy daily use"></textarea>
           'Add subtle premium motion only: gentle camera push-in, slight parallax, realistic light shimmer, and clean product emphasis.',
           'Do not change the product, do not add new text, do not add fake logos, badges, ratings, discounts, watermarks, QR codes, or extra claims.'
         ].join(' ');
-        const response = await fetch('/.netlify/functions/run-grok-video', {
+        const response = await fetch('/.netlify/functions/run-product-card-animation', {
           method:'POST',
           headers:{
             'Content-Type':'application/json',
@@ -1259,7 +1259,7 @@ Easy daily use"></textarea>
           prompt:'Simple animation 6s',
           url:'',
           kind:'video',
-          checker: body.checker || 'kie-check'
+          checker: body.checker || 'product-card-check'
         };
         upsertActiveRun(run);
         closeAnimationModal();
@@ -1322,7 +1322,7 @@ Easy daily use"></textarea>
       try{
         const kind = run.kind || 'image';
         const model = kind === 'video' ? 'Product Animation' : 'Product Selling Card';
-        const resultUrl = await pollProductCard({ uid: currentUser.id, runId: run.runId, taskId: run.taskId, checker: run.checker || (kind === 'video' ? 'kie-check' : 'product-card-check') });
+        const resultUrl = await pollProductCard({ uid: currentUser.id, runId: run.runId, taskId: run.taskId, checker: run.checker || 'product-card-check' });
         upsertActiveRun({ runId: run.runId, status:'ready', model, prompt:run.promptLabel, url:resultUrl, kind, checker:run.checker });
         return resultUrl;
       }catch(error){
