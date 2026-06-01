@@ -112,7 +112,7 @@ function genericProviderFailure(source, status) {
 function requestDiagnostic(event, body, duration) {
   const images = imageUrlsFromBody(body);
   return {
-    aspect_ratio: String(body.aspect_ratio || '16:9'),
+    aspect_ratio: '9:16',
     duration,
     resolution: String(body.resolution || '720p'),
     image_count: images.length,
@@ -167,7 +167,7 @@ async function createUnificAllyTask({ body, prompt, duration }) {
     prompt,
     duration: Math.min(10, duration),
     resolution: String(body.resolution || '720p') === '480p' ? '480p' : '720p',
-    aspect_ratio: String(body.aspect_ratio || '16:9'),
+    aspect_ratio: '9:16',
     ...(images[0] ? { image_url: images[0] } : {}),
   };
 
@@ -184,7 +184,7 @@ async function createKieTask({ body, prompt, duration, uid, runId }) {
   const images = imageUrlsFromBody(body);
   const input = {
     prompt,
-    aspect_ratio: String(body.aspect_ratio || '16:9'),
+    aspect_ratio: '9:16',
     duration,
     resolution: String(body.resolution || '720p'),
     mode: 'normal',
@@ -216,8 +216,13 @@ exports.handler = async (event) => {
     if (!uid) return json(401, { ok: false, error: 'missing_uid' });
     const auth = await verifyAuth(event, uid);
     if (!auth.ok) return json(401, { ok: false, error: auth.error, details: auth });
-    const prompt = String(body.prompt || '').trim();
-    if (!prompt) return json(400, { ok: false, error: 'missing_prompt' });
+    const prompt = [
+      'Simple animation only.',
+      'Do not change the image design, product, logo, layout, colors, or any text.',
+      'Keep all text exactly readable and stable.',
+      'Add only gentle camera movement and subtle light motion.',
+      'No new text, no new objects, no watermarks.'
+    ].join(' ');
     const images = imageUrlsFromBody(body);
     if (!images.length) return json(400, { ok: false, error: 'missing_source_image' });
 
@@ -230,7 +235,7 @@ exports.handler = async (event) => {
         submitted: true,
         taskId: existingTask,
         run_id: runId,
-        checker: existing?.meta?.checker || checker,
+        checker,
         already_submitted: true,
       });
     }
