@@ -128,13 +128,13 @@
     .thumb-state{font-size:12px;color:rgba(255,255,255,.75)}
     .thumb-state.ready{color:rgba(110,231,183,.95)}
     .thumb-state.failed{color:rgba(248,113,113,.95)}
-    .thumb-get,.thumb-animate{font-size:12px;min-width:86px;padding:8px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(99,102,241,.24);color:rgba(255,255,255,.94)}
-    .thumb-animate{position:absolute;top:10px;right:10px;z-index:4;background:rgba(221,255,55,.18);border-color:rgba(221,255,55,.42);color:#efffb2;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+    .thumb-get,.thumb-animate{font-size:12px;min-width:76px;padding:8px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(99,102,241,.24);color:rgba(255,255,255,.94)}
+    .thumb-animate{position:absolute;top:10px;right:10px;z-index:6;background:rgba(221,255,55,.18);border-color:rgba(221,255,55,.42);color:#efffb2;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
     .thumb-get.hidden,.thumb-animate.hidden{display:none !important}
     #previewOverlay{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.86);backdrop-filter:blur(7px);padding:18px}
     #previewOverlay.show{display:flex}.preview-card{position:relative;width:min(980px,100%);max-height:90vh;border-radius:24px;border:1px solid rgba(255,255,255,.14);background:#050714;overflow:hidden}.preview-close{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.58);color:#fff;font-size:24px;z-index:5}.preview-media{display:flex;align-items:center;justify-content:center;min-height:60vh}.preview-media img{max-width:100%;max-height:90vh;object-fit:contain}
     .preview-media video{max-width:100%;max-height:90vh;object-fit:contain}
-    #animationOverlay{position:fixed;inset:0;z-index:2147483646;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.82);backdrop-filter:blur(7px);padding:18px}
+    #animationOverlay{position:fixed;left:0;right:0;top:90px;bottom:0;z-index:2147483646;display:none;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.46);backdrop-filter:none;padding:24px 18px 18px}
     #animationOverlay.show{display:flex}
     .animation-card{position:relative;width:min(760px,100%);max-height:88vh;overflow:auto;display:grid;grid-template-columns:minmax(0,.9fr) minmax(260px,1fr);gap:16px;border:1px solid rgba(255,255,255,.14);border-radius:22px;background:#070914;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.44)}
     .animation-preview{border:1px solid rgba(255,255,255,.1);border-radius:18px;background:#03050b;height:min(320px,42vh);min-height:180px;display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -923,8 +923,8 @@ Easy daily use"></textarea>
     }
 
     const PRODUCT_CARD_EXAMPLES = {
-      before: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/Untitled%20folder/ChatGPT%20Image%20May%2015,%202026,%2009_12_38%20PM.png?auto=format&fit=crop&w=900&q=80',
-      after: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/Untitled%20folder/file_00000000f7e071f78f43a5f997a7ca2e.png?auto=format&fit=crop&w=1200&q=80'
+      before: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%201,%202026,%2008_20_40%20PM.png?auto=format&fit=crop&w=900&q=80',
+      after: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%201,%202026,%2008_20_32%20PM.png?auto=format&fit=crop&w=1200&q=80'
     };
 
     function renderExampleCards(){
@@ -1034,11 +1034,11 @@ Easy daily use"></textarea>
         openAnimationModal(item);
       });
       actions.appendChild(state);
-      actions.appendChild(animateBtn);
       actions.appendChild(getBtn);
       row.appendChild(meta);
       row.appendChild(actions);
       panel.appendChild(row);
+      card.appendChild(animateBtn);
       card.appendChild(panel);
 
       if (url) {
