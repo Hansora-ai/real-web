@@ -105,7 +105,11 @@
       object-fit:cover;
       display:none;
     }
-    .avatar-ai.has-logo img{ display:block; }
+    .avatar-ai.has-logo{
+      background:transparent;
+      box-shadow:none;
+    }
+    .avatar-ai.has-logo img{ display:block; object-fit:contain; }
     .avatar-ai.has-logo span{ display:none; }
     .chat-title strong{
       display:block;
@@ -164,7 +168,11 @@
       object-fit:cover;
       display:none;
     }
-    .welcome-icon.has-logo img{ display:block; }
+    .welcome-icon.has-logo{
+      background:transparent;
+      box-shadow:none;
+    }
+    .welcome-icon.has-logo img{ display:block; object-fit:contain; }
     .welcome-icon.has-logo span{ display:none; }
     .welcome-card h1{
       margin:0;
