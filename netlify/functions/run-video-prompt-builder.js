@@ -441,6 +441,98 @@ async function markDone(rowId, runId, text, raw) {
   });
 }
 
+function taskIdFromCreate(value) {
+  return String(
+    value?.data?.taskId ||
+    value?.data?.task_id ||
+    value?.taskId ||
+    value?.task_id ||
+    value?.data?.id ||
+    value?.id ||
+    ""
+  ).trim();
+}
+
+async function createKieTask({ callbackUrl, prompt }) {
+  const payloads = [
+    {
+      label: "input.prompt",
+      body: {
+        model: MODEL,
+        callBackUrl: callbackUrl,
+        input: { prompt }
+      }
+    },
+    {
+      label: "input.messages",
+      body: {
+        model: MODEL,
+        callBackUrl: callbackUrl,
+        input: {
+          messages: [{ role: "user", content: prompt }],
+          stream: false,
+          max_tokens: 12000
+        }
+      }
+    },
+    {
+      label: "input.content",
+      body: {
+        model: MODEL,
+        callBackUrl: callbackUrl,
+        input: { content: prompt }
+      }
+    },
+    {
+      label: "messages.top_level",
+      body: {
+        model: MODEL,
+        callBackUrl: callbackUrl,
+        messages: [{ role: "user", content: prompt }],
+        stream: false,
+        max_tokens: 12000
+      }
+    }
+  ];
+
+  const attempts = [];
+  for (const candidate of payloads) {
+    const response = await fetch(CREATE_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${KIE_KEY}`,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify(candidate.body)
+    });
+
+    const raw = await response.text();
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (_) {
+      data = { raw };
+    }
+
+    const taskId = taskIdFromCreate(data);
+    attempts.push({
+      label: candidate.label,
+      http_status: response.status,
+      ok: response.ok,
+      code: data?.code,
+      msg: data?.msg || data?.message || data?.error || "",
+      data: data?.data ?? null
+    });
+
+    if (response.ok && taskId) {
+      return { ok: true, taskId, response: data, label: candidate.label, attempts };
+    }
+  }
+
+  return { ok: false, response: attempts[attempts.length - 1] || null, attempts };
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors(), body: "" };
   if (event.httpMethod !== "POST") return json(405, { ok: false, error: "method_not_allowed", version: VERSION_TAG });
@@ -463,56 +555,27 @@ exports.handler = async (event) => {
     const rowId = seeded.row_id || null;
     const callbackUrl = `${CALLBACK_URL}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
 
-    const createPayload = {
-      model: MODEL,
-      callBackUrl: callbackUrl,
-      input: {
-        prompt
-      }
-    };
+    const created = await createKieTask({ callbackUrl, prompt });
+    const taskId = created.taskId || "";
 
-    const createResponse = await fetch(CREATE_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${KIE_KEY}`,
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      },
-      body: JSON.stringify(createPayload)
-    });
-
-    const raw = await createResponse.text();
-    let createJson;
-    try {
-      createJson = JSON.parse(raw);
-    } catch (_) {
-      createJson = { raw };
-    }
-
-    const taskId =
-      createJson?.data?.taskId ||
-      createJson?.data?.task_id ||
-      createJson?.taskId ||
-      createJson?.task_id ||
-      createJson?.data?.id ||
-      createJson?.id ||
-      "";
-
-    if (!createResponse.ok || !taskId) {
+    if (!created.ok || !taskId) {
       if (rowId) {
         await patchGenerationMeta(rowId, {
           source: "video-prompt-builder",
           run_id: runId,
           model: MODEL,
           status: "create_failed",
-          raw: createJson,
+          raw: created.response,
+          create_attempts: created.attempts,
           refund_amount: COST
         });
       }
-      return json(createResponse.status || 500, {
+      return json(502, {
         ok: false,
         error: "create_failed",
-        response: createJson,
+        message: "KIE did not accept the Claude task.",
+        response: created.response,
+        attempts: created.attempts,
         version: VERSION_TAG
       });
     }
@@ -549,6 +612,7 @@ exports.handler = async (event) => {
       cost: COST,
       credits: charged.debit?.credits ?? null,
       model: MODEL,
+      create_shape: created.label,
       version: VERSION_TAG
     });
   } catch (error) {
