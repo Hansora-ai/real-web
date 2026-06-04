@@ -14,7 +14,8 @@ const WORKER_SECRET = process.env.VIDEO_PROMPT_WORKER_SECRET || "";
 
 const MODEL = "claude-opus-4-8";
 const COST = 1;
-const VERSION_TAG = "video_prompt_builder_claude_opus_4_8_background_v8";
+const MAX_OUTPUT_CHARS = 3300;
+const VERSION_TAG = "video_prompt_builder_claude_opus_4_8_background_v9";
 
 function cors() {
   return {
@@ -128,6 +129,9 @@ Write the entire output in the same language as the userâ€™s idea. If the userâ€
 
 OUTPUT FORMAT:
 Give the final answer in this exact structure:
+
+ABSOLUTE LENGTH LIMIT:
+The entire final answer must be ${MAX_OUTPUT_CHARS} characters or fewer, including all headings, spaces, punctuation, and line breaks. Do not exceed ${MAX_OUTPUT_CHARS} characters by even one character. Compress wording aggressively if needed while keeping the structure. The final answer must stop before it reaches ${MAX_OUTPUT_CHARS} characters.
 
 1. FINAL VIDEO PROMPT
    Write one complete, highly detailed video prompt.
