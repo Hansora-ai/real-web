@@ -166,7 +166,7 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'method_not_allowed' });
 
   try {
-    if (!SUPABASE_URL || !SERVICE_KEY) return json(500, { ok: false, error: 'missing_env' });
+    if (!KIE_KEY || !SUPABASE_URL || !SERVICE_KEY) return json(500, { ok: false, error: 'missing_env' });
     const body = JSON.parse(event.body || '{}');
     const uid = getUID(event, body);
     if (!uid) return json(401, { ok: false, error: 'missing_uid' });
@@ -192,34 +192,76 @@ exports.handler = async (event) => {
       refund_amount: cost,
     };
     const rowId = existing?.id || await insertGeneration(uid, runId, prompt, metaBase);
-    const demoTaskId = `demo-${runId}`;
-    const currentCredits = await getCredits(uid);
-    const demoMeta = {
-      ...metaBase,
-      source: 'demo',
-      status: 'demo_submitted',
-      task_id: demoTaskId,
-      charged: false,
-      charged_cost: 0,
-      debited: 0,
-      refund_amount: 0,
-      demo_mode: true,
-      demo_note: 'Demo mode only: KIE AI was not called and no credits were charged.',
-    };
-    await patchGeneration(rowId, demoMeta);
-    return json(201, {
-      ok: true,
-      submitted: true,
-      demo: true,
-      taskId: demoTaskId,
-      id: demoTaskId,
-      run_id: runId,
-      row_id: rowId,
-      debited: 0,
-      credits: currentCredits,
-      message: 'Demo submitted successfully. KIE AI was not called.',
-    });
 
+    const currentCredits = await getCredits(uid);
+    if (currentCredits < cost) {
+      return json(402, { ok: false, error: 'not_enough_credits', credits: currentCredits, need: cost });
+    }
+
+    const model = variant === 'fast'
+      ? normalizeSeedanceModel(process.env.SEEDANCE_20_FAST_MODEL || process.env.SEEDANCE_20_LITE_MODEL, 'fast')
+      : normalizeSeedanceModel(process.env.SEEDANCE_20_MODEL, 'standard');
+    const firstFrameUrl = String(body.first_frame_url || '').trim();
+    const lastFrameUrl = String(body.last_frame_url || '').trim();
+    const referenceImageUrls = Array.isArray(body.reference_image_urls) ? body.reference_image_urls.filter(Boolean).map(String) : [];
+    const referenceVideoUrls = Array.isArray(body.reference_video_urls) ? body.reference_video_urls.filter(Boolean).map(String) : [];
+    const referenceAudioUrls = Array.isArray(body.reference_audio_urls) ? body.reference_audio_urls.filter(Boolean).map(String) : [];
+    const hasFrameMode = !!(firstFrameUrl || lastFrameUrl);
+    const resolution = variant === 'fast'
+      ? (['480p', '720p'].includes(String(body.resolution || '720p')) ? String(body.resolution || '720p') : '720p')
+      : (['480p', '720p', '1080p'].includes(String(body.resolution || '720p')) ? String(body.resolution || '720p') : '720p');
+    const input = {
+      prompt,
+      resolution,
+      duration: clampDuration(body.duration),
+      aspect_ratio: String(body.aspect_ratio || '16:9'),
+      generate_audio: body.generate_audio !== false,
+      return_last_frame: !!body.return_last_frame,
+      web_search: !!(body.enable_web_search || body.web_search),
+      nsfw_checker: body.nsfw_checker === undefined ? false : !!body.nsfw_checker,
+      ...(firstFrameUrl ? { first_frame_url: firstFrameUrl } : {}),
+      ...(lastFrameUrl ? { last_frame_url: lastFrameUrl } : {}),
+      ...(!hasFrameMode && referenceImageUrls.length ? { reference_image_urls: referenceImageUrls.slice(0, 9) } : {}),
+      ...(!hasFrameMode && referenceVideoUrls.length ? { reference_video_urls: referenceVideoUrls.slice(0, 3) } : {}),
+      ...(!hasFrameMode && referenceAudioUrls.length ? { reference_audio_urls: referenceAudioUrls.slice(0, 3) } : {}),
+    };
+    const callback = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
+    const kieRes = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${KIE_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, input, callBackUrl: callback }),
+    });
+    const data = await kieRes.json().catch(() => ({}));
+    if (!kieRes.ok) {
+      await patchGeneration(rowId, { ...metaBase, status: 'failed', error: data });
+      return json(kieRes.status || 502, { ok: false, error: 'kie_create_failed', details: data });
+    }
+    if (data && data.code && Number(data.code) !== 200) {
+      await patchGeneration(rowId, { ...metaBase, status: 'failed', error: data });
+      return json(422, { ok: false, error: 'kie_create_failed', details: data });
+    }
+    const taskId = extractTaskId(data);
+    if (!taskId) {
+      await patchGeneration(rowId, { ...metaBase, status: 'failed', error: data || 'missing_task_id' });
+      return json(502, { ok: false, error: 'missing_task_id', details: data });
+    }
+
+    const debit = await debitCredits(uid, cost);
+    if (!debit.ok) return json(402, { ok: false, error: debit.error, details: debit });
+
+    const meta = {
+      ...metaBase,
+      status: 'processing',
+      model,
+      task_id: taskId,
+      charged: true,
+      charged_at: new Date().toISOString(),
+      charged_cost: cost,
+      debited: cost,
+      refund_amount: cost,
+    };
+    await patchGeneration(rowId, meta);
+    return json(201, { ok: true, submitted: true, taskId, id: taskId, run_id: runId, row_id: rowId, debited: cost, credits: debit.credits });
   } catch (error) {
     return json(500, { ok: false, error: 'server_error', details: String(error && error.message || error) });
   }
