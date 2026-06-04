@@ -753,14 +753,14 @@
     function getLocalRecent() {
       try {
         const arr = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]');
-        return Array.isArray(arr) ? arr.filter((item) => item && item.text).slice(0, HISTORY_LIMIT) : [];
+        return Array.isArray(arr) ? arr.filter((item) => item && item.idea).slice(0, HISTORY_LIMIT) : [];
       } catch (_) {
         return [];
       }
     }
 
     function saveLocalRecent(item) {
-      if (!item || !item.text) return;
+      if (!item || !item.idea) return;
       const current = getLocalRecent();
       const next = [item, ...current.filter((x) => x.run_id !== item.run_id)].slice(0, HISTORY_LIMIT);
       try { localStorage.setItem(LOCAL_KEY, JSON.stringify(next)); } catch (_) {}
@@ -792,13 +792,22 @@
           .limit(40);
 
         if (error) throw error;
-        const rows = (data || [])
+        const serverRows = (data || [])
           .filter((row) => row && row.meta && row.meta.source === 'video-prompt-builder')
           .map(normalizeRecentRow)
-          .filter((row) => row && row.idea && row.text)
+          .filter((row) => row && row.idea);
+        const byRun = new Map();
+        [...serverRows, ...getLocalRecent()].forEach((row) => {
+          if (!row || !row.idea) return;
+          const key = row.run_id || `${row.idea}_${row.created_at || ''}`;
+          const existing = byRun.get(key);
+          if (!existing || (!existing.text && row.text)) byRun.set(key, row);
+        });
+        const rows = Array.from(byRun.values())
+          .sort((a, b) => Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0))
           .slice(0, HISTORY_LIMIT)
           .reverse();
-        renderSavedHistory(rows.length ? rows : getLocalRecent().slice().reverse());
+        renderSavedHistory(rows);
       } catch (error) {
         console.warn('loadRecentRequests failed', error);
         renderSavedHistory(getLocalRecent().slice().reverse());
@@ -806,7 +815,7 @@
     }
 
     function renderSavedHistory(items) {
-      const list = Array.isArray(items) ? items.filter((item) => item && item.idea && item.text).slice(-HISTORY_LIMIT) : [];
+      const list = Array.isArray(items) ? items.filter((item) => item && item.idea).slice(-HISTORY_LIMIT) : [];
       els.chat.innerHTML = '';
       els.welcome = null;
 
@@ -822,10 +831,19 @@
 
       list.forEach((item) => {
         addUserMessage(item.idea || 'Saved request');
-        const row = document.createElement('div');
-        row.className = 'message-row assistant';
-        els.chat.appendChild(row);
-        setAssistantResult(row, item.text);
+        if (item.text) {
+          const row = document.createElement('div');
+          row.className = 'message-row assistant';
+          els.chat.appendChild(row);
+          setAssistantResult(row, item.text);
+        } else if (String(item.status || '').toLowerCase() === 'failed') {
+          const row = document.createElement('div');
+          row.className = 'message-row assistant';
+          els.chat.appendChild(row);
+          setAssistantError(row);
+        } else {
+          addThinkingMessage();
+        }
       });
       scrollChatBottom();
     }
@@ -888,6 +906,7 @@
       addUserMessage(idea);
       const thinkingRow = addThinkingMessage();
       thinkingRow.dataset.idea = idea;
+      saveLocalRecent({ run_id: runId, idea, text: '', status: 'processing', created_at: new Date().toISOString() });
 
       setStatus('Submitting request…');
       runLocked = true;
