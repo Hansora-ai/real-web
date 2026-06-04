@@ -132,7 +132,7 @@
       min-height:0;
       padding:24px;
       overflow:auto;
-      scroll-behavior:smooth;
+      scroll-behavior:auto;
     }
     .welcome-card{
       width:min(980px, 100%);
@@ -467,12 +467,14 @@
     const CHECK_ENDPOINT = '/.netlify/functions/video-prompt-builder-check';
     const BUILDER_MODEL = 'claude-opus-4-8';
     const HISTORY_LIMIT = 7;
+    const OUTPUT_LIMIT = 3300;
     const LOCAL_KEY = 'hansora_video_prompt_builder_recent_v3';
     const copies = {};
     let copySeq = 0;
     let currentUser = null;
     let currentCredits = 0;
     let runLocked = false;
+    let renderingHistory = false;
 
     const els = {
       form: document.getElementById('promptForm'),
@@ -661,7 +663,27 @@
         .replace(/'/g, '&#039;');
     }
 
+    function dedupeOutputText(text) {
+      let value = String(text || '').trim();
+      const markers = ['IDEA LOCK:', '**IDEA LOCK:**', 'STYLE:', '**STYLE:**'];
+      for (const marker of markers) {
+        const first = value.indexOf(marker);
+        if (first < 0) continue;
+        const second = value.indexOf(marker, first + marker.length);
+        if (second > first) {
+          value = value.slice(0, second).trim();
+          break;
+        }
+      }
+      return value;
+    }
+
+    function capOutputText(text) {
+      return Array.from(dedupeOutputText(text)).slice(0, OUTPUT_LIMIT).join('');
+    }
+
     function scrollChatBottom() {
+      if (renderingHistory) return;
       els.chat.scrollTop = els.chat.scrollHeight;
     }
 
@@ -727,6 +749,7 @@
     }
 
     function setAssistantResult(row, text) {
+      text = capOutputText(text);
       const id = `copy_${Date.now()}_${copySeq++}`;
       copies[id] = text;
       row.className = 'message-row assistant';
@@ -771,7 +794,7 @@
       return {
         run_id: meta.run_id || row.run_id || '',
         idea: row.prompt || row.idea || '',
-        text: meta.result_text || row.text || '',
+        text: capOutputText(meta.result_text || row.text || ''),
         status: meta.status || row.status || (meta.result_text ? 'done' : 'processing'),
         created_at: row.created_at || new Date().toISOString()
       };
@@ -816,10 +839,12 @@
 
     function renderSavedHistory(items) {
       const list = Array.isArray(items) ? items.filter((item) => item && item.idea).slice(-HISTORY_LIMIT) : [];
+      renderingHistory = true;
       els.chat.innerHTML = '';
       els.welcome = null;
 
       if (!list.length) {
+        renderingHistory = false;
         showWelcome();
         return;
       }
@@ -845,7 +870,10 @@
           addThinkingMessage();
         }
       });
-      scrollChatBottom();
+      renderingHistory = false;
+      requestAnimationFrame(() => {
+        els.chat.scrollTop = els.chat.scrollHeight;
+      });
     }
 
     async function getAccessToken() {
@@ -870,9 +898,10 @@
         const js = await res.json().catch(() => ({}));
 
         if (js && js.ok && js.status === 'done' && (js.text || js.result_text)) {
-          const text = String(js.text || js.result_text || '').trim();
+          const text = capOutputText(js.text || js.result_text || '');
           setAssistantResult(row, text);
           saveLocalRecent({ run_id: runId, idea: row.dataset.idea || '', text, status: 'done', created_at: new Date().toISOString() });
+          setStatus('');
           await refreshCredits();
           return true;
         }
@@ -946,11 +975,11 @@
         watchCreditsLive(120000);
         setCreditsEverywhere(js.credits != null ? js.credits : Math.max(0, currentCredits - COST));
         refreshCredits().catch(() => {});
-        const immediateText = String(js.text || js.result_text || '').trim();
+        const immediateText = capOutputText(js.text || js.result_text || '');
         if (immediateText) {
           setAssistantResult(thinkingRow, immediateText);
           saveLocalRecent({ run_id: runId, idea, text: immediateText, status: 'done', created_at: new Date().toISOString() });
-          setStatus('Prompt ready.', 'success');
+          setStatus('');
         } else {
           setStatus('Claude is thinking through the scene…', 'success');
           await pollPromptResult({ uid, runId, taskId: js.taskId || js.id || '', row: thinkingRow });
