@@ -174,6 +174,7 @@ async function fetchKieState(taskId) {
   if (!KIE_KEY) return { pending: true, error: "missing_kie_key" };
 
   const endpoints = [
+    `/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`,
     `/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
     `/api/v1/jobs/result?taskId=${encodeURIComponent(taskId)}`,
     `/api/v1/jobs/getTask?taskId=${encodeURIComponent(taskId)}`,
@@ -343,7 +344,7 @@ function collectStatusText(value, out) {
     return;
   }
   if (typeof value === "object") {
-    for (const key of ["status", "state", "message", "error", "reason", "description"]) {
+    for (const key of ["status", "state", "message", "error", "reason", "description", "failMsg", "failCode"]) {
       if (value[key] != null) collectStatusText(value[key], out);
     }
     for (const key of ["data", "result", "response", "task", "job"]) {
@@ -359,6 +360,8 @@ function failureReason(value) {
     value?.data?.error ||
     value?.data?.message ||
     value?.data?.reason ||
+    value?.data?.failMsg ||
+    value?.data?.failCode ||
     value?.result?.error ||
     value?.result?.message ||
     "kie_failed"
