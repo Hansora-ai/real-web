@@ -79,6 +79,21 @@ exports.handler = async (event) => {
       return json(200, { ok: true, status: "done", text: row.meta.result_text, result_text: row.meta.result_text });
     }
 
+    if (String(row.meta?.status || "").toLowerCase() === "failed") {
+      return json(200, {
+        ok: false,
+        failed: true,
+        status: "failed",
+        error: row.meta?.error || "kie_failed",
+        refunded: !!row.meta?.refunded,
+        refund_amount: Number(row.meta?.refunded_cost || 0)
+      });
+    }
+
+    if (row.meta?.async_mode === "claude-messages") {
+      return json(200, { ok: false, status: "pending" });
+    }
+
     if (!ids.taskId) return json(200, { ok: false, status: "pending", error: "missing_task_id" });
 
     const state = await fetchKieState(ids.taskId);
@@ -164,6 +179,7 @@ async function findProcessingGeneration(ids) {
     if (!row) continue;
     const status = String(row.meta?.status || "").toLowerCase();
     if (status === "done" && row.meta?.result_text) return row;
+    if (status === "failed") return row;
     if (status === "processing" || status === "pending" || !status) return row;
   }
 
