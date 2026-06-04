@@ -1,17 +1,20 @@
 // netlify/functions/run-video-prompt-builder.js
 // KIE Claude Opus 4.8 launcher for the video prompt builder.
-// Uses the documented Claude endpoint: POST /claude/v1/messages.
+// Uses the same KIE async task pattern as the working image generators:
+// run creates a task and returns taskId; checker polls KIE recordInfo.
 
+const CREATE_URL = process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/jobs/createTask";
 const KIE_KEY = process.env.KIE_API_KEY || process.env.KIEAI_API_KEY || "";
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-const CLAUDE_URL = process.env.KIE_CLAUDE_URL || "https://api.kie.ai/claude/v1/messages";
+const SITE_BASE = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/, "");
+const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/video-prompt-builder-check`;
 
 const MODEL = "claude-opus-4-8";
 const COST = 1;
-const VERSION_TAG = "video_prompt_builder_claude_opus_4_8_messages_v5";
+const VERSION_TAG = "video_prompt_builder_claude_opus_4_8_kie_task_v7";
 
 function cors() {
   return {
@@ -438,6 +441,97 @@ async function markDone(rowId, runId, text, raw) {
   });
 }
 
+function taskIdFromCreate(value) {
+  return String(
+    value?.data?.taskId ||
+    value?.data?.task_id ||
+    value?.taskId ||
+    value?.task_id ||
+    value?.data?.id ||
+    value?.id ||
+    ""
+  ).trim();
+}
+
+async function createKieTask({ callbackUrl, prompt }) {
+  const payloads = [
+    {
+      label: "input.string",
+      body: {
+        model: MODEL,
+        callBackUrl: callbackUrl,
+        input: prompt
+      }
+    },
+    {
+      label: "input.prompt",
+      body: {
+        model: MODEL,
+        callBackUrl: callbackUrl,
+        input: { prompt }
+      }
+    },
+    {
+      label: "input.messages",
+      body: {
+        model: MODEL,
+        callBackUrl: callbackUrl,
+        input: {
+          messages: [{ role: "user", content: prompt }],
+          thinkingFlag: true,
+          stream: false,
+          max_tokens: 12000
+        }
+      }
+    },
+    {
+      label: "input.content",
+      body: {
+        model: MODEL,
+        callBackUrl: callbackUrl,
+        input: { content: prompt }
+      }
+    }
+  ];
+
+  const attempts = [];
+  for (const candidate of payloads) {
+    const response = await fetch(CREATE_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${KIE_KEY}`,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify(candidate.body)
+    });
+
+    const raw = await response.text();
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (_) {
+      data = { raw };
+    }
+
+    const taskId = taskIdFromCreate(data);
+    attempts.push({
+      label: candidate.label,
+      http_status: response.status,
+      ok: response.ok,
+      code: data?.code,
+      msg: data?.msg || data?.message || data?.error || "",
+      data: data?.data ?? null
+    });
+
+    if (response.ok && taskId) {
+      return { ok: true, taskId, response: data, label: candidate.label, attempts };
+    }
+  }
+
+  return { ok: false, response: attempts[attempts.length - 1] || null, attempts };
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors(), body: "" };
   if (event.httpMethod !== "POST") return json(405, { ok: false, error: "method_not_allowed", version: VERSION_TAG });
@@ -458,14 +552,38 @@ exports.handler = async (event) => {
     const prompt = buildPrompt(userIdea);
     const seeded = await seedGeneration(uid, runId, userIdea, prompt);
     const rowId = seeded.row_id || null;
+    const callbackUrl = `${CALLBACK_URL}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
+
+    const created = await createKieTask({ callbackUrl, prompt });
+    if (!created.ok || !created.taskId) {
+      if (rowId) {
+        await patchGenerationMeta(rowId, {
+          source: "video-prompt-builder",
+          run_id: runId,
+          model: MODEL,
+          status: "create_failed",
+          raw: created.response,
+          create_attempts: created.attempts,
+          refund_amount: COST
+        });
+      }
+      return json(502, {
+        ok: false,
+        error: "create_failed",
+        message: "KIE did not accept the Claude task.",
+        response: created.response,
+        attempts: created.attempts,
+        version: VERSION_TAG
+      });
+    }
 
     const baseMeta = {
       source: "video-prompt-builder",
       run_id: runId,
       model: MODEL,
       status: "processing",
-      task_id: runId,
-      async_mode: "claude-messages",
+      task_id: created.taskId,
+      create_shape: created.label,
       refund_amount: COST
     };
     if (rowId) await patchGenerationMeta(rowId, baseMeta);
@@ -481,69 +599,19 @@ exports.handler = async (event) => {
       return json(500, { ok: false, error: "charge_failed", details: charged.debit || charged, version: VERSION_TAG });
     }
 
-    const claudeResponse = await fetch(CLAUDE_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${KIE_KEY}`,
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        thinkingFlag: true,
-        stream: false,
-        max_tokens: 12000
-      })
-    });
-
-    const raw = await claudeResponse.text();
-    let claudeJson;
-    try {
-      claudeJson = JSON.parse(raw);
-    } catch (_) {
-      claudeJson = { raw };
-    }
-
-    const resultText = collectClaudeText(claudeJson);
-    if (!claudeResponse.ok || !resultText) {
-      const refund = await refundOnce(
-        rowId,
-        uid,
-        COST,
-        claudeJson?.message || claudeJson?.error || claudeJson?.msg || `claude_http_${claudeResponse.status}`
-      );
-      return json(claudeResponse.status || 502, {
-        ok: false,
-        error: "claude_failed",
-        message: claudeJson?.message || claudeJson?.error || claudeJson?.msg || "KIE Claude request failed.",
-        response: claudeJson,
-        refunded: !!refund.refunded,
-        credits: refund.credits ?? null,
-        version: VERSION_TAG
-      });
-    }
-
-    await markDone(rowId, runId, resultText, claudeJson);
-
-    return json(200, {
+    return json(201, {
       ok: true,
-      status: "done",
-      id: runId,
-      taskId: runId,
+      status: "submitted",
+      submitted: true,
+      id: created.taskId,
+      taskId: created.taskId,
       run_id: runId,
       row_id: rowId,
-      text: resultText,
-      result_text: resultText,
       cost: COST,
       credits: charged.debit?.credits ?? null,
       model: MODEL,
       checker: "video-prompt-builder-check",
+      create_shape: created.label,
       version: VERSION_TAG
     });
   } catch (error) {
