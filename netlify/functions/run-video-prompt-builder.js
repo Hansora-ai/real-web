@@ -105,10 +105,9 @@ Create a premium cinematic 3D animated feature-film look, similar to high-end fa
 The style should feel expensive, magical, emotional, and professional, but do not copy any existing movie, character, studio, franchise, or copyrighted design.
 
 VIDEO FORMAT:
-Aspect ratio: 16:9 horizontal cinematic widescreen.
 Duration: 15 seconds.
 Camera: smooth professional cinematic camera movement.
-Scene structure: exact timing from 0.0s to 15.0s.
+Scene structure: clear timing from 0.0s to 15.0s.
 The scene must have a clear beginning, middle, and ending.
 Every second must have a purpose.
 
@@ -128,54 +127,19 @@ LANGUAGE RULE:
 Write the entire output in the same language as the user’s idea. If the user’s idea is Russian, write Russian. If it is Armenian, write Armenian. If it is English, write English. Preserve the user’s language naturally while keeping the exact structure below.
 
 OUTPUT FORMAT:
-Give the final answer in this exact structure:
+Return only ONE copyable video prompt. Do not write analysis. Do not use markdown dividers. Do not repeat the prompt. Do not include a separate "final clean prompt" after already writing the same content.
 
 ABSOLUTE LENGTH LIMIT:
-The entire final answer must be ${MAX_OUTPUT_CHARS} characters or fewer, including all headings, spaces, punctuation, and line breaks. Do not exceed ${MAX_OUTPUT_CHARS} characters by even one character. Compress wording aggressively if needed while keeping the structure. The final answer must stop before it reaches ${MAX_OUTPUT_CHARS} characters.
+The entire final answer must be ${MAX_OUTPUT_CHARS} characters or fewer, including headings, spaces, punctuation, and line breaks. Do not exceed ${MAX_OUTPUT_CHARS} characters by even one character. Compress wording aggressively.
 
-1. FINAL VIDEO PROMPT
-   Write one complete, highly detailed video prompt.
+The prompt must still feel rich, detailed, and useful for a premium cartoon/3D animation model. Use this compact structure:
+IDEA LOCK: one sentence preserving the user's exact action/emotion/ending.
+STYLE: detailed family-friendly cinematic 3D/cartoon animation style, expressive character acting, rich textures, lighting, mood.
+TIMING: include timestamp beats 0-2s, 2-4s, 4-6s, 6-8s, 8-10s, 10-12s, 12-15s. Each beat must mention action, expression/body movement, camera, lighting/environment, and audio/emotion in a compressed but detailed way.
+CAMERA/ANIMATION: concise extra notes on lens/framing/motion and small acting details.
+NEGATIVE: concise avoid-list including bad anatomy, flicker, random cuts, unstable camera, reversed action, changed relationship/mood/ending.
 
-2. TIMING BREAKDOWN
-   Break the full 15 seconds into exact timestamps:
-   0.0–2.0s
-   2.0–4.0s
-   4.0–6.0s
-   6.0–8.0s
-   8.0–10.0s
-   10.0–12.0s
-   12.0–15.0s
-
-For every timing section, describe:
-
-* character action
-* facial expression
-* body movement
-* camera movement
-* lighting changes
-* environment movement
-* emotional feeling
-* sound/music cue
-
-3. CAMERA DIRECTION
-   Describe lens, framing, movement, focus, depth of field, close-ups, wide shots, tracking shots, camera height, camera speed, and final shot composition.
-
-4. CHARACTER ANIMATION
-   Describe small acting details:
-   eye movement, blinking, breathing, hands, posture, hair movement, clothing movement, reaction timing, emotional expression, weight shifts, pauses, and natural physical behavior.
-
-5. ENVIRONMENT AND LIGHTING
-   Describe background, props, atmosphere, shadows, color palette, reflections, particles, texture details, and how lighting supports the mood.
-
-6. AUDIO DIRECTION
-   Describe music, ambience, sound effects, emotional sound moments, and what should happen exactly at important seconds.
-
-7. NEGATIVE INSTRUCTIONS
-   Write what the video must avoid:
-   bad anatomy, distorted faces, extra fingers, flickering, random cuts, unstable camera, fast confusing motion, wrong character identity, inconsistent clothing, blurry faces, low-quality textures, broken objects, strange expressions, unreadable storytelling, sudden scene changes, unnatural animation, reversed story direction, changed main action, changed relationship, changed mood, or a different ending than the user requested.
-
-8. FINAL CLEAN PROMPT
-   After all analysis, write a polished final version in one copyable block, without extra explanation.
+Be detailed, not vague. Do not waste characters on repeated explanations or unnecessary specs. Every word should improve the generated animation.
 
 IMPORTANT QUALITY RULES:
 The scene must feel intentional, not random.
