@@ -90,10 +90,6 @@ exports.handler = async (event) => {
       });
     }
 
-    if (row.meta?.async_mode === "claude-messages") {
-      return json(200, { ok: false, status: "pending" });
-    }
-
     if (!ids.taskId) return json(200, { ok: false, status: "pending", error: "missing_task_id" });
 
     const state = await fetchKieState(ids.taskId);
