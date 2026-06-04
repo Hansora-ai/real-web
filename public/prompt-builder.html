@@ -32,6 +32,7 @@
     html,body{ min-height:100%; }
     body{
       margin:0;
+      padding-top:var(--header-height, 68px);
       color:var(--text);
       font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,Arial,sans-serif;
       background:
@@ -44,14 +45,13 @@
     button,textarea{ font:inherit; }
     button{ cursor:pointer; }
     button:disabled{ cursor:not-allowed; }
-    #sharedHeader{ position:relative; z-index:50; }
 
     .page{
       width:min(1540px, calc(100% - 16px));
-      height:calc(100vh - 64px);
+      height:calc(100vh - var(--header-height, 68px));
       min-height:0;
       margin:0 auto;
-      padding:8px 0 0;
+      padding:0;
       display:flex;
     }
     .chat-panel{
@@ -271,13 +271,16 @@
       color:#ffe4e6;
     }
     .prompt-output{
-      position:relative;
-      padding-top:44px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      padding-bottom:12px;
+    }
+    .prompt-output-text{
+      white-space:pre-wrap;
     }
     .copy-btn{
-      position:absolute;
-      top:10px;
-      right:10px;
+      align-self:flex-end;
       display:inline-flex;
       align-items:center;
       justify-content:center;
@@ -387,10 +390,10 @@
       .page{
         width:100%;
         height:auto;
-        min-height:calc(100vh - 70px);
-        padding:8px 8px 0;
+        min-height:calc(100vh - var(--header-height, 68px));
+        padding:0 8px;
       }
-      .chat-panel{ min-height:calc(100vh - 90px); border-radius:22px; }
+      .chat-panel{ min-height:calc(100vh - var(--header-height, 68px)); border-radius:22px; }
       .chat-list{ padding:14px; }
       .message-bubble{ max-width:92%; font-size:13px; border-radius:20px; }
       .welcome-card{ margin:20px auto; padding:20px; border-radius:24px; }
@@ -480,16 +483,10 @@
       welcome: document.getElementById('welcomeCard')
     };
 
-    function syncPageHeight() {
-      const page = document.querySelector('.page');
-      if (!page) return;
-      if (window.matchMedia('(max-width: 900px)').matches) {
-        page.style.height = '';
-        return;
-      }
-      const top = page.getBoundingClientRect().top;
-      const nextHeight = Math.max(360, window.innerHeight - top);
-      page.style.height = `${nextHeight}px`;
+    function updateHeaderHeightVar() {
+      const header = document.getElementById('siteHeader') || document.getElementById('sharedHeader');
+      const height = header ? Math.max(64, Math.round(header.getBoundingClientRect().height || 68)) : 68;
+      document.documentElement.style.setProperty('--header-height', `${height}px`);
     }
 
     function isUsableUrl(value) {
@@ -735,8 +732,8 @@
       row.className = 'message-row assistant';
       row.innerHTML = `
         <div class="message-bubble prompt-output">
+          <div class="prompt-output-text">${escapeHtml(text)}</div>
           <button type="button" class="copy-btn" data-copy-id="${id}">Copy</button>
-          ${escapeHtml(text)}
         </div>`;
       scrollChatBottom();
     }
@@ -753,22 +750,17 @@
       scrollChatBottom();
     }
 
-    function setAssistantPending(row) {
-      row.className = 'message-row assistant';
-      row.innerHTML = '<div class="message-bubble">This request is still processing. Run a new request or check again later.</div>';
-      scrollChatBottom();
-    }
-
     function getLocalRecent() {
       try {
         const arr = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]');
-        return Array.isArray(arr) ? arr.slice(0, HISTORY_LIMIT) : [];
+        return Array.isArray(arr) ? arr.filter((item) => item && item.text).slice(0, HISTORY_LIMIT) : [];
       } catch (_) {
         return [];
       }
     }
 
     function saveLocalRecent(item) {
+      if (!item || !item.text) return;
       const current = getLocalRecent();
       const next = [item, ...current.filter((x) => x.run_id !== item.run_id)].slice(0, HISTORY_LIMIT);
       try { localStorage.setItem(LOCAL_KEY, JSON.stringify(next)); } catch (_) {}
@@ -803,6 +795,7 @@
         const rows = (data || [])
           .filter((row) => row && row.meta && row.meta.source === 'video-prompt-builder')
           .map(normalizeRecentRow)
+          .filter((row) => row && row.idea && row.text)
           .slice(0, HISTORY_LIMIT)
           .reverse();
         renderSavedHistory(rows.length ? rows : getLocalRecent().slice().reverse());
@@ -813,7 +806,7 @@
     }
 
     function renderSavedHistory(items) {
-      const list = Array.isArray(items) ? items.slice(-HISTORY_LIMIT) : [];
+      const list = Array.isArray(items) ? items.filter((item) => item && item.idea && item.text).slice(-HISTORY_LIMIT) : [];
       els.chat.innerHTML = '';
       els.welcome = null;
 
@@ -832,13 +825,7 @@
         const row = document.createElement('div');
         row.className = 'message-row assistant';
         els.chat.appendChild(row);
-        if (String(item.status || '').toLowerCase() === 'failed') {
-          setAssistantError(row);
-        } else if (item.text) {
-          setAssistantResult(row, item.text);
-        } else {
-          setAssistantPending(row);
-        }
+        setAssistantResult(row, item.text);
       });
       scrollChatBottom();
     }
@@ -857,7 +844,7 @@
     }
 
     async function pollPromptResult({ uid, runId, taskId, row }) {
-      const maxAttempts = 300;
+      const maxAttempts = 3600;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         await delay(attempt < 8 ? 1800 : 2600);
         const url = `${CHECK_ENDPOINT}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}${taskId ? `&taskId=${encodeURIComponent(taskId)}` : ''}`;
@@ -880,8 +867,6 @@
         }
       }
 
-      setAssistantPending(row);
-      saveLocalRecent({ run_id: runId, idea: row.dataset.idea || '', text: '', status: 'processing', created_at: new Date().toISOString() });
       await refreshCredits();
       return false;
     }
@@ -1003,12 +988,12 @@
       setTimeout(() => { loadUser().catch((error) => console.warn('auth refresh failed', error)); }, 50);
     });
 
-    window.addEventListener('resize', syncPageHeight);
+    window.addEventListener('resize', updateHeaderHeightVar);
 
     window.addEventListener('load', () => {
-      syncPageHeight();
-      setTimeout(syncPageHeight, 150);
-      setTimeout(syncPageHeight, 700);
+      updateHeaderHeightVar();
+      setTimeout(updateHeaderHeightVar, 100);
+      setTimeout(updateHeaderHeightVar, 500);
       setupVisualUrls();
       setRunButtonLabel('Run');
       loadUser().catch((error) => console.warn('initial load failed', error));
