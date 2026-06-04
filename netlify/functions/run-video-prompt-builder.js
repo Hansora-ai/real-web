@@ -1,20 +1,20 @@
 // netlify/functions/run-video-prompt-builder.js
 // KIE Claude Opus 4.8 launcher for the video prompt builder.
-// Uses the same KIE async task pattern as the working image generators:
-// run creates a task and returns taskId; checker polls KIE recordInfo.
-
-const CREATE_URL = process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/jobs/createTask";
-const KIE_KEY = process.env.KIE_API_KEY || process.env.KIEAI_API_KEY || "";
+// This function returns fast. The long Claude call runs in
+// video-prompt-builder-worker-background.js, then the checker reads Supabase.
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const SITE_BASE = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/, "");
-const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/video-prompt-builder-check`;
+const WORKER_URL =
+  process.env.VIDEO_PROMPT_WORKER_URL ||
+  `${SITE_BASE}/.netlify/functions/video-prompt-builder-worker-background`;
+const WORKER_SECRET = process.env.VIDEO_PROMPT_WORKER_SECRET || "";
 
 const MODEL = "claude-opus-4-8";
 const COST = 1;
-const VERSION_TAG = "video_prompt_builder_claude_opus_4_8_kie_task_v7";
+const VERSION_TAG = "video_prompt_builder_claude_opus_4_8_background_v8";
 
 function cors() {
   return {
@@ -391,121 +391,20 @@ async function refundOnce(rowId, uid, amount, reason) {
   return { refunded: true, amount, credits: next };
 }
 
-function collectClaudeText(value) {
-  const parts = [];
-
-  function walk(x, depth = 0, trusted = false) {
-    if (!x || depth > 8) return;
-    if (typeof x === "string") {
-      const text = x.trim();
-      if (trusted && text) parts.push(text);
-      return;
-    }
-    if (Array.isArray(x)) {
-      for (const item of x) walk(item, depth + 1, trusted);
-      return;
-    }
-    if (typeof x === "object") {
-      if (typeof x.text === "string") walk(x.text, depth + 1, true);
-      if (typeof x.content === "string") walk(x.content, depth + 1, true);
-      for (const key of ["content", "message", "data", "result", "output", "response"]) {
-        if (x[key] && typeof x[key] !== "string") walk(x[key], depth + 1, trusted || key === "content");
-      }
-    }
-  }
-
-  walk(value, 0, false);
-  return parts.join("\n").trim();
-}
-
-async function markDone(rowId, runId, text, raw) {
-  if (!rowId) return;
-  const rowResponse = await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(rowId)}&select=id,meta&limit=1`, {
-    headers: sbHeaders()
-  });
-  const rows = await rowResponse.json().catch(() => []);
-  const row = Array.isArray(rows) ? rows[0] : null;
-  const meta = row?.meta && typeof row.meta === "object" ? row.meta : {};
-  await patchGeneration(rowId, {
-    result_url: null,
-    meta: {
-      ...meta,
-      source: "video-prompt-builder",
-      run_id: runId,
-      model: MODEL,
-      status: "done",
-      result_text: text,
-      raw_result: raw,
-      completed_at: new Date().toISOString()
-    }
-  });
-}
-
-function taskIdFromCreate(value) {
-  return String(
-    value?.data?.taskId ||
-    value?.data?.task_id ||
-    value?.taskId ||
-    value?.task_id ||
-    value?.data?.id ||
-    value?.id ||
-    ""
-  ).trim();
-}
-
-async function createKieTask({ callbackUrl, prompt }) {
-  const payloads = [
-    {
-      label: "input.string",
-      body: {
-        model: MODEL,
-        callBackUrl: callbackUrl,
-        input: prompt
-      }
-    },
-    {
-      label: "input.prompt",
-      body: {
-        model: MODEL,
-        callBackUrl: callbackUrl,
-        input: { prompt }
-      }
-    },
-    {
-      label: "input.messages",
-      body: {
-        model: MODEL,
-        callBackUrl: callbackUrl,
-        input: {
-          messages: [{ role: "user", content: prompt }],
-          thinkingFlag: true,
-          stream: false,
-          max_tokens: 12000
-        }
-      }
-    },
-    {
-      label: "input.content",
-      body: {
-        model: MODEL,
-        callBackUrl: callbackUrl,
-        input: { content: prompt }
-      }
-    }
-  ];
-
-  const attempts = [];
-  for (const candidate of payloads) {
-    const response = await fetch(CREATE_URL, {
+async function invokeWorker(payload) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4500);
+  try {
+    const response = await fetch(WORKER_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${KIE_KEY}`,
         "Content-Type": "application/json",
-        Accept: "application/json"
+        Accept: "application/json",
+        ...(WORKER_SECRET ? { "X-Worker-Secret": WORKER_SECRET } : {})
       },
-      body: JSON.stringify(candidate.body)
+      body: JSON.stringify(payload),
+      signal: controller.signal
     });
-
     const raw = await response.text();
     let data;
     try {
@@ -513,29 +412,17 @@ async function createKieTask({ callbackUrl, prompt }) {
     } catch (_) {
       data = { raw };
     }
-
-    const taskId = taskIdFromCreate(data);
-    attempts.push({
-      label: candidate.label,
-      http_status: response.status,
-      ok: response.ok,
-      code: data?.code,
-      msg: data?.msg || data?.message || data?.error || "",
-      data: data?.data ?? null
-    });
-
-    if (response.ok && taskId) {
-      return { ok: true, taskId, response: data, label: candidate.label, attempts };
-    }
+    return { ok: response.ok, status: response.status, data };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  } finally {
+    clearTimeout(timer);
   }
-
-  return { ok: false, response: attempts[attempts.length - 1] || null, attempts };
 }
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors(), body: "" };
   if (event.httpMethod !== "POST") return json(405, { ok: false, error: "method_not_allowed", version: VERSION_TAG });
-  if (!KIE_KEY) return json(500, { ok: false, error: "missing_kie_key", version: VERSION_TAG });
 
   try {
     const body = JSON.parse(event.body || "{}");
@@ -552,41 +439,15 @@ exports.handler = async (event) => {
     const prompt = buildPrompt(userIdea);
     const seeded = await seedGeneration(uid, runId, userIdea, prompt);
     const rowId = seeded.row_id || null;
-    const callbackUrl = `${CALLBACK_URL}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
-
-    const created = await createKieTask({ callbackUrl, prompt });
-    if (!created.ok || !created.taskId) {
-      if (rowId) {
-        await patchGenerationMeta(rowId, {
-          source: "video-prompt-builder",
-          run_id: runId,
-          model: MODEL,
-          status: "create_failed",
-          raw: created.response,
-          create_attempts: created.attempts,
-          refund_amount: COST
-        });
-      }
-      return json(502, {
-        ok: false,
-        error: "create_failed",
-        message: "KIE did not accept the Claude task.",
-        response: created.response,
-        attempts: created.attempts,
-        version: VERSION_TAG
-      });
-    }
 
     const baseMeta = {
       source: "video-prompt-builder",
       run_id: runId,
       model: MODEL,
       status: "processing",
-      task_id: created.taskId,
-      create_shape: created.label,
+      worker: "video-prompt-builder-worker-background",
       refund_amount: COST
     };
-    if (rowId) await patchGenerationMeta(rowId, baseMeta);
 
     const charged = await chargeOnceForRun(uid, runId, COST, rowId, baseMeta);
     if (!charged.ok) {
@@ -599,19 +460,35 @@ exports.handler = async (event) => {
       return json(500, { ok: false, error: "charge_failed", details: charged.debit || charged, version: VERSION_TAG });
     }
 
+    const worker = await invokeWorker({ uid, run_id: runId, row_id: rowId, user_idea: userIdea, prompt, model: MODEL, cost: COST });
+    if (!worker.ok) {
+      if (rowId) {
+        await patchGenerationMeta(rowId, {
+          ...baseMeta,
+          status: "failed",
+          failed: true,
+          error: "worker_enqueue_failed",
+          worker_response: worker,
+          failed_at: new Date().toISOString()
+        });
+        await refundOnce(rowId, uid, COST, "worker_enqueue_failed");
+      }
+      return json(502, { ok: false, error: "worker_enqueue_failed", response: worker, version: VERSION_TAG });
+    }
+
     return json(201, {
       ok: true,
       status: "submitted",
       submitted: true,
-      id: created.taskId,
-      taskId: created.taskId,
+      id: "",
+      taskId: "",
       run_id: runId,
       row_id: rowId,
       cost: COST,
       credits: charged.debit?.credits ?? null,
       model: MODEL,
       checker: "video-prompt-builder-check",
-      create_shape: created.label,
+      worker: "video-prompt-builder-worker-background",
       version: VERSION_TAG
     });
   } catch (error) {
