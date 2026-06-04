@@ -1,19 +1,17 @@
 // netlify/functions/run-video-prompt-builder.js
 // KIE Claude Opus 4.8 launcher for the video prompt builder.
-// Charges 1 credit after KIE accepts the task, idempotent per user/run_id.
+// Claude uses /claude/v1/messages, not the async jobs/createTask API.
+// Charges 1 credit once per user/run_id and refunds if the KIE call fails.
 
-const CREATE_URL = process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/jobs/createTask";
+const CLAUDE_URL = process.env.KIE_CLAUDE_URL || "https://api.kie.ai/claude/v1/messages";
 const KIE_KEY = process.env.KIE_API_KEY || process.env.KIEAI_API_KEY || "";
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-const SITE_BASE = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/, "");
-const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/video-prompt-builder-check`;
-
 const MODEL = "claude-opus-4-8";
 const COST = 1;
-const VERSION_TAG = "video_prompt_builder_claude_opus_4_8_v1";
+const VERSION_TAG = "video_prompt_builder_claude_opus_4_8_sync_v2";
 
 function cors() {
   return {
@@ -250,6 +248,23 @@ async function patchGenerationMeta(id, meta) {
   }
 }
 
+async function patchGeneration(id, payload) {
+  if (!SUPABASE_URL || !SERVICE_KEY || !id) return false;
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: sbHeaders({
+        "Content-Type": "application/json",
+        Prefer: "return=minimal"
+      }),
+      body: JSON.stringify(payload)
+    });
+    return response.ok;
+  } catch (_) {
+    return false;
+  }
+}
+
 async function debitCredits(uid, cost) {
   if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { ok: false, error: "missing_env_or_uid" };
   try {
@@ -329,6 +344,100 @@ async function chargeOnceForRun(uid, runId, cost, rowId, baseMeta) {
   return { ok: true, debit, already: false };
 }
 
+async function refundOnce(rowId, uid, amount, reason) {
+  if (!SUPABASE_URL || !SERVICE_KEY || !rowId || !uid || !Number.isFinite(amount) || amount <= 0) {
+    return { refunded: false, amount: 0 };
+  }
+
+  const rowResponse = await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(rowId)}&select=id,meta,user_id&limit=1`, {
+    headers: sbHeaders()
+  });
+  const rows = await rowResponse.json().catch(() => []);
+  const row = Array.isArray(rows) ? rows[0] : null;
+  const meta = row?.meta && typeof row.meta === "object" ? row.meta : {};
+  if (String(meta.refunded || "").toLowerCase() === "true") {
+    return { refunded: false, amount, already_refunded: true };
+  }
+
+  const profileResponse = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits&limit=1`, {
+    headers: sbHeaders()
+  });
+  const profiles = await profileResponse.json().catch(() => []);
+  const current = Number(Array.isArray(profiles) && profiles[0] ? profiles[0].credits : 0);
+  const next = Math.round((current + amount) * 100) / 100;
+  const updateResponse = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
+    method: "PATCH",
+    headers: sbHeaders({
+      "Content-Type": "application/json",
+      Prefer: "return=minimal"
+    }),
+    body: JSON.stringify({ credits: next })
+  });
+  if (!updateResponse.ok) return { refunded: false, amount, error: "profile_refund_failed" };
+
+  await patchGenerationMeta(rowId, {
+    ...meta,
+    status: "failed",
+    failed: true,
+    error: reason,
+    refunded: true,
+    refunded_cost: amount,
+    refunded_at: new Date().toISOString()
+  });
+
+  return { refunded: true, amount, credits: next };
+}
+
+function collectClaudeText(value) {
+  const parts = [];
+
+  function walk(x, depth = 0, trusted = false) {
+    if (!x || depth > 8) return;
+    if (typeof x === "string") {
+      const text = x.trim();
+      if (trusted && text) parts.push(text);
+      return;
+    }
+    if (Array.isArray(x)) {
+      for (const item of x) walk(item, depth + 1, trusted);
+      return;
+    }
+    if (typeof x === "object") {
+      if (typeof x.text === "string") walk(x.text, depth + 1, true);
+      if (typeof x.content === "string") walk(x.content, depth + 1, true);
+      for (const key of ["content", "message", "data", "result", "output", "response"]) {
+        if (x[key] && typeof x[key] !== "string") walk(x[key], depth + 1, trusted || key === "content");
+      }
+    }
+  }
+
+  walk(value, 0, false);
+  return parts.join("\n").trim();
+}
+
+async function markDone(rowId, runId, text, raw) {
+  if (!rowId) return;
+  const rowResponse = await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(rowId)}&select=id,meta&limit=1`, {
+    headers: sbHeaders()
+  });
+  const rows = await rowResponse.json().catch(() => []);
+  const row = Array.isArray(rows) ? rows[0] : null;
+  const meta = row?.meta && typeof row.meta === "object" ? row.meta : {};
+  await patchGeneration(rowId, {
+    result_url: null,
+    meta: {
+      ...meta,
+      source: "video-prompt-builder",
+      run_id: runId,
+      model: MODEL,
+      status: "done",
+      result_text: text,
+      raw_result: raw,
+      completed_at: new Date().toISOString()
+    }
+  });
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors(), body: "" };
   if (event.httpMethod !== "POST") return json(405, { ok: false, error: "method_not_allowed", version: VERSION_TAG });
@@ -349,53 +458,12 @@ exports.handler = async (event) => {
     const prompt = buildPrompt(userIdea);
     const seeded = await seedGeneration(uid, runId, userIdea, prompt);
     const rowId = seeded.row_id || null;
-    const callbackUrl = `${CALLBACK_URL}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
-
-    const payload = {
-      model: MODEL,
-      callBackUrl: callbackUrl,
-      input: { prompt }
-    };
-
-    const createResponse = await fetch(CREATE_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${KIE_KEY}`,
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const raw = await createResponse.text();
-    let createJson;
-    try {
-      createJson = JSON.parse(raw);
-    } catch (_) {
-      createJson = { raw };
-    }
-
-    const taskId = createJson?.data?.taskId || createJson?.taskId || createJson?.data?.id || createJson?.id || "";
-    if (!createResponse.ok || !taskId) {
-      if (rowId) {
-        await patchGenerationMeta(rowId, {
-          source: "video-prompt-builder",
-          run_id: runId,
-          model: MODEL,
-          status: "create_failed",
-          raw: createJson,
-          refund_amount: COST
-        });
-      }
-      return json(createResponse.status || 500, { ok: false, error: "create_failed", response: createJson, version: VERSION_TAG });
-    }
 
     const baseMeta = {
       source: "video-prompt-builder",
       run_id: runId,
       model: MODEL,
       status: "processing",
-      task_id: taskId,
       refund_amount: COST
     };
     if (rowId) await patchGenerationMeta(rowId, baseMeta);
@@ -411,10 +479,58 @@ exports.handler = async (event) => {
       return json(500, { ok: false, error: "charge_failed", details: charged.debit || charged, version: VERSION_TAG });
     }
 
-    return json(201, {
+    const claudePayload = {
+      model: MODEL,
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      stream: false,
+      max_tokens: 12000
+    };
+
+    const claudeResponse = await fetch(CLAUDE_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${KIE_KEY}`,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify(claudePayload)
+    });
+
+    const raw = await claudeResponse.text();
+    let claudeJson;
+    try {
+      claudeJson = JSON.parse(raw);
+    } catch (_) {
+      claudeJson = { raw };
+    }
+
+    const resultText = collectClaudeText(claudeJson);
+    if (!claudeResponse.ok || !resultText) {
+      const refund = await refundOnce(rowId, uid, COST, claudeJson?.message || claudeJson?.error || "kie_claude_failed");
+      return json(claudeResponse.status || 500, {
+        ok: false,
+        error: "claude_failed",
+        response: claudeJson,
+        refunded: !!refund.refunded,
+        credits: refund.credits ?? null,
+        version: VERSION_TAG
+      });
+    }
+
+    await markDone(rowId, runId, resultText, claudeJson);
+
+    return json(200, {
       ok: true,
-      id: taskId,
-      taskId,
+      status: "done",
+      text: resultText,
+      result_text: resultText,
+      id: claudeJson?.id || runId,
       run_id: runId,
       row_id: rowId,
       cost: COST,
