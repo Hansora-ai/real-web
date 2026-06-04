@@ -747,6 +747,18 @@
       scrollChatBottom();
     }
 
+    function setAssistantErrorText(row, message) {
+      row.className = 'message-row assistant';
+      row.innerHTML = `<div class="message-bubble error">${escapeHtml(message || 'Sorry, your request failed. Please try again.')}</div>`;
+      scrollChatBottom();
+    }
+
+    function setAssistantPending(row) {
+      row.className = 'message-row assistant';
+      row.innerHTML = '<div class="message-bubble">This request is still processing. Run a new request or check again later.</div>';
+      scrollChatBottom();
+    }
+
     function getLocalRecent() {
       try {
         const arr = JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]');
@@ -825,7 +837,7 @@
         } else if (item.text) {
           setAssistantResult(row, item.text);
         } else {
-          row.innerHTML = '<div class="message-bubble">This request is still processing. Run a new request or check again later.</div>';
+          setAssistantPending(row);
         }
       });
       scrollChatBottom();
@@ -845,7 +857,7 @@
     }
 
     async function pollPromptResult({ uid, runId, taskId, row }) {
-      const maxAttempts = 120;
+      const maxAttempts = 300;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         await delay(attempt < 8 ? 1800 : 2600);
         const url = `${CHECK_ENDPOINT}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}${taskId ? `&taskId=${encodeURIComponent(taskId)}` : ''}`;
@@ -868,7 +880,8 @@
         }
       }
 
-      setAssistantError(row);
+      setAssistantPending(row);
+      saveLocalRecent({ run_id: runId, idea: row.dataset.idea || '', text: '', status: 'processing', created_at: new Date().toISOString() });
       await refreshCredits();
       return false;
     }
@@ -912,9 +925,16 @@
         try { js = JSON.parse(text); } catch { js = { raw: text }; }
 
         if (!res.ok || !js.ok) {
-          if (js && js.error === 'not_enough_credits') setStatus('Not enough credits.', 'error');
-          else setStatus('Sorry, your request failed. Please try again.', 'error');
-          setAssistantError(thinkingRow);
+          if (js && js.error === 'not_enough_credits') {
+            setStatus('Not enough credits.', 'error');
+            setAssistantErrorText(thinkingRow, 'Not enough credits.');
+          } else if (js && js.error === 'worker_enqueue_failed') {
+            setStatus('Sorry, your request failed. Please try again.', 'error');
+            setAssistantErrorText(thinkingRow, 'Could not start the Claude worker. Your credit was refunded.');
+          } else {
+            setStatus('Sorry, your request failed. Please try again.', 'error');
+            setAssistantError(thinkingRow);
+          }
           await refreshCredits();
           return;
         }
@@ -922,8 +942,15 @@
         watchCreditsLive(120000);
         setCreditsEverywhere(js.credits != null ? js.credits : Math.max(0, currentCredits - COST));
         refreshCredits().catch(() => {});
-        setStatus('Claude is thinking through the scene…', 'success');
-        await pollPromptResult({ uid, runId, taskId: js.taskId || js.id || '', row: thinkingRow });
+        const immediateText = String(js.text || js.result_text || '').trim();
+        if (immediateText) {
+          setAssistantResult(thinkingRow, immediateText);
+          saveLocalRecent({ run_id: runId, idea, text: immediateText, status: 'done', created_at: new Date().toISOString() });
+          setStatus('Prompt ready.', 'success');
+        } else {
+          setStatus('Claude is thinking through the scene…', 'success');
+          await pollPromptResult({ uid, runId, taskId: js.taskId || js.id || '', row: thinkingRow });
+        }
       } catch (error) {
         console.error(error);
         setStatus('Sorry, your request failed. Please try again.', 'error');
