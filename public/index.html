@@ -1636,8 +1636,20 @@
 
   .home-features-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(calc((100% - 32px) / 3), 1fr));
     gap: 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    padding-bottom: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .home-features-grid::-webkit-scrollbar {
+    display: none;
   }
 
   .home-feature-card {
@@ -1653,6 +1665,7 @@
     border-radius: var(--radius);
     background: linear-gradient(180deg, rgba(14, 17, 30, .96), rgba(6, 8, 16, .96));
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.025), 0 0 28px rgba(99,102,241,.08);
+    scroll-snap-align: start;
   }
 
   .home-feature-card::before {
@@ -1667,9 +1680,9 @@
   }
 
   .home-feature-card:hover {
-    transform: translateY(-1px);
     border-color: rgba(167,139,250,.84);
     background: linear-gradient(180deg, rgba(16, 20, 36, .98), rgba(8, 10, 19, .98));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.035), 0 0 30px rgba(99,102,241,.18);
   }
 
   .home-feature-copy,
@@ -1794,7 +1807,7 @@
     }
 
     .home-features-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(calc((100% - 16px) / 3), 1fr));
       gap: 8px;
     }
 
@@ -1952,15 +1965,6 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/5.png" alt="Character" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/product_card.html">
-<div class="home-feature-copy">
-<h3>Product <span>Card</span></h3>
-<p>Create product selling cards.</p>
-</div>
-<div class="home-feature-media">
-<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(29).png" alt="Product Card" loading="lazy" decoding="async">
-</div>
-</a>
 <a class="home-feature-card" href="/lipsync.html">
 <div class="home-feature-copy">
 <h3>Lipsync <span>Avatar</span></h3>
@@ -1970,6 +1974,24 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/Untitled%20design%20(27).png" alt="Lipsync Avatar" loading="lazy" decoding="async">
 </div>
 </a>
+<a class="home-feature-card" href="/product_card.html">
+<div class="home-feature-copy">
+<h3>Product <span>Card</span></h3>
+<p>Create product selling cards.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(29).png" alt="Product Card" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card" href="/prompt-builder.html">
+<div class="home-feature-copy">
+<h3>Cartoon <span>Prompt Builder</span></h3>
+<p>Turn short ideas into detailed cartoon prompts.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(30).png" alt="Cartoon Prompt Builder" loading="lazy" decoding="async">
+</div>
+</a>
 <a class="home-feature-card" href="/analyse.html">
 <div class="home-feature-copy">
 <h3>Hook <span>analyse</span></h3>
@@ -1977,6 +1999,15 @@
 </div>
 <div class="home-feature-media">
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/6.png" alt="Hook analyse" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card" href="/upscale.html">
+<div class="home-feature-copy">
+<h3>Upscale</h3>
+<p>Enhance image quality and detail.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/7.png" alt="Upscale" loading="lazy" decoding="async">
 </div>
 </a>
 </div>
