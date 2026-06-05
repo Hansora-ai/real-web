@@ -1021,8 +1021,9 @@
     }, 280);
   }
 
-  function showSignupOffer(user) {
-    if (!user || !user.id || inOfferPopupFrame() || isSignupOfferDismissed(user)) return;
+  function showSignupOffer(user, force) {
+    if (!user || !user.id || inOfferPopupFrame()) return;
+    if (!force && isSignupOfferDismissed(user)) return;
     if (document.getElementById('hansoraSignupOffer')) return;
 
     const modal = document.createElement('div');
@@ -1237,7 +1238,11 @@
       startCreditsPolling,
       showSignupOfferNow: function () {
         const user = currentUser || { id: 'debug' };
-        showSignupOffer(user);
+        showSignupOffer(user, true);
+      },
+      showPricingOfferNow: function () {
+        const user = currentUser || { id: 'pricing-offer' };
+        showSignupOffer(user, true);
       },
       resetSignupOffer: function () {
         const user = currentUser;
