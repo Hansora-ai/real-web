@@ -13,6 +13,7 @@
   const SIGNUP_OFFER_DELAY_MS = 3 * 60 * 1000;
   const SIGNUP_OFFER_PENDING_PREFIX = 'hansora_signup_offer_pending.';
   const SIGNUP_OFFER_DISMISSED_PREFIX = 'hansora_signup_offer_dismissed.';
+  const SIGNUP_OFFER_OAUTH_STARTED_KEY = 'hansora_signup_offer_oauth_started_at';
   const SIGNUP_OFFER_URL = '/pricing.html?offer_popup=1';
 
   let sb = null;
@@ -835,9 +836,29 @@
         credits: 3
       }).select('user_id,email,credits').single();
       if (ins.error) throw ins.error;
+      try {
+        localStorage.removeItem(offerDismissedKey(user));
+        localStorage.removeItem(offerPendingKey(user));
+      } catch (_) {}
       return { ...ins.data, __hansoraNewSignup: true };
     }
-    return data;
+    const profileCreatedAt = await getProfileCreatedAt(user.id);
+    return profileCreatedAt ? { ...data, __hansoraProfileCreatedAt: profileCreatedAt } : data;
+  }
+
+  async function getProfileCreatedAt(userId) {
+    if (!sb || !userId) return '';
+    try {
+      const { data, error } = await sb
+        .from('profiles')
+        .select('created_at')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (error) return '';
+      return data && data.created_at ? String(data.created_at) : '';
+    } catch (_) {
+      return '';
+    }
   }
 
   async function getUserId() {
@@ -928,12 +949,32 @@
     }
   }
 
-  function isRecentlyCreatedUser(user) {
-    const raw = user && (user.created_at || user.createdAt);
+  function isRecentTimestamp(raw, windowMs) {
     if (!raw) return false;
     const createdAt = Date.parse(raw);
     if (!Number.isFinite(createdAt)) return false;
-    return Date.now() - createdAt >= 0 && Date.now() - createdAt <= 10 * 60 * 1000;
+    return Date.now() - createdAt >= 0 && Date.now() - createdAt <= windowMs;
+  }
+
+  function isRecentlyCreatedUser(user) {
+    return isRecentTimestamp(user && (user.created_at || user.createdAt), 30 * 60 * 1000);
+  }
+
+  function rememberSignupOfferOAuthStart() {
+    try {
+      localStorage.setItem(SIGNUP_OFFER_OAUTH_STARTED_KEY, String(Date.now()));
+    } catch (_) {}
+  }
+
+  function consumeRecentSignupOfferOAuthStart() {
+    try {
+      const startedAt = Number(localStorage.getItem(SIGNUP_OFFER_OAUTH_STARTED_KEY) || 0);
+      if (!Number.isFinite(startedAt) || startedAt <= 0) return false;
+      localStorage.removeItem(SIGNUP_OFFER_OAUTH_STARTED_KEY);
+      return Date.now() - startedAt >= 0 && Date.now() - startedAt <= 30 * 60 * 1000;
+    } catch (_) {
+      return false;
+    }
   }
 
   function handleSignupOffer(user, profile) {
@@ -941,7 +982,15 @@
       scheduleSignupOffer(user, true);
       return;
     }
+    if (profile && isRecentTimestamp(profile.__hansoraProfileCreatedAt, 30 * 60 * 1000)) {
+      scheduleSignupOffer(user, false);
+      return;
+    }
     if (isRecentlyCreatedUser(user)) {
+      scheduleSignupOffer(user, false);
+      return;
+    }
+    if (consumeRecentSignupOfferOAuthStart()) {
       scheduleSignupOffer(user, false);
       return;
     }
@@ -993,7 +1042,14 @@
   }
 
   function scheduleSignupOffer(user, forceNew) {
-    if (!user || !user.id || inOfferPopupFrame() || isSignupOfferDismissed(user)) return;
+    if (!user || !user.id || inOfferPopupFrame()) return;
+    if (forceNew) {
+      try {
+        localStorage.removeItem(offerDismissedKey(user));
+        localStorage.removeItem(offerPendingKey(user));
+      } catch (_) {}
+    }
+    if (isSignupOfferDismissed(user)) return;
     const key = offerPendingKey(user);
     if (!key) return;
 
@@ -1074,6 +1130,7 @@
           captureAffiliateRef();
           const ref = getStoredAffiliateRef();
           if (ref) rememberAffiliateRef(ref, 'google_oauth');
+          rememberSignupOfferOAuthStart();
           const { error } = await sb.auth.signInWithOAuth({
             provider: 'google',
             options: { redirectTo: `${location.origin}/index.html` }
@@ -1126,14 +1183,36 @@
         showLoggedOutUI();
         return;
       }
-      const profile = await getOrCreateProfile(user);
-      showLoggedInUI(profile, user);
-      await registerAffiliateReferral(user);
-      handleSignupOffer(user, profile);
+      await handleAuthenticatedUser(user);
     } catch (error) {
       console.warn('Hansora header session restore failed', error);
       showLoggedOutUI();
     }
+  }
+
+  async function handleAuthenticatedUser(user) {
+    if (!user) return null;
+    const profile = await getOrCreateProfile(user);
+    showLoggedInUI(profile, user);
+    await registerAffiliateReferral(user);
+    handleSignupOffer(user, profile);
+    return profile;
+  }
+
+  function bindAuthStateChanges() {
+    if (!sb || !sb.auth || typeof sb.auth.onAuthStateChange !== 'function') return;
+    sb.auth.onAuthStateChange(function (event, session) {
+      const user = session && session.user ? session.user : null;
+      if (!user) {
+        if (event === 'SIGNED_OUT') showLoggedOutUI();
+        return;
+      }
+      setTimeout(function () {
+        handleAuthenticatedUser(user).catch(function (error) {
+          console.warn('Hansora auth state handling failed', error);
+        });
+      }, 0);
+    });
   }
 
   function exposeApi() {
@@ -1147,7 +1226,21 @@
       getCurrentCredits: function () { return currentCredits; },
       openAuth,
       closeAuth,
-      startCreditsPolling
+      startCreditsPolling,
+      showSignupOfferNow: function () {
+        const user = currentUser || { id: 'debug' };
+        showSignupOffer(user);
+      },
+      resetSignupOffer: function () {
+        const user = currentUser;
+        if (!user || !user.id) return false;
+        try {
+          localStorage.removeItem(offerDismissedKey(user));
+          localStorage.removeItem(offerPendingKey(user));
+          localStorage.removeItem(SIGNUP_OFFER_OAUTH_STARTED_KEY);
+        } catch (_) {}
+        return true;
+      }
     };
     window.refreshCredits = refreshCredits;
     window.hansoraCredits = { addCredits, useCredits, setCredits };
@@ -1164,6 +1257,7 @@
     ensureSupabaseClient();
     exposeApi();
     bindEvents();
+    bindAuthStateChanges();
     restoreSession();
   });
 })();
