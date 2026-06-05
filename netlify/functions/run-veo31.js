@@ -54,7 +54,7 @@ exports.handler = async (event) => {
         const chargeExisting = await chargeOnceForRun(uid, run_id, cost, existing.id, { ...existing.meta, refund_amount: cost });
         if (!chargeExisting.ok) return ok({ submitted:false, error: chargeExisting.error || "charge_failed", details: chargeExisting });
       }
-      return ok({ submitted:true, run_id, taskId: existing.meta.task_id || existing.meta.taskId, reused:true, already_submitted:true });
+      return ok({ ok:true, submitted:true, run_id, taskId: existing.meta.task_id || existing.meta.taskId, reused:true, already_submitted:true });
     }
 
     // Pre-check credits before creating provider job. Debit still happens only after KIE returns taskId.
@@ -196,7 +196,7 @@ if (imageUrls.length) {
       return ok({ submitted:false, error: charge.error || "charge_failed", details: charge, taskId, run_id });
     }
 
-    return ok({ submitted: true, run_id, taskId, status: resp.status, data, debited: cost, credits: charge.debit?.credits, already_charged: !!charge.already });
+    return ok({ ok:true, submitted: true, run_id, taskId, status: resp.status, data, debited: cost, credits: charge.debit?.credits, already_charged: !!charge.already });
   } catch (e) {
     return ok({ submitted:false, error:String(e) });
   }
