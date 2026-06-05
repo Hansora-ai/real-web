@@ -121,19 +121,37 @@ fbq('track', 'PageView');
 <body>
 <div id="sharedHeader"></div>
 <script src="/header.js"></script>
-<section class="relative py-24" id="pricing">
-<div class="max-w-6xl mx-auto px-4">
-<div class="text-center mb-14">
-<h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-purple-300 via-purple-400 to-purple-600 text-transparent bg-clip-text">Buy Your Credits At Fair Prices</h2>
-<p class="mt-4 text-white/70 max-w-3xl mx-auto"> Credits are not expiring</p>
+<section class="relative py-20 sm:py-24 overflow-hidden" id="pricing">
+<div class="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-purple-500/20 via-sky-400/10 to-transparent pointer-events-none"></div>
+<div class="max-w-7xl mx-auto px-4 relative">
+<div class="text-center mb-12">
+<div class="inline-flex items-center gap-2 rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-200 shadow-soft">
+<span class="inline-flex h-2 w-2 rounded-full bg-purple-400"></span>
+Big discounts for our creators
 </div>
-<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+<h2 class="mt-6 text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-white via-purple-200 to-sky-300 text-transparent bg-clip-text">Buy Credits For Less</h2>
+<p class="mt-4 text-white/70 max-w-3xl mx-auto text-base sm:text-lg">One-time credit packs. No monthly plan. Your credits never expire, so you can create whenever you need.</p>
+<div class="mt-6 flex flex-wrap items-center justify-center gap-3 text-sm text-white/75">
+<span class="rounded-full border border-white/10 bg-white/5 px-4 py-2">No subscription</span>
+<span class="rounded-full border border-white/10 bg-white/5 px-4 py-2">Credits never expire</span>
+<span class="rounded-full border border-white/10 bg-white/5 px-4 py-2">All AI tools included</span>
+</div>
+</div>
+<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-7">
 <!-- Plan 100 -->
-<div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/6 to-white/3 shadow-soft p-6 flex flex-col">
+<div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 via-white/5 to-white/[.03] shadow-soft p-6 flex flex-col relative overflow-hidden">
+<div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-purple-400 to-sky-400"></div>
+<div class="flex items-center justify-between gap-3">
 <div class="text-sm text-white/60">100 + 0 credits</div>
-<div class="mt-1 text-5xl font-extrabold tracking-tight">100 <span class="text-2xl align-baseline text-white">credits</span></div>
-<div class="mt-3 text-3xl font-semibold">$9.90</div>
-<a class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white buy-credits" data-credits="100" data-product="https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" href="#buy-100">Buy</a>
+<span class="rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20 px-3 py-1 text-xs font-bold">Save $5</span>
+</div>
+<div class="mt-3 text-5xl font-extrabold tracking-tight">100 <span class="text-2xl align-baseline text-white">credits</span></div>
+<div class="mt-4 flex items-end gap-3">
+<div class="text-4xl font-extrabold text-white">$9.99</div>
+<div class="pb-1 text-lg font-semibold text-white/45 line-through">$14.99</div>
+</div>
+<div class="mt-2 text-sm text-purple-200">Launch discount price</div>
+<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="100" data-product="https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" href="#buy-100">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 200 images (depends on the model)</span><span class="block">Up to 55 videos (depends on the model)</span><span class="block">Up to 100 audio generations (depends on the model)</span></span></li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
@@ -148,12 +166,20 @@ fbq('track', 'PageView');
 </ul>
 </div>
 <!-- Plan 220 -->
-<div class="rounded-2xl border border-purple-400/30 bg-gradient-to-b from-white/8 to-white/4 shadow-soft p-6 flex flex-col ring-1 ring-purple-400/20 relative">
-<div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-300 ring-1 ring-purple-400/30">Most Popular</span></div>
+<div class="rounded-2xl border border-purple-400/40 bg-gradient-to-b from-purple-500/18 via-white/7 to-white/[.04] shadow-soft p-6 flex flex-col ring-1 ring-purple-400/25 relative overflow-hidden scale-[1.01]">
+<div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-400 via-purple-400 to-sky-400"></div>
+<div class="absolute top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white shadow-lg shadow-purple-500/25">Most Popular</span></div>
+<div class="flex items-center justify-between gap-3 mt-8">
 <div class="text-sm text-white/60">200 + 20 credits</div>
-<div class="mt-1 text-5xl font-extrabold tracking-tight">220 <span class="text-2xl align-baseline text-white">credits</span></div>
-<div class="mt-3 text-3xl font-semibold">$19.90</div>
-<a class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white buy-credits" data-credits="220" data-product="https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" href="#buy-220">Buy</a>
+<span class="rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20 px-3 py-1 text-xs font-bold">Save $10</span>
+</div>
+<div class="mt-3 text-5xl font-extrabold tracking-tight">220 <span class="text-2xl align-baseline text-white">credits</span></div>
+<div class="mt-4 flex items-end gap-3">
+<div class="text-4xl font-extrabold text-white">$19.99</div>
+<div class="pb-1 text-lg font-semibold text-white/45 line-through">$29.99</div>
+</div>
+<div class="mt-2 text-sm text-purple-200">Includes 20 gift credits</div>
+<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/25" data-credits="220" data-product="https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" href="#buy-220">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 440 images (depends on the model)</span><span class="block">Up to 120 videos (depends on the model)</span><span class="block">Up to 220 audio generations (depends on the model)</span></span></li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
@@ -169,11 +195,19 @@ fbq('track', 'PageView');
 </ul>
 </div>
 <!-- Plan 550 -->
-<div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/6 to-white/3 shadow-soft p-6 flex flex-col">
+<div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 via-white/5 to-white/[.03] shadow-soft p-6 flex flex-col relative overflow-hidden">
+<div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-purple-400 to-sky-400"></div>
+<div class="flex items-center justify-between gap-3">
 <div class="text-sm text-white/60">500 + 50 credits</div>
-<div class="mt-1 text-5xl font-extrabold tracking-tight">550 <span class="text-2xl align-baseline text-white">credits</span></div>
-<div class="mt-3 text-3xl font-semibold">$49.90</div>
-<a class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white buy-credits" data-credits="550" data-product="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" href="#buy-550">Buy</a>
+<span class="rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20 px-3 py-1 text-xs font-bold">Save $25</span>
+</div>
+<div class="mt-3 text-5xl font-extrabold tracking-tight">550 <span class="text-2xl align-baseline text-white">credits</span></div>
+<div class="mt-4 flex items-end gap-3">
+<div class="text-4xl font-extrabold text-white">$49.99</div>
+<div class="pb-1 text-lg font-semibold text-white/45 line-through">$74.99</div>
+</div>
+<div class="mt-2 text-sm text-purple-200">Includes 50 gift credits</div>
+<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="550" data-product="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" href="#buy-550">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 1100 images (depends on the model)</span><span class="block">Up to 300 videos (depends on the model)</span><span class="block">Up to 550 audio generations (depends on the model)</span></span></li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
@@ -189,12 +223,20 @@ fbq('track', 'PageView');
 </ul>
 </div>
 <!-- Plan 1100 -->
-<div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/6 to-white/3 shadow-soft p-6 flex flex-col relative">
-<div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-300 ring-1 ring-purple-400/30">Best Value</span></div>
+<div class="rounded-2xl border border-sky-400/25 bg-gradient-to-b from-sky-400/12 via-white/6 to-white/[.03] shadow-soft p-6 flex flex-col relative overflow-hidden">
+<div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-400 to-purple-400"></div>
+<div class="absolute top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-sky-500 to-purple-500 text-white shadow-lg shadow-sky-500/20">Best Value</span></div>
+<div class="flex items-center justify-between gap-3 mt-8">
 <div class="text-sm text-white/60">1000 + 100 credits</div>
-<div class="mt-1 text-5xl font-extrabold tracking-tight">1100 <span class="text-2xl align-baseline text-white">credits</span></div>
-<div class="mt-3 text-3xl font-semibold">$99.90</div>
-<a class="mt-4 inline-flex justify-center items-center rounded-xl bg-purple-500 hover:bg-purple-600 transition px-4 py-3 font-semibold text-white buy-credits" data-credits="1100" data-product="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" href="#buy-1100">Buy</a>
+<span class="rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20 px-3 py-1 text-xs font-bold">Save $30</span>
+</div>
+<div class="mt-3 text-5xl font-extrabold tracking-tight">1100 <span class="text-2xl align-baseline text-white">credits</span></div>
+<div class="mt-4 flex items-end gap-3">
+<div class="text-4xl font-extrabold text-white">$99.99</div>
+<div class="pb-1 text-lg font-semibold text-white/45 line-through">$129.99</div>
+</div>
+<div class="mt-2 text-sm text-purple-200">Includes 100 gift credits</div>
+<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="1100" data-product="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" href="#buy-1100">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 2200 images (depends on the model)</span><span class="block">Up to 610 videos (depends on the model)</span><span class="block">Up to 1100 audio generations (depends on the model)</span></span></li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
@@ -209,6 +251,9 @@ fbq('track', 'PageView');
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>+100 gift credits</li>
 </ul>
 </div>
+</div>
+<div class="mt-10 rounded-2xl border border-white/10 bg-white/[.04] px-5 py-4 text-center text-sm text-white/65">
+Pay once, use credits across image, video, product card, audio, and creative tools. Model limits and credit cost can change depending on generation quality and duration.
 </div>
 </div>
 </section>
