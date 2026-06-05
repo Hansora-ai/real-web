@@ -463,7 +463,7 @@
     window.__HANSORA_SB__ = supabaseClient;
     window.hansoraSupabase = supabaseClient;
 
-    const COST = 1;
+    const COST = 0.5;
     const RUN_ENDPOINT = '/.netlify/functions/run-video-prompt-builder';
     const CHECK_ENDPOINT = '/.netlify/functions/video-prompt-builder-check';
     const BUILDER_MODEL = 'claude-opus-4-8';
@@ -537,7 +537,7 @@
 
     function formatCredits(value) {
       const n = parseCredits(value);
-      return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
+      return `${Number.isInteger(n) ? n : String(Number(n.toFixed(2)))}⚡`;
     }
 
     function setCreditsEverywhere(value) {
