@@ -278,8 +278,6 @@
     const ref = getAffiliateRefFromUrl();
     if (ref) {
       rememberAffiliateRef(ref, 'url');
-    } else if (!getSessionAffiliateRef() && !getRecentAffiliateOAuthRef()) {
-      clearStoredAffiliateRef();
     }
     return ref;
   }
@@ -398,7 +396,7 @@
       const { data: referrer, error: accountError } = await sb
         .from('affiliate_accounts')
         .select('user_id, affiliate_code')
-        .eq('affiliate_code', ref)
+        .ilike('affiliate_code', ref)
         .maybeSingle();
 
       if (accountError) throw accountError;
@@ -424,20 +422,14 @@
       const { error: insertError } = await sb.from('affiliate_referrals').insert({
         referrer_user_id: referrer.user_id,
         referred_user_id: user.id,
-        affiliate_code: ref,
+        affiliate_code: referrer.affiliate_code || ref,
         status: 'registered'
       });
 
       if (insertError) throw insertError;
-      markAffiliateRegistered(user, ref);
+      markAffiliateRegistered(user, referrer.affiliate_code || ref);
     } catch (affiliateError) {
       console.warn('Affiliate referral registration failed', affiliateError);
-    } finally {
-      if (user && user.id) {
-        clearStoredAffiliateRef();
-        stripAffiliateRefFromCurrentUrl();
-        stripAffiliateRefFromLinks();
-      }
     }
   }
 
