@@ -615,18 +615,26 @@
         top:14px;
         right:14px;
         z-index:3;
-        width:48px;
-        height:48px;
+        width:40px;
+        height:40px;
         border-radius:999px;
-        border:1px solid rgba(255,255,255,.18);
-        background:rgba(8,10,18,.92);
+        border:0;
+        background:transparent;
         color:#fff;
         font-size:28px;
-        line-height:1;
+        line-height:0;
         font-weight:800;
-        box-shadow:0 16px 42px rgba(0,0,0,.48);
+        box-shadow:none;
+        outline:none;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:0;
+        text-align:center;
       }
-      .hansora-offer-close:hover{ background:rgba(20,24,38,.98); }
+      .hansora-offer-close:hover{ background:transparent; color:#fff; opacity:.82; }
+      .hansora-offer-close:focus,
+      .hansora-offer-close:focus-visible{ outline:none; box-shadow:none; }
       @media (max-width:720px){
         .hansora-offer-modal{ padding:10px; }
         .hansora-offer-panel{
@@ -636,8 +644,8 @@
         .hansora-offer-close{
           top:10px;
           right:10px;
-          width:46px;
-          height:46px;
+          width:40px;
+          height:40px;
         }
       }
     `;
