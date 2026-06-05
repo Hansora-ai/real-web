@@ -5816,6 +5816,29 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       showStatus(GENERATION_FAILED_MESSAGE, 'error');
     }
 
+    function isNotEnoughCreditsMessage(message) {
+      return /not enough credits|not_enough_credits|insufficient credits|insufficient_credits/i.test(String(message || ''));
+    }
+
+    function openPricingOfferPopup() {
+      try {
+        if (window.HansoraHeader && typeof window.HansoraHeader.showPricingOfferNow === 'function') {
+          window.HansoraHeader.showPricingOfferNow();
+          return;
+        }
+        if (window.HansoraHeader && typeof window.HansoraHeader.showSignupOfferNow === 'function') {
+          window.HansoraHeader.showSignupOfferNow();
+        }
+      } catch (error) {
+        console.warn('Could not open pricing offer popup', error);
+      }
+    }
+
+    function showNotEnoughCreditsStatus(message) {
+      showStatus(message || 'Not enough credits.', 'error');
+      setTimeout(openPricingOfferPopup, 80);
+    }
+
     function getKlingMotionVideoError() {
       if (!currentModel || currentModel.id !== 'kling-motion-control') return '';
       if (!motionVideoFile || !Number.isFinite(Number(motionVideoSeconds))) return '';
@@ -8546,7 +8569,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           header: getVisibleHeaderCredits(),
           shared: getSharedHeaderCredits()
         });
-        showStatus('Not enough credits for this model.', 'error');
+        showNotEnoughCreditsStatus('Not enough credits for this model.');
         return;
       }
 
@@ -8563,7 +8586,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             header: getVisibleHeaderCredits(),
             shared: getSharedHeaderCredits()
           });
-          showStatus('Not enough credits for this selection.', 'error');
+          showNotEnoughCreditsStatus('Not enough credits for this selection.');
           return;
         }
       }
@@ -8730,6 +8753,37 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           return '';
         };
 
+        const extractSubmittedTaskId = (payload) => {
+          if (!payload || typeof payload !== 'object') return '';
+          const candidates = [
+            payload.taskId,
+            payload.id,
+            payload.task_id,
+            payload.requestId,
+            payload.request_id,
+            payload.data && payload.data.taskId,
+            payload.data && payload.data.id,
+            payload.data && payload.data.task_id,
+            payload.data && payload.data.requestId,
+            payload.data && payload.data.request_id,
+            payload.data && payload.data.data && payload.data.data.taskId,
+            payload.data && payload.data.data && payload.data.data.id,
+            payload.data && payload.data.data && payload.data.data.task_id,
+            payload.data && payload.data.data && payload.data.data.requestId,
+            payload.data && payload.data.data && payload.data.data.request_id,
+            payload.result && payload.result.taskId,
+            payload.result && payload.result.id,
+            payload.result && payload.result.task_id,
+            payload.result && payload.result.requestId,
+            payload.result && payload.result.request_id
+          ];
+          for (const value of candidates) {
+            const text = String(value || '').trim();
+            if (text.length > 3) return text;
+          }
+          return '';
+        };
+
         // Get Supabase access token (required by Netlify functions that validate auth)
         let __accessToken = '';
         try {
@@ -8758,7 +8812,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             if (parsedMsg) msg = parsedMsg;
           } catch {}
           console.warn('model request failed', { runId, model: currentModel.id, endpoint: runEndpoint, status: res.status, message: msg, raw: txt });
-          showGenerationFailedStatus(msg, runId);
+          if (isNotEnoughCreditsMessage(msg)) {
+            showNotEnoughCreditsStatus(msg);
+          } else {
+            showGenerationFailedStatus(msg, runId);
+          }
           await refreshCredits();
         } else {
           // Some endpoints (e.g., Sora 2) return JSON with taskId/submitted flags
@@ -8768,7 +8826,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           const providerError = cleanGenerationFailureReason(extractProviderError(j) || extractGenerationFailureReason(j));
           if (providerError) {
             console.warn('provider rejected generation', providerError);
-            showGenerationFailedStatus(providerError, runId);
+            if (isNotEnoughCreditsMessage(providerError)) {
+              showNotEnoughCreditsStatus(providerError);
+            } else {
+              showGenerationFailedStatus(providerError, runId);
+            }
             await refreshCredits();
             return;
           }
@@ -8778,7 +8840,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             if (!j || !j.submitted || !j.taskId) {
               const errMsg = extractProviderError(j) || (j && (j.error || j.message)) || 'unknown_error';
               console.warn('sora2 submission missing task id', errMsg);
-              showGenerationFailedStatus(errMsg, runId);
+              if (isNotEnoughCreditsMessage(errMsg)) {
+                showNotEnoughCreditsStatus(errMsg);
+              } else {
+                showGenerationFailedStatus(errMsg, runId);
+              }
               await refreshCredits();
             } else {
               createProcessingPlaceholders();
@@ -8798,7 +8864,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               'success'
             );
             await refreshCredits();
-            const taskId = j && (j.taskId || j.id || (j.data && (j.data.taskId || j.data.id)));
+            const taskId = extractSubmittedTaskId(j);
             const checker = (j && j.checker) || checkerForCurrentModel(currentModel, runEndpoint);
             startPollGeneration(runId, placeholderControllers, taskId, checker);
           }
