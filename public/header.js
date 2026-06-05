@@ -10,10 +10,15 @@
   const AFFILIATE_DONE_PREFIX = 'hansora_affiliate_registered.';
   const AFFILIATE_COOKIE_NAME = 'hansora_affiliate_ref';
   const AFFILIATE_REF_MAX_AGE = 60 * 60 * 24 * 30;
+  const SIGNUP_OFFER_DELAY_MS = 3 * 60 * 1000;
+  const SIGNUP_OFFER_PENDING_PREFIX = 'hansora_signup_offer_pending.';
+  const SIGNUP_OFFER_DISMISSED_PREFIX = 'hansora_signup_offer_dismissed.';
+  const SIGNUP_OFFER_URL = '/pricing.html?offer_popup=1';
 
   let sb = null;
   let currentUser = null;
   let currentCredits = 0;
+  let signupOfferTimer = null;
 
   const IMAGE_MENU_MODELS = [
     { label: 'GPT Image 2', id: 'gpt-image-2', icon: 'G2', note: 'Latest image generation' },
@@ -557,6 +562,83 @@
         }
       }
       @media (max-width:560px){ .hansora-mega-grid{ grid-template-columns:1fr; } }
+      .hansora-offer-modal{
+        position:fixed;
+        inset:0;
+        z-index:2147483000;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:18px;
+        background:rgba(3,6,18,.72);
+        backdrop-filter:blur(12px);
+        -webkit-backdrop-filter:blur(12px);
+        opacity:0;
+        pointer-events:none;
+        transition:opacity .22s ease;
+      }
+      .hansora-offer-modal.is-open{
+        opacity:1;
+        pointer-events:auto;
+      }
+      .hansora-offer-panel{
+        position:relative;
+        width:min(1120px,100%);
+        height:min(760px,calc(100dvh - 36px));
+        border:1px solid rgba(255,255,255,.16);
+        border-radius:28px;
+        overflow:hidden;
+        background:#070912;
+        box-shadow:0 34px 110px rgba(0,0,0,.58);
+        transform:translateY(24px) scale(.98);
+        transition:transform .24s ease;
+      }
+      .hansora-offer-modal.is-open .hansora-offer-panel{
+        transform:translateY(0) scale(1);
+      }
+      .hansora-offer-modal.is-closing{
+        opacity:0;
+      }
+      .hansora-offer-modal.is-closing .hansora-offer-panel{
+        transform:translateY(110vh) scale(.98);
+      }
+      .hansora-offer-frame{
+        width:100%;
+        height:100%;
+        border:0;
+        display:block;
+        background:#070912;
+      }
+      .hansora-offer-close{
+        position:absolute;
+        left:50%;
+        bottom:14px;
+        transform:translateX(-50%);
+        z-index:3;
+        width:48px;
+        height:48px;
+        border-radius:999px;
+        border:1px solid rgba(255,255,255,.18);
+        background:rgba(8,10,18,.92);
+        color:#fff;
+        font-size:28px;
+        line-height:1;
+        font-weight:800;
+        box-shadow:0 16px 42px rgba(0,0,0,.48);
+      }
+      .hansora-offer-close:hover{ background:rgba(20,24,38,.98); }
+      @media (max-width:720px){
+        .hansora-offer-modal{ padding:10px; }
+        .hansora-offer-panel{
+          height:calc(100dvh - 20px);
+          border-radius:22px;
+        }
+        .hansora-offer-close{
+          bottom:10px;
+          width:46px;
+          height:46px;
+        }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -753,7 +835,7 @@
         credits: 3
       }).select('user_id,email,credits').single();
       if (ins.error) throw ins.error;
-      return ins.data;
+      return { ...ins.data, __hansoraNewSignup: true };
     }
     return data;
   }
@@ -818,6 +900,127 @@
       try { await refreshCredits(); } catch (error) { console.warn('credits poll read failed', error); }
       if (Date.now() - started > durationMs) clearInterval(window.__creditsPoll);
     }, intervalMs);
+  }
+
+  function inOfferPopupFrame() {
+    try {
+      return window.self !== window.top || new URLSearchParams(location.search || '').get('offer_popup') === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function offerPendingKey(user) {
+    return user && user.id ? `${SIGNUP_OFFER_PENDING_PREFIX}${user.id}` : '';
+  }
+
+  function offerDismissedKey(user) {
+    return user && user.id ? `${SIGNUP_OFFER_DISMISSED_PREFIX}${user.id}` : '';
+  }
+
+  function isSignupOfferDismissed(user) {
+    const key = offerDismissedKey(user);
+    if (!key) return true;
+    try {
+      return localStorage.getItem(key) === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function isRecentlyCreatedUser(user) {
+    const raw = user && (user.created_at || user.createdAt);
+    if (!raw) return false;
+    const createdAt = Date.parse(raw);
+    if (!Number.isFinite(createdAt)) return false;
+    return Date.now() - createdAt >= 0 && Date.now() - createdAt <= 10 * 60 * 1000;
+  }
+
+  function handleSignupOffer(user, profile) {
+    if (profile && profile.__hansoraNewSignup) {
+      scheduleSignupOffer(user, true);
+      return;
+    }
+    if (isRecentlyCreatedUser(user)) {
+      scheduleSignupOffer(user, false);
+      return;
+    }
+    resumeSignupOffer(user);
+  }
+
+  function closeSignupOffer(user) {
+    const modal = document.getElementById('hansoraSignupOffer');
+    if (!modal) return;
+    if (user && user.id) {
+      try {
+        localStorage.setItem(offerDismissedKey(user), '1');
+        localStorage.removeItem(offerPendingKey(user));
+      } catch (_) {}
+    }
+    modal.classList.add('is-closing');
+    modal.classList.remove('is-open');
+    setTimeout(function () {
+      if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
+    }, 280);
+  }
+
+  function showSignupOffer(user) {
+    if (!user || !user.id || inOfferPopupFrame() || isSignupOfferDismissed(user)) return;
+    if (document.getElementById('hansoraSignupOffer')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'hansoraSignupOffer';
+    modal.className = 'hansora-offer-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Creator discount offer');
+    modal.innerHTML = `
+      <div class="hansora-offer-panel">
+        <iframe class="hansora-offer-frame" src="${withAffiliateRef(SIGNUP_OFFER_URL)}" title="Hansora pricing offer"></iframe>
+        <button class="hansora-offer-close" type="button" aria-label="Close offer">×</button>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const close = modal.querySelector('.hansora-offer-close');
+    if (close) close.addEventListener('click', function () { closeSignupOffer(user); });
+    modal.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') closeSignupOffer(user);
+    });
+    requestAnimationFrame(function () {
+      modal.classList.add('is-open');
+      if (close) close.focus({ preventScroll: true });
+    });
+  }
+
+  function scheduleSignupOffer(user, forceNew) {
+    if (!user || !user.id || inOfferPopupFrame() || isSignupOfferDismissed(user)) return;
+    const key = offerPendingKey(user);
+    if (!key) return;
+
+    let deadline = 0;
+    try {
+      deadline = Number(localStorage.getItem(key) || 0);
+      if (forceNew || !Number.isFinite(deadline) || deadline <= 0) {
+        deadline = Date.now() + SIGNUP_OFFER_DELAY_MS;
+        localStorage.setItem(key, String(deadline));
+      }
+    } catch (_) {
+      deadline = Date.now() + SIGNUP_OFFER_DELAY_MS;
+    }
+
+    const wait = Math.max(0, deadline - Date.now());
+    if (signupOfferTimer) clearTimeout(signupOfferTimer);
+    signupOfferTimer = setTimeout(function () {
+      showSignupOffer(user);
+    }, wait);
+  }
+
+  function resumeSignupOffer(user) {
+    if (!user || !user.id || inOfferPopupFrame() || isSignupOfferDismissed(user)) return;
+    try {
+      const deadline = Number(localStorage.getItem(offerPendingKey(user)) || 0);
+      if (Number.isFinite(deadline) && deadline > 0) scheduleSignupOffer(user, false);
+    } catch (_) {}
   }
 
   function bindEvents() {
@@ -895,6 +1098,7 @@
           const profile = await getOrCreateProfile(data.user);
           showLoggedInUI(profile, data.user);
           await registerAffiliateReferral(data.user);
+          handleSignupOffer(data.user, profile);
           closeAuth();
         } catch (error) {
           if (msg) msg.textContent = error.message || 'Login failed.';
@@ -925,6 +1129,7 @@
       const profile = await getOrCreateProfile(user);
       showLoggedInUI(profile, user);
       await registerAffiliateReferral(user);
+      handleSignupOffer(user, profile);
     } catch (error) {
       console.warn('Hansora header session restore failed', error);
       showLoggedOutUI();
