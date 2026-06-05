@@ -13,7 +13,7 @@ const WORKER_URL =
 const WORKER_SECRET = process.env.VIDEO_PROMPT_WORKER_SECRET || "";
 
 const MODEL = "claude-opus-4-8";
-const COST = 1;
+const COST = 0.5;
 const MIN_OUTPUT_CHARS = 3300;
 const MAX_OUTPUT_CHARS = 3800;
 const VERSION_TAG = "video_prompt_builder_claude_opus_4_8_background_v10";
