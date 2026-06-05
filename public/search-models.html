@@ -4340,7 +4340,7 @@ function createResultCard(data) {
             });
             const js = nb && nb.js ? nb.js : {};
             const statusText = String(js.status || '').toLowerCase();
-            const failed = !!js.failed || statusText.includes('fail') || statusText.includes('error') || statusText.includes('cancel');
+            const failed = !!js.failed || statusText.includes('fail') || statusText.includes('cancel');
             if (failed) {
               item.controller.apply({ status: 'failed', result_url: null });
               await refreshCredits();
@@ -4386,6 +4386,7 @@ function extractGenerationFailureReason(payload) {
   const keyPattern = /^(error|error_message|message|msg|reason|fail_reason|failure_reason|failed_reason|detail|details|code|status|state)$/i;
   const badStatusPattern = /(fail|failed|error|reject|rejected|invalid|denied|blocked|unsafe|moderation|policy|cancel|cancelled)/i;
   const genericErrorPattern = /^(server_error|internal_error|unknown_error|request_failed|provider_error|kie_create_failed|unifically_create_failed|failed|error)$/i;
+  const neutralStatusPattern = /^(ok|success|succeeded|done|complete|completed|processing|pending|ready|200|201|202)$/i;
 
   const stringifyValue = (value) => {
     if (value == null) return '';
@@ -4413,7 +4414,7 @@ function extractGenerationFailureReason(payload) {
     ];
     for (const candidate of detailCandidates) {
       const text = stringifyValue(candidate);
-      if (text && !genericErrorPattern.test(text) && !/^(ok|success|succeeded|done|complete|completed|processing|pending|ready)$/i.test(text)) {
+      if (text && !genericErrorPattern.test(text) && !neutralStatusPattern.test(text)) {
         return text.slice(0, 220);
       }
     }
@@ -4423,7 +4424,7 @@ function extractGenerationFailureReason(payload) {
       const text = stringifyValue(inner);
       if (!text) continue;
       if (genericErrorPattern.test(text)) continue;
-      if (!/^(ok|success|succeeded|done|complete|completed|processing|pending|ready)$/i.test(text)) {
+      if (!neutralStatusPattern.test(text)) {
         return text.slice(0, 220);
       }
     }
@@ -4509,7 +4510,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (taskId) {
         const nb = await __mjFetchNbCheck({ taskId, uid: currentUser.id, runId, checker: checker || 'kie-check' });
         const nbStatus = String(nb?.js?.status || '').toLowerCase();
-        const nbFailed = !!nb?.js?.failed || nbStatus.includes('fail') || nbStatus.includes('error') || nbStatus.includes('cancel');
+        const nbFailed = !!nb?.js?.failed || nbStatus.includes('fail') || nbStatus.includes('cancel');
         if (nbFailed) {
           const reason = cleanGenerationFailureReason(extractGenerationFailureReason(nb?.js)) || (nb?.status ? `checker HTTP ${nb.status}` : '');
           console.warn('generation check failed', { runId, taskId, checker: checker || 'kie-check', reason, response: nb?.js });
@@ -8784,6 +8785,15 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           return '';
         };
 
+        const isAcceptedSubmission = (payload, taskId) => {
+          if (!payload || typeof payload !== 'object' || !taskId) return false;
+          const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
+          const nested = data.data && typeof data.data === 'object' ? data.data : {};
+          const codeOk = Number(payload.code) === 200 || Number(data.code) === 200 || Number(nested.code) === 200;
+          const msgOk = /success|submitted|accepted/i.test(String(payload.msg || payload.message || data.msg || data.message || nested.msg || nested.message || ''));
+          return payload.ok === true || payload.submitted === true || codeOk || msgOk;
+        };
+
         // Get Supabase access token (required by Netlify functions that validate auth)
         let __accessToken = '';
         try {
@@ -8823,7 +8833,9 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           let j = null;
           try { j = await res.json(); } catch { j = null; }
 
-          const providerError = cleanGenerationFailureReason(extractProviderError(j) || extractGenerationFailureReason(j));
+          const submittedTaskId = extractSubmittedTaskId(j);
+          const acceptedSubmission = isAcceptedSubmission(j, submittedTaskId);
+          const providerError = acceptedSubmission ? '' : cleanGenerationFailureReason(extractProviderError(j) || extractGenerationFailureReason(j));
           if (providerError) {
             console.warn('provider rejected generation', providerError);
             if (isNotEnoughCreditsMessage(providerError)) {
@@ -8864,9 +8876,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               'success'
             );
             await refreshCredits();
-            const taskId = extractSubmittedTaskId(j);
             const checker = (j && j.checker) || checkerForCurrentModel(currentModel, runEndpoint);
-            startPollGeneration(runId, placeholderControllers, taskId, checker);
+            startPollGeneration(runId, placeholderControllers, submittedTaskId, checker);
           }
         }
       } catch (err) {
