@@ -8,6 +8,8 @@
   const AFFILIATE_REF_KEY = 'hansora_affiliate_ref';
   const AFFILIATE_PENDING_KEY = 'hansora_pending_affiliate_ref';
   const AFFILIATE_DONE_PREFIX = 'hansora_affiliate_registered.';
+  const AFFILIATE_COOKIE_NAME = 'hansora_affiliate_ref';
+  const AFFILIATE_REF_MAX_AGE = 60 * 60 * 24 * 30;
 
   let sb = null;
   let currentUser = null;
@@ -149,35 +151,111 @@
     } catch (_) {}
   }
 
-  function captureAffiliateRef() {
+  function getAffiliateRefFromUrl() {
     try {
       const params = new URLSearchParams(window.location.search || '');
       const rawRef = params.get('ref') || params.get('affiliate') || params.get('affiliate_ref') || '';
-      const ref = String(rawRef || '').trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64).toUpperCase();
-      if (ref) localStorage.setItem(AFFILIATE_REF_KEY, ref);
-    } catch (_) {}
+      return normalizeAffiliateRef(rawRef);
+    } catch (_) {
+      return '';
+    }
   }
 
   function normalizeAffiliateRef(value) {
     return String(value || '').trim().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64).toUpperCase();
   }
 
-  function getStoredAffiliateRef() {
+  function writeAffiliateCookie(ref) {
     try {
-      return normalizeAffiliateRef(localStorage.getItem(AFFILIATE_REF_KEY));
-    } catch (_) {
-      return '';
+      const secure = location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `${AFFILIATE_COOKIE_NAME}=${encodeURIComponent(ref)}; Max-Age=${AFFILIATE_REF_MAX_AGE}; Path=/; SameSite=Lax${secure}`;
+    } catch (_) {}
+  }
+
+  function readAffiliateCookie() {
+    try {
+      const prefix = `${AFFILIATE_COOKIE_NAME}=`;
+      const parts = String(document.cookie || '').split(';');
+      for (const part of parts) {
+        const value = part.trim();
+        if (value.indexOf(prefix) === 0) return normalizeAffiliateRef(decodeURIComponent(value.slice(prefix.length)));
+      }
+    } catch (_) {}
+    return '';
+  }
+
+  function clearAffiliateCookie() {
+    try {
+      const secure = location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = `${AFFILIATE_COOKIE_NAME}=; Max-Age=0; Path=/; SameSite=Lax${secure}`;
+    } catch (_) {}
+  }
+
+  function rememberAffiliateRef(ref, source) {
+    const code = normalizeAffiliateRef(ref);
+    if (!code) return '';
+
+    const pending = {
+      code,
+      source: source || 'url',
+      captured_at: new Date().toISOString(),
+      landing_path: `${location.pathname || '/'}${location.search || ''}`,
+      landing_url: location.href
+    };
+
+    try {
+      localStorage.setItem(AFFILIATE_REF_KEY, code);
+      localStorage.setItem(AFFILIATE_PENDING_KEY, JSON.stringify(pending));
+    } catch (_) {}
+
+    try {
+      sessionStorage.setItem(AFFILIATE_REF_KEY, code);
+    } catch (_) {}
+
+    writeAffiliateCookie(code);
+    return code;
+  }
+
+  function captureAffiliateRef() {
+    const ref = getAffiliateRefFromUrl();
+    if (ref) rememberAffiliateRef(ref, 'url');
+    return ref;
+  }
+
+  function getStoredAffiliateRef() {
+    const urlRef = getAffiliateRefFromUrl();
+    if (urlRef) return rememberAffiliateRef(urlRef, 'url');
+
+    try {
+      const localRef = normalizeAffiliateRef(localStorage.getItem(AFFILIATE_REF_KEY));
+      if (localRef) return localRef;
+    } catch (_) {}
+
+    try {
+      const sessionRef = normalizeAffiliateRef(sessionStorage.getItem(AFFILIATE_REF_KEY));
+      if (sessionRef) {
+        rememberAffiliateRef(sessionRef, 'session');
+        return sessionRef;
+      }
+    } catch (_) {}
+
+    const cookieRef = readAffiliateCookie();
+    if (cookieRef) {
+      rememberAffiliateRef(cookieRef, 'cookie');
+      return cookieRef;
     }
+
+    return '';
   }
 
   function getPendingAffiliateRef(user) {
     try {
       const pending = JSON.parse(localStorage.getItem(AFFILIATE_PENDING_KEY) || '{}');
-      if (!pending || !pending.code) return '';
+      if (!pending || !pending.code) return getStoredAffiliateRef();
       if (user && pending.user_id && pending.user_id !== user.id) return '';
       return normalizeAffiliateRef(pending.code);
     } catch (_) {
-      return '';
+      return getStoredAffiliateRef();
     }
   }
 
@@ -190,7 +268,12 @@
       if (!pending.user_id || pending.user_id === user.id) {
         localStorage.removeItem(AFFILIATE_PENDING_KEY);
       }
+      localStorage.removeItem(AFFILIATE_REF_KEY);
     } catch (_) {}
+    try {
+      sessionStorage.removeItem(AFFILIATE_REF_KEY);
+    } catch (_) {}
+    clearAffiliateCookie();
   }
 
   async function registerAffiliateReferral(user, code) {
@@ -765,6 +848,9 @@
         const msg = el('authMsg');
         if (msg) msg.textContent = 'Opening Google login…';
         try {
+          captureAffiliateRef();
+          const ref = getStoredAffiliateRef();
+          if (ref) rememberAffiliateRef(ref, 'google_oauth');
           const { error } = await sb.auth.signInWithOAuth({
             provider: 'google',
             options: { redirectTo: `${location.origin}/index.html` }
@@ -788,7 +874,7 @@
           if (error) { if (msg) msg.textContent = error.message; return; }
           const profile = await getOrCreateProfile(data.user);
           showLoggedInUI(profile, data.user);
-          registerAffiliateReferral(data.user);
+          await registerAffiliateReferral(data.user);
           closeAuth();
         } catch (error) {
           if (msg) msg.textContent = error.message || 'Login failed.';
@@ -818,7 +904,7 @@
       }
       const profile = await getOrCreateProfile(user);
       showLoggedInUI(profile, user);
-      registerAffiliateReferral(user);
+      await registerAffiliateReferral(user);
     } catch (error) {
       console.warn('Hansora header session restore failed', error);
       showLoggedOutUI();
@@ -841,6 +927,8 @@
     window.refreshCredits = refreshCredits;
     window.hansoraCredits = { addCredits, useCredits, setCredits };
   }
+
+  captureAffiliateRef();
 
   ready(function () {
     captureAffiliateRef();
