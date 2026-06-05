@@ -10,6 +10,7 @@
   const AFFILIATE_DONE_PREFIX = 'hansora_affiliate_registered.';
   const AFFILIATE_COOKIE_NAME = 'hansora_affiliate_ref';
   const AFFILIATE_SESSION_KEY = 'hansora_affiliate_session_ref';
+  const AFFILIATE_OAUTH_PENDING_KEY = 'hansora_affiliate_oauth_pending';
   const AFFILIATE_REF_MAX_AGE = 60 * 60 * 24 * 30;
   const SIGNUP_OFFER_DELAY_MS = 3 * 60 * 1000;
   const SIGNUP_OFFER_PENDING_PREFIX = 'hansora_signup_offer_pending.';
@@ -208,6 +209,7 @@
     try {
       localStorage.removeItem(AFFILIATE_REF_KEY);
       localStorage.removeItem(AFFILIATE_PENDING_KEY);
+      localStorage.removeItem(AFFILIATE_OAUTH_PENDING_KEY);
     } catch (_) {}
     try {
       sessionStorage.removeItem(AFFILIATE_REF_KEY);
@@ -276,10 +278,37 @@
     const ref = getAffiliateRefFromUrl();
     if (ref) {
       rememberAffiliateRef(ref, 'url');
-    } else if (!getSessionAffiliateRef()) {
+    } else if (!getSessionAffiliateRef() && !getRecentAffiliateOAuthRef()) {
       clearStoredAffiliateRef();
     }
     return ref;
+  }
+
+  function rememberAffiliateOAuthStart(ref) {
+    const code = normalizeAffiliateRef(ref);
+    if (!code) return;
+    try {
+      localStorage.setItem(AFFILIATE_OAUTH_PENDING_KEY, JSON.stringify({
+        code,
+        started_at: Date.now()
+      }));
+    } catch (_) {}
+  }
+
+  function getRecentAffiliateOAuthRef() {
+    try {
+      const pending = JSON.parse(localStorage.getItem(AFFILIATE_OAUTH_PENDING_KEY) || '{}');
+      const code = normalizeAffiliateRef(pending && pending.code);
+      const startedAt = Number(pending && pending.started_at || 0);
+      if (!code || !Number.isFinite(startedAt) || startedAt <= 0) return '';
+      if (Date.now() - startedAt < 0 || Date.now() - startedAt > 30 * 60 * 1000) {
+        localStorage.removeItem(AFFILIATE_OAUTH_PENDING_KEY);
+        return '';
+      }
+      return code;
+    } catch (_) {
+      return '';
+    }
   }
 
   function getSessionAffiliateRef() {
@@ -314,14 +343,16 @@
   function getPendingAffiliateRef(user) {
     try {
       const sessionRef = getSessionAffiliateRef();
+      const oauthRef = getRecentAffiliateOAuthRef();
       const pending = JSON.parse(localStorage.getItem(AFFILIATE_PENDING_KEY) || '{}');
       if (!pending || !pending.code) return getStoredAffiliateRef();
-      if (!sessionRef || normalizeAffiliateRef(pending.code) !== sessionRef) {
+      const pendingCode = normalizeAffiliateRef(pending.code);
+      if ((!sessionRef || pendingCode !== sessionRef) && (!oauthRef || pendingCode !== oauthRef)) {
         clearStoredAffiliateRef();
         return '';
       }
       if (user && pending.user_id && pending.user_id !== user.id) return '';
-      return normalizeAffiliateRef(pending.code);
+      return pendingCode;
     } catch (_) {
       return getStoredAffiliateRef();
     }
@@ -1217,7 +1248,10 @@
         try {
           captureAffiliateRef();
           const ref = getStoredAffiliateRef();
-          if (ref) rememberAffiliateRef(ref, 'google_oauth');
+          if (ref) {
+            rememberAffiliateRef(ref, 'google_oauth');
+            rememberAffiliateOAuthStart(ref);
+          }
           rememberSignupOfferOAuthStart();
           const { error } = await sb.auth.signInWithOAuth({
             provider: 'google',
