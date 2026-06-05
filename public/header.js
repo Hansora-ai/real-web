@@ -611,9 +611,8 @@
       }
       .hansora-offer-close{
         position:absolute;
-        left:50%;
-        bottom:14px;
-        transform:translateX(-50%);
+        top:14px;
+        right:14px;
         z-index:3;
         width:48px;
         height:48px;
@@ -634,7 +633,8 @@
           border-radius:22px;
         }
         .hansora-offer-close{
-          bottom:10px;
+          top:10px;
+          right:10px;
           width:46px;
           height:46px;
         }
