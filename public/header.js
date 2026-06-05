@@ -9,6 +9,7 @@
   const AFFILIATE_PENDING_KEY = 'hansora_pending_affiliate_ref';
   const AFFILIATE_DONE_PREFIX = 'hansora_affiliate_registered.';
   const AFFILIATE_COOKIE_NAME = 'hansora_affiliate_ref';
+  const AFFILIATE_SESSION_KEY = 'hansora_affiliate_session_ref';
   const AFFILIATE_REF_MAX_AGE = 60 * 60 * 24 * 30;
   const SIGNUP_OFFER_DELAY_MS = 3 * 60 * 1000;
   const SIGNUP_OFFER_PENDING_PREFIX = 'hansora_signup_offer_pending.';
@@ -203,6 +204,48 @@
     } catch (_) {}
   }
 
+  function clearStoredAffiliateRef() {
+    try {
+      localStorage.removeItem(AFFILIATE_REF_KEY);
+      localStorage.removeItem(AFFILIATE_PENDING_KEY);
+    } catch (_) {}
+    try {
+      sessionStorage.removeItem(AFFILIATE_REF_KEY);
+      sessionStorage.removeItem(AFFILIATE_SESSION_KEY);
+    } catch (_) {}
+    clearAffiliateCookie();
+  }
+
+  function stripAffiliateRefFromCurrentUrl() {
+    try {
+      const url = new URL(location.href);
+      const before = url.href;
+      url.searchParams.delete('ref');
+      url.searchParams.delete('affiliate');
+      url.searchParams.delete('affiliate_ref');
+      if (url.href !== before && history && history.replaceState) {
+        history.replaceState(history.state, document.title, `${url.pathname}${url.search}${url.hash}`);
+      }
+    } catch (_) {}
+  }
+
+  function stripAffiliateRefFromLinks() {
+    try {
+      document.querySelectorAll('a[href]').forEach(function (link) {
+        const raw = link.getAttribute('href') || '';
+        if (!raw || raw.charAt(0) === '#') return;
+        const url = new URL(raw, location.origin);
+        if (url.origin !== location.origin) return;
+        const before = `${url.pathname}${url.search}${url.hash}`;
+        url.searchParams.delete('ref');
+        url.searchParams.delete('affiliate');
+        url.searchParams.delete('affiliate_ref');
+        const after = `${url.pathname}${url.search}${url.hash}`;
+        if (after !== before) link.setAttribute('href', after);
+      });
+    } catch (_) {}
+  }
+
   function rememberAffiliateRef(ref, source) {
     const code = normalizeAffiliateRef(ref);
     if (!code) return '';
@@ -222,6 +265,7 @@
 
     try {
       sessionStorage.setItem(AFFILIATE_REF_KEY, code);
+      sessionStorage.setItem(AFFILIATE_SESSION_KEY, code);
     } catch (_) {}
 
     writeAffiliateCookie(code);
@@ -230,31 +274,38 @@
 
   function captureAffiliateRef() {
     const ref = getAffiliateRefFromUrl();
-    if (ref) rememberAffiliateRef(ref, 'url');
+    if (ref) {
+      rememberAffiliateRef(ref, 'url');
+    } else if (!getSessionAffiliateRef()) {
+      clearStoredAffiliateRef();
+    }
     return ref;
+  }
+
+  function getSessionAffiliateRef() {
+    try {
+      return normalizeAffiliateRef(sessionStorage.getItem(AFFILIATE_SESSION_KEY) || sessionStorage.getItem(AFFILIATE_REF_KEY));
+    } catch (_) {
+      return '';
+    }
   }
 
   function getStoredAffiliateRef() {
     const urlRef = getAffiliateRefFromUrl();
     if (urlRef) return rememberAffiliateRef(urlRef, 'url');
 
-    try {
-      const localRef = normalizeAffiliateRef(localStorage.getItem(AFFILIATE_REF_KEY));
-      if (localRef) return localRef;
-    } catch (_) {}
+    const sessionRef = getSessionAffiliateRef();
+    if (sessionRef) {
+      try {
+        const localRef = normalizeAffiliateRef(localStorage.getItem(AFFILIATE_REF_KEY));
+        if (localRef && localRef === sessionRef) return sessionRef;
+      } catch (_) {}
 
-    try {
-      const sessionRef = normalizeAffiliateRef(sessionStorage.getItem(AFFILIATE_REF_KEY));
-      if (sessionRef) {
-        rememberAffiliateRef(sessionRef, 'session');
-        return sessionRef;
-      }
-    } catch (_) {}
+      const cookieRef = readAffiliateCookie();
+      if (cookieRef && cookieRef === sessionRef) return sessionRef;
 
-    const cookieRef = readAffiliateCookie();
-    if (cookieRef) {
-      rememberAffiliateRef(cookieRef, 'cookie');
-      return cookieRef;
+      rememberAffiliateRef(sessionRef, 'session');
+      return sessionRef;
     }
 
     return '';
@@ -262,8 +313,13 @@
 
   function getPendingAffiliateRef(user) {
     try {
+      const sessionRef = getSessionAffiliateRef();
       const pending = JSON.parse(localStorage.getItem(AFFILIATE_PENDING_KEY) || '{}');
       if (!pending || !pending.code) return getStoredAffiliateRef();
+      if (!sessionRef || normalizeAffiliateRef(pending.code) !== sessionRef) {
+        clearStoredAffiliateRef();
+        return '';
+      }
       if (user && pending.user_id && pending.user_id !== user.id) return '';
       return normalizeAffiliateRef(pending.code);
     } catch (_) {
@@ -282,18 +338,29 @@
       }
       localStorage.removeItem(AFFILIATE_REF_KEY);
     } catch (_) {}
-    try {
-      sessionStorage.removeItem(AFFILIATE_REF_KEY);
-    } catch (_) {}
-    clearAffiliateCookie();
+    clearStoredAffiliateRef();
+    stripAffiliateRefFromCurrentUrl();
+    stripAffiliateRefFromLinks();
   }
 
   async function registerAffiliateReferral(user, code) {
     const ref = normalizeAffiliateRef(code || getPendingAffiliateRef(user) || getStoredAffiliateRef());
-    if (!sb || !user || !user.id || !ref) return;
+    if (!sb || !user || !user.id || !ref) {
+      if (user && user.id) {
+        clearStoredAffiliateRef();
+        stripAffiliateRefFromCurrentUrl();
+        stripAffiliateRefFromLinks();
+      }
+      return;
+    }
 
     try {
-      if (localStorage.getItem(`${AFFILIATE_DONE_PREFIX}${user.id}.${ref}`)) return;
+      if (localStorage.getItem(`${AFFILIATE_DONE_PREFIX}${user.id}.${ref}`)) {
+        clearStoredAffiliateRef();
+        stripAffiliateRefFromCurrentUrl();
+        stripAffiliateRefFromLinks();
+        return;
+      }
     } catch (_) {}
 
     try {
@@ -304,7 +371,12 @@
         .maybeSingle();
 
       if (accountError) throw accountError;
-      if (!referrer || !referrer.user_id || referrer.user_id === user.id) return;
+      if (!referrer || !referrer.user_id || referrer.user_id === user.id) {
+        clearStoredAffiliateRef();
+        stripAffiliateRefFromCurrentUrl();
+        stripAffiliateRefFromLinks();
+        return;
+      }
 
       const { data: existing, error: existingError } = await sb
         .from('affiliate_referrals')
@@ -329,6 +401,12 @@
       markAffiliateRegistered(user, ref);
     } catch (affiliateError) {
       console.warn('Affiliate referral registration failed', affiliateError);
+    } finally {
+      if (user && user.id) {
+        clearStoredAffiliateRef();
+        stripAffiliateRefFromCurrentUrl();
+        stripAffiliateRefFromLinks();
+      }
     }
   }
 
@@ -352,6 +430,7 @@
   }
 
   function withAffiliateRef(href) {
+    if (currentUser && currentUser.id) return href;
     const ref = getStoredAffiliateRef();
     if (!ref || !href || href.charAt(0) === '#') return href;
 
