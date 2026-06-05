@@ -38,6 +38,13 @@
     { label: 'Product Card', href: '/product_card.html', icon: 'PC', note: 'Product selling cards' },
   ];
 
+  const PROMPT_BUILDER_TOOL = {
+    label: 'Prompt Builder',
+    href: '/prompt-builder.html',
+    icon: 'PB',
+    note: 'Cartoon prompt builder'
+  };
+
   const VIDEO_MENU_ITEMS = [
     { label: 'Seedance 2.0', id: 'seedance-2', icon: 'S2', note: 'Cinematic video model' },
     { label: 'Gemini Omni', id: 'gemini-omni-video', icon: 'GO', note: 'Prompt, image, and video inputs' },
@@ -62,7 +69,6 @@
   ];
 
   const FEATURE_MENU_ITEMS = [
-    ...IMAGE_MENU_TOOLS,
     { label: 'Video upscale', href: '/upscale.html?mode=video', icon: 'VU', note: 'Increase video quality' },
     { label: 'Lipsync Avatar', href: '/lipsync.html', icon: 'LA', note: 'Talking avatar video' },
     { label: 'Text to speech', href: '/audio.html?tool=text-to-speech', icon: 'T2', note: 'Generate voice from text' },
@@ -339,12 +345,26 @@
     return `/search-models.html?model=${encodeURIComponent(id)}`;
   }
 
+  function withAffiliateRef(href) {
+    const ref = getStoredAffiliateRef();
+    if (!ref || !href || href.charAt(0) === '#') return href;
+
+    try {
+      const url = new URL(href, location.origin);
+      if (url.origin !== location.origin) return href;
+      if (!url.searchParams.get('ref')) url.searchParams.set('ref', ref);
+      return `${url.pathname}${url.search}${url.hash}`;
+    } catch (_) {
+      return href;
+    }
+  }
+
   function menuIconClass(index) {
     return index % 4 === 0 ? 'blue' : index % 4 === 1 ? 'violet' : index % 4 === 2 ? 'lime' : 'pink';
   }
 
   function itemHref(item) {
-    return item.href || modelHref(item.id);
+    return withAffiliateRef(item.href || modelHref(item.id));
   }
 
   function itemData(item) {
@@ -377,7 +397,7 @@
   function renderNavMenu(label, href, config) {
     return `
       <span class="hansora-nav-item">
-        <a class="hansora-nav-trigger" href="${href}">${label}</a>
+        <a class="hansora-nav-trigger" href="${withAffiliateRef(href)}">${label}</a>
         ${renderMegaMenu(config)}
       </span>`;
   }
@@ -551,7 +571,7 @@
     mount.innerHTML = `
       <header class="site-header" id="siteHeader">
         <div class="shell nav">
-          <a class="brand" href="/" aria-label="HANSORA AI home">
+          <a class="brand" href="${withAffiliateRef('/')}" aria-label="HANSORA AI home">
             <img src="${LOGO_URL}" alt="">
             <span>HANSORA AI</span>
           </a>
@@ -574,8 +594,8 @@
               label: 'Feature tools',
               className: 'hansora-mega-wide',
               sections: [
-                { title: 'Image tools', items: IMAGE_MENU_TOOLS },
-                { title: 'Video and audio tools', items: FEATURE_MENU_ITEMS.slice(5) },
+                { title: 'Image tools', items: [...IMAGE_MENU_TOOLS, PROMPT_BUILDER_TOOL] },
+                { title: 'Video and audio tools', items: FEATURE_MENU_ITEMS },
               ]
             })}
             ${renderNavMenu('Audio', '/audio.html', {
@@ -585,7 +605,7 @@
                 { title: 'Audio tools', items: AUDIO_MENU_ITEMS },
               ]
             })}
-            <a href="/pricing.html">Pricing</a>
+            <a href="${withAffiliateRef('/pricing.html')}">Pricing</a>
           </nav>
           <div class="nav-actions">
             <button class="btn btn-ghost" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Login</button>
@@ -593,13 +613,13 @@
             <button class="avatar-button" type="button" id="navAvatar" aria-label="Open account menu" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}">
               <img id="navAvatarImg" alt="" src="${cachedAvatar}">
             </button>
-            <a class="btn btn-primary" href="/search-models.html" id="btnGetStarted">Start creating</a>
+            <a class="btn btn-primary" href="${withAffiliateRef('/search-models.html')}" id="btnGetStarted">Start creating</a>
           </div>
         </div>
         <div class="user-menu" id="navMenu">
-          <a href="/profile.html">Profile</a>
-          <a href="/usage.html">History</a>
-          <a href="/pricing.html">Credits</a>
+          <a href="${withAffiliateRef('/profile.html')}">Profile</a>
+          <a href="${withAffiliateRef('/usage.html')}">History</a>
+          <a href="${withAffiliateRef('/pricing.html')}">Credits</a>
           <button type="button" id="btnLogout">Logout</button>
         </div>
       </header>`;
@@ -627,7 +647,7 @@
             <input id="authPass" style="display:none;" placeholder="Password" type="password" autocomplete="current-password">
             <div class="hansora-auth-actions" style="display:none;">
               <button class="btn btn-brand" id="btnDoLogin" type="button">Log in</button>
-              <a class="btn" id="btnGoSignup" href="/login.html?mode=signup">Sign up</a>
+              <a class="btn" id="btnGoSignup" href="${withAffiliateRef('/login.html?mode=signup')}">Sign up</a>
             </div>
             <p class="hansora-auth-msg" id="authMsg"></p>
           </form>
