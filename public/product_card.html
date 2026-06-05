@@ -1077,16 +1077,18 @@ Easy daily use"></textarea>
         model: kind === 'video' ? 'Product Animation' : (row.provider || 'Product Selling Card'),
         prompt: copy.headline || row.prompt || (kind === 'video' ? 'Simple animation 6s' : 'Product card'),
         kind,
-        checker: 'product-card-check'
+        checker: 'product-card-check',
+        createdAt: row.created_at ? Date.parse(row.created_at) || 0 : 0
       };
     }
 
     function renderResults(){
       const activeIds = new Set(activeRuns.map((run) => run.runId).filter(Boolean));
+      const activeItems = [...activeRuns].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       const historyItems = historyRows
         .filter((row) => row && !activeIds.has(runIdFromRow(row)))
         .map(resultItemFromRow);
-      const items = [...activeRuns, ...historyItems].slice(0, 12);
+      const items = [...activeItems, ...historyItems].slice(0, 12);
       els.resultStage.innerHTML = '';
       const hasItems = items.length > 0;
       els.resultStage.classList.toggle('empty', !hasItems);
@@ -1192,8 +1194,11 @@ Easy daily use"></textarea>
 
     function upsertActiveRun(run){
       const index = activeRuns.findIndex((item) => item.runId === run.runId);
-      if (index >= 0) activeRuns[index] = { ...activeRuns[index], ...run };
-      else activeRuns.push(run);
+      const existing = index >= 0 ? activeRuns[index] : null;
+      const stampedRun = { ...run, createdAt: run.createdAt || (existing && existing.createdAt) || Date.now() };
+      if (index >= 0) activeRuns[index] = { ...activeRuns[index], ...stampedRun };
+      else activeRuns.unshift(stampedRun);
+      activeRuns.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       activeRuns = activeRuns.slice(0, 12);
       renderResults();
     }
@@ -1210,6 +1215,7 @@ Easy daily use"></textarea>
         const session = await supabaseClient.auth.getSession();
         const token = session && session.data && session.data.session ? session.data.session.access_token : '';
         const runId = `product-card-animation-${currentUser.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const createdAt = Date.now();
         const prompt = [
           'Simple animation only.',
           'Do not change the image design, product, logo, layout, colors, or any text.',
@@ -1260,7 +1266,8 @@ Easy daily use"></textarea>
           prompt:'Simple animation 6s',
           url:'',
           kind:'video',
-          checker: body.checker || 'product-card-check'
+          checker: body.checker || 'product-card-check',
+          createdAt
         };
         upsertActiveRun(run);
         closeAnimationModal();
