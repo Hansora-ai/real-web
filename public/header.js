@@ -9,8 +9,6 @@
   const AFFILIATE_PENDING_KEY = 'hansora_pending_affiliate_ref';
   const AFFILIATE_DONE_PREFIX = 'hansora_affiliate_registered.';
   const AFFILIATE_COOKIE_NAME = 'hansora_affiliate_ref';
-  const AFFILIATE_SESSION_KEY = 'hansora_affiliate_session_ref';
-  const AFFILIATE_OAUTH_PENDING_KEY = 'hansora_affiliate_oauth_pending';
   const AFFILIATE_REF_MAX_AGE = 60 * 60 * 24 * 30;
   const SIGNUP_OFFER_DELAY_MS = 3 * 60 * 1000;
   const SIGNUP_OFFER_PENDING_PREFIX = 'hansora_signup_offer_pending.';
@@ -209,11 +207,9 @@
     try {
       localStorage.removeItem(AFFILIATE_REF_KEY);
       localStorage.removeItem(AFFILIATE_PENDING_KEY);
-      localStorage.removeItem(AFFILIATE_OAUTH_PENDING_KEY);
     } catch (_) {}
     try {
       sessionStorage.removeItem(AFFILIATE_REF_KEY);
-      sessionStorage.removeItem(AFFILIATE_SESSION_KEY);
     } catch (_) {}
     clearAffiliateCookie();
   }
@@ -267,7 +263,6 @@
 
     try {
       sessionStorage.setItem(AFFILIATE_REF_KEY, code);
-      sessionStorage.setItem(AFFILIATE_SESSION_KEY, code);
     } catch (_) {}
 
     writeAffiliateCookie(code);
@@ -282,57 +277,27 @@
     return ref;
   }
 
-  function rememberAffiliateOAuthStart(ref) {
-    const code = normalizeAffiliateRef(ref);
-    if (!code) return;
-    try {
-      localStorage.setItem(AFFILIATE_OAUTH_PENDING_KEY, JSON.stringify({
-        code,
-        started_at: Date.now()
-      }));
-    } catch (_) {}
-  }
-
-  function getRecentAffiliateOAuthRef() {
-    try {
-      const pending = JSON.parse(localStorage.getItem(AFFILIATE_OAUTH_PENDING_KEY) || '{}');
-      const code = normalizeAffiliateRef(pending && pending.code);
-      const startedAt = Number(pending && pending.started_at || 0);
-      if (!code || !Number.isFinite(startedAt) || startedAt <= 0) return '';
-      if (Date.now() - startedAt < 0 || Date.now() - startedAt > 30 * 60 * 1000) {
-        localStorage.removeItem(AFFILIATE_OAUTH_PENDING_KEY);
-        return '';
-      }
-      return code;
-    } catch (_) {
-      return '';
-    }
-  }
-
-  function getSessionAffiliateRef() {
-    try {
-      return normalizeAffiliateRef(sessionStorage.getItem(AFFILIATE_SESSION_KEY) || sessionStorage.getItem(AFFILIATE_REF_KEY));
-    } catch (_) {
-      return '';
-    }
-  }
-
   function getStoredAffiliateRef() {
     const urlRef = getAffiliateRefFromUrl();
     if (urlRef) return rememberAffiliateRef(urlRef, 'url');
 
-    const sessionRef = getSessionAffiliateRef();
-    if (sessionRef) {
-      try {
-        const localRef = normalizeAffiliateRef(localStorage.getItem(AFFILIATE_REF_KEY));
-        if (localRef && localRef === sessionRef) return sessionRef;
-      } catch (_) {}
+    try {
+      const localRef = normalizeAffiliateRef(localStorage.getItem(AFFILIATE_REF_KEY));
+      if (localRef) return localRef;
+    } catch (_) {}
 
-      const cookieRef = readAffiliateCookie();
-      if (cookieRef && cookieRef === sessionRef) return sessionRef;
+    try {
+      const sessionRef = normalizeAffiliateRef(sessionStorage.getItem(AFFILIATE_REF_KEY));
+      if (sessionRef) {
+        rememberAffiliateRef(sessionRef, 'session');
+        return sessionRef;
+      }
+    } catch (_) {}
 
-      rememberAffiliateRef(sessionRef, 'session');
-      return sessionRef;
+    const cookieRef = readAffiliateCookie();
+    if (cookieRef) {
+      rememberAffiliateRef(cookieRef, 'cookie');
+      return cookieRef;
     }
 
     return '';
@@ -340,17 +305,10 @@
 
   function getPendingAffiliateRef(user) {
     try {
-      const sessionRef = getSessionAffiliateRef();
-      const oauthRef = getRecentAffiliateOAuthRef();
       const pending = JSON.parse(localStorage.getItem(AFFILIATE_PENDING_KEY) || '{}');
       if (!pending || !pending.code) return getStoredAffiliateRef();
-      const pendingCode = normalizeAffiliateRef(pending.code);
-      if ((!sessionRef || pendingCode !== sessionRef) && (!oauthRef || pendingCode !== oauthRef)) {
-        clearStoredAffiliateRef();
-        return '';
-      }
       if (user && pending.user_id && pending.user_id !== user.id) return '';
-      return pendingCode;
+      return normalizeAffiliateRef(pending.code);
     } catch (_) {
       return getStoredAffiliateRef();
     }
@@ -374,38 +332,21 @@
 
   async function registerAffiliateReferral(user, code) {
     const ref = normalizeAffiliateRef(code || getPendingAffiliateRef(user) || getStoredAffiliateRef());
-    if (!sb || !user || !user.id || !ref) {
-      if (user && user.id) {
-        clearStoredAffiliateRef();
-        stripAffiliateRefFromCurrentUrl();
-        stripAffiliateRefFromLinks();
-      }
-      return;
-    }
+    if (!sb || !user || !user.id || !ref) return;
 
     try {
-      if (localStorage.getItem(`${AFFILIATE_DONE_PREFIX}${user.id}.${ref}`)) {
-        clearStoredAffiliateRef();
-        stripAffiliateRefFromCurrentUrl();
-        stripAffiliateRefFromLinks();
-        return;
-      }
+      if (localStorage.getItem(`${AFFILIATE_DONE_PREFIX}${user.id}.${ref}`)) return;
     } catch (_) {}
 
     try {
       const { data: referrer, error: accountError } = await sb
         .from('affiliate_accounts')
         .select('user_id, affiliate_code')
-        .ilike('affiliate_code', ref)
+        .eq('affiliate_code', ref)
         .maybeSingle();
 
       if (accountError) throw accountError;
-      if (!referrer || !referrer.user_id || referrer.user_id === user.id) {
-        clearStoredAffiliateRef();
-        stripAffiliateRefFromCurrentUrl();
-        stripAffiliateRefFromLinks();
-        return;
-      }
+      if (!referrer || !referrer.user_id || referrer.user_id === user.id) return;
 
       const { data: existing, error: existingError } = await sb
         .from('affiliate_referrals')
@@ -422,12 +363,12 @@
       const { error: insertError } = await sb.from('affiliate_referrals').insert({
         referrer_user_id: referrer.user_id,
         referred_user_id: user.id,
-        affiliate_code: referrer.affiliate_code || ref,
+        affiliate_code: ref,
         status: 'registered'
       });
 
       if (insertError) throw insertError;
-      markAffiliateRegistered(user, referrer.affiliate_code || ref);
+      markAffiliateRegistered(user, ref);
     } catch (affiliateError) {
       console.warn('Affiliate referral registration failed', affiliateError);
     }
@@ -464,6 +405,50 @@
       return `${url.pathname}${url.search}${url.hash}`;
     } catch (_) {
       return href;
+    }
+  }
+
+  function preserveAffiliateRefOnLink(link) {
+    if (!link || currentUser && currentUser.id) return;
+    const raw = link.getAttribute('href') || '';
+    if (!raw || raw.charAt(0) === '#' || /^(?:mailto:|tel:|javascript:|data:)/i.test(raw)) return;
+
+    const ref = getStoredAffiliateRef();
+    if (!ref) return;
+
+    try {
+      const url = new URL(raw, location.origin);
+      if (url.origin !== location.origin) return;
+      if (!url.searchParams.get('ref')) url.searchParams.set('ref', ref);
+      link.setAttribute('href', `${url.pathname}${url.search}${url.hash}`);
+    } catch (_) {}
+  }
+
+  function preserveAffiliateRefAcrossPageLinks() {
+    if (currentUser && currentUser.id) return;
+
+    document.querySelectorAll('a[href]').forEach(preserveAffiliateRefOnLink);
+
+    document.addEventListener('click', function (event) {
+      const link = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+      if (link) preserveAffiliateRefOnLink(link);
+    }, true);
+
+    if (window.MutationObserver && document.body) {
+      const observer = new MutationObserver(function (records) {
+        if (currentUser && currentUser.id) {
+          observer.disconnect();
+          return;
+        }
+        records.forEach(function (record) {
+          record.addedNodes.forEach(function (node) {
+            if (!node || node.nodeType !== 1) return;
+            if (node.matches && node.matches('a[href]')) preserveAffiliateRefOnLink(node);
+            if (node.querySelectorAll) node.querySelectorAll('a[href]').forEach(preserveAffiliateRefOnLink);
+          });
+        });
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
     }
   }
 
@@ -1240,10 +1225,7 @@
         try {
           captureAffiliateRef();
           const ref = getStoredAffiliateRef();
-          if (ref) {
-            rememberAffiliateRef(ref, 'google_oauth');
-            rememberAffiliateOAuthStart(ref);
-          }
+          if (ref) rememberAffiliateRef(ref, 'google_oauth');
           rememberSignupOfferOAuthStart();
           const { error } = await sb.auth.signInWithOAuth({
             provider: 'google',
@@ -1375,6 +1357,7 @@
     ensureSupabaseClient();
     exposeApi();
     bindEvents();
+    preserveAffiliateRefAcrossPageLinks();
     bindAuthStateChanges();
     restoreSession();
   });
