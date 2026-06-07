@@ -5200,6 +5200,93 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       return '<span class="model-logo ' + getModelLogoClass(model) + '">' + getModelLogoText(model) + '</span>';
     }
 
+    const __FILE_MIME_BY_EXTENSION = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+      gif: 'image/gif',
+      avif: 'image/avif',
+      heic: 'image/heic',
+      heif: 'image/heif',
+      bmp: 'image/bmp',
+      mp4: 'video/mp4',
+      mov: 'video/quicktime',
+      webm: 'video/webm',
+      m4v: 'video/x-m4v',
+      mp3: 'audio/mpeg',
+      wav: 'audio/wav',
+      m4a: 'audio/mp4',
+      aac: 'audio/aac',
+      ogg: 'audio/ogg'
+    };
+
+    function inferredFileMime(file) {
+      const declared = String(file && file.type || '').trim().toLowerCase();
+      if (declared && declared !== 'application/octet-stream' && declared !== 'binary/octet-stream') return declared;
+      const name = String(file && file.name || '').toLowerCase();
+      const match = name.match(/\.([a-z0-9]+)(?:[?#].*)?$/);
+      return match ? (__FILE_MIME_BY_EXTENSION[match[1]] || declared) : declared;
+    }
+
+    function fileHasGenericMime(file) {
+      const declared = String(file && file.type || '').trim().toLowerCase();
+      return !declared || declared === 'application/octet-stream' || declared === 'binary/octet-stream';
+    }
+
+    function fileIsKind(file, kind) {
+      return inferredFileMime(file).startsWith(String(kind || '').toLowerCase() + '/');
+    }
+
+    function ensureUsefulFileMime(file) {
+      if (!file) return file;
+      const inferred = inferredFileMime(file);
+      const declared = String(file.type || '').trim().toLowerCase();
+      if (!inferred || inferred === declared || typeof File !== 'function') return file;
+      try {
+        return new File([file], file.name || 'upload', {
+          type: inferred,
+          lastModified: Number(file.lastModified || Date.now())
+        });
+      } catch (_) {
+        return file;
+      }
+    }
+
+    async function ensureUploadFileMime(file) {
+      const prepared = ensureUsefulFileMime(file);
+      if (!prepared || !fileHasGenericMime(prepared) || typeof prepared.slice !== 'function') return prepared;
+      try {
+        const bytes = new Uint8Array(await prepared.slice(0, 32).arrayBuffer());
+        const ascii = Array.from(bytes).map((byte) => String.fromCharCode(byte)).join('');
+        let mime = '';
+        if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) mime = 'image/png';
+        else if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) mime = 'image/jpeg';
+        else if (ascii.startsWith('GIF87a') || ascii.startsWith('GIF89a')) mime = 'image/gif';
+        else if (ascii.slice(0, 4) === 'RIFF' && ascii.slice(8, 12) === 'WEBP') mime = 'image/webp';
+        else if (ascii.slice(4, 8) === 'ftyp' && /avif|avis/.test(ascii.slice(8, 24))) mime = 'image/avif';
+        else if (ascii.slice(4, 8) === 'ftyp' && /heic|heix|hevc|hevx|mif1/.test(ascii.slice(8, 24))) mime = 'image/heic';
+        if (!mime || typeof File !== 'function') return prepared;
+        const ext = extForBrowserMime(mime);
+        const originalName = String(prepared.name || 'upload');
+        const name = /\.[a-z0-9]+$/i.test(originalName) ? originalName : `${originalName}.${ext}`;
+        return new File([prepared], name, { type: mime, lastModified: Number(prepared.lastModified || Date.now()) });
+      } catch (error) {
+        console.warn('file type inspection skipped', error);
+        return prepared;
+      }
+    }
+
+    function extForBrowserMime(mime) {
+      if (mime === 'image/jpeg') return 'jpg';
+      if (mime === 'image/png') return 'png';
+      if (mime === 'image/webp') return 'webp';
+      if (mime === 'image/gif') return 'gif';
+      if (mime === 'image/avif') return 'avif';
+      if (mime === 'image/heic') return 'heic';
+      return 'bin';
+    }
+
     function __renderImageThumbs() {
       const thumbs = document.getElementById('imageThumbs');
       if (!thumbs) return;
@@ -5209,13 +5296,13 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const wrapper = document.createElement('div');
         wrapper.className = 'relative h-16 w-16 md:h-20 md:w-20 rounded-xl overflow-hidden border border-white/20';
         let preview;
-        if (file && file.type && file.type.startsWith('video/')) {
+        if (fileIsKind(file, 'video')) {
           preview = document.createElement('video');
           preview.src = url;
           preview.muted = true;
           preview.playsInline = true;
           preview.className = 'h-full w-full object-cover';
-        } else if (file && file.type && file.type.startsWith('audio/')) {
+        } else if (fileIsKind(file, 'audio')) {
           preview = document.createElement('div');
           preview.className = 'h-full w-full flex items-center justify-center bg-white/10 text-[10px] font-bold text-white/80 px-1 text-center';
           preview.textContent = 'AUDIO';
@@ -5240,12 +5327,13 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function acceptsMainUploadFile(file) {
-      if (!file || !file.type) return false;
+      if (!file) return false;
       const accept = String(currentModel?.acceptTypes || 'image/*');
-      if (accept.includes('video/*') && file.type.startsWith('video/')) return true;
-      if (accept.includes('audio/*') && file.type.startsWith('audio/')) return true;
-      if (accept.includes('image/*') && file.type.startsWith('image/')) return true;
-      return file.type.startsWith('image/');
+      if (accept.includes('video/*') && fileIsKind(file, 'video')) return true;
+      if (accept.includes('audio/*') && fileIsKind(file, 'audio')) return true;
+      if (accept.includes('image/*') && fileIsKind(file, 'image')) return true;
+      if (accept.includes('image/*') && fileHasGenericMime(file)) return true;
+      return fileIsKind(file, 'image');
     }
 
 
@@ -6803,7 +6891,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             if (tile.classList.contains('control-disabled')) return;
             const files = Array.from((event.dataTransfer && event.dataTransfer.files) || []);
             const wantsVideo = wrapId === 'klingMotionUploadWrap' && index === 0;
-            const file = files.find((item) => item && item.type && item.type.startsWith(wantsVideo ? 'video/' : 'image/'));
+            const file = files.find((item) => fileIsKind(item, wantsVideo ? 'video' : 'image'));
             if (!file) {
               showStatus(wantsVideo ? 'Drop a video file here.' : 'Drop an image file here.', 'error');
               return;
@@ -6814,7 +6902,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
               const input = document.getElementById(inputId);
               const dt = new DataTransfer();
               if (wrapId === 'veoReferenceWrap') {
-                files.filter((item) => item && item.type && item.type.startsWith('image/')).slice(0, 3).forEach((item) => dt.items.add(item));
+                files.filter((item) => fileIsKind(item, 'image')).slice(0, 3).forEach((item) => dt.items.add(item));
               } else {
                 dt.items.add(file);
               }
@@ -7044,10 +7132,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (!file) return false;
       const rules = String(accept || '').split(',').map((item) => item.trim()).filter(Boolean);
       if (!rules.length) return true;
-      const type = String(file.type || '').toLowerCase();
+      const type = inferredFileMime(file);
       const name = String(file.name || '').toLowerCase();
       return rules.some((rule) => {
         const normalized = rule.toLowerCase();
+        if (normalized === 'image/*' && fileHasGenericMime(file)) return true;
         if (normalized.endsWith('/*')) return type.startsWith(normalized.slice(0, -1));
         if (normalized.startsWith('.')) return name.endsWith(normalized);
         return type === normalized;
@@ -7058,6 +7147,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const seen = new Set();
       return [...(existingFiles || []), ...Array.from(incomingFiles || [])]
         .filter((file) => fileMatchesAccept(file, accept))
+        .map(ensureUsefulFileMime)
         .filter((file) => {
           const key = [file.name, file.size, file.lastModified, file.type].join('|');
           if (seen.has(key)) return false;
@@ -7417,7 +7507,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (!cleanName) return { ok:false, message:'Shot ' + (shotIndex + 1) + ': element name is required.' };
       if (!cleanDescription) return { ok:false, message:'Shot ' + (shotIndex + 1) + ': element description is required.' };
       el.type = 'image';
-      const imageFiles = files.filter((file) => String(file.type || '').startsWith('image/'));
+      const imageFiles = files.filter((file) => fileIsKind(file, 'image'));
       if (imageFiles.length !== files.length || imageFiles.length < 2 || imageFiles.length > 4) {
         return { ok:false, message:'Shot ' + (shotIndex + 1) + ': image element requires 2–4 images.' };
       }
@@ -7510,7 +7600,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (!el) return false;
       const files = Array.isArray(el.files) ? el.files.filter(Boolean) : [];
       el.type = 'image';
-      const imageFiles = files.filter((file) => String(file?.type || '').startsWith('image/'));
+      const imageFiles = files.filter((file) => fileIsKind(file, 'image'));
       return imageFiles.length === files.length && imageFiles.length >= 2 && imageFiles.length <= 4;
     }
 
@@ -7817,8 +7907,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const el = kling30Shots[kling30ActiveShotIndex].element;
       const nextFiles = Array.from(e.target.files || []).filter(Boolean);
       el.type = 'image';
-      const existing = Array.isArray(el.files) ? el.files.filter((f) => String(f.type || '').startsWith('image/')) : [];
-      el.files = existing.concat(nextFiles.filter((f) => String(f.type || '').startsWith('image/'))).slice(0, 4);
+      const existing = Array.isArray(el.files) ? el.files.filter((f) => fileIsKind(f, 'image')) : [];
+      el.files = existing.concat(nextFiles.filter((f) => fileIsKind(f, 'image')).map(ensureUsefulFileMime)).slice(0, 4);
       e.target.value = '';
       renderKling30ElementEditor();
       renderKling30Shots();
@@ -8052,10 +8142,10 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       const getFileMaxMB = (file) => {
         let fileMaxMB = maxUploadMB;
         const limits = currentModel && currentModel.uploadLimitsMB ? currentModel.uploadLimitsMB : null;
-        if (limits && file && file.type) {
-          if (file.type.startsWith('image/')) fileMaxMB = Number(limits.image || fileMaxMB);
-          else if (file.type.startsWith('video/')) fileMaxMB = Number(limits.video || fileMaxMB);
-          else if (file.type.startsWith('audio/')) fileMaxMB = Number(limits.audio || fileMaxMB);
+        if (limits && file) {
+          if (fileIsKind(file, 'image')) fileMaxMB = Number(limits.image || fileMaxMB);
+          else if (fileIsKind(file, 'video')) fileMaxMB = Number(limits.video || fileMaxMB);
+          else if (fileIsKind(file, 'audio')) fileMaxMB = Number(limits.audio || fileMaxMB);
         }
         return fileMaxMB;
       };
@@ -8070,15 +8160,15 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
       const urls = new Array(list.length);
       const hasLargeMedia = list.some((file) => {
-        const type = String(file?.type || '');
-        return type.startsWith('video/') || type.startsWith('audio/');
+        return fileIsKind(file, 'video') || fileIsKind(file, 'audio');
       });
       const concurrency = Math.min(list.length, hasLargeMedia ? 2 : 4);
       let nextIndex = 0;
       let completed = 0;
 
       const uploadOne = async (index) => {
-        const file = list[index];
+        const originalFile = list[index];
+        const file = await ensureUploadFileMime(originalFile);
         let up = null;
         const uploadErrorMessage = (error) => {
           const message = String(error && error.message ? error.message : error || '').trim();
@@ -8088,7 +8178,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         const isRetryableUploadError = (error) => /upload_network_error|upload_timeout|upload_aborted|upload_failed_0/i.test(uploadErrorMessage(error));
         const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
         const normalizeImageFile = async (sourceFile) => {
-          if (!sourceFile || !String(sourceFile.type || '').startsWith('image/') || sourceFile.type === 'image/gif') return sourceFile;
+          if (!sourceFile || !fileIsKind(sourceFile, 'image') || inferredFileMime(sourceFile) === 'image/gif') return ensureUsefulFileMime(sourceFile);
           const objectUrl = URL.createObjectURL(sourceFile);
           try {
             const img = await new Promise((resolve, reject) => {
@@ -8140,7 +8230,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         } catch (error) {
           const bridgeMessage = uploadErrorMessage(error);
           let retryMessage = '';
-          if (isRetryableUploadError(error) && file && String(file.type || '').startsWith('image/')) {
+          if (isRetryableUploadError(error) && file && fileIsKind(file, 'image')) {
             const retryFile = await normalizeImageFile(file);
             if (retryFile && retryFile !== file) {
               try {
