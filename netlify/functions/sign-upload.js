@@ -6,7 +6,7 @@ const https = require('https');
 const { URL } = require('url');
 const crypto = require('crypto');
 
-const HANDLER_VERSION = 'sign-upload@v6-accept-sign-path';
+const HANDLER_VERSION = 'sign-upload@v7-android-mime-fallback';
 
 function cors() {
   return {
@@ -74,10 +74,31 @@ function extForMime(mime) {
   if (m === 'image/jpeg' || m === 'image/jpg' || m === 'image/pjpeg') return 'jpg';
   if (m === 'image/png' || m === 'image/x-png') return 'png';
   if (m === 'image/webp') return 'webp';
+  if (m === 'image/avif') return 'avif';
+  if (m === 'image/heic') return 'heic';
+  if (m === 'image/heif') return 'heif';
+  if (m === 'image/bmp') return 'bmp';
   if (m === 'video/mp4') return 'mp4';
   if (m === 'video/quicktime') return 'mov';
+  if (m === 'video/webm') return 'webm';
   if (m === 'image/gif') return 'gif';
+  if (m === 'audio/mpeg') return 'mp3';
+  if (m === 'audio/wav' || m === 'audio/x-wav') return 'wav';
+  if (m === 'audio/mp4' || m === 'audio/x-m4a') return 'm4a';
   return 'bin';
+}
+function mimeForFilename(filename, mime) {
+  const declared = String(mime || '').trim().toLowerCase();
+  if (declared && declared !== 'application/octet-stream' && declared !== 'binary/octet-stream') return declared;
+  const match = String(filename || '').toLowerCase().match(/\.([a-z0-9]+)$/);
+  const ext = match ? match[1] : '';
+  const byExt = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
+    gif: 'image/gif', avif: 'image/avif', heic: 'image/heic', heif: 'image/heif',
+    bmp: 'image/bmp', mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm',
+    mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4', aac: 'audio/aac', ogg: 'audio/ogg'
+  };
+  return byExt[ext] || declared || 'application/octet-stream';
 }
 function encodePath(p) {
   return String(p).split('/').map(encodeURIComponent).join('/');
@@ -116,7 +137,8 @@ async function signUpload(urlBase, key, bucket, objectPath, mime, exp) {
 
 function objectPathFor(filename, mime) {
   const base = String(filename || 'file').replace(/\.[^.]+$/, '');
-  const ext = extForMime(mime);
+  const filenameExt = (String(filename || '').toLowerCase().match(/\.([a-z0-9]+)$/) || [])[1];
+  const ext = extForMime(mime) === 'bin' && filenameExt ? filenameExt : extForMime(mime);
   const safe = `${sanitize(base)}.${ext}`;
   const now = new Date();
   const y = now.getUTCFullYear();
@@ -158,7 +180,7 @@ exports.handler = async (event) => {
     let payload = {};
     try { payload = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'bad_json' }, headers); }
     const filename = (payload.filename || '').toString();
-    const mime = (payload.mime || '').toString().toLowerCase();
+    const mime = mimeForFilename(filename, payload.mime);
     const objectPath = objectPathFor(filename, mime);
 
     // Bucket probe for precise diagnostics
@@ -187,7 +209,7 @@ exports.handler = async (event) => {
     const uploadUrl = absolutize(url, signedUrl);
     const publicUrl = `${url}/storage/v1/object/public/${encodeURIComponent(bucket)}/${encodeURIComponent(objectPath).replace(/%2F/g,'/')}`;
 
-    return json(200, { uploadUrl, publicUrl, bucket, objectPath },
+    return json(200, { uploadUrl, publicUrl, bucket, objectPath, mime },
       { ...headers, 'x-project-host': new URL(url).host, 'x-bucket': bucket, 'x-object': objectPath });
   } catch (e) {
     return json(500, { error: 'server_error', detail: String(e && e.message ? e.message : e) }, headers);
