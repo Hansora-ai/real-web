@@ -8133,9 +8133,6 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     async function uploadImagesAndGetUrls(files) {
       const list = Array.isArray(files) ? files : (uploadedFiles || []);
       if (!list.length) return [];
-      if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
-        throw new Error('upload_bridge_missing');
-      }
       const maxUploadMB = (typeof currentModel !== 'undefined' && currentModel && currentModel.uploadMaxMB)
         ? Number(currentModel.uploadMaxMB)
         : ((typeof currentModel !== 'undefined' && currentModel && (currentModel.id === 'nano-banana-pro' || currentModel.id === 'nano-banana-2')) ? (currentModel.id === 'nano-banana-2' ? 30 : 25) : 10);
@@ -8175,8 +8172,43 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           const body = error && error.body ? (() => { try { return JSON.stringify(error.body); } catch { return ''; } })() : '';
           return [message, body].filter(Boolean).join(': ').slice(0, 180);
         };
-        const isRetryableUploadError = (error) => /upload_network_error|upload_timeout|upload_aborted|upload_failed_0/i.test(uploadErrorMessage(error));
+        const isRetryableUploadError = (error) => /upload_network_error|direct_upload_network_error|upload_timeout|upload_aborted|upload_failed_0/i.test(uploadErrorMessage(error));
         const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        const directSignedUpload = async (sourceFile) => {
+          const sourceMime = inferredFileMime(sourceFile) || 'application/octet-stream';
+          const sourceName = String(sourceFile && sourceFile.name || 'upload.bin').replace(/[^A-Za-z0-9._-]/g, '_');
+          const signResponse = await fetch('/.netlify/functions/sign-upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: sourceName, mime: sourceMime })
+          });
+          const signed = await signResponse.json().catch(() => null);
+          if (!signResponse.ok || !signed || !signed.uploadUrl || !signed.publicUrl) {
+            const error = new Error((signed && (signed.error || signed.detail)) || `sign_failed_${signResponse.status}`);
+            error.body = signed;
+            throw error;
+          }
+          const uploadMime = String(signed.mime || sourceMime || 'application/octet-stream');
+          let putResponse;
+          try {
+            putResponse = await fetch(signed.uploadUrl, {
+              method: 'PUT',
+              headers: { 'Content-Type': uploadMime },
+              body: sourceFile
+            });
+          } catch (error) {
+            throw new Error('direct_upload_network_error');
+          }
+          if (!putResponse.ok && putResponse.status !== 409) {
+            throw new Error(`direct_upload_failed_${putResponse.status}`);
+          }
+          return {
+            publicUrl: signed.publicUrl,
+            uploadUrl: signed.uploadUrl,
+            objectPath: signed.objectPath,
+            bucket: signed.bucket
+          };
+        };
         const normalizeImageFile = async (sourceFile) => {
           if (!sourceFile || !fileIsKind(sourceFile, 'image') || inferredFileMime(sourceFile) === 'image/gif') return ensureUsefulFileMime(sourceFile);
           const objectUrl = URL.createObjectURL(sourceFile);
@@ -8216,7 +8248,21 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               showStatus(attempt === 1
                 ? `Uploading input files (${index + 1}/${list.length})…`
                 : `Retrying ${label} upload ${attempt}/${attempts} (${index + 1}/${list.length})…`);
-              return await window.kieUploadBridge.upload(sourceFile);
+              try {
+                if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
+                  return await directSignedUpload(sourceFile);
+                }
+                return await window.kieUploadBridge.upload(sourceFile);
+              } catch (bridgeError) {
+                console.warn('upload bridge failed; trying direct signed upload', {
+                  model: currentModel && currentModel.id,
+                  index,
+                  name: sourceFile && sourceFile.name,
+                  type: sourceFile && sourceFile.type,
+                  bridgeError
+                });
+                return await directSignedUpload(sourceFile);
+              }
             } catch (error) {
               lastError = error;
               if (attempt >= attempts || !isRetryableUploadError(error)) throw error;
@@ -8230,7 +8276,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         } catch (error) {
           const bridgeMessage = uploadErrorMessage(error);
           let retryMessage = '';
-          if (isRetryableUploadError(error) && file && fileIsKind(file, 'image')) {
+          if (file && fileIsKind(file, 'image')) {
             const retryFile = await normalizeImageFile(file);
             if (retryFile && retryFile !== file) {
               try {
