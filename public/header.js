@@ -1262,7 +1262,7 @@
     if (btnLogout) {
       btnLogout.addEventListener('click', async function () {
         if (sb) await sb.auth.signOut();
-        showLoggedOutUI();
+        window.location.replace('/');
       });
     }
   }
