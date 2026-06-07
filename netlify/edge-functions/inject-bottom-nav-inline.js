@@ -43,8 +43,8 @@ export default async (request, context) => {
       background:#080a0f;
       border-top:1px solid var(--hs-line);
       padding:10px 10px calc(12px + var(--hs-safe-bottom));
-      transform:translateZ(0);
-      -webkit-transform:translateZ(0);
+      transform:translate3d(0,var(--hs-viewport-shift,0px),0);
+      -webkit-transform:translate3d(0,var(--hs-viewport-shift,0px),0);
     }
     .hs-bottom-nav::before{
       content:"";
@@ -59,7 +59,7 @@ export default async (request, context) => {
       left:0;
       right:0;
       top:100%;
-      height:120px;
+      height:max(240px,30vh);
       background:#080a0f;
       pointer-events:none;
     }
@@ -396,6 +396,7 @@ export default async (request, context) => {
         <a href="/expand.html?mode=face-swap">Face swap</a>
         <a href="/character.html">Character</a>
         <a href="/product_card.html">Product Card</a>
+        <a href="/prompt-builder.html">Cartoon Prompt Builder</a>
         <a href="/upscale.html?mode=video">Video upscale</a>
         <a href="/lipsync.html">Lipsync Avatar</a>
         <a href="/audio.html?tool=text-to-speech">Text to speech</a>
@@ -403,6 +404,7 @@ export default async (request, context) => {
         <a href="/audio.html?tool=voice-changer">Voice changer</a>
         <a href="/audio.html?tool=song-creation">Song Creation</a>
         <a href="/analyse.html">Hook analyse</a>
+        <a href="/models.html">See more</a>
       </div>
       <a href="/pricing.html"><svg viewBox="0 0 24 24"><path d="M3 7h18v10H3z"></path><path d="M8 10h8M8 14h8"></path></svg> Pricing</a>
       <a href="/index.html#faq"><svg viewBox="0 0 24 24"><path d="M12 17h.01"></path><path d="M9.09 9a3 3 0 1 1 5.91 1c0 2-3 2-3 4"></path></svg> FAQ</a>
@@ -423,8 +425,24 @@ export default async (request, context) => {
     const radialClose = document.getElementById('hs-radial-close');
     const radialMore = document.getElementById('hs-radial-more');
     const featureToggle = document.getElementById('hs-feature-toggle');
+    const bottomNav = document.querySelector('.hs-bottom-nav');
     let lockedScrollY = 0;
     let lockCount = 0;
+    let bottomNavShift = 0;
+    let bottomNavFrame = 0;
+    const syncBottomNavToViewport = () => {
+      if (!bottomNav) return;
+      cancelAnimationFrame(bottomNavFrame);
+      bottomNavFrame = requestAnimationFrame(() => {
+        const viewportBottom = window.visualViewport
+          ? window.visualViewport.offsetTop + window.visualViewport.height
+          : window.innerHeight;
+        const rect = bottomNav.getBoundingClientRect();
+        const unshiftedBottom = rect.bottom - bottomNavShift;
+        bottomNavShift = Math.max(0, Math.round(viewportBottom - unshiftedBottom));
+        bottomNav.style.setProperty('--hs-viewport-shift', bottomNavShift + 'px');
+      });
+    };
     const lockPageScroll = () => {
       lockCount += 1;
       if (lockCount > 1) return;
@@ -490,6 +508,14 @@ export default async (request, context) => {
     radialClose && radialClose.addEventListener('click', closeRadial);
     radialMore && radialMore.addEventListener('click', () => { closeRadial(); openMenu(true); });
     featureToggle && featureToggle.addEventListener('click', () => overlay && overlay.classList.toggle('features-open'));
+    syncBottomNavToViewport();
+    window.addEventListener('resize', syncBottomNavToViewport, { passive:true });
+    window.addEventListener('orientationchange', syncBottomNavToViewport, { passive:true });
+    window.visualViewport && window.visualViewport.addEventListener('resize', syncBottomNavToViewport, { passive:true });
+    window.visualViewport && window.visualViewport.addEventListener('scroll', syncBottomNavToViewport, { passive:true });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) syncBottomNavToViewport();
+    });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         closeRadial();
