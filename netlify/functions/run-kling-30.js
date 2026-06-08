@@ -96,7 +96,7 @@ function appendElementReference(prompt, elementName) {
   const cleanName = sanitizeElementName(elementName);
   if (!cleanName) return base;
   const escaped = cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const refRegex = new RegExp('(^|\\s)@' + escaped + '(?=\\s|$)', 'i');
+  const refRegex = new RegExp('@' + escaped + '(?=$|[^a-zA-Z0-9_])', 'i');
   if (refRegex.test(base)) return base;
   return (base ? base + ' ' : '') + '@' + cleanName;
 }
@@ -266,11 +266,30 @@ exports.handler = async (event) => {
       const badShot = multiPrompt.find((shot) => !shot.prompt || Number(shot.duration) < 1 || Number(shot.duration) > 12);
       if (badShot) return json(400, { ok: false, error: 'invalid_multi_prompt', details: 'Each multi-shot prompt must include prompt text and duration from 1-12 seconds.' });
     }
-    const imageUrls = Array.isArray(body.image_urls) ? body.image_urls.map(String).filter(Boolean) : [];
-    const safeImageUrls = body.multi_shots ? imageUrls.slice(0, 1) : imageUrls.slice(0, 2);
     const promptForKie = klingElements.length && !body.multi_shots
       ? klingElements.reduce((out, element) => appendElementReference(out, element.name), prompt)
       : prompt;
+    const suppliedImageUrls = Array.isArray(body.image_urls) ? body.image_urls.map(String).filter(Boolean) : [];
+    const frameImageUrls = [
+      body.first_frame_url ? String(body.first_frame_url) : '',
+      ...suppliedImageUrls,
+      !body.multi_shots && body.last_frame_url ? String(body.last_frame_url) : '',
+    ].filter(Boolean);
+    const usesElementReference = /@[a-zA-Z_][a-zA-Z0-9_]*/.test(promptForKie);
+    if (usesElementReference && !frameImageUrls.length) {
+      const fallbackFirstFrame = klingElements
+        .flatMap((element) => element.element_input_urls || [])
+        .find(Boolean);
+      if (fallbackFirstFrame) frameImageUrls.push(fallbackFirstFrame);
+    }
+    const safeImageUrls = body.multi_shots ? frameImageUrls.slice(0, 1) : frameImageUrls.slice(0, 2);
+    if (usesElementReference && !safeImageUrls.length) {
+      return json(400, {
+        ok: false,
+        error: 'missing_image_urls_for_element_reference',
+        details: 'Kling 3.0 requires a first-frame image_urls entry when the prompt uses an @element reference.',
+      });
+    }
     const input = {
       prompt: promptForKie,
       aspect_ratio: String(body.aspect_ratio || '16:9'),
@@ -278,8 +297,6 @@ exports.handler = async (event) => {
       mode: body.mode || (resolution === '4K' ? '4K' : (resolution === '1080p' ? 'pro' : 'std')),
       sound: !!body.sound,
       multi_shots: !!body.multi_shots,
-      ...(body.first_frame_url ? { first_frame_url: String(body.first_frame_url) } : {}),
-      ...(!body.multi_shots && body.last_frame_url ? { last_frame_url: String(body.last_frame_url) } : {}),
       ...(safeImageUrls.length ? { image_urls: safeImageUrls } : {}),
       ...(klingElements.length ? { kling_elements: klingElements } : {}),
       ...(multiPrompt.length ? { multi_prompt: multiPrompt } : {}),
