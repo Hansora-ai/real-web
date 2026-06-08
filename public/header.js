@@ -15,6 +15,7 @@
   const SIGNUP_OFFER_DISMISSED_PREFIX = 'hansora_signup_offer_dismissed.';
   const SIGNUP_OFFER_OAUTH_STARTED_KEY = 'hansora_signup_offer_oauth_started_at';
   const SIGNUP_OFFER_URL = '/pricing.html?offer_popup=1';
+  const GROK_VIDEO_CREDIT_THRESHOLD = 4;
 
   let sb = null;
   let currentUser = null;
@@ -393,6 +394,15 @@
     return `/search-models.html?model=${encodeURIComponent(id)}`;
   }
 
+  function videoLandingHref(credits) {
+    return modelHref(Number(credits || 0) < GROK_VIDEO_CREDIT_THRESHOLD ? 'grok-video' : 'kling-3');
+  }
+
+  function updateVideoLandingLink() {
+    const link = document.querySelector('[data-hansora-video-landing]');
+    if (link) link.setAttribute('href', withAffiliateRef(videoLandingHref(currentCredits)));
+  }
+
   function withAffiliateRef(href) {
     if (currentUser && currentUser.id) return href;
     const ref = getStoredAffiliateRef();
@@ -488,9 +498,10 @@
   }
 
   function renderNavMenu(label, href, config) {
+    const triggerData = config && config.videoLanding ? ' data-hansora-video-landing="1"' : '';
     return `
       <span class="hansora-nav-item">
-        <a class="hansora-nav-trigger" href="${withAffiliateRef(href)}">${label}</a>
+        <a class="hansora-nav-trigger" href="${withAffiliateRef(href)}"${triggerData}>${label}</a>
         ${renderMegaMenu(config)}
       </span>`;
   }
@@ -761,9 +772,10 @@
                 { title: 'Image tools', items: IMAGE_MENU_TOOLS },
               ]
             })}
-            ${renderNavMenu('Video', '/search-models.html?type=video', {
+            ${renderNavMenu('Video', videoLandingHref(cachedCredits), {
               label: 'Video models',
               className: 'hansora-mega-wide',
+              videoLanding: true,
               sections: [
                 { title: 'Video models', items: VIDEO_MENU_ITEMS },
               ]
@@ -841,6 +853,7 @@
     writeCache('credits', n);
     const navCredits = el('navCredits');
     if (navCredits) navCredits.textContent = formatCredits(n);
+    updateVideoLandingLink();
   }
 
   function avatarUrlFor(user) {
@@ -882,6 +895,7 @@
     if (navAvatar) navAvatar.style.display = 'none';
     if (navMenu) navMenu.classList.remove('is-open');
     clearCache();
+    updateVideoLandingLink();
     redirectLoggedOutHome();
   }
 
