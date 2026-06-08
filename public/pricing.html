@@ -481,6 +481,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 /* Legacy hardcoded-header/hero adjustment disabled: shared header.js now controls the header. */
 </script>
 <!-- HS FINAL STEP1-2 END -->
+<template id="legacy-pricing-mobile-nav-disabled">
 <!-- ===== Hansora Mobile Bottom Navigation (phones only) ===== -->
 <style>
   .hs-bottom-nav, .hs-overlay { display: none; }
@@ -537,7 +538,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     .hs-overlay .links svg{ width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
   }
 </style>
-<nav aria-label="Mobile bottom navigation" class="hs-bottom-nav">
+<nav aria-label="Mobile bottom navigation" class="hs-bottom-nav-legacy">
 <div class="hs-bottom-rail">
 <a aria-label="Home" class="hs-btn" href="index.html">
 <svg viewbox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
@@ -648,6 +649,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.__hs_menu_close = close;
 })();
 </script>
+</template>
 <!-- demo handler removed by patch -->
 <script>
 // STRICT dynamic checkout: prefer data-product; never proceed if uid/credits missing.
