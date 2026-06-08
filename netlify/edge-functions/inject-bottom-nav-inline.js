@@ -350,7 +350,7 @@ export default async (request, context) => {
       <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path><circle cx="8" cy="8" r="1.5"></circle></svg></span>
       <b>Image</b>
     </a>
-    <a class="hs-radial-item hs-radial-video" href="/search-models.html?model=kling-3">
+    <a class="hs-radial-item hs-radial-video" data-hs-video-landing href="/search-models.html?model=kling-3">
       <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg></span>
       <b>Video</b>
     </a>
@@ -383,7 +383,7 @@ export default async (request, context) => {
     </header>
     <div class="links">
       <a href="/search-models.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path></svg> Image</a>
-      <a href="/search-models.html?model=kling-3"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg> Video</a>
+      <a data-hs-video-landing href="/search-models.html?model=kling-3"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg> Video</a>
       <a href="/audio.html"><svg viewBox="0 0 24 24"><path d="M5 10v4"></path><path d="M9 7v10"></path><path d="M13 5v14"></path><path d="M17 8v8"></path></svg> Audio</a>
       <button class="hs-feature-toggle" id="hs-feature-toggle" type="button">
         <span><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path></svg> Features</span>
@@ -430,6 +430,22 @@ export default async (request, context) => {
     let lockCount = 0;
     let bottomNavShift = 0;
     let bottomNavFrame = 0;
+    const getCurrentCredits = () => {
+      try {
+        if (window.HansoraHeader && typeof window.HansoraHeader.getCurrentCredits === 'function') {
+          return Number(window.HansoraHeader.getCurrentCredits() || 0);
+        }
+        return Number(localStorage.getItem('hansora.header.credits') || 0);
+      } catch (_) {
+        return 0;
+      }
+    };
+    const updateVideoLandingLinks = () => {
+      const model = getCurrentCredits() < 4 ? 'grok-video' : 'kling-3';
+      document.querySelectorAll('[data-hs-video-landing]').forEach((link) => {
+        link.setAttribute('href', '/search-models.html?model=' + encodeURIComponent(model));
+      });
+    };
     const syncBottomNavToViewport = () => {
       if (!bottomNav) return;
       cancelAnimationFrame(bottomNavFrame);
@@ -508,6 +524,13 @@ export default async (request, context) => {
     radialClose && radialClose.addEventListener('click', closeRadial);
     radialMore && radialMore.addEventListener('click', () => { closeRadial(); openMenu(true); });
     featureToggle && featureToggle.addEventListener('click', () => overlay && overlay.classList.toggle('features-open'));
+    document.querySelectorAll('[data-hs-video-landing]').forEach((link) => {
+      link.addEventListener('click', updateVideoLandingLinks);
+    });
+    updateVideoLandingLinks();
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'hansora.header.credits') updateVideoLandingLinks();
+    });
     syncBottomNavToViewport();
     window.addEventListener('resize', syncBottomNavToViewport, { passive:true });
     window.addEventListener('orientationchange', syncBottomNavToViewport, { passive:true });
