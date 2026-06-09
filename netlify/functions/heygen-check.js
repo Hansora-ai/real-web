@@ -9,6 +9,8 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const UG_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
 const PROFILES_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
+const HISTORY_BUCKET = process.env.HEYGEN_HISTORY_BUCKET || "generation-history";
+const MAX_ARCHIVE_BYTES = Math.max(1, Number(process.env.HEYGEN_HISTORY_MAX_MB || 200)) * 1024 * 1024;
 
 exports.handler = async (event) => {
   try {
@@ -39,8 +41,8 @@ exports.handler = async (event) => {
         return json(200, { ok: false, failed: true, status: "failed", refunded: !!refund.refunded, refund_amount: refund.amount || 0, error: failureReason(body) });
       }
       if (callbackUrls.length) {
-        await markDone({ row, ids, urls: callbackUrls, raw: body });
-        return json(200, { ok: true, status: "done", result_url: callbackUrls[0], video_url: callbackUrls[0], urls: callbackUrls });
+        const savedUrl = await markDone({ row, ids, urls: callbackUrls, raw: body });
+        return json(200, { ok: true, status: "done", result_url: savedUrl, video_url: savedUrl, urls: [savedUrl] });
       }
     }
 
@@ -58,8 +60,8 @@ exports.handler = async (event) => {
     }
 
     if (state.done && state.urls.length) {
-      if (row) await markDone({ row, ids, urls: state.urls, raw: state.raw });
-      return json(200, { ok: true, status: "done", result_url: state.urls[0], video_url: state.urls[0], urls: state.urls });
+      const savedUrl = row ? await markDone({ row, ids, urls: state.urls, raw: state.raw }) : state.urls[0];
+      return json(200, { ok: true, status: "done", result_url: savedUrl, video_url: savedUrl, urls: [savedUrl] });
     }
 
     return json(200, { ok: false, status: "pending", error: state.error || "" });
@@ -238,20 +240,97 @@ function isHeyGenPageUrl(value) {
 }
 
 async function markDone({ row, ids, urls, raw }) {
+  const originalResultUrl = urls[0];
+  const existingMeta = row.meta && typeof row.meta === "object" ? row.meta : {};
+  const alreadyArchived = !!existingMeta.storage_path &&
+    typeof row.result_url === "string" &&
+    row.result_url.includes(`/storage/v1/object/public/${HISTORY_BUCKET}/`);
+  const archive = alreadyArchived
+    ? { ok: true, path: existingMeta.storage_path, publicUrl: row.result_url }
+    : await archiveHeyGenVideo({ row, sourceUrl: originalResultUrl });
   const meta = {
-    ...(row.meta && typeof row.meta === "object" ? row.meta : {}),
+    ...existingMeta,
     run_id: ids.run_id || row.meta?.run_id || "",
     task_id: ids.taskId || row.meta?.task_id || row.meta?.video_id || "",
     video_id: ids.taskId || row.meta?.video_id || row.meta?.task_id || "",
     status: "done",
     completed_at: new Date().toISOString(),
-    heygen_status_response: raw || row.meta?.heygen_status_response || null
+    heygen_status_response: raw || row.meta?.heygen_status_response || null,
+    original_result_url: originalResultUrl,
+    ...(archive.ok ? {
+      storage_bucket: HISTORY_BUCKET,
+      storage_path: archive.path,
+      archived_at: existingMeta.archived_at || new Date().toISOString(),
+      archive_error: null
+    } : {
+      archive_error: archive.error || "archive_failed"
+    })
   };
+  const savedUrl = archive.ok ? archive.publicUrl : originalResultUrl;
   await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
     method: "PATCH",
     headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=minimal" },
-    body: JSON.stringify({ result_url: urls[0], meta })
+    body: JSON.stringify({ result_url: savedUrl, meta })
   });
+  return savedUrl;
+}
+
+async function archiveHeyGenVideo({ row, sourceUrl }) {
+  if (!SUPABASE_URL || !SERVICE_KEY || !row?.id || !row?.user_id || !sourceUrl) {
+    return { ok: false, error: "missing_archive_config" };
+  }
+  try {
+    const sourceRes = await fetch(sourceUrl);
+    if (!sourceRes.ok) return { ok: false, error: `source_download_${sourceRes.status}` };
+
+    const contentLength = Number(sourceRes.headers.get("content-length") || 0);
+    if (contentLength > MAX_ARCHIVE_BYTES) return { ok: false, error: "archive_file_too_large" };
+
+    const bytes = await sourceRes.arrayBuffer();
+    if (!bytes.byteLength) return { ok: false, error: "archive_empty_file" };
+    if (bytes.byteLength > MAX_ARCHIVE_BYTES) return { ok: false, error: "archive_file_too_large" };
+
+    const contentType = normalizeVideoContentType(sourceRes.headers.get("content-type"), sourceUrl);
+    const extension = extensionForVideo(contentType, sourceUrl);
+    const path = `${row.user_id}/${row.id}.${extension}`;
+    const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(HISTORY_BUCKET)}/${path.split("/").map(encodeURIComponent).join("/")}`;
+    const uploadRes = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        ...sb(),
+        "Content-Type": contentType,
+        "x-upsert": "true"
+      },
+      body: Buffer.from(bytes)
+    });
+    if (!uploadRes.ok) {
+      const text = await uploadRes.text().catch(() => "");
+      return { ok: false, error: `archive_upload_${uploadRes.status}${text ? `:${text.slice(0, 180)}` : ""}` };
+    }
+
+    const publicPath = path.split("/").map(encodeURIComponent).join("/");
+    return {
+      ok: true,
+      path,
+      publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(HISTORY_BUCKET)}/${publicPath}`
+    };
+  } catch (error) {
+    return { ok: false, error: messageOf(error) };
+  }
+}
+
+function normalizeVideoContentType(value, url) {
+  const type = String(value || "").split(";")[0].trim().toLowerCase();
+  if (type === "video/mp4" || type === "video/webm" || type === "video/quicktime") return type;
+  if (/\.webm(?:[?#]|$)/i.test(String(url || ""))) return "video/webm";
+  if (/\.mov(?:[?#]|$)/i.test(String(url || ""))) return "video/quicktime";
+  return "video/mp4";
+}
+
+function extensionForVideo(contentType, url) {
+  if (contentType === "video/webm" || /\.webm(?:[?#]|$)/i.test(String(url || ""))) return "webm";
+  if (contentType === "video/quicktime" || /\.mov(?:[?#]|$)/i.test(String(url || ""))) return "mov";
+  return "mp4";
 }
 
 async function patchGeneration(id, patch) {
