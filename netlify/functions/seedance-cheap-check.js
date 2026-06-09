@@ -8,6 +8,8 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const UG_URL = SUPABASE_URL ? `${SUPABASE_URL.replace(/\/+$/, '')}/rest/v1/user_generations` : '';
 const PROFILES_URL = SUPABASE_URL ? `${SUPABASE_URL.replace(/\/+$/, '')}/rest/v1/profiles` : '';
 const NB_RESULTS_URL = SUPABASE_URL ? `${SUPABASE_URL.replace(/\/+$/, '')}/rest/v1/nb_results` : '';
+const HISTORY_BUCKET = process.env.SEEDANCE_HISTORY_BUCKET || 'generation-history';
+const MAX_ARCHIVE_BYTES = Math.max(1, Number(process.env.SEEDANCE_HISTORY_MAX_MB || 200)) * 1024 * 1024;
 
 exports.handler = async (event) => {
   try {
@@ -46,14 +48,14 @@ exports.handler = async (event) => {
     }
 
     if (state.done && state.urls.length) {
-      await markDone({ row, ids, urls: state.urls });
+      const savedUrls = await markDone({ row, ids, urls: state.urls });
       return json(200, {
         ok: true,
         status: 'done',
-        result_url: state.urls[0],
-        video_url: state.urls[0],
-        image_url: state.urls[0],
-        urls: state.urls,
+        result_url: savedUrls[0],
+        video_url: savedUrls[0],
+        image_url: savedUrls[0],
+        urls: savedUrls,
       });
     }
 
@@ -88,8 +90,8 @@ async function handlePost(event) {
 
   const urls = collectResultUrls(body);
   if (status === 'done' && urls.length) {
-    await markDone({ row, ids, urls });
-    return json(200, { ok: true, status: 'done', result_url: urls[0], video_url: urls[0], urls });
+    const savedUrls = await markDone({ row, ids, urls });
+    return json(200, { ok: true, status: 'done', result_url: savedUrls[0], video_url: savedUrls[0], urls: savedUrls });
   }
 
   return json(200, { ok: false, status: 'pending' });
@@ -171,22 +173,35 @@ async function fetchArkState(taskId) {
 }
 
 async function markDone({ row, ids, urls }) {
+  const archive = await archiveResultUrls({ row, urls });
+  const savedUrls = archive.urls.length ? archive.urls : urls;
   const meta = {
     ...(row.meta && typeof row.meta === 'object' ? row.meta : {}),
     run_id: ids.run_id || row.meta?.run_id || '',
     task_id: ids.taskId || row.meta?.task_id || row.meta?.taskId || '',
     status: 'done',
     completed_at: new Date().toISOString(),
+    original_result_url: urls[0],
+    original_result_urls: urls,
+    ...(archive.paths.length ? {
+      storage_bucket: HISTORY_BUCKET,
+      storage_path: archive.paths[0],
+      storage_paths: archive.paths,
+      archived_at: new Date().toISOString(),
+      archive_errors: archive.errors,
+    } : {
+      archive_errors: archive.errors.length ? archive.errors : ['archive_failed'],
+    }),
   };
 
   await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
     method: 'PATCH',
     headers: { ...sb(), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-    body: JSON.stringify({ result_url: urls[0], meta }),
+    body: JSON.stringify({ result_url: savedUrls[0], meta }),
   });
 
-  if (NB_RESULTS_URL && urls.length) {
-    const rows = urls.slice(0, 4).map((url) => ({
+  if (NB_RESULTS_URL && savedUrls.length) {
+    const rows = savedUrls.slice(0, 4).map((url) => ({
       user_id: ids.uid || row.user_id,
       run_id: ids.run_id || meta.run_id || '',
       task_id: ids.taskId || meta.task_id || '',
@@ -198,6 +213,79 @@ async function markDone({ row, ids, urls }) {
       body: JSON.stringify(rows),
     }).catch(() => {});
   }
+  return savedUrls;
+}
+
+async function archiveResultUrls({ row, urls }) {
+  const archivedUrls = [];
+  const paths = [];
+  const errors = [];
+  for (let index = 0; index < urls.slice(0, 4).length; index += 1) {
+    const sourceUrl = urls[index];
+    const archive = await archiveResultUrl({ row, sourceUrl, index });
+    archivedUrls.push(archive.ok ? archive.publicUrl : sourceUrl);
+    if (archive.ok) paths.push(archive.path);
+    else errors.push(archive.error || `archive_${index + 1}_failed`);
+  }
+  return { urls: archivedUrls, paths, errors };
+}
+
+async function archiveResultUrl({ row, sourceUrl, index }) {
+  if (!SUPABASE_URL || !SERVICE_KEY || !row?.id || !row?.user_id || !sourceUrl) {
+    return { ok: false, error: 'missing_archive_config' };
+  }
+  try {
+    const sourceRes = await fetch(sourceUrl);
+    if (!sourceRes.ok) return { ok: false, error: `source_download_${sourceRes.status}` };
+
+    const contentLength = Number(sourceRes.headers.get('content-length') || 0);
+    if (contentLength > MAX_ARCHIVE_BYTES) return { ok: false, error: 'archive_file_too_large' };
+
+    const bytes = await sourceRes.arrayBuffer();
+    if (!bytes.byteLength) return { ok: false, error: 'archive_empty_file' };
+    if (bytes.byteLength > MAX_ARCHIVE_BYTES) return { ok: false, error: 'archive_file_too_large' };
+
+    const contentType = normalizeVideoContentType(sourceRes.headers.get('content-type'), sourceUrl);
+    const extension = extensionForVideo(contentType, sourceUrl);
+    const suffix = index > 0 ? `-${index + 1}` : '';
+    const path = `${row.user_id}/${row.id}${suffix}.${extension}`;
+    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+    const uploadUrl = `${SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/${encodeURIComponent(HISTORY_BUCKET)}/${encodedPath}`;
+    const uploadRes = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        ...sb(),
+        'Content-Type': contentType,
+        'x-upsert': 'true',
+      },
+      body: Buffer.from(bytes),
+    });
+    if (!uploadRes.ok) {
+      const text = await uploadRes.text().catch(() => '');
+      return { ok: false, error: `archive_upload_${uploadRes.status}${text ? `:${text.slice(0, 180)}` : ''}` };
+    }
+    return {
+      ok: true,
+      path,
+      publicUrl: `${SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/public/${encodeURIComponent(HISTORY_BUCKET)}/${encodedPath}`,
+    };
+  } catch (error) {
+    return { ok: false, error: messageOf(error) };
+  }
+}
+
+function normalizeVideoContentType(value, url) {
+  const type = String(value || '').split(';')[0].trim().toLowerCase();
+  if (type === 'video/mp4' || type === 'video/webm' || type === 'video/quicktime') return type;
+  if (/\.webm(?:[?#]|$)/i.test(String(url || ''))) return 'video/webm';
+  if (/\.mov(?:[?#]|$)/i.test(String(url || ''))) return 'video/quicktime';
+  return 'video/mp4';
+}
+
+function extensionForVideo(contentType, url) {
+  if (contentType === 'video/webm' || /\.webm(?:[?#]|$)/i.test(String(url || ''))) return 'webm';
+  if (contentType === 'video/quicktime' || /\.mov(?:[?#]|$)/i.test(String(url || ''))) return 'mov';
+  return 'mp4';
 }
 
 async function failAndRefundOnce({ row, ids, reason }) {
