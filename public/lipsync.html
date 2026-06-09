@@ -97,32 +97,27 @@
     .result-card{ position:relative; border:1px solid var(--line); background:rgba(17,19,24,.88); border-radius:16px; overflow:hidden; min-height:0; display:flex; flex-direction:column; }
     .result-media{ aspect-ratio:9 / 16; background:rgba(0,0,0,.3); display:flex; align-items:center; justify-content:center; overflow:hidden; }
     .result-media video{ width:100%; height:100%; object-fit:cover; display:block; }
-    .result-media.pending{ flex-direction:column; gap:12px; color:rgba(255,255,255,.65); }
+    .result-media.pending{ flex-direction:column; gap:10px; color:rgba(255,255,255,.55); }
+    .result-media.failed-state{
+      flex-direction:column;
+      color:rgba(248,113,113,.92);
+      background:rgba(2,6,23,.82);
+    }
     .loader{ width:28px; height:28px; border-radius:999px; border:3px solid rgba(148,163,184,.35); border-top-color:#a855f7; animation:spin 1s linear infinite; }
     @keyframes spin{ to{ transform:rotate(360deg); } }
     .processing-orb{
-      width:52px;
-      height:52px;
+      width:48px;
+      height:48px;
       border-radius:18px;
+      border:0;
       background:linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8);
-      box-shadow:0 0 30px rgba(255,37,200,.52),0 18px 44px rgba(56,189,248,.16);
+      box-shadow:0 0 30px rgba(139,92,246,.52);
       animation:orbSpin 1.35s linear infinite;
     }
     @keyframes orbSpin{ to{ transform:rotate(360deg); } }
     .result-media.pending{
-      position:relative;
-      overflow:hidden;
-      background:radial-gradient(circle at 50% 32%,rgba(255,37,200,.18),transparent 45%),linear-gradient(135deg,rgba(99,102,241,.16),rgba(14,165,233,.06)),rgba(0,0,0,.28);
+      background:rgba(2,6,23,.58);
     }
-    .result-media.pending::before{
-      content:"";
-      position:absolute;
-      inset:-40%;
-      background:conic-gradient(from 0deg,transparent,rgba(255,37,200,.16),rgba(56,189,248,.14),transparent);
-      animation:processingGlow 4.8s linear infinite;
-    }
-    .result-media.pending > *{ position:relative; z-index:1; }
-    @keyframes processingGlow{ to{ transform:rotate(360deg); } }
     .badge{ position:absolute; left:10px; top:10px; border-radius:999px; padding:4px 9px; background:rgba(2,6,23,.76); border:1px solid rgba(255,255,255,.12); color:rgba(255,255,255,.86); font-size:10px; z-index:2; }
     .result-info{ padding:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
     .result-info strong{ display:block; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; }
@@ -174,7 +169,7 @@
       <section class="section">
         <span class="label">Model</span>
         <div class="model-grid">
-          <button id="modelAvatarV" class="choice active" type="button" data-model="avatar_v"><strong>Avatar IV</strong><span>0.7⚡ / second</span></button>
+          <button id="modelAvatarV" class="choice active" type="button" data-model="avatar_v"><strong>Avatar V</strong><span>0.7⚡ / second</span></button>
           <button id="modelAvatarIII" class="choice" type="button" data-model="avatar_iii"><strong>Avatar III</strong><span>0.3⚡ / second</span></button>
         </div>
       </section>
@@ -357,6 +352,10 @@
       const el = $('status');
       el.textContent = message || '';
       el.className = 'status' + (kind ? ' ' + kind : '');
+    }
+    const GENERATION_FAILED_MESSAGE = 'Generation failed. Please make sure your image follows the content policies, then try again.';
+    function showGenerationFailedStatus() {
+      showStatus(GENERATION_FAILED_MESSAGE, 'error');
     }
     function selectedAudio() { return recordedAudioFile || audioFile || null; }
     function getBillableSeconds() { return audioDuration ? Math.ceil(audioDuration) : 0; }
@@ -583,7 +582,7 @@
       const failed = status.includes('fail') || status.includes('error') || status.includes('cancel');
       const savedUrl = firstVideoUrl(row.result_url);
       const url = failed ? '' : (savedUrl || firstVideoUrl(meta));
-      const modelLabel = String(row.provider || '').includes('iii') ? 'Avatar III' : 'Avatar IV';
+      const modelLabel = String(row.provider || '').includes('iii') ? 'Avatar III' : 'Avatar V';
       const detailLabel = failed ? 'Failed' : (meta.billable_seconds ? meta.billable_seconds + 's' : 'HeyGen video');
       const card = document.createElement('article');
       card.className = 'result-card';
@@ -592,7 +591,7 @@
       card.dataset.resultUrl = url;
       card.innerHTML = `
         <div class="badge">${failed ? 'Failed' : (url ? 'Ready' : 'Processing')}</div>
-        <div class="result-media ${url ? '' : 'pending'}">${url ? renderPlayableVideo(url) : (failed ? '<span>Failed</span>' : '<div class="processing-orb"></div><span>Creating...</span>')}</div>
+        <div class="result-media ${url ? '' : failed ? 'failed-state' : 'pending'}">${url ? renderPlayableVideo(url) : (failed ? '<span>Failed</span>' : '<div class="processing-orb"></div><span>Creating...</span>')}</div>
         <div class="result-info"><div><strong>${modelLabel}</strong><span>${detailLabel}</span></div>${url ? '<button class="get-btn" type="button">Get</button>' : ''}</div>`;
       const media = card.querySelector('video');
       if (media) bindPreviewVideo(media, url);
@@ -611,7 +610,7 @@
           const mediaWrap = card.querySelector('.result-media');
           if (nextFailed) {
             card.dataset.resultUrl = '';
-            mediaWrap.className = 'result-media pending';
+            mediaWrap.className = 'result-media failed-state';
             mediaWrap.innerHTML = '<span>Failed</span>';
             const detail = card.querySelector('.result-info span');
             if (detail) detail.textContent = 'Failed';
@@ -749,6 +748,7 @@
           }
           if (data.status === 'failed' || data.failed) {
             controller.apply({ status: 'failed' });
+            showGenerationFailedStatus();
             await refreshCredits();
             return;
           }
@@ -775,7 +775,7 @@
         const audioUrl = await uploadFile(audio);
         const runId = `${currentUser.id}-${Date.now()}`;
         placeholder = createResultCard({ provider: currentModel === 'avatar_v' ? 'heygen-avatar-v' : 'heygen-avatar-iii', kind: 'video', result_url: null, meta: { run_id: runId, status: 'processing', billable_seconds: getBillableSeconds() } }, true);
-        showStatus(`Submitting ${currentModel === 'avatar_v' ? 'Avatar IV' : 'Avatar III'} to HeyGen…`);
+        showStatus(`Submitting ${currentModel === 'avatar_v' ? 'Avatar V' : 'Avatar III'} to HeyGen…`);
         const { data: sessionData } = await supabaseClient.auth.getSession();
         const token = sessionData && sessionData.session ? sessionData.session.access_token : '';
         const resp = await fetch('/.netlify/functions/run-heygen-avatar', {
@@ -791,13 +791,14 @@
         });
         const data = await resp.json().catch(() => ({}));
         if (!data.submitted) throw new Error(data.error || 'submit_failed');
-        showStatus(`Submitted ${data.heygen_engine || (currentModel === 'avatar_v' ? 'AvatarIV' : 'AvatarIII')}. Waiting for result…`, 'good');
+        showStatus(`Submitted ${currentModel === 'avatar_v' ? 'Avatar V' : 'Avatar III'}. Waiting for result…`, 'good');
         await refreshCredits();
         watchCreditsLive();
         startPollResult(runId, data.taskId || data.video_id || '', placeholder);
       } catch (error) {
+        console.warn('HeyGen generation submission failed', error);
         if (placeholder && typeof placeholder.apply === 'function') placeholder.apply({ status: 'failed' });
-        showStatus(readableError(error), 'error');
+        showGenerationFailedStatus();
       } finally {
         $('runBtn').disabled = false;
       }
@@ -806,18 +807,20 @@
     function readableError(error) {
       const text = (error && error.message ? error.message : String(error || '')).replace(/^Error:\s*/, '');
       const map = {
-        upload_bridge_missing: 'Upload bridge is missing on this page.',
+        upload_bridge_missing: 'The upload service is temporarily unavailable. Please try again.',
+        upload_failed: 'Your files could not be uploaded. Please try again.',
         file_too_large: 'File is too large.',
         insufficient_credits: 'Not enough credits.',
         audio_too_short_min_5_seconds: 'Audio must be at least 5 seconds.',
         audio_too_long_max_90_seconds: 'Audio must be 90 seconds or shorter.',
-        missing_heygen_api_key: 'HeyGen API key is missing in Netlify env.',
-        heygen_video_401: 'HeyGen rejected the API key. Check the Netlify env value, remove old duplicate keys, then redeploy.',
-        heygen_avatar_create_401: 'HeyGen rejected the API key. Check the Netlify env value, remove old duplicate keys, then redeploy.',
-        heygen_video_400: 'HeyGen rejected this request. For Avatar IV, the photo avatar may not support Avatar IV yet.',
-        debit_failed: 'Credit deduction failed.'
+        missing_heygen_api_key: GENERATION_FAILED_MESSAGE,
+        heygen_video_401: GENERATION_FAILED_MESSAGE,
+        heygen_avatar_create_401: GENERATION_FAILED_MESSAGE,
+        heygen_video_400: GENERATION_FAILED_MESSAGE,
+        debit_failed: GENERATION_FAILED_MESSAGE,
+        submit_failed: GENERATION_FAILED_MESSAGE
       };
-      return map[text] || text || 'Something went wrong.';
+      return map[text] || 'Something went wrong. Please try again.';
     }
 
     async function downloadAsset(url, provider) {
