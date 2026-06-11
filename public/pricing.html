@@ -652,6 +652,68 @@ document.addEventListener('DOMContentLoaded', async () => {
 </template>
 <!-- demo handler removed by patch -->
 <script>
+// Non-blocking Buy click analytics. Uses keepalive so checkout navigation does
+// not cancel the insert, and deduplicates the page's two checkout handlers.
+(function(){
+  const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+  let lastEventKey = '';
+  let lastEventAt = 0;
+
+  function readAuth(){
+    try{
+      for(let i = 0; i < localStorage.length; i++){
+        const key = localStorage.key(i);
+        if(!/^sb-.*-auth-token$/.test(key || '')) continue;
+        const value = JSON.parse(localStorage.getItem(key) || '{}');
+        const session = value.currentSession || value.session || value;
+        const user = session.user || value.user || {};
+        if(session.access_token && user.id){
+          return { accessToken: session.access_token, uid: user.id, email: user.email || null };
+        }
+      }
+    }catch(e){}
+    return null;
+  }
+
+  window.hansoraTrackBuyClick = function(details){
+    try{
+      const auth = readAuth();
+      const uid = String(details?.uid || auth?.uid || '');
+      const credits = Number(details?.credits || 0);
+      const productUrl = String(details?.productUrl || '');
+      const productId = new URL(productUrl, location.href).pathname.split('/').filter(Boolean).pop() || null;
+      if(!auth?.accessToken || !uid || auth.uid !== uid || !credits) return;
+
+      const eventKey = `${uid}:${productId || ''}:${credits}`;
+      const now = Date.now();
+      if(eventKey === lastEventKey && now - lastEventAt < 2000) return;
+      lastEventKey = eventKey;
+      lastEventAt = now;
+
+      fetch(`${SUPABASE_URL}/rest/v1/buy_click_events`, {
+        method: 'POST',
+        keepalive: true,
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${auth.accessToken}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          user_id: uid,
+          email: auth.email,
+          event_name: 'buy_clicked',
+          credits: credits,
+          product_id: productId,
+          page_path: location.pathname
+        })
+      }).catch(function(){});
+    }catch(e){}
+  };
+})();
+</script>
+<script>
 // STRICT dynamic checkout: prefer data-product; never proceed if uid/credits missing.
 (function () {
   function onReady(fn){ if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, {once:true}); else fn(); }
@@ -718,6 +780,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       u.searchParams.set('metadata_uid', uid);
       u.searchParams.set('metadata_credits', String(credits));
 
+      window.hansoraTrackBuyClick?.({ uid: uid, credits: credits, productUrl: base });
       window.hansoraPricingNavigate(u.toString());
     });
   });
@@ -828,6 +891,7 @@ if (!Number.isFinite(credits) || credits<=0){
         const ru = el.getAttribute('data-return-url');
         if (ru) u.searchParams.set('return_url', ru);
         // FINAL redirect only when uid is present (hard block otherwise)
+        window.hansoraTrackBuyClick?.({ uid: uid, credits: credits, productUrl: baseUrl });
         window.hansoraPricingNavigate(u.toString());
       }catch(err){
         console.error(err);
