@@ -432,7 +432,9 @@ export default async (request, context) => {
     let bottomNavFrame = 0;
     const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
-    const readAnalyticsAuth = () => {
+    let analyticsAuthCache = window.__hansoraAnalyticsAuth || null;
+    const refreshAnalyticsAuthCache = () => {
+      analyticsAuthCache = null;
       try {
         for (let i = 0; i < localStorage.length; i += 1) {
           const key = localStorage.key(i);
@@ -441,15 +443,20 @@ export default async (request, context) => {
           const session = value.currentSession || value.session || value;
           const user = session.user || value.user || {};
           if (session.access_token && user.id) {
-            return {
+            analyticsAuthCache = {
               accessToken: session.access_token,
               userId: user.id,
               email: user.email || null
             };
+            break;
           }
         }
       } catch (_) {}
-      return null;
+      window.__hansoraAnalyticsAuth = analyticsAuthCache;
+      return analyticsAuthCache;
+    };
+    const readAnalyticsAuth = () => {
+      return window.__hansoraAnalyticsAuth || analyticsAuthCache || null;
     };
     const analyticsSessionId = () => {
       const key = 'hansora.analytics.session_id';
@@ -481,6 +488,10 @@ export default async (request, context) => {
     const bindMobileNavClickTracking = () => {
       if (window.__hansoraMobileNavClickTrackingBound) return;
       window.__hansoraMobileNavClickTrackingBound = true;
+      refreshAnalyticsAuthCache();
+      window.addEventListener('storage', (event) => {
+        if (/^sb-.*-auth-token$/.test(event.key || '')) refreshAnalyticsAuthCache();
+      });
 
       document.addEventListener('click', (event) => {
         try {
