@@ -106,8 +106,8 @@ exports.handler = async (event) => {
 const kiePayload = {
   prompt,
   model,
-  aspectRatio,
-  quality,
+  aspect_ratio: aspectRatio,
+  resolution: quality === "4K" ? "4k" : "1080p",
   callBackUrl
 };
 // Veo 3.1 generationType handling
