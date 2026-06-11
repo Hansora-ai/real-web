@@ -731,7 +731,47 @@
         .nav-links .hansora-nav-item:hover .hansora-mega-menu,
         .nav-links .hansora-nav-item:focus-within .hansora-mega-menu{ transform:translateX(-16px) translateY(0); }
       }
-      .hansora-mobile-pricing{ display:none; }
+      .hansora-mobile-pricing{
+        position:relative;
+        min-width:76px;
+        height:42px;
+        display:inline-flex;
+        align-items:flex-start;
+        justify-content:center;
+        padding:8px 12px 0;
+        border:1px solid rgba(255,255,255,.10);
+        border-radius:14px;
+        background:linear-gradient(145deg,#181a21,#0f1117);
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 7px 16px rgba(0,0,0,.24);
+        color:#fff;
+        font-size:13px;
+        font-weight:900;
+        line-height:1;
+        letter-spacing:.01em;
+        text-decoration:none;
+        white-space:nowrap;
+      }
+      .hansora-mobile-pricing > span{
+        transform:translateY(2px);
+      }
+      .hansora-mobile-pricing-badge{
+        position:absolute;
+        left:50%;
+        bottom:-8px;
+        transform:translateX(-50%);
+        min-width:64px;
+        padding:3px 7px;
+        border:1px solid rgba(255,255,255,.16);
+        border-radius:999px;
+        background:#ef233c;
+        box-shadow:0 5px 13px rgba(239,35,60,.38);
+        color:#fff;
+        font-size:9px;
+        font-weight:950;
+        line-height:1;
+        text-align:center;
+        letter-spacing:.04em;
+      }
       @media (max-width:720px){
         .site-header .shell.nav{
           min-height:58px !important;
@@ -745,12 +785,12 @@
           margin-right:auto !important;
         }
         .site-header .brand img{
-          width:27px !important;
-          height:27px !important;
-          flex:0 0 27px !important;
+          width:32px !important;
+          height:32px !important;
+          flex:0 0 32px !important;
         }
         .site-header .brand span{
-          font-size:14px !important;
+          font-size:16px !important;
           letter-spacing:.01em !important;
           white-space:nowrap !important;
         }
@@ -785,39 +825,17 @@
           align-items:flex-start;
           justify-content:center;
           padding:6px 8px 0;
-          border:1px solid rgba(255,255,255,.10);
-          border-radius:12px;
-          background:linear-gradient(145deg,#181a21,#0f1117);
-          box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 7px 16px rgba(0,0,0,.24);
-          color:#fff;
           font-size:11px;
-          font-weight:900;
-          line-height:1;
-          letter-spacing:.01em;
-          text-decoration:none;
-          white-space:nowrap;
         }
         .hansora-mobile-pricing-badge{
-          position:absolute;
-          left:50%;
-          bottom:-8px;
-          transform:translateX(-50%);
           min-width:53px;
           padding:3px 6px;
-          border:1px solid rgba(255,255,255,.16);
-          border-radius:999px;
-          background:#ef233c;
-          box-shadow:0 5px 13px rgba(239,35,60,.38);
-          color:#fff;
           font-size:8px;
-          font-weight:950;
-          line-height:1;
-          text-align:center;
-          letter-spacing:.04em;
         }
       }
       @media (max-width:390px){
-        .site-header .brand span{ font-size:12px !important; }
+        .site-header .brand img{ width:29px !important; height:29px !important; flex-basis:29px !important; }
+        .site-header .brand span{ font-size:14px !important; }
         .site-header .credits-pill{ padding:0 6px !important; font-size:11px !important; }
         .hansora-mobile-pricing{ min-width:58px; padding-left:6px; padding-right:6px; }
       }
@@ -985,7 +1003,6 @@
                 { title: 'Audio tools', items: AUDIO_MENU_ITEMS },
               ]
             })}
-            <a href="${withAffiliateRef('/pricing.html')}">Pricing</a>
           </nav>
           <div class="nav-actions">
             <button class="btn btn-ghost" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Login</button>
