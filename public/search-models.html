@@ -3381,7 +3381,11 @@ async function __mjFetchNbCheck(params){
     url = `/.netlify/functions/${checker}?taskId=${encodeURIComponent(taskId)}&uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
   }
   else url = `/.netlify/functions/${checker}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
-  const r = await fetch(url, { method:'GET', headers:{ 'Accept':'application/json' } });
+  const r = await fetch(url, {
+    method: 'GET',
+    cache: 'no-store',
+    headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' }
+  });
   const t = await r.text();
   let js; try{ js = JSON.parse(t); }catch{ js = { raw:t }; }
   return { ok:r.ok, status:r.status, js };
@@ -3728,8 +3732,6 @@ async function __mjFetchNbCheck(params){
           v.src = url;
           v.muted = true;
           v.playsInline = true;
-          v.loop = true;
-          v.autoplay = true;
           v.preload = 'metadata';
           card.appendChild(v);
         } else {
@@ -3916,8 +3918,6 @@ async function __mjFetchNbCheck(params){
                 v.src = __thumb_url;
                 v.muted = true;
                 v.playsInline = true;
-                v.loop = true;
-                v.autoplay = true;
                 v.preload = 'metadata';
                 card.insertBefore(v, card.firstChild);
               } else {
@@ -4122,7 +4122,7 @@ function createResultCard(data) {
       return built;
     }
 
-    async function loadRecentHistory() {
+    async function loadRecentHistory(options = {}) {
       if (!currentUser) return;
       const uid = currentUser.id;
       const recentLimit = window.matchMedia('(min-width: 901px)').matches ? 12 : 10;
@@ -4139,6 +4139,7 @@ function createResultCard(data) {
           return;
         }
 
+        if (options.restartActivePolls) cancelActiveGenerationPolls();
         const strip = document.getElementById('resultsStrip');
         if (strip) strip.innerHTML = '';
         const resultsSection = document.getElementById('resultsSection');
@@ -4328,16 +4329,18 @@ function createResultCard(data) {
       for (const item of pairs) {
         const key = `resume:${item.runId}`;
         if (__activePolls.has(key)) continue;
-        __activePolls.set(key, { cancelled: false });
+        const resumeToken = { cancelled: false };
+        __activePolls.set(key, resumeToken);
         (async () => {
+          const checker = checkerForGenerationRow(item.row);
           try {
-            const checker = checkerForGenerationRow(item.row);
             const nb = await __mjFetchNbCheck({
               taskId: item.taskId,
               uid: currentUser.id,
               runId: item.runId,
               checker
             });
+            if (resumeToken.cancelled) return;
             const js = nb && nb.js ? nb.js : {};
             const statusText = String(js.status || '').toLowerCase();
             const failed = !!js.failed || statusText.includes('fail') || statusText.includes('cancel');
@@ -4358,9 +4361,9 @@ function createResultCard(data) {
             startPollGeneration(item.runId, [item.controller], item.taskId, checker);
           } catch (error) {
             console.warn('resumeProcessingChecks failed', error);
-            startPollGeneration(item.runId, [item.controller], item.taskId);
+            if (!resumeToken.cancelled) startPollGeneration(item.runId, [item.controller], item.taskId, checker);
           } finally {
-            __activePolls.delete(key);
+            if (__activePolls.get(key) === resumeToken) __activePolls.delete(key);
           }
         })();
       }
@@ -4370,6 +4373,13 @@ function createResultCard(data) {
 
 const __activePolls = new Map(); // runId -> token
 const GENERATION_FAILED_MESSAGE = 'Generation failed. Please try again and make sure your prompt and image do not violate any policy.';
+
+function cancelActiveGenerationPolls() {
+  for (const token of __activePolls.values()) {
+    if (token && typeof token === 'object') token.cancelled = true;
+  }
+  __activePolls.clear();
+}
 
 function shortRunId(runId) {
   const value = String(runId || '').trim();
@@ -4456,7 +4466,7 @@ function startPollGeneration(runId, controllers, taskId, checker) {
   pollGeneration(runId, controllers, token, taskId, checker)
     .catch((e) => console.warn('pollGeneration wrapper exception', e))
     .finally(() => {
-      __activePolls.delete(runId);
+      if (__activePolls.get(runId) === token) __activePolls.delete(runId);
     });
 }
 
@@ -4467,7 +4477,7 @@ function startSora2Poll(taskId, uid, runId, controllers) {
   const token = { cancelled: false };
   __activePolls.set(key, token);
   sora2Poll(taskId, uid, runId, controllers, token).finally(() => {
-    __activePolls.delete(key);
+    if (__activePolls.get(key) === token) __activePolls.delete(key);
   });
 }
 
@@ -4476,6 +4486,10 @@ async function sora2Poll(taskId, uid, runId, controllers, token) {
   const deadline = Date.now() + (15 * 60 * 1000);
   while (Date.now() < deadline) {
     if (token && token.cancelled) return;
+    if (document.visibilityState === 'hidden') {
+      await new Promise(res => setTimeout(res, 3000));
+      continue;
+    }
     try {
       const r = await fetch('/.netlify/functions/sora2-check?taskId=' + encodeURIComponent(taskId) + '&uid=' + encodeURIComponent(uid) + '&run_id=' + encodeURIComponent(runId), { cache: 'no-store' });
       const j = await r.json().catch(() => null);
@@ -4506,6 +4520,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
   while (Date.now() - started < maxMs) {
     await new Promise((r) => setTimeout(r, 3000));
     if (token && token.cancelled) return;
+    if (document.visibilityState === 'hidden') continue;
     try {
       if (taskId) {
         const nb = await __mjFetchNbCheck({ taskId, uid: currentUser.id, runId, checker: checker || 'kie-check' });
@@ -4542,7 +4557,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
       if (error) {
         console.warn('pollGeneration error', error);
-        break;
+        continue;
       }
       if (!data) continue;
 
@@ -4600,7 +4615,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
     } catch (e) {
       console.warn('pollGeneration exception', e);
-      break;
+      continue;
     }
   }
 }
@@ -5627,8 +5642,13 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         btnImage.classList.add('text-white/70');
       }
 
-      // Default model per mode
-      const defaultId = mode === 'image' ? 'gpt-image-2' : 'kling30';
+      // Choose the video landing model instantly from credits already cached on the page/header.
+      const instantCredits = Math.max(
+        parseCredits(currentCredits),
+        getSharedHeaderCredits(),
+        getVisibleHeaderCredits()
+      );
+      const defaultId = mode === 'image' ? 'gpt-image-2' : (instantCredits < 4 ? 'grok-video' : 'kling30');
       const def = MODELS.find(m => m.id === defaultId);
       if (def) {
         currentModel = def;
@@ -9066,6 +9086,43 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       promptBoxForSafety.addEventListener('change', () => updatePromptSafetyState(true));
       promptBoxForSafety.addEventListener('paste', () => setTimeout(() => updatePromptSafetyState(true), 0));
     }
+
+    let safariResumeTimer = 0;
+    let safariResumeBusy = false;
+
+    function schedulePageResumeRefresh() {
+      if (document.visibilityState === 'hidden') return;
+      window.clearTimeout(safariResumeTimer);
+      safariResumeTimer = window.setTimeout(async () => {
+        if (safariResumeBusy || document.visibilityState === 'hidden') return;
+        safariResumeBusy = true;
+        try {
+          if (!currentUser) {
+            await loadUser();
+            return;
+          }
+          await loadRecentHistory({ restartActivePolls: true });
+          await refreshCredits();
+        } catch (error) {
+          console.warn('page resume refresh failed', error);
+        } finally {
+          safariResumeBusy = false;
+        }
+      }, 180);
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        document.querySelectorAll('#resultsStrip video').forEach((video) => {
+          try { video.pause(); } catch (_) {}
+        });
+        return;
+      }
+      schedulePageResumeRefresh();
+    });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) schedulePageResumeRefresh();
+    });
 
     // boot
     (async () => {
