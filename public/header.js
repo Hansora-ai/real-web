@@ -164,6 +164,105 @@
     } catch (_) {}
   }
 
+  function readAnalyticsAuth() {
+    try {
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (!/^sb-.*-auth-token$/.test(key || '')) continue;
+        const value = JSON.parse(localStorage.getItem(key) || '{}');
+        const session = value.currentSession || value.session || value;
+        const user = session.user || value.user || {};
+        if (session.access_token && user.id) {
+          return {
+            accessToken: session.access_token,
+            userId: user.id,
+            email: user.email || null
+          };
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function clickDestination(element) {
+    const raw = element && element.getAttribute ? element.getAttribute('href') || '' : '';
+    if (!raw || raw.charAt(0) === '#') return raw.slice(0, 180) || null;
+    try {
+      const url = new URL(raw, location.href);
+      return url.origin === location.origin
+        ? `${url.pathname}${url.hash}`.slice(0, 300)
+        : `${url.origin}${url.pathname}`.slice(0, 300);
+    } catch (_) {
+      return raw.slice(0, 300);
+    }
+  }
+
+  function analyticsSessionId() {
+    const key = 'hansora.analytics.session_id';
+    try {
+      let value = sessionStorage.getItem(key);
+      if (!value) {
+        value = window.crypto && typeof window.crypto.randomUUID === 'function'
+          ? window.crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        sessionStorage.setItem(key, value);
+      }
+      return value;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function bindGlobalClickTracking() {
+    if (window.__hansoraGlobalClickTrackingBound) return;
+    window.__hansoraGlobalClickTrackingBound = true;
+
+    document.addEventListener('click', function (event) {
+      try {
+        const target = event.target && event.target.closest
+          ? event.target.closest('a,button,[role="button"]')
+          : null;
+        if (!target || target.disabled || target.getAttribute('aria-disabled') === 'true') return;
+
+        const auth = readAnalyticsAuth();
+        if (!auth || !auth.userId || !auth.accessToken) return;
+
+        const label = String(
+          target.getAttribute('aria-label') ||
+          target.getAttribute('title') ||
+          target.textContent ||
+          target.id ||
+          'unlabeled'
+        ).replace(/\s+/g, ' ').trim().slice(0, 180);
+
+        fetch(`${SUPABASE_URL}/rest/v1/click_events`, {
+          method: 'POST',
+          keepalive: true,
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${auth.accessToken}`,
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({
+            user_id: auth.userId,
+            email: auth.email,
+            event_name: 'click',
+            element_type: String(target.tagName || '').toLowerCase() || null,
+            element_id: String(target.id || '').slice(0, 180) || null,
+            element_label: label || 'unlabeled',
+            destination: clickDestination(target),
+            page_path: `${location.pathname}${location.hash || ''}`.slice(0, 300),
+            session_id: analyticsSessionId(),
+            device_type: window.matchMedia && window.matchMedia('(max-width: 900px)').matches
+              ? 'mobile'
+              : 'desktop'
+          })
+        }).catch(function () {});
+      } catch (_) {}
+    }, true);
+  }
+
   function getAffiliateRefFromUrl() {
     try {
       const params = new URLSearchParams(window.location.search || '');
@@ -1371,6 +1470,7 @@
     ensureSupabaseClient();
     exposeApi();
     bindEvents();
+    bindGlobalClickTracking();
     preserveAffiliateRefAcrossPageLinks();
     bindAuthStateChanges();
     restoreSession();
