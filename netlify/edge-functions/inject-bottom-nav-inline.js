@@ -430,6 +430,103 @@ export default async (request, context) => {
     let lockCount = 0;
     let bottomNavShift = 0;
     let bottomNavFrame = 0;
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const readAnalyticsAuth = () => {
+      try {
+        for (let i = 0; i < localStorage.length; i += 1) {
+          const key = localStorage.key(i);
+          if (!/^sb-.*-auth-token$/.test(key || '')) continue;
+          const value = JSON.parse(localStorage.getItem(key) || '{}');
+          const session = value.currentSession || value.session || value;
+          const user = session.user || value.user || {};
+          if (session.access_token && user.id) {
+            return {
+              accessToken: session.access_token,
+              userId: user.id,
+              email: user.email || null
+            };
+          }
+        }
+      } catch (_) {}
+      return null;
+    };
+    const analyticsSessionId = () => {
+      const key = 'hansora.analytics.session_id';
+      try {
+        let value = sessionStorage.getItem(key);
+        if (!value) {
+          value = window.crypto && typeof window.crypto.randomUUID === 'function'
+            ? window.crypto.randomUUID()
+            : Date.now() + '-' + Math.random().toString(36).slice(2);
+          sessionStorage.setItem(key, value);
+        }
+        return value;
+      } catch (_) {
+        return null;
+      }
+    };
+    const clickDestination = (element) => {
+      const raw = element && element.getAttribute ? element.getAttribute('href') || '' : '';
+      if (!raw || raw.charAt(0) === '#') return raw.slice(0, 180) || null;
+      try {
+        const url = new URL(raw, location.href);
+        return url.origin === location.origin
+          ? (url.pathname + url.hash).slice(0, 300)
+          : (url.origin + url.pathname).slice(0, 300);
+      } catch (_) {
+        return raw.slice(0, 300);
+      }
+    };
+    const bindMobileNavClickTracking = () => {
+      if (window.__hansoraMobileNavClickTrackingBound) return;
+      window.__hansoraMobileNavClickTrackingBound = true;
+
+      document.addEventListener('click', (event) => {
+        try {
+          // The shared header tracker already records this click when present.
+          if (window.__hansoraGlobalClickTrackingBound) return;
+          const target = event.target && event.target.closest
+            ? event.target.closest('.hs-bottom-nav a,.hs-bottom-nav button,.hs-radial a,.hs-radial button,.hs-overlay a,.hs-overlay button')
+            : null;
+          if (!target || target.disabled || target.getAttribute('aria-disabled') === 'true') return;
+
+          const auth = readAnalyticsAuth();
+          if (!auth || !auth.userId || !auth.accessToken) return;
+
+          const label = String(
+            target.getAttribute('aria-label') ||
+            target.getAttribute('title') ||
+            target.textContent ||
+            target.id ||
+            'unlabeled'
+          ).replace(/\\s+/g, ' ').trim().slice(0, 180);
+
+          fetch(SUPABASE_URL + '/rest/v1/click_events', {
+            method: 'POST',
+            keepalive: true,
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': 'Bearer ' + auth.accessToken,
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+              user_id: auth.userId,
+              email: auth.email,
+              event_name: 'click',
+              element_type: String(target.tagName || '').toLowerCase() || null,
+              element_id: String(target.id || '').slice(0, 180) || null,
+              element_label: label || 'unlabeled',
+              destination: clickDestination(target),
+              page_path: (location.pathname + (location.hash || '')).slice(0, 300),
+              session_id: analyticsSessionId(),
+              device_type: 'mobile'
+            })
+          }).catch(() => {});
+        } catch (_) {}
+      }, true);
+    };
     const getCurrentCredits = () => {
       try {
         if (window.HansoraHeader && typeof window.HansoraHeader.getCurrentCredits === 'function') {
@@ -527,6 +624,7 @@ export default async (request, context) => {
     document.querySelectorAll('[data-hs-video-landing]').forEach((link) => {
       link.addEventListener('click', updateVideoLandingLinks);
     });
+    bindMobileNavClickTracking();
     updateVideoLandingLinks();
     window.addEventListener('storage', (event) => {
       if (event.key === 'hansora.header.credits') updateVideoLandingLinks();
