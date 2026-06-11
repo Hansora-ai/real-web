@@ -716,6 +716,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!u.searchParams.has('quantity')) u.searchParams.set('quantity', '1');
       u.searchParams.set('metadata_uid', uid);
       u.searchParams.set('metadata_credits', String(credits));
+      u.searchParams.set('minimalAddress', 'true');
 
       window.hansoraPricingNavigate(u.toString());
     });
@@ -823,6 +824,7 @@ if (!Number.isFinite(credits) || credits<=0){
         const u = new URL(baseUrl, location.href);
         u.searchParams.set('metadata_uid', uid);
         u.searchParams.set('metadata_credits', String(credits));
+        u.searchParams.set('minimalAddress', 'true');
         const ru = el.getAttribute('data-return-url');
         if (ru) u.searchParams.set('return_url', ru);
         // FINAL redirect only when uid is present (hard block otherwise)
