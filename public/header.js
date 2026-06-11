@@ -1018,11 +1018,11 @@
             })}
           </nav>
           <div class="nav-actions">
-            <button class="btn btn-ghost" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Login</button>
             <a class="hansora-mobile-pricing" href="${withAffiliateRef('/pricing.html')}" aria-label="Pricing, 30% off">
               <span>Pricing</span>
               <strong class="hansora-mobile-pricing-badge">30% OFF</strong>
             </a>
+            <button class="btn btn-ghost" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Login</button>
             <span class="credits-pill" id="navCredits" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}">${formatCredits(cachedCredits)}</span>
             <button class="avatar-button" type="button" id="navAvatar" aria-label="Open account menu" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}">
               <img id="navAvatarImg" alt="" src="${cachedAvatar}">
