@@ -164,7 +164,10 @@
     } catch (_) {}
   }
 
-  function readAnalyticsAuth() {
+  let analyticsAuthCache = null;
+
+  function refreshAnalyticsAuthCache() {
+    analyticsAuthCache = null;
     try {
       for (let i = 0; i < localStorage.length; i += 1) {
         const key = localStorage.key(i);
@@ -173,15 +176,21 @@
         const session = value.currentSession || value.session || value;
         const user = session.user || value.user || {};
         if (session.access_token && user.id) {
-          return {
+          analyticsAuthCache = {
             accessToken: session.access_token,
             userId: user.id,
             email: user.email || null
           };
+          break;
         }
       }
     } catch (_) {}
-    return null;
+    window.__hansoraAnalyticsAuth = analyticsAuthCache;
+    return analyticsAuthCache;
+  }
+
+  function readAnalyticsAuth() {
+    return analyticsAuthCache || window.__hansoraAnalyticsAuth || null;
   }
 
   function clickDestination(element) {
@@ -216,6 +225,10 @@
   function bindGlobalClickTracking() {
     if (window.__hansoraGlobalClickTrackingBound) return;
     window.__hansoraGlobalClickTrackingBound = true;
+    refreshAnalyticsAuthCache();
+    window.addEventListener('storage', function (event) {
+      if (/^sb-.*-auth-token$/.test(event.key || '')) refreshAnalyticsAuthCache();
+    });
 
     document.addEventListener('click', function (event) {
       try {
@@ -1095,6 +1108,8 @@
   function showLoggedOutUI() {
     currentUser = null;
     currentCredits = 0;
+    analyticsAuthCache = null;
+    window.__hansoraAnalyticsAuth = null;
     const header = el('siteHeader');
     const loginBtn = el('btnLoginSignup');
     const navCredits = el('navCredits');
@@ -1513,6 +1528,7 @@
 
   async function handleAuthenticatedUser(user) {
     if (!user) return null;
+    refreshAnalyticsAuthCache();
     const profile = await getOrCreateProfile(user);
     showLoggedInUI(profile, user);
     await registerAffiliateReferral(user);
