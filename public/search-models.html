@@ -3732,6 +3732,8 @@ async function __mjFetchNbCheck(params){
           v.src = url;
           v.muted = true;
           v.playsInline = true;
+          v.loop = true;
+          v.autoplay = true;
           v.preload = 'metadata';
           card.appendChild(v);
         } else {
@@ -3918,6 +3920,8 @@ async function __mjFetchNbCheck(params){
                 v.src = __thumb_url;
                 v.muted = true;
                 v.playsInline = true;
+                v.loop = true;
+                v.autoplay = true;
                 v.preload = 'metadata';
                 card.insertBefore(v, card.firstChild);
               } else {
@@ -9112,12 +9116,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     }
 
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') {
-        document.querySelectorAll('#resultsStrip video').forEach((video) => {
-          try { video.pause(); } catch (_) {}
-        });
-        return;
-      }
+      if (document.visibilityState === 'hidden') return;
       schedulePageResumeRefresh();
     });
     window.addEventListener('pageshow', (event) => {
