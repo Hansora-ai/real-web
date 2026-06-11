@@ -613,6 +613,7 @@
       .nav-links .hansora-nav-item{ position:relative; display:inline-flex; align-items:center; }
       .site-header .shell.nav{ position:relative; }
       .site-header .nav-links{ position:absolute; left:50%; transform:translateX(-50%); }
+      .hansora-brand-mobile{ display:none; }
       .nav-links .hansora-nav-trigger{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; color:inherit; }
       .nav-links .hansora-nav-trigger::after{ content:""; width:6px; height:6px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); opacity:.55; margin-top:-3px; transition:transform .18s ease, opacity .18s ease; }
       .nav-links .hansora-nav-item:hover .hansora-nav-trigger::after,
@@ -733,41 +734,44 @@
       .hansora-mobile-pricing{ display:none; }
       @media (max-width:720px){
         .site-header .shell.nav{
-          min-height:62px !important;
-          padding-left:10px !important;
-          padding-right:10px !important;
-          gap:7px !important;
+          min-height:58px !important;
+          padding-left:7px !important;
+          padding-right:7px !important;
+          gap:5px !important;
         }
         .site-header .brand{
           min-width:0 !important;
-          gap:7px !important;
+          gap:5px !important;
+          margin-right:auto !important;
         }
         .site-header .brand img{
-          width:30px !important;
-          height:30px !important;
-          flex:0 0 30px !important;
+          width:27px !important;
+          height:27px !important;
+          flex:0 0 27px !important;
         }
         .site-header .brand span{
-          font-size:15px !important;
+          font-size:14px !important;
           letter-spacing:.01em !important;
           white-space:nowrap !important;
         }
+        .hansora-brand-full{ display:none; }
+        .hansora-brand-mobile{ display:inline; }
         .site-header .nav-actions{
-          gap:6px !important;
-          margin-left:auto !important;
+          gap:5px !important;
+          margin-left:0 !important;
         }
         .site-header .credits-pill{
-          min-height:34px !important;
-          padding:0 9px !important;
-          border-radius:13px !important;
-          font-size:13px !important;
+          min-height:32px !important;
+          padding:0 7px !important;
+          border-radius:12px !important;
+          font-size:12px !important;
           white-space:nowrap !important;
         }
         .site-header .avatar-button{
-          width:34px !important;
-          height:34px !important;
-          min-width:34px !important;
-          flex:0 0 34px !important;
+          width:32px !important;
+          height:32px !important;
+          min-width:32px !important;
+          flex:0 0 32px !important;
         }
         .site-header .avatar-button img{
           width:100% !important;
@@ -775,18 +779,18 @@
         }
         .hansora-mobile-pricing{
           position:relative;
-          min-width:66px;
-          height:38px;
+          min-width:62px;
+          height:34px;
           display:inline-flex;
           align-items:flex-start;
           justify-content:center;
-          padding:7px 10px 0;
-          border:1px solid rgba(255,120,120,.42);
-          border-radius:13px;
-          background:linear-gradient(145deg,#4d0b12,#9f1724 58%,#d72f3d);
-          box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 8px 20px rgba(190,24,43,.28);
+          padding:6px 8px 0;
+          border:1px solid rgba(255,255,255,.10);
+          border-radius:12px;
+          background:linear-gradient(145deg,#181a21,#0f1117);
+          box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 7px 16px rgba(0,0,0,.24);
           color:#fff;
-          font-size:12px;
+          font-size:11px;
           font-weight:900;
           line-height:1;
           letter-spacing:.01em;
@@ -798,14 +802,14 @@
           left:50%;
           bottom:-8px;
           transform:translateX(-50%);
-          min-width:56px;
-          padding:3px 7px;
+          min-width:53px;
+          padding:3px 6px;
           border:1px solid rgba(255,255,255,.16);
           border-radius:999px;
           background:#ef233c;
           box-shadow:0 5px 13px rgba(239,35,60,.38);
           color:#fff;
-          font-size:9px;
+          font-size:8px;
           font-weight:950;
           line-height:1;
           text-align:center;
@@ -813,9 +817,9 @@
         }
       }
       @media (max-width:390px){
-        .site-header .brand span{ font-size:13px !important; }
-        .site-header .credits-pill{ padding:0 7px !important; font-size:12px !important; }
-        .hansora-mobile-pricing{ min-width:60px; padding-left:7px; padding-right:7px; }
+        .site-header .brand span{ font-size:12px !important; }
+        .site-header .credits-pill{ padding:0 6px !important; font-size:11px !important; }
+        .hansora-mobile-pricing{ min-width:58px; padding-left:6px; padding-right:6px; }
       }
       html.hansora-telegram-webview,
       html.hansora-telegram-webview body{
@@ -948,7 +952,7 @@
         <div class="shell nav">
           <a class="brand" href="${withAffiliateRef('/')}" aria-label="HANSORA AI home">
             <img src="${LOGO_URL}" alt="">
-            <span>HANSORA AI</span>
+            <span><span class="hansora-brand-full">HANSORA AI</span><span class="hansora-brand-mobile">HANSORA</span></span>
           </a>
           <nav class="nav-links" aria-label="Primary navigation">
             ${renderNavMenu('Image', '/search-models.html', {
@@ -985,11 +989,11 @@
           </nav>
           <div class="nav-actions">
             <button class="btn btn-ghost" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Login</button>
-            <span class="credits-pill" id="navCredits" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}">${formatCredits(cachedCredits)}</span>
             <a class="hansora-mobile-pricing" href="${withAffiliateRef('/pricing.html')}" aria-label="Pricing, 30% off">
               <span>Pricing</span>
               <strong class="hansora-mobile-pricing-badge">30% OFF</strong>
             </a>
+            <span class="credits-pill" id="navCredits" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}">${formatCredits(cachedCredits)}</span>
             <button class="avatar-button" type="button" id="navAvatar" aria-label="Open account menu" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}">
               <img id="navAvatarImg" alt="" src="${cachedAvatar}">
             </button>
