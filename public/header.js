@@ -730,6 +730,93 @@
         .nav-links .hansora-nav-item:hover .hansora-mega-menu,
         .nav-links .hansora-nav-item:focus-within .hansora-mega-menu{ transform:translateX(-16px) translateY(0); }
       }
+      .hansora-mobile-pricing{ display:none; }
+      @media (max-width:720px){
+        .site-header .shell.nav{
+          min-height:62px !important;
+          padding-left:10px !important;
+          padding-right:10px !important;
+          gap:7px !important;
+        }
+        .site-header .brand{
+          min-width:0 !important;
+          gap:7px !important;
+        }
+        .site-header .brand img{
+          width:30px !important;
+          height:30px !important;
+          flex:0 0 30px !important;
+        }
+        .site-header .brand span{
+          font-size:15px !important;
+          letter-spacing:.01em !important;
+          white-space:nowrap !important;
+        }
+        .site-header .nav-actions{
+          gap:6px !important;
+          margin-left:auto !important;
+        }
+        .site-header .credits-pill{
+          min-height:34px !important;
+          padding:0 9px !important;
+          border-radius:13px !important;
+          font-size:13px !important;
+          white-space:nowrap !important;
+        }
+        .site-header .avatar-button{
+          width:34px !important;
+          height:34px !important;
+          min-width:34px !important;
+          flex:0 0 34px !important;
+        }
+        .site-header .avatar-button img{
+          width:100% !important;
+          height:100% !important;
+        }
+        .hansora-mobile-pricing{
+          position:relative;
+          min-width:66px;
+          height:38px;
+          display:inline-flex;
+          align-items:flex-start;
+          justify-content:center;
+          padding:7px 10px 0;
+          border:1px solid rgba(255,120,120,.42);
+          border-radius:13px;
+          background:linear-gradient(145deg,#4d0b12,#9f1724 58%,#d72f3d);
+          box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 8px 20px rgba(190,24,43,.28);
+          color:#fff;
+          font-size:12px;
+          font-weight:900;
+          line-height:1;
+          letter-spacing:.01em;
+          text-decoration:none;
+          white-space:nowrap;
+        }
+        .hansora-mobile-pricing-badge{
+          position:absolute;
+          left:50%;
+          bottom:-8px;
+          transform:translateX(-50%);
+          min-width:56px;
+          padding:3px 7px;
+          border:1px solid rgba(255,255,255,.16);
+          border-radius:999px;
+          background:#ef233c;
+          box-shadow:0 5px 13px rgba(239,35,60,.38);
+          color:#fff;
+          font-size:9px;
+          font-weight:950;
+          line-height:1;
+          text-align:center;
+          letter-spacing:.04em;
+        }
+      }
+      @media (max-width:390px){
+        .site-header .brand span{ font-size:13px !important; }
+        .site-header .credits-pill{ padding:0 7px !important; font-size:12px !important; }
+        .hansora-mobile-pricing{ min-width:60px; padding-left:7px; padding-right:7px; }
+      }
       html.hansora-telegram-webview,
       html.hansora-telegram-webview body{
         min-height:var(--hansora-tg-vh,100dvh);
@@ -899,6 +986,10 @@
           <div class="nav-actions">
             <button class="btn btn-ghost" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Login</button>
             <span class="credits-pill" id="navCredits" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}">${formatCredits(cachedCredits)}</span>
+            <a class="hansora-mobile-pricing" href="${withAffiliateRef('/pricing.html')}" aria-label="Pricing, 30% off">
+              <span>Pricing</span>
+              <strong class="hansora-mobile-pricing-badge">30% OFF</strong>
+            </a>
             <button class="avatar-button" type="button" id="navAvatar" aria-label="Open account menu" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}">
               <img id="navAvatarImg" alt="" src="${cachedAvatar}">
             </button>
