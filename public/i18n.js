@@ -3,7 +3,7 @@
 
   const STORAGE_KEY = 'hansora.language';
   const SUPPORTED = new Set(['en', 'ru']);
-  const ATTRIBUTE_NAMES = ['placeholder', 'title', 'aria-label', 'alt'];
+  const ATTRIBUTE_NAMES = ['placeholder', 'title', 'aria-label'];
   const textOriginals = new WeakMap();
   const attributeOriginals = new WeakMap();
   let language = readLanguage();
@@ -153,6 +153,7 @@
         node = walker.nextNode();
       }
       document.documentElement.lang = language;
+      document.documentElement.classList.remove('hansora-i18n-pending');
       syncSwitcher();
     } finally {
       applying = false;
@@ -362,6 +363,7 @@
       console.warn('Hansora translations could not be loaded.', error);
       language = 'en';
       dictionary = {};
+      document.documentElement.classList.remove('hansora-i18n-pending');
     }
     ensureSwitcher();
     translateTree(document.body);
