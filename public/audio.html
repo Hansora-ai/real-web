@@ -160,7 +160,7 @@
             </section>
 
             <section id="isolationPanel" class="hidden space-y-4">
-              <input id="audioFileInput" type="file" class="hidden" />
+              <input id="audioFileInput" type="file" accept=".mp3,audio/mpeg,audio/mp3" class="hidden" />
               <div id="voiceChangerOptions" class="hidden panel rounded-2xl p-4">
                 <p class="small-label mb-2">Target voice</p>
                 <div id="changerVoicePicker" class="voice-picker">
@@ -808,10 +808,11 @@
       const input = $('audioFileInput');
       const drop = $('dropZone');
       drop.addEventListener('click',()=>{
-        // iOS may retain an old media filter on a reused file input. A fresh,
-        // unrestricted input reliably keeps MP3 and other audio files selectable.
+        // Use a fresh input for iOS, with both extension and MIME hints so MP3
+        // files remain selectable across Safari and Chrome.
         const picker = document.createElement('input');
         picker.type = 'file';
+        picker.accept = '.mp3,audio/mpeg,audio/mp3';
         picker.style.position = 'fixed';
         picker.style.left = '-9999px';
         picker.addEventListener('change',()=>{
@@ -830,7 +831,7 @@
 
     function setAudioFile(file){
       if (file && !isSupportedAudioFile(file)) {
-        showError('Voice Isolation accepts audio files only. Please upload MP3, WAV, M4A, AAC, OGG, or FLAC.');
+        showError('Voice Isolation accepts MP3 files only.');
         return;
       }
       clearError();
@@ -883,9 +884,9 @@
     function isSupportedAudioFile(file){
       const type = String(file && file.type || '').toLowerCase();
       const name = String(file && file.name || '').toLowerCase();
-      if (/\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(name)) return true;
+      if (/\.mp3$/i.test(name)) return true;
       if (type.startsWith('video/')) return false;
-      if (type.startsWith('audio/')) return true;
+      if (type === 'audio/mpeg' || type === 'audio/mp3') return true;
       return false;
     }
     function guessAudioMimeType(name){
