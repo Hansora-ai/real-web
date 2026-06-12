@@ -807,7 +807,20 @@
     function wireUpload(){
       const input = $('audioFileInput');
       const drop = $('dropZone');
-      drop.addEventListener('click',()=>input.click());
+      drop.addEventListener('click',()=>{
+        // iOS may retain an old media filter on a reused file input. A fresh,
+        // unrestricted input reliably keeps MP3 and other audio files selectable.
+        const picker = document.createElement('input');
+        picker.type = 'file';
+        picker.style.position = 'fixed';
+        picker.style.left = '-9999px';
+        picker.addEventListener('change',()=>{
+          setAudioFile(picker.files && picker.files[0]);
+          picker.remove();
+        }, { once:true });
+        document.body.appendChild(picker);
+        picker.click();
+      });
       input.addEventListener('change',()=>setAudioFile(input.files && input.files[0]));
       ['dragenter','dragover'].forEach((eventName)=>drop.addEventListener(eventName,(e)=>{ e.preventDefault(); drop.classList.add('drag'); }));
       ['dragleave','drop'].forEach((eventName)=>drop.addEventListener(eventName,(e)=>{ e.preventDefault(); drop.classList.remove('drag'); }));
