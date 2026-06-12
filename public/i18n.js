@@ -130,6 +130,10 @@
     document.querySelectorAll('[data-hansora-language]').forEach(function (button) {
       button.classList.toggle('is-active', button.dataset.hansoraLanguage === language);
     });
+    document.querySelectorAll('[data-hansora-language-name]').forEach(function (label) {
+      const next = language === 'ru' ? 'Русский' : 'English';
+      if (label.textContent !== next) label.textContent = next;
+    });
   }
 
   function ensureStyles() {
@@ -137,53 +141,121 @@
     const style = document.createElement('style');
     style.id = 'hansoraI18nStyles';
     style.textContent = `
-      .hansora-language-wrap{position:relative;display:inline-flex;z-index:1100}
-      .hansora-language-button{min-width:42px;height:38px;padding:0 11px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.06);color:#fff;font:800 12px/1 inherit;cursor:pointer}
-      .hansora-language-button:hover{background:rgba(255,255,255,.1)}
-      .hansora-language-menu{position:absolute;top:calc(100% + 9px);right:0;display:none;width:150px;padding:7px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:#11131a;box-shadow:0 18px 55px rgba(0,0,0,.48)}
-      .hansora-language-menu.is-open{display:grid;gap:4px}
-      .hansora-language-option{width:100%;padding:10px 11px;border:0;border-radius:10px;background:transparent;color:#fff;text-align:left;font:750 13px/1.2 inherit;cursor:pointer}
-      .hansora-language-option:hover,.hansora-language-option.is-active{background:rgba(99,102,241,.2)}
+      .hansora-language-menu-row{width:100%;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;border:0!important;color:inherit!important;text-align:left!important;cursor:pointer!important}
+      .hansora-language-menu-row .hansora-language-current{display:flex;align-items:center;gap:7px;color:rgba(255,255,255,.48);font-size:12px;font-weight:800}
+      .hansora-language-menu-row .hansora-language-chevron{font-size:16px;opacity:.42}
+      .hansora-language-sheet-backdrop{position:fixed;inset:0;z-index:12000;display:flex;align-items:flex-end;justify-content:center;padding:18px;background:rgba(3,5,12,.66);backdrop-filter:blur(12px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease,visibility .22s ease}
+      .hansora-language-sheet-backdrop.is-open{opacity:1;visibility:visible;pointer-events:auto}
+      .hansora-language-sheet{width:min(520px,100%);padding:10px 10px 14px;border:1px solid rgba(255,255,255,.13);border-radius:28px;background:radial-gradient(circle at 15% 0%,rgba(99,102,241,.24),transparent 42%),linear-gradient(165deg,#1b1d28,#0c0e15 72%);box-shadow:0 30px 100px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08);transform:translateY(26px) scale(.98);transition:transform .24s ease}
+      .hansora-language-sheet-backdrop.is-open .hansora-language-sheet{transform:translateY(0) scale(1)}
+      .hansora-language-handle{width:44px;height:4px;margin:2px auto 15px;border-radius:99px;background:rgba(255,255,255,.22)}
+      .hansora-language-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:3px 9px 13px}
+      .hansora-language-sheet-title{margin:0;color:#fff;font-size:20px;font-weight:950;letter-spacing:-.02em}
+      .hansora-language-sheet-subtitle{margin:5px 0 0;color:rgba(255,255,255,.5);font-size:12px;font-weight:650}
+      .hansora-language-sheet-close{width:38px;height:38px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.1);border-radius:999px;background:rgba(255,255,255,.06);color:#fff;font-size:18px;cursor:pointer}
+      .hansora-language-options{display:grid;gap:8px}
+      .hansora-language-option{width:100%;display:flex;align-items:center;gap:14px;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:rgba(255,255,255,.045);color:#fff;text-align:left;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .16s ease}
+      .hansora-language-option:hover{transform:translateY(-1px);background:rgba(255,255,255,.075)}
+      .hansora-language-option.is-active{border-color:rgba(125,211,252,.42);background:linear-gradient(135deg,rgba(99,102,241,.2),rgba(56,189,248,.12))}
+      .hansora-language-flag{width:48px;height:48px;display:grid;place-items:center;flex:0 0 48px;border-radius:15px;background:rgba(255,255,255,.08);font-size:29px;box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+      .hansora-language-copy{display:grid;gap:4px;min-width:0}
+      .hansora-language-copy strong{font-size:15px;font-weight:900}
+      .hansora-language-copy small{color:rgba(255,255,255,.48);font-size:11px;font-weight:650}
+      .hansora-language-check{margin-left:auto;width:25px;height:25px;display:grid;place-items:center;border-radius:99px;background:transparent;color:transparent;font-weight:950}
+      .hansora-language-option.is-active .hansora-language-check{background:linear-gradient(135deg,#818cf8,#38bdf8);color:#fff}
       .hansora-language-floating{position:fixed;top:14px;right:14px;z-index:9999}
-      @media(max-width:720px){.hansora-language-button{min-width:34px;height:32px;padding:0 8px;border-radius:10px;font-size:11px}.site-header .hansora-language-wrap{order:-1}}
+      .hansora-language-floating-button{height:38px;padding:0 13px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:#12151e;color:#fff;font:850 12px/1 inherit;cursor:pointer;box-shadow:0 10px 35px rgba(0,0,0,.32)}
     `;
     document.head.appendChild(style);
   }
 
+  function openLanguageSheet() {
+    const backdrop = document.getElementById('hansoraLanguageSheet');
+    if (backdrop) backdrop.classList.add('is-open');
+  }
+
+  function closeLanguageSheet() {
+    const backdrop = document.getElementById('hansoraLanguageSheet');
+    if (backdrop) backdrop.classList.remove('is-open');
+  }
+
+  function ensureLanguageSheet() {
+    let backdrop = document.getElementById('hansoraLanguageSheet');
+    if (backdrop) return backdrop;
+    backdrop = document.createElement('div');
+    backdrop.id = 'hansoraLanguageSheet';
+    backdrop.className = 'hansora-language-sheet-backdrop';
+    backdrop.setAttribute('data-i18n-ignore', '');
+    backdrop.innerHTML = `
+      <section class="hansora-language-sheet" role="dialog" aria-modal="true" aria-label="Choose language">
+        <div class="hansora-language-handle"></div>
+        <div class="hansora-language-sheet-head">
+          <div>
+            <h2 class="hansora-language-sheet-title">Choose your language</h2>
+            <p class="hansora-language-sheet-subtitle">Your choice will be saved across the website.</p>
+          </div>
+          <button class="hansora-language-sheet-close" type="button" aria-label="Close">×</button>
+        </div>
+        <div class="hansora-language-options">
+          <button class="hansora-language-option" type="button" data-hansora-language="en">
+            <span class="hansora-language-flag">🇬🇧</span>
+            <span class="hansora-language-copy"><strong>English</strong><small>English interface</small></span>
+            <span class="hansora-language-check">✓</span>
+          </button>
+          <button class="hansora-language-option" type="button" data-hansora-language="ru">
+            <span class="hansora-language-flag">🇷🇺</span>
+            <span class="hansora-language-copy"><strong>Русский</strong><small>Интерфейс на русском</small></span>
+            <span class="hansora-language-check">✓</span>
+          </button>
+        </div>
+      </section>`;
+    backdrop.querySelector('.hansora-language-sheet-close').addEventListener('click', closeLanguageSheet);
+    backdrop.addEventListener('click', function (event) {
+      if (event.target === backdrop) closeLanguageSheet();
+    });
+    backdrop.querySelectorAll('[data-hansora-language]').forEach(function (button) {
+      button.addEventListener('click', async function () {
+        await setLanguage(button.dataset.hansoraLanguage);
+        closeLanguageSheet();
+      });
+    });
+    document.body.appendChild(backdrop);
+    return backdrop;
+  }
+
   function ensureSwitcher() {
     ensureStyles();
-    let wrap = document.getElementById('hansoraLanguageSwitcher');
-    const headerActions = document.querySelector('.site-header .nav-actions');
-
-    if (!wrap) {
-      wrap = document.createElement('div');
-      wrap.id = 'hansoraLanguageSwitcher';
-      wrap.className = 'hansora-language-wrap';
-      wrap.setAttribute('data-i18n-ignore', '');
-      wrap.innerHTML = `
-        <button class="hansora-language-button" type="button" aria-label="Choose language"><span data-hansora-language-current>EN</span></button>
-        <div class="hansora-language-menu">
-          <button class="hansora-language-option" type="button" data-hansora-language="en">English</button>
-          <button class="hansora-language-option" type="button" data-hansora-language="ru">Russian</button>
-        </div>`;
-      wrap.querySelector('.hansora-language-button').addEventListener('click', function (event) {
+    ensureLanguageSheet();
+    const accountMenu = document.querySelector('.site-header #navMenu');
+    let row = document.getElementById('hansoraLanguageMenuRow');
+    if (accountMenu && !row) {
+      row = document.createElement('button');
+      row.id = 'hansoraLanguageMenuRow';
+      row.type = 'button';
+      row.className = 'hansora-language-menu-row';
+      row.setAttribute('data-i18n-ignore', '');
+      row.innerHTML = `<span>Language</span><span class="hansora-language-current"><span data-hansora-language-name>English</span><span class="hansora-language-chevron">›</span></span>`;
+      const logout = accountMenu.querySelector('#btnLogout');
+      accountMenu.insertBefore(row, logout || null);
+      row.addEventListener('click', function (event) {
         event.stopPropagation();
-        wrap.querySelector('.hansora-language-menu').classList.toggle('is-open');
-      });
-      wrap.querySelectorAll('[data-hansora-language]').forEach(function (button) {
-        button.addEventListener('click', async function () {
-          closeMenus();
-          await setLanguage(button.dataset.hansoraLanguage);
-        });
+        accountMenu.classList.remove('is-open');
+        openLanguageSheet();
       });
     }
 
-    if (headerActions && wrap.parentElement !== headerActions) {
-      wrap.classList.remove('hansora-language-floating');
-      headerActions.insertBefore(wrap, headerActions.firstChild);
-    } else if (!headerActions && !wrap.parentElement) {
-      wrap.classList.add('hansora-language-floating');
-      document.body.appendChild(wrap);
+    let floating = document.getElementById('hansoraLanguageFloating');
+    if (!accountMenu && !floating) {
+      floating = document.createElement('button');
+      floating.id = 'hansoraLanguageFloating';
+      floating.type = 'button';
+      floating.className = 'hansora-language-floating hansora-language-floating-button';
+      floating.setAttribute('data-i18n-ignore', '');
+      floating.innerHTML = `🌐 <span data-hansora-language-name>English</span>`;
+      floating.addEventListener('click', openLanguageSheet);
+      document.body.appendChild(floating);
+    } else if (accountMenu && floating) {
+      floating.remove();
     }
     syncSwitcher();
   }
@@ -233,6 +305,9 @@
     translateTree
   };
 
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') closeLanguageSheet();
+  });
   document.addEventListener('click', closeMenus);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();
