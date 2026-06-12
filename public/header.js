@@ -17,6 +17,15 @@
   const SIGNUP_OFFER_URL = '/pricing.html?offer_popup=1';
   const GROK_VIDEO_CREDIT_THRESHOLD = 4;
 
+  function ensureI18nRuntime() {
+    if (window.HansoraI18n || document.querySelector('script[data-hansora-i18n]')) return;
+    const script = document.createElement('script');
+    script.src = '/i18n.js';
+    script.defer = true;
+    script.dataset.hansoraI18n = '1';
+    document.head.appendChild(script);
+  }
+
   let sb = null;
   let currentUser = null;
   let currentCredits = 0;
@@ -1588,6 +1597,7 @@
   }
 
   captureAffiliateRef();
+  ensureI18nRuntime();
 
   ready(function () {
     captureAffiliateRef();
