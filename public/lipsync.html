@@ -186,8 +186,8 @@
       <section class="section">
         <span class="label">Audio input</span>
         <div id="audioDrop" class="drop-card">
-          <input id="audioInput" type="file" accept="audio/*" class="hidden" />
-          <button id="audioBtn" class="drop-button" type="button"><span class="drop-icon">🎙️</span><span>Upload audio</span><small class="text-white/45">5–90 seconds</small></button>
+          <input id="audioInput" type="file" class="hidden" />
+          <button id="audioBtn" class="drop-button" type="button"><span class="drop-icon">🎙️</span><span>Upload MP3</span><small class="text-white/45">MP3 • 5–90 seconds</small></button>
           <div id="audioPreview" class="hidden"></div>
         </div>
         <div class="record-box mt-3">
@@ -506,6 +506,11 @@
       updateCost();
       showStatus('Audio ready.', 'good');
     }
+    function isSupportedUploadedAudio(file) {
+      const name = String(file && file.name || '').toLowerCase();
+      const type = String(file && file.type || '').toLowerCase();
+      return /\.mp3$/i.test(name) || type === 'audio/mpeg' || type === 'audio/mp3';
+    }
     function resetAudioSelection() {
       audioFile = null;
       recordedAudioFile = null;
@@ -534,7 +539,7 @@
     async function uploadFile(file) {
       if (!file) throw new Error('missing_file');
       if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') throw new Error('upload_bridge_missing');
-      const maxMB = file.type && file.type.startsWith('audio/') ? 100 : 20;
+      const maxMB = isSupportedUploadedAudio(file) || (file.type && file.type.startsWith('audio/')) ? 100 : 20;
       if (file.size > maxMB * 1024 * 1024) throw new Error('file_too_large');
       const up = await window.kieUploadBridge.upload(file);
       if (!up || !up.publicUrl) throw new Error('upload_failed');
@@ -878,7 +883,7 @@
     });
     bindDrop($('audioDrop'), $('audioInput'), async (file) => {
       if (recordedAudioFile) return;
-      if (!String(file.type || '').startsWith('audio/')) { showStatus('Audio input must be an audio file.', 'error'); return; }
+      if (!isSupportedUploadedAudio(file)) { showStatus('Audio upload must be an MP3 file.', 'error'); return; }
       audioFile = file;
       recordedAudioFile = null;
       syncAudioLocks();
