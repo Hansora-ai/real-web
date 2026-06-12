@@ -160,7 +160,7 @@
             </section>
 
             <section id="isolationPanel" class="hidden space-y-4">
-              <input id="audioFileInput" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" class="hidden" />
+              <input id="audioFileInput" type="file" accept=".mp3,audio/mpeg,audio/mp3,.wav,audio/wav,audio/x-wav,.m4a,audio/x-m4a,.aac,audio/aac,.ogg,audio/ogg,.flac,audio/flac" class="hidden" />
               <div id="voiceChangerOptions" class="hidden panel rounded-2xl p-4">
                 <p class="small-label mb-2">Target voice</p>
                 <div id="changerVoicePicker" class="voice-picker">
@@ -870,9 +870,10 @@
     function isSupportedAudioFile(file){
       const type = String(file && file.type || '').toLowerCase();
       const name = String(file && file.name || '').toLowerCase();
+      if (/\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(name)) return true;
       if (type.startsWith('video/')) return false;
       if (type.startsWith('audio/')) return true;
-      return /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(name);
+      return false;
     }
     function guessAudioMimeType(name){
       const lower = String(name || '').toLowerCase();
