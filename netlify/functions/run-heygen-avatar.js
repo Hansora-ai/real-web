@@ -95,6 +95,9 @@ exports.handler = async (event) => {
         submitted: false,
         error: heygenResult.error || "heygen_submit_failed",
         data: heygenResult.data,
+        provider_message: extractProviderMessage(heygenResult.data),
+        failed_stage: heygenResult.failedStage || "",
+        avatar_id: heygenResult.avatarId || "",
         run_id,
         heygen_auth_debug: safeHeyGenAuthDebug()
       });
@@ -153,7 +156,8 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
         data: assetUpload.data,
         apiVersion: "v3",
         requestedModel: model,
-        heygenEngine: "AvatarV"
+        heygenEngine: "AvatarV",
+        failedStage: "asset_upload"
       };
     }
     const assetId = extractAssetId(assetUpload.data);
@@ -164,7 +168,8 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
         data: assetUpload.data,
         apiVersion: "v3",
         requestedModel: model,
-        heygenEngine: "AvatarV"
+        heygenEngine: "AvatarV",
+        failedStage: "asset_upload"
       };
     }
 
@@ -175,7 +180,6 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
     };
     const avatarResp = await heygenFetch("/v3/avatars", {
       method: "POST",
-      headers: { "Idempotency-Key": `${run_id}-photo-avatar` },
       body: JSON.stringify(avatarPayload)
     });
     const avatarData = avatarResp.data;
@@ -186,7 +190,8 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
         data: avatarData,
         apiVersion: "v3",
         requestedModel: model,
-        heygenEngine: "AvatarV"
+        heygenEngine: "AvatarV",
+        failedStage: "avatar_create"
       };
     }
 
@@ -199,6 +204,7 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
         apiVersion: "v3",
         requestedModel: model,
         heygenEngine: "AvatarV",
+        failedStage: "avatar_create",
         avatarCreateData: avatarData
       };
     }
@@ -210,13 +216,10 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
       title: `Hansora Avatar V ${new Date().toISOString()}`,
       resolution: "1080p",
       aspect_ratio: aspectRatio,
-      callback_url: callbackUrl,
-      callback_id: run_id,
       engine: { type: "avatar_v" }
     };
     const videoResp = await heygenFetch("/v3/videos", {
       method: "POST",
-      headers: { "Idempotency-Key": `${run_id}-avatar-v-video` },
       body: JSON.stringify(videoPayload)
     });
     return {
@@ -227,6 +230,7 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
       apiVersion: "v3",
       requestedModel: model,
       heygenEngine: "AvatarV",
+      failedStage: videoResp.ok ? "" : "video_create",
       avatarId,
       avatarCreateData: avatarData
     };
@@ -411,6 +415,9 @@ function cors() {
 function lowerKeys(headers) { const out = {}; for (const k in headers) out[k.toLowerCase()] = headers[k]; return out; }
 function safeJson(raw) { try { return JSON.parse(raw || "{}"); } catch { return {}; } }
 function messageOf(error) { return error && error.message ? error.message : String(error); }
+function extractProviderMessage(data) {
+  return String(data?.error?.message || data?.data?.error?.message || data?.message || "");
+}
 function sb() { return { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` }; }
 
 function normalizeUrl(value) {
