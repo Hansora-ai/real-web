@@ -145,10 +145,33 @@ exports.handler = async (event) => {
 
 async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, callbackUrl }) {
   if (model === "avatar_v") {
+    const assetUpload = await uploadHeyGenAsset(imageUrl, run_id);
+    if (!assetUpload.ok) {
+      return {
+        ok: false,
+        error: `heygen_asset_upload_${assetUpload.status || "failed"}`,
+        data: assetUpload.data,
+        apiVersion: "v3",
+        requestedModel: model,
+        heygenEngine: "AvatarV"
+      };
+    }
+    const assetId = extractAssetId(assetUpload.data);
+    if (!assetId) {
+      return {
+        ok: false,
+        error: "missing_heygen_asset_id",
+        data: assetUpload.data,
+        apiVersion: "v3",
+        requestedModel: model,
+        heygenEngine: "AvatarV"
+      };
+    }
+
     const avatarPayload = {
       type: "photo",
       name: `Hansora Photo Avatar ${run_id}`,
-      reference_images: [{ type: "url", url: imageUrl }]
+      file: { type: "asset_id", asset_id: assetId }
     };
     const avatarResp = await heygenFetch("/v3/avatars", {
       method: "POST",
@@ -176,20 +199,6 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
         apiVersion: "v3",
         requestedModel: model,
         heygenEngine: "AvatarV",
-        avatarCreateData: avatarData
-      };
-    }
-
-    const eligibility = await waitForAvatarVEligibility(avatarId, avatarData);
-    if (!eligibility.supported) {
-      return {
-        ok: false,
-        error: eligibility.error,
-        data: eligibility.data,
-        apiVersion: "v3",
-        requestedModel: model,
-        heygenEngine: "AvatarV",
-        avatarId,
         avatarCreateData: avatarData
       };
     }
@@ -282,47 +291,36 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
   };
 }
 
-function supportsAvatarV(data) {
-  const engines = data?.data?.avatar_item?.supported_api_engines
-    || data?.avatar_item?.supported_api_engines
-    || data?.data?.supported_api_engines
-    || data?.supported_api_engines
-    || [];
-  return Array.isArray(engines) && engines.some((engine) => {
-    const normalized = String(engine || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-    return normalized === "avatarv" || normalized === "avatar5";
-  });
-}
-
-async function waitForAvatarVEligibility(avatarId, initialData) {
-  let data = initialData;
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    if (supportsAvatarV(data)) return { supported: true, data };
-    const status = avatarStatus(data);
-    if (status === "failed") return { supported: false, error: "photo_avatar_creation_failed", data };
-    if (status === "completed") return { supported: false, error: "photo_avatar_v_not_supported", data };
-    await delay(1500);
-    const lookResp = await heygenFetch(`/v3/avatars/looks/${encodeURIComponent(avatarId)}`, { method: "GET" });
-    if (!lookResp.ok) {
-      return { supported: false, error: `heygen_avatar_look_${lookResp.status || "failed"}`, data: lookResp.data };
+async function uploadHeyGenAsset(imageUrl, run_id) {
+  try {
+    const imageResp = await fetch(imageUrl);
+    const imageBytes = await imageResp.arrayBuffer();
+    const contentType = normalizeImageContentType(imageResp.headers.get("content-type"));
+    if (!imageResp.ok || !imageBytes.byteLength) {
+      return { ok: false, status: imageResp.status || 400, data: { error: "image_fetch_failed" } };
     }
-    data = lookResp.data;
+    if (imageBytes.byteLength > 32 * 1024 * 1024) {
+      return { ok: false, status: 400, data: { error: "image_too_large_max_32_mb" } };
+    }
+
+    const extension = contentType === "image/png" ? "png" : "jpg";
+    const form = new FormData();
+    form.append("file", new Blob([imageBytes], { type: contentType }), `hansora-${run_id}.${extension}`);
+    const resp = await fetch(`${HEYGEN_BASE}/v3/assets`, {
+      method: "POST",
+      headers: {
+        "x-api-key": HEYGEN_API_KEY,
+        Accept: "application/json"
+      },
+      body: form
+    });
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text || "{}"); } catch { data = { raw: text }; }
+    return { ok: resp.ok, status: resp.status, data };
+  } catch (error) {
+    return { ok: false, status: 0, data: { error: messageOf(error) } };
   }
-  return { supported: false, error: "photo_avatar_still_processing", data };
-}
-
-function avatarStatus(data) {
-  return String(
-    data?.data?.avatar_item?.status
-    || data?.avatar_item?.status
-    || data?.data?.status
-    || data?.status
-    || ""
-  ).toLowerCase();
-}
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function uploadTalkingPhoto(imageUrl) {
@@ -355,6 +353,11 @@ function normalizeImageContentType(value) {
   const text = String(value || "").split(";")[0].trim().toLowerCase();
   if (text === "image/png" || text === "image/webp" || text === "image/jpeg") return text;
   return "image/jpeg";
+}
+
+function extractAssetId(data) {
+  const direct = data?.data?.asset_id || data?.asset_id || data?.data?.id || data?.id;
+  return direct ? String(direct) : "";
 }
 
 async function heygenFetch(path, options = {}) {
