@@ -145,11 +145,10 @@ exports.handler = async (event) => {
 
 async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, callbackUrl }) {
   if (model === "avatar_v") {
-    let avatarVFailureReason = "";
     const avatarPayload = {
       type: "photo",
       name: `Hansora Photo Avatar ${run_id}`,
-      file: { type: "url", url: imageUrl }
+      reference_images: [{ type: "url", url: imageUrl }]
     };
     const avatarResp = await heygenFetch("/v3/avatars", {
       method: "POST",
@@ -157,68 +156,71 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
       body: JSON.stringify(avatarPayload)
     });
     const avatarData = avatarResp.data;
-    const avatarId = avatarResp.ok ? extractAvatarId(avatarData) : "";
-
-    if (avatarId && supportsAvatarV(avatarData)) {
-      const videoPayload = {
-        type: "avatar",
-        avatar_id: avatarId,
-        audio_url: audioUrl,
-        title: `Hansora Avatar V ${new Date().toISOString()}`,
-        resolution: "1080p",
-        aspect_ratio: aspectRatio,
-        callback_url: callbackUrl,
-        callback_id: run_id,
-        engine: { type: "avatar_v" }
+    if (!avatarResp.ok) {
+      return {
+        ok: false,
+        error: `heygen_avatar_create_${avatarResp.status || "failed"}`,
+        data: avatarData,
+        apiVersion: "v3",
+        requestedModel: model,
+        heygenEngine: "AvatarV"
       };
-      const videoResp = await heygenFetch("/v3/videos", {
-        method: "POST",
-        headers: { "Idempotency-Key": `${run_id}-avatar-v-video` },
-        body: JSON.stringify(videoPayload)
-      });
-      if (videoResp.ok) {
-        return {
-          ok: true,
-          error: "",
-          videoId: extractVideoId(videoResp.data),
-          data: videoResp.data,
-          apiVersion: "v3",
-          requestedModel: model,
-          heygenEngine: "AvatarV",
-          avatarId,
-          avatarCreateData: avatarData
-        };
-      }
-
-      if (!canSafelyFallback(videoResp.status)) {
-        return {
-          ok: false,
-          error: `heygen_video_${videoResp.status}`,
-          data: videoResp.data,
-          apiVersion: "v3",
-          requestedModel: model,
-          heygenEngine: "AvatarV",
-          avatarId,
-          avatarCreateData: avatarData
-        };
-      }
-      avatarVFailureReason = `avatar_v_video_${videoResp.status || "failed"}`;
     }
 
-    const fallbackReason = avatarVFailureReason || (avatarResp.ok
-      ? (avatarId ? "photo_avatar_does_not_support_avatar_v" : "photo_avatar_missing_id")
-      : `photo_avatar_create_${avatarResp.status || "failed"}`);
-    return submitAvatarIV({
-      model,
-      imageUrl,
-      audioUrl,
-      aspectRatio,
-      run_id,
-      callbackUrl,
-      fallbackReason,
+    const avatarId = extractAvatarId(avatarData);
+    if (!avatarId) {
+      return {
+        ok: false,
+        error: "photo_avatar_missing_id",
+        data: avatarData,
+        apiVersion: "v3",
+        requestedModel: model,
+        heygenEngine: "AvatarV",
+        avatarCreateData: avatarData
+      };
+    }
+
+    const eligibility = await waitForAvatarVEligibility(avatarId, avatarData);
+    if (!eligibility.supported) {
+      return {
+        ok: false,
+        error: eligibility.error,
+        data: eligibility.data,
+        apiVersion: "v3",
+        requestedModel: model,
+        heygenEngine: "AvatarV",
+        avatarId,
+        avatarCreateData: avatarData
+      };
+    }
+
+    const videoPayload = {
+      type: "avatar",
+      avatar_id: avatarId,
+      audio_url: audioUrl,
+      title: `Hansora Avatar V ${new Date().toISOString()}`,
+      resolution: "1080p",
+      aspect_ratio: aspectRatio,
+      callback_url: callbackUrl,
+      callback_id: run_id,
+      engine: { type: "avatar_v" }
+    };
+    const videoResp = await heygenFetch("/v3/videos", {
+      method: "POST",
+      headers: { "Idempotency-Key": `${run_id}-avatar-v-video` },
+      body: JSON.stringify(videoPayload)
+    });
+    return {
+      ok: videoResp.ok,
+      error: videoResp.ok ? "" : `heygen_video_${videoResp.status}`,
+      videoId: extractVideoId(videoResp.data),
+      data: videoResp.data,
+      apiVersion: "v3",
+      requestedModel: model,
+      heygenEngine: "AvatarV",
       avatarId,
       avatarCreateData: avatarData
-    });
+    };
   }
 
   const talkingPhoto = await uploadTalkingPhoto(imageUrl);
@@ -280,45 +282,6 @@ async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, ca
   };
 }
 
-async function submitAvatarIV({
-  model,
-  imageUrl,
-  audioUrl,
-  aspectRatio,
-  run_id,
-  callbackUrl,
-  fallbackReason,
-  avatarId,
-  avatarCreateData
-}) {
-  const payload = {
-    image_url: imageUrl,
-    audio_url: audioUrl,
-    title: `Hansora Avatar IV ${new Date().toISOString()}`,
-    resolution: "1080p",
-    aspect_ratio: aspectRatio,
-    callback_url: callbackUrl,
-    callback_id: run_id,
-    expressiveness: "medium"
-  };
-  const resp = await heygenFetch("/v2/videos", {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
-  return {
-    ok: resp.ok,
-    error: resp.ok ? "" : `heygen_video_${resp.status}`,
-    videoId: extractVideoId(resp.data),
-    data: resp.data,
-    apiVersion: "v2",
-    requestedModel: model,
-    heygenEngine: "AvatarIV",
-    avatarId: avatarId || "",
-    avatarCreateData: avatarCreateData || null,
-    fallbackReason: fallbackReason || ""
-  };
-}
-
 function supportsAvatarV(data) {
   const engines = data?.data?.avatar_item?.supported_api_engines
     || data?.avatar_item?.supported_api_engines
@@ -331,8 +294,35 @@ function supportsAvatarV(data) {
   });
 }
 
-function canSafelyFallback(status) {
-  return [400, 401, 403, 404, 409, 422].includes(Number(status));
+async function waitForAvatarVEligibility(avatarId, initialData) {
+  let data = initialData;
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    if (supportsAvatarV(data)) return { supported: true, data };
+    const status = avatarStatus(data);
+    if (status === "failed") return { supported: false, error: "photo_avatar_creation_failed", data };
+    if (status === "completed") return { supported: false, error: "photo_avatar_v_not_supported", data };
+    await delay(1500);
+    const lookResp = await heygenFetch(`/v3/avatars/looks/${encodeURIComponent(avatarId)}`, { method: "GET" });
+    if (!lookResp.ok) {
+      return { supported: false, error: `heygen_avatar_look_${lookResp.status || "failed"}`, data: lookResp.data };
+    }
+    data = lookResp.data;
+  }
+  return { supported: false, error: "photo_avatar_still_processing", data };
+}
+
+function avatarStatus(data) {
+  return String(
+    data?.data?.avatar_item?.status
+    || data?.avatar_item?.status
+    || data?.data?.status
+    || data?.status
+    || ""
+  ).toLowerCase();
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function uploadTalkingPhoto(imageUrl) {
