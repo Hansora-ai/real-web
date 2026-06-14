@@ -2,9 +2,10 @@
 // HeyGen talking-avatar submitter for one image + one audio file.
 // Server-side Supabase auth, placeholder row, idempotent charge per (uid + run_id), and HeyGen submit.
 // Env: HeyGen_api or HEYGEN_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-// Opt: SITE_BASE (default https://webhansora.netlify.app)
+// Opt: SITE_BASE (default https://hansora.co)
 
-const HEYGEN_API_KEY = process.env.HeyGen_api || process.env.HEYGEN_API_KEY || process.env.HEYGEN_API || process.env.HeyGen_API || "";
+const HEYGEN_API_ENV = pickEnv("HEYGEN_API_KEY", "HeyGen_api", "HEYGEN_API", "HeyGen_API");
+const HEYGEN_API_KEY = HEYGEN_API_ENV.value;
 const HEYGEN_BASE = (process.env.HEYGEN_BASE_URL || "https://api.heygen.com").replace(/\/+$/, "");
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
@@ -13,7 +14,7 @@ const UG_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
 const PROFILES_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
 const AUTH_USER_URL = SUPABASE_URL ? `${SUPABASE_URL}/auth/v1/user` : "";
 
-const SITE_BASE = (process.env.SITE_BASE || "https://webhansora.netlify.app").replace(/\/+$/, "");
+const SITE_BASE = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/, "");
 const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/heygen-check`;
 
 exports.handler = async (event) => {
@@ -90,7 +91,13 @@ exports.handler = async (event) => {
         error: heygenResult.error || "heygen_submit_failed",
         heygen_response: heygenResult.data || null
       });
-      return ok({ submitted: false, error: heygenResult.error || "heygen_submit_failed", data: heygenResult.data, run_id });
+      return ok({
+        submitted: false,
+        error: heygenResult.error || "heygen_submit_failed",
+        data: heygenResult.data,
+        run_id,
+        heygen_auth_debug: safeHeyGenAuthDebug()
+      });
     }
 
     const taskId = String(heygenResult.videoId || "").trim();
@@ -111,12 +118,26 @@ exports.handler = async (event) => {
     await markCharged(uid, run_id, cost, taskId, {
       model,
       provider_api: heygenResult.apiVersion,
+      requested_model: heygenResult.requestedModel || model,
+      heygen_engine: heygenResult.heygenEngine || "",
+      fallback_reason: heygenResult.fallbackReason || "",
       avatar_id: heygenResult.avatarId || "",
       avatar_create_response: heygenResult.avatarCreateData || null,
       submit_response: heygenResult.data || null
     });
 
-    return ok({ submitted: true, run_id, taskId, video_id: taskId, cost, billable_seconds: billableSeconds, data: heygenResult.data });
+    return ok({
+      submitted: true,
+      run_id,
+      taskId,
+      video_id: taskId,
+      cost,
+      billable_seconds: billableSeconds,
+      requested_model: heygenResult.requestedModel || model,
+      heygen_engine: heygenResult.heygenEngine || "",
+      fallback_reason: heygenResult.fallbackReason || "",
+      data: heygenResult.data
+    });
   } catch (error) {
     return ok({ submitted: false, error: messageOf(error) });
   }
@@ -124,70 +145,226 @@ exports.handler = async (event) => {
 
 async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, run_id, callbackUrl }) {
   if (model === "avatar_v") {
-    // Avatar V requires a registered avatar/look. For one uploaded image we first create a Photo Avatar, then request Avatar V.
+    let avatarVFailureReason = "";
     const avatarPayload = {
       type: "photo",
-      name: `Hansora HeyGen ${run_id}`,
+      name: `Hansora Photo Avatar ${run_id}`,
       file: { type: "url", url: imageUrl }
     };
     const avatarResp = await heygenFetch("/v3/avatars", {
       method: "POST",
+      headers: { "Idempotency-Key": `${run_id}-photo-avatar` },
       body: JSON.stringify(avatarPayload)
     });
     const avatarData = avatarResp.data;
-    if (!avatarResp.ok) {
-      return { ok: false, error: `heygen_avatar_create_${avatarResp.status}`, data: avatarData };
-    }
-    const avatarId = extractAvatarId(avatarData);
-    if (!avatarId) return { ok: false, error: "missing_avatar_id", data: avatarData };
+    const avatarId = avatarResp.ok ? extractAvatarId(avatarData) : "";
 
-    const videoPayload = {
-      type: "avatar",
-      avatar_id: avatarId,
-      audio_url: audioUrl,
-      title: `Hansora Avatar V ${new Date().toISOString()}`,
-      resolution: "1080p",
-      aspect_ratio: aspectRatio,
-      callback_url: callbackUrl,
-      callback_id: run_id,
-      engine: { type: "avatar_v" }
-    };
-    const videoResp = await heygenFetch("/v3/videos", {
-      method: "POST",
-      body: JSON.stringify(videoPayload)
-    });
-    const videoData = videoResp.data;
-    return {
-      ok: videoResp.ok,
-      error: videoResp.ok ? "" : `heygen_video_${videoResp.status}`,
-      videoId: extractVideoId(videoData),
-      data: videoData,
-      apiVersion: "v3",
+    if (avatarId && supportsAvatarV(avatarData)) {
+      const videoPayload = {
+        type: "avatar",
+        avatar_id: avatarId,
+        audio_url: audioUrl,
+        title: `Hansora Avatar V ${new Date().toISOString()}`,
+        resolution: "1080p",
+        aspect_ratio: aspectRatio,
+        callback_url: callbackUrl,
+        callback_id: run_id,
+        engine: { type: "avatar_v" }
+      };
+      const videoResp = await heygenFetch("/v3/videos", {
+        method: "POST",
+        headers: { "Idempotency-Key": `${run_id}-avatar-v-video` },
+        body: JSON.stringify(videoPayload)
+      });
+      if (videoResp.ok) {
+        return {
+          ok: true,
+          error: "",
+          videoId: extractVideoId(videoResp.data),
+          data: videoResp.data,
+          apiVersion: "v3",
+          requestedModel: model,
+          heygenEngine: "AvatarV",
+          avatarId,
+          avatarCreateData: avatarData
+        };
+      }
+
+      if (!canSafelyFallback(videoResp.status)) {
+        return {
+          ok: false,
+          error: `heygen_video_${videoResp.status}`,
+          data: videoResp.data,
+          apiVersion: "v3",
+          requestedModel: model,
+          heygenEngine: "AvatarV",
+          avatarId,
+          avatarCreateData: avatarData
+        };
+      }
+      avatarVFailureReason = `avatar_v_video_${videoResp.status || "failed"}`;
+    }
+
+    const fallbackReason = avatarVFailureReason || (avatarResp.ok
+      ? (avatarId ? "photo_avatar_does_not_support_avatar_v" : "photo_avatar_missing_id")
+      : `photo_avatar_create_${avatarResp.status || "failed"}`);
+    return submitAvatarIV({
+      model,
+      imageUrl,
+      audioUrl,
+      aspectRatio,
+      run_id,
+      callbackUrl,
+      fallbackReason,
       avatarId,
       avatarCreateData: avatarData
-    };
+    });
   }
 
-  // Avatar III is a legacy option. HeyGen's maintained legacy image/audio endpoint is /v2/videos.
-  const v2Payload = {
+  const talkingPhoto = await uploadTalkingPhoto(imageUrl);
+  if (!talkingPhoto.ok) {
+    return { ok: false, error: `heygen_talking_photo_${talkingPhoto.status || "failed"}`, data: talkingPhoto.data, apiVersion: "v2" };
+  }
+  const talkingPhotoId = extractTalkingPhotoId(talkingPhoto.data);
+  if (!talkingPhotoId) return { ok: false, error: "missing_talking_photo_id", data: talkingPhoto.data, apiVersion: "v2" };
+
+  const dimension = aspectRatio === "16:9" ? { width: 1920, height: 1080 } : { width: 1080, height: 1920 };
+  const heygenEngine = "AvatarIII";
+  const publicLabel = "Avatar III";
+  const payload = {
+    title: `Hansora ${publicLabel} ${new Date().toISOString()}`,
+    callback_url: callbackUrl,
+    callback_id: run_id,
+    caption: false,
+    test: false,
+    avatar_engine: heygenEngine,
+    dimension,
+    video_inputs: [
+      {
+        character: {
+          type: "talking_photo",
+          talking_photo_id: talkingPhotoId,
+          scale: 1,
+          offset: { x: 0, y: 0 },
+          talking_style: "stable",
+          expression: "default",
+          matting: false
+        },
+        voice: {
+          type: "audio",
+          audio_url: audioUrl
+        },
+        background: {
+          type: "color",
+          value: "#f6f6fc"
+        }
+      }
+    ]
+  };
+
+  const resp = await heygenFetch("/v2/video/generate", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  const data = resp.data;
+  return {
+    ok: resp.ok,
+    error: resp.ok ? "" : `heygen_video_${resp.status}`,
+    videoId: extractVideoId(data),
+    data,
+    apiVersion: "v2",
+    requestedModel: model,
+    heygenEngine,
+    avatarId: talkingPhotoId,
+    avatarCreateData: talkingPhoto.data
+  };
+}
+
+async function submitAvatarIV({
+  model,
+  imageUrl,
+  audioUrl,
+  aspectRatio,
+  run_id,
+  callbackUrl,
+  fallbackReason,
+  avatarId,
+  avatarCreateData
+}) {
+  const payload = {
     image_url: imageUrl,
     audio_url: audioUrl,
-    title: `Hansora Avatar III ${new Date().toISOString()}`,
+    title: `Hansora Avatar IV ${new Date().toISOString()}`,
     resolution: "1080p",
-    aspect_ratio: aspectRatio
+    aspect_ratio: aspectRatio,
+    callback_url: callbackUrl,
+    callback_id: run_id,
+    expressiveness: "medium"
   };
-  const v2Resp = await heygenFetch("/v2/videos", {
+  const resp = await heygenFetch("/v2/videos", {
     method: "POST",
-    body: JSON.stringify(v2Payload)
+    body: JSON.stringify(payload)
   });
-  const v2Data = v2Resp.data;
   return {
-    ok: v2Resp.ok,
-    error: v2Resp.ok ? "" : `heygen_video_${v2Resp.status}`,
-    videoId: extractVideoId(v2Data),
-    data: v2Data,
-    apiVersion: "v2"
+    ok: resp.ok,
+    error: resp.ok ? "" : `heygen_video_${resp.status}`,
+    videoId: extractVideoId(resp.data),
+    data: resp.data,
+    apiVersion: "v2",
+    requestedModel: model,
+    heygenEngine: "AvatarIV",
+    avatarId: avatarId || "",
+    avatarCreateData: avatarCreateData || null,
+    fallbackReason: fallbackReason || ""
   };
+}
+
+function supportsAvatarV(data) {
+  const engines = data?.data?.avatar_item?.supported_api_engines
+    || data?.avatar_item?.supported_api_engines
+    || data?.data?.supported_api_engines
+    || data?.supported_api_engines
+    || [];
+  return Array.isArray(engines) && engines.some((engine) => {
+    const normalized = String(engine || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    return normalized === "avatarv" || normalized === "avatar5";
+  });
+}
+
+function canSafelyFallback(status) {
+  return [400, 401, 403, 404, 409, 422].includes(Number(status));
+}
+
+async function uploadTalkingPhoto(imageUrl) {
+  try {
+    const imageResp = await fetch(imageUrl);
+    const imageBytes = await imageResp.arrayBuffer();
+    const contentType = normalizeImageContentType(imageResp.headers.get("content-type"));
+    if (!imageResp.ok || !imageBytes.byteLength) {
+      return { ok: false, status: imageResp.status || 400, data: { error: "image_fetch_failed" } };
+    }
+    const resp = await fetch("https://upload.heygen.com/v1/talking_photo", {
+      method: "POST",
+      headers: {
+        "x-api-key": HEYGEN_API_KEY,
+        "Content-Type": contentType,
+        Accept: "application/json"
+      },
+      body: Buffer.from(imageBytes)
+    });
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text || "{}"); } catch { data = { raw: text }; }
+    return { ok: resp.ok, status: resp.status, data };
+  } catch (error) {
+    return { ok: false, status: 0, data: { error: messageOf(error) } };
+  }
+}
+
+function normalizeImageContentType(value) {
+  const text = String(value || "").split(";")[0].trim().toLowerCase();
+  if (text === "image/png" || text === "image/webp" || text === "image/jpeg") return text;
+  return "image/jpeg";
 }
 
 async function heygenFetch(path, options = {}) {
@@ -195,7 +372,6 @@ async function heygenFetch(path, options = {}) {
     ...options,
     headers: {
       "x-api-key": HEYGEN_API_KEY,
-      "X-Api-Key": HEYGEN_API_KEY,
       "Content-Type": "application/json",
       Accept: "application/json",
       ...(options.headers || {})
@@ -209,6 +385,29 @@ async function heygenFetch(path, options = {}) {
 
 function ok(obj) { return { statusCode: 200, headers: cors(), body: JSON.stringify(obj) }; }
 function err(code, message) { return { statusCode: code, headers: cors(), body: JSON.stringify({ submitted: false, error: message }) }; }
+function pickEnv(...names) {
+  for (const name of names) {
+    const value = cleanApiKey(process.env[name]);
+    if (value) return { name, value };
+  }
+  return { name: "", value: "" };
+}
+function cleanApiKey(value) {
+  let text = String(value || "").trim();
+  text = text.replace(/^['"]|['"]$/g, "").trim();
+  text = text.replace(/^bearer\s+/i, "").trim();
+  text = text.replace(/\s+/g, "");
+  return text;
+}
+function safeHeyGenAuthDebug() {
+  return {
+    env: HEYGEN_API_ENV.name || "missing",
+    key_length: HEYGEN_API_KEY.length,
+    key_prefix: HEYGEN_API_KEY ? HEYGEN_API_KEY.slice(0, 5) : "",
+    key_suffix: HEYGEN_API_KEY ? HEYGEN_API_KEY.slice(-4) : "",
+    base: HEYGEN_BASE
+  };
+}
 function cors() {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -385,6 +584,12 @@ function extractAvatarId(data) {
   const direct = data?.data?.avatar_item?.id || data?.avatar_item?.id || data?.data?.id || data?.id || data?.data?.avatar_id || data?.avatar_id;
   if (direct) return String(direct);
   return scanForKey(data, /^(avatar[_-]?id|id)$/i);
+}
+function extractTalkingPhotoId(data) {
+  if (!data || typeof data !== "object") return "";
+  const direct = data?.data?.talking_photo_id || data?.talking_photo_id || data?.data?.id || data?.id || data?.data?.asset_id || data?.asset_id;
+  if (direct) return String(direct);
+  return scanForKey(data, /^(talking[_-]?photo[_-]?id|asset[_-]?id|id)$/i);
 }
 function scanForKey(obj, regex) {
   const seen = new Set();
