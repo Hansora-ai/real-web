@@ -8,6 +8,19 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="/header.css" rel="stylesheet" />
+  <style>html.hansora-i18n-pending body{opacity:0!important;pointer-events:none!important}</style>
+  <script>
+    (function hansoraI18nPreload(){
+      try {
+        if (localStorage.getItem('hansora.language') === 'ru') {
+          document.documentElement.classList.add('hansora-i18n-pending');
+          setTimeout(function () {
+            document.documentElement.classList.remove('hansora-i18n-pending');
+          }, 5000);
+        }
+      } catch (_) {}
+    })();
+  </script>
   <script defer src="/header.js"></script>
   <style>
     :root{
@@ -2444,6 +2457,87 @@
       }
     }
 
+    /* Final character-page layout: roomier translated cards and prompt-side action. */
+    .card-title{
+      height:40px !important;
+      padding:4px 3px !important;
+      white-space:normal !important;
+      overflow-wrap:anywhere !important;
+      word-break:normal !important;
+    }
+    .prompt-only .action-row{
+      width:100% !important;
+      margin:0 !important;
+      display:grid !important;
+      grid-template-columns:minmax(0,1fr) 230px !important;
+      gap:10px !important;
+      align-items:center !important;
+    }
+    .prompt-only .action-row #promptOnly{
+      height:92px !important;
+      min-height:92px !important;
+    }
+    .prompt-only .action-row .run-btn{
+      height:54px !important;
+      min-height:54px !important;
+    }
+    .prompt-only .status-line{
+      width:100% !important;
+      margin-top:8px !important;
+    }
+    .prompt-only .status-line:empty{
+      display:none !important;
+    }
+    .details-panel.run-attached{
+      display:grid !important;
+      grid-template-columns:minmax(0,1fr) 230px !important;
+      gap:10px !important;
+      align-items:center !important;
+    }
+    .details-panel.run-attached #extraDetails{
+      width:100% !important;
+    }
+    .details-panel.run-attached .run-btn{
+      width:100% !important;
+      height:54px !important;
+      min-height:54px !important;
+    }
+    @media (min-width:901px){
+      .options-frame,
+      .option-rail{
+        min-height:196px !important;
+      }
+      .option-rail{
+        justify-content:safe center !important;
+      }
+      .option-card{
+        flex:0 0 132px !important;
+        width:132px !important;
+        height:188px !important;
+      }
+      .card-art{
+        height:140px !important;
+      }
+      .card-title{
+        font-size:11.5px !important;
+        line-height:1.12 !important;
+      }
+    }
+    @media (max-width:900px){
+      .prompt-only .action-row{
+        grid-template-columns:1fr !important;
+      }
+      .prompt-only .action-row .run-btn{
+        min-height:48px !important;
+      }
+      .details-panel.run-attached{
+        grid-template-columns:1fr !important;
+      }
+      .details-panel.run-attached .run-btn{
+        min-height:48px !important;
+      }
+    }
+
 </style>
 </head>
 <body>
@@ -2489,11 +2583,11 @@
           <strong>Prompt-only mode</strong>
           <span id="promptModeHint">Type here to disable card choices.</span>
         </div>
-        <textarea id="promptOnly" placeholder="Example: A cinematic full-body character portrait of a young inventor wearing layered navy techwear, soft studio lighting, realistic skin texture, detailed hands, premium character sheet style..."></textarea>
-        <div class="action-row">
-          <div id="statusLine" class="status-line">Type one prompt, or choose cards. Your last 12 characters stay in the row above.</div>
+        <div id="promptActionRow" class="action-row">
+          <textarea id="promptOnly" placeholder="Example: A cinematic full-body character portrait of a young inventor wearing layered navy techwear, soft studio lighting, realistic skin texture, detailed hands, premium character sheet style..."></textarea>
           <button id="runBtn" class="run-btn" type="button" disabled>Generate ✨ 1 credit</button>
         </div>
+        <div id="statusLine" class="status-line"></div>
       </section>
     </section>
   </main>
@@ -2566,6 +2660,7 @@
       progressSteps: document.getElementById('progressSteps'),
       selectedZone: document.getElementById('selectedZone'),
       promptOnlyWrap: document.getElementById('promptOnlyWrap'),
+      promptActionRow: document.getElementById('promptActionRow'),
       promptOnly: document.getElementById('promptOnly'),
       promptModeHint: document.getElementById('promptModeHint'),
       stepTitle: document.getElementById('stepTitle'),
@@ -2632,6 +2727,14 @@
       const selected = hasSelections();
 
       state.promptMode = hasPrompt && !selected;
+
+      if (selected && isDetailsStep()) {
+        if (els.runBtn.parentElement !== els.detailsPanel) els.detailsPanel.appendChild(els.runBtn);
+        els.detailsPanel.classList.add('run-attached');
+      } else {
+        if (els.runBtn.parentElement !== els.promptActionRow) els.promptActionRow.appendChild(els.runBtn);
+        els.detailsPanel.classList.remove('run-attached');
+      }
 
       if (selected) {
         els.promptOnly.disabled = true;
@@ -2739,14 +2842,6 @@
         setStatus('Log in first, then this page can create and show your last 12 characters.', 'error');
       } else if (state.busy) {
         setStatus('Creating your character. The result icon is added to your last 12 row.', 'success');
-      } else if (readyByPrompt) {
-        setStatus('Prompt-only mode is active. The card chooser is disabled.', 'success');
-      } else if (readyByCards) {
-        setStatus('Character path is ready. Click Generate.', 'success');
-      } else if (hasSelections()) {
-        setStatus('Continue the steps or skip to Details before generating.', '');
-      } else {
-        setStatus('Type one prompt, or choose cards. Your last 12 characters stay in the row below.', '');
       }
     }
 
@@ -3048,10 +3143,25 @@
         return;
       }
 
-      const { data: userData } = await supabaseClient.auth.getUser();
+      // Lock before the first asynchronous call so even rapid double-clicks submit only once.
+      state.busy = true;
+      renderRunState();
+
+      let userData;
+      try {
+        const response = await supabaseClient.auth.getUser();
+        userData = response && response.data ? response.data : null;
+      } catch (error) {
+        setStatus(`Could not verify your account: ${error && error.message ? error.message : error}`, 'error');
+        state.busy = false;
+        renderRunState();
+        return;
+      }
       const user = userData && userData.user ? userData.user : null;
       if (!user) {
         setStatus('Please log in first. The real site header login button is loaded from your shared header.', 'error');
+        state.busy = false;
+        renderRunState();
         return;
       }
       state.currentUser = user;
@@ -3059,9 +3169,6 @@
       const prompt = buildPrompt();
       const runId = `character_${user.id}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
       const card = addProcessingCard(runId);
-
-      state.busy = true;
-      renderRunState();
 
       let accessToken = '';
       try {
