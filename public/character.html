@@ -2836,12 +2836,15 @@
       const readyByPrompt = typedPrompt().length > 3 && !hasSelections();
       const readyByCards = hasSelections() && isDetailsStep();
       const ready = !state.busy && !!state.currentUser && (readyByPrompt || readyByCards);
+      const loginRequiredMessage = 'Log in first, then this page can create and show your last 12 characters.';
 
       els.runBtn.disabled = !ready;
       if (!state.currentUser) {
-        setStatus('Log in first, then this page can create and show your last 12 characters.', 'error');
+        setStatus(loginRequiredMessage, 'error');
       } else if (state.busy) {
         setStatus('Creating your character. The result icon is added to your last 12 row.', 'success');
+      } else if (els.statusLine.textContent.trim() === loginRequiredMessage) {
+        setStatus('', '');
       }
     }
 
@@ -2970,6 +2973,10 @@
         <div class="history-label" style="position:static;display:block;color:rgba(255,255,255,.82);">Creating...</div>
       `;
       els.historyRail.prepend(card);
+      requestAnimationFrame(() => {
+        els.historyRail.scrollTo({ left:0, behavior:'smooth' });
+        card.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'start' });
+      });
 
       while (els.historyRail.children.length > 12) {
         els.historyRail.lastElementChild.remove();
