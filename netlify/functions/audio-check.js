@@ -27,9 +27,16 @@ exports.handler = async (event) => {
     ids.uid = ids.uid || row.user_id || "";
     ids.run_id = ids.run_id || row.meta?.run_id || "";
     ids.taskId = ids.taskId || row.meta?.task_id || row.meta?.taskId || "";
-    if (!ids.taskId) return json(200, { ok: false, status: "pending", error: "missing_task_id" });
 
     const audioKind = String(row.meta?.audio_kind || row.meta?.kind || "").toLowerCase();
+    if (!ids.taskId) {
+      if (isKieAudioStale(row, audioKind)) {
+        const refund = await failAndRefundOnce({ row, ids, reason: "missing_task_id_timeout" });
+        return json(200, { ok: false, failed: true, status: "failed", error: "missing_task_id_timeout", refunded: !!refund.refunded, refund_amount: refund.amount || 0 });
+      }
+      return json(200, { ok: false, status: "pending", error: "missing_task_id" });
+    }
+
     if (audioKind && audioKind !== "music") {
       const state = readElevenState(row);
       if (state.failed) {
@@ -55,6 +62,11 @@ exports.handler = async (event) => {
     if (state.done && state.audioUrls.length) {
       await markDone({ row, ids, state });
       return json(200, { ok: true, status: "done", result_url: state.audioUrls[0], audio_url: state.audioUrls[0], audio_urls: state.audioUrls, image_urls: state.imageUrls || [] });
+    }
+
+    if (isKieAudioStale(row, audioKind)) {
+      const refund = await failAndRefundOnce({ row, ids, reason: "audio_provider_timeout" });
+      return json(200, { ok: false, failed: true, status: "failed", error: "audio_provider_timeout", refunded: !!refund.refunded, refund_amount: refund.amount || 0 });
     }
 
     return json(200, { ok: false, status: "pending" });
@@ -89,6 +101,16 @@ function isElevenStale(row) {
   const started = Date.parse(rawTime);
   if (!Number.isFinite(started)) return false;
   const maxPendingMs = Number(process.env.ELEVENLABS_AUDIO_TIMEOUT_MS || 30 * 60 * 1000);
+  return Date.now() - started > maxPendingMs;
+}
+
+function isKieAudioStale(row, audioKind) {
+  const meta = row?.meta && typeof row.meta === "object" ? row.meta : {};
+  const rawTime = meta.worker_started_at || meta.submitted_at || row?.created_at || "";
+  const started = Date.parse(rawTime);
+  if (!Number.isFinite(started)) return false;
+  const defaultTimeout = audioKind === "music" ? 90 * 60 * 1000 : 60 * 60 * 1000;
+  const maxPendingMs = Number(process.env.KIE_AUDIO_TIMEOUT_MS || defaultTimeout);
   return Date.now() - started > maxPendingMs;
 }
 
@@ -144,7 +166,7 @@ async function fetchSunoState(taskId, excludeUrls) {
         return { pending: true };
       }
 
-      if (status === "failed" && isFinalFailure(data, res.status)) {
+      if (status === "failed") {
         terminalFailure = terminalFailure || failureReason(data);
       }
     } catch (error) {
@@ -257,16 +279,39 @@ function normalizeStatus(value) {
 }
 
 function normalizeSunoStatus(value) {
-  const data = value?.data || value || {};
-  const raw = data?.status || data?.state || value?.status || value?.state || "";
-  const status = String(raw).trim().toUpperCase();
-  if (status === "SUCCESS") return "success";
-  if (status === "FIRST_SUCCESS" || status === "TEXT_SUCCESS" || status === "PENDING" || status === "SUBMITTED" || status === "RUNNING" || status === "PROCESSING") return "pending";
-  if (["CREATE_TASK_FAILED", "GENERATE_AUDIO_FAILED", "CALLBACK_EXCEPTION", "SENSITIVE_WORD_ERROR", "FAILED", "FAIL", "ERROR", "CANCELED", "CANCELLED", "REJECTED", "BLOCKED"].includes(status)) return "failed";
-  const flag = data?.successFlag ?? value?.successFlag;
-  if (flag === 1 || flag === "1") return "success";
-  if (flag === 2 || flag === "2" || flag === 3 || flag === "3") return "failed";
+  const tokens = collectStatusTokens(value);
+  const failures = new Set(["CREATE_TASK_FAILED", "GENERATE_AUDIO_FAILED", "CALLBACK_EXCEPTION", "SENSITIVE_WORD_ERROR", "FAILED", "FAIL", "FAILURE", "ERROR", "ERRORED", "CANCELED", "CANCELLED", "REJECTED", "BLOCKED"]);
+  if (tokens.some((token) => failures.has(token))) return "failed";
+  if (tokens.includes("2") || tokens.includes("3")) return "failed";
+  if (tokens.includes("SUCCESS") || tokens.includes("1")) return "success";
   return "pending";
+}
+
+function collectStatusTokens(value) {
+  const tokens = [];
+  const statusKeys = /^(status|state|successflag|code|error|errormessage|failmsg|message|msg)$/i;
+  const containerKeys = /^(data|result|response|task|job|sunodata)$/i;
+  function add(raw) {
+    if (raw === null || raw === undefined || typeof raw === "object") return;
+    const token = String(raw).trim().toUpperCase();
+    if (token) tokens.push(token);
+  }
+  function walk(node, depth = 0) {
+    if (!node || depth > 8) return;
+    if (typeof node === "string") {
+      const parsed = safeJson(node);
+      if (parsed && typeof parsed === "object" && Object.keys(parsed).length) walk(parsed, depth + 1);
+      return;
+    }
+    if (Array.isArray(node)) return node.forEach((item) => walk(item, depth + 1));
+    if (typeof node !== "object") return;
+    for (const [key, child] of Object.entries(node)) {
+      if (statusKeys.test(key)) add(child);
+      if (statusKeys.test(key) || containerKeys.test(key)) walk(child, depth + 1);
+    }
+  }
+  walk(value);
+  return [...new Set(tokens)];
 }
 
 function isFinalFailure(value, httpStatus) {
@@ -282,11 +327,27 @@ function isFinalFailure(value, httpStatus) {
 }
 
 function failureReason(value) {
-  return String(
-    value?.error || value?.message || value?.msg ||
-    value?.data?.errorMessage || value?.data?.failMsg || value?.data?.error || value?.data?.message || value?.data?.msg ||
-    value?.result?.error || value?.result?.message || "kie_failed"
-  );
+  const messages = [];
+  const messageKeys = /^(error|errormessage|failmsg|message|msg|status|state)$/i;
+  const containerKeys = /^(data|result|response|task|job|sunodata)$/i;
+  function walk(node, depth = 0) {
+    if (!node || depth > 8) return;
+    if (typeof node === "string") {
+      const parsed = safeJson(node);
+      if (parsed && typeof parsed === "object" && Object.keys(parsed).length) return walk(parsed, depth + 1);
+      const clean = node.trim();
+      if (clean) messages.push(clean);
+      return;
+    }
+    if (Array.isArray(node)) return node.forEach((item) => walk(item, depth + 1));
+    if (typeof node !== "object") return;
+    for (const [key, child] of Object.entries(node)) {
+      if (messageKeys.test(key) || containerKeys.test(key)) walk(child, depth + 1);
+    }
+  }
+  walk(value);
+  const useful = messages.find((text) => /(fail|error|reject|block|moderation|sensitive|invalid|cancel)/i.test(text));
+  return useful || messages[0] || "kie_failed";
 }
 
 function normalizeComparableUrl(url) { return String(url || "").replace(/[)"'\\\]}]+$/g, "").trim(); }
