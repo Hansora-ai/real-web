@@ -3686,14 +3686,10 @@ async function __mjFetchNbCheck(params){
       const kind = String(data.kind || '').trim().toLowerCase();
       const normalizedKind = kind.replace(/[-\s]+/g, '_');
       const url = String(data.result_url || '').trim().toLowerCase();
-      const meta = data.meta && typeof data.meta === 'object' ? data.meta : {};
-      const status = String(data.status || meta.status || '').trim().toLowerCase();
-      const taskId = String(data.task_id || data.taskId || meta.task_id || meta.taskId || meta.video_id || '').trim();
       if (provider === 'gemini-3.1-pro' && normalizedKind.includes('virality_predictor')) return false;
       if (normalizedKind.includes('virality_predictor')) return false;
       if (kind && kind !== 'image' && kind !== 'video') return false;
       if (/\.(mp3|wav|m4a|aac|ogg|oga|flac)(?:[?#]|$)/i.test(url)) return false;
-      if (!url && /^(processing|pending)?$/.test(status) && !taskId) return false;
       return true;
     }
 
@@ -8885,14 +8881,12 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
 
         const placeholderControllers = [];
-        const createProcessingPlaceholders = (confirmedTaskId) => {
+        const createProcessingPlaceholders = () => {
           if (placeholderControllers.length) return placeholderControllers;
-          if (!String(confirmedTaskId || '').trim()) return placeholderControllers;
           const expectedOutputs = 1;
           for (let i = 0; i < expectedOutputs; i++) {
             const c = addResultCard({
               run_id: runId,
-              task_id: confirmedTaskId,
               provider: currentModel.name,
               kind: currentModel.category,
               prompt,
@@ -8924,18 +8918,22 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           if (!payload || typeof payload !== 'object') return '';
           const candidates = [
             payload.taskId,
+            payload.id,
             payload.task_id,
             payload.requestId,
             payload.request_id,
             payload.data && payload.data.taskId,
+            payload.data && payload.data.id,
             payload.data && payload.data.task_id,
             payload.data && payload.data.requestId,
             payload.data && payload.data.request_id,
             payload.data && payload.data.data && payload.data.data.taskId,
+            payload.data && payload.data.data && payload.data.data.id,
             payload.data && payload.data.data && payload.data.data.task_id,
             payload.data && payload.data.data && payload.data.data.requestId,
             payload.data && payload.data.data && payload.data.data.request_id,
             payload.result && payload.result.taskId,
+            payload.result && payload.result.id,
             payload.result && payload.result.task_id,
             payload.result && payload.result.requestId,
             payload.result && payload.result.request_id
@@ -9009,25 +9007,6 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             return;
           }
 
-          // Never show a green success message or a forever-processing card unless
-          // the provider confirmed submission and returned a real task ID.
-          if (!acceptedSubmission) {
-            const missingAcceptanceReason = cleanGenerationFailureReason(
-              extractGenerationFailureReason(j)
-              || extractProviderError(j)
-              || 'The provider did not confirm that this generation was submitted.'
-            );
-            console.warn('generation submission was not confirmed', {
-              runId,
-              model: currentModel.id,
-              endpoint: runEndpoint,
-              response: j
-            });
-            showGenerationFailedStatus(missingAcceptanceReason, runId);
-            await refreshCredits();
-            return;
-          }
-
           // Sora 2: require submitted + taskId, then poll sora2-check
           if (currentModel && currentModel.id === 'sora2') {
             if (!j || !j.submitted || !j.taskId) {
@@ -9040,22 +9019,22 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               }
               await refreshCredits();
             } else {
+              createProcessingPlaceholders();
+              watchCreditsLive(120000);
               showStatus(
                 `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
                 'success'
               );
-              createProcessingPlaceholders(j.taskId);
-              watchCreditsLive(120000);
               await refreshCredits();
               startSora2Poll(j.taskId, uid, runId, placeholderControllers);
             }
           } else {
+            createProcessingPlaceholders();
+            watchCreditsLive(120000);
             showStatus(
               `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
               'success'
             );
-            createProcessingPlaceholders(submittedTaskId);
-            watchCreditsLive(120000);
             await refreshCredits();
             const checker = (j && j.checker) || checkerForCurrentModel(currentModel, runEndpoint);
             startPollGeneration(runId, placeholderControllers, submittedTaskId, checker);
