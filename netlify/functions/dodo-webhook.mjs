@@ -1,10 +1,13 @@
 // netlify/functions/dodo-webhook.mjs
-// FINAL — Idempotent via CAS: credits added exactly once.
+// Idempotent via CAS: credits added exactly once.
 // - Matches your `public.payments` schema.
 // - Uses `profiles.user_id`.
 // - Adds `apikey` header on all Supabase REST calls.
-// - First upsert ensures a row exists; then a CAS PATCH updates `status` from NULL → 'succeeded'.
+// - First insert ensures a row exists; then a CAS PATCH updates `status` from NULL → 'succeeded'.
 //   Only the request that wins the CAS adds user credits.
+// - Sends a server-side Meta Purchase event. Meta deduplicates retries by transaction ID.
+
+import { createHash } from "node:crypto";
 
 export async function handler(event) {
   try {
@@ -65,7 +68,8 @@ export async function handler(event) {
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
-          "Prefer": "resolution=merge-duplicates,return=representation",
+          // Never overwrite a succeeded row back to null when Dodo retries a webhook.
+          "Prefer": "resolution=ignore-duplicates,return=representation",
           "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           "apikey": SUPABASE_SERVICE_ROLE_KEY
         },
@@ -75,7 +79,6 @@ export async function handler(event) {
           credits,
           amount_cents,
           currency,
-          // leave status as-is if row exists; ok to send null on first insert
           status: null,
           provider,
           return_url,
@@ -83,10 +86,9 @@ export async function handler(event) {
           paid_at
         }])
       });
-      // If this fails, bail out early
-      const body = await sjson(res);
-      if (!res.ok || !Array.isArray(body) || body.length === 0) {
-        const text = body || await res.text();
+      // A duplicate insert returns no row, which is expected.
+      if (!res.ok) {
+        const text = await sjson(res) || await res.text();
         return json(500, { error: "payments upsert failed", detail: text });
       }
     }
@@ -156,7 +158,19 @@ export async function handler(event) {
       }
     }
 
-    return json(200, { ok: true, credited });
+    // Send on every successful Dodo delivery. Meta safely deduplicates retries using event_id.
+    const metaPurchase = await sendMetaPurchase({
+      root,
+      data,
+      meta,
+      uid,
+      transaction_id,
+      amount_cents,
+      currency,
+      return_url
+    });
+
+    return json(200, { ok: true, credited, meta_purchase: metaPurchase });
   } catch (e) {
     return json(500, { error: String(e?.message || e) });
   }
@@ -164,6 +178,111 @@ export async function handler(event) {
 
 // Utils
 function toInt(x){ const n = Number(x); return Number.isFinite(n) ? Math.trunc(n) : null; }
+
+async function sendMetaPurchase({
+  root,
+  data,
+  meta,
+  uid,
+  transaction_id,
+  amount_cents,
+  currency,
+  return_url
+}) {
+  const pixelId = process.env.META_PIXEL_ID || "1336278884948294";
+  const accessToken = process.env.META_CONVERSIONS_API_TOKEN;
+  if (!accessToken) {
+    return { sent: false, skipped: "missing META_CONVERSIONS_API_TOKEN" };
+  }
+  if (amount_cents == null || !currency) {
+    return { sent: false, skipped: "missing payment amount or currency" };
+  }
+
+  const customer = data.customer || root.customer || {};
+  const billing = data.billing || root.billing || {};
+  const names = splitName(customer.name || data.card_holder_name || "");
+
+  const user_data = compact({
+    em: hashedArray(customer.email),
+    ph: hashedArray(customer.phone_number || customer.phone),
+    fn: hashedArray(names.first),
+    ln: hashedArray(names.last),
+    ct: hashedArray(billing.city),
+    st: hashedArray(billing.state),
+    zp: hashedArray(billing.zipcode || billing.postal_code),
+    country: hashedArray(billing.country || data.card_issuing_country),
+    external_id: hashedArray(uid),
+    // Store these browser values in Dodo metadata when creating checkout for stronger attribution.
+    fbp: meta.fbp || null,
+    fbc: meta.fbc || null,
+    client_ip_address: meta.client_ip_address || null,
+    client_user_agent: meta.client_user_agent || null
+  });
+
+  const payload = {
+    data: [{
+      event_name: "Purchase",
+      event_time: Math.floor(Date.now() / 1000),
+      event_id: transaction_id,
+      action_source: "website",
+      event_source_url: return_url || process.env.META_EVENT_SOURCE_URL || undefined,
+      user_data,
+      custom_data: {
+        currency: String(currency).toUpperCase(),
+        value: currencyAmount(amount_cents, currency),
+        order_id: transaction_id
+      }
+    }]
+  };
+
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v25.0/${encodeURIComponent(pixelId)}/events?access_token=${encodeURIComponent(accessToken)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }
+    );
+    const response = await res.json().catch(() => null);
+    if (!res.ok) {
+      console.error("Meta Purchase event failed", response);
+      return { sent: false, error: response || `Meta HTTP ${res.status}` };
+    }
+    return { sent: true, events_received: response?.events_received ?? null };
+  } catch (error) {
+    console.error("Meta Purchase event failed", error);
+    return { sent: false, error: String(error?.message || error) };
+  }
+}
+
+function compact(obj) {
+  return Object.fromEntries(Object.entries(obj).filter(([, value]) => value != null));
+}
+
+function splitName(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  return { first: parts[0] || null, last: parts.length > 1 ? parts.slice(1).join(" ") : null };
+}
+
+function normalize(value) {
+  return String(value).trim().toLowerCase();
+}
+
+function hashedArray(value) {
+  if (value == null || String(value).trim() === "") return undefined;
+  return [sha256(normalize(value))];
+}
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function currencyAmount(amount, currency) {
+  const zeroDecimal = new Set(["BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF"]);
+  return zeroDecimal.has(String(currency).toUpperCase()) ? amount : amount / 100;
+}
+
 function json(status, obj) {
   return {
     statusCode: status,
