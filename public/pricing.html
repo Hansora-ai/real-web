@@ -652,6 +652,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 </template>
 <!-- demo handler removed by patch -->
 <script>
+// Capture Meta browser/ad-click attribution and attach it to Dodo metadata.
+(function(){
+  function readCookie(name){
+    const prefix = encodeURIComponent(name) + '=';
+    const part = document.cookie.split('; ').find(function(value){ return value.indexOf(prefix) === 0; });
+    return part ? decodeURIComponent(part.slice(prefix.length)) : null;
+  }
+
+  window.hansoraMetaAttribution = function(){
+    const fbp = readCookie('_fbp');
+    let fbc = readCookie('_fbc');
+
+    // The Pixel normally creates _fbc. Construct the same value immediately
+    // when checkout is clicked before the Pixel has finished setting it.
+    if(!fbc){
+      const fbclid = new URLSearchParams(location.search).get('fbclid');
+      if(fbclid) fbc = `fb.1.${Date.now()}.${fbclid}`;
+    }
+
+    return { fbp: fbp, fbc: fbc };
+  };
+
+  window.hansoraAddMetaAttribution = function(url){
+    const attribution = window.hansoraMetaAttribution();
+    if(attribution.fbp) url.searchParams.set('metadata_fbp', attribution.fbp);
+    if(attribution.fbc) url.searchParams.set('metadata_fbc', attribution.fbc);
+    return url;
+  };
+})();
+</script>
+<script>
 // Non-blocking Buy click analytics. Uses keepalive so checkout navigation does
 // not cancel the insert, and deduplicates the page's two checkout handlers.
 (function(){
@@ -779,6 +810,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       u.searchParams.set('minimalAddress', 'true');
       u.searchParams.set('metadata_uid', uid);
       u.searchParams.set('metadata_credits', String(credits));
+      window.hansoraAddMetaAttribution?.(u);
 
       window.hansoraTrackBuyClick?.({ uid: uid, credits: credits, productUrl: base });
       window.hansoraPricingNavigate(u.toString());
@@ -888,6 +920,7 @@ if (!Number.isFinite(credits) || credits<=0){
         u.searchParams.set('minimalAddress', 'true');
         u.searchParams.set('metadata_uid', uid);
         u.searchParams.set('metadata_credits', String(credits));
+        window.hansoraAddMetaAttribution?.(u);
         const ru = el.getAttribute('data-return-url');
         if (ru) u.searchParams.set('return_url', ru);
         // FINAL redirect only when uid is present (hard block otherwise)
