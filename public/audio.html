@@ -11,76 +11,107 @@
   <script defer src="/header.js"></script>
   <style>
     :root{
-      --base-bg:#050714;
-      --base-line:#15182a;
+      --base-bg:#0b0c10;
+      --surface:#15171c;
+      --surface-2:#1b1e25;
+      --border:rgba(255,255,255,.08);
+      --border-hover:rgba(255,255,255,.16);
       --brand:#6366f1;
-      --brand-2:#8b5cf6;
-      --cyan:#38bdf8;
-      --good:#86efac;
-      --muted:rgba(226,232,240,.66);
-      --card:rgba(15,23,42,.72);
+      --brand-2:#818cf8;
+      --mint:#5ee9b5;
+      --mint-soft:rgba(94,233,181,.12);
+      --text:#f1f2f4;
+      --muted:rgba(241,242,244,.56);
+      --good:#4ade80;
+      --bad:#f87171;
+      --warn:#fbbf24;
+      --radius:18px;
     }
     *{box-sizing:border-box}
     body{
       min-height:100vh;
       margin:0;
       background:
-        radial-gradient(900px 520px at 15% -10%, rgba(99,102,241,.28), transparent 60%),
-        radial-gradient(900px 520px at 88% 10%, rgba(56,189,248,.18), transparent 58%),
-        radial-gradient(800px 560px at 55% 100%, rgba(168,85,247,.16), transparent 62%),
+        radial-gradient(760px 440px at 82% 4%, rgba(52,211,153,.13), transparent 68%),
+        radial-gradient(620px 420px at 8% 82%, rgba(34,197,94,.07), transparent 70%),
         var(--base-bg);
-      color:#e5e7eb;
+      color:var(--text);
       font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      -webkit-font-smoothing:antialiased;
     }
     button,input,textarea,select{font:inherit}
-    .glass{border:1px solid rgba(255,255,255,.11); background:rgba(8,11,25,.68); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); box-shadow:0 22px 70px rgba(0,0,0,.45)}
-    .panel{border:1px solid rgba(255,255,255,.10); background:linear-gradient(180deg,rgba(15,23,42,.86),rgba(2,6,23,.78)); box-shadow:0 18px 55px rgba(0,0,0,.38)}
-    .btn-brand{border:0; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; box-shadow:0 14px 38px rgba(99,102,241,.38)}
-    .btn-brand:hover{filter:brightness(1.08)}
-    .btn-brand:disabled{opacity:.55; cursor:not-allowed; filter:saturate(.6)}
-    .btn-soft{border:1px solid rgba(148,163,184,.28); background:rgba(15,23,42,.72); color:#e5e7eb}
-    .btn-soft:hover{border-color:rgba(129,140,248,.82); background:rgba(15,23,42,.9)}
-    .chip{border:1px solid rgba(148,163,184,.32); background:rgba(15,23,42,.65); color:#dbeafe; border-radius:999px; padding:8px 12px; font-size:12px; line-height:1; white-space:nowrap}
-    .chip-active{border-color:transparent; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; box-shadow:0 10px 25px rgba(99,102,241,.38)}
-    .field{width:100%; border:1px solid rgba(148,163,184,.22); background:rgba(2,6,23,.58); color:#fff; outline:none; border-radius:16px; padding:12px 14px}
-    .field:focus{border-color:rgba(129,140,248,.9); box-shadow:0 0 0 3px rgba(99,102,241,.18)}
-    .small-label{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:rgba(226,232,240,.58); font-weight:750}
-    .model-card{position:relative; overflow:hidden; border-radius:22px; border:1px solid rgba(255,255,255,.10); background:rgba(15,23,42,.58); transition:.18s ease; cursor:pointer}
-    .model-card:hover{transform:translateY(-2px); border-color:rgba(129,140,248,.72)}
-    .model-card.active{border-color:rgba(139,92,246,.96); box-shadow:0 0 0 1px rgba(139,92,246,.5), 0 22px 55px rgba(79,70,229,.22)}
-    .model-card::before{content:''; position:absolute; inset:-60% -40% auto auto; width:180px; height:180px; border-radius:50%; background:rgba(99,102,241,.22); filter:blur(8px)}
-    .dialogue-line{border:1px solid rgba(255,255,255,.10); background:rgba(2,6,23,.42); border-radius:20px; padding:14px}
+    .glass{border:1px solid rgba(94,233,181,.11); background:linear-gradient(145deg,rgba(21,23,28,.97),rgba(17,24,22,.94)); box-shadow:0 1px 0 rgba(255,255,255,.025) inset,0 20px 70px rgba(16,185,129,.035)}
+    .panel{border:1px solid rgba(94,233,181,.10); background:linear-gradient(145deg,var(--surface-2),rgba(18,28,25,.96)); box-shadow:0 18px 55px rgba(16,185,129,.025)}
+    .btn-brand{border:0; background:var(--brand); color:#fff; transition:background .15s ease, transform .1s ease}
+    .btn-brand:hover{background:var(--brand-2)}
+    .btn-brand:active{transform:scale(.98)}
+    .btn-brand:disabled{opacity:.5; cursor:not-allowed}
+    .btn-soft{border:1px solid var(--border); background:var(--surface-2); color:var(--text); transition:border-color .15s ease, background .15s ease}
+    .btn-soft:hover{border-color:var(--border-hover); background:#20232b}
+    .chip{border:1px solid var(--border); background:var(--surface-2); color:var(--muted); border-radius:999px; padding:8px 14px; font-size:12px; line-height:1; white-space:nowrap; transition:.15s ease}
+    .chip:hover{border-color:var(--border-hover); color:var(--text)}
+    .chip-active{border-color:transparent; background:var(--brand); color:white}
+    .chip-active:hover{background:var(--brand-2); color:#fff}
+    .field{width:100%; border:1px solid var(--border); background:#0e0f13; color:#fff; outline:none; border-radius:12px; padding:12px 14px; transition:border-color .15s ease}
+    .field:focus{border-color:var(--brand)}
+    .small-label{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700}
+    .model-card{position:relative; overflow:hidden; border-radius:16px; border:1px solid var(--border); background:var(--surface-2); transition:.15s ease; cursor:pointer}
+    .model-card:hover{border-color:rgba(94,233,181,.30); background:rgba(24,34,31,.96)}
+    .model-card.active{border-color:rgba(94,233,181,.58); background:linear-gradient(135deg,rgba(99,102,241,.09),rgba(52,211,153,.08)); box-shadow:0 0 0 1px rgba(94,233,181,.08),0 14px 38px rgba(16,185,129,.06)}
+    .dialogue-line{border:1px solid var(--border); background:#0e0f13; border-radius:16px; padding:14px}
     .dialogue-entry{display:flex; flex-direction:column; gap:12px}
     .dialogue-text{min-height:150px; resize:vertical}
-    .remove-line{width:34px;height:34px;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(15,23,42,.7);color:#fff}
+    .remove-line{width:32px;height:32px;display:grid;place-items:center;border-radius:999px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted); transition:.15s ease}
+    .remove-line:hover:not(:disabled){border-color:var(--border-hover); color:#fff}
     .remove-line:disabled{opacity:.35; cursor:not-allowed}
-    .upload-drop{position:relative; min-height:160px; border:1px dashed rgba(148,163,184,.34); background:rgba(2,6,23,.48); border-radius:22px; display:flex; align-items:center; justify-content:center; text-align:center; padding:18px; cursor:pointer}
-    .upload-drop.drag{border-color:#a78bfa; background:rgba(99,102,241,.16)}
-    .audio-card{border:1px solid rgba(255,255,255,.10); background:rgba(15,23,42,.68); border-radius:20px; overflow:hidden}
+    .upload-drop{position:relative; min-height:160px; border:1px dashed var(--border); background:#0e0f13; border-radius:16px; display:flex; align-items:center; justify-content:center; text-align:center; padding:18px; cursor:pointer; transition:.15s ease}
+    .upload-drop:hover{border-color:rgba(94,233,181,.34); background:rgba(15,27,23,.92)}
+    .upload-drop.drag{border-color:var(--mint); background:rgba(52,211,153,.08)}
+    .audio-card{border:1px solid rgba(94,233,181,.11); background:linear-gradient(145deg,var(--surface-2),rgba(17,27,24,.97)); border-radius:16px; overflow:hidden; box-shadow:0 15px 42px rgba(16,185,129,.035)}
     .audio-card audio{width:100%}
-    .status-dot{width:9px;height:9px;border-radius:999px;background:#fbbf24;box-shadow:0 0 0 5px rgba(251,191,36,.14)}
-    .status-dot.ready{background:#86efac; box-shadow:0 0 0 5px rgba(134,239,172,.14)}
-    .status-dot.failed{background:#f87171; box-shadow:0 0 0 5px rgba(248,113,113,.14)}
-    .range-wrap input{width:100%}
-    .mode-note{border:1px solid rgba(129,140,248,.22); background:rgba(99,102,241,.08); border-radius:18px; padding:12px 14px; color:rgba(226,232,240,.78); font-size:12px; line-height:1.55}
+    .status-dot{width:8px;height:8px;border-radius:999px;background:var(--warn)}
+    .status-dot.ready{background:var(--good)}
+    .status-dot.failed{background:var(--bad)}
+    .audio-state{margin-top:16px; min-height:92px; border-radius:14px; border:1px solid var(--border); background:#0e0f13; display:flex; align-items:center; justify-content:center; gap:16px; padding:18px}
+    .audio-state-copy{min-width:0}
+    .audio-state-title{font-size:13px; font-weight:800; color:var(--text)}
+    .audio-state-detail{margin-top:3px; font-size:11px; color:var(--muted)}
+    .audio-bars{height:38px; display:flex; align-items:center; gap:4px}
+    .audio-bars span{display:block; width:4px; height:10px; border-radius:999px; background:linear-gradient(180deg,#a7f3d0,#34d399); box-shadow:0 0 12px rgba(52,211,153,.34); animation:audioBarPulse 1s ease-in-out infinite}
+    .audio-bars span:nth-child(2){animation-delay:-.82s}
+    .audio-bars span:nth-child(3){animation-delay:-.64s}
+    .audio-bars span:nth-child(4){animation-delay:-.46s}
+    .audio-bars span:nth-child(5){animation-delay:-.28s}
+    .audio-bars span:nth-child(6){animation-delay:-.10s}
+    @keyframes audioBarPulse{0%,100%{height:9px;opacity:.48}50%{height:36px;opacity:1}}
+    .audio-state.processing{border-color:rgba(94,233,181,.16); background:linear-gradient(135deg,rgba(14,15,19,.96),rgba(14,29,24,.94)); box-shadow:inset 0 0 35px rgba(52,211,153,.025)}
+    .audio-state.processing .audio-state-title{color:#d1fae5}
+    .audio-state.failed{justify-content:flex-start; border-color:rgba(248,113,113,.32); background:rgba(127,29,29,.14)}
+    .audio-fail-icon{width:38px;height:38px;flex:0 0 auto;border-radius:999px;display:grid;place-items:center;border:1px solid rgba(248,113,113,.42);background:rgba(248,113,113,.12);color:#fca5a5;font-size:19px;font-weight:900}
+    .audio-state.failed .audio-state-title{color:#fecaca}
+    .audio-state.failed .audio-state-detail{color:rgba(254,202,202,.65)}
+    .range-wrap input{width:100%; accent-color:var(--brand)}
+    .mode-note{border:1px solid var(--border); background:rgba(99,102,241,.06); border-radius:14px; padding:12px 14px; color:var(--muted); font-size:12px; line-height:1.55}
     .voice-picker,.language-picker{position:relative}
-    .voice-picker-button,.language-picker-button{width:100%; min-height:50px; min-width:0; text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px}
-    .voice-menu,.language-menu{position:absolute; top:calc(100% + 8px); right:0; width:100%; z-index:40; border:1px solid rgba(148,163,184,.28); background:rgba(8,11,25,.98); border-radius:18px; padding:10px; box-shadow:0 22px 55px rgba(0,0,0,.62); display:none}
+    .voice-picker-button,.language-picker-button{width:100%; min-height:48px; min-width:0; text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .voice-menu,.language-menu{position:absolute; top:calc(100% + 8px); right:0; width:100%; z-index:40; border:1px solid var(--border); background:#15171c; border-radius:14px; padding:10px; box-shadow:0 16px 40px rgba(0,0,0,.5); display:none}
     .voice-menu.open,.language-menu.open{display:block}
-    .voice-search,.language-search{width:100%; border:1px solid rgba(148,163,184,.25); background:rgba(2,6,23,.8); color:#fff; outline:none; border-radius:12px; padding:10px 12px; font-size:13px; margin-bottom:8px}
+    .voice-search,.language-search{width:100%; border:1px solid var(--border); background:#0e0f13; color:#fff; outline:none; border-radius:10px; padding:10px 12px; font-size:13px; margin-bottom:8px}
+    .voice-search:focus,.language-search:focus{border-color:var(--brand)}
     .voice-list,.language-list{max-height:220px; overflow-y:auto; padding-right:4px}
-    .language-option{width:100%; display:block; text-align:left; border:0; background:transparent; color:#dbeafe; border-radius:12px; padding:9px 10px; font-size:13px}
-    .language-option:hover,.language-option.active{background:rgba(99,102,241,.18); color:#fff}
-    .voice-option-row{display:grid; grid-template-columns:1fr 34px; align-items:center; gap:6px; border-radius:12px}
-    .voice-option-row:hover,.voice-option-row.active{background:rgba(99,102,241,.18)}
+    .language-option{width:100%; display:block; text-align:left; border:0; background:transparent; color:var(--muted); border-radius:10px; padding:9px 10px; font-size:13px}
+    .language-option:hover,.language-option.active{background:rgba(99,102,241,.14); color:#fff}
+    .voice-option-row{display:grid; grid-template-columns:1fr 34px; align-items:center; gap:6px; border-radius:10px}
+    .voice-option-row:hover,.voice-option-row.active{background:rgba(99,102,241,.14)}
     .voice-label,.voice-option-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .voice-option-name{min-width:0; max-width:100%; border:0; background:transparent; color:#dbeafe; text-align:left; border-radius:12px; padding:9px 10px; font-size:13px}
+    .voice-option-name{min-width:0; max-width:100%; border:0; background:transparent; color:var(--muted); text-align:left; border-radius:10px; padding:9px 10px; font-size:13px}
     .voice-option-row:hover .voice-option-name,.voice-option-row.active .voice-option-name{color:#fff}
-    .voice-play-btn{width:30px;height:30px;display:grid;place-items:center;border-radius:999px;border:1px solid rgba(148,163,184,.26);background:rgba(15,23,42,.72);color:#dff6ff;font-size:11px;line-height:1}
-    .voice-play-btn:hover,.voice-play-btn.playing{border-color:rgba(56,189,248,.75);background:rgba(56,189,248,.16);color:#fff}
+    .voice-play-btn{width:28px;height:28px;display:grid;place-items:center;border-radius:999px;border:1px solid var(--border);background:#0e0f13;color:var(--muted);font-size:11px;line-height:1; transition:.15s ease}
+    .voice-play-btn:hover,.voice-play-btn.playing{border-color:var(--brand);background:rgba(99,102,241,.16);color:#fff}
 
     .cost-panel-hidden{display:none!important}
-    .audio-actions .get-btn{min-width:86px; justify-content:center; border:0; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; box-shadow:0 10px 24px rgba(99,102,241,.32)}
+    .audio-actions .get-btn{min-width:86px; justify-content:center; border:0; background:var(--brand); color:#fff; transition:background .15s ease}
+    .audio-actions .get-btn:hover{background:var(--brand-2)}
     .file-name-safe{display:block; max-width:10ch; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
     .file-meta-safe{display:block; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
     @media (min-width:901px){
@@ -90,7 +121,7 @@
       .voice-option-row{align-items:start}
     }
     @media (max-width:900px){
-      .desktop-grid{grid-template-columns:1fr!important}.sticky-side{position:static!important}.hero-title{font-size:34px!important}.model-card{min-height:132px}.compact-stack{grid-template-columns:1fr!important}
+      .desktop-grid{grid-template-columns:1fr!important}.sticky-side{position:static!important}.hero-title{font-size:30px!important}.model-card{min-height:108px}.compact-stack{grid-template-columns:1fr!important}
     }
   </style>
 </head>
@@ -100,18 +131,18 @@
   <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
     <section class="grid desktop-grid grid-cols-[360px_1fr] gap-6 items-start">
       <aside class="sticky-side sticky top-5 space-y-4">
-        <div class="glass rounded-[28px] p-5">
+        <div class="glass rounded-2xl p-5">
           <div class="flex items-center justify-between gap-3 mb-5">
             <div>
               <p class="small-label">Hansora Audio</p>
-              <h1 class="hero-title text-4xl font-black tracking-tight leading-none mt-1">Create audio</h1>
+              <h1 class="hero-title text-3xl font-black tracking-tight leading-none mt-1">Create audio</h1>
             </div>
-            <div class="h-12 w-12 rounded-2xl bg-indigo-500/20 border border-indigo-300/20 grid place-items-center text-2xl">🎧</div>
+            <div class="h-11 w-11 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] grid place-items-center text-xl">🎧</div>
           </div>
-          <p class="text-sm text-slate-300/80 leading-6 mb-5">Generate voices, clean noisy recordings, or create full music tracks in one clean workspace.</p>
-          <div id="modelList" class="space-y-3"></div>
+          <p class="text-sm text-[var(--muted)] leading-6 mb-5">Generate voices, clean noisy recordings, or create full music tracks in one clean workspace.</p>
+          <div id="modelList" class="space-y-2"></div>
         </div>
-        <div class="panel rounded-[24px] p-4 cost-panel-hidden">
+        <div class="panel rounded-2xl p-4 cost-panel-hidden">
           <p class="small-label mb-2">Current cost</p>
           <div class="flex items-center justify-between gap-3">
             <div>
@@ -124,7 +155,7 @@
       </aside>
 
       <section class="space-y-5">
-        <div class="glass rounded-[32px] p-5 sm:p-6">
+        <div class="glass rounded-2xl p-5 sm:p-6">
           <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
             <div>
               <p id="activeSubtitle" class="small-label">Text to Dialogue</p>
@@ -271,7 +302,7 @@
           </form>
         </div>
 
-        <section class="panel rounded-[28px] p-5 sm:p-6">
+        <section class="panel rounded-2xl p-5 sm:p-6">
           <div class="flex items-center justify-between gap-3 mb-4">
             <div>
               <p class="small-label">History</p>
@@ -295,9 +326,9 @@
 
     const MODELS = [
       { id:'voice', title:'Text to Dialogue', subtitle:'Speech or conversation', icon:'🗣️', badge:'ElevenLabs', baseCostLabel:'1+⚡', description:'Write one voice line, or add more lines to create a conversation with different character voices.' },
+      { id:'music', title:'Suno Music', subtitle:'Songs, lyrics, and instrumentals', icon:'🎵', badge:'Suno', baseCostLabel:'1.5⚡', description:'Create music with custom mode, lyrics, title, style, gender control, and instrumental control.' },
       { id:'isolation', title:'Voice Isolation', subtitle:'Clean noisy audio', icon:'🎙️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Upload an audio file and isolate the voice from background noise.' },
-      { id:'voice-change', title:'Voice Changer', subtitle:'Transform uploaded speech', icon:'🎚️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Upload speech audio, choose a target voice, and keep the original performance with a new voice.' },
-      { id:'music', title:'Suno Music', subtitle:'Songs, lyrics, and instrumentals', icon:'🎵', badge:'Suno', baseCostLabel:'1.5⚡', description:'Create music with custom mode, lyrics, title, style, gender control, and instrumental control.' }
+      { id:'voice-change', title:'Voice Changer', subtitle:'Transform uploaded speech', icon:'🎚️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Upload speech audio, choose a target voice, and keep the original performance with a new voice.' }
     ];
     let VOICES = [
       {"label":"Adam - Dominant, Firm","value":"pNInz6obpgDQGcFmaJgB","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/pNInz6obpgDQGcFmaJgB/d6905d7a-dd26-4187-bfff-1bd3a5ea7cac.mp3"},
@@ -987,7 +1018,6 @@
 
         button.disabled = true;
         button.textContent = 'Submitting...';
-        addPendingResult(body.run_id, model, body.prompt || body.title || 'Audio task');
         const resp = await fetch(functionUrl('/.netlify/functions/run-audio'), {
           method:'POST',
           headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
@@ -995,6 +1025,7 @@
         });
         const data = await resp.json().catch(()=>({}));
         if (!data.submitted) throw new Error(data.error || 'submit_failed');
+        addPendingResult(body.run_id, model, body.prompt || body.title || 'Audio task');
         await refreshCredits();
         watchCreditsLive();
         startPolling();
@@ -1013,8 +1044,18 @@
       const div = document.createElement('div');
       div.className = 'audio-card p-4';
       div.dataset.runId = runId;
-      div.innerHTML = `<div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-sm font-black truncate">${escapeHtml(model.title)}</p><p class="text-xs text-slate-400 truncate mt-1">${escapeHtml(prompt || '')}</p></div><span class="status-dot"></span></div><div class="mt-4 rounded-2xl bg-slate-950/55 border border-white/10 p-4 text-sm text-slate-300">Processing...</div>`;
+      div.innerHTML = `<div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-sm font-black truncate">${escapeHtml(model.title)}</p><p class="text-xs text-slate-400 truncate mt-1">${escapeHtml(prompt || '')}</p></div><span class="status-dot"></span></div>${renderAudioState('processing')}`;
       list.prepend(div);
+    }
+
+    function isFailedAudioStatus(status){
+      return /(fail|failed|error|reject|rejected|cancel|cancelled|denied)/i.test(String(status || ''));
+    }
+    function renderAudioState(status){
+      if (isFailedAudioStatus(status)) {
+        return `<div class="audio-state failed"><div class="audio-fail-icon">!</div><div class="audio-state-copy"><div class="audio-state-title">Generation failed</div><div class="audio-state-detail">The audio provider could not complete this request. Please try again.</div></div></div>`;
+      }
+      return `<div class="audio-state processing"><div class="audio-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="audio-state-copy"><div class="audio-state-title">Creating your audio</div><div class="audio-state-detail">Your request is still processing. You can safely leave this page and return later.</div></div></div>`;
     }
 
     function escapeHtml(str){ return String(str || '').replace(/[&<>'"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
@@ -1095,61 +1136,76 @@
         div.className = 'audio-card p-4';
         const name = meta.title || row.provider || 'Audio';
         const prompt = row.prompt || meta.prompt || '';
-        const dotClass = status === 'ready' || status === 'complete' || status === 'SUCCESS' ? 'ready' : status === 'failed' ? 'failed' : '';
-        div.innerHTML = `<div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-sm font-black truncate">${escapeHtml(name)}</p><p class="text-xs text-slate-400 truncate mt-1">${escapeHtml(prompt)}</p></div><span class="status-dot ${dotClass}"></span></div>${url ? renderAllAudioControls(urls, name) : `<div class="mt-4 rounded-2xl bg-slate-950/55 border border-white/10 p-4 text-sm text-slate-300">${status === 'failed' ? 'Failed' : 'Processing...'}</div>`}`;
+        const dotClass = url ? 'ready' : isFailedAudioStatus(status) ? 'failed' : '';
+        div.innerHTML = `<div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-sm font-black truncate">${escapeHtml(name)}</p><p class="text-xs text-slate-400 truncate mt-1">${escapeHtml(prompt)}</p></div><span class="status-dot ${dotClass}"></span></div>${url ? renderAllAudioControls(urls, name) : renderAudioState(status)}`;
         list.appendChild(div);
       });
       wireAudioPlayers(list);
     }
 
     async function checkPendingAudioRows(){
-      if (!currentUser) return;
+      if (!currentUser) return 0;
       const { data, error } = await supabaseClient
         .from('user_generations')
         .select('meta')
         .eq('user_id', currentUser.id)
         .eq('kind', 'audio')
         .is('result_url', null)
-        .limit(8);
-      if (error) return;
-      const rows = data || [];
-      await Promise.all(rows.map(async(row)=>{
+        .limit(24);
+      if (error) return 1;
+      const rows = (data || []).filter((row)=>{
+        const meta = row.meta || {};
+        const status = String(meta.status || 'processing').toLowerCase();
+        return !isFailedAudioStatus(status) && !['ready', 'done', 'complete', 'completed', 'success'].includes(status);
+      });
+      const states = await Promise.all(rows.map(async(row)=>{
         const meta = row.meta || {};
         const runId = meta.run_id || '';
         const taskId = meta.task_id || meta.taskId || '';
-        if (!runId || !taskId) return;
+        if (!runId && !taskId) return 'pending';
         try{
-          await fetch(functionUrl(`/.netlify/functions/audio-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId)}`), { method:'GET' });
-        }catch(_){ }
+          const response = await fetch(functionUrl(`/.netlify/functions/audio-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId)}`), { method:'GET' });
+          const result = await response.json().catch(()=>({}));
+          return String(result.status || 'pending').toLowerCase();
+        }catch(_){ return 'pending'; }
       }));
-      return rows.length;
+      return states.filter((status)=>!isFailedAudioStatus(status) && !['ready', 'done', 'complete', 'completed', 'success'].includes(status)).length;
     }
 
     function startPolling(){
       if (pollTimer) clearInterval(pollTimer);
-      let ticks = 0;
-      pollTimer = setInterval(async()=>{
-        ticks += 1;
+      let checking = false;
+      const cycle = async()=>{
+        if (checking || !currentUser) return;
+        checking = true;
         const pendingCount = await checkPendingAudioRows();
         if (!isAnyAudioPlaying()) await loadRecentHistory();
-        if ((Number(pendingCount || 0) === 0 && ticks > 2) || ticks > 80) clearInterval(pollTimer);
-      }, 3000);
+        checking = false;
+        if (Number(pendingCount || 0) === 0 && pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      };
+      cycle();
+      pollTimer = setInterval(cycle, 4000);
     }
 
 
     async function init(){
       renderModels(); wireChips(); wireUpload(); wireLanguagePicker(); addDialogueLine('', 0); syncPanels(); updateCostUI();
       $('audioForm').addEventListener('submit', submitTask);
-      $('refreshResultsBtn').addEventListener('click', async()=>{ await checkPendingAudioRows(); await loadRecentHistory(); });
+      $('refreshResultsBtn').addEventListener('click', async()=>{ await checkPendingAudioRows(); await loadRecentHistory(); startPolling(); });
       $('refreshCreditsBtn').addEventListener('click', refreshCredits);
       const { data: { user } } = await supabaseClient.auth.getUser();
       currentUser = user || null;
       await loadElevenVoices();
-      if (currentUser) { await refreshCredits(); await loadRecentHistory(); }
+      if (currentUser) { await refreshCredits(); await loadRecentHistory(); startPolling(); }
       if (window.HansoraHeader && typeof window.HansoraHeader.init === 'function') {
         try { window.HansoraHeader.init({ supabaseClient }); } catch(e) {}
       }
     }
+    document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && currentUser) startPolling(); });
+    window.addEventListener('focus', ()=>{ if (currentUser) startPolling(); });
     document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
