@@ -3,29 +3,35 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HANSORA • HeyGen Talking Avatar</title>
+  <title>HANSORA • Talking Avatar</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
   <link href="/header.css" rel="stylesheet" />
   <script defer src="/header.js"></script>
   <script src="/kie-upload-bridge.js"></script>
   <style>
     :root{
-      --bg:#08090c;
-      --panel:#111318;
-      --panel2:#171a20;
-      --line:rgba(255,255,255,.09);
-      --muted:rgba(239,244,255,.58);
+      --bg:#0b0c10;
+      --panel:#15171c;
+      --panel2:#1b1e25;
+      --line:rgba(255,255,255,.08);
+      --line-strong:rgba(255,255,255,.16);
+      --muted:rgba(239,244,255,.56);
       --brand:#6366f1;
-      --brand2:#8b5cf6;
+      --brand2:#818cf8;
+      --cyan:#38bdf8;
       --good:#34d399;
       --bad:#fb7185;
       --lime:#ddff37;
+      --display:"Sora",Inter,system-ui,sans-serif;
     }
     *{ box-sizing:border-box; }
-    html,body{ min-height:100%; background:var(--bg); color:#f4f6fb; font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif; }
-    body{ overflow:hidden; }
+    html,body{ min-height:100%; background:var(--bg); color:#f4f6fb; font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+    body{ overflow:hidden; background:var(--bg); }
     button{ cursor:pointer; }
     button:disabled{ opacity:.42; cursor:not-allowed; }
     .app-shell{ min-height:calc(100vh - 58px); display:grid; grid-template-columns:360px minmax(0,1fr); gap:16px; padding:16px; }
@@ -91,6 +97,7 @@
     .hero-board{ border:1px solid var(--line); border-radius:20px; min-height:250px; background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(14,165,233,.07)),rgba(255,255,255,.018); padding:22px; display:flex; align-items:flex-end; justify-content:space-between; gap:18px; }
     .hero-board h1{ font-size:clamp(30px,4.4vw,58px); line-height:.95; margin:0; font-weight:920; letter-spacing:-.04em; }
     .hero-board p{ color:var(--muted); max-width:610px; font-size:14px; line-height:1.55; margin-top:12px; }
+    .engine-note{ display:inline-block; margin-top:16px; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,.26); font-weight:700; }
     .preview-orb{ width:190px; height:190px; border-radius:42px; border:1px solid rgba(255,255,255,.1); background:radial-gradient(circle at 32% 20%,rgba(255,255,255,.32),transparent 28%),linear-gradient(145deg,rgba(99,102,241,.68),rgba(14,165,233,.2)); display:flex; align-items:center; justify-content:center; font-size:64px; flex:0 0 auto; box-shadow:0 25px 70px rgba(99,102,241,.18); }
     .results-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 10px; }
     .results-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
@@ -156,6 +163,127 @@
       .result-media{ height:auto; }
       .model-grid{ grid-template-columns:1fr; }
     }
+
+    /* ===== Clean flat redesign ===== */
+    .panel-title{ font-family:var(--display); font-size:26px; letter-spacing:-.02em; color:#fff; }
+    .panel-subtitle{ font-size:12.5px; }
+
+    .left-panel,.right-panel{
+      border:1px solid var(--line);
+      background:var(--panel);
+      border-radius:18px;
+      box-shadow:none;
+    }
+    .right-panel{ background:var(--panel); }
+
+    .section{
+      border:1px solid var(--line);
+      background:var(--panel2);
+      border-radius:14px;
+      padding:14px;
+      transition:border-color .15s ease;
+    }
+    .section:hover{ border-color:var(--line-strong); }
+    .label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+
+    .model-grid{ gap:10px; }
+    .choice{
+      min-height:78px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#0f1116;
+      transition:border-color .15s ease, background .15s ease;
+    }
+    .choice:hover{ border-color:var(--line-strong); }
+    .choice strong{ font-size:15px; }
+    .choice.active{
+      border-color:var(--brand);
+      background:rgba(99,102,241,.12);
+      box-shadow:none;
+    }
+
+    .drop-card{ border:1px dashed var(--line); background:#0f1116; border-radius:12px; transition:border-color .15s ease, background .15s ease; }
+    .drop-card:hover{ border-color:var(--line-strong); }
+    .drop-card.drag-over{ border-color:var(--brand); background:rgba(99,102,241,.08); }
+    .drop-card.has-file{ border-style:solid; border-color:rgba(99,102,241,.4); }
+    .drop-icon{ width:44px; height:44px; font-size:20px; background:var(--panel2); border:1px solid var(--line); }
+
+    .soft-btn{ border:1px solid var(--line); border-radius:10px; background:var(--panel2); transition:border-color .15s ease, background .15s ease, transform .1s ease; }
+    .soft-btn:hover{ border-color:var(--line-strong); background:#20232b; }
+    .soft-btn:active{ transform:scale(.98); }
+
+    .brand-btn{
+      min-height:54px;
+      border-radius:14px;
+      font-size:16px; font-weight:800; letter-spacing:0;
+      background:var(--brand);
+      box-shadow:none;
+      transition:background .15s ease, transform .1s ease;
+    }
+    .brand-btn:hover{ background:var(--brand2); }
+    .brand-btn:active{ transform:scale(.99); }
+
+    .cost-box{
+      border:1px solid var(--line);
+      background:var(--panel2);
+      color:#e6e8ff;
+      border-radius:14px;
+    }
+
+    /* Hero */
+    .hero-board{
+      border:1px solid var(--line);
+      border-radius:18px;
+      min-height:260px;
+      padding:28px;
+      background:radial-gradient(620px 360px at 88% 0%, rgba(99,102,241,.12), transparent 62%), var(--panel2);
+      overflow:hidden;
+    }
+    .hero-kicker{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 13px; margin-bottom:16px;
+      border:1px solid rgba(99,102,241,.35);
+      border-radius:999px;
+      background:rgba(99,102,241,.1);
+      color:#c7d2fe; font-size:12px; font-weight:700; letter-spacing:.03em;
+    }
+    .hero-board h1{
+      font-family:var(--display);
+      font-size:clamp(32px,4.4vw,58px);
+      line-height:.95; letter-spacing:-.03em;
+      color:#fff;
+    }
+    .preview-orb{
+      width:184px; height:184px;
+      border-radius:32px;
+      border:1px solid var(--line);
+      background:radial-gradient(circle at 32% 24%, rgba(255,255,255,.18), transparent 36%), linear-gradient(150deg, rgba(99,102,241,.6), rgba(56,189,248,.18));
+      box-shadow:none;
+    }
+
+    /* Results */
+    .results-grid{ gap:12px; }
+    .result-card{
+      border:1px solid var(--line);
+      background:var(--panel2);
+      border-radius:14px;
+      transition:border-color .15s ease, transform .15s ease;
+    }
+    .result-card:hover{ transform:translateY(-2px); border-color:var(--line-strong); }
+    .badge{ backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+    .get-btn{
+      background:var(--brand);
+      border-color:transparent;
+      transition:background .15s ease, transform .1s ease;
+    }
+    .get-btn:hover{ background:var(--brand2); }
+    .get-btn:active{ transform:scale(.97); }
+
+    .preview-card{ border-radius:18px; }
+
+    .left-panel::-webkit-scrollbar,.right-panel::-webkit-scrollbar{ width:10px; }
+    .left-panel::-webkit-scrollbar-thumb,.right-panel::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.08); border-radius:999px; border:3px solid transparent; background-clip:content-box; }
+    .left-panel::-webkit-scrollbar-thumb:hover,.right-panel::-webkit-scrollbar-thumb:hover{ background:rgba(255,255,255,.16); background-clip:content-box; }
   </style>
 </head>
 <body>
@@ -164,7 +292,7 @@
   <div class="app-shell">
     <aside class="left-panel">
       <h1 class="panel-title">Create</h1>
-      <p class="panel-subtitle">HeyGen talking avatar from exactly one image and one audio file. Audio length must be 5–90 seconds.</p>
+      <p class="panel-subtitle">Create a talking avatar from exactly one image and one audio file. Audio length must be 5–90 seconds.</p>
 
       <section class="section">
         <span class="label">Model</span>
@@ -217,8 +345,10 @@
     <main class="right-panel">
       <section class="hero-board">
         <div>
-          <h1>HeyGen<br />Talking Avatar</h1>
+          <span class="hero-kicker">✦ AI Lip Sync Studio</span>
+          <h1>Talking<br />Avatar</h1>
           <p>Upload a portrait image, use an audio file or record from your microphone, then generate a lip-synced avatar video. Results appear here and in your recent generations.</p>
+          <span class="engine-note">Powered by HeyGen</span>
         </div>
         <div class="preview-orb">🗣️</div>
       </section>
@@ -226,7 +356,7 @@
       <div class="results-head">
         <div>
           <h2 class="text-sm font-semibold text-white/85">Recent generations</h2>
-          <p class="text-[11px] text-white/45">Latest HeyGen jobs from this account</p>
+          <p class="text-[11px] text-white/45">Latest jobs from this account</p>
         </div>
         <button id="refreshBtn" class="soft-btn" type="button">Refresh</button>
       </div>
@@ -588,7 +718,7 @@
       const savedUrl = firstVideoUrl(row.result_url);
       const url = failed ? '' : (savedUrl || firstVideoUrl(meta));
       const modelLabel = String(row.provider || '').includes('iii') ? 'Avatar III' : 'Avatar V';
-      const detailLabel = failed ? 'Failed' : (meta.billable_seconds ? meta.billable_seconds + 's' : 'HeyGen video');
+      const detailLabel = failed ? 'Failed' : (meta.billable_seconds ? meta.billable_seconds + 's' : 'Avatar video');
       const card = document.createElement('article');
       card.className = 'result-card';
       card.dataset.runId = runId;
@@ -602,7 +732,7 @@
       if (media) bindPreviewVideo(media, url);
       if (media) media.addEventListener('error', () => markVideoUnplayable(card, url));
       const get = card.querySelector('.get-btn');
-      if (get) get.addEventListener('click', (event) => { event.stopPropagation(); downloadAsset(url, 'heygen-avatar'); });
+      if (get) get.addEventListener('click', (event) => { event.stopPropagation(); downloadAsset(url, 'talking-avatar'); });
       if (prepend) grid.prepend(card); else grid.appendChild(card);
       while (grid.children.length > 12) grid.removeChild(grid.lastElementChild);
       return {
@@ -636,7 +766,7 @@
               btn.className = 'get-btn';
               btn.type = 'button';
               btn.textContent = 'Get';
-              btn.addEventListener('click', (event) => { event.stopPropagation(); downloadAsset(nextUrl, 'heygen-avatar'); });
+              btn.addEventListener('click', (event) => { event.stopPropagation(); downloadAsset(nextUrl, 'talking-avatar'); });
               info.appendChild(btn);
             }
           }
@@ -780,7 +910,7 @@
         const audioUrl = await uploadFile(audio);
         const runId = `${currentUser.id}-${Date.now()}`;
         placeholder = createResultCard({ provider: currentModel === 'avatar_v' ? 'heygen-avatar-v' : 'heygen-avatar-iii', kind: 'video', result_url: null, meta: { run_id: runId, status: 'processing', billable_seconds: getBillableSeconds() } }, true);
-        showStatus(`Submitting ${currentModel === 'avatar_v' ? 'Avatar V' : 'Avatar III'} to HeyGen…`);
+        showStatus(`Submitting ${currentModel === 'avatar_v' ? 'Avatar V' : 'Avatar III'}…`);
         const { data: sessionData } = await supabaseClient.auth.getSession();
         const token = sessionData && sessionData.session ? sessionData.session.access_token : '';
         const resp = await fetch('/.netlify/functions/run-heygen-avatar', {
@@ -830,7 +960,7 @@
 
     async function downloadAsset(url, provider) {
       if (!url) return;
-      const filename = `${provider || 'heygen'}-${Date.now()}.mp4`;
+      const filename = `${provider || 'talking-avatar'}-${Date.now()}.mp4`;
       try {
         const response = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-store' });
         if (!response.ok) throw new Error('download_fetch_failed');
