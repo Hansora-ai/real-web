@@ -241,7 +241,11 @@ async function failAndRefundOnce({ row, ids, reason }) {
     body: JSON.stringify({ result_url: null, meta: { ...failedMeta, refund_claim: claim } })
   });
   const claimedRows = await claimRes.json().catch(() => []);
-  if (!claimRes.ok || !Array.isArray(claimedRows) || !claimedRows.length) return { refunded: false, amount, already_claimed: true };
+  if (!claimRes.ok || !Array.isArray(claimedRows) || !claimedRows.length) {
+    const latest = await readGenerationById(row.id);
+    await patchGeneration(row.id, { result_url: null, meta: { ...(latest?.meta || meta), status: "failed", failed: true, error: reason, failed_at: latest?.meta?.failed_at || failedMeta.failed_at } });
+    return { refunded: !!latest?.meta?.refunded, amount, already_claimed: true };
+  }
 
   const profileRes = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(row.user_id)}&select=credits&limit=1`, { headers: sb() });
   const profiles = await profileRes.json().catch(() => []);
@@ -269,6 +273,12 @@ async function patchGeneration(id, payload) {
   return res.ok;
 }
 
+async function readGenerationById(id) {
+  const res = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}&select=id,meta&limit=1`, { headers: sb() });
+  const rows = await res.json().catch(() => []);
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
 function normalizeStatus(value) {
   const data = value?.data || value || {};
   const raw = data?.state ?? data?.status ?? value?.status ?? value?.state ?? data?.successFlag ?? value?.successFlag ?? "";
@@ -282,6 +292,7 @@ function normalizeSunoStatus(value) {
   const tokens = collectStatusTokens(value);
   const failures = new Set(["CREATE_TASK_FAILED", "GENERATE_AUDIO_FAILED", "CALLBACK_EXCEPTION", "SENSITIVE_WORD_ERROR", "FAILED", "FAIL", "FAILURE", "ERROR", "ERRORED", "CANCELED", "CANCELLED", "REJECTED", "BLOCKED"]);
   if (tokens.some((token) => failures.has(token))) return "failed";
+  if (tokens.some((token) => /(FAIL|ERROR|REJECT|BLOCK|SENSITIVE|COPYRIGHT|INVALID|CANCEL)/.test(token))) return "failed";
   if (tokens.includes("2") || tokens.includes("3")) return "failed";
   if (tokens.includes("SUCCESS") || tokens.includes("1")) return "success";
   return "pending";
