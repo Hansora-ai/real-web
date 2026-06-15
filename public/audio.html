@@ -398,6 +398,9 @@
     let selectedAudioFile = null;
     let selectedAudioDurationSeconds = 0;
     let pollTimer = null;
+    let pollEmptyChecks = 0;
+    let pollStartedAt = 0;
+    const checkerStatusByRun = new Map();
     let voicePreviewAudio = null;
     let activeVoicePlayButton = null;
 
@@ -1131,9 +1134,12 @@
         const meta = row.meta || {};
         const urls = allAudioUrls(row);
         const url = urls[0] || '';
-        const status = (url ? 'ready' : (meta.status || 'processing')).toString();
+        const runId = String(meta.run_id || '');
+        const checkerStatus = runId ? checkerStatusByRun.get(runId) : '';
+        const status = (url ? 'ready' : (checkerStatus || meta.status || 'processing')).toString();
         const div = document.createElement('div');
         div.className = 'audio-card p-4';
+        if (runId) div.dataset.runId = runId;
         const name = meta.title || row.provider || 'Audio';
         const prompt = row.prompt || meta.prompt || '';
         const dotClass = url ? 'ready' : isFailedAudioStatus(status) ? 'failed' : '';
@@ -1166,7 +1172,11 @@
         try{
           const response = await fetch(functionUrl(`/.netlify/functions/audio-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId)}`), { method:'GET' });
           const result = await response.json().catch(()=>({}));
-          return String(result.status || 'pending').toLowerCase();
+          const status = String(result.status || 'pending').toLowerCase();
+          if (runId && (isFailedAudioStatus(status) || ['ready', 'done', 'complete', 'completed', 'success'].includes(status))) {
+            checkerStatusByRun.set(runId, status);
+          }
+          return status;
         }catch(_){ return 'pending'; }
       }));
       return states.filter((status)=>!isFailedAudioStatus(status) && !['ready', 'done', 'complete', 'completed', 'success'].includes(status)).length;
@@ -1174,16 +1184,24 @@
 
     function startPolling(){
       if (pollTimer) clearInterval(pollTimer);
+      pollTimer = null;
+      pollEmptyChecks = 0;
+      pollStartedAt = Date.now();
       let checking = false;
       const cycle = async()=>{
         if (checking || !currentUser) return;
         checking = true;
-        const pendingCount = await checkPendingAudioRows();
-        if (!isAnyAudioPlaying()) await loadRecentHistory();
-        checking = false;
-        if (Number(pendingCount || 0) === 0 && pollTimer) {
-          clearInterval(pollTimer);
-          pollTimer = null;
+        try {
+          const pendingCount = await checkPendingAudioRows();
+          if (!isAnyAudioPlaying()) await loadRecentHistory();
+          pollEmptyChecks = Number(pendingCount || 0) === 0 ? pollEmptyChecks + 1 : 0;
+          const graceFinished = Date.now() - pollStartedAt >= 12000;
+          if (pollEmptyChecks >= 3 && graceFinished && pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+          }
+        } finally {
+          checking = false;
         }
       };
       cycle();
