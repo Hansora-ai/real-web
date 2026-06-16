@@ -455,6 +455,42 @@
       letter-spacing: 0;
     }
 
+    .hero-intro h1.hero-gradient {
+      background: linear-gradient(90deg, #9b7cff 0%, #89b7ff 42%, #38c7f5 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero-points {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 18px 26px;
+      margin-top: 22px;
+      color: rgba(247,247,251,.66);
+      font-size: clamp(.92rem, 1.7vw, 1.08rem);
+      font-weight: 820;
+    }
+
+    .hero-points span {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+    }
+
+    .hero-points span::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #9b7cff, #55d6ff);
+      box-shadow: 0 0 18px rgba(85,216,255,.5);
+      flex: 0 0 auto;
+    }
+
     .hero-intro p {
       max-width: 720px;
       margin: 20px auto 0;
@@ -1518,6 +1554,10 @@
       }
     }
 
+    .hero-points span:nth-child(3) {
+      display: none !important;
+    }
+
     .wide-banner .banner-content {
       padding: 26px !important;
     }
@@ -1910,9 +1950,10 @@
 </section>
 <section class="hero-intro">
 <div class="shell">
-<h1>HANSORA AI</h1>
+<h1 class="hero-gradient">HANSORA AI</h1>
 <p>All-in-one AI workspace for images, videos, ads, posters, audio, and creative workflows from one simple place.</p>
 <a class="btn btn-primary start-creating-link" href="/login.html">Start creating</a>
+<div class="hero-points" aria-label="Highlights"><span>All top models</span><span>Credits never expire</span><span>Useful Features</span></div>
 </div>
 </section>
 <section class="section">
