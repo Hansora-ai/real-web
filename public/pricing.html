@@ -938,56 +938,37 @@ if (!Number.isFinite(credits) || credits<=0){
 </script>
 <!-- END: HARD-BLOCK if uid missing; robust Supabase UID resolver -->
 <script>
-(function(){
-  try {
-    function normalize(s){ return (s||'').trim().toLowerCase(); }
-    function extractInfo(card){
-      var info = {content_name: '', value: null, currency: 'USD'};
-      if(!card) return info;
-      var text = card.innerText || '';
-      var mCredits = text.match(/(\d{2,4})\s*credits/i);
-      if(mCredits) info.content_name = mCredits[1] + ' credits';
-      var mPrice = text.replace(/,/g,'').match(/\$(\d+(?:\.\d+)?)/);
-      if(mPrice) info.value = parseFloat(mPrice[1]);
-      return info;
-    }
-
-    var buttons = Array.prototype.slice.call(document.querySelectorAll('a,button'));
-    buttons = buttons.filter(function(el){
-      return normalize(el.textContent) === 'buy';
-    });
-
-    buttons.forEach(function(btn){
-      btn.addEventListener('click', function(){
-        try{
-          var card = btn.closest('.card, .pricing-card, .plan, .package, .bundle, .credit, .item, .shadow, .rounded');
-          var info = extractInfo(card);
-          if(typeof fbq === 'function'){
-            if(info.value){
-              fbq('track','InitiateCheckout',{value: info.value, currency: info.currency, content_name: info.content_name});
-            } else {
-              fbq('track','InitiateCheckout');
-            }
-          }
-        }catch(e){}
-      }, {capture:true});
-    });
-  } catch(e){}
-})();
-</script>
-<script>
 /* Meta Pixel: InitiateCheckout tracking for ALL Buy buttons + safe delay navigation */
 (function(){
+  var CHECKOUT_PACKAGES = {
+    "100": { value: 9.99, currency: "USD", content_name: "100 credits" },
+    "220": { value: 19.99, currency: "USD", content_name: "220 credits" },
+    "550": { value: 49.99, currency: "USD", content_name: "550 credits" },
+    "1100": { value: 99.99, currency: "USD", content_name: "1100 credits" }
+  };
+  var CHECKOUT_PRODUCT_TO_CREDITS = {
+    "pdt_Gi01FZTv21T44htKut7lG": "100",
+    "pdt_YNeJAH4NMLe8gJF7ff0Fe": "220",
+    "pdt_oVJI6GNjziGZKrXtVczUY": "550",
+    "pdt_e8UPGoRi6Sf36NoxV7fAF": "1100"
+  };
   function normalize(s){ return (s||'').trim().toLowerCase(); }
-  function extractInfo(card){
-    var info = {content_name:'', value:null, currency:'USD'};
-    if(!card) return info;
-    var t = (card.innerText||'').replace(/\s+/g,' ');
-    var mC = t.match(/(\d{2,4})\s*credits/i);
-    if(mC) info.content_name = mC[1] + ' credits';
-    var mP = t.replace(/,/g,'').match(/\$(\d+(?:\.\d+)?)/);
-    if(mP) info.value = parseFloat(mP[1]);
-    return info;
+  function productIdFromUrl(rawUrl){
+    try{
+      var url = new URL(rawUrl || '', location.href);
+      return url.pathname.split('/').filter(Boolean).pop() || '';
+    }catch(e){
+      return '';
+    }
+  }
+  function checkoutInfo(el, href){
+    var credits = el && el.getAttribute ? String(el.getAttribute('data-credits') || '').trim() : '';
+    if(!credits){
+      var productUrl = (el && el.getAttribute ? (el.getAttribute('data-product') || href || '') : href || '');
+      var productId = productIdFromUrl(productUrl);
+      credits = CHECKOUT_PRODUCT_TO_CREDITS[productId] || '';
+    }
+    return CHECKOUT_PACKAGES[credits] || null;
   }
   document.addEventListener('click', function(e){
     var el = e.target && e.target.closest && e.target.closest('a,button');
@@ -999,15 +980,15 @@ if (!Number.isFinite(credits) || credits<=0){
     var isBuy = txt==='buy' || txt.indexOf('buy')>=0 || (href && (href.toLowerCase().indexOf('dodo')>=0 || href.indexOf('#buy')>=0)) || id.indexOf('buy')>=0 || cls.indexOf('buy')>=0;
     if(!isBuy) return;
     try{
-      var card = el.closest('.card, .pricing-card, .plan, .package, .bundle, .credit, .item, .shadow, .rounded, .box');
-      var info = extractInfo(card);
+      var info = checkoutInfo(el, href);
       if (typeof fbq === 'function'){
-        if(info.value){
-          fbq('track','InitiateCheckout',{value:info.value, currency:info.currency, content_name:info.content_name});
+        if(info && Number.isFinite(info.value) && info.currency){
+          fbq('track','InitiateCheckout',{
+            value: info.value,
+            currency: info.currency,
+            content_name: info.content_name
+          });
           console.log('✅ Pixel InitiateCheckout sent', info);
-        } else {
-          fbq('track','InitiateCheckout');
-          console.log('✅ Pixel InitiateCheckout sent');
         }
       } else {
         console.log('⚠️ fbq not available at click time');
