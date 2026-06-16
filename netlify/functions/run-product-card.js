@@ -71,6 +71,64 @@ function cleanList(value) {
   return raw.map((item) => cleanText(item, 120)).filter(Boolean).slice(0, 6);
 }
 
+function detectCopyScriptRule(parts) {
+  const text = parts.filter(Boolean).join(" ").trim();
+  if (!text) {
+    return {
+      label: "no user copy",
+      rule: "No user card text was provided. If you need small design labels, use simple English only.",
+      forbidden: "Do not add Chinese, Japanese, Korean, Cyrillic, Arabic, Hindi, Thai, or any other random foreign-language text."
+    };
+  }
+  if (/[\u4e00-\u9fff]/.test(text)) {
+    return {
+      label: "Chinese/Hanzi",
+      rule: "All generated card text must stay in Chinese/Hanzi exactly as supplied by the user. Do not translate it.",
+      forbidden: "Do not add English, Russian, Arabic, Japanese kana, Korean, or any other language unless it was typed by the user."
+    };
+  }
+  if (/[\u3040-\u30ff]/.test(text)) {
+    return {
+      label: "Japanese",
+      rule: "All generated card text must stay in Japanese exactly as supplied by the user. Do not translate it.",
+      forbidden: "Do not add English, Chinese-only marketing text, Korean, Russian, Arabic, or any other language unless it was typed by the user."
+    };
+  }
+  if (/[\uac00-\ud7af]/.test(text)) {
+    return {
+      label: "Korean",
+      rule: "All generated card text must stay in Korean exactly as supplied by the user. Do not translate it.",
+      forbidden: "Do not add English, Chinese, Japanese, Russian, Arabic, or any other language unless it was typed by the user."
+    };
+  }
+  if (/[\u0400-\u04ff]/.test(text)) {
+    return {
+      label: "Cyrillic/Russian",
+      rule: "All generated card text must stay in Cyrillic/Russian exactly as supplied by the user. Do not translate it.",
+      forbidden: "Do not add English, Chinese, Japanese, Korean, Arabic, or any other language unless it was typed by the user."
+    };
+  }
+  if (/[\u0600-\u06ff]/.test(text)) {
+    return {
+      label: "Arabic",
+      rule: "All generated card text must stay in Arabic exactly as supplied by the user. Do not translate it.",
+      forbidden: "Do not add English, Chinese, Japanese, Korean, Russian, or any other language unless it was typed by the user."
+    };
+  }
+  if (/[A-Za-z]/.test(text)) {
+    return {
+      label: "Latin/English",
+      rule: "All generated card text must use Latin/English only. User-provided text should appear exactly as typed; any extra small design text must also be simple English/Latin.",
+      forbidden: "Absolutely do not add Chinese characters, Japanese characters, Korean characters, Cyrillic/Russian, Arabic, Hindi, Thai, or any non-Latin script anywhere on the card."
+    };
+  }
+  return {
+    label: "user-provided script",
+    rule: "All generated card text must use only the same language/script typed by the user. User-provided text should appear exactly as typed; any extra small design text must stay in that same language/script.",
+    forbidden: "Do not add any other language or random foreign-language text."
+  };
+}
+
 function normalizeAspectRatio(value) {
   if (!value) return "1:1";
   const s = String(value).trim().toLowerCase();
@@ -144,6 +202,7 @@ function buildProductCardPrompt(body) {
   const cta = cleanText(body.cta, 60);
   const extraNotes = cleanText(body.extra_notes, 300);
   const benefits = cleanList(body.benefits);
+  const scriptRule = detectCopyScriptRule([brandName, headline, subheadline, cta, ...benefits]);
 
   const textLines = [];
   if (brandName) textLines.push(`Brand name text exactly as typed: "${brandName}"`);
@@ -177,10 +236,19 @@ ${humanGuide(humanMode)}
 TEXT TO RENDER ON THE CARD:
 ${textLines.map((line) => `- ${line}`).join("\n")}
 
+ALLOWED TEXT LANGUAGE / SCRIPT:
+- Detected from the user's headline/features: ${scriptRule.label}.
+- ${scriptRule.rule}
+- ${scriptRule.forbidden}
+
 TEXT ACCURACY RULES:
-- Render only the user-provided text listed above, plus real text already visible on the original product packaging/logo.
+- Render the user-provided text listed above as the primary card text. Extra small labels or design copy are allowed only if they use the same detected language/script.
 - Preserve the exact language, script, spelling, capitalization, and punctuation of user-provided text. If the user typed Russian, render Russian. If the user typed Arabic, Armenian, Spanish, French, German, or any other language, keep that language and do not translate it.
 - Keep text short, large, readable, correctly spelled, and cleanly placed.
+- Do not translate the headline, benefits, brand, CTA, or any user copy into another language.
+- Do not add bilingual text. Do not add a second-language subtitle. Do not add Chinese-style decorative taglines unless the user typed Chinese.
+- If the user typed English/Latin words, every generated text element must be Latin/English only. Any Chinese, Japanese, Korean, Cyrillic, Arabic, Hindi, Thai, or other non-Latin text makes the image invalid.
+- The only non-user text that may remain is real text already printed on the uploaded product itself, if it is visibly part of the original product/photo. Do not invent new packaging or logo text.
 - Do not invent random claims, prices, fake ratings, fake reviews, fake discounts, fake official logos, fake certifications, medical authority badges, flag badges, marketplace logos, legal seals, QR codes, watermarks, or extra brand names.
 - If there is too much user text, prioritize: brand, headline, 3 best benefits, CTA. Do not add filler copy.
 
