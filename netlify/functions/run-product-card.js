@@ -71,6 +71,42 @@ function cleanList(value) {
   return raw.map((item) => cleanText(item, 120)).filter(Boolean).slice(0, 6);
 }
 
+function cleanFeatureList(body) {
+  const values = [
+    body.benefits,
+    body.features,
+    body.feature,
+    body.benefit,
+    body.feature_text,
+    body.featureText,
+    body.benefit_text,
+    body.benefitText,
+    body.feature_1,
+    body.feature_2,
+    body.feature_3,
+    body.feature_4,
+    body.feature_5,
+    body.benefit_1,
+    body.benefit_2,
+    body.benefit_3,
+    body.benefit_4,
+    body.benefit_5,
+  ];
+  const seen = new Set();
+  const items = [];
+  for (const value of values) {
+    for (const item of cleanList(value)) {
+      const key = item.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        items.push(item);
+      }
+      if (items.length >= 6) return items;
+    }
+  }
+  return items;
+}
+
 function detectCopyScriptRule(parts) {
   const text = parts.filter(Boolean).join(" ").trim();
   if (!text) {
@@ -125,8 +161,8 @@ function detectCopyScriptRule(parts) {
   if (/[A-Za-z]/.test(text)) {
     return {
       label: "Latin-script user language",
-      rule: "All generated card text must use the same Latin-script language as the user's headline/features. If the user's wording is English, use simple English. If the user's wording is Spanish, French, German, Italian, Portuguese, or another Latin-script language, keep that language. If the exact Latin-script language is ambiguous, use simple English/Latin rather than any non-Latin script.",
-      forbidden: "Absolutely do not add Chinese characters, Japanese characters, Korean characters, Cyrillic/Russian, Arabic, Hindi, Thai, or any non-Latin script anywhere on the card."
+      rule: "The user typed Latin letters in the headline/features. All generated card text must use that same Latin-script language. For example, if the user typed 'perfect smell', the card text must be English/Latin only.",
+      forbidden: "Never add Chinese characters. Never add Japanese, Korean, Cyrillic/Russian, Arabic, Hindi, Thai, or any non-Latin script anywhere on the card unless that script was typed in the user's headline/features."
     };
   }
   return {
@@ -154,15 +190,43 @@ function generatedCopyGuard(scriptRule) {
   }
   if (scriptRule.label === "Latin-script user language") {
     return [
+      "STRICT NO-CHINESE MODE: because the user typed Latin letters in headline/features, do not generate Chinese anywhere on the card.",
       "Generated missing headline text, generated missing feature text, and any extra design labels must use the same Latin-script language as the user's headline/features.",
       "If the user typed English headline/features, generate English. If the user typed Spanish/French/German/etc. headline/features, generate that same language.",
       "Do not infer Chinese or any other non-Latin language from the product photo, packaging, brand name, UI locale, market style, previous output, or visual design theme.",
-      "Chinese characters are allowed only when they were typed by the user in the headline or benefits."
+      "If any generated headline, subtitle, feature, footer, badge, decorative label, or tagline appears in Chinese, the image is invalid.",
+      "Chinese characters are allowed only when they were typed by the user in the headline or features."
     ];
   }
   return [
     `Generated missing headline text, generated missing feature text, and any extra design labels must use ${scriptRule.label} only.`,
     "Do not infer a different language from the product photo, packaging, brand name, UI locale, market style, previous output, or visual design theme."
+  ];
+}
+
+function languageLockBlock(scriptRule) {
+  const isFallback = !scriptRule || scriptRule.label === "English fallback";
+  const isLatin = scriptRule && scriptRule.label === "Latin-script user language";
+  if (isFallback) {
+    return [
+      "The user did NOT type any headline or feature text.",
+      "Therefore EVERY word of text you place on the card MUST be written in English using Latin letters only.",
+      "Absolutely NO Chinese characters anywhere. No Japanese, Korean, Cyrillic/Russian, Arabic, Armenian, Hindi, Thai, or any other non-English script.",
+      "Do NOT copy, translate, or imitate the language printed on the product, packaging, label, logo, market, or photo. Even if the product shows Chinese, all generated card text stays English.",
+    ];
+  }
+  if (isLatin) {
+    return [
+      "The user typed the headline/features in a Latin-script language (for example English).",
+      "EVERY word of text you place on the card MUST be written in that SAME Latin-script language as the user's typed headline/features.",
+      "Absolutely NO Chinese characters anywhere on the card. No Japanese, Korean, Cyrillic/Russian, Arabic, or any non-Latin script unless the user actually typed it.",
+      "Do NOT copy, translate, or imitate the language printed on the product, packaging, label, logo, market, or photo.",
+    ];
+  }
+  return [
+    `The user typed the headline/features in ${scriptRule.label}.`,
+    `EVERY word of generated or missing text you place on the card MUST be written in ${scriptRule.label}, exactly matching the user's language.`,
+    "Do NOT translate the user's text and do NOT switch generated text to English or any other language.",
   ];
 }
 
@@ -238,7 +302,7 @@ function buildProductCardPrompt(body) {
   const subheadline = cleanText(body.subheadline, 120);
   const cta = cleanText(body.cta, 60);
   const extraNotes = cleanText(body.extra_notes, 300);
-  const benefits = cleanList(body.benefits);
+  const benefits = cleanFeatureList(body);
   const scriptRule = detectCopyScriptRule([headline, ...benefits]);
   const generatedLanguage = generatedCopyLanguage(scriptRule);
   const copyGuard = generatedCopyGuard(scriptRule);
@@ -255,6 +319,11 @@ function buildProductCardPrompt(body) {
   if (cta) textLines.push(`Call-to-action text exactly as typed: "${cta}"`);
 
   const prompt = `
+LANGUAGE LOCK — HIGHEST PRIORITY RULE, READ AND OBEY THIS BEFORE ANYTHING ELSE:
+${languageLockBlock(scriptRule).map((line) => `- ${line}`).join("\n")}
+- This applies to EVERY visible text area: headline, subheadline, feature/benefit callouts, icon labels, badges, footer, captions, taglines, separators, and any small decorative typography.
+- If any generated text appears in the wrong language (especially Chinese when the user did not type Chinese), the image is INVALID and must be redone in the correct language.
+
 Create one high-converting product selling card from the uploaded product photo.
 
 CRITICAL PRODUCT UNDERSTANDING:
@@ -289,6 +358,8 @@ ALLOWED TEXT LANGUAGE / SCRIPT:
 TEXT ACCURACY RULES:
 - Render the user-provided text listed above as the primary card text. Extra small labels or design copy are allowed only if they use the generated-copy language above.
 - If headline or features are missing, generate product-related replacement text in the generated-copy language above. If no headline and no features were provided, generate the missing card copy in English/Latin only.
+- Do not fill empty space with random foreign-language marketing text. Blank/clean design space is better than wrong-language text.
+- If the user provided one English feature such as "perfect smell", that is enough: the whole card must use English/Latin generated text only.
 - Brand name, CTA, subheadline, extra notes, uploaded product-label text, image content, and UI locale must not override the headline/features language decision for generated missing copy.
 - If headline/features are Russian, Armenian, Arabic, Chinese, Japanese, Korean, Spanish, French, German, or any other language, generated missing headline/features must use that same language even if the brand name or CTA is English.
 - Preserve the exact language, script, spelling, capitalization, and punctuation of user-provided text. If the user typed Russian, render Russian. If the user typed Arabic, Armenian, Spanish, French, German, or any other language, keep that language and do not translate it.
@@ -296,6 +367,7 @@ TEXT ACCURACY RULES:
 - Do not translate the headline, benefits, brand, CTA, or any user copy into another language.
 - Do not add bilingual text. Do not add a second-language subtitle. Do not add Chinese-style decorative taglines unless the user typed Chinese.
 - If the user's headline/features are English/Latin or both headline and features are missing, every generated text element must be Latin-script only. Any Chinese, Japanese, Korean, Cyrillic, Arabic, Hindi, Thai, or other non-Latin generated text makes the image invalid.
+- This applies to every visible text area: main headline, subheadline, feature list, icon labels, bottom footer, badge text, caption text, decorative separators, and any small typography.
 - The only non-user text that may remain is real text already printed on the uploaded product itself, if it is visibly part of the original product/photo. Do not invent new packaging or logo text.
 - Do not invent random claims, prices, fake ratings, fake reviews, fake discounts, fake official logos, fake certifications, medical authority badges, flag badges, marketplace logos, legal seals, QR codes, watermarks, or extra brand names.
 - If there is too much user text, prioritize: brand, headline, 3 best benefits, CTA. Do not add filler copy.
