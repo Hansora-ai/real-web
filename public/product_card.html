@@ -1151,8 +1151,8 @@ Easy daily use"></textarea>
     function failureMessage(error){
       const msg = String(error && error.message ? error.message : error || 'generation_failed');
       if (msg === 'generation_timeout') return 'Still processing. You can check the result cards shortly.';
-      const refundText = error && error.refunded ? ' Credits were refunded.' : '';
-      return `Generation failed: ${msg}.${refundText}`;
+      if (error && error.refunded) return 'Generation failed. Please try again. Credits refunded.';
+      return 'Generation failed. Please try again.';
     }
 
     function startBackgroundPoll(run){
@@ -1385,7 +1385,7 @@ Easy daily use"></textarea>
         const msg = String(error && error.message ? error.message : error || 'generation_failed');
         if (msg === 'upload_bridge_missing') showStatus('Upload bridge is missing. Make sure /kie-upload-bridge.js is deployed.', 'error');
         else if (msg === 'not_enough_credits') showStatus('Not enough credits for all selected product cards.', 'error');
-        else showStatus(`Generation failed: ${msg}`, 'error');
+        else showStatus(failureMessage(error), 'error');
         await refreshCredits();
       }finally{
         els.generateBtn.disabled = false;
