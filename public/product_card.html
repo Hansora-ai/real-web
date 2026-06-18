@@ -529,6 +529,19 @@ Easy daily use"></textarea>
       els.status.textContent = message || '';
       els.status.className = `status ${type || ''}`.trim();
     }
+    function openPricingOfferPopup() {
+      try {
+        if (window.HansoraHeader && typeof window.HansoraHeader.showPricingOfferNow === 'function') {
+          window.HansoraHeader.showPricingOfferNow();
+          return;
+        }
+        if (window.HansoraHeader && typeof window.HansoraHeader.showSignupOfferNow === 'function') {
+          window.HansoraHeader.showSignupOfferNow();
+        }
+      } catch (error) {
+        console.warn('Could not open pricing offer popup', error);
+      }
+    }
 
     async function readSupabaseCredits(){
       const { data: userRes } = await supabaseClient.auth.getUser();
@@ -1277,7 +1290,10 @@ Easy daily use"></textarea>
         console.warn('animation failed', error);
         const msg = String(error && error.message ? error.message : error || 'animation_failed');
         if (msg === 'login_required') showStatus('Please log in first.', 'error');
-        else if (msg === 'not_enough_credits') showStatus('Not enough credits. Animation needs 2⚡.', 'error');
+        else if (msg === 'not_enough_credits') {
+          showStatus('Not enough credits. Animation needs 2⚡.', 'error');
+          setTimeout(openPricingOfferPopup, 80);
+        }
         else showStatus(`Animation failed: ${msg}`, 'error');
         await refreshCredits();
       }finally{
@@ -1356,7 +1372,7 @@ Easy daily use"></textarea>
         if (!currentUser) { showStatus('Please log in first.', 'error'); return; }
         const totalCost = getTotalCost();
         const latestCredits = await refreshCredits();
-        if (latestCredits < totalCost) { showStatus(`Not enough credits. This run needs ${formatCost(totalCost)}⚡.`, 'error'); return; }
+        if (latestCredits < totalCost) { showStatus(`Not enough credits. This run needs ${formatCost(totalCost)}⚡.`, 'error'); setTimeout(openPricingOfferPopup, 80); return; }
 
         const referenceUrl = await uploadReferenceImage();
         const extraNotes = productFiles.length > 1
@@ -1384,7 +1400,10 @@ Easy daily use"></textarea>
         }
         const msg = String(error && error.message ? error.message : error || 'generation_failed');
         if (msg === 'upload_bridge_missing') showStatus('Upload bridge is missing. Make sure /kie-upload-bridge.js is deployed.', 'error');
-        else if (msg === 'not_enough_credits') showStatus('Not enough credits for all selected product cards.', 'error');
+        else if (msg === 'not_enough_credits') {
+          showStatus('Not enough credits for all selected product cards.', 'error');
+          setTimeout(openPricingOfferPopup, 80);
+        }
         else showStatus(failureMessage(error), 'error');
         await refreshCredits();
       }finally{
