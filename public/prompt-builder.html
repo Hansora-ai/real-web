@@ -650,6 +650,19 @@
       els.status.textContent = text || '';
       els.status.className = `status-line ${type || ''}`;
     }
+    function openPricingOfferPopup() {
+      try {
+        if (window.HansoraHeader && typeof window.HansoraHeader.showPricingOfferNow === 'function') {
+          window.HansoraHeader.showPricingOfferNow();
+          return;
+        }
+        if (window.HansoraHeader && typeof window.HansoraHeader.showSignupOfferNow === 'function') {
+          window.HansoraHeader.showSignupOfferNow();
+        }
+      } catch (error) {
+        console.warn('Could not open pricing offer popup', error);
+      }
+    }
 
     function setRunButtonLabel(text) {
       els.runBtn.textContent = `${text} ${formatCredits(COST)}`;
@@ -928,6 +941,7 @@
       }
       if (credits < COST) {
         setStatus('Not enough credits.', 'error');
+        setTimeout(openPricingOfferPopup, 80);
         return;
       }
 
@@ -962,6 +976,7 @@
           if (js && js.error === 'not_enough_credits') {
             setStatus('Not enough credits.', 'error');
             setAssistantErrorText(thinkingRow, 'Not enough credits.');
+            setTimeout(openPricingOfferPopup, 80);
           } else if (js && js.error === 'worker_enqueue_failed') {
             setStatus('Sorry, your request failed. Please try again.', 'error');
             setAssistantErrorText(thinkingRow, 'Could not start the Claude worker. Your credit was refunded.');
