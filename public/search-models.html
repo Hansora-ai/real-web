@@ -4952,7 +4952,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         resolutionOptions: ['720p', '1080p'],
         defaultResolution: '720p',
         durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-        costLabel: 'Standard 720p 2.5⚡/s · 1080p 5.5⚡/s · Fast 2.5⚡/s',
+        costLabel: 'Standard 720p 2.5⚡/s · 1080p 5.5⚡/s · Fast 2⚡/s',
         minCredits: 10
       },
       {
@@ -5713,7 +5713,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       if (model.id === 'seedance20') {
         const seconds = Math.max(1, Number(currentDuration || 5));
-        const rate = currentSeedanceVariant === 'fast' ? 2.5 : (currentResolution === '1080p' ? 5.5 : 2.5);
+        const rate = currentSeedanceVariant === 'fast' ? 2 : (currentResolution === '1080p' ? 5.5 : 2.5);
         return Number((seconds * rate).toFixed(1));
       }
       if (model.id === 'gemini-omni-video') {
