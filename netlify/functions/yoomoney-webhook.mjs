@@ -16,13 +16,15 @@ export async function handler(event) {
     if (event.httpMethod === "OPTIONS") return json(204, {});
     if (event.httpMethod !== "POST") return json(405, { error: "Method Not Allowed" });
 
-    const payload = parsePayload(event);
+    let payload = parsePayload(event);
     const notificationSecret = process.env.YOOMONEY_NOTIFICATION_SECRET || "";
-    if (!notificationSecret) {
-      return json(500, { error: "Missing YOOMONEY_NOTIFICATION_SECRET" });
-    }
-    if (!verifyYooMoneySignature(payload, notificationSecret)) {
+    const accessToken = process.env.YOOMONEY_ACCESS_TOKEN || "";
+    if (notificationSecret && !verifyYooMoneySignature(payload, notificationSecret)) {
       return json(403, { error: "Invalid YooMoney signature" });
+    }
+    if (!notificationSecret) {
+      if (!accessToken) return json(500, { error: "Missing YOOMONEY_NOTIFICATION_SECRET or YOOMONEY_ACCESS_TOKEN" });
+      payload = await enrichFromOperationDetails(payload, accessToken);
     }
 
     const codepro = String(payload.codepro || "").toLowerCase() === "true";
@@ -43,6 +45,12 @@ export async function handler(event) {
     const amount_cents = Number.isFinite(amountRub) ? Math.round(amountRub * 100) : null;
     const paid_at = payload.datetime || new Date().toISOString();
     const provider = "yoomoney";
+
+    const successStatus = !payload.status || String(payload.status).toLowerCase() === "success";
+    const incomingDirection = !payload.direction || String(payload.direction).toLowerCase() === "in";
+    if (!successStatus || !incomingDirection) {
+      return json(200, { ok: true, skipped: "operation is not a successful incoming payment", status: payload.status, direction: payload.direction });
+    }
 
     if (!transaction_id || !uid || !credits || !expected || !Number.isFinite(amountRub)) {
       return json(400, {
@@ -173,6 +181,35 @@ function parsePayload(event) {
   if (contentType.includes("application/json")) return JSON.parse(raw || "{}");
   const params = new URLSearchParams(raw);
   return Object.fromEntries(params.entries());
+}
+
+async function enrichFromOperationDetails(payload, accessToken) {
+  const operationId = payload.operation_id || payload.operation_id__ || payload.notification_id || "";
+  if (!operationId) throw new Error("Missing operation_id for YooMoney operation-details verification");
+
+  const res = await fetch("https://yoomoney.ru/api/operation-details", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Accept": "application/json"
+    },
+    body: new URLSearchParams({ operation_id: operationId }).toString()
+  });
+  const details = await res.json().catch(() => null);
+  if (!res.ok || !details || details.error) {
+    throw new Error(`YooMoney operation-details failed: ${details?.error || res.status}`);
+  }
+  return {
+    ...payload,
+    ...details,
+    operation_id: details.operation_id || operationId,
+    amount: details.amount ?? payload.amount,
+    label: details.label || payload.label || "",
+    datetime: details.datetime || payload.datetime,
+    codepro: details.codepro ?? payload.codepro,
+    currency: payload.currency || "643"
+  };
 }
 
 function parseLabel(label) {
