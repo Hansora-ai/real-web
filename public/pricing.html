@@ -102,6 +102,129 @@ html.hansora-pricing-popup #pricing .max-w-7xl{
 html.hansora-pricing-popup #pricing h2{
   font-size:clamp(30px,5vw,54px) !important;
 }
+.pricing-benefits{max-width:760px;margin-left:auto;margin-right:auto}
+.payment-method-box{
+  position:absolute;
+  top:0;
+  right:16px;
+  z-index:5;
+  max-width:300px;
+  text-align:right;
+}
+.payment-method-note{
+  margin:0 0 7px;
+  color:rgba(226,232,240,.62);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.01em;
+}
+.payment-method-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:4px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:999px;
+  background:rgba(8,11,19,.86);
+  box-shadow:0 14px 30px rgba(0,0,0,.30);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+}
+.payment-option{
+  border:1px solid transparent;
+  border-radius:999px;
+  padding:8px 12px;
+  color:rgba(226,232,240,.68);
+  background:rgba(15,23,42,.42);
+  font-size:11px;
+  font-weight:900;
+  cursor:pointer;
+  transition:background .16s ease,color .16s ease,box-shadow .16s ease,border-color .16s ease;
+}
+.payment-option.is-active{
+  color:#fff;
+  border-color:rgba(52,211,153,.86);
+  background:linear-gradient(180deg,rgba(20,31,45,.98),rgba(13,22,30,.98));
+  box-shadow:0 0 0 1px rgba(52,211,153,.18),0 12px 28px rgba(16,185,129,.12);
+}
+.buy-credits{
+  margin-top:18px !important;
+}
+html[data-payment-mode="ru"] .buy-credits{
+  margin-top:18px !important;
+}
+html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="100"]) .buy-credits{
+  margin-top:36px !important;
+}
+html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="550"]) .buy-credits{
+  margin-top:20px !important;
+}
+html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="1100"]) .buy-credits{
+  margin-top:16px !important;
+}
+html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits) > .mt-2.text-sm{
+  min-height:44px;
+  display:flex;
+  align-items:flex-start;
+}
+@media (max-width: 767px){
+  #pricing .text-center.mb-10{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  #pricing .text-center.mb-10 > .inline-flex{
+    order:1;
+  }
+  #pricing .text-center.mb-10 > h2{
+    order:2;
+  }
+  #pricing .text-center.mb-10 > .payment-method-box{
+    order:3;
+  }
+  #pricing .text-center.mb-10 > .pricing-benefits{
+    order:4;
+  }
+  .payment-method-box{
+    position:relative;
+    top:auto;
+    right:auto;
+    margin:16px auto 0;
+    text-align:center;
+  }
+  .payment-method-note{
+    font-size:11px;
+    line-height:1.35;
+  }
+  .payment-option{
+    padding:7px 10px;
+    font-size:11px;
+  }
+  .pricing-benefits{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:8px;
+    max-width:330px;
+    margin-top:18px !important;
+  }
+  .pricing-benefits span{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:38px;
+    padding:8px 9px !important;
+    font-size:11px;
+    line-height:1.18;
+    text-align:center;
+    white-space:normal;
+  }
+  .pricing-benefits span:nth-child(3){
+    grid-column:1 / -1;
+    justify-self:center;
+    width:calc(50% - 4px);
+    min-width:150px;
+  }
+}
 </style>
 <link href="/header.css" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -163,12 +286,19 @@ fbq('track', 'PageView');
 <div class="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-purple-500/20 via-sky-400/10 to-transparent pointer-events-none"></div>
 <div class="max-w-7xl mx-auto px-4 relative">
 <div class="text-center mb-10">
+<div class="payment-method-box" aria-label="Payment method">
+<p class="payment-method-note" data-payment-note>We accept cards from all countries</p>
+<div class="payment-method-toggle">
+<button class="payment-option is-active" type="button" data-payment-mode="international">International card</button>
+<button class="payment-option" type="button" data-payment-mode="ru">Russian card</button>
+</div>
+</div>
 <div class="inline-flex items-center gap-2 rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-200 shadow-soft">
 <span class="inline-flex h-2 w-2 rounded-full bg-purple-400"></span>
-Big discounts for our creators
+<span data-hero-badge-text>Big discounts for our creators</span>
 </div>
 <h2 class="mt-4 text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-white via-purple-200 to-sky-300 text-transparent bg-clip-text">Buy Credits For Less</h2>
-<div class="mt-5 flex flex-wrap items-center justify-center gap-3 text-sm text-white/75">
+<div class="pricing-benefits mt-5 flex flex-wrap items-center justify-center gap-3 text-sm text-white/75">
 <span class="rounded-full border border-white/10 bg-white/5 px-4 py-2">No monthly subscription</span>
 <span class="rounded-full border border-white/10 bg-white/5 px-4 py-2">Credits never expire</span>
 <span class="rounded-full border border-white/10 bg-white/5 px-4 py-2">All AI tools included</span>
@@ -188,7 +318,7 @@ Big discounts for our creators
 <div class="pb-1 text-lg font-semibold text-white/45 line-through">$14.99</div>
 </div>
 <div class="mt-2 text-sm text-purple-200">Launch discount price</div>
-<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="100" data-product="https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" href="#buy-100">Buy</a>
+<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="100" data-product="https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="750" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=750.00&amp;targets=HANSORA%20AI%20100%20credits&amp;label=hansora_web_100" href="#buy-100">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 200 images (depends on the model)</span><span class="block">Up to 55 videos (depends on the model)</span><span class="block">Up to 100 audio generations (depends on the model)</span></span></li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
@@ -205,7 +335,7 @@ Big discounts for our creators
 <!-- Plan 220 -->
 <div class="rounded-2xl border border-purple-400/40 bg-gradient-to-b from-purple-500/18 via-white/7 to-white/[.04] shadow-soft p-6 flex flex-col ring-1 ring-purple-400/25 relative overflow-visible scale-[1.01]">
 <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-400 via-purple-400 to-sky-400"></div>
-<div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white shadow-lg shadow-purple-500/25">Most Popular</span></div>
+<div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white shadow-lg shadow-purple-500/25" data-plan-badge="popular">Most Popular</span></div>
 <div class="flex items-center justify-between gap-3 mt-1">
 <div class="text-sm text-white/60">200 + 20 credits</div>
 <span class="rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20 px-3 py-1 text-xs font-bold">Save $10</span>
@@ -216,7 +346,7 @@ Big discounts for our creators
 <div class="pb-1 text-lg font-semibold text-white/45 line-through">$29.99</div>
 </div>
 <div class="mt-2 text-sm text-purple-200">Includes 20 gift credits</div>
-<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/25" data-credits="220" data-product="https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" href="#buy-220">Buy</a>
+<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/25" data-credits="220" data-product="https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="1500" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=1500.00&amp;targets=HANSORA%20AI%20220%20credits&amp;label=hansora_web_220" href="#buy-220">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 440 images (depends on the model)</span><span class="block">Up to 120 videos (depends on the model)</span><span class="block">Up to 220 audio generations (depends on the model)</span></span></li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
@@ -244,7 +374,7 @@ Big discounts for our creators
 <div class="pb-1 text-lg font-semibold text-white/45 line-through">$74.99</div>
 </div>
 <div class="mt-2 text-sm text-purple-200">Includes 50 gift credits</div>
-<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="550" data-product="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" href="#buy-550">Buy</a>
+<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="550" data-product="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="3700" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=3700.00&amp;targets=HANSORA%20AI%20550%20credits&amp;label=hansora_web_550" href="#buy-550">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 1100 images (depends on the model)</span><span class="block">Up to 300 videos (depends on the model)</span><span class="block">Up to 550 audio generations (depends on the model)</span></span></li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
@@ -262,7 +392,7 @@ Big discounts for our creators
 <!-- Plan 1100 -->
 <div class="rounded-2xl border border-sky-400/25 bg-gradient-to-b from-sky-400/12 via-white/6 to-white/[.03] shadow-soft p-6 flex flex-col relative overflow-visible">
 <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-400 to-purple-400"></div>
-<div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-sky-500 to-purple-500 text-white shadow-lg shadow-sky-500/20">Best Value</span></div>
+<div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-sky-500 to-purple-500 text-white shadow-lg shadow-sky-500/20" data-plan-badge="value">Best Value</span></div>
 <div class="flex items-center justify-between gap-3 mt-1">
 <div class="text-sm text-white/60">1000 + 100 credits</div>
 <span class="rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20 px-3 py-1 text-xs font-bold">Save $30</span>
@@ -273,7 +403,7 @@ Big discounts for our creators
 <div class="pb-1 text-lg font-semibold text-white/45 line-through">$149.99</div>
 </div>
 <div class="mt-2 text-sm text-purple-200">Includes 100 gift credits</div>
-<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="1100" data-product="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" href="#buy-1100">Buy</a>
+<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="1100" data-product="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="7400" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=7400.00&amp;targets=HANSORA%20AI%201100%20credits&amp;label=hansora_web_1100" href="#buy-1100">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 2200 images (depends on the model)</span><span class="block">Up to 610 videos (depends on the model)</span><span class="block">Up to 1100 audio generations (depends on the model)</span></span></li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
@@ -745,6 +875,210 @@ document.addEventListener('DOMContentLoaded', async () => {
 })();
 </script>
 <script>
+// Payment mode UI: International cards (default) or Russian cards (RUB/manual confirmation).
+(function(){
+  const RUB_PRICES = {
+    "100": { price: "₽750", old: "₽1,100", save: "Скидка ₽350", gift: "Цена со скидкой", name: "100 кредитов" },
+    "220": { price: "₽1,500", old: "₽2,200", save: "Скидка ₽700", gift: "Включает 20 подарочных кредитов", name: "220 кредитов" },
+    "550": { price: "₽3,700", old: "₽5,500", save: "Скидка ₽1,800", gift: "Включает 50 подарочных кредитов", name: "550 кредитов" },
+    "1100": { price: "₽7,400", old: "₽9,600", save: "Скидка ₽2,200", gift: "Включает 100 подарочных кредитов", name: "1100 кредитов" }
+  };
+  const RU_FEATURES = {
+    "100": [
+      ["До 200 изображений (зависит от модели)", "До 55 видео (зависит от модели)", "До 100 аудио-генераций (зависит от модели)"],
+      "Все функции",
+      "Качество 720-1080p-4K (зависит от модели)",
+      "Доступ к шаблонам, примерам и промптам",
+      "Право использовать наши промпты в коммерческих целях",
+      "Генерация до 15 секунд (зависит от модели)",
+      "Быстрая генерация",
+      "Поддержка по email",
+      "Регулярные обновления и улучшения",
+      "Доступ к новым моделям после запуска"
+    ],
+    "220": [
+      ["До 440 изображений (зависит от модели)", "До 120 видео (зависит от модели)", "До 220 аудио-генераций (зависит от модели)"],
+      "Все функции",
+      "Качество 720-1080p-4K (зависит от модели)",
+      "Доступ к шаблонам, примерам и промптам",
+      "Право использовать наши промпты в коммерческих целях",
+      "Генерация до 30 секунд (по лимитам модели)",
+      "Быстрая генерация",
+      "Поддержка по email",
+      "Регулярные обновления и улучшения",
+      "Доступ к новым моделям после запуска",
+      "+20 подарочных кредитов"
+    ],
+    "550": [
+      ["До 1100 изображений (зависит от модели)", "До 300 видео (зависит от модели)", "До 550 аудио-генераций (зависит от модели)"],
+      "Все функции",
+      "Качество 720-1080p-4K (зависит от модели)",
+      "Доступ к шаблонам, примерам и промптам",
+      "Право использовать наши промпты в коммерческих целях",
+      "Генерация до 30 секунд (по лимитам модели)",
+      "Быстрая генерация",
+      "Поддержка по email",
+      "Регулярные обновления и улучшения",
+      "Доступ к новым моделям после запуска",
+      "+50 подарочных кредитов"
+    ],
+    "1100": [
+      ["До 2200 изображений (зависит от модели)", "До 600 видео (зависит от модели)", "До 1100 аудио-генераций (зависит от модели)"],
+      "Все функции",
+      "Качество 720-1080p-4K (зависит от модели)",
+      "Доступ к шаблонам, примерам и промптам",
+      "Право использовать наши промпты в коммерческих целях",
+      "Генерация до 30 секунд (по лимитам модели)",
+      "Быстрая генерация",
+      "Приоритетная поддержка",
+      "Регулярные обновления и улучшения",
+      "Доступ к новым моделям после запуска",
+      "+100 подарочных кредитов"
+    ]
+  };
+  const ORIGINAL = new WeakMap();
+
+  function getMode(){
+    return document.documentElement.dataset.paymentMode === "ru" ? "ru" : "international";
+  }
+  function setText(el, text){ if (el) el.textContent = text; }
+  function cardForButton(btn){ return btn ? btn.closest(".rounded-2xl") : null; }
+  function saveOriginal(card){
+    if (!card || ORIGINAL.has(card)) return ORIGINAL.get(card);
+    const data = {
+      html: card.innerHTML
+    };
+    ORIGINAL.set(card, data);
+    return data;
+  }
+  function featureHtml(items){
+    return items.map(function(item){
+      if (Array.isArray(item)) {
+        return `<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span>${item.map(function(line){ return `<span class="block">${line}</span>`; }).join("")}</span></li>`;
+      }
+      return `<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>${item}</li>`;
+    }).join("");
+  }
+  function restoreCard(card){
+    const original = ORIGINAL.get(card);
+    if (original) card.innerHTML = original.html;
+  }
+  function applyRuCard(card){
+    const btn = card.querySelector(".buy-credits[data-credits]");
+    if (!btn) return;
+    const credits = String(btn.getAttribute("data-credits") || "");
+    const rub = RUB_PRICES[credits];
+    if (!rub) return;
+    const smallLine = card.querySelector(".flex.items-center.justify-between .text-sm");
+    const save = card.querySelector(".flex.items-center.justify-between span");
+    const title = card.querySelector(".mt-3.text-5xl");
+    const prices = card.querySelectorAll(".mt-4 .text-4xl, .mt-4 .line-through");
+    const note = card.querySelector(".mt-2.text-sm");
+    const list = card.querySelector("ul");
+    setText(smallLine, credits === "100" ? "100 + 0 кредитов" : credits === "220" ? "200 + 20 кредитов" : credits === "550" ? "500 + 50 кредитов" : "1000 + 100 кредитов");
+    setText(save, rub.save);
+    if (title) title.innerHTML = `${credits} <span class="text-2xl align-baseline text-white">кредитов</span>`;
+    if (prices[0]) prices[0].textContent = rub.price;
+    if (prices[1]) prices[1].textContent = rub.old;
+    setText(note, rub.gift);
+    setText(btn, "Купить");
+    if (list) list.innerHTML = featureHtml(RU_FEATURES[credits] || []);
+  }
+  function applyMode(mode){
+    const isRu = mode === "ru";
+    document.documentElement.dataset.paymentMode = isRu ? "ru" : "international";
+    document.documentElement.lang = isRu ? "ru" : "en";
+    document.querySelectorAll(".payment-option").forEach(function(btn){
+      const active = btn.dataset.paymentMode === mode;
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    setText(document.querySelector("[data-payment-note]"), isRu ? "Выберите способ оплаты" : "Choose payment method");
+    const modeButtons = document.querySelectorAll(".payment-option");
+    if (modeButtons[0]) modeButtons[0].textContent = isRu ? "Международная карта" : "International card";
+    if (modeButtons[1]) modeButtons[1].textContent = isRu ? "Карта РФ" : "Russian card";
+    setText(document.querySelector("[data-hero-badge-text]"), isRu ? "Большие скидки для наших пользователей" : "Big discounts for our creators");
+    setText(document.querySelector("#pricing h2"), isRu ? "Выгодная покупка кредитов" : "Buy Credits For Less");
+    const benefits = document.querySelectorAll(".pricing-benefits span");
+    if (benefits[0]) benefits[0].textContent = isRu ? "Без ежемесячной подписки" : "No monthly subscription";
+    if (benefits[1]) benefits[1].textContent = isRu ? "Кредиты не сгорают" : "Credits never expire";
+    if (benefits[2]) benefits[2].textContent = isRu ? "Все AI-инструменты включены" : "All AI tools included";
+    document.querySelectorAll("[data-plan-badge]").forEach(function(badge){
+      const type = badge.getAttribute("data-plan-badge");
+      badge.textContent = isRu ? (type === "popular" ? "Популярный выбор" : "Лучшая выгода") : (type === "popular" ? "Most Popular" : "Best Value");
+    });
+    document.querySelectorAll(".buy-credits[data-credits]").forEach(function(btn){
+      const card = cardForButton(btn);
+      if (!card) return;
+      saveOriginal(card);
+      if (isRu) applyRuCard(card);
+      else restoreCard(card);
+    });
+  }
+  async function readCurrentUserEmail(){
+    try {
+      if (window.supabase?.auth?.getSession) {
+        const result = await window.supabase.auth.getSession();
+        const email = result?.data?.session?.user?.email;
+        if (email) return email;
+      }
+      if (window.supabase?.auth?.getUser) {
+        const result = await window.supabase.auth.getUser();
+        const email = result?.data?.user?.email;
+        if (email) return email;
+      }
+    } catch(e){}
+    return "";
+  }
+  window.hansoraCurrentPaymentMode = getMode;
+  window.hansoraResolveCheckoutBase = function(el){
+    if (!el) return "";
+    if (getMode() === "ru") return (el.getAttribute("data-ru-product") || "").trim();
+    return (el.getAttribute("data-product") || "").trim();
+  };
+  window.hansoraOpeningCheckoutText = function(){
+    return getMode() === "ru" ? "Открываем оплату..." : "Opening checkout…";
+  };
+  window.hansoraPrepareCheckoutUrl = async function(el, uid, credits, baseUrl){
+    const mode = getMode();
+    const url = new URL(baseUrl, location.href);
+    if (mode === "ru") {
+      const amount = Number(el.getAttribute("data-rub-amount") || "0");
+      const email = await readCurrentUserEmail();
+      const labelEmail = String(email || "").replace(/\|/g, "");
+      url.searchParams.set("credits", String(credits));
+      url.searchParams.set("amount", String(amount));
+      url.searchParams.set("currency", "RUB");
+      url.searchParams.set("user_id", uid);
+      if (email) url.searchParams.set("email", email);
+      url.searchParams.set("label", `hansora_web|${credits}|${uid}|${labelEmail}`);
+      return url;
+    }
+    if (!url.searchParams.has("quantity")) url.searchParams.set("quantity", "1");
+    url.searchParams.set("minimalAddress", "true");
+    url.searchParams.set("metadata_uid", uid);
+    url.searchParams.set("metadata_credits", String(credits));
+    window.hansoraAddMetaAttribution?.(url);
+    return url;
+  };
+  document.addEventListener("DOMContentLoaded", function(){
+    const initial = new URLSearchParams(location.search).get("method") === "ru" ? "ru" : "international";
+    applyMode(initial);
+    document.querySelectorAll(".payment-option").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        const mode = btn.dataset.paymentMode === "ru" ? "ru" : "international";
+        applyMode(mode);
+        const params = new URLSearchParams(location.search);
+        if (mode === "ru") params.set("method", "ru");
+        else params.delete("method");
+        const next = `${location.pathname}${params.toString() ? `?${params.toString()}` : ""}${location.hash || ""}`;
+        history.replaceState(null, "", next);
+      });
+    });
+  });
+})();
+</script>
+<script>
 // STRICT dynamic checkout: prefer data-product; never proceed if uid/credits missing.
 (function () {
   function onReady(fn){ if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, {once:true}); else fn(); }
@@ -756,8 +1090,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       ev.preventDefault();
       ev.stopPropagation();
 
-      // Choose base product URL: prefer data-product; else only use href if it's already a Dodo URL
-      const dataProduct = (el.getAttribute('data-product')||'').trim();
+      // Choose base product URL by active payment mode.
+      const dataProduct = (window.hansoraResolveCheckoutBase?.(el) || el.getAttribute('data-product') || '').trim();
       const href = (el.getAttribute('href')||'').trim();
       const isDodoHref = /dodopayments\.com\/buy/i.test(href);
       const base = dataProduct || (isDodoHref ? href : '');
@@ -805,12 +1139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!uid) return; // block when not logged in
 
       // Build final URL
-      const u = new URL(base, location.origin);
-      if (!u.searchParams.has('quantity')) u.searchParams.set('quantity', '1');
-      u.searchParams.set('minimalAddress', 'true');
-      u.searchParams.set('metadata_uid', uid);
-      u.searchParams.set('metadata_credits', String(credits));
-      window.hansoraAddMetaAttribution?.(u);
+      const u = await (window.hansoraPrepareCheckoutUrl?.(el, uid, credits, base) || new URL(base, location.origin));
 
       window.hansoraTrackBuyClick?.({ uid: uid, credits: credits, productUrl: base });
       window.hansoraPricingNavigate(u.toString());
@@ -898,17 +1227,17 @@ if (!Number.isFinite(credits) || credits<=0){
       return;
     }
 
-    const baseUrl = (el.getAttribute('data-product')||'').trim() || (isDodo ? href : '') || '';
+    const baseUrl = (window.hansoraResolveCheckoutBase?.(el) || el.getAttribute('data-product') || '').trim() || (isDodo ? href : '') || '';
     if (!baseUrl){
-      alert('Missing Dodo checkout URL.');
+      alert('Missing checkout URL.');
       return;
     }
 
     const original = el.innerText;
     if ('disabled' in el) el.disabled = true;
-    if (original) el.innerText = 'Opening checkout…';
+    if (original) el.innerText = window.hansoraOpeningCheckoutText?.() || 'Opening checkout…';
 
-    resolveUid().then(function(uid){
+    resolveUid().then(async function(uid){
       if (!uid){
         alert('You are not logged in. (UID missing)');
         if ('disabled' in el) el.disabled = false;
@@ -916,13 +1245,7 @@ if (!Number.isFinite(credits) || credits<=0){
         return;
       }
       try{
-        const u = new URL(baseUrl, location.href);
-        u.searchParams.set('minimalAddress', 'true');
-        u.searchParams.set('metadata_uid', uid);
-        u.searchParams.set('metadata_credits', String(credits));
-        window.hansoraAddMetaAttribution?.(u);
-        const ru = el.getAttribute('data-return-url');
-        if (ru) u.searchParams.set('return_url', ru);
+        const u = await (window.hansoraPrepareCheckoutUrl?.(el, uid, credits, baseUrl) || new URL(baseUrl, location.href));
         // FINAL redirect only when uid is present (hard block otherwise)
         window.hansoraTrackBuyClick?.({ uid: uid, credits: credits, productUrl: baseUrl });
         window.hansoraPricingNavigate(u.toString());
