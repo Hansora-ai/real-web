@@ -455,6 +455,22 @@
       el.textContent = message || '';
       el.className = 'status' + (kind ? ' ' + kind : '');
     }
+    function isNotEnoughCreditsMessage(message) {
+      return /not enough credits|not_enough_credits|insufficient credits|insufficient_credits/i.test(String(message || ''));
+    }
+    function openPricingOfferPopup() {
+      try {
+        if (window.HansoraHeader && typeof window.HansoraHeader.showPricingOfferNow === 'function') {
+          window.HansoraHeader.showPricingOfferNow();
+          return;
+        }
+        if (window.HansoraHeader && typeof window.HansoraHeader.showSignupOfferNow === 'function') {
+          window.HansoraHeader.showSignupOfferNow();
+        }
+      } catch (error) {
+        console.warn('Could not open pricing offer popup', error);
+      }
+    }
     const GENERATION_FAILED_MESSAGE = 'Generation failed. Please make sure your image follows the content policies, then try again.';
     function showGenerationFailedStatus() {
       showStatus(GENERATION_FAILED_MESSAGE, 'error');
@@ -872,7 +888,7 @@
       if (!audioDuration || audioDuration < 5 || audioDuration > 90.25) { showStatus('Audio must be 5–90 seconds.', 'error'); return; }
       const cost = getCost();
       const availableCredits = await getAvailableCredits(cost);
-      if (availableCredits < cost) { showStatus(`Not enough credits. Needed ${cost}⚡.`, 'error'); return; }
+      if (availableCredits < cost) { showStatus(`Not enough credits. Needed ${cost}⚡.`, 'error'); setTimeout(openPricingOfferPopup, 80); return; }
 
       $('runBtn').disabled = true;
       let placeholder = null;
@@ -905,6 +921,7 @@
       } catch (error) {
         console.warn('HeyGen generation submission failed', error);
         if (placeholder && typeof placeholder.apply === 'function') placeholder.apply({ status: 'failed' });
+        if (isNotEnoughCreditsMessage(error && error.message ? error.message : error)) setTimeout(openPricingOfferPopup, 80);
         showGenerationFailedStatus();
       } finally {
         $('runBtn').disabled = false;
