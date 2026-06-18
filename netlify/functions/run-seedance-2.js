@@ -93,7 +93,7 @@ function costFor(body) {
   const duration = clampDuration(body.duration);
   const variant = String(body.variant || '').toLowerCase();
   const resolution = String(body.resolution || '720p');
-  if (variant === 'fast' || variant === 'lite') return Number((duration * 2.5).toFixed(1));
+  if (variant === 'fast' || variant === 'lite') return Number((duration * 2).toFixed(1));
   return Number((duration * (resolution === '1080p' ? 5.5 : 2.5)).toFixed(1));
 }
 
