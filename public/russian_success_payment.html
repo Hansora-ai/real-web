@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Оплата прошла успешно - HANSORA AI</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{
+      --bg:#070912;
+      --panel:rgba(15,23,42,.78);
+      --line:rgba(255,255,255,.12);
+      --muted:rgba(226,232,240,.68);
+      --text:#f8fafc;
+      --brand:#8b5cf6;
+      --cyan:#38bdf8;
+      --good:#34d399;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:grid;
+      place-items:center;
+      padding:28px 16px;
+      color:var(--text);
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+      background:
+        radial-gradient(900px 520px at 18% -8%,rgba(139,92,246,.28),transparent 62%),
+        radial-gradient(760px 520px at 88% 8%,rgba(56,189,248,.18),transparent 60%),
+        radial-gradient(720px 520px at 48% 105%,rgba(52,211,153,.10),transparent 64%),
+        var(--bg);
+    }
+    .wrap{width:min(100%,720px)}
+    .brand{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      margin-bottom:18px;
+      color:#fff;
+      font-weight:950;
+      letter-spacing:.02em;
+    }
+    .brand-mark{
+      width:42px;
+      height:42px;
+      display:block;
+      object-fit:contain;
+      filter:drop-shadow(0 14px 28px rgba(56,189,248,.18));
+    }
+    .card{
+      position:relative;
+      overflow:hidden;
+      border:1px solid var(--line);
+      border-radius:28px;
+      padding:34px;
+      background:linear-gradient(180deg,rgba(15,23,42,.88),rgba(2,6,23,.78));
+      box-shadow:0 28px 90px rgba(0,0,0,.46);
+      text-align:center;
+    }
+    .card:before{
+      content:"";
+      position:absolute;
+      inset:0 0 auto;
+      height:4px;
+      background:linear-gradient(90deg,var(--brand),var(--cyan),var(--good));
+    }
+    .check{
+      width:76px;
+      height:76px;
+      margin:4px auto 20px;
+      border-radius:999px;
+      display:grid;
+      place-items:center;
+      color:#062016;
+      background:linear-gradient(135deg,#a7f3d0,#38bdf8);
+      box-shadow:0 20px 48px rgba(52,211,153,.22);
+      font-size:42px;
+      font-weight:1000;
+    }
+    h1{
+      margin:0;
+      font-size:clamp(30px,6vw,48px);
+      line-height:1.04;
+      letter-spacing:0;
+      font-weight:1000;
+      background:linear-gradient(90deg,#fff,#ddd6fe,#7dd3fc);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+    }
+    .lead{
+      margin:18px auto 0;
+      max-width:580px;
+      color:var(--muted);
+      font-size:17px;
+      line-height:1.62;
+      font-weight:650;
+    }
+    .email-box{
+      margin:24px auto 0;
+      max-width:520px;
+      border:1px solid rgba(125,211,252,.22);
+      border-radius:18px;
+      background:rgba(2,6,23,.54);
+      padding:16px;
+    }
+    .email-label{
+      margin:0 0 6px;
+      color:rgba(226,232,240,.56);
+      font-size:11px;
+      font-weight:950;
+      text-transform:uppercase;
+      letter-spacing:.09em;
+    }
+    .email{
+      margin:0;
+      overflow-wrap:anywhere;
+      color:#fff;
+      font-size:18px;
+      font-weight:950;
+    }
+    .actions{
+      margin-top:26px;
+      display:grid;
+      justify-items:center;
+      gap:10px;
+    }
+    button{
+      width:min(100%,310px);
+      min-height:52px;
+      border:1px solid rgba(52,211,153,.78);
+      border-radius:999px;
+      color:#fff;
+      cursor:pointer;
+      font-size:16px;
+      font-weight:1000;
+      background:linear-gradient(180deg,rgba(20,31,45,.98),rgba(13,22,30,.98));
+      box-shadow:0 0 0 1px rgba(52,211,153,.14),0 16px 36px rgba(16,185,129,.12);
+    }
+    button:disabled{
+      opacity:.72;
+      cursor:default;
+    }
+    .status{
+      min-height:18px;
+      margin:0;
+      color:rgba(226,232,240,.58);
+      font-size:12px;
+      font-weight:750;
+    }
+    @media (max-width:520px){
+      body{padding:18px 12px}
+      .card{border-radius:24px;padding:28px 18px}
+      .lead{font-size:15px}
+      .email{font-size:16px}
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="brand">
+      <img class="brand-mark" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(23).png" alt="HANSORA AI" />
+      <div>HANSORA AI</div>
+    </div>
+    <section class="card">
+      <div class="check">✓</div>
+      <h1>Оплата прошла успешно</h1>
+      <p class="lead">
+        Поздравляем! Кредиты будут добавлены на этот Gmail в течение 30 минут.
+        Спасибо за доверие. Мы надеемся, что впереди у нас будет долгий и приятный путь вместе.
+      </p>
+      <div class="email-box">
+        <p class="email-label">Gmail аккаунта</p>
+        <p class="email" id="emailText">Проверяем аккаунт...</p>
+      </div>
+      <div class="actions">
+        <button id="understoodBtn" type="button">Понятно</button>
+        <p class="status" id="statusText">Сохраняем подтверждение...</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const SUPABASE_URL = "https://qmaealblegvcwodlmeht.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c";
+    const LOG_TABLE = "russian_card_payment_logs";
+    const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+    const params = new URLSearchParams(location.search);
+    const openedAt = new Date();
+    let currentUser = null;
+    let currentSession = null;
+    let pageViewLogged = false;
+
+    const emailText = document.getElementById("emailText");
+    const statusText = document.getElementById("statusText");
+    const understoodBtn = document.getElementById("understoodBtn");
+
+    const credits = cleanNumber(params.get("credits"));
+    const amount = cleanNumber(params.get("amount"));
+    const currency = (params.get("currency") || "RUB").toUpperCase();
+    const providerRef = params.get("payment_id") || params.get("order_id") || params.get("transaction_id") || params.get("id") || "";
+
+    init();
+
+    async function init(){
+      await loadUser();
+      await logEvent("page_opened");
+      statusText.textContent = pageViewLogged ? "Подтверждение сохранено." : "Если запись не сохранилась автоматически, мы всё равно видим время перехода в системе оплаты.";
+    }
+
+    async function loadUser(){
+      try {
+        const sessionResult = await sb.auth.getSession();
+        currentSession = sessionResult?.data?.session || null;
+        currentUser = currentSession?.user || null;
+        if (!currentUser) {
+          const userResult = await sb.auth.getUser();
+          currentUser = userResult?.data?.user || null;
+        }
+      } catch (_) {}
+      const email = currentUser?.email || params.get("email") || "Gmail не найден";
+      emailText.textContent = email;
+    }
+
+    async function logEvent(eventName){
+      const email = currentUser?.email || params.get("email") || null;
+      const userId = currentUser?.id || params.get("user_id") || null;
+      const sessionToken = currentSession?.access_token || null;
+      if (!sessionToken || !userId) return false;
+
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${LOG_TABLE}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${sessionToken}`,
+            "Prefer": "return=minimal"
+          },
+          body: JSON.stringify({
+            event_name: eventName,
+            user_id: userId,
+            email: email,
+            credits: credits ? Number(credits) : null,
+            amount: amount ? Number(amount) : null,
+            currency: currency,
+            provider_ref: providerRef || null,
+            page_url: location.href,
+            referrer: document.referrer || null,
+            user_agent: navigator.userAgent,
+            created_at_client: new Date().toISOString()
+          })
+        });
+        const ok = response.ok;
+        if (eventName === "page_opened") pageViewLogged = ok;
+        return ok;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    understoodBtn.addEventListener("click", async function(){
+      understoodBtn.disabled = true;
+      understoodBtn.textContent = "Сохраняем...";
+      statusText.textContent = "Сохраняем нажатие кнопки...";
+      const ok = await logEvent("understood_clicked");
+      understoodBtn.textContent = "Готово";
+      statusText.textContent = ok ? "Спасибо, нажатие сохранено." : "Спасибо. Если запись не сохранилась, мы всё равно проверим оплату вручную.";
+      setTimeout(function(){ window.location.href = "/"; }, 900);
+    });
+
+    function cleanNumber(value){
+      const match = String(value || "").replace(",", ".").match(/\d+(?:\.\d+)?/);
+      return match ? match[0] : "";
+    }
+    function formatAmount(value, code){
+      const number = Number(value);
+      if (!Number.isFinite(number)) return `${value} ${code}`;
+      if (code === "RUB") return `${number.toLocaleString("ru-RU")} ₽`;
+      return `${number.toLocaleString("ru-RU")} ${code}`;
+    }
+  </script>
+</body>
+</html>
