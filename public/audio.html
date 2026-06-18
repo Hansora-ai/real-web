@@ -478,6 +478,22 @@
       if (raw && raw !== box.textContent) console.warn('Audio error detail:', raw);
       box.classList.remove('hidden');
     }
+    function isNotEnoughCreditsMessage(message) {
+      return /not enough credits|not_enough_credits|insufficient credits|insufficient_credits/i.test(String(message || ''));
+    }
+    function openPricingOfferPopup() {
+      try {
+        if (window.HansoraHeader && typeof window.HansoraHeader.showPricingOfferNow === 'function') {
+          window.HansoraHeader.showPricingOfferNow();
+          return;
+        }
+        if (window.HansoraHeader && typeof window.HansoraHeader.showSignupOfferNow === 'function') {
+          window.HansoraHeader.showSignupOfferNow();
+        }
+      } catch (error) {
+        console.warn('Could not open pricing offer popup', error);
+      }
+    }
     function clearError(){ const box=$('errorBox'); box.textContent=''; box.classList.add('hidden'); }
 
     function renderModels(){
@@ -1033,7 +1049,9 @@
         watchCreditsLive();
         startPolling();
       }catch(err){
-        showError(String(err.message || err));
+        const message = String(err.message || err);
+        showError(message);
+        if (isNotEnoughCreditsMessage(message)) setTimeout(openPricingOfferPopup, 80);
       }finally{
         button.disabled = false;
         const finalModel = activeModel();
