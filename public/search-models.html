@@ -73,6 +73,102 @@
     textarea#promptBox{
       resize:none;
     }
+    .prompt-mention-wrap{ position:relative; }
+    #promptBox.prompt-mention-source{
+      position:absolute !important;
+      width:1px !important;
+      height:1px !important;
+      min-height:0 !important;
+      opacity:0 !important;
+      pointer-events:none !important;
+      resize:none !important;
+      overflow:hidden !important;
+    }
+    .prompt-mention-editor{
+      width:100%;
+      min-height:3.75rem;
+      outline:none;
+      white-space:pre-wrap;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    }
+    .prompt-mention-editor:empty::before{
+      content:attr(data-placeholder);
+      color:rgba(255,255,255,.4);
+      pointer-events:none;
+    }
+    .prompt-image-mention-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      max-width:100%;
+      margin:0 2px;
+      padding:1px 7px 1px 3px;
+      border-radius:9999px;
+      border:1px solid rgba(168,85,247,.30);
+      background:linear-gradient(135deg,rgba(99,102,241,.46),rgba(168,85,247,.42));
+      color:#fff;
+      font-size:1.02em;
+      font-weight:750;
+      line-height:1.35;
+      box-shadow:0 6px 14px rgba(124,58,237,.11);
+      vertical-align:baseline;
+      cursor:pointer;
+      user-select:none;
+    }
+    .prompt-image-mention-chip img{
+      width:18px;
+      height:18px;
+      border-radius:9999px;
+      object-fit:cover;
+      flex:0 0 auto;
+      border:1px solid rgba(255,255,255,.34);
+      background:rgba(0,0,0,.18);
+    }
+    .prompt-image-mention-menu{
+      position:absolute;
+      z-index:70;
+      left:14px;
+      top:calc(100% - 6px);
+      width:min(320px, calc(100% - 28px));
+      max-height:230px;
+      overflow:auto;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.13);
+      background:rgba(18,20,28,.98);
+      box-shadow:0 18px 52px rgba(0,0,0,.55);
+      padding:7px;
+      backdrop-filter:blur(18px);
+    }
+    .prompt-image-mention-option{
+      width:100%;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      border:0;
+      border-radius:11px;
+      background:transparent;
+      color:rgba(255,255,255,.9);
+      padding:8px;
+      text-align:left;
+      font-size:13px;
+      font-weight:760;
+      cursor:pointer;
+    }
+    .prompt-image-mention-option:hover,
+    .prompt-image-mention-option.is-active{
+      background:rgba(139,92,246,.20);
+      color:#fff;
+    }
+    .prompt-image-mention-option img{
+      width:34px;
+      height:34px;
+      border-radius:9px;
+      object-fit:cover;
+      border:1px solid rgba(255,255,255,.2);
+      background:rgba(255,255,255,.08);
+      flex:0 0 auto;
+    }
     .result-card-loader,
     .processing-orb{
       width:48px;
@@ -501,6 +597,11 @@
       font-size:14px !important;
       line-height:1.45 !important;
     }
+    body.workspace-redesign #promptMentionEditor{
+      min-height:160px;
+      font-size:14px !important;
+      line-height:1.45 !important;
+    }
     body.workspace-redesign #modelButton{
       order:-1;
       width:100%;
@@ -884,6 +985,7 @@
       body.workspace-redesign #modelButton{ order:-1; }
       body.workspace-redesign #generatorCard .rounded-2xl:has(#promptBox){ min-height:170px; }
       body.workspace-redesign #promptBox{ min-height:140px; }
+      body.workspace-redesign #promptMentionEditor{ min-height:140px; }
       body.workspace-redesign #veoQualityBlock:not(.hidden),
       body.workspace-redesign #soraTierBlock:not(.hidden),
       body.workspace-redesign #klingSoundBlock:not(.hidden),
@@ -2796,13 +2898,22 @@
         </div>
 
         <!-- Prompt (textarea) -->
-        <div class="flex-1 flex items-stretch gap-2 rounded-2xl border border-white/15 bg-slate-950/70 px-3 py-2">
+        <div class="prompt-mention-wrap flex-1 flex items-stretch gap-2 rounded-2xl border border-white/15 bg-slate-950/70 px-3 py-2">
           <textarea
             id="promptBox"
             rows="2"
             placeholder="Describe what you want to create…"
-            class="w-full bg-transparent text-sm sm:text-[15px] outline-none placeholder:text-white/40 leading-5"
+            class="prompt-mention-source w-full bg-transparent text-sm sm:text-[15px] outline-none placeholder:text-white/40 leading-5"
           ></textarea>
+          <div
+            id="promptMentionEditor"
+            class="prompt-mention-editor w-full bg-transparent text-sm sm:text-[15px] leading-5"
+            contenteditable="true"
+            role="textbox"
+            aria-multiline="true"
+            data-placeholder="Describe what you want to create…"
+          ></div>
+          <div id="promptImageMentionMenu" class="prompt-image-mention-menu hidden" role="listbox" aria-label="Uploaded images"></div>
         </div>
 
         <!-- Model button -->
@@ -5343,6 +5454,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         wrapper.appendChild(closeBtn);
         thumbs.appendChild(wrapper);
       });
+      if (typeof refreshPromptImageMentionMenu === 'function') refreshPromptImageMentionMenu();
     }
 
     function acceptsMainUploadFile(file) {
@@ -5464,9 +5576,388 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let geminiOmniAudioIds = [];
     let wanPromptExtend = true;
 
+	    const promptMentionPreviewUrls = new WeakMap();
+	    let promptImageMentionRange = null;
+	    let promptImageMentionActiveIndex = 0;
+	    let promptMentionSyncingFromEditor = false;
+
+	    function getPromptMentionPreviewUrl(file) {
+	      if (!file) return '';
+	      if (!promptMentionPreviewUrls.has(file)) {
+	        promptMentionPreviewUrls.set(file, URL.createObjectURL(file));
+	      }
+	      return promptMentionPreviewUrls.get(file);
+	    }
+
+	    function getPromptMentionFileKey(file) {
+	      if (!file) return '';
+	      return [
+	        file.name || '',
+	        file.size || 0,
+	        file.lastModified || 0,
+	        file.type || ''
+	      ].join('|');
+	    }
+
+	    function getPromptMentionImageItems() {
+	      const files = [];
+	      const seen = new Set();
+	      const addFile = (file) => {
+	        if (!file || seen.has(file)) return;
+	        if (!fileIsKind(file, 'image') && !fileHasGenericMime(file)) return;
+	        seen.add(file);
+	        files.push(file);
+	      };
+	      const addFiles = (value) => {
+	        if (Array.isArray(value)) value.forEach(addFile);
+	        else addFile(value);
+	      };
+
+	      addFiles(uploadedFiles);
+	      addFiles(startFrameFile);
+	      addFiles(lastFrameFile);
+	      addFiles(veoReferenceFiles);
+	      addFiles(alephImageFile);
+	      addFiles(motionImageFile);
+	      addFiles(seedanceFirstFrameFile);
+	      addFiles(seedanceLastFrameFile);
+	      addFiles(seedanceImageRefFiles);
+	      addFiles(kling30FirstFrameFile);
+	      addFiles(kling30LastFrameFile);
+	      addFiles(kling30ElementFiles);
+	      if (Array.isArray(kling30Shots)) {
+	        kling30Shots.forEach((shot) => addFiles(shot && shot.element ? shot.element.files : []));
+	      }
+	      addFiles(videoFirstFrameFile);
+	      addFiles(videoLastFrameFile);
+	      addFiles(videoRefImageFiles);
+
+	      return files.map((file, index) => ({
+	        file,
+	        key: getPromptMentionFileKey(file),
+	        label: 'Image ' + (index + 1),
+	        url: getPromptMentionPreviewUrl(file)
+	      }));
+	    }
+
+	    function getPromptMentionEditorText(editor) {
+	      if (!editor) return '';
+	      const readNode = (node) => {
+	        if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
+	        if (node.nodeType !== Node.ELEMENT_NODE) return '';
+	        if (node.classList && node.classList.contains('prompt-image-mention-chip')) {
+	          return '@' + (node.dataset.label || node.textContent.replace(/^@/, '').trim());
+	        }
+	        if (node.nodeName === 'BR') return '\n';
+	        const isBlock = ['DIV', 'P'].includes(node.nodeName) && node !== editor;
+	        let text = '';
+	        node.childNodes.forEach((child) => { text += readNode(child); });
+	        if (isBlock && text && !text.endsWith('\n')) text += '\n';
+	        return text;
+	      };
+	      let value = '';
+	      editor.childNodes.forEach((child) => { value += readNode(child); });
+	      return value.replace(/\u00a0/g, ' ').replace(/\n+$/, '');
+	    }
+
+	    function syncPromptMentionTextarea() {
+	      const editor = document.getElementById('promptMentionEditor');
+	      const promptBox = document.getElementById('promptBox');
+	      if (!editor || !promptBox) return;
+	      promptMentionSyncingFromEditor = true;
+	      promptBox.value = getPromptMentionEditorText(editor);
+	      promptBox.dispatchEvent(new Event('input', { bubbles: true }));
+	      promptMentionSyncingFromEditor = false;
+	    }
+
+	    function makePromptImageMentionChip(item) {
+	      const chip = document.createElement('span');
+	      chip.className = 'prompt-image-mention-chip';
+	      chip.contentEditable = 'false';
+	      chip.setAttribute('contenteditable', 'false');
+	      chip.dataset.label = item.label;
+	      chip.dataset.imageKey = item.key || '';
+
+	      const img = document.createElement('img');
+	      img.src = item.url;
+	      img.alt = '';
+	      img.draggable = false;
+
+	      const label = document.createElement('span');
+	      label.textContent = '@' + item.label;
+
+	      chip.appendChild(img);
+	      chip.appendChild(label);
+	      return chip;
+	    }
+
+	    function refreshPromptMentionChips() {
+	      const editor = document.getElementById('promptMentionEditor');
+	      if (!editor) return;
+	      const items = getPromptMentionImageItems();
+	      const itemByKey = new Map(items.map((item) => [item.key, item]));
+	      let changed = false;
+
+	      Array.from(editor.querySelectorAll('.prompt-image-mention-chip')).forEach((chip) => {
+	        const item = itemByKey.get(chip.dataset.imageKey || '');
+	        if (!item) {
+	          chip.replaceWith(document.createTextNode('@image'));
+	          changed = true;
+	          return;
+	        }
+
+	        if (chip.dataset.label !== item.label) {
+	          chip.dataset.label = item.label;
+	          const label = chip.querySelector('span');
+	          const img = chip.querySelector('img');
+	          if (label) label.textContent = '@' + item.label;
+	          if (img) img.src = item.url;
+	          changed = true;
+	        }
+	      });
+
+	      if (changed) syncPromptMentionTextarea();
+	    }
+
+	    function hidePromptImageMentionMenu() {
+	      const menu = document.getElementById('promptImageMentionMenu');
+	      if (menu) menu.classList.add('hidden');
+	      promptImageMentionRange = null;
+	    }
+
+	    function positionPromptImageMentionMenu() {
+	      const editor = document.getElementById('promptMentionEditor');
+	      const menu = document.getElementById('promptImageMentionMenu');
+	      const wrap = editor ? editor.closest('.prompt-mention-wrap') : null;
+	      if (!editor || !menu || !wrap || !promptImageMentionRange) return;
+
+	      const wrapRect = wrap.getBoundingClientRect();
+	      const editorRect = editor.getBoundingClientRect();
+	      let rect = promptImageMentionRange.getBoundingClientRect();
+	      if (!rect || (!rect.width && !rect.height)) rect = editorRect;
+	      const maxLeft = Math.max(8, wrapRect.width - menu.offsetWidth - 8);
+	      const left = Math.max(8, Math.min(maxLeft, rect.left - wrapRect.left));
+	      const top = Math.max(42, rect.bottom - wrapRect.top + 8);
+	      menu.style.left = left + 'px';
+	      menu.style.top = top + 'px';
+	    }
+
+	    function setPromptImageMentionActive(index) {
+	      const menu = document.getElementById('promptImageMentionMenu');
+	      const options = menu ? Array.from(menu.querySelectorAll('[data-prompt-image-index]')) : [];
+	      if (!options.length) return;
+	      promptImageMentionActiveIndex = (index + options.length) % options.length;
+	      options.forEach((option, optionIndex) => {
+	        option.classList.toggle('is-active', optionIndex === promptImageMentionActiveIndex);
+	      });
+	    }
+
+	    function openPromptImageMentionMenuForChip(chip) {
+	      const editor = document.getElementById('promptMentionEditor');
+	      if (!editor || !chip || !editor.contains(chip)) return;
+	      if (!getPromptMentionImageItems().length) return;
+
+	      const range = document.createRange();
+	      range.selectNode(chip);
+	      promptImageMentionRange = range;
+
+	      const match = String(chip.dataset.label || '').match(/Image\s+(\d+)/i);
+	      promptImageMentionActiveIndex = match ? Math.max(0, Number(match[1]) - 1) : 0;
+
+	      const selection = window.getSelection();
+	      if (selection) {
+	        selection.removeAllRanges();
+	        selection.addRange(range);
+	      }
+	      renderPromptImageMentionMenu();
+	    }
+
+	    function insertPromptImageMention(item) {
+	      const editor = document.getElementById('promptMentionEditor');
+	      if (!editor || !item) return;
+	      editor.focus();
+	      const selection = window.getSelection();
+	      if (!selection) return;
+
+	      let range = promptImageMentionRange || selection.getRangeAt(0);
+	      const selectedChip = selection.anchorNode && selection.anchorNode.nodeType === Node.ELEMENT_NODE
+	        ? selection.anchorNode.closest && selection.anchorNode.closest('.prompt-image-mention-chip')
+	        : selection.anchorNode && selection.anchorNode.parentElement
+	        ? selection.anchorNode.parentElement.closest('.prompt-image-mention-chip')
+	        : null;
+	      if (!promptImageMentionRange && selectedChip && editor.contains(selectedChip)) {
+	        range = document.createRange();
+	        range.selectNode(selectedChip);
+	      }
+
+	      selection.removeAllRanges();
+	      selection.addRange(range);
+	      range.deleteContents();
+
+	      const chip = makePromptImageMentionChip(item);
+	      const space = document.createTextNode(' ');
+	      range.insertNode(chip);
+	      chip.after(space);
+	      if (space.nextSibling && space.nextSibling.nodeType === Node.TEXT_NODE) {
+	        space.nextSibling.textContent = space.nextSibling.textContent.replace(/^\s+/, '');
+	      }
+	      range.setStart(space, space.textContent.length);
+	      range.setEnd(space, space.textContent.length);
+	      selection.removeAllRanges();
+	      selection.addRange(range);
+
+	      syncPromptMentionTextarea();
+	      hidePromptImageMentionMenu();
+	    }
+
+	    function renderPromptImageMentionMenu() {
+	      const menu = document.getElementById('promptImageMentionMenu');
+	      if (!menu) return;
+	      const items = getPromptMentionImageItems();
+	      menu.innerHTML = '';
+	      if (!items.length) {
+	        hidePromptImageMentionMenu();
+	        return;
+	      }
+
+	      items.forEach((item, index) => {
+	        const button = document.createElement('button');
+	        button.type = 'button';
+	        button.className = 'prompt-image-mention-option';
+	        button.dataset.promptImageIndex = String(index);
+	        button.setAttribute('role', 'option');
+	        button.innerHTML = '<img alt="" draggable="false"><span></span>';
+	        button.querySelector('img').src = item.url;
+	        button.querySelector('span').textContent = item.label;
+	        button.addEventListener('mousedown', (event) => event.preventDefault());
+	        button.addEventListener('click', () => insertPromptImageMention(item));
+	        menu.appendChild(button);
+	      });
+
+	      menu.classList.remove('hidden');
+	      setPromptImageMentionActive(Math.min(promptImageMentionActiveIndex, items.length - 1));
+	      positionPromptImageMentionMenu();
+	    }
+
+	    function refreshPromptImageMentionMenu() {
+	      const menu = document.getElementById('promptImageMentionMenu');
+	      refreshPromptMentionChips();
+	      if (menu && !menu.classList.contains('hidden')) renderPromptImageMentionMenu();
+	    }
+
+	    function getCurrentPromptMentionRange() {
+	      const editor = document.getElementById('promptMentionEditor');
+	      const selection = window.getSelection();
+	      if (!editor || !selection || !selection.rangeCount) return null;
+	      const range = selection.getRangeAt(0);
+	      if (!range.collapsed || !editor.contains(range.endContainer)) return null;
+	      if (range.endContainer.nodeType !== Node.TEXT_NODE) return null;
+
+	      const beforeCaret = range.endContainer.textContent.slice(0, range.endOffset);
+	      const match = beforeCaret.match(/@([a-z]*)$/i);
+	      if (!match) return null;
+	      const query = String(match[1] || '').toLowerCase();
+	      if (!'image'.startsWith(query)) return null;
+
+	      const mentionRange = range.cloneRange();
+	      mentionRange.setStart(range.endContainer, range.endOffset - match[0].length);
+	      mentionRange.setEnd(range.endContainer, range.endOffset);
+	      return mentionRange;
+	    }
+
+	    function updatePromptImageMentionMenuFromCaret() {
+	      promptImageMentionRange = getCurrentPromptMentionRange();
+	      if (!promptImageMentionRange || !getPromptMentionImageItems().length) {
+	        hidePromptImageMentionMenu();
+	        return;
+	      }
+	      promptImageMentionActiveIndex = 0;
+	      renderPromptImageMentionMenu();
+	    }
+
+	    function renderPromptMentionText(value) {
+	      const editor = document.getElementById('promptMentionEditor');
+	      if (!editor) return;
+	      const text = String(value || '');
+	      const items = getPromptMentionImageItems();
+	      const parts = text.split(/(@Image\s+\d+)/gi);
+	      editor.innerHTML = '';
+	      parts.forEach((part) => {
+	        const match = part.match(/^@Image\s+(\d+)$/i);
+	        if (match) {
+	          const item = items[Number(match[1]) - 1];
+	          if (item) {
+	            editor.appendChild(makePromptImageMentionChip(item));
+	            return;
+	          }
+	        }
+	        if (part) editor.appendChild(document.createTextNode(part));
+	      });
+	    }
+
+	    function syncPromptMentionEditorFromTextarea() {
+	      if (promptMentionSyncingFromEditor) return;
+	      const promptBox = document.getElementById('promptBox');
+	      if (!promptBox) return;
+	      renderPromptMentionText(promptBox.value || '');
+	    }
+	    window.syncPromptMentionEditorFromTextarea = syncPromptMentionEditorFromTextarea;
+
+	    function initPromptImageMentions() {
+	      const editor = document.getElementById('promptMentionEditor');
+	      const promptBox = document.getElementById('promptBox');
+	      const menu = document.getElementById('promptImageMentionMenu');
+	      if (!editor || !promptBox || !menu || editor.dataset.mentionsWired) return;
+	      editor.dataset.mentionsWired = 'true';
+
+	      editor.addEventListener('input', () => {
+	        syncPromptMentionTextarea();
+	        updatePromptImageMentionMenuFromCaret();
+	      });
+	      editor.addEventListener('keyup', (event) => {
+	        if (['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(event.key)) return;
+	        updatePromptImageMentionMenuFromCaret();
+	      });
+	      editor.addEventListener('click', (event) => {
+	        const chip = event.target && event.target.closest ? event.target.closest('.prompt-image-mention-chip') : null;
+	        if (chip && editor.contains(chip)) {
+	          event.preventDefault();
+	          event.stopPropagation();
+	          openPromptImageMentionMenuForChip(chip);
+	          return;
+	        }
+	        updatePromptImageMentionMenuFromCaret();
+	      });
+	      editor.addEventListener('blur', () => setTimeout(hidePromptImageMentionMenu, 140));
+	      editor.addEventListener('paste', (event) => {
+	        event.preventDefault();
+	        const text = event.clipboardData ? event.clipboardData.getData('text/plain') : '';
+	        document.execCommand('insertText', false, text);
+	      });
+	      editor.addEventListener('keydown', (event) => {
+	        if (menu.classList.contains('hidden')) return;
+	        const items = getPromptMentionImageItems();
+	        if (event.key === 'Escape') {
+	          event.preventDefault();
+	          hidePromptImageMentionMenu();
+	        } else if (event.key === 'ArrowDown') {
+	          event.preventDefault();
+	          setPromptImageMentionActive(promptImageMentionActiveIndex + 1);
+	        } else if (event.key === 'ArrowUp') {
+	          event.preventDefault();
+	          setPromptImageMentionActive(promptImageMentionActiveIndex - 1);
+	        } else if ((event.key === 'Enter' || event.key === 'Tab') && items.length) {
+	          event.preventDefault();
+	          insertPromptImageMention(items[promptImageMentionActiveIndex] || items[0]);
+	        }
+	      });
+	      promptBox.addEventListener('change', syncPromptMentionEditorFromTextarea);
+	      syncPromptMentionEditorFromTextarea();
+	    }
 
 
-    function getWorkspaceModelItems() {
+
+	    function getWorkspaceModelItems() {
       const source = MODELS.filter((m) => !m.hidden && (currentMode === 'image' ? m.category === 'image' : m.category === 'video'));
       if (currentMode !== 'video') return sortModelsForCurrentMode(source);
       const hasVeo31 = source.some((m) => m.id === 'veo31-fast' || m.id === 'veo31');
@@ -5620,13 +6111,17 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       document.querySelectorAll('.preset-card').forEach((card) => {
         if (card.dataset.wired) return;
         card.dataset.wired = 'true';
-        card.addEventListener('click', () => {
-          document.querySelectorAll('.preset-card').forEach((c) => c.classList.remove('selected'));
-          card.classList.add('selected');
-          const prompt = document.getElementById('promptBox');
-          if (prompt && !prompt.value.trim()) prompt.value = card.dataset.prompt || '';
-        });
-      });
+	        card.addEventListener('click', () => {
+	          document.querySelectorAll('.preset-card').forEach((c) => c.classList.remove('selected'));
+	          card.classList.add('selected');
+	          const prompt = document.getElementById('promptBox');
+	          if (prompt && !prompt.value.trim()) {
+	            prompt.value = card.dataset.prompt || '';
+	            if (window.syncPromptMentionEditorFromTextarea) window.syncPromptMentionEditorFromTextarea();
+	            prompt.dispatchEvent(new Event('input', { bubbles: true }));
+	          }
+	        });
+	      });
       renderWorkspaceModelRail();
       syncWorkspaceModelSummary();
     }
@@ -6946,9 +7441,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       document.getElementById('lastFrameInput').click();
     });
 
-    function renderSingleThumb(file, containerEl, onRemove) {
-      containerEl.innerHTML = '';
-      if (!file) return;
+	    function renderSingleThumb(file, containerEl, onRemove) {
+	      containerEl.innerHTML = '';
+	      if (!file) {
+	        if (typeof refreshPromptImageMentionMenu === 'function') refreshPromptImageMentionMenu();
+	        return;
+	      }
 
     
       const url = URL.createObjectURL(file);
@@ -6982,14 +7480,16 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       closeBtn.textContent = '×';
       closeBtn.addEventListener('click', (event) => {
         event.preventDefault();
-        event.stopPropagation();
-        onRemove();
-        wrapper.remove();
-      });
-      wrapper.appendChild(preview);
-      wrapper.appendChild(closeBtn);
-      containerEl.appendChild(wrapper);
-    }
+	        event.stopPropagation();
+	        onRemove();
+	        wrapper.remove();
+	        if (typeof refreshPromptImageMentionMenu === 'function') refreshPromptImageMentionMenu();
+	      });
+	      wrapper.appendChild(preview);
+	      wrapper.appendChild(closeBtn);
+	      containerEl.appendChild(wrapper);
+	      if (typeof refreshPromptImageMentionMenu === 'function') refreshPromptImageMentionMenu();
+	    }
 
     function renderFileListThumbs(files, containerEl, onRemove) {
       if (!containerEl) return;
@@ -7002,9 +7502,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           renderFileListThumbs(files, containerEl, onRemove);
           if (typeof syncSeedanceInputLocks === 'function') syncSeedanceInputLocks();
         });
-      });
-      if (typeof syncSeedanceInputLocks === 'function') syncSeedanceInputLocks();
-    }
+	      });
+	      if (typeof syncSeedanceInputLocks === 'function') syncSeedanceInputLocks();
+	      if (typeof refreshPromptImageMentionMenu === 'function') refreshPromptImageMentionMenu();
+	    }
 
     function setSeedanceControlDisabled(btnId, inputId, disabled, title) {
       const btn = document.getElementById(btnId);
@@ -7086,9 +7587,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         wrapper.appendChild(img);
         wrapper.appendChild(closeBtn);
         container.appendChild(wrapper);
-      });
-      syncVeo31InputLocks();
-    }
+	      });
+	      syncVeo31InputLocks();
+	      if (typeof refreshPromptImageMentionMenu === 'function') refreshPromptImageMentionMenu();
+	    }
 
     function clearLastFrame() {
       lastFrameFile = null;
@@ -9085,13 +9587,14 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     });
 
     const promptBoxForSafety = document.getElementById('promptBox');
-    if (promptBoxForSafety) {
-      promptBoxForSafety.addEventListener('input', () => updatePromptSafetyState(true));
-      promptBoxForSafety.addEventListener('change', () => updatePromptSafetyState(true));
-      promptBoxForSafety.addEventListener('paste', () => setTimeout(() => updatePromptSafetyState(true), 0));
-    }
+	    if (promptBoxForSafety) {
+	      promptBoxForSafety.addEventListener('input', () => updatePromptSafetyState(true));
+	      promptBoxForSafety.addEventListener('change', () => updatePromptSafetyState(true));
+	      promptBoxForSafety.addEventListener('paste', () => setTimeout(() => updatePromptSafetyState(true), 0));
+	    }
+	    initPromptImageMentions();
 
-    let safariResumeTimer = 0;
+	    let safariResumeTimer = 0;
     let safariResumeBusy = false;
 
     function schedulePageResumeRefresh() {
