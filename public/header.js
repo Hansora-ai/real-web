@@ -667,6 +667,12 @@
         width:min(700px,calc(100vw - 32px));
         grid-template-columns:1fr;
       }
+      .hansora-mega-video{
+        width:min(940px,calc(100vw - 32px));
+      }
+      .hansora-mega-video .hansora-mega-grid{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+      }
       .hansora-mega-compact{
         width:min(560px,calc(100vw - 32px));
         grid-template-columns:1fr;
@@ -1006,7 +1012,7 @@
             })}
             ${renderNavMenu('Video', videoLandingHref(cachedCredits), {
               label: 'Video models',
-              className: 'hansora-mega-wide',
+              className: 'hansora-mega-wide hansora-mega-video',
               videoLanding: true,
               sections: [
                 { title: 'Video models', items: VIDEO_MENU_ITEMS },
