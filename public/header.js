@@ -63,8 +63,10 @@
 
   const VIDEO_MENU_ITEMS = [
     { label: 'Seedance 2.0', id: 'seedance-2', icon: 'S2', note: 'Cinematic video model' },
-    { label: 'Gemini Omni', id: 'gemini-omni-video', icon: 'GO', note: 'Prompt, image, and video inputs' },
     { label: 'Kling 3.0', id: 'kling-3', icon: 'K3', note: 'Advanced video generation' },
+    { label: 'Seedance 2.0 Mini', id: 'seedance-2-mini', icon: 'SM', note: 'Fast cinematic video model' },
+    { label: 'Kling 3 Turbo', id: 'kling-3-turbo', icon: 'KT', note: 'Fast text or image video model' },
+    { label: 'Gemini Omni', id: 'gemini-omni-video', icon: 'GO', note: 'Prompt, image, and video inputs' },
     { label: 'HappyHorse 1.0', id: 'happyhorse-1', icon: 'HH', note: 'Video and audio model' },
     { label: 'Veo 3.1', id: 'veo31', icon: 'V3', note: 'Google video model' },
     { label: 'Grok', id: 'grok-video', icon: 'GX', note: 'Cinematic video' },
