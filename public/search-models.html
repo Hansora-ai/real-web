@@ -11,9 +11,9 @@
   <link rel="dns-prefetch" href="//qmaealblegvcwodlmeht.supabase.co" />
   <link href="./search-models-tailwind.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link href="/header.css" rel="stylesheet" />
-  <script defer src="/header.js"></script>
-  <script defer src="/kie-upload-bridge.js"></script>
+  <link href="./header.css" rel="stylesheet" />
+  <script defer src="./header.js"></script>
+  <script defer src="./kie-upload-bridge.js"></script>
   <style>
     :root{
       --base-bg:#050714;
@@ -5072,6 +5072,27 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         minCredits: 10
       },
       {
+        id: 'seedance20-mini',
+        name: 'Seedance 2.0 Mini',
+        emoji: '🌱',
+        subtitle: 'Text / media references → Video',
+        category: 'video',
+        description: 'Seedance 2.0 Mini with first/last frame, image, video, and audio references.',
+        endpoint: '/.netlify/functions/run-seedance-2-mini',
+        needsImage: false,
+        maxFiles: 0,
+        uploadMaxMB: 50,
+        uploadLimitsMB: { image: 30, video: 50, audio: 50 },
+        specificUpload: 'seedance',
+        aspectOptions: ['16:9', '9:16', '1:1', '4:3', '3:4'],
+        defaultAspect: '16:9',
+        resolutionOptions: ['480p', '720p'],
+        defaultResolution: '720p',
+        durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        costLabel: 'Mini 1.3⚡/s',
+        minCredits: 5.2
+      },
+      {
         id: 'gemini-omni-video',
         name: 'Gemini Omni',
         emoji: 'GO',
@@ -5272,7 +5293,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     // Models that should APPEND images when user uploads again (multi-image support)
     const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'grok-image', 'wan-2-7-image', 'qwen-2']);
     const IMAGE_MODEL_ORDER = ['gpt-image-2', 'nano-banana-2', 'nano-banana-pro', 'seedream-5-lite', 'grok-image'];
-    const VIDEO_MODEL_ORDER = ['kling30', 'seedance20', 'gemini-omni-video', 'happyhorse10', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
+    const VIDEO_MODEL_ORDER = ['kling30', 'seedance20', 'seedance20-mini', 'gemini-omni-video', 'happyhorse10', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function sortModelsForCurrentMode(items) {
       const order = currentMode === 'video' ? VIDEO_MODEL_ORDER : IMAGE_MODEL_ORDER;
@@ -5302,6 +5323,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id.includes('happyhorse')) return 'HH';
       if (id.includes('qwen')) return 'Q';
       if (id.includes('z-image')) return 'Z';
+      if (id === 'seedance20-mini') return 'SM';
       if (id.includes('seedance20')) return 'S2';
       if (id.includes('gemini-omni')) return 'GO';
       if (id.includes('kling30')) return 'K3';
@@ -6011,6 +6033,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         'seedance-2': 'seedance20',
         'seedance-2.0': 'seedance20',
         'seedance20': 'seedance20',
+        'seedance-2-mini': 'seedance20-mini',
+        'seedance-2.0-mini': 'seedance20-mini',
+        'seedance20-mini': 'seedance20-mini',
         'gemini-omni': 'gemini-omni-video',
         'geminiomni': 'gemini-omni-video',
         'gemini-omni-video': 'gemini-omni-video',
@@ -6215,6 +6240,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const seconds = Math.max(1, Number(currentDuration || 5));
         const rate = currentSeedanceVariant === 'fast' ? 2 : (currentResolution === '1080p' ? 5.5 : 2.5);
         return Number((seconds * rate).toFixed(1));
+      }
+      if (model.id === 'seedance20-mini') {
+        const seconds = Math.max(1, Number(currentDuration || 5));
+        return Number((seconds * 1.3).toFixed(1));
       }
       if (model.id === 'gemini-omni-video') {
         const hasVideoInput = !!videoSourceFile;
@@ -8957,7 +8986,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           };
         }
 
-        case 'seedance20': {
+        case 'seedance20':
+        case 'seedance20-mini': {
           let cursor = 0;
           const firstFrameUrl = seedanceFirstFrameFile ? (urls || [])[cursor++] : '';
           const lastFrameUrl = seedanceLastFrameFile ? (urls || [])[cursor++] : '';
@@ -8970,10 +9000,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             uid,
             user_id: uid,
             prompt,
-            variant: currentSeedanceVariant === 'fast' ? 'fast' : 'standard',
+            variant: model.id === 'seedance20-mini' ? 'mini' : (currentSeedanceVariant === 'fast' ? 'fast' : 'standard'),
+            model: model.id === 'seedance20-mini' ? 'bytedance/seedance-2-mini' : undefined,
             aspect_ratio: aspect || '16:9',
             duration: duration ? Number(duration) : 5,
-            resolution: currentSeedanceVariant === 'fast' ? '720p' : (currentResolution || '720p'),
+            resolution: model.id === 'seedance20-mini' ? (currentResolution || '720p') : (currentSeedanceVariant === 'fast' ? '720p' : (currentResolution || '720p')),
             generate_audio: !!seedanceGenerateAudio,
             enable_web_search: !!seedanceWebSearch,
             web_search: !!seedanceWebSearch,
