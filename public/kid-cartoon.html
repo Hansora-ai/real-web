@@ -490,6 +490,55 @@
       align-items:center;
       justify-content:center;
     }
+    .creating-state{
+      width:100%;
+      height:100%;
+      display:grid;
+      place-items:center;
+      text-align:center;
+      background:
+        radial-gradient(circle at 50% 35%,rgba(139,92,246,.25),transparent 28%),
+        radial-gradient(circle at 64% 42%,rgba(56,189,248,.18),transparent 24%),
+        #050812;
+    }
+    .creating-icon{
+      width:74px;
+      height:74px;
+      margin:0 auto 13px;
+      border-radius:22px;
+      display:grid;
+      place-items:center;
+      color:#071018;
+      font-size:34px;
+      font-weight:950;
+      background:linear-gradient(135deg,#d9ff5d,#7dd3fc 48%,#8b5cf6);
+      box-shadow:0 0 34px rgba(139,92,246,.35);
+      animation:creatingPulse 1.4s ease-in-out infinite;
+    }
+    .creating-state strong{ display:block; color:#fff; font-size:15px; }
+    .creating-state span{ display:block; margin-top:5px; color:rgba(255,255,255,.56); font-size:12px; }
+    .creating-dots{
+      display:inline-flex;
+      gap:4px;
+      margin-top:12px;
+    }
+    .creating-dots i{
+      width:6px;
+      height:6px;
+      border-radius:999px;
+      background:#d9ff5d;
+      animation:creatingDot 1s ease-in-out infinite;
+    }
+    .creating-dots i:nth-child(2){ animation-delay:.15s; }
+    .creating-dots i:nth-child(3){ animation-delay:.3s; }
+    @keyframes creatingPulse{
+      0%,100%{ transform:scale(1); filter:saturate(1); }
+      50%{ transform:scale(1.06); filter:saturate(1.35); }
+    }
+    @keyframes creatingDot{
+      0%,100%{ transform:translateY(0); opacity:.35; }
+      50%{ transform:translateY(-5px); opacity:1; }
+    }
     .result{ margin-top:16px; padding:16px; border:1px solid rgba(255,255,255,.08); border-radius:18px; background:rgba(255,255,255,.035); }
     .result.hidden{ display:none; }
     .result h2{ margin:0 0 8px; font-size:16px; }
@@ -1009,7 +1058,20 @@
         open.textContent = 'Open';
         actions.appendChild(open);
       } else {
-        media.textContent = failed ? 'Generation failed' : 'Processing video...';
+        if (failed) {
+          media.textContent = 'Generation failed';
+        } else {
+          media.innerHTML = [
+            '<div class="creating-state">',
+            '<div>',
+            '<div class="creating-icon">+</div>',
+            '<strong>Creating video</strong>',
+            '<span>Processing your cartoon story</span>',
+            '<div class="creating-dots"><i></i><i></i><i></i></div>',
+            '</div>',
+            '</div>'
+          ].join('');
+        }
       }
     }
 
@@ -1029,6 +1091,20 @@
         '</div>'
       ].join('');
       applyResultCard(card, { status: resultStatus(row), result_url: row.result_url || '' });
+      return card;
+    }
+
+    function showProcessingCard({ userId, runId, taskId }) {
+      els.emptyResults.classList.add('hidden');
+      els.resultsList.classList.remove('hidden');
+      const existing = runId ? els.resultsList.querySelector(`[data-run-id="${CSS.escape(runId)}"]`) : null;
+      const card = existing || createResultCard({
+        result_url: null,
+        meta: { run_id: runId, task_id: taskId, status: 'processing' }
+      });
+      if (!existing) els.resultsList.prepend(card);
+      applyResultCard(card, { status: 'processing', result_url: '' });
+      if (userId && runId && taskId) startKidPoll({ userId, runId, taskId, card });
       return card;
     }
 
@@ -1062,6 +1138,11 @@
         .order('created_at', { ascending: false })
         .limit(9);
       if (error || !Array.isArray(data) || !data.length) {
+        if (els.resultsList.children.length) {
+          els.emptyResults.classList.add('hidden');
+          els.resultsList.classList.remove('hidden');
+          return;
+        }
         els.emptyResults.classList.remove('hidden');
         els.resultsList.classList.add('hidden');
         els.resultsList.innerHTML = '';
@@ -1218,10 +1299,13 @@
           window.HansoraHeader.startCreditsPolling(90000, 1500);
         }
         setStatus('Request submitted. Your cartoon video is processing.', 'good');
-        els.resultText.innerHTML = `Task <b>${data.taskId || data.id || 'submitted'}</b> is processing. Open <a href="/usage.html">History</a> to pick it up when ready.`;
-        els.promptPreview.textContent = data.prompt || '';
-        els.result.classList.remove('hidden');
-        await loadRecentGenerations(user);
+        els.result.classList.add('hidden');
+        showProcessingCard({
+          userId: user.id,
+          runId: data.run_id || runId,
+          taskId: data.taskId || data.id || ''
+        });
+        setTimeout(() => loadRecentGenerations(user), 1200);
       } catch (error) {
         setStatus(String(error && error.message || error), 'bad');
         console.error('Kid Cartoon run failed', error);
