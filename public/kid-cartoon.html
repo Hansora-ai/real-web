@@ -94,7 +94,25 @@
       padding:10px;
       scrollbar-width:thin;
     }
-    .drop-icon{ width:54px; height:54px; border-radius:18px; display:grid; place-items:center; margin:0 auto; color:#061018; font-size:28px; font-weight:950; background:linear-gradient(135deg,#d9ff5d,#7dd3fc); }
+    .drop-icon{
+      width:54px;
+      height:54px;
+      border-radius:18px;
+      display:grid;
+      place-items:center;
+      margin:0 auto;
+      color:#061018;
+      background:linear-gradient(135deg,#d9ff5d,#7dd3fc);
+    }
+    .drop-icon svg{
+      width:28px;
+      height:28px;
+      stroke:currentColor;
+      stroke-width:2.6;
+      fill:none;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
     input[type=file]{ display:none; }
     .upload-empty{ display:block; width:100%; }
     .upload-empty[hidden],
@@ -158,9 +176,17 @@
       color:#d9ff5d;
       border:1px solid rgba(204,255,56,.5);
       background:rgba(204,255,56,.08);
-      font-size:24px;
       line-height:1;
       margin:0 auto;
+    }
+    .add-image-tile svg{
+      width:24px;
+      height:24px;
+      stroke:currentColor;
+      stroke-width:2.4;
+      fill:none;
+      stroke-linecap:round;
+      stroke-linejoin:round;
     }
     .add-image-tile small{ display:block; margin-top:9px; color:rgba(255,255,255,.56); font-size:12px; line-height:1.1; }
     textarea,
@@ -662,7 +688,9 @@
             <input id="kidImages" type="file" accept="image/*" multiple hidden />
             <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="Upload kid images">
               <div id="uploadEmpty" class="upload-empty">
-                <span class="drop-icon">+</span>
+                <span class="drop-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M5 20h14"></path></svg>
+                </span>
                 <strong>Upload kid<br>photos</strong>
                 <small>Use clear face photos for each child.</small>
               </div>
@@ -852,7 +880,7 @@
         const addTile = document.createElement('button');
         addTile.className = 'add-image-tile';
         addTile.type = 'button';
-        addTile.innerHTML = '<div><span>+</span><small>Add image</small></div>';
+        addTile.innerHTML = '<div><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M5 20h14"></path></svg></span><small>Add image</small></div>';
         addTile.addEventListener('click', (event) => {
           event.stopPropagation();
           els.input.click();
@@ -1627,6 +1655,82 @@
     renderImageThumbs();
     updateRunLabel();
     scheduleRecentGenerationLoads();
+  </script>
+  <style id="kid-cartoon-result-fix-20260624">
+    html[data-kid-cartoon-fix="20260624-2134"] .creating-icon,
+    .creating-icon{
+      width:48px !important;
+      height:48px !important;
+      border-radius:18px !important;
+      color:transparent !important;
+      font-size:0 !important;
+      line-height:0 !important;
+      text-indent:-9999px !important;
+      overflow:hidden !important;
+      background:linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8) !important;
+      box-shadow:0 0 30px rgba(139,92,246,.52) !important;
+      animation:creatingSpin 1.35s linear infinite !important;
+    }
+    .creating-icon::before,
+    .creating-icon::after{
+      content:none !important;
+      display:none !important;
+    }
+    .result-media video{
+      width:100% !important;
+      height:100% !important;
+      max-width:100% !important;
+      max-height:100% !important;
+      object-fit:contain !important;
+      background:#050812 !important;
+    }
+    #previewOverlay video{
+      max-width:100% !important;
+      max-height:min(88vh,900px) !important;
+      object-fit:contain !important;
+    }
+  </style>
+  <script>
+    window.KID_CARTOON_FIX_VERSION = '20260624-2134';
+    document.documentElement.dataset.kidCartoonFix = window.KID_CARTOON_FIX_VERSION;
+    (function hardenKidCartoonResultUi(){
+      function fixResultUi(root) {
+        const scope = root && root.querySelectorAll ? root : document;
+        scope.querySelectorAll('.creating-icon').forEach((icon) => {
+          icon.textContent = '';
+          icon.setAttribute('aria-hidden', 'true');
+          icon.style.setProperty('color', 'transparent', 'important');
+          icon.style.setProperty('font-size', '0', 'important');
+          icon.style.setProperty('text-indent', '-9999px', 'important');
+          icon.style.setProperty('background', 'linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8)', 'important');
+        });
+        scope.querySelectorAll('.result-media video').forEach((video) => {
+          video.style.setProperty('object-fit', 'contain', 'important');
+          video.style.setProperty('width', '100%', 'important');
+          video.style.setProperty('height', '100%', 'important');
+          video.style.setProperty('max-width', '100%', 'important');
+          video.style.setProperty('max-height', '100%', 'important');
+          video.style.setProperty('background', '#050812', 'important');
+          if (video.dataset.previewBound === '1') return;
+          video.dataset.previewBound = '1';
+          video.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const url = video.dataset.resultUrl || video.currentSrc || video.src || '';
+            if (url && window.openPreview) window.openPreview(url);
+          });
+        });
+      }
+      fixResultUi(document);
+      new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === 1) fixResultUi(node);
+          });
+        });
+      }).observe(document.documentElement, { childList:true, subtree:true });
+      setInterval(() => fixResultUi(document), 1500);
+    })();
   </script>
 </body>
 </html>
