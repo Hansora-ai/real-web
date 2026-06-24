@@ -3081,6 +3081,43 @@
     }
     body.workspace-redesign .upload-add-plus::before{ width:18px !important; height:4px !important; }
     body.workspace-redesign .upload-add-plus::after{ width:4px !important; height:18px !important; }
+    body.workspace-redesign #videoRefsUploadWrap .upload-thumb-list,
+    body.workspace-redesign #seedanceUploadWrap .upload-thumb-list,
+    body.workspace-redesign #kling30UploadWrap .upload-thumb-list{
+      pointer-events:auto !important;
+      overflow-x:auto !important;
+      overflow-y:hidden !important;
+      -webkit-overflow-scrolling:touch !important;
+      overscroll-behavior-x:contain !important;
+      touch-action:pan-x pan-y !important;
+      scrollbar-width:thin !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap .upload-thumb-list > div,
+    body.workspace-redesign #seedanceUploadWrap .upload-thumb-list > div,
+    body.workspace-redesign #kling30UploadWrap .upload-thumb-list > div{
+      pointer-events:auto !important;
+      flex:0 0 auto !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap .upload-thumb-list button,
+    body.workspace-redesign #seedanceUploadWrap .upload-thumb-list button,
+    body.workspace-redesign #kling30UploadWrap .upload-thumb-list button,
+    body.workspace-redesign #veoReferenceThumbs button{
+      width:24px !important;
+      height:24px !important;
+      min-width:24px !important;
+      min-height:24px !important;
+      top:6px !important;
+      right:6px !important;
+      font-size:14px !important;
+      line-height:1 !important;
+      border:1px solid rgba(255,255,255,.18) !important;
+      background:rgba(0,0,0,.72) !important;
+      color:#fff !important;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
+      z-index:20 !important;
+    }
     @media (max-width:900px){
       body.workspace-redesign #uploadBtn:not(.hidden){
         min-height:118px !important;
