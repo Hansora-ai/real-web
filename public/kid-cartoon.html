@@ -513,11 +513,11 @@
     .result-info{
       height:92px;
       min-height:92px;
-      padding:9px 10px;
+      padding:10px 10px 9px;
       display:flex;
       flex-direction:column;
-      justify-content:center;
-      gap:5px;
+      justify-content:space-between;
+      gap:4px;
     }
     .result-top-row,
     .result-bottom-row{
@@ -529,9 +529,21 @@
     }
     .result-name{ display:block; min-width:0; font-size:13px; font-weight:850; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .result-kind{ flex:0 0 auto; color:rgba(255,255,255,.45); font-size:11px; font-weight:850; text-transform:uppercase; letter-spacing:.04em; }
-    .result-prompt{ margin:0; color:rgba(255,255,255,.62); font-size:12px; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .result-prompt{
+      margin:0;
+      color:rgba(255,255,255,.62);
+      font-size:12px;
+      line-height:1.25;
+      min-height:30px;
+      max-height:30px;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
     .result-status-text{ color:#6ee7b7; font-size:12px; font-weight:850; }
-    .result-actions{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; }
+    .result-bottom-row{ min-height:34px; }
+    .result-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-left:auto; }
     .result-actions a,
     .result-actions button{
       min-height:34px;
@@ -1723,18 +1735,31 @@
       height:92px !important;
       min-height:92px !important;
       max-height:92px !important;
-      padding:9px 10px !important;
+      padding:10px 10px 9px !important;
       display:flex !important;
       flex-direction:column !important;
-      justify-content:center !important;
-      gap:5px !important;
+      justify-content:space-between !important;
+      gap:4px !important;
       overflow:hidden !important;
     }
+    .result-prompt{
+      min-height:30px !important;
+      max-height:30px !important;
+      display:-webkit-box !important;
+      -webkit-line-clamp:2 !important;
+      -webkit-box-orient:vertical !important;
+      overflow:hidden !important;
+      white-space:normal !important;
+    }
+    .result-bottom-row{
+      min-height:34px !important;
+      flex:0 0 34px !important;
+    }
     .result-actions{
-      margin-top:auto !important;
+      margin-left:auto !important;
       display:flex !important;
       align-items:center !important;
-      justify-content:space-between !important;
+      justify-content:flex-end !important;
       gap:8px !important;
     }
     html[data-kid-cartoon-fix="20260624-2254"] .creating-icon,
@@ -1771,7 +1796,7 @@
     }
   </style>
   <script>
-    window.KID_CARTOON_FIX_VERSION = '20260624-2308';
+    window.KID_CARTOON_FIX_VERSION = '20260624-2324';
     document.documentElement.dataset.kidCartoonFix = window.KID_CARTOON_FIX_VERSION;
     (function hardenKidCartoonResultUi(){
       function fixResultUi(root) {
@@ -1796,7 +1821,17 @@
           info.style.setProperty('height', '92px', 'important');
           info.style.setProperty('min-height', '92px', 'important');
           info.style.setProperty('max-height', '92px', 'important');
+          info.style.setProperty('justify-content', 'space-between', 'important');
           info.style.setProperty('overflow', 'hidden', 'important');
+        });
+        scope.querySelectorAll('.result-prompt').forEach((prompt) => {
+          prompt.style.setProperty('min-height', '30px', 'important');
+          prompt.style.setProperty('max-height', '30px', 'important');
+          prompt.style.setProperty('display', '-webkit-box', 'important');
+          prompt.style.setProperty('-webkit-line-clamp', '2', 'important');
+          prompt.style.setProperty('-webkit-box-orient', 'vertical', 'important');
+          prompt.style.setProperty('white-space', 'normal', 'important');
+          prompt.style.setProperty('overflow', 'hidden', 'important');
         });
         scope.querySelectorAll('.creating-icon').forEach((icon) => {
           icon.textContent = '';
