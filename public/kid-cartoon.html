@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kid Cartoon Studio | Hansora AI</title>
+  <meta name="description" content="Turn child photos into a charming 3D animated cartoon video with Hansora AI." />
+  <link rel="preconnect" href="https://qmaealblegvcwodlmeht.supabase.co" />
+  <link rel="dns-prefetch" href="//qmaealblegvcwodlmeht.supabase.co" />
+  <link href="./search-models-tailwind.css" rel="stylesheet" />
+  <link href="./header.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="./header.js"></script>
+  <script defer src="./kie-upload-bridge.js"></script>
+  <style>
+    :root{
+      --bg:#060712;
+      --panel:#11131d;
+      --panel-2:#181b27;
+      --line:rgba(255,255,255,.1);
+      --muted:rgba(255,255,255,.58);
+      --text:rgba(255,255,255,.94);
+      --accent:#8b5cf6;
+      --accent-2:#38bdf8;
+      --lime:#ccff38;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      min-height:100vh;
+      color:var(--text);
+      background:#05060b;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    main{ padding:104px 20px 24px; }
+    .page-shell{ width:min(1520px,100%); margin:0 auto; display:grid; grid-template-columns:420px minmax(0,1fr); gap:28px; align-items:start; }
+    .panel{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(23,25,36,.96),rgba(13,15,24,.96));
+      border-radius:24px;
+      box-shadow:0 22px 70px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
+      overflow:hidden;
+    }
+    .composer{ position:sticky; top:92px; }
+    .panel-pad{ padding:18px; }
+    .title{ font-size:30px; line-height:1.02; margin:0 0 9px; letter-spacing:0; }
+    .sub{ margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
+    .field{ margin-top:16px; }
+    .label{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; color:rgba(255,255,255,.72); font-size:12px; font-weight:800; }
+    .hint{ color:rgba(255,255,255,.42); font-weight:700; }
+    .section{
+      margin-top:16px;
+      padding:14px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      background:rgba(255,255,255,.025);
+    }
+    .section-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
+      color:rgba(255,255,255,.72);
+      font-size:12px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .dropzone{
+      position:relative;
+      min-height:156px;
+      border:1px dashed rgba(255,255,255,.18);
+      border-radius:18px;
+      background:rgba(255,255,255,.035);
+      display:grid;
+      place-items:center;
+      text-align:center;
+      padding:18px;
+      cursor:pointer;
+      transition:border-color .16s ease, background .16s ease, transform .16s ease;
+    }
+    .dropzone:hover,
+    .dropzone.drag-over{ border-color:rgba(56,189,248,.85); background:rgba(56,189,248,.06); transform:translateY(-1px); }
+    .dropzone strong{ display:block; font-size:16px; margin-top:12px; line-height:1.25; }
+    .dropzone small{ display:block; color:var(--muted); margin-top:8px; font-size:12px; line-height:1.35; }
+    .dropzone.has-file{
+      min-height:132px;
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      overflow-x:auto;
+      overflow-y:hidden;
+      padding:10px;
+      scrollbar-width:thin;
+    }
+    .drop-icon{ width:54px; height:54px; border-radius:18px; display:grid; place-items:center; margin:0 auto; color:#061018; font-size:28px; font-weight:950; background:linear-gradient(135deg,#d9ff5d,#7dd3fc); }
+    input[type=file]{ display:none; }
+    .upload-empty{ display:block; width:100%; }
+    .upload-empty[hidden],
+    .upload-grid[hidden]{ display:none !important; }
+    .upload-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+      width:100%;
+    }
+    .dropzone.has-file .upload-grid{
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      gap:10px;
+      overflow:visible;
+    }
+    .upload-thumb,
+    .add-image-tile{
+      position:relative;
+      flex:0 0 104px;
+      width:104px;
+      height:114px;
+      min-height:114px;
+      border-radius:16px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.12);
+      background:#080b15;
+    }
+    .upload-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .remove-image{
+      position:absolute;
+      top:7px;
+      right:7px;
+      width:26px;
+      height:26px;
+      border:0;
+      border-radius:999px;
+      background:rgba(0,0,0,.72);
+      color:#fff;
+      font-weight:950;
+      cursor:pointer;
+    }
+    .add-image-tile{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-style:dashed;
+      border-color:rgba(255,255,255,.16);
+      cursor:pointer;
+      color:rgba(255,255,255,.7);
+      font-weight:900;
+      text-align:center;
+    }
+    .add-image-tile span{
+      width:48px;
+      height:48px;
+      border-radius:16px;
+      display:grid;
+      place-items:center;
+      color:#d9ff5d;
+      border:1px solid rgba(204,255,56,.5);
+      background:rgba(204,255,56,.08);
+      font-size:24px;
+      line-height:1;
+      margin:0 auto;
+    }
+    .add-image-tile small{ display:block; margin-top:9px; color:rgba(255,255,255,.56); font-size:12px; line-height:1.1; }
+    textarea,
+    select{
+      width:100%;
+      color:#fff;
+      background:rgba(255,255,255,.055);
+      border:1px solid rgba(255,255,255,.11);
+      border-radius:16px;
+      padding:13px 14px;
+      outline:none;
+      font:inherit;
+    }
+    textarea{ resize:none; min-height:106px; line-height:1.45; }
+    textarea:focus,
+    select:focus{ border-color:rgba(139,92,246,.75); box-shadow:0 0 0 3px rgba(139,92,246,.18); }
+    .mention-wrap{ position:relative; }
+    .prompt-editor{
+      width:100%;
+      min-height:118px;
+      max-height:220px;
+      overflow:auto;
+      color:#fff;
+      background:rgba(255,255,255,.055);
+      border:1px solid rgba(255,255,255,.11);
+      border-radius:16px;
+      padding:13px 14px;
+      outline:none;
+      font:inherit;
+      line-height:1.45;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    .prompt-editor:focus{ border-color:rgba(139,92,246,.75); box-shadow:0 0 0 3px rgba(139,92,246,.18); }
+    .prompt-editor:empty:before{
+      content:attr(data-placeholder);
+      color:rgba(255,255,255,.36);
+      pointer-events:none;
+    }
+    .prompt-hidden{ display:none; }
+    .mention-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      min-height:26px;
+      margin:0 2px;
+      padding:2px 9px 2px 3px;
+      border-radius:999px;
+      color:#fff;
+      font-size:1.08em;
+      font-weight:900;
+      background:rgba(139,92,246,.62);
+      box-shadow:0 0 16px rgba(139,92,246,.28);
+      vertical-align:baseline;
+      white-space:nowrap;
+    }
+    .mention-chip img{
+      width:22px;
+      height:22px;
+      border-radius:999px;
+      object-fit:cover;
+      border:1px solid rgba(255,255,255,.32);
+    }
+    .mention-menu{
+      position:absolute;
+      left:10px;
+      right:10px;
+      bottom:calc(100% + 8px);
+      z-index:10;
+      padding:8px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:14px;
+      background:rgba(24,26,36,.98);
+      box-shadow:0 18px 45px rgba(0,0,0,.38);
+    }
+    .mention-menu.hidden{ display:none; }
+    .mention-item{
+      width:100%;
+      min-height:48px;
+      border:0;
+      border-radius:10px;
+      background:transparent;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      color:#fff;
+      padding:7px;
+      font:inherit;
+      font-weight:850;
+      cursor:pointer;
+      text-align:left;
+    }
+    .mention-item:hover{ background:rgba(255,255,255,.075); }
+    .mention-item img{
+      width:34px;
+      height:34px;
+      border-radius:8px;
+      object-fit:cover;
+    }
+    .seg{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .seg button,
+    .pill-row button{
+      border:1px solid rgba(255,255,255,.11);
+      background:rgba(255,255,255,.05);
+      color:rgba(255,255,255,.7);
+      min-height:42px;
+      border-radius:14px;
+      font-size:12px;
+      font-weight:850;
+      cursor:pointer;
+      transition:background .15s ease, border-color .15s ease, color .15s ease;
+    }
+    .seg button.active,
+    .pill-row button.active{
+      background:linear-gradient(135deg,rgba(139,92,246,.95),rgba(56,189,248,.82));
+      border-color:rgba(255,255,255,.2);
+      color:#fff;
+    }
+    .pill-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .pill-row.res{ grid-template-columns:1fr 1fr; }
+    .run{
+      width:100%;
+      min-height:56px;
+      margin-top:18px;
+      border:0;
+      border-radius:18px;
+      background:linear-gradient(90deg,#6366f1,#8b5cf6,#38bdf8);
+      color:#fff;
+      font-size:16px;
+      font-weight:950;
+      cursor:pointer;
+      box-shadow:0 16px 38px rgba(99,102,241,.28);
+    }
+    .run:disabled{ opacity:.58; cursor:not-allowed; box-shadow:none; }
+    .status{ min-height:20px; margin:12px 0 0; color:rgba(255,255,255,.66); font-size:12px; line-height:1.45; }
+    .status.good{ color:#67e8a6; }
+    .status.bad{ color:#fda4af; }
+    .workspace{ min-height:calc(100vh - 128px); border-radius:22px; background:#05060b; }
+    .workspace-body{
+      min-height:520px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:22px;
+      background:#05060b;
+      padding:20px;
+    }
+    .workspace-title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      color:rgba(255,255,255,.78);
+      font-size:14px;
+      font-weight:900;
+    }
+    .workspace-title span{
+      color:rgba(255,255,255,.42);
+      font-size:12px;
+      font-weight:800;
+    }
+    .empty-results{
+      min-height:420px;
+      border:1px dashed rgba(255,255,255,.08);
+      border-radius:18px;
+      margin-top:16px;
+      padding:18px;
+      background:rgba(255,255,255,.018);
+    }
+    .empty-results.hidden{ display:none; }
+    .sample-head{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:14px;
+    }
+    .sample-head h2{ margin:0; font-size:20px; line-height:1.1; letter-spacing:0; }
+    .sample-head p{ margin:5px 0 0; max-width:540px; color:var(--muted); font-size:13px; line-height:1.45; }
+    .sample-badge{
+      flex:0 0 auto;
+      border:1px solid rgba(204,255,56,.35);
+      color:#d9ff5d;
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:11px;
+      font-weight:950;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      background:rgba(204,255,56,.06);
+    }
+    .before-after-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+    }
+    .ba-card{
+      min-height:360px;
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:18px;
+      overflow:hidden;
+      background:#070a14;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .ba-media{
+      min-height:270px;
+      position:relative;
+      overflow:hidden;
+      background:#050812;
+    }
+    .ba-media:before{
+      content:"";
+      position:absolute;
+      z-index:1;
+      inset:auto 0 0;
+      height:38%;
+      background:linear-gradient(180deg,transparent,rgba(0,0,0,.34));
+    }
+    .ba-media img,
+    .ba-media video{
+      width:100%;
+      height:100%;
+      min-height:270px;
+      display:block;
+      object-fit:cover;
+      background:#050812;
+    }
+    .sample-video-empty{
+      min-height:270px;
+      display:grid;
+      place-items:center;
+      color:rgba(255,255,255,.62);
+      background:
+        radial-gradient(circle at 35% 24%,rgba(204,255,56,.22),transparent 25%),
+        radial-gradient(circle at 78% 26%,rgba(56,189,248,.26),transparent 23%),
+        linear-gradient(145deg,#15213a,#07101a);
+      font-weight:900;
+    }
+    .ba-footer{
+      padding:14px 16px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+    }
+    .ba-footer strong{ display:block; font-size:14px; }
+    .ba-footer span{ display:block; margin-top:3px; color:var(--muted); font-size:12px; line-height:1.35; }
+    .ba-label{
+      flex:0 0 auto;
+      padding:7px 10px;
+      border-radius:999px;
+      color:#fff;
+      font-size:11px;
+      font-weight:950;
+      background:rgba(255,255,255,.12);
+    }
+    .ba-label.after{ background:linear-gradient(135deg,#8b5cf6,#38bdf8); }
+    .results-list{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
+      margin-top:16px;
+    }
+    .results-list.hidden{ display:none; }
+    .result-card{
+      min-height:330px;
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:18px;
+      overflow:hidden;
+      background:#070a14;
+      position:relative;
+    }
+    .result-media{
+      height:230px;
+      background:#050812;
+      display:grid;
+      place-items:center;
+      color:rgba(255,255,255,.45);
+      font-size:13px;
+      font-weight:850;
+    }
+    .result-media video{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+      background:#050812;
+    }
+    .result-chip{
+      position:absolute;
+      left:12px;
+      top:12px;
+      z-index:2;
+      border-radius:999px;
+      padding:6px 9px;
+      background:rgba(0,0,0,.72);
+      color:#fff;
+      font-size:11px;
+      font-weight:950;
+    }
+    .result-chip.ready{ background:rgba(16,185,129,.88); }
+    .result-chip.failed{ background:rgba(239,68,68,.88); }
+    .result-info{ padding:13px 14px 15px; }
+    .result-info strong{ display:block; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .result-info span{ display:block; margin-top:4px; color:var(--muted); font-size:12px; }
+    .result-actions{ display:flex; gap:8px; margin-top:12px; }
+    .result-actions a,
+    .result-actions button{
+      min-height:34px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      color:#fff;
+      padding:0 12px;
+      font:inherit;
+      font-size:12px;
+      font-weight:900;
+      text-decoration:none;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .result{ margin-top:16px; padding:16px; border:1px solid rgba(255,255,255,.08); border-radius:18px; background:rgba(255,255,255,.035); }
+    .result.hidden{ display:none; }
+    .result h2{ margin:0 0 8px; font-size:16px; }
+    .result p{ margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
+    .result a{ color:#a5f3fc; font-weight:800; text-decoration:none; }
+    .prompt-preview{
+      margin-top:14px;
+      padding:14px;
+      border-radius:16px;
+      background:#090b13;
+      border:1px solid rgba(255,255,255,.08);
+      color:rgba(255,255,255,.66);
+      font-size:12px;
+      line-height:1.45;
+      max-height:150px;
+      overflow:auto;
+    }
+    @media (max-width:920px){
+      main{ padding-top:94px; }
+      .page-shell{ grid-template-columns:1fr; }
+      .composer{ position:static; }
+      .before-after-grid{ grid-template-columns:1fr; }
+      .results-list{ grid-template-columns:1fr; }
+      .sample-head{ align-items:flex-start; flex-direction:column; }
+    }
+  </style>
+</head>
+<body>
+  <div id="sharedHeader"></div>
+  <main>
+    <div class="page-shell">
+      <section class="panel composer">
+        <div class="panel-pad">
+          <h1 class="title">Kid Cartoon Studio</h1>
+          <p class="sub">Upload child photo references, write a short scene idea, and generate a character-preserving 3D animated video.</p>
+
+          <div class="section">
+            <div class="section-head"><label for="kidImages">Kid images</label><span class="hint">Max 4</span></div>
+            <input id="kidImages" type="file" accept="image/*" multiple hidden />
+            <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="Upload kid images">
+              <div id="uploadEmpty" class="upload-empty">
+                <span class="drop-icon">+</span>
+                <strong>Upload kid<br>photos</strong>
+                <small>Use clear face photos for each child.</small>
+              </div>
+              <div id="imageThumbs" class="upload-grid" hidden></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label"><span>Character style</span></div>
+            <div class="seg" id="styleSeg">
+              <button type="button" data-style="realistic" class="active">Characters stay realistic</button>
+              <button type="button" data-style="cartoon">Cartoon style</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label"><span>Short scene idea</span><span class="hint">simple is OK</span></div>
+            <div class="mention-wrap">
+              <div id="promptEditor" class="prompt-editor" contenteditable="true" data-placeholder="kid feeding friendly animals in a magical garden"></div>
+              <div id="imageMentionMenu" class="mention-menu hidden"></div>
+            </div>
+            <textarea id="prompt" class="prompt-hidden" maxlength="500" aria-hidden="true"></textarea>
+          </div>
+
+          <div class="field">
+            <div class="label"><span>Aspect ratio</span></div>
+            <div class="pill-row" id="aspectRow">
+              <button type="button" data-aspect="16:9" class="active">16:9</button>
+              <button type="button" data-aspect="9:16">9:16</button>
+              <button type="button" data-aspect="1:1">1:1</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label"><span>Resolution</span></div>
+            <div class="pill-row res" id="resolutionRow">
+              <button type="button" data-resolution="720p" class="active">720p</button>
+              <button type="button" data-resolution="1080p">1080p</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label"><span>Duration</span><span id="durationLabel" class="hint">6s</span></div>
+            <input id="duration" type="range" min="4" max="15" step="1" value="6" style="width:100%;" />
+          </div>
+
+          <button id="runBtn" class="run" type="button">Run 15 ⚡</button>
+          <p id="status" class="status"></p>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <div class="workspace-body">
+          <div class="workspace-title">
+            <strong>Recent generations</strong>
+          </div>
+          <div class="empty-results">
+            <div class="sample-head">
+              <div>
+                <h2>Before and after preview</h2>
+                <p>New users can see the idea before their first generated video appears in History.</p>
+              </div>
+              <span class="sample-badge">Example</span>
+            </div>
+            <div class="before-after-grid" aria-label="Before and after example">
+              <article class="ba-card">
+                <div class="ba-media ba-before">
+                  <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%2024,%202026,%2001_14_04%20PM.png" alt="Before kid photo example" loading="lazy" />
+                </div>
+                <div class="ba-footer">
+                  <div>
+                    <strong>Before</strong>
+                    <span>Uploaded kid photo reference.</span>
+                  </div>
+                  <span class="ba-label">IMAGE</span>
+                </div>
+              </article>
+              <article class="ba-card">
+                <div class="ba-media ba-after">
+                  <video controls muted playsinline loop preload="metadata" poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%2024,%202026,%2001_14_04%20PM.png"></video>
+                </div>
+                <div class="ba-footer">
+                  <div>
+                    <strong>After</strong>
+                    <span>Animated story result with preserved character.</span>
+                  </div>
+                  <span class="ba-label after">VIDEO</span>
+                </div>
+              </article>
+            </div>
+          </div>
+          <div id="resultsList" class="results-list hidden"></div>
+          <div id="result" class="result hidden">
+            <h2>Request submitted</h2>
+            <p id="resultText"></p>
+            <div id="promptPreview" class="prompt-preview"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const sb = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__HANSORA_SB__ = sb;
+
+    let files = [];
+    let styleMode = 'realistic';
+    let aspectRatio = '16:9';
+    let resolution = '720p';
+    const maxFiles = 4;
+    let fileIdSeed = 0;
+    let activeMentionChip = null;
+
+    const els = {
+      input: document.getElementById('kidImages'),
+      drop: document.getElementById('dropzone'),
+      uploadEmpty: document.getElementById('uploadEmpty'),
+      imageThumbs: document.getElementById('imageThumbs'),
+      prompt: document.getElementById('prompt'),
+      editor: document.getElementById('promptEditor'),
+      mentionMenu: document.getElementById('imageMentionMenu'),
+      duration: document.getElementById('duration'),
+      durationLabel: document.getElementById('durationLabel'),
+      run: document.getElementById('runBtn'),
+      status: document.getElementById('status'),
+      emptyResults: document.querySelector('.empty-results'),
+      resultsList: document.getElementById('resultsList'),
+      result: document.getElementById('result'),
+      resultText: document.getElementById('resultText'),
+      promptPreview: document.getElementById('promptPreview'),
+    };
+    const activePolls = new Map();
+
+    function parseCredits(value) {
+      const n = Number(String(value ?? '').replace(/[^\d.-]/g, ''));
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function currentCost() {
+      const seconds = Math.max(4, Math.min(15, Number(els.duration.value || 6)));
+      const rate = resolution === '1080p' ? 5.5 : 2.5;
+      return Number((seconds * rate).toFixed(1));
+    }
+
+    function setStatus(message, type) {
+      els.status.textContent = message || '';
+      els.status.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    function updateRunLabel() {
+      els.durationLabel.textContent = `${els.duration.value}s`;
+      const cost = currentCost();
+      els.run.textContent = `Run ${Number.isInteger(cost) ? cost : cost.toFixed(1)} ⚡`;
+    }
+
+    function renderImageThumbs() {
+      els.imageThumbs.innerHTML = '';
+      els.uploadEmpty.hidden = files.length > 0;
+      els.imageThumbs.hidden = files.length === 0;
+      els.drop.classList.toggle('has-file', files.length > 0);
+
+      files.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'upload-thumb';
+        const img = document.createElement('img');
+        img.src = item.url;
+        img.alt = `Kid image ${index + 1}`;
+        const remove = document.createElement('button');
+        remove.className = 'remove-image';
+        remove.type = 'button';
+        remove.textContent = '×';
+        remove.setAttribute('aria-label', `Remove image ${index + 1}`);
+        remove.addEventListener('click', (event) => {
+          event.stopPropagation();
+          removeKidFile(index);
+        });
+        card.appendChild(img);
+        card.appendChild(remove);
+        els.imageThumbs.appendChild(card);
+      });
+
+      if (files.length > 0 && files.length < maxFiles) {
+        const addTile = document.createElement('button');
+        addTile.className = 'add-image-tile';
+        addTile.type = 'button';
+        addTile.innerHTML = '<div><span>+</span><small>Add image</small></div>';
+        addTile.addEventListener('click', (event) => {
+          event.stopPropagation();
+          els.input.click();
+        });
+        els.imageThumbs.appendChild(addTile);
+      }
+    }
+
+    function addFiles(list) {
+      const incoming = Array.from(list || []).filter((file) => String(file.type || '').startsWith('image/'));
+      incoming.slice(0, Math.max(0, maxFiles - files.length)).forEach((file) => {
+        files.push({
+          id: `kid-image-${Date.now()}-${fileIdSeed++}`,
+          file,
+          url: URL.createObjectURL(file)
+        });
+      });
+      renderImageThumbs();
+      normalizeMentionChips();
+      maybeShowMentionMenu();
+    }
+
+    function removeKidFile(index) {
+      const removed = files.splice(index, 1)[0];
+      if (removed && removed.url) URL.revokeObjectURL(removed.url);
+      renderImageThumbs();
+      normalizeMentionChips();
+      hideMentionMenu();
+      syncPromptFromEditor();
+    }
+
+    function getFileIndexById(id) {
+      return files.findIndex((item) => item.id === id);
+    }
+
+    function makeMentionChip(item) {
+      const index = getFileIndexById(item.id);
+      const chip = document.createElement('span');
+      chip.className = 'mention-chip';
+      chip.contentEditable = 'false';
+      chip.dataset.imageId = item.id;
+
+      const img = document.createElement('img');
+      img.src = item.url;
+      img.alt = '';
+      const label = document.createElement('span');
+      label.textContent = `@Image ${index + 1}`;
+      chip.appendChild(img);
+      chip.appendChild(label);
+      return chip;
+    }
+
+    function normalizeMentionChips() {
+      [...els.editor.querySelectorAll('.mention-chip')].forEach((chip) => {
+        const index = getFileIndexById(chip.dataset.imageId);
+        if (index < 0) {
+          chip.replaceWith(document.createTextNode('@image'));
+          return;
+        }
+        const item = files[index];
+        const img = chip.querySelector('img');
+        const label = chip.querySelector('span');
+        if (img) img.src = item.url;
+        if (label) label.textContent = `@Image ${index + 1}`;
+      });
+      syncPromptFromEditor();
+    }
+
+    function syncPromptFromEditor() {
+      els.prompt.value = (els.editor.innerText || '').replace(/\u00a0/g, ' ').trim();
+      return els.prompt.value;
+    }
+
+    function setCaretAfter(node) {
+      const range = document.createRange();
+      range.setStartAfter(node);
+      range.collapse(true);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    function getCaretTextBeforeEditor() {
+      const sel = window.getSelection();
+      if (!sel.rangeCount || !els.editor.contains(sel.anchorNode)) return '';
+      const range = sel.getRangeAt(0).cloneRange();
+      const pre = range.cloneRange();
+      pre.selectNodeContents(els.editor);
+      pre.setEnd(range.endContainer, range.endOffset);
+      return pre.toString();
+    }
+
+    function findTextPosition(root, targetOffset) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let count = 0;
+      let node = walker.nextNode();
+      while (node) {
+        const next = count + node.textContent.length;
+        if (targetOffset <= next) return { node, offset: Math.max(0, targetOffset - count) };
+        count = next;
+        node = walker.nextNode();
+      }
+      return { node: root, offset: root.childNodes.length };
+    }
+
+    function createTextRange(root, start, end) {
+      const range = document.createRange();
+      const startPos = findTextPosition(root, start);
+      const endPos = findTextPosition(root, end);
+      range.setStart(startPos.node, startPos.offset);
+      range.setEnd(endPos.node, endPos.offset);
+      return range;
+    }
+
+    function getMentionTrigger() {
+      const before = getCaretTextBeforeEditor();
+      const match = before.match(/(^|\s)@(image)?$/i);
+      if (!match) return null;
+      return {
+        start: before.length - match[0].length + (match[1] ? match[1].length : 0),
+        end: before.length
+      };
+    }
+
+    function renderMentionMenu() {
+      els.mentionMenu.innerHTML = '';
+      files.forEach((item, index) => {
+        const option = document.createElement('button');
+        option.className = 'mention-item';
+        option.type = 'button';
+        option.dataset.imageId = item.id;
+        option.innerHTML = `<img src="${item.url}" alt=""><span>Image ${index + 1}</span>`;
+        els.mentionMenu.appendChild(option);
+      });
+    }
+
+    function showMentionMenu() {
+      if (!files.length) {
+        hideMentionMenu();
+        return;
+      }
+      renderMentionMenu();
+      els.mentionMenu.classList.remove('hidden');
+    }
+
+    function hideMentionMenu() {
+      els.mentionMenu.classList.add('hidden');
+      if (!els.mentionMenu.contains(document.activeElement)) activeMentionChip = null;
+    }
+
+    function maybeShowMentionMenu() {
+      if (!files.length) {
+        hideMentionMenu();
+        return;
+      }
+      if (activeMentionChip || getMentionTrigger()) showMentionMenu();
+      else hideMentionMenu();
+    }
+
+    function chooseMention(item) {
+      if (activeMentionChip && els.editor.contains(activeMentionChip)) {
+        const replacement = makeMentionChip(item);
+        activeMentionChip.replaceWith(replacement);
+        setCaretAfter(replacement);
+      } else {
+        const trigger = getMentionTrigger();
+        if (!trigger) return;
+        const range = createTextRange(els.editor, trigger.start, trigger.end);
+        range.deleteContents();
+        const chip = makeMentionChip(item);
+        range.insertNode(chip);
+        const space = document.createTextNode(' ');
+        const after = document.createRange();
+        after.setStartAfter(chip);
+        after.collapse(true);
+        after.insertNode(space);
+        setCaretAfter(space);
+      }
+      activeMentionChip = null;
+      hideMentionMenu();
+      syncPromptFromEditor();
+    }
+
+    function selectButton(containerId, attr, value, setter) {
+      document.getElementById(containerId).addEventListener('click', (event) => {
+        const btn = event.target.closest('button[' + attr + ']');
+        if (!btn) return;
+        [...btn.parentElement.children].forEach((node) => node.classList.remove('active'));
+        btn.classList.add('active');
+        setter(btn.getAttribute(attr));
+        updateRunLabel();
+      });
+      value();
+    }
+
+    async function getUserAndToken() {
+      const { data: userData } = await sb.auth.getUser();
+      const user = userData && userData.user ? userData.user : null;
+      if (!user) return { user: null, token: '' };
+      const { data: sessionData } = await sb.auth.getSession();
+      return { user, token: sessionData && sessionData.session ? sessionData.session.access_token : '' };
+    }
+
+    function resultStatus(row) {
+      const metaStatus = row && row.meta && row.meta.status ? String(row.meta.status) : '';
+      if (row && row.result_url) return 'ready';
+      if (/fail|error|cancel|reject/i.test(metaStatus)) return 'failed';
+      return metaStatus || 'processing';
+    }
+
+    function resultUrlFromPayload(payload) {
+      if (!payload || typeof payload !== 'object') return '';
+      const direct = payload.video_url || payload.result_url || payload.image_url;
+      if (typeof direct === 'string' && /^https?:\/\//i.test(direct)) return direct;
+      const pools = [payload.urls, payload.images, payload.result_urls, payload.results];
+      for (const pool of pools) {
+        if (!Array.isArray(pool)) continue;
+        const url = pool.find((item) => typeof item === 'string' && /^https?:\/\//i.test(item));
+        if (url) return url;
+      }
+      return '';
+    }
+
+    function applyResultCard(card, data) {
+      const status = String(data.status || '').toLowerCase();
+      const url = data.result_url || '';
+      const ready = !!url;
+      const failed = !ready && /fail|error|cancel|reject/i.test(status);
+      const chip = card.querySelector('.result-chip');
+      const media = card.querySelector('.result-media');
+      const statusText = card.querySelector('.result-status-text');
+      const actions = card.querySelector('.result-actions');
+      chip.className = 'result-chip' + (ready ? ' ready' : failed ? ' failed' : '');
+      chip.textContent = ready ? 'Ready' : failed ? 'Failed' : 'Processing';
+      statusText.textContent = ready ? 'Ready' : failed ? 'Failed' : 'Processing';
+      media.innerHTML = '';
+      actions.innerHTML = '';
+      if (ready) {
+        const video = document.createElement('video');
+        video.src = url;
+        video.controls = true;
+        video.playsInline = true;
+        video.preload = 'metadata';
+        media.appendChild(video);
+        const open = document.createElement('a');
+        open.href = url;
+        open.target = '_blank';
+        open.rel = 'noopener';
+        open.textContent = 'Open';
+        actions.appendChild(open);
+      } else {
+        media.textContent = failed ? 'Generation failed' : 'Processing video...';
+      }
+    }
+
+    function createResultCard(row) {
+      const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
+      const card = document.createElement('article');
+      card.className = 'result-card';
+      card.dataset.runId = meta.run_id || '';
+      card.dataset.taskId = meta.task_id || meta.taskId || '';
+      card.innerHTML = [
+        '<div class="result-chip">Processing</div>',
+        '<div class="result-media"></div>',
+        '<div class="result-info">',
+        '<strong>Kid Cartoon video</strong>',
+        '<span class="result-status-text">Processing</span>',
+        '<div class="result-actions"></div>',
+        '</div>'
+      ].join('');
+      applyResultCard(card, { status: resultStatus(row), result_url: row.result_url || '' });
+      return card;
+    }
+
+    async function checkKidResult(params) {
+      const qs = new URLSearchParams();
+      if (params.taskId) qs.set('taskId', params.taskId);
+      if (params.uid) qs.set('uid', params.uid);
+      if (params.runId) qs.set('run_id', params.runId);
+      const res = await fetch('/.netlify/functions/kid-cartoon-check?' + qs.toString(), {
+        method: 'GET',
+        cache: 'no-store',
+        headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' }
+      });
+      return res.json().catch(() => ({}));
+    }
+
+    async function loadRecentGenerations(userOverride) {
+      const auth = userOverride ? { user: userOverride } : await getUserAndToken();
+      const user = auth.user;
+      if (!user) {
+        els.emptyResults.classList.remove('hidden');
+        els.resultsList.classList.add('hidden');
+        els.resultsList.innerHTML = '';
+        return;
+      }
+      const { data, error } = await sb
+        .from('user_generations')
+        .select('id,provider,kind,prompt,result_url,meta,created_at')
+        .eq('user_id', user.id)
+        .eq('provider', 'Kid Cartoon Studio')
+        .order('created_at', { ascending: false })
+        .limit(9);
+      if (error || !Array.isArray(data) || !data.length) {
+        els.emptyResults.classList.remove('hidden');
+        els.resultsList.classList.add('hidden');
+        els.resultsList.innerHTML = '';
+        return;
+      }
+      els.emptyResults.classList.add('hidden');
+      els.resultsList.classList.remove('hidden');
+      els.resultsList.innerHTML = '';
+      data.forEach((row) => {
+        const card = createResultCard(row);
+        els.resultsList.appendChild(card);
+        const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
+        const runId = meta.run_id || '';
+        const taskId = meta.task_id || meta.taskId || '';
+        const status = resultStatus(row).toLowerCase();
+        if (!row.result_url && runId && taskId && !/fail|error|cancel|reject/i.test(status)) {
+          startKidPoll({ userId: user.id, runId, taskId, card });
+        }
+      });
+    }
+
+    async function startKidPoll({ userId, runId, taskId, card }) {
+      if (!userId || !runId || !taskId || activePolls.has(runId)) return;
+      const token = { cancelled: false };
+      activePolls.set(runId, token);
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      try {
+        for (let attempt = 0; attempt < 220; attempt++) {
+          if (token.cancelled) return;
+          if (document.visibilityState !== 'hidden') {
+            try {
+              const checked = await checkKidResult({ uid: userId, runId, taskId });
+              const checkStatus = String(checked.status || '').toLowerCase();
+              const checkedUrl = resultUrlFromPayload(checked);
+              if (checkedUrl) {
+                applyResultCard(card, { status: 'ready', result_url: checkedUrl });
+                setStatus('Cartoon video is ready.', 'good');
+                if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') {
+                  window.HansoraHeader.startCreditsPolling(15000, 1500);
+                }
+                return;
+              }
+              if (checked.failed || /fail|error|cancel|reject/i.test(checkStatus)) {
+                applyResultCard(card, { status: 'failed', result_url: '' });
+                setStatus(checked.error || 'Generation failed.', 'bad');
+                return;
+              }
+            } catch (error) {}
+
+            const { data } = await sb
+              .from('user_generations')
+              .select('result_url,meta')
+              .eq('user_id', userId)
+              .eq('meta->>run_id', runId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (data) {
+              const status = data.meta && data.meta.status ? String(data.meta.status) : (data.result_url ? 'ready' : 'processing');
+              if (data.result_url) {
+                applyResultCard(card, { status: 'ready', result_url: data.result_url });
+                return;
+              }
+              if (/fail|error|cancel|reject/i.test(status)) {
+                applyResultCard(card, { status: 'failed', result_url: '' });
+                return;
+              }
+              applyResultCard(card, { status, result_url: '' });
+            }
+          }
+          await sleep(attempt < 8 ? 4000 : 8000);
+        }
+      } finally {
+        if (activePolls.get(runId) === token) activePolls.delete(runId);
+      }
+    }
+
+    async function uploadReferences() {
+      if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
+        throw new Error('Upload bridge is not available.');
+      }
+      setStatus(`Uploading ${files.length} photo${files.length === 1 ? '' : 's'}...`);
+      const urls = await Promise.all(files.map(async (item) => {
+        const uploaded = await window.kieUploadBridge.upload(item.file, { bucket: 'video' });
+        if (!uploaded || !uploaded.publicUrl) throw new Error('Upload did not return a public URL.');
+        return uploaded.publicUrl;
+      }));
+      return urls;
+    }
+
+    async function run() {
+      try {
+        els.result.classList.add('hidden');
+        if (!files.length) {
+          setStatus('Upload at least one kid photo first.', 'bad');
+          return;
+        }
+        const shortPrompt = syncPromptFromEditor();
+        if (!shortPrompt) {
+          setStatus('Write a short scene idea first.', 'bad');
+          return;
+        }
+        const { user, token } = await getUserAndToken();
+        if (!user) {
+          setStatus('Please log in first.', 'bad');
+          if (window.HansoraHeader && typeof window.HansoraHeader.openAuth === 'function') window.HansoraHeader.openAuth();
+          return;
+        }
+        const cost = currentCost();
+        const currentCredits = window.HansoraHeader && typeof window.HansoraHeader.getCurrentCredits === 'function'
+          ? parseCredits(window.HansoraHeader.getCurrentCredits())
+          : 0;
+        if (currentCredits && currentCredits < cost) {
+          setStatus(`Not enough credits. Need ${cost} credits.`, 'bad');
+          return;
+        }
+        els.run.disabled = true;
+        const imageUrls = await uploadReferences();
+        const runId = `${user.id}-${Date.now()}`;
+        setStatus('Submitting cartoon video request...');
+        const res = await fetch('/.netlify/functions/run-kid-cartoon-seedance-2', {
+          method: 'POST',
+          headers: Object.assign(
+            { 'Content-Type': 'application/json', 'X-USER-ID': user.id },
+            token ? { Authorization: 'Bearer ' + token } : {}
+          ),
+          body: JSON.stringify({
+            uid: user.id,
+            run_id: runId,
+            prompt: shortPrompt,
+            style_mode: styleMode,
+            aspect_ratio: aspectRatio,
+            resolution,
+            duration: Number(els.duration.value || 6),
+            image_urls: imageUrls,
+            generate_audio: true
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || data.details || 'Request failed.');
+        }
+        if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function' && data.credits !== undefined) {
+          window.HansoraHeader.setCredits(data.credits);
+        }
+        if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') {
+          window.HansoraHeader.startCreditsPolling(90000, 1500);
+        }
+        setStatus('Request submitted. Your cartoon video is processing.', 'good');
+        els.resultText.innerHTML = `Task <b>${data.taskId || data.id || 'submitted'}</b> is processing. Open <a href="/usage.html">History</a> to pick it up when ready.`;
+        els.promptPreview.textContent = data.prompt || '';
+        els.result.classList.remove('hidden');
+        await loadRecentGenerations(user);
+      } catch (error) {
+        setStatus(String(error && error.message || error), 'bad');
+      } finally {
+        els.run.disabled = false;
+      }
+    }
+
+    els.input.addEventListener('change', (event) => {
+      addFiles(event.target.files);
+      els.input.value = '';
+    });
+    ['dragenter', 'dragover'].forEach((name) => els.drop.addEventListener(name, (event) => {
+      event.preventDefault();
+      els.drop.classList.add('drag-over');
+    }));
+    ['dragleave', 'drop'].forEach((name) => els.drop.addEventListener(name, (event) => {
+      event.preventDefault();
+      els.drop.classList.remove('drag-over');
+    }));
+    els.drop.addEventListener('drop', (event) => addFiles(event.dataTransfer.files));
+    els.drop.addEventListener('click', (event) => {
+      if (event.target.closest('.remove-image') || event.target.closest('.add-image-tile')) return;
+      els.input.click();
+    });
+    els.drop.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        els.input.click();
+      }
+    });
+    els.editor.addEventListener('input', () => {
+      syncPromptFromEditor();
+      maybeShowMentionMenu();
+    });
+    els.editor.addEventListener('keyup', maybeShowMentionMenu);
+    els.editor.addEventListener('click', (event) => {
+      const chip = event.target.closest('.mention-chip');
+      if (chip && files.length) {
+        activeMentionChip = chip;
+        showMentionMenu();
+        return;
+      }
+      activeMentionChip = null;
+      maybeShowMentionMenu();
+    });
+    els.editor.addEventListener('paste', (event) => {
+      event.preventDefault();
+      const text = (event.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
+    });
+    els.mentionMenu.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      const item = event.target.closest('.mention-item');
+      if (!item) return;
+      const image = files.find((file) => file.id === item.dataset.imageId);
+      if (image) chooseMention(image);
+    });
+    document.addEventListener('click', (event) => {
+      if (els.editor.contains(event.target) || els.mentionMenu.contains(event.target)) return;
+      hideMentionMenu();
+    });
+    document.getElementById('styleSeg').addEventListener('click', (event) => {
+      const btn = event.target.closest('button[data-style]');
+      if (!btn) return;
+      [...btn.parentElement.children].forEach((node) => node.classList.remove('active'));
+      btn.classList.add('active');
+      styleMode = btn.dataset.style;
+    });
+    selectButton('aspectRow', 'data-aspect', () => aspectRatio, (value) => { aspectRatio = value; });
+    selectButton('resolutionRow', 'data-resolution', () => resolution, (value) => { resolution = value; });
+    els.duration.addEventListener('input', updateRunLabel);
+    els.run.addEventListener('click', run);
+    if (sb.auth && typeof sb.auth.onAuthStateChange === 'function') {
+      sb.auth.onAuthStateChange(() => loadRecentGenerations());
+    }
+    renderImageThumbs();
+    updateRunLabel();
+    loadRecentGenerations();
+  </script>
+</body>
+</html>
