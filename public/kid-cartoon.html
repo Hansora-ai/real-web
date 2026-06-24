@@ -32,7 +32,7 @@
       background:#05060b;
       font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     }
-    main{ padding:104px 20px 24px; }
+    main{ padding:28px 20px 24px; }
     .page-shell{ width:min(1520px,100%); margin:0 auto; display:grid; grid-template-columns:420px minmax(0,1fr); gap:28px; align-items:start; }
     .panel{
       border:1px solid var(--line);
@@ -41,7 +41,7 @@
       box-shadow:0 22px 70px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
       overflow:hidden;
     }
-    .composer{ position:sticky; top:92px; }
+    .composer{ position:sticky; top:18px; }
     .panel-pad{ padding:18px; }
     .title{ font-size:30px; line-height:1.02; margin:0 0 9px; letter-spacing:0; }
     .sub{ margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
@@ -298,6 +298,14 @@
     .status{ min-height:20px; margin:12px 0 0; color:rgba(255,255,255,.66); font-size:12px; line-height:1.45; }
     .status.good{ color:#67e8a6; }
     .status.bad{ color:#fda4af; }
+    .run-status{
+      margin:14px 0 0;
+      padding:10px 12px;
+      border:1px solid rgba(255,255,255,.09);
+      border-radius:13px;
+      background:rgba(255,255,255,.035);
+    }
+    .run-status:empty{ display:none; }
     .workspace{ min-height:calc(100vh - 128px); border-radius:22px; background:#05060b; }
     .workspace-body{
       min-height:520px;
@@ -500,7 +508,7 @@
       overflow:auto;
     }
     @media (max-width:920px){
-      main{ padding-top:94px; }
+      main{ padding:18px 10px 108px; }
       .page-shell{ grid-template-columns:1fr; }
       .composer{ position:static; }
       .before-after-grid{ grid-template-columns:1fr; }
@@ -570,8 +578,8 @@
             <input id="duration" type="range" min="4" max="15" step="1" value="6" style="width:100%;" />
           </div>
 
+          <p id="status" class="status run-status"></p>
           <button id="runBtn" class="run" type="button">Run 15 ⚡</button>
-          <p id="status" class="status"></p>
         </div>
       </section>
 
@@ -674,6 +682,7 @@
     function setStatus(message, type) {
       els.status.textContent = message || '';
       els.status.className = 'status' + (type ? ' ' + type : '');
+      els.status.classList.add('run-status');
     }
 
     function updateRunLabel() {
@@ -1109,6 +1118,7 @@
 
     async function run() {
       try {
+        setStatus('Preparing request...');
         els.result.classList.add('hidden');
         if (!files.length) {
           setStatus('Upload at least one kid photo first.', 'bad');
@@ -1157,7 +1167,8 @@
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.ok) {
-          throw new Error(data.error || data.details || 'Request failed.');
+          const details = typeof data.details === 'string' ? data.details : (data.error ? '' : JSON.stringify(data.details || data));
+          throw new Error(data.error || details || 'Request failed.');
         }
         if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function' && data.credits !== undefined) {
           window.HansoraHeader.setCredits(data.credits);
@@ -1172,6 +1183,7 @@
         await loadRecentGenerations(user);
       } catch (error) {
         setStatus(String(error && error.message || error), 'bad');
+        console.error('Kid Cartoon run failed', error);
       } finally {
         els.run.disabled = false;
       }
