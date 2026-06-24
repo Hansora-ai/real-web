@@ -107,8 +107,10 @@ function buildCartoonPrompt(body) {
     ? 'realistic'
     : 'cartoon';
   const action = userAction || 'the child having a joyful gentle adventure with friendly animals';
+  const intro = styleMode === 'realistic'
+    ? 'Create a polished cinematic 3D animated video from the uploaded child reference photo(s), with the referenced child kept as a realistic human child.'
+    : 'Create a polished high-end Pixar-style 3D animated video from the uploaded child reference photo(s).';
   const shared = [
-    'Create a polished high-end Pixar-style 3D animated video from the uploaded child reference photo(s).',
     'Use the reference photo(s) to preserve the child or children exactly: face shape, hair, skin tone, age, proportions, expression, clothing cues, and recognizable personality.',
     'If more than one child is shown, preserve each child individually and keep their relative ages and appearances distinct.',
     'Do not replace the child with a different character, do not age them up or down, do not change ethnicity, and do not invent extra children unless the action clearly requires background extras.',
@@ -118,8 +120,9 @@ function buildCartoonPrompt(body) {
   ];
   const style = styleMode === 'realistic'
     ? [
-        'Character treatment: keep the referenced child realistic and highly detailed while placing them inside a premium Pixar-style 3D animated world.',
-        'The child should look like the real child from the photo, with natural skin texture and lifelike facial details, while the environment, animals, props, and lighting are stylized, charming, and cinematic.',
+        'Character treatment: keep the referenced child photorealistic, realistic, and highly detailed, not cartoon and not Pixar-stylized.',
+        'The child must look like the real child from the photo, with natural skin texture, lifelike facial details, normal human eyes, realistic proportions, and realistic hair. Do not create a cartoon face, do not create oversized animated eyes, do not make the child look like a Pixar character, and do not stylize the child into a doll or illustration.',
+        'The environment, animals, props, color, and lighting may be charming and cinematic, but the referenced child must remain a real human child inside that world.',
       ]
     : [
         'Character treatment: transform the referenced child into a faithful Pixar-style 3D animated cartoon character while preserving a one-to-one likeness.',
@@ -129,7 +132,7 @@ function buildCartoonPrompt(body) {
     'Avoid distorted faces, identity drift, duplicate limbs, warped hands, creepy expressions, text, logos, watermarks, and low-quality motion.',
     'Keep the child as the main subject and make the action easy to understand within the selected duration.',
   ];
-  return [...shared.slice(0, 1), ...style, ...shared.slice(1), ...quality].join(' ');
+  return [intro, ...style, ...shared, ...quality].join(' ');
 }
 
 async function fetchGeneration(uid, runId) {
