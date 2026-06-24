@@ -1132,9 +1132,42 @@
         || (model.includes('seedance-2') && engine.includes('kid'));
     }
 
+    async function fetchGenerationRows(userId, token) {
+      if (token) {
+        const params = new URLSearchParams({
+          user_id: `eq.${userId}`,
+          select: 'id,provider,kind,prompt,result_url,meta,created_at',
+          order: 'created_at.desc',
+          limit: '100'
+        });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/user_generations?${params.toString()}`, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+            'Cache-Control': 'no-cache'
+          }
+        });
+        const rows = await res.json().catch(() => []);
+        if (!res.ok) throw new Error(Array.isArray(rows) ? 'history_read_failed' : (rows.message || rows.error || 'history_read_failed'));
+        return Array.isArray(rows) ? rows : [];
+      }
+
+      const { data, error } = await sb
+        .from('user_generations')
+        .select('id,provider,kind,prompt,result_url,meta,created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return Array.isArray(data) ? data : [];
+    }
+
     async function loadRecentGenerations(userOverride) {
-      const auth = userOverride ? { user: userOverride } : await getUserAndToken();
-      const user = auth.user;
+      const auth = await getUserAndToken();
+      const user = userOverride || auth.user;
       if (!user) {
         if (!els.resultsList.children.length) {
           els.emptyResults.classList.remove('hidden');
@@ -1143,14 +1176,14 @@
         }
         return;
       }
-      const { data, error } = await sb
-        .from('user_generations')
-        .select('id,provider,kind,prompt,result_url,meta,created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      const rows = Array.isArray(data) ? data.filter(isKidCartoonRow).slice(0, 9) : [];
-      if (error || !rows.length) {
+      let allRows = [];
+      try {
+        allRows = await fetchGenerationRows(user.id, auth.token || '');
+      } catch (error) {
+        console.warn('Kid Cartoon history read failed', error);
+      }
+      const rows = allRows.filter(isKidCartoonRow).slice(0, 9);
+      if (!rows.length) {
         if (els.resultsList.children.length) {
           els.emptyResults.classList.add('hidden');
           els.resultsList.classList.remove('hidden');
@@ -1318,7 +1351,7 @@
           runId: data.run_id || runId,
           taskId: data.taskId || data.id || ''
         });
-        setTimeout(() => loadRecentGenerations(user), 1200);
+        setTimeout(() => loadRecentGenerations(), 1200);
       } catch (error) {
         setStatus(String(error && error.message || error), 'bad');
         console.error('Kid Cartoon run failed', error);
