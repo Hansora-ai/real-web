@@ -1915,7 +1915,7 @@
       justify-content:flex-end !important;
       gap:8px !important;
     }
-    html[data-kid-cartoon-fix="20260625-0028"] .creating-icon,
+    html[data-kid-cartoon-fix="20260625-0048"] .creating-icon,
     .creating-icon{
       width:48px !important;
       height:48px !important;
@@ -1971,9 +1971,11 @@
         overscroll-behavior-x:contain !important;
         scroll-snap-type:x mandatory !important;
         scroll-padding-left:10px !important;
-        padding:10px 22% 10px 10px !important;
+        padding:10px 22% 0 10px !important;
         margin-top:14px !important;
+        scrollbar-width:none !important;
       }
+      .results-list::-webkit-scrollbar{ display:none !important; }
       .result-card{
         position:relative !important;
         flex:0 0 78% !important;
@@ -2036,13 +2038,13 @@
         position:absolute !important;
         left:8px !important;
         right:8px !important;
-        bottom:8px !important;
+        bottom:0 !important;
         z-index:4 !important;
         width:auto !important;
         height:auto !important;
         min-height:0 !important;
         max-height:none !important;
-        padding:8px 10px !important;
+        padding:10px 12px !important;
         border-radius:14px !important;
         border:1px solid rgba(255,255,255,.10) !important;
         background:rgba(2,6,23,.72) !important;
@@ -2055,8 +2057,7 @@
         overflow:hidden !important;
       }
       .result-top-row{
-        gap:8px !important;
-        align-items:flex-end !important;
+        display:none !important;
       }
       .result-name{
         font-size:11px !important;
@@ -2067,22 +2068,16 @@
         display:none !important;
       }
       .result-prompt{
-        min-height:12px !important;
-        max-height:12px !important;
-        line-height:1.2 !important;
-        font-size:10px !important;
-        color:rgba(255,255,255,.65) !important;
-        white-space:nowrap !important;
-        overflow:hidden !important;
-        text-overflow:ellipsis !important;
+        display:none !important;
       }
       .result-bottom-row{
-        min-height:28px !important;
+        min-height:34px !important;
         flex:0 0 auto !important;
         align-items:center !important;
       }
       .result-status-text{
-        font-size:10px !important;
+        font-size:13px !important;
+        font-weight:900 !important;
         color:rgba(110,231,183,.95) !important;
       }
       .result-actions{
@@ -2091,13 +2086,13 @@
       }
       .result-actions .result-get{
         min-width:74px !important;
-        min-height:30px !important;
+        min-height:34px !important;
         padding:6px 16px !important;
         border-radius:999px !important;
         border:1px solid rgba(255,255,255,.14) !important;
         background:rgba(99,102,241,.72) !important;
         color:rgba(255,255,255,.95) !important;
-        font-size:10px !important;
+        font-size:13px !important;
         font-weight:800 !important;
         box-shadow:none !important;
       }
@@ -2109,7 +2104,7 @@
     }
   </style>
   <script>
-    window.KID_CARTOON_FIX_VERSION = '20260625-0028';
+    window.KID_CARTOON_FIX_VERSION = '20260625-0048';
     document.documentElement.dataset.kidCartoonFix = window.KID_CARTOON_FIX_VERSION;
     (function hardenKidCartoonResultUi(){
       const mobileQuery = window.matchMedia ? window.matchMedia('(max-width:900px)') : null;
@@ -2162,7 +2157,7 @@
             info.style.setProperty('position', 'absolute', 'important');
             info.style.setProperty('left', '8px', 'important');
             info.style.setProperty('right', '8px', 'important');
-            info.style.setProperty('bottom', '8px', 'important');
+            info.style.setProperty('bottom', '0', 'important');
             info.style.setProperty('z-index', '4', 'important');
             info.style.setProperty('height', 'auto', 'important');
             info.style.setProperty('min-height', '0', 'important');
@@ -2181,6 +2176,10 @@
           info.style.setProperty('overflow', 'hidden', 'important');
         });
         scope.querySelectorAll('.result-prompt').forEach((prompt) => {
+          if (isMobileThumb()) {
+            prompt.style.setProperty('display', 'none', 'important');
+            return;
+          }
           prompt.style.setProperty('min-height', isMobileThumb() ? '12px' : '15px', 'important');
           prompt.style.setProperty('max-height', isMobileThumb() ? '12px' : '15px', 'important');
           prompt.style.setProperty('display', 'block', 'important');
