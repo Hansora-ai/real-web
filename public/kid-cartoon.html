@@ -425,14 +425,17 @@
     }
     .ba-label.after{ background:linear-gradient(135deg,#8b5cf6,#38bdf8); }
     .results-list{
-      display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
+      display:flex;
+      align-items:flex-start;
+      flex-wrap:wrap;
       gap:14px;
       margin-top:16px;
     }
     .results-list.hidden{ display:none; }
     .result-card{
-      min-height:330px;
+      flex:0 0 260px;
+      width:260px;
+      min-height:348px;
       border:1px solid rgba(255,255,255,.1);
       border-radius:18px;
       overflow:hidden;
@@ -440,7 +443,7 @@
       position:relative;
     }
     .result-media{
-      height:230px;
+      height:260px;
       background:#050812;
       display:grid;
       place-items:center;
@@ -472,7 +475,7 @@
     .result-info{ padding:13px 14px 15px; }
     .result-info strong{ display:block; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .result-info span{ display:block; margin-top:4px; color:var(--muted); font-size:12px; }
-    .result-actions{ display:flex; gap:8px; margin-top:12px; }
+    .result-actions{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:12px; }
     .result-actions a,
     .result-actions button{
       min-height:34px;
@@ -489,6 +492,13 @@
       display:inline-flex;
       align-items:center;
       justify-content:center;
+    }
+    .result-actions .result-get{
+      margin-left:auto;
+      min-width:78px;
+      border-color:rgba(139,92,246,.55);
+      background:rgba(99,102,241,.9);
+      box-shadow:0 10px 24px rgba(99,102,241,.22);
     }
     .creating-state{
       width:100%;
@@ -561,7 +571,7 @@
       .page-shell{ grid-template-columns:1fr; }
       .composer{ position:static; }
       .before-after-grid{ grid-template-columns:1fr; }
-      .results-list{ grid-template-columns:1fr; }
+      .results-list{ flex-wrap:nowrap; overflow-x:auto; padding-bottom:6px; }
       .sample-head{ align-items:flex-start; flex-direction:column; }
     }
   </style>
@@ -1030,6 +1040,30 @@
       return '';
     }
 
+    async function downloadAsset(url, kind = 'video', provider = 'kid-cartoon') {
+      if (!url) return;
+      const cleanProvider = String(provider || 'kid-cartoon').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'kid-cartoon';
+      const fallbackExt = String(kind).toLowerCase() === 'video' ? 'mp4' : 'png';
+      const urlExt = (String(url).split('?')[0].match(/\.([a-z0-9]{2,5})$/i) || [])[1];
+      const filename = `${cleanProvider}-${Date.now()}.${urlExt || fallbackExt}`;
+      try {
+        const response = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-store' });
+        if (!response.ok) throw new Error('download_fetch_failed');
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 2500);
+      } catch (error) {
+        window.open(url, '_blank', 'noopener');
+      }
+    }
+
     function applyResultCard(card, data) {
       const status = String(data.status || '').toLowerCase();
       const url = data.result_url || '';
@@ -1042,22 +1076,38 @@
       chip.className = 'result-chip' + (ready ? ' ready' : failed ? ' failed' : '');
       chip.textContent = ready ? 'Ready' : failed ? 'Failed' : 'Processing';
       statusText.textContent = ready ? 'Ready' : failed ? 'Failed' : 'Processing';
-      media.innerHTML = '';
-      actions.innerHTML = '';
       if (ready) {
-        const video = document.createElement('video');
-        video.src = url;
-        video.controls = true;
-        video.playsInline = true;
-        video.preload = 'metadata';
-        media.appendChild(video);
-        const open = document.createElement('a');
-        open.href = url;
-        open.target = '_blank';
-        open.rel = 'noopener';
-        open.textContent = 'Open';
-        actions.appendChild(open);
+        media.dataset.state = 'ready';
+        let video = media.querySelector('video');
+        if (!video || video.dataset.resultUrl !== url) {
+          media.innerHTML = '';
+          video = document.createElement('video');
+          video.controls = true;
+          video.playsInline = true;
+          video.preload = 'metadata';
+          video.dataset.resultUrl = url;
+          video.src = url;
+          media.appendChild(video);
+        }
+        let getBtn = actions.querySelector('.result-get');
+        if (!getBtn) {
+          actions.innerHTML = '';
+          getBtn = document.createElement('button');
+          getBtn.type = 'button';
+          getBtn.className = 'result-get';
+          getBtn.textContent = 'GET';
+          getBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            downloadAsset(getBtn.dataset.downloadUrl || '', 'video', 'kid-cartoon');
+          });
+          actions.appendChild(getBtn);
+        }
+        getBtn.dataset.downloadUrl = url;
       } else {
+        actions.innerHTML = '';
+        if (media.dataset.state === (failed ? 'failed' : 'processing')) return;
+        media.dataset.state = failed ? 'failed' : 'processing';
         if (failed) {
           media.textContent = 'Generation failed';
         } else {
@@ -1080,6 +1130,7 @@
       const card = document.createElement('article');
       card.className = 'result-card';
       card.dataset.runId = meta.run_id || '';
+      card.dataset.rowId = row.id || '';
       card.dataset.taskId = meta.task_id || meta.taskId || '';
       card.innerHTML = [
         '<div class="result-chip">Processing</div>',
@@ -1196,17 +1247,28 @@
       }
       els.emptyResults.classList.add('hidden');
       els.resultsList.classList.remove('hidden');
-      els.resultsList.innerHTML = '';
+      const seenKeys = new Set();
       rows.forEach((row) => {
-        const card = createResultCard(row);
-        els.resultsList.appendChild(card);
         const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
         const runId = meta.run_id || '';
         const taskId = meta.task_id || meta.taskId || '';
+        const key = runId || row.id || '';
+        let card = key ? els.resultsList.querySelector(`[data-run-id="${CSS.escape(key)}"], [data-row-id="${CSS.escape(key)}"]`) : null;
+        if (!card) {
+          card = createResultCard(row);
+          els.resultsList.appendChild(card);
+        } else {
+          applyResultCard(card, { status: resultStatus(row), result_url: row.result_url || '' });
+        }
+        if (key) seenKeys.add(key);
         const status = resultStatus(row).toLowerCase();
         if (!row.result_url && runId && taskId && !/fail|error|cancel|reject/i.test(status)) {
           startKidPoll({ userId: user.id, runId, taskId, card });
         }
+      });
+      [...els.resultsList.querySelectorAll('.result-card')].forEach((card) => {
+        const key = card.dataset.runId || card.dataset.rowId || '';
+        if (key && !seenKeys.has(key)) card.remove();
       });
     }
 
