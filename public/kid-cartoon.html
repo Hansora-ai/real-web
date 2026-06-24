@@ -1399,11 +1399,16 @@
       });
     })();
 
+    function usesMobileResultThumb() {
+      return !!(window.matchMedia && window.matchMedia('(max-width:900px)').matches);
+    }
+
     function applyResultCard(card, data) {
       const status = String(data.status || '').toLowerCase();
       const url = data.result_url || '';
       const ready = !!url;
       const failed = !ready && /fail|error|cancel|reject/i.test(status);
+      const mobileThumb = usesMobileResultThumb();
       const chip = card.querySelector('.result-chip');
       const media = card.querySelector('.result-media');
       const statusText = card.querySelector('.result-status-text');
@@ -1411,7 +1416,7 @@
       const kindText = card.querySelector('.result-kind');
       const promptText = card.querySelector('.result-prompt');
       chip.className = 'result-chip' + (ready ? ' ready' : failed ? ' failed' : '');
-      chip.textContent = ready ? 'Ready' : failed ? 'Failed' : 'Processing';
+      chip.textContent = ready && mobileThumb ? 'VIDEO' : ready ? 'Ready' : failed ? 'Failed' : 'Processing';
       statusText.textContent = ready ? 'Ready' : failed ? 'Failed' : 'Processing';
       if (kindText) kindText.textContent = 'VIDEO';
       if (promptText && data.prompt) promptText.textContent = data.prompt;
@@ -1421,9 +1426,11 @@
         if (!video || video.dataset.resultUrl !== url) {
           media.innerHTML = '';
           video = document.createElement('video');
-          video.controls = true;
+          video.controls = !mobileThumb;
           video.muted = true;
           video.playsInline = true;
+          video.loop = mobileThumb;
+          video.autoplay = mobileThumb;
           video.preload = 'metadata';
           video.dataset.resultUrl = url;
           video.src = url;
@@ -1441,7 +1448,7 @@
           getBtn = document.createElement('button');
           getBtn.type = 'button';
           getBtn.className = 'result-get';
-          getBtn.textContent = 'GET';
+          getBtn.textContent = mobileThumb ? 'Get' : 'GET';
           getBtn.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -1449,6 +1456,7 @@
           });
           actions.appendChild(getBtn);
         }
+        getBtn.textContent = mobileThumb ? 'Get' : 'GET';
         getBtn.dataset.downloadUrl = url;
       } else {
         actions.innerHTML = '';
@@ -1907,7 +1915,7 @@
       justify-content:flex-end !important;
       gap:8px !important;
     }
-    html[data-kid-cartoon-fix="20260625-0012"] .creating-icon,
+    html[data-kid-cartoon-fix="20260625-0028"] .creating-icon,
     .creating-icon{
       width:48px !important;
       height:48px !important;
@@ -1941,6 +1949,159 @@
       background:transparent !important;
       cursor:pointer !important;
     }
+    @media (max-width:900px){
+      .workspace{
+        overflow:hidden !important;
+      }
+      .workspace-body{
+        overflow:hidden !important;
+        min-height:0 !important;
+        padding-bottom:10px !important;
+      }
+      .results-list{
+        display:flex !important;
+        flex-wrap:nowrap !important;
+        gap:12px !important;
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        overflow-x:auto !important;
+        overflow-y:hidden !important;
+        -webkit-overflow-scrolling:touch !important;
+        overscroll-behavior-x:contain !important;
+        scroll-snap-type:x mandatory !important;
+        scroll-padding-left:10px !important;
+        padding:10px 22% 10px 10px !important;
+        margin-top:14px !important;
+      }
+      .result-card{
+        position:relative !important;
+        flex:0 0 78% !important;
+        width:auto !important;
+        min-width:0 !important;
+        max-width:none !important;
+        height:auto !important;
+        min-height:0 !important;
+        max-height:none !important;
+        aspect-ratio:2 / 3 !important;
+        display:block !important;
+        border-radius:18px !important;
+        overflow:hidden !important;
+        scroll-snap-align:start !important;
+        background:rgba(15,23,42,.55) !important;
+      }
+      .result-media{
+        position:absolute !important;
+        inset:0 !important;
+        width:100% !important;
+        height:100% !important;
+        min-height:0 !important;
+        max-height:none !important;
+        flex:none !important;
+        display:flex !important;
+        align-items:center !important;
+        justify-content:center !important;
+        background:rgba(2,6,23,.85) !important;
+      }
+      .result-media video{
+        width:100% !important;
+        height:100% !important;
+        max-width:none !important;
+        max-height:none !important;
+        object-fit:contain !important;
+        background:rgba(2,6,23,.85) !important;
+      }
+      .result-preview-hit{
+        z-index:1 !important;
+      }
+      .result-chip{
+        top:8px !important;
+        left:8px !important;
+        z-index:3 !important;
+        padding:4px 8px !important;
+        border-radius:999px !important;
+        border:1px solid rgba(255,255,255,.12) !important;
+        background:rgba(2,6,23,.70) !important;
+        color:rgba(255,255,255,.86) !important;
+        font-size:11px !important;
+        line-height:1.25 !important;
+        font-weight:800 !important;
+        backdrop-filter:blur(10px) !important;
+        -webkit-backdrop-filter:blur(10px) !important;
+      }
+      .result-chip.ready{
+        background:rgba(2,6,23,.70) !important;
+      }
+      .result-info{
+        position:absolute !important;
+        left:8px !important;
+        right:8px !important;
+        bottom:8px !important;
+        z-index:4 !important;
+        width:auto !important;
+        height:auto !important;
+        min-height:0 !important;
+        max-height:none !important;
+        padding:8px 10px !important;
+        border-radius:14px !important;
+        border:1px solid rgba(255,255,255,.10) !important;
+        background:rgba(2,6,23,.72) !important;
+        backdrop-filter:blur(10px) !important;
+        -webkit-backdrop-filter:blur(10px) !important;
+        display:flex !important;
+        flex-direction:column !important;
+        justify-content:stretch !important;
+        gap:4px !important;
+        overflow:hidden !important;
+      }
+      .result-top-row{
+        gap:8px !important;
+        align-items:flex-end !important;
+      }
+      .result-name{
+        font-size:11px !important;
+        font-weight:800 !important;
+        max-width:160px !important;
+      }
+      .result-kind{
+        display:none !important;
+      }
+      .result-prompt{
+        min-height:12px !important;
+        max-height:12px !important;
+        line-height:1.2 !important;
+        font-size:10px !important;
+        color:rgba(255,255,255,.65) !important;
+        white-space:nowrap !important;
+        overflow:hidden !important;
+        text-overflow:ellipsis !important;
+      }
+      .result-bottom-row{
+        min-height:28px !important;
+        flex:0 0 auto !important;
+        align-items:center !important;
+      }
+      .result-status-text{
+        font-size:10px !important;
+        color:rgba(110,231,183,.95) !important;
+      }
+      .result-actions{
+        gap:8px !important;
+        flex-shrink:0 !important;
+      }
+      .result-actions .result-get{
+        min-width:74px !important;
+        min-height:30px !important;
+        padding:6px 16px !important;
+        border-radius:999px !important;
+        border:1px solid rgba(255,255,255,.14) !important;
+        background:rgba(99,102,241,.72) !important;
+        color:rgba(255,255,255,.95) !important;
+        font-size:10px !important;
+        font-weight:800 !important;
+        box-shadow:none !important;
+      }
+    }
     #previewOverlay video{
       max-width:100% !important;
       max-height:min(88vh,900px) !important;
@@ -1948,37 +2109,80 @@
     }
   </style>
   <script>
-    window.KID_CARTOON_FIX_VERSION = '20260625-0012';
+    window.KID_CARTOON_FIX_VERSION = '20260625-0028';
     document.documentElement.dataset.kidCartoonFix = window.KID_CARTOON_FIX_VERSION;
     (function hardenKidCartoonResultUi(){
+      const mobileQuery = window.matchMedia ? window.matchMedia('(max-width:900px)') : null;
+      const isMobileThumb = () => !!(mobileQuery && mobileQuery.matches);
       function fixResultUi(root) {
         const scope = root && root.querySelectorAll ? root : document;
         scope.querySelectorAll('.result-card').forEach((card) => {
-          card.style.setProperty('width', '260px', 'important');
-          card.style.setProperty('height', '330px', 'important');
-          card.style.setProperty('min-height', '330px', 'important');
-          card.style.setProperty('max-height', '330px', 'important');
-          card.style.setProperty('display', 'flex', 'important');
-          card.style.setProperty('flex-direction', 'column', 'important');
+          if (isMobileThumb()) {
+            card.style.setProperty('position', 'relative', 'important');
+            card.style.setProperty('flex', '0 0 78%', 'important');
+            card.style.setProperty('width', 'auto', 'important');
+            card.style.setProperty('height', 'auto', 'important');
+            card.style.setProperty('min-height', '0', 'important');
+            card.style.setProperty('max-height', 'none', 'important');
+            card.style.setProperty('aspect-ratio', '2 / 3', 'important');
+            card.style.setProperty('display', 'block', 'important');
+            card.style.setProperty('border-radius', '18px', 'important');
+          } else {
+            card.style.setProperty('width', '260px', 'important');
+            card.style.setProperty('height', '330px', 'important');
+            card.style.setProperty('min-height', '330px', 'important');
+            card.style.setProperty('max-height', '330px', 'important');
+            card.style.setProperty('display', 'flex', 'important');
+            card.style.setProperty('flex-direction', 'column', 'important');
+            card.style.removeProperty('aspect-ratio');
+          }
           card.style.setProperty('overflow', 'hidden', 'important');
         });
         scope.querySelectorAll('.result-media').forEach((media) => {
-          media.style.setProperty('height', '238px', 'important');
-          media.style.setProperty('min-height', '238px', 'important');
-          media.style.setProperty('max-height', '238px', 'important');
-          media.style.setProperty('flex', '0 0 238px', 'important');
+          if (isMobileThumb()) {
+            media.style.setProperty('position', 'absolute', 'important');
+            media.style.setProperty('inset', '0', 'important');
+            media.style.setProperty('width', '100%', 'important');
+            media.style.setProperty('height', '100%', 'important');
+            media.style.setProperty('min-height', '0', 'important');
+            media.style.setProperty('max-height', 'none', 'important');
+            media.style.setProperty('flex', 'none', 'important');
+          } else {
+            media.style.setProperty('position', 'relative', 'important');
+            media.style.removeProperty('inset');
+            media.style.setProperty('height', '238px', 'important');
+            media.style.setProperty('min-height', '238px', 'important');
+            media.style.setProperty('max-height', '238px', 'important');
+            media.style.setProperty('flex', '0 0 238px', 'important');
+          }
           media.style.setProperty('overflow', 'hidden', 'important');
         });
         scope.querySelectorAll('.result-info').forEach((info) => {
-          info.style.setProperty('height', '92px', 'important');
-          info.style.setProperty('min-height', '92px', 'important');
-          info.style.setProperty('max-height', '92px', 'important');
-          info.style.setProperty('justify-content', 'space-between', 'important');
+          if (isMobileThumb()) {
+            info.style.setProperty('position', 'absolute', 'important');
+            info.style.setProperty('left', '8px', 'important');
+            info.style.setProperty('right', '8px', 'important');
+            info.style.setProperty('bottom', '8px', 'important');
+            info.style.setProperty('z-index', '4', 'important');
+            info.style.setProperty('height', 'auto', 'important');
+            info.style.setProperty('min-height', '0', 'important');
+            info.style.setProperty('max-height', 'none', 'important');
+            info.style.setProperty('justify-content', 'stretch', 'important');
+          } else {
+            info.style.setProperty('position', 'relative', 'important');
+            info.style.removeProperty('left');
+            info.style.removeProperty('right');
+            info.style.removeProperty('bottom');
+            info.style.setProperty('height', '92px', 'important');
+            info.style.setProperty('min-height', '92px', 'important');
+            info.style.setProperty('max-height', '92px', 'important');
+            info.style.setProperty('justify-content', 'space-between', 'important');
+          }
           info.style.setProperty('overflow', 'hidden', 'important');
         });
         scope.querySelectorAll('.result-prompt').forEach((prompt) => {
-          prompt.style.setProperty('min-height', '15px', 'important');
-          prompt.style.setProperty('max-height', '15px', 'important');
+          prompt.style.setProperty('min-height', isMobileThumb() ? '12px' : '15px', 'important');
+          prompt.style.setProperty('max-height', isMobileThumb() ? '12px' : '15px', 'important');
           prompt.style.setProperty('display', 'block', 'important');
           prompt.style.setProperty('white-space', 'nowrap', 'important');
           prompt.style.setProperty('overflow', 'hidden', 'important');
@@ -1994,11 +2198,23 @@
         });
         scope.querySelectorAll('.result-media video').forEach((video) => {
           video.style.setProperty('object-fit', 'contain', 'important');
-          video.style.setProperty('width', 'auto', 'important');
-          video.style.setProperty('height', 'auto', 'important');
-          video.style.setProperty('max-width', '100%', 'important');
-          video.style.setProperty('max-height', '100%', 'important');
+          video.style.setProperty('width', isMobileThumb() ? '100%' : 'auto', 'important');
+          video.style.setProperty('height', isMobileThumb() ? '100%' : 'auto', 'important');
+          video.style.setProperty('max-width', isMobileThumb() ? 'none' : '100%', 'important');
+          video.style.setProperty('max-height', isMobileThumb() ? 'none' : '100%', 'important');
           video.style.setProperty('background', '#050812', 'important');
+          if (isMobileThumb()) {
+            video.controls = false;
+            video.muted = true;
+            video.loop = true;
+            video.autoplay = true;
+            video.playsInline = true;
+            video.play && video.play().catch(() => {});
+          } else {
+            video.controls = true;
+            video.loop = false;
+            video.autoplay = false;
+          }
           const media = video.closest('.result-media');
           const card = video.closest('.result-card');
           const url = video.dataset.resultUrl || video.currentSrc || video.src || '';
@@ -2012,8 +2228,21 @@
             if (url && window.openPreview) window.openPreview(url);
           });
         });
+        scope.querySelectorAll('.result-chip').forEach((chip) => {
+          const card = chip.closest('.result-card');
+          const media = card && card.querySelector('.result-media');
+          const state = media && media.dataset.state;
+          if (isMobileThumb() && state === 'ready') chip.textContent = 'VIDEO';
+          chip.style.setProperty('z-index', '3', 'important');
+        });
+        scope.querySelectorAll('.result-get').forEach((button) => {
+          button.textContent = isMobileThumb() ? 'Get' : 'GET';
+        });
       }
       fixResultUi(document);
+      if (mobileQuery && mobileQuery.addEventListener) {
+        mobileQuery.addEventListener('change', () => fixResultUi(document));
+      }
       new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           mutation.addedNodes.forEach((node) => {
