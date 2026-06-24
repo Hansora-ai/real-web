@@ -1121,23 +1121,36 @@
       return res.json().catch(() => ({}));
     }
 
+    function isKidCartoonRow(row) {
+      const provider = String(row && row.provider || '').toLowerCase();
+      const engine = String(row && row.meta && row.meta.engine || '').toLowerCase();
+      const model = String(row && row.meta && row.meta.model || '').toLowerCase();
+      const source = String(row && row.meta && row.meta.source || '').toLowerCase();
+      return provider.includes('kid cartoon')
+        || engine.includes('kid-cartoon')
+        || source.includes('kid-cartoon')
+        || (model.includes('seedance-2') && engine.includes('kid'));
+    }
+
     async function loadRecentGenerations(userOverride) {
       const auth = userOverride ? { user: userOverride } : await getUserAndToken();
       const user = auth.user;
       if (!user) {
-        els.emptyResults.classList.remove('hidden');
-        els.resultsList.classList.add('hidden');
-        els.resultsList.innerHTML = '';
+        if (!els.resultsList.children.length) {
+          els.emptyResults.classList.remove('hidden');
+          els.resultsList.classList.add('hidden');
+          els.resultsList.innerHTML = '';
+        }
         return;
       }
       const { data, error } = await sb
         .from('user_generations')
         .select('id,provider,kind,prompt,result_url,meta,created_at')
         .eq('user_id', user.id)
-        .eq('provider', 'Kid Cartoon Studio')
         .order('created_at', { ascending: false })
-        .limit(9);
-      if (error || !Array.isArray(data) || !data.length) {
+        .limit(100);
+      const rows = Array.isArray(data) ? data.filter(isKidCartoonRow).slice(0, 9) : [];
+      if (error || !rows.length) {
         if (els.resultsList.children.length) {
           els.emptyResults.classList.add('hidden');
           els.resultsList.classList.remove('hidden');
@@ -1151,7 +1164,7 @@
       els.emptyResults.classList.add('hidden');
       els.resultsList.classList.remove('hidden');
       els.resultsList.innerHTML = '';
-      data.forEach((row) => {
+      rows.forEach((row) => {
         const card = createResultCard(row);
         els.resultsList.appendChild(card);
         const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
@@ -1382,9 +1395,14 @@
     if (sb.auth && typeof sb.auth.onAuthStateChange === 'function') {
       sb.auth.onAuthStateChange(() => loadRecentGenerations());
     }
+    function scheduleRecentGenerationLoads() {
+      [0, 700, 1800, 4000, 8000].forEach((delay) => {
+        setTimeout(() => loadRecentGenerations().catch((error) => console.warn('Kid Cartoon history load failed', error)), delay);
+      });
+    }
     renderImageThumbs();
     updateRunLabel();
-    loadRecentGenerations();
+    scheduleRecentGenerationLoads();
   </script>
 </body>
 </html>
