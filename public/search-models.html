@@ -2860,6 +2860,237 @@
       background:rgba(99,102,241,.16) !important;
       box-shadow:0 0 0 1px rgba(129,140,248,.5) inset, 0 18px 42px rgba(79,70,229,.22) !important;
     }
+
+    /* Product-card style upload affordances: green plus, compact copy, add tile after uploads */
+    body.workspace-redesign #uploadBtn:not(.hidden){
+      width:100% !important;
+      min-height:126px !important;
+      height:auto !important;
+      border:1px dashed rgba(255,255,255,.22) !important;
+      border-radius:18px !important;
+      background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.018)) !important;
+      color:rgba(255,255,255,.82) !important;
+      flex-direction:column !important;
+      justify-content:center !important;
+      gap:10px !important;
+      padding:14px !important;
+      box-shadow:none !important;
+    }
+    body.workspace-redesign #uploadBtn:not(.hidden) span:first-child,
+    body.workspace-redesign #startFrameBtn span:first-child,
+    body.workspace-redesign #lastFrameBtn span:first-child,
+    body.workspace-redesign #veoReferenceBtn span:first-child,
+    body.workspace-redesign #alephVideoBtn span:first-child,
+    body.workspace-redesign #alephImageBtn span:first-child,
+    body.workspace-redesign #motionVideoBtn span:first-child,
+    body.workspace-redesign #motionImageBtn span:first-child,
+    body.workspace-redesign .upload-plus,
+    body.workspace-redesign .upload-add-plus{
+      width:54px !important;
+      height:54px !important;
+      border-radius:18px !important;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
+      background:rgba(221,255,55,.12) !important;
+      border:1px solid rgba(221,255,55,.42) !important;
+      color:#efffb2 !important;
+      font-size:32px !important;
+      line-height:1 !important;
+      font-weight:800 !important;
+      margin:0 !important;
+      box-shadow:0 0 28px rgba(221,255,55,.12) !important;
+    }
+    body.workspace-redesign #uploadBtn:not(.hidden) #uploadBtnLabel,
+    body.workspace-redesign #startFrameBtn span:not(:first-child):not(.absolute),
+    body.workspace-redesign #lastFrameBtn span:not(:first-child):not(.absolute),
+    body.workspace-redesign #veoReferenceBtn span:not(:first-child):not(.absolute),
+    body.workspace-redesign #alephVideoBtn span:not(:first-child):not(.absolute),
+    body.workspace-redesign #alephImageBtn span:not(:first-child):not(.absolute),
+    body.workspace-redesign #motionVideoBtn span:not(:first-child):not(.absolute),
+    body.workspace-redesign #motionImageBtn span:not(:first-child):not(.absolute),
+    body.workspace-redesign .upload-drop-btn > span:not(.upload-plus):not(.absolute){
+      color:rgba(255,255,255,.9) !important;
+      font-size:14px !important;
+      font-weight:850 !important;
+      line-height:1.15 !important;
+      white-space:normal !important;
+      text-align:center !important;
+    }
+    body.workspace-redesign .upload-drop-card{
+      border:1px dashed rgba(255,255,255,.22) !important;
+      background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.018)) !important;
+      box-shadow:none !important;
+    }
+    body.workspace-redesign .upload-drop-btn:hover,
+    body.workspace-redesign #uploadBtn:not(.hidden):hover{
+      border-color:rgba(221,255,55,.48) !important;
+      background:rgba(221,255,55,.06) !important;
+      color:#fff !important;
+    }
+    body.workspace-redesign #imageThumbs:not(:empty){
+      display:flex !important;
+      gap:12px !important;
+      overflow-x:auto !important;
+      overflow-y:hidden !important;
+      padding:0 2px 4px !important;
+    }
+    body.workspace-redesign #imageThumbs > .upload-add-tile,
+    body.workspace-redesign #veoReferenceThumbs > .upload-add-tile,
+    body.workspace-redesign .upload-thumb-zone > .upload-add-tile{
+      position:relative !important;
+      flex:0 0 96px !important;
+      width:96px !important;
+      height:104px !important;
+      min-height:104px !important;
+      border-radius:16px !important;
+      border:1px dashed rgba(255,255,255,.18) !important;
+      background:rgba(255,255,255,.035) !important;
+      display:flex !important;
+      flex-direction:column !important;
+      align-items:center !important;
+      justify-content:center !important;
+      gap:8px !important;
+      color:rgba(255,255,255,.68) !important;
+      font-size:13px !important;
+      font-weight:850 !important;
+      text-align:center !important;
+      cursor:pointer !important;
+      pointer-events:auto !important;
+    }
+    body.workspace-redesign #imageThumbs > .upload-add-tile .upload-add-plus,
+    body.workspace-redesign #veoReferenceThumbs > .upload-add-tile .upload-add-plus,
+    body.workspace-redesign .upload-thumb-zone > .upload-add-tile .upload-add-plus{
+      width:42px !important;
+      height:42px !important;
+      border-radius:15px !important;
+      font-size:26px !important;
+    }
+    body.workspace-redesign #veoReferenceThumbs:not(:empty){
+      position:absolute !important;
+      inset:0 !important;
+      z-index:3 !important;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:flex-start !important;
+      gap:10px !important;
+      padding:10px !important;
+      overflow-x:auto !important;
+      overflow-y:hidden !important;
+      pointer-events:auto !important;
+    }
+    body.workspace-redesign #veoReferenceThumbs:not(:empty) > div{
+      flex:0 0 96px !important;
+      width:96px !important;
+      height:104px !important;
+      border-radius:16px !important;
+      border:1px solid rgba(255,255,255,.16) !important;
+    }
+    body.workspace-redesign #veoReferenceWrap > .flex:has(#veoReferenceThumbs:not(:empty)) #veoReferenceBtn{
+      opacity:0 !important;
+      pointer-events:none !important;
+      visibility:hidden !important;
+    }
+    body.workspace-redesign .upload-thumb-zone > .upload-add-tile{
+      flex-basis:88px !important;
+      width:88px !important;
+      height:96px !important;
+      min-height:96px !important;
+      border-radius:14px !important;
+    }
+    body.workspace-redesign .upload-thumb-zone > .upload-add-tile .upload-add-plus{
+      width:38px !important;
+      height:38px !important;
+      border-radius:14px !important;
+      font-size:24px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap .upload-thumb-zone,
+    body.workspace-redesign #seedanceUploadWrap .upload-thumb-zone,
+    body.workspace-redesign #kling30UploadWrap .upload-thumb-zone{
+      gap:10px !important;
+    }
+    body.workspace-redesign #uploadBtn:not(.hidden) span:first-child,
+    body.workspace-redesign #startFrameBtn span:first-child,
+    body.workspace-redesign #lastFrameBtn span:first-child,
+    body.workspace-redesign #veoReferenceBtn span:first-child,
+    body.workspace-redesign #alephVideoBtn span:first-child,
+    body.workspace-redesign #alephImageBtn span:first-child,
+    body.workspace-redesign #motionVideoBtn span:first-child,
+    body.workspace-redesign #motionImageBtn span:first-child,
+    body.workspace-redesign .upload-plus,
+    body.workspace-redesign .upload-add-plus{
+      position:relative !important;
+      font-size:0 !important;
+      line-height:0 !important;
+      text-indent:-9999px !important;
+      overflow:hidden !important;
+    }
+    body.workspace-redesign #uploadBtn:not(.hidden) span:first-child::before,
+    body.workspace-redesign #uploadBtn:not(.hidden) span:first-child::after,
+    body.workspace-redesign #startFrameBtn span:first-child::before,
+    body.workspace-redesign #startFrameBtn span:first-child::after,
+    body.workspace-redesign #lastFrameBtn span:first-child::before,
+    body.workspace-redesign #lastFrameBtn span:first-child::after,
+    body.workspace-redesign #veoReferenceBtn span:first-child::before,
+    body.workspace-redesign #veoReferenceBtn span:first-child::after,
+    body.workspace-redesign #alephVideoBtn span:first-child::before,
+    body.workspace-redesign #alephVideoBtn span:first-child::after,
+    body.workspace-redesign #alephImageBtn span:first-child::before,
+    body.workspace-redesign #alephImageBtn span:first-child::after,
+    body.workspace-redesign #motionVideoBtn span:first-child::before,
+    body.workspace-redesign #motionVideoBtn span:first-child::after,
+    body.workspace-redesign #motionImageBtn span:first-child::before,
+    body.workspace-redesign #motionImageBtn span:first-child::after,
+    body.workspace-redesign .upload-plus::before,
+    body.workspace-redesign .upload-plus::after,
+    body.workspace-redesign .upload-add-plus::before,
+    body.workspace-redesign .upload-add-plus::after{
+      content:"" !important;
+      position:absolute !important;
+      left:50% !important;
+      top:50% !important;
+      transform:translate(-50%,-50%) !important;
+      border-radius:999px !important;
+      background:#efffb2 !important;
+    }
+    body.workspace-redesign #uploadBtn:not(.hidden) span:first-child::before,
+    body.workspace-redesign #startFrameBtn span:first-child::before,
+    body.workspace-redesign #lastFrameBtn span:first-child::before,
+    body.workspace-redesign #veoReferenceBtn span:first-child::before,
+    body.workspace-redesign #alephVideoBtn span:first-child::before,
+    body.workspace-redesign #alephImageBtn span:first-child::before,
+    body.workspace-redesign #motionVideoBtn span:first-child::before,
+    body.workspace-redesign #motionImageBtn span:first-child::before,
+    body.workspace-redesign .upload-plus::before,
+    body.workspace-redesign .upload-add-plus::before{
+      width:21px !important;
+      height:5px !important;
+    }
+    body.workspace-redesign #uploadBtn:not(.hidden) span:first-child::after,
+    body.workspace-redesign #startFrameBtn span:first-child::after,
+    body.workspace-redesign #lastFrameBtn span:first-child::after,
+    body.workspace-redesign #veoReferenceBtn span:first-child::after,
+    body.workspace-redesign #alephVideoBtn span:first-child::after,
+    body.workspace-redesign #alephImageBtn span:first-child::after,
+    body.workspace-redesign #motionVideoBtn span:first-child::after,
+    body.workspace-redesign #motionImageBtn span:first-child::after,
+    body.workspace-redesign .upload-plus::after,
+    body.workspace-redesign .upload-add-plus::after{
+      width:5px !important;
+      height:21px !important;
+    }
+    body.workspace-redesign .upload-add-plus::before{ width:18px !important; height:4px !important; }
+    body.workspace-redesign .upload-add-plus::after{ width:4px !important; height:18px !important; }
+    @media (max-width:900px){
+      body.workspace-redesign #uploadBtn:not(.hidden){
+        min-height:118px !important;
+      }
+      body.workspace-redesign #imageThumbs > .upload-add-tile,
+      body.workspace-redesign #veoReferenceThumbs > .upload-add-tile{
+        flex-basis:92px !important;
+        width:92px !important;
+      }
+    }
     #modelOverlay{
       overscroll-behavior:contain;
       touch-action:none;
@@ -5465,6 +5696,133 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       return 'bin';
     }
 
+    function uploadKindFromAccept(accept) {
+      const value = String(accept || 'image/*').toLowerCase();
+      if (value.includes('video/*')) return 'video';
+      if (value.includes('audio/*')) return 'audio';
+      return 'image';
+    }
+
+    function uploadNoun(kind, plural) {
+      const clean = String(kind || 'image').toLowerCase();
+      if (clean === 'video') return plural ? 'videos' : 'video';
+      if (clean === 'audio') return plural ? 'audio files' : 'audio';
+      return plural ? 'images' : 'image';
+    }
+
+    function setUploadButtonCopy(btnId, label) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      const spans = Array.from(btn.children || []).filter((el) => {
+        if (!el || el.tagName !== 'SPAN') return false;
+        return !String(el.className || '').includes('absolute');
+      });
+      if (spans[0]) spans[0].textContent = '+';
+      if (spans[1]) spans[1].textContent = label;
+    }
+
+    function makeUploadAddTile(label, onClick) {
+      const tile = document.createElement('div');
+      tile.className = 'upload-add-tile';
+      tile.setAttribute('role', 'button');
+      tile.setAttribute('tabindex', '0');
+      tile.setAttribute('aria-label', label);
+      const plus = document.createElement('div');
+      plus.className = 'upload-add-plus';
+      plus.textContent = '+';
+      const text = document.createElement('span');
+      text.textContent = label;
+      tile.appendChild(plus);
+      tile.appendChild(text);
+      tile.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof onClick === 'function') onClick();
+      });
+      tile.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        if (typeof onClick === 'function') onClick();
+      });
+      return tile;
+    }
+
+    function getMainUploadKind() {
+      return uploadKindFromAccept(currentModel && currentModel.acceptTypes ? currentModel.acceptTypes : 'image/*');
+    }
+
+    function syncMainUploadUi() {
+      const uploadBtn = document.getElementById('uploadBtn');
+      const uploadBtnLabel = document.getElementById('uploadBtnLabel');
+      if (!uploadBtn || !currentModel) return;
+      const max = Number(currentModel.maxFiles || 0);
+      const hasFiles = !!((uploadedFiles || []).length);
+      const canUseMainUpload = max > 0 && !currentModel.useFrames && !currentModel.needsVideo && !currentModel.needsMotionVideo && !currentModel.specificUpload;
+      if (!canUseMainUpload) return;
+      const kind = getMainUploadKind();
+      uploadBtn.classList.toggle('hidden', hasFiles);
+      setUploadButtonCopy('uploadBtn', `Upload ${uploadNoun(kind, max > 1)}`);
+      if (uploadBtnLabel) uploadBtnLabel.textContent = `Upload ${uploadNoun(kind, max > 1)}`;
+    }
+
+    function getListUploadConfig(containerId) {
+      const id = String(containerId || '');
+      const byId = {
+        veoReferenceThumbs: { inputId: 'veoReferenceInput', kind: 'image', max: 3 },
+        seedanceImageRefsThumbs: { inputId: 'seedanceImageRefsInput', kind: 'image', max: 9 },
+        seedanceVideoRefsThumbs: { inputId: 'seedanceVideoRefsInput', kind: 'video', max: 3 },
+        seedanceAudioRefsThumbs: { inputId: 'seedanceAudioRefsInput', kind: 'audio', max: 3 },
+        videoRefVideosThumbs: { inputId: 'videoRefVideosInput', kind: 'video', max: 3 },
+        videoRefAudioThumbs: { inputId: 'videoRefAudioInput', kind: 'audio', max: 1 },
+        kling30ElementsThumbs: { inputId: 'kling30ElementsInput', kind: 'image', max: 4 }
+      };
+      if (id === 'videoRefImagesThumbs') {
+        const max = currentModel && (currentModel.id === 'grok-video' || currentModel.id === 'gemini-omni-video') ? 7 : 9;
+        return { inputId: 'videoRefImagesInput', kind: 'image', max };
+      }
+      return byId[id] || null;
+    }
+
+    function appendUploadAddTile(containerEl, files, config) {
+      if (!containerEl || !config) return;
+      const max = Number(config.max || 1);
+      const count = Array.isArray(files) ? files.length : 0;
+      if (count <= 0) return;
+      if (count >= max) return;
+      const input = document.getElementById(config.inputId);
+      if (!input || input.disabled) return;
+      const label = `Add ${uploadNoun(config.kind, false)}`;
+      containerEl.appendChild(makeUploadAddTile(label, () => input.click()));
+    }
+
+    function syncUploadButtonCopy() {
+      const max = Number(currentModel && currentModel.maxFiles ? currentModel.maxFiles : 0);
+      setUploadButtonCopy('uploadBtn', `Upload ${uploadNoun(getMainUploadKind(), max > 1)}`);
+      [
+        ['startFrameBtn', 'Upload image'],
+        ['lastFrameBtn', 'Upload image'],
+        ['veoReferenceBtn', 'Upload images'],
+        ['alephVideoBtn', 'Upload video'],
+        ['alephImageBtn', 'Upload image'],
+        ['motionVideoBtn', 'Upload video'],
+        ['motionImageBtn', 'Upload image'],
+        ['seedanceFirstBtn', 'Upload image'],
+        ['seedanceLastBtn', 'Upload image'],
+        ['seedanceImageRefsBtn', 'Upload images'],
+        ['seedanceVideoRefsBtn', 'Upload videos'],
+        ['seedanceAudioRefsBtn', 'Upload audio'],
+        ['kling30FirstBtn', 'Upload image'],
+        ['kling30LastBtn', 'Upload image'],
+        ['kling30ElementsBtn', 'Upload images'],
+        ['videoFirstFrameBtn', 'Upload image'],
+        ['videoLastFrameBtn', 'Upload image'],
+        ['videoSourceBtn', 'Upload video'],
+        ['videoRefImagesBtn', 'Upload images'],
+        ['videoRefVideosBtn', 'Upload videos'],
+        ['videoRefAudioBtn', 'Upload audio']
+      ].forEach(([id, label]) => setUploadButtonCopy(id, label));
+    }
+
     function __renderImageThumbs() {
       const thumbs = document.getElementById('imageThumbs');
       if (!thumbs) return;
@@ -5502,6 +5860,13 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         wrapper.appendChild(closeBtn);
         thumbs.appendChild(wrapper);
       });
+      const max = Number(currentModel && currentModel.maxFiles ? currentModel.maxFiles : 0);
+      if ((uploadedFiles || []).length && (uploadedFiles || []).length < max) {
+        const input = document.getElementById('imageInput');
+        const kind = getMainUploadKind();
+        thumbs.appendChild(makeUploadAddTile(`Add ${uploadNoun(kind, false)}`, () => input && input.click()));
+      }
+      syncMainUploadUi();
       if (typeof refreshPromptImageMentionMenu === 'function') refreshPromptImageMentionMenu();
     }
 
@@ -7163,13 +7528,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         if (currentModel && Number(currentModel.maxFiles || 0) > 0) {
           if (uploadBtn) uploadBtn.classList.remove('hidden');
           if (thumbs) thumbs.classList.remove('hidden');
-          if (uploadBtnLabel) {
-            const accept = String(currentModel.acceptTypes || 'image/*');
-            uploadBtnLabel.textContent = (accept.includes('video/*') || accept.includes('audio/*')) ? 'Upload media' : 'Upload image';
-          }
         }
       }
     
+      syncUploadButtonCopy();
+      syncMainUploadUi();
       // Mobile quick options (UI only)
       updateMobileQuickOptions();
       updateUploadPanelState();
@@ -7198,7 +7561,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const imageInput = document.getElementById('videoRefImagesInput');
       if (title) title.textContent = '';
       if (hint) hint.textContent = '';
-      if (imageLabel) imageLabel.textContent = kind === 'grokVideo' ? 'Image input (up to 7)' : (kind === 'geminiOmni' ? 'Image input' : 'Image refs');
+      if (imageLabel) imageLabel.textContent = 'Upload images';
       if (imageInput) imageInput.multiple = true;
       show('videoFirstFrameControl', kind === 'wan27' || kind === 'happyhorse');
       show('videoLastFrameControl', kind === 'wan27');
@@ -7208,6 +7571,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       show('videoRefAudioControl', kind === 'wan27');
       show('geminiAudioIdsControl', kind === 'geminiOmni');
       show('wanPromptExtendControl', kind === 'wan27');
+      syncUploadButtonCopy();
       if (typeof syncVideoRefsInputLocks === 'function') syncVideoRefsInputLocks();
     }
     // ------------------------------------------------------------
@@ -7569,6 +7933,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           if (typeof syncSeedanceInputLocks === 'function') syncSeedanceInputLocks();
         });
 	      });
+	      appendUploadAddTile(containerEl, files || [], getListUploadConfig(containerEl.id));
 	      if (typeof syncSeedanceInputLocks === 'function') syncSeedanceInputLocks();
 	      if (typeof refreshPromptImageMentionMenu === 'function') refreshPromptImageMentionMenu();
 	    }
@@ -7654,6 +8019,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         wrapper.appendChild(closeBtn);
         container.appendChild(wrapper);
 	      });
+	      appendUploadAddTile(container, veoReferenceFiles, getListUploadConfig('veoReferenceThumbs'));
 	      syncVeo31InputLocks();
 	      if (typeof refreshPromptImageMentionMenu === 'function') refreshPromptImageMentionMenu();
 	    }
