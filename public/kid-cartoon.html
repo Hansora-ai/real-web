@@ -461,15 +461,21 @@
     .result-card{
       flex:0 0 260px;
       width:260px;
-      min-height:348px;
+      height:330px;
+      max-height:330px;
       border:1px solid rgba(255,255,255,.1);
       border-radius:18px;
       overflow:hidden;
       background:#070a14;
       position:relative;
+      display:flex;
+      flex-direction:column;
     }
     .result-media{
-      height:260px;
+      height:238px;
+      min-height:238px;
+      max-height:238px;
+      flex:0 0 238px;
       background:#050812;
       display:grid;
       place-items:center;
@@ -502,10 +508,18 @@
     }
     .result-chip.ready{ background:rgba(16,185,129,.88); }
     .result-chip.failed{ background:rgba(239,68,68,.88); }
-    .result-info{ padding:13px 14px 15px; }
+    .result-info{
+      height:92px;
+      min-height:92px;
+      padding:9px 10px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:5px;
+    }
     .result-info strong{ display:block; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .result-info span{ display:block; margin-top:4px; color:var(--muted); font-size:12px; }
-    .result-actions{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:12px; }
+    .result-actions{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; }
     .result-actions a,
     .result-actions button{
       min-height:34px;
@@ -1657,7 +1671,45 @@
     scheduleRecentGenerationLoads();
   </script>
   <style id="kid-cartoon-result-fix-20260624">
-    html[data-kid-cartoon-fix="20260624-2134"] .creating-icon,
+    .result-card{
+      flex:0 0 260px !important;
+      width:260px !important;
+      height:330px !important;
+      max-height:330px !important;
+      min-height:330px !important;
+      display:flex !important;
+      flex-direction:column !important;
+      overflow:hidden !important;
+    }
+    .result-media{
+      height:238px !important;
+      min-height:238px !important;
+      max-height:238px !important;
+      flex:0 0 238px !important;
+      overflow:hidden !important;
+      display:grid !important;
+      place-items:center !important;
+      background:#050812 !important;
+    }
+    .result-info{
+      height:92px !important;
+      min-height:92px !important;
+      max-height:92px !important;
+      padding:9px 10px !important;
+      display:flex !important;
+      flex-direction:column !important;
+      justify-content:center !important;
+      gap:5px !important;
+      overflow:hidden !important;
+    }
+    .result-actions{
+      margin-top:auto !important;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:space-between !important;
+      gap:8px !important;
+    }
+    html[data-kid-cartoon-fix="20260624-2254"] .creating-icon,
     .creating-icon{
       width:48px !important;
       height:48px !important;
@@ -1691,11 +1743,33 @@
     }
   </style>
   <script>
-    window.KID_CARTOON_FIX_VERSION = '20260624-2134';
+    window.KID_CARTOON_FIX_VERSION = '20260624-2254';
     document.documentElement.dataset.kidCartoonFix = window.KID_CARTOON_FIX_VERSION;
     (function hardenKidCartoonResultUi(){
       function fixResultUi(root) {
         const scope = root && root.querySelectorAll ? root : document;
+        scope.querySelectorAll('.result-card').forEach((card) => {
+          card.style.setProperty('width', '260px', 'important');
+          card.style.setProperty('height', '330px', 'important');
+          card.style.setProperty('min-height', '330px', 'important');
+          card.style.setProperty('max-height', '330px', 'important');
+          card.style.setProperty('display', 'flex', 'important');
+          card.style.setProperty('flex-direction', 'column', 'important');
+          card.style.setProperty('overflow', 'hidden', 'important');
+        });
+        scope.querySelectorAll('.result-media').forEach((media) => {
+          media.style.setProperty('height', '238px', 'important');
+          media.style.setProperty('min-height', '238px', 'important');
+          media.style.setProperty('max-height', '238px', 'important');
+          media.style.setProperty('flex', '0 0 238px', 'important');
+          media.style.setProperty('overflow', 'hidden', 'important');
+        });
+        scope.querySelectorAll('.result-info').forEach((info) => {
+          info.style.setProperty('height', '92px', 'important');
+          info.style.setProperty('min-height', '92px', 'important');
+          info.style.setProperty('max-height', '92px', 'important');
+          info.style.setProperty('overflow', 'hidden', 'important');
+        });
         scope.querySelectorAll('.creating-icon').forEach((icon) => {
           icon.textContent = '';
           icon.setAttribute('aria-hidden', 'true');
