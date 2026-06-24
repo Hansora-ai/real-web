@@ -496,6 +496,13 @@
       background:#050812;
       cursor:pointer;
     }
+    .result-preview-hit{
+      position:absolute;
+      inset:0;
+      z-index:1;
+      background:transparent;
+      cursor:pointer;
+    }
     .result-chip{
       position:absolute;
       left:12px;
@@ -712,7 +719,7 @@
       main{
         width:100%;
         max-width:100%;
-        padding:14px 10px 104px;
+        padding:14px 10px 24px;
         overflow-x:hidden;
       }
       .page-shell{
@@ -795,7 +802,7 @@
       }
       .workspace-body{
         min-height:0;
-        padding:14px;
+        padding:14px 14px 2px;
         border-radius:20px;
       }
       .before-after-grid{ grid-template-columns:minmax(0,1fr); }
@@ -810,7 +817,7 @@
         flex-wrap:nowrap;
         overflow-x:auto;
         overflow-y:hidden;
-        padding-bottom:6px;
+        padding-bottom:0;
       }
       .result-card{
         flex:0 0 min(260px, calc(100vw - 48px));
@@ -1310,6 +1317,36 @@
       }
     }
 
+    function bindResultPreview(card, media, url) {
+      if (!card || !url) return;
+      card.dataset.previewUrl = url;
+      if (media) media.dataset.previewUrl = url;
+      let hit = media ? media.querySelector('.result-preview-hit') : null;
+      if (media && !hit) {
+        hit = document.createElement('div');
+        hit.className = 'result-preview-hit';
+        hit.setAttribute('aria-label', 'Open preview');
+        media.appendChild(hit);
+      }
+      if (card.dataset.previewBound === '1') return;
+      card.dataset.previewBound = '1';
+      const open = (event) => {
+        if (event && event.target && event.target.closest('.result-get, .result-actions, a, button')) return;
+        const previewUrl = card.dataset.previewUrl || (media && media.dataset.previewUrl) || '';
+        if (!previewUrl || !window.openPreview) return;
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        window.openPreview(previewUrl);
+      };
+      card.addEventListener('click', open);
+      if (media) {
+        media.addEventListener('click', open);
+        hit.addEventListener('click', open);
+      }
+    }
+
     (function initPreviewOverlay(){
       let overlay = document.getElementById('previewOverlay');
       if (!overlay) {
@@ -1397,6 +1434,7 @@
           });
           media.appendChild(video);
         }
+        bindResultPreview(card, media, url);
         let getBtn = actions.querySelector('.result-get');
         if (!getBtn) {
           actions.innerHTML = '';
@@ -1869,7 +1907,7 @@
       justify-content:flex-end !important;
       gap:8px !important;
     }
-    html[data-kid-cartoon-fix="20260624-2353"] .creating-icon,
+    html[data-kid-cartoon-fix="20260625-0012"] .creating-icon,
     .creating-icon{
       width:48px !important;
       height:48px !important;
@@ -1896,6 +1934,13 @@
       object-fit:contain !important;
       background:#050812 !important;
     }
+    .result-preview-hit{
+      position:absolute !important;
+      inset:0 !important;
+      z-index:1 !important;
+      background:transparent !important;
+      cursor:pointer !important;
+    }
     #previewOverlay video{
       max-width:100% !important;
       max-height:min(88vh,900px) !important;
@@ -1903,7 +1948,7 @@
     }
   </style>
   <script>
-    window.KID_CARTOON_FIX_VERSION = '20260624-2353';
+    window.KID_CARTOON_FIX_VERSION = '20260625-0012';
     document.documentElement.dataset.kidCartoonFix = window.KID_CARTOON_FIX_VERSION;
     (function hardenKidCartoonResultUi(){
       function fixResultUi(root) {
@@ -1954,6 +1999,10 @@
           video.style.setProperty('max-width', '100%', 'important');
           video.style.setProperty('max-height', '100%', 'important');
           video.style.setProperty('background', '#050812', 'important');
+          const media = video.closest('.result-media');
+          const card = video.closest('.result-card');
+          const url = video.dataset.resultUrl || video.currentSrc || video.src || '';
+          if (card && url) bindResultPreview(card, media, url);
           if (video.dataset.previewBound === '1') return;
           video.dataset.previewBound = '1';
           video.addEventListener('click', (event) => {
