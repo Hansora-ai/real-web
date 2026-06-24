@@ -513,11 +513,11 @@
     .result-info{
       height:92px;
       min-height:92px;
-      padding:10px 10px 9px;
+      padding:10px 10px;
       display:flex;
       flex-direction:column;
       justify-content:space-between;
-      gap:4px;
+      gap:3px;
     }
     .result-top-row,
     .result-bottom-row{
@@ -534,15 +534,15 @@
       color:rgba(255,255,255,.62);
       font-size:12px;
       line-height:1.25;
-      min-height:30px;
-      max-height:30px;
-      display:-webkit-box;
-      -webkit-line-clamp:2;
-      -webkit-box-orient:vertical;
+      min-height:15px;
+      max-height:15px;
+      display:block;
+      white-space:nowrap;
       overflow:hidden;
+      text-overflow:ellipsis;
     }
     .result-status-text{ color:#6ee7b7; font-size:12px; font-weight:850; }
-    .result-bottom-row{ min-height:34px; }
+    .result-bottom-row{ min-height:34px; flex:0 0 34px; }
     .result-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-left:auto; }
     .result-actions a,
     .result-actions button{
@@ -1735,21 +1735,20 @@
       height:92px !important;
       min-height:92px !important;
       max-height:92px !important;
-      padding:10px 10px 9px !important;
+      padding:10px 10px !important;
       display:flex !important;
       flex-direction:column !important;
       justify-content:space-between !important;
-      gap:4px !important;
+      gap:3px !important;
       overflow:hidden !important;
     }
     .result-prompt{
-      min-height:30px !important;
-      max-height:30px !important;
-      display:-webkit-box !important;
-      -webkit-line-clamp:2 !important;
-      -webkit-box-orient:vertical !important;
+      min-height:15px !important;
+      max-height:15px !important;
+      display:block !important;
+      white-space:nowrap !important;
       overflow:hidden !important;
-      white-space:normal !important;
+      text-overflow:ellipsis !important;
     }
     .result-bottom-row{
       min-height:34px !important;
@@ -1796,7 +1795,7 @@
     }
   </style>
   <script>
-    window.KID_CARTOON_FIX_VERSION = '20260624-2324';
+    window.KID_CARTOON_FIX_VERSION = '20260624-2335';
     document.documentElement.dataset.kidCartoonFix = window.KID_CARTOON_FIX_VERSION;
     (function hardenKidCartoonResultUi(){
       function fixResultUi(root) {
@@ -1825,13 +1824,12 @@
           info.style.setProperty('overflow', 'hidden', 'important');
         });
         scope.querySelectorAll('.result-prompt').forEach((prompt) => {
-          prompt.style.setProperty('min-height', '30px', 'important');
-          prompt.style.setProperty('max-height', '30px', 'important');
-          prompt.style.setProperty('display', '-webkit-box', 'important');
-          prompt.style.setProperty('-webkit-line-clamp', '2', 'important');
-          prompt.style.setProperty('-webkit-box-orient', 'vertical', 'important');
-          prompt.style.setProperty('white-space', 'normal', 'important');
+          prompt.style.setProperty('min-height', '15px', 'important');
+          prompt.style.setProperty('max-height', '15px', 'important');
+          prompt.style.setProperty('display', 'block', 'important');
+          prompt.style.setProperty('white-space', 'nowrap', 'important');
           prompt.style.setProperty('overflow', 'hidden', 'important');
+          prompt.style.setProperty('text-overflow', 'ellipsis', 'important');
         });
         scope.querySelectorAll('.creating-icon').forEach((icon) => {
           icon.textContent = '';
