@@ -472,21 +472,23 @@
       flex-direction:column;
     }
     .result-media{
+      position:relative;
       height:238px;
       min-height:238px;
       max-height:238px;
       flex:0 0 238px;
       background:#050812;
-      display:grid;
-      place-items:center;
+      display:flex;
+      align-items:center;
+      justify-content:center;
       color:rgba(255,255,255,.45);
       font-size:13px;
       font-weight:850;
       cursor:default;
     }
     .result-media video{
-      width:100%;
-      height:100%;
+      width:auto;
+      height:auto;
       max-width:100%;
       max-height:100%;
       object-fit:contain;
@@ -517,8 +519,18 @@
       justify-content:center;
       gap:5px;
     }
-    .result-info strong{ display:block; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .result-info span{ display:block; margin-top:4px; color:var(--muted); font-size:12px; }
+    .result-top-row,
+    .result-bottom-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      min-width:0;
+    }
+    .result-name{ display:block; min-width:0; font-size:13px; font-weight:850; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .result-kind{ flex:0 0 auto; color:rgba(255,255,255,.45); font-size:11px; font-weight:850; text-transform:uppercase; letter-spacing:.04em; }
+    .result-prompt{ margin:0; color:rgba(255,255,255,.62); font-size:12px; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .result-status-text{ color:#6ee7b7; font-size:12px; font-weight:850; }
     .result-actions{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; }
     .result-actions a,
     .result-actions button{
@@ -1239,9 +1251,13 @@
       const media = card.querySelector('.result-media');
       const statusText = card.querySelector('.result-status-text');
       const actions = card.querySelector('.result-actions');
+      const kindText = card.querySelector('.result-kind');
+      const promptText = card.querySelector('.result-prompt');
       chip.className = 'result-chip' + (ready ? ' ready' : failed ? ' failed' : '');
       chip.textContent = ready ? 'Ready' : failed ? 'Failed' : 'Processing';
       statusText.textContent = ready ? 'Ready' : failed ? 'Failed' : 'Processing';
+      if (kindText) kindText.textContent = 'VIDEO';
+      if (promptText && data.prompt) promptText.textContent = data.prompt;
       if (ready) {
         media.dataset.state = 'ready';
         let video = media.querySelector('video');
@@ -1249,6 +1265,7 @@
           media.innerHTML = '';
           video = document.createElement('video');
           video.controls = true;
+          video.muted = true;
           video.playsInline = true;
           video.preload = 'metadata';
           video.dataset.resultUrl = url;
@@ -1303,16 +1320,25 @@
       card.dataset.runId = meta.run_id || '';
       card.dataset.rowId = row.id || '';
       card.dataset.taskId = meta.task_id || meta.taskId || '';
+      const prompt = row.prompt || 'Create a polished cinematic 3D animated video';
       card.innerHTML = [
         '<div class="result-chip">Processing</div>',
         '<div class="result-media"></div>',
         '<div class="result-info">',
-        '<strong>Kid Cartoon video</strong>',
+        '<div class="result-top-row">',
+        '<strong class="result-name">Kid Cartoon Studio</strong>',
+        '<span class="result-kind">VIDEO</span>',
+        '</div>',
+        '<p class="result-prompt"></p>',
+        '<div class="result-bottom-row">',
         '<span class="result-status-text">Processing</span>',
         '<div class="result-actions"></div>',
+        '</div>',
         '</div>'
       ].join('');
-      applyResultCard(card, { status: resultStatus(row), result_url: row.result_url || '' });
+      const promptEl = card.querySelector('.result-prompt');
+      if (promptEl) promptEl.textContent = prompt;
+      applyResultCard(card, { status: resultStatus(row), result_url: row.result_url || '', prompt });
       return card;
     }
 
@@ -1682,13 +1708,15 @@
       overflow:hidden !important;
     }
     .result-media{
+      position:relative !important;
       height:238px !important;
       min-height:238px !important;
       max-height:238px !important;
       flex:0 0 238px !important;
       overflow:hidden !important;
-      display:grid !important;
-      place-items:center !important;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
       background:#050812 !important;
     }
     .result-info{
@@ -1729,8 +1757,8 @@
       display:none !important;
     }
     .result-media video{
-      width:100% !important;
-      height:100% !important;
+      width:auto !important;
+      height:auto !important;
       max-width:100% !important;
       max-height:100% !important;
       object-fit:contain !important;
@@ -1743,7 +1771,7 @@
     }
   </style>
   <script>
-    window.KID_CARTOON_FIX_VERSION = '20260624-2254';
+    window.KID_CARTOON_FIX_VERSION = '20260624-2308';
     document.documentElement.dataset.kidCartoonFix = window.KID_CARTOON_FIX_VERSION;
     (function hardenKidCartoonResultUi(){
       function fixResultUi(root) {
@@ -1780,8 +1808,8 @@
         });
         scope.querySelectorAll('.result-media video').forEach((video) => {
           video.style.setProperty('object-fit', 'contain', 'important');
-          video.style.setProperty('width', '100%', 'important');
-          video.style.setProperty('height', '100%', 'important');
+          video.style.setProperty('width', 'auto', 'important');
+          video.style.setProperty('height', 'auto', 'important');
           video.style.setProperty('max-width', '100%', 'important');
           video.style.setProperty('max-height', '100%', 'important');
           video.style.setProperty('background', '#050812', 'important');
