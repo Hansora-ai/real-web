@@ -271,7 +271,7 @@
       <section class="section">
         <span class="label">Model</span>
         <div class="model-grid">
-          <button id="modelAvatarV" class="choice active" type="button" data-model="avatar_v"><strong>Avatar V</strong><span>0.7⚡ / second</span></button>
+          <button id="modelAvatarV" class="choice active" type="button" data-model="avatar_v"><strong>Avatar IV</strong><span>0.7⚡ / second</span></button>
           <button id="modelAvatarIII" class="choice" type="button" data-model="avatar_iii"><strong>Avatar III</strong><span>0.3⚡ / second</span></button>
         </div>
       </section>
@@ -705,7 +705,7 @@
       const failed = status.includes('fail') || status.includes('error') || status.includes('cancel');
       const savedUrl = firstVideoUrl(row.result_url);
       const url = failed ? '' : (savedUrl || firstVideoUrl(meta));
-      const modelLabel = String(row.provider || '').includes('iii') ? 'Avatar III' : 'Avatar V';
+      const modelLabel = String(row.provider || '').includes('iii') ? 'Avatar III' : 'Avatar IV';
       const detailLabel = failed ? 'Failed' : (meta.billable_seconds ? meta.billable_seconds + 's' : 'Avatar video');
       const card = document.createElement('article');
       card.className = 'result-card';
@@ -898,7 +898,7 @@
         const audioUrl = await uploadFile(audio);
         const runId = `${currentUser.id}-${Date.now()}`;
         placeholder = createResultCard({ provider: currentModel === 'avatar_v' ? 'heygen-avatar-v' : 'heygen-avatar-iii', kind: 'video', result_url: null, meta: { run_id: runId, status: 'processing', billable_seconds: getBillableSeconds() } }, true);
-        showStatus(`Submitting ${currentModel === 'avatar_v' ? 'Avatar V' : 'Avatar III'}…`);
+        showStatus(`Submitting ${currentModel === 'avatar_v' ? 'Avatar IV' : 'Avatar III'}…`);
         const { data: sessionData } = await supabaseClient.auth.getSession();
         const token = sessionData && sessionData.session ? sessionData.session.access_token : '';
         const resp = await fetch('/.netlify/functions/run-heygen-avatar', {
@@ -914,7 +914,7 @@
         });
         const data = await resp.json().catch(() => ({}));
         if (!data.submitted) throw new Error(data.error || 'submit_failed');
-        showStatus(`Submitted ${currentModel === 'avatar_v' ? 'Avatar V' : 'Avatar III'}. Waiting for result…`, 'good');
+        showStatus(`Submitted ${currentModel === 'avatar_v' ? 'Avatar IV' : 'Avatar III'}. Waiting for result…`, 'good');
         await refreshCredits();
         watchCreditsLive();
         startPollResult(runId, data.taskId || data.video_id || '', placeholder);
