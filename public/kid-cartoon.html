@@ -917,12 +917,48 @@
       value();
     }
 
+    function withTimeout(promise, ms, fallback) {
+      let timer;
+      return Promise.race([
+        promise,
+        new Promise((resolve) => {
+          timer = setTimeout(() => resolve(fallback), ms);
+        })
+      ]).finally(() => clearTimeout(timer));
+    }
+
+    function readStoredAuth() {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i) || '';
+          if (!/^sb-.*-auth-token$/.test(key)) continue;
+          const parsed = JSON.parse(localStorage.getItem(key) || '{}');
+          const session = Array.isArray(parsed) ? parsed[0] : parsed;
+          const token = session && (session.access_token || session.currentSession && session.currentSession.access_token);
+          const user = session && (session.user || session.currentSession && session.currentSession.user);
+          if (token && user && user.id) return { user, token };
+        }
+      } catch (error) {
+        console.warn('Stored auth read failed', error);
+      }
+      return { user: null, token: '' };
+    }
+
     async function getUserAndToken() {
-      const { data: userData } = await sb.auth.getUser();
-      const user = userData && userData.user ? userData.user : null;
-      if (!user) return { user: null, token: '' };
-      const { data: sessionData } = await sb.auth.getSession();
-      return { user, token: sessionData && sessionData.session ? sessionData.session.access_token : '' };
+      const stored = readStoredAuth();
+      if (stored.user && stored.token) return stored;
+
+      const headerUser = window.HansoraHeader && typeof window.HansoraHeader.getCurrentUser === 'function'
+        ? window.HansoraHeader.getCurrentUser()
+        : null;
+      const sessionData = await withTimeout(sb.auth.getSession(), 2500, { data: { session: null }, error: 'timeout' });
+      const session = sessionData && sessionData.data ? sessionData.data.session : null;
+      if (session && session.access_token && session.user) return { user: session.user, token: session.access_token };
+      if (headerUser && headerUser.id && session && session.access_token) return { user: headerUser, token: session.access_token };
+
+      const userData = await withTimeout(sb.auth.getUser(), 2500, { data: { user: null }, error: 'timeout' });
+      const user = userData && userData.data && userData.data.user ? userData.data.user : headerUser;
+      return { user: user || null, token: session && session.access_token ? session.access_token : '' };
     }
 
     function resultStatus(row) {
@@ -1129,10 +1165,15 @@
           setStatus('Write a short scene idea first.', 'bad');
           return;
         }
+        setStatus('Checking login...');
         const { user, token } = await getUserAndToken();
         if (!user) {
           setStatus('Please log in first.', 'bad');
           if (window.HansoraHeader && typeof window.HansoraHeader.openAuth === 'function') window.HansoraHeader.openAuth();
+          return;
+        }
+        if (!token) {
+          setStatus('Please refresh the page and log in again.', 'bad');
           return;
         }
         const cost = currentCost();
