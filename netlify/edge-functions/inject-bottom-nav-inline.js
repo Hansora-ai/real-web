@@ -397,6 +397,7 @@ export default async (request, context) => {
         <a href="/character.html">Character</a>
         <a href="/product_card.html">Product Card</a>
         <a href="/prompt-builder.html">Cartoon Prompt Builder</a>
+        <a href="/kid-cartoon.html">Kid Cartoon</a>
         <a href="/upscale.html?mode=video">Video upscale</a>
         <a href="/lipsync.html">Lipsync Avatar</a>
         <a href="/audio.html?tool=text-to-speech">Text to speech</a>
