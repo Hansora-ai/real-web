@@ -41,7 +41,14 @@
       box-shadow:0 22px 70px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
       overflow:hidden;
     }
-    .composer{ position:sticky; top:18px; }
+    .composer{
+      position:sticky;
+      top:18px;
+      max-height:calc(100vh - 36px);
+      overflow-y:auto;
+      overscroll-behavior:contain;
+      scrollbar-width:thin;
+    }
     .panel-pad{ padding:18px; }
     .title{ font-size:30px; line-height:1.02; margin:0 0 9px; letter-spacing:0; }
     .sub{ margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
@@ -354,6 +361,25 @@
       font-size:12px;
       font-weight:800;
     }
+    .see-all-link{
+      flex:0 0 auto;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:999px;
+      padding:8px 12px;
+      color:rgba(255,255,255,.78);
+      background:rgba(255,255,255,.03);
+      font-size:11px;
+      font-weight:950;
+      line-height:1;
+      text-decoration:none;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+    .see-all-link:hover{
+      border-color:rgba(255,255,255,.22);
+      color:#fff;
+      background:rgba(255,255,255,.06);
+    }
     .empty-results{
       min-height:420px;
       border:1px dashed rgba(255,255,255,.08);
@@ -420,6 +446,16 @@
       object-fit:cover;
       background:#050812;
     }
+    .ba-after video{
+      pointer-events:none;
+    }
+    .sample-after-video::-webkit-media-controls,
+    .sample-after-video::-webkit-media-controls-panel,
+    .sample-after-video::-webkit-media-controls-overlay-play-button{
+      display:none !important;
+      opacity:0 !important;
+      pointer-events:none !important;
+    }
     .sample-video-empty{
       min-height:270px;
       display:grid;
@@ -470,6 +506,21 @@
       position:relative;
       display:flex;
       flex-direction:column;
+    }
+    @media (min-width:901px){
+      .results-list:not(.hidden){
+        display:grid !important;
+        grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+        align-items:start !important;
+        gap:14px !important;
+        width:100% !important;
+      }
+      .results-list:not(.hidden) .result-card{
+        width:100% !important;
+        min-width:0 !important;
+        max-width:none !important;
+        flex:initial !important;
+      }
     }
     .result-media{
       position:relative;
@@ -899,6 +950,7 @@
         <div class="workspace-body">
           <div class="workspace-title">
             <strong>Recent generations</strong>
+            <a class="see-all-link" href="./usage.html">SEE ALL</a>
           </div>
           <div class="empty-results">
             <div class="sample-head">
@@ -911,7 +963,7 @@
             <div class="before-after-grid" aria-label="Before and after example">
               <article class="ba-card">
                 <div class="ba-media ba-before">
-                  <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%2024,%202026,%2001_14_04%20PM.png" alt="Before kid photo example" loading="lazy" />
+                  <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%2025,%202026,%2004_09_47%20PM.png" alt="Before kid photo example" loading="lazy" />
                 </div>
                 <div class="ba-footer">
                   <div>
@@ -923,7 +975,19 @@
               </article>
               <article class="ba-card">
                 <div class="ba-media ba-after">
-                  <video controls muted playsinline loop preload="metadata" poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%2024,%202026,%2001_14_04%20PM.png"></video>
+                  <video
+                    class="sample-after-video"
+                    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/kid-cartoon-1782389233676.mp4"
+                    muted
+                    autoplay
+                    playsinline
+                    loop
+                    preload="auto"
+                    disablepictureinpicture
+                    disableremoteplayback
+                    poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%2025,%202026,%2004_09_47%20PM.png"
+                    aria-label="Animated kid cartoon example"
+                  ></video>
                 </div>
                 <div class="ba-footer">
                   <div>
@@ -2104,7 +2168,7 @@
     }
   </style>
   <script>
-    window.KID_CARTOON_FIX_VERSION = '20260625-0048';
+    window.KID_CARTOON_FIX_VERSION = '20260625-1618';
     document.documentElement.dataset.kidCartoonFix = window.KID_CARTOON_FIX_VERSION;
     (function hardenKidCartoonResultUi(){
       const mobileQuery = window.matchMedia ? window.matchMedia('(max-width:900px)') : null;
@@ -2123,12 +2187,13 @@
             card.style.setProperty('display', 'block', 'important');
             card.style.setProperty('border-radius', '18px', 'important');
           } else {
-            card.style.setProperty('width', '260px', 'important');
+            card.style.setProperty('width', '100%', 'important');
             card.style.setProperty('height', '330px', 'important');
             card.style.setProperty('min-height', '330px', 'important');
             card.style.setProperty('max-height', '330px', 'important');
             card.style.setProperty('display', 'flex', 'important');
             card.style.setProperty('flex-direction', 'column', 'important');
+            card.style.setProperty('flex', 'initial', 'important');
             card.style.removeProperty('aspect-ratio');
           }
           card.style.setProperty('overflow', 'hidden', 'important');
@@ -2226,6 +2291,17 @@
             const url = video.dataset.resultUrl || video.currentSrc || video.src || '';
             if (url && window.openPreview) window.openPreview(url);
           });
+        });
+        scope.querySelectorAll('.sample-after-video').forEach((video) => {
+          video.controls = false;
+          video.muted = true;
+          video.loop = true;
+          video.autoplay = true;
+          video.playsInline = true;
+          video.removeAttribute('controls');
+          video.style.setProperty('pointer-events', 'none', 'important');
+          video.style.setProperty('object-fit', 'cover', 'important');
+          video.play && video.play().catch(() => {});
         });
         scope.querySelectorAll('.result-chip').forEach((chip) => {
           const card = chip.closest('.result-card');
