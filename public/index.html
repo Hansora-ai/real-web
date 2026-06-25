@@ -1824,10 +1824,6 @@
       padding-top: 18px !important;
     }
 
-    .home-features-section .shell {
-      overflow: hidden;
-    }
-
     .home-features-head {
       align-items: center !important;
       flex-direction: row !important;
@@ -1854,16 +1850,14 @@
 
     .home-features-grid {
       grid-auto-flow: row;
-      width: max-content;
-      grid-template-columns: repeat(5, calc((100vw - 52px) / 3));
+      grid-template-columns: repeat(5, minmax(calc((100% - 16px) / 3), 1fr));
       grid-template-rows: repeat(2, minmax(0, 1fr));
       grid-auto-columns: unset;
       gap: 8px;
       align-items: stretch;
-      overflow: visible;
+      overflow-x: auto;
+      overflow-y: hidden;
       scroll-snap-type: none;
-      animation: hansoraFeatureMobileDrift 7.5s ease-in-out infinite alternate;
-      will-change: transform;
     }
 
     .home-feature-card {
@@ -1897,15 +1891,6 @@
       display: none !important;
     }
 
-    @keyframes hansoraFeatureMobileDrift {
-      0%, 12% {
-        transform: translateX(0);
-      }
-
-      88%, 100% {
-        transform: translateX(calc((56px - 200vw) / 3));
-      }
-    }
   }
 </style>
 
@@ -2115,7 +2100,7 @@
 
   const isMobile = () => mobileQuery.matches;
 
-  const pauseBriefly = (ms = 2600) => {
+  const pauseBriefly = (ms = 6000) => {
     pausedUntil = performance.now() + ms;
   };
 
@@ -2162,7 +2147,7 @@
     if (frame || !isMobile() || !isVisible) return;
     const maxScroll = grid.scrollWidth - grid.clientWidth;
     if (maxScroll > 4 && grid.scrollLeft < 1) {
-      grid.scrollLeft = Math.min(10, maxScroll);
+      grid.scrollLeft = Math.min(2, maxScroll);
       direction = 1;
     }
     pausedUntil = 0;
