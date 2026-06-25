@@ -62,6 +62,7 @@
   };
 
   const VIDEO_MENU_ITEMS = [
+    { label: 'Kid Cartoon', href: '/kid-cartoon.html', icon: 'KC', note: 'Add your kid in cartoon' },
     { label: 'Seedance 2.0', id: 'seedance-2', icon: 'S2', note: 'Cinematic video model' },
     { label: 'Kling 3.0', id: 'kling-3', icon: 'K3', note: 'Advanced video generation' },
     { label: 'Seedance 2.0 Mini', id: 'seedance-2-mini', icon: 'SM', note: 'Fast cinematic video model' },
@@ -87,6 +88,7 @@
   ];
 
   const FEATURE_MENU_ITEMS = [
+    { label: 'Kid Cartoon', href: '/kid-cartoon.html', icon: 'KC', note: 'Add your kid in cartoon' },
     { label: 'Video upscale', href: '/upscale.html?mode=video', icon: 'VU', note: 'Increase video quality' },
     { label: 'Lipsync Avatar', href: '/lipsync.html', icon: 'LA', note: 'Talking avatar video' },
     { label: 'Text to speech', href: '/audio.html?tool=text-to-speech', icon: 'T2', note: 'Generate voice from text' },
