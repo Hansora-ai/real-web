@@ -130,6 +130,7 @@ function buildScenePlan(action, body) {
     `Concrete ${duration}-second story beats built directly from the user's idea "${action}": open with an establishing shot that clearly shows the child already in the scene and beginning to do "${action}"; middle beat, the child fully performs "${action}" with readable body movement and a clear emotional reaction; final beat, the action resolves with a warm, expressive moment and small natural background motion.`,
     `The child must be actively doing exactly what the user described ("${action}") — not posing, not a still portrait, and never a different activity than the one requested.`,
     `Anything the user mentioned (such as animals, objects, or a setting) must appear in the role the user described, supporting "${action}" rather than replacing it.`,
+    `Make the sequence genuinely interesting and dynamic: invent 2-3 creative, delightful related actions and reactions that naturally extend "${action}" (lively movement, playful interaction with the environment and any characters, expressive gestures, and a small surprising or heart-warming beat), so the video feels alive and engaging instead of one repeated motion — while always keeping "${action}" as the clear main event.`,
   ];
 
   if (motion === 'airborne') {
@@ -150,11 +151,11 @@ function buildCartoonPrompt(body) {
     : 'cartoon';
   const action = userAction || 'the child having a joyful gentle adventure with friendly animals';
   const intro = styleMode === 'realistic'
-    ? 'Create a cinematic video set in a beautiful, polished 3D Pixar-style animated world, with a photorealistic, real human child (matching the uploaded reference photo) already present in the scene from the very first frame. The child stays 100% photorealistic, like real camera footage, while everything around them — environment, props, animals, sky, and lighting — is rendered as a gorgeous high-end 3D Pixar-style scene.'
+    ? 'Create a cinematic video whose main subject is a 100% photorealistic, ultra-realistic real human child who looks exactly like a real person in real life — completely indistinguishable from real camera footage — and exactly matching the uploaded reference photo, captured as if filmed on a real professional cinema camera with natural photographic skin, real texture and pores, and lifelike detail. The child is already present in the scene from the very first frame. The world behind and around the child — environment, props, sky, animals — is a charming, high-end 3D Pixar-style animated background, but this animated cartoon style applies ONLY to the surroundings and must NEVER be applied to the child.'
     : 'Create a polished, high-end 3D Pixar-style animated video from the uploaded child reference photo(s), where both the child and the whole world are rendered in beautiful Pixar-style 3D animation.';
   const scenePlan = buildScenePlan(action, body);
   const actionBlock = [
-    `Core user scene idea: ${action}. Treat this as the required centerpiece: follow it literally, then creatively ENHANCE and expand it into a vivid, beautiful, imaginative animated sequence — keep the exact requested action as the main event and add complementary, related secondary actions, charming details, and rich atmosphere around it. Never swap the user's action for a different one.`,
+    `Core user scene idea: ${action}. Treat this as the required centerpiece: follow it literally, then creatively ENHANCE it into a vivid, beautiful, genuinely interesting animated sequence — keep the exact requested action as the main event, but do NOT stop at the plain literal idea: invent several imaginative, dynamic, closely-related actions, reactions, and delightful little moments around it so the video feels alive, surprising, and engaging the whole way through. Never swap the user's action for a different one.`,
     ...scenePlan,
   ];
   const identity = [
@@ -164,16 +165,17 @@ function buildCartoonPrompt(body) {
   ];
   const shared = [
     'Camera direction: smooth gentle dolly-in or slow arc camera movement, no random cuts, no sudden zooms, keep the child and the main action readable throughout.',
-    'Make the scene warm, charming, cinematic, safe, colorful, and emotionally expressive, with soft natural lighting, clean composition, a richly detailed beautiful background, and playful storybook energy.',
+    'Make the scene warm, charming, cinematic, safe, colorful, and emotionally expressive, with soft natural lighting, clean composition, and a richly detailed beautiful background.',
   ];
   const style = styleMode === 'realistic'
     ? [
-        'Character treatment: keep the referenced child FULLY photorealistic and highly detailed — real human skin with natural texture and pores, lifelike facial details, normal human eyes, realistic proportions, and realistic hair. The child must NOT be cartoon, NOT Pixar-stylized, and NOT a CGI/3D-render look; they must look like the real child from the photo, as if filmed by a real camera.',
-        'Environment treatment: render everything around the child — setting, props, sky, animals, and effects — in a beautiful, polished, high-end 3D Pixar animation style, so the realistic real child belongs naturally inside a charming Pixar-style world. Match the lighting so the realistic child sits naturally and believably within the stylized 3D world.',
+        'Character treatment: the child must be FULLY photorealistic and hyper-detailed — real human skin with natural texture, visible pores, fine peach fuzz, and subsurface scattering, realistic catch-lights in normal-sized human eyes, individual realistic hair strands, and true-to-photo proportions, captured as if shot on a professional cinema camera with a 50mm lens and shallow depth of field. The child must look like a REAL filmed human, NOT a cartoon, NOT Pixar-stylized, NOT a CGI/3D render, and NOT plastic, waxy, doll-like, or over-smoothed.',
+        'Environment treatment: render ONLY the world around the child — setting, props, sky, animals, and effects — in a beautiful, high-end 3D Pixar animation style. Do NOT pull the child into that animated style and do NOT smooth or stylize the child to match the world; instead keep a deliberate, appealing contrast of a real, photographic child within a charming animated world, and light the child like real camera footage.',
+        'Negative for the child only: no cartoon face, no 3D-render skin, no plastic or waxy texture, no doll-like or over-smoothed look, and no enlarged anime/Pixar eyes — the child must stay indistinguishable from a real photographed person.',
       ]
     : [
-        'Character treatment: transform the referenced child into an appealing 3D Pixar-style animated character while preserving a strict one-to-one (1:1) likeness to the uploaded photo — the exact same face, hair, skin tone, age, and proportions, instantly recognizable as the same child, just rendered as polished Pixar-style 3D.',
-        'Environment treatment: render the entire world — child, setting, props, animals, and effects — in one consistent, beautiful, high-end 3D Pixar animation style with expressive eyes, soft rounded forms, and polished Pixar-like materials.',
+        'Character treatment: transform the referenced child into an appealing 3D Pixar-style animated character while preserving a strict one-to-one (1:1) likeness to the uploaded photo. Keep the face a super-similar, extremely close match to the photo — same face shape, nose, eyes, eyebrows, smile, skin tone, hairstyle, age, and proportions — so anyone instantly recognizes the exact same child, just rendered as polished Pixar-style 3D.',
+        'Environment treatment: render the entire world — child, setting, props, animals, and effects — in one consistent, beautiful, high-end 3D Pixar animation style with expressive eyes, soft rounded forms, polished Pixar-like materials, and a charming, playful storybook energy.',
       ];
   const quality = [
     'Avoid distorted faces, identity drift, duplicate limbs, warped hands, missing fingers, fused bodies, creepy expressions, text, logos, watermarks, and low-quality motion.',
