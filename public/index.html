@@ -2096,7 +2096,7 @@
   let isVisible = true;
   let touchStartX = 0;
   let touchStartY = 0;
-  const speed = 34;
+  const speed = 84;
 
   const isMobile = () => mobileQuery.matches;
 
@@ -2118,7 +2118,7 @@
 
     const maxScroll = grid.scrollWidth - grid.clientWidth;
     if (maxScroll <= 4) {
-      stop();
+      frame = requestAnimationFrame(tick);
       return;
     }
 
@@ -2147,7 +2147,7 @@
     if (frame || !isMobile() || !isVisible) return;
     const maxScroll = grid.scrollWidth - grid.clientWidth;
     if (maxScroll > 4 && grid.scrollLeft < 1) {
-      grid.scrollLeft = Math.min(2, maxScroll);
+      grid.scrollLeft = Math.min(18, maxScroll);
       direction = 1;
     }
     pausedUntil = 0;
