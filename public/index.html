@@ -1950,7 +1950,7 @@
 <div class="x-scroll" id="topVideos">
 <!-- Replace each media placeholder with a 16:9 video or image. Keep the link href for click target. -->
 <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-01.webp" aria-label="New inputs" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-01.mp4" data-lazy-video data-eager-video></video><span class="slot-label"><strong>New inputs</strong><span>Video 01</span></span></a>
-<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-02.webp" aria-label="Marketing studio hooks" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-02.mp4" data-lazy-video data-eager-video></video><span class="slot-label"><strong>Marketing studio hooks</strong><span>Video 02</span></span></a>
+<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-02.webp" aria-label="Marketing studio hooks" autoplay="" loop="" muted="" playsinline="" preload="metadata" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/HANSORA.mp4" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/HANSORA.mp4" data-lazy-video data-eager-video></video><span class="slot-label"><strong>Marketing studio hooks</strong><span>Video 02</span></span></a>
 <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-03.webp" aria-label="HANSORA CLI" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-03.mp4" data-lazy-video data-eager-video></video><span class="slot-label"><strong>HANSORA CLI</strong><span>Video 03</span></span></a>
 <a class="slot aspect-16x9" href="/analyse.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-04.webp" aria-label="Image to video" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-04.mp4" data-lazy-video data-eager-video></video><span class="slot-label"><strong>Image to video</strong><span>Video 04</span></span></a>
 </div>
@@ -2086,15 +2086,16 @@
   if (!grid) return;
 
   const mobileQuery = window.matchMedia('(max-width: 540px)');
-  const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   let frame = 0;
   let lastTime = 0;
   let direction = 1;
   let pausedUntil = 0;
   let isVisible = true;
+  let touchStartX = 0;
+  let touchStartY = 0;
   const speed = 34;
 
-  const isMobile = () => mobileQuery.matches && !reduceMotionQuery.matches;
+  const isMobile = () => mobileQuery.matches;
 
   const pauseBriefly = (ms = 2600) => {
     pausedUntil = performance.now() + ms;
@@ -2141,6 +2142,11 @@
 
   const start = () => {
     if (frame || !isMobile() || !isVisible) return;
+    const maxScroll = grid.scrollWidth - grid.clientWidth;
+    if (maxScroll > 4 && grid.scrollLeft < 1) {
+      grid.scrollLeft = Math.min(10, maxScroll);
+      direction = 1;
+    }
     pausedUntil = 0;
     frame = requestAnimationFrame(tick);
   };
@@ -2150,12 +2156,24 @@
     else stop();
   };
 
-  ['touchstart', 'pointerdown', 'wheel'].forEach((eventName) => {
-    grid.addEventListener(eventName, () => pauseBriefly(), { passive: true });
-  });
+  grid.addEventListener('touchstart', (event) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+  }, { passive: true });
+
+  grid.addEventListener('touchmove', (event) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    const deltaX = Math.abs(touch.clientX - touchStartX);
+    const deltaY = Math.abs(touch.clientY - touchStartY);
+    if (deltaX > 10 && deltaX > deltaY) pauseBriefly();
+  }, { passive: true });
+
+  grid.addEventListener('wheel', pauseBriefly, { passive: true });
 
   mobileQuery.addEventListener?.('change', refresh);
-  reduceMotionQuery.addEventListener?.('change', refresh);
   window.addEventListener('resize', refresh, { passive: true });
   window.addEventListener('pageshow', refresh);
   document.addEventListener('visibilitychange', () => {
