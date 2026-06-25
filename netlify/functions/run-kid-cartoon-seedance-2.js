@@ -97,8 +97,68 @@ function costFor(body) {
 function cleanUserPrompt(value) {
   return String(value || '')
     .replace(/\s+/g, ' ')
+    .replace(/\bwiht\b/gi, 'with')
+    .replace(/\bgerl\b/gi, 'girl')
+    .replace(/\bgril\b/gi, 'girl')
+    .replace(/\banmials\b/gi, 'animals')
+    .replace(/\banimals?\s+play(?:ing)?\b/gi, 'playing with animals')
     .trim()
     .slice(0, 500);
+}
+
+function detectSceneType(action) {
+  const text = String(action || '').toLowerCase();
+  if (/(animal|animals|rabbit|bunny|deer|horse|dog|cat|bird|butterfl|feed|feeding|pet|pets|farm|zoo)/i.test(text)) return 'animals';
+  if (/(soccer|football|ball|basketball|tennis|sport|kick|goal)/i.test(text)) return 'sports';
+  if (/(dance|dancing|sing|music|party)/i.test(text)) return 'performance';
+  if (/(garden|forest|park|flower|meadow|nature|tree|outside|outdoor)/i.test(text)) return 'nature';
+  return 'general';
+}
+
+function buildScenePlan(action, body) {
+  const duration = clampDuration(body.duration);
+  const aspect = normalizeAspect(body.aspect_ratio);
+  const sceneType = detectSceneType(action);
+  const framing = aspect === '9:16'
+    ? 'Vertical 9:16 framing: full child and nearby animals must fit in frame; leave safe headroom and visible ground below the child.'
+    : aspect === '1:1'
+      ? 'Square framing: keep the full child, hands, animals, and visible ground plane inside the frame.'
+      : 'Wide cinematic framing: keep the child as the clear main subject while showing the animal action around them.';
+
+  if (sceneType === 'animals') {
+    return [
+      `Concrete ${duration}-second story beats: start with the child kneeling or sitting fully above the grass in a sunny meadow, smiling as friendly rabbits and a small deer approach; middle beat, the child slowly reaches out with an open palm holding clover or tiny flowers while one rabbit sniffs the hand and the deer steps closer; final beat, the child gently pets the rabbit, laughs naturally, and the animals respond with small believable movements while butterflies or birds move in the background.`,
+      'The child must be actively doing the idea, not just posing: visible reaching hand, gentle petting motion, animals reacting, clear eye-line between child and animals, warm facial reaction.',
+      'Grounding and anatomy: show the child resting on top of the meadow, never swallowed by grass; shoulders, torso, arms, hands, knees or legs must remain visible and physically connected; grass may overlap only lightly in the foreground near hands/feet, never cover the torso or make the body look buried.',
+      'Animal direction: use friendly believable animals at child-safe distance; rabbits/deer/birds should have natural scale, clear faces, simple readable motion, and should not merge into the child body.',
+      framing,
+    ];
+  }
+
+  if (sceneType === 'sports') {
+    return [
+      `Concrete ${duration}-second story beats: start with the child standing fully visible on solid ground with the ball in frame; middle beat, the child performs the main action from the user idea with a readable body movement; final beat, the child reacts happily as the action completes.`,
+      'The child must be actively moving, with clear feet, knees, hands, and ball placement; no static portrait.',
+      'Grounding and anatomy: feet stay planted on visible ground, limbs remain attached and proportional, no body parts hidden by grass or props.',
+      framing,
+    ];
+  }
+
+  if (sceneType === 'performance') {
+    return [
+      `Concrete ${duration}-second story beats: start with the child fully visible preparing the performance; middle beat, the child performs the requested action with expressive hands, face, and body; final beat, the child finishes with a joyful reaction and small environmental motion.`,
+      'The child must be actively performing, not just smiling at camera; show natural timing, readable gestures, and smooth camera movement.',
+      'Grounding and anatomy: full body or clear upper body must remain visible, with limbs connected and no props cutting through the child.',
+      framing,
+    ];
+  }
+
+  return [
+    `Concrete ${duration}-second story beats: start with a clear establishing shot that shows the child fully placed in the scene; middle beat, the child performs the exact user idea with visible body movement and a clear reaction; final beat, the action resolves with a warm expressive moment and small background motion.`,
+    'The scene must feel like a complete animated moment, not a single portrait: include a beginning, action, reaction, and ending.',
+    'Grounding and anatomy: keep the child visibly above the ground or seat, never half-buried or hidden by foreground objects; keep hands, arms, legs, and face clean and readable.',
+    framing,
+  ];
 }
 
 function buildCartoonPrompt(body) {
@@ -110,29 +170,35 @@ function buildCartoonPrompt(body) {
   const intro = styleMode === 'realistic'
     ? 'Create a polished cinematic 3D animated video from the uploaded child reference photo(s), with the referenced child kept as a realistic human child.'
     : 'Create a polished high-end Pixar-style 3D animated video from the uploaded child reference photo(s).';
-  const shared = [
-    'Use the reference photo(s) to preserve the child or children exactly: face shape, hair, skin tone, age, proportions, expression, clothing cues, and recognizable personality.',
+  const scenePlan = buildScenePlan(action, body);
+  const actionBlock = [
+    `Core user scene idea: ${action}. Follow this idea literally, then expand it into a specific animated sequence with clear action and reaction.`,
+    ...scenePlan,
+  ];
+  const identity = [
+    'Use the reference photo(s) to preserve the child exactly: face shape, hair, skin tone, age, proportions, expression, clothing cues, and recognizable personality.',
     'If more than one child is shown, preserve each child individually and keep their relative ages and appearances distinct.',
     'Do not replace the child with a different character, do not age them up or down, do not change ethnicity, and do not invent extra children unless the action clearly requires background extras.',
-    'Use the short user idea as the core scene, then enrich it with natural related actions, expressive reactions, small story beats, playful background details, and smooth cinematic camera movement so the moment feels complete and not empty.',
+  ];
+  const shared = [
+    'Camera direction: smooth gentle dolly-in or slow arc camera movement, no random cuts, no sudden zooms, keep the child and the main action readable throughout.',
     'Make the scene warm, charming, cinematic, safe, colorful, and emotionally expressive, with soft natural lighting, clean composition, detailed background, polished 3D materials, and playful storybook energy.',
-    `Core user scene idea: ${action}. Expand this into a rich, coherent animated moment while keeping the exact intent of the idea.`,
   ];
   const style = styleMode === 'realistic'
     ? [
-        'Character treatment: keep the referenced child photorealistic, realistic, and highly detailed, not cartoon and not Pixar-stylized.',
-        'The child must look like the real child from the photo, with natural skin texture, lifelike facial details, normal human eyes, realistic proportions, and realistic hair. Do not create a cartoon face, do not create oversized animated eyes, do not make the child look like a Pixar character, and do not stylize the child into a doll or illustration.',
-        'The environment, animals, props, color, and lighting may be charming and cinematic, but the referenced child must remain a real human child inside that world.',
+        'Character treatment: keep the referenced child photorealistic and highly detailed, not cartoon and not Pixar-stylized.',
+        'The child must look like the real child from the photo, with natural skin texture, lifelike facial details, normal human eyes, realistic proportions, and realistic hair; the environment and animals may be charming and cinematic.',
       ]
     : [
         'Character treatment: transform the referenced child into a faithful Pixar-style 3D animated cartoon character while preserving a one-to-one likeness.',
         'The child should be clearly recognizable as the same child from the reference photo, but rendered as an appealing 3D cartoon character with expressive eyes, soft rounded forms, and polished Pixar-like animated materials.',
       ];
   const quality = [
-    'Avoid distorted faces, identity drift, duplicate limbs, warped hands, creepy expressions, text, logos, watermarks, and low-quality motion.',
+    'Avoid distorted faces, identity drift, duplicate limbs, warped hands, missing fingers, fused bodies, creepy expressions, text, logos, watermarks, and low-quality motion.',
+    'Do not make a simple still portrait. Do not crop the body in a way that hides the action. Do not bury the child in grass, flowers, blankets, fog, or foreground objects.',
     'Keep the child as the main subject and make the action easy to understand within the selected duration.',
   ];
-  return [intro, ...style, ...shared, ...quality].join(' ');
+  return [intro, ...actionBlock, ...style, ...identity, ...shared, ...quality].join(' ');
 }
 
 async function fetchGeneration(uid, runId) {
