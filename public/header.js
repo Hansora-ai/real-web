@@ -669,6 +669,12 @@
         width:min(700px,calc(100vw - 32px));
         grid-template-columns:1fr;
       }
+      .hansora-mega-features{
+        width:min(1120px,calc(100vw - 32px));
+      }
+      .hansora-mega-features .hansora-mega-grid{
+        grid-template-columns:repeat(4,minmax(0,1fr));
+      }
       .hansora-mega-video{
         width:min(940px,calc(100vw - 32px));
       }
@@ -1022,7 +1028,7 @@
             })}
             ${renderNavMenu('Features', '/models.html', {
               label: 'Feature tools',
-              className: 'hansora-mega-wide',
+              className: 'hansora-mega-wide hansora-mega-features',
               sections: [
                 { title: 'Image tools', items: [...IMAGE_MENU_TOOLS, PROMPT_BUILDER_TOOL] },
                 { title: 'Video and audio tools', items: FEATURE_MENU_ITEMS },
