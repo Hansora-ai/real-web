@@ -1849,42 +1849,47 @@
     }
 
     .home-features-grid {
-      grid-auto-flow: row;
-      grid-template-columns: repeat(5, minmax(calc((100% - 16px) / 3), 1fr));
-      grid-template-rows: repeat(2, minmax(0, 1fr));
-      grid-auto-columns: unset;
-      gap: 8px;
+      grid-auto-flow: column;
+      grid-template-columns: none;
+      grid-template-rows: repeat(4, minmax(0, 1fr));
+      grid-auto-columns: minmax(calc(100% - 44px), 1fr);
+      gap: 10px;
       align-items: stretch;
       overflow-x: auto;
       overflow-y: hidden;
-      scroll-snap-type: none;
+      scroll-snap-type: x proximity;
     }
 
     .home-feature-card {
-      min-height: 124px;
+      min-height: 90px;
       align-self: stretch;
-      display: flex;
-      flex-direction: column-reverse;
-      justify-content: flex-end;
-      gap: 8px;
-      padding: 8px;
-      border-radius: 10px;
+      display: grid;
+      grid-template-columns: 82px minmax(0, 1fr);
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 18px;
     }
 
     .home-feature-card p {
-      display: none;
+      display: block;
+      margin-top: 5px;
+      max-width: none;
+      font-size: .78rem;
+      line-height: 1.28;
     }
 
     .home-feature-card h3 {
-      font-size: clamp(.68rem, 3.1vw, .82rem);
-      line-height: 1.05;
-      letter-spacing: -.02em;
+      font-size: clamp(.95rem, 4.4vw, 1.18rem);
+      line-height: 1.08;
+      letter-spacing: 0;
     }
 
     .home-feature-media {
-      width: 100%;
+      width: 82px;
       aspect-ratio: 1 / 1;
-      border-radius: 9px;
+      justify-self: start;
+      border-radius: 13px;
     }
 
     .home-features-more-mobile {
@@ -1914,6 +1919,67 @@
     object-fit: contain !important;
     object-position: center center !important;
     transform: none !important;
+  }
+</style>
+
+<style id="hansora-mobile-feature-wide-card-fix">
+  @media (max-width: 540px) {
+    #image-models .home-features-grid {
+      grid-auto-flow: column !important;
+      grid-template-columns: none !important;
+      grid-template-rows: repeat(4, 92px) !important;
+      grid-auto-columns: minmax(calc(100% - 44px), 1fr) !important;
+      gap: 10px !important;
+      align-items: stretch !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      scroll-snap-type: x proximity !important;
+    }
+
+    #image-models .home-feature-card {
+      min-height: 0 !important;
+      height: 92px !important;
+      display: grid !important;
+      grid-template-columns: 72px minmax(0, 1fr) !important;
+      align-items: center !important;
+      justify-content: stretch !important;
+      gap: 12px !important;
+      padding: 10px !important;
+      border-radius: 18px !important;
+    }
+
+    #image-models .home-feature-copy {
+      order: 2 !important;
+      min-width: 0 !important;
+    }
+
+    #image-models .home-feature-media {
+      order: 1 !important;
+      width: 72px !important;
+      height: 72px !important;
+      justify-self: center !important;
+      align-self: center !important;
+      border-radius: 13px !important;
+    }
+
+    #image-models .home-feature-card h3 {
+      font-size: clamp(.95rem, 4.4vw, 1.18rem) !important;
+      line-height: 1.08 !important;
+      letter-spacing: 0 !important;
+      white-space: normal !important;
+    }
+
+    #image-models .home-feature-card p {
+      display: -webkit-box !important;
+      margin: 5px 0 0 !important;
+      max-width: none !important;
+      color: rgba(247,247,251,.48) !important;
+      font-size: .78rem !important;
+      line-height: 1.28 !important;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden !important;
+    }
   }
 </style>
 
@@ -1990,6 +2056,42 @@
 <a class="btn btn-ghost home-features-more-desktop" href="/models.html#featuresSection">See more</a>
 </div>
 <div class="home-features-grid">
+<a class="home-feature-card" href="/analyse.html">
+<div class="home-feature-copy">
+<h3>Hook <span>analyse</span></h3>
+<p>Analyze hooks and improve videos.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/6.png" alt="Hook analyse" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card" href="/product_card.html">
+<div class="home-feature-copy">
+<h3>Product <span>Card</span></h3>
+<p>Create product selling cards.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(29).png" alt="Product Card" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card" href="/lipsync.html">
+<div class="home-feature-copy">
+<h3>Lipsync <span>Avatar</span></h3>
+<p>Sync voice with avatar video.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/Untitled%20design%20(27).png" alt="Lipsync Avatar" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card" href="/kid-cartoon.html">
+<div class="home-feature-copy">
+<h3>Kid <span>Cartoon</span></h3>
+<p>Add your kid in cartoon.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(37).png" alt="Kid Cartoon" loading="lazy" decoding="async">
+</div>
+</a>
 <a class="home-feature-card" href="https://hansora.co/search-models?model=kling-motion-control">
 <div class="home-feature-copy">
 <h3>Motion <span>Sync</span></h3>
@@ -2006,24 +2108,6 @@
 </div>
 <div class="home-feature-media">
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/4.png" alt="Full angles" loading="lazy" decoding="async">
-</div>
-</a>
-<a class="home-feature-card" href="/kid-cartoon.html">
-<div class="home-feature-copy">
-<h3>Kid <span>Cartoon</span></h3>
-<p>Add your kid in cartoon.</p>
-</div>
-<div class="home-feature-media">
-<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(37).png" alt="Kid Cartoon" loading="lazy" decoding="async">
-</div>
-</a>
-<a class="home-feature-card" href="/lipsync.html">
-<div class="home-feature-copy">
-<h3>Lipsync <span>Avatar</span></h3>
-<p>Sync voice with avatar video.</p>
-</div>
-<div class="home-feature-media">
-<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/Untitled%20design%20(27).png" alt="Lipsync Avatar" loading="lazy" decoding="async">
 </div>
 </a>
 <a class="home-feature-card" href="/upscale.html">
@@ -2044,24 +2128,6 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(30).png" alt="Cartoon Prompt Builder" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/analyse.html">
-<div class="home-feature-copy">
-<h3>Hook <span>analyse</span></h3>
-<p>Analyze hooks and improve videos.</p>
-</div>
-<div class="home-feature-media">
-<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/6.png" alt="Hook analyse" loading="lazy" decoding="async">
-</div>
-</a>
-<a class="home-feature-card" href="/product_card.html">
-<div class="home-feature-copy">
-<h3>Product <span>Card</span></h3>
-<p>Create product selling cards.</p>
-</div>
-<div class="home-feature-media">
-<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(29).png" alt="Product Card" loading="lazy" decoding="async">
-</div>
-</a>
 <a class="home-feature-card" href="/character.html">
 <div class="home-feature-copy">
 <h3>Character</h3>
@@ -2080,127 +2146,27 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(38).png" alt="Suno Music" loading="lazy" decoding="async">
 </div>
 </a>
+<a class="home-feature-card" href="/expand.html">
+<div class="home-feature-copy">
+<h3>Face <span>swap</span></h3>
+<p>Swap faces in images.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(40).png" alt="Face swap" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card" href="/audio.html">
+<div class="home-feature-copy">
+<h3>Text to <span>speech</span></h3>
+<p>Create voice from text.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(39).png" alt="Text to speech" loading="lazy" decoding="async">
+</div>
+</a>
 </div>
 </div>
 </section>
-<script id="hansora-mobile-features-autoscroll">
-(() => {
-  const grid = document.querySelector('#image-models .home-features-grid');
-  if (!grid) return;
-
-  const mobileQuery = window.matchMedia('(max-width: 540px)');
-  let frame = 0;
-  let lastTime = 0;
-  let direction = 1;
-  let pausedUntil = 0;
-  let isVisible = true;
-  let touchStartX = 0;
-  let touchStartY = 0;
-  const speed = 84;
-
-  const isMobile = () => mobileQuery.matches;
-
-  const pauseBriefly = (ms = 6000) => {
-    pausedUntil = performance.now() + ms;
-  };
-
-  const stop = () => {
-    if (frame) cancelAnimationFrame(frame);
-    frame = 0;
-    lastTime = 0;
-  };
-
-  const tick = (time) => {
-    if (!isMobile() || !isVisible) {
-      stop();
-      return;
-    }
-
-    const maxScroll = grid.scrollWidth - grid.clientWidth;
-    if (maxScroll <= 4) {
-      frame = requestAnimationFrame(tick);
-      return;
-    }
-
-    if (!lastTime) lastTime = time;
-    const delta = Math.min(64, time - lastTime) / 1000;
-    lastTime = time;
-
-    if (time >= pausedUntil) {
-      let next = grid.scrollLeft + direction * speed * delta;
-      if (next >= maxScroll) {
-        next = maxScroll;
-        direction = -1;
-        pausedUntil = time + 650;
-      } else if (next <= 0) {
-        next = 0;
-        direction = 1;
-        pausedUntil = time;
-      }
-      grid.scrollLeft = next;
-    }
-
-    frame = requestAnimationFrame(tick);
-  };
-
-  const start = () => {
-    if (frame || !isMobile() || !isVisible) return;
-    const maxScroll = grid.scrollWidth - grid.clientWidth;
-    if (maxScroll > 4 && grid.scrollLeft < 1) {
-      grid.scrollLeft = Math.min(18, maxScroll);
-      direction = 1;
-    }
-    pausedUntil = 0;
-    frame = requestAnimationFrame(tick);
-  };
-
-  const refresh = () => {
-    if (isMobile() && isVisible) start();
-    else stop();
-  };
-
-  grid.addEventListener('touchstart', (event) => {
-    const touch = event.touches[0];
-    if (!touch) return;
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-  }, { passive: true });
-
-  grid.addEventListener('touchmove', (event) => {
-    const touch = event.touches[0];
-    if (!touch) return;
-    const deltaX = Math.abs(touch.clientX - touchStartX);
-    const deltaY = Math.abs(touch.clientY - touchStartY);
-    if (deltaX > 10 && deltaX > deltaY) pauseBriefly();
-  }, { passive: true });
-
-  grid.addEventListener('wheel', pauseBriefly, { passive: true });
-
-  mobileQuery.addEventListener?.('change', refresh);
-  window.addEventListener('resize', refresh, { passive: true });
-  window.addEventListener('pageshow', refresh);
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stop();
-    else refresh();
-  });
-
-  if ('IntersectionObserver' in window) {
-    const observer = new IntersectionObserver((entries) => {
-      isVisible = entries[0]?.isIntersecting !== false;
-      if (isVisible) refresh();
-      else stop();
-    }, { rootMargin: '80px 0px', threshold: 0.01 });
-    observer.observe(grid);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', refresh, { once: true });
-  } else {
-    refresh();
-  }
-  window.addEventListener('load', refresh, { once: true });
-})();
-</script>
 <section class="section" id="video-models">
 <div class="shell">
 <div class="model-section">
