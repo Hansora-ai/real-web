@@ -427,11 +427,11 @@
           <p>Describe the scene in one place. The builder will protect your original idea and expand it into a clear cinematic 3D prompt.</p>
           <div class="example-videos" aria-label="Example videos">
             <button id="exampleVideoCard1" type="button" class="example-video-card" aria-label="Example video 1">
-              <video id="exampleVideo1" muted playsinline loop preload="metadata"></video>
+              <video id="exampleVideo1" muted playsinline webkit-playsinline autoplay loop preload="auto"></video>
               <span class="example-video-placeholder"><b>▶</b>Example video 1</span>
             </button>
             <button id="exampleVideoCard2" type="button" class="example-video-card" aria-label="Example video 2">
-              <video id="exampleVideo2" muted playsinline loop preload="metadata"></video>
+              <video id="exampleVideo2" muted playsinline webkit-playsinline autoplay loop preload="auto"></video>
               <span class="example-video-placeholder"><b>▶</b>Example video 2</span>
             </button>
           </div>
@@ -519,8 +519,21 @@
 
       examples.forEach((item) => {
         if (!item.video || !item.card || !isUsableUrl(item.url)) return;
+        item.video.muted = true;
+        item.video.loop = true;
+        item.video.autoplay = true;
+        item.video.playsInline = true;
+        item.video.setAttribute('muted', '');
+        item.video.setAttribute('playsinline', '');
+        item.video.setAttribute('webkit-playsinline', '');
+        item.video.setAttribute('preload', 'auto');
+        item.video.addEventListener('loadeddata', () => item.card.classList.add('has-video'), { once: true });
+        item.video.addEventListener('canplay', () => item.card.classList.add('has-video'), { once: true });
         item.video.src = item.url;
-        item.card.classList.add('has-video');
+        item.video.load();
+        item.video.play().then(() => {
+          item.card.classList.add('has-video');
+        }).catch(() => {});
         item.card.addEventListener('mouseenter', () => item.video.play().catch(() => {}));
         item.card.addEventListener('mouseleave', () => { item.video.pause(); item.video.currentTime = 0; });
         item.card.addEventListener('click', () => {
@@ -610,14 +623,15 @@
         currentUser = data && data.user ? data.user : null;
         if (!currentUser) {
           setCreditsEverywhere(0);
-          renderSavedHistory(getLocalRecent());
+          try { localStorage.removeItem(LOCAL_KEY); } catch (_) {}
+          showWelcome();
           return;
         }
         await refreshCredits();
         await loadRecentRequests();
       } catch (error) {
         console.warn('loadUser failed', error);
-        renderSavedHistory(getLocalRecent());
+        showWelcome();
       }
     }
 
@@ -629,7 +643,8 @@
           currentUser = null;
           currentCredits = 0;
           setCreditsEverywhere(0);
-          renderSavedHistory(getLocalRecent());
+          try { localStorage.removeItem(LOCAL_KEY); } catch (_) {}
+          showWelcome();
         } catch (error) {
           console.warn('logout failed', error);
         }
@@ -720,11 +735,11 @@
           <p>Describe the scene in one place. The builder will protect your original idea and expand it into a clear cinematic 3D prompt.</p>
           <div class="example-videos" aria-label="Example videos">
             <button id="exampleVideoCard1" type="button" class="example-video-card" aria-label="Example video 1">
-              <video id="exampleVideo1" muted playsinline loop preload="metadata"></video>
+              <video id="exampleVideo1" muted playsinline webkit-playsinline autoplay loop preload="auto"></video>
               <span class="example-video-placeholder"><b>▶</b>Example video 1</span>
             </button>
             <button id="exampleVideoCard2" type="button" class="example-video-card" aria-label="Example video 2">
-              <video id="exampleVideo2" muted playsinline loop preload="metadata"></video>
+              <video id="exampleVideo2" muted playsinline webkit-playsinline autoplay loop preload="auto"></video>
               <span class="example-video-placeholder"><b>▶</b>Example video 2</span>
             </button>
           </div>
@@ -816,7 +831,7 @@
 
     async function loadRecentRequests() {
       if (!currentUser) {
-        renderSavedHistory(getLocalRecent());
+        showWelcome();
         return;
       }
 
