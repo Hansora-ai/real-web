@@ -530,16 +530,9 @@
         item.video.addEventListener('loadeddata', () => item.card.classList.add('has-video'), { once: true });
         item.video.addEventListener('canplay', () => item.card.classList.add('has-video'), { once: true });
         item.video.src = item.url;
+        item.card.classList.add('has-video');
         item.video.load();
-        item.video.play().then(() => {
-          item.card.classList.add('has-video');
-        }).catch(() => {});
-        item.card.addEventListener('mouseenter', () => item.video.play().catch(() => {}));
-        item.card.addEventListener('mouseleave', () => { item.video.pause(); item.video.currentTime = 0; });
-        item.card.addEventListener('click', () => {
-          if (item.video.paused) item.video.play().catch(() => {});
-          else item.video.pause();
-        });
+        item.video.play().catch(() => {});
       });
     }
 
