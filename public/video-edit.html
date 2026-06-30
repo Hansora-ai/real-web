@@ -416,34 +416,25 @@
       letter-spacing:.06em;
       background:rgba(204,255,56,.06);
     }
-    .before-after-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:14px;
+    .feature-preview{
+      display:flex;
+      justify-content:center;
     }
-    .ba-card{
+    .feature-preview-card{
+      width:min(560px,100%);
       border:1px solid rgba(255,255,255,.1);
       border-radius:18px;
       overflow:hidden;
       background:#070a14;
       box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
     }
-    .ba-media{
-      height:270px;
+    .feature-preview-media{
+      height:280px;
       position:relative;
       overflow:hidden;
       background:#050812;
     }
-    .ba-media:before{
-      content:"";
-      position:absolute;
-      z-index:1;
-      inset:auto 0 0;
-      height:38%;
-      background:linear-gradient(180deg,transparent,rgba(0,0,0,.34));
-      pointer-events:none;
-    }
-    .ba-media video{
+    .feature-preview-media video{
       width:100%;
       height:100%;
       display:block;
@@ -451,33 +442,12 @@
       background:#050812;
       pointer-events:none;
     }
-    .ba-media video::-webkit-media-controls,
-    .ba-media video::-webkit-media-controls-panel,
-    .ba-media video::-webkit-media-controls-overlay-play-button{
+    .feature-preview-media video::-webkit-media-controls,
+    .feature-preview-media video::-webkit-media-controls-panel,
+    .feature-preview-media video::-webkit-media-controls-overlay-play-button{
       display:none !important;
       opacity:0 !important;
       pointer-events:none !important;
-    }
-    .ba-footer{
-      padding:14px 16px 16px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-      text-align:left;
-    }
-    .ba-footer strong{ display:block; color:#fff; font-size:14px; }
-    .ba-footer span{ display:block; margin-top:3px; color:var(--muted); font-size:12px; line-height:1.35; }
-    .ba-label{
-      flex:0 0 auto;
-      padding:7px 10px;
-      border-radius:999px;
-      color:#fff;
-      font-size:11px;
-      font-weight:950;
-      background:rgba(255,255,255,.12);
-    }
-    .ba-label.after{ background:linear-gradient(135deg,#8b5cf6,#38bdf8); }
     }
     .result-card{
       min-width:0;
@@ -594,17 +564,17 @@
     }
     .result-status-text{ color:#65ffd0; font-size:13px; font-weight:900; }
     .result-get{
-      width:62px;
-      min-width:62px;
-      height:30px;
-      min-height:30px;
+      width:48px;
+      min-width:48px;
+      height:26px;
+      min-height:26px;
       border:1px solid rgba(255,255,255,.12);
       border-radius:999px;
       background:#5c5ce6;
       color:#fff;
-      padding:0 12px;
+      padding:0 7px;
       font-weight:950;
-      font-size:12px;
+      font-size:10px;
       line-height:1;
       cursor:pointer;
     }
@@ -914,10 +884,10 @@
         gap:8px !important;
       }
       .result-actions{
-        flex:0 0 62px !important;
-        width:62px !important;
-        min-width:62px !important;
-        max-width:62px !important;
+        flex:0 0 48px !important;
+        width:48px !important;
+        min-width:48px !important;
+        max-width:48px !important;
       }
       .result-chip{ font-size:11px !important; padding:4px 8px !important; left:8px !important; top:8px !important; }
       .result-status-text{ font-size:13px !important; }
@@ -930,25 +900,39 @@
       .trim-actions{ gap:10px; }
       .trim-cancel,
       .trim-confirm{ min-width:116px; min-height:40px; }
-      .before-after-grid{ grid-template-columns:minmax(0,1fr); }
-      .ba-media{ height:220px; }
+      .feature-preview-media{ height:220px; }
     }
+    .result-card .result-info .result-bottom-row .result-actions,
+    .result-card .result-info .result-bottom-row .result-actions *{
+      box-sizing:border-box !important;
+    }
+    .result-card .result-info .result-bottom-row .result-actions{
+      flex:0 0 48px !important;
+      width:48px !important;
+      min-width:48px !important;
+      max-width:48px !important;
+    }
+    .result-card .result-info .result-bottom-row .result-actions button,
+    .result-card .result-info .result-bottom-row .result-actions a,
     .result-actions .result-get{
-      width:62px !important;
-      min-width:62px !important;
-      max-width:62px !important;
-      height:30px !important;
-      min-height:30px !important;
-      max-height:30px !important;
-      padding:0 12px !important;
+      width:48px !important;
+      min-width:48px !important;
+      max-width:48px !important;
+      height:26px !important;
+      min-height:26px !important;
+      max-height:26px !important;
+      padding:0 7px !important;
       border-radius:999px !important;
       border:1px solid rgba(255,255,255,.14) !important;
       background:rgba(99,102,241,.72) !important;
       color:rgba(255,255,255,.95) !important;
-      font-size:12px !important;
+      font-size:10px !important;
       font-weight:800 !important;
       line-height:1 !important;
       box-shadow:none !important;
+      display:inline-flex !important;
+      align-items:center !important;
+      justify-content:center !important;
     }
   </style>
 </head>
@@ -1030,50 +1014,23 @@
           <div id="emptyResults" class="empty-results">
             <div class="sample-head">
               <div>
-                <h2>Before and after preview</h2>
-                <p>New users can see the idea before their first edited video appears in History.</p>
+                <h2>Feature preview</h2>
+                <p>Try It Now</p>
               </div>
               <span class="sample-badge">Example</span>
             </div>
-            <div class="before-after-grid" aria-label="Before and after video example">
-              <article class="ba-card">
-                <div class="ba-media">
+            <div class="feature-preview" aria-label="Video edit feature preview">
+              <article class="feature-preview-card">
+                <div class="feature-preview-media">
                   <video
-                    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-23.mp4"
+                    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/lv_0_20260630231754.mp4"
                     muted
                     autoplay
                     playsinline
                     loop
                     preload="metadata"
-                    aria-label="Before video example"
+                    aria-label="Video edit feature preview"
                   ></video>
-                </div>
-                <div class="ba-footer">
-                  <div>
-                    <strong>Before</strong>
-                    <span>Original uploaded video.</span>
-                  </div>
-                  <span class="ba-label">VIDEO</span>
-                </div>
-              </article>
-              <article class="ba-card">
-                <div class="ba-media">
-                  <video
-                    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/HANSORA.mp4"
-                    muted
-                    autoplay
-                    playsinline
-                    loop
-                    preload="metadata"
-                    aria-label="After video example"
-                  ></video>
-                </div>
-                <div class="ba-footer">
-                  <div>
-                    <strong>After</strong>
-                    <span>Edited result preview.</span>
-                  </div>
-                  <span class="ba-label after">VIDEO</span>
                 </div>
               </article>
             </div>
@@ -1281,21 +1238,24 @@
       scope.querySelectorAll('.result-get').forEach((button) => {
         const actions = button.closest('.result-actions');
         if (actions) {
-          actions.style.setProperty('flex', '0 0 62px', 'important');
-          actions.style.setProperty('width', '62px', 'important');
-          actions.style.setProperty('min-width', '62px', 'important');
-          actions.style.setProperty('max-width', '62px', 'important');
+          actions.style.setProperty('flex', '0 0 48px', 'important');
+          actions.style.setProperty('width', '48px', 'important');
+          actions.style.setProperty('min-width', '48px', 'important');
+          actions.style.setProperty('max-width', '48px', 'important');
         }
-        button.style.setProperty('width', '62px', 'important');
-        button.style.setProperty('min-width', '62px', 'important');
-        button.style.setProperty('max-width', '62px', 'important');
-        button.style.setProperty('height', '30px', 'important');
-        button.style.setProperty('min-height', '30px', 'important');
-        button.style.setProperty('max-height', '30px', 'important');
-        button.style.setProperty('padding', '0 12px', 'important');
-        button.style.setProperty('font-size', '12px', 'important');
+        button.style.setProperty('width', '48px', 'important');
+        button.style.setProperty('min-width', '48px', 'important');
+        button.style.setProperty('max-width', '48px', 'important');
+        button.style.setProperty('height', '26px', 'important');
+        button.style.setProperty('min-height', '26px', 'important');
+        button.style.setProperty('max-height', '26px', 'important');
+        button.style.setProperty('padding', '0 7px', 'important');
+        button.style.setProperty('font-size', '10px', 'important');
         button.style.setProperty('line-height', '1', 'important');
         button.style.setProperty('box-shadow', 'none', 'important');
+        button.style.setProperty('display', 'inline-flex', 'important');
+        button.style.setProperty('align-items', 'center', 'important');
+        button.style.setProperty('justify-content', 'center', 'important');
       });
       scope.querySelectorAll('.result-prompt').forEach((prompt) => {
         prompt.style.setProperty('display', 'block', 'important');
