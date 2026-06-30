@@ -2002,6 +2002,22 @@
   }
 </style>
 
+<style id="hansora-top-feature-order-update">
+  #image-models .home-feature-card {
+    order: var(--feature-desktop-order, 0);
+  }
+
+  #image-models .home-feature-card[aria-disabled="true"] {
+    cursor: default;
+  }
+
+  @media (max-width: 540px) {
+    #image-models .home-feature-card {
+      order: var(--feature-mobile-order, var(--feature-desktop-order, 0));
+    }
+  }
+</style>
+
 </head>
 <body>
 <noscript><img alt="" height="1" src="https://www.facebook.com/tr?id=1336278884948294&amp;ev=PageView&amp;noscript=1" style="display:none" width="1" loading="lazy" decoding="async"><img alt="" height="1" src="https://www.facebook.com/tr?id=970925395839377&amp;ev=PageView&amp;noscript=1" style="display:none" width="1" loading="lazy" decoding="async"></noscript>
@@ -2056,7 +2072,7 @@
 <a class="btn btn-ghost home-features-more-desktop" href="/models.html#featuresSection">See more</a>
 </div>
 <div class="home-features-grid">
-<a class="home-feature-card" href="/analyse.html">
+<a class="home-feature-card" href="/analyse.html" style="--feature-desktop-order: 1; --feature-mobile-order: 1;">
 <div class="home-feature-copy">
 <h3>Hook <span>analyse</span></h3>
 <p>Analyze hooks and improve videos.</p>
@@ -2065,7 +2081,7 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/6.png" alt="Hook analyse" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/product_card.html">
+<a class="home-feature-card" href="/product_card.html" style="--feature-desktop-order: 2; --feature-mobile-order: 2;">
 <div class="home-feature-copy">
 <h3>Product <span>Card</span></h3>
 <p>Create product selling cards.</p>
@@ -2074,7 +2090,7 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(29).png" alt="Product Card" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/lipsync.html">
+<a class="home-feature-card" href="/lipsync.html" style="--feature-desktop-order: 13; --feature-mobile-order: 8;">
 <div class="home-feature-copy">
 <h3>Lipsync <span>Avatar</span></h3>
 <p>Sync voice with avatar video.</p>
@@ -2083,7 +2099,7 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/Untitled%20design%20(27).png" alt="Lipsync Avatar" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/kid-cartoon.html">
+<a class="home-feature-card" href="/kid-cartoon.html" style="--feature-desktop-order: 4; --feature-mobile-order: 4;">
 <div class="home-feature-copy">
 <h3>Kid <span>Cartoon</span></h3>
 <p>Add your kid in cartoon.</p>
@@ -2092,16 +2108,16 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(37).png" alt="Kid Cartoon" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="https://hansora.co/search-models?model=kling-motion-control">
+<a class="home-feature-card" href="/video-edit.html" style="--feature-desktop-order: 3; --feature-mobile-order: 3;">
 <div class="home-feature-copy">
-<h3>Motion <span>Sync</span></h3>
-<p>Make an image follow video movement.</p>
+<h3>Video <span>Edit</span></h3>
+<p>Edit uploaded videos with prompts.</p>
 </div>
 <div class="home-feature-media">
-<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(25).png" alt="Motion Sync" loading="lazy" decoding="async">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(42).png" alt="Video Edit" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/expand.html?mode=angles">
+<a class="home-feature-card" href="/expand.html?mode=angles" style="--feature-desktop-order: 6; --feature-mobile-order: 6;">
 <div class="home-feature-copy">
 <h3>Full <span>angles</span></h3>
 <p>Create additional angle views.</p>
@@ -2110,16 +2126,16 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/4.png" alt="Full angles" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/upscale.html">
+<a class="home-feature-card" href="/background-change.html" style="--feature-desktop-order: 7; --feature-mobile-order: 5;">
 <div class="home-feature-copy">
-<h3>Upscale</h3>
-<p>Enhance image quality and detail.</p>
+<h3>Video Background <span>Change</span></h3>
+<p>Change video backgrounds.</p>
 </div>
 <div class="home-feature-media">
-<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/7.png" alt="Upscale" loading="lazy" decoding="async">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(43).png" alt="Video Background Change" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/prompt-builder.html">
+<a class="home-feature-card" href="/prompt-builder.html" style="--feature-desktop-order: 8; --feature-mobile-order: 7;">
 <div class="home-feature-copy">
 <h3>Cartoon <span>Prompt Builder</span></h3>
 <p>Turn short ideas into detailed cartoon prompts.</p>
@@ -2128,7 +2144,7 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(30).png" alt="Cartoon Prompt Builder" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/character.html">
+<a class="home-feature-card" href="/character.html" style="--feature-desktop-order: 9; --feature-mobile-order: 9;">
 <div class="home-feature-copy">
 <h3>Character</h3>
 <p>Build consistent AI characters.</p>
@@ -2137,7 +2153,7 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/5.png" alt="Character" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/audio.html?tool=song-creation">
+<a class="home-feature-card" href="/audio.html?tool=song-creation" style="--feature-desktop-order: 10; --feature-mobile-order: 14;">
 <div class="home-feature-copy">
 <h3>Suno <span>Music</span></h3>
 <p>Create songs and music tracks.</p>
@@ -2146,7 +2162,43 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(38).png" alt="Suno Music" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/expand.html">
+<div class="home-feature-card" aria-disabled="true" style="--feature-desktop-order: 11; --feature-mobile-order: 11;">
+<div class="home-feature-copy">
+<h3>UGC</h3>
+<p>Coming soon.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(45).png" alt="UGC" loading="lazy" decoding="async">
+</div>
+</div>
+<div class="home-feature-card" aria-disabled="true" style="--feature-desktop-order: 12; --feature-mobile-order: 12;">
+<div class="home-feature-copy">
+<h3>Relight <span>Video</span></h3>
+<p>Coming soon.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(44).png" alt="Relight Video" loading="lazy" decoding="async">
+</div>
+</div>
+<a class="home-feature-card" href="https://hansora.co/search-models?model=kling-motion-control" style="--feature-desktop-order: 5; --feature-mobile-order: 13;">
+<div class="home-feature-copy">
+<h3>Motion <span>Sync</span></h3>
+<p>Make an image follow video movement.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(25).png" alt="Motion Sync" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card" href="/upscale.html" style="--feature-desktop-order: 14; --feature-mobile-order: 10;">
+<div class="home-feature-copy">
+<h3>Upscale</h3>
+<p>Enhance image quality and detail.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/7.png" alt="Upscale" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card" href="/expand.html" style="--feature-desktop-order: 15; --feature-mobile-order: 15;">
 <div class="home-feature-copy">
 <h3>Face <span>swap</span></h3>
 <p>Swap faces in images.</p>
@@ -2155,7 +2207,7 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(40).png" alt="Face swap" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/audio.html">
+<a class="home-feature-card" href="/audio.html" style="--feature-desktop-order: 16; --feature-mobile-order: 16;">
 <div class="home-feature-copy">
 <h3>Text to <span>speech</span></h3>
 <p>Create voice from text.</p>
