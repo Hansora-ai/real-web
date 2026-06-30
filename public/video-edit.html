@@ -590,18 +590,22 @@
       align-items:end;
       justify-content:space-between;
       gap:10px;
+      min-width:0;
     }
     .result-status-text{ color:#65ffd0; font-size:13px; font-weight:900; }
     .result-get{
-      min-width:76px;
-      min-height:38px;
+      width:62px;
+      min-width:62px;
+      height:30px;
+      min-height:30px;
       border:1px solid rgba(255,255,255,.12);
       border-radius:999px;
       background:#5c5ce6;
       color:#fff;
-      padding:0 18px;
+      padding:0 12px;
       font-weight:950;
-      font-size:13px;
+      font-size:12px;
+      line-height:1;
       cursor:pointer;
     }
     .preview-overlay{
@@ -909,6 +913,12 @@
         align-items:center !important;
         gap:8px !important;
       }
+      .result-actions{
+        flex:0 0 62px !important;
+        width:62px !important;
+        min-width:62px !important;
+        max-width:62px !important;
+      }
       .result-chip{ font-size:11px !important; padding:4px 8px !important; left:8px !important; top:8px !important; }
       .result-status-text{ font-size:13px !important; }
       .preview-overlay{ padding:14px; }
@@ -924,15 +934,18 @@
       .ba-media{ height:220px; }
     }
     .result-actions .result-get{
-      min-width:74px !important;
-      min-height:34px !important;
-      height:34px !important;
-      padding:6px 16px !important;
+      width:62px !important;
+      min-width:62px !important;
+      max-width:62px !important;
+      height:30px !important;
+      min-height:30px !important;
+      max-height:30px !important;
+      padding:0 12px !important;
       border-radius:999px !important;
       border:1px solid rgba(255,255,255,.14) !important;
       background:rgba(99,102,241,.72) !important;
       color:rgba(255,255,255,.95) !important;
-      font-size:13px !important;
+      font-size:12px !important;
       font-weight:800 !important;
       line-height:1 !important;
       box-shadow:none !important;
@@ -1263,6 +1276,36 @@
       return window.matchMedia && window.matchMedia('(max-width:900px)').matches;
     }
 
+    function forceCompactResultUi(root = document) {
+      const scope = root && root.querySelectorAll ? root : document;
+      scope.querySelectorAll('.result-get').forEach((button) => {
+        const actions = button.closest('.result-actions');
+        if (actions) {
+          actions.style.setProperty('flex', '0 0 62px', 'important');
+          actions.style.setProperty('width', '62px', 'important');
+          actions.style.setProperty('min-width', '62px', 'important');
+          actions.style.setProperty('max-width', '62px', 'important');
+        }
+        button.style.setProperty('width', '62px', 'important');
+        button.style.setProperty('min-width', '62px', 'important');
+        button.style.setProperty('max-width', '62px', 'important');
+        button.style.setProperty('height', '30px', 'important');
+        button.style.setProperty('min-height', '30px', 'important');
+        button.style.setProperty('max-height', '30px', 'important');
+        button.style.setProperty('padding', '0 12px', 'important');
+        button.style.setProperty('font-size', '12px', 'important');
+        button.style.setProperty('line-height', '1', 'important');
+        button.style.setProperty('box-shadow', 'none', 'important');
+      });
+      scope.querySelectorAll('.result-prompt').forEach((prompt) => {
+        prompt.style.setProperty('display', 'block', 'important');
+        prompt.style.setProperty('white-space', 'nowrap', 'important');
+        prompt.style.setProperty('overflow', 'hidden', 'important');
+        prompt.style.setProperty('text-overflow', 'ellipsis', 'important');
+        prompt.style.setProperty('-webkit-line-clamp', '1', 'important');
+      });
+    }
+
     function resultStatus(row) {
       const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
       return String(meta.status || row.status || (row.result_url ? 'ready' : 'processing'));
@@ -1316,6 +1359,7 @@
           downloadAsset(url, 'video', 'video-edit');
         });
         actions.appendChild(button);
+        forceCompactResultUi(card);
         card.addEventListener('click', () => openPreview(url), { once:false });
       } else {
         actions.innerHTML = '';
@@ -1346,6 +1390,7 @@
       ].join('');
       card.querySelector('.result-prompt').textContent = prompt;
       applyResultCard(card, { status: resultStatus(row), result_url: row.result_url || '', prompt });
+      forceCompactResultUi(card);
       return card;
     }
 
@@ -1869,6 +1914,15 @@
     });
 
     updateRunLabel();
+    forceCompactResultUi(document);
+    new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) forceCompactResultUi(node);
+        });
+      });
+    }).observe(document.body, { childList:true, subtree:true });
+    setInterval(() => forceCompactResultUi(document), 1500);
     loadRecentGenerations();
     sb.auth.onAuthStateChange(() => setTimeout(loadRecentGenerations, 250));
   </script>
