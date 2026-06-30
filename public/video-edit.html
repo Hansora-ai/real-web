@@ -25,6 +25,10 @@
       --green:#20c997;
     }
     *{ box-sizing:border-box; }
+    video,
+    input[type="range"]{
+      accent-color:#f5f7fb;
+    }
     body{
       margin:0;
       min-height:100vh;
@@ -110,6 +114,12 @@
       background:rgba(255,255,255,.035);
       transform:none;
     }
+    .dropzone.has-video:focus,
+    .dropzone.has-video:focus-visible{
+      outline:none;
+      border-color:rgba(255,255,255,.18);
+      box-shadow:none;
+    }
     .dropzone strong{ display:block; font-size:16px; margin-top:12px; line-height:1.25; }
     .dropzone small{ display:block; color:var(--muted); margin-top:8px; font-size:12px; line-height:1.35; }
     .drop-icon{
@@ -177,8 +187,13 @@
       border-radius:999px;
       background:rgba(0,0,0,.32);
       color:#fff;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
       font-size:18px;
       font-weight:900;
+      line-height:1;
+      padding:0;
       cursor:pointer;
     }
     .image-grid{
@@ -515,13 +530,15 @@
     }
     .result-status-text{ color:#65ffd0; font-size:13px; font-weight:900; }
     .result-get{
-      min-width:82px;
-      min-height:42px;
+      min-width:76px;
+      min-height:38px;
       border:1px solid rgba(255,255,255,.12);
       border-radius:999px;
       background:#5c5ce6;
       color:#fff;
+      padding:0 18px;
       font-weight:950;
+      font-size:13px;
       cursor:pointer;
     }
     .preview-overlay{
@@ -571,29 +588,33 @@
     }
     .trim-overlay.show{ display:grid; }
     .trim-modal{
-      width:min(860px,94vw);
+      width:min(760px,94vw);
+      max-height:calc(100svh - 44px);
+      overflow-y:auto;
       border:1px solid rgba(255,255,255,.13);
       border-radius:22px;
       background:#1b1d22;
       box-shadow:0 40px 120px rgba(0,0,0,.5);
-      padding:22px;
+      padding:18px;
+      scrollbar-width:thin;
     }
-    .trim-head{ text-align:center; margin-bottom:18px; }
-    .trim-head strong{ display:block; font-size:20px; }
-    .trim-head span{ color:rgba(255,255,255,.5); font-size:13px; font-weight:800; }
+    .trim-head{ text-align:center; margin-bottom:14px; }
+    .trim-head strong{ display:block; font-size:18px; }
+    .trim-head span{ color:rgba(255,255,255,.5); font-size:12px; font-weight:800; }
     .trim-video{
       width:100%;
       aspect-ratio:16/9;
+      max-height:44svh;
       border-radius:14px;
       overflow:hidden;
       background:#03050d;
     }
     .trim-video video{ width:100%; height:100%; object-fit:contain; display:block; }
-    .trim-controls{ margin-top:16px; }
+    .trim-controls{ margin-top:12px; }
     .trim-strip{
       position:relative;
       width:100%;
-      height:74px;
+      height:62px;
       border-radius:10px;
       overflow:hidden;
       background:#0b0d12;
@@ -677,12 +698,12 @@
       display:flex;
       gap:12px;
       justify-content:center;
-      margin-top:18px;
+      margin-top:14px;
     }
     .trim-cancel,
     .trim-confirm{
-      min-width:156px;
-      min-height:48px;
+      min-width:142px;
+      min-height:42px;
       border:0;
       border-radius:14px;
       color:#fff;
@@ -736,11 +757,14 @@
       .result-get{ min-width:118px; min-height:48px; text-transform:none; }
       .preview-overlay{ padding:14px; }
       .trim-overlay{ padding:10px; }
-      .trim-modal{ padding:14px; }
-      .trim-strip{ height:58px; }
+      .trim-modal{ padding:12px; max-height:calc(100svh - 24px); }
+      .trim-head{ margin-bottom:10px; }
+      .trim-video{ max-height:38svh; }
+      .trim-strip{ height:52px; }
       .trim-actions{ gap:10px; }
       .trim-cancel,
-      .trim-confirm{ min-width:128px; }
+      .trim-confirm{ min-width:116px; min-height:40px; }
+      .result-get{ min-width:88px; min-height:40px; padding:0 16px; font-size:13px; }
       .before-after-grid{ grid-template-columns:minmax(0,1fr); }
       .ba-media{ height:220px; }
     }
@@ -1041,15 +1065,24 @@
       document.body.style.overflow = '';
     }
 
-    function downloadAsset(url) {
+    async function downloadAsset(url) {
       if (!url) return;
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `video-edit-${Date.now()}.mp4`;
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      try {
+        const res = await fetch(url, { mode:'cors' });
+        if (!res.ok) throw new Error(`download_${res.status}`);
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = `video-edit-${Date.now()}.mp4`;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      } catch (error) {
+        window.open(url, '_blank', 'noopener');
+      }
     }
 
     function usesMobileCard() {
