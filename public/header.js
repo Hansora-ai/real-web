@@ -67,6 +67,8 @@
     { label: 'Seedance 2.0 Mini', id: 'seedance-2-mini', icon: 'SM', note: 'Fast cinematic video model' },
     { label: 'Kling 3 Turbo', id: 'kling-3-turbo', icon: 'KT', note: 'Fast text or image video model' },
     { label: 'Gemini Omni', id: 'gemini-omni-video', icon: 'GO', note: 'Prompt, image, and video inputs' },
+    { label: 'Video Edit', href: '/video-edit.html', icon: 'VE', note: 'Edit uploaded video' },
+    { label: 'Background Change', href: '/background-change.html', icon: 'BG', note: 'Change video background' },
     { label: 'HappyHorse 1.0', id: 'happyhorse-1', icon: 'HH', note: 'Video and audio model' },
     { label: 'Veo 3.1', id: 'veo31', icon: 'V3', note: 'Google video model' },
     { label: 'Grok', id: 'grok-video', icon: 'GX', note: 'Cinematic video' },
@@ -89,6 +91,8 @@
 
   const FEATURE_MENU_ITEMS = [
     { label: 'Video upscale', href: '/upscale.html?mode=video', icon: 'VU', note: 'Increase video quality' },
+    { label: 'Video Edit', href: '/video-edit.html', icon: 'VE', note: 'Edit uploaded video' },
+    { label: 'Background Change', href: '/background-change.html', icon: 'BG', note: 'Change video background' },
     { label: 'Lipsync Avatar', href: '/lipsync.html', icon: 'LA', note: 'Talking avatar video' },
     { label: 'Text to speech', href: '/audio.html?tool=text-to-speech', icon: 'T2', note: 'Generate voice from text' },
     { label: 'Voice isolater', href: '/audio.html?tool=voice-isolater', icon: 'VI', note: 'Separate clean vocals' },
