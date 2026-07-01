@@ -92,9 +92,10 @@ function normalizeSeedanceModel(value, variant) {
 function costFor(body) {
   const duration = clampDuration(body.duration);
   const variant = String(body.variant || '').toLowerCase();
-  const resolution = String(body.resolution || '720p');
+  const resolution = String(body.resolution || '720p').toLowerCase();
   if (variant === 'fast' || variant === 'lite') return Number((duration * 2).toFixed(1));
-  return Number((duration * (resolution === '1080p' ? 5.5 : 2.5)).toFixed(1));
+  const rate = resolution === '4k' ? 12 : (resolution === '1080p' ? 5.5 : 2.5);
+  return Number((duration * rate).toFixed(1));
 }
 
 async function fetchGeneration(uid, runId) {
@@ -207,9 +208,10 @@ exports.handler = async (event) => {
     const referenceVideoUrls = Array.isArray(body.reference_video_urls) ? body.reference_video_urls.filter(Boolean).map(String) : [];
     const referenceAudioUrls = Array.isArray(body.reference_audio_urls) ? body.reference_audio_urls.filter(Boolean).map(String) : [];
     const hasFrameMode = !!(firstFrameUrl || lastFrameUrl);
+    const requestedResolution = String(body.resolution || '720p').toLowerCase();
     const resolution = variant === 'fast'
-      ? (['480p', '720p'].includes(String(body.resolution || '720p')) ? String(body.resolution || '720p') : '720p')
-      : (['480p', '720p', '1080p'].includes(String(body.resolution || '720p')) ? String(body.resolution || '720p') : '720p');
+      ? (['480p', '720p'].includes(requestedResolution) ? requestedResolution : '720p')
+      : (['480p', '720p', '1080p', '4k'].includes(requestedResolution) ? requestedResolution : '720p');
     const input = {
       prompt,
       resolution,
