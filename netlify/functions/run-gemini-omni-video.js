@@ -82,6 +82,18 @@ function normalizeResolution(value) {
   return key === '4k' ? '4k' : '1080p';
 }
 
+function normalizeVideoWindow(body, duration) {
+  const startRaw = Number(body.video_start ?? body.start ?? 0);
+  const endRaw = Number(body.video_end ?? body.ends ?? body.end ?? duration);
+  const start = Number.isFinite(startRaw) ? Math.max(0, startRaw) : 0;
+  const fallbackEnd = start + Number(duration || 4);
+  const ends = Number.isFinite(endRaw) ? Math.max(start + 0.1, endRaw) : fallbackEnd;
+  return {
+    start: Number(start.toFixed(1)),
+    ends: Number(ends.toFixed(1)),
+  };
+}
+
 const GEMINI_VOICE_PRESETS = {
   achernar: { label: 'Achernar', description: 'female, soft, high pitch', sample: 'Hello, I am achernar.' },
   achird: { label: 'Achird', description: 'male, friendly, mid pitch', sample: 'Hello, I am achird.' },
@@ -168,11 +180,10 @@ async function resolveGeminiOmniAudioIds(values) {
 function costFor(body) {
   const resolution = normalizeResolution(body.resolution);
   const hasVideo = !!String(body.video_url || '').trim();
-  if (hasVideo) return resolution === '4k' ? 25 : 17;
+  if (hasVideo) return resolution === '4k' ? 16 : 11;
   const duration = normalizeDuration(body.duration);
-  const table1080 = { 4: 6, 6: 8, 8: 10, 10: 12 };
-  const table4k = { 4: 13, 6: 15, 8: 17, 10: 19 };
-  return resolution === '4k' ? table4k[duration] : table1080[duration];
+  const table = { 4: 4.5, 6: 6, 8: 7.5, 10: 9 };
+  return table[duration];
 }
 
 async function fetchGeneration(uid, runId) {
@@ -270,6 +281,7 @@ exports.handler = async (event) => {
     const resolution = normalizeResolution(body.resolution);
     const aspectRatio = ['16:9', '9:16'].includes(String(body.aspect_ratio || '16:9')) ? String(body.aspect_ratio || '16:9') : '16:9';
     const cost = costFor({ video_url: videoUrl, resolution, duration });
+    const videoWindow = normalizeVideoWindow(body, duration);
     const model = String(process.env.GEMINI_OMNI_VIDEO_MODEL || 'gemini-omni-video').trim();
     const metaBase = {
       source: 'kie',
@@ -299,7 +311,7 @@ exports.handler = async (event) => {
       aspect_ratio: aspectRatio,
       resolution,
       ...(imageUrls.length ? { image_urls: imageUrls } : {}),
-      ...(videoUrl ? { video_list: [{ url: videoUrl, start: 0, ends: duration }] } : {}),
+      ...(videoUrl ? { video_list: [{ url: videoUrl, start: videoWindow.start, ends: videoWindow.ends }] } : {}),
       ...(audioIds.length ? { audio_ids: audioIds } : {}),
     };
     const callback = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
