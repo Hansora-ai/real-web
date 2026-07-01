@@ -69,7 +69,7 @@ function normalizeVideoWindow(body) {
 }
 
 function costFor(resolution) {
-  return normalizeResolution(resolution) === '4k' ? 22 : 15;
+  return normalizeResolution(resolution) === '4k' ? 16 : 11;
 }
 
 function extractTaskId(data) {
