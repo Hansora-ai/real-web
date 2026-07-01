@@ -86,7 +86,7 @@ function clampDuration(value) {
 function normalizeResolution(value, variant) {
   const raw = String(value || '720p').toLowerCase();
   if (variant === 'fast') return raw === '480p' ? '480p' : '720p';
-  if (raw === '480p' || raw === '720p' || raw === '1080p') return raw;
+  if (raw === '480p' || raw === '720p' || raw === '1080p' || raw === '4k') return raw;
   return '720p';
 }
 
@@ -105,9 +105,10 @@ function normalizeModel(value, variant) {
 function costFor(body) {
   const duration = clampDuration(body.duration);
   const variant = String(body.variant || '').toLowerCase();
-  const resolution = String(body.resolution || '720p');
+  const resolution = String(body.resolution || '720p').toLowerCase();
   if (variant === 'fast' || variant === 'lite') return Number((duration * 2).toFixed(1));
-  return Number((duration * (resolution === '1080p' ? 5.5 : 2.5)).toFixed(1));
+  const rate = resolution === '4k' ? 12 : (resolution === '1080p' ? 5.5 : 2.5);
+  return Number((duration * rate).toFixed(1));
 }
 
 function hasMedia(body) {
