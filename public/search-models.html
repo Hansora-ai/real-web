@@ -3135,13 +3135,177 @@
     #modelOverlay > div{
       overscroll-behavior:contain;
     }
-    #overlayModelList{
-      overscroll-behavior:contain;
-      -webkit-overflow-scrolling:touch;
-      touch-action:pan-y;
-    }
+	    #overlayModelList{
+	      overscroll-behavior:contain;
+	      -webkit-overflow-scrolling:touch;
+	      touch-action:pan-y;
+	    }
+	    #geminiOmniTrimOverlay{
+	      position:fixed;
+	      inset:0;
+	      z-index:10000;
+	      display:none;
+	      place-items:center;
+	      padding:28px;
+	      background:rgba(0,0,0,.78);
+	      backdrop-filter:blur(12px);
+	      -webkit-backdrop-filter:blur(12px);
+	    }
+	    #geminiOmniTrimOverlay.show{ display:grid; }
+	    .gemini-trim-card{
+	      width:min(760px,94vw);
+	      max-height:calc(100svh - 44px);
+	      overflow-y:auto;
+	      border:1px solid rgba(255,255,255,.13);
+	      border-radius:22px;
+	      background:#1b1d22;
+	      box-shadow:0 40px 120px rgba(0,0,0,.5);
+	      padding:18px;
+	      scrollbar-width:thin;
+	    }
+	    .gemini-trim-head{ text-align:center; margin-bottom:14px; }
+	    .gemini-trim-head h3{
+	      margin:0;
+	      color:#fff;
+	      font-size:18px;
+	      font-weight:900;
+	      line-height:1.15;
+	    }
+	    .gemini-trim-head p{ margin:6px 0 0; color:rgba(255,255,255,.5); font-size:12px; font-weight:800; }
+	    .gemini-trim-video-wrap{
+	      width:100%;
+	      aspect-ratio:16/9;
+	      max-height:44svh;
+	      border-radius:14px;
+	      overflow:hidden;
+	      background:#03050d;
+	    }
+	    .gemini-trim-video-wrap video{ width:100%; height:100%; object-fit:contain; display:block; }
+	    .gemini-trim-controls{ margin-top:12px; }
+	    .gemini-trim-strip{
+	      position:relative;
+	      width:100%;
+	      height:62px;
+	      border-radius:10px;
+	      overflow:hidden;
+	      background:#0b0d12;
+	      touch-action:none;
+	      cursor:pointer;
+	      user-select:none;
+	      -webkit-user-select:none;
+	    }
+	    .gemini-trim-film{
+	      position:absolute;
+	      inset:0;
+	      display:grid;
+	      grid-template-columns:repeat(9,1fr);
+	      gap:3px;
+	      opacity:.84;
+	      pointer-events:none;
+	      user-select:none;
+	      -webkit-user-select:none;
+	    }
+	    .gemini-trim-frame{
+	      min-width:0;
+	      background:linear-gradient(135deg,#1f2430,#11141c);
+	      overflow:hidden;
+	      user-select:none;
+	      -webkit-user-select:none;
+	    }
+	    .gemini-trim-frame img{
+	      width:100%;
+	      height:100%;
+	      object-fit:cover;
+	      display:block;
+	      pointer-events:none;
+	      user-select:none;
+	      -webkit-user-select:none;
+	      -webkit-user-drag:none;
+	    }
+	    .gemini-trim-selection{
+	      position:absolute;
+	      top:0;
+	      bottom:0;
+	      left:0;
+	      width:0;
+	      border:5px solid #fff;
+	      border-radius:6px;
+	      box-shadow:0 0 0 999px rgba(0,0,0,.44);
+	      background:transparent;
+	      pointer-events:none;
+	      user-select:none;
+	      -webkit-user-select:none;
+	    }
+	    .gemini-trim-handle{
+	      position:absolute;
+	      top:-5px;
+	      bottom:-5px;
+	      width:18px;
+	      background:#fff;
+	      pointer-events:auto;
+	      cursor:ew-resize;
+	    }
+	    .gemini-trim-handle::after{
+	      content:'';
+	      position:absolute;
+	      top:50%;
+	      left:50%;
+	      width:6px;
+	      height:24px;
+	      transform:translate(-50%,-50%);
+	      border-left:2px solid #333;
+	      border-right:2px solid #333;
+	    }
+	    .gemini-trim-handle.left{ left:-14px; border-radius:4px 0 0 4px; }
+	    .gemini-trim-handle.right{ right:-14px; border-radius:0 4px 4px 0; }
+	    .gemini-trim-bubble{
+	      position:absolute;
+	      right:10px;
+	      bottom:8px;
+	      padding:4px 7px;
+	      border-radius:8px;
+	      color:#fff;
+	      background:rgba(0,0,0,.66);
+	      font-size:12px;
+	      font-weight:950;
+	    }
+	    .gemini-trim-meta{
+	      display:flex;
+	      justify-content:space-between;
+	      gap:12px;
+	      margin-top:12px;
+	      color:rgba(255,255,255,.56);
+	      font-size:12px;
+	      font-weight:800;
+	    }
+	    .gemini-trim-actions{
+	      display:flex;
+	      gap:12px;
+	      justify-content:center;
+	      margin-top:14px;
+	    }
+	    .gemini-trim-actions button{
+	      min-width:142px;
+	      min-height:42px;
+	      border:0;
+	      border-radius:14px;
+	      color:#fff;
+	      font-weight:950;
+	      cursor:pointer;
+	    }
+	    #geminiTrimCancel{ background:#2b3035; color:rgba(255,255,255,.76); }
+	    #geminiTrimConfirm{ background:linear-gradient(135deg,#ff2bc5,#7c5cff); }
+	    @media (max-width:640px){
+	      #geminiOmniTrimOverlay{ padding:10px; }
+	      .gemini-trim-card{ padding:12px; max-height:calc(100svh - 24px); }
+	      .gemini-trim-head{ margin-bottom:10px; }
+	      .gemini-trim-video-wrap{ max-height:38svh; }
+	      .gemini-trim-strip{ height:52px; }
+	      .gemini-trim-actions{ gap:10px; }
+	      .gemini-trim-actions button{ min-width:116px; min-height:40px; }
+	    }
 
-    </style>
+	    </style>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
   <div id="sharedHeader"></div>
@@ -3712,10 +3876,38 @@
 
     <!-- RESULTS STRIP -->
     
-  </main>
+	  </main>
 
-  <!-- BOTTOM BAR -->
-  <script>
+	  <div id="geminiOmniTrimOverlay" aria-hidden="true">
+	    <div class="gemini-trim-card" role="dialog" aria-modal="true" aria-labelledby="geminiTrimTitle">
+	      <div class="gemini-trim-head">
+	        <h3 id="geminiTrimTitle">Choose Video Part</h3>
+	        <p id="geminiTrimSubtitle">Select the 10 seconds to edit</p>
+	      </div>
+	      <div class="gemini-trim-video-wrap"><video id="geminiTrimVideo" controls playsinline preload="metadata"></video></div>
+	      <div class="gemini-trim-controls">
+	        <div id="geminiTrimStrip" class="gemini-trim-strip" aria-label="Choose video segment">
+	          <div id="geminiTrimFilm" class="gemini-trim-film" aria-hidden="true"></div>
+	          <div id="geminiTrimSelection" class="gemini-trim-selection">
+	            <span id="geminiTrimStartHandle" class="gemini-trim-handle left" aria-hidden="true"></span>
+	            <span id="geminiTrimEndHandle" class="gemini-trim-handle right" aria-hidden="true"></span>
+	            <span id="geminiTrimBubble" class="gemini-trim-bubble">10.0s</span>
+	          </div>
+	        </div>
+	        <div class="gemini-trim-meta">
+	          <span id="geminiTrimRangeLabel">0.0s -> 10.0s</span>
+	          <span id="geminiTrimMaxLabel">10s from video</span>
+	        </div>
+	      </div>
+	      <div class="gemini-trim-actions">
+	        <button id="geminiTrimCancel" type="button">Cancel</button>
+	        <button id="geminiTrimConfirm" type="button">Confirm</button>
+	      </div>
+	    </div>
+	  </div>
+
+	  <!-- BOTTOM BAR -->
+	  <script>
 // --- KIE result support through one checker ---
 function __mjCacheKey(runId){ return `mj_urls_${runId}`; }
 function __mjLoadCached(runId){
@@ -5330,15 +5522,15 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         maxFiles: 0,
         uploadMaxMB: 50,
         uploadLimitsMB: { image: 30, video: 50, audio: 50 },
-        specificUpload: 'seedance',
-        aspectOptions: ['16:9', '9:16', '1:1', '4:3', '3:4'],
-        defaultAspect: '16:9',
-        resolutionOptions: ['720p', '1080p'],
-        defaultResolution: '720p',
-        durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-        costLabel: 'Standard 720p 2.5⚡/s · 1080p 5.5⚡/s · Fast 2⚡/s',
-        minCredits: 10
-      },
+	        specificUpload: 'seedance',
+	        aspectOptions: ['16:9', '9:16', '1:1', '4:3', '3:4'],
+	        defaultAspect: '16:9',
+	        resolutionOptions: ['720p', '1080p', '4K'],
+	        defaultResolution: '720p',
+	        durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+	        costLabel: 'Standard 720p 2.5⚡/s · 1080p 5.5⚡/s · 4K 12⚡/s · Fast 2⚡/s',
+	        minCredits: 10
+	      },
       {
         id: 'seedance20-mini',
         name: 'Seedance 2.0 Mini',
@@ -5374,12 +5566,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         specificUpload: 'geminiOmni',
         aspectOptions: ['16:9', '9:16'],
         defaultAspect: '16:9',
-        resolutionOptions: ['1080p', '4K'],
-        defaultResolution: '1080p',
-        durations: [4, 6, 8, 10],
-        costLabel: '1080p 4s-6⚡ 6s-8⚡ 8s-10⚡ 10s-12⚡ / 4K 4s-13⚡ 6s-15⚡ 8s-17⚡ 10s-19⚡ / Image 1080p 17⚡ 4K 25⚡',
-        minCredits: 6
-      },
+	        resolutionOptions: ['1080p', '4K'],
+	        defaultResolution: '1080p',
+	        durations: [4, 6, 8, 10],
+	        costLabel: 'No video: 4s-4.5⚡ 6s-6⚡ 8s-7.5⚡ 10s-9⚡ / Video: 1080p 11⚡ 4K 16⚡',
+	        minCredits: 4.5
+	      },
       {
         id: 'wan27-video',
         name: 'Wan 2.7',
@@ -6019,12 +6211,20 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       return true;
     }
     let videoLastFrameFile = null;
-    let videoSourceFile = null;
-    let videoRefImageFiles = [];
-    let videoRefVideoFiles = [];
-    let videoRefAudioFiles = [];
-    let geminiOmniAudioIds = [];
-    let wanPromptExtend = true;
+	    let videoSourceFile = null;
+	    let videoRefImageFiles = [];
+	    let videoRefVideoFiles = [];
+	    let videoRefAudioFiles = [];
+	    let geminiOmniAudioIds = [];
+	    let geminiOmniVideoStart = 0;
+	    let geminiOmniVideoEnd = 0;
+	    let geminiOmniSourceDuration = 0;
+	    let __geminiOmniTrimUrl = '';
+	    let geminiOmniTrimStartBeforeModal = 0;
+	    let geminiOmniTrimEndBeforeModal = 0;
+	    let geminiOmniActiveTrimDrag = '';
+	    let geminiOmniFilmRenderToken = 0;
+	    let wanPromptExtend = true;
 
 	    const promptMentionPreviewUrls = new WeakMap();
 	    let promptImageMentionRange = null;
@@ -6665,24 +6865,23 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const seconds = Math.max(1, Number(currentDuration || 6));
         return Number((seconds * 0.3).toFixed(1));
       }
-      if (model.id === 'seedance20') {
-        const seconds = Math.max(1, Number(currentDuration || 5));
-        const rate = currentSeedanceVariant === 'fast' ? 2 : (currentResolution === '1080p' ? 5.5 : 2.5);
-        return Number((seconds * rate).toFixed(1));
-      }
+	      if (model.id === 'seedance20') {
+	        const seconds = Math.max(1, Number(currentDuration || 5));
+	        const rate = currentSeedanceVariant === 'fast' ? 2 : (currentResolution === '4K' ? 12 : (currentResolution === '1080p' ? 5.5 : 2.5));
+	        return Number((seconds * rate).toFixed(1));
+	      }
       if (model.id === 'seedance20-mini') {
         const seconds = Math.max(1, Number(currentDuration || 5));
         return Number((seconds * 1.3).toFixed(1));
       }
-      if (model.id === 'gemini-omni-video') {
-        const hasVideoInput = !!videoSourceFile;
-        if (hasVideoInput) return currentResolution === '4K' ? 25 : 17;
-        const seconds = Math.max(4, Math.min(10, Number(currentDuration || 4)));
-        const table1080 = { 4: 6, 6: 8, 8: 10, 10: 12 };
-        const table4k = { 4: 13, 6: 15, 8: 17, 10: 19 };
-        const rounded = [4, 6, 8, 10].includes(seconds) ? seconds : 4;
-        return currentResolution === '4K' ? table4k[rounded] : table1080[rounded];
-      }
+	      if (model.id === 'gemini-omni-video') {
+	        const hasVideoInput = !!videoSourceFile;
+	        if (hasVideoInput) return currentResolution === '4K' ? 16 : 11;
+	        const seconds = Math.max(4, Math.min(10, Number(currentDuration || 4)));
+	        const table = { 4: 4.5, 6: 6, 8: 7.5, 10: 9 };
+	        const rounded = [4, 6, 8, 10].includes(seconds) ? seconds : 4;
+	        return table[rounded];
+	      }
       if (model.id === 'kling30') {
         const seconds = getKling30MultiShotDuration();
         let rate = 1;
@@ -6863,11 +7062,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         btn.addEventListener('click', () => {
           currentDuration = val;
           if (durationCurrentLabel) durationCurrentLabel.textContent = `${val}s`;
-          Array.from(durationPills.children).forEach((child) => child.classList.remove('chip-active'));
-          btn.classList.add('chip-active');
-          updateCostDisplay();
-          updateRunButtonLabel();
-        });
+	          Array.from(durationPills.children).forEach((child) => child.classList.remove('chip-active'));
+	          btn.classList.add('chip-active');
+	          refreshGeminiOmniTrimForDuration();
+	          updateCostDisplay();
+	          updateRunButtonLabel();
+	        });
         durationPills.appendChild(btn);
       });
       updateCostDisplay();
@@ -7366,10 +7566,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       videoLastFrameFile = null;
       videoSourceFile = null;
       videoRefImageFiles = [];
-      videoRefVideoFiles = [];
-      videoRefAudioFiles = [];
-      geminiOmniAudioIds = [];
-      wanPromptExtend = true;
+	      videoRefVideoFiles = [];
+	      videoRefAudioFiles = [];
+	      geminiOmniAudioIds = [];
+	      resetGeminiOmniTrimState();
+	      wanPromptExtend = true;
 
       const thumbs = document.getElementById('imageThumbs');
       if (thumbs) thumbs.innerHTML = '';
@@ -7958,9 +8159,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      if (typeof refreshPromptImageMentionMenu === 'function') refreshPromptImageMentionMenu();
 	    }
 
-    function renderFileListThumbs(files, containerEl, onRemove) {
-      if (!containerEl) return;
-      containerEl.innerHTML = '';
+	    function renderFileListThumbs(files, containerEl, onRemove) {
+	      if (!containerEl) return;
+	      containerEl.innerHTML = '';
       (files || []).forEach((file, index) => {
         const holder = document.createElement('div');
         containerEl.appendChild(holder);
@@ -7975,7 +8176,237 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      if (typeof refreshPromptImageMentionMenu === 'function') refreshPromptImageMentionMenu();
 	    }
 
-    function setSeedanceControlDisabled(btnId, inputId, disabled, title) {
+	    function getGeminiOmniRequestedDuration() {
+	      const duration = Number(currentDuration || 10);
+	      return [4, 6, 8, 10].includes(duration) ? duration : 10;
+	    }
+
+	    function getGeminiOmniTrimMaxDuration() {
+	      return 10;
+	    }
+
+	    function getGeminiOmniTrimMinDuration() {
+	      return 4;
+	    }
+
+	    function getGeminiOmniSelectedVideoDuration() {
+	      const selected = Number((Number(geminiOmniVideoEnd || 0) - Number(geminiOmniVideoStart || 0)).toFixed(1));
+	      return Math.max(0, selected);
+	    }
+
+	    function formatGeminiTrimTime(value) {
+	      const n = Number(value || 0);
+	      return `${Number.isFinite(n) ? n.toFixed(1) : '0.0'}s`;
+	    }
+
+	    function resetGeminiOmniTrimState() {
+	      geminiOmniVideoStart = 0;
+	      geminiOmniVideoEnd = 0;
+	      geminiOmniSourceDuration = 0;
+	      geminiOmniActiveTrimDrag = '';
+	      geminiOmniFilmRenderToken++;
+	      const video = document.getElementById('geminiTrimVideo');
+	      if (video) {
+	        video.pause();
+	        video.removeAttribute('src');
+	        video.load();
+	      }
+	      if (__geminiOmniTrimUrl) {
+	        try { URL.revokeObjectURL(__geminiOmniTrimUrl); } catch (_) {}
+	        __geminiOmniTrimUrl = '';
+	      }
+	    }
+
+	    function updateGeminiOmniTrimLabels() {
+	      const selection = document.getElementById('geminiTrimSelection');
+	      const bubble = document.getElementById('geminiTrimBubble');
+	      const rangeLabel = document.getElementById('geminiTrimRangeLabel');
+	      const maxLabel = document.getElementById('geminiTrimMaxLabel');
+	      const subtitle = document.getElementById('geminiTrimSubtitle');
+	      const max = Math.max(1, Number(geminiOmniSourceDuration || getGeminiOmniTrimMaxDuration()));
+	      const selected = Math.max(0, geminiOmniVideoEnd - geminiOmniVideoStart);
+	      if (selection) {
+	        const left = Math.max(0, Math.min(100, (geminiOmniVideoStart / max) * 100));
+	        const width = Math.max(0, Math.min(100 - left, (selected / max) * 100));
+	        selection.style.left = `${left}%`;
+	        selection.style.width = `${width}%`;
+	      }
+	      if (bubble) bubble.textContent = formatGeminiTrimTime(selected);
+	      if (rangeLabel) rangeLabel.textContent = `${formatGeminiTrimTime(geminiOmniVideoStart)} -> ${formatGeminiTrimTime(geminiOmniVideoEnd)}`;
+	      if (maxLabel) maxLabel.textContent = `${formatGeminiTrimTime(selected)} from video`;
+	      if (subtitle) subtitle.textContent = `Select 4 to 10 seconds from the video`;
+	    }
+
+	    function setGeminiOmniTrimWindow(start, end) {
+	      const max = Math.max(1, Number(geminiOmniSourceDuration || getGeminiOmniTrimMaxDuration()));
+	      const minLength = Math.min(getGeminiOmniTrimMinDuration(), max);
+	      const maxLength = Math.min(getGeminiOmniTrimMaxDuration(), max);
+	      start = Number(start || 0);
+	      end = Number(end || 0);
+	      if (!Number.isFinite(start)) start = 0;
+	      if (!Number.isFinite(end)) end = start + maxLength;
+	      start = Math.max(0, Math.min(start, Math.max(0, max - 0.1)));
+	      end = Math.max(start + 0.1, Math.min(end, max));
+	      if (end - start > maxLength) end = start + maxLength;
+	      if (end > max) {
+	        end = max;
+	        start = Math.max(0, end - maxLength);
+	      }
+	      if (end - start < minLength) {
+	        if (start + minLength <= max) {
+	          end = start + minLength;
+	        } else {
+	          end = max;
+	          start = Math.max(0, max - minLength);
+	        }
+	      }
+	      geminiOmniVideoStart = Number(start.toFixed(1));
+	      geminiOmniVideoEnd = Number(end.toFixed(1));
+	      updateGeminiOmniTrimLabels();
+	    }
+
+	    function secondsFromGeminiTrimPointer(event) {
+	      const strip = document.getElementById('geminiTrimStrip');
+	      const rect = strip ? strip.getBoundingClientRect() : { left:0, width:1 };
+	      const clientX = event.clientX || (event.touches && event.touches[0] && event.touches[0].clientX) || 0;
+	      const pct = rect.width ? (clientX - rect.left) / rect.width : 0;
+	      const max = Math.max(1, Number(geminiOmniSourceDuration || getGeminiOmniTrimMaxDuration()));
+	      return Math.max(0, Math.min(max, pct * max));
+	    }
+
+	    function moveGeminiTrimHandle(kind, seconds) {
+	      const max = Math.max(1, Number(geminiOmniSourceDuration || getGeminiOmniTrimMaxDuration()));
+	      const minLength = Math.min(getGeminiOmniTrimMinDuration(), max);
+	      const maxLength = Math.min(getGeminiOmniTrimMaxDuration(), max);
+	      if (kind === 'start') {
+	        let start = Math.max(0, Math.min(seconds, geminiOmniVideoEnd - minLength));
+	        if (geminiOmniVideoEnd - start > maxLength) start = geminiOmniVideoEnd - maxLength;
+	        setGeminiOmniTrimWindow(start, geminiOmniVideoEnd);
+	      } else if (kind === 'end') {
+	        let end = Math.min(max, Math.max(seconds, geminiOmniVideoStart + minLength));
+	        if (end - geminiOmniVideoStart > maxLength) end = geminiOmniVideoStart + maxLength;
+	        setGeminiOmniTrimWindow(geminiOmniVideoStart, end);
+	      } else {
+	        const length = Math.min(maxLength, Math.max(minLength, geminiOmniVideoEnd - geminiOmniVideoStart || maxLength));
+	        let start = seconds - length / 2;
+	        start = Math.max(0, Math.min(start, Math.max(0, max - length)));
+	        setGeminiOmniTrimWindow(start, start + length);
+	      }
+	      const video = document.getElementById('geminiTrimVideo');
+	      if (video && Number.isFinite(geminiOmniVideoStart)) {
+	        try { video.currentTime = geminiOmniVideoStart; } catch (_) {}
+	      }
+	    }
+
+	    async function renderGeminiOmniTrimFilmstrip() {
+	      const film = document.getElementById('geminiTrimFilm');
+	      if (!film) return;
+	      const token = ++geminiOmniFilmRenderToken;
+	      film.innerHTML = '';
+	      const count = 9;
+	      for (let i = 0; i < count; i++) {
+	        const frame = document.createElement('div');
+	        frame.className = 'gemini-trim-frame';
+	        film.appendChild(frame);
+	      }
+	      if (!__geminiOmniTrimUrl || !geminiOmniSourceDuration) return;
+	      const snap = document.createElement('video');
+	      snap.src = __geminiOmniTrimUrl;
+	      snap.muted = true;
+	      snap.playsInline = true;
+	      snap.preload = 'auto';
+	      const canvas = document.createElement('canvas');
+	      const ctx = canvas.getContext('2d');
+	      const waitFor = (name) => new Promise((resolve, reject) => {
+	        const ok = () => { cleanup(); resolve(); };
+	        const bad = () => { cleanup(); reject(new Error(name)); };
+	        const cleanup = () => {
+	          snap.removeEventListener(name, ok);
+	          snap.removeEventListener('error', bad);
+	        };
+	        snap.addEventListener(name, ok, { once:true });
+	        snap.addEventListener('error', bad, { once:true });
+	      });
+	      try {
+	        if (!snap.readyState) await waitFor('loadedmetadata');
+	        canvas.width = 180;
+	        canvas.height = 104;
+	        const frames = Array.from(film.children);
+	        for (let i = 0; i < frames.length; i++) {
+	          if (token !== geminiOmniFilmRenderToken) return;
+	          const time = Math.min(geminiOmniSourceDuration - 0.05, (geminiOmniSourceDuration * (i + 0.5)) / frames.length);
+	          snap.currentTime = Math.max(0, time);
+	          await waitFor('seeked');
+	          if (token !== geminiOmniFilmRenderToken) return;
+	          ctx.fillStyle = '#11141c';
+	          ctx.fillRect(0, 0, canvas.width, canvas.height);
+	          const scale = Math.max(canvas.width / snap.videoWidth, canvas.height / snap.videoHeight);
+	          const width = snap.videoWidth * scale;
+	          const height = snap.videoHeight * scale;
+	          ctx.drawImage(snap, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+	          const img = document.createElement('img');
+	          img.alt = '';
+	          img.draggable = false;
+	          img.src = canvas.toDataURL('image/jpeg', .68);
+	          frames[i].innerHTML = '';
+	          frames[i].appendChild(img);
+	        }
+	      } catch (_) {
+	      } finally {
+	        snap.removeAttribute('src');
+	        snap.load();
+	      }
+	    }
+
+	    function openGeminiOmniTrimModal(file) {
+	      if (!file || !currentModel || currentModel.id !== 'gemini-omni-video') return;
+	      const overlay = document.getElementById('geminiOmniTrimOverlay');
+	      const video = document.getElementById('geminiTrimVideo');
+	      if (!overlay || !video) return;
+	      resetGeminiOmniTrimState();
+	      __geminiOmniTrimUrl = URL.createObjectURL(file);
+	      video.src = __geminiOmniTrimUrl;
+	      overlay.classList.add('show');
+	      overlay.setAttribute('aria-hidden', 'false');
+	      document.body.style.overflow = 'hidden';
+	      video.addEventListener('loadedmetadata', () => {
+	        geminiOmniSourceDuration = Math.max(0, Number(video.duration || 0));
+	        const clipLength = Math.min(getGeminiOmniTrimMaxDuration(), geminiOmniSourceDuration || getGeminiOmniTrimMaxDuration());
+	        setGeminiOmniTrimWindow(0, clipLength);
+	        geminiOmniTrimStartBeforeModal = geminiOmniVideoStart;
+	        geminiOmniTrimEndBeforeModal = geminiOmniVideoEnd;
+	        renderGeminiOmniTrimFilmstrip();
+	      }, { once: true });
+	    }
+
+	    function closeGeminiOmniTrimModal({ clearFile = false, restore = false } = {}) {
+	      const overlay = document.getElementById('geminiOmniTrimOverlay');
+	      if (overlay) {
+	        overlay.classList.remove('show');
+	        overlay.setAttribute('aria-hidden', 'true');
+	      }
+	      document.body.style.overflow = '';
+	      if (restore) setGeminiOmniTrimWindow(geminiOmniTrimStartBeforeModal, geminiOmniTrimEndBeforeModal);
+	      const video = document.getElementById('geminiTrimVideo');
+	      if (video) video.pause();
+	      if (clearFile) {
+	        videoSourceFile = null;
+	        resetGeminiOmniTrimState();
+	        const input = document.getElementById('videoSourceInput');
+	        const thumb = document.getElementById('videoSourceThumb');
+	        if (input) input.value = '';
+	        if (thumb) thumb.innerHTML = '';
+	        updateCostDisplay();
+	        updateRunButtonLabel();
+	      }
+	    }
+
+	    function refreshGeminiOmniTrimForDuration() {
+	      if (!videoSourceFile || !currentModel || currentModel.id !== 'gemini-omni-video' || !geminiOmniSourceDuration) return;
+	      updateGeminiOmniTrimLabels();
+	    }
+
+	    function setSeedanceControlDisabled(btnId, inputId, disabled, title) {
       const btn = document.getElementById(btnId);
       const input = document.getElementById(inputId);
       const card = btn ? btn.closest('.upload-drop-card') : null;
@@ -8377,17 +8808,19 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       });
       syncVideoRefsInputLocks();
     });
-    document.getElementById('videoSourceInput').addEventListener('change', (e) => {
-      videoSourceFile = (e.target.files || [])[0] || null;
-      renderSingleThumb(videoSourceFile, document.getElementById('videoSourceThumb'), () => {
-        videoSourceFile = null;
-        document.getElementById('videoSourceInput').value = '';
-        updateCostDisplay();
-        updateRunButtonLabel();
-      });
-      updateCostDisplay();
-      updateRunButtonLabel();
-    });
+	    document.getElementById('videoSourceInput').addEventListener('change', (e) => {
+	      videoSourceFile = (e.target.files || [])[0] || null;
+	      renderSingleThumb(videoSourceFile, document.getElementById('videoSourceThumb'), () => {
+	        videoSourceFile = null;
+	        resetGeminiOmniTrimState();
+	        document.getElementById('videoSourceInput').value = '';
+	        updateCostDisplay();
+	        updateRunButtonLabel();
+	      });
+	      if (videoSourceFile && currentModel && currentModel.id === 'gemini-omni-video') openGeminiOmniTrimModal(videoSourceFile);
+	      updateCostDisplay();
+	      updateRunButtonLabel();
+	    });
     document.getElementById('videoRefImagesInput').addEventListener('change', (e) => {
       const max = currentModel && currentModel.id === 'grok-video' ? 7 : (currentModel && currentModel.id === 'gemini-omni-video' ? 7 : 9);
       videoRefImageFiles = appendFilesWithLimit(videoRefImageFiles, e.target.files, max, 'image/*');
@@ -8408,16 +8841,61 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         document.getElementById('videoRefVideosInput').value = '';
       });
     });
-    document.getElementById('videoRefAudioInput').addEventListener('change', (e) => {
-      videoRefAudioFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, 1);
-      renderFileListThumbs(videoRefAudioFiles, document.getElementById('videoRefAudioThumbs'), (index) => {
-        videoRefAudioFiles.splice(index, 1);
-        document.getElementById('videoRefAudioInput').value = '';
-      });
-    });
-    document.getElementById('wanPromptExtendToggle').addEventListener('click', (e) => {
-      wanPromptExtend = !wanPromptExtend;
-      e.currentTarget.textContent = wanPromptExtend ? 'Prompt extend on' : 'Prompt extend off';
+	    document.getElementById('videoRefAudioInput').addEventListener('change', (e) => {
+	      videoRefAudioFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, 1);
+	      renderFileListThumbs(videoRefAudioFiles, document.getElementById('videoRefAudioThumbs'), (index) => {
+	        videoRefAudioFiles.splice(index, 1);
+	        document.getElementById('videoRefAudioInput').value = '';
+	      });
+	    });
+	    const geminiTrimStrip = document.getElementById('geminiTrimStrip');
+	    const geminiTrimFilm = document.getElementById('geminiTrimFilm');
+	    const geminiTrimStartHandle = document.getElementById('geminiTrimStartHandle');
+	    const geminiTrimEndHandle = document.getElementById('geminiTrimEndHandle');
+	    const geminiTrimVideoEl = document.getElementById('geminiTrimVideo');
+	    const geminiTrimOverlayEl = document.getElementById('geminiOmniTrimOverlay');
+	    const geminiTrimCancel = document.getElementById('geminiTrimCancel');
+	    const geminiTrimConfirm = document.getElementById('geminiTrimConfirm');
+	    if (geminiTrimStrip) {
+	      geminiTrimStrip.addEventListener('pointerdown', (event) => {
+	        event.preventDefault();
+	        if (event.target === geminiTrimStartHandle) geminiOmniActiveTrimDrag = 'start';
+	        else if (event.target === geminiTrimEndHandle) geminiOmniActiveTrimDrag = 'end';
+	        else geminiOmniActiveTrimDrag = 'window';
+	        if (geminiTrimStrip.setPointerCapture) geminiTrimStrip.setPointerCapture(event.pointerId);
+	        moveGeminiTrimHandle(geminiOmniActiveTrimDrag, secondsFromGeminiTrimPointer(event));
+	      });
+	      geminiTrimStrip.addEventListener('pointermove', (event) => {
+	        if (!geminiOmniActiveTrimDrag) return;
+	        event.preventDefault();
+	        moveGeminiTrimHandle(geminiOmniActiveTrimDrag, secondsFromGeminiTrimPointer(event));
+	      });
+	      ['pointerup','pointercancel','lostpointercapture'].forEach((eventName) => {
+	        geminiTrimStrip.addEventListener(eventName, () => { geminiOmniActiveTrimDrag = ''; });
+	      });
+	      ['dragstart','selectstart'].forEach((eventName) => {
+	        geminiTrimStrip.addEventListener(eventName, (event) => event.preventDefault());
+	        if (geminiTrimFilm) geminiTrimFilm.addEventListener(eventName, (event) => event.preventDefault());
+	      });
+	    }
+	    if (geminiTrimVideoEl) {
+	      geminiTrimVideoEl.addEventListener('timeupdate', () => {
+	        if (!geminiTrimOverlayEl || !geminiTrimOverlayEl.classList.contains('show')) return;
+	        if (geminiTrimVideoEl.currentTime >= geminiOmniVideoEnd) {
+	          geminiTrimVideoEl.currentTime = geminiOmniVideoStart;
+	          geminiTrimVideoEl.pause();
+	        }
+	      });
+	    }
+	    if (geminiTrimCancel) geminiTrimCancel.addEventListener('click', () => closeGeminiOmniTrimModal({ clearFile:true, restore:true }));
+	    if (geminiTrimConfirm) geminiTrimConfirm.addEventListener('click', () => closeGeminiOmniTrimModal());
+	    document.addEventListener('keydown', (event) => {
+	      if (event.key !== 'Escape' || !geminiTrimOverlayEl || !geminiTrimOverlayEl.classList.contains('show')) return;
+	      closeGeminiOmniTrimModal({ clearFile:true, restore:true });
+	    });
+	    document.getElementById('wanPromptExtendToggle').addEventListener('click', (e) => {
+	      wanPromptExtend = !wanPromptExtend;
+	      e.currentTarget.textContent = wanPromptExtend ? 'Prompt extend on' : 'Prompt extend off';
       e.currentTarget.classList.toggle('chip-active', wanPromptExtend);
     });
     const geminiVoiceButton = document.getElementById('geminiVoiceButton');
@@ -9455,18 +9933,21 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           const sourceVideoUrl = videoSourceFile ? (urls || [])[0] : '';
           const imageStartIndex = videoSourceFile ? 1 : 0;
           const imageUrls = (urls || []).slice(imageStartIndex, imageStartIndex + videoRefImageFiles.length);
+          const selectedVideoDuration = sourceVideoUrl ? getGeminiOmniSelectedVideoDuration() : 0;
           return {
             uid,
             user_id: uid,
             prompt,
             aspect_ratio: aspect || '16:9',
-            duration: duration ? Number(duration) : 4,
-            resolution: currentResolution === '4K' ? '4k' : '1080p',
-            image_urls: imageUrls,
-            video_url: sourceVideoUrl || undefined,
-            audio_ids: geminiOmniAudioIds,
-            run_id: runId
-          };
+            duration: sourceVideoUrl ? selectedVideoDuration : (duration ? Number(duration) : 4),
+	            resolution: currentResolution === '4K' ? '4k' : '1080p',
+	            image_urls: imageUrls,
+	            video_url: sourceVideoUrl || undefined,
+	            video_start: sourceVideoUrl ? Number(geminiOmniVideoStart || 0) : undefined,
+	            video_end: sourceVideoUrl ? Number(geminiOmniVideoEnd || (geminiOmniVideoStart + selectedVideoDuration)) : undefined,
+	            audio_ids: geminiOmniAudioIds,
+	            run_id: runId
+	          };
         }
         case 'wan27-video': {
           let cursor = 0;
