@@ -1,1897 +1,589 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Video Edit | Hansora AI</title>
-  <meta name="description" content="Edit uploaded videos with prompt guidance, optional reference images, and selected start/end timing." />
-  <link rel="preconnect" href="https://qmaealblegvcwodlmeht.supabase.co" />
-  <link rel="dns-prefetch" href="//qmaealblegvcwodlmeht.supabase.co" />
-  <link href="./search-models-tailwind.css" rel="stylesheet" />
-  <link href="./header.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="./header.js"></script>
-  <script defer src="./kie-upload-bridge.js"></script>
-  <style>
-    :root{
-      --bg:#060712;
-      --panel:#11131d;
-      --panel-2:#181b27;
-      --line:rgba(255,255,255,.1);
-      --muted:rgba(255,255,255,.58);
-      --text:rgba(255,255,255,.94);
-      --accent:#7c5cff;
-      --accent-2:#38bdf8;
-      --green:#20c997;
-    }
-    *{ box-sizing:border-box; }
-    video,
-    input[type="range"]{
-      accent-color:#f5f7fb;
-    }
-    body{
-      margin:0;
-      min-height:100vh;
-      color:var(--text);
-      background:#05060b;
-      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    }
-    main{ padding:28px 20px 24px; }
-    .page-shell{
-      width:min(1520px,100%);
-      margin:0 auto;
-      display:grid;
-      grid-template-columns:420px minmax(0,1fr);
-      gap:28px;
-      align-items:start;
-    }
-    .panel{
-      border:1px solid var(--line);
-      background:linear-gradient(180deg,rgba(23,25,36,.96),rgba(13,15,24,.96));
-      border-radius:24px;
-      box-shadow:0 22px 70px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
-      overflow:hidden;
-    }
-    .composer{
-      position:sticky;
-      top:calc(var(--header-height, 88px) + 18px);
-      max-height:calc(100svh - var(--header-height, 88px) - 36px);
-      overflow-y:auto;
-      overscroll-behavior:contain;
-      scrollbar-width:thin;
-    }
-    .panel-pad{ padding:18px; }
-    .title{ font-size:30px; line-height:1.02; margin:0 0 9px; letter-spacing:0; }
-    .sub{ margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
-    .field{ margin-top:16px; }
-    .label{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      margin-bottom:8px;
-      color:rgba(255,255,255,.72);
-      font-size:12px;
-      font-weight:850;
-    }
-    .hint{ color:rgba(255,255,255,.42); font-weight:800; }
-    .section{
-      margin-top:16px;
-      padding:14px;
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:18px;
-      background:rgba(255,255,255,.025);
-    }
-    .section-head{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      margin-bottom:10px;
-      color:rgba(255,255,255,.72);
-      font-size:12px;
-      font-weight:900;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-    }
-    .dropzone{
-      position:relative;
-      min-height:156px;
-      border:1px dashed rgba(255,255,255,.18);
-      border-radius:18px;
-      background:rgba(255,255,255,.035);
-      display:grid;
-      place-items:center;
-      text-align:center;
-      padding:18px;
-      cursor:pointer;
-      transition:border-color .16s ease, background .16s ease, transform .16s ease;
-    }
-    .dropzone:not(.has-video):hover,
-    .dropzone.drag-over{ border-color:rgba(56,189,248,.85); background:rgba(56,189,248,.06); transform:translateY(-1px); }
-    .dropzone.has-video:hover{
-      border-color:rgba(255,255,255,.18);
-      background:rgba(255,255,255,.035);
-      transform:none;
-    }
-    .dropzone.has-video:focus,
-    .dropzone.has-video:focus-visible{
-      outline:none;
-      border-color:rgba(255,255,255,.18);
-      box-shadow:none;
-    }
-    .dropzone strong{ display:block; font-size:16px; margin-top:12px; line-height:1.25; }
-    .dropzone small{ display:block; color:var(--muted); margin-top:8px; font-size:12px; line-height:1.35; }
-    .drop-icon{
-      width:54px;
-      height:54px;
-      border-radius:18px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      margin:0 auto;
-      color:#061018;
-      background:linear-gradient(135deg,#d9ff5d,#7dd3fc);
-      font-size:28px;
-      font-weight:950;
-      line-height:1;
-      padding-bottom:3px;
-    }
-    .video-preview-wrap{
-      display:none;
-      width:100%;
-      gap:10px;
-      align-items:center;
-      text-align:left;
-    }
-    .dropzone.has-video,
-    .dropzone.has-images{
-      display:block;
-      min-height:auto;
-      padding:10px;
-      text-align:left;
-    }
-    .dropzone.has-video .video-preview-wrap{ display:flex; }
-    .dropzone.has-video .empty-upload,
-    .dropzone.has-images .empty-upload{ display:none; }
-    .video-thumb{
-      width:110px;
-      height:70px;
-      flex:0 0 auto;
-      border-radius:14px;
-      overflow:hidden;
-      background:#03050d;
-      border:1px solid rgba(255,255,255,.12);
-    }
-    .video-thumb video{ width:100%; height:100%; object-fit:cover; display:block; }
-    .video-meta{ min-width:0; flex:1; }
-    .video-meta strong{ margin:0; font-size:14px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .video-meta span{ margin-top:5px; display:block; color:var(--muted); font-size:12px; }
-    .small-btn{
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.055);
-      color:#fff;
-      border-radius:999px;
-      min-height:34px;
-      padding:0 13px;
-      font-size:12px;
-      font-weight:900;
-      cursor:pointer;
-    }
-    .small-btn:hover{ border-color:rgba(255,255,255,.22); background:rgba(255,255,255,.09); }
-    .clear-video{
-      flex:0 0 auto;
-      width:32px;
-      height:32px;
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:999px;
-      background:rgba(0,0,0,.32);
-      color:#fff;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      font-size:18px;
-      font-weight:900;
-      line-height:1;
-      padding:0;
-      cursor:pointer;
-      position:relative;
-      overflow:hidden;
-      text-indent:-999px;
-    }
-    .clear-video::before,
-    .clear-video::after,
-    .remove::before,
-    .remove::after{
-      content:"";
-      position:absolute;
-      left:50%;
-      top:50%;
-      width:13px;
-      height:3px;
-      border-radius:999px;
-      background:#fff;
-      transform:translate(-50%,-50%) rotate(45deg);
-    }
-    .clear-video::after,
-    .remove::after{ transform:translate(-50%,-50%) rotate(-45deg); }
-    .image-grid{
-      display:none;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:12px;
-      width:100%;
-    }
-    .dropzone.has-images .image-grid{ display:grid; }
-    .image-thumb{
-      position:relative;
-      aspect-ratio:1;
-      width:100%;
-      border-radius:16px;
-      overflow:hidden;
-      background:#03050d;
-      border:1px solid rgba(255,255,255,.12);
-    }
-    .image-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
-    .add-image-tile{
-      aspect-ratio:1;
-      width:100%;
-      border:1px dashed rgba(255,255,255,.2);
-      border-radius:16px;
-      background:rgba(3,5,13,.72);
-      color:rgba(255,255,255,.72);
-      cursor:pointer;
-      display:grid;
-      place-items:center;
-      text-align:center;
-      padding:10px;
-      font:inherit;
-      font-weight:900;
-    }
-    .add-image-tile:hover{ border-color:rgba(204,255,56,.55); background:rgba(204,255,56,.05); }
-    .add-image-tile span{
-      width:50px;
-      height:50px;
-      border-radius:18px;
-      border:2px solid rgba(204,255,56,.72);
-      display:grid;
-      place-items:center;
-      margin:0 auto 10px;
-      color:#d9ff5d;
-      background:rgba(204,255,56,.06);
-    }
-    .add-image-tile svg{
-      width:28px;
-      height:28px;
-      fill:none;
-      stroke:currentColor;
-      stroke-width:2.5;
-      stroke-linecap:round;
-      stroke-linejoin:round;
-    }
-    .add-image-tile small{
-      display:block;
-      color:rgba(255,255,255,.66);
-      font-size:14px;
-      line-height:1.2;
-    }
-    .remove{
-      position:absolute;
-      top:5px;
-      right:5px;
-      width:24px;
-      height:24px;
-      border-radius:999px;
-      border:0;
-      color:#fff;
-      background:rgba(0,0,0,.72);
-      cursor:pointer;
-      font-weight:900;
-      text-indent:-999px;
-      overflow:hidden;
-    }
-    textarea{
-      width:100%;
-      min-height:154px;
-      resize:vertical;
-      border:1px solid rgba(255,255,255,.1);
-      border-radius:18px;
-      background:rgba(255,255,255,.06);
-      color:#fff;
-      padding:14px;
-      outline:none;
-      font:inherit;
-      font-size:15px;
-      line-height:1.45;
-    }
-    textarea::placeholder{ color:rgba(255,255,255,.35); }
-    .pill-row{
-      display:grid;
-      grid-template-columns:repeat(2,1fr);
-      gap:10px;
-    }
-    .pill-row button{
-      min-height:44px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.06);
-      color:rgba(255,255,255,.72);
-      border-radius:15px;
-      cursor:pointer;
-      font-weight:900;
-      font-size:14px;
-    }
-    .pill-row button.active{
-      color:#fff;
-      border-color:rgba(56,189,248,.55);
-      background:linear-gradient(135deg,#7c5cff,#38bdf8);
-    }
-    .run{
-      width:100%;
-      margin-top:18px;
-      min-height:54px;
-      border:0;
-      border-radius:18px;
-      background:linear-gradient(135deg,#7562ff,#8b5cf6 55%,#32bdf6);
-      color:#fff;
-      font-size:18px;
-      font-weight:950;
-      cursor:pointer;
-      box-shadow:0 18px 48px rgba(124,92,255,.34);
-    }
-    .run:disabled{ opacity:.58; cursor:not-allowed; box-shadow:none; }
-    .status{
-      margin:12px 2px 0;
-      min-height:18px;
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.35;
-      font-weight:800;
-    }
-    .status.good{ color:#65ffd0; }
-    .status.bad{ color:#ff8b8b; }
-    .workspace{
-      min-width:0;
-      border:1px solid var(--line);
-      border-radius:24px;
-      background:rgba(5,7,14,.68);
-      overflow:hidden;
-    }
-    .workspace-body{ padding:28px; }
-    .workspace-title{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:16px;
-      margin:0 0 18px;
-      font-size:18px;
-      font-weight:950;
-    }
-    .see-all-link{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-height:34px;
-      padding:0 17px;
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:999px;
-      color:rgba(255,255,255,.75);
-      text-decoration:none;
-      font-size:12px;
-      font-weight:950;
-    }
-    .results-list{
-      display:grid;
-      grid-template-columns:repeat(4,minmax(0,1fr));
-      gap:18px;
-      align-items:start;
-    }
-    .results-list.hidden{ display:none; }
-    .empty-results{
-      min-height:360px;
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:22px;
-      color:var(--muted);
-      background:rgba(255,255,255,.018);
-      padding:18px;
-    }
-    .empty-results.hidden{ display:none; }
-    .sample-head{
-      display:flex;
-      justify-content:space-between;
-      align-items:end;
-      gap:14px;
-      margin-bottom:14px;
-      text-align:left;
-    }
-    .sample-head h2{ margin:0; color:#fff; font-size:18px; line-height:1.1; }
-    .sample-head p{ margin:5px 0 0; max-width:560px; color:var(--muted); font-size:13px; line-height:1.4; }
-    .sample-badge{
-      flex:0 0 auto;
-      border:1px solid rgba(204,255,56,.35);
-      color:#d9ff5d;
-      border-radius:999px;
-      padding:7px 10px;
-      font-size:11px;
-      font-weight:950;
-      text-transform:uppercase;
-      letter-spacing:.06em;
-      background:rgba(204,255,56,.06);
-    }
-    .feature-preview{
-      display:flex;
-      justify-content:center;
-    }
-    .feature-preview-card{
-      width:min(560px,100%);
-      border:1px solid rgba(255,255,255,.1);
-      border-radius:18px;
-      overflow:hidden;
-      background:#070a14;
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
-    }
-    .feature-preview-media{
-      height:280px;
-      position:relative;
-      overflow:hidden;
-      background:#050812;
-    }
-    .feature-preview-media video{
-      width:100%;
-      height:100%;
-      display:block;
-      object-fit:cover;
-      background:#050812;
-      pointer-events:none;
-    }
-    .feature-preview-media video::-webkit-media-controls,
-    .feature-preview-media video::-webkit-media-controls-panel,
-    .feature-preview-media video::-webkit-media-controls-overlay-play-button{
-      display:none !important;
-      opacity:0 !important;
-      pointer-events:none !important;
-    }
-    .result-card{
-      min-width:0;
-      height:330px;
-      min-height:330px;
-      max-height:330px;
-      border:1px solid rgba(60,76,116,.74);
-      border-radius:18px;
-      background:#050917;
-      overflow:hidden;
-      position:relative;
-      display:flex;
-      flex-direction:column;
-    }
-    .result-chip{
-      position:absolute;
-      left:12px;
-      top:12px;
-      z-index:4;
-      border-radius:999px;
-      padding:7px 12px;
-      background:#0f172a;
-      color:#fff;
-      font-size:12px;
-      font-weight:950;
-    }
-    .result-chip.ready{ background:#16a47a; }
-    .result-chip.failed{ background:#db4a4a; }
-    .result-media{
-      height:238px;
-      min-height:238px;
-      max-height:238px;
-      flex:0 0 238px;
-      display:grid;
-      place-items:center;
-      overflow:hidden;
-      background:#030712;
-      color:rgba(255,255,255,.56);
-      font-size:14px;
-      font-weight:850;
-    }
-    .result-media video{
-      width:100%;
-      height:100%;
-      object-fit:contain;
-      background:#030712;
-      cursor:pointer;
-    }
-    .creating-state{
-      display:grid;
-      place-items:center;
-      width:100%;
-      height:100%;
-      text-align:center;
-      color:#fff;
-      background:
-        radial-gradient(circle at 50% 35%,rgba(139,92,246,.25),transparent 28%),
-        radial-gradient(circle at 64% 42%,rgba(56,189,248,.18),transparent 24%),
-        #050812;
-    }
-    .creating-icon{
-      width:48px;
-      height:48px;
-      border-radius:18px;
-      margin:0 auto 13px;
-      background:linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8);
-      box-shadow:0 0 30px rgba(139,92,246,.52);
-      animation:creatingSpin 1.35s linear infinite;
-    }
-    .creating-state strong{ display:block; color:#fff; font-size:15px; }
-    .creating-state span{ display:block; margin-top:5px; color:rgba(255,255,255,.56); font-size:12px; }
-    .creating-dots{ display:inline-flex; gap:4px; margin-top:12px; }
-    .creating-dots i{
-      width:6px;
-      height:6px;
-      border-radius:999px;
-      background:#d9ff5d;
-      animation:creatingDot 1s ease-in-out infinite;
-    }
-    .creating-dots i:nth-child(2){ animation-delay:.15s; }
-    .creating-dots i:nth-child(3){ animation-delay:.3s; }
-    @keyframes creatingSpin{ to{ transform:rotate(360deg); } }
-    @keyframes creatingDot{
-      0%,100%{ transform:translateY(0); opacity:.35; }
-      50%{ transform:translateY(-5px); opacity:1; }
-    }
-    .result-info{
-      min-height:92px;
-      height:92px;
-      max-height:92px;
-      flex:0 0 92px;
-      padding:10px 10px;
-      display:flex;
-      flex-direction:column;
-      background:linear-gradient(180deg,#070b17,#050817);
-    }
-    .result-top-row{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-    .result-name{ font-size:15px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .result-kind{ color:rgba(255,255,255,.52); font-size:12px; font-weight:950; letter-spacing:.05em; }
-    .result-prompt{
-      margin:9px 0 0;
-      color:rgba(255,255,255,.66);
-      font-size:13px;
-      line-height:1.35;
-      white-space:nowrap;
-      text-overflow:ellipsis;
-      overflow:hidden;
-    }
-    .result-bottom-row{
-      margin-top:auto;
-      display:flex;
-      align-items:end;
-      justify-content:space-between;
-      gap:10px;
-      min-width:0;
-    }
-    .result-status-text{ color:#65ffd0; font-size:13px; font-weight:900; }
-    .result-get{
-      width:48px;
-      min-width:48px;
-      height:26px;
-      min-height:26px;
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:999px;
-      background:#5c5ce6;
-      color:#fff;
-      padding:0 7px;
-      font-weight:950;
-      font-size:10px;
-      line-height:1;
-      cursor:pointer;
-    }
-    .preview-overlay{
-      position:fixed;
-      inset:0;
-      z-index:9999;
-      display:none;
-      place-items:center;
-      padding:32px;
-      background:rgba(0,0,0,.82);
-      backdrop-filter:blur(10px);
-    }
-    .preview-overlay.show{ display:grid; }
-    .preview-box{
-      position:relative;
-      width:min(980px,92vw);
-      max-height:82vh;
-      border:1px solid rgba(255,255,255,.14);
-      border-radius:20px;
-      background:#050812;
-      overflow:hidden;
-    }
-    .preview-box video{ width:100%; max-height:82vh; display:block; background:#000; }
-    .preview-close{
-      position:absolute;
-      right:12px;
-      top:12px;
-      width:42px;
-      height:42px;
-      z-index:2;
-      border:1px solid rgba(255,255,255,.16);
-      border-radius:999px;
-      background:rgba(0,0,0,.48);
-      color:#fff;
-      font-size:24px;
-      cursor:pointer;
-    }
-    .trim-overlay{
-      position:fixed;
-      inset:0;
-      z-index:10000;
-      display:none;
-      place-items:center;
-      padding:28px;
-      background:rgba(0,0,0,.78);
-      backdrop-filter:blur(12px);
-    }
-    .trim-overlay.show{ display:grid; }
-    .trim-modal{
-      width:min(760px,94vw);
-      max-height:calc(100svh - 44px);
-      overflow-y:auto;
-      border:1px solid rgba(255,255,255,.13);
-      border-radius:22px;
-      background:#1b1d22;
-      box-shadow:0 40px 120px rgba(0,0,0,.5);
-      padding:18px;
-      scrollbar-width:thin;
-    }
-    .trim-head{ text-align:center; margin-bottom:14px; }
-    .trim-head strong{ display:block; font-size:18px; }
-    .trim-head span{ color:rgba(255,255,255,.5); font-size:12px; font-weight:800; }
-    .trim-video{
-      width:100%;
-      aspect-ratio:16/9;
-      max-height:44svh;
-      border-radius:14px;
-      overflow:hidden;
-      background:#03050d;
-    }
-    .trim-video video{ width:100%; height:100%; object-fit:contain; display:block; }
-    .trim-controls{ margin-top:12px; }
-    .trim-strip{
-      position:relative;
-      width:100%;
-      height:62px;
-      border-radius:10px;
-      overflow:hidden;
-      background:#0b0d12;
-      touch-action:none;
-      cursor:pointer;
-      user-select:none;
-      -webkit-user-select:none;
-    }
-    .trim-film{
-      position:absolute;
-      inset:0;
-      display:grid;
-      grid-template-columns:repeat(9,1fr);
-      gap:3px;
-      opacity:.84;
-      pointer-events:none;
-      user-select:none;
-      -webkit-user-select:none;
-    }
-    .trim-frame{
-      min-width:0;
-      background:linear-gradient(135deg,#1f2430,#11141c);
-      overflow:hidden;
-      user-select:none;
-      -webkit-user-select:none;
-    }
-    .trim-frame img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
-      pointer-events:none;
-      user-select:none;
-      -webkit-user-select:none;
-      -webkit-user-drag:none;
-    }
-    .trim-selection{
-      position:absolute;
-      top:0;
-      bottom:0;
-      left:0;
-      width:0;
-      border:5px solid #fff;
-      border-radius:6px;
-      box-shadow:0 0 0 999px rgba(0,0,0,.44);
-      background:transparent;
-      pointer-events:none;
-      user-select:none;
-      -webkit-user-select:none;
-    }
-    .trim-handle{
-      position:absolute;
-      top:-5px;
-      bottom:-5px;
-      width:18px;
-      background:#fff;
-      pointer-events:auto;
-      cursor:ew-resize;
-    }
-    .trim-handle::after{
-      content:'';
-      position:absolute;
-      top:50%;
-      left:50%;
-      width:6px;
-      height:24px;
-      transform:translate(-50%,-50%);
-      border-left:2px solid #333;
-      border-right:2px solid #333;
-    }
-    .trim-handle.left{ left:-14px; border-radius:4px 0 0 4px; }
-    .trim-handle.right{ right:-14px; border-radius:0 4px 4px 0; }
-    .trim-bubble{
-      position:absolute;
-      right:10px;
-      bottom:8px;
-      padding:4px 7px;
-      border-radius:8px;
-      color:#fff;
-      background:rgba(0,0,0,.66);
-      font-size:12px;
-      font-weight:950;
-    }
-    .trim-summary{
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      margin-top:12px;
-      color:rgba(255,255,255,.56);
-      font-size:12px;
-      font-weight:800;
-    }
-    .trim-actions{
-      display:flex;
-      gap:12px;
-      justify-content:center;
-      margin-top:14px;
-    }
-    .trim-cancel,
-    .trim-confirm{
-      min-width:142px;
-      min-height:42px;
-      border:0;
-      border-radius:14px;
-      color:#fff;
-      font-weight:950;
-      cursor:pointer;
-    }
-    .trim-cancel{ background:#2b3035; color:rgba(255,255,255,.76); }
-    .trim-confirm{ background:linear-gradient(135deg,#ff2bc5,#7c5cff); }
-    @media (max-width:1200px){
-      .page-shell{ grid-template-columns:380px minmax(0,1fr); gap:18px; }
-      .results-list{ grid-template-columns:repeat(3,minmax(0,1fr)); }
-    }
-    @media (max-width:900px){
-      main{ padding:14px 12px 118px; }
-      .page-shell{ display:block; }
-      .composer{ position:static; max-height:none; overflow:visible; overscroll-behavior:auto; margin-bottom:16px; }
-      .dropzone.has-video{
-        padding:12px;
-      }
-      .dropzone.has-video .video-preview-wrap{
-        display:grid;
-        grid-template-columns:minmax(0,1fr) auto auto;
-        grid-template-areas:
-          "thumb thumb thumb"
-          "meta edit clear";
-        align-items:center;
-        gap:10px 8px;
-      }
-      .video-thumb{
-        grid-area:thumb;
-        width:100%;
-        height:auto;
-        aspect-ratio:16/9;
-        max-height:150px;
-      }
-      .video-meta{
-        grid-area:meta;
-        min-width:0;
-      }
-      .video-meta strong{
-        display:none;
-      }
-      .video-meta span{
-        margin:0;
-        white-space:nowrap;
-        overflow:hidden;
-        text-overflow:ellipsis;
-        font-size:13px;
-      }
-      #changeTrimBtn{
-        grid-area:edit;
-        min-width:68px;
-        min-height:36px;
-        padding:0 16px;
-      }
-      .clear-video{
-        grid-area:clear;
-        width:36px;
-        height:36px;
-      }
-      .workspace-body{ padding:14px; }
-      .results-list{
-        display:flex;
-        gap:12px;
-        overflow-x:auto;
-        overflow-y:hidden;
-        padding-bottom:0;
-        scroll-snap-type:x proximity;
-      }
-      .results-list.hidden{ display:none; }
-      .result-card{
-        flex:0 0 78% !important;
-        width:78% !important;
-        height:330px !important;
-        min-height:330px !important;
-        max-height:330px !important;
-        position:relative !important;
-        overflow:hidden !important;
-        scroll-snap-align:start;
-        border-radius:18px;
-      }
-      .result-media{
-        height:238px !important;
-        min-height:238px !important;
-        max-height:238px !important;
-        flex:0 0 238px !important;
-      }
-      .result-info{
-        position:absolute;
-        left:8px !important;
-        right:8px !important;
-        bottom:8px !important;
-        width:auto !important;
-        box-sizing:border-box !important;
-        min-height:0;
-        height:84px !important;
-        max-height:84px !important;
-        padding:9px 10px !important;
-        border:1px solid rgba(255,255,255,.10);
-        border-radius:14px;
-        background:rgba(33,35,48,.86);
-        backdrop-filter:blur(12px);
-        display:flex !important;
-        flex-direction:column !important;
-        justify-content:space-between !important;
-      }
-      .result-name{ display:none !important; }
-      .result-kind{
-        display:block !important;
-        font-size:11px !important;
-        max-width:48px !important;
-      }
-      .result-prompt{
-        display:block !important;
-        margin:0 !important;
-        min-height:14px !important;
-        max-height:14px !important;
-        font-size:11px !important;
-        line-height:14px !important;
-        white-space:nowrap !important;
-        overflow:hidden !important;
-        text-overflow:ellipsis !important;
-      }
-      .result-top-row{ min-height:14px !important; align-items:center !important; }
-      .result-bottom-row{
-        min-height:34px !important;
-        align-items:center !important;
-        gap:8px !important;
-      }
-      .result-actions{
-        flex:0 0 48px !important;
-        width:48px !important;
-        min-width:48px !important;
-        max-width:48px !important;
-      }
-      .result-chip{ font-size:11px !important; padding:4px 8px !important; left:8px !important; top:8px !important; }
-      .result-status-text{ font-size:13px !important; }
-      .preview-overlay{ padding:14px; }
-      .trim-overlay{ padding:10px; }
-      .trim-modal{ padding:12px; max-height:calc(100svh - 24px); }
-      .trim-head{ margin-bottom:10px; }
-      .trim-video{ max-height:38svh; }
-      .trim-strip{ height:52px; }
-      .trim-actions{ gap:10px; }
-      .trim-cancel,
-      .trim-confirm{ min-width:116px; min-height:40px; }
-      .feature-preview-media{ height:220px; }
-    }
-    .result-card .result-info .result-bottom-row .result-actions,
-    .result-card .result-info .result-bottom-row .result-actions *{
-      box-sizing:border-box !important;
-    }
-    .result-card .result-info .result-bottom-row .result-actions{
-      flex:0 0 48px !important;
-      width:48px !important;
-      min-width:48px !important;
-      max-width:48px !important;
-    }
-    .result-card .result-info .result-bottom-row .result-actions button,
-    .result-card .result-info .result-bottom-row .result-actions a,
-    .result-actions .result-get{
-      width:48px !important;
-      min-width:48px !important;
-      max-width:48px !important;
-      height:26px !important;
-      min-height:26px !important;
-      max-height:26px !important;
-      padding:0 7px !important;
-      border-radius:999px !important;
-      border:1px solid rgba(255,255,255,.14) !important;
-      background:rgba(99,102,241,.72) !important;
-      color:rgba(255,255,255,.95) !important;
-      font-size:10px !important;
-      font-weight:800 !important;
-      line-height:1 !important;
-      box-shadow:none !important;
-      display:inline-flex !important;
-      align-items:center !important;
-      justify-content:center !important;
-    }
-  </style>
-</head>
-<body>
-  <div id="sharedHeader"></div>
-  <main>
-    <div class="page-shell">
-      <section class="panel composer">
-        <div class="panel-pad">
-          <h1 class="title">Video Edit</h1>
-          <p class="sub">Upload a video, choose the part to use, add optional image references, and describe the edit.</p>
+// netlify/functions/video-edit-check.js
+// Dedicated checker/refunder for Video Edit jobs.
+const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/, '');
+const KIE_KEY = process.env.KIE_API_KEY || process.env.KIEAI_API_KEY || '';
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const UG_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : '';
+const PROFILES_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : '';
+const NB_RESULTS_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/nb_results` : '';
+const HISTORY_BUCKET = process.env.KIE_HISTORY_BUCKET || 'generation-history';
+const MAX_ARCHIVE_BYTES = Math.max(1, Number(process.env.KIE_HISTORY_MAX_MB || 200)) * 1024 * 1024;
 
-          <div class="section">
-            <div class="section-head"><label for="sourceVideo">Video upload</label><span class="hint">Choose 10s from the video</span></div>
-            <input id="sourceVideo" type="file" accept="video/*" hidden />
-            <div id="videoDrop" class="dropzone" role="button" tabindex="0" aria-label="Upload video">
-              <div class="empty-upload">
-                <span class="drop-icon" aria-hidden="true">+</span>
-                <strong>Upload video</strong>
-                <small>Upload up to 3 minutes. Choose the exact 10 seconds to edit.</small>
-              </div>
-              <div class="video-preview-wrap">
-                <div class="video-thumb"><video id="videoThumb" muted playsinline preload="metadata"></video></div>
-                <div class="video-meta">
-                  <strong id="videoName">Uploaded video</strong>
-                  <span id="videoTiming">0.0s - 0.0s</span>
-                </div>
-                <button id="changeTrimBtn" class="small-btn" type="button">Edit</button>
-                <button id="clearVideoBtn" class="clear-video" type="button" aria-label="Remove video"></button>
-              </div>
-            </div>
-          </div>
+const json = (statusCode, body) => ({
+  statusCode,
+  headers: {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+  },
+  body: JSON.stringify(body),
+});
 
-          <div class="section">
-            <div class="section-head"><label for="referenceImages">Reference images</label><span class="hint">Optional</span></div>
-            <input id="referenceImages" type="file" accept="image/*" multiple hidden />
-            <div id="imageDrop" class="dropzone" role="button" tabindex="0" aria-label="Upload reference images">
-              <div class="empty-upload">
-                <span class="drop-icon" aria-hidden="true">+</span>
-                <strong>Add reference images</strong>
-                <small>Optional image references for the edit.</small>
-              </div>
-              <div id="imageGrid" class="image-grid"></div>
-            </div>
-          </div>
+exports.handler = async (event) => {
+  try {
+    if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: json(204, {}).headers, body: '' };
+    if (event.httpMethod === 'POST') return handlePost(event);
+    if (event.httpMethod !== 'GET') return json(405, { ok: false, error: 'Use GET or POST' });
 
-          <div class="field">
-            <div class="label"><span>Prompt</span><span class="hint">Required</span></div>
-            <textarea id="prompt" maxlength="1200" placeholder="Describe how you want to edit the uploaded video..."></textarea>
-          </div>
-
-          <div class="field">
-            <div class="label"><span>Aspect ratio</span></div>
-            <div class="pill-row" id="aspectRow">
-              <button type="button" data-aspect="16:9" class="active">16:9</button>
-              <button type="button" data-aspect="9:16">9:16</button>
-            </div>
-          </div>
-
-          <div class="field">
-            <div class="label"><span>Resolution</span></div>
-            <div class="pill-row" id="resolutionRow">
-              <button type="button" data-resolution="1080p" class="active">1080p</button>
-              <button type="button" data-resolution="4K">4K</button>
-            </div>
-          </div>
-
-          <p id="status" class="status"></p>
-          <button id="runBtn" class="run" type="button">Run 11 ⚡</button>
-        </div>
-      </section>
-
-      <section class="workspace">
-        <div class="workspace-body">
-          <div class="workspace-title">
-            <strong>Recent generations</strong>
-            <a class="see-all-link" href="./usage.html">SEE ALL</a>
-          </div>
-          <div id="emptyResults" class="empty-results">
-            <div class="sample-head">
-              <div>
-                <h2>Feature preview</h2>
-                <p>Try It Now</p>
-              </div>
-              <span class="sample-badge">Example</span>
-            </div>
-            <div class="feature-preview" aria-label="Video edit feature preview">
-              <article class="feature-preview-card">
-                <div class="feature-preview-media">
-                  <video
-                    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/lv_0_20260630231754.mp4"
-                    muted
-                    autoplay
-                    playsinline
-                    loop
-                    preload="metadata"
-                    aria-label="Video edit feature preview"
-                  ></video>
-                </div>
-              </article>
-            </div>
-          </div>
-          <div id="resultsList" class="results-list hidden"></div>
-        </div>
-      </section>
-    </div>
-  </main>
-
-  <div id="trimOverlay" class="trim-overlay" role="dialog" aria-modal="true" aria-labelledby="trimTitle">
-    <div class="trim-modal">
-      <div class="trim-head">
-        <strong id="trimTitle">Choose Video Part</strong>
-        <span>Select the 10 seconds to edit</span>
-      </div>
-      <div class="trim-video"><video id="trimVideo" controls playsinline preload="metadata"></video></div>
-      <div class="trim-controls">
-        <div id="trimStrip" class="trim-strip" aria-label="Choose video segment">
-          <div id="trimFilm" class="trim-film" aria-hidden="true"></div>
-          <div id="trimSelection" class="trim-selection">
-            <span id="trimStartHandle" class="trim-handle left" aria-hidden="true"></span>
-            <span id="trimEndHandle" class="trim-handle right" aria-hidden="true"></span>
-            <span id="trimBubble" class="trim-bubble">10.0s</span>
-          </div>
-        </div>
-        <div class="trim-summary">
-          <span id="trimWindow">0.0s -> 0.0s</span>
-          <span id="trimLength">10.0s from video</span>
-        </div>
-      </div>
-      <div class="trim-actions">
-        <button id="trimCancel" class="trim-cancel" type="button">Cancel</button>
-        <button id="trimConfirm" class="trim-confirm" type="button">Confirm</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="previewOverlay" class="preview-overlay">
-    <div class="preview-box">
-      <button id="previewClose" class="preview-close" type="button" aria-label="Close preview">x</button>
-      <div id="previewHost"></div>
-    </div>
-  </div>
-
-  <script>
-    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c'.replace('eyJpc3MiOiJIUzI1NiIsInJlZiI6', 'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6');
-    const sb = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    window.__HANSORA_SB__ = sb;
-
-    const els = {
-      sourceVideo: document.getElementById('sourceVideo'),
-      videoDrop: document.getElementById('videoDrop'),
-      videoThumb: document.getElementById('videoThumb'),
-      videoName: document.getElementById('videoName'),
-      videoTiming: document.getElementById('videoTiming'),
-      changeTrim: document.getElementById('changeTrimBtn'),
-      clearVideo: document.getElementById('clearVideoBtn'),
-      referenceImages: document.getElementById('referenceImages'),
-      imageDrop: document.getElementById('imageDrop'),
-      imageGrid: document.getElementById('imageGrid'),
-      prompt: document.getElementById('prompt'),
-      status: document.getElementById('status'),
-      run: document.getElementById('runBtn'),
-      emptyResults: document.getElementById('emptyResults'),
-      resultsList: document.getElementById('resultsList'),
-      trimOverlay: document.getElementById('trimOverlay'),
-      trimVideo: document.getElementById('trimVideo'),
-      trimStrip: document.getElementById('trimStrip'),
-      trimFilm: document.getElementById('trimFilm'),
-      trimSelection: document.getElementById('trimSelection'),
-      trimStartHandle: document.getElementById('trimStartHandle'),
-      trimEndHandle: document.getElementById('trimEndHandle'),
-      trimBubble: document.getElementById('trimBubble'),
-      trimWindow: document.getElementById('trimWindow'),
-      trimLength: document.getElementById('trimLength'),
-      trimCancel: document.getElementById('trimCancel'),
-      trimConfirm: document.getElementById('trimConfirm')
+    const qs = event.queryStringParameters || {};
+    const ids = {
+      uid: String(qs.uid || '').trim(),
+      run_id: String(qs.run_id || '').trim(),
+      taskId: String(qs.taskId || qs.task_id || '').trim(),
     };
+    const row = await findVideoEditGeneration(ids);
+    if (!row) return json(200, { ok: false, status: 'ignored', reason: 'not_video_edit_processing' });
 
-    let videoFile = null;
-    let videoObjectUrl = '';
-    let videoDuration = 0;
-    let trimStart = 0;
-    let trimEnd = 0;
-    let trimStartBeforeModal = 0;
-    let trimEndBeforeModal = 0;
-    let activeTrimDrag = '';
-    let filmRenderToken = 0;
-    let imageFiles = [];
-    let aspectRatio = '16:9';
-    let resolution = '1080p';
-    const activePolls = new Map();
+    ids.uid = ids.uid || row.user_id || '';
+    ids.run_id = ids.run_id || row.meta?.run_id || '';
+    ids.taskId = ids.taskId || row.meta?.task_id || row.meta?.taskId || '';
+    if (!ids.taskId) return json(200, { ok: false, status: 'pending', error: 'missing_task_id' });
 
-    function fmt(value) {
-      const num = Number(value || 0);
-      return `${num.toFixed(1)}s`;
+    const state = await fetchKieState(ids.taskId, collectKnownInputUrls(row));
+    if (state.failed) {
+      const refund = await failAndRefundOnce({ row, ids, reason: state.error || 'kie_failed' });
+      return json(200, {
+        ok: false,
+        failed: true,
+        status: 'failed',
+        error: state.error || 'kie_failed',
+        refunded: !!refund.refunded,
+        refund_amount: refund.amount || 0,
+      });
     }
 
-    function selectedLength() {
-      return Math.max(0, trimEnd - trimStart);
+    if (state.done && state.urls.length) {
+      const savedUrls = await markDone({ row, ids, urls: state.urls });
+      return json(200, {
+        ok: true,
+        status: 'done',
+        result_url: savedUrls[0],
+        video_url: savedUrls[0],
+        urls: savedUrls,
+      });
     }
 
-    function runCost() {
-      return resolution === '4K' ? 16 : 11;
-    }
+    return json(200, { ok: false, status: 'pending' });
+  } catch (error) {
+    return json(200, { ok: false, status: 'error', error: messageOf(error) });
+  }
+};
 
-    function setStatus(message, type) {
-      els.status.textContent = message || '';
-      els.status.className = 'status' + (type ? ` ${type}` : '');
-    }
+async function handlePost(event) {
+  const qs = event.queryStringParameters || {};
+  const body = safeJson(event.body);
+  const bodyIds = extractIds(body);
+  const ids = {
+    uid: String(qs.uid || bodyIds.uid || '').trim(),
+    run_id: String(qs.run_id || bodyIds.run_id || '').trim(),
+    taskId: String(qs.taskId || qs.task_id || bodyIds.taskId || '').trim(),
+  };
+  const row = await findVideoEditGeneration(ids);
+  if (!row) return json(200, { ok: false, status: 'ignored', reason: 'not_video_edit_processing' });
 
-    function updateRunLabel() {
-      els.run.textContent = `Run ${runCost()} ⚡`;
-    }
+  ids.uid = ids.uid || row.user_id || '';
+  ids.run_id = ids.run_id || row.meta?.run_id || '';
+  ids.taskId = ids.taskId || row.meta?.task_id || row.meta?.taskId || '';
+  const status = normalizeStatus(body);
+  if (status === 'failed') {
+    const refund = await failAndRefundOnce({ row, ids, reason: failureReason(body) });
+    return json(200, { ok: false, failed: true, status: 'failed', error: failureReason(body), refunded: !!refund.refunded });
+  }
 
-    function updateTimingLabel() {
-      if (!videoFile) {
-        els.videoTiming.textContent = 'No video selected';
+  const urls = collectResultUrls(body, collectKnownInputUrls(row));
+  if (urls.length) {
+    const savedUrls = await markDone({ row, ids, urls });
+    return json(200, { ok: true, status: 'done', result_url: savedUrls[0], video_url: savedUrls[0], urls: savedUrls });
+  }
+
+  return json(200, { ok: false, status: 'pending' });
+}
+
+function sb(extra = {}) {
+  return { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, ...extra };
+}
+
+function safeJson(raw) {
+  if (!raw) return {};
+  try { return JSON.parse(raw); } catch { return {}; }
+}
+
+function extractIds(body) {
+  const meta = body?.meta || body?.metadata || body?.data?.meta || body?.data?.metadata || body?.result?.meta || {};
+  return {
+    uid: String(body?.uid || body?.user_id || body?.data?.uid || meta.uid || '').trim(),
+    run_id: String(body?.run_id || body?.data?.run_id || meta.run_id || '').trim(),
+    taskId: String(body?.taskId || body?.task_id || body?.data?.taskId || body?.data?.task_id || body?.result?.taskId || body?.id || '').trim(),
+  };
+}
+
+function isVideoEditRow(row) {
+  const meta = row?.meta && typeof row.meta === 'object' ? row.meta : {};
+  const provider = String(row?.provider || '').toLowerCase();
+  const engine = String(meta.engine || '').toLowerCase();
+  const feature = String(meta.source_feature || '').toLowerCase();
+  return feature === 'video-edit' || engine === 'video-edit-gemini-omni' || provider === 'video edit';
+}
+
+async function findVideoEditGeneration(ids) {
+  if (!UG_URL || !SERVICE_KEY) return null;
+  const select = 'select=id,user_id,provider,kind,result_url,meta,created_at';
+  const queries = [];
+  if (ids.uid && ids.run_id) queries.push(`?user_id=eq.${encodeURIComponent(ids.uid)}&meta->>run_id=eq.${encodeURIComponent(ids.run_id)}&${select}&limit=1`);
+  if (ids.taskId) {
+    queries.push(`?meta->>task_id=eq.${encodeURIComponent(ids.taskId)}&${select}&limit=1`);
+    queries.push(`?meta->>taskId=eq.${encodeURIComponent(ids.taskId)}&${select}&limit=1`);
+  }
+  for (const query of queries) {
+    const res = await fetch(UG_URL + query, { headers: sb() });
+    const rows = await res.json().catch(() => []);
+    const row = Array.isArray(rows) ? rows[0] : null;
+    if (!row || row.result_url || !isVideoEditRow(row)) continue;
+    const status = String(row.meta?.status || '').toLowerCase();
+    if (status === 'processing' || status === 'pending' || !status) return row;
+  }
+  return null;
+}
+
+async function fetchKieState(taskId, excludeUrls = []) {
+  if (!KIE_KEY) return { pending: true, error: 'missing_kie_key' };
+  const endpoints = [
+    `/api/v1/veo/record-info?taskId=${encodeURIComponent(taskId)}`,
+    `/api/v1/jobs/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+    `/api/v1/jobs/result?taskId=${encodeURIComponent(taskId)}`,
+    `/api/v1/jobs/getTask?taskId=${encodeURIComponent(taskId)}`,
+    `/api/v1/mj/getTaskResult?taskId=${encodeURIComponent(taskId)}`,
+    `/api/v1/mj/result?taskId=${encodeURIComponent(taskId)}`,
+    `/api/v1/mj/getTask?taskId=${encodeURIComponent(taskId)}`,
+  ];
+  let sawFailed = false;
+  let failReason = '';
+  let sawLiveTask = false;
+  for (const path of endpoints) {
+    try {
+      const res = await fetch(KIE_BASE + path, { headers: { Accept: 'application/json', Authorization: `Bearer ${KIE_KEY}` } });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      const status = normalizeStatus(data);
+      if (status === 'failed') {
+        if (isLookupOnlyFailure(data)) continue;
+        sawFailed = true;
+        failReason = failReason || failureReason(data);
+        continue;
+      }
+      const urls = collectResultUrls(data, excludeUrls);
+      if (status === 'done' && urls.length) return { done: true, urls };
+      if (urls.length) return { done: true, urls };
+      sawLiveTask = true;
+    } catch (error) {
+      failReason = failReason || messageOf(error);
+    }
+  }
+  if (sawLiveTask) return { pending: true };
+  if (sawFailed) return { failed: true, error: failReason || 'kie_failed' };
+  return { pending: true };
+}
+
+async function markDone({ row, ids, urls }) {
+  const archive = await archiveResultUrls({ row, urls });
+  const savedUrls = archive.urls.length ? archive.urls : urls;
+  const meta = {
+    ...(row.meta && typeof row.meta === 'object' ? row.meta : {}),
+    run_id: ids.run_id || row.meta?.run_id || '',
+    task_id: ids.taskId || row.meta?.task_id || row.meta?.taskId || '',
+    status: 'done',
+    completed_at: new Date().toISOString(),
+    original_result_url: urls[0],
+    original_result_urls: urls,
+    ...(archive.paths.length ? {
+      storage_bucket: HISTORY_BUCKET,
+      storage_path: archive.paths[0],
+      storage_paths: archive.paths,
+      archived_at: new Date().toISOString(),
+      archive_errors: archive.errors,
+    } : {
+      archive_errors: archive.errors.length ? archive.errors : ['archive_failed'],
+    }),
+  };
+  await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
+    method: 'PATCH',
+    headers: sb({ 'Content-Type': 'application/json', Prefer: 'return=minimal' }),
+    body: JSON.stringify({ result_url: savedUrls[0], meta }),
+  });
+
+  if (NB_RESULTS_URL && savedUrls.length) {
+    const rows = savedUrls.slice(0, 4).map((url) => ({
+      user_id: ids.uid || row.user_id,
+      run_id: ids.run_id || meta.run_id || '',
+      task_id: ids.taskId || meta.task_id || '',
+      image_url: url,
+    }));
+    await fetch(NB_RESULTS_URL, {
+      method: 'POST',
+      headers: sb({ 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }),
+      body: JSON.stringify(rows),
+    }).catch(() => {});
+  }
+  return savedUrls;
+}
+
+async function archiveResultUrls({ row, urls }) {
+  const archivedUrls = [];
+  const paths = [];
+  const errors = [];
+  for (let index = 0; index < urls.slice(0, 4).length; index += 1) {
+    const sourceUrl = urls[index];
+    const archive = await archiveResultUrl({ row, sourceUrl, index });
+    archivedUrls.push(archive.ok ? archive.publicUrl : sourceUrl);
+    if (archive.ok) paths.push(archive.path);
+    else errors.push(archive.error || `archive_${index + 1}_failed`);
+  }
+  return { urls: archivedUrls, paths, errors };
+}
+
+async function archiveResultUrl({ row, sourceUrl, index }) {
+  if (!SUPABASE_URL || !SERVICE_KEY || !row?.id || !row?.user_id || !sourceUrl) {
+    return { ok: false, error: 'missing_archive_config' };
+  }
+  try {
+    const sourceRes = await fetch(sourceUrl);
+    if (!sourceRes.ok) return { ok: false, error: `source_download_${sourceRes.status}` };
+
+    const contentLength = Number(sourceRes.headers.get('content-length') || 0);
+    if (contentLength > MAX_ARCHIVE_BYTES) return { ok: false, error: 'archive_file_too_large' };
+
+    const bytes = await sourceRes.arrayBuffer();
+    if (!bytes.byteLength) return { ok: false, error: 'archive_empty_file' };
+    if (bytes.byteLength > MAX_ARCHIVE_BYTES) return { ok: false, error: 'archive_file_too_large' };
+
+    const contentType = normalizeArchiveContentType(sourceRes.headers.get('content-type'), sourceUrl, bytes);
+    const extension = extensionForArchive(contentType, sourceUrl);
+    const suffix = index > 0 ? `-${index + 1}` : '';
+    const path = `${row.user_id}/${row.id}${suffix}.${extension}`;
+    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(HISTORY_BUCKET)}/${encodedPath}`, {
+      method: 'POST',
+      headers: sb({
+        'Content-Type': contentType,
+        'x-upsert': 'true',
+      }),
+      body: Buffer.from(bytes),
+    });
+    if (!uploadRes.ok) {
+      const text = await uploadRes.text().catch(() => '');
+      return { ok: false, error: `archive_upload_${uploadRes.status}${text ? `:${text.slice(0, 180)}` : ''}` };
+    }
+    return {
+      ok: true,
+      path,
+      publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(HISTORY_BUCKET)}/${encodedPath}`,
+    };
+  } catch (error) {
+    return { ok: false, error: messageOf(error) };
+  }
+}
+
+function normalizeArchiveContentType(value, url, bytes) {
+  const type = String(value || '').split(';')[0].trim().toLowerCase();
+  if (/^(image|video)\//.test(type) && type !== 'image/svg+xml') return type;
+  const clean = String(url || '').split('?')[0].split('#')[0].toLowerCase();
+  if (/\.webm$/.test(clean)) return 'video/webm';
+  if (/\.(mov|qt)$/.test(clean)) return 'video/quicktime';
+  if (/\.m4v$/.test(clean)) return 'video/mp4';
+  if (/\.png$/.test(clean)) return 'image/png';
+  if (/\.(jpg|jpeg)$/.test(clean)) return 'image/jpeg';
+  if (/\.webp$/.test(clean)) return 'image/webp';
+  if (/\.gif$/.test(clean)) return 'image/gif';
+  const head = new Uint8Array(bytes || new ArrayBuffer(0)).slice(0, 16);
+  if (head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47) return 'image/png';
+  if (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) return 'image/jpeg';
+  if (head[0] === 0x47 && head[1] === 0x49 && head[2] === 0x46) return 'image/gif';
+  if (head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46 && head[8] === 0x57 && head[9] === 0x45 && head[10] === 0x42 && head[11] === 0x50) return 'image/webp';
+  return 'video/mp4';
+}
+
+function extensionForArchive(contentType, url) {
+  const clean = String(url || '').split('?')[0].split('#')[0].toLowerCase();
+  const match = clean.match(/\.([a-z0-9]+)$/);
+  if (match && /^(mp4|webm|mov|m4v|png|jpg|jpeg|webp|gif)$/.test(match[1])) {
+    return match[1] === 'jpeg' ? 'jpg' : match[1];
+  }
+  if (contentType === 'video/webm') return 'webm';
+  if (contentType === 'video/quicktime') return 'mov';
+  if (contentType === 'image/png') return 'png';
+  if (contentType === 'image/jpeg') return 'jpg';
+  if (contentType === 'image/webp') return 'webp';
+  if (contentType === 'image/gif') return 'gif';
+  return 'mp4';
+}
+
+async function failAndRefundOnce({ row, ids, reason }) {
+  const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
+  const amount = Number(meta.refund_amount || 0);
+  const failedMeta = {
+    ...meta,
+    run_id: ids.run_id || meta.run_id || '',
+    task_id: ids.taskId || meta.task_id || meta.taskId || '',
+    status: 'failed',
+    failed: true,
+    error: reason,
+    failed_at: new Date().toISOString(),
+  };
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    await patchGeneration(row.id, { meta: { ...failedMeta, refund_skipped_reason: 'missing_refund_amount' } });
+    return { refunded: false, amount: 0 };
+  }
+
+  const claim = `r_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const claimUrl = `${UG_URL}?id=eq.${encodeURIComponent(row.id)}&result_url=is.null&meta->>refunded=is.null&meta->>refund_claim=is.null&select=id`;
+  const claimRes = await fetch(claimUrl, {
+    method: 'PATCH',
+    headers: sb({ 'Content-Type': 'application/json', Prefer: 'return=representation' }),
+    body: JSON.stringify({ result_url: null, meta: { ...failedMeta, refund_claim: claim } }),
+  });
+  const claimed = await claimRes.json().catch(() => []);
+  if (!claimRes.ok || !Array.isArray(claimed) || !claimed.length) return { refunded: false, amount, already_claimed: true };
+
+  const profileRes = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(row.user_id)}&select=credits&limit=1`, { headers: sb() });
+  const profiles = await profileRes.json().catch(() => []);
+  const currentCredits = Number(Array.isArray(profiles) && profiles[0] ? profiles[0].credits : 0);
+  const nextCredits = Math.round((currentCredits + amount) * 100) / 100;
+  const updateRes = await fetch(`${PROFILES_URL}?user_id=eq.${encodeURIComponent(row.user_id)}`, {
+    method: 'PATCH',
+    headers: sb({ 'Content-Type': 'application/json', Prefer: 'return=minimal' }),
+    body: JSON.stringify({ credits: nextCredits }),
+  });
+  if (!updateRes.ok) {
+    await patchGeneration(row.id, { meta: { ...failedMeta, refund_claim: claim, refund_error: 'profile_refund_failed' } });
+    return { refunded: false, amount, error: 'profile_refund_failed' };
+  }
+  await patchGeneration(row.id, { meta: { ...failedMeta, refund_claim: claim, refunded: true, refunded_cost: amount, refunded_at: new Date().toISOString() } });
+  return { refunded: true, amount, credits: nextCredits };
+}
+
+async function patchGeneration(id, payload) {
+  const res = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: sb({ 'Content-Type': 'application/json', Prefer: 'return=minimal' }),
+    body: JSON.stringify(payload),
+  });
+  return res.ok;
+}
+
+function normalizeStatus(value) {
+  const flag = value?.data?.successFlag ?? value?.successFlag ?? value?.result?.successFlag;
+  if (flag === 1 || flag === '1') return 'done';
+  if (flag === 2 || flag === '2' || flag === 3 || flag === '3') return 'failed';
+  const text = [];
+  collectStatusText(value, text);
+  const joined = text.join(' ').toLowerCase();
+  if (/(fail|failed|failure|error|errored|cancel|canceled|cancelled|rejected|moderation|blocked|sensitive|flagged)/.test(joined)) return 'failed';
+  if (/(success|succeeded|completed|complete|finish|finished|done)/.test(joined)) return 'done';
+  return 'pending';
+}
+
+function collectStatusText(value, out) {
+  if (!value || out.length > 80) return;
+  if (typeof value === 'string') {
+    if (/fail|error|success|complete|finish|done|pending|process|cancel|reject|blocked|moderation|sensitive|flag/i.test(value)) out.push(value);
+    return;
+  }
+  if (Array.isArray(value)) return value.forEach((item) => collectStatusText(item, out));
+  if (typeof value === 'object') {
+    for (const key of ['status', 'state', 'message', 'error', 'reason', 'description']) {
+      if (value[key] != null) collectStatusText(value[key], out);
+    }
+    for (const key of ['data', 'result', 'response', 'task', 'job']) {
+      if (value[key]) collectStatusText(value[key], out);
+    }
+  }
+}
+
+function isLookupOnlyFailure(value) {
+  const text = String(value?.msg || value?.message || value?.error || value?.data?.msg || value?.data?.message || value?.data?.error || '').toLowerCase();
+  return /not\s*found|no\s*task|task\s*does\s*not\s*exist|invalid\s*task|missing\s*task|cannot\s*find|record\s*not\s*found|unsupported|wrong endpoint/.test(text);
+}
+
+function failureReason(value) {
+  return String(value?.error || value?.message || value?.data?.error || value?.data?.message || value?.data?.reason || value?.result?.error || value?.result?.message || 'kie_failed');
+}
+
+function normalizeComparableUrl(url) {
+  return String(url || '').replace(/[)"'\\\]}]+$/g, '').trim();
+}
+
+function isUploadedInputUrl(url) {
+  const value = String(url || '').toLowerCase();
+  return value.includes('/storage/v1/object/public/') ||
+    value.includes('.supabase.co/storage/v1/object/') ||
+    value.includes('.supabase.in/storage/v1/object/');
+}
+
+function collectKnownInputUrls(row) {
+  const meta = row?.meta && typeof row.meta === 'object' ? row.meta : {};
+  const urls = [];
+  const seen = new Set();
+  const inputKeys = new Set([
+    'input_url',
+    'input_urls',
+    'source_url',
+    'source_urls',
+    'reference_url',
+    'reference_urls',
+    'reference_image_urls',
+    'reference_video_urls',
+    'first_frame_url',
+    'last_frame_url',
+    'tail_image_url',
+    'video_url',
+    'original_video_url',
+    'image_url',
+    'audio_url',
+    'image_urls',
+    'video_urls',
+    'audio_urls',
+    'input_window',
+    'element_input_urls',
+    'element_input_video_urls',
+  ]);
+
+  function push(url) {
+    if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return;
+    const clean = normalizeComparableUrl(url);
+    if (!clean || seen.has(clean)) return;
+    seen.add(clean);
+    urls.push(clean);
+  }
+
+  function walk(value, trusted = false, depth = 0) {
+    if (!value || depth > 8) return;
+    if (typeof value === 'string') {
+      if (!trusted) return;
+      const parsed = safeJson(value);
+      if (parsed && typeof parsed === 'object' && Object.keys(parsed).length) {
+        walk(parsed, trusted, depth + 1);
         return;
       }
-      els.videoTiming.textContent = `${fmt(trimStart)} - ${fmt(trimEnd)} selected (${fmt(selectedLength())})`;
+      const matches = value.match(/https?:\/\/[^\s"'<>]+/gi);
+      if (matches) matches.forEach(push);
+      return;
     }
-
-    function getResultUrl(payload) {
-      if (!payload) return '';
-      const candidates = [
-        payload.video_url,
-        payload.result_url,
-        payload.url,
-        payload.output,
-        Array.isArray(payload.urls) ? payload.urls[0] : '',
-        Array.isArray(payload.result_urls) ? payload.result_urls[0] : '',
-        payload.data && payload.data.video_url,
-        payload.data && payload.data.result_url,
-        payload.data && Array.isArray(payload.data.urls) ? payload.data.urls[0] : ''
-      ];
-      for (const value of candidates) {
-        if (typeof value === 'string' && /^https?:\/\//i.test(value)) return value;
-      }
-      return '';
+    if (Array.isArray(value)) {
+      for (const item of value) walk(item, trusted, depth + 1);
+      return;
     }
-
-    async function getUserAndToken() {
-      const { data } = await sb.auth.getSession();
-      const session = data && data.session ? data.session : null;
-      return { user: session && session.user ? session.user : null, token: session ? session.access_token : '' };
-    }
-
-    function openPreview(url) {
-      if (!url) return;
-      const overlay = document.getElementById('previewOverlay');
-      const host = document.getElementById('previewHost');
-      host.innerHTML = '';
-      const video = document.createElement('video');
-      video.src = url;
-      video.controls = true;
-      video.playsInline = true;
-      video.autoplay = true;
-      host.appendChild(video);
-      overlay.classList.add('show');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closePreview() {
-      const overlay = document.getElementById('previewOverlay');
-      const host = document.getElementById('previewHost');
-      overlay.classList.remove('show');
-      host.innerHTML = '';
-      document.body.style.overflow = '';
-    }
-
-    async function downloadAsset(url, kind = 'video', provider = 'video-edit') {
-      if (!url) return;
-      const cleanProvider = String(provider || 'video-edit').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'video-edit';
-      const fallbackExt = String(kind).toLowerCase() === 'video' ? 'mp4' : 'png';
-      const urlExt = (String(url).split('?')[0].match(/\.([a-z0-9]{2,5})$/i) || [])[1];
-      const filename = `${cleanProvider}-${Date.now()}.${urlExt || fallbackExt}`;
-      try {
-        const res = await fetch(url, { mode:'cors', credentials:'omit', cache:'no-store' });
-        if (!res.ok) throw new Error('download_fetch_failed');
-        const blob = await res.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = objectUrl;
-        a.download = filename;
-        a.rel = 'noopener';
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 2500);
-      } catch (error) {
-        window.open(url, '_blank', 'noopener');
+    if (typeof value === 'object') {
+      for (const [rawKey, child] of Object.entries(value)) {
+        const key = String(rawKey || '');
+        walk(child, trusted || inputKeys.has(key), depth + 1);
       }
     }
+  }
 
-    function usesMobileCard() {
-      return window.matchMedia && window.matchMedia('(max-width:900px)').matches;
-    }
+  walk(meta.original_video_url, true);
+  walk(meta.input_window, true);
+  walk(meta.input_urls, true);
+  walk(meta.source_urls, true);
+  walk(meta.reference_urls, true);
+  walk(meta, false);
+  return urls;
+}
 
-    function forceCompactResultUi(root = document) {
-      const scope = root && root.querySelectorAll ? root : document;
-      scope.querySelectorAll('.result-get').forEach((button) => {
-        const actions = button.closest('.result-actions');
-        if (actions) {
-          actions.style.setProperty('flex', '0 0 48px', 'important');
-          actions.style.setProperty('width', '48px', 'important');
-          actions.style.setProperty('min-width', '48px', 'important');
-          actions.style.setProperty('max-width', '48px', 'important');
-        }
-        button.style.setProperty('width', '48px', 'important');
-        button.style.setProperty('min-width', '48px', 'important');
-        button.style.setProperty('max-width', '48px', 'important');
-        button.style.setProperty('height', '26px', 'important');
-        button.style.setProperty('min-height', '26px', 'important');
-        button.style.setProperty('max-height', '26px', 'important');
-        button.style.setProperty('padding', '0 7px', 'important');
-        button.style.setProperty('font-size', '10px', 'important');
-        button.style.setProperty('line-height', '1', 'important');
-        button.style.setProperty('box-shadow', 'none', 'important');
-        button.style.setProperty('display', 'inline-flex', 'important');
-        button.style.setProperty('align-items', 'center', 'important');
-        button.style.setProperty('justify-content', 'center', 'important');
-      });
-      scope.querySelectorAll('.result-prompt').forEach((prompt) => {
-        prompt.style.setProperty('display', 'block', 'important');
-        prompt.style.setProperty('white-space', 'nowrap', 'important');
-        prompt.style.setProperty('overflow', 'hidden', 'important');
-        prompt.style.setProperty('text-overflow', 'ellipsis', 'important');
-        prompt.style.setProperty('-webkit-line-clamp', '1', 'important');
-      });
-    }
+function collectResultUrls(value, excludeUrls = []) {
+  const urls = [];
+  const seen = new Set();
+  const excluded = new Set(excludeUrls.map(normalizeComparableUrl).filter(Boolean));
+  const outputKeys = new Set([
+    'video_url',
+    'videoUrl',
+    'image_url',
+    'imageUrl',
+    'result_url',
+    'resultUrl',
+    'result_urls',
+    'resultUrls',
+    'fullResultUrls',
+    'full_result_urls',
+    'resultImageUrl',
+    'result_image_url',
+    'result_json',
+    'resultJson',
+    'response_json',
+    'responseJson',
+    'url',
+    'download_url',
+    'downloadUrl',
+    'media_url',
+    'mediaUrl',
+    'asset_url',
+    'assetUrl',
+    'file',
+    'output',
+    'outputs',
+    'images',
+    'image_urls',
+    'imageUrls',
+    'videos',
+    'video_urls',
+    'videoUrls',
+    'urls',
+    'files',
+    'file_url',
+    'fileUrl',
+    'file_urls',
+    'fileUrls',
+    'generate_url',
+    'generateUrl',
+  ]);
+  const containerKeys = new Set(['data', 'result', 'results', 'response', 'info', 'task_result', 'taskResult', 'output', 'outputs']);
+  const blockedKeys = /(^|_)(input|inputs|reference|references|source|first|last|tail|start|end|frame|frames|image_urls|video_urls|audio_urls|request|payload|params|parameters|meta|metadata)(_|$)/i;
 
-    function resultStatus(row) {
-      const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
-      return String(meta.status || row.status || (row.result_url ? 'ready' : 'processing'));
-    }
+  function push(url) {
+    if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return;
+    const clean = normalizeComparableUrl(url);
+    if (!/^https?:\/\/.+/i.test(clean)) return;
+    if (excluded.has(clean)) return;
+    if (isUploadedInputUrl(clean)) return;
+    if (seen.has(clean)) return;
+    seen.add(clean);
+    urls.push(clean);
+  }
 
-    function applyResultCard(card, data) {
-      const status = String(data.status || '').toLowerCase();
-      const url = data.result_url || '';
-      const ready = !!url;
-      const failed = !ready && /fail|error|cancel|reject/i.test(status);
-      const mobile = usesMobileCard();
-      const chip = card.querySelector('.result-chip');
-      const media = card.querySelector('.result-media');
-      const statusText = card.querySelector('.result-status-text');
-      const actions = card.querySelector('.result-actions');
-      const promptText = card.querySelector('.result-prompt');
-      chip.className = 'result-chip' + (ready ? ' ready' : failed ? ' failed' : '');
-      chip.textContent = ready && mobile ? 'VIDEO' : ready ? 'Ready' : failed ? 'Failed' : 'Processing';
-      statusText.textContent = ready ? 'Ready' : failed ? 'Failed' : 'Processing';
-      if (promptText && data.prompt) promptText.textContent = data.prompt;
-      if (ready) {
-        media.dataset.state = 'ready';
-        if (media.dataset.url !== url) {
-          media.dataset.url = url;
-          media.innerHTML = '';
-          const video = document.createElement('video');
-          video.src = url;
-          video.dataset.resultUrl = url;
-          video.controls = !mobile;
-          video.muted = true;
-          video.playsInline = true;
-          video.loop = mobile;
-          video.autoplay = mobile;
-          video.preload = 'metadata';
-          video.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            openPreview(video.dataset.resultUrl || video.src || '');
-          });
-          media.appendChild(video);
-          if (mobile) video.play && video.play().catch(() => {});
-        }
-        actions.innerHTML = '';
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'result-get';
-        button.textContent = mobile ? 'Get' : 'GET';
-        button.addEventListener('click', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          downloadAsset(url, 'video', 'video-edit');
-        });
-        actions.appendChild(button);
-        forceCompactResultUi(card);
-        card.addEventListener('click', () => openPreview(url), { once:false });
-      } else {
-        actions.innerHTML = '';
-        if (media.dataset.state === (failed ? 'failed' : 'processing')) return;
-        media.dataset.state = failed ? 'failed' : 'processing';
-        media.innerHTML = failed
-          ? 'Generation failed'
-          : '<div class="creating-state"><div><div class="creating-icon" aria-hidden="true"></div><strong>Creating video</strong><span>Processing your video edit</span><div class="creating-dots"><i></i><i></i><i></i></div></div></div>';
-      }
-    }
-
-    function createResultCard(row) {
-      const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
-      const card = document.createElement('article');
-      card.className = 'result-card';
-      card.dataset.runId = meta.run_id || '';
-      card.dataset.rowId = row.id || '';
-      card.dataset.taskId = meta.task_id || meta.taskId || '';
-      const prompt = row.prompt || 'Edit the uploaded video';
-      card.innerHTML = [
-        '<div class="result-chip">Processing</div>',
-        '<div class="result-media"></div>',
-        '<div class="result-info">',
-        '<div class="result-top-row"><strong class="result-name">Video Edit</strong><span class="result-kind">VIDEO</span></div>',
-        '<p class="result-prompt"></p>',
-        '<div class="result-bottom-row"><span class="result-status-text">Processing</span><div class="result-actions"></div></div>',
-        '</div>'
-      ].join('');
-      card.querySelector('.result-prompt').textContent = prompt;
-      applyResultCard(card, { status: resultStatus(row), result_url: row.result_url || '', prompt });
-      forceCompactResultUi(card);
-      return card;
-    }
-
-    function showProcessingCard({ userId, runId, taskId, prompt }) {
-      els.emptyResults.classList.add('hidden');
-      els.resultsList.classList.remove('hidden');
-      const card = createResultCard({
-        result_url: null,
-        prompt,
-        meta: { run_id: runId, task_id: taskId, status: 'processing' }
-      });
-      els.resultsList.prepend(card);
-      if (userId && runId && taskId) startPoll({ userId, runId, taskId, card });
-      return card;
-    }
-
-    async function checkResult(params) {
-      const qs = new URLSearchParams();
-      if (params.taskId) qs.set('taskId', params.taskId);
-      if (params.userId) qs.set('uid', params.userId);
-      if (params.runId) qs.set('run_id', params.runId);
-      const res = await fetch('/.netlify/functions/video-edit-check?' + qs.toString(), {
-        method: 'GET',
-        cache: 'no-store',
-        headers: { Accept:'application/json', 'Cache-Control':'no-cache' }
-      });
-      return res.json().catch(() => ({}));
-    }
-
-    async function startPoll({ userId, runId, taskId, card }) {
-      if (!userId || !runId || !taskId || activePolls.has(runId)) return;
-      const token = { cancelled:false };
-      activePolls.set(runId, token);
-      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      try {
-        for (let attempt = 0; attempt < 220; attempt++) {
-          if (token.cancelled) return;
-          try {
-            const checked = await checkResult({ userId, runId, taskId });
-            const status = String(checked.status || '').toLowerCase();
-            const url = getResultUrl(checked);
-            if (url) {
-              applyResultCard(card, { status:'ready', result_url:url });
-              setStatus('Video edit is ready.', 'good');
-              return;
-            }
-            if (checked.failed || /fail|error|cancel|reject/i.test(status)) {
-              applyResultCard(card, { status:'failed', result_url:'' });
-              setStatus(checked.error || 'Generation failed.', 'bad');
-              return;
-            }
-          } catch {}
-          await sleep(attempt < 8 ? 4000 : 8000);
-        }
-      } finally {
-        if (activePolls.get(runId) === token) activePolls.delete(runId);
-      }
-    }
-
-    function isVideoEditRow(row) {
-      const provider = String(row && row.provider || '').toLowerCase();
-      const meta = row && row.meta && typeof row.meta === 'object' ? row.meta : {};
-      const engine = String(meta.engine || '').toLowerCase();
-      const sourceFeature = String(meta.source_feature || '').toLowerCase();
-      return sourceFeature === 'video-edit' || provider === 'video edit' || engine === 'video-edit-gemini-omni';
-    }
-
-    async function loadRecentGenerations() {
-      const { user, token } = await getUserAndToken();
-      if (!user) return;
-      try {
-        const params = new URLSearchParams({
-          user_id:`eq.${user.id}`,
-          select:'id,provider,kind,prompt,result_url,meta,created_at',
-          order:'created_at.desc',
-          limit:'100'
-        });
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/user_generations?${params.toString()}`, {
-          cache:'no-store',
-          headers:{
-            apikey:SUPABASE_ANON_KEY,
-            Authorization:`Bearer ${token}`,
-            Accept:'application/json',
-            'Cache-Control':'no-cache'
-          }
-        });
-        const rows = await res.json().catch(() => []);
-        const filtered = (Array.isArray(rows) ? rows : []).filter(isVideoEditRow).slice(0, 12);
-        if (!filtered.length) return;
-        els.emptyResults.classList.add('hidden');
-        els.resultsList.innerHTML = '';
-        els.resultsList.classList.remove('hidden');
-        filtered.forEach((row) => els.resultsList.appendChild(createResultCard(row)));
-      } catch (error) {
-        console.warn('Video edit history read failed', error);
-      }
-    }
-
-    function setTrimWindow(start, end) {
-      const max = Math.max(1, videoDuration || 10);
-      start = Number(start || 0);
-      end = Number(end || 0);
-      if (!Number.isFinite(start)) start = 0;
-      if (!Number.isFinite(end)) end = start + 10;
-      start = Math.max(0, Math.min(start, Math.max(0, max - 1)));
-      end = Math.max(start + 1, Math.min(end, max));
-      if (end - start > 10) end = start + 10;
-      if (end > max) {
-        end = max;
-        start = Math.max(0, end - 10);
-      }
-      trimStart = Number(start.toFixed(1));
-      trimEnd = Number(end.toFixed(1));
-      updateTrimUi();
-    }
-
-    function updateTrimUi() {
-      const max = Math.max(1, videoDuration || 10);
-      const left = Math.max(0, Math.min(100, (trimStart / max) * 100));
-      const width = Math.max(0, Math.min(100 - left, ((trimEnd - trimStart) / max) * 100));
-      els.trimSelection.style.left = `${left}%`;
-      els.trimSelection.style.width = `${width}%`;
-      els.trimWindow.textContent = `${fmt(trimStart)} -> ${fmt(trimEnd)}`;
-      els.trimLength.textContent = `${fmt(Math.min(10, Math.max(0, selectedLength())))} from video`;
-      els.trimBubble.textContent = fmt(selectedLength());
-      updateTimingLabel();
-    }
-
-    function secondsFromPointer(event) {
-      const rect = els.trimStrip.getBoundingClientRect();
-      const clientX = event.clientX || (event.touches && event.touches[0] && event.touches[0].clientX) || 0;
-      const pct = rect.width ? (clientX - rect.left) / rect.width : 0;
-      const max = Math.max(1, videoDuration || 10);
-      return Math.max(0, Math.min(max, pct * max));
-    }
-
-    function moveTrimHandle(kind, seconds) {
-      if (kind === 'start') {
-        setTrimWindow(Math.min(seconds, trimEnd - 1), trimEnd);
-      } else if (kind === 'end') {
-        setTrimWindow(trimStart, Math.max(seconds, trimStart + 1));
-      } else {
-        const length = Math.min(10, Math.max(1, selectedLength() || 10));
-        let start = seconds - length / 2;
-        start = Math.max(0, Math.min(start, Math.max(0, (videoDuration || 10) - length)));
-        setTrimWindow(start, start + length);
-      }
-      try { els.trimVideo.currentTime = trimStart; } catch {}
-    }
-
-    async function renderTrimFilmstrip() {
-      const token = ++filmRenderToken;
-      els.trimFilm.innerHTML = '';
-      const count = 9;
-      for (let i = 0; i < count; i++) {
-        const frame = document.createElement('div');
-        frame.className = 'trim-frame';
-        els.trimFilm.appendChild(frame);
-      }
-      if (!videoObjectUrl || !videoDuration) return;
-
-      const snap = document.createElement('video');
-      snap.src = videoObjectUrl;
-      snap.muted = true;
-      snap.playsInline = true;
-      snap.preload = 'auto';
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const waitFor = (name) => new Promise((resolve, reject) => {
-        const ok = () => { cleanup(); resolve(); };
-        const bad = () => { cleanup(); reject(new Error(name)); };
-        const cleanup = () => {
-          snap.removeEventListener(name, ok);
-          snap.removeEventListener('error', bad);
-        };
-        snap.addEventListener(name, ok, { once:true });
-        snap.addEventListener('error', bad, { once:true });
-      });
-      try {
-        if (!snap.readyState) await waitFor('loadedmetadata');
-        canvas.width = 180;
-        canvas.height = 104;
-        const frames = Array.from(els.trimFilm.children);
-        for (let i = 0; i < frames.length; i++) {
-          if (token !== filmRenderToken) return;
-          const time = Math.min(videoDuration - 0.05, (videoDuration * (i + 0.5)) / frames.length);
-          snap.currentTime = Math.max(0, time);
-          await waitFor('seeked');
-          if (token !== filmRenderToken) return;
-          ctx.fillStyle = '#11141c';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          const scale = Math.max(canvas.width / snap.videoWidth, canvas.height / snap.videoHeight);
-          const width = snap.videoWidth * scale;
-          const height = snap.videoHeight * scale;
-          ctx.drawImage(snap, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
-          const img = document.createElement('img');
-          img.alt = '';
-          img.draggable = false;
-          img.src = canvas.toDataURL('image/jpeg', .68);
-          frames[i].innerHTML = '';
-          frames[i].appendChild(img);
-        }
-      } catch {
-        // Thumbnail generation is only visual; timing still works if the browser cannot sample frames.
-      } finally {
-        snap.removeAttribute('src');
-        snap.load();
-      }
-    }
-
-    function openTrimModal() {
-      if (!videoFile || !videoObjectUrl) return;
-      trimStartBeforeModal = trimStart;
-      trimEndBeforeModal = trimEnd;
-      els.trimVideo.src = videoObjectUrl;
-      els.trimVideo.currentTime = trimStart || 0;
-      updateTrimUi();
-      renderTrimFilmstrip();
-      els.trimOverlay.classList.add('show');
-      document.body.style.overflow = 'hidden';
-      setTimeout(() => {
-        try { els.trimVideo.currentTime = trimStart || 0; } catch {}
-      }, 80);
-    }
-
-    function closeTrimModal({ restore = false } = {}) {
-      if (restore) setTrimWindow(trimStartBeforeModal, trimEndBeforeModal);
-      els.trimOverlay.classList.remove('show');
-      document.body.style.overflow = '';
-      try { els.trimVideo.pause(); } catch {}
-      updateTimingLabel();
-    }
-
-    function clearVideoFile() {
-      videoFile = null;
-      videoDuration = 0;
-      trimStart = 0;
-      trimEnd = 0;
-      if (videoObjectUrl) URL.revokeObjectURL(videoObjectUrl);
-      videoObjectUrl = '';
-      els.videoDrop.classList.remove('has-video', 'drag-over');
-      els.videoThumb.removeAttribute('src');
-      els.videoThumb.load();
-      els.videoName.textContent = 'Uploaded video';
-      els.videoTiming.textContent = '0.0s - 0.0s';
-      setStatus('');
-    }
-
-    function setVideoFile(file) {
-      if (!file || !String(file.type || '').startsWith('video/')) {
-        setStatus('Please upload a video file.', 'bad');
+  function walk(x, depth = 0, trusted = false) {
+    if (!x || depth > 8 || urls.length >= 4) return;
+    if (typeof x === 'string') {
+      if (!trusted) return;
+      const parsed = safeJson(x);
+      if (parsed && typeof parsed === 'object' && Object.keys(parsed).length) {
+        walk(parsed, depth + 1, true);
         return;
       }
-      videoFile = file;
-      if (videoObjectUrl) URL.revokeObjectURL(videoObjectUrl);
-      videoObjectUrl = URL.createObjectURL(file);
-      els.videoDrop.classList.remove('drag-over');
-      els.videoDrop.classList.add('has-video');
-      els.videoThumb.src = videoObjectUrl;
-      els.videoName.textContent = file.name || 'Uploaded video';
-      const probe = document.createElement('video');
-      probe.preload = 'metadata';
-      probe.src = videoObjectUrl;
-      probe.onloadedmetadata = () => {
-        videoDuration = Number.isFinite(probe.duration) ? probe.duration : 0;
-        if (videoDuration > 180.05) {
-          clearVideoFile();
-          setStatus('Upload a video up to 3 minutes.', 'bad');
-          return;
-        }
-        trimStart = 0;
-        trimEnd = Math.min(10, videoDuration || 10);
-        updateTimingLabel();
-        if (videoDuration > 10.05) openTrimModal();
-      };
-      probe.onerror = () => setStatus('Could not read this video duration.', 'bad');
-      setStatus('');
+      const matches = x.match(/https?:\/\/[^\s"'<>]+/gi);
+      if (matches) matches.forEach(push);
+      return;
     }
-
-    function addReferenceImages(fileList) {
-      const incoming = Array.from(fileList || []).filter((file) => String(file.type || '').startsWith('image/'));
-      imageFiles = imageFiles.concat(incoming).slice(0, 5);
-      renderImages();
+    if (Array.isArray(x)) {
+      for (const item of x) walk(item, depth + 1, trusted || depth === 0);
+      return;
     }
-
-    function renderImages() {
-      els.imageGrid.querySelectorAll('img[data-object-url]').forEach((img) => URL.revokeObjectURL(img.dataset.objectUrl));
-      els.imageGrid.innerHTML = '';
-      els.imageDrop.classList.toggle('has-images', imageFiles.length > 0);
-      imageFiles.forEach((file, index) => {
-        const item = document.createElement('div');
-        item.className = 'image-thumb';
-        const img = document.createElement('img');
-        const objectUrl = URL.createObjectURL(file);
-        img.src = objectUrl;
-        img.dataset.objectUrl = objectUrl;
-        img.alt = `Reference ${index + 1}`;
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'remove';
-        remove.setAttribute('aria-label', 'Remove reference image');
-        remove.addEventListener('click', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          imageFiles.splice(index, 1);
-          renderImages();
-        });
-        item.appendChild(img);
-        item.appendChild(remove);
-        els.imageGrid.appendChild(item);
-      });
-      if (imageFiles.length > 0 && imageFiles.length < 5) {
-        const addTile = document.createElement('button');
-        addTile.type = 'button';
-        addTile.className = 'add-image-tile';
-        addTile.innerHTML = '<div><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M5 20h14"></path></svg></span><small>Add image</small></div>';
-        addTile.addEventListener('click', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          els.referenceImages.click();
-        });
-        els.imageGrid.appendChild(addTile);
+    if (typeof x === 'object') {
+      for (const [rawKey, child] of Object.entries(x)) {
+        const key = String(rawKey || '');
+        const nextTrusted = trusted || outputKeys.has(key);
+        if (!nextTrusted && !trusted && blockedKeys.test(key)) continue;
+        if (nextTrusted || containerKeys.has(key)) walk(child, depth + 1, nextTrusted);
       }
     }
+  }
 
-    async function uploadFiles(files, label) {
-      if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
-        throw new Error('Upload service is not available on this page.');
-      }
-      const out = [];
-      for (const file of files) {
-        setStatus(`Uploading ${label}...`);
-        const uploaded = await window.kieUploadBridge.upload(file, { bucket:'video' });
-        if (!uploaded || !uploaded.publicUrl) throw new Error('Upload did not return a public URL.');
-        out.push(uploaded.publicUrl);
-      }
-      return out;
-    }
+  walk(value);
+  return urls.slice(0, 4);
+}
 
-    async function runVideoEdit() {
-      const prompt = String(els.prompt.value || '').trim();
-      if (!videoFile) {
-        setStatus('Upload a video first.', 'bad');
-        return;
-      }
-      if (!prompt) {
-        setStatus('Write the edit prompt first.', 'bad');
-        return;
-      }
-      if (!trimEnd || trimEnd <= trimStart) {
-        setStatus('Choose a valid video segment first.', 'bad');
-        return;
-      }
-      const { user, token } = await getUserAndToken();
-      if (!user) {
-        setStatus('Please log in first.', 'bad');
-        if (window.HansoraHeader && typeof window.HansoraHeader.openAuth === 'function') window.HansoraHeader.openAuth();
-        return;
-      }
-      els.run.disabled = true;
-      try {
-        const currentCredits = window.HansoraHeader && typeof window.HansoraHeader.getCurrentCredits === 'function'
-          ? Number(String(window.HansoraHeader.getCurrentCredits()).replace(/[^0-9.]/g, '') || 0)
-          : 0;
-        if (currentCredits && currentCredits < runCost()) {
-          setStatus(`Not enough credits. Need ${runCost()} credits.`, 'bad');
-          return;
-        }
-        const runId = `${user.id}-${Date.now()}`;
-        const videoUrls = await uploadFiles([videoFile], 'video');
-        const imageUrls = imageFiles.length ? await uploadFiles(imageFiles, 'reference images') : [];
-        const start = Number(trimStart.toFixed(3));
-        const ends = Number(trimEnd.toFixed(3));
-        const length = Math.max(1, ends - start);
-        const duration = [4, 6, 8, 10].find((value) => value >= length) || 10;
-        setStatus('Submitting video edit request...');
-        const body = {
-          uid:user.id,
-          user_id:user.id,
-          run_id:runId,
-          source_feature:'video-edit',
-          prompt,
-          aspect_ratio:aspectRatio,
-          resolution:resolution === '4K' ? '4k' : '1080p',
-          duration,
-          image_urls:imageUrls,
-          video_url:videoUrls[0],
-          video_original_duration:Number((videoDuration || 0).toFixed(3)),
-          video_start:start,
-          video_end:ends,
-          video_list:[{ url:videoUrls[0], start, ends }]
-        };
-        const res = await fetch('/.netlify/functions/run-video-edit-gemini-omni', {
-          method:'POST',
-          headers:Object.assign(
-            { 'Content-Type':'application/json', 'X-USER-ID':user.id },
-            token ? { Authorization:'Bearer ' + token } : {}
-          ),
-          body:JSON.stringify(body)
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.ok) {
-          throw new Error(data.error || data.message || (data.details && JSON.stringify(data.details)) || `Request failed (${res.status})`);
-        }
-        if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function' && data.credits !== undefined) {
-          window.HansoraHeader.setCredits(data.credits);
-        }
-        if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') {
-          window.HansoraHeader.startCreditsPolling(90000, 1500);
-        }
-        setStatus('Request submitted. Your video edit is processing.', 'good');
-        showProcessingCard({ userId:user.id, runId:data.run_id || runId, taskId:data.taskId || data.id || '', prompt });
-        setTimeout(loadRecentGenerations, 1200);
-      } catch (error) {
-        console.error('Video edit run failed', error);
-        setStatus(String(error && error.message || error), 'bad');
-      } finally {
-        els.run.disabled = false;
-      }
-    }
-
-    function wireDrop(drop, input, handler) {
-      drop.addEventListener('click', (event) => {
-        if (event.target.closest('button')) return;
-        input.click();
-      });
-      drop.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          if (event.target.closest('button')) return;
-          event.preventDefault();
-          input.click();
-        }
-      });
-      ['dragenter','dragover'].forEach((name) => {
-        drop.addEventListener(name, (event) => {
-          event.preventDefault();
-          drop.classList.add('drag-over');
-        });
-      });
-      ['dragleave','drop'].forEach((name) => {
-        drop.addEventListener(name, (event) => {
-          event.preventDefault();
-          drop.classList.remove('drag-over');
-        });
-      });
-      drop.addEventListener('drop', (event) => handler(event.dataTransfer.files));
-    }
-
-    els.sourceVideo.addEventListener('change', (event) => {
-      const file = event.target.files && event.target.files[0];
-      setVideoFile(file);
-      event.target.value = '';
-    });
-    els.referenceImages.addEventListener('change', (event) => {
-      addReferenceImages(event.target.files);
-      event.target.value = '';
-    });
-    wireDrop(els.videoDrop, els.sourceVideo, (files) => setVideoFile(Array.from(files || [])[0]));
-    wireDrop(els.imageDrop, els.referenceImages, addReferenceImages);
-    els.changeTrim.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      openTrimModal();
-    });
-    els.clearVideo.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      clearVideoFile();
-    });
-    els.trimStrip.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
-      if (event.target === els.trimStartHandle) activeTrimDrag = 'start';
-      else if (event.target === els.trimEndHandle) activeTrimDrag = 'end';
-      else activeTrimDrag = 'window';
-      els.trimStrip.setPointerCapture && els.trimStrip.setPointerCapture(event.pointerId);
-      moveTrimHandle(activeTrimDrag, secondsFromPointer(event));
-    });
-    els.trimStrip.addEventListener('pointermove', (event) => {
-      if (!activeTrimDrag) return;
-      event.preventDefault();
-      moveTrimHandle(activeTrimDrag, secondsFromPointer(event));
-    });
-    ['pointerup','pointercancel','lostpointercapture'].forEach((name) => {
-      els.trimStrip.addEventListener(name, () => { activeTrimDrag = ''; });
-    });
-    ['dragstart','selectstart'].forEach((name) => {
-      els.trimStrip.addEventListener(name, (event) => event.preventDefault());
-      els.trimFilm.addEventListener(name, (event) => event.preventDefault());
-    });
-    els.trimVideo.addEventListener('timeupdate', () => {
-      if (els.trimOverlay.classList.contains('show') && els.trimVideo.currentTime >= trimEnd) {
-        els.trimVideo.currentTime = trimStart;
-        els.trimVideo.pause();
-      }
-    });
-    els.trimCancel.addEventListener('click', () => closeTrimModal({ restore:true }));
-    els.trimConfirm.addEventListener('click', () => closeTrimModal());
-    document.querySelectorAll('#aspectRow button').forEach((button) => {
-      button.addEventListener('click', () => {
-        document.querySelectorAll('#aspectRow button').forEach((item) => item.classList.remove('active'));
-        button.classList.add('active');
-        aspectRatio = button.dataset.aspect || '16:9';
-      });
-    });
-    document.querySelectorAll('#resolutionRow button').forEach((button) => {
-      button.addEventListener('click', () => {
-        document.querySelectorAll('#resolutionRow button').forEach((item) => item.classList.remove('active'));
-        button.classList.add('active');
-        resolution = button.dataset.resolution || '1080p';
-        updateRunLabel();
-      });
-    });
-    els.run.addEventListener('click', runVideoEdit);
-    document.getElementById('previewClose').addEventListener('click', closePreview);
-    document.getElementById('previewOverlay').addEventListener('click', (event) => {
-      if (event.target.id === 'previewOverlay') closePreview();
-    });
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && document.getElementById('previewOverlay').classList.contains('show')) closePreview();
-      if (event.key === 'Escape' && els.trimOverlay.classList.contains('show')) closeTrimModal({ restore:true });
-    });
-
-    updateRunLabel();
-    forceCompactResultUi(document);
-    new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (node.nodeType === 1) forceCompactResultUi(node);
-        });
-      });
-    }).observe(document.body, { childList:true, subtree:true });
-    setInterval(() => forceCompactResultUi(document), 1500);
-    loadRecentGenerations();
-    sb.auth.onAuthStateChange(() => setTimeout(loadRecentGenerations, 250));
-  </script>
-</body>
-</html>
+function messageOf(error) {
+  return error && error.message ? error.message : String(error);
+}
