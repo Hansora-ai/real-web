@@ -400,6 +400,7 @@ export default async (request, context) => {
         <a href="/kid-cartoon.html">Kid Cartoon</a>
         <a href="/video-edit.html">Video Edit</a>
         <a href="/background-change.html">Background Change</a>
+        <a href="/video-relight.html">Video Relight</a>
         <a href="/upscale.html?mode=video">Video upscale</a>
         <a href="/lipsync.html">Lipsync Avatar</a>
         <a href="/audio.html?tool=text-to-speech">Text to speech</a>
