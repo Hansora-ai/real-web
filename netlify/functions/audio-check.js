@@ -8,6 +8,8 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const UG_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/user_generations` : "";
 const PROFILES_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
+const HISTORY_BUCKET = process.env.KIE_HISTORY_BUCKET || "generation-history";
+const MAX_ARCHIVE_BYTES = Math.max(1, Number(process.env.KIE_HISTORY_MAX_MB || 200)) * 1024 * 1024;
 
 exports.handler = async (event) => {
   try {
@@ -60,8 +62,8 @@ exports.handler = async (event) => {
     }
 
     if (state.done && state.audioUrls.length) {
-      await markDone({ row, ids, state });
-      return json(200, { ok: true, status: "done", result_url: state.audioUrls[0], audio_url: state.audioUrls[0], audio_urls: state.audioUrls, image_urls: state.imageUrls || [] });
+      const savedState = await markDone({ row, ids, state });
+      return json(200, { ok: true, status: "done", result_url: savedState.audioUrls[0], audio_url: savedState.audioUrls[0], audio_urls: savedState.audioUrls, image_urls: savedState.imageUrls || [] });
     }
 
     if (isKieAudioStale(row, audioKind)) {
@@ -204,6 +206,11 @@ async function fetchFirstFinished(paths, excludeUrls = []) {
 }
 
 async function markDone({ row, ids, state }) {
+  const audioArchive = await archiveResultUrls({ row, urls: state.audioUrls, prefix: "audio" });
+  const imageArchive = await archiveResultUrls({ row, urls: state.imageUrls || [], prefix: "image" });
+  const savedAudioUrls = audioArchive.urls.length ? audioArchive.urls : state.audioUrls;
+  const savedImageUrls = imageArchive.urls.length ? imageArchive.urls : state.imageUrls || [];
+  const archiveErrors = [...audioArchive.errors, ...imageArchive.errors];
   const meta = {
     ...(row.meta && typeof row.meta === "object" ? row.meta : {}),
     run_id: ids.run_id || row.meta?.run_id || "",
@@ -211,17 +218,139 @@ async function markDone({ row, ids, state }) {
     status: "ready",
     failed: false,
     error: null,
-    audio_url: state.audioUrls[0],
-    audio_urls: state.audioUrls,
-    image_urls: state.imageUrls || [],
+    audio_url: savedAudioUrls[0],
+    audio_urls: savedAudioUrls,
+    image_urls: savedImageUrls,
+    original_audio_url: state.audioUrls[0],
+    original_audio_urls: state.audioUrls,
+    original_image_urls: state.imageUrls || [],
     suno_complete: !!state.suno_complete,
-    completed_at: new Date().toISOString()
+    completed_at: new Date().toISOString(),
+    ...(audioArchive.paths.length || imageArchive.paths.length ? {
+      storage_bucket: HISTORY_BUCKET,
+      storage_path: audioArchive.paths[0] || imageArchive.paths[0],
+      storage_paths: audioArchive.paths,
+      image_storage_paths: imageArchive.paths,
+      archived_at: new Date().toISOString(),
+      archive_errors: archiveErrors
+    } : {
+      archive_errors: archiveErrors.length ? archiveErrors : ["archive_failed"]
+    })
   };
   await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
     method: "PATCH",
     headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=minimal" },
-    body: JSON.stringify({ result_url: state.audioUrls[0], meta })
+    body: JSON.stringify({ result_url: savedAudioUrls[0], meta })
   });
+  return { ...state, audioUrls: savedAudioUrls, imageUrls: savedImageUrls };
+}
+
+async function archiveResultUrls({ row, urls, prefix }) {
+  const archivedUrls = [];
+  const paths = [];
+  const errors = [];
+  for (let index = 0; index < urls.slice(0, 4).length; index += 1) {
+    const sourceUrl = urls[index];
+    const archive = await archiveResultUrl({ row, sourceUrl, index, prefix });
+    archivedUrls.push(archive.ok ? archive.publicUrl : sourceUrl);
+    if (archive.ok) paths.push(archive.path);
+    else errors.push(archive.error || `${prefix || "media"}_${index + 1}_archive_failed`);
+  }
+  return { urls: archivedUrls, paths, errors };
+}
+
+async function archiveResultUrl({ row, sourceUrl, index, prefix }) {
+  if (!SUPABASE_URL || !SERVICE_KEY || !row?.id || !row?.user_id || !sourceUrl) {
+    return { ok: false, error: "missing_archive_config" };
+  }
+  try {
+    const sourceRes = await fetch(sourceUrl);
+    if (!sourceRes.ok) return { ok: false, error: `source_download_${sourceRes.status}` };
+
+    const contentLength = Number(sourceRes.headers.get("content-length") || 0);
+    if (contentLength > MAX_ARCHIVE_BYTES) return { ok: false, error: "archive_file_too_large" };
+
+    const bytes = await sourceRes.arrayBuffer();
+    if (!bytes.byteLength) return { ok: false, error: "archive_empty_file" };
+    if (bytes.byteLength > MAX_ARCHIVE_BYTES) return { ok: false, error: "archive_file_too_large" };
+
+    const fallbackType = prefix === "image" ? "image/png" : "audio/mpeg";
+    const contentType = normalizeArchiveContentType(sourceRes.headers.get("content-type"), sourceUrl, bytes, fallbackType);
+    const extension = extensionForArchive(contentType, sourceUrl);
+    const suffix = index > 0 ? `-${index + 1}` : "";
+    const safePrefix = String(prefix || "media").replace(/[^a-z0-9_-]/gi, "").toLowerCase() || "media";
+    const path = `${row.user_id}/${row.id}-${safePrefix}${suffix}.${extension}`;
+    const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(HISTORY_BUCKET)}/${encodedPath}`, {
+      method: "POST",
+      headers: {
+        ...sb(),
+        "Content-Type": contentType,
+        "x-upsert": "true"
+      },
+      body: Buffer.from(bytes)
+    });
+    if (!uploadRes.ok) {
+      const text = await uploadRes.text().catch(() => "");
+      return { ok: false, error: `archive_upload_${uploadRes.status}${text ? `:${text.slice(0, 180)}` : ""}` };
+    }
+    return {
+      ok: true,
+      path,
+      publicUrl: `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(HISTORY_BUCKET)}/${encodedPath}`
+    };
+  } catch (error) {
+    return { ok: false, error: messageOf(error) };
+  }
+}
+
+function normalizeArchiveContentType(value, url, bytes, fallbackType) {
+  const type = String(value || "").split(";")[0].trim().toLowerCase();
+  if (/^(audio|image|video)\//.test(type) && type !== "image/svg+xml") return type;
+  const clean = String(url || "").split("?")[0].split("#")[0].toLowerCase();
+  if (/\.mp3$/.test(clean)) return "audio/mpeg";
+  if (/\.wav$/.test(clean)) return "audio/wav";
+  if (/\.m4a$/.test(clean)) return "audio/mp4";
+  if (/\.aac$/.test(clean)) return "audio/aac";
+  if (/\.ogg$/.test(clean)) return "audio/ogg";
+  if (/\.flac$/.test(clean)) return "audio/flac";
+  if (/\.webm$/.test(clean)) return "video/webm";
+  if (/\.mp4$/.test(clean)) return "video/mp4";
+  if (/\.png$/.test(clean)) return "image/png";
+  if (/\.(jpg|jpeg)$/.test(clean)) return "image/jpeg";
+  if (/\.webp$/.test(clean)) return "image/webp";
+  if (/\.gif$/.test(clean)) return "image/gif";
+  const head = new Uint8Array(bytes || new ArrayBuffer(0)).slice(0, 16);
+  if (head[0] === 0x49 && head[1] === 0x44 && head[2] === 0x33) return "audio/mpeg";
+  if (head[0] === 0xff && (head[1] & 0xe0) === 0xe0) return "audio/mpeg";
+  if (head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46 && head[8] === 0x57 && head[9] === 0x41 && head[10] === 0x56 && head[11] === 0x45) return "audio/wav";
+  if (head[0] === 0x4f && head[1] === 0x67 && head[2] === 0x67 && head[3] === 0x53) return "audio/ogg";
+  if (head[0] === 0x66 && head[1] === 0x4c && head[2] === 0x61 && head[3] === 0x43) return "audio/flac";
+  if (head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47) return "image/png";
+  if (head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff) return "image/jpeg";
+  if (head[0] === 0x47 && head[1] === 0x49 && head[2] === 0x46) return "image/gif";
+  if (head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46 && head[8] === 0x57 && head[9] === 0x45 && head[10] === 0x42 && head[11] === 0x50) return "image/webp";
+  return fallbackType || "audio/mpeg";
+}
+
+function extensionForArchive(contentType, url) {
+  const clean = String(url || "").split("?")[0].split("#")[0].toLowerCase();
+  const match = clean.match(/\.([a-z0-9]+)$/);
+  if (match && /^(mp3|wav|m4a|aac|ogg|flac|mp4|webm|png|jpg|jpeg|webp|gif)$/.test(match[1])) {
+    return match[1] === "jpeg" ? "jpg" : match[1];
+  }
+  if (contentType === "audio/wav") return "wav";
+  if (contentType === "audio/mp4" || contentType === "audio/x-m4a") return "m4a";
+  if (contentType === "audio/aac") return "aac";
+  if (contentType === "audio/ogg") return "ogg";
+  if (contentType === "audio/flac") return "flac";
+  if (contentType === "video/webm") return "webm";
+  if (contentType === "video/mp4") return "mp4";
+  if (contentType === "image/png") return "png";
+  if (contentType === "image/jpeg") return "jpg";
+  if (contentType === "image/webp") return "webp";
+  if (contentType === "image/gif") return "gif";
+  return "mp3";
 }
 
 async function failAndRefundOnce({ row, ids, reason }) {
