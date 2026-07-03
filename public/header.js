@@ -34,6 +34,7 @@
   const IMAGE_MENU_MODELS = [
     { label: 'GPT Image 2', id: 'gpt-image-2', icon: 'G2', note: 'Latest image generation' },
     { label: 'Nano Banana 2', id: 'nano-banana-2', icon: 'N2', note: 'Fast image edits' },
+    { label: 'Nano Banana 2 Lite', id: 'nano-banana-2-lite', icon: 'NL', note: 'Low-cost 1K image edits' },
     { label: 'Nano Banana Pro', id: 'nano-banana-pro', icon: 'NP', note: 'Pro image generation' },
     { label: 'Seedream 5.0 Lite', id: 'seedream-5-lite', icon: 'S', note: 'Light creative images' },
     { label: 'Grok Image', id: 'grok-image', icon: 'X', note: 'Stylized image model' },
@@ -687,6 +688,12 @@
       .hansora-mega-video .hansora-mega-grid{
         grid-template-columns:repeat(3,minmax(0,1fr));
       }
+      .hansora-mega-image{
+        width:min(1220px,calc(100vw - 32px));
+      }
+      .hansora-mega-image .hansora-mega-grid{
+        grid-template-columns:repeat(4,minmax(0,1fr));
+      }
       .hansora-mega-compact{
         width:min(560px,calc(100vw - 32px));
         grid-template-columns:1fr;
@@ -772,6 +779,7 @@
       @media (max-width:900px){
         .site-header .nav-links{ position:static; transform:none; }
         .hansora-mega-menu{ left:0; transform:translateX(-16px) translateY(8px); grid-template-columns:1fr; width:min(92vw,520px); max-height:72vh; overflow:auto; }
+        .hansora-mega-image .hansora-mega-grid{ grid-template-columns:1fr; }
         .nav-links .hansora-nav-item:hover .hansora-mega-menu,
         .nav-links .hansora-nav-item:focus-within .hansora-mega-menu{ transform:translateX(-16px) translateY(0); }
       }
@@ -1019,9 +1027,9 @@
           <nav class="nav-links" aria-label="Primary navigation">
             ${renderNavMenu('Image', '/search-models.html', {
               label: 'Image tools and models',
+              className: 'hansora-mega-wide hansora-mega-image',
               sections: [
-                { title: 'Image models', items: IMAGE_MENU_MODELS },
-                { title: 'Image tools', items: IMAGE_MENU_TOOLS },
+                { title: 'Image models and tools', items: [...IMAGE_MENU_MODELS, ...IMAGE_MENU_TOOLS] },
               ]
             })}
             ${renderNavMenu('Video', videoLandingHref(cachedCredits), {
