@@ -5266,8 +5266,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        resolutionOptions: ['1K'],
 	        defaultResolution: '1K',
 	        durations: null,
-	        costLabel: '0.05⚡ per job',
-	        minCredits: 0.05
+	        costLabel: '0.5⚡ per job',
+	        minCredits: 0.5
 	      },
 
 	      {
@@ -6976,7 +6976,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      if (!model) return null;
 	      if (model.id === 'nano-banana-pro') return currentResolution === '4K' ? 2 : 1.5;
 	      if (model.id === 'nano-banana-2') return currentResolution === '4K' ? 1.5 : 1;
-	      if (model.id === 'nano-banana-2-lite') return 0.05;
+	      if (model.id === 'nano-banana-2-lite') return 0.5;
 	      if (model.id === 'gpt-image-2') return currentResolution === '4K' ? 1.5 : 1;
       if (model.id === 'wan-2-7-image') return currentWanTier === 'pro' ? 1 : 0.5;
       if (model.id === 'veo31-fast') return currentResolution === '4K' ? 12 : 5;
