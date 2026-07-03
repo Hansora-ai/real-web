@@ -182,7 +182,9 @@ function costFor(body) {
   const hasVideo = !!String(body.video_url || '').trim();
   if (hasVideo) return resolution === '4k' ? 16 : 11;
   const duration = normalizeDuration(body.duration);
-  const table = { 4: 4.5, 6: 6, 8: 7.5, 10: 9 };
+  const table = resolution === '4k'
+    ? { 4: 9, 6: 11, 8: 12, 10: 13 }
+    : { 4: 4.5, 6: 6, 8: 7.5, 10: 9 };
   return table[duration];
 }
 
