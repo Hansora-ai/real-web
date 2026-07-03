@@ -5234,9 +5234,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         costLabel: '1.5⚡ per job',
         minCredits: 1.5
       },
-      {
-        id: 'nano-banana-2',
-        name: 'Nano Banana 2',
+	      {
+	        id: 'nano-banana-2',
+	        name: 'Nano Banana 2',
         emoji: '🍌',
         subtitle: 'Text / (Image) → Image',
         category: 'image',
@@ -5247,12 +5247,31 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         aspectOptions: ['auto', '1:1', '1:4', '1:8', '2:3', '3:2', '3:4', '4:1', '4:3', '4:5', '5:4', '8:1', '9:16', '16:9', '21:9'],
         defaultAspect: 'auto',
         durations: null,
-        costLabel: '1⚡ per job',
-        minCredits: 1
-      },
+	        costLabel: '1⚡ per job',
+	        minCredits: 1
+	      },
+	      {
+	        id: 'nano-banana-2-lite',
+	        name: 'Nano Banana 2 Lite',
+	        emoji: '🍌',
+	        subtitle: 'Text / (Image) → Image',
+	        category: 'image',
+	        description: 'Fast low-cost 1K image generation and editing.',
+	        endpoint: '/.netlify/functions/run-nano-banana-2-lite',
+	        needsImage: false,
+	        maxFiles: 10,
+	        uploadMaxMB: 30,
+	        aspectOptions: ['auto', '1:1', '1:4', '1:8', '2:3', '3:2', '3:4', '4:1', '4:3', '4:5', '5:4', '8:1', '9:16', '16:9', '21:9'],
+	        defaultAspect: 'auto',
+	        resolutionOptions: ['1K'],
+	        defaultResolution: '1K',
+	        durations: null,
+	        costLabel: '0.05⚡ per job',
+	        minCredits: 0.05
+	      },
 
-      {
-        id: 'seedream-4-5',
+	      {
+	        id: 'seedream-4-5',
         name: 'Seedream 4.5',
         emoji: '🎨',
         subtitle: 'Text / (Image) → Image',
@@ -5771,8 +5790,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let currentVeoVariant = 'fast'; // 'fast' | 'quality'
     let uploadedFiles = [];
     // Models that should APPEND images when user uploads again (multi-image support)
-    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'grok-image', 'wan-2-7-image', 'qwen-2']);
-    const IMAGE_MODEL_ORDER = ['gpt-image-2', 'nano-banana-2', 'nano-banana-pro', 'seedream-5-lite', 'grok-image'];
+	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'grok-image', 'wan-2-7-image', 'qwen-2']);
+	    const IMAGE_MODEL_ORDER = ['gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-lite', 'grok-image'];
     const VIDEO_MODEL_ORDER = ['seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function sortModelsForCurrentMode(items) {
@@ -5792,9 +5811,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
     function getModelLogoText(model) {
       const id = String(model?.id || '');
-      if (id === 'gpt-image-2') return 'G2';
-      if (id.includes('gpt')) return 'AI';
-      if (id === 'nano-banana-2') return 'N2';
+	      if (id === 'gpt-image-2') return 'G2';
+	      if (id.includes('gpt')) return 'AI';
+	      if (id === 'nano-banana-2-lite') return 'NL';
+	      if (id === 'nano-banana-2') return 'N2';
       if (id === 'nano-banana-pro') return 'NP';
       if (id.includes('nano')) return 'NB';
       if (id.includes('seedream')) return 'S';
@@ -6767,9 +6787,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         'seedance-2.0-mini': 'seedance20-mini',
         'seedance20-mini': 'seedance20-mini',
         'gemini-omni': 'gemini-omni-video',
-        'geminiomni': 'gemini-omni-video',
-        'gemini-omni-video': 'gemini-omni-video',
-        'veo31': 'veo31-fast',
+	        'geminiomni': 'gemini-omni-video',
+	        'gemini-omni-video': 'gemini-omni-video',
+	        'nano-banana-2-lite': 'nano-banana-2-lite',
+	        'nanobanana2lite': 'nano-banana-2-lite',
+	        'veo31': 'veo31-fast',
         'veo-31': 'veo31-fast',
         'veo-3.1': 'veo31-fast',
         'veo3.1': 'veo31-fast',
@@ -6951,10 +6973,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function getModelCreditValue(model = currentModel) {
-      if (!model) return null;
-      if (model.id === 'nano-banana-pro') return currentResolution === '4K' ? 2 : 1.5;
-      if (model.id === 'nano-banana-2') return currentResolution === '4K' ? 1.5 : 1;
-      if (model.id === 'gpt-image-2') return currentResolution === '4K' ? 1.5 : 1;
+	      if (!model) return null;
+	      if (model.id === 'nano-banana-pro') return currentResolution === '4K' ? 2 : 1.5;
+	      if (model.id === 'nano-banana-2') return currentResolution === '4K' ? 1.5 : 1;
+	      if (model.id === 'nano-banana-2-lite') return 0.05;
+	      if (model.id === 'gpt-image-2') return currentResolution === '4K' ? 1.5 : 1;
       if (model.id === 'wan-2-7-image') return currentWanTier === 'pro' ? 1 : 0.5;
       if (model.id === 'veo31-fast') return currentResolution === '4K' ? 12 : 5;
       if (model.id === 'veo31') return currentResolution === '4K' ? 22 : 17;
@@ -9939,9 +9962,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || 'auto', run_id: runId };
         case 'nano-banana-pro':
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', resolution: (resolution || '1K'), run_id: runId };
-        case 'nano-banana-2':
-          return { urls, prompt: prompt || '.', format: 'png', size: aspect || 'auto', resolution: (resolution || '1K'), google_search: true, run_id: runId };
-        case 'seedream-4-5':
+	        case 'nano-banana-2':
+	          return { urls, prompt: prompt || '.', format: 'png', size: aspect || 'auto', resolution: (resolution || '1K'), google_search: true, run_id: runId };
+	        case 'nano-banana-2-lite':
+	          return { urls, prompt: prompt || '.', format: 'png', size: aspect || 'auto', resolution: '1K', run_id: runId };
+	        case 'seedream-4-5':
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', run_id: runId };
         case 'seedream-5-lite':
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', quality: 'high', run_id: runId };
