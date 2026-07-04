@@ -2018,6 +2018,339 @@
   }
 </style>
 
+<style id="hansora-studio-marquee">
+  /* Fresh from the studio: two auto-scrolling video rows (replaces the old video models mosaic). */
+  .studio-marquee-section .studio-head {
+    margin-bottom: 22px;
+  }
+
+  .studio-rows {
+    display: grid;
+    gap: 14px;
+  }
+
+  .studio-clip {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  }
+
+  .studio-row {
+    display: flex;
+    width: max-content;
+    animation: studioScroll 55s linear infinite;
+    will-change: transform;
+  }
+
+  .studio-row-rev {
+    animation-direction: reverse;
+    animation-duration: 63s;
+  }
+
+  .studio-clip:hover .studio-row {
+    animation-play-state: paused;
+  }
+
+  .studio-set {
+    display: flex;
+    gap: 14px;
+    padding-right: 14px;
+  }
+
+  .studio-card {
+    position: relative;
+    flex: 0 0 auto;
+    width: clamp(250px, 26vw, 384px);
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background:
+      linear-gradient(135deg, rgba(99,102,241,.34), rgba(56,189,248,.16)),
+      #111520;
+    transition: border-color .25s ease, box-shadow .25s ease;
+  }
+
+  .studio-card:hover {
+    border-color: rgba(167,139,250,.62);
+    box-shadow: 0 0 30px rgba(99,102,241,.28);
+  }
+
+  .studio-card video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity .45s ease;
+  }
+
+  .studio-card video.is-on {
+    opacity: 1;
+  }
+
+  @keyframes studioScroll {
+    to { transform: translateX(-50%); }
+  }
+
+  @media (max-width: 740px) {
+    .studio-rows { gap: 10px; }
+    .studio-set { gap: 10px; padding-right: 10px; }
+    .studio-card { width: min(300px, 74vw); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .studio-row { animation: none; }
+    .studio-clip { overflow-x: auto; }
+  }
+</style>
+
+<style id="hansora-pricing-offers-update">
+  /* Pricing offer cards: gradient top line, save pills, strikethrough compare prices. */
+  .price-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 26px 22px 22px;
+    transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+  }
+
+  .price-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: linear-gradient(90deg, #a855f7, #6366f1, #38bdf8);
+    pointer-events: none;
+  }
+
+  .price-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(167,139,250,.55);
+    box-shadow: 0 22px 60px rgba(99,102,241,.2);
+  }
+
+  .price-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .price-top-row small {
+    color: var(--muted);
+    font-size: .98rem;
+    font-weight: 850;
+  }
+
+  .save-pill {
+    flex: 0 0 auto;
+    padding: 6px 14px;
+    border: 1px solid rgba(52,211,153,.45);
+    border-radius: 999px;
+    background: rgba(52,211,153,.12);
+    color: #6ee7b7;
+    font-size: .82rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .price-card h3 {
+    margin: 0 0 12px;
+    font-size: 2.7rem;
+    line-height: 1;
+  }
+
+  .price-card h3 em {
+    font-style: normal;
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: var(--text);
+  }
+
+  .price-line {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 0 0 8px;
+  }
+
+  .price-now {
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 950;
+    line-height: 1;
+  }
+
+  .price-was {
+    color: var(--soft);
+    font-size: 1.15rem;
+    font-weight: 850;
+    text-decoration: line-through;
+  }
+
+  .price-note-line {
+    margin: 0 0 20px;
+    color: var(--muted);
+    font-size: .98rem;
+    font-weight: 800;
+  }
+
+  .price-card .btn {
+    width: 100%;
+    margin-top: auto;
+  }
+
+  .price-card.popular {
+    border-color: rgba(167,139,250,.62);
+    background: linear-gradient(180deg, rgba(124,92,255,.15), rgba(255,255,255,.03));
+    box-shadow: inset 0 0 0 1px rgba(167,139,250,.15), 0 20px 60px rgba(99,102,241,.2);
+  }
+
+  .price-card .plan-badge {
+    z-index: 2;
+  }
+
+  /* "Credits do not expire" spotlight badge under the pricing heading. */
+  .pricing-sub { margin: 18px auto 30px; }
+
+  .no-expire-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 28px;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background:
+      linear-gradient(180deg, rgba(19,23,40,.97), rgba(11,14,24,.97)) padding-box,
+      linear-gradient(90deg, #a855f7, #38bdf8, #e879f9, #a855f7) border-box;
+    background-size: auto, 260% 100%;
+    color: #fff;
+    font-size: clamp(1rem, 2.2vw, 1.22rem);
+    font-weight: 900;
+    letter-spacing: .04em;
+    animation: expireBorderFlow 5s linear infinite, expireGlow 2.8s ease-in-out infinite;
+  }
+
+  .no-expire-badge i {
+    font-style: normal;
+    color: #79e7ff;
+    font-size: .95em;
+    text-shadow: 0 0 14px rgba(121,231,255,.9);
+  }
+
+  @keyframes expireBorderFlow {
+    to { background-position: 0 0, 260% 0; }
+  }
+
+  @keyframes expireGlow {
+    0%, 100% { box-shadow: 0 0 26px rgba(124,92,255,.32); }
+    50% { box-shadow: 0 0 48px rgba(56,189,248,.5); }
+  }
+
+  /* Final "Ready to create?" call-to-action section. */
+  main { padding-bottom: 0; }
+
+  .ready-cta-section {
+    position: relative;
+    overflow: hidden;
+    margin-top: 0;
+    padding: clamp(72px, 10vw, 140px) 0;
+    text-align: center;
+    border-top: 1px solid var(--line);
+    background:
+      radial-gradient(900px 460px at 50% 118%, rgba(124,92,255,.32), transparent 68%),
+      radial-gradient(700px 380px at 50% -10%, rgba(56,189,248,.12), transparent 66%);
+  }
+
+  .ready-ghost {
+    position: absolute;
+    left: 50%;
+    top: clamp(4px, 2vw, 18px);
+    transform: translateX(-50%);
+    font-size: clamp(4rem, 16vw, 13rem);
+    font-weight: 950;
+    line-height: 1;
+    letter-spacing: .02em;
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(255,255,255,.07);
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .ready-cta-section h2 {
+    position: relative;
+    margin: 0;
+    font-size: clamp(2.6rem, 8vw, 6.4rem);
+    line-height: .95;
+    font-weight: 950;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .ready-grad {
+    display: inline-block;
+    background: linear-gradient(92deg, #55d6ff, #9b7cff 45%, #38c7f5 80%, #55d6ff);
+    background-size: 240% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: readyFlow 7s linear infinite;
+  }
+
+  @keyframes readyFlow {
+    to { background-position: 240% center; }
+  }
+
+  .ready-cta-section p {
+    position: relative;
+    max-width: 660px;
+    margin: 22px auto 0;
+    padding: 0 14px;
+    color: var(--muted);
+    font-size: clamp(1.02rem, 2vw, 1.18rem);
+  }
+
+  .ready-cta-actions {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 32px;
+    padding: 0 14px;
+  }
+
+  .ready-cta-actions .btn {
+    min-width: 200px;
+    min-height: 52px;
+  }
+
+  .ready-cta-actions .btn-primary {
+    animation: readyPulse 2.8s ease-in-out infinite;
+  }
+
+  @keyframes readyPulse {
+    0%, 100% { box-shadow: 0 16px 42px rgba(99,102,241,.32); }
+    50% { box-shadow: 0 18px 64px rgba(124,92,255,.6), 0 0 30px rgba(56,189,248,.32); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .no-expire-badge,
+    .ready-grad,
+    .ready-cta-actions .btn-primary {
+      animation: none;
+    }
+  }
+</style>
+
 </head>
 <body>
 <noscript><img alt="" height="1" src="https://www.facebook.com/tr?id=1336278884948294&amp;ev=PageView&amp;noscript=1" style="display:none" width="1" loading="lazy" decoding="async"><img alt="" height="1" src="https://www.facebook.com/tr?id=970925395839377&amp;ev=PageView&amp;noscript=1" style="display:none" width="1" loading="lazy" decoding="async"></noscript>
@@ -2219,236 +2552,55 @@
 </div>
 </div>
 </section>
-<section class="section" id="video-models">
+<section class="section studio-marquee-section" id="video-models">
 <div class="shell">
-<div class="model-section">
-<a class="slot model-info-card" href="/search-models.html?model=seedance-2">
-  <img
-    alt="Video models info image"
-    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Copy%20of%20WEBSITE%20(1200%20x%201200%20px).png" loading="lazy" decoding="async">
-  <span class="slot-label">
-    <span>Info image</span>
-    <strong>Video models</strong>
-  </span>
-</a>
-<div class="model-grid video-grid media-mosaic mobile-mosaic-only">
-  <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-06.webp"
-        aria-label="Text to video"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-06.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Text to video</strong>
-        <span>16:9</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-07.webp"
-        aria-label="Image to video"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-07.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Image to video</strong>
-        <span>16:9</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-08.webp"
-        aria-label="Vertical ad"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-08.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Vertical ad</strong>
-        <span>9:16</span>
-      </span>
-    </a>
-  </div>
-  <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-09.webp"
-        aria-label="Cinematic scene"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-09.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Cinematic scene</strong>
-        <span>Video</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-10.webp"
-        aria-label="Social crop"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-10.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Social crop</strong>
-        <span>1:1</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-11.webp"
-        aria-label="Video edit"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-11.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Video edit</strong>
-        <span>Video</span>
-      </span>
-    </a>
-  </div>
-</div><div class="model-grid video-grid media-mosaic-desktop desktop-mosaic-only">
-  <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-06.webp"
-        aria-label="Text to video"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-06.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Text to video</strong>
-        <span>16:9</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-08.webp"
-        aria-label="Image to video"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-08.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Image to video</strong>
-        <span>16:9</span>
-      </span>
-    </a>
-  </div>
-  <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-07.webp"
-        aria-label="Vertical ad"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-07.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Vertical ad</strong>
-        <span>9:16</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-10.webp"
-        aria-label="Cinematic scene"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-10.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Cinematic scene</strong>
-        <span>Video</span>
-      </span>
-    </a>
-  </div>
-  <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-12.webp"
-        aria-label="Social crop"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-12.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Social crop</strong>
-        <span>1:1</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-11.webp"
-        aria-label="Video edit"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-11.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Video edit</strong>
-        <span>Video</span>
-      </span>
-    </a>
-  </div>
-  <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-09.webp"
-        aria-label="Preview 07"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-09.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Preview 07</strong>
-        <span>1:1</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-13.webp"
-        aria-label="Preview 08"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-13.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Preview 08</strong>
-        <span>Video</span>
-      </span>
-    </a>
-  </div>
+<div class="section-head studio-head">
+<div>
+<span class="kicker">Made with Hansora</span>
+<h2>Fresh from the studio</h2>
+</div>
+<a class="btn btn-ghost" href="/search-models.html?model=seedance-2">Try video models</a>
+</div>
+</div>
+<div class="studio-rows">
+<div class="studio-clip">
+<div class="studio-row">
+<div class="studio-set">
+<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094412_fbc2c33e-b861-4744-8aa3-13047b3b83c3.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094453_5a14ff6f-cf81-4420-89ff-ca720dc45d2e.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094457_f398a727-e1de-4224-8e05-f8bf6daa4fd8.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094521_92c1e259-dd60-4db1-b40d-97a68bcc2ea0.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094622_41c4ed95-c7c2-49a8-933e-1cec2ea4e6d9.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094630_a32a5fd2-2e9b-43ea-b8c4-47d8da57ce5c.mp4"></video></a>
+</div>
+<div class="studio-set" aria-hidden="true">
+<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094412_fbc2c33e-b861-4744-8aa3-13047b3b83c3.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094453_5a14ff6f-cf81-4420-89ff-ca720dc45d2e.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094457_f398a727-e1de-4224-8e05-f8bf6daa4fd8.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094521_92c1e259-dd60-4db1-b40d-97a68bcc2ea0.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094622_41c4ed95-c7c2-49a8-933e-1cec2ea4e6d9.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094630_a32a5fd2-2e9b-43ea-b8c4-47d8da57ce5c.mp4"></video></a>
+</div>
+</div>
+</div>
+<div class="studio-clip">
+<div class="studio-row studio-row-rev">
+<div class="studio-set">
+<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260414_170749_3474b08b-9dc4-49e6-b6e2-4af862eff61d.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_145850_1c3033a9-fc81-4568-b2dc-30147f01cb3f.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_152145_3ab61025-269f-4fd5-a6a3-229437ae237c.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_165534_93d73350-b4ed-4b14-b0a9-7c75bfa7f1a4.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_174336_b12e810c-f18f-441c-8da9-3081b622a409.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_171940_af1f119c-1420-4fdf-b74c-29f888fae29e.mp4"></video></a>
+</div>
+<div class="studio-set" aria-hidden="true">
+<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260414_170749_3474b08b-9dc4-49e6-b6e2-4af862eff61d.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_145850_1c3033a9-fc81-4568-b2dc-30147f01cb3f.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_152145_3ab61025-269f-4fd5-a6a3-229437ae237c.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_165534_93d73350-b4ed-4b14-b0a9-7c75bfa7f1a4.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_174336_b12e810c-f18f-441c-8da9-3081b622a409.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_171940_af1f119c-1420-4fdf-b74c-29f888fae29e.mp4"></video></a>
+</div>
 </div>
 </div>
 </div>
@@ -2977,32 +3129,36 @@
 <section class="section pricing" id="pricing">
 <div class="shell">
 <h2>Buy credits</h2>
-<p class="pricing-sub">Credits do not expire.</p>
+<p class="pricing-sub"><span class="no-expire-badge"><i>✦</i>Credits Never Expire<i>✦</i></span></p>
 <div class="price-grid">
 <article class="price-card">
-<small>100 + 0 credits</small>
-<h3>100</h3>
-<p>$9.90</p>
+<div class="price-top-row"><small>100 + 0 credits</small><span class="save-pill">Save $5</span></div>
+<h3>100 <em>credits</em></h3>
+<p class="price-line"><span class="price-now">$9.99</span><span class="price-was">$14.99</span></p>
+<p class="price-note-line">Launch discount price</p>
 <a class="btn btn-primary" href="https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
 </article>
 <article class="price-card popular">
-<span class="plan-badge">Popular</span>
-<small>200 + 20 credits</small>
-<h3>220</h3>
-<p>$19.90</p>
+<span class="plan-badge">Most Popular</span>
+<div class="price-top-row"><small>200 + 20 credits</small><span class="save-pill">Save $10</span></div>
+<h3>220 <em>credits</em></h3>
+<p class="price-line"><span class="price-now">$19.99</span><span class="price-was">$29.99</span></p>
+<p class="price-note-line">Includes 20 gift credits</p>
 <a class="btn btn-primary" href="https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
 </article>
 <article class="price-card">
-<small>500 + 50 credits</small>
-<h3>550</h3>
-<p>$49.90</p>
+<div class="price-top-row"><small>500 + 50 credits</small><span class="save-pill">Save $25</span></div>
+<h3>550 <em>credits</em></h3>
+<p class="price-line"><span class="price-now">$49.99</span><span class="price-was">$74.99</span></p>
+<p class="price-note-line">Includes 50 gift credits</p>
 <a class="btn btn-primary" href="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
 </article>
-<article class="price-card popular">
-<span class="plan-badge best-value">Best value</span>
-<small>1000 + 100 credits</small>
-<h3>1100</h3>
-<p>$99.90</p>
+<article class="price-card">
+<span class="plan-badge best-value">Best Value</span>
+<div class="price-top-row"><small>1000 + 100 credits</small><span class="save-pill">Save $50</span></div>
+<h3>1100 <em>credits</em></h3>
+<p class="price-line"><span class="price-now">$99.99</span><span class="price-was">$149.99</span></p>
+<p class="price-note-line">Includes 100 gift credits</p>
 <a class="btn btn-primary" href="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
 </article>
 </div>
@@ -3026,6 +3182,17 @@
 <summary>Where do I see my generations?</summary>
 <p>Your recent generations and history are available from your account after login.</p>
 </details>
+</section>
+<section class="ready-cta-section">
+<div class="ready-ghost" aria-hidden="true">HANSORA</div>
+<div class="shell">
+<h2>Ready to<br/><span class="ready-grad">create?</span></h2>
+<p>Your first masterpiece is one prompt away. Every top AI model in one workspace — no subscription, and your credits never expire.</p>
+<div class="ready-cta-actions">
+<a class="btn btn-primary start-creating-link" href="/login.html">Start creating</a>
+<a class="btn" href="/models.html">Explore all models</a>
+</div>
+</div>
 </section>
 </main>
 <footer class="footer">
@@ -3299,6 +3466,52 @@
         target.scrollBy({ left: dir * target.clientWidth * 0.9, behavior: 'smooth' });
       });
     });
+  </script>
+<script>
+    (() => {
+      const section = document.getElementById('video-models');
+      if (!section) return;
+      const studioVideos = Array.from(section.querySelectorAll('video[data-studio-src]'));
+      if (!studioVideos.length) return;
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let active = false;
+
+      studioVideos.forEach((video) => {
+        video.addEventListener('loadeddata', () => video.classList.add('is-on'), { once: true });
+      });
+
+      const setActive = (on) => {
+        if (on === active) return;
+        active = on;
+        studioVideos.forEach((video) => {
+          if (on) {
+            if (!video.src) { video.src = video.dataset.studioSrc; video.load(); }
+            if (!reduceMotion) video.play().catch(() => {});
+          } else if (!video.paused) {
+            video.pause();
+          }
+        });
+      };
+
+      const check = () => {
+        const rect = section.getBoundingClientRect();
+        const near = rect.bottom > -320 && rect.top < window.innerHeight + 320;
+        setActive(near && !document.hidden);
+      };
+
+      let queued = false;
+      const queueCheck = () => {
+        if (queued) return;
+        queued = true;
+        window.requestAnimationFrame(() => { queued = false; check(); });
+      };
+
+      window.addEventListener('scroll', queueCheck, { passive: true });
+      window.addEventListener('resize', queueCheck, { passive: true });
+      document.addEventListener('visibilitychange', check);
+      window.setInterval(() => { if (!document.hidden) check(); }, 1000);
+      check();
+    })();
   </script>
 </body>
 </html>
