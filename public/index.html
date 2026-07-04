@@ -2591,7 +2591,7 @@
 <a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_152145_3ab61025-269f-4fd5-a6a3-229437ae237c.mp4"></video></a>
 <a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_165534_93d73350-b4ed-4b14-b0a9-7c75bfa7f1a4.mp4"></video></a>
 <a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_174336_b12e810c-f18f-441c-8da9-3081b622a409.mp4"></video></a>
-<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_171940_af1f119c-1420-4fdf-b74c-29f888fae29e.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094639_253d329f-1093-4efa-aee2-430c9e66de64.mp4"></video></a>
 </div>
 <div class="studio-set" aria-hidden="true">
 <a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260414_170749_3474b08b-9dc4-49e6-b6e2-4af862eff61d.mp4"></video></a>
@@ -2599,7 +2599,7 @@
 <a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_152145_3ab61025-269f-4fd5-a6a3-229437ae237c.mp4"></video></a>
 <a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_165534_93d73350-b4ed-4b14-b0a9-7c75bfa7f1a4.mp4"></video></a>
 <a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_174336_b12e810c-f18f-441c-8da9-3081b622a409.mp4"></video></a>
-<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260623_171940_af1f119c-1420-4fdf-b74c-29f888fae29e.mp4"></video></a>
+<a class="studio-card" href="/search-models.html?model=seedance-2" tabindex="-1"><video muted loop playsinline preload="none" aria-label="Made with Hansora AI video" data-studio-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/new%20videos/compressed-videos-under-1mb%202/hf_20260409_094639_253d329f-1093-4efa-aee2-430c9e66de64.mp4"></video></a>
 </div>
 </div>
 </div>
@@ -3129,7 +3129,7 @@
 <section class="section pricing" id="pricing">
 <div class="shell">
 <h2>Buy credits</h2>
-<p class="pricing-sub"><span class="no-expire-badge"><i>✦</i>Credits Never Expire<i>✦</i></span></p>
+<p class="pricing-sub"><span class="no-expire-badge"><i>✦</i>Credits Never expire<i>✦</i></span></p>
 <div class="price-grid">
 <article class="price-card">
 <div class="price-top-row"><small>100 + 0 credits</small><span class="save-pill">Save $5</span></div>
@@ -3317,7 +3317,9 @@
         warmTimerType = '';
       };
 
+      const HANSORA_WARM_LOAD_DISABLED = true;
       const scheduleSettledLoad = () => {
+        if (HANSORA_WARM_LOAD_DISABLED) return;
         if (!pageVisible || warmTimer != null) return;
         const warmVideos = () => {
           warmTimer = null;
@@ -3474,29 +3476,70 @@
       const studioVideos = Array.from(section.querySelectorAll('video[data-studio-src]'));
       if (!studioVideos.length) return;
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const LOAD_AHEAD = 1400;   // start downloading this far before the section arrives
+      const NEAR_RANGE = 1800;   // treat the section as "in use" within this distance
+      const PAUSE_DELAY = 2600;  // grace period so fast up/down scrolls never unload it
       let active = false;
+      let pauseTimer = null;
 
       studioVideos.forEach((video) => {
         video.addEventListener('loadeddata', () => video.classList.add('is-on'), { once: true });
       });
 
-      const setActive = (on) => {
-        if (on === active) return;
-        active = on;
+      const loadAll = () => {
         studioVideos.forEach((video) => {
-          if (on) {
-            if (!video.src) { video.src = video.dataset.studioSrc; video.load(); }
-            if (!reduceMotion) video.play().catch(() => {});
+          if (!video.src) { video.src = video.dataset.studioSrc; video.load(); }
+        });
+      };
+
+      const pauseAll = () => {
+        studioVideos.forEach((video) => { if (!video.paused) video.pause(); });
+      };
+
+      // Play only the cards actually on screen. Phones refuse to run 24 videos at
+      // once and force-pause them; this keeps 2-6 playing and retries any the
+      // browser paused, so the marquee never freezes on mobile.
+      const syncPlayback = () => {
+        if (!active || document.hidden || reduceMotion) return;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        studioVideos.forEach((video) => {
+          const r = video.getBoundingClientRect();
+          const onScreen = r.right > -80 && r.left < vw + 80 && r.bottom > 0 && r.top < vh;
+          if (onScreen) {
+            if (video.paused) video.play().catch(() => {});
           } else if (!video.paused) {
             video.pause();
           }
         });
       };
 
+      const setActive = (on) => {
+        if (on) {
+          if (pauseTimer) { window.clearTimeout(pauseTimer); pauseTimer = null; }
+          active = true;
+          syncPlayback();
+          return;
+        }
+        if (!active || pauseTimer != null) return;
+        pauseTimer = window.setTimeout(() => {
+          pauseTimer = null;
+          active = false;
+          pauseAll();
+        }, PAUSE_DELAY);
+      };
+
       const check = () => {
+        if (document.hidden) {
+          if (pauseTimer) { window.clearTimeout(pauseTimer); pauseTimer = null; }
+          active = false;
+          pauseAll();
+          return;
+        }
         const rect = section.getBoundingClientRect();
-        const near = rect.bottom > -320 && rect.top < window.innerHeight + 320;
-        setActive(near && !document.hidden);
+        const wantLoad = rect.bottom > -LOAD_AHEAD && rect.top < window.innerHeight + LOAD_AHEAD;
+        if (wantLoad && !studioVideos[0].src) loadAll();
+        setActive(rect.bottom > -NEAR_RANGE && rect.top < window.innerHeight + NEAR_RANGE);
       };
 
       let queued = false;
@@ -3509,7 +3552,7 @@
       window.addEventListener('scroll', queueCheck, { passive: true });
       window.addEventListener('resize', queueCheck, { passive: true });
       document.addEventListener('visibilitychange', check);
-      window.setInterval(() => { if (!document.hidden) check(); }, 1000);
+      window.setInterval(() => { if (!document.hidden) { check(); syncPlayback(); } }, 700);
       check();
     })();
   </script>
