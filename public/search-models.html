@@ -10625,8 +10625,10 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
                 `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
                 'success'
               );
-              await refreshCredits();
               startSora2Poll(j.taskId, uid, runId, placeholderControllers);
+              Promise.resolve(refreshCredits()).catch((error) => {
+                console.warn('credit refresh after submit failed', error);
+              });
             }
           } else {
             createProcessingPlaceholders();
@@ -10635,9 +10637,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
               'success'
             );
-            await refreshCredits();
             const checker = (j && j.checker) || checkerForCurrentModel(currentModel, runEndpoint);
             startPollGeneration(runId, placeholderControllers, submittedTaskId, checker);
+            Promise.resolve(refreshCredits()).catch((error) => {
+              console.warn('credit refresh after submit failed', error);
+            });
           }
         }
       } catch (err) {
