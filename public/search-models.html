@@ -4309,8 +4309,8 @@ async function __mjFetchNbCheck(params){
           v.muted = true;
           v.playsInline = true;
           v.loop = true;
-          v.autoplay = true;
           v.preload = 'metadata';
+          v.dataset.stripVideo = '1';
           card.appendChild(v);
         } else {
           const img = document.createElement('img');
@@ -4497,8 +4497,8 @@ async function __mjFetchNbCheck(params){
                 v.muted = true;
                 v.playsInline = true;
                 v.loop = true;
-                v.autoplay = true;
                 v.preload = 'metadata';
+                v.dataset.stripVideo = '1';
                 card.insertBefore(v, card.firstChild);
               } else {
                 const img = document.createElement('img');
@@ -10752,5 +10752,47 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       <div id="mobileOptionList" class="space-y-2 max-h-[45vh] overflow-auto pr-1"></div>
     </div>
   </div>
+<script>
+    /* Phone results strip playback manager (performance only, no app logic).
+       The visible card keeps autoplaying exactly like before; cards outside
+       the screen wait their turn and play instantly when swiped in. Desktop
+       result cards are a different renderer and are not affected. */
+    (() => {
+      const isVisible = (el) => {
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height) return false;
+        if (r.bottom <= 0 || r.top >= window.innerHeight) return false;
+        if (r.right <= 0 || r.left >= window.innerWidth) return false;
+        return true;
+      };
+
+      const sync = () => {
+        document.querySelectorAll('video[data-strip-video]').forEach((v) => {
+          if (document.hidden || !isVisible(v)) {
+            if (!v.paused) v.pause();
+            return;
+          }
+          if (v.paused) {
+            const p = v.play();
+            if (p && p.catch) p.catch(() => {});
+          }
+        });
+      };
+
+      let queued = false;
+      const queueSync = () => {
+        if (queued) return;
+        queued = true;
+        window.requestAnimationFrame(() => { queued = false; sync(); });
+      };
+
+      window.addEventListener('scroll', queueSync, { passive: true });
+      document.addEventListener('scroll', queueSync, { passive: true, capture: true });
+      window.addEventListener('resize', queueSync, { passive: true });
+      document.addEventListener('visibilitychange', sync);
+      window.setInterval(() => { if (!document.hidden) sync(); }, 700);
+      sync();
+    })();
+  </script>
 </body>
 </html>
