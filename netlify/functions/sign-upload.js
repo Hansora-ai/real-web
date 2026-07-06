@@ -183,16 +183,6 @@ exports.handler = async (event) => {
     const mime = mimeForFilename(filename, payload.mime);
     const objectPath = objectPathFor(filename, mime);
 
-    // Bucket probe for precise diagnostics
-    const probe = await tinyFetch(`${url}/storage/v1/bucket/${encodeURIComponent(bucket)}`, {
-      method: 'GET',
-      headers: { 'Authorization': `Bearer ${key}` },
-    });
-    if (probe.status === 404) {
-      return json(500, { error: 'bucket_not_found', detail: `Bucket '${bucket}' does not exist on ${new URL(url).host}` },
-        { ...headers, 'x-project-host': new URL(url).host, 'x-bucket': bucket });
-    }
-
     const signed = await signUpload(url, key, bucket, objectPath, mime, exp);
     if (!signed.ok) {
       return json(502, { error: 'sign_failed', detail: signed.raw || signed.data },
