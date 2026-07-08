@@ -133,8 +133,8 @@ exports.handler = async (event) => {
       return json(400, { ok:false, error:'missing_input', details:'Provide a prompt or an image_url.' });
     }
 
-    // Costs: 5s -> 4⚡, 10s -> 8⚡
-    const cost = (duration === 10) ? 8 : 4;
+    // Costs: 5s -> 3⚡, 10s -> 6⚡
+    const cost = (duration === 10) ? 6 : 3;
     const run_id = (body.run_id && String(body.run_id).trim()) || `${uid || 'anon'}-${Date.now()}`;
 
     // Idempotency: if this run_id was already submitted, return the existing task without charging twice.
