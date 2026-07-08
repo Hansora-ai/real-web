@@ -94,7 +94,8 @@ exports.handler = async (event) => {
       duration: billedSeconds,
       video_url: videoUrl,
       charged: false,
-      charge_cost: COST
+      charge_cost: COST,
+      refund_amount: COST
     };
     ugId = await upsertPlaceholder(uid, prompt || "Kling Motion Control", baseMeta, ugId);
 
@@ -199,8 +200,8 @@ function computeCost(motionModel, mode, billedSeconds){
   const m = normalizeMode(mode);
   const model = normalizeMotionModel(motionModel);
   const rate = model === "kling30"
-    ? (m === "1080p" ? 1.8 : 1.5)
-    : (m === "1080p" ? 1.5 : 1);
+    ? (m === "1080p" ? 1.8 : 1.3)
+    : (m === "1080p" ? 1.2 : 0.7);
   return Number((Number(billedSeconds) * rate).toFixed(1));
 }
 
@@ -319,7 +320,7 @@ async function debitCreditsOnce(uid, cost, ugId, ugMeta){
     const idToPatch = existing?.id || ugId;
     if (idToPatch) {
       const now = new Date().toISOString();
-      const nextMeta = { ...(existing?.meta || ugMeta || {}), charged: true, charge_cost: cost, charged_at: now };
+      const nextMeta = { ...(existing?.meta || ugMeta || {}), charged: true, charge_cost: cost, charged_cost: cost, debited: cost, refund_amount: cost, charged_at: now };
       await patchUG(idToPatch, { meta: nextMeta });
     }
 
