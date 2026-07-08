@@ -79,8 +79,8 @@ function costFor(body) {
   const sound = !!body.sound;
   let rate = 1;
   if (resolution === '4K') rate = 4;
-  else if (resolution === '1080p') rate = sound ? 2 : 1.5;
-  else rate = sound ? 1.5 : 1;
+  else if (resolution === '1080p') rate = sound ? 1.8 : 1.3;
+  else rate = sound ? 1.3 : 1;
   return Number((duration * rate).toFixed(1));
 }
 
