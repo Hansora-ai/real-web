@@ -5613,11 +5613,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       },
       {
         id: 'happyhorse10',
-        name: 'HappyHorse 1.0',
+        name: 'HappyHorse 1.1',
         emoji: 'HH',
         subtitle: 'Text / Image / Reference → Video',
         category: 'video',
-        description: 'HappyHorse 1.0 video with first frame, reference images, and source video edit.',
+        description: 'HappyHorse 1.1 video with first frame and reference images.',
         endpoint: '/.netlify/functions/run-happyhorse-1',
         needsImage: false,
         maxFiles: 0,
@@ -5628,8 +5628,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         resolutionOptions: ['720p', '1080p'],
         defaultResolution: '720p',
         durations: [5, 10],
-        costLabel: '720p 2.5⚡/s · 1080p 3.5⚡/s',
-        minCredits: 12.5
+        costLabel: '720p 1.5⚡/s · 1080p 1.8⚡/s',
+        minCredits: 7.5
       },
       {
         id: 'grok-video',
@@ -5666,8 +5666,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         aspectOptions: ['1:1', '9:16', '16:9'],
         defaultAspect: '1:1',
         durations: [5, 10],
-        costLabel: 'Credits 5s-4⚡ 10s-8⚡',
-        minCredits: 4
+        costLabel: 'Credits 5s-3⚡ 10s-6⚡',
+        minCredits: 3
       },
       {
         id: 'kling26',
@@ -5702,8 +5702,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         resolutionOptions: ['720p', '1080p', '4K'],
         defaultResolution: '720p',
         durations: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-        costLabel: '720p 1⚡/s · 1080p 1.5⚡/s · 4K 4⚡/s',
-        minCredits: 5
+        costLabel: '720p 1⚡/s · 720p sound 1.3⚡/s · 1080p 1.3⚡/s · 1080p sound 1.8⚡/s · 4K 4⚡/s',
+        minCredits: 3
       },
       {
         id: 'kling3-turbo',
@@ -5762,8 +5762,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         resolutionOptions: ['720p', '1080p'],
         defaultResolution: '720p',
         durations: null,
-        costLabel: 'Kling 2.6: 720p 1⚡/sec, 1080p 1.5⚡/sec',
-        minCredits: 1
+        costLabel: 'Kling 2.6: 720p 0.7⚡/s, 1080p 1.2⚡/s · Kling 3.0: 720p 1.3⚡/s, 1080p 1.8⚡/s',
+        minCredits: 0.7
       },
             {
         id: 'aleph',
@@ -6800,7 +6800,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         'wan-2.7': 'wan27-video',
         'happyhorse': 'happyhorse10',
         'happyhorse-1': 'happyhorse10',
-        'happyhorse-1.0': 'happyhorse10',
+        'happyhorse-1.1': 'happyhorse10',
         'grok': 'grok-video',
         'kling3': 'kling30',
         'kling-3': 'kling30',
@@ -6988,7 +6988,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       if (model.id === 'happyhorse10') {
         const seconds = Math.max(1, Number(currentDuration || 5));
-        const rate = currentResolution === '1080p' ? 3.5 : 2.5;
+        const rate = currentResolution === '1080p' ? 1.8 : 1.5;
         return Number((seconds * rate).toFixed(1));
       }
       if (model.id === 'grok-video') {
@@ -7018,8 +7018,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const seconds = getKling30MultiShotDuration();
         let rate = 1;
         if (currentResolution === '4K') rate = 4;
-        else if (currentResolution === '1080p') rate = currentKlingSound ? 2 : 1.5;
-        else rate = currentKlingSound ? 1.5 : 1;
+        else if (currentResolution === '1080p') rate = currentKlingSound ? 1.8 : 1.3;
+        else rate = currentKlingSound ? 1.3 : 1;
         return Number((seconds * rate).toFixed(1));
       }
       if (model.id === 'kling3-turbo') {
@@ -7030,8 +7030,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (model.id === 'kling-motion-control') {
         const seconds = Math.max(1, Math.ceil(Number(motionVideoSeconds || currentDuration || 1)));
         const rate = currentMotionModel === 'kling30'
-          ? (currentResolution === '1080p' ? 1.8 : 1.5)
-          : (currentResolution === '1080p' ? 1.5 : 1);
+          ? (currentResolution === '1080p' ? 1.8 : 1.3)
+          : (currentResolution === '1080p' ? 1.2 : 0.7);
         return Number((seconds * rate).toFixed(1));
       }
       if (model.id === 'kling26') {
@@ -7041,7 +7041,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       if (model.id === 'kling25') {
         const dur = (currentDuration === 10 || String(currentDuration) === '10') ? 10 : 5;
-        return dur === 10 ? 8 : 4;
+        return dur === 10 ? 6 : 3;
       }
       if (model.id === 'sora2') return currentSoraTier === 'pro' ? 20 : 3;
       if (typeof model.minCredits === 'number') return model.minCredits;
