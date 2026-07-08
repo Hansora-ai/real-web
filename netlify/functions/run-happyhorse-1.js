@@ -47,7 +47,7 @@ function extractTaskId(data) {
 }
 function costFor(body) {
   const duration = Math.max(1, Number(body.duration || 5));
-  const rate = String(body.resolution || '720p') === '1080p' ? 3.5 : 2.5;
+  const rate = String(body.resolution || '720p') === '1080p' ? 1.8 : 1.5;
   return Number((duration * rate).toFixed(1));
 }
 async function fetchGeneration(uid, runId) {
@@ -59,7 +59,7 @@ async function insertGeneration(uid, runId, prompt, meta) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/user_generations`, {
     method: 'POST',
     headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-    body: JSON.stringify({ user_id: uid, provider: 'HappyHorse 1.0', kind: 'video', prompt, result_url: null, meta }),
+    body: JSON.stringify({ user_id: uid, provider: 'HappyHorse 1.1', kind: 'video', prompt, result_url: null, meta }),
   });
   const rows = await res.json().catch(() => []);
   return Array.isArray(rows) && rows[0] ? rows[0].id : null;
@@ -107,30 +107,25 @@ exports.handler = async (event) => {
     const existingTask = existing?.meta?.task_id || existing?.meta?.taskId || '';
     if (existingTask) return json(200, { ok: true, submitted: true, taskId: existingTask, run_id: runId, already_submitted: true });
     const cost = costFor(body);
-    const metaBase = { source: 'kie', engine: 'happyhorse-1.0', run_id: runId, status: 'pending', refund_amount: cost };
+    const metaBase = { source: 'kie', engine: 'happyhorse-1.1', run_id: runId, status: 'pending', refund_amount: cost };
     const rowId = existing?.id || await insertGeneration(uid, runId, prompt, metaBase);
     const credits = await getCredits(uid);
     if (credits < cost) return json(402, { ok: false, error: 'not_enough_credits', credits, need: cost });
-    const input = {
-      prompt,
-      aspect_ratio: String(body.aspect_ratio || '16:9'),
-      duration: Math.max(1, Number(body.duration || 5)),
-      resolution: String(body.resolution || '720p'),
-      ...(body.first_frame_url ? { first_frame_url: String(body.first_frame_url) } : {}),
-      ...(body.video_url ? { video_url: String(body.video_url) } : {}),
-      ...(Array.isArray(body.image_urls) && body.image_urls.length ? { image_urls: body.image_urls } : {}),
-      ...(Array.isArray(body.reference_image_urls) && body.reference_image_urls.length ? { reference_image_urls: body.reference_image_urls } : {}),
-    };
-    const hasVideo = !!body.video_url;
     const hasRefs = Array.isArray(body.reference_image_urls) && body.reference_image_urls.length;
     const hasImages = Array.isArray(body.image_urls) && body.image_urls.length;
-    const model = hasVideo
-      ? (process.env.HAPPYHORSE_VIDEO_EDIT_MODEL || 'happyhorse/video-edit')
-      : hasRefs
-      ? (process.env.HAPPYHORSE_REFERENCE_MODEL || 'happyhorse/reference-to-video')
+    const model = hasRefs
+      ? (process.env.HAPPYHORSE_11_REFERENCE_MODEL || 'happyhorse-1-1/reference-to-video')
       : hasImages
-      ? (process.env.HAPPYHORSE_IMAGE_MODEL || 'happyhorse/image-to-video')
-      : (process.env.HAPPYHORSE_TEXT_MODEL || 'happyhorse/text-to-video');
+      ? (process.env.HAPPYHORSE_11_IMAGE_MODEL || 'happyhorse-1-1/image-to-video')
+      : (process.env.HAPPYHORSE_11_TEXT_MODEL || 'happyhorse-1-1/text-to-video');
+    const input = {
+      prompt,
+      duration: Math.max(1, Number(body.duration || 5)),
+      resolution: String(body.resolution || '720p'),
+      ...(!hasImages || hasRefs ? { aspect_ratio: String(body.aspect_ratio || '16:9') } : {}),
+      ...(hasImages ? { image_urls: body.image_urls } : {}),
+      ...(hasRefs ? { reference_image: body.reference_image_urls } : {}),
+    };
     const kieRes = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${KIE_KEY}`, 'Content-Type': 'application/json' },
