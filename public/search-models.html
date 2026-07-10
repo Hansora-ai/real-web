@@ -5337,6 +5337,25 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         minCredits: 0.5
       },
       {
+        id: 'seedream-5-pro',
+        name: 'Seedream 5.0 Pro',
+        emoji: '🎨',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'Seedream 5.0 Pro for controlled generation and precise edits.',
+        endpoint: '/.netlify/functions/run-seedream-5-pro',
+        needsImage: false,
+        maxFiles: 10,
+        uploadMaxMB: 10,
+        aspectOptions: ['1:1', '2:3', '3:2', '3:4', '4:3', '9:16', '16:9'],
+        defaultAspect: '1:1',
+        resolutionOptions: ['1K', '2K'],
+        defaultResolution: '1K',
+        durations: null,
+        costLabel: '0.5⚡ per job',
+        minCredits: 0.5
+      },
+      {
         id: 'grok-image',
         name: 'Grok Image',
         emoji: '𝕏',
@@ -5790,8 +5809,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let currentVeoVariant = 'fast'; // 'fast' | 'quality'
     let uploadedFiles = [];
     // Models that should APPEND images when user uploads again (multi-image support)
-	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'grok-image', 'wan-2-7-image', 'qwen-2']);
-	    const IMAGE_MODEL_ORDER = ['gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-lite', 'grok-image'];
+	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
+	    const IMAGE_MODEL_ORDER = ['gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-pro', 'seedream-5-lite', 'grok-image'];
     const VIDEO_MODEL_ORDER = ['seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function sortModelsForCurrentMode(items) {
@@ -6791,6 +6810,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        'gemini-omni-video': 'gemini-omni-video',
 	        'nano-banana-2-lite': 'nano-banana-2-lite',
 	        'nanobanana2lite': 'nano-banana-2-lite',
+	        'seedream-5-pro': 'seedream-5-pro',
+	        'seedream5pro': 'seedream-5-pro',
 	        'veo31': 'veo31-fast',
         'veo-31': 'veo31-fast',
         'veo-3.1': 'veo31-fast',
@@ -6978,6 +6999,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      if (model.id === 'nano-banana-2') return currentResolution === '4K' ? 1.5 : 1;
 	      if (model.id === 'nano-banana-2-lite') return 0.5;
 	      if (model.id === 'gpt-image-2') return currentResolution === '4K' ? 1.5 : 1;
+	      if (model.id === 'seedream-5-pro') return currentResolution === '2K' ? 1 : 0.5;
       if (model.id === 'wan-2-7-image') return currentWanTier === 'pro' ? 1 : 0.5;
       if (model.id === 'veo31-fast') return currentResolution === '4K' ? 12 : 5;
       if (model.id === 'veo31') return currentResolution === '4K' ? 22 : 17;
@@ -9970,6 +9992,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', run_id: runId };
         case 'seedream-5-lite':
           return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', quality: 'high', run_id: runId };
+        case 'seedream-5-pro':
+          return { urls, prompt: prompt || '.', format: 'png', size: aspect || '1:1', resolution: (resolution || '1K'), quality: (resolution === '2K' ? 'high' : 'basic'), run_id: runId };
         case 'gpt-image-1':
           return { prompt, aspect_ratio: aspect || '1:1', image_urls: urls && urls.length ? urls : undefined, run_id: runId };
         case 'gpt-image-2':
