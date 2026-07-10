@@ -36,6 +36,7 @@
     { label: 'Nano Banana 2', id: 'nano-banana-2', icon: 'N2', note: 'Fast image edits' },
     { label: 'Nano Banana 2 Lite', id: 'nano-banana-2-lite', icon: 'NL', note: 'Low-cost 1K image edits' },
     { label: 'Nano Banana Pro', id: 'nano-banana-pro', icon: 'NP', note: 'Pro image generation' },
+    { label: 'Seedream 5.0 Pro', id: 'seedream-5-pro', icon: 'SP', note: 'Pro controlled image edits' },
     { label: 'Seedream 5.0 Lite', id: 'seedream-5-lite', icon: 'S', note: 'Light creative images' },
     { label: 'Grok Image', id: 'grok-image', icon: 'X', note: 'Stylized image model' },
     { label: 'Seedream 4.5', id: 'seedream-4-5', icon: 'S4', note: 'Image generator' },
