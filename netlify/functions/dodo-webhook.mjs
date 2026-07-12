@@ -63,8 +63,9 @@ export async function handler(event) {
     const root = body || {};
     const data = root.data || root;
     const type = root.type || root.payload_type || data.type || data.payload_type || null;
+    const normalizedType = String(type || "").toLowerCase();
     let status = root.status || data.status || null;
-    if (!status && type === "payment.succeeded") status = "succeeded";
+    if (!status && normalizedType === "payment.succeeded") status = "succeeded";
 
     const meta = (root.metadata || data.metadata || (data.payment && data.payment.metadata)) || {};
 
@@ -81,7 +82,12 @@ export async function handler(event) {
     const provider = "dodopayments";
     const return_url = meta.return_url || null;
     const paid_at = data.created_at || data.updated_at || new Date().toISOString();
-    const isSubscriptionWebhook = String(type || "").startsWith("subscription.");
+    const isSubscriptionWebhook = normalizedType.startsWith("subscription.");
+    const isSuccessfulPayment =
+      status === "paid" ||
+      status === "succeeded" ||
+      status === "successful" ||
+      (normalizedType === "payment" && !!transaction_id && !root.error_code && !data.error_code);
 
     if (isSubscriptionWebhook) {
       const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -104,20 +110,48 @@ export async function handler(event) {
         currency,
         provider,
         return_url,
-        paid_at
+        paid_at,
+        subscriptionPaymentTransactionId: null
       });
     }
     if (plan_id) {
-      return json(200, {
-        ok: true,
-        skipped: "subscription metadata on non-subscription event",
-        status,
-        type,
-        plan_id
+      if (!isSuccessfulPayment) {
+        return json(200, {
+          ok: true,
+          skipped: "subscription payment not successful",
+          status,
+          type,
+          plan_id
+        });
+      }
+
+      const SUPABASE_URL = process.env.SUPABASE_URL;
+      const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+        return json(500, { error: "Missing Supabase env (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)" });
+      }
+
+      return await handleSubscriptionWebhook({
+        SUPABASE_URL,
+        SUPABASE_SERVICE_ROLE_KEY,
+        root,
+        data,
+        type: "subscription.active",
+        status: "active",
+        uid,
+        plan_id,
+        planConfig,
+        monthly_credits,
+        amount_cents,
+        currency,
+        provider,
+        return_url,
+        paid_at,
+        subscriptionPaymentTransactionId: transaction_id
       });
     }
 
-    if (!(status === "paid" || status === "succeeded")) {
+    if (!isSuccessfulPayment) {
       return json(200, { ok: true, skipped: "not a successful payment status", status, type });
     }
     if (!transaction_id || !uid || !credits) {
@@ -275,7 +309,8 @@ async function handleSubscriptionWebhook({
   currency,
   provider,
   return_url,
-  paid_at
+  paid_at,
+  subscriptionPaymentTransactionId = null
 }) {
   if (!uid || !plan_id || !planConfig) {
     return json(400, {
@@ -287,17 +322,34 @@ async function handleSubscriptionWebhook({
   }
 
   const rawStatus = String(data.status || status || "").toLowerCase();
-  const current_period_start = data.previous_billing_date || data.created_at || paid_at || null;
-  const current_period_end = data.next_billing_date || data.expires_at || null;
+  const current_period_start =
+    data.previous_billing_date ||
+    data.current_period_start ||
+    data.created_at ||
+    paid_at ||
+    null;
+  const current_period_end =
+    data.next_billing_date ||
+    data.current_period_end ||
+    data.expires_at ||
+    addOneMonthIso(current_period_start || paid_at) ||
+    null;
   const cancel_at_period_end = Boolean(data.cancel_at_next_billing_date || data.cancel_at_period_end);
   const canceled_at = data.cancelled_at || data.canceled_at || null;
   const subscription_id =
     data.subscription_id ||
+    data.subscription?.subscription_id ||
+    data.subscription?.id ||
+    data.payment?.subscription_id ||
     data.id ||
     root.subscription_id ||
+    root.subscription?.subscription_id ||
+    root.subscription?.id ||
+    root.payment?.subscription_id ||
     root.id ||
     root.transaction_id ||
     data.transaction_id ||
+    subscriptionPaymentTransactionId ||
     null;
 
   let subscriptionStatus = rawStatus || "inactive";
@@ -359,13 +411,13 @@ async function handleSubscriptionWebhook({
 
   let credited = false;
   let creditReason = "not a monthly credit grant event";
-  if (subscriptionStatus === "active" && monthly_credits > 0 && (type === "subscription.active" || type === "subscription.renewed")) {
+  if (subscriptionStatus === "active" && monthly_credits > 0 && (type === "subscription.active" || type === "subscription.renewed" || subscriptionPaymentTransactionId)) {
     const monthlyTransactionId = [
-      "subscription",
-      subscription_id || uid,
+      "subscription-period",
+      uid,
       plan_id,
-      current_period_start || "unknown-start",
-      current_period_end || "unknown-end",
+      dateKey(current_period_start || paid_at),
+      dateKey(current_period_end || addOneMonthIso(current_period_start || paid_at)),
       "monthly-credits"
     ].join(":");
 
@@ -400,6 +452,20 @@ async function handleSubscriptionWebhook({
 
 // Utils
 function toInt(x){ const n = Number(x); return Number.isFinite(n) ? Math.trunc(n) : null; }
+
+function addOneMonthIso(value) {
+  const d = value ? new Date(value) : new Date();
+  if (Number.isNaN(d.getTime())) return null;
+  d.setMonth(d.getMonth() + 1);
+  return d.toISOString();
+}
+
+function dateKey(value) {
+  if (!value) return "unknown";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value).slice(0, 10) || "unknown";
+  return d.toISOString().slice(0, 10);
+}
 
 async function sjson(res) { try { return await res.json(); } catch { return null; } }
 
