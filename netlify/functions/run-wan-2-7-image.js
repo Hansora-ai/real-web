@@ -124,6 +124,36 @@ async function patchUserGenerationMetaById(id, meta){
   }catch(_e){ return false; }
 }
 
+async function hasUnlimitedSubscription(uid, tier){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid || uid === "anon") return false;
+  try{
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_subscriptions?user_id=eq.${encodeURIComponent(uid)}&select=status,plan_id,current_period_end&limit=1`, {
+      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+    });
+    if (!r.ok) return false;
+    const arr = await r.json().catch(()=>[]);
+    const row = Array.isArray(arr) ? arr[0] : null;
+    if (!row || row.status !== "active" || row.plan_id !== "pro_max_monthly") return false;
+    const endMs = row.current_period_end ? Date.parse(row.current_period_end) : 0;
+    if (!Number.isFinite(endMs) || endMs <= Date.now()) return false;
+    return normalizeTier(tier) === "normal";
+  }catch(_e){ return false; }
+}
+
+async function markSubscriptionUnlimitedCharged(row_id, meta){
+  if (!row_id) return false;
+  return patchUserGenerationMetaById(row_id, {
+    ...(meta || {}),
+    charged: "true",
+    charged_cost: 0,
+    charge_cost: 0,
+    debited: 0,
+    refund_amount: 0,
+    subscription_unlimited: true,
+    charged_at: (new Date()).toISOString()
+  });
+}
+
 async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) {
     const debit = await debitCredits(uid, cost);
@@ -208,12 +238,14 @@ exports.handler = async (event) => {
     const tier = normalizeTier(body.tier || body.quality);
     const model = tier === "pro" ? "wan/2-7-image-pro" : "wan/2-7-image";
     const cost = tier === "pro" ? 1 : 0.5;
+    const subscriptionUnlimited = await hasUnlimitedSubscription(uid, tier);
+    const chargeCost = subscriptionUnlimited ? 0 : cost;
 
     // Provider label: keep stable, include mode
     const provider = "Wan 2.7 Image";
 
     // Seed user_generations row (pending)
-    const seeded = await seedUserGeneration(uid, run_id, prompt, provider, { aspect_ratio, tier, mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: cost });
+    const seeded = await seedUserGeneration(uid, run_id, prompt, provider, { aspect_ratio, tier, mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: chargeCost, charge_cost: chargeCost, model_cost: cost, subscription_unlimited: subscriptionUnlimited });
     const row_id = seeded?.row_id || null;
 
     // callback must include uid & run_id
@@ -261,7 +293,7 @@ exports.handler = async (event) => {
               "Content-Type": "application/json",
               "Prefer": "return=minimal"
             },
-            body: JSON.stringify({ meta: { source:"wan-2-7-image", run_id, model, status:"create_failed", task_id: id, raw: js, refund_amount: cost } })
+            body: JSON.stringify({ meta: { source:"wan-2-7-image", run_id, model, status:"create_failed", task_id: id, raw: js, refund_amount: chargeCost, charge_cost: chargeCost, model_cost: cost, subscription_unlimited: subscriptionUnlimited } })
           });
         }
       } catch {}
@@ -279,14 +311,17 @@ exports.handler = async (event) => {
             "Content-Type": "application/json",
             "Prefer": "return=minimal"
           },
-          body: JSON.stringify({ meta: { source:"wan-2-7-image", run_id, model, status:"processing", task_id: id, aspect_ratio, tier, resolution:"1K", mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: cost } })
+          body: JSON.stringify({ meta: { source:"wan-2-7-image", run_id, model, status:"processing", task_id: id, aspect_ratio, tier, resolution:"1K", mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: chargeCost, charge_cost: chargeCost, model_cost: cost, subscription_unlimited: subscriptionUnlimited } })
         });
       }
     } catch {}
 
     // Debit credits AFTER provider accepted and exactly once per (uid, run_id)
-    const baseMeta = { source:"wan-2-7-image", run_id, model, status:"processing", task_id: id, aspect_ratio, tier, resolution:"1K", mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: cost };
-    const charged = await chargeOnceForRun(uid, run_id, cost, row_id, baseMeta);
+    const baseMeta = { source:"wan-2-7-image", run_id, model, status:"processing", task_id: id, aspect_ratio, tier, resolution:"1K", mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: chargeCost, charge_cost: chargeCost, model_cost: cost, subscription_unlimited: subscriptionUnlimited };
+    const charged = chargeCost > 0
+      ? await chargeOnceForRun(uid, run_id, chargeCost, row_id, baseMeta)
+      : { ok:true, debit:{ ok:true, credits:null }, already:false };
+    if (chargeCost === 0) await markSubscriptionUnlimitedCharged(row_id, baseMeta);
 
     if (!charged.ok) {
       if (charged.debit && !charged.debit.ok && charged.debit.error === "insufficient_credits") {
@@ -303,7 +338,9 @@ exports.handler = async (event) => {
       id,
       run_id,
       row_id,
-      cost,
+      cost: chargeCost,
+      model_cost: cost,
+      subscription_unlimited: subscriptionUnlimited,
       already_charged: !!charged.already,
       version: VERSION_TAG,
       used_callback: cb
