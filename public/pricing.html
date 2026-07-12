@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en" data-payment-mode="international" data-pricing-plan-mode="monthly"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style data-restored-from="cid:css-0a4489e5-d92d-4daa-b715-31e937606051@mhtml.blink">
+<!DOCTYPE html><html lang="en" data-payment-mode="international" data-pricing-plan-mode="payg"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style data-restored-from="cid:css-0a4489e5-d92d-4daa-b715-31e937606051@mhtml.blink">
 @charset "utf-8";
 
 :root { --base-bg: #0b0d13; --base-line: #1a1f2b; --brand: #6366f1; }
@@ -712,6 +712,7 @@ img, video { max-width: 100%; height: auto; }
 <meta content="Simple, beautiful AI generation for images &amp; video." name="description">
 
 <link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" rel="icon">
+<link href="/header.css" rel="stylesheet">
 
 
 
@@ -740,6 +741,7 @@ img, video { max-width: 100%; height: auto; }
   filter:none !important;
 }
 .buy-subscription.is-current-plan:hover{ transform:none !important; filter:none !important; }
+.monthly-card::before{ left:24px !important; right:24px !important; width:auto !important; border-radius:999px !important; }
 .monthly-card.is-current-plan{ border-color:rgba(45,212,191,.7) !important; box-shadow:0 0 0 1px rgba(45,212,191,.22), 0 24px 70px rgba(45,212,191,.12) !important; }
 .monthly-card.is-current-plan .monthly-pill{ color:#99f6e4 !important; border-color:rgba(45,212,191,.35) !important; background:rgba(20,184,166,.12) !important; }
 </style>
@@ -775,8 +777,8 @@ img, video { max-width: 100%; height: auto; }
 <span class="rounded-full border border-white/10 bg-white/5 px-4 py-2">All AI tools included</span>
 </div>
 <div class="pricing-choice" aria-label="Choose pricing type">
-<button class="pricing-choice-btn" type="button" data-pricing-choice="payg" aria-pressed="false">Pay as you go <span class="pricing-choice-sale">30% OFF</span></button>
-<button class="pricing-choice-btn is-active" type="button" data-pricing-choice="monthly" aria-pressed="true">Monthly <span class="monthly-unlimited-badge">Unlimited models</span></button>
+<button class="pricing-choice-btn is-active" type="button" data-pricing-choice="payg" aria-pressed="true">Pay as you go <span class="pricing-choice-sale">30% OFF</span></button>
+<button class="pricing-choice-btn" type="button" data-pricing-choice="monthly" aria-pressed="false">Monthly <span class="monthly-unlimited-badge">Unlimited models</span></button>
 </div>
 </div>
 <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-7" data-payg-offers="">
@@ -1435,7 +1437,7 @@ Pay once, use credits across image, video, product card, audio, and creative too
     window.hansoraPricingNavigate(url.toString());
   }
   ready(async function(){
-    setPlanMode(new URLSearchParams(location.search).get('plan') === 'payg' ? 'payg' : 'monthly');
+    setPlanMode(new URLSearchParams(location.search).get('plan') === 'monthly' ? 'monthly' : 'payg');
     setPaymentMode(new URLSearchParams(location.search).get('method') === 'ru' ? 'ru' : 'international');
     document.querySelectorAll('[data-pricing-choice]').forEach(function(btn){
       btn.addEventListener('click', function(){
@@ -1483,5 +1485,6 @@ Pay once, use credits across image, video, product card, audio, and creative too
   });
 })();
 </script>
+<script defer src="/header.js"></script>
 
 </body></html>
