@@ -162,6 +162,25 @@ async function debitCredits(uid, cost) {
   return { ok: true, credits: next };
 }
 
+async function hasUnlimitedSubscription(uid, duration) {
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid) return false;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/user_subscriptions?user_id=eq.${encodeURIComponent(uid)}&select=status,plan_id,current_period_end&limit=1`, {
+      headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
+    });
+    if (!res.ok) return false;
+    const rows = await res.json().catch(() => []);
+    const row = Array.isArray(rows) ? rows[0] : null;
+    if (!row || row.status !== 'active') return false;
+    const endMs = row.current_period_end ? Date.parse(row.current_period_end) : 0;
+    if (!Number.isFinite(endMs) || endMs <= Date.now()) return false;
+    if (Math.round(Number(duration || 0)) !== 6) return false;
+    return row.plan_id === 'premium_monthly' || row.plan_id === 'pro_monthly' || row.plan_id === 'pro_max_monthly';
+  } catch {
+    return false;
+  }
+}
+
 async function createUnificAllyTask({ body, prompt, duration }) {
   const images = imageUrlsFromBody(body);
   const input = {
@@ -238,21 +257,23 @@ exports.handler = async (event) => {
     }
 
     const cost = costFor(body);
+    const subscriptionUnlimited = await hasUnlimitedSubscription(uid, duration);
+    const chargeCost = subscriptionUnlimited ? 0 : cost;
     const source = useUnificAlly ? 'unifically' : 'kie';
     const diagnostic = requestDiagnostic(event, body, duration);
-    const metaBase = { source, engine: 'grok', run_id: runId, status: 'pending', refund_amount: cost, checker, diagnostic };
+    const metaBase = { source, engine: 'grok', run_id: runId, status: 'pending', refund_amount: chargeCost, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited, checker, diagnostic };
     const rowId = existing?.id || await insertGeneration(uid, runId, prompt, metaBase);
-    const credits = await getCredits(uid);
-    if (credits < cost) {
+    const credits = chargeCost > 0 ? await getCredits(uid) : Infinity;
+    if (chargeCost > 0 && credits < chargeCost) {
       await patchGeneration(rowId, {
         ...metaBase,
         status: 'failed',
         error_summary: 'not_enough_credits',
         credits,
-        need: cost,
+        need: chargeCost,
         failed_at: new Date().toISOString(),
       });
-      return json(402, { ok: false, error: 'not_enough_credits', message: 'not_enough_credits', credits, need: cost, run_id: runId });
+      return json(402, { ok: false, error: 'not_enough_credits', message: 'not_enough_credits', credits, need: chargeCost, run_id: runId });
     }
 
     const created = useUnificAlly
@@ -293,7 +314,7 @@ exports.handler = async (event) => {
       });
       return json(502, { ok: false, error: 'missing_task_id', message: errorSummary, details: created.data, run_id: runId });
     }
-    const debit = await debitCredits(uid, cost);
+    const debit = chargeCost > 0 ? await debitCredits(uid, chargeCost) : { ok: true, credits: null };
     if (!debit.ok) {
       await patchGeneration(rowId, {
         ...metaBase,
@@ -315,9 +336,12 @@ exports.handler = async (event) => {
       task_id: taskId,
       charged: true,
       charged_at: new Date().toISOString(),
-      charged_cost: cost,
-      debited: cost,
-      refund_amount: cost,
+      charged_cost: chargeCost,
+      debited: chargeCost,
+      refund_amount: chargeCost,
+      charge_cost: chargeCost,
+      model_cost: cost,
+      subscription_unlimited: subscriptionUnlimited,
       request_input: created.input,
       provider_create_response: created.data,
     });
@@ -331,7 +355,9 @@ exports.handler = async (event) => {
       row_id: rowId,
       checker,
       provider: source,
-      debited: cost,
+      debited: chargeCost,
+      model_cost: cost,
+      subscription_unlimited: subscriptionUnlimited,
       credits: debit.credits,
     });
   } catch (error) {
