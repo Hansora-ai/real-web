@@ -106,6 +106,40 @@ async function patchUserGenerationMetaById(row_id, meta){
   }
 }
 
+async function hasUnlimitedSubscription(uid, modelKey){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid || uid === "anon") return false;
+  try{
+    const url = `${SUPABASE_URL}/rest/v1/user_subscriptions?user_id=eq.${encodeURIComponent(uid)}&select=status,plan_id,current_period_end&limit=1`;
+    const r = await fetch(url, { headers:{ "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` } });
+    if (!r.ok) return false;
+    const arr = await r.json().catch(()=>[]);
+    const row = Array.isArray(arr) ? arr[0] : null;
+    if (!row || row.status !== "active") return false;
+    const endMs = row.current_period_end ? Date.parse(row.current_period_end) : 0;
+    if (!Number.isFinite(endMs) || endMs <= Date.now()) return false;
+    if (modelKey === "seedream-5-lite") {
+      return row.plan_id === "premium_monthly" || row.plan_id === "pro_monthly" || row.plan_id === "pro_max_monthly";
+    }
+    return false;
+  }catch{
+    return false;
+  }
+}
+
+async function markSubscriptionUnlimitedCharged(row_id, meta){
+  if (!row_id) return false;
+  return patchUserGenerationMetaById(row_id, {
+    ...(meta || {}),
+    charged: "true",
+    charged_cost: 0,
+    charge_cost: 0,
+    debited: 0,
+    refund_amount: 0,
+    subscription_unlimited: true,
+    charged_at: (new Date()).toISOString()
+  });
+}
+
 async function fetchUserGenByRunId(uid, run_id){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) return null;
   try{
@@ -293,23 +327,29 @@ exports.handler = async (event) => {
 
     // Charge exactly once per run_id (cost = 0.5)
     const cost = 0.5;
+    const subscriptionUnlimited = await hasUnlimitedSubscription(uid, "seedream-5-lite");
+    const chargeCost = subscriptionUnlimited ? 0 : cost;
 
     // Seed placeholder row
-    const baseMeta = { run_id, task_id: taskId, size, status:"processing", refund_amount: cost };
+    const baseMeta = { run_id, task_id: taskId, size, status:"processing", refund_amount: chargeCost, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited };
     const seeded = await seedUserGeneration(uid, run_id, prompt, baseMeta);
     const row_id = seeded?.row_id || null;
 
-    const charged = await chargeOnceForRun(uid, run_id, cost, row_id, { ...baseMeta, source:"seedream-5-lite", model:"seedream-5-lite", refund_amount: cost });
+    const chargeMeta = { ...baseMeta, source:"seedream-5-lite", model:"seedream-5-lite", refund_amount: chargeCost, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited };
+    const charged = chargeCost > 0
+      ? await chargeOnceForRun(uid, run_id, chargeCost, row_id, chargeMeta)
+      : { ok:true, already:false };
+    if (chargeCost === 0) await markSubscriptionUnlimitedCharged(row_id, chargeMeta);
 
     if (!charged.ok){
       if (charged.error === "insufficient_credits"){
-        return json(402, { ok:false, submitted:false, error:"not_enough_credits", run_id, cost, version: VERSION_TAG });
+        return json(402, { ok:false, submitted:false, error:"not_enough_credits", run_id, cost: chargeCost, version: VERSION_TAG });
       }
       if (charged.error === "charge_in_progress"){
-        return json(409, { ok:false, submitted:false, error:"charge_in_progress", run_id, cost, version: VERSION_TAG });
+        return json(409, { ok:false, submitted:false, error:"charge_in_progress", run_id, cost: chargeCost, version: VERSION_TAG });
       }
       // do not block job; but report charging failure
-      return json(500, { ok:false, submitted:false, error:"charge_failed", run_id, cost, version: VERSION_TAG });
+      return json(500, { ok:false, submitted:false, error:"charge_failed", run_id, cost: chargeCost, version: VERSION_TAG });
     }
 
     return json(201, {
@@ -317,7 +357,9 @@ exports.handler = async (event) => {
       submitted:true,
       taskId,
       run_id,
-      cost,
+      cost: chargeCost,
+      model_cost: cost,
+      subscription_unlimited: subscriptionUnlimited,
       already_charged: !!charged.already,
       version: VERSION_TAG,
       used_callback: cb
