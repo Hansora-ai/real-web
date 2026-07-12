@@ -785,6 +785,43 @@
       border-bottom-color:rgba(221,255,55,.95);
     }
     .model-tab .glyph{ font-size:18px; opacity:.9; }
+    .subscription-unlimited-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:5px;
+      border-radius:999px;
+      border:1px solid rgba(255,224,151,.72);
+      background:linear-gradient(180deg,#ffe7a8,#ffd46f);
+      color:#111827;
+      font-size:10px;
+      line-height:1;
+      font-weight:900;
+      white-space:nowrap;
+      letter-spacing:0;
+      box-shadow:0 8px 20px rgba(255,199,92,.18);
+    }
+    .subscription-unlimited-badge .subscription-infinity{
+      font-size:14px;
+      line-height:.8;
+      font-weight:900;
+    }
+    .subscription-unlimited-badge.is-hidden{ display:none !important; }
+    .model-unlimited-badge{
+      height:22px;
+      padding:0 9px;
+      margin-left:2px;
+    }
+    .cost-unlimited-badge{
+      height:24px;
+      padding:0 10px;
+    }
+    .rail-unlimited-badge{
+      width:22px;
+      height:22px;
+      padding:0;
+      margin-left:1px;
+    }
     .model-logo{
       width:24px;
       height:24px;
@@ -3360,6 +3397,10 @@
         >
           <span class="text-xs opacity-80 hidden sm:inline">Model</span>
           <span id="modelButtonLabel" class="truncate max-w-[150px] sm:max-w-[180px]">Nano Banana</span>
+          <span id="modelUnlimitedBadge" class="subscription-unlimited-badge model-unlimited-badge is-hidden" aria-label="Unlimited with your monthly plan">
+            <span class="subscription-infinity" aria-hidden="true">∞</span>
+            <span>Unlimited</span>
+          </span>
           <span aria-hidden="true" class="ml-1 text-white/70 text-base leading-none">&gt;</span>
         </button>
       </div>
@@ -5508,7 +5549,27 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         costLabel: 'Credits Sora -3⚡ Pro 20-25⚡',
         minCredits: 7
       },
-            {
+      {
+        id: 'veo31-lite',
+        name: 'Veo 3.1 Lite',
+        emoji: '🎥',
+        subtitle: 'Text → Video (start / last frames optional)',
+        category: 'video',
+        description: 'Veo 3.1 Lite — 8s only, 720p / 1080p.',
+        endpoint: '/.netlify/functions/run-veo31',
+        needsImage: false,
+        maxFiles: 0,
+        useFrames: true,
+        startOptional: true,
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        durations: [8],
+        resolutionOptions: ['720p', '1080p'],
+        defaultResolution: '720p',
+        costLabel: 'Credits Lite 720p 2⚡ / 1080p 2.5⚡',
+        minCredits: 2
+      },
+      {
         id: 'veo31-fast',
         name: 'Veo 3.1 Fast',
         emoji: '🎥',
@@ -5806,12 +5867,108 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let currentModel = MODELS[0];
     let currentMode = 'image';
     let currentVeoFamily = null; // 'veo3' | 'veo31'
-    let currentVeoVariant = 'fast'; // 'fast' | 'quality'
+    let currentVeoVariant = 'fast'; // 'lite' | 'fast' | 'quality'
     let uploadedFiles = [];
     // Models that should APPEND images when user uploads again (multi-image support)
 	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
 	    const IMAGE_MODEL_ORDER = ['gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-pro', 'seedream-5-lite', 'grok-image'];
-    const VIDEO_MODEL_ORDER = ['seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
+    const VIDEO_MODEL_ORDER = ['seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
+
+    function normalizeUnlimitedValue(value) {
+      return String(value || '').trim().toLowerCase();
+    }
+
+    function getSelectedDurationNumber(fallback) {
+      const raw = currentDuration === null || currentDuration === undefined || currentDuration === '' ? fallback : currentDuration;
+      const num = Number(raw);
+      return Number.isFinite(num) ? num : Number(fallback || 0);
+    }
+
+    function getCurrentSubscriptionModelRequest() {
+      if (!currentModel) return null;
+      const resolution = normalizeUnlimitedValue(currentResolution);
+      if (currentModel.id === 'nano-banana-2-lite') {
+        return { model: 'nano-banana-2-lite', type: 'image', quality: '1k' };
+      }
+      if (currentModel.id === 'nano-banana-2') {
+        return { model: 'nano-banana-2', type: 'image', quality: resolution || '1k' };
+      }
+      if (currentModel.id === 'gpt-image-2') {
+        return { model: 'gpt-image-2', type: 'image', quality: resolution || '1k' };
+      }
+      if (currentModel.id === 'z-image') {
+        return { model: 'z-image', type: 'image' };
+      }
+      if (currentModel.id === 'seedream-5-lite') {
+        return { model: 'seedream-5-lite', type: 'image' };
+      }
+      if (currentModel.id === 'wan-2-7-image') {
+        if (currentWanTier === 'pro') return null;
+        return { model: 'wan-2-7-image', type: 'image', quality: 'normal' };
+      }
+      if (currentModel.id === 'grok-video') {
+        return { model: 'grok-video', type: 'video', resolution: '720p', duration: getSelectedDurationNumber(6) };
+      }
+      if (currentModel.id === 'veo31-lite') {
+        return { model: 'veo31-lite', type: 'video', resolution: resolution || '720p', duration: getSelectedDurationNumber(8) };
+      }
+      if (currentModel.id === 'kling25') {
+        return { model: 'kling-2-5-turbo', type: 'video', resolution: '1080p', duration: getSelectedDurationNumber(5) };
+      }
+      return null;
+    }
+
+    function isCurrentSelectionUnlimited() {
+      const state = window.HANSORA_SUBSCRIPTION;
+      if (!state || state.active !== true) return false;
+      const request = getCurrentSubscriptionModelRequest();
+      if (!request) return false;
+      const checker = window.HansoraHeader?.isUnlimitedModel || window.hansoraSubscription?.isUnlimitedModel;
+      if (typeof checker !== 'function') return false;
+      try {
+        return checker(request) === true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function unlimitedBadgeMarkup(extraClass = '') {
+      return `<span class="subscription-unlimited-badge ${extraClass}" aria-label="Unlimited with your monthly plan"><span class="subscription-infinity" aria-hidden="true">∞</span><span>Unlimited</span></span>`;
+    }
+
+    function setCostLabelContent(el) {
+      if (!el || !currentModel) return;
+      if (isCurrentSelectionUnlimited()) {
+        el.innerHTML = unlimitedBadgeMarkup('cost-unlimited-badge');
+      } else {
+        el.textContent = getCurrentCostLabel();
+      }
+    }
+
+    function updateSubscriptionUnlimitedDisplay() {
+      const isUnlimited = isCurrentSelectionUnlimited();
+      const badge = document.getElementById('modelUnlimitedBadge');
+      if (badge) badge.classList.toggle('is-hidden', !isUnlimited);
+      const costLabelEl = document.getElementById('costLabel');
+      if (costLabelEl && currentModel) setCostLabelContent(costLabelEl);
+      updateRunButtonLabel();
+    }
+
+    window.addEventListener('hansora:subscription-updated', () => {
+      updateSubscriptionUnlimitedDisplay();
+      renderWorkspaceModelRail();
+    });
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        updateSubscriptionUnlimitedDisplay();
+        renderWorkspaceModelRail();
+      }, { once: true });
+    } else {
+      setTimeout(() => {
+        updateSubscriptionUnlimitedDisplay();
+        renderWorkspaceModelRail();
+      }, 0);
+    }
 
     function sortModelsForCurrentMode(items) {
       const order = currentMode === 'video' ? VIDEO_MODEL_ORDER : IMAGE_MODEL_ORDER;
@@ -6756,9 +6913,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	    function getWorkspaceModelItems() {
       const source = MODELS.filter((m) => !m.hidden && (currentMode === 'image' ? m.category === 'image' : m.category === 'video'));
       if (currentMode !== 'video') return sortModelsForCurrentMode(source);
-      const hasVeo31 = source.some((m) => m.id === 'veo31-fast' || m.id === 'veo31');
-      const items = source.filter((m) => !['veo31-fast','veo31','veo3-fast','veo3'].includes(m.id));
-      if (hasVeo31) items.push({ id: 'veo31-fast', name: 'Veo 3.1', emoji: '🎥', subtitle: 'Fast / Quality', category: 'video' });
+      const hasVeo31 = source.some((m) => m.id === 'veo31-lite' || m.id === 'veo31-fast' || m.id === 'veo31');
+      const items = source.filter((m) => !['veo31-lite','veo31-fast','veo31','veo3-fast','veo3'].includes(m.id));
+      if (hasVeo31) items.push({ id: 'veo31-lite', name: 'Veo 3.1', emoji: '🎥', subtitle: 'Lite / Fast / Quality', category: 'video' });
       return sortModelsForCurrentMode(items);
     }
 
@@ -6812,6 +6969,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        'nanobanana2lite': 'nano-banana-2-lite',
 	        'seedream-5-pro': 'seedream-5-pro',
 	        'seedream5pro': 'seedream-5-pro',
+	        'veo31-lite': 'veo31-lite',
+	        'veo-31-lite': 'veo31-lite',
+	        'veo-3.1-lite': 'veo31-lite',
+	        'veo3.1-lite': 'veo31-lite',
+	        'veo31lite': 'veo31-lite',
+	        'veo3lite': 'veo31-lite',
 	        'veo31': 'veo31-fast',
         'veo-31': 'veo31-fast',
         'veo-3.1': 'veo31-fast',
@@ -6891,9 +7054,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       items.forEach((model) => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        const active = currentModel && (currentModel.id === model.id || (model.id === 'veo31-fast' && ['veo31-fast','veo31'].includes(currentModel.id)));
+        const active = currentModel && (currentModel.id === model.id || (model.id === 'veo31-lite' && ['veo31-lite','veo31-fast','veo31'].includes(currentModel.id)));
+        const activeUnlimited = active && isCurrentSelectionUnlimited();
         btn.className = 'model-tab' + (active ? ' active' : '');
-        btn.innerHTML = modelLogoHTML(model) + '<span>' + model.name + '</span>';
+        btn.innerHTML = modelLogoHTML(model) + '<span>' + model.name + '</span>' + (activeUnlimited ? unlimitedBadgeMarkup('rail-unlimited-badge') : '');
         btn.addEventListener('click', () => selectWorkspaceModel(model.id));
         rail.appendChild(btn);
       });
@@ -6974,8 +7138,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
       const costLabelEl = document.getElementById('costLabel');
       if (costLabelEl && currentModel) {
-        costLabelEl.textContent = getCurrentCostLabel();
+        setCostLabelContent(costLabelEl);
       }
+      const unlimitedBadge = document.getElementById('modelUnlimitedBadge');
+      if (unlimitedBadge) unlimitedBadge.classList.toggle('is-hidden', !isCurrentSelectionUnlimited());
       syncWorkspaceModelSummary();
       renderWorkspaceModelRail();
       updateRunButtonLabel();
@@ -6995,12 +7161,14 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
     function getModelCreditValue(model = currentModel) {
 	      if (!model) return null;
+      if (model === currentModel && isCurrentSelectionUnlimited()) return 0;
 	      if (model.id === 'nano-banana-pro') return currentResolution === '4K' ? 2 : 1.5;
 	      if (model.id === 'nano-banana-2') return currentResolution === '4K' ? 1.5 : 1;
 	      if (model.id === 'nano-banana-2-lite') return 0.5;
 	      if (model.id === 'gpt-image-2') return currentResolution === '4K' ? 1.5 : 1;
 	      if (model.id === 'seedream-5-pro') return currentResolution === '2K' ? 1 : 0.5;
       if (model.id === 'wan-2-7-image') return currentWanTier === 'pro' ? 1 : 0.5;
+      if (model.id === 'veo31-lite') return currentResolution === '1080p' ? 2.5 : 2;
       if (model.id === 'veo31-fast') return currentResolution === '4K' ? 12 : 5;
       if (model.id === 'veo31') return currentResolution === '4K' ? 22 : 17;
       if (model.id === 'wan27-video') {
@@ -7085,7 +7253,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
     function updateCostDisplay() {
       const costLabelEl = document.getElementById('costLabel');
-      if (costLabelEl && currentModel) costLabelEl.textContent = getCurrentCostLabel();
+      if (costLabelEl && currentModel) setCostLabelContent(costLabelEl);
+      const badge = document.getElementById('modelUnlimitedBadge');
+      if (badge) badge.classList.toggle('is-hidden', !isCurrentSelectionUnlimited());
+      renderWorkspaceModelRail();
     }
 
     function getRunCreditLabel() {
@@ -7095,6 +7266,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     function updateRunButtonLabel() {
       const runBtn = document.getElementById('runBtn');
       if (!runBtn) return;
+      if (isCurrentSelectionUnlimited()) {
+        runBtn.innerHTML = 'Run ' + unlimitedBadgeMarkup('cost-unlimited-badge');
+        syncKlingMotionRunState(false);
+        updatePromptSafetyState(false);
+        return;
+      }
       const credits = getRunCreditLabel();
       runBtn.textContent = credits ? `Run ${credits} ⚡` : 'Run';
       syncKlingMotionRunState(false);
@@ -7177,7 +7354,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (!currentModel || !['kling26', 'kling30'].includes(currentModel.id)) return;
       const costLabelEl = document.getElementById('costLabel');
       if (!costLabelEl) return;
-      costLabelEl.textContent = getCurrentCostLabel();
+      setCostLabelContent(costLabelEl);
       updateRunButtonLabel();
     }
 
@@ -7353,9 +7530,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       // Fast / Quality is selected in the bottom bar.
       let overlayModels = filtered;
       if (currentMode === 'video') {
-        const hasVeo31 = filtered.some((m) => m.id === 'veo31-fast' || m.id === 'veo31');
+        const hasVeo31 = filtered.some((m) => m.id === 'veo31-lite' || m.id === 'veo31-fast' || m.id === 'veo31');
 
-        filtered = filtered.filter((m) => !['veo3-fast', 'veo3', 'veo31-fast', 'veo31'].includes(m.id));
+        filtered = filtered.filter((m) => !['veo3-fast', 'veo3', 'veo31-lite', 'veo31-fast', 'veo31'].includes(m.id));
 
         const matchGroup = (label) => {
           if (!searchValue) return true;
@@ -7370,9 +7547,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             id: 'veo31-fast',
             name: 'Veo 3.1',
             emoji: 'V',
-            subtitle: 'Text → Video (Fast / Quality in bottom)',
+            subtitle: 'Text → Video (Lite / Fast / Quality in bottom)',
             category: 'video',
             __veoFamily: 'veo31',
+            __defaultId: 'veo31-lite',
+            __liteId: 'veo31-lite',
             __fastId: 'veo31-fast',
             __qualityId: 'veo31',
           });
@@ -7405,9 +7584,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             return;
           }
           if (model.__veoFamily) {
-            currentModel = MODELS.find((m) => m.id === model.__fastId) || currentModel;
+            currentModel = MODELS.find((m) => m.id === (model.__defaultId || model.__fastId)) || currentModel;
             currentVeoFamily = model.__veoFamily;
-            currentVeoVariant = 'fast';
+            currentVeoVariant = model.__defaultId === model.__liteId ? 'lite' : 'fast';
           } else {
             currentModel = model;
             currentVeoFamily = null;
@@ -7451,7 +7630,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
       // Veo Fast / Quality toggle (only for Veo 3.1)
       const isVeo3 = false;
-      const isVeo31 = currentModel.id === 'veo31-fast' || currentModel.id === 'veo31';
+      const isVeo31 = currentModel.id === 'veo31-lite' || currentModel.id === 'veo31-fast' || currentModel.id === 'veo31';
       const isWan27 = currentModel.id === 'wan-2-7-image';
       const isMotionControl = currentModel.id === 'kling-motion-control';
       if (isWan27) {
@@ -7540,7 +7719,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         if (veoQualityLabel) veoQualityLabel.textContent = 'Quality';
         currentWanTier = 'normal';
         currentVeoFamily = isVeo31 ? 'veo31' : 'veo3';
-        currentVeoVariant = (currentModel.id.endsWith('-fast') ? 'fast' : 'quality');
+        currentVeoVariant = currentModel.id.endsWith('-lite') ? 'lite' : (currentModel.id.endsWith('-fast') ? 'fast' : 'quality');
 
         if (veoQualityBlock) veoQualityBlock.classList.remove('hidden');
         if (veoQualityPills) {
@@ -7555,7 +7734,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
               if (!currentVeoFamily) return;
               const nextId =
                 currentVeoFamily === 'veo31'
-                  ? (variant === 'fast' ? 'veo31-fast' : 'veo31')
+                  ? (variant === 'lite' ? 'veo31-lite' : (variant === 'fast' ? 'veo31-fast' : 'veo31'))
                   : (variant === 'fast' ? 'veo3-fast' : 'veo3');
               const nextModel = MODELS.find((m) => m.id === nextId);
               if (!nextModel) return;
@@ -7566,6 +7745,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             });
             return b;
           };
+          if (isVeo31) veoQualityPills.appendChild(makeBtn('Lite', 'lite'));
           veoQualityPills.appendChild(makeBtn('Fast', 'fast'));
           veoQualityPills.appendChild(makeBtn('Quality', 'quality'));
         }
@@ -8600,7 +8780,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
     function syncVeo31InputLocks() {
       const isFrameModel = currentModel && currentModel.useFrames;
-      const isVeo31Model = currentModel && (currentModel.id === 'veo31-fast' || currentModel.id === 'veo31');
+      const isVeo31Model = currentModel && (currentModel.id === 'veo31-lite' || currentModel.id === 'veo31-fast' || currentModel.id === 'veo31');
       if (!isFrameModel) return;
       if (!startFrameFile && lastFrameFile && typeof clearLastFrame === 'function') clearLastFrame();
       const hasFrames = !!(startFrameFile || lastFrameFile);
@@ -10035,6 +10215,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             model: model.id === 'veo3-fast' ? 'veo3_fast' : 'veo3',
             run_id: runId
           };
+        case 'veo31-lite':
         case 'veo31-fast':
         case 'veo31': {
           const frameCount = [startFrameFile, lastFrameFile].filter(Boolean).length;
@@ -10052,7 +10233,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             resolution: currentResolution || '1080p',
             quality: currentResolution || '1080p',
             imageUrl: '',
-            model: model.id === 'veo31-fast' ? 'veo3_1_fast' : 'veo3_1',
+            model: model.id === 'veo31-lite' ? 'veo3_lite' : (model.id === 'veo31-fast' ? 'veo3_fast' : 'veo3'),
             run_id: runId
           };
         }
@@ -10429,7 +10610,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         const frameFiles = currentModel.useFrames
           ? [startFrameFile, lastFrameFile].filter(Boolean)
           : [];
-        const veoRefs = currentModel.useFrames && (currentModel.id === 'veo31-fast' || currentModel.id === 'veo31')
+        const veoRefs = currentModel.useFrames && (currentModel.id === 'veo31-lite' || currentModel.id === 'veo31-fast' || currentModel.id === 'veo31')
           ? (veoReferenceFiles || [])
           : [];
         const urls = currentModel.useFrames
