@@ -33,7 +33,7 @@
       { key: 'gpt-image-2:1k', label: 'GPT Image 2', type: 'image', models: ['gpt-image-2', 'gpt image 2'], qualities: ['1k'] },
       { key: 'seedream-5-lite', label: 'Seedream 5.0 Lite', type: 'image', models: ['seedream-5-lite', 'seedream 5 lite', 'seedream 5.0 lite'] },
       { key: 'grok-video:6s', label: 'Grok Video', type: 'video', models: ['grok-video', 'grok video', 'grok'], durations: [6] },
-      { key: 'veo-3-1-lite:720p:8s', label: 'Veo 3.1 Lite', type: 'video', models: ['veo31-lite', 'veo-3-1-lite', 'veo 3.1 lite', 'veo31'], resolutions: ['720p'], durations: [8] }
+      { key: 'veo-3-1-lite:720p:8s', label: 'Veo 3.1 Lite', type: 'video', models: ['veo31-lite', 'veo3_lite', 'veo-3-1-lite', 'veo 3.1 lite'], resolutions: ['720p'], durations: [8] }
     ],
     pro_max_monthly: [
       { key: 'nano-banana-2-lite', label: 'Nano Banana 2 Lite', type: 'image', models: ['nano-banana-2-lite', 'nano banana 2 lite'] },
@@ -45,7 +45,7 @@
       { key: 'seedream-5-lite', label: 'Seedream 5.0 Lite', type: 'image', models: ['seedream-5-lite', 'seedream 5 lite', 'seedream 5.0 lite'] },
       { key: 'wan-2-7-image', label: 'Wan 2.7 Image', type: 'image', models: ['wan-2-7', 'wan 2.7', 'wan-2-7-image', 'wan 2.7 image'] },
       { key: 'grok-video:6s', label: 'Grok Video', type: 'video', models: ['grok-video', 'grok video', 'grok'], durations: [6] },
-      { key: 'veo-3-1-lite:1080p:8s', label: 'Veo 3.1 Lite', type: 'video', models: ['veo31-lite', 'veo-3-1-lite', 'veo 3.1 lite', 'veo31'], resolutions: ['1080p'], durations: [8] },
+      { key: 'veo-3-1-lite:1080p:8s', label: 'Veo 3.1 Lite', type: 'video', models: ['veo31-lite', 'veo3_lite', 'veo-3-1-lite', 'veo 3.1 lite'], resolutions: ['1080p'], durations: [8] },
       { key: 'kling-2-5-turbo:1080p:5s', label: 'Kling 2.5 Turbo', type: 'video', models: ['kling-2-5-turbo', 'kling 2.5 turbo'], resolutions: ['1080p'], durations: [5] }
     ]
   };
