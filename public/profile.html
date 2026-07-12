@@ -226,6 +226,195 @@
     .usage-delta.positive { color: #86efac; }
     .usage-delta.negative { color: #fca5a5; }
 
+    .subscription-plan-card {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(125, 211, 252, .24);
+      border-radius: 20px;
+      background:
+        radial-gradient(260px 130px at 0% 0%, rgba(56,189,248,.16), transparent 65%),
+        linear-gradient(135deg, rgba(99,102,241,.14), rgba(255,255,255,.045));
+      padding: 18px;
+      box-shadow: 0 18px 46px rgba(0,0,0,.22);
+    }
+
+    .subscription-plan-card::before {
+      content: "";
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      top: 0;
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #60a5fa, #a78bfa, #22d3ee);
+    }
+
+    .subscription-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid rgba(125, 211, 252, .28);
+      border-radius: 999px;
+      background: rgba(14, 165, 233, .1);
+      color: #bae6fd;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: .02em;
+    }
+
+    .subscription-plan-name {
+      margin-top: 12px;
+      color: #f8fafc;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -.03em;
+    }
+
+    .subscription-plan-meta {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: rgba(226,232,240,.76);
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .subscription-plan-meta span {
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 999px;
+      background: rgba(255,255,255,.055);
+      padding: 6px 9px;
+    }
+
+    .subscription-models {
+      margin-top: 12px;
+      color: rgba(226,232,240,.58);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .subscription-actions {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .subscription-cancel-btn {
+      border: 1px solid rgba(248,113,113,.32);
+      border-radius: 12px;
+      background: rgba(127,29,29,.18);
+      color: #fecaca;
+      padding: 9px 12px;
+      font-size: 12px;
+      font-weight: 850;
+      transition: background .16s, border-color .16s, transform .16s;
+    }
+
+    .subscription-cancel-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(248,113,113,.52);
+      background: rgba(127,29,29,.28);
+    }
+
+    .subscription-cancel-btn[disabled] {
+      cursor: not-allowed;
+      opacity: .55;
+      transform: none;
+    }
+
+    .subscription-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 95;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .subscription-modal.is-open { display: flex; }
+
+    .subscription-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      border: 0;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(12px);
+      cursor: pointer;
+    }
+
+    .subscription-modal-panel {
+      position: relative;
+      width: min(620px, 100%);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 24px;
+      background:
+        radial-gradient(500px 230px at 10% 0%, rgba(248,113,113,.14), transparent 64%),
+        radial-gradient(500px 230px at 95% 0%, rgba(125,211,252,.12), transparent 64%),
+        #10131d;
+      box-shadow: 0 30px 90px rgba(0,0,0,.58);
+      padding: 22px;
+    }
+
+    .subscription-reasons {
+      margin-top: 16px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .subscription-reason {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px;
+      background: rgba(255,255,255,.045);
+      padding: 11px 12px;
+      color: rgba(248,250,252,.86);
+      font-size: 13px;
+      font-weight: 760;
+      cursor: pointer;
+    }
+
+    .subscription-reason input { accent-color: #f87171; }
+
+    .subscription-other-note {
+      margin-top: 10px;
+      display: none;
+      width: 100%;
+      min-height: 78px;
+      resize: vertical;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      background: rgba(8,11,19,.7);
+      color: #f8fafc;
+      padding: 12px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .subscription-other-note.is-visible { display: block; }
+
+    .subscription-modal-actions {
+      margin-top: 18px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .subscription-modal-error {
+      margin-top: 12px;
+      min-height: 18px;
+      color: #fca5a5;
+      font-size: 12px;
+      font-weight: 760;
+    }
+
     @media (max-width: 740px) {
       .usage-modal { padding: 12px; }
       .usage-modal-head { padding: 18px; }
@@ -337,6 +526,21 @@
             <p class="text-sm opacity-90">Need more generations? Get extra credits for HD exports and fast-track processing.</p>
             <button id="btnBuyCredits" class="mt-4 btn-brand px-4 py-2 rounded-xl text-sm">Buy Credits</button>
           </div>
+          <div id="subscriptionPlanCard" class="subscription-plan-card md:col-span-2">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <span id="subscriptionStatusPill" class="subscription-status-pill">Monthly plan</span>
+                <h3 id="subscriptionPlanName" class="subscription-plan-name">Checking your monthly plan...</h3>
+                <p id="subscriptionPlanText" class="mt-2 text-sm text-white/65">Loading subscription details.</p>
+                <div id="subscriptionPlanMeta" class="subscription-plan-meta hidden"></div>
+                <p id="subscriptionModels" class="subscription-models hidden"></p>
+              </div>
+            </div>
+            <div class="subscription-actions">
+              <a id="subscriptionUpgradeLink" href="/pricing.html?plan=monthly" class="btn-brand px-4 py-2 rounded-xl text-sm font-semibold">View monthly plans</a>
+              <button id="btnCancelSubscription" type="button" class="subscription-cancel-btn hidden">Cancel subscription</button>
+            </div>
+          </div>
         </div>
       </section>
     </div>
@@ -369,6 +573,37 @@
     </section>
   </div>
 
+  <div id="cancelSubscriptionModal" class="subscription-modal" aria-hidden="true">
+    <button id="cancelSubscriptionBackdrop" class="subscription-modal-backdrop" type="button" aria-label="Close cancellation dialog"></button>
+    <section class="subscription-modal-panel" role="dialog" aria-modal="true" aria-labelledby="cancelSubscriptionTitle">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[.16em] text-red-200/70">Cancel subscription</p>
+          <h2 id="cancelSubscriptionTitle" class="mt-2 text-2xl font-semibold leading-tight text-white">Are you sure?</h2>
+          <p id="cancelSubscriptionCopy" class="mt-2 text-sm leading-6 text-white/64">Your unlimited models stay active until the end of your paid period. Please choose one reason before cancelling.</p>
+        </div>
+        <button id="cancelSubscriptionClose" class="usage-close-btn" type="button" aria-label="Close cancellation dialog">×</button>
+      </div>
+
+      <form id="cancelSubscriptionForm">
+        <div class="subscription-reasons" role="radiogroup" aria-label="Cancellation reason">
+          <label class="subscription-reason"><input type="radio" name="cancelReason" value="price_too_high"> The price is too high</label>
+          <label class="subscription-reason"><input type="radio" name="cancelReason" value="did_not_use_unlimited"> I did not use unlimited models</label>
+          <label class="subscription-reason"><input type="radio" name="cancelReason" value="missing_models"> Missing the models I need</label>
+          <label class="subscription-reason"><input type="radio" name="cancelReason" value="results_not_good_enough"> Results were not good enough</label>
+          <label class="subscription-reason"><input type="radio" name="cancelReason" value="one_project_only"> I only needed it for one project</label>
+          <label class="subscription-reason"><input type="radio" name="cancelReason" value="other"> Other</label>
+        </div>
+        <textarea id="cancelSubscriptionOther" class="subscription-other-note" placeholder="Optional: tell us more"></textarea>
+        <div id="cancelSubscriptionError" class="subscription-modal-error"></div>
+        <div class="subscription-modal-actions">
+          <button id="keepSubscriptionBtn" type="button" class="btn px-4 py-2 rounded-xl text-sm font-semibold text-white">Keep plan</button>
+          <button id="confirmCancelSubscriptionBtn" type="submit" class="subscription-cancel-btn">Cancel at period end</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
   <div class="h-10"></div>
 
   <script>
@@ -380,6 +615,125 @@
     const $ = (id) => document.getElementById(id);
     const setText = (id, v) => { const el = $(id); if (el) el.textContent = v ?? '—'; };
     const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'}); } catch { return '—'; } };
+
+    const SUBSCRIPTION_PLAN_COPY = {
+      premium_monthly: {
+        name: 'Premium',
+        monthlyCredits: 300,
+        price: '$40 / month'
+      },
+      pro_monthly: {
+        name: 'Pro',
+        monthlyCredits: 500,
+        price: '$64 / month'
+      },
+      pro_max_monthly: {
+        name: 'Pro Max',
+        monthlyCredits: 1000,
+        price: '$120 / month'
+      }
+    };
+
+    let currentSubscription = null;
+
+    function isSubscriptionUsable(row) {
+      if (!row || row.status !== 'active') return false;
+      if (!row.current_period_end) return true;
+      return Date.parse(row.current_period_end) > Date.now();
+    }
+
+    function setSubscriptionLoading() {
+      setText('subscriptionStatusPill', 'Monthly plan');
+      setText('subscriptionPlanName', 'Checking your monthly plan...');
+      setText('subscriptionPlanText', 'Loading subscription details.');
+      document.getElementById('subscriptionPlanMeta')?.classList.add('hidden');
+      document.getElementById('subscriptionModels')?.classList.add('hidden');
+      document.getElementById('btnCancelSubscription')?.classList.add('hidden');
+    }
+
+    function renderNoSubscription() {
+      currentSubscription = null;
+      setText('subscriptionStatusPill', 'No monthly plan');
+      setText('subscriptionPlanName', "Currently you don't have monthly credit");
+      setText('subscriptionPlanText', 'You can keep using pay-as-you-go credits, or choose a monthly plan with included credits and unlimited models.');
+      document.getElementById('subscriptionPlanMeta')?.classList.add('hidden');
+      document.getElementById('subscriptionModels')?.classList.add('hidden');
+      document.getElementById('btnCancelSubscription')?.classList.add('hidden');
+    }
+
+    function renderSubscription(row) {
+      currentSubscription = row;
+      const plan = SUBSCRIPTION_PLAN_COPY[row.plan_id] || { name: row.plan_id || 'Monthly plan', monthlyCredits: null, price: '' };
+      const endsAt = row.current_period_end ? fmtDate(row.current_period_end) : 'the end of this period';
+      const statusText = row.cancel_at_period_end ? 'Cancels at period end' : 'Active monthly plan';
+
+      setText('subscriptionStatusPill', statusText);
+      setText('subscriptionPlanName', plan.name);
+      setText(
+        'subscriptionPlanText',
+        row.cancel_at_period_end
+          ? `Your unlimited models stay active until ${endsAt}. You will not be charged again.`
+          : 'Your monthly plan is active. Included monthly credits and unlimited model access are enabled.'
+      );
+
+      const meta = document.getElementById('subscriptionPlanMeta');
+      if (meta) {
+        meta.innerHTML = '';
+        [
+          plan.price,
+          plan.monthlyCredits ? `${plan.monthlyCredits} monthly credits` : '',
+          `Renews until ${endsAt}`
+        ].filter(Boolean).forEach((text) => {
+          const span = document.createElement('span');
+          span.textContent = text;
+          meta.appendChild(span);
+        });
+        meta.classList.remove('hidden');
+      }
+
+      const models = document.getElementById('subscriptionModels');
+      if (models) {
+        const list = Array.isArray(row.unlimited_models) ? row.unlimited_models : [];
+        models.textContent = list.length ? `Unlimited models: ${list.join(', ')}` : 'Unlimited models are enabled for this plan.';
+        models.classList.remove('hidden');
+      }
+
+      const cancelBtn = document.getElementById('btnCancelSubscription');
+      if (cancelBtn) {
+        cancelBtn.classList.toggle('hidden', !!row.cancel_at_period_end);
+        cancelBtn.disabled = !!row.cancel_at_period_end;
+      }
+    }
+
+    async function loadSubscriptionStatus() {
+      const user = await ensureAuth();
+      if (!user) {
+        renderNoSubscription();
+        return;
+      }
+
+      setSubscriptionLoading();
+      try {
+        const { data, error } = await sb.from('user_subscriptions')
+          .select('status,plan_id,unlimited_models,current_period_start,current_period_end,cancel_at_period_end,canceled_at,provider_subscription_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (error) throw error;
+        if (!isSubscriptionUsable(data)) {
+          renderNoSubscription();
+          return;
+        }
+        renderSubscription(data);
+      } catch (error) {
+        console.warn('subscription read failed', error);
+        setText('subscriptionStatusPill', 'Monthly plan');
+        setText('subscriptionPlanName', 'Could not load monthly plan');
+        setText('subscriptionPlanText', 'Please refresh and try again.');
+        document.getElementById('subscriptionPlanMeta')?.classList.add('hidden');
+        document.getElementById('subscriptionModels')?.classList.add('hidden');
+        document.getElementById('btnCancelSubscription')?.classList.add('hidden');
+      }
+    }
 
     function waitForInitialSession(timeoutMs = 2000) {
       return new Promise((resolve) => {
@@ -551,6 +905,92 @@
       });
     }
 
+    function openCancelSubscription() {
+      const modal = document.getElementById('cancelSubscriptionModal');
+      if (!modal || !currentSubscription) return;
+      document.getElementById('cancelSubscriptionError').textContent = '';
+      document.getElementById('cancelSubscriptionOther')?.classList.remove('is-visible');
+      document.querySelectorAll('input[name="cancelReason"]').forEach((input) => { input.checked = false; });
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCancelSubscription() {
+      const modal = document.getElementById('cancelSubscriptionModal');
+      if (!modal) return;
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    async function submitCancelSubscription(event) {
+      event.preventDefault();
+      const error = document.getElementById('cancelSubscriptionError');
+      const submitBtn = document.getElementById('confirmCancelSubscriptionBtn');
+      const selected = document.querySelector('input[name="cancelReason"]:checked');
+      const note = document.getElementById('cancelSubscriptionOther')?.value || '';
+      if (!selected) {
+        if (error) error.textContent = 'Please choose one reason before cancelling.';
+        return;
+      }
+
+      try {
+        if (error) error.textContent = '';
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Cancelling...';
+        }
+        const { data: sessionData } = await sb.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        if (!token) throw new Error('missing_session');
+
+        const res = await fetch('/.netlify/functions/cancel-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            reason: selected.value,
+            note: selected.value === 'other' ? note : '',
+            plan_id: currentSubscription?.plan_id || null
+          })
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || 'cancel_failed');
+
+        closeCancelSubscription();
+        await loadSubscriptionStatus();
+      } catch (cancelError) {
+        console.warn('cancel subscription failed', cancelError);
+        if (error) error.textContent = 'Could not cancel right now. Please try again.';
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Cancel at period end';
+        }
+      }
+    }
+
+    function initSubscriptionControls() {
+      document.getElementById('btnCancelSubscription')?.addEventListener('click', openCancelSubscription);
+      document.getElementById('cancelSubscriptionBackdrop')?.addEventListener('click', closeCancelSubscription);
+      document.getElementById('cancelSubscriptionClose')?.addEventListener('click', closeCancelSubscription);
+      document.getElementById('keepSubscriptionBtn')?.addEventListener('click', closeCancelSubscription);
+      document.getElementById('cancelSubscriptionForm')?.addEventListener('submit', submitCancelSubscription);
+      document.querySelectorAll('input[name="cancelReason"]').forEach((input) => {
+        input.addEventListener('change', () => {
+          const other = document.getElementById('cancelSubscriptionOther');
+          if (!other) return;
+          other.classList.toggle('is-visible', input.value === 'other' && input.checked);
+        });
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeCancelSubscription();
+      });
+    }
+
     function initActions() {
       document.getElementById('btnCreateNow')?.addEventListener('click', () => { window.location.href = 'models.html'; });
       document.getElementById('btnBuyCredits')?.addEventListener('click', () => { window.location.href = 'pricing.html'; });
@@ -560,13 +1000,16 @@
       await waitForInitialSession();
       await loadProfileInfo();
       startCreditsParity();
+      await loadSubscriptionStatus();
       initUsageHistory();
+      initSubscriptionControls();
       initActions();
 
       sb.auth.onAuthStateChange((event) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'SIGNED_OUT') {
           loadProfileInfo();
           loadCredits();
+          loadSubscriptionStatus();
         }
       });
     })();
