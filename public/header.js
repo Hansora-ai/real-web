@@ -16,6 +16,39 @@
   const SIGNUP_OFFER_OAUTH_STARTED_KEY = 'hansora_signup_offer_oauth_started_at';
   const SIGNUP_OFFER_URL = '/pricing.html?offer_popup=1';
   const GROK_VIDEO_CREDIT_THRESHOLD = 4;
+  const SUBSCRIPTION_CACHE_MS = 60 * 1000;
+  const SUBSCRIPTION_PLAN_RULES = {
+    premium_monthly: [
+      { key: 'nano-banana-2-lite', label: 'Nano Banana 2 Lite', type: 'image', models: ['nano-banana-2-lite', 'nano banana 2 lite'] },
+      { key: 'nano-banana-2:1k', label: 'Nano Banana 2', type: 'image', models: ['nano-banana-2', 'nano banana 2'], qualities: ['1k'] },
+      { key: 'z-image', label: 'Z Image', type: 'image', models: ['z-image', 'z image'] },
+      { key: 'gpt-image-2:1k', label: 'GPT Image 2', type: 'image', models: ['gpt-image-2', 'gpt image 2'], qualities: ['1k'] },
+      { key: 'seedream-5-lite', label: 'Seedream 5.0 Lite', type: 'image', models: ['seedream-5-lite', 'seedream 5 lite', 'seedream 5.0 lite'] },
+      { key: 'grok-video:6s', label: 'Grok Video', type: 'video', models: ['grok-video', 'grok video', 'grok'], durations: [6] }
+    ],
+    pro_monthly: [
+      { key: 'nano-banana-2-lite', label: 'Nano Banana 2 Lite', type: 'image', models: ['nano-banana-2-lite', 'nano banana 2 lite'] },
+      { key: 'nano-banana-2:1k', label: 'Nano Banana 2', type: 'image', models: ['nano-banana-2', 'nano banana 2'], qualities: ['1k'] },
+      { key: 'z-image', label: 'Z Image', type: 'image', models: ['z-image', 'z image'] },
+      { key: 'gpt-image-2:1k', label: 'GPT Image 2', type: 'image', models: ['gpt-image-2', 'gpt image 2'], qualities: ['1k'] },
+      { key: 'seedream-5-lite', label: 'Seedream 5.0 Lite', type: 'image', models: ['seedream-5-lite', 'seedream 5 lite', 'seedream 5.0 lite'] },
+      { key: 'grok-video:6s', label: 'Grok Video', type: 'video', models: ['grok-video', 'grok video', 'grok'], durations: [6] },
+      { key: 'veo-3-1-lite:720p:8s', label: 'Veo 3.1 Lite', type: 'video', models: ['veo31-lite', 'veo-3-1-lite', 'veo 3.1 lite', 'veo31'], resolutions: ['720p'], durations: [8] }
+    ],
+    pro_max_monthly: [
+      { key: 'nano-banana-2-lite', label: 'Nano Banana 2 Lite', type: 'image', models: ['nano-banana-2-lite', 'nano banana 2 lite'] },
+      { key: 'nano-banana-2:1k', label: 'Nano Banana 2', type: 'image', models: ['nano-banana-2', 'nano banana 2'], qualities: ['1k'] },
+      { key: 'nano-banana-2:2k', label: 'Nano Banana 2', type: 'image', models: ['nano-banana-2', 'nano banana 2'], qualities: ['2k'] },
+      { key: 'z-image', label: 'Z Image', type: 'image', models: ['z-image', 'z image'] },
+      { key: 'gpt-image-2:1k', label: 'GPT Image 2', type: 'image', models: ['gpt-image-2', 'gpt image 2'], qualities: ['1k'] },
+      { key: 'gpt-image-2:2k', label: 'GPT Image 2', type: 'image', models: ['gpt-image-2', 'gpt image 2'], qualities: ['2k'] },
+      { key: 'seedream-5-lite', label: 'Seedream 5.0 Lite', type: 'image', models: ['seedream-5-lite', 'seedream 5 lite', 'seedream 5.0 lite'] },
+      { key: 'wan-2-7-image', label: 'Wan 2.7 Image', type: 'image', models: ['wan-2-7', 'wan 2.7', 'wan-2-7-image', 'wan 2.7 image'] },
+      { key: 'grok-video:6s', label: 'Grok Video', type: 'video', models: ['grok-video', 'grok video', 'grok'], durations: [6] },
+      { key: 'veo-3-1-lite:1080p:8s', label: 'Veo 3.1 Lite', type: 'video', models: ['veo31-lite', 'veo-3-1-lite', 'veo 3.1 lite', 'veo31'], resolutions: ['1080p'], durations: [8] },
+      { key: 'kling-2-5-turbo:1080p:5s', label: 'Kling 2.5 Turbo', type: 'video', models: ['kling-2-5-turbo', 'kling 2.5 turbo'], resolutions: ['1080p'], durations: [5] }
+    ]
+  };
 
   function ensureI18nRuntime() {
     if (window.HansoraI18n || document.querySelector('script[data-hansora-i18n]')) return;
@@ -30,6 +63,10 @@
   let currentUser = null;
   let currentCredits = 0;
   let signupOfferTimer = null;
+  let currentSubscription = null;
+  let subscriptionLoadedAt = 0;
+  let subscriptionUserId = null;
+  let subscriptionPromise = null;
 
   const IMAGE_MENU_MODELS = [
     { label: 'GPT Image 2', id: 'gpt-image-2', icon: 'G2', note: 'Latest image generation' },
@@ -1150,6 +1187,7 @@
     currentCredits = 0;
     analyticsAuthCache = null;
     window.__hansoraAnalyticsAuth = null;
+    clearSubscriptionState();
     const header = el('siteHeader');
     const loginBtn = el('btnLoginSignup');
     const navCredits = el('navCredits');
@@ -1240,6 +1278,201 @@
     if (!sb) return null;
     const { data } = await sb.auth.getUser();
     return data && data.user ? data.user.id : null;
+  }
+
+  function normalizeSubscriptionValue(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[_\s]+/g, '-')
+      .replace(/[^a-z0-9.-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  function normalizeQuality(value) {
+    const text = normalizeSubscriptionValue(value);
+    if (text === '1-k') return '1k';
+    if (text === '2-k') return '2k';
+    return text.replace('-', '');
+  }
+
+  function normalizeResolution(value) {
+    const text = normalizeSubscriptionValue(value);
+    if (!text) return '';
+    const match = text.match(/(720|1080|2160|4k)/);
+    if (!match) return text;
+    return match[1] === '4k' ? '4k' : `${match[1]}p`;
+  }
+
+  function normalizeDuration(value) {
+    if (value == null || value === '') return null;
+    if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value);
+    const match = String(value).match(/(\d+(?:\.\d+)?)/);
+    return match ? Math.round(Number(match[1])) : null;
+  }
+
+  function ruleIsConstrained(rule) {
+    return Boolean(
+      (rule.qualities && rule.qualities.length) ||
+      (rule.resolutions && rule.resolutions.length) ||
+      (rule.durations && rule.durations.length)
+    );
+  }
+
+  function ruleDisplayName(rule) {
+    const parts = [rule.label || rule.key];
+    if (rule.qualities && rule.qualities.length) parts.push(rule.qualities.join('-').toUpperCase());
+    if (rule.resolutions && rule.resolutions.length) parts.push(rule.resolutions.join('-'));
+    if (rule.durations && rule.durations.length) parts.push(`${rule.durations.join('-')}s`);
+    return parts.join(' ');
+  }
+
+  function fallbackRulesFromLabels(labels) {
+    return (Array.isArray(labels) ? labels : []).map(function (label) {
+      const text = String(label || '').trim();
+      return {
+        key: normalizeSubscriptionValue(text),
+        label: text,
+        type: '',
+        models: [text]
+      };
+    }).filter(function (rule) { return rule.key; });
+  }
+
+  function subscriptionRulesFor(planId, labels) {
+    return SUBSCRIPTION_PLAN_RULES[planId] || fallbackRulesFromLabels(labels);
+  }
+
+  function buildSubscriptionState(row) {
+    const now = Date.now();
+    const endMs = row && row.current_period_end ? Date.parse(row.current_period_end) : 0;
+    const active = Boolean(
+      row &&
+      row.status === 'active' &&
+      Number.isFinite(endMs) &&
+      endMs > now
+    );
+    if (!active) {
+      return {
+        active: false,
+        status: row && row.status ? row.status : 'inactive',
+        planId: row && row.plan_id ? row.plan_id : null,
+        currentPeriodEnd: row && row.current_period_end ? row.current_period_end : null,
+        cancelAtPeriodEnd: Boolean(row && row.cancel_at_period_end),
+        unlimitedModels: [],
+        unlimitedModelKeys: [],
+        rules: []
+      };
+    }
+    const rules = subscriptionRulesFor(row.plan_id, row.unlimited_models);
+    return {
+      active: true,
+      status: row.status,
+      planId: row.plan_id,
+      currentPeriodEnd: row.current_period_end || null,
+      cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),
+      unlimitedModels: rules.map(ruleDisplayName),
+      unlimitedModelKeys: rules.map(function (rule) { return rule.key; }),
+      rules: rules.map(function (rule) {
+        return {
+          key: rule.key,
+          label: rule.label,
+          type: rule.type || '',
+          qualities: rule.qualities || [],
+          resolutions: rule.resolutions || [],
+          durations: rule.durations || []
+        };
+      })
+    };
+  }
+
+  function publishSubscriptionState(state) {
+    currentSubscription = state || buildSubscriptionState(null);
+    window.HANSORA_SUBSCRIPTION = currentSubscription;
+    window.HANSORA_UNLIMITED_MODELS = currentSubscription.unlimitedModelKeys || [];
+    window.dispatchEvent(new CustomEvent('hansora:subscription-updated', { detail: currentSubscription }));
+    return currentSubscription;
+  }
+
+  function clearSubscriptionState() {
+    subscriptionLoadedAt = 0;
+    subscriptionUserId = null;
+    subscriptionPromise = null;
+    publishSubscriptionState(buildSubscriptionState(null));
+  }
+
+  function requestFromModelInput(input, options) {
+    const source = input && typeof input === 'object' ? input : { model: input };
+    const extra = options && typeof options === 'object' ? options : {};
+    const model = source.model || source.modelId || source.selectedModel || source.id || source.label || source.name || '';
+    const quality = source.quality || source.size || source.outputQuality || source.resolution || extra.quality || extra.size || '';
+    const resolution = source.resolution || source.quality || source.size || extra.resolution || '';
+    const duration = source.duration || source.seconds || source.durationSeconds || source.length || extra.duration || extra.seconds || extra.durationSeconds || null;
+    return {
+      raw: input,
+      model: normalizeSubscriptionValue(model),
+      quality: normalizeQuality(quality),
+      resolution: normalizeResolution(resolution),
+      duration: normalizeDuration(duration)
+    };
+  }
+
+  function ruleMatchesRequest(rule, request) {
+    const aliases = (rule.models || []).map(normalizeSubscriptionValue);
+    const rawKey = normalizeSubscriptionValue(request.raw);
+    if (typeof request.raw === 'string') {
+      const exactCandidates = [rule.key, ruleDisplayName(rule)].map(normalizeSubscriptionValue);
+      if (!ruleIsConstrained(rule)) {
+        exactCandidates.push(rule.label, ...(rule.models || []));
+      }
+      if (exactCandidates.map(normalizeSubscriptionValue).includes(rawKey)) return true;
+    }
+    if (!request.model || !aliases.includes(request.model)) return false;
+    if (rule.qualities && rule.qualities.length && !rule.qualities.map(normalizeQuality).includes(request.quality)) return false;
+    if (rule.resolutions && rule.resolutions.length && !rule.resolutions.map(normalizeResolution).includes(request.resolution)) return false;
+    if (rule.durations && rule.durations.length && !rule.durations.includes(request.duration)) return false;
+    return true;
+  }
+
+  function isUnlimitedModel(input, options) {
+    const state = currentSubscription;
+    if (!state || !state.active) return false;
+    const rules = subscriptionRulesFor(state.planId, state.unlimitedModels);
+    const request = requestFromModelInput(input, options);
+    return rules.some(function (rule) { return ruleMatchesRequest(rule, request); });
+  }
+
+  async function loadSubscriptionForUser(user, options) {
+    if (!sb || !user || !user.id) {
+      clearSubscriptionState();
+      return currentSubscription;
+    }
+    const force = Boolean(options && options.force);
+    const now = Date.now();
+    if (!force && subscriptionUserId === user.id && currentSubscription && now - subscriptionLoadedAt < SUBSCRIPTION_CACHE_MS) {
+      return currentSubscription;
+    }
+    if (!force && subscriptionUserId === user.id && subscriptionPromise) return subscriptionPromise;
+    subscriptionUserId = user.id;
+    subscriptionPromise = (async function () {
+      const { data, error } = await sb
+        .from('user_subscriptions')
+        .select('status,plan_id,unlimited_models,current_period_end,cancel_at_period_end,updated_at')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      subscriptionLoadedAt = Date.now();
+      return publishSubscriptionState(buildSubscriptionState(data));
+    })();
+    try {
+      return await subscriptionPromise;
+    } catch (error) {
+      console.warn('Hansora subscription read failed', error);
+      return publishSubscriptionState(buildSubscriptionState(null));
+    } finally {
+      subscriptionPromise = null;
+    }
   }
 
   async function refreshCredits() {
@@ -1571,6 +1804,9 @@
     refreshAnalyticsAuthCache();
     const profile = await getOrCreateProfile(user);
     showLoggedInUI(profile, user);
+    loadSubscriptionForUser(user).catch(function (error) {
+      console.warn('Hansora subscription background read failed', error);
+    });
     await registerAffiliateReferral(user);
     handleSignupOffer(user, profile);
     return profile;
@@ -1593,12 +1829,18 @@
   }
 
   function exposeApi() {
+    if (!currentSubscription) publishSubscriptionState(buildSubscriptionState(null));
     window.HansoraHeader = {
       refreshCredits,
       setCredits: setCreditsDisplay,
       saveCredits: setCredits,
       addCredits,
       useCredits,
+      refreshSubscription: function () {
+        return currentUser ? loadSubscriptionForUser(currentUser, { force: true }) : Promise.resolve(currentSubscription);
+      },
+      getSubscription: function () { return currentSubscription; },
+      isUnlimitedModel,
       getCurrentUser: function () { return currentUser; },
       getCurrentCredits: function () { return currentCredits; },
       openAuth,
@@ -1625,6 +1867,11 @@
     };
     window.refreshCredits = refreshCredits;
     window.hansoraCredits = { addCredits, useCredits, setCredits };
+    window.hansoraSubscription = {
+      refresh: window.HansoraHeader.refreshSubscription,
+      get: window.HansoraHeader.getSubscription,
+      isUnlimitedModel
+    };
   }
 
   captureAffiliateRef();
