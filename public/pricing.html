@@ -1399,6 +1399,9 @@ Pay once, use credits across image, video, product card, audio, and creative too
   }
   function addCommonDodoParams(url, user){
     if (!url.searchParams.has('quantity')) url.searchParams.set('quantity', '1');
+    if (!url.searchParams.has('redirect_url')) {
+      url.searchParams.set('redirect_url', 'https://hansora.co/profile.html?checkout=success');
+    }
     url.searchParams.set('minimalAddress', 'true');
     url.searchParams.set('metadata_uid', user.id);
     if (user.email) url.searchParams.set('metadata_email', user.email);
