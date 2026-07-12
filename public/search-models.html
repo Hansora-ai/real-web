@@ -11793,7 +11793,12 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
       const urls = collectPreviewInputUrls(data || {});
       const diag = getPreviewDiagnostic(data || {});
-      const hadUploadedInput = Number(diag.uploaded_url_count || diag.uploadedUrlCount || 0) > 0;
+      const meta = getPreviewMeta(data || {});
+      const previewMode = String(meta.mode || diag.mode || data?.mode || '').toLowerCase();
+      const previewModelName = String(meta.model || diag.model || data?.model || '').toLowerCase();
+      const hadUploadedInput = Number(diag.uploaded_url_count || diag.uploadedUrlCount || meta.uploaded_url_count || 0) > 0
+        || previewMode.includes('image-to-image')
+        || previewModelName.includes('image-to-image');
       if (!urls.length && currentModel && (currentModel.needsImage || hadUploadedInput) && data && data.result_url) {
         urls.push(String(data.result_url));
       }
