@@ -10999,43 +10999,35 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
       const attempt = async (index) => {
         try {
-          const { data, error } = await supabaseClient
-            .from('user_generations')
-            .select('id,meta')
-            .eq('user_id', uid)
-            .filter('meta->>run_id', 'eq', runId)
-            .limit(1)
-            .maybeSingle();
-
-          if (error) throw error;
-          if (!data || !data.id) throw new Error('generation_row_not_ready');
-
-          const existingMeta = data.meta && typeof data.meta === 'object' ? data.meta : {};
-          const existingDiagnostic = existingMeta.client_diagnostic && typeof existingMeta.client_diagnostic === 'object'
-            ? existingMeta.client_diagnostic
-            : {};
-          const nextMeta = Object.assign({}, existingMeta, {
-            run_id: runId,
-            model: existingMeta.model || model.id || diagnostic.model_id || '',
-            model_name: existingMeta.model_name || model.name || diagnostic.model_name || '',
-            input_urls: inputUrls,
-            source_urls: inputUrls,
-            uploaded_url_count: inputUrls.length,
-            input_urls_saved_at: new Date().toISOString(),
-            client_diagnostic: Object.assign({}, existingDiagnostic, diagnostic, {
-              model_id: diagnostic.model_id || model.id || existingDiagnostic.model_id || '',
-              model_name: diagnostic.model_name || model.name || existingDiagnostic.model_name || '',
+          let accessToken = '';
+          try {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            accessToken = sessionData && sessionData.session && sessionData.session.access_token ? sessionData.session.access_token : '';
+          } catch (_) {}
+          const res = await fetch('/.netlify/functions/save-generation-inputs', {
+            method: 'POST',
+            headers: Object.assign(
+              { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              accessToken ? { 'Authorization': 'Bearer ' + accessToken } : {}
+            ),
+            body: JSON.stringify({
+              uid,
+              run_id: runId,
+              taskId: submittedTaskId,
+              model_id: model.id || diagnostic.model_id || '',
+              model_name: model.name || diagnostic.model_name || '',
               input_urls: inputUrls,
-              uploaded_url_count: inputUrls.length
+              source_urls: inputUrls,
+              client_diagnostic: Object.assign({}, diagnostic, {
+                model_id: diagnostic.model_id || model.id || '',
+                model_name: diagnostic.model_name || model.name || '',
+                input_urls: inputUrls,
+                uploaded_url_count: inputUrls.length
+              })
             })
           });
-          if (submittedTaskId && !nextMeta.task_id) nextMeta.task_id = submittedTaskId;
-
-          const { error: updateError } = await supabaseClient
-            .from('user_generations')
-            .update({ meta: nextMeta })
-            .eq('id', data.id);
-          if (updateError) throw updateError;
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok || !payload.ok) throw new Error(payload.error || payload.reason || payload.status || `save_inputs_${res.status}`);
         } catch (error) {
           if (index + 1 >= delays.length) {
             console.warn('Could not persist generation input URLs for recreate', { runId, error });
