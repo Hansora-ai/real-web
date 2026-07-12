@@ -11040,6 +11040,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       setTimeout(() => attempt(0), delays[0]);
     }
 
+    let lastAcceptedRunMarker = 0;
+
     async function runCurrentModel() {
       if (!currentModel) {
         showStatus('Please choose a model first.', 'error');
@@ -11395,6 +11397,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
                 `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
                 'success'
               );
+              lastAcceptedRunMarker = Date.now();
               persistGenerationInputUrlsInBackground({
                 uid,
                 runId,
@@ -11415,6 +11418,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
               'success'
             );
+            lastAcceptedRunMarker = Date.now();
             persistGenerationInputUrlsInBackground({
               uid,
               runId,
@@ -11763,14 +11767,15 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
     async function submitPreviewRun(setStatus) {
       const before = resultCardCount();
+      const acceptedBefore = Number(lastAcceptedRunMarker || 0);
       await runCurrentModel();
       const after = resultCardCount();
-      if (after > before) {
+      if (Number(lastAcceptedRunMarker || 0) > acceptedBefore || after > before) {
         if (window.closePreview) window.closePreview();
         return true;
       }
       if (typeof setStatus === 'function') {
-        setStatus('Could not submit. Check the red message on the page and try again.', 'error');
+        setStatus('Generation failed. Check your prompt or image, then try again.', 'error');
       }
       return false;
     }
