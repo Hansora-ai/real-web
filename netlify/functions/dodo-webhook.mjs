@@ -197,10 +197,11 @@ export async function handler(event) {
     // ---- 2) Add credits only if we won the CAS ----
     let credited = false;
     if (won) {
-      // Read current credits
-      let currentCredits = 0;
+      // Read current buckets. Pay-as-you-go purchases must never mix into monthly_credits.
+      let currentMonthlyCredits = 0;
+      let currentPaygCredits = 0;
       {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`, {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits,monthly_credits,payg_credits`, {
           headers: {
             "Accept": "application/json",
             "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
@@ -211,11 +212,12 @@ export async function handler(event) {
         if (!res.ok || !Array.isArray(rows) || rows.length === 0) {
           return json(500, { error: "profiles fetch failed or 0 rows" });
         }
-        currentCredits = Number(rows?.[0]?.credits ?? 0);
+        currentMonthlyCredits = Number(rows?.[0]?.monthly_credits ?? 0);
+        currentPaygCredits = Number(rows?.[0]?.payg_credits ?? rows?.[0]?.credits ?? 0);
       }
-      // Update credits
+      // Update the pay-as-you-go bucket. The DB trigger keeps profiles.credits as one visible total.
       {
-        const newCredits = currentCredits + credits;
+        const newPaygCredits = currentPaygCredits + credits;
         const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
           method: "PATCH",
           headers: {
@@ -225,7 +227,11 @@ export async function handler(event) {
             "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
             "apikey": SUPABASE_SERVICE_ROLE_KEY
           },
-          body: JSON.stringify({ credits: newCredits })
+          body: JSON.stringify({
+            monthly_credits: currentMonthlyCredits,
+            payg_credits: newPaygCredits,
+            credits: currentMonthlyCredits + newPaygCredits
+          })
         });
         const updated = await sjson(res) || [];
         if (!res.ok || !Array.isArray(updated) || updated.length === 0) {
@@ -299,7 +305,7 @@ async function handleSubscriptionWebhook({
   if (type === "subscription.on_hold") subscriptionStatus = "on_hold";
   if (type === "subscription.failed") subscriptionStatus = "failed";
   if (type === "subscription.expired") subscriptionStatus = "expired";
-  if (type === "subscription.cancelled") subscriptionStatus = "cancelled";
+  if (type === "subscription.cancelled" || type === "subscription.canceled") subscriptionStatus = "cancelled";
 
   // If Dodo marks a scheduled cancellation but the period has not ended, keep access active.
   if (
@@ -375,7 +381,8 @@ async function handleSubscriptionWebhook({
       provider,
       return_url,
       payload: root,
-      paid_at
+      paid_at,
+      creditBucket: "monthly"
     });
     credited = creditResult.credited;
     creditReason = creditResult.reason;
@@ -408,7 +415,8 @@ async function addCreditsOnce({
   provider,
   return_url,
   payload,
-  paid_at
+  paid_at,
+  creditBucket = "payg"
 }) {
   {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/payments?on_conflict=transaction_id`, {
@@ -467,9 +475,10 @@ async function addCreditsOnce({
   }
   if (!won) return { credited: false, reason: "already credited" };
 
-  let currentCredits = 0;
+  let currentMonthlyCredits = 0;
+  let currentPaygCredits = 0;
   {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits,monthly_credits,payg_credits`, {
       headers: {
         "Accept": "application/json",
         "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
@@ -480,11 +489,18 @@ async function addCreditsOnce({
     if (!res.ok || !Array.isArray(rows) || rows.length === 0) {
       return { credited: false, reason: "profiles fetch failed or 0 rows" };
     }
-    currentCredits = Number(rows?.[0]?.credits ?? 0);
+    currentMonthlyCredits = Number(rows?.[0]?.monthly_credits ?? 0);
+    currentPaygCredits = Number(rows?.[0]?.payg_credits ?? rows?.[0]?.credits ?? 0);
   }
 
   {
-    const newCredits = currentCredits + credits;
+    const newMonthlyCredits = creditBucket === "monthly"
+      ? currentMonthlyCredits + credits
+      : currentMonthlyCredits;
+    const newPaygCredits = creditBucket === "monthly"
+      ? currentPaygCredits
+      : currentPaygCredits + credits;
+
     const res = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
       method: "PATCH",
       headers: {
@@ -494,7 +510,11 @@ async function addCreditsOnce({
         "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         "apikey": SUPABASE_SERVICE_ROLE_KEY
       },
-      body: JSON.stringify({ credits: newCredits })
+      body: JSON.stringify({
+        monthly_credits: newMonthlyCredits,
+        payg_credits: newPaygCredits,
+        credits: newMonthlyCredits + newPaygCredits
+      })
     });
     const updated = await sjson(res) || [];
     if (!res.ok || !Array.isArray(updated) || updated.length === 0) {
@@ -502,7 +522,10 @@ async function addCreditsOnce({
     }
   }
 
-  return { credited: true, reason: "monthly credits added" };
+  return {
+    credited: true,
+    reason: creditBucket === "monthly" ? "monthly credits added" : "pay-as-you-go credits added"
+  };
 }
 
 async function sendMetaPurchase({
