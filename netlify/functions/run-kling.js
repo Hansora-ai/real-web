@@ -75,6 +75,26 @@ async function debitCredits(uid, cost){
   }catch(e){ return { ok:false, error:'server_exception', details:String(e&&e.message||e) }; }
 }
 
+async function hasUnlimitedSubscription(uid, duration, resolution){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid) return false;
+  try{
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_subscriptions?user_id=eq.${encodeURIComponent(uid)}&select=status,plan_id,current_period_end&limit=1`, {
+      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+    });
+    if (!r.ok) return false;
+    const arr = await r.json().catch(()=>[]);
+    const row = Array.isArray(arr) ? arr[0] : null;
+    if (!row || row.status !== 'active' || row.plan_id !== 'pro_max_monthly') return false;
+    const endMs = row.current_period_end ? Date.parse(row.current_period_end) : 0;
+    if (!Number.isFinite(endMs) || endMs <= Date.now()) return false;
+    const dur = Number(duration);
+    const res = String(resolution || '1080p').trim().toLowerCase();
+    return dur === 5 && res === '1080p';
+  }catch(_){
+    return false;
+  }
+}
+
 // Extract a taskId from various KIE response shapes
 function extractTaskId(data){
   if (!data || typeof data !== 'object') return '';
@@ -135,6 +155,9 @@ exports.handler = async (event) => {
 
     // Costs: 5s -> 3⚡, 10s -> 6⚡
     const cost = (duration === 10) ? 6 : 3;
+    const requestedResolution = String(body.resolution || '1080p');
+    const subscriptionUnlimited = await hasUnlimitedSubscription(uid, duration, requestedResolution);
+    const chargeCost = subscriptionUnlimited ? 0 : cost;
     const run_id = (body.run_id && String(body.run_id).trim()) || `${uid || 'anon'}-${Date.now()}`;
 
     // Idempotency: if this run_id was already submitted, return the existing task without charging twice.
@@ -159,12 +182,12 @@ exports.handler = async (event) => {
 
     // Pre-check credits (no deduction here). Deduction still happens after KIE accepts.
     try{
-      if (SUPABASE_URL && SERVICE_KEY){
+      if (chargeCost > 0 && SUPABASE_URL && SERVICE_KEY){
         const profUrl = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
         const r0 = await fetch(profUrl, { headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
         const arr = await r0.json().catch(()=>[]);
         const cur = (Array.isArray(arr) && arr[0] && (typeof arr[0].credits==='number' || typeof arr[0].credits==='string')) ? Number(arr[0].credits) : 0;
-        if (cur < cost) return json(402, { ok:false, error:'not_enough_credits', credits: cur, need: cost });
+        if (cur < chargeCost) return json(402, { ok:false, error:'not_enough_credits', credits: cur, need: chargeCost });
       }
     }catch(_){}
 
@@ -173,7 +196,7 @@ exports.handler = async (event) => {
     try {
       if (SUPABASE_URL && SERVICE_KEY && uid){
         const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-        const meta = { source:'kling', run_id, model:'kling', status:'pending', refund_amount: cost };
+        const meta = { source:'kling', run_id, model:'kling', status:'pending', refund_amount: chargeCost, charge_cost: chargeCost, model_cost: cost, subscription_unlimited: subscriptionUnlimited };
         const rIns = await fetch(ug, {
           method: 'POST',
           headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
@@ -225,14 +248,14 @@ exports.handler = async (event) => {
           await fetch(`${ug}?id=eq.${encodeURIComponent(arr[0].id)}`, {
             method: 'PATCH',
             headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-            body: JSON.stringify({ meta: { source:'kling', run_id, model, status:'processing', task_id: taskId, refund_amount: cost } }),
+            body: JSON.stringify({ meta: { source:'kling', run_id, model, status:'processing', task_id: taskId, refund_amount: chargeCost, charge_cost: chargeCost, model_cost: cost, subscription_unlimited: subscriptionUnlimited } }),
           });
         }
       }
     } catch {}
 
     // Debit credits AFTER task was accepted
-    const debit = await debitCredits(uid, cost);
+    const debit = chargeCost > 0 ? await debitCredits(uid, chargeCost) : { ok:true, credits:null };
     if (!debit.ok){
       return json(402, { ok:false, error:'not_enough_credits', details: debit });
     }
@@ -247,7 +270,7 @@ exports.handler = async (event) => {
         const arr = await chk.json().catch(()=>[]);
         if (Array.isArray(arr) && arr.length){
           const meta0 = arr[0].meta || {};
-          const meta = { ...meta0, charged: true, charged_at: new Date().toISOString(), charged_cost: cost, debited: cost, refund_amount: cost };
+          const meta = { ...meta0, charged: true, charged_at: new Date().toISOString(), charged_cost: chargeCost, debited: chargeCost, refund_amount: chargeCost, charge_cost: chargeCost, model_cost: cost, subscription_unlimited: subscriptionUnlimited };
           await fetch(`${ug}?id=eq.${encodeURIComponent(arr[0].id)}`, {
             method:'PATCH',
             headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
@@ -256,7 +279,7 @@ exports.handler = async (event) => {
         }
       }
     }catch(_){}
-return json(201, { ok:true, submitted:true, taskId, id: taskId, run_id, row_id, debited: cost, credits: debit.credits });
+return json(201, { ok:true, submitted:true, taskId, id: taskId, run_id, row_id, debited: chargeCost, model_cost: cost, subscription_unlimited: subscriptionUnlimited, credits: debit.credits });
   }catch(e){
     return json(500, { ok:false, error:'server_error', details: String(e && e.message || e) });
   }
