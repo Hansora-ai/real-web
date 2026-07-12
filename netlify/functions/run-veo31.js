@@ -2,7 +2,7 @@
 // Submit a KIE Veo 3 job and seed a placeholder row in user_generations.
 // Mirrors your working Runway flow with minimal changes:
 // - Endpoint: https://api.kie.ai/api/v1/veo/generate
-// - model: "veo3_fast" (default) or "veo3"
+// - model: "veo3_lite", "veo3_fast" (default), or "veo3"
 // - imageUrls: [<uploaded-url>] when image is provided
 
 const KIE_URL = "https://api.kie.ai/api/v1/veo/generate";
@@ -37,7 +37,7 @@ exports.handler = async (event) => {
 
     const model = normalizeModel(body.model || "veo3_fast");
     const aspectRatio = normalizeAspect(body.aspectRatio || "16:9");
-    const quality = normalizeQuality(body.quality || body.resolution || "1080p");
+    const quality = normalizeQuality(body.quality || body.resolution || "1080p", model);
 
     // Accept a single URL, convert to array as imageUrls
     const imageUrl = normalizeUrl(body.imageUrl || body.fileUrl || "");
@@ -46,12 +46,14 @@ exports.handler = async (event) => {
     const clientRunId = (body.run_id || "").toString().trim();
     const run_id = clientRunId || `${uid}-${Date.now()}`;
     const cost = veo31Cost(model, quality);
+    const unlimitedBySubscription = await hasUnlimitedVeo31Subscription(uid, model, quality);
+    const chargeCost = unlimitedBySubscription ? 0 : cost;
 
     // Idempotency: if this run_id already has a task_id, return it and avoid double-debit.
     const existing = await findUserGeneration(uid, run_id);
     if (existing && existing.meta && (existing.meta.task_id || existing.meta.taskId)) {
-      if (!isCharged(existing.meta)) {
-        const chargeExisting = await chargeOnceForRun(uid, run_id, cost, existing.id, { ...existing.meta, refund_amount: cost });
+      if (!isCharged(existing.meta) && chargeCost > 0) {
+        const chargeExisting = await chargeOnceForRun(uid, run_id, chargeCost, existing.id, { ...existing.meta, refund_amount: chargeCost });
         if (!chargeExisting.ok) return ok({ submitted:false, error: chargeExisting.error || "charge_failed", details: chargeExisting });
       }
       return ok({ ok:true, submitted:true, run_id, taskId: existing.meta.task_id || existing.meta.taskId, reused:true, already_submitted:true });
@@ -59,8 +61,8 @@ exports.handler = async (event) => {
 
     // Pre-check credits before creating provider job. Debit still happens only after KIE returns taskId.
     const currentCredits = await getCredits(uid);
-    if (currentCredits < cost) {
-      return ok({ submitted:false, error:"insufficient_credits", need: cost, have: currentCredits });
+    if (chargeCost > 0 && currentCredits < chargeCost) {
+      return ok({ submitted:false, error:"insufficient_credits", need: chargeCost, have: currentCredits });
     }
 
     const callBackUrl = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
@@ -75,11 +77,11 @@ exports.handler = async (event) => {
 
         const payload = {
           user_id: uid,
-          provider: (String(model||"").includes("fast") ? "veo3.1fast" : "veo3.1"),
+          provider: veo31ProviderName(model),
           kind: "video",
           prompt,
           result_url: null,
-          meta: { run_id, status: "pending", aspect_ratio: aspectRatio, quality, duration: 8, model, charge_cost: cost, refund_amount: cost }
+          meta: { run_id, status: "pending", aspect_ratio: aspectRatio, quality, duration: 8, model, charge_cost: chargeCost, refund_amount: chargeCost, subscription_unlimited: unlimitedBySubscription }
         };
 
         if (idToPatch) {
@@ -107,7 +109,7 @@ const kiePayload = {
   prompt,
   model,
   aspect_ratio: aspectRatio,
-  resolution: quality === "4K" ? "4k" : "1080p",
+  resolution: kieResolutionValue(quality),
   callBackUrl
 };
 // Veo 3.1 generationType handling
@@ -171,7 +173,7 @@ if (imageUrls.length) {
           await fetch(`${UG_URL}?id=eq.${encodeURIComponent(arr[0].id)}`, {
             method: "PATCH",
             headers: { ...sb(), "Content-Type": "application/json", "Prefer": "return=minimal" },
-            body: JSON.stringify({ meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality, duration: 8, task_id: taskId, model, charge_cost: cost, refund_amount: cost } })
+            body: JSON.stringify({ meta: { run_id, status: "processing", aspect_ratio: aspectRatio, quality, duration: 8, task_id: taskId, model, charge_cost: chargeCost, refund_amount: chargeCost, subscription_unlimited: unlimitedBySubscription } })
           });
         }
       }
@@ -189,14 +191,29 @@ if (imageUrls.length) {
       duration: 8,
       task_id: taskId,
       model,
-      refund_amount: cost
+      refund_amount: chargeCost,
+      charge_cost: chargeCost,
+      subscription_unlimited: unlimitedBySubscription
     };
-    const charge = await chargeOnceForRun(uid, run_id, cost, rowId, baseMeta);
+    const charge = chargeCost > 0
+      ? await chargeOnceForRun(uid, run_id, chargeCost, rowId, baseMeta)
+      : { ok:true, debit:{ ok:true, credits:null }, already:false };
     if (!charge.ok) {
       return ok({ submitted:false, error: charge.error || "charge_failed", details: charge, taskId, run_id });
     }
+    if (chargeCost === 0 && rowId) {
+      await patchUserGenerationMetaById(rowId, {
+        ...baseMeta,
+        charged: "true",
+        charged_cost: 0,
+        charge_cost: 0,
+        charged_at: new Date().toISOString(),
+        debited: 0,
+        refund_amount: 0
+      });
+    }
 
-    return ok({ ok:true, submitted: true, run_id, taskId, status: resp.status, data, debited: cost, credits: charge.debit?.credits, already_charged: !!charge.already });
+    return ok({ ok:true, submitted: true, run_id, taskId, status: resp.status, data, debited: chargeCost, credits: charge.debit?.credits, already_charged: !!charge.already, subscription_unlimited: unlimitedBySubscription });
   } catch (e) {
     return ok({ submitted:false, error:String(e) });
   }
@@ -209,23 +226,67 @@ function safeJson(s){ try{ return JSON.parse(s||"{}"); } catch { return {}; } }
 function lowerKeys(h){ const o={}; for (const k in h) o[k.toLowerCase()] = h[k]; return o; }
 function normalizeModel(m){
   const raw = String(m||"");
-  const s = raw.toLowerCase().replace(/\s+/g,"").replace(/-/g,"");
-  if (s === "veo3" || s === "veo3standard") return "veo3";
-  if (s === "veo3fast" || s === "veo3_fast") return "veo3_fast";
+  const s = raw.toLowerCase().replace(/[\s_-]+/g,"");
+  if (s === "veo3" || s === "veo31" || s === "veo3quality" || s === "veo31quality" || s === "veo3standard" || s === "veo31standard") return "veo3";
+  if (s === "veo3fast" || s === "veo31fast") return "veo3_fast";
+  if (s === "veo3lite" || s === "veo31lite") return "veo3_lite";
   // default to fast so existing "fast" behavior remains
   return "veo3_fast";
 }
 function normalizeAspect(a){ a=String(a||"").trim(); return /^(16:9|9:16)$/.test(a)?a:"16:9"; }
-function normalizeQuality(q){ q=String(q||"").trim().toLowerCase(); return q === "4k" || q === "4K" ? "4K" : "1080p"; }
+function normalizeQuality(q, model){
+  const raw = String(q||"").trim().toLowerCase();
+  const isLite = normalizeModel(model) === "veo3_lite";
+  if (raw === "720p" || raw === "720") return "720p";
+  if (!isLite && (raw === "4k" || raw === "2160p" || raw === "2160")) return "4K";
+  return "1080p";
+}
+function kieResolutionValue(quality){
+  const q = normalizeQuality(quality);
+  if (q === "720p") return "720p";
+  if (q === "4K") return "4k";
+  return "1080p";
+}
 function normalizeUrl(u){ try{ const url=new URL(String(u||"")); return url.href; } catch { return ""; } }
 function sb(){ return { "apikey": SERVICE_KEY, "Authorization": `Bearer ${SERVICE_KEY}` }; }
 
 function veo31Cost(model, quality){
-  const isFast = String(model || "").toLowerCase().includes("fast");
-  const q = normalizeQuality(quality);
+  const normalizedModel = normalizeModel(model);
+  const q = normalizeQuality(quality, normalizedModel);
+  if (normalizedModel === "veo3_lite") return q === "1080p" ? 2.5 : 2;
   // Prices requested: Fast 1080p=5, Fast 4K=12, Quality 1080p=17, Quality 4K=22.
-  if (isFast) return q === "4K" ? 12 : 5;
+  if (normalizedModel === "veo3_fast") return q === "4K" ? 12 : 5;
   return q === "4K" ? 22 : 17;
+}
+
+function veo31ProviderName(model){
+  const normalizedModel = normalizeModel(model);
+  if (normalizedModel === "veo3_lite") return "veo3.1lite";
+  if (normalizedModel === "veo3_fast") return "veo3.1fast";
+  return "veo3.1";
+}
+
+async function hasUnlimitedVeo31Subscription(uid, model, quality){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid) return false;
+  const normalizedModel = normalizeModel(model);
+  if (normalizedModel !== "veo3_lite") return false;
+  const q = normalizeQuality(quality, normalizedModel);
+  if (q !== "720p" && q !== "1080p") return false;
+  try{
+    const url = `${SUPABASE_URL}/rest/v1/user_subscriptions?user_id=eq.${encodeURIComponent(uid)}&select=status,plan_id,current_period_end`;
+    const r = await fetch(url, { headers: sb() });
+    if (!r.ok) return false;
+    const arr = await r.json().catch(()=>[]);
+    const row = Array.isArray(arr) ? arr[0] : null;
+    if (!row || row.status !== "active") return false;
+    const endMs = row.current_period_end ? Date.parse(row.current_period_end) : 0;
+    if (!Number.isFinite(endMs) || endMs <= Date.now()) return false;
+    if (row.plan_id === "pro_monthly" && q === "720p") return true;
+    if (row.plan_id === "pro_max_monthly" && q === "1080p") return true;
+    return false;
+  }catch{
+    return false;
+  }
 }
 
 function isCharged(meta){
