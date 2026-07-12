@@ -681,10 +681,11 @@
       .preview-action-status{ order:1; }
       .preview-actions{
         order:2;
-        grid-template-columns:repeat(3, 1fr);
+        grid-template-columns:1fr 1fr;
         margin-top:0;
       }
       .preview-action-btn.primary{ grid-column:auto; }
+      .preview-action-btn[data-preview-action="download"]{ grid-column:1 / -1; }
       #previewPromptSection{ order:3; }
       #previewDetailsSection{ order:4; }
       .preview-prompt-text{ max-height:112px; }
@@ -7425,6 +7426,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       updateModelButtonLabels();
       configureControlsForModel();
       if (reusableImages.length) applyReusableImagesToCurrentModel(reusableImages);
+      updateUploadPanelState();
+      updateMobileQuickOptions();
       renderWorkspaceModelRail();
     }
 
@@ -8068,17 +8071,16 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             return;
           }
           if (model.__veoFamily) {
-            currentModel = MODELS.find((m) => m.id === (model.__defaultId || model.__fastId)) || currentModel;
+            selectWorkspaceModel(model.__defaultId || model.__fastId);
             currentVeoFamily = model.__veoFamily;
             currentVeoVariant = model.__defaultId === model.__liteId ? 'lite' : 'fast';
           } else {
-            currentModel = model;
+            selectWorkspaceModel(model.id);
             currentVeoFamily = null;
             currentVeoVariant = 'fast';
           }
           closeModelOverlay();
           updateModelButtonLabels();
-          configureControlsForModel();
           renderWorkspaceModelRail();
         });
 
@@ -8222,10 +8224,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
                   : (variant === 'fast' ? 'veo3-fast' : 'veo3');
               const nextModel = MODELS.find((m) => m.id === nextId);
               if (!nextModel) return;
-              currentModel = nextModel;
+              selectWorkspaceModel(nextModel.id);
               currentVeoVariant = variant;
               updateModelButtonLabels();
-              configureControlsForModel();
             });
             return b;
           };
@@ -11375,6 +11376,19 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       return meta.client_diagnostic && typeof meta.client_diagnostic === 'object' ? meta.client_diagnostic : {};
     }
 
+    function normalizePreviewModelToken(value) {
+      return String(value || '')
+        .toLowerCase()
+        .replace(/&/g, 'and')
+        .replace(/[^a-z0-9.]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function compactPreviewModelToken(value) {
+      return normalizePreviewModelToken(value).replace(/[^a-z0-9]+/g, '');
+    }
+
     function findPreviewModel(data) {
       const meta = getPreviewMeta(data);
       const diag = getPreviewDiagnostic(data);
@@ -11391,12 +11405,60 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         if (model) return model;
       }
 
-      const label = String((data && (data.provider || data.model || data.name)) || '').toLowerCase();
+      const label = String((data && (data.provider || data.model || data.name)) || '');
       if (!label) return null;
-      return MODELS.find((item) => {
-        const name = String(item.name || '').toLowerCase();
-        const id = String(item.id || '').toLowerCase();
-        return label === name || label === id || label.includes(name) || name.includes(label);
+      const normalized = normalizePreviewModelToken(label);
+      const compact = compactPreviewModelToken(label);
+      const aliases = {
+        'gptimage20': 'gpt-image-2',
+        'gptimage2': 'gpt-image-2',
+        'nano banana 2 lite': 'nano-banana-2-lite',
+        'nanobanana2lite': 'nano-banana-2-lite',
+        'nano banana 2': 'nano-banana-2',
+        'nanobanana2': 'nano-banana-2',
+        'nano banana pro': 'nano-banana-pro',
+        'nanobananapro': 'nano-banana-pro',
+        'nano banana': 'nano-banana',
+        'nanobanana': 'nano-banana',
+        'seedream 5.0 lite': 'seedream-5-lite',
+        'seedream50lite': 'seedream-5-lite',
+        'seedream 5.0 pro': 'seedream-5-pro',
+        'seedream50pro': 'seedream-5-pro',
+        'wan 2.7 image': 'wan-2-7-image',
+        'wan27image': 'wan-2-7-image',
+        'grok video': 'grok-video',
+        'grokvideo': 'grok-video',
+        'kling 3.0': 'kling30',
+        'kling30': 'kling30',
+        'kling 3 turbo': 'kling3-turbo',
+        'kling3turbo': 'kling3-turbo'
+      };
+      const aliasId = aliases[normalized] || aliases[compact];
+      if (aliasId) {
+        const aliasModel = MODELS.find((item) => item.id === aliasId);
+        if (aliasModel) return aliasModel;
+      }
+
+      const exact = MODELS.find((item) => {
+        return normalizePreviewModelToken(item.name) === normalized
+          || normalizePreviewModelToken(item.id) === normalized
+          || compactPreviewModelToken(item.name) === compact
+          || compactPreviewModelToken(item.id) === compact;
+      });
+      if (exact) return exact;
+
+      const candidates = MODELS
+        .slice()
+        .sort((a, b) => String(b.name || b.id || '').length - String(a.name || a.id || '').length);
+      return candidates.find((item) => {
+        const name = normalizePreviewModelToken(item.name);
+        const id = normalizePreviewModelToken(item.id);
+        const compactName = compactPreviewModelToken(item.name);
+        const compactId = compactPreviewModelToken(item.id);
+        return (name && normalized.includes(name))
+          || (id && normalized.includes(id))
+          || (compactName && compact.includes(compactName))
+          || (compactId && compact.includes(compactId));
       }) || null;
     }
 
@@ -11638,6 +11700,9 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       applyPreviewOptions(data || {});
 
       const urls = collectPreviewInputUrls(data || {});
+      if (!urls.length && currentModel && currentModel.needsImage && data && data.result_url) {
+        urls.push(String(data.result_url));
+      }
       if (urls.length) {
         if (typeof setStatus === 'function') setStatus('Restoring uploaded file...', '');
         const files = await hydratePreviewFiles(urls, 'image', currentModel ? Math.max(1, Number(currentModel.maxFiles || 1)) : 1);
