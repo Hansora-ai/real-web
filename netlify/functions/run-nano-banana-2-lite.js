@@ -151,6 +151,38 @@ async function patchUserGenerationMetaById(id, meta){
   }catch(_e){ return false; }
 }
 
+async function hasUnlimitedSubscription(uid, modelKey){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid || uid === "anon") return false;
+  try{
+    const url = `${SUPABASE_URL}/rest/v1/user_subscriptions?user_id=eq.${encodeURIComponent(uid)}&select=status,plan_id,current_period_end&limit=1`;
+    const r = await fetch(url, { headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
+    if (!r.ok) return false;
+    const arr = await r.json().catch(()=>[]);
+    const row = Array.isArray(arr) ? arr[0] : null;
+    if (!row || row.status !== "active") return false;
+    const endMs = row.current_period_end ? Date.parse(row.current_period_end) : 0;
+    if (!Number.isFinite(endMs) || endMs <= Date.now()) return false;
+    if (modelKey === "nano-banana-2-lite") {
+      return row.plan_id === "premium_monthly" || row.plan_id === "pro_monthly" || row.plan_id === "pro_max_monthly";
+    }
+    return false;
+  }catch(_e){ return false; }
+}
+
+async function markSubscriptionUnlimitedCharged(row_id, meta){
+  if (!row_id) return false;
+  return patchUserGenerationMetaById(row_id, {
+    ...(meta || {}),
+    charged: "true",
+    charged_cost: 0,
+    charge_cost: 0,
+    debited: 0,
+    refund_amount: 0,
+    subscription_unlimited: true,
+    charged_at: (new Date()).toISOString()
+  });
+}
+
 async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) {
     // Fallback: still debit server-side (but cannot persist idempotency)
@@ -240,9 +272,11 @@ exports.handler = async (event) => {
     const resolution = normalizeResolution(body.resolution);
 
     const cost = 0.5;
+    const subscriptionUnlimited = await hasUnlimitedSubscription(uid, "nano-banana-2-lite");
+    const chargeCost = subscriptionUnlimited ? 0 : cost;
 
     // Seed user_generations row (pending)
-    const seeded = await seedUserGeneration(uid, run_id, prompt, { size, resolution, refund_amount: cost });
+    const seeded = await seedUserGeneration(uid, run_id, prompt, { size, resolution, refund_amount: chargeCost, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited });
     const row_id = seeded?.row_id || null;
 
     // callback must include uid & run_id
@@ -300,7 +334,7 @@ exports.handler = async (event) => {
               "Content-Type": "application/json",
               "Prefer": "return=minimal"
             },
-            body: JSON.stringify({ meta: { source:"nano-banana-2-lite", run_id, model:"nano-banana-2-lite", status:"create_failed", task_id: taskId, raw: js, refund_amount: cost } })
+            body: JSON.stringify({ meta: { source:"nano-banana-2-lite", run_id, model:"nano-banana-2-lite", status:"create_failed", task_id: taskId, raw: js, refund_amount: chargeCost, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited } })
           });
         }
       } catch {}
@@ -318,14 +352,17 @@ exports.handler = async (event) => {
             "Content-Type": "application/json",
             "Prefer": "return=minimal"
           },
-            body: JSON.stringify({ meta: { source:"nano-banana-2-lite", run_id, model:"nano-banana-2-lite", status:"processing", task_id: taskId, size, resolution, refund_amount: cost } })
+            body: JSON.stringify({ meta: { source:"nano-banana-2-lite", run_id, model:"nano-banana-2-lite", status:"processing", task_id: taskId, size, resolution, refund_amount: chargeCost, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited } })
         });
       }
     } catch {}
 
     // Debit credits AFTER provider accepted and exactly once per (uid, run_id)
-    const baseMeta = { source:"nano-banana-2-lite", run_id, model:"nano-banana-2-lite", status:"processing", task_id: taskId, size, resolution, refund_amount: cost };
-    const charged = await chargeOnceForRun(uid, run_id, cost, row_id, baseMeta);
+    const baseMeta = { source:"nano-banana-2-lite", run_id, model:"nano-banana-2-lite", status:"processing", task_id: taskId, size, resolution, refund_amount: chargeCost, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited };
+    const charged = chargeCost > 0
+      ? await chargeOnceForRun(uid, run_id, chargeCost, row_id, baseMeta)
+      : { ok:true, debit:{ ok:true, credits:null }, already:false };
+    if (chargeCost === 0) await markSubscriptionUnlimitedCharged(row_id, baseMeta);
 
     if (!charged.ok) {
       if (charged.debit && !charged.debit.ok && (charged.debit.error === "insufficient_credits" || charged.debit.error === "insufficient")) {
@@ -342,7 +379,9 @@ exports.handler = async (event) => {
       submitted:true,
       taskId,
       run_id,
-      cost,
+      cost: chargeCost,
+      model_cost: cost,
+      subscription_unlimited: subscriptionUnlimited,
       already_charged: !!charged.already,
       version: VERSION_TAG,
       used_callback: cb
