@@ -551,24 +551,7 @@
     }
     .preview-author strong{ display:block; color:#fff; font-size:14px; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .preview-author span{ color:rgba(255,255,255,.45); font-size:11px; }
-    .preview-tabs{
-      display:grid;
-      grid-template-columns:1fr 1fr 1fr;
-      gap:6px;
-      padding:4px;
-      border-radius:12px;
-      background:rgba(255,255,255,.055);
-    }
-    .preview-tabs button{
-      height:34px;
-      border:0;
-      border-radius:9px;
-      background:transparent;
-      color:rgba(255,255,255,.43);
-      font-size:12px;
-      font-weight:800;
-    }
-    .preview-tabs button.is-active{ background:rgba(255,255,255,.11); color:rgba(255,255,255,.82); }
+    .preview-tabs{ display:none; }
     .preview-section{
       border-radius:13px;
       background:rgba(255,255,255,.055);
@@ -634,13 +617,18 @@
       color:rgba(255,255,255,.9);
       font-weight:850;
       font-size:13px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:9px;
     }
+    .preview-action-btn svg{ width:18px; height:18px; flex:0 0 auto; }
     .preview-action-btn.primary{
       grid-column:1 / -1;
-      background:linear-gradient(135deg,#ddff37,#a3e635);
-      color:#10130b;
-      border-color:rgba(221,255,55,.55);
-      box-shadow:0 12px 28px rgba(221,255,55,.16);
+      background:linear-gradient(135deg,#6366f1,#8b5cf6,#38bdf8);
+      color:#fff;
+      border-color:rgba(139,92,246,.65);
+      box-shadow:0 14px 34px rgba(99,102,241,.28);
     }
     .preview-action-btn:disabled{ opacity:.58; cursor:not-allowed; }
     .preview-action-status{
@@ -667,8 +655,15 @@
         background:#101216;
       }
       #previewOverlay .preview-media{
-        min-height:58vh;
-        padding:64px 18px 18px;
+        height:auto;
+        min-height:0;
+        padding:58px 18px 12px;
+        align-items:flex-start;
+      }
+      #previewOverlay .preview-media img,
+      #previewOverlay .preview-media video{
+        max-height:52dvh;
+        width:auto;
       }
       #previewOverlay .preview-info-panel{
         border-left:0;
@@ -682,8 +677,16 @@
         border-color:rgba(221,255,55,.55);
         box-shadow:0 0 0 2px rgba(221,255,55,.15);
       }
-      .preview-actions{ grid-template-columns:repeat(3, 1fr); }
+      .preview-author-row{ order:0; }
+      .preview-action-status{ order:1; }
+      .preview-actions{
+        order:2;
+        grid-template-columns:repeat(3, 1fr);
+        margin-top:0;
+      }
       .preview-action-btn.primary{ grid-column:auto; }
+      #previewPromptSection{ order:3; }
+      #previewDetailsSection{ order:4; }
       .preview-prompt-text{ max-height:112px; }
     }
 
@@ -4227,11 +4230,6 @@ async function __mjFetchNbCheck(params){
             </div>
           </div>
         </div>
-        <div class="preview-tabs" aria-hidden="true">
-          <button type="button" class="is-active">Info</button>
-          <button type="button">Tools</button>
-          <button type="button">More</button>
-        </div>
         <section id="previewPromptSection" class="preview-section">
           <div class="preview-section-head">
             <span>Prompt</span>
@@ -4239,7 +4237,7 @@ async function __mjFetchNbCheck(params){
           </div>
           <div id="previewPromptText" class="preview-prompt-text"></div>
         </section>
-        <section class="preview-section">
+        <section id="previewDetailsSection" class="preview-section">
           <div class="preview-section-head"><span>Details</span></div>
           <div class="preview-details">
             <div class="preview-detail-row"><span>Model</span><strong id="previewModelDetail">Model</strong></div>
@@ -4294,12 +4292,22 @@ async function __mjFetchNbCheck(params){
     actionStatus.className = 'preview-action-status' + (tone ? ' ' + tone : '');
   }
 
+  function actionIcon(action) {
+    if (action === 'create-video') {
+      return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.5-2.6A1 1 0 0 1 21 8.3v7.4a1 1 0 0 1-1.5.9L15 14"></path><rect x="3" y="6" width="12" height="12" rx="2"></rect></svg>';
+    }
+    if (action === 'recreate') {
+      return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9 9.7 9.7 0 0 1-6.7-2.7"></path><path d="M3 12a9 9 0 0 1 9-9 9.7 9.7 0 0 1 6.7 2.7"></path><path d="M3 21v-6h6"></path><path d="M21 3v6h-6"></path></svg>';
+    }
+    return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>';
+  }
+
   function button(label, action, primary) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'preview-action-btn' + (primary ? ' primary' : '');
     b.dataset.previewAction = action;
-    b.textContent = label;
+    b.innerHTML = actionIcon(action) + '<span>' + label + '</span>';
     return b;
   }
 
@@ -7276,9 +7284,128 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       return sortModelsForCurrentMode(items);
     }
 
-    function selectWorkspaceModel(id) {
+    function collectReusableImageFiles() {
+      const files = [];
+      const seen = new Set();
+      const add = (file) => {
+        if (!file || seen.has(file)) return;
+        if (!fileIsKind(file, 'image') && !fileHasGenericMime(file)) return;
+        seen.add(file);
+        files.push(file);
+      };
+      const addMany = (value) => {
+        if (Array.isArray(value)) value.forEach(add);
+        else add(value);
+      };
+      addMany(uploadedFiles);
+      addMany(startFrameFile);
+      addMany(lastFrameFile);
+      addMany(veoReferenceFiles);
+      addMany(seedanceFirstFrameFile);
+      addMany(seedanceLastFrameFile);
+      addMany(seedanceImageRefFiles);
+      addMany(kling30FirstFrameFile);
+      addMany(kling30LastFrameFile);
+      addMany(videoFirstFrameFile);
+      addMany(videoLastFrameFile);
+      addMany(videoRefImageFiles);
+      return files;
+    }
+
+    function applyReusableImagesToCurrentModel(files) {
+      const imageFiles = (files || []).filter((file) => file && (fileIsKind(file, 'image') || fileHasGenericMime(file)));
+      if (!currentModel || !imageFiles.length) return false;
+      clearPreviewInputValues();
+      if (currentModel.category === 'image') {
+        if (Number(currentModel.maxFiles || 0) > 0 && !currentModel.needsVideo && !currentModel.needsMotionVideo && !currentModel.specificUpload) {
+          uploadedFiles = imageFiles.slice(0, Number(currentModel.maxFiles || imageFiles.length || 1));
+          __renderImageThumbs();
+          syncMainUploadUi();
+          return true;
+        }
+        return false;
+      }
+
+      if (currentModel.specificUpload === 'seedance') {
+        seedanceImageRefFiles = imageFiles.slice(0, 9);
+        renderFileListThumbs(seedanceImageRefFiles, document.getElementById('seedanceImageRefsThumbs'), (index) => {
+          seedanceImageRefFiles.splice(index, 1);
+          const input = document.getElementById('seedanceImageRefsInput');
+          if (input) input.value = '';
+          syncSeedanceInputLocks();
+        });
+        syncSeedanceInputLocks();
+        return true;
+      }
+      if (currentModel.specificUpload === 'grokVideo' || currentModel.specificUpload === 'geminiOmni') {
+        videoRefImageFiles = imageFiles.slice(0, 7);
+        renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
+          videoRefImageFiles.splice(index, 1);
+          const input = document.getElementById('videoRefImagesInput');
+          if (input) input.value = '';
+          updateCostDisplay();
+          updateRunButtonLabel();
+        });
+        updateCostDisplay();
+        updateRunButtonLabel();
+        return true;
+      }
+      if (currentModel.specificUpload === 'kling30') {
+        kling30FirstFrameFile = imageFiles[0] || null;
+        renderSingleThumb(kling30FirstFrameFile, document.getElementById('kling30FirstThumb'), () => {
+          kling30FirstFrameFile = null;
+          const input = document.getElementById('kling30FirstInput');
+          if (input) input.value = '';
+          syncKling30InputLocks();
+        });
+        syncKling30InputLocks();
+        updateCostDisplay();
+        updateRunButtonLabel();
+        return true;
+      }
+      if (currentModel.specificUpload === 'wan27' || currentModel.specificUpload === 'happyhorse') {
+        videoFirstFrameFile = imageFiles[0] || null;
+        renderSingleThumb(videoFirstFrameFile, document.getElementById('videoFirstFrameThumb'), () => {
+          videoFirstFrameFile = null;
+          const input = document.getElementById('videoFirstFrameInput');
+          if (input) input.value = '';
+          clearVideoLastFrame();
+          syncVideoRefsInputLocks();
+        });
+        syncVideoRefsInputLocks();
+        updateCostDisplay();
+        updateRunButtonLabel();
+        return true;
+      }
+      if (currentModel.useFrames) {
+        startFrameFile = imageFiles[0] || null;
+        renderSingleThumb(startFrameFile, document.getElementById('startFrameThumb'), () => {
+          startFrameFile = null;
+          const input = document.getElementById('startFrameInput');
+          if (input) input.value = '';
+          if (typeof syncVeo31InputLocks === 'function') syncVeo31InputLocks();
+        });
+        if (typeof syncVeo31InputLocks === 'function') syncVeo31InputLocks();
+        updateCostDisplay();
+        updateRunButtonLabel();
+        return true;
+      }
+      if (Number(currentModel.maxFiles || 0) > 0 && !currentModel.needsVideo && !currentModel.needsMotionVideo) {
+        uploadedFiles = imageFiles.slice(0, Number(currentModel.maxFiles || 1));
+        __renderImageThumbs();
+        syncMainUploadUi();
+        updateCostDisplay();
+        updateRunButtonLabel();
+        return true;
+      }
+      return false;
+    }
+
+    function selectWorkspaceModel(id, options = {}) {
       const next = MODELS.find((m) => m.id === id);
       if (!next) return;
+      const shouldPreserveUploads = options.preserveUploads !== false;
+      const reusableImages = shouldPreserveUploads ? collectReusableImageFiles() : [];
       currentModel = next;
       currentMode = next.category === 'video' ? 'video' : 'image';
       const btnImage = document.getElementById('btnModeImage');
@@ -7297,6 +7424,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       updateModelButtonLabels();
       configureControlsForModel();
+      if (reusableImages.length) applyReusableImagesToCurrentModel(reusableImages);
       renderWorkspaceModelRail();
     }
 
@@ -7479,10 +7607,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const defaultId = mode === 'image' ? 'gpt-image-2' : (instantCredits < 4 ? 'grok-video' : 'kling30');
       const def = MODELS.find(m => m.id === defaultId);
       if (def) {
-        currentModel = def;
-        updateModelButtonLabels();
-        configureControlsForModel();
-        renderWorkspaceModelRail();
+        selectWorkspaceModel(def.id);
       }
     }
 
@@ -11507,7 +11632,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     async function restorePreviewGeneration(data, setStatus) {
       const model = findPreviewModel(data);
       if (model) {
-        selectWorkspaceModel(model.id);
+        selectWorkspaceModel(model.id, { preserveUploads: false });
       }
       setPromptForPreviewRun(data && data.prompt ? data.prompt : '');
       applyPreviewOptions(data || {});
@@ -11522,14 +11647,17 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
     async function restorePreviewImageForVideo(data, setStatus) {
       const targetId = Math.max(parseCredits(currentCredits), getSharedHeaderCredits(), getVisibleHeaderCredits()) < 3 ? 'grok-video' : 'kling30';
-      selectWorkspaceModel(targetId);
-      setPromptForPreviewRun(data && data.prompt ? data.prompt : '');
+      selectWorkspaceModel(targetId, { preserveUploads: false });
+      setPromptForPreviewRun('');
       applyPreviewOptions({ meta: { client_diagnostic: { aspect_ratio: '16:9', duration: targetId === 'grok-video' ? 6 : 5, resolution: targetId === 'grok-video' ? '720p' : '720p' } } });
       const imageUrl = String((data && data.result_url) || '').trim();
       if (!imageUrl) throw new Error('No image URL found for Create Video.');
       if (typeof setStatus === 'function') setStatus('Preparing image for video...', '');
       const file = await fileFromPreviewUrl(imageUrl, 'hansora-video-reference.png', 'image/png');
       applyPreviewFilesToCurrentModel([file], 'video-source');
+      updateModelButtonLabels();
+      updateCostDisplay();
+      updateRunButtonLabel();
     }
 
     window.hansoraPreviewActions = {
@@ -11547,7 +11675,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       'create-video': async (data, setStatus) => {
         if (!data || String(data.kind || '').toLowerCase() === 'video') return;
         await restorePreviewImageForVideo(data, setStatus);
-        await submitPreviewRun(setStatus);
+        if (typeof setStatus === 'function') setStatus('Image is ready in the video model.', 'success');
+        setTimeout(() => {
+          if (window.closePreview) window.closePreview();
+          try { document.getElementById('generatorCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+        }, 250);
       }
     };
 
