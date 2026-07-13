@@ -201,6 +201,9 @@ async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
     if (String(meta0?.charged || '').toLowerCase() === 'true'){
       return { ok:true, debit:{ ok:true, credits: null }, idempotent:true, already:true };
     }
+    if (String(meta0?.status || '').toLowerCase() === 'failed' || meta0?.failed === true) {
+      return { ok:true, debit:{ ok:true, credits: null }, idempotent:true, already:false, skipped:true };
+    }
 
     // Claim
     const claim = `c_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -281,7 +284,7 @@ exports.handler = async (event) => {
     const chargeCost = subscriptionUnlimited ? 0 : cost;
 
     // Seed user_generations row (pending)
-    const seeded = await seedUserGeneration(uid, run_id, prompt, { size, resolution, refund_amount: chargeCost, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited });
+    const seeded = await seedUserGeneration(uid, run_id, prompt, { size, resolution, refund_amount: 0, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited });
     const row_id = seeded?.row_id || null;
 
     // callback must include uid & run_id
@@ -342,7 +345,7 @@ exports.handler = async (event) => {
               "Content-Type": "application/json",
               "Prefer": "return=minimal"
             },
-            body: JSON.stringify({ meta: { source:"nano-banana-2", run_id, model:"nano-banana-2", status:"create_failed", task_id: taskId, raw: js, refund_amount: chargeCost, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited } })
+            body: JSON.stringify({ meta: { source:"nano-banana-2", run_id, model:"nano-banana-2", status:"create_failed", task_id: taskId, raw: js, refund_amount: 0, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited } })
           });
         }
       } catch {}
@@ -360,13 +363,13 @@ exports.handler = async (event) => {
             "Content-Type": "application/json",
             "Prefer": "return=minimal"
           },
-          body: JSON.stringify({ meta: { source:"nano-banana-2", run_id, model:"nano-banana-2", status:"processing", task_id: taskId, size, resolution, refund_amount: chargeCost, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited } })
+          body: JSON.stringify({ meta: { source:"nano-banana-2", run_id, model:"nano-banana-2", status:"processing", task_id: taskId, size, resolution, refund_amount: 0, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited } })
         });
       }
     } catch {}
 
     // Debit credits AFTER provider accepted and exactly once per (uid, run_id)
-    const baseMeta = { source:"nano-banana-2", run_id, model:"nano-banana-2", status:"processing", task_id: taskId, size, resolution, refund_amount: chargeCost, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited };
+    const baseMeta = { source:"nano-banana-2", run_id, model:"nano-banana-2", status:"processing", task_id: taskId, size, resolution, refund_amount: 0, charge_cost: chargeCost, subscription_unlimited: subscriptionUnlimited };
     const charged = chargeCost > 0
       ? await chargeOnceForRun(uid, run_id, chargeCost, row_id, baseMeta)
       : { ok:true, debit:{ ok:true, credits:null }, already:false };
