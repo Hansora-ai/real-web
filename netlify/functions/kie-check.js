@@ -40,6 +40,13 @@ exports.handler = async (event) => {
 
     if (state.failed) {
       const refund = await failAndRefundOnce({ row, ids, reason: state.error || "kie_failed" });
+      if (refund.waiting_for_charge) {
+        return json(200, {
+          ok: false,
+          status: "pending",
+          waiting_for_charge: true
+        });
+      }
       return json(200, {
         ok: false,
         failed: true,
@@ -90,6 +97,13 @@ async function handlePost(event) {
   const status = normalizeStatus(body);
   if (status === "failed") {
     const refund = await failAndRefundOnce({ row, ids, reason: failureReason(body) });
+    if (refund.waiting_for_charge) {
+      return json(200, {
+        ok: false,
+        status: "pending",
+        waiting_for_charge: true
+      });
+    }
     return json(200, {
       ok: false,
       failed: true,
@@ -354,6 +368,8 @@ function extensionForArchive(contentType, url) {
 async function failAndRefundOnce({ row, ids, reason }) {
   const meta = row.meta && typeof row.meta === "object" ? row.meta : {};
   const amount = Number(meta.refund_amount || 0);
+  const charged = String(meta.charged || "").toLowerCase() === "true";
+  const hasChargeClaim = !!meta.charge_claim;
   const failedMeta = {
     ...meta,
     run_id: ids.run_id || meta.run_id || "",
@@ -363,6 +379,17 @@ async function failAndRefundOnce({ row, ids, reason }) {
     error: reason,
     failed_at: new Date().toISOString()
   };
+
+  if (!charged && hasChargeClaim) {
+    return { refunded: false, amount: 0, waiting_for_charge: true };
+  }
+
+  if (!charged) {
+    await patchGeneration(row.id, {
+      meta: { ...failedMeta, refund_skipped_reason: "not_charged" }
+    });
+    return { refunded: false, amount: 0, reason: "not_charged" };
+  }
 
   if (!Number.isFinite(amount) || amount <= 0) {
     await patchGeneration(row.id, {
