@@ -190,11 +190,46 @@ html[data-payment-mode="ru"] .buy-credits { margin-top: 18px !important; }
 
 html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="100"]) .buy-credits { margin-top: 36px !important; }
 
-html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="550"]) .buy-credits { margin-top: 20px !important; }
+html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="535"]) .buy-credits { margin-top: 20px !important; }
 
 html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="1100"]) .buy-credits { margin-top: 16px !important; }
 
 html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits) > .mt-2.text-sm { min-height: 44px; display: flex; align-items: flex-start; }
+
+html[data-payment-mode="ru"] [data-pricing-choice="monthly"],
+html[data-payment-mode="ru"] .monthly-plans,
+html[data-payment-mode="ru"] .monthly-benefits,
+html[data-payment-mode="ru"] .model-usage-section { display: none !important; }
+
+html[data-payment-mode="ru"] .pricing-choice { grid-template-columns: 1fr; }
+
+html[data-payment-mode="ru"] [data-payg-offers].grid > .rounded-2xl > .flex.items-center.justify-between {
+  min-height: 54px;
+  align-items: flex-start;
+  margin-top: 0 !important;
+}
+
+html[data-payment-mode="ru"] [data-payg-offers].grid > .rounded-2xl {
+  transform: none !important;
+}
+
+html[data-payment-mode="ru"] [data-payg-offers].grid > .rounded-2xl > .mt-3.text-5xl {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+}
+
+html[data-payment-mode="ru"] [data-payg-offers].grid > .rounded-2xl > .mt-4 {
+  min-height: 54px;
+}
+
+html[data-payment-mode="ru"] [data-payg-offers].grid > .rounded-2xl > .mt-2.text-sm {
+  min-height: 48px;
+}
+
+html[data-payment-mode="ru"] [data-payg-offers].grid > .rounded-2xl > .buy-credits {
+  margin-top: 18px !important;
+}
 
 @media (max-width: 767px) {
   #pricing .text-center.mb-10 { display: flex; flex-direction: column; align-items: center; }
@@ -809,23 +844,23 @@ img, video { max-width: 100%; height: auto; }
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to new models as they launch</li>
 </ul>
 </div>
-<!-- Plan 220 -->
+<!-- Plan 210 -->
 <div class="rounded-2xl border border-purple-400/40 bg-gradient-to-b from-purple-500/18 via-white/7 to-white/[.04] shadow-soft p-6 flex flex-col ring-1 ring-purple-400/25 relative overflow-visible scale-[1.01]">
 <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-400 via-purple-400 to-sky-400"></div>
 <div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white shadow-lg shadow-purple-500/25" data-plan-badge="popular">Most Popular</span></div>
 <div class="flex items-center justify-between gap-3 mt-1">
-<div class="text-sm text-white/60">200 + 20 credits</div>
+<div class="text-sm text-white/60">200 + 10 credits</div>
 <span class="rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20 px-3 py-1 text-xs font-bold">Save $10</span>
 </div>
-<div class="mt-3 text-5xl font-extrabold tracking-tight">220 <span class="text-2xl align-baseline text-white">credits</span></div>
+<div class="mt-3 text-5xl font-extrabold tracking-tight">210 <span class="text-2xl align-baseline text-white">credits</span></div>
 <div class="mt-4 flex items-end gap-3">
 <div class="text-4xl font-extrabold text-white">$19.99</div>
 <div class="pb-1 text-lg font-semibold text-white/45 line-through">$29.99</div>
 </div>
-<div class="mt-2 text-sm text-purple-200">Includes 20 gift credits</div>
-<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/25" data-credits="220" data-product="https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="1500" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=1500.00&amp;targets=HANSORA%20AI%20220%20credits&amp;label=hansora_web_220" href="#buy-220">Buy</a>
+<div class="mt-2 text-sm text-purple-200">Includes 10 gift credits (5%)</div>
+<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/25" data-credits="210" data-product="https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="1500" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=1500.00&amp;targets=HANSORA%20AI%20210%20credits&amp;label=hansora_web_210" href="#buy-210">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
-<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 440 images (depends on the model)</span><span class="block">Up to 120 videos (depends on the model)</span><span class="block">Up to 220 audio generations (depends on the model)</span></span></li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 420 images (depends on the model)</span><span class="block">Up to 115 videos (depends on the model)</span><span class="block">Up to 210 audio generations (depends on the model)</span></span></li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>720–1080p-4k high quality (model‑dependent)</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to Templates &amp; Examples/Prompts</li>
@@ -835,25 +870,25 @@ img, video { max-width: 100%; height: auto; }
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Email support</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Regular feature updates &amp; improvements</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to new models as they launch</li>
-<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>+20 gift credits</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>+10 gift credits (5%)</li>
 </ul>
 </div>
-<!-- Plan 550 -->
+<!-- Plan 535 -->
 <div class="rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 via-white/5 to-white/[.03] shadow-soft p-6 flex flex-col relative overflow-hidden">
 <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-purple-400 to-sky-400"></div>
 <div class="flex items-center justify-between gap-3">
-<div class="text-sm text-white/60">500 + 50 credits</div>
+<div class="text-sm text-white/60">500 + 35 credits</div>
 <span class="rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20 px-3 py-1 text-xs font-bold">Save $25</span>
 </div>
-<div class="mt-3 text-5xl font-extrabold tracking-tight">550 <span class="text-2xl align-baseline text-white">credits</span></div>
+<div class="mt-3 text-5xl font-extrabold tracking-tight">535 <span class="text-2xl align-baseline text-white">credits</span></div>
 <div class="mt-4 flex items-end gap-3">
 <div class="text-4xl font-extrabold text-white">$49.99</div>
 <div class="pb-1 text-lg font-semibold text-white/45 line-through">$74.99</div>
 </div>
-<div class="mt-2 text-sm text-purple-200">Includes 50 gift credits</div>
-<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="550" data-product="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="3700" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=3700.00&amp;targets=HANSORA%20AI%20550%20credits&amp;label=hansora_web_550" href="#buy-550">Buy</a>
+<div class="mt-2 text-sm text-purple-200">Includes 35 gift credits (7%)</div>
+<a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="535" data-product="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="3700" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=3700.00&amp;targets=HANSORA%20AI%20535%20credits&amp;label=hansora_web_535" href="#buy-535">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
-<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 1100 images (depends on the model)</span><span class="block">Up to 300 videos (depends on the model)</span><span class="block">Up to 550 audio generations (depends on the model)</span></span></li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 1070 images (depends on the model)</span><span class="block">Up to 290 videos (depends on the model)</span><span class="block">Up to 535 audio generations (depends on the model)</span></span></li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>All features</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>720–1080p-4k high quality (model‑dependent)</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to Templates &amp; Examples/Prompts</li>
@@ -863,7 +898,7 @@ img, video { max-width: 100%; height: auto; }
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Email support</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Regular feature updates &amp; improvements</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to new models as they launch</li>
-<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>+50 gift credits</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>+35 gift credits (7%)</li>
 </ul>
 </div>
 <!-- Plan 1100 -->
@@ -879,7 +914,7 @@ img, video { max-width: 100%; height: auto; }
 <div class="text-4xl font-extrabold text-white">$99.99</div>
 <div class="pb-1 text-lg font-semibold text-white/45 line-through">$149.99</div>
 </div>
-<div class="mt-2 text-sm text-purple-200">Includes 100 gift credits</div>
+<div class="mt-2 text-sm text-purple-200">Includes 100 gift credits (10%)</div>
 <a class="mt-5 inline-flex justify-center items-center rounded-xl bg-gradient-to-r from-purple-500 to-sky-400 hover:from-purple-400 hover:to-sky-300 transition px-4 py-3 font-semibold text-white buy-credits shadow-lg shadow-purple-500/20" data-credits="1100" data-product="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="7400" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=7400.00&amp;targets=HANSORA%20AI%201100%20credits&amp;label=hansora_web_1100" href="#buy-1100">Buy</a>
 <ul class="mt-5 space-y-2 text-sm text-white/85">
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span><span><span class="block">Up to 2200 images (depends on the model)</span><span class="block">Up to 610 videos (depends on the model)</span><span class="block">Up to 1100 audio generations (depends on the model)</span></span></li>
@@ -892,7 +927,7 @@ img, video { max-width: 100%; height: auto; }
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Email support</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Regular feature updates &amp; improvements</li>
 <li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>Access to new models as they launch</li>
-<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>+100 gift credits</li>
+<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>+100 gift credits (10%)</li>
 </ul>
 </div>
 </div>
@@ -914,6 +949,8 @@ Pay once, use credits across image, video, product card, audio, and creative too
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">Z</span><span class="monthly-model-name">Z Image</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">G</span><span class="monthly-model-name">GPT Image 2 1K</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 18V9M12 18V5M19 18v-7"></path></svg></span><span class="monthly-model-name">Seedream 5.0 Lite</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
+<li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">X</span><span class="monthly-model-name">Grok Image</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
+<li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">Q</span><span class="monthly-model-name">Qwen 2</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">X</span><span class="monthly-model-name">Grok Video</span><span class="monthly-model-info" tabindex="0" role="button" aria-label="Grok Video details: 6 seconds" data-tooltip="6s video">i</span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 </ul>
 <ul>
@@ -942,6 +979,8 @@ Pay once, use credits across image, video, product card, audio, and creative too
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">Z</span><span class="monthly-model-name">Z Image</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">G</span><span class="monthly-model-name">GPT Image 2 1K</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 18V9M12 18V5M19 18v-7"></path></svg></span><span class="monthly-model-name">Seedream 5.0 Lite</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
+<li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">X</span><span class="monthly-model-name">Grok Image</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
+<li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">Q</span><span class="monthly-model-name">Qwen 2</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">X</span><span class="monthly-model-name">Grok Video</span><span class="monthly-model-info" tabindex="0" role="button" aria-label="Grok Video details: 6 seconds" data-tooltip="6s video">i</span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">V</span><span class="monthly-model-name">Veo 3.1 Lite</span><span class="monthly-model-info" tabindex="0" role="button" aria-label="Veo 3.1 Lite details: 720p, 8 seconds" data-tooltip="720p, 8s video">i</span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 </ul>
@@ -972,6 +1011,8 @@ Pay once, use credits across image, video, product card, audio, and creative too
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">G</span><span class="monthly-model-name">GPT Image 2 1K-2K</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 18V9M12 18V5M19 18v-7"></path></svg></span><span class="monthly-model-name">Seedream 5.0 Lite</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">W</span><span class="monthly-model-name">Wan 2.7 Image</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
+<li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">X</span><span class="monthly-model-name">Grok Image</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
+<li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">Q</span><span class="monthly-model-name">Qwen 2</span><span class="monthly-model-info-spacer" aria-hidden="true"></span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">X</span><span class="monthly-model-name">Grok Video</span><span class="monthly-model-info" tabindex="0" role="button" aria-label="Grok Video details: 6 seconds" data-tooltip="6s video">i</span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">V</span><span class="monthly-model-name">Veo 3.1 Lite</span><span class="monthly-model-info" tabindex="0" role="button" aria-label="Veo 3.1 Lite details: 1080p, 8 seconds" data-tooltip="1080p, 8s video">i</span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
 <li class="monthly-model-row"><span class="monthly-model-logo" aria-hidden="true">K</span><span class="monthly-model-name">Kling 2.5 Turbo</span><span class="monthly-model-info" tabindex="0" role="button" aria-label="Kling 2.5 Turbo details: 1080p, 5 seconds" data-tooltip="1080p, 5s video">i</span><span class="monthly-model-limit"><span class="infinity">∞</span> PER MONTH</span></li>
@@ -1013,19 +1054,19 @@ Pay once, use credits across image, video, product card, audio, and creative too
 </div>
 <div class="plan-cell">
 <strong>Medium</strong>
-<div class="plan-credit-line"><span>200 + 20 credits</span><em class="plan-save">Save $10</em></div>
+<div class="plan-credit-line"><span>200 + 10 credits (5%)</span><em class="plan-save">Save $10</em></div>
 <div class="plan-price">$19.99 <span class="plan-old-price">$29.99</span></div>
-<a class="plan-buy inline-flex justify-center items-center font-semibold buy-credits" data-credits="220" data-product="https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="1500" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=1500.00&amp;targets=HANSORA%20AI%20220%20credits&amp;label=hansora_web_220" href="#buy-220">Buy</a>
+<a class="plan-buy inline-flex justify-center items-center font-semibold buy-credits" data-credits="210" data-product="https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="1500" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=1500.00&amp;targets=HANSORA%20AI%20210%20credits&amp;label=hansora_web_210" href="#buy-210">Buy</a>
 </div>
 <div class="plan-cell">
 <strong>Pro</strong>
-<div class="plan-credit-line"><span>500 + 50 credits</span><em class="plan-save">Save $25</em></div>
+<div class="plan-credit-line"><span>500 + 35 credits (7%)</span><em class="plan-save">Save $25</em></div>
 <div class="plan-price">$49.99 <span class="plan-old-price">$74.99</span></div>
-<a class="plan-buy inline-flex justify-center items-center font-semibold buy-credits" data-credits="550" data-product="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="3700" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=3700.00&amp;targets=HANSORA%20AI%20550%20credits&amp;label=hansora_web_550" href="#buy-550">Buy</a>
+<a class="plan-buy inline-flex justify-center items-center font-semibold buy-credits" data-credits="535" data-product="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="3700" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=3700.00&amp;targets=HANSORA%20AI%20535%20credits&amp;label=hansora_web_535" href="#buy-535">Buy</a>
 </div>
 <div class="plan-cell plan-featured">
 <strong>Large</strong>
-<div class="plan-credit-line"><span>1000 + 100 credits</span><em class="plan-save">Save $30</em></div>
+<div class="plan-credit-line"><span>1000 + 100 credits (10%)</span><em class="plan-save">Save $30</em></div>
 <div class="plan-price">$99.99 <span class="plan-old-price">$149.99</span></div>
 <a class="plan-buy inline-flex justify-center items-center font-semibold buy-credits" data-credits="1100" data-product="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="7400" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=7400.00&amp;targets=HANSORA%20AI%201100%20credits&amp;label=hansora_web_1100" href="#buy-1100">Buy</a>
 </div>
@@ -1485,6 +1526,133 @@ Pay once, use credits across image, video, product card, audio, and creative too
     }
     const y = document.getElementById('y');
     if (y) y.textContent = new Date().getFullYear();
+  });
+})();
+</script>
+<script>
+// Russian-card presentation: Russian copy, RUB prices, and pay-as-you-go only.
+(function(){
+  const RUB_PACKS = {
+    "100": { price:"₽750", old:"₽1,100", save:"Скидка ₽350", gift:"Цена со скидкой", line:"100 + 0 кредитов", title:"100" },
+    "210": { price:"₽1,500", old:"₽2,200", save:"Скидка ₽700", gift:"Включает 10 подарочных кредитов (5%)", line:"200 + 10 кредитов", title:"210" },
+    "535": { price:"₽3,700", old:"₽5,500", save:"Скидка ₽1,800", gift:"Включает 35 подарочных кредитов (7%)", line:"500 + 35 кредитов", title:"535" },
+    "1100": { price:"₽7,400", old:"₽9,600", save:"Скидка ₽2,200", gift:"Включает 100 подарочных кредитов (10%)", line:"1000 + 100 кредитов", title:"1100" }
+  };
+  const RU_FEATURES = {
+    "100": [
+      ["До 200 изображений (зависит от модели)", "До 55 видео (зависит от модели)", "До 100 аудио-генераций (зависит от модели)"],
+      "Все функции", "Качество 720–1080p–4K (зависит от модели)", "Доступ к шаблонам, примерам и промптам",
+      "Право использовать наши промпты в коммерческих целях", "Генерация до 15 секунд (зависит от модели)",
+      "Быстрая генерация", "Поддержка по email", "Регулярные обновления и улучшения", "Доступ к новым моделям после запуска"
+    ],
+    "210": [
+      ["До 420 изображений (зависит от модели)", "До 115 видео (зависит от модели)", "До 210 аудио-генераций (зависит от модели)"],
+      "Все функции", "Качество 720–1080p–4K (зависит от модели)", "Доступ к шаблонам, примерам и промптам",
+      "Право использовать наши промпты в коммерческих целях", "Генерация до 30 секунд (по лимитам модели)",
+      "Быстрая генерация", "Поддержка по email", "Регулярные обновления и улучшения", "Доступ к новым моделям после запуска",
+      "+10 подарочных кредитов (5%)"
+    ],
+    "535": [
+      ["До 1070 изображений (зависит от модели)", "До 290 видео (зависит от модели)", "До 535 аудио-генераций (зависит от модели)"],
+      "Все функции", "Качество 720–1080p–4K (зависит от модели)", "Доступ к шаблонам, примерам и промптам",
+      "Право использовать наши промпты в коммерческих целях", "Генерация до 30 секунд (по лимитам модели)",
+      "Быстрая генерация", "Поддержка по email", "Регулярные обновления и улучшения", "Доступ к новым моделям после запуска",
+      "+35 подарочных кредитов (7%)"
+    ],
+    "1100": [
+      ["До 2200 изображений (зависит от модели)", "До 610 видео (зависит от модели)", "До 1100 аудио-генераций (зависит от модели)"],
+      "Все функции", "Качество 720–1080p–4K (зависит от модели)", "Доступ к шаблонам, примерам и промптам",
+      "Право использовать наши промпты в коммерческих целях", "Генерация до 30 секунд (по лимитам модели)",
+      "Быстрая генерация", "Приоритетная поддержка", "Регулярные обновления и улучшения", "Доступ к новым моделям после запуска",
+      "+100 подарочных кредитов (10%)"
+    ]
+  };
+  const ORIGINAL_CARDS = new WeakMap();
+
+  function setText(element, text){ if (element) element.textContent = text; }
+  function featureHtml(items){
+    return items.map(function(item){
+      const content = Array.isArray(item)
+        ? `<span>${item.map(function(line){ return `<span class="block">${line}</span>`; }).join("")}</span>`
+        : item;
+      return `<li class="flex items-start gap-2"><span class="mt-1 w-2 h-2 rounded-full bg-purple-500"></span>${content}</li>`;
+    }).join("");
+  }
+  function paygCard(button){ return button ? button.closest(".rounded-2xl") : null; }
+  function saveCard(card){ if (card && !ORIGINAL_CARDS.has(card)) ORIGINAL_CARDS.set(card, card.innerHTML); }
+  function restoreCard(card){ const html = ORIGINAL_CARDS.get(card); if (html) card.innerHTML = html; }
+  function applyRussianCard(card){
+    const button = card.querySelector(".buy-credits[data-credits]");
+    const credits = String(button?.getAttribute("data-credits") || "");
+    const pack = RUB_PACKS[credits];
+    if (!button || !pack) return;
+    const prices = card.querySelectorAll(".mt-4 .text-4xl, .mt-4 .line-through");
+    setText(card.querySelector(".flex.items-center.justify-between .text-sm"), pack.line);
+    setText(card.querySelector(".flex.items-center.justify-between span"), pack.save);
+    const title = card.querySelector(".mt-3.text-5xl");
+    if (title) title.innerHTML = `${pack.title} <span class="text-2xl align-baseline text-white">кредитов</span>`;
+    if (prices[0]) prices[0].textContent = pack.price;
+    if (prices[1]) prices[1].textContent = pack.old;
+    setText(card.querySelector(".mt-2.text-sm"), pack.gift);
+    setText(button, "Купить");
+    const list = card.querySelector("ul");
+    if (list) list.innerHTML = featureHtml(RU_FEATURES[credits] || []);
+  }
+  function forcePayAsYouGo(){
+    document.documentElement.setAttribute("data-pricing-plan-mode", "payg");
+    document.querySelectorAll("[data-pricing-choice]").forEach(function(button){
+      const active = button.getAttribute("data-pricing-choice") === "payg";
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  }
+  function applyRussianMode(mode){
+    const isRussian = mode === "ru";
+    document.documentElement.setAttribute("data-payment-mode", isRussian ? "ru" : "international");
+    document.documentElement.lang = isRussian ? "ru" : "en";
+    if (isRussian) forcePayAsYouGo();
+    document.querySelectorAll(".payment-option").forEach(function(button){
+      const active = button.getAttribute("data-payment-mode") === mode;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    setText(document.querySelector("[data-payment-note]"), isRussian ? "Выберите способ оплаты" : "Choose payment method");
+    const paymentButtons = document.querySelectorAll(".payment-option");
+    if (paymentButtons[0]) paymentButtons[0].textContent = isRussian ? "Международная карта" : "International card";
+    if (paymentButtons[1]) paymentButtons[1].textContent = isRussian ? "Карта РФ" : "Russian card";
+    setText(document.querySelector("[data-hero-badge-text]"), isRussian ? "Большие скидки для наших пользователей" : "20% off monthly plans");
+    setText(document.querySelector("#pricing h2"), isRussian ? "Выгодная покупка кредитов" : "Monthly Unlimited Plans");
+    const benefits = document.querySelectorAll(".pricing-benefits span");
+    if (benefits[0]) benefits[0].textContent = isRussian ? "Без ежемесячной подписки" : "No monthly subscription";
+    if (benefits[1]) benefits[1].textContent = isRussian ? "Кредиты не сгорают" : "Credits never expire";
+    if (benefits[2]) benefits[2].textContent = isRussian ? "Все AI-инструменты включены" : "All AI tools included";
+    const paygChoice = document.querySelector('[data-pricing-choice="payg"]');
+    if (paygChoice) paygChoice.childNodes[0].nodeValue = isRussian ? "Оплата по мере использования " : "Pay as you go ";
+    document.querySelectorAll("[data-plan-badge]").forEach(function(badge){
+      const type = badge.getAttribute("data-plan-badge");
+      badge.textContent = isRussian ? (type === "popular" ? "Популярный выбор" : "Лучшая выгода") : (type === "popular" ? "Most Popular" : "Best Value");
+    });
+    document.querySelectorAll("[data-payg-offers] .buy-credits[data-credits]").forEach(function(button){
+      const card = paygCard(button);
+      if (!card) return;
+      saveCard(card);
+      if (isRussian) applyRussianCard(card); else restoreCard(card);
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    const initialMode = new URLSearchParams(location.search).get("method") === "ru" ? "ru" : "international";
+    applyRussianMode(initialMode);
+    document.querySelectorAll(".payment-option").forEach(function(button){
+      button.addEventListener("click", function(){
+        const mode = button.getAttribute("data-payment-mode") === "ru" ? "ru" : "international";
+        applyRussianMode(mode);
+        const params = new URLSearchParams(location.search);
+        if (mode === "ru") { params.set("method", "ru"); params.set("plan", "payg"); }
+        else params.delete("method");
+        history.replaceState(null, "", `${location.pathname}${params.toString() ? "?" + params.toString() : ""}${location.hash || ""}`);
+      });
+    });
   });
 })();
 </script>
