@@ -3695,16 +3695,16 @@
         }
         body.workspace-redesign #resultsStrip .results-masonry-content{
           width:100%;
-          display:flex;
-          flex-direction:column;
-          gap:16px;
-        }
-        body.workspace-redesign #resultsStrip .results-ordered-row{
-          width:100%;
           display:grid;
           grid-template-columns:repeat(3,minmax(0,1fr));
           gap:16px;
           align-items:start;
+        }
+        body.workspace-redesign #resultsStrip .results-masonry-column{
+          min-width:0;
+          display:flex;
+          flex-direction:column;
+          gap:16px;
         }
         body.workspace-redesign #resultsStrip .result-card{
           display:inline-flex !important;
@@ -3861,7 +3861,7 @@
         }
       }
       @media (min-width:901px) and (max-width:1250px){
-        body.workspace-redesign #resultsStrip .results-ordered-row{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+        body.workspace-redesign #resultsStrip .results-masonry-content{ grid-template-columns:repeat(2,minmax(0,1fr)); }
       }
 
 	    </style>
@@ -4440,7 +4440,7 @@
 
     <section id="resultsSection" class="hidden mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm pt-8 font-semibold text-white/80">Recent 15 generations</h2>
+        <h2 class="text-sm pt-8 font-semibold text-white/80">Recent generations</h2>
         <a href="usage.html" class="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/[.045] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/70 hover:bg-white/10 hover:text-white">See all</a>
       </div>
       <div id="resultsStrip" class="flex gap-3 overflow-x-auto pb-2"></div>
@@ -5608,14 +5608,26 @@ function createResultCard(data) {
 
         const columnCount = Math.max(1, Number(cardHost.dataset.columnCount || 3));
         cardHost.innerHTML = '';
-        for (let index = 0; index < cardHost.__orderedResultCards.length; index += columnCount) {
-          const row = document.createElement('div');
-          row.className = 'results-ordered-row';
-          cardHost.__orderedResultCards.slice(index, index + columnCount).forEach((resultCard) => {
-            row.appendChild(resultCard);
-          });
-          cardHost.appendChild(row);
-        }
+        const columns = Array.from({ length: columnCount }, () => {
+          const column = document.createElement('div');
+          column.className = 'results-masonry-column';
+          cardHost.appendChild(column);
+          return column;
+        });
+        const availableWidth = cardHost.clientWidth || 960;
+        const columnWidth = Math.max(180, (availableWidth - ((columnCount - 1) * 16)) / columnCount);
+        const columnHeights = new Array(columnCount).fill(0);
+        cardHost.__orderedResultCards.forEach((resultCard) => {
+          let targetIndex = 0;
+          for (let index = 1; index < columnHeights.length; index += 1) {
+            if (columnHeights[index] < columnHeights[targetIndex]) targetIndex = index;
+          }
+          columns[targetIndex].appendChild(resultCard);
+          const mediaHeight = resultCard.classList.contains('result-card--landscape')
+            ? columnWidth * 9 / 16
+            : (resultCard.classList.contains('result-card--square') ? columnWidth : columnWidth * 16 / 9);
+          columnHeights[targetIndex] += mediaHeight + 92 + 16;
+        });
       }
 
       return built;
