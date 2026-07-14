@@ -1245,7 +1245,7 @@
     if (!sb || !user) throw new Error('Not logged in');
     const { data, error } = await sb
       .from('profiles')
-      .select('user_id,email,credits')
+      .select('user_id,email,credits,monthly_credits,payg_credits')
       .eq('user_id', user.id)
       .maybeSingle();
     if (error) throw error;
@@ -1253,7 +1253,9 @@
       const ins = await sb.from('profiles').insert({
         user_id: user.id,
         email: user.email,
-        credits: 3
+        credits: 3,
+        monthly_credits: 0,
+        payg_credits: 3
       }).select('user_id,email,credits').single();
       if (ins.error) throw ins.error;
       try {
@@ -1261,6 +1263,19 @@
         localStorage.removeItem(offerPendingKey(user));
       } catch (_) {}
       return { ...ins.data, __hansoraNewSignup: true };
+    }
+    const credits = Number(data.credits || 0);
+    const monthlyCredits = Number(data.monthly_credits || 0);
+    const paygCredits = Number(data.payg_credits || 0);
+    const missingBucketCredits = Number((credits - monthlyCredits - paygCredits).toFixed(2));
+    if (missingBucketCredits > 0) {
+      const repairedPaygCredits = Number((paygCredits + missingBucketCredits).toFixed(2));
+      const repair = await sb
+        .from('profiles')
+        .update({ payg_credits: repairedPaygCredits })
+        .eq('user_id', user.id);
+      if (repair.error) throw repair.error;
+      data.payg_credits = repairedPaygCredits;
     }
     const profileCreatedAt = await getProfileCreatedAt(user.id);
     return profileCreatedAt ? { ...data, __hansoraProfileCreatedAt: profileCreatedAt } : data;
@@ -1271,11 +1286,11 @@
     try {
       const { data, error } = await sb
         .from('profiles')
-        .select('created_at')
+        .select('updated_at')
         .eq('user_id', userId)
         .maybeSingle();
       if (error) return '';
-      return data && data.created_at ? String(data.created_at) : '';
+      return data && data.updated_at ? String(data.updated_at) : '';
     } catch (_) {
       return '';
     }
