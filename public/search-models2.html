@@ -369,6 +369,79 @@
       body.workspace-redesign #resultsStrip .thumb-get.hidden{
         display:none !important;
       }
+      #resultsStrip .result-shortcuts{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap:7px;
+        flex-shrink:0;
+      }
+      #resultsStrip .result-shortcut-btn{
+        position:relative;
+        width:34px;
+        min-width:34px !important;
+        height:34px;
+        padding:0 !important;
+        border-radius:999px;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        color:#fff;
+        border:1px solid rgba(255,255,255,.18);
+        transition:transform .16s ease, filter .16s ease, opacity .16s ease;
+      }
+      #resultsStrip .result-shortcut-btn:hover{ transform:translateY(-1px); filter:brightness(1.1); }
+      #resultsStrip .result-shortcut-btn:disabled{ opacity:.68; cursor:wait; }
+      #resultsStrip .result-shortcut-btn svg{ width:17px; height:17px; }
+      #resultsStrip .result-shortcut-btn::after{
+        content:attr(data-tooltip);
+        position:absolute;
+        left:50%;
+        bottom:calc(100% + 8px);
+        z-index:30;
+        transform:translate(-50%,4px);
+        padding:6px 9px;
+        border:1px solid rgba(255,255,255,.14);
+        border-radius:8px;
+        background:rgba(9,11,15,.97);
+        box-shadow:0 8px 24px rgba(0,0,0,.38);
+        color:#fff;
+        font-size:11px;
+        font-weight:700;
+        line-height:1;
+        white-space:nowrap;
+        opacity:0;
+        visibility:hidden;
+        pointer-events:none;
+        transition:opacity .14s ease, transform .14s ease, visibility .14s ease;
+      }
+      #resultsStrip .result-shortcut-btn:hover::after,
+      #resultsStrip .result-shortcut-btn:focus-visible::after{
+        opacity:1;
+        visibility:visible;
+        transform:translate(-50%,0);
+      }
+      #resultsStrip .result-shortcut-video{
+        background:linear-gradient(135deg,#22c55e,#84cc16);
+        box-shadow:0 7px 18px rgba(34,197,94,.25);
+      }
+      #resultsStrip .result-shortcut-recreate{
+        background:linear-gradient(135deg,#f59e0b,#f97316);
+        box-shadow:0 7px 18px rgba(249,115,22,.25);
+      }
+      #resultsStrip .result-shortcut-download{
+        background:linear-gradient(135deg,#6366f1,#8b5cf6);
+        box-shadow:0 7px 18px rgba(99,102,241,.25);
+      }
+      #resultsStrip .result-shortcut-spinner{
+        width:16px;
+        height:16px;
+        border:2px solid rgba(255,255,255,.42);
+        border-top-color:#fff;
+        border-radius:50%;
+        animation:result-shortcut-spin .72s linear infinite;
+      }
+      @keyframes result-shortcut-spin{ to{ transform:rotate(360deg); } }
 
       #resultsStrip .empty-placeholder{
         width:100%;
@@ -3670,6 +3743,20 @@
           min-height:92px !important;
           padding:10px 12px !important;
         }
+        body.workspace-redesign #resultsStrip .result-shortcut-btn,
+        body.workspace-redesign #resultsStrip .result-card button.result-shortcut-btn,
+        body.workspace-redesign #resultsStrip .thumb-get.result-shortcut-btn{
+          display:inline-flex !important;
+          width:34px !important;
+          min-width:34px !important;
+          max-width:34px !important;
+          height:34px !important;
+          min-height:34px !important;
+          padding:0 !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-btn.hidden{
+          display:none !important;
+        }
       }
       @media (min-width:901px) and (max-width:1250px){
         body.workspace-redesign #resultsStrip .results-masonry-content{ grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -4807,6 +4894,62 @@ async function __mjFetchNbCheck(params){
       return isReadyResultStatus(cleanStatus);
     }
 
+    function resultShortcutIcon(action) {
+      if (action === 'create-video') {
+        return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.5-2.6A1 1 0 0 1 21 8.3v7.4a1 1 0 0 1-1.5.9L15 14"></path><rect x="3" y="6" width="12" height="12" rx="2"></rect></svg>';
+      }
+      if (action === 'recreate') {
+        return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0 2 5.3"></path><path d="M20 4v7h-7"></path></svg>';
+      }
+      return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>';
+    }
+
+    function createResultShortcutButton(action, label) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `result-shortcut-btn result-shortcut-${action === 'create-video' ? 'video' : action}`;
+      button.title = label;
+      button.dataset.tooltip = label;
+      button.setAttribute('aria-label', label);
+      button.innerHTML = resultShortcutIcon(action);
+      return button;
+    }
+
+    async function runResultShortcut(button, action, data) {
+      if (!button || button.disabled) return;
+      const handler = window.hansoraPreviewActions && window.hansoraPreviewActions[action];
+      if (typeof handler !== 'function') return;
+      const original = button.innerHTML;
+      button.disabled = true;
+      button.innerHTML = '<span class="result-shortcut-spinner" aria-hidden="true"></span>';
+      try {
+        await handler(data || {}, () => {});
+      } catch (error) {
+        console.warn(`Result ${action} shortcut failed`, error);
+      } finally {
+        button.disabled = false;
+        button.innerHTML = original;
+      }
+    }
+
+    async function downloadResultShortcut(button, url, kind, provider) {
+      if (!url || !button || button.disabled) return;
+      const showProgress = isMobileUI();
+      const original = button.innerHTML;
+      if (showProgress) {
+        button.disabled = true;
+        button.innerHTML = '<span class="result-shortcut-spinner" aria-hidden="true"></span>';
+      }
+      try {
+        await downloadAsset(url, kind, provider);
+      } finally {
+        if (showProgress) {
+          button.disabled = false;
+          button.innerHTML = original;
+        }
+      }
+    }
+
     function createResultThumb(data) {
       if (!shouldShowResultGeneration(data)) return null;
       const provider = data.provider || 'Model';
@@ -4914,11 +5057,12 @@ async function __mjFetchNbCheck(params){
         state.textContent = '…';
       }
 
-      const getBtn = document.createElement('button');
-      getBtn.type = 'button';
-      getBtn.className = 'thumb-get';
-      getBtn.textContent = 'Get';
+      const createVideoBtn = createResultShortcutButton('create-video', 'Create video');
+      const recreateBtn = createResultShortcutButton('recreate', 'Recreate');
+      const getBtn = createResultShortcutButton('download', 'Download');
+      getBtn.classList.add('thumb-get');
       if (!isReady || isFailed) getBtn.classList.add('hidden');
+      if (kind !== 'image' || !isReady || isFailed) createVideoBtn.classList.add('hidden');
 
       // download helper (best-effort; fallback to opening)
       const downloadUrl = async (u) => {
@@ -4940,15 +5084,29 @@ async function __mjFetchNbCheck(params){
         }
       };
 
-      getBtn.addEventListener('click', (e) => {
+      createVideoBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        runResultShortcut(createVideoBtn, 'create-video', previewData);
+      });
+
+      recreateBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        runResultShortcut(recreateBtn, 'recreate', previewData);
+      });
+
+      getBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
         const targetUrl = __thumb_url || url;
         if (!targetUrl) return;
-        downloadAsset(targetUrl, __thumb_kind || kind, provider);
+        await downloadResultShortcut(getBtn, targetUrl, __thumb_kind || kind, provider);
       });
 
       actions.appendChild(state);
+      actions.appendChild(createVideoBtn);
+      actions.appendChild(recreateBtn);
       actions.appendChild(getBtn);
 
       row.appendChild(meta);
@@ -4971,6 +5129,7 @@ async function __mjFetchNbCheck(params){
           const nextStatusRaw = (next && next.status != null) ? String(next.status) : statusRaw;
           const nextStatusLower = String(nextStatusRaw || '').toLowerCase();
           const nextUrl = (next && next.result_url) ? String(next.result_url) : (__thumb_url || '');
+          const nextKind = (next && next.kind) ? String(next.kind).toLowerCase() : __thumb_kind;
           const failed = isFailedResultStatus(nextStatusLower);
           const ready = canGetResult(nextStatusLower, nextUrl);
 
@@ -5011,10 +5170,11 @@ async function __mjFetchNbCheck(params){
             getBtn.classList.add('hidden');
             getBtn.disabled = true;
           }
+          createVideoBtn.classList.toggle('hidden', nextKind !== 'image' || !ready || failed);
 
           // media element
           __thumb_url = nextUrl || '';
-          __thumb_kind = (next && next.kind) ? String(next.kind).toLowerCase() : __thumb_kind;
+          __thumb_kind = nextKind;
           previewData.result_url = __thumb_url;
           previewData.kind = __thumb_kind;
           previewData.status = nextStatusRaw;
@@ -5178,18 +5338,34 @@ function createResultCard(data) {
       bottomRow.className = 'flex items-center justify-between gap-2 mt-1';
       const statusText = document.createElement('span');
       statusText.className = 'text-[10px] text-indigo-200/80';
-      const downloadBtn = document.createElement('button');
-      downloadBtn.type = 'button';
-      downloadBtn.className = 'result-get text-[12px] px-5 py-2 rounded-full bg-indigo-500/90 hover:bg-indigo-400 text-white hidden';
-      downloadBtn.textContent = 'GET';
-      downloadBtn.addEventListener('click', (event) => {
+      const cardActions = document.createElement('div');
+      cardActions.className = 'result-shortcuts';
+      const createVideoBtn = createResultShortcutButton('create-video', 'Create video');
+      const recreateBtn = createResultShortcutButton('recreate', 'Recreate');
+      const downloadBtn = createResultShortcutButton('download', 'Download');
+      downloadBtn.classList.add('hidden');
+      createVideoBtn.classList.add('hidden');
+      createVideoBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        runResultShortcut(createVideoBtn, 'create-video', previewData);
+      });
+      recreateBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        runResultShortcut(recreateBtn, 'recreate', previewData);
+      });
+      downloadBtn.addEventListener('click', async (event) => {
         event.preventDefault();
         event.stopPropagation();
         const downloadUrl = downloadBtn.dataset.downloadUrl || '';
-        if (downloadUrl) downloadAsset(downloadUrl, kind, provider);
+        if (downloadUrl) await downloadResultShortcut(downloadBtn, downloadUrl, kind, provider);
       });
+      cardActions.appendChild(createVideoBtn);
+      cardActions.appendChild(recreateBtn);
+      cardActions.appendChild(downloadBtn);
       bottomRow.appendChild(statusText);
-      bottomRow.appendChild(downloadBtn);
+      bottomRow.appendChild(cardActions);
 
       body.appendChild(topRow);
       body.appendChild(promptEl);
@@ -5228,6 +5404,7 @@ function createResultCard(data) {
           downloadBtn.dataset.downloadUrl = '';
           downloadBtn.disabled = true;
         }
+        createVideoBtn.classList.toggle('hidden', kind !== 'image' || !readyNow || failedNow);
 
         let label = 'Processing…';
         let pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-black/70 text-white/80';
