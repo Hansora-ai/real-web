@@ -423,6 +423,44 @@
     .opt-btn:active{ transform: translateY(1px); }
     .opt-chev{ opacity:.7; }
 
+    .model-quantity-block{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex:0 0 auto;
+    }
+    .model-quantity-label{
+      color:rgba(255,255,255,.5);
+      font-size:11px;
+      font-weight:750;
+    }
+    .model-quantity-picker{
+      min-height:34px;
+      display:inline-grid;
+      grid-template-columns:34px 34px 34px;
+      align-items:center;
+      border:1px solid rgba(255,255,255,.15);
+      border-radius:999px;
+      background:rgba(2,6,23,.7);
+      overflow:hidden;
+    }
+    .model-quantity-picker button{
+      height:34px;
+      border:0;
+      background:transparent;
+      color:rgba(255,255,255,.68);
+      font-size:22px;
+      line-height:1;
+      cursor:pointer;
+    }
+    .model-quantity-picker button:disabled{ opacity:.28; cursor:not-allowed; }
+    #generationQuantityValue{
+      color:#fff;
+      font-size:13px;
+      font-weight:900;
+      text-align:center;
+    }
+
     /* Fullscreen preview overlay (click media shows, download only via Get) */
     #previewOverlay{
       position:fixed;
@@ -695,6 +733,20 @@
       }
       .preview-action-btn.primary{ grid-column:auto; }
       .preview-action-btn[data-preview-action="download"]{ grid-column:1 / -1; }
+      #previewOverlay .preview-card.is-video-preview .preview-actions{
+        grid-template-columns:1fr;
+      }
+      #previewOverlay .preview-card.is-video-preview .preview-action-btn[data-preview-action="recreate"],
+      #previewOverlay .preview-card.is-video-preview .preview-action-btn[data-preview-action="download"]{
+        width:100%;
+        grid-column:1 / -1;
+      }
+      #previewOverlay .preview-card.is-video-preview .preview-action-btn[data-preview-action="download"]{
+        background:linear-gradient(135deg,#6366f1,#8b5cf6,#38bdf8);
+        color:#fff;
+        border-color:rgba(139,92,246,.65);
+        box-shadow:0 14px 34px rgba(99,102,241,.28);
+      }
       #previewPromptSection{ order:3; }
       #previewDetailsSection{ order:4; }
       .preview-prompt-text{ max-height:112px; }
@@ -880,7 +932,8 @@
     body.workspace-redesign #klingSoundBlock,
     body.workspace-redesign #durationBlock,
     body.workspace-redesign #resolutionBlock,
-    body.workspace-redesign #aspectBlock{
+    body.workspace-redesign #aspectBlock,
+    body.workspace-redesign #quantityBlock{
       width:100%;
       justify-content:space-between;
       border-radius:14px;
@@ -3551,6 +3604,62 @@
 	      .gemini-trim-actions button{ min-width:116px; min-height:40px; }
 	    }
 
+      /* Desktop recent results: large, orientation-aware masonry cards. */
+      @media (min-width:901px){
+        body.workspace-redesign #resultsStrip:not(.empty){
+          display:block !important;
+          columns:3;
+          column-gap:16px !important;
+          width:100% !important;
+          max-height:none !important;
+          min-height:0 !important;
+          overflow:visible !important;
+          padding:12px !important;
+          clip-path:none !important;
+          contain:none !important;
+        }
+        body.workspace-redesign #resultsStrip .result-card{
+          display:inline-flex !important;
+          width:100% !important;
+          min-width:0 !important;
+          max-width:none !important;
+          height:auto !important;
+          min-height:0 !important;
+          max-height:none !important;
+          margin:0 0 16px !important;
+          break-inside:avoid;
+          vertical-align:top;
+          border-radius:18px !important;
+        }
+        body.workspace-redesign #resultsStrip .result-card .result-media{
+          width:100% !important;
+          height:auto !important;
+          min-height:0 !important;
+          max-height:none !important;
+          flex:none !important;
+          aspect-ratio:9 / 16;
+        }
+        body.workspace-redesign #resultsStrip .result-card.result-card--landscape .result-media{
+          aspect-ratio:16 / 9;
+        }
+        body.workspace-redesign #resultsStrip .result-card .result-media img,
+        body.workspace-redesign #resultsStrip .result-card .result-media video{
+          width:100% !important;
+          height:100% !important;
+          max-width:none !important;
+          max-height:none !important;
+          object-fit:cover !important;
+        }
+        body.workspace-redesign #resultsStrip .result-card > div:last-child{
+          height:auto !important;
+          min-height:92px !important;
+          padding:10px 12px !important;
+        }
+      }
+      @media (min-width:901px) and (max-width:1250px){
+        body.workspace-redesign #resultsStrip:not(.empty){ columns:2; }
+      }
+
 	    </style>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
@@ -4038,6 +4147,15 @@
                 <div id="veoQualityPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
               </div>
 
+              <div id="quantityBlock" class="model-quantity-block">
+                <span class="model-quantity-label">Quantity</span>
+                <div class="model-quantity-picker" role="group" aria-label="Generation quantity">
+                  <button id="quantityMinusBtn" type="button" aria-label="Decrease quantity">−</button>
+                  <output id="generationQuantityValue" aria-live="polite">1</output>
+                  <button id="quantityPlusBtn" type="button" aria-label="Increase quantity">+</button>
+                </div>
+              </div>
+
               
               <div id="soraTierBlock" class="flex items-center gap-1.5 hidden">
                 <div id="soraTierPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
@@ -4263,6 +4381,7 @@ async function __mjFetchNbCheck(params){
   `;
 
   const mediaHost = overlay.querySelector('#previewMedia');
+  const previewCard = overlay.querySelector('.preview-card');
   const closeBtn = overlay.querySelector('.preview-close');
   const actionsHost = overlay.querySelector('#previewActions');
   const actionStatus = overlay.querySelector('#previewActionStatus');
@@ -4337,6 +4456,7 @@ async function __mjFetchNbCheck(params){
       result_url: url,
       kind: k
     });
+    if (previewCard) previewCard.classList.toggle('is-video-preview', k === 'video');
     mediaHost.innerHTML = '';
     if (k === 'video') {
       const v = document.createElement('video');
@@ -4360,7 +4480,7 @@ async function __mjFetchNbCheck(params){
     overlay.querySelector('#previewTypeDetail').textContent = k === 'video' ? 'Video' : 'Image';
     overlay.querySelector('#previewQualityDetail').textContent = getPreviewQuality(currentPreview);
     overlay.querySelector('#previewCreatedDetail').textContent = previewCreatedLabel(currentPreview.created_at);
-    if (promptSection) promptSection.style.display = k === 'video' ? 'none' : '';
+    if (promptSection) promptSection.style.display = '';
     if (promptText) promptText.textContent = prompt || 'No prompt saved for this generation.';
     renderActions(currentPreview);
     setPreviewStatus('', '');
@@ -4931,6 +5051,44 @@ async function __mjFetchNbCheck(params){
       return isMobileUI() ? createResultThumb(data) : createResultCard(data);
     }
 
+    function readResultAspectRatio(data) {
+      const meta = data && data.meta && typeof data.meta === 'object' ? data.meta : {};
+      const candidates = [
+        data && data.aspect_ratio,
+        meta.aspect_ratio,
+        meta.aspectRatio,
+        meta.request_input && meta.request_input.aspect_ratio,
+        meta.diagnostic && meta.diagnostic.aspect_ratio,
+        meta.diagnostic && meta.diagnostic.client && meta.diagnostic.client.aspect_ratio
+      ];
+      for (const raw of candidates) {
+        const match = String(raw || '').trim().match(/^(\d+(?:\.\d+)?)\s*[:x\/]\s*(\d+(?:\.\d+)?)$/i);
+        if (!match) continue;
+        const width = Number(match[1]);
+        const height = Number(match[2]);
+        if (width > 0 && height > 0) return width / height;
+      }
+      return 0;
+    }
+
+    function bindResultCardOrientation(card, mediaEl, data) {
+      const setOrientation = (ratio) => {
+        const landscape = Number(ratio) > 1;
+        card.classList.toggle('result-card--landscape', landscape);
+        card.classList.toggle('result-card--portrait', !landscape);
+      };
+      setOrientation(readResultAspectRatio(data));
+      if (mediaEl.tagName.toLowerCase() === 'video') {
+        mediaEl.addEventListener('loadedmetadata', () => {
+          if (mediaEl.videoWidth && mediaEl.videoHeight) setOrientation(mediaEl.videoWidth / mediaEl.videoHeight);
+        });
+      } else {
+        mediaEl.addEventListener('load', () => {
+          if (mediaEl.naturalWidth && mediaEl.naturalHeight) setOrientation(mediaEl.naturalWidth / mediaEl.naturalHeight);
+        });
+      }
+    }
+
 function createResultCard(data) {
       if (!shouldShowResultGeneration(data)) return null;
       const provider = data.provider || 'Model';
@@ -4969,6 +5127,7 @@ function createResultCard(data) {
         mediaEl.loading = 'lazy';
         mediaEl.decoding = 'async';
       }
+      bindResultCardOrientation(card, mediaEl, data);
       mediaEl.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -5102,7 +5261,7 @@ function createResultCard(data) {
       if (options && options.prepend) strip.prepend(card);
       else strip.appendChild(card);
 
-      const __max = window.matchMedia('(min-width: 901px)').matches ? 12 : 10;
+      const __max = 15;
       while (strip.children.length > __max) strip.removeChild(strip.lastElementChild);
 
       return built;
@@ -5111,7 +5270,7 @@ function createResultCard(data) {
     async function loadRecentHistory(options = {}) {
       if (!currentUser) return;
       const uid = currentUser.id;
-      const recentLimit = window.matchMedia('(min-width: 901px)').matches ? 12 : 10;
+      const recentLimit = 15;
       try {
         const { data, error } = await supabaseClient
           .from('user_generations')
@@ -6233,6 +6392,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
     let currentModel = MODELS[0];
     let currentMode = 'image';
+    let generationQuantity = 1;
     let currentVeoFamily = null; // 'veo3' | 'veo31'
     let currentVeoVariant = 'fast'; // 'lite' | 'fast' | 'quality'
     let uploadedFiles = [];
@@ -6268,6 +6428,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       if (model.id === 'seedream-5-lite') {
         return { model: 'seedream-5-lite', type: 'image' };
+      }
+      if (model.id === 'grok-image') {
+        return { model: 'grok-image', type: 'image' };
+      }
+      if (model.id === 'qwen-2') {
+        return { model: 'qwen-2', type: 'image' };
       }
       if (model.id === 'wan-2-7-image') {
         if (currentWanTier === 'pro') return null;
@@ -7577,6 +7743,17 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         open.dataset.wired = 'true';
         open.addEventListener('click', openModelOverlay);
       }
+      const quantityMinus = document.getElementById('quantityMinusBtn');
+      const quantityPlus = document.getElementById('quantityPlusBtn');
+      if (quantityMinus && !quantityMinus.dataset.wired) {
+        quantityMinus.dataset.wired = 'true';
+        quantityMinus.addEventListener('click', () => setGenerationQuantity(generationQuantity - 1));
+      }
+      if (quantityPlus && !quantityPlus.dataset.wired) {
+        quantityPlus.dataset.wired = 'true';
+        quantityPlus.addEventListener('click', () => setGenerationQuantity(generationQuantity + 1));
+      }
+      syncGenerationQuantityDisplay();
       document.querySelectorAll('.preset-card').forEach((card) => {
         if (card.dataset.wired) return;
         card.dataset.wired = 'true';
@@ -7652,7 +7829,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       return Math.max(1, Math.min(15, total));
     }
 
-    function getModelCreditValue(model = currentModel) {
+    function getModelUnitCreditValue(model = currentModel) {
 	      if (!model) return null;
       if (model === currentModel && isCurrentSelectionUnlimited()) return 0;
 	      if (model.id === 'nano-banana-pro') return currentResolution === '4K' ? 2 : 1.5;
@@ -7730,6 +7907,33 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (typeof model.minCredits === 'number') return model.minCredits;
       const match = String(model.costLabel || '').match(/(\d+(?:\.\d+)?)/);
       return match ? Number(match[1]) : null;
+    }
+
+    function normalizedGenerationQuantity(value = generationQuantity) {
+      return Math.max(1, Math.min(2, Math.round(Number(value) || 1)));
+    }
+
+    function getModelCreditValue(model = currentModel, quantity = generationQuantity) {
+      const unitValue = getModelUnitCreditValue(model);
+      if (unitValue === null || unitValue === undefined || unitValue === '') return unitValue;
+      return Number((Number(unitValue) * normalizedGenerationQuantity(quantity)).toFixed(2));
+    }
+
+    function syncGenerationQuantityDisplay() {
+      generationQuantity = normalizedGenerationQuantity(generationQuantity);
+      const value = document.getElementById('generationQuantityValue');
+      const minus = document.getElementById('quantityMinusBtn');
+      const plus = document.getElementById('quantityPlusBtn');
+      if (value) value.textContent = String(generationQuantity);
+      if (minus) minus.disabled = generationQuantity <= 1;
+      if (plus) plus.disabled = generationQuantity >= 2;
+    }
+
+    function setGenerationQuantity(value) {
+      generationQuantity = normalizedGenerationQuantity(value);
+      syncGenerationQuantityDisplay();
+      updateCostDisplay();
+      updateRunButtonLabel();
     }
 
     function formatCreditValue(value) {
@@ -10984,7 +11188,65 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       }
     }
 
-    async function runCurrentModel() {
+    function persistGenerationInputUrlsInBackground(details) {
+      const uid = String(details && details.uid || '').trim();
+      const runId = String(details && details.runId || '').trim();
+      const inputUrls = Array.isArray(details && details.urls)
+        ? details.urls.map((url) => String(url || '').trim()).filter((url) => /^https?:\/\//i.test(url))
+        : [];
+      if (!uid || !runId || !inputUrls.length || !supabaseClient) return;
+
+      const model = details.model || {};
+      const diagnostic = details.diagnostic && typeof details.diagnostic === 'object' ? details.diagnostic : {};
+      const submittedTaskId = String(details.taskId || '').trim();
+      const delays = [250, 700, 1400, 2500, 4000, 6500];
+
+      const attempt = async (index) => {
+        try {
+          let accessToken = '';
+          try {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            accessToken = sessionData && sessionData.session && sessionData.session.access_token ? sessionData.session.access_token : '';
+          } catch (_) {}
+          const res = await fetch('/.netlify/functions/save-generation-inputs', {
+            method: 'POST',
+            headers: Object.assign(
+              { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              accessToken ? { 'Authorization': 'Bearer ' + accessToken } : {}
+            ),
+            body: JSON.stringify({
+              uid,
+              run_id: runId,
+              taskId: submittedTaskId,
+              model_id: model.id || diagnostic.model_id || '',
+              model_name: model.name || diagnostic.model_name || '',
+              input_urls: inputUrls,
+              source_urls: inputUrls,
+              client_diagnostic: Object.assign({}, diagnostic, {
+                model_id: diagnostic.model_id || model.id || '',
+                model_name: diagnostic.model_name || model.name || '',
+                input_urls: inputUrls,
+                uploaded_url_count: inputUrls.length
+              })
+            })
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok || !payload.ok) throw new Error(payload.error || payload.reason || payload.status || `save_inputs_${res.status}`);
+        } catch (error) {
+          if (index + 1 >= delays.length) {
+            console.warn('Could not persist generation input URLs for recreate', { runId, error });
+            return;
+          }
+          setTimeout(() => attempt(index + 1), delays[index + 1]);
+        }
+      };
+
+      setTimeout(() => attempt(0), delays[0]);
+    }
+
+    let lastAcceptedRunMarker = 0;
+
+    async function runSingleCurrentModel(batchManaged = false) {
       if (!currentModel) {
         showStatus('Please choose a model first.', 'error');
         return;
@@ -11017,7 +11279,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         }
       }
 
-      const requiredCredits = Number(getModelCreditValue(currentModel) || 0);
+      const requiredCredits = Number(getModelCreditValue(currentModel, 1) || 0);
       let availableCredits = await getAvailableCredits(requiredCredits);
 
       if (requiredCredits > 0 && availableCredits < requiredCredits) {
@@ -11035,7 +11297,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
       // Kling dynamic credit requirement (depends on model, resolution, sound, and duration)
       if (currentModel && ['kling26', 'kling30'].includes(currentModel.id)) {
-        const __need = Number(getModelCreditValue(currentModel) || 0);
+        const __need = Number(getModelCreditValue(currentModel, 1) || 0);
         availableCredits = await getAvailableCredits(__need);
         if (availableCredits < __need) {
           console.warn('Credit gate blocked Kling run', {
@@ -11339,6 +11601,15 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
                 `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
                 'success'
               );
+              lastAcceptedRunMarker = Date.now();
+              persistGenerationInputUrlsInBackground({
+                uid,
+                runId,
+                urls,
+                model: currentModel,
+                diagnostic: body.client_diagnostic,
+                taskId: j && (j.taskId || j.task_id || j.id)
+              });
               startSora2Poll(j.taskId, uid, runId, placeholderControllers);
               Promise.resolve(refreshCredits()).catch((error) => {
                 console.warn('credit refresh after submit failed', error);
@@ -11351,6 +11622,15 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
               'success'
             );
+            lastAcceptedRunMarker = Date.now();
+            persistGenerationInputUrlsInBackground({
+              uid,
+              runId,
+              urls,
+              model: currentModel,
+              diagnostic: body.client_diagnostic,
+              taskId: submittedTaskId
+            });
             const checker = (j && j.checker) || checkerForCurrentModel(currentModel, runEndpoint);
             startPollGeneration(runId, placeholderControllers, submittedTaskId, checker);
             Promise.resolve(refreshCredits()).catch((error) => {
@@ -11374,9 +11654,47 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         }
         await refreshCredits();
       } finally {
-        runBtn.disabled = false;
-        updateRunButtonLabel();
+        if (!batchManaged) {
+          runBtn.disabled = false;
+          updateRunButtonLabel();
+        }
       }
+    }
+
+    async function runCurrentModel() {
+      const quantity = normalizedGenerationQuantity(generationQuantity);
+      if (quantity === 1) return runSingleCurrentModel(false);
+
+      if (!currentModel) {
+        showStatus('Please choose a model first.', 'error');
+        return;
+      }
+      const prompt = String(document.getElementById('promptBox')?.value || '').trim();
+      if (!prompt && currentModel.id !== 'kling-motion-control') {
+        showStatus('Please enter a prompt.', 'error');
+        return;
+      }
+      if (promptHasBlockedSexualTerms(prompt)) {
+        updatePromptSafetyState(true);
+        return;
+      }
+      if (!currentUser) {
+        showStatus('Please log in first.', 'error');
+        return;
+      }
+
+      const totalRequiredCredits = Number(getModelCreditValue(currentModel, quantity) || 0);
+      const availableCredits = await getAvailableCredits(totalRequiredCredits);
+      if (totalRequiredCredits > 0 && availableCredits < totalRequiredCredits) {
+        showNotEnoughCreditsStatus(`Not enough credits for ${quantity} generations.`);
+        return;
+      }
+
+      showStatus(`Submitting ${quantity} separate generations…`);
+      await Promise.allSettled(
+        Array.from({ length: quantity }, () => runSingleCurrentModel(true))
+      );
+      updateRunButtonLabel();
     }
 
     function getPreviewMeta(data) {
@@ -11691,14 +12009,15 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
     async function submitPreviewRun(setStatus) {
       const before = resultCardCount();
+      const acceptedBefore = Number(lastAcceptedRunMarker || 0);
       await runCurrentModel();
       const after = resultCardCount();
-      if (after > before) {
+      if (Number(lastAcceptedRunMarker || 0) > acceptedBefore || after > before) {
         if (window.closePreview) window.closePreview();
         return true;
       }
       if (typeof setStatus === 'function') {
-        setStatus('Could not submit. Check the red message on the page and try again.', 'error');
+        setStatus('Generation failed. Check your prompt or image, then try again.', 'error');
       }
       return false;
     }
@@ -11713,7 +12032,12 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
       const urls = collectPreviewInputUrls(data || {});
       const diag = getPreviewDiagnostic(data || {});
-      const hadUploadedInput = Number(diag.uploaded_url_count || diag.uploadedUrlCount || 0) > 0;
+      const meta = getPreviewMeta(data || {});
+      const previewMode = String(meta.mode || diag.mode || data?.mode || '').toLowerCase();
+      const previewModelName = String(meta.model || diag.model || data?.model || '').toLowerCase();
+      const hadUploadedInput = Number(diag.uploaded_url_count || diag.uploadedUrlCount || meta.uploaded_url_count || 0) > 0
+        || previewMode.includes('image-to-image')
+        || previewModelName.includes('image-to-image');
       if (!urls.length && currentModel && (currentModel.needsImage || hadUploadedInput) && data && data.result_url) {
         urls.push(String(data.result_url));
       }
