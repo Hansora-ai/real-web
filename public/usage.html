@@ -150,14 +150,6 @@
     }
     .copy-prompt-btn:hover{border-color:rgba(129,140,248,.70);background:rgba(30,41,59,.92)}
     .copy-prompt-btn:disabled{opacity:.42;cursor:not-allowed}
-    .usage-shortcuts{display:flex;align-items:center;justify-content:flex-end;gap:7px}
-    .usage-shortcut{width:34px;height:34px;min-width:34px;padding:0;border-radius:999px;border:1px solid rgba(255,255,255,.18);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;position:relative}
-    .usage-shortcut svg{width:17px;height:17px}
-    .usage-shortcut.video{background:linear-gradient(135deg,#16a34a,#84cc16)}
-    .usage-shortcut.recreate{background:linear-gradient(135deg,#f59e0b,#f97316)}
-    .usage-shortcut.download{background:linear-gradient(135deg,#6366f1,#8b5cf6)}
-    .usage-shortcut::after{content:attr(data-tooltip);position:absolute;left:50%;bottom:calc(100% + 7px);transform:translate(-50%,3px);padding:5px 8px;border-radius:7px;background:rgba(7,9,14,.97);color:#fff;font-size:10px;font-weight:800;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .14s ease,transform .14s ease;z-index:20}
-    .usage-shortcut:hover::after,.usage-shortcut:focus-visible::after{opacity:1;visibility:visible;transform:translate(-50%,0)}
     #previewOverlay{
       position:fixed;
       inset:0;
@@ -173,7 +165,7 @@
     #previewOverlay.show{display:flex}
     .preview-card{
       position:relative;
-      width:min(940px,100%);
+      width:min(1240px,100%);
       max-height:90vh;
       border:1px solid rgba(255,255,255,.14);
       border-radius:26px;
@@ -181,9 +173,22 @@
       overflow:hidden;
       box-shadow:0 30px 100px rgba(0,0,0,.72);
     }
-    .preview-card img,.preview-card video{width:100%;max-height:calc(90vh - 70px);object-fit:contain;display:block;background:#020617}
+    .preview-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:min(720px,90vh);max-height:90vh}
+    .preview-media-pane{min-width:0;display:grid;place-items:center;background:#030712;padding:26px;overflow:hidden}
+    .preview-media-pane img,.preview-media-pane video{width:100%;height:100%;max-height:calc(90vh - 52px);object-fit:contain;display:block;background:#020617;border-radius:14px}
     .preview-audio{min-height:360px;padding:34px;display:grid;place-items:center;text-align:center}
     .preview-audio audio{width:min(620px,100%);margin-top:18px}
+    .preview-side{min-width:0;padding:18px;display:flex;flex-direction:column;gap:14px;background:rgba(19,23,33,.98);border-left:1px solid rgba(255,255,255,.10);overflow:auto}
+    .preview-head{display:flex;align-items:center;gap:12px;padding-right:50px}
+    .preview-avatar{width:44px;height:44px;border-radius:999px;background:linear-gradient(135deg,#d9ff42,#8b5cf6);flex:0 0 auto}
+    .preview-provider{font-size:17px;font-weight:900;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .preview-kind{font-size:12px;color:#9ca3af;margin-top:2px;text-transform:capitalize}
+    .preview-section{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.055);border-radius:15px;padding:14px}
+    .preview-section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#9ca3af;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .preview-copy{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.07);color:#fff;border-radius:10px;padding:8px 11px;font-size:11px;font-weight:900;cursor:pointer;text-transform:none;letter-spacing:0}
+    .preview-prompt{margin-top:11px;max-height:180px;overflow:auto;border-radius:12px;background:rgba(255,255,255,.06);padding:13px;color:#e5e7eb;font-size:13px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+    .preview-detail-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:10px;color:#9ca3af;font-size:13px}
+    .preview-detail-row strong{color:#f3f4f6;text-align:right}
     .preview-close{
       position:absolute;
       top:12px;
@@ -203,11 +208,13 @@
       padding:0;
       text-align:center;
     }
-    .preview-actions{min-height:70px;padding:12px 66px 12px 16px;display:flex;align-items:center;justify-content:center;gap:10px;background:rgba(10,13,21,.96);border-top:1px solid rgba(255,255,255,.09)}
-    .preview-actions .usage-shortcut{width:42px;height:42px;min-width:42px}
-    .preview-actions .usage-shortcut svg{width:20px;height:20px}
+    .preview-actions{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .preview-action{min-height:48px;border:1px solid rgba(255,255,255,.14);border-radius:13px;background:rgba(255,255,255,.07);color:#fff;display:flex;align-items:center;justify-content:center;gap:9px;font-size:13px;font-weight:900;cursor:pointer;text-decoration:none}
+    .preview-action svg{width:19px;height:19px}
+    .preview-action.create-video{grid-column:1/-1;background:linear-gradient(135deg,#695cf6,#39bdf8);border-color:rgba(255,255,255,.18)}
+    .preview-action:hover{filter:brightness(1.12)}
     @media(max-width:1050px){.usage-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-    @media(max-width:760px){.page-shell{padding:18px 12px 34px}.usage-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.panel{border-radius:22px}.preview-card{border-radius:18px}.preview-audio{min-height:280px;padding:22px}}
+    @media(max-width:760px){.page-shell{padding:18px 12px 34px}.usage-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.panel{border-radius:22px}.preview-card{border-radius:18px;overflow:auto}.preview-layout{display:block;max-height:none}.preview-media-pane{height:min(58vh,520px);padding:12px}.preview-media-pane img,.preview-media-pane video{max-height:100%}.preview-side{border-left:0;border-top:1px solid rgba(255,255,255,.10)}.preview-audio{min-height:280px;padding:22px}}
   </style>
 </head>
 <body>
@@ -489,14 +496,12 @@
       window.location.href = `/search-models.html?usageAction=${encodeURIComponent(action)}`;
     }
 
-    function addUsageAction(host, action, label, row, url, kind){
+    function addPreviewAction(host, action, label, row, url, kind){
       const control = document.createElement(action === 'download' ? 'a' : 'button');
       if (action !== 'download') control.type = 'button';
-      control.className = `usage-shortcut ${action === 'create-video' ? 'video' : action}`;
-      control.title = label;
-      control.dataset.tooltip = label;
+      control.className = `preview-action ${action}`;
       control.setAttribute('aria-label', label);
-      control.innerHTML = usageActionIcon(action);
+      control.innerHTML = `${usageActionIcon(action)}<span>${label}</span>`;
       if (action === 'download') {
         control.href = downloadHref(url, row);
         control.download = '';
@@ -511,12 +516,12 @@
       host.appendChild(control);
     }
 
-    function populateUsageActions(host, row, url, kind, failed){
+    function populatePreviewActions(host, row, url, kind){
       if (!host) return;
       host.innerHTML = '';
-      if (!failed && url && kind === 'image') addUsageAction(host, 'create-video', 'Create Video', row, url, kind);
-      addUsageAction(host, 'recreate', 'Recreate', row, url, kind);
-      if (!failed && url && (kind === 'image' || kind === 'video')) addUsageAction(host, 'download', 'Download', row, url, kind);
+      if (kind === 'image') addPreviewAction(host, 'create-video', 'Create Video', row, url, kind);
+      addPreviewAction(host, 'recreate', 'Recreate', row, url, kind);
+      addPreviewAction(host, 'download', 'Download', row, url, kind);
     }
 
     function renderRows(rows){
@@ -556,11 +561,12 @@
             <span>${escapeHtml(kind)}</span>
           </div>
           <div class="card-actions">
-            <div class="usage-shortcuts"></div>
+            ${url && !failed ? `<a class="download-btn" href="${downloadHref(url, row)}" download>Download</a>` : ''}
             <button class="copy-prompt-btn" type="button" ${prompt ? '' : 'disabled'}>${prompt ? 'Copy prompt' : 'No prompt'}</button>
           </div>
         `;
-        populateUsageActions(card.querySelector('.usage-shortcuts'), row, url, kind, failed);
+        const download = card.querySelector('.download-btn');
+        if (download) download.addEventListener('click', (event) => event.stopPropagation());
         const copyPrompt = card.querySelector('.copy-prompt-btn');
         if (copyPrompt) {
           copyPrompt.addEventListener('click', async (event) => {
@@ -652,10 +658,52 @@
       }
     }
 
+    function previewQualityForRow(row){
+      const meta = parseMeta(row.meta);
+      const diagnostic = parseMeta(meta.client_diagnostic || meta.diagnostic || {});
+      return String(meta.quality || meta.resolution || diagnostic.resolution || '-');
+    }
+
     function openPreview(row, url, kind, title){
       if (!url) return;
-      $('previewContent').innerHTML = `${renderMedia(url, kind, title, true)}<div class="preview-actions"></div>`;
-      populateUsageActions($('previewContent').querySelector('.preview-actions'), row, url, kind, false);
+      const prompt = promptForRow(row);
+      const provider = row.provider || 'Hansora AI';
+      const created = row.created_at ? new Date(row.created_at).toLocaleDateString([], {year:'numeric', month:'short', day:'numeric'}) : '-';
+      $('previewContent').innerHTML = `
+        <div class="preview-layout">
+          <div class="preview-media-pane">${renderMedia(url, kind, title, true)}</div>
+          <aside class="preview-side">
+            <div class="preview-head">
+              <div class="preview-avatar"></div>
+              <div class="min-w-0">
+                <div class="preview-provider">${escapeHtml(provider)}</div>
+                <div class="preview-kind">${escapeHtml(kind)} generation</div>
+              </div>
+            </div>
+            <section class="preview-section">
+              <div class="preview-section-title"><span>Prompt</span><button class="preview-copy" type="button" ${prompt ? '' : 'disabled'}>Copy</button></div>
+              <div class="preview-prompt">${escapeHtml(prompt || 'No prompt saved for this generation.')}</div>
+            </section>
+            <section class="preview-section">
+              <div class="preview-section-title"><span>Details</span></div>
+              <div class="preview-detail-row"><span>Model</span><strong>${escapeHtml(provider)}</strong></div>
+              <div class="preview-detail-row"><span>Type</span><strong>${escapeHtml(kind.charAt(0).toUpperCase() + kind.slice(1))}</strong></div>
+              <div class="preview-detail-row"><span>Quality</span><strong>${escapeHtml(previewQualityForRow(row))}</strong></div>
+              <div class="preview-detail-row"><span>Created</span><strong>${escapeHtml(created)}</strong></div>
+            </section>
+            <div class="preview-actions"></div>
+          </aside>
+        </div>`;
+      populatePreviewActions($('previewContent').querySelector('.preview-actions'), row, url, kind);
+      const previewCopy = $('previewContent').querySelector('.preview-copy');
+      if (previewCopy) {
+        previewCopy.addEventListener('click', async () => {
+          if (!prompt) return;
+          const ok = await copyText(prompt);
+          previewCopy.textContent = ok ? 'Copied' : 'Copy failed';
+          setTimeout(() => { previewCopy.textContent = 'Copy'; }, 1200);
+        });
+      }
       $('previewOverlay').classList.add('show');
       $('previewOverlay').setAttribute('aria-hidden','false');
       document.body.style.overflow = 'hidden';
@@ -670,7 +718,7 @@
 
     function bindEvents(){
       $('usageList').addEventListener('click', (event) => {
-        if (event.target.closest('.usage-shortcut,.copy-prompt-btn,audio')) return;
+        if (event.target.closest('.download-btn,.copy-prompt-btn,audio')) return;
         const card = event.target.closest('.usage-card[data-url]');
         if (!card) return;
         openPreview(card.__usageRow, card.dataset.url, card.__usageKind || card.dataset.kind, card.dataset.title);
