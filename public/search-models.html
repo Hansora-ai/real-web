@@ -369,6 +369,79 @@
       body.workspace-redesign #resultsStrip .thumb-get.hidden{
         display:none !important;
       }
+      #resultsStrip .result-shortcuts{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap:7px;
+        flex-shrink:0;
+      }
+      #resultsStrip .result-shortcut-btn{
+        position:relative;
+        width:34px;
+        min-width:34px !important;
+        height:34px;
+        padding:0 !important;
+        border-radius:999px;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        color:#fff;
+        border:1px solid rgba(255,255,255,.18);
+        transition:transform .16s ease, filter .16s ease, opacity .16s ease;
+      }
+      #resultsStrip .result-shortcut-btn:hover{ transform:translateY(-1px); filter:brightness(1.1); }
+      #resultsStrip .result-shortcut-btn:disabled{ opacity:.68; cursor:wait; }
+      #resultsStrip .result-shortcut-btn svg{ width:17px; height:17px; }
+      #resultsStrip .result-shortcut-btn::after{
+        content:attr(data-tooltip);
+        position:absolute;
+        left:50%;
+        bottom:calc(100% + 8px);
+        z-index:30;
+        transform:translate(-50%,4px);
+        padding:6px 9px;
+        border:1px solid rgba(255,255,255,.14);
+        border-radius:8px;
+        background:rgba(9,11,15,.97);
+        box-shadow:0 8px 24px rgba(0,0,0,.38);
+        color:#fff;
+        font-size:11px;
+        font-weight:700;
+        line-height:1;
+        white-space:nowrap;
+        opacity:0;
+        visibility:hidden;
+        pointer-events:none;
+        transition:opacity .14s ease, transform .14s ease, visibility .14s ease;
+      }
+      #resultsStrip .result-shortcut-btn:hover::after,
+      #resultsStrip .result-shortcut-btn:focus-visible::after{
+        opacity:1;
+        visibility:visible;
+        transform:translate(-50%,0);
+      }
+      #resultsStrip .result-shortcut-video{
+        background:linear-gradient(135deg,#22c55e,#84cc16);
+        box-shadow:0 7px 18px rgba(34,197,94,.25);
+      }
+      #resultsStrip .result-shortcut-recreate{
+        background:linear-gradient(135deg,#f59e0b,#f97316);
+        box-shadow:0 7px 18px rgba(249,115,22,.25);
+      }
+      #resultsStrip .result-shortcut-download{
+        background:linear-gradient(135deg,#6366f1,#8b5cf6);
+        box-shadow:0 7px 18px rgba(99,102,241,.25);
+      }
+      #resultsStrip .result-shortcut-spinner{
+        width:16px;
+        height:16px;
+        border:2px solid rgba(255,255,255,.42);
+        border-top-color:#fff;
+        border-radius:50%;
+        animation:result-shortcut-spin .72s linear infinite;
+      }
+      @keyframes result-shortcut-spin{ to{ transform:rotate(360deg); } }
 
       #resultsStrip .empty-placeholder{
         width:100%;
@@ -3604,6 +3677,192 @@
 	      .gemini-trim-actions button{ min-width:116px; min-height:40px; }
 	    }
 
+      /* Desktop recent results: large, orientation-aware masonry cards. */
+      @media (min-width:901px){
+        body.workspace-redesign #resultsStrip:not(.empty){
+          display:block !important;
+          width:100% !important;
+          max-height:min(840px, calc(100vh - 205px)) !important;
+          min-height:0 !important;
+          overflow-x:hidden !important;
+          overflow-y:auto !important;
+          overscroll-behavior:contain !important;
+          -webkit-overflow-scrolling:touch;
+          padding:12px !important;
+          clip-path:none !important;
+          contain:none !important;
+          scrollbar-width:thin;
+        }
+        body.workspace-redesign #resultsStrip .results-masonry-content{
+          width:100%;
+          display:grid;
+          grid-template-columns:repeat(3,minmax(0,1fr));
+          gap:16px;
+          align-items:start;
+        }
+        body.workspace-redesign #resultsStrip .results-masonry-column{
+          min-width:0;
+          display:flex;
+          flex-direction:column;
+          gap:16px;
+        }
+        body.workspace-redesign #resultsStrip .result-card{
+          display:inline-flex !important;
+          width:100% !important;
+          min-width:0 !important;
+          max-width:none !important;
+          height:auto !important;
+          min-height:0 !important;
+          max-height:none !important;
+          margin:0 !important;
+          break-inside:avoid;
+          vertical-align:top;
+          border-radius:18px !important;
+        }
+        body.workspace-redesign #resultsStrip .result-card .result-media{
+          width:100% !important;
+          height:auto !important;
+          min-height:0 !important;
+          max-height:none !important;
+          flex:none !important;
+          aspect-ratio:9 / 16;
+        }
+        body.workspace-redesign #resultsStrip .result-card.result-card--landscape .result-media{
+          aspect-ratio:16 / 9;
+        }
+        body.workspace-redesign #resultsStrip .result-card.result-card--square .result-media{
+          aspect-ratio:1 / 1;
+        }
+        body.workspace-redesign #resultsStrip .result-card .result-media img,
+        body.workspace-redesign #resultsStrip .result-card .result-media video{
+          width:100% !important;
+          height:100% !important;
+          max-width:none !important;
+          max-height:none !important;
+          object-fit:cover !important;
+        }
+        body.workspace-redesign #resultsStrip .result-card > div:last-child{
+          height:auto !important;
+          min-height:92px !important;
+          padding:10px 12px !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-btn,
+        body.workspace-redesign #resultsStrip .result-card button.result-shortcut-btn,
+        body.workspace-redesign #resultsStrip .thumb-get.result-shortcut-btn{
+          display:inline-flex !important;
+          position:relative !important;
+          width:32px !important;
+          min-width:32px !important;
+          max-width:32px !important;
+          height:32px !important;
+          min-height:32px !important;
+          padding:0 !important;
+          border-radius:999px !important;
+          border:1px solid rgba(255,255,255,.18) !important;
+          color:#fff !important;
+          align-items:center !important;
+          justify-content:center !important;
+          overflow:visible !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcuts{
+          display:flex !important;
+          align-items:center !important;
+          justify-content:flex-end !important;
+          gap:6px !important;
+          flex-shrink:0 !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-btn svg{
+          width:16px !important;
+          height:16px !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-video{
+          background:linear-gradient(135deg,#16a34a,#84cc16) !important;
+          box-shadow:0 4px 12px rgba(34,197,94,.28) !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-recreate{
+          background:linear-gradient(135deg,#f59e0b,#f97316) !important;
+          box-shadow:0 4px 12px rgba(249,115,22,.28) !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-download{
+          background:linear-gradient(135deg,#6366f1,#8b5cf6) !important;
+          box-shadow:0 4px 12px rgba(99,102,241,.28) !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-btn::after{
+          content:attr(data-tooltip);
+          position:absolute;
+          left:50%;
+          bottom:calc(100% + 7px);
+          z-index:100;
+          transform:translate(-50%,3px);
+          padding:5px 8px;
+          border:1px solid rgba(255,255,255,.14);
+          border-radius:7px;
+          background:rgba(9,11,15,.98);
+          color:#fff;
+          font-size:10px;
+          font-weight:700;
+          line-height:1;
+          white-space:nowrap;
+          opacity:0;
+          visibility:hidden;
+          pointer-events:none;
+          transition:opacity .14s ease, transform .14s ease;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-btn:hover::after,
+        body.workspace-redesign #resultsStrip .result-shortcut-btn:focus-visible::after{
+          opacity:1;
+          visibility:visible;
+          transform:translate(-50%,0);
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-btn.hidden{
+          display:none !important;
+        }
+        body.workspace-redesign #resultsStrip .result-preview-hover{
+          position:absolute;
+          inset:0;
+          z-index:8;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          background:rgba(8,10,15,.42);
+          color:rgba(255,255,255,.92);
+          opacity:0;
+          pointer-events:none;
+          transition:opacity .18s ease;
+        }
+        body.workspace-redesign #resultsStrip .result-preview-hover.is-video{
+          bottom:42px;
+        }
+        body.workspace-redesign #resultsStrip .result-media:hover .result-preview-hover{
+          opacity:1;
+        }
+        body.workspace-redesign #resultsStrip .result-preview-hover.hidden{
+          display:none !important;
+        }
+        body.workspace-redesign #resultsStrip .result-preview-hover span,
+        body.workspace-redesign #resultsStrip .result-preview-hover button{
+          min-width:0 !important;
+          height:auto !important;
+          padding:7px 11px !important;
+          border:1px solid rgba(255,255,255,.22) !important;
+          border-radius:999px !important;
+          background:rgba(20,22,28,.72) !important;
+          color:#fff !important;
+          font-size:11px !important;
+          font-weight:700 !important;
+          line-height:1 !important;
+          backdrop-filter:blur(7px);
+          -webkit-backdrop-filter:blur(7px);
+        }
+        body.workspace-redesign #resultsStrip .result-preview-hover button{
+          pointer-events:auto;
+          cursor:pointer;
+        }
+      }
+      @media (min-width:901px) and (max-width:1250px){
+        body.workspace-redesign #resultsStrip .results-masonry-content{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+      }
+
 	    </style>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
@@ -4736,6 +4995,62 @@ async function __mjFetchNbCheck(params){
       return isReadyResultStatus(cleanStatus);
     }
 
+    function resultShortcutIcon(action) {
+      if (action === 'create-video') {
+        return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.5-2.6A1 1 0 0 1 21 8.3v7.4a1 1 0 0 1-1.5.9L15 14"></path><rect x="3" y="6" width="12" height="12" rx="2"></rect></svg>';
+      }
+      if (action === 'recreate') {
+        return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5"></path><path d="M4 17v-5h5"></path><path d="M6.1 8.5A7 7 0 0 1 18.6 7L20 9"></path><path d="M17.9 15.5A7 7 0 0 1 5.4 17L4 15"></path></svg>';
+      }
+      return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>';
+    }
+
+    function createResultShortcutButton(action, label) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `result-shortcut-btn result-shortcut-${action === 'create-video' ? 'video' : action}`;
+      button.title = label;
+      button.dataset.tooltip = label;
+      button.setAttribute('aria-label', label);
+      button.innerHTML = resultShortcutIcon(action);
+      return button;
+    }
+
+    async function runResultShortcut(button, action, data) {
+      if (!button || button.disabled) return;
+      const handler = window.hansoraPreviewActions && window.hansoraPreviewActions[action];
+      if (typeof handler !== 'function') return;
+      const original = button.innerHTML;
+      button.disabled = true;
+      button.innerHTML = '<span class="result-shortcut-spinner" aria-hidden="true"></span>';
+      try {
+        await handler(data || {}, () => {});
+      } catch (error) {
+        console.warn(`Result ${action} shortcut failed`, error);
+      } finally {
+        button.disabled = false;
+        button.innerHTML = original;
+      }
+    }
+
+    async function downloadResultShortcut(button, url, kind, provider) {
+      if (!url || !button || button.disabled) return;
+      const showProgress = isMobileUI();
+      const original = button.innerHTML;
+      if (showProgress) {
+        button.disabled = true;
+        button.innerHTML = '<span class="result-shortcut-spinner" aria-hidden="true"></span>';
+      }
+      try {
+        await downloadAsset(url, kind, provider);
+      } finally {
+        if (showProgress) {
+          button.disabled = false;
+          button.innerHTML = original;
+        }
+      }
+    }
+
     function createResultThumb(data) {
       if (!shouldShowResultGeneration(data)) return null;
       const provider = data.provider || 'Model';
@@ -4847,6 +5162,8 @@ async function __mjFetchNbCheck(params){
       getBtn.type = 'button';
       getBtn.className = 'thumb-get';
       getBtn.textContent = 'Get';
+      getBtn.title = 'Download';
+      getBtn.setAttribute('aria-label', 'Download');
       if (!isReady || isFailed) getBtn.classList.add('hidden');
 
       // download helper (best-effort; fallback to opening)
@@ -4869,12 +5186,12 @@ async function __mjFetchNbCheck(params){
         }
       };
 
-      getBtn.addEventListener('click', (e) => {
+      getBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
         const targetUrl = __thumb_url || url;
         if (!targetUrl) return;
-        downloadAsset(targetUrl, __thumb_kind || kind, provider);
+        await downloadResultShortcut(getBtn, targetUrl, __thumb_kind || kind, provider);
       });
 
       actions.appendChild(state);
@@ -4900,6 +5217,7 @@ async function __mjFetchNbCheck(params){
           const nextStatusRaw = (next && next.status != null) ? String(next.status) : statusRaw;
           const nextStatusLower = String(nextStatusRaw || '').toLowerCase();
           const nextUrl = (next && next.result_url) ? String(next.result_url) : (__thumb_url || '');
+          const nextKind = (next && next.kind) ? String(next.kind).toLowerCase() : __thumb_kind;
           const failed = isFailedResultStatus(nextStatusLower);
           const ready = canGetResult(nextStatusLower, nextUrl);
 
@@ -4940,10 +5258,9 @@ async function __mjFetchNbCheck(params){
             getBtn.classList.add('hidden');
             getBtn.disabled = true;
           }
-
           // media element
           __thumb_url = nextUrl || '';
-          __thumb_kind = (next && next.kind) ? String(next.kind).toLowerCase() : __thumb_kind;
+          __thumb_kind = nextKind;
           previewData.result_url = __thumb_url;
           previewData.kind = __thumb_kind;
           previewData.status = nextStatusRaw;
@@ -4995,6 +5312,47 @@ async function __mjFetchNbCheck(params){
       return isMobileUI() ? createResultThumb(data) : createResultCard(data);
     }
 
+    function readResultAspectRatio(data) {
+      const meta = data && data.meta && typeof data.meta === 'object' ? data.meta : {};
+      const candidates = [
+        data && data.aspect_ratio,
+        meta.aspect_ratio,
+        meta.aspectRatio,
+        meta.request_input && meta.request_input.aspect_ratio,
+        meta.diagnostic && meta.diagnostic.aspect_ratio,
+        meta.diagnostic && meta.diagnostic.client && meta.diagnostic.client.aspect_ratio
+      ];
+      for (const raw of candidates) {
+        const match = String(raw || '').trim().match(/^(\d+(?:\.\d+)?)\s*[:x\/]\s*(\d+(?:\.\d+)?)$/i);
+        if (!match) continue;
+        const width = Number(match[1]);
+        const height = Number(match[2]);
+        if (width > 0 && height > 0) return width / height;
+      }
+      return 0;
+    }
+
+    function bindResultCardOrientation(card, mediaEl, data) {
+      const setOrientation = (ratio) => {
+        const numericRatio = Number(ratio);
+        const square = numericRatio >= 0.9 && numericRatio <= 1.1;
+        const landscape = numericRatio > 1.1;
+        card.classList.toggle('result-card--landscape', landscape);
+        card.classList.toggle('result-card--square', square);
+        card.classList.toggle('result-card--portrait', !landscape && !square);
+      };
+      setOrientation(readResultAspectRatio(data));
+      if (mediaEl.tagName.toLowerCase() === 'video') {
+        mediaEl.addEventListener('loadedmetadata', () => {
+          if (mediaEl.videoWidth && mediaEl.videoHeight) setOrientation(mediaEl.videoWidth / mediaEl.videoHeight);
+        });
+      } else {
+        mediaEl.addEventListener('load', () => {
+          if (mediaEl.naturalWidth && mediaEl.naturalHeight) setOrientation(mediaEl.naturalWidth / mediaEl.naturalHeight);
+        });
+      }
+    }
+
 function createResultCard(data) {
       if (!shouldShowResultGeneration(data)) return null;
       const provider = data.provider || 'Model';
@@ -5033,17 +5391,40 @@ function createResultCard(data) {
         mediaEl.loading = 'lazy';
         mediaEl.decoding = 'async';
       }
-      mediaEl.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const previewUrl = mediaEl.dataset.previewUrl || mediaEl.src || '';
-        if (previewUrl && window.openPreview) window.openPreview(previewUrl, kind, previewData);
-      });
+      bindResultCardOrientation(card, mediaEl, data);
+      if (kind !== 'video') {
+        mediaEl.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const previewUrl = mediaEl.dataset.previewUrl || mediaEl.src || '';
+          if (previewUrl && window.openPreview) window.openPreview(previewUrl, kind, previewData);
+        });
+      }
       media.appendChild(mediaEl);
 
       const statusChip = document.createElement('div');
       statusChip.className = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-black/70 text-white/80';
       media.appendChild(statusChip);
+
+      const previewHover = document.createElement('div');
+      previewHover.className = `result-preview-hover${kind === 'video' ? ' is-video' : ''}${hasUrl ? '' : ' hidden'}`;
+      if (kind === 'video') {
+        const previewButton = document.createElement('button');
+        previewButton.type = 'button';
+        previewButton.textContent = 'Open preview';
+        previewButton.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const previewUrl = mediaEl.dataset.previewUrl || previewData.result_url || '';
+          if (previewUrl && window.openPreview) window.openPreview(previewUrl, kind, previewData);
+        });
+        previewHover.appendChild(previewButton);
+      } else {
+        const previewLabel = document.createElement('span');
+        previewLabel.textContent = 'Open preview';
+        previewHover.appendChild(previewLabel);
+      }
+      media.appendChild(previewHover);
 
       const body = document.createElement('div');
       body.className = 'p-2.5 space-y-1';
@@ -5068,18 +5449,34 @@ function createResultCard(data) {
       bottomRow.className = 'flex items-center justify-between gap-2 mt-1';
       const statusText = document.createElement('span');
       statusText.className = 'text-[10px] text-indigo-200/80';
-      const downloadBtn = document.createElement('button');
-      downloadBtn.type = 'button';
-      downloadBtn.className = 'result-get text-[12px] px-5 py-2 rounded-full bg-indigo-500/90 hover:bg-indigo-400 text-white hidden';
-      downloadBtn.textContent = 'GET';
-      downloadBtn.addEventListener('click', (event) => {
+      const cardActions = document.createElement('div');
+      cardActions.className = 'result-shortcuts';
+      const createVideoBtn = createResultShortcutButton('create-video', 'Create video');
+      const recreateBtn = createResultShortcutButton('recreate', 'Recreate');
+      const downloadBtn = createResultShortcutButton('download', 'Download');
+      downloadBtn.classList.add('hidden');
+      createVideoBtn.classList.add('hidden');
+      createVideoBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        runResultShortcut(createVideoBtn, 'create-video', previewData);
+      });
+      recreateBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        runResultShortcut(recreateBtn, 'recreate', previewData);
+      });
+      downloadBtn.addEventListener('click', async (event) => {
         event.preventDefault();
         event.stopPropagation();
         const downloadUrl = downloadBtn.dataset.downloadUrl || '';
-        if (downloadUrl) downloadAsset(downloadUrl, kind, provider);
+        if (downloadUrl) await downloadResultShortcut(downloadBtn, downloadUrl, kind, provider);
       });
+      cardActions.appendChild(createVideoBtn);
+      cardActions.appendChild(recreateBtn);
+      cardActions.appendChild(downloadBtn);
       bottomRow.appendChild(statusText);
-      bottomRow.appendChild(downloadBtn);
+      bottomRow.appendChild(cardActions);
 
       body.appendChild(topRow);
       body.appendChild(promptEl);
@@ -5102,11 +5499,13 @@ function createResultCard(data) {
           loader.style.display = 'none';
           previewData.result_url = newData.result_url;
           previewData.status = stRaw;
+          previewHover.classList.remove('hidden');
         } else {
           mediaEl.classList.add('hidden');
           mediaEl.dataset.previewUrl = '';
           loader.style.display = st.includes('fail') ? 'none' : 'block';
           previewData.status = stRaw;
+          previewHover.classList.add('hidden');
         }
 
         if (readyNow) {
@@ -5118,6 +5517,7 @@ function createResultCard(data) {
           downloadBtn.dataset.downloadUrl = '';
           downloadBtn.disabled = true;
         }
+        createVideoBtn.classList.toggle('hidden', kind !== 'image' || !readyNow || failedNow);
 
         let label = 'Processing…';
         let pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-black/70 text-white/80';
@@ -5163,11 +5563,42 @@ function createResultCard(data) {
       const card = built && built.card ? built.card : null;
       if (!card) return null;
 
-      if (options && options.prepend) strip.prepend(card);
-      else strip.appendChild(card);
+      let cardHost = strip;
+      if (window.matchMedia('(min-width: 901px)').matches) {
+        cardHost = strip.querySelector('.results-masonry-content');
+        if (!cardHost) {
+          cardHost = document.createElement('div');
+          cardHost.className = 'results-masonry-content';
+          const columnCount = window.matchMedia('(max-width: 1250px)').matches ? 2 : 3;
+          cardHost.dataset.columnCount = String(columnCount);
+          for (let index = 0; index < columnCount; index += 1) {
+            const column = document.createElement('div');
+            column.className = 'results-masonry-column';
+            cardHost.appendChild(column);
+          }
+          strip.appendChild(cardHost);
+        }
+      }
 
-      const __max = window.matchMedia('(min-width: 901px)').matches ? 12 : 10;
-      while (strip.children.length > __max) strip.removeChild(strip.lastElementChild);
+      const __max = 15;
+      if (cardHost === strip) {
+        if (options && options.prepend) cardHost.prepend(card);
+        else cardHost.appendChild(card);
+        while (cardHost.children.length > __max) cardHost.removeChild(cardHost.lastElementChild);
+      } else {
+        const orderedCards = Array.isArray(cardHost.__orderedResultCards)
+          ? cardHost.__orderedResultCards.slice()
+          : [];
+        if (options && options.prepend) orderedCards.unshift(card);
+        else orderedCards.push(card);
+        cardHost.__orderedResultCards = orderedCards.slice(0, __max);
+
+        const columns = Array.from(cardHost.querySelectorAll(':scope > .results-masonry-column'));
+        columns.forEach((column) => { column.innerHTML = ''; });
+        cardHost.__orderedResultCards.forEach((resultCard, index) => {
+          columns[index % columns.length].appendChild(resultCard);
+        });
+      }
 
       return built;
     }
@@ -5175,7 +5606,7 @@ function createResultCard(data) {
     async function loadRecentHistory(options = {}) {
       if (!currentUser) return;
       const uid = currentUser.id;
-      const recentLimit = window.matchMedia('(min-width: 901px)').matches ? 12 : 10;
+      const recentLimit = 15;
       try {
         const { data, error } = await supabaseClient
           .from('user_generations')
