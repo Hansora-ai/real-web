@@ -12529,6 +12529,35 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       if (event.persisted) schedulePageResumeRefresh();
     });
 
+    async function consumeQueuedUsageAction() {
+      const requestedAction = new URLSearchParams(window.location.search).get('usageAction');
+      if (!requestedAction) return;
+
+      let payload = null;
+      try {
+        payload = JSON.parse(sessionStorage.getItem('hansora:usage-action') || 'null');
+      } catch (error) {
+        console.warn('Could not read queued Usage action', error);
+      }
+      if (!payload || payload.action !== requestedAction) return;
+
+      const handler = window.hansoraPreviewActions && window.hansoraPreviewActions[requestedAction];
+      if (typeof handler !== 'function') return;
+
+      sessionStorage.removeItem('hansora:usage-action');
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('usageAction');
+      window.history.replaceState({}, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+
+      const reportStatus = (message, type) => showStatus(message, type || '');
+      try {
+        reportStatus(requestedAction === 'create-video' ? 'Preparing image for video...' : 'Restoring generation...', '');
+        await handler(payload.data || {}, reportStatus);
+      } catch (error) {
+        reportStatus(error && error.message ? error.message : 'Could not restore this generation.', 'error');
+      }
+    }
+
     // boot
     (async () => {
       wireWorkspaceRedesign();
@@ -12541,7 +12570,9 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       wireWorkspaceRedesign();
       wireUploadTileClicks();
       setTimeout(() => {
-        loadUser().catch((error) => console.warn('loadUser deferred failed', error));
+        loadUser()
+          .then(() => consumeQueuedUsageAction())
+          .catch((error) => console.warn('loadUser deferred failed', error));
       }, 0);
     })();
   </script>
