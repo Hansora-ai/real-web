@@ -1,4 +1,4 @@
-\// netlify/functions/run-qwen-2.js
+// netlify/functions/run-qwen-2.js
 // Qwen 2 launcher via KIE createTask with server-side credit debit (idempotent per run_id).
 // - Text to Image: model qwen2/text-to-image
 // - Image Edit: model qwen2/image-edit
