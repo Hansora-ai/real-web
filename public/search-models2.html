@@ -3622,8 +3622,16 @@
         }
         body.workspace-redesign #resultsStrip .results-masonry-content{
           width:100%;
-          columns:3;
-          column-gap:16px;
+          display:grid;
+          grid-template-columns:repeat(3,minmax(0,1fr));
+          gap:16px;
+          align-items:start;
+        }
+        body.workspace-redesign #resultsStrip .results-masonry-column{
+          min-width:0;
+          display:flex;
+          flex-direction:column;
+          gap:16px;
         }
         body.workspace-redesign #resultsStrip .result-card{
           display:inline-flex !important;
@@ -3633,7 +3641,7 @@
           height:auto !important;
           min-height:0 !important;
           max-height:none !important;
-          margin:0 0 16px !important;
+          margin:0 !important;
           break-inside:avoid;
           vertical-align:top;
           border-radius:18px !important;
@@ -3664,7 +3672,7 @@
         }
       }
       @media (min-width:901px) and (max-width:1250px){
-        body.workspace-redesign #resultsStrip .results-masonry-content{ columns:2; }
+        body.workspace-redesign #resultsStrip .results-masonry-content{ grid-template-columns:repeat(2,minmax(0,1fr)); }
       }
 
 	    </style>
@@ -5271,15 +5279,36 @@ function createResultCard(data) {
         if (!cardHost) {
           cardHost = document.createElement('div');
           cardHost.className = 'results-masonry-content';
+          const columnCount = window.matchMedia('(max-width: 1250px)').matches ? 2 : 3;
+          cardHost.dataset.columnCount = String(columnCount);
+          for (let index = 0; index < columnCount; index += 1) {
+            const column = document.createElement('div');
+            column.className = 'results-masonry-column';
+            cardHost.appendChild(column);
+          }
           strip.appendChild(cardHost);
         }
       }
 
-      if (options && options.prepend) cardHost.prepend(card);
-      else cardHost.appendChild(card);
-
       const __max = 15;
-      while (cardHost.children.length > __max) cardHost.removeChild(cardHost.lastElementChild);
+      if (cardHost === strip) {
+        if (options && options.prepend) cardHost.prepend(card);
+        else cardHost.appendChild(card);
+        while (cardHost.children.length > __max) cardHost.removeChild(cardHost.lastElementChild);
+      } else {
+        const orderedCards = Array.isArray(cardHost.__orderedResultCards)
+          ? cardHost.__orderedResultCards.slice()
+          : [];
+        if (options && options.prepend) orderedCards.unshift(card);
+        else orderedCards.push(card);
+        cardHost.__orderedResultCards = orderedCards.slice(0, __max);
+
+        const columns = Array.from(cardHost.querySelectorAll(':scope > .results-masonry-column'));
+        columns.forEach((column) => { column.innerHTML = ''; });
+        cardHost.__orderedResultCards.forEach((resultCard, index) => {
+          columns[index % columns.length].appendChild(resultCard);
+        });
+      }
 
       return built;
     }
