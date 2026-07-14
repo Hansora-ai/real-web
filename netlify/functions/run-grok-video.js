@@ -158,7 +158,11 @@ async function debitCredits(uid, cost) {
     headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
     body: JSON.stringify({ credits: next }),
   });
-  if (!res.ok) return { ok: false, error: 'profile_update_failed', status: res.status };
+  if (!res.ok) {
+    const databaseError = await res.text().catch(() => '');
+    console.error('Profile credit update failed', { uid, current, cost, next, status: res.status, databaseError });
+    return { ok: false, error: 'profile_update_failed', status: res.status, database_error: databaseError, uid, current, cost, next };
+  }
   return { ok: true, credits: next };
 }
 
