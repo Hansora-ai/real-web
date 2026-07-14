@@ -3608,15 +3608,22 @@
       @media (min-width:901px){
         body.workspace-redesign #resultsStrip:not(.empty){
           display:block !important;
-          columns:3;
-          column-gap:16px !important;
           width:100% !important;
-          max-height:none !important;
+          max-height:min(840px, calc(100vh - 205px)) !important;
           min-height:0 !important;
-          overflow:visible !important;
+          overflow-x:hidden !important;
+          overflow-y:auto !important;
+          overscroll-behavior:contain !important;
+          -webkit-overflow-scrolling:touch;
           padding:12px !important;
           clip-path:none !important;
           contain:none !important;
+          scrollbar-width:thin;
+        }
+        body.workspace-redesign #resultsStrip .results-masonry-content{
+          width:100%;
+          columns:3;
+          column-gap:16px;
         }
         body.workspace-redesign #resultsStrip .result-card{
           display:inline-flex !important;
@@ -3657,7 +3664,7 @@
         }
       }
       @media (min-width:901px) and (max-width:1250px){
-        body.workspace-redesign #resultsStrip:not(.empty){ columns:2; }
+        body.workspace-redesign #resultsStrip .results-masonry-content{ columns:2; }
       }
 
 	    </style>
@@ -5258,11 +5265,21 @@ function createResultCard(data) {
       const card = built && built.card ? built.card : null;
       if (!card) return null;
 
-      if (options && options.prepend) strip.prepend(card);
-      else strip.appendChild(card);
+      let cardHost = strip;
+      if (window.matchMedia('(min-width: 901px)').matches) {
+        cardHost = strip.querySelector('.results-masonry-content');
+        if (!cardHost) {
+          cardHost = document.createElement('div');
+          cardHost.className = 'results-masonry-content';
+          strip.appendChild(cardHost);
+        }
+      }
+
+      if (options && options.prepend) cardHost.prepend(card);
+      else cardHost.appendChild(card);
 
       const __max = 15;
-      while (strip.children.length > __max) strip.removeChild(strip.lastElementChild);
+      while (cardHost.children.length > __max) cardHost.removeChild(cardHost.lastElementChild);
 
       return built;
     }
