@@ -3747,12 +3747,69 @@
         body.workspace-redesign #resultsStrip .result-card button.result-shortcut-btn,
         body.workspace-redesign #resultsStrip .thumb-get.result-shortcut-btn{
           display:inline-flex !important;
-          width:34px !important;
-          min-width:34px !important;
-          max-width:34px !important;
-          height:34px !important;
-          min-height:34px !important;
+          position:relative !important;
+          width:32px !important;
+          min-width:32px !important;
+          max-width:32px !important;
+          height:32px !important;
+          min-height:32px !important;
           padding:0 !important;
+          border-radius:999px !important;
+          border:1px solid rgba(255,255,255,.18) !important;
+          color:#fff !important;
+          align-items:center !important;
+          justify-content:center !important;
+          overflow:visible !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcuts{
+          display:flex !important;
+          align-items:center !important;
+          justify-content:flex-end !important;
+          gap:6px !important;
+          flex-shrink:0 !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-btn svg{
+          width:16px !important;
+          height:16px !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-video{
+          background:linear-gradient(135deg,#16a34a,#84cc16) !important;
+          box-shadow:0 4px 12px rgba(34,197,94,.28) !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-recreate{
+          background:linear-gradient(135deg,#f59e0b,#f97316) !important;
+          box-shadow:0 4px 12px rgba(249,115,22,.28) !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-download{
+          background:linear-gradient(135deg,#6366f1,#8b5cf6) !important;
+          box-shadow:0 4px 12px rgba(99,102,241,.28) !important;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-btn::after{
+          content:attr(data-tooltip);
+          position:absolute;
+          left:50%;
+          bottom:calc(100% + 7px);
+          z-index:100;
+          transform:translate(-50%,3px);
+          padding:5px 8px;
+          border:1px solid rgba(255,255,255,.14);
+          border-radius:7px;
+          background:rgba(9,11,15,.98);
+          color:#fff;
+          font-size:10px;
+          font-weight:700;
+          line-height:1;
+          white-space:nowrap;
+          opacity:0;
+          visibility:hidden;
+          pointer-events:none;
+          transition:opacity .14s ease, transform .14s ease;
+        }
+        body.workspace-redesign #resultsStrip .result-shortcut-btn:hover::after,
+        body.workspace-redesign #resultsStrip .result-shortcut-btn:focus-visible::after{
+          opacity:1;
+          visibility:visible;
+          transform:translate(-50%,0);
         }
         body.workspace-redesign #resultsStrip .result-shortcut-btn.hidden{
           display:none !important;
@@ -5057,12 +5114,13 @@ async function __mjFetchNbCheck(params){
         state.textContent = '…';
       }
 
-      const createVideoBtn = createResultShortcutButton('create-video', 'Create video');
-      const recreateBtn = createResultShortcutButton('recreate', 'Recreate');
-      const getBtn = createResultShortcutButton('download', 'Download');
-      getBtn.classList.add('thumb-get');
+      const getBtn = document.createElement('button');
+      getBtn.type = 'button';
+      getBtn.className = 'thumb-get';
+      getBtn.textContent = 'Get';
+      getBtn.title = 'Download';
+      getBtn.setAttribute('aria-label', 'Download');
       if (!isReady || isFailed) getBtn.classList.add('hidden');
-      if (kind !== 'image' || !isReady || isFailed) createVideoBtn.classList.add('hidden');
 
       // download helper (best-effort; fallback to opening)
       const downloadUrl = async (u) => {
@@ -5084,18 +5142,6 @@ async function __mjFetchNbCheck(params){
         }
       };
 
-      createVideoBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        runResultShortcut(createVideoBtn, 'create-video', previewData);
-      });
-
-      recreateBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        runResultShortcut(recreateBtn, 'recreate', previewData);
-      });
-
       getBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -5105,8 +5151,6 @@ async function __mjFetchNbCheck(params){
       });
 
       actions.appendChild(state);
-      actions.appendChild(createVideoBtn);
-      actions.appendChild(recreateBtn);
       actions.appendChild(getBtn);
 
       row.appendChild(meta);
@@ -5170,8 +5214,6 @@ async function __mjFetchNbCheck(params){
             getBtn.classList.add('hidden');
             getBtn.disabled = true;
           }
-          createVideoBtn.classList.toggle('hidden', nextKind !== 'image' || !ready || failed);
-
           // media element
           __thumb_url = nextUrl || '';
           __thumb_kind = nextKind;
