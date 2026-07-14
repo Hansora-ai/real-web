@@ -83,6 +83,9 @@
     }
     .media-box img,.media-box video{width:100%;height:100%;object-fit:cover;display:block}
     .media-box audio{width:88%;max-width:220px}
+    .open-preview-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(3,6,14,.20);color:#fff;opacity:0;pointer-events:none;transition:opacity .18s ease}
+    .open-preview-hint span{padding:7px 11px;border:1px solid rgba(255,255,255,.20);border-radius:999px;background:rgba(15,18,25,.44);font-size:11px;font-weight:850;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+    @media(hover:hover) and (pointer:fine){.usage-card[data-url]:hover .open-preview-hint{opacity:1}}
     .video-badge{
       position:absolute;
       left:10px;
@@ -147,6 +150,14 @@
     }
     .copy-prompt-btn:hover{border-color:rgba(129,140,248,.70);background:rgba(30,41,59,.92)}
     .copy-prompt-btn:disabled{opacity:.42;cursor:not-allowed}
+    .usage-shortcuts{display:flex;align-items:center;justify-content:flex-end;gap:7px}
+    .usage-shortcut{width:34px;height:34px;min-width:34px;padding:0;border-radius:999px;border:1px solid rgba(255,255,255,.18);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none;position:relative}
+    .usage-shortcut svg{width:17px;height:17px}
+    .usage-shortcut.video{background:linear-gradient(135deg,#16a34a,#84cc16)}
+    .usage-shortcut.recreate{background:linear-gradient(135deg,#f59e0b,#f97316)}
+    .usage-shortcut.download{background:linear-gradient(135deg,#6366f1,#8b5cf6)}
+    .usage-shortcut::after{content:attr(data-tooltip);position:absolute;left:50%;bottom:calc(100% + 7px);transform:translate(-50%,3px);padding:5px 8px;border-radius:7px;background:rgba(7,9,14,.97);color:#fff;font-size:10px;font-weight:800;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .14s ease,transform .14s ease;z-index:20}
+    .usage-shortcut:hover::after,.usage-shortcut:focus-visible::after{opacity:1;visibility:visible;transform:translate(-50%,0)}
     #previewOverlay{
       position:fixed;
       inset:0;
@@ -170,7 +181,7 @@
       overflow:hidden;
       box-shadow:0 30px 100px rgba(0,0,0,.72);
     }
-    .preview-card img,.preview-card video{width:100%;max-height:90vh;object-fit:contain;display:block;background:#020617}
+    .preview-card img,.preview-card video{width:100%;max-height:calc(90vh - 70px);object-fit:contain;display:block;background:#020617}
     .preview-audio{min-height:360px;padding:34px;display:grid;place-items:center;text-align:center}
     .preview-audio audio{width:min(620px,100%);margin-top:18px}
     .preview-close{
@@ -185,9 +196,16 @@
       background:rgba(0,0,0,.58);
       color:#fff;
       font-size:24px;
-      line-height:1;
+      line-height:normal;
       cursor:pointer;
+      display:grid;
+      place-items:center;
+      padding:0;
+      text-align:center;
     }
+    .preview-actions{min-height:70px;padding:12px 66px 12px 16px;display:flex;align-items:center;justify-content:center;gap:10px;background:rgba(10,13,21,.96);border-top:1px solid rgba(255,255,255,.09)}
+    .preview-actions .usage-shortcut{width:42px;height:42px;min-width:42px}
+    .preview-actions .usage-shortcut svg{width:20px;height:20px}
     @media(max-width:1050px){.usage-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
     @media(max-width:760px){.page-shell{padding:18px 12px 34px}.usage-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.panel{border-radius:22px}.preview-card{border-radius:18px}.preview-audio{min-height:280px;padding:22px}}
   </style>
@@ -199,7 +217,7 @@
     <section class="panel p-5 sm:p-7">
       <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p class="small-label">Last 30 days</p>
+          <p class="small-label">Last 60 days</p>
           <h1 class="text-3xl sm:text-4xl font-black tracking-tight mt-2">Usage</h1>
           <p id="usageSummary" class="text-sm text-slate-400 mt-2">Loading your recent generations...</p>
         </div>
@@ -211,7 +229,7 @@
       <div id="usageList" class="usage-grid mt-7" aria-live="polite"></div>
 
       <div id="usageEmpty" class="hidden mt-7 rounded-2xl border border-white/10 bg-white/[.03] px-5 py-10 text-center text-slate-400">
-        No generations from the last 30 days.
+        No generations from the last 60 days.
       </div>
 
       <div id="usageLogin" class="hidden mt-7 rounded-2xl border border-white/10 bg-white/[.03] px-5 py-10 text-center">
@@ -229,7 +247,7 @@
 
   <div id="previewOverlay" aria-hidden="true">
     <div class="preview-card">
-      <button id="previewClose" class="preview-close" type="button" aria-label="Close preview">x</button>
+      <button id="previewClose" class="preview-close" type="button" aria-label="Close preview"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg></button>
       <div id="previewContent"></div>
     </div>
   </div>
@@ -242,7 +260,7 @@
     window.hansoraSupabase = supabaseClient;
 
     const PAGE_SIZE = 20;
-    const DAYS_BACK = 30;
+    const DAYS_BACK = 60;
     let currentPage = 1;
     let totalRows = 0;
     let currentUser = null;
@@ -427,16 +445,78 @@
         const videoSrc = preview ? safeUrl : `${safeUrl}#t=0.1`;
         return preview
           ? `<video src="${safeUrl}" controls autoplay playsinline preload="metadata"></video>`
-          : `<div class="media-box"><video src="${videoSrc}" muted playsinline preload="auto"></video><div class="video-badge">Video</div></div>`;
+          : `<div class="media-box"><video src="${videoSrc}" muted playsinline preload="auto"></video><div class="video-badge">Video</div><div class="open-preview-hint"><span>Open preview</span></div></div>`;
       }
       if (kind === 'image') {
         return preview
           ? `<img src="${safeUrl}" alt="${safeTitle}" />`
-          : `<div class="media-box"><img src="${safeUrl}" alt="${safeTitle}" loading="lazy" decoding="async" /></div>`;
+          : `<div class="media-box"><img src="${safeUrl}" alt="${safeTitle}" loading="lazy" decoding="async" /><div class="open-preview-hint"><span>Open preview</span></div></div>`;
       }
       return preview
         ? `<div class="preview-audio"><div><h2 class="text-xl font-black">Preview unavailable</h2><a class="download-btn mt-5" href="${safeUrl}" target="_blank" rel="noopener">Open file</a></div></div>`
         : `<div class="media-box file-box">File preview unavailable</div>`;
+    }
+
+    function usageActionIcon(action){
+      if (action === 'create-video') {
+        return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.5-2.6A1 1 0 0 1 21 8.3v7.4a1 1 0 0 1-1.5.9L15 14"></path><rect x="3" y="6" width="12" height="12" rx="2"></rect></svg>';
+      }
+      if (action === 'recreate') {
+        return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a8 8 0 0 1 13.7-4.7L20 7.5"></path><path d="M20 3v4.5h-4.5"></path><path d="M20 14a8 8 0 0 1-13.7 4.7L4 16.5"></path><path d="M4 21v-4.5h4.5"></path></svg>';
+      }
+      return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>';
+    }
+
+    function usageActionData(row, url, kind){
+      return {
+        provider: row.provider || titleForRow(row) || 'Hansora AI',
+        model: row.provider || '',
+        kind: kind === 'file' ? String(row.kind || 'image').toLowerCase() : kind,
+        prompt: promptForRow(row),
+        result_url: url || row.result_url || '',
+        meta: parseMeta(row.meta),
+        created_at: row.created_at || ''
+      };
+    }
+
+    function queueSearchModelAction(action, row, url, kind){
+      const payload = { action, data: usageActionData(row, url, kind), queued_at: Date.now() };
+      try {
+        sessionStorage.setItem('hansora:usage-action', JSON.stringify(payload));
+      } catch (error) {
+        console.warn('Could not prepare Usage action', error);
+      }
+      window.location.href = `/search-models.html?usageAction=${encodeURIComponent(action)}`;
+    }
+
+    function addUsageAction(host, action, label, row, url, kind){
+      const control = document.createElement(action === 'download' ? 'a' : 'button');
+      if (action !== 'download') control.type = 'button';
+      control.className = `usage-shortcut ${action === 'create-video' ? 'video' : action}`;
+      control.title = label;
+      control.dataset.tooltip = label;
+      control.setAttribute('aria-label', label);
+      control.innerHTML = usageActionIcon(action);
+      if (action === 'download') {
+        control.href = downloadHref(url, row);
+        control.download = '';
+      } else {
+        control.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          queueSearchModelAction(action, row, url, kind);
+        });
+      }
+      control.addEventListener('click', (event) => event.stopPropagation());
+      host.appendChild(control);
+    }
+
+    function populateUsageActions(host, row, url, kind, failed){
+      if (!host) return;
+      host.innerHTML = '';
+      if (!failed && url && kind === 'image') addUsageAction(host, 'create-video', 'Create Video', row, url, kind);
+      addUsageAction(host, 'recreate', 'Recreate', row, url, kind);
+      if (!failed && url && (kind === 'image' || kind === 'video')) addUsageAction(host, 'download', 'Download', row, url, kind);
     }
 
     function renderRows(rows){
@@ -460,6 +540,8 @@
           card.dataset.title = title;
         }
         if (prompt) card.dataset.prompt = prompt;
+        card.__usageRow = row;
+        card.__usageKind = kind;
         card.innerHTML = `
           <div class="flex items-start justify-between gap-3 mb-3">
             <div class="min-w-0">
@@ -474,12 +556,11 @@
             <span>${escapeHtml(kind)}</span>
           </div>
           <div class="card-actions">
-            ${url && !failed ? `<a class="download-btn" href="${downloadHref(url, row)}" download>Download</a>` : ''}
+            <div class="usage-shortcuts"></div>
             <button class="copy-prompt-btn" type="button" ${prompt ? '' : 'disabled'}>${prompt ? 'Copy prompt' : 'No prompt'}</button>
           </div>
         `;
-        const download = card.querySelector('.download-btn');
-        if (download) download.addEventListener('click', (event) => event.stopPropagation());
+        populateUsageActions(card.querySelector('.usage-shortcuts'), row, url, kind, failed);
         const copyPrompt = card.querySelector('.copy-prompt-btn');
         if (copyPrompt) {
           copyPrompt.addEventListener('click', async (event) => {
@@ -513,7 +594,7 @@
       currentUser = userData && userData.user ? userData.user : null;
       if (!currentUser) {
         $('usageList').innerHTML = '';
-        $('usageSummary').textContent = 'Log in to see your generations from the last 30 days.';
+        $('usageSummary').textContent = 'Log in to see your generations from the last 60 days.';
         $('usageLogin').classList.remove('hidden');
         $('pager').classList.add('hidden');
         return;
@@ -546,7 +627,7 @@
       const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE));
       if (currentPage > totalPages) return loadUsage(totalPages);
 
-      $('usageSummary').textContent = `${totalRows} generation${totalRows === 1 ? '' : 's'} from the last 30 days. Showing up to ${PAGE_SIZE} per page.`;
+      $('usageSummary').textContent = `${totalRows} generation${totalRows === 1 ? '' : 's'} from the last 60 days. Showing up to ${PAGE_SIZE} per page.`;
       $('usageEmpty').classList.toggle('hidden', rows.length > 0);
       renderRows(rows);
       updatePager(totalPages);
@@ -571,9 +652,10 @@
       }
     }
 
-    function openPreview(url, kind, title){
+    function openPreview(row, url, kind, title){
       if (!url) return;
-      $('previewContent').innerHTML = renderMedia(url, kind, title, true);
+      $('previewContent').innerHTML = `${renderMedia(url, kind, title, true)}<div class="preview-actions"></div>`;
+      populateUsageActions($('previewContent').querySelector('.preview-actions'), row, url, kind, false);
       $('previewOverlay').classList.add('show');
       $('previewOverlay').setAttribute('aria-hidden','false');
       document.body.style.overflow = 'hidden';
@@ -588,10 +670,10 @@
 
     function bindEvents(){
       $('usageList').addEventListener('click', (event) => {
-        if (event.target.closest('.download-btn,audio')) return;
+        if (event.target.closest('.usage-shortcut,.copy-prompt-btn,audio')) return;
         const card = event.target.closest('.usage-card[data-url]');
         if (!card) return;
-        openPreview(card.dataset.url, card.dataset.kind, card.dataset.title);
+        openPreview(card.__usageRow, card.dataset.url, card.__usageKind || card.dataset.kind, card.dataset.title);
       });
       $('previewClose').addEventListener('click', closePreview);
       $('previewOverlay').addEventListener('click', (event) => {
