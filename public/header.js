@@ -76,28 +76,28 @@
   let subscriptionPromise = null;
 
   const IMAGE_MENU_MODELS = [
-    { label: 'GPT Image 2', id: 'gpt-image-2', icon: 'G2', note: 'Latest image generation' },
-    { label: 'Nano Banana 2', id: 'nano-banana-2', icon: 'N2', note: 'Fast image edits' },
-    { label: 'Nano Banana 2 Lite', id: 'nano-banana-2-lite', icon: 'NL', note: 'Low-cost 1K image edits' },
-    { label: 'Nano Banana Pro', id: 'nano-banana-pro', icon: 'NP', note: 'Pro image generation' },
-    { label: 'Seedream 5.0 Pro', id: 'seedream-5-pro', icon: 'SP', note: 'Pro controlled image edits' },
-    { label: 'Seedream 5.0 Lite', id: 'seedream-5-lite', icon: 'S', note: 'Light creative images' },
-    { label: 'Grok Image', id: 'grok-image', icon: 'X', note: 'Stylized image model' },
-    { label: 'Seedream 4.5', id: 'seedream-4-5', icon: 'S4', note: 'Image generator' },
-    { label: 'Wan 2.7', id: 'wan-2-7', icon: 'W', note: 'Image and frame work' },
-    { label: 'Qwen 2', id: 'qwen-2', icon: 'Q2', note: 'Image generation' },
-    { label: 'Z Image', id: 'z-image', icon: 'Z', note: 'Creative image model' },
-    { label: 'GPT Image 1.5', id: 'gpt-image-1-5', icon: 'G1', note: 'OpenAI image model' },
-    { label: 'Nano Banana', id: 'nano-banana', icon: 'NB', note: 'Image editing' },
+    { label: 'GPT Image 2', id: 'gpt-image-2', icon: 'G2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/2.png', note: 'Latest image generation' },
+    { label: 'Nano Banana 2', id: 'nano-banana-2', icon: 'N2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png', note: 'Fast image edits' },
+    { label: 'Nano Banana 2 Lite', id: 'nano-banana-2-lite', icon: 'NL', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png', note: 'Low-cost 1K image edits' },
+    { label: 'Nano Banana Pro', id: 'nano-banana-pro', icon: 'NP', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png', note: 'Pro image generation' },
+    { label: 'Seedream 5.0 Pro', id: 'seedream-5-pro', icon: 'SP', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Pro controlled image edits' },
+    { label: 'Seedream 5.0 Lite', id: 'seedream-5-lite', icon: 'S', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Light creative images' },
+    { label: 'Grok Image', id: 'grok-image', icon: 'X', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/4.png', note: 'Stylized image model' },
+    { label: 'Seedream 4.5', id: 'seedream-4-5', icon: 'S4', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Image generator' },
+    { label: 'Wan 2.7', id: 'wan-2-7', icon: 'W', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/6.png', note: 'Image and frame work' },
+    { label: 'Qwen 2', id: 'qwen-2', icon: 'Q2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/6.png', note: 'Image generation' },
+    { label: 'Z Image', id: 'z-image', icon: 'Z', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/6.png', note: 'Creative image model' },
+    { label: 'GPT Image 1.5', id: 'gpt-image-1-5', icon: 'G1', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/2.png', note: 'OpenAI image model' },
+    { label: 'Nano Banana', id: 'nano-banana', icon: 'NB', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png', note: 'Image editing' },
   ];
 
   const IMAGE_MENU_TOOLS = [
-    { label: 'Image Upscale', href: '/upscale.html', icon: 'UP', note: 'Increase image quality' },
-    { label: 'Full angles', href: '/expand.html?mode=angles', icon: 'FA', note: 'Different angles chosen' },
-    { label: 'Expand', href: '/expand.html?mode=expand', icon: 'EX', note: 'Extend image edges' },
-    { label: 'Face swap', href: '/expand.html?mode=face-swap', icon: 'FS', note: 'Chosen face swap' },
-    { label: 'Character', href: '/character.html', icon: 'CH', note: 'Character creator' },
-    { label: 'Product Card', href: '/product_card.html', icon: 'PC', note: 'Product selling cards' },
+    { label: 'Image Upscale', href: '/upscale.html', icon: 'UP', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/7.png', note: 'Increase image quality' },
+    { label: 'Full angles', href: '/expand.html?mode=angles', icon: 'FA', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/8.png', note: 'Different angles chosen' },
+    { label: 'Expand', href: '/expand.html?mode=expand', icon: 'EX', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/9.png', note: 'Extend image edges' },
+    { label: 'Face swap', href: '/expand.html?mode=face-swap', icon: 'FS', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/10.png', note: 'Chosen face swap' },
+    { label: 'Character', href: '/character.html', icon: 'CH', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/11.png', note: 'Character creator' },
+    { label: 'Product Card', href: '/product_card.html', icon: 'PC', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/12.png', note: 'Product selling cards' },
   ];
 
   const PROMPT_BUILDER_TOOL = {
@@ -651,10 +651,17 @@
     return item.id && !item.href ? ` data-hansora-model="${item.id}"` : '';
   }
 
+  function renderMegaIcon(item, index) {
+    if (item.logoUrl) {
+      return `<span class="hansora-mega-icon has-image"><img src="${item.logoUrl}" alt="" loading="lazy" decoding="async"></span>`;
+    }
+    return `<span class="hansora-mega-icon ${menuIconClass(index)}">${item.icon}</span>`;
+  }
+
   function renderMegaItems(items, offset) {
     return items.map((item, index) => `
       <a class="hansora-mega-item" href="${itemHref(item)}"${itemData(item)}>
-        <span class="hansora-mega-icon ${menuIconClass(index + (offset || 0))}">${item.icon}</span>
+        ${renderMegaIcon(item, index + (offset || 0))}
         <span class="hansora-mega-copy">
           <strong>${item.label}</strong>
           <em>${item.note}</em>
@@ -797,6 +804,17 @@
       .hansora-mega-icon.violet{ background:linear-gradient(135deg,#fde68a,#a78bfa,#f472b6); }
       .hansora-mega-icon.lime{ background:linear-gradient(135deg,#ecfccb,#bef264); }
       .hansora-mega-icon.pink{ background:linear-gradient(135deg,#67e8f9,#c084fc,#f472b6); }
+      .hansora-mega-icon.has-image{
+        overflow:hidden;
+        background:#0d1017;
+        box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), 0 12px 26px rgba(0,0,0,.22);
+      }
+      .hansora-mega-icon.has-image img{
+        display:block;
+        width:100%;
+        height:100%;
+        object-fit:cover;
+      }
       .hansora-mega-copy{ display:block; min-width:0; overflow:hidden; }
       .hansora-mega-item strong{
         display:-webkit-box;
