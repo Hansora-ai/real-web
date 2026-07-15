@@ -804,9 +804,9 @@ img, video { max-width: 100%; height: auto; }
 </div>
 <div class="inline-flex items-center gap-2 rounded-full border border-purple-400/30 bg-purple-500/10 px-4 py-2 text-sm font-semibold text-purple-200 shadow-soft">
 <span class="inline-flex h-2 w-2 rounded-full bg-purple-400"></span>
-<span data-hero-badge-text="">20% off monthly plans</span>
+<span data-hero-badge-text="">Save 30% on credit packs</span>
 </div>
-<h2 class="mt-4 text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-white via-purple-200 to-sky-300 text-transparent bg-clip-text">Monthly Unlimited Plans</h2>
+<h2 class="mt-4 text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-center bg-gradient-to-r from-white via-purple-200 to-sky-300 text-transparent bg-clip-text">Pay As You Go Credits</h2>
 <div class="pricing-benefits mt-5 flex flex-wrap items-center justify-center gap-3 text-sm text-white/75">
 <span class="rounded-full border border-white/10 bg-white/5 px-4 py-2">No monthly subscription</span>
 <span class="rounded-full border border-white/10 bg-white/5 px-4 py-2">Credits never expire</span>
@@ -1426,6 +1426,14 @@ Pay once, use credits across image, video, product card, audio, and creative too
       }
     });
   }
+  function updatePricingHero(mode){
+    if (document.documentElement.lang === 'ru') return;
+    const isPayg = mode === 'payg';
+    const badge = document.querySelector('[data-hero-badge-text]');
+    const heading = document.querySelector('#pricing h2');
+    if (badge) badge.textContent = isPayg ? 'Save 30% on credit packs' : '20% off monthly plans';
+    if (heading) heading.textContent = isPayg ? 'Pay As You Go Credits' : 'Monthly Unlimited Plans';
+  }
   function setPlanMode(mode){
     const finalMode = mode === 'payg' ? 'payg' : 'monthly';
     document.documentElement.setAttribute('data-pricing-plan-mode', finalMode);
@@ -1434,6 +1442,7 @@ Pay once, use credits across image, video, product card, audio, and creative too
       btn.classList.toggle('is-active', active);
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
+    updatePricingHero(finalMode);
   }
   function setPaymentMode(mode){
     const finalMode = mode === 'ru' ? 'ru' : 'international';
@@ -1626,8 +1635,9 @@ Pay once, use credits across image, video, product card, audio, and creative too
     const paymentButtons = document.querySelectorAll(".payment-option");
     if (paymentButtons[0]) paymentButtons[0].textContent = isRussian ? "Международная карта" : "International card";
     if (paymentButtons[1]) paymentButtons[1].textContent = isRussian ? "Карта РФ" : "Russian card";
-    setText(document.querySelector("[data-hero-badge-text]"), isRussian ? "Большие скидки для наших пользователей" : "20% off monthly plans");
-    setText(document.querySelector("#pricing h2"), isRussian ? "Выгодная покупка кредитов" : "Monthly Unlimited Plans");
+    const planMode = document.documentElement.getAttribute("data-pricing-plan-mode") === "monthly" ? "monthly" : "payg";
+    setText(document.querySelector("[data-hero-badge-text]"), isRussian ? "Большие скидки для наших пользователей" : (planMode === "payg" ? "Save 30% on credit packs" : "20% off monthly plans"));
+    setText(document.querySelector("#pricing h2"), isRussian ? "Выгодная покупка кредитов" : (planMode === "payg" ? "Pay As You Go Credits" : "Monthly Unlimited Plans"));
     const benefits = document.querySelectorAll(".pricing-benefits span");
     if (benefits[0]) benefits[0].textContent = isRussian ? "Без ежемесячной подписки" : "No monthly subscription";
     if (benefits[1]) benefits[1].textContent = isRussian ? "Кредиты не сгорают" : "Credits never expire";
