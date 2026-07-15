@@ -104,49 +104,50 @@
     label: 'Prompt Builder',
     href: '/prompt-builder.html',
     icon: 'PB',
+    logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/17.png',
     note: 'Cartoon prompt builder'
   };
 
   const VIDEO_MENU_ITEMS = [
-    { label: 'Seedance 2.0', id: 'seedance-2', icon: 'S2', note: 'Cinematic video model' },
-    { label: 'Kling 3.0', id: 'kling-3', icon: 'K3', note: 'Advanced video generation' },
-    { label: 'Seedance 2.0 Mini', id: 'seedance-2-mini', icon: 'SM', note: 'Fast cinematic video model' },
-    { label: 'Kling 3 Turbo', id: 'kling-3-turbo', icon: 'KT', note: 'Fast text or image video model' },
-    { label: 'Gemini Omni', id: 'gemini-omni-video', icon: 'GO', note: 'Prompt, image, and video inputs' },
-    { label: 'Video Edit', href: '/video-edit.html', icon: 'VE', note: 'Edit uploaded video' },
-    { label: 'Background Change', href: '/background-change.html', icon: 'BG', note: 'Change video background' },
-    { label: 'Video Relight', href: '/video-relight.html', icon: 'VR', note: 'Change video lighting' },
-    { label: 'HappyHorse 1.0', id: 'happyhorse-1', icon: 'HH', note: 'Video and audio model' },
-    { label: 'Veo 3.1', id: 'veo31', icon: 'V3', note: 'Google video model' },
-    { label: 'Grok', id: 'grok-video', icon: 'GX', note: 'Cinematic video' },
-    { label: 'Kling 2.6', id: 'kling26', icon: 'K2', note: 'Video with sound' },
-    { label: 'Kling 2.5 Turbo', id: 'kling-2-5-turbo', icon: 'KT', note: 'Fast Kling video model' },
-    { label: 'Wan 2.7', id: 'wan-2-7-video', icon: 'W', note: 'First and last frame control' },
-    { label: 'Kling Motion Control', id: 'kling-motion-control', icon: 'KM', note: 'Motion transfer' },
-    { label: 'Aleph', id: 'aleph', icon: 'A', note: 'Video transformation' },
-    { label: 'Video upscale', href: '/upscale.html?mode=video', icon: 'VU', note: 'Increase video quality' },
-    { label: 'Lips sync / Avatar', href: '/lipsync.html', icon: 'LS', note: 'Talking avatar video' },
-    { label: 'Kid Cartoon', href: '/kid-cartoon.html', icon: 'KC', note: 'Add your kid in cartoon' },
+    { label: 'Seedance 2.0', id: 'seedance-2', icon: 'S2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Cinematic video model' },
+    { label: 'Kling 3.0', id: 'kling-3', icon: 'K3', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/14.png', note: 'Advanced video generation' },
+    { label: 'Seedance 2.0 Mini', id: 'seedance-2-mini', icon: 'SM', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Fast cinematic video model' },
+    { label: 'Kling 3 Turbo', id: 'kling-3-turbo', icon: 'KT', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/14.png', note: 'Fast text or image video model' },
+    { label: 'Gemini Omni', id: 'gemini-omni-video', icon: 'GO', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/3.png', note: 'Prompt, image, and video inputs' },
+    { label: 'Video Edit', href: '/video-edit.html', icon: 'VE', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/22.png', note: 'Edit uploaded video' },
+    { label: 'Background Change', href: '/background-change.html', icon: 'BG', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/23.png', note: 'Change video background' },
+    { label: 'Video Relight', href: '/video-relight.html', icon: 'VR', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/24.png', note: 'Change video lighting' },
+    { label: 'HappyHorse 1.0', id: 'happyhorse-1', icon: 'HH', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/15.png', note: 'Video and audio model' },
+    { label: 'Veo 3.1', id: 'veo31', icon: 'V3', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/3.png', note: 'Google video model' },
+    { label: 'Grok', id: 'grok-video', icon: 'GX', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/4.png', note: 'Cinematic video' },
+    { label: 'Kling 2.6', id: 'kling26', icon: 'K2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/14.png', note: 'Video with sound' },
+    { label: 'Kling 2.5 Turbo', id: 'kling-2-5-turbo', icon: 'KT', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/14.png', note: 'Fast Kling video model' },
+    { label: 'Wan 2.7', id: 'wan-2-7-video', icon: 'W', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/6.png', note: 'First and last frame control' },
+    { label: 'Kling Motion Control', id: 'kling-motion-control', icon: 'KM', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/14.png', note: 'Motion transfer' },
+    { label: 'Aleph', id: 'aleph', icon: 'A', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/16.png', note: 'Video transformation' },
+    { label: 'Video upscale', href: '/upscale.html?mode=video', icon: 'VU', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/25.png', note: 'Increase video quality' },
+    { label: 'Lips sync / Avatar', href: '/lipsync.html', icon: 'LS', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/26.png', note: 'Talking avatar video' },
+    { label: 'Kid Cartoon', href: '/kid-cartoon.html', icon: 'KC', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/27.png', note: 'Add your kid in cartoon' },
   ];
 
   const AUDIO_MENU_ITEMS = [
-    { label: 'Text to speech', href: '/audio.html?tool=text-to-speech', icon: 'T2', note: 'Generate voice from text' },
-    { label: 'Voice isolater', href: '/audio.html?tool=voice-isolater', icon: 'VI', note: 'Separate clean vocals' },
-    { label: 'Voice changer', href: '/audio.html?tool=voice-changer', icon: 'VC', note: 'Transform a voice' },
-    { label: 'Song Creation', href: '/audio.html?tool=song-creation', icon: 'SC', note: 'Create music tracks' },
+    { label: 'Text to speech', href: '/audio.html?tool=text-to-speech', icon: 'T2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/18.png', note: 'Generate voice from text' },
+    { label: 'Voice isolater', href: '/audio.html?tool=voice-isolater', icon: 'VI', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/19.png', note: 'Separate clean vocals' },
+    { label: 'Voice changer', href: '/audio.html?tool=voice-changer', icon: 'VC', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/28.png', note: 'Transform a voice' },
+    { label: 'Song Creation', href: '/audio.html?tool=song-creation', icon: 'SC', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/20.png', note: 'Create music tracks' },
   ];
 
   const FEATURE_MENU_ITEMS = [
-    { label: 'Video upscale', href: '/upscale.html?mode=video', icon: 'VU', note: 'Increase video quality' },
-    { label: 'Video Edit', href: '/video-edit.html', icon: 'VE', note: 'Edit uploaded video' },
-    { label: 'Background Change', href: '/background-change.html', icon: 'BG', note: 'Change video background' },
-    { label: 'Video Relight', href: '/video-relight.html', icon: 'VR', note: 'Change video lighting' },
-    { label: 'Lipsync Avatar', href: '/lipsync.html', icon: 'LA', note: 'Talking avatar video' },
-    { label: 'Text to speech', href: '/audio.html?tool=text-to-speech', icon: 'T2', note: 'Generate voice from text' },
-    { label: 'Voice isolater', href: '/audio.html?tool=voice-isolater', icon: 'VI', note: 'Separate clean vocals' },
-    { label: 'Song Creation', href: '/audio.html?tool=song-creation', icon: 'SC', note: 'Create music tracks' },
-    { label: 'Hook analyse', href: '/analyse.html', icon: 'HA', note: 'Analyse hooks and ideas' },
-    { label: 'Kid Cartoon', href: '/kid-cartoon.html', icon: 'KC', note: 'Add your kid in cartoon' },
+    { label: 'Video upscale', href: '/upscale.html?mode=video', icon: 'VU', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/25.png', note: 'Increase video quality' },
+    { label: 'Video Edit', href: '/video-edit.html', icon: 'VE', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/22.png', note: 'Edit uploaded video' },
+    { label: 'Background Change', href: '/background-change.html', icon: 'BG', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/23.png', note: 'Change video background' },
+    { label: 'Video Relight', href: '/video-relight.html', icon: 'VR', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/24.png', note: 'Change video lighting' },
+    { label: 'Lipsync Avatar', href: '/lipsync.html', icon: 'LA', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/26.png', note: 'Talking avatar video' },
+    { label: 'Text to speech', href: '/audio.html?tool=text-to-speech', icon: 'T2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/18.png', note: 'Generate voice from text' },
+    { label: 'Voice isolater', href: '/audio.html?tool=voice-isolater', icon: 'VI', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/19.png', note: 'Separate clean vocals' },
+    { label: 'Song Creation', href: '/audio.html?tool=song-creation', icon: 'SC', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/20.png', note: 'Create music tracks' },
+    { label: 'Hook analyse', href: '/analyse.html', icon: 'HA', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/21.png', note: 'Analyse hooks and ideas' },
+    { label: 'Kid Cartoon', href: '/kid-cartoon.html', icon: 'KC', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/27.png', note: 'Add your kid in cartoon' },
   ];
 
   function ready(fn) {
@@ -741,10 +742,13 @@
         grid-template-columns:repeat(3,minmax(0,1fr));
       }
       .hansora-mega-image{
-        width:min(1220px,calc(100vw - 32px));
+        left:calc(50% + 92px);
+        width:min(940px,calc(100vw - 32px));
+        max-height:calc(100dvh - 112px);
+        overflow-y:auto;
       }
       .hansora-mega-image .hansora-mega-grid{
-        grid-template-columns:repeat(4,minmax(0,1fr));
+        grid-template-columns:repeat(3,minmax(0,1fr));
       }
       .hansora-mega-compact{
         width:min(560px,calc(100vw - 32px));
@@ -842,6 +846,7 @@
       @media (max-width:900px){
         .site-header .nav-links{ position:static; transform:none; }
         .hansora-mega-menu{ left:0; transform:translateX(-16px) translateY(8px); grid-template-columns:1fr; width:min(92vw,520px); max-height:72vh; overflow:auto; }
+        .hansora-mega-image{ left:0; }
         .hansora-mega-image .hansora-mega-grid{ grid-template-columns:1fr; }
         .nav-links .hansora-nav-item:hover .hansora-mega-menu,
         .nav-links .hansora-nav-item:focus-within .hansora-mega-menu{ transform:translateX(-16px) translateY(0); }
@@ -963,6 +968,22 @@
       html.hansora-telegram-webview body{
         margin-top:0 !important;
         padding-top:0 !important;
+      }
+      html.hansora-pricing-popup,
+      html.hansora-pricing-popup body{
+        min-height:100%;
+        overflow:auto;
+        background:#070912;
+      }
+      html.hansora-pricing-popup body{
+        padding-top:0 !important;
+      }
+      html.hansora-pricing-popup #sharedHeader,
+      html.hansora-pricing-popup .site-header,
+      html.hansora-pricing-popup .hs-bottom-nav,
+      html.hansora-pricing-popup .bottom-nav,
+      html.hansora-pricing-popup footer{
+        display:none !important;
       }
       html.hansora-telegram-webview #sharedHeader{
         margin-top:0 !important;
@@ -1579,6 +1600,17 @@
     }
   }
 
+  function applyOfferPopupPageMode() {
+    try {
+      if (new URLSearchParams(location.search || '').get('offer_popup') !== '1') return false;
+      document.documentElement.classList.add('hansora-pricing-popup');
+      if (document.body) document.body.classList.add('hansora-pricing-popup');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function offerPendingKey(user) {
     return user && user.id ? `${SIGNUP_OFFER_PENDING_PREFIX}${user.id}` : '';
   }
@@ -1919,6 +1951,7 @@
 
   ready(function () {
     captureAffiliateRef();
+    applyOfferPopupPageMode();
     applyTelegramViewportFix();
     injectHeaderStyles();
     injectHeader();
