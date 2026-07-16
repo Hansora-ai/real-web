@@ -1057,24 +1057,34 @@
         top:14px;
         right:14px;
         z-index:3;
-        width:40px;
-        height:40px;
+        width:42px;
+        height:42px;
         border-radius:999px;
-        border:0;
-        background:transparent;
+        border:1px solid rgba(255,255,255,.30);
+        background:rgba(7,9,18,.88);
         color:#fff;
-        font-size:28px;
+        font-size:27px;
         line-height:0;
         font-weight:800;
-        box-shadow:none;
+        box-shadow:0 10px 28px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.12);
+        backdrop-filter:blur(12px);
+        -webkit-backdrop-filter:blur(12px);
         outline:none;
         display:flex;
         align-items:center;
         justify-content:center;
         padding:0;
         text-align:center;
+        cursor:pointer;
+        transition:background .16s ease, border-color .16s ease, transform .16s ease, opacity .16s ease;
       }
-      .hansora-offer-close:hover{ background:transparent; color:#fff; opacity:.82; }
+      .hansora-offer-close:hover{
+        background:rgba(124,58,237,.92);
+        border-color:rgba(255,255,255,.58);
+        color:#fff;
+        opacity:1;
+        transform:scale(1.06);
+      }
       .hansora-offer-close:focus,
       .hansora-offer-close:focus-visible{ outline:none; box-shadow:none; }
       @media (max-width:720px){
