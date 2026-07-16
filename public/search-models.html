@@ -172,7 +172,6 @@
       background:rgba(255,255,255,.08);
       flex:0 0 auto;
     }
-    .result-card-loader,
     .processing-orb{
       width:48px;
       height:48px;
@@ -182,10 +181,128 @@
       box-shadow:0 0 30px rgba(139,92,246,.52);
       animation:orbSpin 1.35s linear infinite;
     }
+    .result-card-loader,
+    .generation-stage{
+      position:relative;
+      width:min(88%,260px);
+      min-height:150px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      color:rgba(255,255,255,.92);
+      text-align:center;
+      isolation:isolate;
+    }
+    .generation-stage-icon{
+      position:relative;
+      width:76px;
+      height:76px;
+      display:grid;
+      place-items:center;
+      border-radius:28px;
+    }
+    .generation-stage-icon::before,
+    .generation-stage-icon::after{
+      content:"";
+      position:absolute;
+      inset:3px;
+      border-radius:50%;
+      border:1.5px solid transparent;
+      border-top-color:rgba(125,211,252,.92);
+      border-right-color:rgba(192,132,252,.78);
+      filter:drop-shadow(0 0 8px rgba(125,211,252,.42));
+      animation:generationOrbit 1.55s linear infinite;
+    }
+    .generation-stage-icon::after{
+      inset:11px;
+      border-top-color:rgba(244,114,182,.92);
+      border-right-color:transparent;
+      border-bottom-color:rgba(129,140,248,.82);
+      animation-direction:reverse;
+      animation-duration:1.05s;
+    }
+    .generation-stage-core{
+      position:relative;
+      width:42px;
+      height:42px;
+      border-radius:16px 21px 15px 23px;
+      background:linear-gradient(135deg,#38bdf8 0%,#8b5cf6 48%,#f725b8 100%);
+      box-shadow:
+        0 0 18px rgba(56,189,248,.42),
+        0 0 34px rgba(139,92,246,.48),
+        0 0 52px rgba(247,37,184,.24);
+      animation:generationCore 2s ease-in-out infinite;
+    }
+    .generation-stage-core::before,
+    .generation-stage-core::after{
+      content:"";
+      position:absolute;
+      width:6px;
+      height:6px;
+      border-radius:50%;
+      background:#fff;
+      box-shadow:0 0 12px rgba(255,255,255,.9);
+      animation:generationSpark 1.7s ease-in-out infinite;
+    }
+    .generation-stage-core::before{ top:5px; right:8px; }
+    .generation-stage-core::after{ left:7px; bottom:6px; animation-delay:-.8s; }
+    .generation-stage-label{
+      font-size:13px;
+      line-height:1.2;
+      font-weight:850;
+      letter-spacing:.01em;
+      color:rgba(255,255,255,.96);
+    }
+    .generation-stage-detail{
+      margin-top:-5px;
+      max-width:220px;
+      color:rgba(226,232,240,.55);
+      font-size:10px;
+      line-height:1.35;
+    }
+    .generation-stage[data-stage="requesting"] .generation-stage-icon::before{
+      animation-duration:2.2s;
+    }
+    .generation-stage[data-stage="requesting"] .generation-stage-icon::after{
+      opacity:.45;
+      animation-duration:1.8s;
+    }
+    .generation-stage[data-stage="requesting"] .generation-stage-core{
+      filter:saturate(.78);
+      animation-duration:2.6s;
+    }
+    .generation-stage[data-stage="generating"] .generation-stage-icon{
+      animation:generationFloat 2.4s ease-in-out infinite;
+    }
+    @keyframes generationOrbit{ to{ transform:rotate(360deg); } }
+    @keyframes generationCore{
+      0%,100%{ transform:scale(.92) rotate(-5deg); border-radius:16px 21px 15px 23px; }
+      50%{ transform:scale(1.08) rotate(7deg); border-radius:23px 15px 22px 16px; }
+    }
+    @keyframes generationSpark{
+      0%,100%{ opacity:.25; transform:scale(.6); }
+      50%{ opacity:1; transform:scale(1.15); }
+    }
+    @keyframes generationFloat{
+      0%,100%{ transform:translateY(0); }
+      50%{ transform:translateY(-5px); }
+    }
     @keyframes spin{
       to{ transform:rotate(360deg); }
     }
     @keyframes orbSpin{ to{ transform:rotate(360deg); } }
+    @media (prefers-reduced-motion:reduce){
+      .generation-stage-icon,
+      .generation-stage-icon::before,
+      .generation-stage-icon::after,
+      .generation-stage-core,
+      .generation-stage-core::before,
+      .generation-stage-core::after{
+        animation-duration:6s !important;
+      }
+    }
     .clamp-2{
       display:-webkit-box;
       -webkit-line-clamp:2;
@@ -4996,6 +5113,49 @@ async function __mjFetchNbCheck(params){
       return isReadyResultStatus(cleanStatus);
     }
 
+    function isRequestingResultStatus(status) {
+      return /(requesting|uploading|submitting|client[-_\s]?processing|preparing)/i.test(String(status || ''));
+    }
+
+    function generationStageCopy(status) {
+      if (isRequestingResultStatus(status)) {
+        return {
+          stage: 'requesting',
+          label: 'Processing request',
+          detail: 'Preparing files and sending your request'
+        };
+      }
+      return {
+        stage: 'generating',
+        label: 'Generating',
+        detail: 'Your request was accepted and is being created'
+      };
+    }
+
+    function createGenerationStage(status) {
+      const stage = document.createElement('div');
+      stage.className = 'generation-stage';
+      stage.innerHTML = `
+        <div class="generation-stage-icon" aria-hidden="true">
+          <span class="generation-stage-core"></span>
+        </div>
+        <div class="generation-stage-label"></div>
+        <div class="generation-stage-detail"></div>
+      `;
+      updateGenerationStage(stage, status);
+      return stage;
+    }
+
+    function updateGenerationStage(stage, status) {
+      if (!stage) return;
+      const copy = generationStageCopy(status);
+      stage.dataset.stage = copy.stage;
+      const label = stage.querySelector('.generation-stage-label');
+      const detail = stage.querySelector('.generation-stage-detail');
+      if (label) label.textContent = copy.label;
+      if (detail) detail.textContent = copy.detail;
+    }
+
     function resultShortcutIcon(action) {
       if (action === 'create-video') {
         return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.5-2.6A1 1 0 0 1 21 8.3v7.4a1 1 0 0 1-1.5.9L15 14"></path><rect x="3" y="6" width="12" height="12" rx="2"></rect></svg>';
@@ -5105,15 +5265,14 @@ async function __mjFetchNbCheck(params){
         ph.style.gap = '10px';
         ph.style.color = 'rgba(255,255,255,.55)';
         ph.style.fontSize = '12px';
-        if (!initialFailed) {
-          const orb = document.createElement('div');
-          orb.className = 'processing-orb';
-          ph.appendChild(orb);
+        if (initialFailed) {
+          const label = document.createElement('div');
+          label.className = 'result-thumb-placeholder-label';
+          label.textContent = 'Failed';
+          ph.appendChild(label);
+        } else {
+          ph.appendChild(createGenerationStage(statusRaw || 'generating'));
         }
-        const label = document.createElement('div');
-        label.className = 'result-thumb-placeholder-label';
-        label.textContent = initialFailed ? 'Failed' : 'Creating...';
-        ph.appendChild(label);
         card.appendChild(ph);
       }
 
@@ -5232,7 +5391,7 @@ async function __mjFetchNbCheck(params){
             state.textContent = 'Ready';
             state.classList.add('ready');
           } else {
-            state.textContent = 'Processing';
+            state.textContent = isRequestingResultStatus(nextStatusRaw) ? 'Processing request' : 'Generating';
             state.classList.add('processing');
           }
 
@@ -5240,15 +5399,15 @@ async function __mjFetchNbCheck(params){
           if (placeholder && failed && !ready) {
             placeholder.innerHTML = '<div class="result-thumb-placeholder-label">Failed</div>';
             placeholder.style.color = 'rgba(248,113,113,.9)';
-          } else if (placeholder && !failed && !ready && !placeholder.querySelector('.processing-orb')) {
-            placeholder.innerHTML = '';
-            const orb = document.createElement('div');
-            orb.className = 'processing-orb';
-            const label = document.createElement('div');
-            label.className = 'result-thumb-placeholder-label';
-            label.textContent = 'Creating...';
-            placeholder.appendChild(orb);
-            placeholder.appendChild(label);
+          } else if (placeholder && !failed && !ready) {
+            let stage = placeholder.querySelector('.generation-stage');
+            if (!stage) {
+              placeholder.innerHTML = '';
+              stage = createGenerationStage(nextStatusRaw);
+              placeholder.appendChild(stage);
+            } else {
+              updateGenerationStage(stage, nextStatusRaw);
+            }
             placeholder.style.color = 'rgba(255,255,255,.55)';
           }
 
@@ -5378,8 +5537,8 @@ function createResultCard(data) {
 
       const media = document.createElement('div');
       media.className = 'result-media relative h-72 bg-slate-900 flex items-center justify-center';
-      const loader = document.createElement('div');
-      loader.className = 'result-card-loader';
+      const loader = createGenerationStage(statusRaw || 'generating');
+      loader.classList.add('result-card-loader');
       media.appendChild(loader);
 
       const mediaEl = document.createElement(kind === 'video' ? 'video' : 'img');
@@ -5516,7 +5675,8 @@ function createResultCard(data) {
         } else {
           mediaEl.classList.add('hidden');
           mediaEl.dataset.previewUrl = '';
-          loader.style.display = st.includes('fail') ? 'none' : 'block';
+          loader.style.display = st.includes('fail') ? 'none' : 'flex';
+          if (!failedNow) updateGenerationStage(loader, stRaw);
           previewData.status = stRaw;
           previewHover.classList.add('hidden');
         }
@@ -5532,7 +5692,7 @@ function createResultCard(data) {
         }
         createVideoBtn.classList.toggle('hidden', kind !== 'image' || !readyNow || failedNow);
 
-        let label = 'Processing…';
+        let label = isRequestingResultStatus(stRaw) ? 'Processing request' : 'Generating…';
         let pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-black/70 text-white/80';
         let statusClass = 'text-[10px] text-indigo-200/80';
 
@@ -5630,8 +5790,103 @@ function createResultCard(data) {
         });
       }
 
+      built.remove = function removeResultCard() {
+        if (cardHost && Array.isArray(cardHost.__orderedResultCards)) {
+          cardHost.__orderedResultCards = cardHost.__orderedResultCards.filter((item) => item !== card);
+        }
+        if (card && card.parentNode) card.parentNode.removeChild(card);
+        if (!strip.querySelector('.result-card, .result-thumb')) {
+          strip.innerHTML = '';
+          strip.classList.add('empty');
+          ensureResultsEmptyState();
+        }
+      };
+
       return built;
     }
+
+    const __clientRequestPlaceholders = new Set();
+    let __clientRunSequence = 0;
+
+    function createClientRunId(uid) {
+      __clientRunSequence += 1;
+      return `${uid}-${Date.now() + __clientRunSequence}`;
+    }
+
+    function createClientRequestPlaceholder(details) {
+      const data = details || {};
+      const model = data.model || {};
+      const runId = String(data.runId || createClientRunId(data.uid || 'run'));
+      const built = addResultCard({
+        run_id: runId,
+        provider: model.name || 'Model',
+        kind: model.category || 'image',
+        prompt: data.prompt || '',
+        result_url: null,
+        status: 'requesting',
+        meta: {
+          run_id: runId,
+          status: 'requesting',
+          client_only: true,
+          client_diagnostic: {
+            model_id: model.id || '',
+            model_name: model.name || '',
+            aspect_ratio: data.aspect,
+            duration: data.duration,
+            resolution: data.resolution
+          }
+        },
+        created_at: new Date().toISOString()
+      }, { prepend: true });
+      if (!built) return null;
+
+      const originalApply = built.apply;
+      const context = {
+        runId,
+        controller: built,
+        accepted: false,
+        settled: false,
+        removed: false,
+        markGenerating() {
+          if (this.removed || this.settled) return;
+          this.accepted = true;
+          originalApply({ status: 'generating', result_url: null });
+        },
+        remove() {
+          if (this.removed) return;
+          this.removed = true;
+          this.settled = true;
+          __clientRequestPlaceholders.delete(this);
+          if (typeof built.remove === 'function') built.remove();
+        }
+      };
+
+      built.apply = function applyClientRequestState(next) {
+        const nextStatus = String(next && next.status || '');
+        if (isFailedResultStatus(nextStatus)) {
+          context.remove();
+          return;
+        }
+        originalApply(next || {});
+        if (canGetResult(nextStatus, next && next.result_url)) {
+          context.settled = true;
+          __clientRequestPlaceholders.delete(context);
+        }
+      };
+
+      __clientRequestPlaceholders.add(context);
+      return context;
+    }
+
+    function removeClientRequestPlaceholder(context) {
+      if (context && typeof context.remove === 'function') context.remove();
+    }
+
+    window.addEventListener('pagehide', function () {
+      Array.from(__clientRequestPlaceholders).forEach((context) => {
+        if (context && !context.accepted) context.remove();
+      });
+    });
 
     async function loadRecentHistory(options = {}) {
       if (!currentUser) return;
@@ -5656,6 +5911,16 @@ function createResultCard(data) {
         const resultsSection = document.getElementById('resultsSection');
         const visibleRows = (data || [])
           .filter(shouldShowResultGeneration)
+          .filter((row) => {
+            const meta = row && row.meta && typeof row.meta === 'object' ? row.meta : {};
+            const status = String(meta.status || (row && row.result_url ? 'ready' : '')).toLowerCase();
+            const taskId = String(meta.task_id || meta.taskId || '').trim();
+            const engine = String(meta.engine || '').toLowerCase();
+            if (row && row.result_url) return true;
+            if (!taskId && /^(pending|requesting|uploading|submitting)$/.test(status)) return false;
+            if (!taskId && engine === 'sora2' && status === 'processing') return false;
+            return true;
+          })
           .sort((a, b) => (Date.parse(b && b.created_at || '') || 0) - (Date.parse(a && a.created_at || '') || 0))
           .slice(0, recentLimit);
         const hasItems = visibleRows.length > 0;
@@ -6017,6 +6282,8 @@ async function sora2Poll(taskId, uid, runId, controllers, token) {
         return;
       }
       if (j && j.failed) {
+        const reason = cleanGenerationFailureReason(extractGenerationFailureReason(j));
+        showGenerationFailedStatus(reason, runId);
         for (let i = 0; i < controllers.length; i++) {
           controllers[i].apply({ status: 'failed', result_url: null });
         }
@@ -11623,8 +11890,9 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
     let lastAcceptedRunMarker = 0;
 
-    async function runSingleCurrentModel(batchManaged = false) {
+    async function runSingleCurrentModel(batchManaged = false, initialRequestContext = null) {
       if (!currentModel) {
+        removeClientRequestPlaceholder(initialRequestContext);
         showStatus('Please choose a model first.', 'error');
         return;
       }
@@ -11632,15 +11900,18 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       const rawPrompt = promptBox.value || '';
       const prompt = rawPrompt.trim();
       if (!prompt && (!currentModel || currentModel.id !== 'kling-motion-control')) {
+        removeClientRequestPlaceholder(initialRequestContext);
         showStatus('Please enter a prompt.', 'error');
         return;
       }
       if (promptHasBlockedSexualTerms(prompt)) {
+        removeClientRequestPlaceholder(initialRequestContext);
         updatePromptSafetyState(true);
         return;
       }
 
       if (!currentUser) {
+        removeClientRequestPlaceholder(initialRequestContext);
         showStatus('Please log in first.', 'error');
         return;
       }
@@ -11648,6 +11919,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       if (currentModel && currentModel.id === 'kling30') {
         const klingValidation = validateKling30BeforeRun();
         if (!klingValidation.ok) {
+          removeClientRequestPlaceholder(initialRequestContext);
           showStatus(klingValidation.message, 'error');
           if (kling30MultiShots && kling30ActiveShotIndex >= 0) {
             renderKling30ElementEditor();
@@ -11656,8 +11928,20 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         }
       }
 
+      const uid = currentUser.id;
+      const requestContext = initialRequestContext || createClientRequestPlaceholder({
+        uid,
+        model: Object.assign({}, currentModel),
+        prompt,
+        aspect: currentAspect,
+        duration: currentDuration,
+        resolution: currentResolution
+      });
+      const runId = requestContext ? requestContext.runId : createClientRunId(uid);
+
       const requiredCredits = Number(getModelCreditValue(currentModel, 1) || 0);
       let availableCredits = await getAvailableCredits(requiredCredits);
+      if (requestContext && requestContext.removed) return;
 
       if (requiredCredits > 0 && availableCredits < requiredCredits) {
         console.warn('Credit gate blocked run', {
@@ -11668,6 +11952,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           header: getVisibleHeaderCredits(),
           shared: getSharedHeaderCredits()
         });
+        removeClientRequestPlaceholder(requestContext);
         showNotEnoughCreditsStatus('Not enough credits for this model.');
         return;
       }
@@ -11676,6 +11961,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       if (currentModel && ['kling26', 'kling30'].includes(currentModel.id)) {
         const __need = Number(getModelCreditValue(currentModel, 1) || 0);
         availableCredits = await getAvailableCredits(__need);
+        if (requestContext && requestContext.removed) return;
         if (availableCredits < __need) {
           console.warn('Credit gate blocked Kling run', {
             model: currentModel.id,
@@ -11685,6 +11971,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             header: getVisibleHeaderCredits(),
             shared: getSharedHeaderCredits()
           });
+          removeClientRequestPlaceholder(requestContext);
           showNotEnoughCreditsStatus('Not enough credits for this selection.');
           return;
         }
@@ -11695,49 +11982,57 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       if (currentModel.useFrames) {
         // Kling 2.1 requires start frame; Veo 3.1 start frame is optional
         if (!currentModel.startOptional && !startFrameFile) {
+          removeClientRequestPlaceholder(requestContext);
           showStatus('This model requires a Start frame image.', 'error');
           return;
         }
         if (lastFrameFile && !startFrameFile) {
+          removeClientRequestPlaceholder(requestContext);
           showStatus('Last frame requires a Start frame first.', 'error');
           return;
         }
       } else if (currentModel.specificUpload === 'seedance' && seedanceLastFrameFile && !seedanceFirstFrameFile) {
+        removeClientRequestPlaceholder(requestContext);
         showStatus('Last frame requires a First frame first.', 'error');
         return;
       } else if (currentModel.specificUpload === 'wan27' && videoLastFrameFile && !videoFirstFrameFile) {
+        removeClientRequestPlaceholder(requestContext);
         showStatus('Last frame requires a First frame first.', 'error');
         return;
       } else if (currentModel.specificUpload === 'kling30' && kling30LastFrameFile && !kling30FirstFrameFile) {
+        removeClientRequestPlaceholder(requestContext);
         showStatus('Last frame requires a First frame first.', 'error');
         return;
       } else if (currentModel.needsVideo) {
         if (!alephVideoFile) {
+          removeClientRequestPlaceholder(requestContext);
           showStatus('This model requires a video upload.', 'error');
           return;
         }
       } else if (currentModel.needsMotionVideo) {
         if (!motionVideoFile) {
+          removeClientRequestPlaceholder(requestContext);
           showStatus('This model requires a source video upload.', 'error');
           return;
         }
         if (!syncKlingMotionRunState(true)) {
+          removeClientRequestPlaceholder(requestContext);
           return;
         }
         if (!motionImageFile) {
+          removeClientRequestPlaceholder(requestContext);
           showStatus('This model requires a reference image.', 'error');
           return;
         }
       } else if (currentModel.needsImage && !uploadedFiles.length) {
+        removeClientRequestPlaceholder(requestContext);
         showStatus('This model requires at least one image.', 'error');
         return;
       }
 
       const runBtn = document.getElementById('runBtn');
-      const uid = currentUser.id;
-      const runId = `${uid}-${Date.now()}`;
       runBtn.disabled = true;
-      showStatus('Uploading input files…');
+      showStatus('Processing request…');
 
       try {
         const frameFiles = currentModel.useFrames
@@ -11763,7 +12058,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             ? [videoSourceFile, ...videoRefImageFiles]
             : [videoFirstFrameFile, videoLastFrameFile, videoSourceFile, ...videoRefImageFiles, ...videoRefVideoFiles, ...videoRefAudioFiles]).filter(Boolean))
           : await uploadImagesAndGetUrls(uploadedFiles);
-        showStatus('Submitting to ' + currentModel.name + '…');
+        if (requestContext && requestContext.removed) return;
+        showStatus('Processing request…');
 
         // Sora 2 requires a seeded user_generations row id (1:1 with working sora2 page)
         let __genId = null;
@@ -11819,7 +12115,9 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         }
 
 
-        const placeholderControllers = [];
+        const placeholderControllers = requestContext && requestContext.controller
+          ? [requestContext.controller]
+          : [];
         const createProcessingPlaceholders = () => {
           if (placeholderControllers.length) return placeholderControllers;
           const expectedOutputs = 1;
@@ -11830,10 +12128,10 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               kind: currentModel.category,
               prompt,
               result_url: null,
-              status: 'processing',
+              status: 'generating',
               meta: {
                 run_id: runId,
-                status: 'processing',
+                status: 'generating',
                 client_diagnostic: {
                   model_id: currentModel.id,
                   model_name: currentModel.name,
@@ -11849,6 +12147,15 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             if (c) placeholderControllers.push(c);
           }
           return placeholderControllers;
+        };
+        const markRequestAccepted = () => {
+          if (requestContext) {
+            requestContext.markGenerating();
+            return placeholderControllers;
+          }
+          const controllers = createProcessingPlaceholders();
+          controllers.forEach((controller) => controller.apply({ status: 'generating', result_url: null }));
+          return controllers;
         };
         const extractProviderError = (payload) => {
           if (!payload || typeof payload !== 'object') return '';
@@ -11917,6 +12224,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         }
 
         const runEndpoint = endpointForCurrentRun(currentModel);
+        if (requestContext && requestContext.removed) return;
         const res = await fetch(runEndpoint, {
           method: 'POST',
           headers: Object.assign(
@@ -11935,6 +12243,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             if (parsedMsg) msg = parsedMsg;
           } catch {}
           console.warn('model request failed', { runId, model: currentModel.id, endpoint: runEndpoint, status: res.status, message: msg, raw: txt });
+          removeClientRequestPlaceholder(requestContext);
           if (isNotEnoughCreditsMessage(msg)) {
             showNotEnoughCreditsStatus(msg);
           } else {
@@ -11951,6 +12260,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           const providerError = acceptedSubmission ? '' : cleanGenerationFailureReason(extractProviderError(j) || extractGenerationFailureReason(j));
           if (providerError) {
             console.warn('provider rejected generation', providerError);
+            removeClientRequestPlaceholder(requestContext);
             if (isNotEnoughCreditsMessage(providerError)) {
               showNotEnoughCreditsStatus(providerError);
             } else {
@@ -11965,6 +12275,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             if (!j || !j.submitted || !j.taskId) {
               const errMsg = extractProviderError(j) || (j && (j.error || j.message)) || 'unknown_error';
               console.warn('sora2 submission missing task id', errMsg);
+              removeClientRequestPlaceholder(requestContext);
               if (isNotEnoughCreditsMessage(errMsg)) {
                 showNotEnoughCreditsStatus(errMsg);
               } else {
@@ -11972,7 +12283,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               }
               await refreshCredits();
             } else {
-              createProcessingPlaceholders();
+              markRequestAccepted();
               watchCreditsLive(120000);
               showStatus(
                 `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
@@ -11993,7 +12304,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               });
             }
           } else {
-            createProcessingPlaceholders();
+            markRequestAccepted();
             watchCreditsLive(120000);
             showStatus(
               `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
@@ -12017,6 +12328,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         }
       } catch (err) {
         console.error(err);
+        removeClientRequestPlaceholder(requestContext);
         if (err && err.message === 'file_too_large') {
           const limitMb = (typeof currentModel !== 'undefined' && currentModel && currentModel.uploadMaxMB)
             ? Number(currentModel.uploadMaxMB)
@@ -12031,6 +12343,9 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         }
         await refreshCredits();
       } finally {
+        if (requestContext && !requestContext.accepted && !requestContext.settled) {
+          removeClientRequestPlaceholder(requestContext);
+        }
         if (!batchManaged) {
           runBtn.disabled = false;
           updateRunButtonLabel();
@@ -12059,18 +12374,47 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         showStatus('Please log in first.', 'error');
         return;
       }
+      if (currentModel && currentModel.id === 'kling30') {
+        const klingValidation = validateKling30BeforeRun();
+        if (!klingValidation.ok) {
+          showStatus(klingValidation.message, 'error');
+          if (kling30MultiShots && kling30ActiveShotIndex >= 0) renderKling30ElementEditor();
+          return;
+        }
+      }
+
+      const requestContexts = Array.from({ length: quantity }, () => createClientRequestPlaceholder({
+        uid: currentUser.id,
+        model: Object.assign({}, currentModel),
+        prompt,
+        aspect: currentAspect,
+        duration: currentDuration,
+        resolution: currentResolution
+      }));
+      const runBtn = document.getElementById('runBtn');
+      if (runBtn) runBtn.disabled = true;
+      showStatus('Processing requests…');
 
       const totalRequiredCredits = Number(getModelCreditValue(currentModel, quantity) || 0);
       const availableCredits = await getAvailableCredits(totalRequiredCredits);
+      if (requestContexts.some((context) => context && context.removed)) {
+        requestContexts.forEach(removeClientRequestPlaceholder);
+        if (runBtn) runBtn.disabled = false;
+        updateRunButtonLabel();
+        return;
+      }
       if (totalRequiredCredits > 0 && availableCredits < totalRequiredCredits) {
+        requestContexts.forEach(removeClientRequestPlaceholder);
         showNotEnoughCreditsStatus(`Not enough credits for ${quantity} generations.`);
+        if (runBtn) runBtn.disabled = false;
+        updateRunButtonLabel();
         return;
       }
 
-      showStatus(`Submitting ${quantity} separate generations…`);
       await Promise.allSettled(
-        Array.from({ length: quantity }, () => runSingleCurrentModel(true))
+        requestContexts.map((context) => runSingleCurrentModel(true, context))
       );
+      if (runBtn) runBtn.disabled = false;
       updateRunButtonLabel();
     }
 
