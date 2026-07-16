@@ -5731,6 +5731,10 @@ function createResultCard(data) {
       const built = createResultItem(data);
       const card = built && built.card ? built.card : null;
       if (!card) return null;
+      if (data && data.client_pending) {
+        card.dataset.clientPending = '1';
+        card.dataset.clientSequence = String(data.client_sequence || 0);
+      }
 
       let cardHost = strip;
       if (window.matchMedia('(min-width: 901px)').matches) {
@@ -5756,6 +5760,13 @@ function createResultCard(data) {
         if (options && options.prepend) orderedCards.unshift(card);
         else orderedCards.push(card);
         orderedCards.sort((a, b) => {
+          const aPending = a.dataset.clientPending === '1';
+          const bPending = b.dataset.clientPending === '1';
+          if (aPending !== bPending) return aPending ? -1 : 1;
+          if (aPending && bPending) {
+            const sequenceDifference = Number(b.dataset.clientSequence || 0) - Number(a.dataset.clientSequence || 0);
+            if (sequenceDifference) return sequenceDifference;
+          }
           const aTime = Date.parse(a.dataset.createdAt || '') || 0;
           const bTime = Date.parse(b.dataset.createdAt || '') || 0;
           return bTime - aTime;
@@ -5820,6 +5831,8 @@ function createResultCard(data) {
         prompt: data.prompt || '',
         result_url: null,
         status: 'requesting',
+        client_pending: true,
+        client_sequence: __clientRunSequence,
         meta: {
           run_id: runId,
           status: 'requesting',
@@ -5860,12 +5873,20 @@ function createResultCard(data) {
       built.apply = function applyClientRequestState(next) {
         const nextStatus = String(next && next.status || '');
         if (isFailedResultStatus(nextStatus)) {
-          context.remove();
+          if (!context.accepted) {
+            context.remove();
+            return;
+          }
+          originalApply(next || {});
+          context.settled = true;
+          delete built.card.dataset.clientPending;
+          __clientRequestPlaceholders.delete(context);
           return;
         }
         originalApply(next || {});
         if (canGetResult(nextStatus, next && next.result_url)) {
           context.settled = true;
+          delete built.card.dataset.clientPending;
           __clientRequestPlaceholders.delete(context);
         }
       };
@@ -5913,7 +5934,6 @@ function createResultCard(data) {
             const taskId = String(meta.task_id || meta.taskId || '').trim();
             const engine = String(meta.engine || '').toLowerCase();
             if (row && row.result_url) return true;
-            if (isFailedResultStatus(status)) return false;
             if (!taskId && /^(pending|requesting|uploading|submitting)$/.test(status)) return false;
             if (!taskId && engine === 'sora2' && status === 'processing') return false;
             return true;
