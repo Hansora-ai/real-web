@@ -5862,6 +5862,7 @@ function createResultCard(data) {
           originalApply({ status: 'generating', result_url: null });
         },
         remove() {
+          if (this.accepted) return;
           if (this.removed) return;
           this.removed = true;
           this.settled = true;
@@ -5873,14 +5874,9 @@ function createResultCard(data) {
       built.apply = function applyClientRequestState(next) {
         const nextStatus = String(next && next.status || '');
         if (isFailedResultStatus(nextStatus)) {
-          if (!context.accepted) {
-            context.remove();
-            return;
-          }
           originalApply(next || {});
           context.settled = true;
           delete built.card.dataset.clientPending;
-          __clientRequestPlaceholders.delete(context);
           return;
         }
         originalApply(next || {});
@@ -5899,6 +5895,19 @@ function createResultCard(data) {
       if (context && typeof context.remove === 'function') context.remove();
     }
 
+    function hasLiveAcceptedClientCards() {
+      return Array.from(__clientRequestPlaceholders).some((context) => {
+        return !!(
+          context &&
+          context.accepted &&
+          !context.removed &&
+          context.controller &&
+          context.controller.card &&
+          context.controller.card.isConnected
+        );
+      });
+    }
+
     window.addEventListener('pagehide', function () {
       Array.from(__clientRequestPlaceholders).forEach((context) => {
         if (context && !context.accepted) context.remove();
@@ -5907,6 +5916,7 @@ function createResultCard(data) {
 
     async function loadRecentHistory(options = {}) {
       if (!currentUser) return;
+      if (options.restartActivePolls && hasLiveAcceptedClientCards()) return;
       const uid = currentUser.id;
       const recentLimit = 15;
       try {
