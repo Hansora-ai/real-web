@@ -750,6 +750,14 @@
       .hansora-mega-image .hansora-mega-grid{
         grid-template-columns:repeat(3,minmax(0,1fr));
       }
+      .nav-links .hansora-nav-item:has(> .hansora-mega-image)::before{
+        content:"";
+        position:absolute;
+        top:100%;
+        left:0;
+        right:0;
+        height:22px;
+      }
       .hansora-mega-compact{
         width:min(560px,calc(100vw - 32px));
         grid-template-columns:1fr;
