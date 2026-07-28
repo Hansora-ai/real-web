@@ -5728,6 +5728,32 @@ function createResultCard(data) {
       return { card, apply };
     }
 
+    function layoutDesktopResultCards(cardHost) {
+      if (!cardHost || !Array.isArray(cardHost.__orderedResultCards)) return;
+      const columnCount = Math.max(1, Number(cardHost.dataset.columnCount || 3));
+      cardHost.innerHTML = '';
+      const columns = Array.from({ length: columnCount }, () => {
+        const column = document.createElement('div');
+        column.className = 'results-masonry-column';
+        cardHost.appendChild(column);
+        return column;
+      });
+      const availableWidth = cardHost.clientWidth || 960;
+      const columnWidth = Math.max(180, (availableWidth - ((columnCount - 1) * 16)) / columnCount);
+      const columnHeights = new Array(columnCount).fill(0);
+      cardHost.__orderedResultCards.forEach((resultCard) => {
+        let targetIndex = 0;
+        for (let index = 1; index < columnHeights.length; index += 1) {
+          if (columnHeights[index] < columnHeights[targetIndex]) targetIndex = index;
+        }
+        columns[targetIndex].appendChild(resultCard);
+        const mediaHeight = resultCard.classList.contains('result-card--landscape')
+          ? columnWidth * 9 / 16
+          : (resultCard.classList.contains('result-card--square') ? columnWidth : columnWidth * 16 / 9);
+        columnHeights[targetIndex] += mediaHeight + 92 + 16;
+      });
+    }
+
     function addResultCard(data, options) {
       const strip = document.getElementById('resultsStrip');
       if (!strip) return null;
@@ -5784,29 +5810,9 @@ function createResultCard(data) {
           return bTime - aTime;
         });
         cardHost.__orderedResultCards = orderedCards.slice(0, __max);
-
-        const columnCount = Math.max(1, Number(cardHost.dataset.columnCount || 3));
-        cardHost.innerHTML = '';
-        const columns = Array.from({ length: columnCount }, () => {
-          const column = document.createElement('div');
-          column.className = 'results-masonry-column';
-          cardHost.appendChild(column);
-          return column;
-        });
-        const availableWidth = cardHost.clientWidth || 960;
-        const columnWidth = Math.max(180, (availableWidth - ((columnCount - 1) * 16)) / columnCount);
-        const columnHeights = new Array(columnCount).fill(0);
-        cardHost.__orderedResultCards.forEach((resultCard) => {
-          let targetIndex = 0;
-          for (let index = 1; index < columnHeights.length; index += 1) {
-            if (columnHeights[index] < columnHeights[targetIndex]) targetIndex = index;
-          }
-          columns[targetIndex].appendChild(resultCard);
-          const mediaHeight = resultCard.classList.contains('result-card--landscape')
-            ? columnWidth * 9 / 16
-            : (resultCard.classList.contains('result-card--square') ? columnWidth : columnWidth * 16 / 9);
-          columnHeights[targetIndex] += mediaHeight + 92 + 16;
-        });
+        if (!(options && options.deferDesktopLayout)) {
+          layoutDesktopResultCards(cardHost);
+        }
       }
 
       built.remove = function removeResultCard() {
@@ -5928,7 +5934,6 @@ function createResultCard(data) {
 
     async function loadRecentHistory(options = {}) {
       if (!currentUser) return;
-      if (options.restartActivePolls && hasLiveAcceptedClientCards()) return;
       const uid = currentUser.id;
       const recentLimit = 15;
       try {
@@ -5944,7 +5949,10 @@ function createResultCard(data) {
           return;
         }
 
-        if (options.restartActivePolls) cancelActiveGenerationPolls();
+        if (options.restartActivePolls) {
+          cancelActiveGenerationPolls();
+          __clientRequestPlaceholders.clear();
+        }
         const strip = document.getElementById('resultsStrip');
         if (strip) strip.innerHTML = '';
         const resultsSection = document.getElementById('resultsSection');
@@ -5969,7 +5977,6 @@ function createResultCard(data) {
         }
 
         const resumePairs = [];
-        (async () => {
         for (const row of visibleRows) {
           const runId = row && row.meta && row.meta.run_id ? row.meta.run_id : '';
           const taskId = row && row.meta && (row.meta.task_id || row.meta.taskId) ? (row.meta.task_id || row.meta.taskId) : '';
@@ -5984,15 +5991,16 @@ function createResultCard(data) {
             status,
             meta: row.meta || {},
             created_at: row.created_at || ''
-          }, { prepend: false });
+          }, { prepend: false, deferDesktopLayout: true });
           const statusLower = String(status || '').toLowerCase();
           if (controller && runId && taskId && !row.result_url && (statusLower === 'processing' || statusLower === 'pending' || !statusLower)) {
             resumePairs.push({ row, controller, runId, taskId });
           }
         }
+        const historyCardHost = strip && strip.querySelector('.results-masonry-content');
+        if (historyCardHost) layoutDesktopResultCards(historyCardHost);
         resumeProcessingChecks(resumePairs);
-      })();
-      if (isMobileUI()) ensureResultsEmptyState();
+        if (isMobileUI()) ensureResultsEmptyState();
       } catch (e) {
         console.warn('loadRecentHistory failed', e);
       }
@@ -6099,6 +6107,7 @@ function createResultCard(data) {
       const kindHint = String((row && row.kind) || '').toLowerCase();
       const meta = row && row.meta && typeof row.meta === 'object' ? row.meta : {};
       if (meta.checker) return String(meta.checker);
+      if (String(meta.engine || '').toLowerCase() === 'sora2') return 'sora2-check';
       if (String(meta.source || '').toLowerCase() === 'byteplus') return 'seedance-cheap-check';
       return 'kie-check';
     }
@@ -6301,9 +6310,9 @@ function startSora2Poll(taskId, uid, runId, controllers) {
   });
 }
 
-// Poll Sora 2 via Netlify function sora2-check (15 minutes max)
+// Poll Sora 2 via Netlify function sora2-check (40 minutes max)
 async function sora2Poll(taskId, uid, runId, controllers, token) {
-  const deadline = Date.now() + (15 * 60 * 1000);
+  const deadline = Date.now() + (40 * 60 * 1000);
   while (Date.now() < deadline) {
     if (token && token.cancelled) return;
     if (document.visibilityState === 'hidden') {
@@ -6337,7 +6346,7 @@ async function sora2Poll(taskId, uid, runId, controllers, token) {
 
 async function pollGeneration(runId, controllers, token, taskId, checker) {
   if (!currentUser || !runId || !controllers || !controllers.length) return;
-  const maxMs = 900000;
+  const maxMs = 2400000;
   const started = Date.now();
   while (Date.now() - started < maxMs) {
     await new Promise((r) => setTimeout(r, 3000));
@@ -12998,6 +13007,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
        the screen wait their turn and play instantly when swiped in. Desktop
        result cards are a different renderer and are not affected. */
     (() => {
+      if (!window.matchMedia('(max-width: 767px)').matches) return;
       const isVisible = (el) => {
         const r = el.getBoundingClientRect();
         if (!r.width || !r.height) return false;
