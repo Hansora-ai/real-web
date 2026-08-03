@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="hy">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hansora AI — Անվճար դասընթաց</title>
+  <meta name="description" content="Սովորեք աշխատել Hansora AI-ի հետ՝ տեսադասերով, պատրաստի prompt-երով և գործնական օրինակներով։">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="icon" href="/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Armenian:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="/header.css" rel="stylesheet">
+  <style>
+    :root{--bg:#06070b;--surface:#0e1018;--surface2:#141725;--line:rgba(255,255,255,.1);--muted:#a4a9ba;--purple:#9b6cff;--blue:#49b9ff;--success:#52dfa1}
+    *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:var(--bg);color:#fff;font-family:"Noto Sans Armenian",Inter,system-ui,sans-serif;min-height:100vh}
+    button,a{font:inherit} button{color:inherit} .hidden{display:none!important}
+    .page-bg{position:fixed;inset:0;z-index:-1;overflow:hidden;background:radial-gradient(circle at 15% 8%,rgba(121,73,255,.16),transparent 34%),radial-gradient(circle at 88% 22%,rgba(38,167,255,.11),transparent 30%),#06070b}
+    .page-bg:after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,black,transparent 76%)}
+    .shell{width:min(1480px,calc(100% - 32px));margin:0 auto}.hero{padding:78px 0 54px;text-align:center}.eyebrow{display:inline-flex;align-items:center;gap:9px;border:1px solid rgba(155,108,255,.38);background:rgba(155,108,255,.09);border-radius:999px;padding:8px 14px;color:#d5c3ff;font-size:13px;font-weight:700}.eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 14px var(--success)}
+    h1{font-size:clamp(38px,6vw,72px);line-height:1.07;letter-spacing:-.045em;margin:22px auto 18px;max-width:920px}.gradient{background:linear-gradient(100deg,#fff 20%,#c6a9ff 53%,#7ed4ff);-webkit-background-clip:text;background-clip:text;color:transparent}.lead{color:#b7bbca;font-size:clamp(16px,2vw,20px);line-height:1.8;max-width:790px;margin:0 auto}.hero-meta{display:flex;justify-content:center;flex-wrap:wrap;gap:14px 25px;margin-top:30px;color:#d9dbe3;font-size:14px}.hero-meta span:before{content:"✓";color:var(--success);margin-right:8px;font-weight:800}
+    .course-grid{display:grid;grid-template-columns:1fr;gap:22px}.card{background:linear-gradient(145deg,rgba(20,23,37,.94),rgba(11,13,21,.96));border:1px solid var(--line);border-radius:24px;box-shadow:0 20px 70px rgba(0,0,0,.28)}.player-card{overflow:hidden;width:100%}.player-wrap{position:relative;aspect-ratio:16/9;background:#020308;cursor:pointer}.player-wrap iframe{width:100%;height:100%;border:0}.video-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;background:radial-gradient(circle at 50% 40%,rgba(139,94,255,.24),transparent 36%),linear-gradient(145deg,#111424,#080910)}.video-empty .play{width:96px;height:96px;border:1px solid rgba(255,255,255,.26);border-radius:50%;display:grid;place-items:center;margin:0 auto 20px;background:linear-gradient(145deg,#9a63ff,#358edb);box-shadow:0 16px 45px rgba(117,75,255,.4);font-size:32px;padding-left:5px}.video-empty strong{display:block;font-size:22px}.video-empty small{display:block;color:#aeb3c2;margin-top:9px}.player-info{padding:24px 26px 27px}.player-topline{display:flex;justify-content:space-between;gap:16px;align-items:center}.lesson-kicker{color:#a88aff;font-weight:700;font-size:13px}.access-pill{padding:6px 10px;border-radius:999px;background:rgba(82,223,161,.1);color:#85efbd;font-size:12px;font-weight:700}.player-info h2{font-size:25px;line-height:1.35;margin:10px 0 8px}.player-info p{margin:0;color:var(--muted);line-height:1.7;font-size:14px}
+    .side{padding:26px}.side-title{display:flex;justify-content:space-between;align-items:center;padding:4px 4px 18px}.side-title h2{font-size:19px;margin:0}.progress{font-size:13px;color:var(--muted)}.lesson-list{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}.lesson-btn{width:100%;display:block;text-align:left;border:1px solid transparent;background:rgba(255,255,255,.035);border-radius:18px;padding:0;overflow:hidden;cursor:pointer;transition:.2s}.lesson-btn:hover{background:rgba(255,255,255,.065);border-color:rgba(255,255,255,.08);transform:translateY(-2px)}.lesson-btn.active{background:rgba(143,94,255,.12);border-color:rgba(155,108,255,.58);box-shadow:0 10px 28px rgba(111,70,214,.17)}.lesson-btn.coming{opacity:.68}.lesson-thumb{position:relative;display:block;aspect-ratio:16/9;background-size:cover;background-position:center;background-color:#171a27}.lesson-thumb:after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(7,8,13,.48),transparent 58%)}.lesson-thumb-play{position:absolute;z-index:1;left:50%;top:50%;transform:translate(-50%,-50%);width:48px;height:48px;border-radius:50%;display:grid;place-items:center;padding-left:2px;background:rgba(8,9,14,.74);border:1px solid rgba(255,255,255,.4);font-size:16px}.lesson-btn:hover .lesson-thumb-play{background:#8d5cff}.lesson-thumb.coming-thumb{display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,rgba(155,108,255,.22),transparent 35%),#171a27;color:#a9aebe;font-size:13px}.lesson-row{display:grid;grid-template-columns:40px 1fr auto;gap:11px;align-items:center;padding:15px}.lesson-num{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:#202437;color:#d7d9e3;font-weight:800;font-size:15px}.lesson-btn.active .lesson-num{background:linear-gradient(145deg,#9a63ff,#408fe8);color:white}.lesson-copy strong{display:block;font-size:13px;line-height:1.45}.lesson-copy small{display:block;margin-top:5px;color:#8f95a7;font-size:11px}.lock{color:#777e92;font-size:15px}.lesson-btn.unlocked .lock{color:var(--success)}
+    .lesson-content{margin:24px 0 80px;display:grid;gap:22px}.section-card{padding:28px}.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:18px}.section-head h2{margin:0;font-size:22px}.section-head p{margin:7px 0 0;color:var(--muted);font-size:13px}.prompt-list{display:grid;gap:12px}.prompt{border:1px solid var(--line);border-radius:16px;background:rgba(0,0,0,.2);overflow:hidden}.prompt-main{display:grid;grid-template-columns:1fr auto;gap:18px;padding:16px 17px;align-items:start}.prompt-text{color:#d9dce7;line-height:1.75;font-family:Inter,"Noto Sans Armenian",sans-serif;font-size:13px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}.prompt.expanded .prompt-text{-webkit-line-clamp:unset}.prompt-actions{display:flex;gap:8px}.mini-btn{border:1px solid var(--line);background:rgba(255,255,255,.05);border-radius:10px;padding:8px 11px;font-size:12px;cursor:pointer;white-space:nowrap}.mini-btn:hover{background:rgba(255,255,255,.1)}.copy-btn{color:#d4c5ff;border-color:rgba(155,108,255,.3)}
+    .feedback-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px}.choice{position:relative}.choice input{position:absolute;opacity:0}.choice span{display:flex;min-height:54px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:rgba(255,255,255,.03);color:#c8cbd5;font-size:13px;cursor:pointer;transition:.18s}.choice span:before{content:"";width:16px;height:16px;border:1px solid #646a7c;border-radius:50%;margin-right:10px;flex:0 0 auto}.choice input:checked+span{border-color:#9b6cff;background:rgba(155,108,255,.11);color:#fff}.choice input:checked+span:before{border:5px solid #9b6cff;background:#fff}.comment{width:100%;min-height:100px;resize:vertical;margin-top:14px;border:1px solid var(--line);border-radius:14px;background:rgba(0,0,0,.22);color:#fff;padding:14px 15px;font:inherit;font-size:13px;outline:none}.comment:focus{border-color:#8b61e5;box-shadow:0 0 0 3px rgba(139,97,229,.12)}.submit{margin-top:13px;border:0;border-radius:12px;padding:12px 18px;background:linear-gradient(105deg,#925cff,#368fdc);font-weight:700;cursor:pointer}.submit:disabled{opacity:.5;cursor:wait}
+    .gate{padding:19px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:20px;background:linear-gradient(105deg,rgba(155,108,255,.14),rgba(73,185,255,.07));border-color:rgba(155,108,255,.25)}.gate strong{font-size:15px}.gate p{color:#b4b7c4;margin:5px 0 0;font-size:12px}.primary{border:0;border-radius:12px;background:linear-gradient(105deg,#965fff,#358fdc);padding:12px 17px;font-weight:800;cursor:pointer;white-space:nowrap;text-decoration:none;color:#fff}.primary:hover{filter:brightness(1.08)}
+    .modal{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.78);backdrop-filter:blur(12px)}.modal.open{display:flex}.modal-box{position:relative;width:min(920px,100%);max-height:92vh;overflow:auto;border:1px solid rgba(255,255,255,.14);border-radius:24px;background:#10121b;padding:28px;box-shadow:0 25px 90px #000}.modal-close{position:absolute;top:16px;right:16px;width:37px;height:37px;border-radius:50%;border:1px solid var(--line);background:#1a1d29;cursor:pointer}.modal h2{text-align:center;margin:4px 36px 9px;font-size:28px}.modal-sub{text-align:center;color:var(--muted);margin:0 auto 23px;max-width:620px;line-height:1.65;font-size:14px}.packs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.pack{position:relative;border:1px solid var(--line);border-radius:17px;padding:18px 15px;background:rgba(255,255,255,.03)}.pack.featured{border-color:#9060ed;box-shadow:inset 0 0 0 1px rgba(144,96,237,.24);background:rgba(144,96,237,.08)}.pack-badge{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#8f5bea;border-radius:99px;padding:4px 9px;font-size:9px;font-weight:800;white-space:nowrap}.pack small{color:#9ca1b1}.pack h3{font-size:21px;margin:8px 0 3px}.price{font-size:25px;font-weight:800;margin:15px 0}.buy{display:block;width:100%;border:0;border-radius:11px;padding:11px;background:#fff;color:#0d0e14;font-weight:800;cursor:pointer}.featured .buy{background:linear-gradient(105deg,#965fff,#4ebcfb);color:white}.signup-box{width:min(460px,100%);text-align:center}.signup-box .icon{width:62px;height:62px;border-radius:18px;margin:0 auto 15px;display:grid;place-items:center;background:rgba(155,108,255,.14);color:#b899ff;font-size:27px}.signup-box p{color:var(--muted);line-height:1.7}.signup-actions{display:flex;justify-content:center;gap:10px;margin-top:20px}.secondary{border:1px solid var(--line);background:#191c27;border-radius:12px;padding:12px 17px;cursor:pointer;text-decoration:none;color:#fff}.toast{position:fixed;left:50%;bottom:24px;z-index:11000;transform:translate(-50%,20px);opacity:0;pointer-events:none;border:1px solid var(--line);border-radius:13px;background:#181b25;padding:12px 17px;color:#fff;font-size:13px;transition:.25s;box-shadow:0 10px 40px #000}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:900px){.lesson-list{grid-template-columns:repeat(2,1fr)}.packs{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:640px){.shell{width:min(100% - 20px,1480px)}.hero{padding:48px 0 35px}h1{font-size:39px}.hero-meta{display:grid;gap:8px;text-align:left;margin-left:auto;margin-right:auto;width:max-content}.lesson-list{grid-template-columns:1fr}.section-card{padding:20px}.feedback-options{grid-template-columns:1fr}.prompt-main{grid-template-columns:1fr}.prompt-actions{justify-content:flex-end}.gate{align-items:flex-start;flex-direction:column}.gate .primary{width:100%}.packs{grid-template-columns:1fr}.modal-box{padding:23px 16px}.modal h2{font-size:22px}.player-info{padding:20px}.player-info h2{font-size:21px}}
+    .prompt-body{min-width:0}.prompt-title{margin:0 0 10px;color:#fff;font-size:16px;line-height:1.4}.prompt-text{white-space:pre-wrap}.lang-btn{color:#8fc8ff;border-color:rgba(73,185,255,.35)}
+    /* Keep the main player at its original width; widen only the lesson selector. */
+    .shell{width:min(1180px,calc(100% - 32px))}
+    .course-grid{width:100%;min-width:0;grid-template-columns:minmax(0,1fr)}
+    .side{width:min(1480px,calc(100vw - 32px));margin-left:50%;transform:translateX(-50%)}
+    .lesson-btn:nth-child(1) .lesson-thumb{background-image:url('https://i.ytimg.com/vi/yqjvoOV78xk/hqdefault.jpg')!important}
+    .lesson-btn:nth-child(2) .lesson-thumb{background-image:url('https://i.ytimg.com/vi/KqXOQ6Edw6g/hqdefault.jpg')!important}
+    .lesson-btn:nth-child(3) .lesson-thumb{background-image:url('https://i.ytimg.com/vi/khAT8qCwOxI/hqdefault.jpg')!important}
+    @media(max-width:640px){.shell{width:min(100% - 20px,1180px)}.side{width:100%;margin-left:0;transform:none}}
+  </style>
+</head>
+<body>
+  <div class="page-bg"></div>
+  <div id="hsHeader"></div>
+
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow"><i></i> HANSORA AI ԴԱՍԸՆԹԱՑ</div>
+      <h1><span class="gradient">Սովորիր ստեղծել AI-ով՝ քայլ առ քայլ</span></h1>
+      <p class="lead">Երեք գործնական տեսադաս, պատրաստի prompt-եր և իրական օրինակներ, որոնք կօգնեն քեզ վստահ աշխատել Hansora AI-ի հետ։</p>
+      <div class="hero-meta"><span>3 գործնական դաս + նորերը շուտով</span><span>Պատրաստի prompt-եր</span><span>Մշտական հասանելիություն</span></div>
+    </section>
+
+    <section class="course-grid">
+      <article class="card player-card">
+        <div id="playerWrap" class="player-wrap">
+          <div id="videoEmpty" class="video-empty">
+            <div><div class="play">▶</div><strong>Տեսանյութը շուտով կավելացվի</strong><small>Էջը և ամբողջ տրամաբանությունն արդեն պատրաստ են</small></div>
+          </div>
+        </div>
+        <div id="playerInfo" class="player-info hidden">
+          <div class="player-topline"><span id="lessonKicker" class="lesson-kicker"></span><span id="accessPill" class="access-pill"></span></div>
+          <h2 id="lessonTitle"></h2>
+          <p id="lessonDescription"></p>
+        </div>
+      </article>
+
+      <aside class="card side">
+        <div class="side-title"><h2>Դասընթացի ծրագիր</h2><span id="progressText" class="progress">0 / 5 դաս հասանելի</span></div>
+        <div id="lessonList" class="lesson-list"></div>
+      </aside>
+    </section>
+
+    <section id="lessonContent" class="lesson-content hidden">
+      <article class="card section-card">
+        <div class="section-head"><div><h2>Օգտագործման պատրաստ հրահանգներ</h2><p>Ընտրեք հրահանգը, կարդացեք կամ պատճենեք և օգտագործեք անմիջապես Hansora AI-ում։</p></div></div>
+        <div id="promptList" class="prompt-list"></div>
+      </article>
+
+      <article class="card section-card">
+        <div class="section-head"><div><h2>Ինչպե՞ս կգնահատեք այս դասը</h2><p>Ձեր պատասխանը կօգնի մեզ բարելավել դասընթացը։</p></div></div>
+        <form id="feedbackForm">
+          <div id="feedbackOptions" class="feedback-options"></div>
+          <textarea id="feedbackComment" class="comment" maxlength="1500" placeholder="Ցանկության դեպքում գրեք ձեր կարծիքը կամ առաջարկը…"></textarea>
+          <button id="feedbackSubmit" class="submit" type="submit">Ուղարկել պատասխանը</button>
+        </form>
+      </article>
+    </section>
+  </main>
+
+  <div id="signupModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="signupTitle">
+    <div class="modal-box signup-box">
+      <button class="modal-close" data-close-modal aria-label="Փակել">×</button>
+      <div class="icon">♙</div><h2 id="signupTitle">Գրանցումը պարտադիր է</h2>
+      <p>Դասերը դիտելու, կրեդիտներ գնելու և ձեր պատասխանները պահպանելու համար նախ մուտք գործեք կամ ստեղծեք անվճար հաշիվ։</p>
+      <div class="signup-actions"><button class="secondary" data-close-modal type="button">Հետ գնալ</button><a class="primary" href="/login.html?mode=signup&return_to=%2Fcourse.html">Գրանցվել</a></div>
+    </div>
+  </div>
+
+  <div id="creditsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="creditsTitle">
+    <div class="modal-box">
+      <button class="modal-close" data-close-modal aria-label="Փակել">×</button>
+      <h2 id="creditsTitle">Ընտրեք կրեդիտների փաթեթը</h2>
+      <p class="modal-sub">Գնեք կրեդիտներ և ստացեք ամբողջ դասընթացի մշտական հասանելիություն։ Կրեդիտները չեն սպառվում և ամբողջությամբ մնում են ձեր հաշվին։</p>
+      <div id="creditPacks" class="packs"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://assets.mediadelivery.net/playerjs/playerjs-latest.min.js"></script>
+  <script src="/hs-header.js"></script>
+  <script>
+  (function(){
+    'use strict';
+    const COURSE_CONFIG = {
+      // Video IDs are returned only after a server-side login/access check.
+      introVideoId: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/intro.mp4',
+      lessons: [
+        {id:'lesson-1', videoId:'https://player.mediadelivery.net/embed/719723/1429007c-5a9a-4671-8e5b-4714514db527?autoplay=false&loop=false&muted=false&preload=true&responsive=true', thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/1429007c-5a9a-4671-8e5b-4714514db527/thumbnail.jpg', title:'Դաս 1․ Պատկերի ստեղծում', duration:'30 րոպե', description:'Սովորեք Hansora AI-ի միջոցով ստեղծել որակյալ պատկերներ՝ ճիշտ գործիքների, կարգավորումների և prompt-երի օգնությամբ։', prompts:[
+          'Ստեղծիր պրոֆեսիոնալ ապրանքային լուսանկար [ԱՊՐԱՆՔ]-ի համար։ Օգտագործիր փափուկ ստուդիական լուսավորություն, մաքուր ֆոն, իրատեսական նյութեր և գովազդային բարձր որակ։',
+          'Ստեղծիր մանրամասն կինեմատոգրաֆիկ տեսարան հետևյալ գաղափարով՝ [ԳԱՂԱՓԱՐ]։ Նկարագրիր միջավայրը, լուսավորությունը, տեսախցիկի անկյունը և գունային տրամադրությունը։',
+          'Վերափոխիր այս պարզ գաղափարը պրոֆեսիոնալ AI prompt-ի՝ [ԳՐԵՔ ԳԱՂԱՓԱՐԸ]։ Ավելացրու ոճ, կոմպոզիցիա, լուսավորություն և տեխնիկական մանրամասներ։'
+        ]},
+        {id:'lesson-2', videoId:'https://player.mediadelivery.net/embed/719723/5394456c-2878-49a1-9e54-0713de3e8f11?autoplay=false&loop=false&muted=false&preload=true&responsive=true', thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/5394456c-2878-49a1-9e54-0713de3e8f11/thumbnail.jpg', title:'Դաս 2․ Տեսանյութի ստեղծում — Մաս 1', duration:'30 րոպե', description:'Ծանոթացեք Hansora AI-ի տեսանյութերի ստեղծման հիմնական գործիքներին և պատրաստեք ձեր առաջին AI տեսանյութը։', prompts:[
+          'Ստեղծիր սոցիալական ցանցերի համար 9:16 գովազդային տեսանյութ [ԱՊՐԱՆՔ]-ի մասին։ Առաջին 2 վայրկյանում օգտագործիր ուժեղ hook, ապա ցույց տուր հիմնական առավելությունը և ավարտիր հստակ գործողության կոչով։',
+          'Նկարագրիր նույն կերպարը երեք տարբեր տեսարաններում՝ պահպանելով դեմքը, հագուստը և գունային ոճը։ Կերպարի նկարագրություն՝ [ՆԿԱՐԱԳՐՈՒԹՅՈՒՆ]։',
+          'Ստեղծիր premium բրենդային visual [ԲՐԵՆԴ]-ի համար՝ մինիմալիստական կոմպոզիցիայով, հարուստ նյութերով և ժամանակակից գովազդային լուսավորությամբ։'
+        ]},
+        {id:'lesson-3', videoId:'https://player.mediadelivery.net/embed/719723/4facee7d-ad25-4c2b-bbdf-995ba4b841a1?autoplay=false&loop=false&muted=false&preload=true&responsive=true', thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/4facee7d-ad25-4c2b-bbdf-995ba4b841a1/thumbnail.jpg', title:'Դաս 3․ Տեսանյութի ստեղծում — Մաս 2', duration:'30 րոպե', description:'Շարունակեք տեսանյութերի ստեղծման աշխատանքը՝ ավելի առաջադեմ քայլերով, կարգավորումներով և գործնական օրինակներով։', prompts:[
+          'Կազմիր 5 քայլից բաղկացած AI content workflow [ԲԻԶՆԵՍԻ ՏԵՍԱԿ]-ի համար՝ ներառելով գաղափարը, visual-ը, տեսանյութը, տեքստը և հրապարակումը։',
+          'Ստեղծիր մեկ ապրանքից 5 տարբեր գովազդային creative-ի գաղափար։ Յուրաքանչյուրի համար տուր hook, հիմնական տեսարան, վերնագիր և գործողության կոչ։ Ապրանքը՝ [ԱՊՐԱՆՔ]։',
+          'Վերլուծիր այս creative գաղափարը՝ [ԳԱՂԱՓԱՐ]։ Առաջարկիր երեք բարելավում՝ ուշադրության, վստահության և վաճառքի հավանականության բարձրացման համար։'
+        ]},
+        {id:'lesson-4', videoId:'', title:'Դաս 4․ Շուտով', duration:'Շուտով', description:'Այս դասի վերնագիրը և բովանդակությունը շուտով կավելացվեն։', prompts:[], comingSoon:true},
+        {id:'lesson-5', videoId:'', title:'Դաս 5․ Շուտով', duration:'Շուտով', description:'Այս դասի վերնագիրը և բովանդակությունը շուտով կավելացվեն։', prompts:[], comingSoon:true}
+      ]
+    };
+    const IMAGE_PROMPTS = [
+      {
+        title:'1. Տեքստից պատկեր',
+        text:`You are a professional AI image prompt director specializing in ultra-realistic photography.
+
+Turn the information inside the square brackets into one complete, highly detailed prompt for generating a realistic AI image.
+
+MY IDEA:
+
+Main subject: [DESCRIBE THE PERSON, PRODUCT, ANIMAL, OR OBJECT]
+
+Action or pose: [DESCRIBE WHAT THE SUBJECT IS DOING]
+
+Environment: [DESCRIBE THE LOCATION AND BACKGROUND]
+
+Clothing and appearance: [DESCRIBE CLOTHING, HAIR, ACCESSORIES, OR OTHER IMPORTANT DETAILS]
+
+Lighting and time: [FOR EXAMPLE: SOFT MORNING SUNLIGHT, GOLDEN HOUR, OVERCAST DAYLIGHT, OR NIGHT LIGHTING]
+
+Mood: [FOR EXAMPLE: PEACEFUL, LUXURIOUS, DRAMATIC, JOYFUL, OR MYSTERIOUS]
+
+Shot type and camera angle: [FOR EXAMPLE: CLOSE-UP, MEDIUM SHOT, FULL-BODY SHOT, EYE-LEVEL, LOW ANGLE, OR OVERHEAD]
+
+Aspect ratio: [FOR EXAMPLE: 9:16, 1:1, 4:5, OR 16:9]
+
+Additional requirements: [ADD ANYTHING THAT MUST BE INCLUDED, PRESERVED, OR AVOIDED]
+
+PROMPT REQUIREMENTS:
+
+- Create one coherent photographic scene—not a list of disconnected keywords.
+- Make the image look like a genuine photograph captured with a professional camera.
+- Clearly describe the subject, action, environment, composition, camera position, lighting, colors, mood, and photographic texture.
+- Include natural skin texture with visible pores and subtle imperfections when a person is present.
+- Use realistic anatomy, facial proportions, hands, clothing, materials, shadows, reflections, and environmental details.
+- Make the lighting physically consistent with the environment and time of day.
+- Choose a suitable professional camera and lens based on the requested composition.
+- Avoid plastic skin, excessive beauty retouching, artificial HDR, oversaturation, distorted anatomy, fake-looking background blur, illustration, painting, cartoon, 3D-render, and CGI aesthetics.
+- Do not add text, logos, watermarks, or extra people unless I specifically request them.
+- If one of my descriptions is short, intelligently complete the missing creative details while preserving my original idea.
+- Do not explain your decisions.
+- Return only the final ready-to-use image-generation prompt.`,
+        ru:`Вы — профессиональный режиссёр промптов для изображений ИИ, специализирующийся на ультрареалистичной фотографии.
+
+Преобразуйте информацию в квадратных скобках в один цельный, максимально подробный промпт для создания реалистичного изображения с помощью ИИ.
+
+МОЯ ИДЕЯ:
+
+Главный объект: [ОПИШИТЕ ЧЕЛОВЕКА, ПРОДУКТ, ЖИВОТНОЕ ИЛИ ПРЕДМЕТ]
+
+Действие или поза: [ОПИШИТЕ, ЧТО ДЕЛАЕТ ОБЪЕКТ]
+
+Окружение: [ОПИШИТЕ МЕСТО И ФОН]
+
+Одежда и внешний вид: [ОПИШИТЕ ОДЕЖДУ, ВОЛОСЫ, АКСЕССУАРЫ ИЛИ ДРУГИЕ ВАЖНЫЕ ДЕТАЛИ]
+
+Освещение и время: [НАПРИМЕР: МЯГКИЙ УТРЕННИЙ СОЛНЕЧНЫЙ СВЕТ, ЗОЛОТОЙ ЧАС, ПАСМУРНЫЙ ДНЕВНОЙ СВЕТ ИЛИ НОЧНОЕ ОСВЕЩЕНИЕ]
+
+Настроение: [НАПРИМЕР: СПОКОЙНОЕ, РОСКОШНОЕ, ДРАМАТИЧНОЕ, РАДОСТНОЕ ИЛИ ТАИНСТВЕННОЕ]
+
+Тип кадра и ракурс камеры: [НАПРИМЕР: КРУПНЫЙ ПЛАН, СРЕДНИЙ ПЛАН, КАДР В ПОЛНЫЙ РОСТ, НА УРОВНЕ ГЛАЗ, НИЗКИЙ РАКУРС ИЛИ ВИД СВЕРХУ]
+
+Соотношение сторон: [НАПРИМЕР: 9:16, 1:1, 4:5 ИЛИ 16:9]
+
+Дополнительные требования: [ДОБАВЬТЕ ВСЁ, ЧТО НЕОБХОДИМО ВКЛЮЧИТЬ, СОХРАНИТЬ ИЛИ ИЗБЕЖАТЬ]
+
+ТРЕБОВАНИЯ К ПРОМПТУ:
+
+- Создайте одну цельную фотографическую сцену, а не список несвязанных ключевых слов.
+- Изображение должно выглядеть как настоящая фотография, снятая профессиональной камерой.
+- Чётко опишите объект, действие, окружение, композицию, положение камеры, освещение, цвета, настроение и фотографическую текстуру.
+- Если в кадре присутствует человек, добавьте естественную текстуру кожи с видимыми порами и лёгкими несовершенствами.
+- Используйте реалистичную анатомию, пропорции лица, руки, одежду, материалы, тени, отражения и детали окружения.
+- Освещение должно быть физически согласовано с окружением и временем суток.
+- Выберите подходящую профессиональную камеру и объектив с учётом требуемой композиции.
+- Избегайте пластиковой кожи, чрезмерной ретуши, искусственного HDR, перенасыщенности, искажённой анатомии, неестественного размытия фона, иллюстративности, живописи, мультяшности, 3D-рендера и CGI-эстетики.
+- Не добавляйте текст, логотипы, водяные знаки или лишних людей, если я прямо об этом не прошу.
+- Если одно из моих описаний слишком короткое, разумно дополните недостающие творческие детали, сохранив исходную идею.
+- Не объясняйте свои решения.
+- Верните только финальный готовый к использованию промпт для генерации изображения.`
+      },
+      {
+        title:'2. Կրեատիվ պատկեր',
+        text:`**Act as a professional AI photography and creative director.**
+
+Analyze the attached reference image and create one complete, detailed prompt for generating a new ultra-realistic image with a closely related visual concept and creative direction.
+
+Study the reference image’s main idea, composition, camera angle, subject placement, environment, lighting direction, colors, mood, depth, styling, and photographic texture.
+
+Create my version with the following requirements:
+
+New subject or product: [DESCRIBE WHO OR WHAT SHOULD APPEAR]
+
+Changes I want: [DESCRIBE WHAT SHOULD BE DIFFERENT]
+
+Additional requirements: [ADD IMPORTANT DETAILS OR WRITE “NONE”]
+
+The final result must look like a genuine professional photograph with natural skin texture when people are present, realistic anatomy, physically believable lighting, accurate materials, natural shadows, and subtle real-world imperfections.
+
+Do not include any logos, watermarks, or written text from the reference. Do not mention the reference image in the final prompt.
+
+**Return only the final ready-to-use image-generation prompt.**`,
+        ru:`**Выступите в роли профессионального фотографа ИИ и креативного директора.**
+
+Проанализируйте прикреплённое референсное изображение и создайте один цельный, подробный промпт для генерации нового ультрареалистичного изображения с близкой визуальной концепцией и креативным направлением.
+
+Изучите основную идею референса, композицию, ракурс камеры, расположение объекта, окружение, направление света, цвета, настроение, глубину, стилизацию и фотографическую текстуру.
+
+Создайте мою версию с учётом следующих требований:
+
+Новый объект или продукт: [ОПИШИТЕ, КТО ИЛИ ЧТО ДОЛЖНО БЫТЬ В КАДРЕ]
+
+Желаемые изменения: [ОПИШИТЕ, ЧТО ДОЛЖНО ОТЛИЧАТЬСЯ]
+
+Дополнительные требования: [ДОБАВЬТЕ ВАЖНЫЕ ДЕТАЛИ ИЛИ НАПИШИТЕ «НЕТ»]
+
+Финальный результат должен выглядеть как настоящая профессиональная фотография: с естественной текстурой кожи при наличии людей, реалистичной анатомией, физически правдоподобным освещением, точными материалами, естественными тенями и лёгкими несовершенствами реального мира.
+
+Не включайте логотипы, водяные знаки или письменный текст из референса. Не упоминайте референсное изображение в финальном промпте.
+
+**Верните только финальный готовый к использованию промпт для генерации изображения.**`
+      },
+      {
+        title:'3. Շարունակական պատկերներ',
+        text:`Act as a professional AI photography director, image-editing prompt engineer, and visual continuity supervisor.
+
+Analyze the attached image and write one complete image-editing prompt for creating the next shot in the same realistic photo series.
+
+IMPORTANT: This is an image-editing and visual-continuity task—not a new character generation.
+
+The attached image is the sole visual reference and identity source. The person in the new shot must remain unmistakably the exact same individual. Do not use the image merely as inspiration, do not create a similar-looking person, and do not reinterpret or beautify the face.
+
+IDENTITY LOCK:
+
+Preserve the person’s exact facial identity, including:
+
+- Exact face shape and facial proportions
+- Eye shape, size, color, spacing, and direction
+- Eyebrows and eyelashes
+- Nose shape and size
+- Lip shape, size, and natural color
+- Jawline, cheeks, chin, forehead, and ears
+- Skin tone, visible skin texture, pores, and natural imperfections
+- Hairline, hairstyle, hair color, length, and texture
+- Age, body type, and body proportions
+- Makeup and expression style
+
+The person must look like the same photographed individual—not a recreation, replacement, face swap, or approximate variation.
+
+CONTINUITY LOCK:
+
+Unless I explicitly request a change, preserve every visible detail from the attached image, including:
+
+- Exact clothing design, fit, length, fabric, colors, seams, and folds
+- Exact hairstyle and hair accessories
+- Jewelry, glasses, gloves, shoes, socks, and all other accessories
+- Products, props, and their colors, shapes, materials, and quantities
+- Overall fashion styling and visual character
+- Lighting quality, exposure, contrast, white balance, and color grading
+- Camera realism, lens character, depth of field, sharpness, and photographic texture
+- Natural skin detail, fabric texture, material reflections, shadows, and environmental detail
+
+Do not simplify, redesign, replace, remove, or add details unless I explicitly request it.
+
+Create the next shot with only these changes:
+
+New action or pose: [DESCRIBE THE NEW ACTION OR POSE]
+
+New location or background: [DESCRIBE THE NEW LOCATION, OR WRITE “KEEP THE EXACT SAME LOCATION”]
+
+New camera composition: [DESCRIBE THE SHOT TYPE, CAMERA ANGLE, AND FRAMING]
+
+Other requested changes: [DESCRIBE ANY OTHER CHANGES, OR WRITE “NONE”]
+
+EDITING PRIORITIES:
+
+1. Exact facial identity and recognizable appearance
+2. Exact clothing, accessories, products, and important visual details
+3. The original image’s realism, resolution, and photographic quality
+4. The requested new pose, action, location, and camera composition
+
+If any requested change conflicts with identity or continuity, preserve the person’s identity and unchanged details first.
+
+REALISM AND QUALITY LOCK:
+
+The new shot must match the original image’s photographic quality. Preserve the same level of resolution, sharpness, natural skin microtexture, fabric detail, material accuracy, realistic anatomy, lighting consistency, contrast, color depth, and subtle real-world imperfections.
+
+Do not make the result smoother, cleaner, more artificial, more cinematic, or more stylized than the attached image. Do not introduce plastic skin, excessive retouching, artificial HDR, oversaturation, fake background blur, CGI textures, illustration, distorted anatomy, incorrect hands, or inconsistent lighting.
+
+When the pose or camera angle changes, reconstruct only the areas that must change. Preserve all unaffected identity and styling details as faithfully as possible.
+
+Do not add text, logos, watermarks, extra people, new accessories, or unrequested objects.
+
+Write the final prompt as a direct instruction for editing the attached image. Clearly state that the attached image must remain the identity, wardrobe, detail, and quality reference.
+
+Do not explain your analysis or decisions.
+
+Return only the final ready-to-use image-editing prompt.`,
+        ru:`Выступите в роли профессионального постановщика AI-фотографии, инженера промптов для редактирования изображений и специалиста по визуальной непрерывности.
+
+Проанализируйте прикреплённое изображение и напишите один цельный промпт для редактирования изображения, чтобы создать следующий кадр той же реалистичной фотосерии.
+
+ВАЖНО: Это задача по редактированию изображения и сохранению визуальной непрерывности, а не генерация нового персонажа.
+
+Прикреплённое изображение является единственным визуальным референсом и источником идентичности. Человек в новом кадре должен безошибочно оставаться тем же самым человеком. Не используйте изображение только как источник вдохновения, не создавайте похожего человека, не переосмысливайте и не приукрашивайте лицо.
+
+ФИКСАЦИЯ ИДЕНТИЧНОСТИ:
+
+Сохраните точную идентичность лица человека, включая:
+
+- Точную форму лица и пропорции
+- Форму, размер, цвет, расстояние и направление взгляда глаз
+- Брови и ресницы
+- Форму и размер носа
+- Форму, размер и естественный цвет губ
+- Линию челюсти, щёки, подбородок, лоб и уши
+- Тон кожи, видимую текстуру кожи, поры и естественные несовершенства
+- Линию роста волос, причёску, цвет, длину и текстуру волос
+- Возраст, тип телосложения и пропорции тела
+- Макияж и характер выражения лица
+
+Человек должен выглядеть как тот же сфотографированный человек, а не как реконструкция, замена, подмена лица или приблизительная вариация.
+
+ФИКСАЦИЯ НЕПРЕРЫВНОСТИ:
+
+Если я прямо не прошу об изменении, сохраните каждую видимую деталь прикреплённого изображения, включая:
+
+- Точный дизайн, посадку, длину, ткань, цвета, швы и складки одежды
+- Точную причёску и аксессуары для волос
+- Украшения, очки, перчатки, обувь, носки и все остальные аксессуары
+- Продукты, реквизит, их цвета, формы, материалы и количество
+- Общий модный стиль и визуальный характер
+- Качество освещения, экспозицию, контраст, баланс белого и цветокоррекцию
+- Реалистичность камеры, характер объектива, глубину резкости, чёткость и фотографическую текстуру
+- Естественные детали кожи, текстуру ткани, отражения материалов, тени и детали окружения
+
+Не упрощайте, не переделывайте, не заменяйте, не удаляйте и не добавляйте детали, если я прямо этого не прошу.
+
+Создайте следующий кадр, изменив только следующее:
+
+Новое действие или поза: [ОПИШИТЕ НОВОЕ ДЕЙСТВИЕ ИЛИ ПОЗУ]
+
+Новое место или фон: [ОПИШИТЕ НОВОЕ МЕСТО ИЛИ НАПИШИТЕ «СОХРАНИТЬ ТОЧНО ТО ЖЕ МЕСТО»]
+
+Новая композиция камеры: [ОПИШИТЕ ТИП КАДРА, РАКУРС КАМЕРЫ И КАДРИРОВАНИЕ]
+
+Другие запрошенные изменения: [ОПИШИТЕ ДРУГИЕ ИЗМЕНЕНИЯ ИЛИ НАПИШИТЕ «НЕТ»]
+
+ПРИОРИТЕТЫ РЕДАКТИРОВАНИЯ:
+
+1. Точная идентичность лица и узнаваемая внешность
+2. Точная одежда, аксессуары, продукты и важные визуальные детали
+3. Реалистичность, разрешение и фотографическое качество исходного изображения
+4. Запрошенные новая поза, действие, место и композиция камеры
+
+Если какое-либо изменение конфликтует с идентичностью или непрерывностью, в первую очередь сохраните идентичность человека и все неизменяемые детали.
+
+ФИКСАЦИЯ РЕАЛИЗМА И КАЧЕСТВА:
+
+Новый кадр должен соответствовать фотографическому качеству исходного изображения. Сохраните тот же уровень разрешения, чёткости, естественной микротекстуры кожи, детализации ткани, точности материалов, реалистичной анатомии, согласованности освещения, контраста, глубины цвета и лёгких несовершенств реального мира.
+
+Не делайте результат более гладким, чистым, искусственным, кинематографичным или стилизованным, чем исходное изображение. Не добавляйте пластиковую кожу, чрезмерную ретушь, искусственный HDR, перенасыщенность, неестественное размытие фона, CGI-текстуры, иллюстративность, искажённую анатомию, неправильные руки или несогласованное освещение.
+
+При изменении позы или ракурса реконструируйте только те области, которые действительно должны измениться. Максимально точно сохраните все незатронутые детали идентичности и стиля.
+
+Не добавляйте текст, логотипы, водяные знаки, лишних людей, новые аксессуары или незапрошенные объекты.
+
+Напишите финальный промпт как прямую инструкцию для редактирования прикреплённого изображения. Чётко укажите, что прикреплённое изображение должно оставаться референсом идентичности, одежды, деталей и качества.
+
+Не объясняйте анализ или решения.
+
+Верните только финальный готовый к использованию промпт для редактирования изображения.`
+      },
+      {
+        title:'4. Ապրանքի պատկեր',
+        text:`Act as a professional commercial photographer, advertising creative director, product-styling specialist, and AI image-editing prompt engineer.
+
+Analyze the attached product image and write one complete, highly detailed image-editing prompt for creating a professional advertising image with this exact product.
+
+IMPORTANT: The attached product is the sole product-identity reference. This is not a request to create a similar product or redesign the packaging.
+
+PRODUCT IDENTITY LOCK:
+
+The final image must preserve the exact product from the attached image, including:
+
+- Exact product category and recognizable identity
+- Exact shape, geometry, dimensions, proportions, and scale
+- Exact packaging structure, container, cap, lid, pump, nozzle, handle, and other components
+- Exact colors, color placement, gradients, transparency, and finish
+- Exact materials, textures, reflections, and surface characteristics
+- Exact logo, label, typography, symbols, graphics, and their placement
+- Exact spelling and visible written information
+- Exact branding and packaging details
+
+Do not redesign, simplify, restyle, recolor, reshape, rebrand, translate, replace, or invent any part of the product.
+
+Do not create an approximate or similar-looking product. Treat the uploaded product as a fixed, immutable commercial asset and build the new scene around it.
+
+MY ADVERTISING IDEA:
+
+Campaign purpose: [SOCIAL-MEDIA ADVERTISEMENT, WEBSITE BANNER, PRODUCT CARD, CAROUSEL, SEASONAL CAMPAIGN, OR ANOTHER PURPOSE]
+
+Human presence: [WITH A HUMAN / WITHOUT A HUMAN]
+
+If a human is included: [DESCRIBE THE PERSON, CLOTHING, APPEARANCE, ACTION, AND HOW THEY INTERACT WITH THE PRODUCT. IF THERE IS NO HUMAN, WRITE “NOT APPLICABLE”]
+
+Product position and interaction: [DESCRIBE EXACTLY WHERE THE PRODUCT SHOULD APPEAR, ITS ANGLE, SIZE, AND HOW IT IS HELD, USED, OR DISPLAYED]
+
+Location or background: [DESCRIBE THE ENVIRONMENT]
+
+Surrounding objects or ingredients: [DESCRIBE THE PROPS, MATERIALS, INGREDIENTS, OR DECORATIONS AROUND THE PRODUCT]
+
+Lighting and time: [DESCRIBE THE LIGHTING STYLE AND TIME OF DAY]
+
+Mood and brand feeling: [LUXURIOUS, CLEAN, NATURAL, ENERGETIC, PLAYFUL, MINIMAL, FUTURISTIC, OR ANOTHER MOOD]
+
+Camera composition: [CLOSE-UP, MEDIUM SHOT, FULL-BODY SHOT, OVERHEAD, LOW ANGLE, EYE-LEVEL, MACRO, OR ANOTHER COMPOSITION]
+
+Additional requirements: [ADD ANYTHING ELSE THAT MUST BE INCLUDED, PRESERVED, OR AVOIDED]
+
+COMMERCIAL COMPOSITION REQUIREMENTS:
+
+- Make the exact product the clear visual hero.
+- Keep the product completely recognizable and sufficiently large in the composition.
+- Keep the front label facing the camera and clearly visible unless I request another angle.
+- Do not cover important branding, text, or packaging details with hands, fingers, props, reflections, shadows, hair, clothing, or other objects.
+- Create a coherent advertising concept—not a collection of random decorative elements.
+- Choose props and colors that support the product’s category, ingredients, purpose, and brand personality.
+- Maintain believable scale, perspective, contact, weight, reflections, and shadows.
+- Leave appropriate negative space if the campaign purpose requires room for marketing text, but do not generate the text itself unless I specifically request it.
+
+IF A HUMAN IS INCLUDED:
+
+- Make the interaction between the person and product natural and physically believable.
+- Use anatomically correct hands and fingers with a realistic grip.
+- Do not deform, cover, shrink, enlarge, or redesign the product while it is being held or used.
+- Keep the product visible and make its label face the camera when possible.
+- Give the person natural skin texture, realistic anatomy, believable clothing, and an authentic commercial-photography appearance.
+- The person should support the product story without taking attention away from the product.
+
+IF NO HUMAN IS INCLUDED:
+
+- Do not include people, hands, faces, or body parts.
+- Use professional product placement, surface contact, props, ingredients, and environmental details.
+- Keep the product stable, correctly scaled, and visually dominant.
+- Create physically accurate shadows, reflections, condensation, liquid, particles, or material effects when relevant.
+
+REALISM AND QUALITY:
+
+The final result must look like a genuine high-end commercial photograph captured during a professional advertising photoshoot.
+
+Use realistic product materials, accurate reflections, natural or professional studio lighting, physically consistent shadows, believable depth, refined composition, and high-resolution photographic detail.
+
+Do not introduce distorted packaging, incorrect text, altered branding, duplicated products, warped labels, floating objects without physical logic, artificial CGI textures, plastic-looking people, excessive retouching, illustration, painting, or cartoon aesthetics.
+
+Write the final prompt as a direct instruction for editing the attached product image. Clearly state that the uploaded product must remain the exact identity and design reference.
+
+Do not explain your analysis or creative decisions.
+
+Return only the final ready-to-use image-editing prompt.`,
+        ru:`Выступите в роли профессионального коммерческого фотографа, креативного директора рекламы, специалиста по стилизации продуктов и инженера промптов для редактирования изображений с помощью ИИ.
+
+Проанализируйте прикреплённое изображение продукта и напишите один цельный, максимально подробный промпт для редактирования изображения, чтобы создать профессиональный рекламный кадр именно с этим продуктом.
+
+ВАЖНО: Прикреплённый продукт является единственным референсом его идентичности. Это не запрос на создание похожего продукта или изменение дизайна упаковки.
+
+ФИКСАЦИЯ ИДЕНТИЧНОСТИ ПРОДУКТА:
+
+Финальное изображение должно сохранить точный продукт из прикреплённого изображения, включая:
+
+- Точную категорию продукта и узнаваемую идентичность
+- Точную форму, геометрию, размеры, пропорции и масштаб
+- Точную конструкцию упаковки, контейнер, колпачок, крышку, помпу, дозатор, ручку и другие компоненты
+- Точные цвета, расположение цветов, градиенты, прозрачность и тип отделки
+- Точные материалы, текстуры, отражения и характеристики поверхности
+- Точные логотип, этикетку, типографику, символы, графику и их расположение
+- Точное написание и видимую текстовую информацию
+- Точный брендинг и детали упаковки
+
+Не изменяйте дизайн, не упрощайте, не меняйте стиль, цвет, форму, бренд, язык, не заменяйте и не придумывайте никакие части продукта.
+
+Не создавайте приблизительный или похожий продукт. Рассматривайте загруженный продукт как фиксированный, неизменяемый коммерческий объект и стройте новую сцену вокруг него.
+
+МОЯ РЕКЛАМНАЯ ИДЕЯ:
+
+Цель кампании: [РЕКЛАМА В СОЦИАЛЬНЫХ СЕТЯХ, БАННЕР ДЛЯ САЙТА, КАРТОЧКА ТОВАРА, КАРУСЕЛЬ, СЕЗОННАЯ КАМПАНИЯ ИЛИ ДРУГАЯ ЦЕЛЬ]
+
+Присутствие человека: [С ЧЕЛОВЕКОМ / БЕЗ ЧЕЛОВЕКА]
+
+Если присутствует человек: [ОПИШИТЕ ЧЕЛОВЕКА, ОДЕЖДУ, ВНЕШНИЙ ВИД, ДЕЙСТВИЕ И ВЗАИМОДЕЙСТВИЕ С ПРОДУКТОМ. ЕСЛИ ЧЕЛОВЕКА НЕТ, НАПИШИТЕ «НЕ ПРИМЕНИМО»]
+
+Положение продукта и взаимодействие: [ТОЧНО ОПИШИТЕ, ГДЕ ДОЛЖЕН НАХОДИТЬСЯ ПРОДУКТ, ЕГО РАКУРС, РАЗМЕР И ТО, КАК ЕГО ДЕРЖАТ, ИСПОЛЬЗУЮТ ИЛИ ДЕМОНСТРИРУЮТ]
+
+Место или фон: [ОПИШИТЕ ОКРУЖЕНИЕ]
+
+Окружающие предметы или ингредиенты: [ОПИШИТЕ РЕКВИЗИТ, МАТЕРИАЛЫ, ИНГРЕДИЕНТЫ ИЛИ ДЕКОР ВОКРУГ ПРОДУКТА]
+
+Освещение и время: [ОПИШИТЕ СТИЛЬ ОСВЕЩЕНИЯ И ВРЕМЯ СУТОК]
+
+Настроение и характер бренда: [РОСКОШНЫЙ, ЧИСТЫЙ, НАТУРАЛЬНЫЙ, ЭНЕРГИЧНЫЙ, ИГРИВЫЙ, МИНИМАЛИСТИЧНЫЙ, ФУТУРИСТИЧНЫЙ ИЛИ ДРУГОЙ]
+
+Композиция камеры: [КРУПНЫЙ ПЛАН, СРЕДНИЙ ПЛАН, В ПОЛНЫЙ РОСТ, ВИД СВЕРХУ, НИЗКИЙ РАКУРС, НА УРОВНЕ ГЛАЗ, МАКРО ИЛИ ДРУГАЯ КОМПОЗИЦИЯ]
+
+Дополнительные требования: [ДОБАВЬТЕ ВСЁ, ЧТО НЕОБХОДИМО ВКЛЮЧИТЬ, СОХРАНИТЬ ИЛИ ИЗБЕЖАТЬ]
+
+ТРЕБОВАНИЯ К КОММЕРЧЕСКОЙ КОМПОЗИЦИИ:
+
+- Сделайте именно этот продукт главным визуальным героем.
+- Сохраните продукт полностью узнаваемым и достаточно крупным в композиции.
+- Если я не прошу другой ракурс, передняя этикетка должна быть обращена к камере и хорошо видна.
+- Не закрывайте важный брендинг, текст или детали упаковки руками, пальцами, реквизитом, отражениями, тенями, волосами, одеждой или другими объектами.
+- Создайте цельную рекламную концепцию, а не набор случайных декоративных элементов.
+- Выберите реквизит и цвета, поддерживающие категорию продукта, его ингредиенты, назначение и характер бренда.
+- Сохраняйте правдоподобные масштаб, перспективу, контакт с поверхностью, вес, отражения и тени.
+- Если цель кампании требует места для рекламного текста, оставьте подходящее негативное пространство, но не генерируйте сам текст, если я прямо этого не прошу.
+
+ЕСЛИ ПРИСУТСТВУЕТ ЧЕЛОВЕК:
+
+- Взаимодействие человека с продуктом должно быть естественным и физически правдоподобным.
+- Используйте анатомически правильные руки и пальцы с реалистичным захватом.
+- Не деформируйте, не закрывайте, не уменьшайте, не увеличивайте и не меняйте дизайн продукта, когда его держат или используют.
+- Сохраняйте продукт видимым и по возможности направляйте его этикетку к камере.
+- Обеспечьте человеку естественную текстуру кожи, реалистичную анатомию, правдоподобную одежду и аутентичный вид коммерческой фотографии.
+- Человек должен поддерживать историю продукта, не отвлекая от него внимание.
+
+ЕСЛИ ЧЕЛОВЕКА НЕТ:
+
+- Не включайте людей, руки, лица или части тела.
+- Используйте профессиональное размещение продукта, реалистичный контакт с поверхностью, реквизит, ингредиенты и детали окружения.
+- Сохраняйте продукт устойчивым, правильно масштабированным и визуально доминирующим.
+- Когда это уместно, создавайте физически точные тени, отражения, конденсат, жидкость, частицы или эффекты материалов.
+
+РЕАЛИЗМ И КАЧЕСТВО:
+
+Финальный результат должен выглядеть как настоящая высококлассная коммерческая фотография, снятая во время профессиональной рекламной фотосессии.
+
+Используйте реалистичные материалы продукта, точные отражения, естественное или профессиональное студийное освещение, физически согласованные тени, правдоподобную глубину, выверенную композицию и фотографические детали высокого разрешения.
+
+Не добавляйте искажённую упаковку, неправильный текст, изменённый брендинг, дублированные продукты, деформированные этикетки, парящие без физической логики объекты, искусственные CGI-текстуры, людей с пластиковой внешностью, чрезмерную ретушь, иллюстративность, живопись или мультяшную эстетику.
+
+Напишите финальный промпт как прямую инструкцию для редактирования прикреплённого изображения продукта. Чётко укажите, что загруженный продукт должен оставаться точным референсом идентичности и дизайна.
+
+Не объясняйте анализ или творческие решения.
+
+Верните только финальный готовый к использованию промпт для редактирования изображения.`
+      }
+    ];
+    COURSE_CONFIG.lessons[0].prompts = IMAGE_PROMPTS;
+    const VIDEO_PROMPTS = [
+      {
+        title:'1. Տեքստից տեսանյութ',
+        text:`**Act as a professional AI video director.**
+
+**Turn my simple idea into one clear, detailed text-to-video prompt.**
+
+**Create one continuous realistic shot. Clearly describe the subject, the main action, natural environmental movement, one suitable camera movement, lighting, and mood. Keep the movement achievable within a short video and do not add unnecessary characters, actions, cuts, transitions, or effects.**
+
+**My idea: [WRITE YOUR SIMPLE VIDEO IDEA]**
+
+**Return only the final ready-to-use video prompt.**`,
+        ru:`**Выступите в роли профессионального режиссёра AI-видео.**
+
+**Преобразуйте мою простую идею в один ясный и подробный промпт для генерации видео из текста.**
+
+**Создайте один непрерывный реалистичный кадр. Чётко опишите объект, основное действие, естественное движение окружающей среды, одно подходящее движение камеры, освещение и настроение. Движение должно быть выполнимым в коротком видео. Не добавляйте ненужных персонажей, действий, склеек, переходов или эффектов.**
+
+**Моя идея: [НАПИШИТЕ СВОЮ ПРОСТУЮ ИДЕЮ ДЛЯ ВИДЕО]**
+
+**Верните только финальный готовый к использованию промпт для видео.**`
+      },
+      {
+        title:'2. Պատկերից տեսանյութ',
+        text:`**Act as a professional AI video director.**
+
+**Analyze the attached image and turn my short movement idea into one clear image-to-video prompt.**
+
+**Treat the attached image as the exact opening frame. Preserve the same person, face, clothing, product, location, lighting, composition, and visual quality.**
+
+**Describe only the requested movement and one suitable camera behavior. Keep the action simple, realistic, and achievable within one short continuous shot. Do not add unrequested actions, objects, characters, cuts, transformations, or scene changes.**
+
+**Movement idea: [WRITE THE MOVEMENT FOR THIS SHOT]**
+
+**Return only the final ready-to-use video prompt. Dont describe the image only give the prompt and it must be short but not too short nor too long**`,
+        ru:`**Выступите в роли профессионального режиссёра AI-видео.**
+
+**Проанализируйте прикреплённое изображение и преобразуйте мою краткую идею движения в один ясный промпт для генерации видео из изображения.**
+
+**Рассматривайте прикреплённое изображение как точный начальный кадр. Сохраните того же человека, лицо, одежду, продукт, место, освещение, композицию и визуальное качество.**
+
+**Опишите только запрошенное движение и одно подходящее поведение камеры. Действие должно быть простым, реалистичным и выполнимым в одном коротком непрерывном кадре. Не добавляйте незапрошенные действия, объекты, персонажей, склейки, трансформации или смены сцены.**
+
+**Идея движения: [ОПИШИТЕ ДВИЖЕНИЕ ДЛЯ ЭТОГО КАДРА]**
+
+**Верните только финальный готовый к использованию промпт для видео. Не описывайте изображение — дайте только промпт. Он должен быть кратким, но не слишком коротким и не слишком длинным.**`
+      },
+      {
+        title:'3. Առաջին կադրից վերջին կադր',
+        text:`**Create one realistic continuous video connecting the two attached images.**
+
+**Image 1 must be the exact opening frame.**
+
+**Image 2 must be the exact final frame.**
+
+**Generate a smooth, physically believable transition between them. Preserve the same person, facial identity, clothing, hairstyle, product, environment, lighting, colors, and photographic quality throughout.**
+
+**The movement between the two frames should be: [DESCRIBE HOW THE SUBJECT MOVES FROM THE FIRST POSITION TO THE FINAL POSITION]**
+
+**Camera behavior: [DESCRIBE THE CAMERA MOVEMENT OR WRITE “KEEP THE CAMERA STABLE”]**
+
+**Do not introduce cuts, transformations, new objects, changing facial features, altered clothing, distorted anatomy, or product redesigns.**
+
+**Return only the final video prompt.**`,
+        ru:`**Создайте одно реалистичное непрерывное видео, соединяющее два прикреплённых изображения.**
+
+**Изображение 1 должно быть точным начальным кадром.**
+
+**Изображение 2 должно быть точным финальным кадром.**
+
+**Создайте между ними плавный, физически правдоподобный переход. На протяжении всего видео сохраняйте того же человека, идентичность лица, одежду, причёску, продукт, окружение, освещение, цвета и фотографическое качество.**
+
+**Движение между двумя кадрами: [ОПИШИТЕ, КАК ОБЪЕКТ ПЕРЕМЕЩАЕТСЯ ИЗ НАЧАЛЬНОГО ПОЛОЖЕНИЯ В ФИНАЛЬНОЕ]**
+
+**Поведение камеры: [ОПИШИТЕ ДВИЖЕНИЕ КАМЕРЫ ИЛИ НАПИШИТЕ «СОХРАНИТЬ КАМЕРУ НЕПОДВИЖНОЙ»]**
+
+**Не добавляйте склейки, трансформации, новые объекты, изменения черт лица, изменённую одежду, искажённую анатомию или новый дизайн продукта.**
+
+**Верните только финальный промпт для видео.**`
+      },
+      {
+        title:'4. Ռեֆերենսային պատկերներից տեսանյութ',
+        text:`**Create one realistic video using the attached images for these specific purposes:**
+
+**Image 1: [IDENTITY, CHARACTER, PRODUCT, LOCATION, CLOTHING, OR STYLE REFERENCE]**
+
+**Image 2: [IDENTITY, CHARACTER, PRODUCT, LOCATION, CLOTHING, OR STYLE REFERENCE]**
+
+**Image 3: [IDENTITY, CHARACTER, PRODUCT, LOCATION, CLOTHING, OR STYLE REFERENCE]**
+
+**Video action: [DESCRIBE WHAT HAPPENS]**
+
+**Camera movement: [DESCRIBE ONE CAMERA MOVEMENT OR WRITE “STATIC CAMERA”]**
+
+**Preserve the referenced person’s identity and the referenced product’s exact shape, packaging, colors, label, and branding throughout the complete video. Combine the references naturally without redesigning or replacing them.**
+
+**Return only the final ready-to-use video prompt.**`,
+        ru:`**Создайте одно реалистичное видео, используя прикреплённые изображения для следующих конкретных целей:**
+
+**Изображение 1: [РЕФЕРЕНС ИДЕНТИЧНОСТИ, ПЕРСОНАЖА, ПРОДУКТА, МЕСТА, ОДЕЖДЫ ИЛИ СТИЛЯ]**
+
+**Изображение 2: [РЕФЕРЕНС ИДЕНТИЧНОСТИ, ПЕРСОНАЖА, ПРОДУКТА, МЕСТА, ОДЕЖДЫ ИЛИ СТИЛЯ]**
+
+**Изображение 3: [РЕФЕРЕНС ИДЕНТИЧНОСТИ, ПЕРСОНАЖА, ПРОДУКТА, МЕСТА, ОДЕЖДЫ ИЛИ СТИЛЯ]**
+
+**Действие в видео: [ОПИШИТЕ, ЧТО ПРОИСХОДИТ]**
+
+**Движение камеры: [ОПИШИТЕ ОДНО ДВИЖЕНИЕ КАМЕРЫ ИЛИ НАПИШИТЕ «СТАТИЧНАЯ КАМЕРА»]**
+
+**На протяжении всего видео сохраняйте идентичность человека из референса, а также точную форму, упаковку, цвета, этикетку и брендинг продукта из референса. Естественно объедините референсы, не меняя их дизайн и не заменяя их.**
+
+**Верните только финальный готовый к использованию промпт для видео.**`
+      },
+      {
+        title:'5. Տեսանյութից տեսանյութ',
+        text:`**Act as a professional AI video-editing prompt writer.**
+
+**Turn my requested change into one clear prompt for editing the attached video.**
+
+**Requested change: [DESCRIBE WHAT SHOULD BE CHANGED, ADDED, REMOVED, OR REPLACED]**
+
+**Preserve the original subject’s identity, face, body proportions, movement, timing, camera behavior, composition, and every element I have not asked to change.**
+
+**Make the edit visually consistent across every frame, with realistic motion, lighting, shadows, perspective, scale, reflections, and physical interaction. Avoid flickering, morphing, disappearing details, or unrequested changes.**
+
+**Return only the final ready-to-use video-editing prompt.**`,
+        ru:`**Выступите в роли профессионального автора промптов для редактирования AI-видео.**
+
+**Преобразуйте запрошенное мной изменение в один ясный промпт для редактирования прикреплённого видео.**
+
+**Запрошенное изменение: [ОПИШИТЕ, ЧТО НУЖНО ИЗМЕНИТЬ, ДОБАВИТЬ, УДАЛИТЬ ИЛИ ЗАМЕНИТЬ]**
+
+**Сохраните идентичность, лицо, пропорции тела, движение, тайминг, поведение камеры, композицию исходного объекта и каждый элемент, который я не просил изменять.**
+
+**Сделайте редактирование визуально согласованным в каждом кадре, сохранив реалистичные движение, освещение, тени, перспективу, масштаб, отражения и физическое взаимодействие. Избегайте мерцания, морфинга, исчезающих деталей и незапрошенных изменений.**
+
+**Верните только финальный готовый к использованию промпт для редактирования видео.**`
+      },
+      {
+        title:'6. Բարդ պատկերից տեսանյութ',
+        text:`**Create one realistic continuous image-to-video shot from the attached starting image.**
+
+**Preserve the subject, face, clothing, product, environment, lighting, composition, and visual quality.**
+
+**Main action: [DESCRIBE WHAT SHOULD HAPPEN]**
+
+**Environmental movement: [DESCRIBE ANY BACKGROUND MOVEMENT OR WRITE “MINIMAL NATURAL MOVEMENT”]**
+
+**Camera movement: [DESCRIBE ONE CAMERA MOVEMENT OR WRITE “STATIC CAMERA”]**
+
+**Ending moment: [DESCRIBE HOW THE SHOT SHOULD END]**
+
+**Do not add, remove, redesign, or transform anything that I have not requested. Return only the final video prompt.**`,
+        ru:`**Создайте один реалистичный непрерывный кадр видео из прикреплённого начального изображения.**
+
+**Сохраните объект, лицо, одежду, продукт, окружение, освещение, композицию и визуальное качество.**
+
+**Основное действие: [ОПИШИТЕ, ЧТО ДОЛЖНО ПРОИЗОЙТИ]**
+
+**Движение окружения: [ОПИШИТЕ ДВИЖЕНИЕ НА ЗАДНЕМ ПЛАНЕ ИЛИ НАПИШИТЕ «МИНИМАЛЬНОЕ ЕСТЕСТВЕННОЕ ДВИЖЕНИЕ»]**
+
+**Движение камеры: [ОПИШИТЕ ОДНО ДВИЖЕНИЕ КАМЕРЫ ИЛИ НАПИШИТЕ «СТАТИЧНАЯ КАМЕРА»]**
+
+**Финальный момент: [ОПИШИТЕ, КАК ДОЛЖЕН ЗАВЕРШИТЬСЯ КАДР]**
+
+**Не добавляйте, не удаляйте, не меняйте дизайн и не трансформируйте ничего, чего я не просил. Верните только финальный промпт для видео.**`
+      }
+    ];
+    COURSE_CONFIG.lessons[1].prompts = VIDEO_PROMPTS;
+    COURSE_CONFIG.lessons[2].prompts = VIDEO_PROMPTS;
+    const PACKS = [
+      {credits:100, price:'$9.99', product:'https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1', featured:true, gift:''},
+      {credits:210, price:'$19.99', product:'https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1', gift:'+10 նվեր կրեդիտ'},
+      {credits:535, price:'$49.99', product:'https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1', gift:'+35 նվեր կրեդիտ'},
+      {credits:1100, price:'$99.99', product:'https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1', gift:'+100 նվեր կրեդիտ'}
+    ];
+    const ANSWERS=['Գերազանց էր՝ ամեն ինչ հասկանալի էր','Լավ էր, բայց բավարար չէր','Լավ էր, բայց ավելի շատ օրինակներ են պետք','Լավ էր, բայց նյութը շատ արագ էր ներկայացված','Ավելին էի սպասում․ լավը չէր','Լավը չէր․ որոշ հատվածներ չհասկացա','Ինձ դուր չեկավ․ վատն էր'];
+    let sb=null, session=null, hasAccess=false, activeIndex=-1, ytPlayer=null, ytReady=false;
+    const $=s=>document.querySelector(s);
+    const esc=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2600)}
+    function openModal(id){$(id).classList.add('open');document.body.style.overflow='hidden'}
+    function closeModals(){document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open'));document.body.style.overflow=''}
+    function requireUser(){if(session?.user)return true;openModal('#signupModal');return false}
+    async function authHeader(){const {data}=await sb.auth.getSession();session=data?.session||null;return session?{'Authorization':'Bearer '+session.access_token}: {}}
+    async function checkAccess(){
+      if(!session){hasAccess=false;renderAccess();return}
+      try{
+        const res=await fetch('/.netlify/functions/course-access',{headers:await authHeader()});
+        const data=await res.json();
+        hasAccess=!!(res.ok&&data.access);
+        if(res.ok&&data.videos){
+          COURSE_CONFIG.introVideoId=data.videos.intro||COURSE_CONFIG.introVideoId||'';
+          COURSE_CONFIG.lessons.forEach((lesson,index)=>{lesson.videoId=(data.videos.lessons||[])[index]||lesson.videoId||''});
+        }
+      }catch(_){hasAccess=false}
+      renderAccess();
+    }
+    function renderAccess(){
+      renderLessons();
+      if(!session)showLockedPlayer();
+      else if(!hasAccess)showIntro();
+      else if(activeIndex<0||COURSE_CONFIG.lessons[activeIndex]?.comingSoon)selectLesson(0);
+      else mountVideo(COURSE_CONFIG.lessons[activeIndex].videoId,false);
+    }
+    function renderLessons(){
+      $('#lessonList').innerHTML=COURSE_CONFIG.lessons.map((l,i)=>{const preview=l.thumbnailUrl||(!String(l.videoId).startsWith('http')?`https://i.ytimg.com/vi/${encodeURIComponent(l.videoId)}/hqdefault.jpg`:'');const thumb=l.comingSoon?'<span class="lesson-thumb coming-thumb">ՇՈՒՏՈՎ</span>':`<span class="lesson-thumb" style="background-image:url('${esc(preview)}')"><span class="lesson-thumb-play">▶</span></span>`;return `<button type="button" class="lesson-btn ${activeIndex===i?'active':''} ${hasAccess&&!l.comingSoon?'unlocked':''} ${l.comingSoon?'coming':''}" data-lesson="${i}">${thumb}<span class="lesson-row"><span class="lesson-num">${i+1}</span><span class="lesson-copy"><strong>${esc(l.title)}</strong><small>${esc(l.duration)}</small></span><span class="lock">${l.comingSoon?'◷':(hasAccess?'✓':'🔒')}</span></span></button>`}).join('');
+      const published=COURSE_CONFIG.lessons.filter(l=>!l.comingSoon).length;
+      $('#progressText').textContent=(hasAccess?published:'0')+' / '+COURSE_CONFIG.lessons.length+' դաս հասանելի';
+    }
+    function playerMeta(kicker,title,description,pill){$('#lessonKicker').textContent=kicker;$('#lessonTitle').textContent=title;$('#lessonDescription').textContent=description;$('#accessPill').textContent=pill}
+    function showEmpty(message){destroyPlayer();$('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty"><div><div class="play">▶</div><strong>${esc(message)}</strong><small>Տեսանյութի հղումը կավելացվի այստեղ</small></div></div>`}
+    function destroyPlayer(){if(ytPlayer&&typeof ytPlayer.destroy==='function'){try{ytPlayer.destroy()}catch(_){}}ytPlayer=null}
+    function mountVideo(videoId,isIntro){
+      if(!videoId){showEmpty(isIntro?'Ներածական տեսանյութը շուտով կավելացվի':'Դասի տեսանյութը շուտով կավելացվի');return}
+      if(/^https?:\/\/.+\.(mp4|webm|mov)(?:[?#].*)?$/i.test(String(videoId))){
+        destroyPlayer();
+        $('#playerWrap').innerHTML=`<video id="introNativeVideo" src="${esc(videoId)}" controls playsinline preload="metadata" controlslist="nodownload" style="width:100%;height:100%;display:block;background:#000;object-fit:contain"></video>`;
+        const video=$('#introNativeVideo');
+        if(isIntro)video.addEventListener('ended',openCredits,{once:false});
+        return;
+      }
+      if(String(videoId).startsWith('https://player.mediadelivery.net/')){
+        destroyPlayer();
+        const source=new URL(videoId);source.searchParams.set('autoplay','false');source.searchParams.set('loop','false');source.searchParams.set('muted','false');source.searchParams.set('preload','true');source.searchParams.set('responsive','true');source.searchParams.set('context',Date.now().toString());
+        $('#playerWrap').innerHTML=`<iframe id="bunnyPlayer" src="${esc(source.toString())}" loading="eager" title="Hansora AI տեսադաս" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe>`;
+        if(isIntro&&window.playerjs){const player=new playerjs.Player('bunnyPlayer');player.on('ended',openCredits)}
+        return;
+      }
+      destroyPlayer();$('#playerWrap').innerHTML='<div id="ytPlayer" style="position:absolute;inset:0"></div>';
+      const playerOrigin=location.protocol==='http:'||location.protocol==='https:'?location.origin:'https://hansora.co';
+      const create=()=>{ytPlayer=new YT.Player('ytPlayer',{videoId,host:'https://www.youtube-nocookie.com',playerVars:{rel:0,playsinline:1,iv_load_policy:3,origin:playerOrigin,widget_referrer:'https://hansora.co/course.html'},events:{onStateChange:e=>{if(isIntro&&e.data===YT.PlayerState.ENDED)openCredits()}}})};
+      if(window.YT&&YT.Player)create();else{window.onYouTubeIframeAPIReady=()=>{ytReady=true;create()};if(!document.querySelector('script[src*="youtube.com/iframe_api"]')){const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s)}}
+    }
+    function showLockedPlayer(){activeIndex=-1;renderLessons();$('#playerInfo').classList.add('hidden');$('#lessonContent').classList.add('hidden');destroyPlayer();$('#playerWrap').innerHTML='<div class="video-empty"><div><div class="play">▶</div><strong>Սեղմեք՝ տեսանյութը դիտելու համար</strong></div></div>'}
+    function showIntro(){activeIndex=-1;renderLessons();$('#playerInfo').classList.add('hidden');$('#lessonContent').classList.add('hidden');mountVideo(COURSE_CONFIG.introVideoId,true)}
+    function selectLesson(index){
+      if(!requireUser())return;
+      if(!hasAccess){showIntro();toast('Դասը բացելու համար դիտեք տեսանյութը');return}
+      const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Այս դասը շուտով հասանելի կլինի');return}
+      activeIndex=index;renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('ԴԱՍ '+(index+1),l.title,l.description,'Բացված է');mountVideo(l.videoId,false);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
+    }
+    function renderPrompts(lesson){$('#promptList').innerHTML=lesson.prompts.map((p,i)=>{const item=typeof p==='string'?{title:`Հրահանգ ${i+1}`,text:p,ru:''}:p;return `<div class="prompt" data-prompt-index="${i}" data-lang="en"><div class="prompt-main"><div class="prompt-body"><h3 class="prompt-title">${esc(item.title)}</h3><div class="prompt-text">${esc(item.text)}</div></div><div class="prompt-actions">${item.ru?'<button type="button" class="mini-btn lang-btn">Русский</button>':''}<button type="button" class="mini-btn more-btn">Տեսնել ավելին</button><button type="button" class="mini-btn copy-btn">Պատճենել</button></div></div></div>`}).join('')}
+    function renderFeedback(lesson){$('#feedbackOptions').innerHTML=ANSWERS.map((a,i)=>`<label class="choice"><input type="radio" name="rating" value="${esc(a)}" ${i===0?'required':''}><span>${esc(a)}</span></label>`).join('');$('#feedbackComment').value='';$('#feedbackForm').dataset.lesson=lesson.id}
+    function openCredits(){if(!requireUser())return;openModal('#creditsModal')}
+    function renderPacks(){$('#creditPacks').innerHTML=PACKS.map(p=>`<article class="pack ${p.featured?'featured':''}">${p.featured?'<span class="pack-badge">ԱՌԱՋԱՐԿՎՈՒՄ Է</span>':''}<small>${p.gift||'Կրեդիտները չեն սպառվում'}</small><h3>${p.credits} կրեդիտ</h3><div class="price">${p.price}</div><button class="buy" type="button" data-credits="${p.credits}" data-product="${esc(p.product)}">Գնել</button></article>`).join('')}
+    function checkout(button){
+      if(!requireUser())return;const url=new URL(button.dataset.product);url.searchParams.set('quantity','1');url.searchParams.set('minimalAddress','true');url.searchParams.set('redirect_url',location.origin+'/course.html?checkout=success');url.searchParams.set('metadata_uid',session.user.id);url.searchParams.set('metadata_credits',button.dataset.credits);url.searchParams.set('metadata_course_id','hansora-ai-course');if(session.user.email)url.searchParams.set('metadata_email',session.user.email);location.href=url.toString();
+    }
+    async function submitFeedback(event){
+      event.preventDefault();if(!requireUser())return;const form=event.currentTarget;const choice=form.querySelector('input[name="rating"]:checked');if(!choice){toast('Խնդրում ենք ընտրել պատասխաններից մեկը');return}const btn=$('#feedbackSubmit');btn.disabled=true;
+      try{const res=await fetch('/.netlify/functions/course-feedback',{method:'POST',headers:{'Content-Type':'application/json',...(await authHeader())},body:JSON.stringify({lesson_id:form.dataset.lesson,answer:choice.value,comment:$('#feedbackComment').value.trim()})});if(!res.ok)throw new Error('save_failed');toast('Շնորհակալություն․ ձեր պատասխանը պահպանվեց')}catch(_){toast('Չհաջողվեց պահպանել։ Խնդրում ենք կրկին փորձել')}finally{btn.disabled=false}
+    }
+    async function init(){
+      renderPacks();renderLessons();showLockedPlayer();
+      if(location.protocol==='file:'||location.hostname==='127.0.0.1'||location.hostname==='localhost'){
+        session={user:{id:'local-preview',email:'preview@hansora.local'}};
+        hasAccess=true;
+        selectLesson(0);
+        toast('Նախադիտման ռեժիմ․ դասերը բացված են');
+        return;
+      }
+      try{await HSHeader.mount('#hsHeader');sb=window.supabaseClient;const {data}=await sb.auth.getSession();session=data?.session||null;sb.auth.onAuthStateChange((_e,s)=>{session=s;checkAccess()});await checkAccess()}catch(e){console.warn(e);renderAccess()}
+      if(new URLSearchParams(location.search).get('checkout')==='success'&&session){toast('Վճարումը ստուգվում է…');let tries=0;const poll=setInterval(async()=>{tries++;await checkAccess();if(hasAccess||tries>=12){clearInterval(poll);if(hasAccess){toast('Դասընթացը բացված է');selectLesson(0)}}},2000)}
+    }
+    document.addEventListener('click',e=>{const lesson=e.target.closest('[data-lesson]');if(lesson)selectLesson(Number(lesson.dataset.lesson));if(e.target.closest('#playerWrap')&&!session)requireUser();if(e.target.closest('[data-close-modal]')||e.target.classList.contains('modal'))closeModals();const more=e.target.closest('.more-btn');if(more){const box=more.closest('.prompt');box.classList.toggle('expanded');more.textContent=box.classList.contains('expanded')?'Փակել':'Տեսնել ավելին'}const lang=e.target.closest('.lang-btn');if(lang){const box=lang.closest('.prompt');const prompt=COURSE_CONFIG.lessons[activeIndex].prompts[Number(box.dataset.promptIndex)];const toRussian=box.dataset.lang!=='ru';box.dataset.lang=toRussian?'ru':'en';box.querySelector('.prompt-text').textContent=toRussian?prompt.ru:prompt.text;lang.textContent=toRussian?'English':'Русский'}const copy=e.target.closest('.copy-btn');if(copy){const text=copy.closest('.prompt').querySelector('.prompt-text').textContent;navigator.clipboard.writeText(text).then(()=>toast('Հրահանգը պատճենված է'))}const buy=e.target.closest('.buy');if(buy)checkout(buy)});
+    $('#feedbackForm').addEventListener('submit',submitFeedback);document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModals()});
+    document.addEventListener('DOMContentLoaded',init);
+  })();
+  </script>
+</body>
+</html>
