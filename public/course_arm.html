@@ -27,7 +27,9 @@
     .modal{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.78);backdrop-filter:blur(12px)}.modal.open{display:flex}.modal-box{position:relative;width:min(920px,100%);max-height:92vh;overflow:auto;border:1px solid rgba(255,255,255,.14);border-radius:24px;background:#10121b;padding:28px;box-shadow:0 25px 90px #000}.intro-video-box{width:min(1100px,100%);padding:0;overflow:hidden;background:#05060a}.intro-video-box .modal-close{z-index:2;background:rgba(8,9,14,.82)}.intro-video-frame{position:relative;aspect-ratio:16/9;background:#000}.intro-video-frame video{width:100%;height:100%;display:block;object-fit:contain;background:#000}.modal-close{position:absolute;top:16px;right:16px;width:37px;height:37px;border-radius:50%;border:1px solid var(--line);background:#1a1d29;cursor:pointer}.modal h2{text-align:center;margin:4px 36px 9px;font-size:28px}.modal-sub{text-align:center;color:var(--muted);margin:0 auto 23px;max-width:620px;line-height:1.65;font-size:14px}.packs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.pack{position:relative;border:1px solid var(--line);border-radius:17px;padding:18px 15px;background:rgba(255,255,255,.03)}.pack.featured{border-color:#9060ed;box-shadow:inset 0 0 0 1px rgba(144,96,237,.24);background:rgba(144,96,237,.08)}.pack-badge{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#8f5bea;border-radius:99px;padding:4px 9px;font-size:9px;font-weight:800;white-space:nowrap}.pack small{color:#9ca1b1}.pack h3{font-size:21px;margin:8px 0 3px}.price{font-size:25px;font-weight:800;margin:15px 0}.buy{display:block;width:100%;border:0;border-radius:11px;padding:11px;background:#fff;color:#0d0e14;font-weight:800;cursor:pointer}.featured .buy{background:linear-gradient(105deg,#965fff,#4ebcfb);color:white}.signup-box{width:min(460px,100%);text-align:center}.signup-box .icon{width:62px;height:62px;border-radius:18px;margin:0 auto 15px;display:grid;place-items:center;background:rgba(155,108,255,.14);color:#b899ff;font-size:27px}.signup-box p{color:var(--muted);line-height:1.7}.signup-actions{display:flex;justify-content:center;gap:10px;margin-top:20px}.secondary{border:1px solid var(--line);background:#191c27;border-radius:12px;padding:12px 17px;cursor:pointer;text-decoration:none;color:#fff}.toast{position:fixed;left:50%;bottom:24px;z-index:11000;transform:translate(-50%,20px);opacity:0;pointer-events:none;border:1px solid var(--line);border-radius:13px;background:#181b25;padding:12px 17px;color:#fff;font-size:13px;transition:.25s;box-shadow:0 10px 40px #000}.toast.show{opacity:1;transform:translate(-50%,0)}
     @media(max-width:900px){.lesson-list{grid-template-columns:repeat(2,1fr)}.packs{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:640px){.shell{width:min(100% - 20px,1480px)}.hero{padding:48px 0 35px}h1{font-size:39px}.hero-meta{display:grid;gap:8px;text-align:left;margin-left:auto;margin-right:auto;width:max-content}.lesson-list{grid-template-columns:1fr}.section-card{padding:20px}.feedback-options{grid-template-columns:1fr}.prompt-main{grid-template-columns:1fr}.prompt-actions{justify-content:flex-end}.gate{align-items:flex-start;flex-direction:column}.gate .primary{width:100%}.packs{grid-template-columns:1fr}.modal-box{padding:23px 16px}.modal h2{font-size:22px}.player-info{padding:20px}.player-info h2{font-size:21px}}
-    .prompt-body{min-width:0}.prompt-title{margin:0 0 10px;color:#fff;font-size:16px;line-height:1.4}.prompt-text{white-space:pre-wrap}.lang-btn{color:#8fc8ff;border-color:rgba(73,185,255,.35)}
+    .lesson-preview{position:absolute;inset:0;display:grid;place-items:center;background-size:cover;background-position:center}.lesson-preview:before{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(4,5,9,.74),rgba(4,5,9,.1) 60%),rgba(5,6,10,.12)}.lesson-preview-inner{position:relative;z-index:1;text-align:center;padding:24px}.lesson-preview .play{width:96px;height:96px;border:1px solid rgba(255,255,255,.5);border-radius:50%;display:grid;place-items:center;margin:0 auto 18px;background:linear-gradient(145deg,rgba(154,99,255,.92),rgba(53,142,219,.92));box-shadow:0 16px 45px rgba(117,75,255,.4);font-size:32px;padding-left:5px}.lesson-preview strong{display:block;font-size:20px;text-shadow:0 2px 12px #000}.lesson-preview small{display:block;margin-top:8px;color:#e2e4eb;text-shadow:0 2px 10px #000}.prompt-body{min-width:0}.prompt-title{margin:0 0 10px;color:#fff;font-size:16px;line-height:1.4}.prompt-text{white-space:pre-wrap}.lang-btn{color:#8fc8ff;border-color:rgba(73,185,255,.35)}
+    .pricing-sale{width:max-content;margin:0 auto 12px;padding:7px 13px;border:1px solid rgba(82,223,161,.3);border-radius:999px;background:rgba(82,223,161,.1);color:#79efb8;font-size:12px;font-weight:800;letter-spacing:.04em}.pricing-benefits{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin:16px 0 24px}.pricing-benefits span{padding:7px 11px;border:1px solid rgba(255,255,255,.1);border-radius:999px;background:rgba(255,255,255,.04);color:#c8ccd8;font-size:11px}.packs{gap:15px}.pack{min-height:285px;padding:22px 18px;background:linear-gradient(165deg,rgba(255,255,255,.075),rgba(255,255,255,.025));overflow:visible}.pack:before{content:"";position:absolute;top:0;left:16px;right:16px;height:3px;border-radius:0 0 999px 999px;background:linear-gradient(90deg,#a266ff,#47bdff)}.pack.featured{transform:translateY(-5px);background:linear-gradient(165deg,rgba(145,91,255,.22),rgba(80,48,145,.1));box-shadow:0 22px 55px rgba(117,75,255,.2),inset 0 0 0 1px rgba(144,96,237,.25)}.pack-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:14px}.pack-line{color:#9298aa;font-size:11px}.pack-save{padding:4px 8px;border:1px solid rgba(82,223,161,.25);border-radius:999px;background:rgba(82,223,161,.09);color:#77eeb5;font-size:10px;font-weight:800;white-space:nowrap}.pack h3{font-size:24px;margin:4px 0 14px}.pack-prices{display:flex;align-items:flex-end;gap:9px}.price{font-size:29px;margin:0}.old-price{padding-bottom:3px;color:#747b8f;font-size:14px;font-weight:700;text-decoration:line-through}.pack-gift{min-height:38px;margin:9px 0 17px;color:#cbb7ff;font-size:11px;line-height:1.5}.buy{margin-top:auto;padding:13px;background:linear-gradient(105deg,#965fff,#4ebcfb);color:#fff}.buy:hover{filter:brightness(1.08)}
+    .pack{display:flex;flex-direction:column}.signup-actions{display:block}.signup-actions .primary{display:flex;width:100%;min-height:52px;align-items:center;justify-content:center}
     /* Keep the main player at its original width; widen only the lesson selector. */
     .shell{width:min(1180px,calc(100% - 32px))}
     .course-grid{width:100%;min-width:0;grid-template-columns:minmax(0,1fr)}
@@ -98,16 +100,18 @@
     <div class="modal-box signup-box">
       <button class="modal-close" data-close-modal aria-label="Փակել">×</button>
       <div class="icon">♙</div><h2 id="signupTitle">Գրանցումը պարտադիր է</h2>
-      <p>Դասերը դիտելու, կրեդիտներ գնելու և ձեր պատասխանները պահպանելու համար նախ մուտք գործեք կամ ստեղծեք անվճար հաշիվ։</p>
-      <div class="signup-actions"><button class="secondary" data-close-modal type="button">Հետ գնալ</button><a class="primary" href="/login.html?mode=signup&return_to=%2Fcourse.html">Գրանցվել</a></div>
+      <p>Դասերը դիտելու համար նախ խնդրում ենք գրանցվել կայքում։</p>
+      <div class="signup-actions"><a id="courseSignupLink" class="primary" href="/login.html?mode=signup">Գրանցվել</a></div>
     </div>
   </div>
 
   <div id="creditsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="creditsTitle">
     <div class="modal-box">
       <button class="modal-close" data-close-modal aria-label="Փակել">×</button>
+      <div class="pricing-sale">ՄԻՆՉԵՎ 30% ԶԵՂՉ</div>
       <h2 id="creditsTitle">Ընտրեք կրեդիտների փաթեթը</h2>
-      <p class="modal-sub">Գնեք կրեդիտներ և ստացեք ամբողջ դասընթացի մշտական հասանելիություն։ Կրեդիտները չեն սպառվում և ամբողջությամբ մնում են ձեր հաշվին։</p>
+      <p class="modal-sub">Գնեք առնվազն 100 կրեդիտ և ստացեք ամբողջ դասընթացի մշտական հասանելիություն։ Բոլոր կրեդիտները մնում են ձեր Hansora հաշվին։</p>
+      <div class="pricing-benefits"><span>Առանց ամսական բաժանորդագրության</span><span>Կրեդիտները չեն սպառվում</span><span>Բոլոր AI գործիքները ներառված են</span></div>
       <div id="creditPacks" class="packs"></div>
     </div>
   </div>
@@ -759,14 +763,15 @@ Return only the final ready-to-use image-editing prompt.`,
     ];
     COURSE_CONFIG.lessons[1].prompts = VIDEO_PROMPTS;
     COURSE_CONFIG.lessons[2].prompts = VIDEO_PROMPTS;
+    const LESSON_PREVIEWS=['https://i.ytimg.com/vi/yqjvoOV78xk/hqdefault.jpg','https://i.ytimg.com/vi/KqXOQ6Edw6g/hqdefault.jpg','https://i.ytimg.com/vi/khAT8qCwOxI/hqdefault.jpg'];
     const PACKS = [
-      {credits:100, price:'$9.99', product:'https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1', featured:true, gift:''},
-      {credits:210, price:'$19.99', product:'https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1', gift:'+10 նվեր կրեդիտ'},
-      {credits:535, price:'$49.99', product:'https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1', gift:'+35 նվեր կրեդիտ'},
-      {credits:1100, price:'$99.99', product:'https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1', gift:'+100 նվեր կրեդիտ'}
+      {credits:100, line:'100 + 0 կրեդիտ', price:'$9.99', oldPrice:'$14.99', save:'Խնայեք $5', product:'https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1', gift:'Մեկնարկային զեղչված գին'},
+      {credits:210, line:'200 + 10 կրեդիտ', price:'$19.99', oldPrice:'$29.99', save:'Խնայեք $10', product:'https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1', featured:true, gift:'Ներառում է 10 նվեր կրեդիտ (5%)'},
+      {credits:535, line:'500 + 35 կրեդիտ', price:'$49.99', oldPrice:'$74.99', save:'Խնայեք $25', product:'https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1', gift:'Ներառում է 35 նվեր կրեդիտ (7%)'},
+      {credits:1100, line:'1000 + 100 կրեդիտ', price:'$99.99', oldPrice:'$149.99', save:'Խնայեք $30', product:'https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1', gift:'Ներառում է 100 նվեր կրեդիտ (10%)'}
     ];
     const ANSWERS=['Գերազանց էր՝ ամեն ինչ հասկանալի էր','Լավ էր, բայց բավարար չէր','Լավ էր, բայց ավելի շատ օրինակներ են պետք','Լավ էր, բայց նյութը շատ արագ էր ներկայացված','Ավելին էի սպասում․ լավը չէր','Լավը չէր․ որոշ հատվածներ չհասկացա','Ինձ դուր չեկավ․ վատն էր'];
-    let sb=null, session=null, hasAccess=false, activeIndex=-1, ytPlayer=null, ytReady=false, introAutoOpened=false;
+    let sb=null, session=null, hasAccess=false, activeIndex=-1, ytPlayer=null, ytReady=false;
     const $=s=>document.querySelector(s);
     const esc=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
     function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2600)}
@@ -823,7 +828,14 @@ Return only the final ready-to-use image-editing prompt.`,
       const create=()=>{ytPlayer=new YT.Player('ytPlayer',{videoId,host:'https://www.youtube-nocookie.com',playerVars:{rel:0,playsinline:1,iv_load_policy:3,origin:playerOrigin,widget_referrer:'https://hansora.co/course.html'},events:{onStateChange:e=>{if(isIntro&&e.data===YT.PlayerState.ENDED)openCredits()}}})};
       if(window.YT&&YT.Player)create();else{window.onYouTubeIframeAPIReady=()=>{ytReady=true;create()};if(!document.querySelector('script[src*="youtube.com/iframe_api"]')){const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s)}}
     }
-    function showLockedPlayer(){activeIndex=-1;renderLessons();$('#playerInfo').classList.add('hidden');$('#lessonContent').classList.add('hidden');destroyPlayer();$('#playerWrap').innerHTML='<div class="video-empty"><div><div class="play">▶</div><strong>Սեղմեք՝ տեսանյութը դիտելու համար</strong></div></div>'}
+    function previewLockedLesson(index){
+      const lesson=COURSE_CONFIG.lessons[index]||COURSE_CONFIG.lessons[0];
+      activeIndex=index;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.remove('hidden');
+      playerMeta('ԴԱՍ '+(index+1),lesson.title,lesson.description,session?'Դիտել ներածությունը':'Գրանցվել՝ դիտելու համար');
+      const preview=LESSON_PREVIEWS[index]||'';
+      $('#playerWrap').innerHTML=`<div class="lesson-preview" style="background-image:url('${esc(preview)}')"><div class="lesson-preview-inner"><div class="play">▶</div><strong>${esc(lesson.title)}</strong><small>${session?'Սեղմեք Play՝ ներածական տեսանյութը դիտելու համար':'Սեղմեք Play՝ գրանցվելու և դիտելու համար'}</small></div></div>`;
+    }
+    function showLockedPlayer(){previewLockedLesson(0)}
     function openIntroVideo(){
       if(!requireUser())return;
       const video=$('#introPopupVideo');
@@ -831,21 +843,16 @@ Return only the final ready-to-use image-editing prompt.`,
       openModal('#introModal');
       video.play().catch(()=>{});
     }
-    function showIntro(){
-      activeIndex=-1;renderLessons();$('#playerInfo').classList.add('hidden');$('#lessonContent').classList.add('hidden');destroyPlayer();
-      $('#playerWrap').innerHTML='<div class="video-empty"><div><div class="play">▶</div><strong>Դիտել ներածական տեսանյութը</strong><small>Տեսանյութի ավարտից հետո կբացվեն կրեդիտների փաթեթները</small></div></div>';
-      if(!introAutoOpened){introAutoOpened=true;openIntroVideo()}
-    }
+    function showIntro(){previewLockedLesson(activeIndex>=0&&!COURSE_CONFIG.lessons[activeIndex]?.comingSoon?activeIndex:0)}
     function selectLesson(index){
-      if(!requireUser())return;
-      if(!hasAccess){showIntro();openIntroVideo();toast('Դասը բացելու համար դիտեք ներածական տեսանյութը');return}
       const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Այս դասը շուտով հասանելի կլինի');return}
+      if(!session||!hasAccess){previewLockedLesson(index);window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});return}
       activeIndex=index;renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('ԴԱՍ '+(index+1),l.title,l.description,'Բացված է');mountVideo(l.videoId,false);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
     }
     function renderPrompts(lesson){$('#promptList').innerHTML=lesson.prompts.map((p,i)=>{const item=typeof p==='string'?{title:`Հրահանգ ${i+1}`,text:p,ru:''}:p;return `<div class="prompt" data-prompt-index="${i}" data-lang="en"><div class="prompt-main"><div class="prompt-body"><h3 class="prompt-title">${esc(item.title)}</h3><div class="prompt-text">${esc(item.text)}</div></div><div class="prompt-actions">${item.ru?'<button type="button" class="mini-btn lang-btn">Русский</button>':''}<button type="button" class="mini-btn more-btn">Տեսնել ավելին</button><button type="button" class="mini-btn copy-btn">Պատճենել</button></div></div></div>`}).join('')}
     function renderFeedback(lesson){$('#feedbackOptions').innerHTML=ANSWERS.map((a,i)=>`<label class="choice"><input type="radio" name="rating" value="${esc(a)}" ${i===0?'required':''}><span>${esc(a)}</span></label>`).join('');$('#feedbackComment').value='';$('#feedbackForm').dataset.lesson=lesson.id}
     function openCredits(){if(!requireUser())return;openModal('#creditsModal')}
-    function renderPacks(){$('#creditPacks').innerHTML=PACKS.map(p=>`<article class="pack ${p.featured?'featured':''}">${p.featured?'<span class="pack-badge">ԱՌԱՋԱՐԿՎՈՒՄ Է</span>':''}<small>${p.gift||'Կրեդիտները չեն սպառվում'}</small><h3>${p.credits} կրեդիտ</h3><div class="price">${p.price}</div><button class="buy" type="button" data-credits="${p.credits}" data-product="${esc(p.product)}">Գնել</button></article>`).join('')}
+    function renderPacks(){$('#creditPacks').innerHTML=PACKS.map(p=>`<article class="pack ${p.featured?'featured':''}">${p.featured?'<span class="pack-badge">ԱՄԵՆԱՊԱՀԱՆՋՎԱԾԸ</span>':''}<div class="pack-top"><span class="pack-line">${esc(p.line)}</span><span class="pack-save">${esc(p.save)}</span></div><h3>${p.credits} կրեդիտ</h3><div class="pack-prices"><div class="price">${p.price}</div><div class="old-price">${p.oldPrice}</div></div><div class="pack-gift">${esc(p.gift)}</div><button class="buy" type="button" data-credits="${p.credits}" data-product="${esc(p.product)}">Գնել</button></article>`).join('')}
     function checkout(button){
       if(!requireUser())return;const url=new URL(button.dataset.product);url.searchParams.set('quantity','1');url.searchParams.set('minimalAddress','true');url.searchParams.set('redirect_url',location.origin+location.pathname+'?checkout=success');url.searchParams.set('metadata_uid',session.user.id);url.searchParams.set('metadata_credits',button.dataset.credits);url.searchParams.set('metadata_course_id','hansora-ai-course');if(session.user.email)url.searchParams.set('metadata_email',session.user.email);location.href=url.toString();
     }
@@ -854,7 +861,7 @@ Return only the final ready-to-use image-editing prompt.`,
       try{const res=await fetch('/.netlify/functions/course-feedback',{method:'POST',headers:{'Content-Type':'application/json',...(await authHeader())},body:JSON.stringify({lesson_id:form.dataset.lesson,answer:choice.value,comment:$('#feedbackComment').value.trim()})});if(!res.ok)throw new Error('save_failed');toast('Շնորհակալություն․ ձեր պատասխանը պահպանվեց')}catch(_){toast('Չհաջողվեց պահպանել։ Խնդրում ենք կրկին փորձել')}finally{btn.disabled=false}
     }
     async function init(){
-      renderPacks();renderLessons();showLockedPlayer();
+      renderPacks();renderLessons();showLockedPlayer();$('#courseSignupLink').href='/login.html?mode=signup&return_to='+encodeURIComponent(location.pathname);
       if(location.protocol==='file:'||location.hostname==='127.0.0.1'||location.hostname==='localhost'){
         session={user:{id:'local-preview',email:'preview@hansora.local'}};
         hasAccess=true;
@@ -862,7 +869,7 @@ Return only the final ready-to-use image-editing prompt.`,
         toast('Նախադիտման ռեժիմ․ դասերը բացված են');
         return;
       }
-      try{sb=window.__HANSORA_SB__||window.hansoraSupabase||window.supabaseClient;if(!sb){sb=window.supabase.createClient('https://qmaealblegvcwodlmeht.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c');window.__HANSORA_SB__=sb}const {data}=await sb.auth.getSession();session=data?.session||null;sb.auth.onAuthStateChange((_e,s)=>{session=s;introAutoOpened=false;checkAccess()});await checkAccess()}catch(e){console.warn(e);renderAccess()}
+      try{sb=window.__HANSORA_SB__||window.hansoraSupabase||window.supabaseClient;if(!sb){sb=window.supabase.createClient('https://qmaealblegvcwodlmeht.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c');window.__HANSORA_SB__=sb}const {data}=await sb.auth.getSession();session=data?.session||null;sb.auth.onAuthStateChange((_e,s)=>{session=s;checkAccess()});await checkAccess()}catch(e){console.warn(e);renderAccess()}
       if(new URLSearchParams(location.search).get('checkout')==='success'&&session){toast('Վճարումը ստուգվում է…');let tries=0;const poll=setInterval(async()=>{tries++;await checkAccess();if(hasAccess||tries>=12){clearInterval(poll);if(hasAccess){toast('Դասընթացը բացված է');selectLesson(0)}}},2000)}
     }
     document.addEventListener('click',e=>{const lesson=e.target.closest('[data-lesson]');if(lesson)selectLesson(Number(lesson.dataset.lesson));if(e.target.closest('#playerWrap')){if(!session)requireUser();else if(!hasAccess)openIntroVideo()}if(e.target.closest('[data-close-modal]')||e.target.classList.contains('modal'))closeModals();const more=e.target.closest('.more-btn');if(more){const box=more.closest('.prompt');box.classList.toggle('expanded');more.textContent=box.classList.contains('expanded')?'Փակել':'Տեսնել ավելին'}const lang=e.target.closest('.lang-btn');if(lang){const box=lang.closest('.prompt');const prompt=COURSE_CONFIG.lessons[activeIndex].prompts[Number(box.dataset.promptIndex)];const toRussian=box.dataset.lang!=='ru';box.dataset.lang=toRussian?'ru':'en';box.querySelector('.prompt-text').textContent=toRussian?prompt.ru:prompt.text;lang.textContent=toRussian?'English':'Русский'}const copy=e.target.closest('.copy-btn');if(copy){const text=copy.closest('.prompt').querySelector('.prompt-text').textContent;navigator.clipboard.writeText(text).then(()=>toast('Հրահանգը պատճենված է'))}const buy=e.target.closest('.buy');if(buy)checkout(buy)});
