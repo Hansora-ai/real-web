@@ -859,7 +859,20 @@ Return only the final ready-to-use image-editing prompt.`,
     }
     async function submitFeedback(event){
       event.preventDefault();if(!requireUser())return;const form=event.currentTarget;const choice=form.querySelector('input[name="rating"]:checked');if(!choice){toast('Խնդրում ենք ընտրել պատասխաններից մեկը');return}const btn=$('#feedbackSubmit');btn.disabled=true;
-      try{const res=await fetch('/.netlify/functions/course-feedback',{method:'POST',headers:{'Content-Type':'application/json',...(await authHeader())},body:JSON.stringify({lesson_id:form.dataset.lesson,answer:choice.value,comment:$('#feedbackComment').value.trim()})});if(!res.ok)throw new Error('save_failed');toast('Շնորհակալություն․ ձեր պատասխանը պահպանվեց')}catch(_){toast('Չհաջողվեց պահպանել։ Խնդրում ենք կրկին փորձել')}finally{btn.disabled=false}
+      try{
+        const {data}=await sb.auth.getSession();session=data?.session||null;
+        if(!session?.user?.id){openModal('#signupModal');return}
+        const {error}=await sb.from('course_feedback').insert({
+          user_id:session.user.id,
+          user_email:session.user.email||null,
+          lesson_id:form.dataset.lesson,
+          answer:choice.value,
+          comment:$('#feedbackComment').value.trim()||null,
+          updated_at:new Date().toISOString()
+        });
+        if(error)throw error;
+        toast('Շնորհակալություն․ ձեր պատասխանը պահպանվեց');
+      }catch(error){console.warn('Course feedback save failed:',error);toast('Չհաջողվեց պահպանել։ Խնդրում ենք կրկին փորձել')}finally{btn.disabled=false}
     }
     async function init(){
       renderPacks();renderLessons();showLockedPlayer();$('#courseSignupLink').href='/login.html?mode=signup&return_to='+encodeURIComponent(location.pathname);
