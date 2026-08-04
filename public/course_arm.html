@@ -802,8 +802,7 @@ Return only the final ready-to-use image-editing prompt.`,
       renderLessons();
       if(!session)showLockedPlayer();
       else if(!hasAccess)showIntro();
-      else if(activeIndex<0||COURSE_CONFIG.lessons[activeIndex]?.comingSoon)selectLesson(0);
-      else mountVideo(COURSE_CONFIG.lessons[activeIndex].videoId,false);
+      else selectLesson(activeIndex>=0&&!COURSE_CONFIG.lessons[activeIndex]?.comingSoon?activeIndex:0,false);
     }
     function renderLessons(){
       $('#lessonList').innerHTML=COURSE_CONFIG.lessons.map((l,i)=>{const preview=l.thumbnailUrl||(!String(l.videoId).startsWith('http')?`https://i.ytimg.com/vi/${encodeURIComponent(l.videoId)}/hqdefault.jpg`:'');const thumb=l.comingSoon?'<span class="lesson-thumb coming-thumb">ՇՈՒՏՈՎ</span>':`<span class="lesson-thumb" style="background-image:url('${esc(preview)}')"><span class="lesson-thumb-play">▶</span></span>`;return `<button type="button" class="lesson-btn ${activeIndex===i?'active':''} ${hasAccess&&!l.comingSoon?'unlocked':''} ${l.comingSoon?'coming':''}" data-lesson="${i}">${thumb}<span class="lesson-row"><span class="lesson-num">${i+1}</span><span class="lesson-copy"><strong>${esc(l.title)}</strong><small>${esc(l.duration)}</small></span><span class="lock">${l.comingSoon?'◷':(hasAccess?'✓':'🔒')}</span></span></button>`}).join('');
@@ -850,11 +849,11 @@ Return only the final ready-to-use image-editing prompt.`,
       video.play().catch(()=>{});
     }
     function showIntro(){previewLockedLesson(activeIndex>=0&&!COURSE_CONFIG.lessons[activeIndex]?.comingSoon?activeIndex:0)}
-    function selectLesson(index){
+    function selectLesson(index,shouldScroll=true){
       const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Այս դասը շուտով հասանելի կլինի');return}
       if(accessLoading){toast('Խնդրում ենք սպասել․ հասանելիությունը ստուգվում է');return}
       if(!session||!hasAccess){previewLockedLesson(index);window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});return}
-      activeIndex=index;renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('ԴԱՍ '+(index+1),l.title,l.description,'Բացված է');mountVideo(l.videoId,false);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
+      activeIndex=index;renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('ԴԱՍ '+(index+1),l.title,l.description,'Բացված է');mountVideo(l.videoId,false);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
     }
     function renderPrompts(lesson){$('#promptList').innerHTML=lesson.prompts.map((p,i)=>{const item=typeof p==='string'?{title:`Հրահանգ ${i+1}`,text:p,ru:''}:p;return `<div class="prompt" data-prompt-index="${i}" data-lang="en"><div class="prompt-main"><div class="prompt-body"><h3 class="prompt-title">${esc(item.title)}</h3><div class="prompt-text">${esc(item.text)}</div></div><div class="prompt-actions">${item.ru?'<button type="button" class="mini-btn lang-btn">Русский</button>':''}<button type="button" class="mini-btn more-btn">Տեսնել ավելին</button><button type="button" class="mini-btn copy-btn">Պատճենել</button></div></div></div>`}).join('')}
     function renderFeedback(lesson){$('#feedbackOptions').innerHTML=ANSWERS.map((a,i)=>`<label class="choice"><input type="radio" name="rating" value="${esc(a)}" ${i===0?'required':''}><span>${esc(a)}</span></label>`).join('');$('#feedbackComment').value='';$('#feedbackForm').dataset.lesson=lesson.id}
@@ -868,14 +867,10 @@ Return only the final ready-to-use image-editing prompt.`,
       try{
         const {data,error:userError}=await sb.auth.getUser();
         if(userError||!data?.user?.id)throw userError||new Error('authentication_required');
-        const verifiedUser=data.user;
-        const {error}=await sb.from('course_feedback').insert({
-          user_id:verifiedUser.id,
-          user_email:verifiedUser.email||null,
-          lesson_id:form.dataset.lesson,
-          answer:choice.value,
-          comment:$('#feedbackComment').value.trim()||null,
-          updated_at:new Date().toISOString()
+        const {error}=await sb.rpc('submit_course_feedback',{
+          p_lesson_id:form.dataset.lesson,
+          p_answer:choice.value,
+          p_comment:$('#feedbackComment').value.trim()||null
         });
         if(error)throw error;
         toast('Շնորհակալություն․ ձեր պատասխանը պահպանվեց');
