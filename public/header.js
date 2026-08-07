@@ -95,7 +95,6 @@
     { label: 'Image Upscale', href: '/upscale.html', icon: 'UP', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/7.png', note: 'Increase image quality' },
     { label: 'Full angles', href: '/expand.html?mode=angles', icon: 'FA', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/8.png', note: 'Different angles chosen' },
     { label: 'Expand', href: '/expand.html?mode=expand', icon: 'EX', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/9.png', note: 'Extend image edges' },
-    { label: 'Face swap', href: '/expand.html?mode=face-swap', icon: 'FS', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/10.png', note: 'Chosen face swap' },
     { label: 'Character', href: '/character.html', icon: 'CH', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/11.png', note: 'Character creator' },
     { label: 'Product Card', href: '/product_card.html', icon: 'PC', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/12.png', note: 'Product selling cards' },
   ];
