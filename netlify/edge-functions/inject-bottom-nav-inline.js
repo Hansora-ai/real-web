@@ -393,7 +393,6 @@ export default async (request, context) => {
         <a href="/upscale.html">Image upscale</a>
         <a href="/expand.html?mode=angles">Full angles</a>
         <a href="/expand.html?mode=expand">Expand</a>
-        <a href="/expand.html?mode=face-swap">Face swap</a>
         <a href="/character.html">Character</a>
         <a href="/product_card.html">Product Card</a>
         <a href="/prompt-builder.html">Cartoon Prompt Builder</a>
