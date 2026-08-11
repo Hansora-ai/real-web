@@ -5815,7 +5815,7 @@ function createResultCard(data) {
         }
       }
 
-      built.remove = function removeResultCard() {
+      built.remove = function removeResultCard(removeOptions) {
         if (cardHost && Array.isArray(cardHost.__orderedResultCards)) {
           cardHost.__orderedResultCards = cardHost.__orderedResultCards.filter((item) => item !== card);
         }
@@ -5823,7 +5823,12 @@ function createResultCard(data) {
         if (!strip.querySelector('.result-card, .result-thumb')) {
           strip.innerHTML = '';
           strip.classList.add('empty');
-          ensureResultsEmptyState();
+          if (removeOptions && removeOptions.suppressEmptyState) {
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection) resultsSection.classList.add('hidden');
+          } else {
+            ensureResultsEmptyState();
+          }
         }
       };
 
@@ -5879,13 +5884,13 @@ function createResultCard(data) {
           this.accepted = true;
           originalApply({ status: 'generating', result_url: null });
         },
-        remove() {
+        remove(options) {
           if (this.accepted) return;
           if (this.removed) return;
           this.removed = true;
           this.settled = true;
           __clientRequestPlaceholders.delete(this);
-          if (typeof built.remove === 'function') built.remove();
+          if (typeof built.remove === 'function') built.remove(options);
         }
       };
 
@@ -5909,8 +5914,8 @@ function createResultCard(data) {
       return context;
     }
 
-    function removeClientRequestPlaceholder(context) {
-      if (context && typeof context.remove === 'function') context.remove();
+    function removeClientRequestPlaceholder(context, options) {
+      if (context && typeof context.remove === 'function') context.remove(options);
     }
 
     function hasLiveAcceptedClientCards() {
@@ -12291,7 +12296,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             if (parsedMsg) msg = parsedMsg;
           } catch {}
           console.warn('model request failed', { runId, model: currentModel.id, endpoint: runEndpoint, status: res.status, message: msg, raw: txt });
-          removeClientRequestPlaceholder(requestContext);
+          removeClientRequestPlaceholder(requestContext, safetyBlocked ? { suppressEmptyState: true } : null);
           if (safetyBlocked) {
             showStatus(msg || 'This request was blocked by our content safety policy.', 'error');
           } else if (isNotEnoughCreditsMessage(msg)) {
