@@ -2,7 +2,7 @@
 
 const crypto = require('node:crypto');
 
-const POLICY_VERSION = '2026-08-11.2';
+const POLICY_VERSION = '2026-08-11.5';
 
 const NSFW_TERMS = [
   'adult content', 'bare breasts', 'blow job', 'blowjob', 'boob', 'boobs',
@@ -23,9 +23,9 @@ const MINOR_TERMS = [
 ];
 
 const DECEPTIVE_DEEPFAKE_TERMS = [
-  'deep fake', 'deepfake', 'fake endorsement', 'fake identity',
+  'deep fake', 'deepfake', 'face swap', 'face swapping', 'fake endorsement', 'fake identity',
   'fake interview', 'fake news clip', 'fake passport', 'fake statement',
-  'impersonate', 'impersonation', 'make it look authentic',
+  'impersonate', 'impersonation',
   'make it look like they said', 'make them confess', 'make them endorse',
   'pretend to be', 'without their consent'
 ];
@@ -81,7 +81,9 @@ function evaluatePrompt(prompt) {
 
   const deceptiveConstruction = /\b(?:make|show|create|generate)\b.{0,80}\b(?:celebrity|politician|president|prime minister|public figure|real person)\b.{0,80}\b(?:say|confess|endorse|promote|admit)\b/.test(normalized);
   const fabricatedMedia = /\bfake\b.{0,40}\b(?:video|photo|image|recording|speech)\b.{0,80}\b(?:celebrity|politician|president|public figure|real person)\b/.test(normalized);
-  if (deceptiveConstruction || fabricatedMedia) {
+  const faceReplacement = /\b(?:replace|swap|change)\b.{0,80}\bface\b.{0,80}\b(?:with|for|onto)\b.{0,80}\bface\b/.test(normalized)
+    || /\bput\b.{0,80}\bface\b.{0,80}\b(?:on|onto)\b.{0,80}\b(?:person|body|video|image|photo)\b/.test(normalized);
+  if (deceptiveConstruction || fabricatedMedia || faceReplacement) {
     return { allowed: false, category: 'harmful_or_deceptive_deepfake', policyVersion: POLICY_VERSION };
   }
   return { allowed: true, category: null, policyVersion: POLICY_VERSION };
@@ -93,6 +95,26 @@ function publicMessage(decision) {
     return 'This request was blocked because NSFW or sexual content is not allowed.';
   }
   return 'This request was blocked because harmful or deceptive deepfake content is not allowed.';
+}
+
+function collectPromptLikeText(value, parentKey, output, depth) {
+  if (depth > 8 || value == null) return;
+  const key = String(parentKey || '').toLowerCase();
+  if (typeof value === 'string') {
+    if (/(?:prompt|instruction|description|caption|scenario|script|text)/.test(key)) {
+      output.push(value);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.slice(0, 100).forEach((item) => collectPromptLikeText(item, key, output, depth + 1));
+    return;
+  }
+  if (typeof value === 'object') {
+    Object.entries(value).slice(0, 200).forEach(([childKey, childValue]) => {
+      collectPromptLikeText(childValue, childKey, output, depth + 1);
+    });
+  }
 }
 
 const ALLOWED_RUN_ENDPOINTS = new Set([
@@ -179,9 +201,16 @@ exports.handler = async function handler(event) {
     return json(400, { ok: false, error: 'Generation payload is required.' });
   }
 
-  const decision = evaluatePrompt(prompt);
+  const promptParts = [prompt];
+  collectPromptLikeText(request.payload, 'payload', promptParts, 0);
+  const moderationText = Array.from(new Set(promptParts.map((part) => String(part || '').trim()).filter(Boolean))).join('\n');
+  if (moderationText.length > 60000) {
+    return json(413, { ok: false, error: 'Combined prompt content is too long.' });
+  }
+
+  const decision = evaluatePrompt(moderationText);
   const decisionId = crypto.randomUUID();
-  const promptHash = crypto.createHash('sha256').update(prompt).digest('hex').slice(0, 16);
+  const promptHash = crypto.createHash('sha256').update(moderationText).digest('hex').slice(0, 16);
   console.info('content_safety_decision', JSON.stringify({
     decisionId,
     allowed: decision.allowed,
