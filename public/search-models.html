@@ -11,6 +11,7 @@
   <link rel="dns-prefetch" href="//qmaealblegvcwodlmeht.supabase.co" />
   <link href="./search-models-tailwind.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./content-filter.js"></script>
   <link href="./header.css" rel="stylesheet" />
   <script defer src="./header.js"></script>
   <script defer src="./kie-upload-bridge.js"></script>
@@ -7590,54 +7591,23 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let kling30MultiShots = false;
     let videoFirstFrameFile = null;
 
-    const EXPLICIT_BLOCK_WORDS = new Set([
-      'pussy',
-      'penis',
-      'dick',
-      'vagina',
-      'vergina',
-      'cock',
-      'clit',
-      'boob',
-      'boobs',
-      'tit',
-      'tits',
-      'milf',
-      'slut',
-      'whore',
-      'sex',
-      'sexual',
-      'xxx',
-      'fuck',
-      'fucking',
-      'fucked',
-      'masturbate',
-      'masturbating',
-      'masturbation',
-      'genital',
-      'genitals',
-      'nude',
-      'topless',
-      'breast',
-      'breasts'
-    ]);
+    function getPromptSafetyDecision(value) {
+      if (window.HansoraContentFilter && typeof window.HansoraContentFilter.evaluatePrompt === 'function') {
+        return window.HansoraContentFilter.evaluatePrompt(value);
+      }
+      // Fail closed if the required safety layer did not load.
+      return { allowed: false, category: 'safety_filter_unavailable' };
+    }
 
     function promptHasBlockedSexualTerms(value) {
-      const text = String(value || '').toLowerCase();
-      if (!text.trim()) return false;
-      const normalized = text
-        .replace(/[^a-z\s]+/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      if (!normalized) return false;
-      if (normalized.includes('no clothes') || normalized.includes('without clothes') || normalized.includes('jerk off')) return true;
-      return normalized.split(' ').some((word) => EXPLICIT_BLOCK_WORDS.has(word));
+      return !getPromptSafetyDecision(value).allowed;
     }
 
     function updatePromptSafetyState(showMessage = true) {
       const runBtn = document.getElementById('runBtn');
       const promptBox = document.getElementById('promptBox');
-      const blocked = promptHasBlockedSexualTerms(promptBox ? promptBox.value : '');
+      const decision = getPromptSafetyDecision(promptBox ? promptBox.value : '');
+      const blocked = !decision.allowed;
       if (!runBtn) return !blocked;
       if (blocked) {
         runBtn.dataset.promptBlocked = '1';
@@ -7645,7 +7615,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         runBtn.classList.add('opacity-60', 'cursor-not-allowed');
         if (showMessage) {
           runBtn.dataset.promptSafetyMessage = '1';
-          showStatus('Explicit sexual prompts are not allowed.', 'error');
+          const message = window.HansoraContentFilter && typeof window.HansoraContentFilter.publicMessage === 'function'
+            ? window.HansoraContentFilter.publicMessage(decision)
+            : 'Safety verification is temporarily unavailable. Please try again.';
+          showStatus(message || 'This request is not allowed by our content safety policy.', 'error');
         }
         return false;
       }
@@ -12294,26 +12267,40 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
         const runEndpoint = endpointForCurrentRun(currentModel);
         if (requestContext && requestContext.removed) return;
-        const res = await fetch(runEndpoint, {
+        // Every model submission goes through the same server-side safety gateway.
+        // The gateway moderates first, then forwards the unchanged payload to the
+        // selected model endpoint, where the existing credit deduction continues.
+        const res = await fetch('/.netlify/functions/safe-run', {
           method: 'POST',
           headers: Object.assign(
             { 'Content-Type': 'application/json', 'X-USER-ID': uid },
             __accessToken ? { 'Authorization': ('Bearer ' + __accessToken) } : {}
           ),
-          body: JSON.stringify(body)
+          body: JSON.stringify({
+            target_endpoint: runEndpoint,
+            model_id: currentModel.id,
+            model_name: currentModel.name,
+            kind: currentModel.category,
+            prompt,
+            payload: body
+          })
         });
 
         if (!res.ok) {
           const txt = await res.text().catch(() => '');
           let msg = txt || `status ${res.status}`;
+          let safetyBlocked = false;
           try {
             const j = JSON.parse(txt);
+            safetyBlocked = j && j.code === 'CONTENT_POLICY_BLOCKED';
             const parsedMsg = cleanGenerationFailureReason(j.message || extractGenerationFailureReason(j) || extractProviderError(j) || j.error);
             if (parsedMsg) msg = parsedMsg;
           } catch {}
           console.warn('model request failed', { runId, model: currentModel.id, endpoint: runEndpoint, status: res.status, message: msg, raw: txt });
           removeClientRequestPlaceholder(requestContext);
-          if (isNotEnoughCreditsMessage(msg)) {
+          if (safetyBlocked) {
+            showStatus(msg || 'This request was blocked by our content safety policy.', 'error');
+          } else if (isNotEnoughCreditsMessage(msg)) {
             showNotEnoughCreditsStatus(msg);
           } else {
             showGenerationFailedStatus(msg, runId);
