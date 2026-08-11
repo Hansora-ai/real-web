@@ -11,7 +11,6 @@
   <link rel="dns-prefetch" href="//qmaealblegvcwodlmeht.supabase.co" />
   <link href="./search-models-tailwind.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./content-filter.js"></script>
   <link href="./header.css" rel="stylesheet" />
   <script defer src="./header.js"></script>
   <script defer src="./kie-upload-bridge.js"></script>
@@ -7592,11 +7591,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let videoFirstFrameFile = null;
 
     function getPromptSafetyDecision(value) {
-      if (window.HansoraContentFilter && typeof window.HansoraContentFilter.evaluatePrompt === 'function') {
-        return window.HansoraContentFilter.evaluatePrompt(value);
-      }
-      // Fail closed if the required safety layer did not load.
-      return { allowed: false, category: 'safety_filter_unavailable' };
+      // The authoritative block-only check runs in safe-run.cjs after Generate.
+      // No browser allowlist is used; the gateway decides whether to forward.
+      return { allowed: true, category: null };
     }
 
     function promptHasBlockedSexualTerms(value) {
@@ -7615,10 +7612,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         runBtn.classList.add('opacity-60', 'cursor-not-allowed');
         if (showMessage) {
           runBtn.dataset.promptSafetyMessage = '1';
-          const message = window.HansoraContentFilter && typeof window.HansoraContentFilter.publicMessage === 'function'
-            ? window.HansoraContentFilter.publicMessage(decision)
-            : 'Safety verification is temporarily unavailable. Please try again.';
-          showStatus(message || 'This request is not allowed by our content safety policy.', 'error');
+          showStatus('This request is not allowed by our content safety policy.', 'error');
         }
         return false;
       }
