@@ -594,6 +594,57 @@
         left:calc(50% - 24px);
         top:calc(50% - 24px);
       }
+      #resultsStrip .result-failed-state{
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        gap:10px;
+        width:100%;
+        height:100%;
+        padding:22px;
+        text-align:center;
+        color:#fecaca;
+        background:
+          radial-gradient(circle at 50% 44%, rgba(239,68,68,.18), transparent 34%),
+          linear-gradient(180deg, rgba(69,10,10,.16), rgba(15,4,10,.38));
+      }
+      #resultsStrip .result-media > .result-failed-state{
+        position:absolute;
+        inset:0;
+        z-index:2;
+      }
+      #resultsStrip .result-failed-state.hidden{ display:none !important; }
+      #resultsStrip .result-failed-icon{
+        width:58px;
+        height:58px;
+        border-radius:50%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        border:1px solid rgba(248,113,113,.42);
+        background:rgba(127,29,29,.38);
+        box-shadow:0 0 0 8px rgba(239,68,68,.055), 0 14px 38px rgba(127,29,29,.28);
+        color:#f87171;
+      }
+      #resultsStrip .result-failed-icon svg{
+        width:27px;
+        height:27px;
+      }
+      #resultsStrip .result-failed-title{
+        color:#f87171;
+        font-size:18px;
+        font-weight:850;
+        line-height:1;
+        letter-spacing:.08em;
+        text-transform:uppercase;
+      }
+      #resultsStrip .result-failed-copy{
+        max-width:230px;
+        color:rgba(254,202,202,.68);
+        font-size:11px;
+        line-height:1.45;
+      }
 
 }
 
@@ -5164,6 +5215,23 @@ async function __mjFetchNbCheck(params){
       if (label) label.textContent = copy.label;
     }
 
+    function createFailedResultState() {
+      const failedState = document.createElement('div');
+      failedState.className = 'result-failed-state';
+      failedState.innerHTML = `
+        <div class="result-failed-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="m9 9 6 6"></path>
+            <path d="m15 9-6 6"></path>
+          </svg>
+        </div>
+        <div class="result-failed-title">Failed</div>
+        <div class="result-failed-copy">This generation could not be completed.</div>
+      `;
+      return failedState;
+    }
+
     function resultShortcutIcon(action) {
       if (action === 'create-video') {
         return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.5-2.6A1 1 0 0 1 21 8.3v7.4a1 1 0 0 1-1.5.9L15 14"></path><rect x="3" y="6" width="12" height="12" rx="2"></rect></svg>';
@@ -5274,10 +5342,7 @@ async function __mjFetchNbCheck(params){
         ph.style.color = 'rgba(255,255,255,.55)';
         ph.style.fontSize = '12px';
         if (initialFailed) {
-          const label = document.createElement('div');
-          label.className = 'result-thumb-placeholder-label';
-          label.textContent = 'Failed';
-          ph.appendChild(label);
+          ph.appendChild(createFailedResultState());
         } else {
           ph.appendChild(createGenerationStage(statusRaw || 'generating'));
         }
@@ -5405,7 +5470,8 @@ async function __mjFetchNbCheck(params){
 
           const placeholder = card.querySelector('.result-thumb-placeholder');
           if (placeholder && failed && !ready) {
-            placeholder.innerHTML = '<div class="result-thumb-placeholder-label">Failed</div>';
+            placeholder.innerHTML = '';
+            placeholder.appendChild(createFailedResultState());
             placeholder.style.color = 'rgba(248,113,113,.9)';
           } else if (placeholder && !failed && !ready) {
             let stage = placeholder.querySelector('.generation-stage');
@@ -5549,6 +5615,10 @@ function createResultCard(data) {
       loader.classList.add('result-card-loader');
       media.appendChild(loader);
 
+      const failedState = createFailedResultState();
+      failedState.classList.add('hidden');
+      media.appendChild(failedState);
+
       const mediaEl = document.createElement(kind === 'video' ? 'video' : 'img');
       mediaEl.className = 'max-h-full max-w-full object-contain hidden';
       mediaEl.style.cursor = 'pointer';
@@ -5584,6 +5654,7 @@ function createResultCard(data) {
 
       const statusChip = document.createElement('div');
       statusChip.className = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-black/70 text-white/80';
+      statusChip.style.zIndex = '4';
       media.appendChild(statusChip);
 
       const previewHover = document.createElement('div');
@@ -5671,6 +5742,8 @@ function createResultCard(data) {
         const hasUrlNow = !!newData.result_url;
         const failedNow = isFailedResultStatus(st);
         const readyNow = canGetResult(st, newData.result_url);
+        failedState.classList.toggle('hidden', !failedNow);
+        media.classList.toggle('result-media--failed', failedNow);
 
         if (hasUrlNow) {
           mediaEl.src = newData.result_url;
