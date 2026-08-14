@@ -4044,6 +4044,94 @@
         body.workspace-redesign #resultsStrip .results-masonry-content{ grid-template-columns:repeat(2,minmax(0,1fr)); }
       }
 
+      /* Compact premium failure state — shared by desktop cards and mobile thumbs. */
+      body.workspace-redesign #resultsStrip .result-failed-state{
+        width:100% !important;
+        height:100% !important;
+        min-height:0 !important;
+        display:flex !important;
+        flex-direction:column !important;
+        align-items:center !important;
+        justify-content:center !important;
+        gap:6px !important;
+        padding:20px !important;
+        text-align:center !important;
+        color:#fb7185 !important;
+        background:
+          radial-gradient(circle at 50% 48%,rgba(244,63,94,.085),transparent 30%),
+          linear-gradient(180deg,rgba(4,7,20,.76),rgba(3,5,16,.94)) !important;
+        box-sizing:border-box !important;
+      }
+      body.workspace-redesign #resultsStrip .result-media > .result-failed-state{
+        position:absolute !important;
+        inset:0 !important;
+        z-index:2 !important;
+      }
+      body.workspace-redesign #resultsStrip .result-thumb-placeholder > .result-failed-state{
+        position:relative !important;
+        inset:auto !important;
+      }
+      body.workspace-redesign #resultsStrip .result-failed-state.hidden{
+        display:none !important;
+      }
+      body.workspace-redesign #resultsStrip .result-failed-icon{
+        position:relative !important;
+        inset:auto !important;
+        width:38px !important;
+        height:38px !important;
+        min-width:38px !important;
+        min-height:38px !important;
+        max-width:38px !important;
+        max-height:38px !important;
+        flex:0 0 38px !important;
+        display:grid !important;
+        place-items:center !important;
+        padding:0 !important;
+        margin:0 0 2px !important;
+        border:1px solid rgba(251,113,133,.30) !important;
+        border-radius:12px !important;
+        background:linear-gradient(145deg,rgba(244,63,94,.15),rgba(244,63,94,.055)) !important;
+        color:#fb7185 !important;
+        box-shadow:0 8px 22px rgba(244,63,94,.10),inset 0 1px 0 rgba(255,255,255,.035) !important;
+        opacity:1 !important;
+        transform:none !important;
+        box-sizing:border-box !important;
+      }
+      body.workspace-redesign #resultsStrip .result-failed-icon svg{
+        position:static !important;
+        inset:auto !important;
+        width:16px !important;
+        height:16px !important;
+        min-width:16px !important;
+        min-height:16px !important;
+        max-width:16px !important;
+        max-height:16px !important;
+        padding:0 !important;
+        margin:0 !important;
+        color:#fb7185 !important;
+        stroke:#fb7185 !important;
+        fill:none !important;
+        opacity:1 !important;
+        transform:none !important;
+      }
+      body.workspace-redesign #resultsStrip .result-failed-title{
+        margin:0 !important;
+        color:#fb7185 !important;
+        font-size:13px !important;
+        font-weight:750 !important;
+        line-height:1.2 !important;
+        letter-spacing:.01em !important;
+      }
+      body.workspace-redesign #resultsStrip .result-failed-copy{
+        max-width:180px !important;
+        margin:0 !important;
+        color:rgba(255,255,255,.42) !important;
+        font-size:10px !important;
+        font-weight:500 !important;
+        line-height:1.35 !important;
+        letter-spacing:.005em !important;
+      }
+
 	    </style>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
@@ -5217,18 +5305,17 @@ async function __mjFetchNbCheck(params){
 
     function createFailedResultState() {
       const failedState = document.createElement('div');
-      failedState.className = 'result-failed-state';
-      failedState.innerHTML = `
-        <div class="result-failed-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="9"></circle>
-            <path d="m9 9 6 6"></path>
-            <path d="m15 9-6 6"></path>
-          </svg>
-        </div>
-        <div class="result-failed-title">Failed</div>
-        <div class="result-failed-copy">This generation could not be completed.</div>
-      `;
+  failedState.className = 'result-failed-state';
+  failedState.innerHTML = `
+    <div class="result-failed-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">
+        <path d="m8.5 8.5 7 7"></path>
+        <path d="m15.5 8.5-7 7"></path>
+      </svg>
+    </div>
+    <div class="result-failed-title">Failed</div>
+    <div class="result-failed-copy">Generation wasn’t completed</div>
+  `;
       return failedState;
     }
 
