@@ -6842,9 +6842,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         maxFiles: 0,
         uploadMaxMB: 200,
         uploadLimitsMB: { image: 30, video: 200, audio: 15 },
+        referenceLimits: { image: 30, video: 10, audio: 3 },
         specificUpload: 'seedance',
         aspectOptions: ['16:9', '9:16', '1:1', '4:3', '3:4'],
-        defaultAspect: '16:9',
+        defaultAspect: '1:1',
         resolutionOptions: ['480p', '720p'],
         defaultResolution: '720p',
         durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
@@ -7473,13 +7474,19 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const id = String(containerId || '');
       const byId = {
         veoReferenceThumbs: { inputId: 'veoReferenceInput', kind: 'image', max: 3 },
-        seedanceImageRefsThumbs: { inputId: 'seedanceImageRefsInput', kind: 'image', max: 9 },
-        seedanceVideoRefsThumbs: { inputId: 'seedanceVideoRefsInput', kind: 'video', max: 3 },
-        seedanceAudioRefsThumbs: { inputId: 'seedanceAudioRefsInput', kind: 'audio', max: 3 },
         videoRefVideosThumbs: { inputId: 'videoRefVideosInput', kind: 'video', max: 3 },
         videoRefAudioThumbs: { inputId: 'videoRefAudioInput', kind: 'audio', max: 1 },
         kling30ElementsThumbs: { inputId: 'kling30ElementsInput', kind: 'image', max: 4 }
       };
+      if (id === 'seedanceImageRefsThumbs') {
+        return { inputId: 'seedanceImageRefsInput', kind: 'image', max: getSeedanceReferenceLimit('image') };
+      }
+      if (id === 'seedanceVideoRefsThumbs') {
+        return { inputId: 'seedanceVideoRefsInput', kind: 'video', max: getSeedanceReferenceLimit('video') };
+      }
+      if (id === 'seedanceAudioRefsThumbs') {
+        return { inputId: 'seedanceAudioRefsInput', kind: 'audio', max: getSeedanceReferenceLimit('audio') };
+      }
       if (id === 'videoRefImagesThumbs') {
         const max = currentModel && (currentModel.id === 'grok-video' || currentModel.id === 'gemini-omni-video') ? 7 : 9;
         return { inputId: 'videoRefImagesInput', kind: 'image', max };
@@ -8216,7 +8223,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
 
       if (currentModel.specificUpload === 'seedance') {
-        seedanceImageRefFiles = imageFiles.slice(0, 9);
+        seedanceImageRefFiles = imageFiles.slice(0, getSeedanceReferenceLimit('image'));
         renderFileListThumbs(seedanceImageRefFiles, document.getElementById('seedanceImageRefsThumbs'), (index) => {
           seedanceImageRefFiles.splice(index, 1);
           const input = document.getElementById('seedanceImageRefsInput');
@@ -9582,7 +9589,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
 
       // AR
-      if (currentModel.aspectOptions && currentModel.aspectOptions.length) {
+      if (currentModel.aspectOptions && currentModel.aspectOptions.length && !seedance25UsesAdaptiveAspect()) {
         arBtn.classList.remove('hidden');
         arLabel.textContent = currentAspect || currentModel.aspectOptions[0];
       } else {
@@ -9610,6 +9617,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       let current = null;
 
       if (type === 'aspect') {
+        if (seedance25UsesAdaptiveAspect()) return;
         options = (currentModel.aspectOptions || []).slice();
         current = String(currentAspect || '');
         title.textContent = 'Aspect ratio';
@@ -10158,7 +10166,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      updateGeminiOmniTrimLabels();
 	    }
 
-	    function setSeedanceControlDisabled(btnId, inputId, disabled, title) {
+    function setSeedanceControlDisabled(btnId, inputId, disabled, title) {
       const btn = document.getElementById(btnId);
       const input = document.getElementById(inputId);
       const card = btn ? btn.closest('.upload-drop-card') : null;
@@ -10168,6 +10176,19 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       if (input) input.disabled = !!disabled;
       if (card) card.classList.toggle('control-disabled', !!disabled);
+    }
+
+    function seedance25UsesAdaptiveAspect() {
+      return !!(currentModel && currentModel.id === 'seedance25' && seedanceFirstFrameFile);
+    }
+
+    function syncSeedanceAspectControl() {
+      if (!currentModel || currentModel.id !== 'seedance25') return;
+      const locked = seedance25UsesAdaptiveAspect();
+      const aspectBlock = document.getElementById('aspectBlock');
+      const mobileAspectBtn = document.getElementById('mobileAspectBtn');
+      if (aspectBlock) aspectBlock.classList.toggle('hidden', locked);
+      if (mobileAspectBtn) mobileAspectBtn.classList.toggle('hidden', locked);
     }
 
     function syncSeedanceInputLocks() {
@@ -10182,6 +10203,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       setSeedanceControlDisabled('seedanceImageRefsBtn', 'seedanceImageRefsInput', hasFrames, referenceLockText);
       setSeedanceControlDisabled('seedanceVideoRefsBtn', 'seedanceVideoRefsInput', hasFrames, referenceLockText);
       setSeedanceControlDisabled('seedanceAudioRefsBtn', 'seedanceAudioRefsInput', hasFrames, referenceLockText);
+      syncSeedanceAspectControl();
     }
 
     function setVeoControlDisabled(btnId, inputId, disabled, title) {
@@ -10333,6 +10355,22 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           return true;
         })
         .slice(0, limit);
+    }
+    function getSeedanceReferenceLimit(kind) {
+      const defaults = { image: 9, video: 3, audio: 3 };
+      const configured = currentModel && currentModel.referenceLimits;
+      return Math.max(1, Number(configured && configured[kind] || defaults[kind] || 1));
+    }
+    function filterSeedance25ReferenceFiles(files, kind) {
+      const incoming = Array.from(files || []).filter((file) => fileMatchesAccept(file, `${kind}/*`));
+      if (!currentModel || currentModel.id !== 'seedance25') return incoming;
+      const maxMB = kind === 'image' ? 30 : (kind === 'video' ? 200 : 15);
+      const maxBytes = maxMB * 1024 * 1024;
+      const accepted = incoming.filter((file) => Number(file.size || 0) <= maxBytes);
+      if (accepted.length !== incoming.length) {
+        showStatus(`Each Seedance 2.5 ${kind} reference must be ${maxMB} MB or smaller.`, 'error');
+      }
+      return accepted;
     }
     const bindDropToInput = (inputId) => {
       const input = document.getElementById(inputId);
@@ -10488,7 +10526,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         syncSeedanceInputLocks();
         return;
       }
-      seedanceImageRefFiles = appendFilesWithLimit(seedanceImageRefFiles, e.target.files, 9, 'image/*');
+      const incoming = filterSeedance25ReferenceFiles(e.target.files, 'image');
+      const maxImages = getSeedanceReferenceLimit('image');
+      if (currentModel && currentModel.id === 'seedance25' && seedanceImageRefFiles.length + incoming.length > maxImages) {
+        showStatus(`Seedance 2.5 accepts up to ${maxImages} image references.`, 'error');
+      }
+      seedanceImageRefFiles = appendFilesWithLimit(seedanceImageRefFiles, incoming, maxImages, 'image/*');
       e.target.value = '';
       renderFileListThumbs(seedanceImageRefFiles, document.getElementById('seedanceImageRefsThumbs'), (index) => {
         seedanceImageRefFiles.splice(index, 1);
@@ -10502,7 +10545,17 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         syncSeedanceInputLocks();
         return;
       }
-      seedanceVideoRefFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, 3);
+      if (currentModel && currentModel.id === 'seedance25') {
+        const incoming = filterSeedance25ReferenceFiles(e.target.files, 'video');
+        const maxVideos = getSeedanceReferenceLimit('video');
+        if (seedanceVideoRefFiles.length + incoming.length > maxVideos) {
+          showStatus(`Seedance 2.5 accepts up to ${maxVideos} video references.`, 'error');
+        }
+        seedanceVideoRefFiles = appendFilesWithLimit(seedanceVideoRefFiles, incoming, maxVideos, 'video/*');
+        e.target.value = '';
+      } else {
+        seedanceVideoRefFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, 3);
+      }
       renderFileListThumbs(seedanceVideoRefFiles, document.getElementById('seedanceVideoRefsThumbs'), (index) => {
         seedanceVideoRefFiles.splice(index, 1);
         document.getElementById('seedanceVideoRefsInput').value = '';
