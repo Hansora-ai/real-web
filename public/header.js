@@ -332,8 +332,16 @@
     }
   }
 
+  function removeAnalyticsConsentBanner() {
+    const banner = document.getElementById('hansoraAnalyticsConsent');
+    const style = document.getElementById('hansoraAnalyticsConsentStyles');
+    if (banner) banner.remove();
+    if (style) style.remove();
+  }
+
   function injectAnalyticsConsentBanner() {
     if (analyticsConsentMode === 'pending') return;
+    if (currentUser || readCache('loggedIn') === '1') return;
     if (readAnalyticsConsent()) return;
     if (document.getElementById('hansoraAnalyticsConsent')) return;
 
@@ -1567,6 +1575,10 @@
           </div>
         </section>
       </div>`;
+
+    // Center the chooser against the viewport, not a transformed header parent.
+    const courseModal = mount.querySelector('#aiCourseModal');
+    if (courseModal && document.body) document.body.appendChild(courseModal);
   }
 
   function injectAuthModal() {
@@ -1619,6 +1631,7 @@
   function showLoggedInUI(profile, user) {
     currentUser = user || null;
     promoteAiCourseOriginForAuthenticatedUser();
+    removeAnalyticsConsentBanner();
     const header = el('siteHeader');
     const loginBtn = el('btnLoginSignup');
     const navCredits = el('navCredits');
@@ -1654,6 +1667,7 @@
     if (navMenu) navMenu.classList.remove('is-open');
     clearCache();
     updateVideoLandingLink();
+    injectAnalyticsConsentBanner();
     redirectLoggedOutHome();
   }
 
@@ -2416,9 +2430,8 @@
     exposeApi();
     bindEvents();
     bindGlobalClickTracking();
-    initializeRegionalAnalyticsConsent();
     preserveAffiliateRefAcrossPageLinks();
     bindAuthStateChanges();
-    restoreSession();
+    restoreSession().finally(initializeRegionalAnalyticsConsent);
   });
 })();
