@@ -208,6 +208,14 @@
     }
   }
 
+  function getPendingAiCourseOrigin() {
+    try {
+      return normalizeAiCoursePath(localStorage.getItem(AI_COURSE_PENDING_ORIGIN_KEY));
+    } catch (_) {
+      return '';
+    }
+  }
+
   function isTelegramWebView() {
     const tg = window.Telegram && window.Telegram.WebApp;
     const ua = navigator.userAgent || '';
@@ -1674,10 +1682,10 @@
   let authMode = 'login';
 
   function setAuthMode(mode) {
-    authMode = 'login';
+    authMode = mode === 'signup' ? 'signup' : 'login';
     const title = el('authTitle');
     const msg = el('authMsg');
-    if (title) title.textContent = 'Log in';
+    if (title) title.textContent = authMode === 'signup' ? 'Create your account' : 'Log in';
     if (msg) msg.textContent = '';
   }
 
@@ -2216,8 +2224,29 @@
 
     if (btnLoginSignup) btnLoginSignup.addEventListener('click', function (event) { event.preventDefault(); openAuth('login'); });
     if (btnGetStarted) {
-      btnGetStarted.addEventListener('click', function () {});
+      btnGetStarted.addEventListener('click', function (event) {
+        if (currentUser || readCache('loggedIn') === '1') return;
+        event.preventDefault();
+        openAuth('signup');
+      });
     }
+    // Older pages still point their Start creating links to /login.html.
+    // Keep those pages working while routing logged-out visitors to this popup.
+    document.addEventListener('click', function (event) {
+      const link = event.target.closest && event.target.closest('a');
+      if (!link || currentUser || readCache('loggedIn') === '1') return;
+      let legacyLoginLink = false;
+      let signupMode = link.classList.contains('start-creating-link');
+      try {
+        const destination = new URL(link.href, location.href);
+        legacyLoginLink = destination.origin === location.origin
+          && (destination.pathname === '/login.html' || destination.pathname === '/login');
+        signupMode = signupMode || destination.searchParams.get('mode') === 'signup';
+      } catch (_) {}
+      if (!signupMode && !legacyLoginLink) return;
+      event.preventDefault();
+      openAuth(signupMode ? 'signup' : 'login');
+    }, true);
     function closeAiCourseModal() {
       if (!aiCourseModal) return;
       aiCourseModal.classList.remove('is-open');
@@ -2341,9 +2370,14 @@
 
   async function handleAuthenticatedUser(user) {
     if (!user) return null;
+    const pendingCourseReturn = getPendingAiCourseOrigin();
     refreshAnalyticsAuthCache();
     const profile = await getOrCreateProfile(user);
     showLoggedInUI(profile, user);
+    if (pendingCourseReturn && normalizeAiCoursePath(location.pathname) !== pendingCourseReturn) {
+      window.location.replace(pendingCourseReturn);
+      return profile;
+    }
     loadSubscriptionForUser(user).catch(function (error) {
       console.warn('Hansora subscription background read failed', error);
     });
