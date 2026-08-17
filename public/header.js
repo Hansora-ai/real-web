@@ -229,7 +229,139 @@
     } catch (_) {}
   }
 
+  const ANALYTICS_CONSENT_KEY = 'hansora.analytics.consent.v1';
+  const ANALYTICS_CONSENT_VERSION = 'analytics-v1';
+  const ANALYTICS_VISITOR_ID_KEY = 'hansora.analytics.visitor_id';
+  let analyticsConsentMemory = '';
   let analyticsAuthCache = null;
+
+  function readAnalyticsConsent() {
+    try {
+      const saved = localStorage.getItem(ANALYTICS_CONSENT_KEY) || '';
+      if (saved === 'accepted' || saved === 'rejected') return saved;
+    } catch (_) {}
+    return analyticsConsentMemory;
+  }
+
+  function writeAnalyticsConsent(value) {
+    analyticsConsentMemory = value === 'accepted' ? 'accepted' : 'rejected';
+    try {
+      localStorage.setItem(ANALYTICS_CONSENT_KEY, analyticsConsentMemory);
+      if (analyticsConsentMemory === 'rejected') {
+        localStorage.removeItem(ANALYTICS_VISITOR_ID_KEY);
+      }
+    } catch (_) {}
+  }
+
+  function analyticsVisitorId() {
+    if (readAnalyticsConsent() !== 'accepted') return null;
+    try {
+      let value = localStorage.getItem(ANALYTICS_VISITOR_ID_KEY);
+      if (!value) {
+        value = window.crypto && typeof window.crypto.randomUUID === 'function'
+          ? window.crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+        localStorage.setItem(ANALYTICS_VISITOR_ID_KEY, value);
+      }
+      return value;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function injectAnalyticsConsentBanner() {
+    if (readAnalyticsConsent()) return;
+    if (document.getElementById('hansoraAnalyticsConsent')) return;
+
+    const style = document.createElement('style');
+    style.id = 'hansoraAnalyticsConsentStyles';
+    style.textContent = `
+      #hansoraAnalyticsConsent {
+        position: fixed;
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+        z-index: 2147483646;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        max-width: 780px;
+        margin: 0 auto;
+        padding: 16px 18px;
+        border: 1px solid rgba(255,255,255,.16);
+        border-radius: 18px;
+        background: rgba(7,10,22,.97);
+        color: #f8fafc;
+        box-shadow: 0 20px 60px rgba(0,0,0,.45);
+        font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      }
+      #hansoraAnalyticsConsent p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+        color: rgba(248,250,252,.82);
+      }
+      #hansoraAnalyticsConsent strong { color: #fff; }
+      .hansora-analytics-consent-actions {
+        display: flex;
+        flex: 0 0 auto;
+        gap: 9px;
+      }
+      .hansora-analytics-consent-actions button {
+        min-height: 40px;
+        padding: 0 16px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.18);
+        color: #fff;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 750;
+        cursor: pointer;
+      }
+      #hansoraAnalyticsReject { background: rgba(255,255,255,.06); }
+      #hansoraAnalyticsAccept {
+        border-color: transparent;
+        background: linear-gradient(135deg,#6366f1,#8b5cf6);
+      }
+      @media (max-width: 640px) {
+        #hansoraAnalyticsConsent {
+          align-items: stretch;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .hansora-analytics-consent-actions button { flex: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    const banner = document.createElement('section');
+    banner.id = 'hansoraAnalyticsConsent';
+    banner.setAttribute('role', 'dialog');
+    banner.setAttribute('aria-label', 'Analytics preferences');
+    banner.innerHTML = `
+      <p><strong>Help us improve Hansora.</strong> Allow anonymous click analytics so we can understand which pages and buttons are useful. You can reject and continue using the website.</p>
+      <div class="hansora-analytics-consent-actions">
+        <button id="hansoraAnalyticsReject" type="button">Reject</button>
+        <button id="hansoraAnalyticsAccept" type="button">Accept analytics</button>
+      </div>
+    `;
+    document.body.appendChild(banner);
+
+    const closeBanner = function () {
+      banner.remove();
+      style.remove();
+    };
+    banner.querySelector('#hansoraAnalyticsReject').addEventListener('click', function () {
+      writeAnalyticsConsent('rejected');
+      closeBanner();
+    });
+    banner.querySelector('#hansoraAnalyticsAccept').addEventListener('click', function () {
+      writeAnalyticsConsent('accepted');
+      analyticsVisitorId();
+      closeBanner();
+    });
+  }
 
   function refreshAnalyticsAuthCache() {
     analyticsAuthCache = null;
@@ -303,7 +435,9 @@
         if (!target || target.disabled || target.getAttribute('aria-disabled') === 'true') return;
 
         const auth = readAnalyticsAuth();
-        if (!auth || !auth.userId || !auth.accessToken) return;
+        const isRegisteredUser = Boolean(auth && auth.userId && auth.accessToken);
+        const visitorId = isRegisteredUser ? null : analyticsVisitorId();
+        if (!isRegisteredUser && !visitorId) return;
 
         const label = String(
           target.getAttribute('aria-label') ||
@@ -313,29 +447,48 @@
           'unlabeled'
         ).replace(/\s+/g, ' ').trim().slice(0, 180);
 
-        fetch(`${SUPABASE_URL}/rest/v1/click_events`, {
+        const tableName = isRegisteredUser ? 'click_events' : 'anonymous_click_events';
+        const authorizationToken = isRegisteredUser ? auth.accessToken : SUPABASE_ANON_KEY;
+        const payload = isRegisteredUser
+          ? {
+              user_id: auth.userId,
+              email: auth.email,
+              event_name: 'click',
+              element_type: String(target.tagName || '').toLowerCase() || null,
+              element_id: String(target.id || '').slice(0, 180) || null,
+              element_label: label || 'unlabeled',
+              destination: clickDestination(target),
+              page_path: `${location.pathname}${location.hash || ''}`.slice(0, 300),
+              session_id: analyticsSessionId(),
+              device_type: window.matchMedia && window.matchMedia('(max-width: 900px)').matches
+                ? 'mobile'
+                : 'desktop'
+            }
+          : {
+              visitor_id: visitorId,
+              session_id: analyticsSessionId(),
+              event_name: 'click',
+              element_type: String(target.tagName || '').toLowerCase() || null,
+              element_id: String(target.id || '').slice(0, 180) || null,
+              element_label: label || 'unlabeled',
+              destination: clickDestination(target),
+              page_path: `${location.pathname}${location.hash || ''}`.slice(0, 300),
+              device_type: window.matchMedia && window.matchMedia('(max-width: 900px)').matches
+                ? 'mobile'
+                : 'desktop',
+              consent_version: ANALYTICS_CONSENT_VERSION
+            };
+
+        fetch(`${SUPABASE_URL}/rest/v1/${tableName}`, {
           method: 'POST',
           keepalive: true,
           headers: {
             'Content-Type': 'application/json',
             'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${auth.accessToken}`,
+            'Authorization': `Bearer ${authorizationToken}`,
             'Prefer': 'return=minimal'
           },
-          body: JSON.stringify({
-            user_id: auth.userId,
-            email: auth.email,
-            event_name: 'click',
-            element_type: String(target.tagName || '').toLowerCase() || null,
-            element_id: String(target.id || '').slice(0, 180) || null,
-            element_label: label || 'unlabeled',
-            destination: clickDestination(target),
-            page_path: `${location.pathname}${location.hash || ''}`.slice(0, 300),
-            session_id: analyticsSessionId(),
-            device_type: window.matchMedia && window.matchMedia('(max-width: 900px)').matches
-              ? 'mobile'
-              : 'desktop'
-          })
+          body: JSON.stringify(payload)
         }).catch(function () {});
       } catch (_) {}
     }, true);
@@ -1976,6 +2129,7 @@
     ensureSupabaseClient();
     exposeApi();
     bindEvents();
+    injectAnalyticsConsentBanner();
     bindGlobalClickTracking();
     preserveAffiliateRefAcrossPageLinks();
     bindAuthStateChanges();
