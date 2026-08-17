@@ -15,7 +15,10 @@
   const SIGNUP_OFFER_DISMISSED_PREFIX = 'hansora_signup_offer_dismissed.';
   const SIGNUP_OFFER_OAUTH_STARTED_KEY = 'hansora_signup_offer_oauth_started_at';
   const SIGNUP_OFFER_URL = '/pricing.html?offer_popup=1';
-  const AI_COURSE_ORIGIN_KEY = 'hansora.ai_course.origin';
+  const AI_COURSE_ORIGIN_KEY = 'hansora.ai_course.origin.v2';
+  const AI_COURSE_PENDING_ORIGIN_KEY = 'hansora.ai_course.pending_origin.v2';
+  const AI_COURSE_SKIP_CAPTURE_KEY = 'hansora.ai_course.skip_next_capture';
+  let aiCourseOriginCaptureDone = false;
   const GROK_VIDEO_CREDIT_THRESHOLD = 4;
   const SUBSCRIPTION_CACHE_MS = 60 * 1000;
   const SUBSCRIPTION_PLAN_RULES = {
@@ -172,7 +175,29 @@
   }
 
   function captureAiCourseOrigin() {
-    return rememberAiCourseOrigin(location.pathname);
+    if (aiCourseOriginCaptureDone) return '';
+    aiCourseOriginCaptureDone = true;
+    const coursePath = normalizeAiCoursePath(location.pathname);
+    if (!coursePath) return '';
+    try {
+      const skippedPath = normalizeAiCoursePath(sessionStorage.getItem(AI_COURSE_SKIP_CAPTURE_KEY));
+      sessionStorage.removeItem(AI_COURSE_SKIP_CAPTURE_KEY);
+      if (skippedPath === coursePath) return '';
+      localStorage.setItem(AI_COURSE_PENDING_ORIGIN_KEY, coursePath);
+    } catch (_) {}
+    return coursePath;
+  }
+
+  function promoteAiCourseOriginForAuthenticatedUser() {
+    try {
+      const pendingPath = normalizeAiCoursePath(localStorage.getItem(AI_COURSE_PENDING_ORIGIN_KEY));
+      if (!pendingPath) return '';
+      rememberAiCourseOrigin(pendingPath);
+      localStorage.removeItem(AI_COURSE_PENDING_ORIGIN_KEY);
+      return pendingPath;
+    } catch (_) {
+      return '';
+    }
   }
 
   function getRememberedAiCourseOrigin() {
@@ -317,44 +342,65 @@
     style.textContent = `
       #hansoraAnalyticsConsent {
         position: fixed;
-        left: 16px;
-        right: 16px;
-        bottom: 16px;
+        left: 18px;
+        bottom: 18px;
         z-index: 2147483646;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 18px;
-        max-width: 780px;
-        margin: 0 auto;
-        padding: 16px 18px;
-        border: 1px solid rgba(255,255,255,.16);
-        border-radius: 18px;
-        background: rgba(7,10,22,.97);
+        gap: 14px;
+        width: min(410px, calc(100vw - 36px));
+        padding: 13px 14px 13px 16px;
+        border: 1px solid rgba(139,92,246,.38);
+        border-radius: 16px 16px 16px 5px;
+        background:
+          linear-gradient(135deg,rgba(99,102,241,.16),transparent 52%),
+          rgba(7,10,22,.96);
         color: #f8fafc;
-        box-shadow: 0 20px 60px rgba(0,0,0,.45);
+        box-shadow: 0 16px 45px rgba(0,0,0,.42),0 0 28px rgba(99,102,241,.11);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
         font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+        overflow: hidden;
+        animation: hansoraConsentIn .28s ease-out both;
+      }
+      #hansoraAnalyticsConsent::before {
+        content:"";
+        position:absolute;
+        top:-34px;
+        right:-34px;
+        width:82px;
+        height:82px;
+        border-radius:24px;
+        transform:rotate(28deg);
+        background:linear-gradient(135deg,rgba(139,92,246,.78),rgba(56,189,248,.30));
+        opacity:.36;
+        pointer-events:none;
       }
       #hansoraAnalyticsConsent p {
         margin: 0;
-        font-size: 13px;
-        line-height: 1.5;
-        color: rgba(248,250,252,.82);
+        position:relative;
+        z-index:1;
+        font-size: 12.5px;
+        line-height: 1.4;
+        color: rgba(248,250,252,.78);
       }
       #hansoraAnalyticsConsent strong { color: #fff; }
       .hansora-analytics-consent-actions {
         display: flex;
+        position:relative;
+        z-index:1;
         flex: 0 0 auto;
-        gap: 9px;
+        gap: 7px;
       }
       .hansora-analytics-consent-actions button {
-        min-height: 40px;
-        padding: 0 16px;
+        min-height: 34px;
+        padding: 0 12px;
         border-radius: 999px;
         border: 1px solid rgba(255,255,255,.18);
         color: #fff;
         font: inherit;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 750;
         cursor: pointer;
       }
@@ -363,13 +409,20 @@
         border-color: transparent;
         background: linear-gradient(135deg,#6366f1,#8b5cf6);
       }
+      @keyframes hansoraConsentIn {
+        from { opacity:0; transform:translate3d(-8px,10px,0); }
+        to { opacity:1; transform:translate3d(0,0,0); }
+      }
       @media (max-width: 640px) {
         #hansoraAnalyticsConsent {
-          align-items: stretch;
-          flex-direction: column;
-          gap: 12px;
+          left:12px;
+          bottom:12px;
+          width:calc(100vw - 24px);
+          gap:10px;
+          padding:12px;
         }
-        .hansora-analytics-consent-actions button { flex: 1; }
+        #hansoraAnalyticsConsent p { font-size:12px; }
+        .hansora-analytics-consent-actions button { min-height:32px; padding:0 10px; }
       }
     `;
     document.head.appendChild(style);
@@ -914,23 +967,106 @@
       .site-header .shell.nav{ position:relative; }
       .site-header .nav-links{ position:absolute; left:50%; transform:translateX(-50%); }
       .site-header .user-menu .hansora-ai-course-button{ width:100%; text-align:left; }
-      .site-header .hansora-course-language-choice{
-        margin:0 10px 6px;
-        padding:7px;
-        border:1px solid rgba(255,255,255,.10);
-        border-radius:12px;
+      .hansora-course-modal{
+        position:fixed;
+        inset:0;
+        z-index:2147483600;
+        display:grid;
+        place-items:center;
+        padding:20px;
+        background:rgba(3,5,14,.72);
+        backdrop-filter:blur(12px);
+        -webkit-backdrop-filter:blur(12px);
+        opacity:0;
+        visibility:hidden;
+        transition:opacity .2s ease,visibility .2s ease;
+      }
+      .hansora-course-modal.is-open{ opacity:1; visibility:visible; }
+      .hansora-course-dialog{
+        position:relative;
+        width:min(560px,100%);
+        padding:32px;
+        overflow:hidden;
+        border:1px solid rgba(255,255,255,.14);
+        border-radius:28px;
+        background:
+          radial-gradient(circle at 10% 0%,rgba(99,102,241,.25),transparent 42%),
+          radial-gradient(circle at 95% 100%,rgba(56,189,248,.16),transparent 42%),
+          #0a0d19;
+        box-shadow:0 30px 100px rgba(0,0,0,.58),0 0 60px rgba(99,102,241,.13);
+        color:#fff;
+        transform:translateY(12px) scale(.98);
+        transition:transform .22s ease;
+        font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      }
+      .hansora-course-modal.is-open .hansora-course-dialog{ transform:translateY(0) scale(1); }
+      .hansora-course-close{
+        position:absolute;
+        top:16px;
+        right:16px;
+        width:38px;
+        height:38px;
+        display:grid;
+        place-items:center;
+        padding:0;
+        border:1px solid rgba(255,255,255,.14);
+        border-radius:50%;
+        background:rgba(255,255,255,.06);
+        color:#fff;
+        font-size:18px;
+        cursor:pointer;
+      }
+      .hansora-course-close:hover{ background:rgba(255,255,255,.12); transform:rotate(4deg); }
+      .hansora-course-eyebrow{
+        margin:0 0 9px;
+        color:#a5b4fc;
+        font-size:12px;
+        font-weight:800;
+        letter-spacing:.14em;
+        text-transform:uppercase;
+      }
+      .hansora-course-dialog h2{ margin:0; padding-right:38px; font-size:clamp(25px,4vw,34px); line-height:1.12; }
+      .hansora-course-intro{ margin:10px 0 23px; color:rgba(255,255,255,.65); font-size:14px; line-height:1.55; }
+      .hansora-course-options{ display:grid; gap:12px; }
+      .hansora-course-option{
+        display:grid;
+        grid-template-columns:54px minmax(0,1fr) 28px;
+        align-items:center;
+        gap:15px;
+        min-height:82px;
+        padding:13px 16px;
+        border:1px solid rgba(255,255,255,.11);
+        border-radius:18px;
         background:rgba(255,255,255,.045);
-      }
-      .site-header .hansora-course-language-choice[hidden]{ display:none !important; }
-      .site-header .hansora-course-language-choice a{
-        display:block;
-        padding:9px 10px;
-        border-radius:9px;
-        font-size:13px;
-        line-height:1.25;
+        color:#fff;
         text-decoration:none;
+        transition:transform .18s ease,border-color .18s ease,background .18s ease;
       }
-      .site-header .hansora-course-language-choice a:hover{ background:rgba(255,255,255,.08); }
+      .hansora-course-option:hover{
+        transform:translateY(-2px);
+        border-color:rgba(129,140,248,.55);
+        background:rgba(99,102,241,.12);
+      }
+      .hansora-course-flag{
+        display:grid;
+        place-items:center;
+        width:54px;
+        height:54px;
+        border-radius:16px;
+        background:rgba(255,255,255,.08);
+        font-size:30px;
+        box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);
+      }
+      .hansora-course-copy strong{ display:block; margin-bottom:4px; font-size:17px; }
+      .hansora-course-copy span{ display:block; color:rgba(255,255,255,.57); font-size:13px; line-height:1.35; }
+      .hansora-course-arrow{ color:#a5b4fc; font-size:24px; transition:transform .18s ease; }
+      .hansora-course-option:hover .hansora-course-arrow{ transform:translateX(3px); }
+      @media (max-width:560px){
+        .hansora-course-modal{ padding:12px; }
+        .hansora-course-dialog{ padding:26px 18px 20px; border-radius:23px; }
+        .hansora-course-option{ grid-template-columns:48px minmax(0,1fr) 22px; gap:12px; padding:12px; }
+        .hansora-course-flag{ width:48px; height:48px; border-radius:14px; font-size:27px; }
+      }
       .hansora-brand-mobile{ display:none; }
       .nav-links .hansora-nav-trigger{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; color:inherit; }
       .nav-links .hansora-nav-trigger::after{ content:""; width:6px; height:6px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); opacity:.55; margin-top:-3px; transition:transform .18s ease, opacity .18s ease; }
@@ -1407,14 +1543,30 @@
           <a href="${withAffiliateRef('/profile.html')}">Profile</a>
           <a href="${withAffiliateRef('/usage.html')}">History</a>
           <a href="${withAffiliateRef('/pricing.html')}">Credits</a>
-          <button class="hansora-ai-course-button" type="button" id="btnAiCourse" aria-expanded="false">AI Course</button>
-          <div class="hansora-course-language-choice" id="aiCourseLanguageChoice" hidden>
-            <a href="/course_arm" data-ai-course-path="/course_arm">Հայերեն լեզվով դասերը</a>
-            <a href="/course_ru" data-ai-course-path="/course_ru">На русском языке</a>
-          </div>
+          <button class="hansora-ai-course-button" type="button" id="btnAiCourse">AI Course</button>
           <button type="button" id="btnLogout">Logout</button>
         </div>
-      </header>`;
+      </header>
+      <div class="hansora-course-modal" id="aiCourseModal" aria-hidden="true">
+        <section class="hansora-course-dialog" role="dialog" aria-modal="true" aria-labelledby="aiCourseTitle">
+          <button class="hansora-course-close" id="aiCourseClose" type="button" aria-label="Close course selection">✕</button>
+          <p class="hansora-course-eyebrow">Hansora AI Course</p>
+          <h2 id="aiCourseTitle">Choose your course language</h2>
+          <p class="hansora-course-intro">Select the language in which you would like to study.</p>
+          <div class="hansora-course-options">
+            <a class="hansora-course-option" href="/course_arm" data-ai-course-path="/course_arm">
+              <span class="hansora-course-flag" aria-hidden="true">🇦🇲</span>
+              <span class="hansora-course-copy"><strong>Հայերեն լեզվով դասեր</strong><span>AI դասընթաց՝ հայերեն բացատրություններով</span></span>
+              <span class="hansora-course-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="hansora-course-option" href="/course_ru" data-ai-course-path="/course_ru">
+              <span class="hansora-course-flag" aria-hidden="true">🇷🇺</span>
+              <span class="hansora-course-copy"><strong>Курс на русском языке</strong><span>Уроки по AI с объяснениями на русском</span></span>
+              <span class="hansora-course-arrow" aria-hidden="true">›</span>
+            </a>
+          </div>
+        </section>
+      </div>`;
   }
 
   function injectAuthModal() {
@@ -1466,6 +1618,7 @@
 
   function showLoggedInUI(profile, user) {
     currentUser = user || null;
+    promoteAiCourseOriginForAuthenticatedUser();
     const header = el('siteHeader');
     const loginBtn = el('btnLoginSignup');
     const navCredits = el('navCredits');
@@ -2021,7 +2174,8 @@
     const btnLoginSignup = el('btnLoginSignup');
     const btnGetStarted = el('btnGetStarted');
     const btnAiCourse = el('btnAiCourse');
-    const aiCourseLanguageChoice = el('aiCourseLanguageChoice');
+    const aiCourseModal = el('aiCourseModal');
+    const aiCourseClose = el('aiCourseClose');
     const btnLogout = el('btnLogout');
     const authClose = el('authClose');
     const doLogin = el('btnDoLogin');
@@ -2050,6 +2204,21 @@
     if (btnGetStarted) {
       btnGetStarted.addEventListener('click', function () {});
     }
+    function closeAiCourseModal() {
+      if (!aiCourseModal) return;
+      aiCourseModal.classList.remove('is-open');
+      aiCourseModal.setAttribute('aria-hidden', 'true');
+      document.body.style.removeProperty('overflow');
+      if (btnAiCourse) btnAiCourse.focus({ preventScroll: true });
+    }
+    function openAiCourseModal() {
+      if (!aiCourseModal) return;
+      if (navMenu) navMenu.classList.remove('is-open');
+      aiCourseModal.classList.add('is-open');
+      aiCourseModal.setAttribute('aria-hidden', 'false');
+      document.body.style.setProperty('overflow', 'hidden');
+      if (aiCourseClose) aiCourseClose.focus({ preventScroll: true });
+    }
     if (btnAiCourse) {
       btnAiCourse.addEventListener('click', function (event) {
         event.preventDefault();
@@ -2059,16 +2228,19 @@
           location.href = coursePath;
           return;
         }
-        if (!aiCourseLanguageChoice) return;
-        const willOpen = aiCourseLanguageChoice.hidden;
-        aiCourseLanguageChoice.hidden = !willOpen;
-        btnAiCourse.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        openAiCourseModal();
       });
     }
-    if (aiCourseLanguageChoice) {
-      aiCourseLanguageChoice.querySelectorAll('[data-ai-course-path]').forEach(function (link) {
+    if (aiCourseClose) aiCourseClose.addEventListener('click', closeAiCourseModal);
+    if (aiCourseModal) {
+      aiCourseModal.addEventListener('click', function (event) {
+        if (event.target === aiCourseModal) closeAiCourseModal();
+      });
+      aiCourseModal.querySelectorAll('[data-ai-course-path]').forEach(function (link) {
         link.addEventListener('click', function () {
-          rememberAiCourseOrigin(link.getAttribute('data-ai-course-path'));
+          try {
+            sessionStorage.setItem(AI_COURSE_SKIP_CAPTURE_KEY, link.getAttribute('data-ai-course-path') || '');
+          } catch (_) {}
         });
       });
     }
@@ -2079,7 +2251,10 @@
       });
     }
     document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape') closeAuth();
+      if (event.key === 'Escape') {
+        closeAuth();
+        closeAiCourseModal();
+      }
     });
 
     if (btnGoogleLogin) {
