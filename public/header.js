@@ -15,6 +15,7 @@
   const SIGNUP_OFFER_DISMISSED_PREFIX = 'hansora_signup_offer_dismissed.';
   const SIGNUP_OFFER_OAUTH_STARTED_KEY = 'hansora_signup_offer_oauth_started_at';
   const SIGNUP_OFFER_URL = '/pricing.html?offer_popup=1';
+  const AI_COURSE_ORIGIN_KEY = 'hansora.ai_course.origin';
   const GROK_VIDEO_CREDIT_THRESHOLD = 4;
   const SUBSCRIPTION_CACHE_MS = 60 * 1000;
   const SUBSCRIPTION_PLAN_RULES = {
@@ -152,6 +153,34 @@
   function ready(fn) {
     if (document.readyState !== 'loading') fn();
     else document.addEventListener('DOMContentLoaded', fn);
+  }
+
+  function normalizeAiCoursePath(pathname) {
+    const path = String(pathname || '').replace(/\/+$/, '') || '/';
+    if (path === '/course_arm' || path === '/course_arm.html') return '/course_arm';
+    if (path === '/course_ru' || path === '/course_ru.html') return '/course_ru';
+    return '';
+  }
+
+  function rememberAiCourseOrigin(pathname) {
+    const coursePath = normalizeAiCoursePath(pathname);
+    if (!coursePath) return '';
+    try {
+      localStorage.setItem(AI_COURSE_ORIGIN_KEY, coursePath);
+    } catch (_) {}
+    return coursePath;
+  }
+
+  function captureAiCourseOrigin() {
+    return rememberAiCourseOrigin(location.pathname);
+  }
+
+  function getRememberedAiCourseOrigin() {
+    try {
+      return normalizeAiCoursePath(localStorage.getItem(AI_COURSE_ORIGIN_KEY));
+    } catch (_) {
+      return '';
+    }
   }
 
   function isTelegramWebView() {
@@ -351,9 +380,9 @@
     banner.setAttribute('aria-label', 'Analytics preferences');
     const consentRequired = analyticsConsentMode === 'consent_required';
     banner.innerHTML = `
-      <p><strong>Help us improve Hansora.</strong> ${consentRequired
-        ? 'Allow anonymous click analytics so we can understand which pages and buttons are useful. Tracking starts only if you accept.'
-        : 'We use anonymous click analytics to understand which pages and buttons are useful. You can reject to stop analytics.'}</p>
+      <p><strong>Analytics cookies.</strong> ${consentRequired
+        ? 'Allow anonymous analytics?'
+        : 'We use anonymous analytics. Reject to stop.'}</p>
       <div class="hansora-analytics-consent-actions">
         <button id="hansoraAnalyticsReject" type="button">Reject</button>
         <button id="hansoraAnalyticsAccept" type="button">${consentRequired ? 'Accept analytics' : 'Continue'}</button>
@@ -884,6 +913,24 @@
       .nav-links .hansora-nav-item{ position:relative; display:inline-flex; align-items:center; }
       .site-header .shell.nav{ position:relative; }
       .site-header .nav-links{ position:absolute; left:50%; transform:translateX(-50%); }
+      .site-header .user-menu .hansora-ai-course-button{ width:100%; text-align:left; }
+      .site-header .hansora-course-language-choice{
+        margin:0 10px 6px;
+        padding:7px;
+        border:1px solid rgba(255,255,255,.10);
+        border-radius:12px;
+        background:rgba(255,255,255,.045);
+      }
+      .site-header .hansora-course-language-choice[hidden]{ display:none !important; }
+      .site-header .hansora-course-language-choice a{
+        display:block;
+        padding:9px 10px;
+        border-radius:9px;
+        font-size:13px;
+        line-height:1.25;
+        text-decoration:none;
+      }
+      .site-header .hansora-course-language-choice a:hover{ background:rgba(255,255,255,.08); }
       .hansora-brand-mobile{ display:none; }
       .nav-links .hansora-nav-trigger{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; color:inherit; }
       .nav-links .hansora-nav-trigger::after{ content:""; width:6px; height:6px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); opacity:.55; margin-top:-3px; transition:transform .18s ease, opacity .18s ease; }
@@ -1360,6 +1407,11 @@
           <a href="${withAffiliateRef('/profile.html')}">Profile</a>
           <a href="${withAffiliateRef('/usage.html')}">History</a>
           <a href="${withAffiliateRef('/pricing.html')}">Credits</a>
+          <button class="hansora-ai-course-button" type="button" id="btnAiCourse" aria-expanded="false">AI Course</button>
+          <div class="hansora-course-language-choice" id="aiCourseLanguageChoice" hidden>
+            <a href="/course_arm" data-ai-course-path="/course_arm">Հայերեն լեզվով դասերը</a>
+            <a href="/course_ru" data-ai-course-path="/course_ru">На русском языке</a>
+          </div>
           <button type="button" id="btnLogout">Logout</button>
         </div>
       </header>`;
@@ -1968,6 +2020,8 @@
     const navMenu = el('navMenu');
     const btnLoginSignup = el('btnLoginSignup');
     const btnGetStarted = el('btnGetStarted');
+    const btnAiCourse = el('btnAiCourse');
+    const aiCourseLanguageChoice = el('aiCourseLanguageChoice');
     const btnLogout = el('btnLogout');
     const authClose = el('authClose');
     const doLogin = el('btnDoLogin');
@@ -1995,6 +2049,28 @@
     if (btnLoginSignup) btnLoginSignup.addEventListener('click', function (event) { event.preventDefault(); openAuth('login'); });
     if (btnGetStarted) {
       btnGetStarted.addEventListener('click', function () {});
+    }
+    if (btnAiCourse) {
+      btnAiCourse.addEventListener('click', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const coursePath = getRememberedAiCourseOrigin();
+        if (coursePath) {
+          location.href = coursePath;
+          return;
+        }
+        if (!aiCourseLanguageChoice) return;
+        const willOpen = aiCourseLanguageChoice.hidden;
+        aiCourseLanguageChoice.hidden = !willOpen;
+        btnAiCourse.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      });
+    }
+    if (aiCourseLanguageChoice) {
+      aiCourseLanguageChoice.querySelectorAll('[data-ai-course-path]').forEach(function (link) {
+        link.addEventListener('click', function () {
+          rememberAiCourseOrigin(link.getAttribute('data-ai-course-path'));
+        });
+      });
     }
     if (authClose) authClose.addEventListener('click', closeAuth);
     if (modal) {
@@ -2150,10 +2226,12 @@
   }
 
   captureAffiliateRef();
+  captureAiCourseOrigin();
   ensureI18nRuntime();
 
   ready(function () {
     captureAffiliateRef();
+    captureAiCourseOrigin();
     applyOfferPopupPageMode();
     applyTelegramViewportFix();
     injectHeaderStyles();
