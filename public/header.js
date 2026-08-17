@@ -233,6 +233,7 @@
   const ANALYTICS_CONSENT_VERSION = 'analytics-v1';
   const ANALYTICS_VISITOR_ID_KEY = 'hansora.analytics.visitor_id';
   let analyticsConsentMemory = '';
+  let analyticsConsentMode = 'pending';
   let analyticsAuthCache = null;
 
   function readAnalyticsConsent() {
@@ -253,8 +254,16 @@
     } catch (_) {}
   }
 
+  function anonymousAnalyticsAllowed() {
+    const consent = readAnalyticsConsent();
+    if (consent === 'rejected') return false;
+    if (analyticsConsentMode === 'consent_required') return consent === 'accepted';
+    if (analyticsConsentMode === 'opt_out') return true;
+    return false;
+  }
+
   function analyticsVisitorId() {
-    if (readAnalyticsConsent() !== 'accepted') return null;
+    if (!anonymousAnalyticsAllowed()) return null;
     try {
       let value = localStorage.getItem(ANALYTICS_VISITOR_ID_KEY);
       if (!value) {
@@ -270,6 +279,7 @@
   }
 
   function injectAnalyticsConsentBanner() {
+    if (analyticsConsentMode === 'pending') return;
     if (readAnalyticsConsent()) return;
     if (document.getElementById('hansoraAnalyticsConsent')) return;
 
@@ -339,11 +349,14 @@
     banner.id = 'hansoraAnalyticsConsent';
     banner.setAttribute('role', 'dialog');
     banner.setAttribute('aria-label', 'Analytics preferences');
+    const consentRequired = analyticsConsentMode === 'consent_required';
     banner.innerHTML = `
-      <p><strong>Help us improve Hansora.</strong> Allow anonymous click analytics so we can understand which pages and buttons are useful. You can reject and continue using the website.</p>
+      <p><strong>Help us improve Hansora.</strong> ${consentRequired
+        ? 'Allow anonymous click analytics so we can understand which pages and buttons are useful. Tracking starts only if you accept.'
+        : 'We use anonymous click analytics to understand which pages and buttons are useful. You can reject to stop analytics.'}</p>
       <div class="hansora-analytics-consent-actions">
         <button id="hansoraAnalyticsReject" type="button">Reject</button>
-        <button id="hansoraAnalyticsAccept" type="button">Accept analytics</button>
+        <button id="hansoraAnalyticsAccept" type="button">${consentRequired ? 'Accept analytics' : 'Continue'}</button>
       </div>
     `;
     document.body.appendChild(banner);
@@ -361,6 +374,26 @@
       analyticsVisitorId();
       closeBanner();
     });
+  }
+
+  async function initializeRegionalAnalyticsConsent() {
+    try {
+      const response = await fetch('/.netlify/functions/analytics-region', {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!response.ok) throw new Error(`analytics_region_${response.status}`);
+      const result = await response.json();
+      analyticsConsentMode = result && result.consentRequired === true
+        ? 'consent_required'
+        : 'opt_out';
+    } catch (_) {
+      // Requested behavior: unknown or unavailable location uses opt-out mode.
+      analyticsConsentMode = 'opt_out';
+    }
+    injectAnalyticsConsentBanner();
   }
 
   function refreshAnalyticsAuthCache() {
@@ -2129,8 +2162,8 @@
     ensureSupabaseClient();
     exposeApi();
     bindEvents();
-    injectAnalyticsConsentBanner();
     bindGlobalClickTracking();
+    initializeRegionalAnalyticsConsent();
     preserveAffiliateRefAcrossPageLinks();
     bindAuthStateChanges();
     restoreSession();
