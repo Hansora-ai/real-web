@@ -2559,11 +2559,6 @@
       btnAiCourse.addEventListener('click', function (event) {
         event.preventDefault();
         event.stopPropagation();
-        const coursePath = getRememberedAiCourseOrigin();
-        if (coursePath) {
-          location.href = coursePath;
-          return;
-        }
         openAiCourseModal();
       });
     }
