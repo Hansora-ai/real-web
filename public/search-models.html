@@ -11886,7 +11886,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             prompt,
             variant: model.id === 'seedance20-mini' ? 'mini' : (currentSeedanceVariant === 'fast' ? 'fast' : 'standard'),
             model: model.id === 'seedance20-mini' ? 'bytedance/seedance-2-mini' : undefined,
-            aspect_ratio: aspect || '16:9',
+            aspect_ratio: model.id === 'seedance25' && (firstFrameUrl || lastFrameUrl) ? 'adaptive' : (aspect || '16:9'),
             duration: duration ? Number(duration) : 5,
             resolution: model.id === 'seedance20-mini' ? (currentResolution || '720p') : (currentSeedanceVariant === 'fast' ? '720p' : (currentResolution || '720p')),
             generate_audio: !!seedanceGenerateAudio,
