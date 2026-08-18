@@ -2,43 +2,24 @@
 
 const crypto = require('node:crypto');
 
-const POLICY_VERSION = '2026-08-16.2';
+const POLICY_VERSION = '2026-08-11.5';
 
-// These terms are explicit enough to block without needing surrounding context.
-const DIRECT_SEXUAL_TERMS = [
+const NSFW_TERMS = [
   'adult content', 'bare breasts', 'blow job', 'blowjob', 'boob', 'boobs',
-  'clit', 'cock', 'dick', 'erotic', 'explicit sex',
+  'breast', 'breasts', 'clit', 'cock', 'dick', 'erotic', 'explicit sex',
   'fetish', 'fuck', 'fucking', 'genital', 'genitals', 'hardcore', 'hentai',
-  'jerk off', 'masturbate', 'masturbating', 'masturbation', 'milf',
-  'onlyfans', 'orgasm', 'penis', 'porn', 'pornographic', 'pussy', 'sex',
-  'sexual', 'slut', 'vagina', 'vergina', 'whore', 'xxx', 'sexo',
-  'pornografia', 'sexe', 'порно', 'секс'
-];
-
-// These words are ambiguous and only block when they describe a human.
-const HUMAN_NUDITY_WORDS = [
-  'naked', 'nude', 'topless', 'desnuda', 'desnudo', 'nue', 'nu',
-  'голая', 'голый', 'обнаженная', 'обнаженный'
-];
-
-const HUMAN_NOUNS = [
-  'person', 'people', 'human', 'man', 'men', 'woman', 'women', 'male',
-  'female', 'girl', 'girls', 'boy', 'boys', 'guy', 'guys', 'lady', 'ladies',
-  'gentleman', 'child', 'children', 'baby', 'kid', 'kids', 'teen', 'teenager',
-  'adult', 'model', 'subject', 'character', 'hero', 'warrior', 'actor',
-  'actress', 'celebrity', 'singer', 'politician', 'president', 'body'
-];
-
-const HUMAN_REFERENCES = [
-  ...HUMAN_NOUNS,
-  'him', 'her', 'them', 'himself', 'herself', 'themselves', 'their body',
-  'his body', 'her body'
+  'jerk off', 'masturbate', 'masturbating', 'masturbation', 'milf', 'naked',
+  'no clothes', 'nude', 'nudity', 'onlyfans', 'orgasm', 'penis', 'porn',
+  'pornographic', 'pussy', 'sex', 'sexual', 'slut', 'strip naked', 'topless',
+  'undress', 'vagina', 'vergina', 'whore', 'without clothes', 'xxx',
+  'desnuda', 'desnudo', 'sexo', 'pornografia', 'nue', 'nu', 'sexe',
+  'голая', 'голый', 'обнаженная', 'обнаженный', 'порно', 'секс'
 ];
 
 const MINOR_TERMS = [
-  'baby', 'child', 'children', 'high schooler', 'kid', 'kids', 'little boy',
-  'little girl', 'minor', 'schoolgirl', 'schoolboy', 'teen', 'teenage',
-  'teenager', 'underage', 'young boy', 'young girl', 'young looking'
+  'baby', 'boy', 'child', 'children', 'girl', 'high schooler', 'kid', 'kids',
+  'minor', 'schoolgirl', 'schoolboy', 'teen', 'teenage', 'teenager',
+  'underage', 'young looking'
 ];
 
 const DECEPTIVE_DEEPFAKE_TERMS = [
@@ -87,55 +68,11 @@ function containsTerm(normalized, terms) {
   return false;
 }
 
-function regexAlternation(terms) {
-  return terms
-    .map((term) => normalizePrompt(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'))
-    .sort((a, b) => b.length - a.length)
-    .join('|');
-}
-
-function restoreSpacedSensitiveWords(normalized, words) {
-  let result = normalized;
-  for (const word of words) {
-    const clean = normalizePrompt(word);
-    if (!/^[a-z]{3,}$/.test(clean)) continue;
-    const spaced = clean.split('').join('\\s+');
-    result = result.replace(new RegExp(`\\b${spaced}\\b`, 'g'), clean);
-  }
-  return result;
-}
-
-function hasHumanNudityContext(normalized) {
-  const text = restoreSpacedSensitiveWords(normalized, HUMAN_NUDITY_WORDS);
-  const nudity = regexAlternation(HUMAN_NUDITY_WORDS);
-  const humanNoun = regexAlternation(HUMAN_NOUNS);
-  const humanReference = regexAlternation(HUMAN_REFERENCES);
-  const stateWords = '(?:(?:is|are|was|were|be|being|shown|depicted|rendered|appears|looks|made|completely|fully|totally|entirely|standing|sitting|lying|posing)\\s+){0,5}';
-
-  const patterns = [
-    // "naked woman", "nude adult model", "topless person"
-    new RegExp(`\\b(?:${nudity})\\b\\s+(?:(?:adult|young|realistic|photorealistic|beautiful|full body|male|female)\\s+){0,3}\\b(?:${humanNoun})\\b`),
-    // "woman is naked", "show her completely nude", "the subject posing topless"
-    new RegExp(`\\b(?:${humanReference})\\b\\s+${stateWords}\\b(?:${nudity})\\b`),
-    // "make/show/render the person naked"
-    new RegExp(`\\b(?:make|show|depict|render|generate|create)\\b(?:\\s+\\w+){0,5}\\s+\\b(?:${humanReference})\\b(?:\\s+\\w+){0,4}\\s+\\b(?:${nudity})\\b`),
-    // "nude portrait", "naked selfie", "topless video"
-    new RegExp(`\\b(?:${nudity})\\b\\s+(?:portrait|selfie|photo|photograph|image|video|scene)\\b`),
-    // "person without clothes", "no clothes on the woman"
-    new RegExp(`\\b(?:${humanReference})\\b(?:\\s+\\w+){0,5}\\s+\\b(?:without clothes|no clothes)\\b`),
-    new RegExp(`\\b(?:without clothes|no clothes)\\b(?:\\s+\\w+){0,5}\\s+\\b(?:${humanReference})\\b`),
-    // "undress her", "strip the model naked"
-    new RegExp(`\\b(?:undress|strip)\\b(?:\\s+the)?\\s+\\b(?:${humanReference})\\b`)
-  ];
-
-  return patterns.some((pattern) => pattern.test(text));
-}
-
 function evaluatePrompt(prompt) {
   const normalized = normalizePrompt(prompt);
   if (!normalized) return { allowed: true, category: null, policyVersion: POLICY_VERSION };
 
-  const sexual = containsTerm(normalized, DIRECT_SEXUAL_TERMS) || hasHumanNudityContext(normalized);
+  const sexual = containsTerm(normalized, NSFW_TERMS);
   const minor = containsTerm(normalized, MINOR_TERMS);
   if (sexual && minor) return { allowed: false, category: 'sexual_content_involving_minors', policyVersion: POLICY_VERSION };
   if (sexual) return { allowed: false, category: 'nsfw_sexual_content', policyVersion: POLICY_VERSION };
@@ -203,6 +140,8 @@ const ALLOWED_RUN_ENDPOINTS = new Set([
   '/.netlify/functions/run-qwen-2',
   '/.netlify/functions/run-seedance-2',
   '/.netlify/functions/run-seedance-2-mini',
+  '/.netlify/functions/run-seedance-25',
+  '/.netlify/functions/run-seedance-25-cheap',
   '/.netlify/functions/run-seedance-cheap',
   '/.netlify/functions/run-seedream-4-5',
   '/.netlify/functions/run-seedream-5-lite',
@@ -294,15 +233,6 @@ exports.handler = async function handler(event) {
       decision_id: decisionId,
       policy_version: decision.policyVersion
     }, { 'X-Content-Safety': 'blocked' });
-  }
-
-  if (request.check_only === true) {
-    return json(200, {
-      ok: true,
-      allowed: true,
-      decision_id: decisionId,
-      policy_version: decision.policyVersion
-    }, { 'X-Content-Safety': 'approved' });
   }
 
   const baseUrl = requestBaseUrl(event);
