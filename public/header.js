@@ -18,6 +18,8 @@
   const AI_COURSE_ORIGIN_KEY = 'hansora.ai_course.origin.v2';
   const AI_COURSE_PENDING_ORIGIN_KEY = 'hansora.ai_course.pending_origin.v2';
   const AI_COURSE_SKIP_CAPTURE_KEY = 'hansora.ai_course.skip_next_capture';
+  const SIGNUP_ATTRIBUTION_PENDING_KEY = 'hansora.signup_attribution.pending.v1';
+  const SIGNUP_ATTRIBUTION_MAX_AGE_MS = 6 * 60 * 60 * 1000;
   let aiCourseOriginCaptureDone = false;
   const GROK_VIDEO_CREDIT_THRESHOLD = 4;
   const SUBSCRIPTION_CACHE_MS = 60 * 1000;
@@ -180,9 +182,17 @@
     const coursePath = normalizeAiCoursePath(location.pathname);
     if (!coursePath) return '';
     try {
+      const existingPath = normalizeAiCoursePath(localStorage.getItem(AI_COURSE_PENDING_ORIGIN_KEY));
+      if (existingPath) return existingPath;
       const skippedPath = normalizeAiCoursePath(sessionStorage.getItem(AI_COURSE_SKIP_CAPTURE_KEY));
       sessionStorage.removeItem(AI_COURSE_SKIP_CAPTURE_KEY);
       if (skippedPath === coursePath) return '';
+      // Only treat the course as an acquisition source when it is the entry
+      // page. Clicking to it from another Hansora page remains an index visit.
+      if (document.referrer) {
+        const referrer = new URL(document.referrer);
+        if (referrer.origin === location.origin) return '';
+      }
       localStorage.setItem(AI_COURSE_PENDING_ORIGIN_KEY, coursePath);
     } catch (_) {}
     return coursePath;
@@ -214,6 +224,95 @@
     } catch (_) {
       return '';
     }
+  }
+
+  function signupSourceFromCoursePath(coursePath) {
+    if (coursePath === '/course_arm') return 'course_arm';
+    if (coursePath === '/course_ru') return 'course_ru';
+    return 'index';
+  }
+
+  function rememberSignupAttributionStart() {
+    const coursePath = getPendingAiCourseOrigin();
+    const source = signupSourceFromCoursePath(coursePath);
+    const attribution = {
+      source: source,
+      landingPath: coursePath || '/index.html',
+      startedAt: Date.now()
+    };
+    try {
+      localStorage.setItem(SIGNUP_ATTRIBUTION_PENDING_KEY, JSON.stringify(attribution));
+    } catch (_) {}
+    return attribution;
+  }
+
+  function readSignupAttributionStart() {
+    try {
+      const value = JSON.parse(localStorage.getItem(SIGNUP_ATTRIBUTION_PENDING_KEY) || 'null');
+      if (!value || !Number.isFinite(Number(value.startedAt))) return null;
+      if (Date.now() - Number(value.startedAt) > SIGNUP_ATTRIBUTION_MAX_AGE_MS) {
+        localStorage.removeItem(SIGNUP_ATTRIBUTION_PENDING_KEY);
+        return null;
+      }
+      const source = value.source === 'course_arm' || value.source === 'course_ru'
+        ? value.source
+        : 'index';
+      return {
+        source: source,
+        landingPath: source === 'course_arm'
+          ? '/course_arm'
+          : source === 'course_ru' ? '/course_ru' : '/index.html',
+        startedAt: Number(value.startedAt)
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function isRecentlyCreatedAccount(user) {
+    const createdAt = Date.parse(user && user.created_at ? user.created_at : '');
+    return Number.isFinite(createdAt) && Date.now() - createdAt <= SIGNUP_ATTRIBUTION_MAX_AGE_MS;
+  }
+
+  async function countryCodeForSignupAttribution() {
+    try {
+      const controller = typeof AbortController === 'function' ? new AbortController() : null;
+      const timer = controller ? setTimeout(function () { controller.abort(); }, 1400) : null;
+      const response = await fetch('/.netlify/functions/analytics-region', {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' },
+        signal: controller ? controller.signal : undefined
+      });
+      if (timer) clearTimeout(timer);
+      if (!response.ok) return 'UNKNOWN';
+      const result = await response.json();
+      const country = String(result && result.country ? result.country : '').toUpperCase();
+      return /^[A-Z]{2}$/.test(country) ? country : 'UNKNOWN';
+    } catch (_) {
+      return 'UNKNOWN';
+    }
+  }
+
+  async function recordSignupAttribution(user) {
+    const attribution = readSignupAttributionStart();
+    if (!attribution || !user || !user.id || !sb) return false;
+    if (!isRecentlyCreatedAccount(user)) {
+      try { localStorage.removeItem(SIGNUP_ATTRIBUTION_PENDING_KEY); } catch (_) {}
+      return false;
+    }
+    const countryCode = await countryCodeForSignupAttribution();
+    const { error } = await sb.rpc('record_registration_attribution', {
+      p_signup_source: attribution.source,
+      p_country_code: countryCode
+    });
+    if (error) {
+      console.warn('Hansora signup attribution write failed', error);
+      return false;
+    }
+    try { localStorage.removeItem(SIGNUP_ATTRIBUTION_PENDING_KEY); } catch (_) {}
+    return true;
   }
 
   function isTelegramWebView() {
@@ -2305,6 +2404,7 @@
         const msg = el('authMsg');
         if (msg) msg.textContent = 'Opening Google login…';
         try {
+          rememberSignupAttributionStart();
           captureAffiliateRef();
           const ref = getStoredAffiliateRef();
           if (ref) rememberAffiliateRef(ref, 'google_oauth');
@@ -2372,7 +2472,12 @@
     if (!user) return null;
     const pendingCourseReturn = getPendingAiCourseOrigin();
     refreshAnalyticsAuthCache();
+    const attributionWrite = recordSignupAttribution(user).catch(function (error) {
+      console.warn('Hansora signup attribution failed', error);
+      return false;
+    });
     const profile = await getOrCreateProfile(user);
+    await attributionWrite;
     showLoggedInUI(profile, user);
     if (pendingCourseReturn && normalizeAiCoursePath(location.pathname) !== pendingCourseReturn) {
       window.location.replace(pendingCourseReturn);
