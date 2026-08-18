@@ -20,6 +20,7 @@
   const AI_COURSE_SKIP_CAPTURE_KEY = 'hansora.ai_course.skip_next_capture';
   const SIGNUP_ATTRIBUTION_PENDING_KEY = 'hansora.signup_attribution.pending.v1';
   const SIGNUP_ATTRIBUTION_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+  const TELEGRAM_OAUTH_STARTED_KEY = 'hansora.telegram_oauth.started.v1';
   let aiCourseOriginCaptureDone = false;
   const GROK_VIDEO_CREDIT_THRESHOLD = 4;
   const SUBSCRIPTION_CACHE_MS = 60 * 1000;
@@ -183,7 +184,6 @@
     if (!coursePath) return '';
     try {
       const existingPath = normalizeAiCoursePath(localStorage.getItem(AI_COURSE_PENDING_ORIGIN_KEY));
-      if (existingPath) return existingPath;
       const skippedPath = normalizeAiCoursePath(sessionStorage.getItem(AI_COURSE_SKIP_CAPTURE_KEY));
       sessionStorage.removeItem(AI_COURSE_SKIP_CAPTURE_KEY);
       if (skippedPath === coursePath) return '';
@@ -191,8 +191,10 @@
       // page. Clicking to it from another Hansora page remains an index visit.
       if (document.referrer) {
         const referrer = new URL(document.referrer);
-        if (referrer.origin === location.origin) return '';
+        if (referrer.origin === location.origin) return existingPath;
       }
+      // A newly opened external course link is a new acquisition entry and
+      // must replace any unfinished/stale course source in this browser.
       localStorage.setItem(AI_COURSE_PENDING_ORIGIN_KEY, coursePath);
     } catch (_) {}
     return coursePath;
@@ -1082,6 +1084,39 @@
       .site-header .shell.nav{ position:relative; }
       .site-header .nav-links{ position:absolute; left:50%; transform:translateX(-50%); }
       .site-header .user-menu .hansora-ai-course-button{ width:100%; text-align:left; }
+      .hansora-auth-form .hansora-oauth-stack{ display:grid; gap:10px; }
+      .hansora-auth-form .hansora-telegram-btn{
+        position:relative;
+        min-height:48px;
+        overflow:hidden;
+        border-color:rgba(94,207,255,.48);
+        background:linear-gradient(135deg,#239ed9,#2aabee 58%,#66c8f5);
+        color:#fff;
+        box-shadow:0 14px 34px rgba(34,158,217,.25),inset 0 1px 0 rgba(255,255,255,.24);
+      }
+      .hansora-auth-form .hansora-telegram-btn::before{
+        content:"";
+        position:absolute;
+        inset:0;
+        background:linear-gradient(110deg,transparent 25%,rgba(255,255,255,.17) 48%,transparent 70%);
+        transform:translateX(-120%);
+        transition:transform .45s ease;
+      }
+      .hansora-auth-form .hansora-telegram-btn:hover::before{ transform:translateX(120%); }
+      .hansora-auth-form .hansora-telegram-btn:hover{
+        border-color:rgba(255,255,255,.42);
+        background:linear-gradient(135deg,#1e96cf,#2aabee 58%,#7bd3f8);
+      }
+      .hansora-auth-form .hansora-telegram-btn svg{
+        position:relative;
+        z-index:1;
+        width:22px;
+        height:22px;
+        flex:0 0 22px;
+        filter:drop-shadow(0 3px 8px rgba(0,72,115,.25));
+      }
+      .hansora-auth-form .hansora-telegram-btn span{ position:relative; z-index:1; }
+      .hansora-auth-form .hansora-telegram-btn[disabled]{ opacity:.68; cursor:wait; transform:none; }
       .hansora-course-modal{
         position:fixed;
         inset:0;
@@ -1698,12 +1733,18 @@
             <button class="btn hansora-auth-close" id="authClose" type="button">✕</button>
           </div>
           <form class="hansora-auth-form" id="authForm">
-            <button class="btn hansora-google-btn" id="btnGoogleLogin" type="button">
-              <img alt="G" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
-              <span>Continue with Google</span>
-            </button>
+            <div class="hansora-oauth-stack">
+              <button class="btn hansora-google-btn" id="btnGoogleLogin" type="button">
+                <img alt="G" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
+                <span>Continue with Google</span>
+              </button>
+              <button class="btn hansora-telegram-btn" id="btnTelegramLogin" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M21.8 3.2 18.6 20c-.24 1.19-.88 1.48-1.78.92l-4.87-3.59-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.96 9.02-8.15c.39-.35-.09-.55-.61-.2L6.23 13.78l-4.8-1.5c-1.04-.33-1.06-1.04.22-1.54L20.4 3.52c.87-.32 1.63.2 1.4-.32Z"/></svg>
+                <span>Continue with Telegram</span>
+              </button>
+            </div>
             <p class="hansora-auth-msg" style="margin:12px 0 0;color:rgba(255,255,255,.72);line-height:1.45;">
-              For account safety, sign up and login are currently available only with a Google account.
+              Continue securely with Google or Telegram. Telegram may not share an email address.
             </p>
             <div class="hansora-auth-divider" style="display:none;"><span>or</span></div>
             <input id="authEmail" style="display:none;" placeholder="Email" type="email" autocomplete="email">
@@ -1729,10 +1770,66 @@
     updateVideoLandingLink();
   }
 
+  function authProfileForUser(user) {
+    const userMetadata = user && user.user_metadata ? user.user_metadata : {};
+    const identities = user && Array.isArray(user.identities) ? user.identities : [];
+    const telegramIdentity = identities.find(function (identity) {
+      const identityData = identity && identity.identity_data ? identity.identity_data : {};
+      return identity && (
+        identity.provider === 'custom:telegram' ||
+        identity.provider === 'telegram' ||
+        identityData.iss === 'https://oauth.telegram.org'
+      );
+    }) || null;
+    const identityData = telegramIdentity && telegramIdentity.identity_data
+      ? telegramIdentity.identity_data
+      : {};
+    const metadata = Object.assign({}, identityData, userMetadata);
+    const appProvider = user && user.app_metadata ? String(user.app_metadata.provider || '') : '';
+    const isTelegram = Boolean(
+      telegramIdentity ||
+      appProvider === 'custom:telegram' ||
+      appProvider === 'telegram' ||
+      metadata.iss === 'https://oauth.telegram.org'
+    );
+    const telegramUserId = isTelegram
+      ? String(metadata.sub || metadata.telegram_user_id || metadata.id || (telegramIdentity && telegramIdentity.id) || '')
+      : '';
+    const telegramUsername = isTelegram
+      ? String(metadata.preferred_username || metadata.username || '').replace(/^@/, '').slice(0, 64)
+      : '';
+    const displayName = String(
+      metadata.full_name ||
+      metadata.name ||
+      [metadata.first_name, metadata.last_name].filter(Boolean).join(' ') ||
+      telegramUsername ||
+      (user && user.email) ||
+      'Hansora User'
+    ).trim().slice(0, 160);
+    const avatarUrl = String(
+      metadata.avatar_url ||
+      metadata.picture ||
+      metadata.photo_url ||
+      metadata.avatar ||
+      ''
+    ).slice(0, 1000);
+    return {
+      isTelegram: isTelegram,
+      authProvider: isTelegram ? 'telegram' : (appProvider || 'google'),
+      email: isTelegram
+        ? (telegramUserId || null)
+        : (user && user.email ? user.email : null),
+      telegramUserId: telegramUserId || null,
+      telegramUsername: telegramUsername || null,
+      displayName: displayName || null,
+      avatarUrl: avatarUrl || null
+    };
+  }
+
   function avatarUrlFor(user) {
-    const email = user && user.email ? user.email : 'Hansora';
-    const metadata = user && user.user_metadata ? user.user_metadata : {};
-    return metadata.avatar_url || metadata.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(email.slice(0, 1).toUpperCase())}&background=6366f1&color=fff`;
+    const authProfile = authProfileForUser(user);
+    const fallbackName = authProfile.displayName || authProfile.telegramUsername || authProfile.email || 'Hansora';
+    return authProfile.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackName.slice(0, 1).toUpperCase())}&background=6366f1&color=fff`;
   }
 
   function showLoggedInUI(profile, user) {
@@ -1809,8 +1906,82 @@
     }
   }
 
+  function rememberTelegramOAuthStart() {
+    try {
+      localStorage.setItem(TELEGRAM_OAUTH_STARTED_KEY, String(Date.now()));
+    } catch (_) {}
+  }
+
+  function clearTelegramOAuthStart() {
+    try {
+      localStorage.removeItem(TELEGRAM_OAUTH_STARTED_KEY);
+    } catch (_) {}
+  }
+
+  function telegramOAuthWasStarted() {
+    try {
+      const startedAt = Number(localStorage.getItem(TELEGRAM_OAUTH_STARTED_KEY) || 0);
+      if (!Number.isFinite(startedAt) || startedAt <= 0) return false;
+      if (Date.now() - startedAt > 30 * 60 * 1000) {
+        localStorage.removeItem(TELEGRAM_OAUTH_STARTED_KEY);
+        return false;
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function telegramOAuthReturnError() {
+    if (!telegramOAuthWasStarted()) return '';
+    try {
+      const query = new URLSearchParams(location.search || '');
+      const hash = new URLSearchParams(String(location.hash || '').replace(/^#/, ''));
+      return String(
+        query.get('error_description') || query.get('error') ||
+        hash.get('error_description') || hash.get('error') || ''
+      ).replace(/\+/g, ' ').trim();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function cleanOAuthErrorFromUrl() {
+    try {
+      const url = new URL(location.href);
+      ['error', 'error_code', 'error_description'].forEach(function (key) {
+        url.searchParams.delete(key);
+      });
+      const hash = new URLSearchParams(String(url.hash || '').replace(/^#/, ''));
+      ['error', 'error_code', 'error_description'].forEach(function (key) {
+        hash.delete(key);
+      });
+      url.hash = hash.toString() ? `#${hash.toString()}` : '';
+      history.replaceState(history.state, document.title, `${url.pathname}${url.search}${url.hash}`);
+    } catch (_) {}
+  }
+
+  function showTelegramOAuthFailure(detail) {
+    clearTelegramOAuthStart();
+    cleanOAuthErrorFromUrl();
+    const button = el('btnTelegramLogin');
+    if (button) {
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+    }
+    openAuth('login');
+    const msg = el('authMsg');
+    if (msg) {
+      const safeDetail = String(detail || '').slice(0, 240);
+      msg.textContent = safeDetail
+        ? `Telegram login was not completed: ${safeDetail}`
+        : 'Telegram login was cancelled or not completed. Please try again.';
+    }
+  }
+
   async function getOrCreateProfile(user) {
     if (!sb || !user) throw new Error('Not logged in');
+    const authProfile = authProfileForUser(user);
     const { data, error } = await sb
       .from('profiles')
       .select('user_id,email,credits,monthly_credits,payg_credits')
@@ -1818,19 +1989,41 @@
       .maybeSingle();
     if (error) throw error;
     if (!data) {
-      const ins = await sb.from('profiles').insert({
+      const profileInsert = {
         user_id: user.id,
-        email: user.email,
+        email: authProfile.email,
         credits: 3,
         monthly_credits: 0,
         payg_credits: 3
-      }).select('user_id,email,credits').single();
+      };
+      if (authProfile.isTelegram) {
+        Object.assign(profileInsert, {
+          auth_provider: 'telegram',
+          telegram_user_id: authProfile.telegramUserId,
+          telegram_username: authProfile.telegramUsername,
+          display_name: authProfile.displayName,
+          avatar_url: authProfile.avatarUrl
+        });
+      }
+      const ins = await sb.from('profiles').insert(profileInsert).select('user_id,email,credits').single();
       if (ins.error) throw ins.error;
       try {
         localStorage.removeItem(offerDismissedKey(user));
         localStorage.removeItem(offerPendingKey(user));
       } catch (_) {}
       return { ...ins.data, __hansoraNewSignup: true };
+    }
+    if (authProfile.isTelegram) {
+      const telegramProfileUpdate = {
+        email: authProfile.email,
+        auth_provider: 'telegram',
+        telegram_user_id: authProfile.telegramUserId,
+        telegram_username: authProfile.telegramUsername,
+        display_name: authProfile.displayName,
+        avatar_url: authProfile.avatarUrl
+      };
+      const updateResult = await sb.from('profiles').update(telegramProfileUpdate).eq('user_id', user.id);
+      if (updateResult.error) console.warn('Telegram profile metadata update failed', updateResult.error);
     }
     const credits = Number(data.credits || 0);
     const monthlyCredits = Number(data.monthly_credits || 0);
@@ -2301,6 +2494,7 @@
     const authClose = el('authClose');
     const doLogin = el('btnDoLogin');
     const btnGoogleLogin = el('btnGoogleLogin');
+    const btnTelegramLogin = el('btnTelegramLogin');
     const modal = el('authModal');
 
     document.querySelectorAll('[data-hansora-model]').forEach(function (link) {
@@ -2420,6 +2614,30 @@
       });
     }
 
+    if (btnTelegramLogin) {
+      btnTelegramLogin.addEventListener('click', async function () {
+        const msg = el('authMsg');
+        if (msg) msg.textContent = 'Opening Telegram login…';
+        btnTelegramLogin.disabled = true;
+        btnTelegramLogin.setAttribute('aria-busy', 'true');
+        try {
+          rememberSignupAttributionStart();
+          captureAffiliateRef();
+          const ref = getStoredAffiliateRef();
+          if (ref) rememberAffiliateRef(ref, 'telegram_oauth');
+          rememberSignupOfferOAuthStart();
+          rememberTelegramOAuthStart();
+          const { error } = await sb.auth.signInWithOAuth({
+            provider: 'custom:telegram',
+            options: { redirectTo: `${location.origin}/index.html` }
+          });
+          if (error) throw error;
+        } catch (error) {
+          showTelegramOAuthFailure(error && error.message ? error.message : 'Please try again.');
+        }
+      });
+    }
+
     if (doLogin) {
       doLogin.addEventListener('click', async function () {
         const emailIn = el('authEmail');
@@ -2459,6 +2677,9 @@
       const user = data && data.user ? data.user : null;
       if (!user) {
         showLoggedOutUI();
+        if (telegramOAuthWasStarted()) {
+          showTelegramOAuthFailure(telegramOAuthReturnError());
+        }
         return;
       }
       await handleAuthenticatedUser(user);
@@ -2470,6 +2691,7 @@
 
   async function handleAuthenticatedUser(user) {
     if (!user) return null;
+    clearTelegramOAuthStart();
     const pendingCourseReturn = getPendingAiCourseOrigin();
     refreshAnalyticsAuthCache();
     const attributionWrite = recordSignupAttribution(user).catch(function (error) {
