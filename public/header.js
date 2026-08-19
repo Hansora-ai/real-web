@@ -20,6 +20,11 @@
   const AI_COURSE_SKIP_CAPTURE_KEY = 'hansora.ai_course.skip_next_capture';
   const SIGNUP_ATTRIBUTION_PENDING_KEY = 'hansora.signup_attribution.pending.v1';
   const SIGNUP_ATTRIBUTION_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+  const AUTH_FUNNEL_PENDING_KEY = 'hansora.auth_funnel.pending.v1';
+  const AUTH_FUNNEL_MAX_AGE_MS = 30 * 60 * 1000;
+  const AUTH_CALLBACK_SEARCH_SNAPSHOT = window.location.search || '';
+  const AUTH_CALLBACK_HASH_SNAPSHOT = window.location.hash || '';
+  const AUTH_CALLBACK_REFERRER_SNAPSHOT = document.referrer || '';
   const TELEGRAM_OAUTH_STARTED_KEY = 'hansora.telegram_oauth.started.v1';
   let aiCourseOriginCaptureDone = false;
   const GROK_VIDEO_CREDIT_THRESHOLD = 4;
@@ -237,9 +242,13 @@
   function rememberSignupAttributionStart() {
     const coursePath = getPendingAiCourseOrigin();
     const source = signupSourceFromCoursePath(coursePath);
+    const visitorId = readExistingAnalyticsVisitorId() || analyticsVisitorId();
+    const sessionId = readExistingAnalyticsSessionId() || (visitorId ? analyticsSessionId() : null);
     const attribution = {
       source: source,
       landingPath: coursePath || '/index.html',
+      visitorId: visitorId,
+      sessionId: sessionId,
       startedAt: Date.now()
     };
     try {
@@ -264,6 +273,8 @@
         landingPath: source === 'course_arm'
           ? '/course_arm'
           : source === 'course_ru' ? '/course_ru' : '/index.html',
+        visitorId: validAnalyticsId(value.visitorId),
+        sessionId: validAnalyticsId(value.sessionId),
         startedAt: Number(value.startedAt)
       };
     } catch (_) {
@@ -307,7 +318,9 @@
     const countryCode = await countryCodeForSignupAttribution();
     const { error } = await sb.rpc('record_registration_attribution', {
       p_signup_source: attribution.source,
-      p_country_code: countryCode
+      p_country_code: countryCode,
+      p_visitor_id: attribution.visitorId,
+      p_session_id: attribution.sessionId
     });
     if (error) {
       console.warn('Hansora signup attribution write failed', error);
@@ -395,6 +408,7 @@
   const ANALYTICS_CONSENT_KEY = 'hansora.analytics.consent.v1';
   const ANALYTICS_CONSENT_VERSION = 'analytics-v1';
   const ANALYTICS_VISITOR_ID_KEY = 'hansora.analytics.visitor_id';
+  const ANALYTICS_SESSION_ID_KEY = 'hansora.analytics.session_id';
   let analyticsConsentMemory = '';
   let analyticsConsentMode = 'pending';
   let analyticsAuthCache = null;
@@ -439,6 +453,204 @@
     } catch (_) {
       return null;
     }
+  }
+
+  function validAnalyticsId(value) {
+    const normalized = typeof value === 'string' ? value.trim() : '';
+    return normalized.length >= 8 && normalized.length <= 128 ? normalized : null;
+  }
+
+  function readExistingAnalyticsVisitorId() {
+    try {
+      return validAnalyticsId(localStorage.getItem(ANALYTICS_VISITOR_ID_KEY));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function readExistingAnalyticsSessionId() {
+    try {
+      return validAnalyticsId(sessionStorage.getItem(ANALYTICS_SESSION_ID_KEY));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function restoreExistingAnalyticsSessionId(sessionId) {
+    const existingSessionId = readExistingAnalyticsSessionId();
+    const preservedSessionId = validAnalyticsId(sessionId);
+    if (existingSessionId || !preservedSessionId) return existingSessionId;
+    try {
+      sessionStorage.setItem(ANALYTICS_SESSION_ID_KEY, preservedSessionId);
+      return preservedSessionId;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function createAuthAttemptId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      return window.crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function beginAuthFunnelAttempt(provider, attribution) {
+    const normalizedProvider = provider === 'telegram' ? 'telegram' : 'google';
+    const sourceAttribution = attribution || readSignupAttributionStart() || {};
+    const visitorId = validAnalyticsId(sourceAttribution.visitorId)
+      || readExistingAnalyticsVisitorId();
+    if (!visitorId) return null;
+    const sessionId = validAnalyticsId(sourceAttribution.sessionId)
+      || readExistingAnalyticsSessionId();
+    const attempt = {
+      attemptId: createAuthAttemptId(),
+      visitorId: visitorId,
+      sessionId: sessionId,
+      provider: normalizedProvider,
+      source: sourceAttribution.source === 'course_arm' || sourceAttribution.source === 'course_ru'
+        ? sourceAttribution.source
+        : 'index',
+      startedAt: Date.now()
+    };
+    try {
+      localStorage.setItem(AUTH_FUNNEL_PENDING_KEY, JSON.stringify(attempt));
+    } catch (_) {}
+    return attempt;
+  }
+
+  function readAuthFunnelAttempt() {
+    try {
+      const value = JSON.parse(localStorage.getItem(AUTH_FUNNEL_PENDING_KEY) || 'null');
+      if (!value || !Number.isFinite(Number(value.startedAt))) return null;
+      if (Date.now() - Number(value.startedAt) > AUTH_FUNNEL_MAX_AGE_MS) {
+        localStorage.removeItem(AUTH_FUNNEL_PENDING_KEY);
+        return null;
+      }
+      const visitorId = validAnalyticsId(value.visitorId);
+      const attemptId = validAnalyticsId(value.attemptId);
+      if (!visitorId || !attemptId) return null;
+      return {
+        attemptId: attemptId,
+        visitorId: visitorId,
+        sessionId: validAnalyticsId(value.sessionId),
+        provider: value.provider === 'telegram' ? 'telegram' : 'google',
+        source: value.source === 'course_arm' || value.source === 'course_ru'
+          ? value.source
+          : 'index',
+        startedAt: Number(value.startedAt)
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function clearAuthFunnelAttempt() {
+    try {
+      localStorage.removeItem(AUTH_FUNNEL_PENDING_KEY);
+    } catch (_) {}
+  }
+
+  function authCallbackErrorReason() {
+    try {
+      const query = new URLSearchParams(AUTH_CALLBACK_SEARCH_SNAPSHOT);
+      const hash = new URLSearchParams(String(AUTH_CALLBACK_HASH_SNAPSHOT).replace(/^#/, ''));
+      return String(
+        query.get('error_description') || query.get('error_code') || query.get('error') ||
+        hash.get('error_description') || hash.get('error_code') || hash.get('error') || ''
+      ).replace(/\+/g, ' ').trim().slice(0, 500);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function authCallbackWasReceived() {
+    const attempt = readAuthFunnelAttempt();
+    if (!attempt) return false;
+    try {
+      const queryPart = String(AUTH_CALLBACK_SEARCH_SNAPSHOT).replace(/^\?/, '');
+      const hashPart = String(AUTH_CALLBACK_HASH_SNAPSHOT).replace(/^#/, '');
+      const params = new URLSearchParams(
+        [queryPart, hashPart].filter(Boolean).join('&')
+      );
+      if (
+        params.has('code') || params.has('access_token') || params.has('refresh_token') ||
+        params.has('error') || params.has('error_code') || params.has('error_description') ||
+        String(AUTH_CALLBACK_HASH_SNAPSHOT).indexOf('sb=') !== -1
+      ) return true;
+      const referrer = String(AUTH_CALLBACK_REFERRER_SNAPSHOT);
+      return /supabase\.co|accounts\.google\.com|oauth\.telegram\.org/i.test(referrer)
+        && (location.pathname === '/index.html' || location.pathname === '/');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function recordAuthFunnelEvent(eventName, attempt, options) {
+    const activeAttempt = attempt || readAuthFunnelAttempt();
+    if (!activeAttempt || !activeAttempt.visitorId || !activeAttempt.attemptId) return false;
+    const details = options || {};
+    const auth = readAnalyticsAuth();
+    const userId = details.userId || null;
+    const useAuthenticatedToken = Boolean(userId && auth && auth.accessToken && auth.userId === userId);
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = controller ? setTimeout(function () { controller.abort(); }, 1400) : null;
+    try {
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/auth_funnel_events?on_conflict=attempt_id,event_name`,
+        {
+          method: 'POST',
+          keepalive: true,
+          signal: controller ? controller.signal : undefined,
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${useAuthenticatedToken ? auth.accessToken : SUPABASE_ANON_KEY}`,
+            'Prefer': 'resolution=ignore-duplicates,return=minimal'
+          },
+          body: JSON.stringify({
+            attempt_id: activeAttempt.attemptId,
+            visitor_id: activeAttempt.visitorId,
+            session_id: activeAttempt.sessionId,
+            event_name: eventName,
+            auth_provider: activeAttempt.provider,
+            signup_source: activeAttempt.source,
+            page_path: `${location.pathname || '/'}${location.search || ''}`.slice(0, 300),
+            error_reason: details.errorReason
+              ? String(details.errorReason).replace(/\s+/g, ' ').trim().slice(0, 500)
+              : null,
+            user_id: userId
+          })
+        }
+      );
+      return response.ok;
+    } catch (_) {
+      return false;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  async function recordAuthFunnelFailure(error, attempt, userId) {
+    const detail = error && error.message ? error.message : error || 'Authentication was not completed';
+    await recordAuthFunnelEvent('auth_failed', attempt, {
+      userId: userId || null,
+      errorReason: detail
+    });
+    clearAuthFunnelAttempt();
+  }
+
+  async function captureAuthCallbackArrival() {
+    const attempt = readAuthFunnelAttempt();
+    if (!attempt || !authCallbackWasReceived()) return false;
+    restoreExistingAnalyticsSessionId(attempt.sessionId);
+    await recordAuthFunnelEvent('auth_callback_received', attempt);
+    const errorReason = authCallbackErrorReason();
+    if (errorReason) {
+      await recordAuthFunnelFailure(errorReason, attempt);
+      return true;
+    }
+    return true;
   }
 
   function removeAnalyticsConsentBanner() {
@@ -636,14 +848,13 @@
   }
 
   function analyticsSessionId() {
-    const key = 'hansora.analytics.session_id';
     try {
-      let value = sessionStorage.getItem(key);
+      let value = sessionStorage.getItem(ANALYTICS_SESSION_ID_KEY);
       if (!value) {
         value = window.crypto && typeof window.crypto.randomUUID === 'function'
           ? window.crypto.randomUUID()
           : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        sessionStorage.setItem(key, value);
+        sessionStorage.setItem(ANALYTICS_SESSION_ID_KEY, value);
       }
       return value;
     } catch (_) {
@@ -685,6 +896,7 @@
           ? {
               user_id: auth.userId,
               email: auth.email,
+              visitor_id: readExistingAnalyticsVisitorId(),
               event_name: 'click',
               element_type: String(target.tagName || '').toLowerCase() || null,
               element_id: String(target.id || '').slice(0, 180) || null,
@@ -2592,8 +2804,11 @@
       btnGoogleLogin.addEventListener('click', async function () {
         const msg = el('authMsg');
         if (msg) msg.textContent = 'Opening Google login…';
+        let authAttempt = null;
         try {
-          rememberSignupAttributionStart();
+          const attribution = rememberSignupAttributionStart();
+          authAttempt = beginAuthFunnelAttempt('google', attribution);
+          await recordAuthFunnelEvent('auth_google_clicked', authAttempt);
           captureAffiliateRef();
           const ref = getStoredAffiliateRef();
           if (ref) rememberAffiliateRef(ref, 'google_oauth');
@@ -2602,8 +2817,9 @@
             provider: 'google',
             options: { redirectTo: `${location.origin}/index.html` }
           });
-          if (error && msg) msg.textContent = error.message || 'Google login failed.';
+          if (error) throw error;
         } catch (error) {
+          await recordAuthFunnelFailure(error, authAttempt);
           if (msg) msg.textContent = error.message || 'Google login failed.';
         }
       });
@@ -2615,8 +2831,11 @@
         if (msg) msg.textContent = 'Opening Telegram login…';
         btnTelegramLogin.disabled = true;
         btnTelegramLogin.setAttribute('aria-busy', 'true');
+        let authAttempt = null;
         try {
-          rememberSignupAttributionStart();
+          const attribution = rememberSignupAttributionStart();
+          authAttempt = beginAuthFunnelAttempt('telegram', attribution);
+          await recordAuthFunnelEvent('auth_telegram_clicked', authAttempt);
           captureAffiliateRef();
           const ref = getStoredAffiliateRef();
           if (ref) rememberAffiliateRef(ref, 'telegram_oauth');
@@ -2628,6 +2847,7 @@
           });
           if (error) throw error;
         } catch (error) {
+          await recordAuthFunnelFailure(error, authAttempt);
           showTelegramOAuthFailure(error && error.message ? error.message : 'Please try again.');
         }
       });
@@ -2686,15 +2906,43 @@
 
   async function handleAuthenticatedUser(user) {
     if (!user) return null;
+    const authAttempt = readAuthFunnelAttempt();
     clearTelegramOAuthStart();
     const pendingCourseReturn = getPendingAiCourseOrigin();
+    const pendingAttribution = readSignupAttributionStart();
+    if (pendingAttribution) restoreExistingAnalyticsSessionId(pendingAttribution.sessionId);
     refreshAnalyticsAuthCache();
+    const authSuccessWrite = recordAuthFunnelEvent('auth_success', authAttempt, {
+      userId: user.id
+    });
     const attributionWrite = recordSignupAttribution(user).catch(function (error) {
       console.warn('Hansora signup attribution failed', error);
       return false;
     });
-    const profile = await getOrCreateProfile(user);
+    let profile;
+    try {
+      profile = await getOrCreateProfile(user);
+    } catch (error) {
+      await authSuccessWrite;
+      await recordAuthFunnelFailure(
+        `Profile creation failed: ${error && error.message ? error.message : 'unknown error'}`,
+        authAttempt,
+        user.id
+      );
+      throw error;
+    }
+    const authSuccessRecorded = await authSuccessWrite;
     await attributionWrite;
+    if (authAttempt && (profile.__hansoraNewSignup || isRecentlyCreatedAccount(user))) {
+      const registrationRecorded = await recordAuthFunnelEvent(
+        'registration_completed',
+        authAttempt,
+        { userId: user.id }
+      );
+      if (registrationRecorded) clearAuthFunnelAttempt();
+    } else if (authSuccessRecorded) {
+      clearAuthFunnelAttempt();
+    }
     showLoggedInUI(profile, user);
     if (pendingCourseReturn && normalizeAiCoursePath(location.pathname) !== pendingCourseReturn) {
       window.location.replace(pendingCourseReturn);
@@ -2787,7 +3035,9 @@
     bindEvents();
     bindGlobalClickTracking();
     preserveAffiliateRefAcrossPageLinks();
-    bindAuthStateChanges();
-    restoreSession().finally(initializeRegionalAnalyticsConsent);
+    captureAuthCallbackArrival().finally(function () {
+      bindAuthStateChanges();
+      restoreSession().finally(initializeRegionalAnalyticsConsent);
+    });
   });
 })();
