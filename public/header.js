@@ -597,7 +597,7 @@
     const timer = controller ? setTimeout(function () { controller.abort(); }, 1400) : null;
     try {
       const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/auth_funnel_events?on_conflict=attempt_id,event_name`,
+        `${SUPABASE_URL}/rest/v1/auth_funnel_events`,
         {
           method: 'POST',
           keepalive: true,
@@ -606,7 +606,7 @@
             'Content-Type': 'application/json',
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${useAuthenticatedToken ? auth.accessToken : SUPABASE_ANON_KEY}`,
-            'Prefer': 'resolution=ignore-duplicates,return=minimal'
+            'Prefer': 'return=minimal'
           },
           body: JSON.stringify({
             attempt_id: activeAttempt.attemptId,
