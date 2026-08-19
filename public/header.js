@@ -86,6 +86,7 @@
   let subscriptionLoadedAt = 0;
   let subscriptionUserId = null;
   let subscriptionPromise = null;
+  let authCallbackArrivalWrite = Promise.resolve(false);
 
   const IMAGE_MENU_MODELS = [
     { label: 'GPT Image 2', id: 'gpt-image-2', icon: 'G2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/2.png', note: 'Latest image generation' },
@@ -936,6 +937,197 @@
         }).catch(function () {});
       } catch (_) {}
     }, true);
+  }
+
+  function recordRegisteredClickEvent(eventName, details) {
+    const eventDetails = details || {};
+    let auth = readAnalyticsAuth();
+    if (!auth || !auth.userId || !auth.accessToken) {
+      refreshAnalyticsAuthCache();
+      auth = readAnalyticsAuth();
+    }
+    if (!auth || !auth.userId || !auth.accessToken) return Promise.resolve(false);
+
+    const target = eventDetails.target || null;
+    const payload = {
+      user_id: auth.userId,
+      email: auth.email,
+      visitor_id: readExistingAnalyticsVisitorId(),
+      event_name: String(eventName || '').slice(0, 180),
+      element_type: String(
+        eventDetails.elementType || (target && target.tagName) || 'course_preview'
+      ).toLowerCase().slice(0, 80),
+      element_id: String(
+        eventDetails.elementId || (target && target.id) || ''
+      ).slice(0, 180) || null,
+      element_label: String(eventDetails.label || eventName || 'course event')
+        .replace(/\s+/g, ' ').trim().slice(0, 180),
+      destination: eventDetails.destination || clickDestination(target),
+      page_path: `${location.pathname}${location.hash || ''}`.slice(0, 300),
+      session_id: analyticsSessionId(),
+      device_type: window.matchMedia && window.matchMedia('(max-width: 900px)').matches
+        ? 'mobile'
+        : 'desktop'
+    };
+
+    return fetch(`${SUPABASE_URL}/rest/v1/click_events`, {
+      method: 'POST',
+      keepalive: true,
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${auth.accessToken}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(payload)
+    }).then(function (response) {
+      return response.ok;
+    }).catch(function () {
+      return false;
+    });
+  }
+
+  function bindCoursePreviewFunnelTracking() {
+    if (window.__hansoraCoursePreviewTrackingBound) return;
+    const coursePath = normalizeAiCoursePath(location.pathname);
+    if (coursePath !== '/course_arm' && coursePath !== '/course_ru') return;
+
+    const previewVideo = document.getElementById('introPopupVideo');
+    const introModal = document.getElementById('introModal');
+    const pricingModal = document.getElementById('creditsModal');
+    if (!previewVideo || !introModal || !pricingModal) return;
+
+    window.__hansoraCoursePreviewTrackingBound = true;
+    const progressCheckpoints = new Set();
+    let previewEnded = false;
+    let lastProgress = 0;
+    let pricingPopupFromPreview = false;
+    let pricingPopupActionTaken = false;
+
+    function progressPercent() {
+      const duration = Number(previewVideo.duration);
+      const currentTime = Number(previewVideo.currentTime);
+      if (!Number.isFinite(duration) || duration <= 0 || !Number.isFinite(currentTime)) {
+        return lastProgress;
+      }
+      lastProgress = Math.max(0, Math.min(100, Math.round((currentTime / duration) * 100)));
+      return lastProgress;
+    }
+
+    function trackPreviewClose(method) {
+      if (!introModal.classList.contains('open') || previewEnded) return;
+      const percent = progressPercent();
+      recordRegisteredClickEvent(`course_preview_closed_${method}`, {
+        elementType: 'video',
+        elementId: 'introPopupVideo',
+        label: `Preview closed at ${percent}% (${method})`
+      });
+    }
+
+    function trackPricingClose(method) {
+      if (!pricingPopupFromPreview || !pricingModal.classList.contains('open')) return;
+      pricingPopupActionTaken = true;
+      recordRegisteredClickEvent(`course_preview_pricing_popup_closed_${method}`, {
+        elementType: 'modal',
+        elementId: 'creditsModal',
+        label: `Post-preview pricing popup closed (${method})`
+      });
+      pricingPopupFromPreview = false;
+    }
+
+    document.addEventListener('click', function (event) {
+      const target = event.target && event.target.closest ? event.target : null;
+      if (!target) return;
+
+      const lockedPreview = target.closest('.lesson-preview');
+      if (lockedPreview && lockedPreview.closest('#playerWrap')) {
+        previewEnded = false;
+        pricingPopupFromPreview = false;
+        recordRegisteredClickEvent('course_preview_play_clicked', {
+          target: lockedPreview,
+          elementType: 'button',
+          elementId: 'playerWrap',
+          label: 'Non-buyer clicked course preview Play'
+        });
+      }
+
+      const closeButton = target.closest('[data-close-modal]');
+      const clickedBackdrop = target.classList && target.classList.contains('modal');
+      if (closeButton || clickedBackdrop) {
+        trackPreviewClose(closeButton ? 'x' : 'backdrop');
+        trackPricingClose(closeButton ? 'x' : 'backdrop');
+      }
+
+      const buyButton = target.closest('.buy');
+      if (pricingPopupFromPreview && buyButton && buyButton.closest('#creditsModal')) {
+        pricingPopupActionTaken = true;
+        recordRegisteredClickEvent('course_preview_pricing_popup_buy_clicked', {
+          target: buyButton,
+          elementType: 'button',
+          label: `Post-preview Buy clicked: ${buyButton.dataset.credits || 'unknown'} credits`
+        });
+        pricingPopupFromPreview = false;
+      }
+    }, true);
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return;
+      trackPreviewClose('escape');
+      trackPricingClose('escape');
+    }, true);
+
+    previewVideo.addEventListener('play', function () {
+      previewEnded = false;
+      recordRegisteredClickEvent('course_preview_play_started', {
+        elementType: 'video',
+        elementId: 'introPopupVideo',
+        label: `Course preview playback started at ${progressPercent()}%`
+      });
+    });
+
+    previewVideo.addEventListener('timeupdate', function () {
+      const percent = progressPercent();
+      [25, 50, 75].forEach(function (checkpoint) {
+        if (percent < checkpoint || progressCheckpoints.has(checkpoint)) return;
+        progressCheckpoints.add(checkpoint);
+        recordRegisteredClickEvent(`course_preview_progress_${checkpoint}`, {
+          elementType: 'video',
+          elementId: 'introPopupVideo',
+          label: `Course preview reached ${checkpoint}%`
+        });
+      });
+    });
+
+    previewVideo.addEventListener('ended', function () {
+      previewEnded = true;
+      lastProgress = 100;
+      pricingPopupFromPreview = false;
+      recordRegisteredClickEvent('course_preview_completed', {
+        elementType: 'video',
+        elementId: 'introPopupVideo',
+        label: 'Course preview reached the end (100%)'
+      });
+      setTimeout(function () {
+        if (!pricingModal.classList.contains('open')) return;
+        pricingPopupFromPreview = true;
+        pricingPopupActionTaken = false;
+        recordRegisteredClickEvent('course_preview_pricing_popup_opened', {
+          elementType: 'modal',
+          elementId: 'creditsModal',
+          label: 'Post-preview pricing popup opened after video reached 100%'
+        });
+      }, 0);
+    });
+
+    window.addEventListener('pagehide', function () {
+      if (!pricingPopupFromPreview || !pricingModal.classList.contains('open') || pricingPopupActionTaken) return;
+      pricingPopupActionTaken = true;
+      recordRegisteredClickEvent('course_preview_pricing_popup_abandoned', {
+        elementType: 'modal',
+        elementId: 'creditsModal',
+        label: 'User left the page while post-preview pricing popup was open'
+      });
+    });
   }
 
   function getAffiliateRefFromUrl() {
@@ -2912,18 +3104,10 @@
     const pendingAttribution = readSignupAttributionStart();
     if (pendingAttribution) restoreExistingAnalyticsSessionId(pendingAttribution.sessionId);
     refreshAnalyticsAuthCache();
-    const authSuccessWrite = recordAuthFunnelEvent('auth_success', authAttempt, {
-      userId: user.id
-    });
-    const attributionWrite = recordSignupAttribution(user).catch(function (error) {
-      console.warn('Hansora signup attribution failed', error);
-      return false;
-    });
     let profile;
     try {
       profile = await getOrCreateProfile(user);
     } catch (error) {
-      await authSuccessWrite;
       await recordAuthFunnelFailure(
         `Profile creation failed: ${error && error.message ? error.message : 'unknown error'}`,
         authAttempt,
@@ -2931,6 +3115,20 @@
       );
       throw error;
     }
+    showLoggedInUI(profile, user);
+    if (pendingCourseReturn && normalizeAiCoursePath(location.pathname) !== pendingCourseReturn) {
+      window.location.replace(pendingCourseReturn);
+      return profile;
+    }
+    const authSuccessWrite = authCallbackArrivalWrite.then(function () {
+      return recordAuthFunnelEvent('auth_success', authAttempt, {
+        userId: user.id
+      });
+    });
+    const attributionWrite = recordSignupAttribution(user).catch(function (error) {
+      console.warn('Hansora signup attribution failed', error);
+      return false;
+    });
     const authSuccessRecorded = await authSuccessWrite;
     await attributionWrite;
     if (authAttempt && (profile.__hansoraNewSignup || isRecentlyCreatedAccount(user))) {
@@ -2942,11 +3140,6 @@
       if (registrationRecorded) clearAuthFunnelAttempt();
     } else if (authSuccessRecorded) {
       clearAuthFunnelAttempt();
-    }
-    showLoggedInUI(profile, user);
-    if (pendingCourseReturn && normalizeAiCoursePath(location.pathname) !== pendingCourseReturn) {
-      window.location.replace(pendingCourseReturn);
-      return profile;
     }
     loadSubscriptionForUser(user).catch(function (error) {
       console.warn('Hansora subscription background read failed', error);
@@ -3034,10 +3227,13 @@
     exposeApi();
     bindEvents();
     bindGlobalClickTracking();
+    bindCoursePreviewFunnelTracking();
     preserveAffiliateRefAcrossPageLinks();
-    captureAuthCallbackArrival().finally(function () {
-      bindAuthStateChanges();
-      restoreSession().finally(initializeRegionalAnalyticsConsent);
+    authCallbackArrivalWrite = captureAuthCallbackArrival().catch(function (error) {
+      console.warn('Hansora auth callback tracking failed', error);
+      return false;
     });
+    bindAuthStateChanges();
+    restoreSession().finally(initializeRegionalAnalyticsConsent);
   });
 })();
