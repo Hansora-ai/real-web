@@ -6205,6 +6205,26 @@ function createResultCard(data) {
       updateRunButtonLabel();
     }
 
+    function restoreActiveUnlimitedQueueIndicators() {
+      const strip = document.getElementById('resultsStrip');
+      const resultsSection = document.getElementById('resultsSection');
+      let restoredCard = false;
+      for (const active of activeUnlimitedQueuesByKind.values()) {
+        const context = active && active.context;
+        const card = context && context.controller && context.controller.card;
+        if (!context || context.removed || context.settled || !card) continue;
+        __clientRequestPlaceholders.add(context);
+        context.markQueued();
+        if (strip && !card.isConnected) {
+          strip.prepend(card);
+          restoredCard = true;
+        }
+      }
+      if (restoredCard && strip) strip.classList.remove('empty');
+      if (restoredCard && resultsSection) resultsSection.classList.remove('hidden');
+      updateRunButtonLabel();
+    }
+
     function clearActiveUnlimitedQueue(mediaKind, jobId) {
       const active = activeUnlimitedQueuesByKind.get(mediaKind);
       if (!active || (jobId && active.id !== jobId)) return;
@@ -6242,7 +6262,7 @@ function createResultCard(data) {
       const context = details.context;
       const model = details.model || {};
       let eligibleAt = details.eligibleAt || null;
-      setActiveUnlimitedQueue({ id: jobId, mediaKind, modelId: model.id || '', eligibleAt });
+      setActiveUnlimitedQueue({ id: jobId, mediaKind, modelId: model.id || '', eligibleAt, context });
       if (context) context.markQueued();
 
       for (;;) {
@@ -13522,7 +13542,10 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             return;
           }
           await loadRecentHistory({ restartActivePolls: true });
+          restoreActiveUnlimitedQueueIndicators();
+          await restoreUnlimitedQueueState();
           await refreshCredits();
+          restoreActiveUnlimitedQueueIndicators();
         } catch (error) {
           console.warn('page resume refresh failed', error);
         } finally {
