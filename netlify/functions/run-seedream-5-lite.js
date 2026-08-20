@@ -327,7 +327,11 @@ exports.handler = async (event) => {
 
     // Charge exactly once per run_id (cost = 0.5)
     const cost = 0.5;
-    const subscriptionUnlimited = await hasUnlimitedSubscription(uid, "seedream-5-lite");
+    const queueSecretHeader = event?.headers?.["x-hansora-queue-secret"] || event?.headers?.["X-Hansora-Queue-Secret"] || "";
+    const queueAuthorized = process.env.HANSORA_QUEUE_SECRET
+      && queueSecretHeader === process.env.HANSORA_QUEUE_SECRET;
+    const subscriptionUnlimited = String(body.billing_mode || "").toLowerCase() === "unlimited"
+      && queueAuthorized && await hasUnlimitedSubscription(uid, "seedream-5-lite");
     const chargeCost = subscriptionUnlimited ? 0 : cost;
 
     // Seed placeholder row
