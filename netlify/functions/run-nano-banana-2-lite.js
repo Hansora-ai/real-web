@@ -275,7 +275,10 @@ exports.handler = async (event) => {
     const resolution = normalizeResolution(body.resolution);
 
     const cost = 0.5;
-    const subscriptionUnlimited = await hasUnlimitedSubscription(uid, "nano-banana-2-lite");
+    const queueAuthorized = process.env.HANSORA_QUEUE_SECRET
+      && getHeader(event, "x-hansora-queue-secret") === process.env.HANSORA_QUEUE_SECRET;
+    const subscriptionUnlimited = String(body.billing_mode || "").toLowerCase() === "unlimited"
+      && queueAuthorized && await hasUnlimitedSubscription(uid, "nano-banana-2-lite");
     const chargeCost = subscriptionUnlimited ? 0 : cost;
 
     // Seed user_generations row (pending)
