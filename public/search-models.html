@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+\<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -1553,11 +1553,19 @@
       border-color:rgba(244,114,182,.88) !important;
       color:#fff !important;
     }
+    body.workspace-redesign #unlimitedRunBtn.is-unavailable{
+      filter:saturate(.45);
+      opacity:.52;
+      box-shadow:none !important;
+    }
     body.workspace-redesign #runBtn.credit-run-btn{
-      background:rgba(15,23,42,.94) !important;
-      border:1px solid rgba(148,163,184,.42) !important;
-      color:#e2e8f0 !important;
-      box-shadow:0 8px 24px rgba(2,6,23,.28) !important;
+      background:linear-gradient(135deg,#6366f1,#8b5cf6) !important;
+      border:1px solid rgba(167,139,250,.72) !important;
+      color:#fff !important;
+      box-shadow:0 14px 38px rgba(99,102,241,.42) !important;
+    }
+    body.workspace-redesign .generation-action-buttons.credit-only{
+      grid-template-columns:minmax(0,1fr);
     }
     @media (max-width:767px){
       body.workspace-redesign .generation-action-buttons{
@@ -7601,7 +7609,31 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function isCurrentSelectionUnlimited() {
-      return isModelSelectionUnlimited(currentModel);
+      return normalizedGenerationQuantity(generationQuantity) === 1 && isModelSelectionUnlimited(currentModel);
+    }
+
+    function isModelIncludedInCurrentUnlimitedPlan(model = currentModel) {
+      const state = window.HANSORA_SUBSCRIPTION;
+      if (!model || !state || state.active !== true) return false;
+      const keyByModel = {
+        'nano-banana-2-lite': 'nano-banana-2-lite',
+        'nano-banana-2': 'nano-banana-2',
+        'z-image': 'z-image',
+        'gpt-image-2': 'gpt-image-2',
+        'seedream-5-lite': 'seedream-5-lite',
+        'grok-image': 'grok-image',
+        'qwen-2': 'qwen-2',
+        'wan-2-7-image': 'wan-2-7-image',
+        'grok-video': 'grok-video',
+        'veo31-lite': 'veo-3-1-lite',
+        'kling25': 'kling-2-5-turbo'
+      };
+      const modelKey = keyByModel[model.id];
+      if (!modelKey) return false;
+      return (state.unlimitedModelKeys || []).some((value) => {
+        const key = normalizeUnlimitedValue(value);
+        return key === modelKey || key.startsWith(`${modelKey}:`);
+      });
     }
 
     function unlimitedBadgeMarkup(extraClass = '') {
@@ -8971,7 +9003,6 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
     function getModelUnitCreditValue(model = currentModel) {
 	      if (!model) return null;
-      if (model === currentModel && isCurrentSelectionUnlimited()) return 0;
 	      if (model.id === 'nano-banana-pro') return currentResolution === '4K' ? 2 : 1.5;
 	      if (model.id === 'nano-banana-2') return currentResolution === '4K' ? 1.5 : 1;
 	      if (model.id === 'nano-banana-2-lite') return 0.5;
@@ -9112,18 +9143,30 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const credits = getRunCreditLabel();
       runBtn.textContent = credits ? `Run ${credits} ⚡` : 'Run';
       if (unlimitedBtn) {
+        const modelIncluded = isModelIncludedInCurrentUnlimitedPlan();
         const unlimited = isCurrentSelectionUnlimited();
-        unlimitedBtn.classList.toggle('hidden', !unlimited);
-        unlimitedBtn.classList.toggle('inline-flex', unlimited);
+        const actions = unlimitedBtn.closest('.generation-action-buttons');
+        unlimitedBtn.classList.toggle('hidden', !modelIncluded);
+        unlimitedBtn.classList.toggle('inline-flex', modelIncluded);
+        if (actions) actions.classList.toggle('credit-only', !modelIncluded);
         const activeQueue = currentModel ? activeUnlimitedQueuesByKind.get(currentModel.category) : null;
-        if (unlimited && activeQueue) {
+        if (modelIncluded && !unlimited) {
           unlimitedBtn.disabled = true;
+          unlimitedBtn.classList.remove('is-queued');
+          unlimitedBtn.classList.add('is-unavailable');
+          unlimitedBtn.innerHTML = '<span class="run-unlimited-label"><span class="subscription-infinity" aria-hidden="true">∞</span><span>Unlimited</span></span>';
+          unlimitedBtn.title = normalizedGenerationQuantity(generationQuantity) > 1
+            ? 'Unlimited supports one generation per request. Use Run with credits for quantity 2.'
+            : 'These selected settings are not included in Unlimited. Use Run with credits or choose an included setting.';
+        } else if (unlimited && activeQueue) {
+          unlimitedBtn.disabled = true;
+          unlimitedBtn.classList.remove('is-unavailable');
           unlimitedBtn.classList.add('is-queued');
           unlimitedBtn.innerHTML = '<span class="queue-button-spinner" aria-hidden="true"></span><span>In Queue</span>';
           unlimitedBtn.title = `Unlimited ${currentModel.category} generation is already queued or starting. Credit generation remains available.`;
         } else {
           unlimitedBtn.disabled = false;
-          unlimitedBtn.classList.remove('is-queued');
+          unlimitedBtn.classList.remove('is-queued', 'is-unavailable');
           unlimitedBtn.innerHTML = '<span class="run-unlimited-label"><span class="subscription-infinity" aria-hidden="true">∞</span><span>Unlimited</span></span>';
           unlimitedBtn.title = 'Generate without credits using the Unlimited fair-use queue.';
         }
