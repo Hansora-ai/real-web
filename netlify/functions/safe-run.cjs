@@ -3,6 +3,9 @@
 const crypto = require('node:crypto');
 
 const POLICY_VERSION = '2026-08-16.2';
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const QUEUE_SECRET = process.env.HANSORA_QUEUE_SECRET || '';
 
 // These terms are explicit enough to block without needing surrounding context.
 const DIRECT_SEXUAL_TERMS = [
@@ -236,6 +239,108 @@ function requestBaseUrl(event) {
   return `${protocol}://${host}`;
 }
 
+function getHeader(event, name) {
+  const headers = event.headers || {};
+  return headers[name] || headers[name.toLowerCase()] || headers[name.toUpperCase()] || '';
+}
+
+async function authenticateUser(event) {
+  const token = String(getHeader(event, 'authorization')).match(/^Bearer\s+(.+)$/i)?.[1] || '';
+  if (!token || !SUPABASE_URL || !SERVICE_KEY) return null;
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(10000)
+  });
+  if (!response.ok) return null;
+  const payload = await response.json().catch(() => null);
+  return payload && (payload.id || payload.user?.id) ? { id: String(payload.id || payload.user.id) } : null;
+}
+
+async function serviceRequest(path, options = {}) {
+  if (!SUPABASE_URL || !SERVICE_KEY) throw new Error('missing_queue_environment');
+  return fetch(`${SUPABASE_URL}${path}`, {
+    ...options,
+    headers: {
+      apikey: SERVICE_KEY,
+      Authorization: `Bearer ${SERVICE_KEY}`,
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers || {})
+    },
+    signal: options.signal || AbortSignal.timeout(15000)
+  });
+}
+
+async function serviceRpc(name, body) {
+  const response = await serviceRequest(`/rest/v1/rpc/${name}`, { method: 'POST', body: JSON.stringify(body || {}) });
+  if (!response.ok) throw new Error(`${name}_${response.status}_${await response.text().catch(() => '')}`);
+  return response.json().catch(() => null);
+}
+
+async function activeSubscription(userId) {
+  const response = await serviceRequest(`/rest/v1/user_subscriptions?user_id=eq.${encodeURIComponent(userId)}&select=status,plan_id,current_period_end&limit=1`);
+  if (!response.ok) return null;
+  const rows = await response.json().catch(() => []);
+  const row = Array.isArray(rows) ? rows[0] : null;
+  const endMs = row?.current_period_end ? Date.parse(row.current_period_end) : 0;
+  return row?.status === 'active' && Number.isFinite(endMs) && endMs > Date.now() ? row : null;
+}
+
+function normalizedToken(value) {
+  return String(value || '').trim().toLowerCase().replace(/[_\s.]+/g, '-').replace(/-+/g, '-');
+}
+
+function normalizedResolution(value) {
+  const match = String(value || '').toLowerCase().match(/(720|1080|2160|1k|2k|4k)/);
+  return match ? match[1].toUpperCase().replace(/^720$/, '720P').replace(/^1080$/, '1080P').replace(/^2160$/, '2160P') : '';
+}
+
+function unlimitedEligibility(planId, modelId, mediaKind, payload) {
+  const model = normalizedToken(modelId);
+  const kind = normalizedToken(mediaKind);
+  const resolution = normalizedResolution(payload?.resolution || payload?.quality);
+  const duration = Math.round(Number(payload?.duration || 0));
+  const commonImage = new Set(['nano-banana-2-lite', 'z-image', 'seedream-5-lite', 'grok-image', 'qwen-2']);
+  if (kind === 'image' && commonImage.has(model)) return true;
+  if (kind === 'image' && model === 'nano-banana-2') {
+    return resolution === '1K' || (planId === 'pro_max_monthly' && resolution === '2K');
+  }
+  if (kind === 'image' && model === 'gpt-image-2') {
+    return resolution === '1K' || (planId === 'pro_max_monthly' && resolution === '2K');
+  }
+  if (kind === 'image' && model === 'wan-2-7-image') {
+    return planId === 'pro_max_monthly' && normalizedToken(payload?.tier || payload?.quality || 'normal') === 'normal';
+  }
+  if (kind === 'video' && model === 'grok-video') return duration === 6;
+  if (kind === 'video' && model === 'veo31-lite') {
+    if (duration !== 8 || normalizedToken(payload?.model) !== 'veo3-lite') return false;
+    if (planId === 'pro_monthly') return resolution === '720P';
+    if (planId === 'pro_max_monthly') return resolution === '720P' || resolution === '1080P';
+    return false;
+  }
+  if (kind === 'video' && (model === 'kling25' || model === 'kling-2-5-turbo')) {
+    return planId === 'pro_max_monthly' && duration === 5 && (!resolution || resolution === '1080P');
+  }
+  return false;
+}
+
+async function readQueueJob(userId, jobId) {
+  const response = await serviceRequest(`/rest/v1/unlimited_generation_jobs?id=eq.${encodeURIComponent(jobId)}&user_id=eq.${encodeURIComponent(userId)}&select=id,status,eligible_at,model_id,model_name,media_kind,run_id,provider_status,provider_response,error_message&limit=1`);
+  if (!response.ok) throw new Error(`queue_status_${response.status}`);
+  const rows = await response.json().catch(() => []);
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function dispatchQueuedJob(baseUrl, jobId) {
+  if (!QUEUE_SECRET) throw new Error('missing_queue_secret');
+  const response = await fetch(`${baseUrl}/.netlify/functions/process-unlimited-generation-background`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Hansora-Queue-Secret': QUEUE_SECRET },
+    body: JSON.stringify({ job_id: jobId }),
+    signal: AbortSignal.timeout(10000)
+  });
+  if (!response.ok && response.status !== 202) throw new Error(`queue_dispatch_${response.status}`);
+}
+
 exports.handler = async function handler(event) {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: { 'Cache-Control': 'no-store' }, body: '' };
@@ -249,6 +354,51 @@ exports.handler = async function handler(event) {
     request = JSON.parse(event.body || '{}');
   } catch (_) {
     return json(400, { ok: false, error: 'Invalid JSON request.' });
+  }
+
+  if (request.action === 'unlimited-status' || request.action === 'unlimited-list') {
+    const user = await authenticateUser(event);
+    if (!user) return json(401, { ok: false, error: 'Authentication required.' });
+    try {
+      if (request.action === 'unlimited-list') {
+        const response = await serviceRequest(`/rest/v1/unlimited_generation_jobs?user_id=eq.${encodeURIComponent(user.id)}&status=in.(queued,running)&select=id,status,eligible_at,model_id,model_name,media_kind,run_id,prompt,created_at&order=created_at.asc`);
+        if (!response.ok) throw new Error(`queue_list_${response.status}`);
+        return json(200, { ok: true, jobs: await response.json().catch(() => []) });
+      }
+      const jobId = String(request.queue_job_id || '').trim();
+      if (!/^[0-9a-f-]{36}$/i.test(jobId)) return json(400, { ok: false, error: 'Invalid queue job.' });
+      const job = await readQueueJob(user.id, jobId);
+      if (!job) return json(404, { ok: false, error: 'Queue job not found.' });
+      if (job.status === 'submitted') {
+        return json(200, {
+          ok: true,
+          queue_status: 'submitted',
+          queue_job_id: job.id,
+          provider_status: job.provider_status,
+          provider_response: job.provider_response || {}
+        });
+      }
+      if (job.status === 'failed' || job.status === 'cancelled') {
+        return json(200, {
+          ok: false,
+          queue_status: job.status,
+          queue_job_id: job.id,
+          error: job.error_message || job.provider_response?.message || job.provider_response?.error || 'Queued generation failed.'
+        });
+      }
+      return json(202, {
+        ok: true,
+        queue_status: job.status,
+        queue_job_id: job.id,
+        eligible_at: job.eligible_at,
+        model_id: job.model_id,
+        media_kind: job.media_kind,
+        message: 'Unlimited generation queued due to high recent usage. Credit generations remain available with priority processing.'
+      });
+    } catch (error) {
+      console.error('unlimited_queue_status_failed', error && error.message);
+      return json(503, { ok: false, error: 'Unlimited queue status is temporarily unavailable.' });
+    }
   }
 
   const prompt = String(request.prompt || '');
@@ -316,6 +466,83 @@ exports.handler = async function handler(event) {
     });
   }
 
+  const usageMode = normalizedToken(request.usage_mode || request.billing_mode);
+  if (usageMode === 'unlimited') {
+    const user = await authenticateUser(event);
+    if (!user) return json(401, { ok: false, error: 'Authentication required for Unlimited generation.' });
+    const claimedUid = String(getHeader(event, 'x-user-id') || request.payload.uid || request.payload.user_id || '').trim();
+    if (claimedUid && claimedUid !== user.id) return json(403, { ok: false, error: 'User identity mismatch.' });
+    if (!SUPABASE_URL || !SERVICE_KEY || !QUEUE_SECRET) {
+      return json(503, { ok: false, error: 'Unlimited queue is temporarily unavailable.' });
+    }
+    try {
+      const subscription = await activeSubscription(user.id);
+      if (!subscription || !['premium_monthly', 'pro_monthly', 'pro_max_monthly'].includes(subscription.plan_id)) {
+        return json(403, { ok: false, error: 'An active Unlimited subscription is required.' });
+      }
+      if (!unlimitedEligibility(subscription.plan_id, modelId, mediaKind, request.payload)) {
+        return json(403, { ok: false, error: 'This model setting is not Unlimited on your current plan.' });
+      }
+      const queuedPayload = { ...request.payload, uid: user.id, user_id: user.id, billing_mode: 'unlimited' };
+      const runId = String(queuedPayload.run_id || queuedPayload.runId || `${user.id}-${Date.now()}`);
+      queuedPayload.run_id = runId;
+      const queued = await serviceRpc('hansora_enqueue_unlimited_generation', {
+        p_user_id: user.id,
+        p_plan_id: subscription.plan_id,
+        p_kind: mediaKind,
+        p_model_id: modelId,
+        p_model_name: String(request.model_name || modelId).slice(0, 200),
+        p_target_endpoint: targetEndpoint,
+        p_prompt: prompt,
+        p_payload: queuedPayload,
+        p_run_id: runId
+      });
+      if (!queued || !queued.id) throw new Error('queue_insert_failed');
+      if (queued.already_active && queued.run_id !== runId) {
+        return json(409, {
+          ok: false,
+          code: 'UNLIMITED_CATEGORY_BUSY',
+          queue_job_id: queued.id,
+          queue_status: queued.status,
+          model_id: queued.model_id,
+          message: `An Unlimited ${mediaKind} generation is already queued or starting. Credit generations remain available.`
+        });
+      }
+      let queueStatus = queued.status || 'queued';
+      if (Number(queued.delay_seconds || 0) <= 0 && queueStatus === 'queued') {
+        const claimed = await serviceRpc('hansora_claim_due_unlimited_generation', { p_job_id: queued.id });
+        if (claimed?.id) {
+          queueStatus = 'running';
+          try {
+            await dispatchQueuedJob(baseUrl, queued.id);
+          } catch (dispatchError) {
+            console.error('unlimited_queue_immediate_dispatch_failed', dispatchError && dispatchError.message);
+            await serviceRpc('hansora_release_unlimited_generation', { p_job_id: queued.id });
+            queueStatus = 'queued';
+          }
+        }
+      }
+      return json(202, {
+        ok: true,
+        queue_job_id: queued.id,
+        queue_status: queueStatus,
+        eligible_at: queued.eligible_at,
+        delay_seconds: Number(queued.delay_seconds || 0),
+        run_id: queued.run_id,
+        message: Number(queued.delay_seconds || 0) > 0
+          ? 'Unlimited generation queued due to high recent usage. Credit generations remain available with priority processing.'
+          : 'Unlimited generation is in queue and will begin shortly. Credit generations remain available with priority processing.'
+      }, { 'X-Content-Safety': 'approved', 'X-Content-Safety-Decision': decisionId });
+    } catch (error) {
+      console.error('unlimited_queue_submit_failed', JSON.stringify({ modelId, mediaKind, message: error && error.message }));
+      return json(503, { ok: false, error: 'Unlimited queue is temporarily unavailable. No provider request was made.' });
+    }
+  }
+
+  if (usageMode === 'credits') {
+    request.payload = { ...request.payload, billing_mode: 'credits' };
+  }
+
   const incomingHeaders = event.headers || {};
   const forwardHeaders = {
     'Content-Type': 'application/json',
@@ -356,3 +583,4 @@ exports.handler = async function handler(event) {
 
 exports.evaluatePrompt = evaluatePrompt;
 exports.POLICY_VERSION = POLICY_VERSION;
+exports.unlimitedEligibility = unlimitedEligibility;
