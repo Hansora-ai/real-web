@@ -19,6 +19,7 @@ function getUID(event, body) {
   return String(getHeader(event, 'x-user-id') || body?.uid || body?.user_id || qs.get('uid') || '').trim();
 }
 async function verifyAuth(event, uid) {
+  if (process.env.HANSORA_QUEUE_SECRET && getHeader(event, 'x-hansora-queue-secret') === process.env.HANSORA_QUEUE_SECRET) return { ok: true, internal: true };
   const token = ((getHeader(event, 'authorization') || '').match(/^Bearer\s+(.+)$/i) || [])[1] || '';
   if (!token) return { ok: false, error: 'missing_auth' };
   const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${token}` } });
@@ -261,7 +262,10 @@ exports.handler = async (event) => {
     }
 
     const cost = costFor(body);
-    const subscriptionUnlimited = await hasUnlimitedSubscription(uid, duration);
+    const queueAuthorized = process.env.HANSORA_QUEUE_SECRET
+      && getHeader(event, 'x-hansora-queue-secret') === process.env.HANSORA_QUEUE_SECRET;
+    const subscriptionUnlimited = String(body.billing_mode || '').toLowerCase() === 'unlimited'
+      && queueAuthorized && await hasUnlimitedSubscription(uid, duration);
     const chargeCost = subscriptionUnlimited ? 0 : cost;
     const source = useUnificAlly ? 'unifically' : 'kie';
     const diagnostic = requestDiagnostic(event, body, duration);
