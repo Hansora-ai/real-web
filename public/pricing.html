@@ -1485,6 +1485,7 @@ Pay once, use credits across image, video, product card, audio, and creative too
     if (!base) return;
     const url = new URL(base, location.href);
     if (mode === 'ru') {
+      url.searchParams.set('successURL', 'https://hansora.co/russian-payment-success.html');
       url.searchParams.set('credits', String(credits));
       url.searchParams.set('user_id', user.id);
       if (user.email) url.searchParams.set('email', user.email);
