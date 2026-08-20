@@ -29,6 +29,7 @@ function getUID(event, body){
 
 
 async function verifyAuth(event, uid){
+  if (process.env.HANSORA_QUEUE_SECRET && getHeader(event, 'x-hansora-queue-secret') === process.env.HANSORA_QUEUE_SECRET) return true;
   // Require a valid Supabase access token and ensure it matches uid.
   const auth = getHeader(event, 'authorization') || getHeader(event, 'Authorization') || '';
   const m = auth.match(/^Bearer\s+(.+)$/i);
@@ -156,7 +157,10 @@ exports.handler = async (event) => {
     // Costs: 5s -> 3⚡, 10s -> 6⚡
     const cost = (duration === 10) ? 6 : 3;
     const requestedResolution = String(body.resolution || '1080p');
-    const subscriptionUnlimited = await hasUnlimitedSubscription(uid, duration, requestedResolution);
+    const queueAuthorized = process.env.HANSORA_QUEUE_SECRET
+      && getHeader(event, 'x-hansora-queue-secret') === process.env.HANSORA_QUEUE_SECRET;
+    const subscriptionUnlimited = String(body.billing_mode || '').toLowerCase() === 'unlimited'
+      && queueAuthorized && await hasUnlimitedSubscription(uid, duration, requestedResolution);
     const chargeCost = subscriptionUnlimited ? 0 : cost;
     const run_id = (body.run_id && String(body.run_id).trim()) || `${uid || 'anon'}-${Date.now()}`;
 
