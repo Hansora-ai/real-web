@@ -229,7 +229,10 @@ exports.handler = async (event) => {
     const model = "z-image";
 
     const cost = 0.2;
-    const subscriptionUnlimited = await hasUnlimitedSubscription(uid, "z-image");
+    const queueAuthorized = process.env.HANSORA_QUEUE_SECRET
+      && getHeader(event, "x-hansora-queue-secret") === process.env.HANSORA_QUEUE_SECRET;
+    const subscriptionUnlimited = String(body.billing_mode || "").toLowerCase() === "unlimited"
+      && queueAuthorized && await hasUnlimitedSubscription(uid, "z-image");
     const chargeCost = subscriptionUnlimited ? 0 : cost;
 
     // Provider label: keep stable, include mode
