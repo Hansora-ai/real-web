@@ -250,7 +250,10 @@ exports.handler = async (event) => {
     const model = isImageToImage ? "gpt-image-2-image-to-image" : "gpt-image-2-text-to-image";
 
     const cost = resolution === "4K" ? 1.5 : 1;
-    const subscriptionUnlimited = await hasUnlimitedSubscription(uid, "gpt-image-2", resolution);
+    const queueAuthorized = process.env.HANSORA_QUEUE_SECRET
+      && getHeader(event, "x-hansora-queue-secret") === process.env.HANSORA_QUEUE_SECRET;
+    const subscriptionUnlimited = String(body.billing_mode || "").toLowerCase() === "unlimited"
+      && queueAuthorized && await hasUnlimitedSubscription(uid, "gpt-image-2", resolution);
     const chargeCost = subscriptionUnlimited ? 0 : cost;
 
     // Provider label: keep stable, include mode
