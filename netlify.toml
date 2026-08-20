@@ -15,6 +15,10 @@
   timeout = 26
   memory = 512
 
+# Unlimited generation queue dispatcher (runs once per minute)
+[functions."dispatch-unlimited-queue"]
+  schedule = "* * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]
