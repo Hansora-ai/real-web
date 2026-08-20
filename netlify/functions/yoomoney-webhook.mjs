@@ -1,4 +1,4 @@
-// netlify/functions/yoomoney-webhook.mjs wow
+// netlify/functions/yoomoney-webhook.mjs
 // YooMoney HTTP notification receiver for Russian card payments.
 // Adds credits exactly once by using the same payments-table CAS pattern as dodo-webhook.mjs.
 
@@ -6,8 +6,8 @@ import { createHash, createHmac } from "node:crypto";
 
 const PACKS = {
   100: { rub: 750 },
-  220: { rub: 1500 },
-  550: { rub: 3700 },
+  210: { rub: 1500 },
+  535: { rub: 3700 },
   1100: { rub: 7400 }
 };
 
