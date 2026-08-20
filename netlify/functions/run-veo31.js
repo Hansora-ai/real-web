@@ -46,7 +46,10 @@ exports.handler = async (event) => {
     const clientRunId = (body.run_id || "").toString().trim();
     const run_id = clientRunId || `${uid}-${Date.now()}`;
     const cost = veo31Cost(model, quality);
-    const unlimitedBySubscription = await hasUnlimitedVeo31Subscription(uid, model, quality);
+    const queueAuthorized = process.env.HANSORA_QUEUE_SECRET
+      && headers["x-hansora-queue-secret"] === process.env.HANSORA_QUEUE_SECRET;
+    const unlimitedBySubscription = String(body.billing_mode || "").toLowerCase() === "unlimited"
+      && queueAuthorized && await hasUnlimitedVeo31Subscription(uid, model, quality);
     const chargeCost = unlimitedBySubscription ? 0 : cost;
 
     // Idempotency: if this run_id already has a task_id, return it and avoid double-debit.
@@ -282,7 +285,7 @@ async function hasUnlimitedVeo31Subscription(uid, model, quality){
     const endMs = row.current_period_end ? Date.parse(row.current_period_end) : 0;
     if (!Number.isFinite(endMs) || endMs <= Date.now()) return false;
     if (row.plan_id === "pro_monthly" && q === "720p") return true;
-    if (row.plan_id === "pro_max_monthly" && q === "1080p") return true;
+    if (row.plan_id === "pro_max_monthly" && (q === "720p" || q === "1080p")) return true;
     return false;
   }catch{
     return false;
