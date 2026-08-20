@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 
 const SUBSCRIPTION_PLANS = {
   premium_monthly: {
-    monthlyCredits: 300,
+    monthlyCredits: 250,
     unlimitedModels: [
       "Nano Banana 2 Lite",
       "Nano Banana 2 1K",
@@ -22,7 +22,7 @@ const SUBSCRIPTION_PLANS = {
     ]
   },
   pro_monthly: {
-    monthlyCredits: 500,
+    monthlyCredits: 450,
     unlimitedModels: [
       "Nano Banana 2 Lite",
       "Nano Banana 2 1K",
