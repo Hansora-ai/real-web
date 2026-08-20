@@ -6216,7 +6216,22 @@ function createResultCard(data) {
         __clientRequestPlaceholders.add(context);
         context.markQueued();
         if (strip && !card.isConnected) {
-          strip.prepend(card);
+          if (window.matchMedia('(min-width: 901px)').matches) {
+            let cardHost = strip.querySelector('.results-masonry-content');
+            if (!cardHost) {
+              cardHost = document.createElement('div');
+              cardHost.className = 'results-masonry-content';
+              cardHost.dataset.columnCount = String(window.matchMedia('(max-width: 1250px)').matches ? 2 : 3);
+              strip.appendChild(cardHost);
+            }
+            const orderedCards = Array.isArray(cardHost.__orderedResultCards)
+              ? cardHost.__orderedResultCards.filter((item) => item !== card)
+              : Array.from(cardHost.querySelectorAll('.result-card')).filter((item) => item !== card);
+            cardHost.__orderedResultCards = [card, ...orderedCards].slice(0, 15);
+            layoutDesktopResultCards(cardHost);
+          } else {
+            strip.prepend(card);
+          }
           restoredCard = true;
         }
       }
