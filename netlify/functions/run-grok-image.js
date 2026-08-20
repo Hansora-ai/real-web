@@ -119,6 +119,21 @@ async function patchUserGenerationMetaById(id, meta){
   }catch(_e){ return false; }
 }
 
+async function hasUnlimitedSubscription(uid){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid || uid === "anon") return false;
+  try{
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_subscriptions?user_id=eq.${encodeURIComponent(uid)}&select=status,plan_id,current_period_end&limit=1`, {
+      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+    });
+    if (!r.ok) return false;
+    const rows = await r.json().catch(()=>[]);
+    const row = Array.isArray(rows) ? rows[0] : null;
+    const endMs = row?.current_period_end ? Date.parse(row.current_period_end) : 0;
+    return row?.status === "active" && Number.isFinite(endMs) && endMs > Date.now()
+      && ["premium_monthly", "pro_monthly", "pro_max_monthly"].includes(row.plan_id);
+  }catch(_e){ return false; }
+}
+
 async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) {
     const debit = await debitCredits(uid, cost);
@@ -201,13 +216,18 @@ exports.handler = async (event) => {
     const isImageToImage = input_urls.length > 0;
     const model = isImageToImage ? "grok-imagine/image-to-image" : "grok-imagine/text-to-image";
 
-    const cost = 0.5;
+    const modelCost = 0.5;
+    const queueAuthorized = process.env.HANSORA_QUEUE_SECRET
+      && getHeader(event, "x-hansora-queue-secret") === process.env.HANSORA_QUEUE_SECRET;
+    const subscriptionUnlimited = String(body.billing_mode || "").toLowerCase() === "unlimited"
+      && queueAuthorized && await hasUnlimitedSubscription(uid);
+    const cost = subscriptionUnlimited ? 0 : modelCost;
 
     // Provider label: keep stable, include mode
     const provider = "Grok Image";
 
     // Seed user_generations row (pending)
-    const seeded = await seedUserGeneration(uid, run_id, prompt, provider, { aspect_ratio, mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: cost });
+    const seeded = await seedUserGeneration(uid, run_id, prompt, provider, { aspect_ratio, mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: cost, charge_cost: cost, model_cost: modelCost, subscription_unlimited: subscriptionUnlimited });
     const row_id = seeded?.row_id || null;
 
     // callback must include uid & run_id
@@ -275,7 +295,7 @@ exports.handler = async (event) => {
     } catch {}
 
     // Debit credits AFTER provider accepted and exactly once per (uid, run_id)
-    const baseMeta = { source:"grok-image", run_id, model, status:"processing", task_id: id, aspect_ratio, resolution:"720p", mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: cost };
+    const baseMeta = { source:"grok-image", run_id, model, status:"processing", task_id: id, aspect_ratio, resolution:"720p", mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: cost, charge_cost: cost, model_cost: modelCost, subscription_unlimited: subscriptionUnlimited };
     const charged = await chargeOnceForRun(uid, run_id, cost, row_id, baseMeta);
 
     if (!charged.ok) {
@@ -294,6 +314,8 @@ exports.handler = async (event) => {
       run_id,
       row_id,
       cost,
+      model_cost: modelCost,
+      subscription_unlimited: subscriptionUnlimited,
       already_charged: !!charged.already,
       version: VERSION_TAG,
       used_callback: cb
