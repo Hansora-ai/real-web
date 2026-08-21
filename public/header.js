@@ -79,6 +79,8 @@
   }
 
   const LANGUAGE_STORAGE_KEY = 'hansora.language.v1';
+  const REGISTRATION_LANGUAGE_CHOICE_KEY = 'hansora.registration.languageChoiceRequired.v1';
+  const REGISTRATION_LANGUAGE_CHOICE_EVENT = 'hansora:registration-language-choice-required';
   const LANGUAGE_SUFFIX = { en: '', hy: '_arm', ru: '_ru' };
   const LANGUAGE_META = {
     en: { name: 'English', flag: '🇬🇧', htmlLang: 'en' },
@@ -172,6 +174,97 @@
       return location.protocol === 'file:' ? url.href : `${url.pathname}${url.search}${url.hash}`;
     } catch (_) {
       return href;
+    }
+  }
+
+  function profileLanguageValue(language) {
+    if (language === 'hy') return 'arm';
+    if (language === 'ru') return 'ru';
+    return 'en';
+  }
+
+  function pageLanguageFromProfile(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'arm' || normalized === 'hy') return 'hy';
+    if (normalized === 'ru') return 'ru';
+    return 'en';
+  }
+
+  function isCourseLandingPath() {
+    return /\/(?:course_arm|course_ru)\/?$/i.test(location.pathname || '');
+  }
+
+  function registrationLanguageChoiceIsRequired(user) {
+    const target = user || currentUser;
+    if (!target || !target.id) return false;
+    try {
+      return localStorage.getItem(REGISTRATION_LANGUAGE_CHOICE_KEY) === target.id;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function storeRegistrationLanguageChoice(user) {
+    if (!user || !user.id) return;
+    try { localStorage.setItem(REGISTRATION_LANGUAGE_CHOICE_KEY, user.id); } catch (_) {}
+  }
+
+  function clearRegistrationLanguageChoice(user) {
+    const target = user || currentUser;
+    try {
+      const storedUserId = localStorage.getItem(REGISTRATION_LANGUAGE_CHOICE_KEY);
+      if (!target || !target.id || storedUserId === target.id) {
+        localStorage.removeItem(REGISTRATION_LANGUAGE_CHOICE_KEY);
+      }
+    } catch (_) {}
+  }
+
+  function announceRegistrationLanguageChoice(user) {
+    if (!user || !user.id) return;
+    storeRegistrationLanguageChoice(user);
+    window.dispatchEvent(new CustomEvent(REGISTRATION_LANGUAGE_CHOICE_EVENT, {
+      detail: { userId: user.id }
+    }));
+  }
+
+  async function saveProfileLanguagePreference(language) {
+    try { localStorage.setItem(LANGUAGE_STORAGE_KEY, language); } catch (_) {}
+    if (!sb || !currentUser || !currentUser.id) return true;
+    try {
+      const { error } = await sb
+        .from('profiles')
+        .update({ language: profileLanguageValue(language) })
+        .eq('user_id', currentUser.id);
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.warn('Hansora profile language save failed', error);
+      return false;
+    }
+  }
+
+  async function synchronizeProfileLanguage(user) {
+    if (!sb || !user || !user.id) return false;
+    try {
+      const { data, error } = await sb
+        .from('profiles')
+        .select('language')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+
+      const preferredLanguage = pageLanguageFromProfile(data && data.language);
+      try { localStorage.setItem(LANGUAGE_STORAGE_KEY, preferredLanguage); } catch (_) {}
+      if (isCourseLandingPath() || preferredLanguage === CURRENT_LANGUAGE) return false;
+
+      const destination = localizedHref(location.href, preferredLanguage);
+      const currentLocation = `${location.pathname}${location.search}${location.hash}`;
+      if (!destination || destination === location.href || destination === currentLocation) return false;
+      window.location.replace(destination);
+      return true;
+    } catch (error) {
+      console.warn('Hansora profile language restore failed', error);
+      return false;
     }
   }
 
@@ -3179,9 +3272,9 @@
         if (event.target === languageModal) closeLanguageModal();
       });
       languageModal.querySelectorAll('[data-language-code]').forEach(function (button) {
-        button.addEventListener('click', function () {
+        button.addEventListener('click', async function () {
           const languageCode = button.getAttribute('data-language-code') || 'en';
-          try { localStorage.setItem(LANGUAGE_STORAGE_KEY, languageCode); } catch (_) {}
+          await saveProfileLanguagePreference(languageCode);
           const destination = localizedHref(location.href, languageCode);
           if (destination === location.href || destination === `${location.pathname}${location.search}${location.hash}`) {
             closeLanguageModal();
@@ -3354,6 +3447,8 @@
     } else if (authSuccessRecorded) {
       clearAuthFunnelAttempt();
     }
+    const languageRedirected = await synchronizeProfileLanguage(user);
+    if (languageRedirected) return profile;
     loadSubscriptionForUser(user).catch(function (error) {
       console.warn('Hansora subscription background read failed', error);
     });
