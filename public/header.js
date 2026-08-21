@@ -1214,20 +1214,20 @@
     function trackPreviewClose(method) {
       if (!introModal.classList.contains('open') || previewEnded) return;
       const percent = progressPercent();
-      recordRegisteredClickEvent(`course_preview_closed_${method}`, {
+      recordRegisteredClickEvent('video_closed', {
         elementType: 'video',
         elementId: 'introPopupVideo',
-        label: `Preview closed at ${percent}% (${method})`
+        label: `Intro video closed before completion at ${percent}% (${method})`
       });
     }
 
     function trackPricingClose(method) {
       if (!pricingPopupFromPreview || !pricingModal.classList.contains('open')) return;
       pricingPopupActionTaken = true;
-      recordRegisteredClickEvent(`course_preview_pricing_popup_closed_${method}`, {
+      recordRegisteredClickEvent('offer_closed', {
         elementType: 'modal',
         elementId: 'creditsModal',
-        label: `Post-preview pricing popup closed (${method})`
+        label: `Post-video offer closed (${method})`
       });
       pricingPopupFromPreview = false;
     }
@@ -1240,11 +1240,11 @@
       if (lockedPreview && lockedPreview.closest('#playerWrap')) {
         previewEnded = false;
         pricingPopupFromPreview = false;
-        recordRegisteredClickEvent('course_preview_play_clicked', {
+        recordRegisteredClickEvent('video_play_clicked', {
           target: lockedPreview,
           elementType: 'button',
           elementId: 'playerWrap',
-          label: 'Non-buyer clicked course preview Play'
+          label: 'Non-buyer clicked intro video Play'
         });
       }
 
@@ -1258,10 +1258,10 @@
       const buyButton = target.closest('.buy');
       if (pricingPopupFromPreview && buyButton && buyButton.closest('#creditsModal')) {
         pricingPopupActionTaken = true;
-        recordRegisteredClickEvent('course_preview_pricing_popup_buy_clicked', {
+        recordRegisteredClickEvent('buy_clicked', {
           target: buyButton,
           elementType: 'button',
-          label: `Post-preview Buy clicked: ${buyButton.dataset.credits || 'unknown'} credits`
+          label: `Post-video Buy clicked: ${buyButton.dataset.credits || 'unknown'} credits`
         });
         pricingPopupFromPreview = false;
       }
@@ -1275,10 +1275,10 @@
 
     previewVideo.addEventListener('play', function () {
       previewEnded = false;
-      recordRegisteredClickEvent('course_preview_play_started', {
+      recordRegisteredClickEvent('video_started', {
         elementType: 'video',
         elementId: 'introPopupVideo',
-        label: `Course preview playback started at ${progressPercent()}%`
+        label: `Intro video playback started at ${progressPercent()}%`
       });
     });
 
@@ -1287,10 +1287,10 @@
       [25, 50, 75].forEach(function (checkpoint) {
         if (percent < checkpoint || progressCheckpoints.has(checkpoint)) return;
         progressCheckpoints.add(checkpoint);
-        recordRegisteredClickEvent(`course_preview_progress_${checkpoint}`, {
+        recordRegisteredClickEvent(`video_${checkpoint}`, {
           elementType: 'video',
           elementId: 'introPopupVideo',
-          label: `Course preview reached ${checkpoint}%`
+          label: `Intro video reached ${checkpoint}%`
         });
       });
     });
@@ -1299,30 +1299,38 @@
       previewEnded = true;
       lastProgress = 100;
       pricingPopupFromPreview = false;
-      recordRegisteredClickEvent('course_preview_completed', {
+      recordRegisteredClickEvent('video_completed', {
         elementType: 'video',
         elementId: 'introPopupVideo',
-        label: 'Course preview reached the end (100%)'
+        label: 'Intro video reached the end (100%)'
       });
       setTimeout(function () {
         if (!pricingModal.classList.contains('open')) return;
         pricingPopupFromPreview = true;
         pricingPopupActionTaken = false;
-        recordRegisteredClickEvent('course_preview_pricing_popup_opened', {
+        recordRegisteredClickEvent('offer_shown', {
           elementType: 'modal',
           elementId: 'creditsModal',
-          label: 'Post-preview pricing popup opened after video reached 100%'
+          label: 'Post-video offer shown after video reached 100%'
         });
       }, 0);
     });
 
     window.addEventListener('pagehide', function () {
+      if (introModal.classList.contains('open') && !previewEnded) {
+        const percent = progressPercent();
+        recordRegisteredClickEvent('video_abandoned', {
+          elementType: 'video',
+          elementId: 'introPopupVideo',
+          label: `User left the page with intro video at ${percent}%`
+        });
+      }
       if (!pricingPopupFromPreview || !pricingModal.classList.contains('open') || pricingPopupActionTaken) return;
       pricingPopupActionTaken = true;
-      recordRegisteredClickEvent('course_preview_pricing_popup_abandoned', {
+      recordRegisteredClickEvent('offer_abandoned', {
         elementType: 'modal',
         elementId: 'creditsModal',
-        label: 'User left the page while post-preview pricing popup was open'
+        label: 'User left the page while post-video offer was open'
       });
     });
   }
@@ -3251,6 +3259,24 @@
       document.body.style.removeProperty('overflow');
       if (btnLanguage) btnLanguage.focus({ preventScroll: true });
     }
+    async function applyLanguageChoice(languageCode) {
+      const selectedLanguage = LANGUAGE_META[languageCode] ? languageCode : 'en';
+      await saveProfileLanguagePreference(selectedLanguage);
+      clearRegistrationLanguageChoice();
+      const destination = localizedHref(location.href, selectedLanguage);
+      if (destination === location.href || destination === `${location.pathname}${location.search}${location.hash}`) {
+        closeLanguageModal();
+        return;
+      }
+      window.location.assign(destination);
+    }
+    async function dismissLanguageModal() {
+      if (registrationLanguageChoiceIsRequired()) {
+        await applyLanguageChoice('en');
+        return;
+      }
+      closeLanguageModal();
+    }
     function openLanguageModal() {
       if (!languageModal) return;
       if (navMenu) navMenu.classList.remove('is-open');
@@ -3266,21 +3292,22 @@
         openLanguageModal();
       });
     }
-    if (languageClose) languageClose.addEventListener('click', closeLanguageModal);
+    window.addEventListener(REGISTRATION_LANGUAGE_CHOICE_EVENT, function (event) {
+      const requestedUserId = event && event.detail ? event.detail.userId : '';
+      if (!currentUser || !currentUser.id || requestedUserId !== currentUser.id) return;
+      openLanguageModal();
+    });
+    if (languageClose) languageClose.addEventListener('click', function () {
+      dismissLanguageModal();
+    });
     if (languageModal) {
       languageModal.addEventListener('click', function (event) {
-        if (event.target === languageModal) closeLanguageModal();
+        if (event.target === languageModal) dismissLanguageModal();
       });
       languageModal.querySelectorAll('[data-language-code]').forEach(function (button) {
         button.addEventListener('click', async function () {
           const languageCode = button.getAttribute('data-language-code') || 'en';
-          await saveProfileLanguagePreference(languageCode);
-          const destination = localizedHref(location.href, languageCode);
-          if (destination === location.href || destination === `${location.pathname}${location.search}${location.hash}`) {
-            closeLanguageModal();
-            return;
-          }
-          window.location.assign(destination);
+          await applyLanguageChoice(languageCode);
         });
       });
     }
@@ -3294,7 +3321,7 @@
       if (event.key === 'Escape') {
         closeAuth();
         closeAiCourseModal();
-        closeLanguageModal();
+        dismissLanguageModal();
       }
     });
 
@@ -3422,6 +3449,12 @@
       throw error;
     }
     showLoggedInUI(profile, user);
+    if (profile.__hansoraNewSignup) storeRegistrationLanguageChoice(user);
+    if (registrationLanguageChoiceIsRequired(user)) {
+      window.dispatchEvent(new CustomEvent(REGISTRATION_LANGUAGE_CHOICE_EVENT, {
+        detail: { userId: user.id }
+      }));
+    }
     if (pendingCourseReturn && normalizeAiCoursePath(location.pathname) !== pendingCourseReturn) {
       window.location.replace(pendingCourseReturn);
       return profile;
@@ -3447,7 +3480,9 @@
     } else if (authSuccessRecorded) {
       clearAuthFunnelAttempt();
     }
-    const languageRedirected = await synchronizeProfileLanguage(user);
+    const languageRedirected = registrationLanguageChoiceIsRequired(user)
+      ? false
+      : await synchronizeProfileLanguage(user);
     if (languageRedirected) return profile;
     loadSubscriptionForUser(user).catch(function (error) {
       console.warn('Hansora subscription background read failed', error);
