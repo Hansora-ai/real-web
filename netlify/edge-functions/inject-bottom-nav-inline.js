@@ -13,6 +13,85 @@ export default async (request, context) => {
     return new Response(html, { status: res.status, headers: res.headers });
   }
 
+  const requestPath = new URL(request.url).pathname.toLowerCase();
+  const language = /_arm(?:\.html)?\/?$/.test(requestPath)
+    ? 'arm'
+    : /_ru(?:\.html)?\/?$/.test(requestPath)
+      ? 'ru'
+      : 'en';
+
+  const COPY = {
+    en: {
+      mobileNav: 'Mobile bottom navigation',
+      home: 'Home',
+      features: 'Features',
+      openCreate: 'Open create menu',
+      create: 'Create',
+      history: 'History',
+      menu: 'Menu',
+      chooseModel: 'Choose model type',
+      image: 'Image',
+      video: 'Video',
+      audio: 'Audio',
+      more: 'See more',
+      closeModels: 'Close models menu',
+      closeMenu: 'Close menu',
+      pricing: 'Pricing',
+      faq: 'FAQ',
+      contact: 'Contact'
+    },
+    arm: {
+      mobileNav: 'Բջջային ստորին նավիգացիա',
+      home: 'Գլխավոր',
+      features: 'Գործիքներ',
+      openCreate: 'Բացել ստեղծման ընտրացանկը',
+      create: 'Ստեղծել',
+      history: 'Պատմություն',
+      menu: 'Ընտրացանկ',
+      chooseModel: 'Ընտրեք մոդելի տեսակը',
+      image: 'Պատկեր',
+      video: 'Տեսանյութ',
+      audio: 'Ձայն',
+      more: 'Տեսնել ավելին',
+      closeModels: 'Փակել մոդելների ընտրացանկը',
+      closeMenu: 'Փակել ընտրացանկը',
+      pricing: 'Գներ',
+      faq: 'Հաճախ տրվող հարցեր',
+      contact: 'Կապ'
+    },
+    ru: {
+      mobileNav: 'Нижняя мобильная навигация',
+      home: 'Главная',
+      features: 'Инструменты',
+      openCreate: 'Открыть меню создания',
+      create: 'Создать',
+      history: 'История',
+      menu: 'Меню',
+      chooseModel: 'Выберите тип модели',
+      image: 'Изображение',
+      video: 'Видео',
+      audio: 'Аудио',
+      more: 'Смотреть ещё',
+      closeModels: 'Закрыть меню моделей',
+      closeMenu: 'Закрыть меню',
+      pricing: 'Цены',
+      faq: 'Частые вопросы',
+      contact: 'Контакты'
+    }
+  };
+  const copy = COPY[language];
+  const localizedPath = (value) => {
+    if (language === 'en') return value;
+    const match = value.match(/^([^?#]+)([?#].*)?$/);
+    if (!match) return value;
+    const path = match[1];
+    const tail = match[2] || '';
+    if (!path.endsWith('.html') || new RegExp(`_${language}\\.html$`).test(path)) {
+      return value;
+    }
+    return path.replace(/\.html$/, `_${language}.html`) + tail;
+  };
+
   const STYLE = `<style>
   .hs-bottom-nav,
   .hs-overlay,
@@ -316,57 +395,57 @@ export default async (request, context) => {
   }
 </style>`;
 
-  const NAV = `<nav aria-label="Mobile bottom navigation" class="hs-bottom-nav">
+  const NAV = `<nav aria-label="${copy.mobileNav}" class="hs-bottom-nav">
   <div class="hs-bottom-rail">
-    <a aria-label="Home" class="hs-btn" href="/index.html">
+    <a aria-label="${copy.home}" class="hs-btn" href="${localizedPath('/index.html')}">
       <svg viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
-      <span>Home</span>
+      <span>${copy.home}</span>
     </a>
-    <a aria-label="Features" class="hs-btn" href="/models.html#featuresSection">
+    <a aria-label="${copy.features}" class="hs-btn" href="${localizedPath('/models.html#featuresSection')}">
       <svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"></path></svg>
-      <span>Features</span>
+      <span>${copy.features}</span>
     </a>
     <div class="hs-fab-wrap">
-      <button aria-label="Open create menu" class="hs-fab" id="hs-models-btn" type="button">
+      <button aria-label="${copy.openCreate}" class="hs-fab" id="hs-models-btn" type="button">
         <span aria-hidden="true" class="hs-fab-plus">+</span>
-        <span class="hs-fab-label">Create</span>
+        <span class="hs-fab-label">${copy.create}</span>
       </button>
     </div>
-    <a aria-label="History" class="hs-btn" href="/usage.html">
+    <a aria-label="${copy.history}" class="hs-btn" href="${localizedPath('/usage.html')}">
       <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.708"></path><path d="M3 3v6h6"></path><path d="M12 7v6l4 2"></path></svg>
-      <span>History</span>
+      <span>${copy.history}</span>
     </a>
-    <button aria-label="Menu" class="hs-btn" id="hs-menu-btn" type="button">
+    <button aria-label="${copy.menu}" class="hs-btn" id="hs-menu-btn" type="button">
       <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
-      <span>Menu</span>
+      <span>${copy.menu}</span>
     </button>
   </div>
 </nav>
 
 <div class="hs-radial" id="hs-radial" aria-hidden="true">
   <div class="hs-radial-backdrop" id="hs-radial-backdrop"></div>
-  <div class="hs-radial-panel" role="dialog" aria-modal="true" aria-label="Choose model type">
-    <a class="hs-radial-item hs-radial-image" href="/search-models.html">
+  <div class="hs-radial-panel" role="dialog" aria-modal="true" aria-label="${copy.chooseModel}">
+    <a class="hs-radial-item hs-radial-image" href="${localizedPath('/search-models.html')}">
       <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path><circle cx="8" cy="8" r="1.5"></circle></svg></span>
-      <b>Image</b>
+      <b>${copy.image}</b>
     </a>
-    <a class="hs-radial-item hs-radial-video" data-hs-video-landing href="/search-models.html?model=kling-3">
+    <a class="hs-radial-item hs-radial-video" data-hs-video-landing href="${localizedPath('/search-models.html?model=kling-3')}">
       <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg></span>
-      <b>Video</b>
+      <b>${copy.video}</b>
     </a>
-    <a class="hs-radial-item hs-radial-audio" href="/audio.html">
+    <a class="hs-radial-item hs-radial-audio" href="${localizedPath('/audio.html')}">
       <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M5 10v4"></path><path d="M9 7v10"></path><path d="M13 5v14"></path><path d="M17 8v8"></path><path d="M21 11v2"></path></svg></span>
-      <b>Audio</b>
+      <b>${copy.audio}</b>
     </a>
-    <a class="hs-radial-item hs-radial-character" href="/character.html">
+    <a class="hs-radial-item hs-radial-character" href="${localizedPath('/character.html')}">
       <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg></span>
       <b>Character</b>
     </a>
-    <a class="hs-radial-item hs-radial-more" href="/models.html">
+    <a class="hs-radial-item hs-radial-more" href="${localizedPath('/models.html')}">
       <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"></path><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14z"></path></svg></span>
-      <b>See more</b>
+      <b>${copy.more}</b>
     </a>
-    <button class="hs-radial-close" id="hs-radial-close" type="button" aria-label="Close models menu">
+    <button class="hs-radial-close" id="hs-radial-close" type="button" aria-label="${copy.closeModels}">
       <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg>
     </button>
   </div>
@@ -376,42 +455,42 @@ export default async (request, context) => {
   <div class="backdrop" id="hs-backdrop"></div>
   <div class="panel" role="dialog" aria-modal="true" aria-labelledby="hs-ol-title">
     <header>
-      <h3 id="hs-ol-title">Menu</h3>
-      <button id="hs-close" aria-label="Close menu" type="button">
+      <h3 id="hs-ol-title">${copy.menu}</h3>
+      <button id="hs-close" aria-label="${copy.closeMenu}" type="button">
         <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"></path></svg>
       </button>
     </header>
     <div class="links">
-      <a href="/search-models.html"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path></svg> Image</a>
-      <a data-hs-video-landing href="/search-models.html?model=kling-3"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg> Video</a>
-      <a href="/audio.html"><svg viewBox="0 0 24 24"><path d="M5 10v4"></path><path d="M9 7v10"></path><path d="M13 5v14"></path><path d="M17 8v8"></path></svg> Audio</a>
+      <a href="${localizedPath('/search-models.html')}"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path></svg> ${copy.image}</a>
+      <a data-hs-video-landing href="${localizedPath('/search-models.html?model=kling-3')}"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg> ${copy.video}</a>
+      <a href="${localizedPath('/audio.html')}"><svg viewBox="0 0 24 24"><path d="M5 10v4"></path><path d="M9 7v10"></path><path d="M13 5v14"></path><path d="M17 8v8"></path></svg> ${copy.audio}</a>
       <button class="hs-feature-toggle" id="hs-feature-toggle" type="button">
-        <span><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path></svg> Features</span>
+        <span><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path></svg> ${copy.features}</span>
         <svg class="hs-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
       </button>
       <div class="hs-feature-list" id="hs-feature-list">
-        <a href="/upscale.html">Image upscale</a>
-        <a href="/expand.html?mode=angles">Full angles</a>
-        <a href="/expand.html?mode=expand">Expand</a>
-        <a href="/character.html">Character</a>
-        <a href="/product_card.html">Product Card</a>
-        <a href="/prompt-builder.html">Cartoon Prompt Builder</a>
-        <a href="/kid-cartoon.html">Kid Cartoon</a>
-        <a href="/video-edit.html">Video Edit</a>
-        <a href="/background-change.html">Background Change</a>
-        <a href="/video-relight.html">Video Relight</a>
-        <a href="/upscale.html?mode=video">Video upscale</a>
-        <a href="/lipsync.html">Lipsync Avatar</a>
-        <a href="/audio.html?tool=text-to-speech">Text to speech</a>
-        <a href="/audio.html?tool=voice-isolater">Voice isolater</a>
-        <a href="/audio.html?tool=voice-changer">Voice changer</a>
-        <a href="/audio.html?tool=song-creation">Song Creation</a>
-        <a href="/analyse.html">Hook analyse</a>
-        <a href="/models.html">See more</a>
+        <a href="${localizedPath('/upscale.html')}">Image upscale</a>
+        <a href="${localizedPath('/expand.html?mode=angles')}">Full angles</a>
+        <a href="${localizedPath('/expand.html?mode=expand')}">Expand</a>
+        <a href="${localizedPath('/character.html')}">Character</a>
+        <a href="${localizedPath('/product_card.html')}">Product Card</a>
+        <a href="${localizedPath('/prompt-builder.html')}">Cartoon Prompt Builder</a>
+        <a href="${localizedPath('/kid-cartoon.html')}">Kid Cartoon</a>
+        <a href="${localizedPath('/video-edit.html')}">Video Edit</a>
+        <a href="${localizedPath('/background-change.html')}">Background Change</a>
+        <a href="${localizedPath('/video-relight.html')}">Video Relight</a>
+        <a href="${localizedPath('/upscale.html?mode=video')}">Video upscale</a>
+        <a href="${localizedPath('/lipsync.html')}">Lipsync Avatar</a>
+        <a href="${localizedPath('/audio.html?tool=text-to-speech')}">Text to speech</a>
+        <a href="${localizedPath('/audio.html?tool=voice-isolater')}">Voice isolater</a>
+        <a href="${localizedPath('/audio.html?tool=voice-changer')}">Voice changer</a>
+        <a href="${localizedPath('/audio.html?tool=song-creation')}">Song Creation</a>
+        <a href="${localizedPath('/analyse.html')}">Hook analyse</a>
+        <a href="${localizedPath('/models.html')}">${copy.more}</a>
       </div>
-      <a href="/pricing.html"><svg viewBox="0 0 24 24"><path d="M3 7h18v10H3z"></path><path d="M8 10h8M8 14h8"></path></svg> Pricing</a>
-      <a href="/index.html#faq"><svg viewBox="0 0 24 24"><path d="M12 17h.01"></path><path d="M9.09 9a3 3 0 1 1 5.91 1c0 2-3 2-3 4"></path></svg> FAQ</a>
-      <a href="/contact.html"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"></path><path d="M4 8l8 6 8-6"></path></svg> Contact</a>
+      <a href="${localizedPath('/pricing.html')}"><svg viewBox="0 0 24 24"><path d="M3 7h18v10H3z"></path><path d="M8 10h8M8 14h8"></path></svg> ${copy.pricing}</a>
+      <a href="${localizedPath('/index.html#faq')}"><svg viewBox="0 0 24 24"><path d="M12 17h.01"></path><path d="M9.09 9a3 3 0 1 1 5.91 1c0 2-3 2-3 4"></path></svg> ${copy.faq}</a>
+      <a href="${localizedPath('/contact.html')}"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"></path><path d="M4 8l8 6 8-6"></path></svg> ${copy.contact}</a>
     </div>
   </div>
 </div>
@@ -551,10 +630,11 @@ export default async (request, context) => {
         return 0;
       }
     };
+    const localizedSearchModelsPath = ${JSON.stringify(localizedPath('/search-models.html'))};
     const updateVideoLandingLinks = () => {
       const model = getCurrentCredits() < 4 ? 'grok-video' : 'kling-3';
       document.querySelectorAll('[data-hs-video-landing]').forEach((link) => {
-        link.setAttribute('href', '/search-models.html?model=' + encodeURIComponent(model));
+        link.setAttribute('href', localizedSearchModelsPath + '?model=' + encodeURIComponent(model));
       });
     };
     const syncBottomNavToViewport = () => {
