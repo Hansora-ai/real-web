@@ -78,6 +78,112 @@
     document.head.appendChild(script);
   }
 
+  const LANGUAGE_STORAGE_KEY = 'hansora.language.v1';
+  const LANGUAGE_SUFFIX = { en: '', hy: '_arm', ru: '_ru' };
+  const LANGUAGE_META = {
+    en: { name: 'English', flag: '🇬🇧', htmlLang: 'en' },
+    hy: { name: 'Հայերեն', flag: '🇦🇲', htmlLang: 'hy' },
+    ru: { name: 'Русский', flag: '🇷🇺', htmlLang: 'ru' }
+  };
+
+  function detectPageLanguage() {
+    let pathname = '';
+    try { pathname = decodeURIComponent(location.pathname || ''); } catch (_) { pathname = location.pathname || ''; }
+    if (/(?:_arm\.html|\/course_arm\/?$)/i.test(pathname)) return 'hy';
+    if (/(?:_ru\.html|\/course_ru\/?$)/i.test(pathname)) return 'ru';
+    const declared = String(document.documentElement.lang || '').toLowerCase();
+    if (declared === 'hy' || declared.indexOf('hy-') === 0) return 'hy';
+    if (declared === 'ru' || declared.indexOf('ru-') === 0) return 'ru';
+    return 'en';
+  }
+
+  const CURRENT_LANGUAGE = detectPageLanguage();
+
+  const HEADER_COPY = {
+    en: {
+      home: 'HANSORA AI home', primaryNav: 'Primary navigation', image: 'Image', imageMenu: 'Image tools and models', imageSection: 'Image models and tools',
+      video: 'Video', videoMenu: 'Video models', features: 'Features', featureMenu: 'Feature tools', imageTools: 'Image tools', videoAudioTools: 'Video and audio tools',
+      audio: 'Audio', audioTools: 'Audio tools', pricing: 'Pricing', pricingAria: 'Pricing, 30% off', discount: '30% OFF', login: 'Login', openAccount: 'Open account menu',
+      startCreating: 'Start creating', profile: 'Profile', history: 'History', credits: 'Credits', aiCourse: 'AI Course', logout: 'Logout', language: 'Language',
+      closeCourse: 'Close course selection', courseEyebrow: 'Hansora AI Course', courseTitle: 'Choose your course language', courseIntro: 'Select the language in which you would like to study.',
+      closeLanguage: 'Close language selection', languageEyebrow: 'Hansora language', languageTitle: 'Choose website language', languageIntro: 'Select the language for this page and every Hansora menu and popup.', current: 'Current',
+      logIn: 'Log in', createAccount: 'Create your account', google: 'Continue with Google', telegram: 'Continue with Telegram', secureAuth: 'Continue securely with Google or Telegram. Telegram may not share an email address.',
+      or: 'or', email: 'Email', password: 'Password', signUp: 'Sign up', analyticsAria: 'Analytics preferences', analyticsQuestion: 'Allow anonymous analytics?', analyticsNotice: 'We use anonymous analytics. Reject to stop.',
+      reject: 'Reject', acceptAnalytics: 'Accept analytics', continue: 'Continue', telegramFailure: 'Telegram login was not completed', telegramCancelled: 'Telegram login was cancelled or not completed. Please try again.',
+      creatorOffer: 'Creator discount offer', pricingOffer: 'Hansora pricing offer', closeOffer: 'Close offer', openingGoogle: 'Opening Google login…', googleFailed: 'Google login failed.',
+      openingTelegram: 'Opening Telegram login…', tryAgain: 'Please try again.', enterCredentials: 'Enter email & password.', signingIn: 'Signing in…', loginFailed: 'Login failed.', notLoggedIn: 'Not logged in', notEnoughCredits: 'Not enough credits'
+    },
+    hy: {
+      home: 'HANSORA AI գլխավոր էջ', primaryNav: 'Հիմնական նավիգացիա', image: 'Պատկեր', imageMenu: 'Պատկերի գործիքներ և մոդելներ', imageSection: 'Պատկերի մոդելներ և գործիքներ',
+      video: 'Տեսանյութ', videoMenu: 'Տեսանյութի մոդելներ', features: 'Գործիքներ', featureMenu: 'Լրացուցիչ գործիքներ', imageTools: 'Պատկերի գործիքներ', videoAudioTools: 'Տեսանյութի և ձայնի գործիքներ',
+      audio: 'Ձայն', audioTools: 'Ձայնային գործիքներ', pricing: 'Գներ', pricingAria: 'Գներ՝ 30% զեղչով', discount: '30% ԶԵՂՉ', login: 'Մուտք', openAccount: 'Բացել հաշվի ընտրացանկը',
+      startCreating: 'Սկսել ստեղծել', profile: 'Պրոֆիլ', history: 'Պատմություն', credits: 'Կրեդիտներ', aiCourse: 'AI դասընթաց', logout: 'Դուրս գալ', language: 'Լեզու',
+      closeCourse: 'Փակել դասընթացի լեզվի ընտրությունը', courseEyebrow: 'Hansora AI դասընթաց', courseTitle: 'Ընտրեք դասընթացի լեզուն', courseIntro: 'Ընտրեք, թե որ լեզվով եք ցանկանում սովորել։',
+      closeLanguage: 'Փակել լեզվի ընտրությունը', languageEyebrow: 'Hansora-ի լեզու', languageTitle: 'Ընտրեք կայքի լեզուն', languageIntro: 'Ընտրեք այս էջի, Hansora-ի ընտրացանկերի և պատուհանների լեզուն։', current: 'Ընտրված',
+      logIn: 'Մուտք գործել', createAccount: 'Ստեղծեք ձեր հաշիվը', google: 'Շարունակել Google-ով', telegram: 'Շարունակել Telegram-ով', secureAuth: 'Անվտանգ շարունակեք Google-ով կամ Telegram-ով։ Telegram-ը կարող է չտրամադրել էլփոստի հասցե։',
+      or: 'կամ', email: 'Էլփոստ', password: 'Գաղտնաբառ', signUp: 'Գրանցվել', analyticsAria: 'Վերլուծական տվյալների կարգավորումներ', analyticsQuestion: 'Թույլատրե՞լ անանուն վերլուծությունը։', analyticsNotice: 'Մենք օգտագործում ենք անանուն վերլուծություն։ Դադարեցնելու համար մերժեք։',
+      reject: 'Մերժել', acceptAnalytics: 'Թույլատրել', continue: 'Շարունակել', telegramFailure: 'Telegram-ով մուտքը չի ավարտվել', telegramCancelled: 'Telegram-ով մուտքը չեղարկվել կամ չի ավարտվել։ Փորձեք կրկին։',
+      creatorOffer: 'Զեղչային առաջարկ ստեղծողների համար', pricingOffer: 'Hansora-ի գնային առաջարկ', closeOffer: 'Փակել առաջարկը', openingGoogle: 'Բացվում է Google-ով մուտքը…', googleFailed: 'Google-ով մուտքը ձախողվեց։',
+      openingTelegram: 'Բացվում է Telegram-ով մուտքը…', tryAgain: 'Փորձեք կրկին։', enterCredentials: 'Մուտքագրեք էլփոստը և գաղտնաբառը։', signingIn: 'Մուտք է կատարվում…', loginFailed: 'Մուտքը ձախողվեց։', notLoggedIn: 'Մուտք չեք գործել', notEnoughCredits: 'Բավարար կրեդիտներ չկան'
+    },
+    ru: {
+      home: 'Главная страница HANSORA AI', primaryNav: 'Основная навигация', image: 'Изображения', imageMenu: 'Инструменты и модели изображений', imageSection: 'Модели и инструменты изображений',
+      video: 'Видео', videoMenu: 'Видеомодели', features: 'Инструменты', featureMenu: 'Дополнительные инструменты', imageTools: 'Инструменты для изображений', videoAudioTools: 'Инструменты для видео и аудио',
+      audio: 'Аудио', audioTools: 'Аудиоинструменты', pricing: 'Цены', pricingAria: 'Цены со скидкой 30%', discount: 'СКИДКА 30%', login: 'Войти', openAccount: 'Открыть меню аккаунта',
+      startCreating: 'Начать создавать', profile: 'Профиль', history: 'История', credits: 'Кредиты', aiCourse: 'AI-курс', logout: 'Выйти', language: 'Язык',
+      closeCourse: 'Закрыть выбор языка курса', courseEyebrow: 'AI-курс Hansora', courseTitle: 'Выберите язык курса', courseIntro: 'Выберите язык, на котором хотите проходить обучение.',
+      closeLanguage: 'Закрыть выбор языка', languageEyebrow: 'Язык Hansora', languageTitle: 'Выберите язык сайта', languageIntro: 'Выберите язык этой страницы, меню и всех окон Hansora.', current: 'Выбрано',
+      logIn: 'Войти', createAccount: 'Создайте аккаунт', google: 'Продолжить с Google', telegram: 'Продолжить с Telegram', secureAuth: 'Безопасно продолжите с Google или Telegram. Telegram может не передавать адрес электронной почты.',
+      or: 'или', email: 'Эл. почта', password: 'Пароль', signUp: 'Зарегистрироваться', analyticsAria: 'Настройки аналитики', analyticsQuestion: 'Разрешить анонимную аналитику?', analyticsNotice: 'Мы используем анонимную аналитику. Нажмите «Отклонить», чтобы остановить сбор.',
+      reject: 'Отклонить', acceptAnalytics: 'Разрешить', continue: 'Продолжить', telegramFailure: 'Вход через Telegram не завершён', telegramCancelled: 'Вход через Telegram отменён или не завершён. Попробуйте ещё раз.',
+      creatorOffer: 'Скидочное предложение для создателей', pricingOffer: 'Ценовое предложение Hansora', closeOffer: 'Закрыть предложение', openingGoogle: 'Открывается вход через Google…', googleFailed: 'Не удалось войти через Google.',
+      openingTelegram: 'Открывается вход через Telegram…', tryAgain: 'Попробуйте ещё раз.', enterCredentials: 'Введите эл. почту и пароль.', signingIn: 'Выполняется вход…', loginFailed: 'Не удалось войти.', notLoggedIn: 'Вход не выполнен', notEnoughCredits: 'Недостаточно кредитов'
+    }
+  };
+
+  const NOTE_TRANSLATIONS = {
+    hy: { 'Latest image generation':'Պատկերների նորագույն գեներացում','Fast image edits':'Պատկերների արագ խմբագրում','Low-cost 1K image edits':'Մատչելի 1K պատկերների խմբագրում','Pro image generation':'Պրոֆեսիոնալ պատկերների գեներացում','Pro controlled image edits':'Պրոֆեսիոնալ վերահսկվող խմբագրում','Light creative images':'Արագ ստեղծագործական պատկերներ','Stylized image model':'Ոճավորված պատկերների մոդել','Image generator':'Պատկերների գեներացում','Image and frame work':'Պատկերների և կադրերի ստեղծում','Image generation':'Պատկերների գեներացում','Creative image model':'Ստեղծագործական պատկերների մոդել','OpenAI image model':'OpenAI-ի պատկերների մոդել','Image editing':'Պատկերների խմբագրում','Increase image quality':'Բարձրացնել պատկերի որակը','Different angles chosen':'Ստեղծել տարբեր դիտանկյուններ','Extend image edges':'Ընդլայնել պատկերի եզրերը','Character creator':'Կերպարների ստեղծում','Product selling cards':'Վաճառող ապրանքային քարտեր','Cartoon prompt builder':'Մուլտֆիլմի prompt-ների ստեղծում','Cinematic video model':'Կինեմատոգրաֆիկ տեսանյութերի մոդել','Advanced video generation':'Տեսանյութերի առաջադեմ գեներացում','Fast cinematic video model':'Արագ կինեմատոգրաֆիկ տեսանյութերի մոդել','Fast text or image video model':'Տեքստից կամ պատկերից արագ տեսանյութ','Prompt, image, and video inputs':'Prompt, պատկեր և տեսանյութ որպես մուտքային տվյալներ','Edit uploaded video':'Խմբագրել ներբեռնված տեսանյութը','Change video background':'Փոխել տեսանյութի ֆոնը','Change video lighting':'Փոխել տեսանյութի լուսավորությունը','Video and audio model':'Տեսանյութի և ձայնի մոդել','Google video model':'Google-ի տեսանյութերի մոդել','Cinematic video':'Կինեմատոգրաֆիկ տեսանյութ','Video with sound':'Ձայնով տեսանյութ','Fast Kling video model':'Kling-ի արագ տեսանյութերի մոդել','First and last frame control':'Առաջին և վերջին կադրերի կառավարում','Motion transfer':'Շարժման փոխանցում','Video transformation':'Տեսանյութի ձևափոխում','Increase video quality':'Բարձրացնել տեսանյութի որակը','Talking avatar video':'Խոսող avatar տեսանյութ','Add your kid in cartoon':'Ավելացնել ձեր երեխային մուլտֆիլմում','Generate voice from text':'Տեքստից ձայն գեներացնել','Separate clean vocals':'Առանձնացնել մաքուր վոկալը','Transform a voice':'Փոխակերպել ձայնը','Create music tracks':'Ստեղծել երաժշտական թրեքեր','Analyse hooks and ideas':'Վերլուծել հուկերն ու գաղափարները' },
+    ru: { 'Latest image generation':'Новейшая генерация изображений','Fast image edits':'Быстрое редактирование изображений','Low-cost 1K image edits':'Доступное редактирование изображений 1K','Pro image generation':'Профессиональная генерация изображений','Pro controlled image edits':'Профессиональное управляемое редактирование','Light creative images':'Быстрые креативные изображения','Stylized image model':'Модель для стилизованных изображений','Image generator':'Генерация изображений','Image and frame work':'Работа с изображениями и кадрами','Image generation':'Генерация изображений','Creative image model':'Креативная модель изображений','OpenAI image model':'Модель изображений OpenAI','Image editing':'Редактирование изображений','Increase image quality':'Повысить качество изображения','Different angles chosen':'Создать разные ракурсы','Extend image edges':'Расширить границы изображения','Character creator':'Создание персонажей','Product selling cards':'Продающие карточки товаров','Cartoon prompt builder':'Создание prompt для мультфильмов','Cinematic video model':'Модель кинематографичного видео','Advanced video generation':'Продвинутая генерация видео','Fast cinematic video model':'Быстрая модель кинематографичного видео','Fast text or image video model':'Быстрое видео из текста или изображения','Prompt, image, and video inputs':'Prompt, изображение и видео на входе','Edit uploaded video':'Редактировать загруженное видео','Change video background':'Изменить фон видео','Change video lighting':'Изменить освещение видео','Video and audio model':'Модель видео и аудио','Google video model':'Видеомодель Google','Cinematic video':'Кинематографичное видео','Video with sound':'Видео со звуком','Fast Kling video model':'Быстрая видеомодель Kling','First and last frame control':'Управление первым и последним кадрами','Motion transfer':'Перенос движения','Video transformation':'Преобразование видео','Increase video quality':'Повысить качество видео','Talking avatar video':'Видео с говорящим avatar','Add your kid in cartoon':'Добавить ребёнка в мультфильм','Generate voice from text':'Генерировать голос из текста','Separate clean vocals':'Отделить чистый вокал','Transform a voice':'Преобразовать голос','Create music tracks':'Создавать музыкальные треки','Analyse hooks and ideas':'Анализировать хуки и идеи' }
+  };
+
+  function copy(key) {
+    return (HEADER_COPY[CURRENT_LANGUAGE] && HEADER_COPY[CURRENT_LANGUAGE][key]) || HEADER_COPY.en[key] || key;
+  }
+
+  function translatedNote(note) {
+    return (NOTE_TRANSLATIONS[CURRENT_LANGUAGE] && NOTE_TRANSLATIONS[CURRENT_LANGUAGE][note]) || note;
+  }
+
+  function localizedHref(href, language) {
+    const lang = LANGUAGE_SUFFIX[language] != null ? language : CURRENT_LANGUAGE;
+    if (!href || href.charAt(0) === '#' || /^(?:mailto:|tel:|javascript:|data:)/i.test(href)) return href;
+    try {
+      const base = location.href || 'https://hansora.co/index.html';
+      const url = new URL(href, base);
+      if (url.origin !== location.origin) return href;
+      let pathname = url.pathname || '/';
+      if (pathname === '/') pathname = '/index.html';
+      if (/\/(?:course_arm|course_ru)\/?$/i.test(pathname) || !/\.html$/i.test(pathname)) {
+        return location.protocol === 'file:' ? url.href : `${pathname}${url.search}${url.hash}`;
+      }
+      pathname = pathname.replace(/_(?:arm|ru)(?=\.html$)/i, '');
+      pathname = pathname.replace(/\.html$/i, `${LANGUAGE_SUFFIX[lang]}.html`);
+      url.pathname = pathname;
+      return location.protocol === 'file:' ? url.href : `${url.pathname}${url.search}${url.hash}`;
+    } catch (_) {
+      return href;
+    }
+  }
+
+  function siteHref(href, language) {
+    return withAffiliateRef(localizedHref(href, language));
+  }
+
+  function oauthReturnUrl() {
+    const target = localizedHref('/index.html');
+    try { return new URL(target, location.origin).href; } catch (_) { return `${location.origin}${target}`; }
+  }
+
   let sb = null;
   let currentUser = null;
   let currentCredits = 0;
@@ -760,15 +866,13 @@
     const banner = document.createElement('section');
     banner.id = 'hansoraAnalyticsConsent';
     banner.setAttribute('role', 'dialog');
-    banner.setAttribute('aria-label', 'Analytics preferences');
+    banner.setAttribute('aria-label', copy('analyticsAria'));
     const consentRequired = analyticsConsentMode === 'consent_required';
     banner.innerHTML = `
-      <p><strong>Analytics cookies.</strong> ${consentRequired
-        ? 'Allow anonymous analytics?'
-        : 'We use anonymous analytics. Reject to stop.'}</p>
+      <p>${consentRequired ? copy('analyticsQuestion') : copy('analyticsNotice')}</p>
       <div class="hansora-analytics-consent-actions">
-        <button id="hansoraAnalyticsReject" type="button">Reject</button>
-        <button id="hansoraAnalyticsAccept" type="button">${consentRequired ? 'Accept analytics' : 'Continue'}</button>
+        <button id="hansoraAnalyticsReject" type="button">${copy('reject')}</button>
+        <button id="hansoraAnalyticsAccept" type="button">${consentRequired ? copy('acceptAnalytics') : copy('continue')}</button>
       </div>
     `;
     document.body.appendChild(banner);
@@ -1347,7 +1451,7 @@
 
   function redirectLoggedOutHome() {
     if (!shouldRedirectWhenLoggedOut()) return;
-    const target = location.origin ? `${location.origin}/index.html` : '/index.html';
+    const target = location.origin ? `${location.origin}${localizedHref('/index.html')}` : localizedHref('/index.html');
     if (location.href !== target) location.href = target;
   }
 
@@ -1357,7 +1461,7 @@
   }
 
   function modelHref(id) {
-    return `/search-models.html?model=${encodeURIComponent(id)}`;
+    return localizedHref(`/search-models.html?model=${encodeURIComponent(id)}`);
   }
 
   function videoLandingHref(credits) {
@@ -1366,7 +1470,7 @@
 
   function updateVideoLandingLink() {
     const link = document.querySelector('[data-hansora-video-landing]');
-    if (link) link.setAttribute('href', withAffiliateRef(videoLandingHref(currentCredits)));
+    if (link) link.setAttribute('href', siteHref(videoLandingHref(currentCredits)));
   }
 
   function withAffiliateRef(href) {
@@ -1433,7 +1537,7 @@
   }
 
   function itemHref(item) {
-    return withAffiliateRef(item.href || modelHref(item.id));
+    return siteHref(item.href || modelHref(item.id));
   }
 
   function itemData(item) {
@@ -1453,7 +1557,7 @@
         ${renderMegaIcon(item, index + (offset || 0))}
         <span class="hansora-mega-copy">
           <strong>${item.label}</strong>
-          <em>${item.note}</em>
+          <em>${translatedNote(item.note)}</em>
         </span>
       </a>`).join('');
   }
@@ -1474,7 +1578,7 @@
     const triggerData = config && config.videoLanding ? ' data-hansora-video-landing="1"' : '';
     return `
       <span class="hansora-nav-item">
-        <a class="hansora-nav-trigger" href="${withAffiliateRef(href)}"${triggerData}>${label}</a>
+        <a class="hansora-nav-trigger" href="${siteHref(href)}"${triggerData}>${label}</a>
         ${renderMegaMenu(config)}
       </span>`;
   }
@@ -1615,6 +1719,42 @@
       .hansora-course-copy span{ display:block; color:rgba(255,255,255,.57); font-size:13px; line-height:1.35; }
       .hansora-course-arrow{ color:#a5b4fc; font-size:24px; transition:transform .18s ease; }
       .hansora-course-option:hover .hansora-course-arrow{ transform:translateX(3px); }
+      .hansora-language-button{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:18px;
+      }
+      .hansora-language-button .hansora-language-value{
+        color:rgba(255,255,255,.58);
+        font-size:.86em;
+        font-weight:700;
+      }
+      .hansora-language-option{
+        width:100%;
+        font:inherit;
+        text-align:left;
+        cursor:pointer;
+      }
+      .hansora-language-option.is-current{
+        border-color:rgba(129,140,248,.62);
+        background:linear-gradient(135deg,rgba(99,102,241,.18),rgba(56,189,248,.09));
+        box-shadow:inset 0 0 0 1px rgba(165,180,252,.08);
+      }
+      .hansora-language-current{
+        display:inline-flex!important;
+        width:max-content;
+        margin-top:6px;
+        padding:3px 8px;
+        border:1px solid rgba(165,180,252,.26);
+        border-radius:999px;
+        background:rgba(99,102,241,.15);
+        color:#c7d2fe!important;
+        font-size:10px!important;
+        font-weight:800;
+        letter-spacing:.06em;
+        text-transform:uppercase;
+      }
       @media (max-width:560px){
         .hansora-course-modal{ padding:12px; }
         .hansora-course-dialog{ padding:26px 18px 20px; border-radius:23px; }
@@ -2038,75 +2178,93 @@
     const mount = document.getElementById('sharedHeader');
     if (!mount || mount.dataset.hansoraHeaderMounted === '1') return;
     mount.dataset.hansoraHeaderMounted = '1';
+    document.documentElement.lang = LANGUAGE_META[CURRENT_LANGUAGE].htmlLang;
     const cachedLoggedIn = readCache('loggedIn') === '1';
     const cachedCredits = readCache('credits', '0');
     const cachedAvatar = readCache('avatar', 'https://ui-avatars.com/api/?name=H&background=6366f1&color=fff');
+    const currentLanguage = LANGUAGE_META[CURRENT_LANGUAGE];
+    const languageOptions = ['en', 'ru', 'hy'].map(function (languageCode) {
+      const language = LANGUAGE_META[languageCode];
+      const descriptions = {
+        en: 'Website in English',
+        hy: 'Կայքը հայերեն',
+        ru: 'Сайт на русском'
+      };
+      const isCurrent = languageCode === CURRENT_LANGUAGE;
+      return `
+        <button class="hansora-course-option hansora-language-option${isCurrent ? ' is-current' : ''}" type="button" data-language-code="${languageCode}">
+          <span class="hansora-course-flag" aria-hidden="true">${language.flag}</span>
+          <span class="hansora-course-copy"><strong>${language.name}</strong><span>${descriptions[languageCode]}</span>${isCurrent ? `<span class="hansora-language-current">${copy('current')}</span>` : ''}</span>
+          <span class="hansora-course-arrow" aria-hidden="true">›</span>
+        </button>`;
+    }).join('');
     mount.innerHTML = `
       <header class="site-header" id="siteHeader">
         <div class="shell nav">
-          <a class="brand" href="${withAffiliateRef('/')}" aria-label="HANSORA AI home">
+          <a class="brand" href="${siteHref('/')}" aria-label="${copy('home')}">
             <img src="${LOGO_URL}" alt="">
             <span><span class="hansora-brand-full">HANSORA AI</span><span class="hansora-brand-mobile">HANSORA</span></span>
           </a>
-          <nav class="nav-links" aria-label="Primary navigation">
-            ${renderNavMenu('Image', '/search-models.html', {
-              label: 'Image tools and models',
+          <nav class="nav-links" aria-label="${copy('primaryNav')}">
+            ${renderNavMenu(copy('image'), '/search-models.html', {
+              label: copy('imageMenu'),
               className: 'hansora-mega-wide hansora-mega-image',
               sections: [
-                { title: 'Image models and tools', items: [...IMAGE_MENU_MODELS, ...IMAGE_MENU_TOOLS] },
+                { title: copy('imageSection'), items: [...IMAGE_MENU_MODELS, ...IMAGE_MENU_TOOLS] },
               ]
             })}
-            ${renderNavMenu('Video', videoLandingHref(cachedCredits), {
-              label: 'Video models',
+            ${renderNavMenu(copy('video'), videoLandingHref(cachedCredits), {
+              label: copy('videoMenu'),
               className: 'hansora-mega-wide hansora-mega-video',
               videoLanding: true,
               sections: [
-                { title: 'Video models', items: VIDEO_MENU_ITEMS },
+                { title: copy('videoMenu'), items: VIDEO_MENU_ITEMS },
               ]
             })}
-            ${renderNavMenu('Features', '/models.html', {
-              label: 'Feature tools',
+            ${renderNavMenu(copy('features'), '/models.html', {
+              label: copy('featureMenu'),
               className: 'hansora-mega-wide hansora-mega-features',
               sections: [
-                { title: 'Image tools', items: [...IMAGE_MENU_TOOLS, PROMPT_BUILDER_TOOL] },
-                { title: 'Video and audio tools', items: FEATURE_MENU_ITEMS },
+                { title: copy('imageTools'), items: [...IMAGE_MENU_TOOLS, PROMPT_BUILDER_TOOL] },
+                { title: copy('videoAudioTools'), items: FEATURE_MENU_ITEMS },
               ]
             })}
-            ${renderNavMenu('Audio', '/audio.html', {
-              label: 'Audio tools',
+            ${renderNavMenu(copy('audio'), '/audio.html', {
+              label: copy('audioTools'),
               className: 'hansora-mega-compact',
               sections: [
-                { title: 'Audio tools', items: AUDIO_MENU_ITEMS },
+                { title: copy('audioTools'), items: AUDIO_MENU_ITEMS },
               ]
             })}
           </nav>
           <div class="nav-actions">
-            <a class="hansora-mobile-pricing" href="${withAffiliateRef('/pricing.html')}" aria-label="Pricing, 30% off">
-              <span>Pricing</span>
-              <strong class="hansora-mobile-pricing-badge">30% OFF</strong>
+            <a class="hansora-mobile-pricing" href="${siteHref('/pricing.html')}" aria-label="${copy('pricingAria')}">
+              <span>${copy('pricing')}</span>
+              <strong class="hansora-mobile-pricing-badge">${copy('discount')}</strong>
             </a>
-            <button class="btn btn-ghost" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Login</button>
+            <button class="btn btn-ghost" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">${copy('login')}</button>
             <span class="credits-pill" id="navCredits" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}">${formatCredits(cachedCredits)}</span>
-            <button class="avatar-button" type="button" id="navAvatar" aria-label="Open account menu" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}">
+            <button class="avatar-button" type="button" id="navAvatar" aria-label="${copy('openAccount')}" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}">
               <img id="navAvatarImg" alt="" src="${cachedAvatar}">
             </button>
-            <a class="btn btn-primary" href="${withAffiliateRef('/search-models.html')}" id="btnGetStarted">Start creating</a>
+            <a class="btn btn-primary" href="${siteHref('/search-models.html')}" id="btnGetStarted">${copy('startCreating')}</a>
           </div>
         </div>
         <div class="user-menu" id="navMenu">
-          <a href="${withAffiliateRef('/profile.html')}">Profile</a>
-          <a href="${withAffiliateRef('/usage.html')}">History</a>
-          <a href="${withAffiliateRef('/pricing.html')}">Credits</a>
-          <button class="hansora-ai-course-button" type="button" id="btnAiCourse">AI Course</button>
-          <button type="button" id="btnLogout">Logout</button>
+          <a href="${siteHref('/profile.html')}">${copy('profile')}</a>
+          <a href="${siteHref('/usage.html')}">${copy('history')}</a>
+          <a href="${siteHref('/pricing.html')}">${copy('credits')}</a>
+          <button class="hansora-ai-course-button" type="button" id="btnAiCourse">${copy('aiCourse')}</button>
+          <button class="hansora-ai-course-button hansora-language-button" type="button" id="btnLanguage"><strong>${copy('language')}</strong><span class="hansora-language-value">${currentLanguage.flag} ${currentLanguage.name} ›</span></button>
+          <button type="button" id="btnLogout">${copy('logout')}</button>
         </div>
       </header>
       <div class="hansora-course-modal" id="aiCourseModal" aria-hidden="true">
         <section class="hansora-course-dialog" role="dialog" aria-modal="true" aria-labelledby="aiCourseTitle">
-          <button class="hansora-course-close" id="aiCourseClose" type="button" aria-label="Close course selection">✕</button>
-          <p class="hansora-course-eyebrow">Hansora AI Course</p>
-          <h2 id="aiCourseTitle">Choose your course language</h2>
-          <p class="hansora-course-intro">Select the language in which you would like to study.</p>
+          <button class="hansora-course-close" id="aiCourseClose" type="button" aria-label="${copy('closeCourse')}">✕</button>
+          <p class="hansora-course-eyebrow">${copy('courseEyebrow')}</p>
+          <h2 id="aiCourseTitle">${copy('courseTitle')}</h2>
+          <p class="hansora-course-intro">${copy('courseIntro')}</p>
           <div class="hansora-course-options">
             <a class="hansora-course-option" href="/course_arm" data-ai-course-path="/course_arm">
               <span class="hansora-course-flag" aria-hidden="true">🇦🇲</span>
@@ -2120,11 +2278,22 @@
             </a>
           </div>
         </section>
+      </div>
+      <div class="hansora-course-modal hansora-language-modal" id="languageModal" aria-hidden="true">
+        <section class="hansora-course-dialog" role="dialog" aria-modal="true" aria-labelledby="languageModalTitle">
+          <button class="hansora-course-close" id="languageClose" type="button" aria-label="${copy('closeLanguage')}">✕</button>
+          <p class="hansora-course-eyebrow">${copy('languageEyebrow')}</p>
+          <h2 id="languageModalTitle">${copy('languageTitle')}</h2>
+          <p class="hansora-course-intro">${copy('languageIntro')}</p>
+          <div class="hansora-course-options">${languageOptions}</div>
+        </section>
       </div>`;
 
     // Center the chooser against the viewport, not a transformed header parent.
     const courseModal = mount.querySelector('#aiCourseModal');
     if (courseModal && document.body) document.body.appendChild(courseModal);
+    const languageModal = mount.querySelector('#languageModal');
+    if (languageModal && document.body) document.body.appendChild(languageModal);
   }
 
   function injectAuthModal() {
@@ -2133,29 +2302,29 @@
       <div class="hansora-auth-modal" id="authModal" aria-hidden="true">
         <div class="hansora-auth-card" id="authCard" role="dialog" aria-modal="true" aria-labelledby="authTitle">
           <div class="hansora-auth-head">
-            <h3 id="authTitle">Log in</h3>
-            <button class="btn hansora-auth-close" id="authClose" type="button">✕</button>
+            <h3 id="authTitle">${copy('logIn')}</h3>
+            <button class="btn hansora-auth-close" id="authClose" type="button" aria-label="${copy('closeLanguage')}">✕</button>
           </div>
           <form class="hansora-auth-form" id="authForm">
             <div class="hansora-oauth-stack">
               <button class="btn hansora-google-btn" id="btnGoogleLogin" type="button">
                 <img alt="G" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
-                <span>Continue with Google</span>
+                <span>${copy('google')}</span>
               </button>
               <button class="btn hansora-telegram-btn" id="btnTelegramLogin" type="button">
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M21.8 3.2 18.6 20c-.24 1.19-.88 1.48-1.78.92l-4.87-3.59-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.96 9.02-8.15c.39-.35-.09-.55-.61-.2L6.23 13.78l-4.8-1.5c-1.04-.33-1.06-1.04.22-1.54L20.4 3.52c.87-.32 1.63.2 1.4-.32Z"/></svg>
-                <span>Continue with Telegram</span>
+                <span>${copy('telegram')}</span>
               </button>
             </div>
             <p class="hansora-auth-msg" style="margin:12px 0 0;color:rgba(255,255,255,.72);line-height:1.45;">
-              Continue securely with Google or Telegram. Telegram may not share an email address.
+              ${copy('secureAuth')}
             </p>
-            <div class="hansora-auth-divider" style="display:none;"><span>or</span></div>
-            <input id="authEmail" style="display:none;" placeholder="Email" type="email" autocomplete="email">
-            <input id="authPass" style="display:none;" placeholder="Password" type="password" autocomplete="current-password">
+            <div class="hansora-auth-divider" style="display:none;"><span>${copy('or')}</span></div>
+            <input id="authEmail" style="display:none;" placeholder="${copy('email')}" type="email" autocomplete="email">
+            <input id="authPass" style="display:none;" placeholder="${copy('password')}" type="password" autocomplete="current-password">
             <div class="hansora-auth-actions" style="display:none;">
-              <button class="btn btn-brand" id="btnDoLogin" type="button">Log in</button>
-              <a class="btn" id="btnGoSignup" href="${withAffiliateRef('/login.html?mode=signup')}">Sign up</a>
+              <button class="btn btn-brand" id="btnDoLogin" type="button">${copy('logIn')}</button>
+              <a class="btn" id="btnGoSignup" href="${siteHref('/login.html?mode=signup')}">${copy('signUp')}</a>
             </div>
             <p class="hansora-auth-msg" id="authMsg"></p>
           </form>
@@ -2285,7 +2454,7 @@
     authMode = mode === 'signup' ? 'signup' : 'login';
     const title = el('authTitle');
     const msg = el('authMsg');
-    if (title) title.textContent = authMode === 'signup' ? 'Create your account' : 'Log in';
+    if (title) title.textContent = authMode === 'signup' ? copy('createAccount') : copy('logIn');
     if (msg) msg.textContent = '';
   }
 
@@ -2378,13 +2547,13 @@
     if (msg) {
       const safeDetail = String(detail || '').slice(0, 240);
       msg.textContent = safeDetail
-        ? `Telegram login was not completed: ${safeDetail}`
-        : 'Telegram login was cancelled or not completed. Please try again.';
+        ? `${copy('telegramFailure')}: ${safeDetail}`
+        : copy('telegramCancelled');
     }
   }
 
   async function getOrCreateProfile(user) {
-    if (!sb || !user) throw new Error('Not logged in');
+    if (!sb || !user) throw new Error(copy('notLoggedIn'));
     const authProfile = authProfileForUser(user);
     const { data, error } = await sb
       .from('profiles')
@@ -2683,7 +2852,7 @@
 
   async function setCredits(value) {
     const uid = await getUserId();
-    if (!uid) throw new Error('Not logged in');
+    if (!uid) throw new Error(copy('notLoggedIn'));
     const { error } = await sb
       .from('profiles')
       .update({ credits: value })
@@ -2703,7 +2872,7 @@
   async function useCredits(cost) {
     const current = await refreshCredits();
     const amount = Number(cost || 0);
-    if (Number(current || 0) < amount) throw new Error('Not enough credits');
+    if (Number(current || 0) < amount) throw new Error(copy('notEnoughCredits'));
     const next = Number(current || 0) - amount;
     await setCredits(next);
     return next;
@@ -2829,11 +2998,11 @@
     modal.className = 'hansora-offer-modal';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', 'Creator discount offer');
+    modal.setAttribute('aria-label', copy('creatorOffer'));
     modal.innerHTML = `
       <div class="hansora-offer-panel">
-        <iframe class="hansora-offer-frame" src="${withAffiliateRef(SIGNUP_OFFER_URL)}" title="Hansora pricing offer"></iframe>
-        <button class="hansora-offer-close" type="button" aria-label="Close offer">×</button>
+        <iframe class="hansora-offer-frame" src="${siteHref(SIGNUP_OFFER_URL)}" title="${copy('pricingOffer')}"></iframe>
+        <button class="hansora-offer-close" type="button" aria-label="${copy('closeOffer')}">×</button>
       </div>`;
     document.body.appendChild(modal);
 
@@ -2894,6 +3063,9 @@
     const btnAiCourse = el('btnAiCourse');
     const aiCourseModal = el('aiCourseModal');
     const aiCourseClose = el('aiCourseClose');
+    const btnLanguage = el('btnLanguage');
+    const languageModal = el('languageModal');
+    const languageClose = el('languageClose');
     const btnLogout = el('btnLogout');
     const authClose = el('authClose');
     const doLogin = el('btnDoLogin');
@@ -2979,6 +3151,46 @@
         });
       });
     }
+    function closeLanguageModal() {
+      if (!languageModal) return;
+      languageModal.classList.remove('is-open');
+      languageModal.setAttribute('aria-hidden', 'true');
+      document.body.style.removeProperty('overflow');
+      if (btnLanguage) btnLanguage.focus({ preventScroll: true });
+    }
+    function openLanguageModal() {
+      if (!languageModal) return;
+      if (navMenu) navMenu.classList.remove('is-open');
+      languageModal.classList.add('is-open');
+      languageModal.setAttribute('aria-hidden', 'false');
+      document.body.style.setProperty('overflow', 'hidden');
+      if (languageClose) languageClose.focus({ preventScroll: true });
+    }
+    if (btnLanguage) {
+      btnLanguage.addEventListener('click', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        openLanguageModal();
+      });
+    }
+    if (languageClose) languageClose.addEventListener('click', closeLanguageModal);
+    if (languageModal) {
+      languageModal.addEventListener('click', function (event) {
+        if (event.target === languageModal) closeLanguageModal();
+      });
+      languageModal.querySelectorAll('[data-language-code]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          const languageCode = button.getAttribute('data-language-code') || 'en';
+          try { localStorage.setItem(LANGUAGE_STORAGE_KEY, languageCode); } catch (_) {}
+          const destination = localizedHref(location.href, languageCode);
+          if (destination === location.href || destination === `${location.pathname}${location.search}${location.hash}`) {
+            closeLanguageModal();
+            return;
+          }
+          window.location.assign(destination);
+        });
+      });
+    }
     if (authClose) authClose.addEventListener('click', closeAuth);
     if (modal) {
       modal.addEventListener('click', function (event) {
@@ -2989,13 +3201,14 @@
       if (event.key === 'Escape') {
         closeAuth();
         closeAiCourseModal();
+        closeLanguageModal();
       }
     });
 
     if (btnGoogleLogin) {
       btnGoogleLogin.addEventListener('click', async function () {
         const msg = el('authMsg');
-        if (msg) msg.textContent = 'Opening Google login…';
+        if (msg) msg.textContent = copy('openingGoogle');
         let authAttempt = null;
         try {
           const attribution = rememberSignupAttributionStart();
@@ -3007,12 +3220,12 @@
           rememberSignupOfferOAuthStart();
           const { error } = await sb.auth.signInWithOAuth({
             provider: 'google',
-            options: { redirectTo: `${location.origin}/index.html` }
+            options: { redirectTo: oauthReturnUrl() }
           });
           if (error) throw error;
         } catch (error) {
           await recordAuthFunnelFailure(error, authAttempt);
-          if (msg) msg.textContent = error.message || 'Google login failed.';
+          if (msg) msg.textContent = error.message || copy('googleFailed');
         }
       });
     }
@@ -3020,7 +3233,7 @@
     if (btnTelegramLogin) {
       btnTelegramLogin.addEventListener('click', async function () {
         const msg = el('authMsg');
-        if (msg) msg.textContent = 'Opening Telegram login…';
+        if (msg) msg.textContent = copy('openingTelegram');
         btnTelegramLogin.disabled = true;
         btnTelegramLogin.setAttribute('aria-busy', 'true');
         let authAttempt = null;
@@ -3035,12 +3248,12 @@
           rememberTelegramOAuthStart();
           const { error } = await sb.auth.signInWithOAuth({
             provider: 'custom:telegram',
-            options: { redirectTo: `${location.origin}/index.html` }
+            options: { redirectTo: oauthReturnUrl() }
           });
           if (error) throw error;
         } catch (error) {
           await recordAuthFunnelFailure(error, authAttempt);
-          showTelegramOAuthFailure(error && error.message ? error.message : 'Please try again.');
+          showTelegramOAuthFailure(error && error.message ? error.message : copy('tryAgain'));
         }
       });
     }
@@ -3050,8 +3263,8 @@
         const emailIn = el('authEmail');
         const passIn = el('authPass');
         const msg = el('authMsg');
-        if (!emailIn.value || !passIn.value) { if (msg) msg.textContent = 'Enter email & password.'; return; }
-        if (msg) msg.textContent = 'Signing in…';
+        if (!emailIn.value || !passIn.value) { if (msg) msg.textContent = copy('enterCredentials'); return; }
+        if (msg) msg.textContent = copy('signingIn');
         try {
           const { data, error } = await sb.auth.signInWithPassword({ email: emailIn.value.trim(), password: passIn.value.trim() });
           if (error) { if (msg) msg.textContent = error.message; return; }
@@ -3061,7 +3274,7 @@
           handleSignupOffer(data.user, profile);
           closeAuth();
         } catch (error) {
-          if (msg) msg.textContent = error.message || 'Login failed.';
+          if (msg) msg.textContent = error.message || copy('loginFailed');
         }
       });
     }
@@ -3069,7 +3282,7 @@
     if (btnLogout) {
       btnLogout.addEventListener('click', async function () {
         if (sb) await sb.auth.signOut();
-        window.location.replace('/');
+        window.location.replace(localizedHref('/index.html'));
       });
     }
   }
@@ -3213,7 +3426,6 @@
 
   captureAffiliateRef();
   captureAiCourseOrigin();
-  ensureI18nRuntime();
 
   ready(function () {
     captureAffiliateRef();
