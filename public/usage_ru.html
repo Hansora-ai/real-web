@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA — Использование</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="/header.css" rel="stylesheet" />
+  <script defer src="/header.js"></script>
+  <style>
+    :root{
+      --bg:#050714;
+      --line:rgba(255,255,255,.10);
+      --muted:rgba(226,232,240,.66);
+      --brand:#6366f1;
+      --brand-2:#8b5cf6;
+      --cyan:#38bdf8;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      color:#e5e7eb;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      background:
+        radial-gradient(900px 520px at 15% -10%,rgba(99,102,241,.22),transparent 62%),
+        radial-gradient(860px 520px at 88% 2%,rgba(56,189,248,.14),transparent 58%),
+        radial-gradient(760px 520px at 50% 100%,rgba(139,92,246,.13),transparent 64%),
+        var(--bg);
+    }
+    button{font:inherit}
+    .page-shell{max-width:1260px;margin:0 auto;padding:32px 18px 48px}
+    .panel{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(15,23,42,.86),rgba(2,6,23,.78));
+      border-radius:28px;
+      box-shadow:0 22px 70px rgba(0,0,0,.44);
+      backdrop-filter:blur(18px);
+      -webkit-backdrop-filter:blur(18px);
+    }
+    .small-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:rgba(226,232,240,.58);font-weight:850}
+    .btn-soft{
+      border:1px solid rgba(148,163,184,.28);
+      background:rgba(15,23,42,.72);
+      color:#e5e7eb;
+      border-radius:999px;
+      min-height:42px;
+    }
+    .btn-soft:hover{border-color:rgba(129,140,248,.82);background:rgba(15,23,42,.9)}
+    .btn-soft:disabled{opacity:.42;cursor:not-allowed}
+    .usage-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+    .usage-card{
+      min-width:0;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(15,23,42,.68);
+      border-radius:18px;
+      padding:12px;
+      cursor:pointer;
+      overflow:hidden;
+      min-height:430px;
+      display:flex;
+      flex-direction:column;
+      transition:border-color .16s ease,background .16s ease,transform .16s ease;
+    }
+    .usage-card:hover{border-color:rgba(129,140,248,.74);background:rgba(15,23,42,.88);transform:translateY(-1px)}
+    .usage-card.failed{border-color:rgba(248,113,113,.48);background:linear-gradient(180deg,rgba(127,29,29,.24),rgba(15,23,42,.72))}
+    .usage-card.failed:hover{border-color:rgba(248,113,113,.70);background:linear-gradient(180deg,rgba(127,29,29,.30),rgba(15,23,42,.82))}
+    .usage-card.disabled{cursor:default}
+    .usage-card.disabled:hover{transform:none;border-color:rgba(255,255,255,.10)}
+    .usage-card.disabled.failed:hover{border-color:rgba(248,113,113,.48)}
+    .safe-name{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .media-box{
+      position:relative;
+      width:100%;
+      aspect-ratio:3/4;
+      border-radius:14px;
+      background:rgba(2,6,23,.58);
+      border:1px solid rgba(255,255,255,.08);
+      overflow:hidden;
+      display:grid;
+      place-items:center;
+    }
+    .media-box img,.media-box video{width:100%;height:100%;object-fit:cover;display:block}
+    .media-box audio{width:88%;max-width:220px}
+    .open-preview-hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(3,6,14,.20);color:#fff;opacity:0;pointer-events:none;transition:opacity .18s ease}
+    .open-preview-hint span{padding:7px 11px;border:1px solid rgba(255,255,255,.20);border-radius:999px;background:rgba(15,18,25,.44);font-size:11px;font-weight:850;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+    @media(hover:hover) and (pointer:fine){.usage-card[data-url]:hover .open-preview-hint{opacity:1}}
+    .video-badge{
+      position:absolute;
+      left:10px;
+      bottom:10px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(2,6,23,.72);
+      color:#fff;
+      border-radius:999px;
+      padding:5px 9px;
+      font-size:11px;
+      font-weight:900;
+      pointer-events:none;
+    }
+    .audio-box{
+      padding:16px;
+      background:
+        radial-gradient(circle at 50% 35%,rgba(99,102,241,.28),transparent 46%),
+        linear-gradient(180deg,rgba(15,23,42,.88),rgba(2,6,23,.92));
+    }
+    .audio-disc{
+      width:78px;
+      height:78px;
+      border-radius:999px;
+      margin:0 auto 16px;
+      background:radial-gradient(circle at center,#0f172a 0 22%,#38bdf8 23% 25%,#6366f1 26% 54%,#111827 55% 100%);
+      box-shadow:0 18px 45px rgba(99,102,241,.28);
+    }
+    .file-box{padding:14px;text-align:center;color:#cbd5e1;font-size:12px}
+    .failed-box{color:#fecaca;background:radial-gradient(circle at 50% 42%,rgba(248,113,113,.16),transparent 48%),rgba(2,6,23,.66)}
+    .failed-icon{width:52px;height:52px;border-radius:999px;display:grid;place-items:center;margin:0 auto 12px;border:1px solid rgba(248,113,113,.55);background:rgba(127,29,29,.34);color:#fecaca;font-size:28px;font-weight:950;box-shadow:0 0 34px rgba(248,113,113,.20)}
+    .processing-box{color:#fde68a;background:radial-gradient(circle at 50% 42%,rgba(251,191,36,.13),transparent 48%),rgba(2,6,23,.66)}
+    .processing-spinner{width:48px;height:48px;border-radius:999px;margin:0 auto 14px;border:4px solid rgba(251,191,36,.18);border-top-color:#fbbf24;animation:usage-spin .85s linear infinite;box-shadow:0 0 28px rgba(251,191,36,.12)}
+    .processing-note{margin-top:6px;color:#94a3b8;font-size:11px}
+    @keyframes usage-spin{to{transform:rotate(360deg)}}
+    .status-dot{width:9px;height:9px;border-radius:999px;background:#86efac;box-shadow:0 0 0 5px rgba(134,239,172,.14);flex:0 0 auto}
+    .status-dot.failed{background:#f87171;box-shadow:0 0 0 5px rgba(248,113,113,.14)}
+    .status-dot.processing{background:#fbbf24;box-shadow:0 0 0 5px rgba(251,191,36,.14)}
+    .card-actions{margin-top:auto;display:flex;flex-direction:column;gap:9px;padding-top:12px}
+    .download-btn{
+      display:inline-flex;
+      width:100%;
+      justify-content:center;
+      align-items:center;
+      padding:10px 14px;
+      border:0;
+      border-radius:999px;
+      color:#fff;
+      background:linear-gradient(135deg,var(--brand-2),var(--brand));
+      font-size:12px;
+      font-weight:900;
+      text-decoration:none;
+    }
+    .copy-prompt-btn{
+      display:inline-flex;
+      width:100%;
+      justify-content:center;
+      align-items:center;
+      padding:10px 14px;
+      border:1px solid rgba(148,163,184,.28);
+      border-radius:999px;
+      color:#e5e7eb;
+      background:rgba(15,23,42,.82);
+      font-size:12px;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .copy-prompt-btn:hover{border-color:rgba(129,140,248,.70);background:rgba(30,41,59,.92)}
+    .copy-prompt-btn:disabled{opacity:.42;cursor:not-allowed}
+    #previewOverlay{
+      position:fixed;
+      inset:0;
+      z-index:2147483647;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.86);
+      backdrop-filter:blur(9px);
+      -webkit-backdrop-filter:blur(9px);
+      padding:20px;
+    }
+    #previewOverlay.show{display:flex}
+    .preview-card{
+      position:relative;
+      width:min(1240px,100%);
+      max-height:90vh;
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:26px;
+      background:rgba(2,6,23,.94);
+      overflow:hidden;
+      box-shadow:0 30px 100px rgba(0,0,0,.72);
+    }
+    .preview-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:min(720px,90vh);max-height:90vh}
+    .preview-media-pane{min-width:0;display:grid;place-items:center;background:#030712;padding:26px;overflow:hidden}
+    .preview-media-pane img,.preview-media-pane video{width:100%;height:100%;max-height:calc(90vh - 52px);object-fit:contain;display:block;background:#020617;border-radius:14px}
+    .preview-audio{min-height:360px;padding:34px;display:grid;place-items:center;text-align:center}
+    .preview-audio audio{width:min(620px,100%);margin-top:18px}
+    .preview-side{min-width:0;padding:18px;display:flex;flex-direction:column;gap:14px;background:rgba(19,23,33,.98);border-left:1px solid rgba(255,255,255,.10);overflow:auto}
+    .preview-head{display:flex;align-items:center;gap:12px;padding-right:50px}
+    .preview-avatar{width:44px;height:44px;border-radius:999px;background:linear-gradient(135deg,#d9ff42,#8b5cf6);flex:0 0 auto}
+    .preview-provider{font-size:17px;font-weight:900;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .preview-kind{font-size:12px;color:#9ca3af;margin-top:2px;text-transform:capitalize}
+    .preview-section{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.055);border-radius:15px;padding:14px}
+    .preview-section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#9ca3af;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .preview-copy{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.07);color:#fff;border-radius:10px;padding:8px 11px;font-size:11px;font-weight:900;cursor:pointer;text-transform:none;letter-spacing:0}
+    .preview-prompt{margin-top:11px;max-height:180px;overflow:auto;border-radius:12px;background:rgba(255,255,255,.06);padding:13px;color:#e5e7eb;font-size:13px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+    .preview-detail-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:10px;color:#9ca3af;font-size:13px}
+    .preview-detail-row strong{color:#f3f4f6;text-align:right}
+    .preview-close{
+      position:absolute;
+      top:12px;
+      right:12px;
+      z-index:3;
+      width:42px;
+      height:42px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(0,0,0,.58);
+      color:#fff;
+      font-size:24px;
+      line-height:normal;
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      padding:0;
+      text-align:center;
+    }
+    .preview-actions{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .preview-action{min-height:48px;border:1px solid rgba(255,255,255,.14);border-radius:13px;background:rgba(255,255,255,.07);color:#fff;display:flex;align-items:center;justify-content:center;gap:9px;font-size:13px;font-weight:900;cursor:pointer;text-decoration:none}
+    .preview-action svg{width:19px;height:19px}
+    .preview-action.create-video{grid-column:1/-1;background:linear-gradient(135deg,#695cf6,#39bdf8);border-color:rgba(255,255,255,.18)}
+    .preview-action:hover{filter:brightness(1.12)}
+    @media(max-width:1050px){.usage-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+    @media(max-width:760px){
+      .page-shell{padding:18px 12px 34px}
+      .usage-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+      .panel{border-radius:22px}
+      .preview-card{border-radius:18px;overflow:auto}
+      .preview-layout{display:block;max-height:none}
+      .preview-media-pane{height:min(58vh,520px);padding:12px}
+      .preview-media-pane img,.preview-media-pane video{max-height:100%}
+      .preview-side{border-left:0;border-top:1px solid rgba(255,255,255,.10)}
+      .preview-head{display:none}
+      .preview-actions{order:-1;margin-top:0}
+      .preview-close{position:fixed;top:calc(5vh + 12px);right:32px;z-index:5}
+      .preview-audio{min-height:280px;padding:22px}
+    }
+  </style>
+</head>
+<body>
+  <div id="sharedHeader"></div>
+
+  <main class="page-shell">
+    <section class="panel p-5 sm:p-7">
+      <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="small-label">Последние 60 дней</p>
+          <h1 class="text-3xl sm:text-4xl font-black tracking-tight mt-2">Использование</h1>
+          <p id="usageSummary" class="text-sm text-slate-400 mt-2">Загружаем ваши последние генерации...</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="refreshBtn" class="btn-soft px-4" type="button">Обновить</button>
+        </div>
+      </div>
+
+      <div id="usageList" class="usage-grid mt-7" aria-live="polite"></div>
+
+      <div id="usageEmpty" class="hidden mt-7 rounded-2xl border border-white/10 bg-white/[.03] px-5 py-10 text-center text-slate-400">
+        За последние 60 дней генераций не было.
+      </div>
+
+      <div id="usageLogin" class="hidden mt-7 rounded-2xl border border-white/10 bg-white/[.03] px-5 py-10 text-center">
+        <p class="text-slate-300 font-bold">Войдите, чтобы посмотреть использование.</p>
+        <a class="btn-soft inline-flex items-center justify-center px-5 mt-4 no-underline" href="/login.html">Войти</a>
+      </div>
+
+      <div id="pager" class="hidden mt-7 flex items-center justify-center gap-3">
+        <button id="prevPage" class="btn-soft px-4" type="button">Назад</button>
+        <span id="pageLabel" class="text-sm text-slate-400 min-w-[110px] text-center">Страница 1 из 1</span>
+        <button id="nextPage" class="btn-soft px-4" type="button">Далее</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="previewOverlay" aria-hidden="true">
+    <div class="preview-card">
+      <button id="previewClose" class="preview-close" type="button" aria-label="Закрыть предпросмотр"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg></button>
+      <div id="previewContent"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const supabaseClient = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__HANSORA_SB__ = supabaseClient;
+    window.hansoraSupabase = supabaseClient;
+
+    const PAGE_SIZE = 20;
+    const DAYS_BACK = 60;
+    let currentPage = 1;
+    let totalRows = 0;
+    let currentUser = null;
+
+    const $ = (id) => document.getElementById(id);
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const isAudioUrl = (url) => /\.(mp3|wav|m4a|aac|ogg|oga|flac)(?:[?#]|$)/i.test(String(url || '')) || /audio|%2emp3|%2ewav|%2em4a|%2eaac|%2eogg|%2eflac/i.test(String(url || ''));
+    const isVideoUrl = (url) => /\.(mp4|mov|webm|m4v)(?:[?#]|$)/i.test(String(url || '')) || /video|%2emp4|%2emov|%2ewebm|%2em4v/i.test(String(url || ''));
+    const isImageUrl = (url) => /\.(png|jpe?g|webp|gif|avif|svg)(?:[?#]|$)/i.test(String(url || '')) || /image|%2epng|%2ejpg|%2ejpeg|%2ewebp|%2egif|%2eavif/i.test(String(url || ''));
+
+    function parseMeta(raw){
+      if (!raw) return {};
+      if (typeof raw === 'object') return raw;
+      try { return JSON.parse(raw); } catch { return {}; }
+    }
+
+    function isUsableUrl(value){
+      if (typeof value !== 'string') return false;
+      const trimmed = value.trim();
+      if (!/^https?:\/\//i.test(trimmed)) return false;
+      if (/callback|webhook/i.test(trimmed)) return false;
+      return true;
+    }
+
+    function collectUrls(row){
+      const meta = parseMeta(row.meta);
+      const urls = [];
+      const seen = new Set();
+      const push = (value) => {
+        if (typeof value !== 'string') return;
+        const matches = value.match(/https?:\/\/[^\s"'<>\\)]+/gi) || [value];
+        matches.forEach((candidate) => {
+          if (!isUsableUrl(candidate)) return;
+          const url = candidate.trim().replace(/[.,;]+$/,'');
+          if (seen.has(url)) return;
+          seen.add(url);
+          urls.push(url);
+        });
+      };
+      push(row.result_url);
+      const preferredKeys = [
+        'audio_url','audioUrl','audio','audio_url_signed',
+        'video_url','videoUrl','video','video_url_signed',
+        'image_url','imageUrl','image','image_url_signed',
+        'result_url','resultUrl','result','file_url','fileUrl',
+        'download_url','downloadUrl','output_url','outputUrl','media_url','mediaUrl',
+        'input_url','inputUrl','source_url','sourceUrl','url'
+      ];
+      preferredKeys.forEach((key) => push(meta[key]));
+      ['result_urls','resultUrls','output_urls','outputUrls','urls','images','imageUrls','videos','videoUrls','audios','audioUrls','files','fileUrls','output','outputs','results','data','items'].forEach((key) => {
+        const value = meta[key];
+        if (Array.isArray(value)) value.forEach((item) => typeof item === 'string' ? push(item) : walk(item, key));
+        else walk(value, key);
+      });
+      if (!urls.length) walk(meta, '');
+      return urls;
+
+      function walk(value, key){
+        if (!value || /callback|webhook/i.test(key || '')) return;
+        if (typeof value === 'string') {
+          push(value);
+          return;
+        }
+        if (Array.isArray(value)) {
+          value.forEach((item) => walk(item, key));
+          return;
+        }
+        if (typeof value === 'object') {
+          Object.entries(value).forEach(([childKey, childValue]) => walk(childValue, childKey));
+        }
+      }
+    }
+
+    function mediaKind(url, row){
+      const meta = parseMeta(row.meta);
+      const hint = [
+        meta.media_type, meta.mediaType, meta.type, meta.mime_type, meta.mimeType,
+        meta.file_type, meta.fileType, meta.file_name, meta.fileName,
+        meta.original_file_name, meta.originalFileName, meta.input_type, meta.inputType,
+        meta.input_mime_type, meta.inputMimeType, meta.output_type, meta.outputType,
+        meta.output_mime_type, meta.outputMimeType, row.kind, row.provider
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (isAudioUrl(url) || /\.(mp3|wav|m4a|aac|ogg|oga|flac)\b/i.test(hint) || hint.includes('audio') || hint.includes('music') || hint.includes('song')) return 'audio';
+      if (isVideoUrl(url) || /\.(mp4|mov|webm|m4v)\b/i.test(hint) || hint.includes('video')) return 'video';
+      if (isImageUrl(url) || /\.(png|jpe?g|webp|gif|avif|svg)\b/i.test(hint) || hint.includes('image')) return 'image';
+      return 'file';
+    }
+
+    function shouldHideRow(row){
+      const provider = String(row.provider || '').trim().toLowerCase();
+      const kind = String(row.kind || '').trim().toLowerCase();
+      const normalizedKind = kind.replace(/[-\s]+/g, '_');
+      return provider === 'gemini-3.1-pro' && normalizedKind.includes('virality_predictor');
+    }
+
+    function titleForRow(row){
+      const meta = parseMeta(row.meta);
+      return meta.file_name || meta.title || row.prompt || [row.provider, row.kind].filter(Boolean).join(' - ') || 'Generation';
+    }
+
+    function promptForRow(row){
+      const meta = parseMeta(row.meta);
+      const promptJson = parseMeta(meta.promptJson || meta.prompt_json || meta.param || meta.params || meta.input);
+      const candidates = [
+        row.prompt,
+        meta.prompt,
+        meta.input_prompt,
+        meta.inputPrompt,
+        meta.original_prompt,
+        meta.originalPrompt,
+        meta.params && meta.params.prompt,
+        meta.input && meta.input.prompt,
+        promptJson.prompt,
+        promptJson.input && promptJson.input.prompt
+      ];
+      return String(candidates.find((value) => typeof value === 'string' && value.trim()) || '').trim();
+    }
+
+    function subtitleForRow(row){
+      return [row.provider, row.kind].filter(Boolean).join(' - ') || 'Generation';
+    }
+
+    function statusForRow(row){
+      const meta = parseMeta(row.meta);
+      const details = parseMeta(meta.details || {});
+      const provider = parseMeta(meta.provider || meta.provider_response || meta.providerResponse || {});
+      return String(meta.status || meta.state || meta.task_status || meta.taskStatus || meta.execution_status || meta.executionStatus || details.status || details.state || provider.status || provider.state || row.status || '').toLowerCase();
+    }
+
+    function isFailedRow(row){
+      const meta = parseMeta(row.meta);
+      const status = statusForRow(row);
+      return /fail|error|reject|blocked|moderation|sensitive|flagged|timeout|cancel/.test(status) ||
+        meta.failed === true ||
+        !!(meta.error || meta.error_message || meta.errorMessage || meta.refund_error);
+    }
+
+    function isProcessingRow(row){
+      if (isFailedRow(row)) return false;
+      const status = statusForRow(row).replace(/[\s-]+/g, '_');
+      return /^(processing|pending|queued|submitted|running|generating|in_progress|starting|created|waiting|accepted)$/.test(status) ||
+        /(^|_)(processing|pending|queued|submitted|running|generating|in_progress|starting|waiting)($|_)/.test(status);
+    }
+
+    function hasCompletedOutput(row){
+      if (isUsableUrl(row.result_url)) return true;
+      const meta = parseMeta(row.meta);
+      const containsUsableUrl = (value) => {
+        if (typeof value === 'string') return isUsableUrl(value);
+        if (Array.isArray(value)) return value.some(containsUsableUrl);
+        if (value && typeof value === 'object') return Object.values(value).some(containsUsableUrl);
+        return false;
+      };
+      const directKeys = [
+        'result_url','resultUrl','output_url','outputUrl','download_url','downloadUrl',
+        'video_url','videoUrl','image_url','imageUrl','audio_url','audioUrl','file_url','fileUrl'
+      ];
+      if (directKeys.some((key) => containsUsableUrl(meta[key]))) return true;
+      const arrayKeys = ['result_urls','resultUrls','output_urls','outputUrls','videos','videoUrls','images','imageUrls','audios','audioUrls','files','fileUrls','results','outputs'];
+      return arrayKeys.some((key) => containsUsableUrl(meta[key]));
+    }
+
+    function fileNameFromUrl(url, fallback){
+      try {
+        const name = decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() || '');
+        return name || fallback || 'generation';
+      } catch {
+        return fallback || 'generation';
+      }
+    }
+
+    function downloadHref(url, row){
+      const name = fileNameFromUrl(url, titleForRow(row));
+      return `/.netlify/functions/download-proxy?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name)}`;
+    }
+
+    async function copyText(text){
+      const value = String(text || '');
+      if (!value) return false;
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(value);
+          return true;
+        }
+      } catch {}
+      const area = document.createElement('textarea');
+      area.value = value;
+      area.setAttribute('readonly','');
+      area.style.position = 'fixed';
+      area.style.left = '-9999px';
+      document.body.appendChild(area);
+      area.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch {}
+      area.remove();
+      return ok;
+    }
+
+    function renderMedia(url, kind, title, preview){
+      const safeUrl = escapeHtml(url);
+      const safeTitle = escapeHtml(title);
+      if (kind === 'audio') {
+        if (preview) {
+          return `<div class="preview-audio"><div><div class="audio-disc"></div><h2 class="text-xl font-black safe-name">${safeTitle}</h2><audio src="${safeUrl}" controls autoplay preload="auto"></audio></div></div>`;
+        }
+        return `<div class="media-box audio-box"><div class="w-full"><div class="audio-disc"></div><audio src="${safeUrl}" controls preload="none"></audio></div></div>`;
+      }
+      if (kind === 'video') {
+        const videoSrc = preview ? safeUrl : `${safeUrl}#t=0.1`;
+        return preview
+          ? `<video src="${safeUrl}" controls autoplay playsinline preload="metadata"></video>`
+          : `<div class="media-box"><video src="${videoSrc}" muted playsinline preload="auto"></video><div class="video-badge">Video</div><div class="open-preview-hint"><span>Открыть предпросмотр</span></div></div>`;
+      }
+      if (kind === 'image') {
+        return preview
+          ? `<img src="${safeUrl}" alt="${safeTitle}" />`
+          : `<div class="media-box"><img src="${safeUrl}" alt="${safeTitle}" loading="lazy" decoding="async" /><div class="open-preview-hint"><span>Открыть предпросмотр</span></div></div>`;
+      }
+      return preview
+        ? `<div class="preview-audio"><div><h2 class="text-xl font-black">Предпросмотр недоступен</h2><a class="download-btn mt-5" href="${safeUrl}" target="_blank" rel="noopener">Открыть файл</a></div></div>`
+        : `<div class="media-box file-box">Предпросмотр файла недоступен</div>`;
+    }
+
+    function usageActionIcon(action){
+      if (action === 'create-video') {
+        return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.5-2.6A1 1 0 0 1 21 8.3v7.4a1 1 0 0 1-1.5.9L15 14"></path><rect x="3" y="6" width="12" height="12" rx="2"></rect></svg>';
+      }
+      if (action === 'recreate') {
+        return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a8 8 0 0 1 13.7-4.7L20 7.5"></path><path d="M20 3v4.5h-4.5"></path><path d="M20 14a8 8 0 0 1-13.7 4.7L4 16.5"></path><path d="M4 21v-4.5h4.5"></path></svg>';
+      }
+      return '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>';
+    }
+
+    function usageActionData(row, url, kind){
+      return {
+        provider: row.provider || titleForRow(row) || 'Hansora AI',
+        model: row.provider || '',
+        kind: kind === 'file' ? String(row.kind || 'image').toLowerCase() : kind,
+        prompt: promptForRow(row),
+        result_url: url || row.result_url || '',
+        meta: parseMeta(row.meta),
+        created_at: row.created_at || ''
+      };
+    }
+
+    function queueSearchModelAction(action, row, url, kind){
+      const payload = { action, data: usageActionData(row, url, kind), queued_at: Date.now() };
+      try {
+        sessionStorage.setItem('hansora:usage-action', JSON.stringify(payload));
+      } catch (error) {
+        console.warn('Could not prepare Usage action', error);
+      }
+      window.location.href = `/search-models.html?usageAction=${encodeURIComponent(action)}`;
+    }
+
+    function addPreviewAction(host, action, label, row, url, kind){
+      const control = document.createElement(action === 'download' ? 'a' : 'button');
+      if (action !== 'download') control.type = 'button';
+      control.className = `preview-action ${action}`;
+      control.setAttribute('aria-label', label);
+      control.innerHTML = `${usageActionIcon(action)}<span>${label}</span>`;
+      if (action === 'download') {
+        control.href = downloadHref(url, row);
+        control.download = '';
+      } else {
+        control.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          queueSearchModelAction(action, row, url, kind);
+        });
+      }
+      control.addEventListener('click', (event) => event.stopPropagation());
+      host.appendChild(control);
+    }
+
+    function populatePreviewActions(host, row, url, kind){
+      if (!host) return;
+      host.innerHTML = '';
+      if (kind === 'image') addPreviewAction(host, 'create-video', 'Создать видео', row, url, kind);
+      addPreviewAction(host, 'recreate', 'Создать снова', row, url, kind);
+      addPreviewAction(host, 'download', 'Скачать', row, url, kind);
+    }
+
+    function renderRows(rows){
+      const list = $('usageList');
+      list.innerHTML = '';
+      rows.forEach((row) => {
+        const urls = collectUrls(row);
+        const url = urls[0] || '';
+        const title = titleForRow(row);
+        const subtitle = subtitleForRow(row);
+        const prompt = promptForRow(row);
+        const failed = isFailedRow(row);
+        const processing = !failed && (!url || isProcessingRow(row) || !hasCompletedOutput(row));
+        const ready = !!url && !failed && !processing;
+        const kind = url ? mediaKind(url, row) : 'file';
+        const created = row.created_at ? new Date(row.created_at).toLocaleDateString([], {month:'short', day:'numeric'}) : '';
+        const card = document.createElement('article');
+        card.className = `usage-card ${ready ? '' : 'disabled'} ${failed ? 'failed' : ''}`;
+        if (ready) {
+          card.dataset.url = url;
+          card.dataset.kind = kind;
+          card.dataset.title = title;
+        }
+        if (prompt) card.dataset.prompt = prompt;
+        card.__usageRow = row;
+        card.__usageKind = kind;
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3 mb-3">
+            <div class="min-w-0">
+              <p class="font-black safe-name">${escapeHtml(title)}</p>
+              <p class="text-xs text-slate-400 mt-1 safe-name">${escapeHtml(subtitle)}</p>
+            </div>
+            <span class="status-dot ${failed ? 'failed' : processing ? 'processing' : ''}"></span>
+          </div>
+          ${failed ? `<div class="media-box file-box failed-box"><div><div class="failed-icon">!</div><div>Ошибка</div></div></div>` : processing ? `<div class="media-box file-box processing-box"><div><div class="processing-spinner" aria-hidden="true"></div><div class="font-black">Обработка…</div><div class="processing-note">Генерация ещё выполняется</div></div></div>` : renderMedia(url, kind, title, false)}
+          <div class="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
+            <span>${escapeHtml(created)}</span>
+            <span>${escapeHtml(kind)}</span>
+          </div>
+          <div class="card-actions">
+            ${ready ? `<a class="download-btn" href="${downloadHref(url, row)}" download>Скачать</a>` : ''}
+            <button class="copy-prompt-btn" type="button" ${prompt ? '' : 'disabled'}>${prompt ? 'Копировать промпт' : 'Нет промпта'}</button>
+          </div>
+        `;
+        const download = card.querySelector('.download-btn');
+        if (download) download.addEventListener('click', (event) => event.stopPropagation());
+        const copyPrompt = card.querySelector('.copy-prompt-btn');
+        if (copyPrompt) {
+          copyPrompt.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            if (!prompt) return;
+            const original = copyPrompt.textContent;
+            const ok = await copyText(prompt);
+            copyPrompt.textContent = ok ? 'Скопировано' : 'Не удалось скопировать';
+            setTimeout(() => { copyPrompt.textContent = original; }, 1200);
+          });
+        }
+        list.appendChild(card);
+      });
+    }
+
+    function setLoading(){
+      $('usageList').innerHTML = Array.from({length:6}, () => `
+        <div class="usage-card disabled">
+          <div class="h-5 w-2/3 rounded bg-white/10 mb-3"></div>
+          <div class="media-box"><div class="h-12 w-12 rounded-full bg-white/10"></div></div>
+          <div class="h-4 w-1/2 rounded bg-white/10 mt-3"></div>
+        </div>
+      `).join('');
+      $('usageEmpty').classList.add('hidden');
+      $('usageLogin').classList.add('hidden');
+    }
+
+    async function loadUsage(page = 1){
+      setLoading();
+      const { data: userData } = await supabaseClient.auth.getUser();
+      currentUser = userData && userData.user ? userData.user : null;
+      if (!currentUser) {
+        $('usageList').innerHTML = '';
+        $('usageSummary').textContent = 'Войдите, чтобы посмотреть генерации за последние 60 дней.';
+        $('usageLogin').classList.remove('hidden');
+        $('pager').classList.add('hidden');
+        return;
+      }
+
+      currentPage = Math.max(1, page);
+      const since = new Date(Date.now() - DAYS_BACK * 24 * 60 * 60 * 1000).toISOString();
+      const from = (currentPage - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, error, count } = await supabaseClient
+        .from('user_generations')
+        .select('id,created_at,provider,kind,prompt,result_url,meta', { count:'exact' })
+        .eq('user_id', currentUser.id)
+        .not('kind', 'ilike', '%virality%')
+        .gte('created_at', since)
+        .order('created_at', { ascending:false })
+        .range(from, to);
+
+      if (error) {
+        $('usageList').innerHTML = '';
+        $('usageSummary').textContent = 'Сейчас не удалось загрузить данные об использовании.';
+        $('usageEmpty').textContent = error.message || 'Не удалось загрузить данные об использовании.';
+        $('usageEmpty').classList.remove('hidden');
+        $('pager').classList.add('hidden');
+        return;
+      }
+
+      const rows = (data || []).filter((row) => !shouldHideRow(row));
+      totalRows = count || 0;
+      const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE));
+      if (currentPage > totalPages) return loadUsage(totalPages);
+
+      $('usageSummary').textContent = `${totalRows} генераций за последние 60 дней. На странице отображается до ${PAGE_SIZE}.`;
+      $('usageEmpty').classList.toggle('hidden', rows.length > 0);
+      renderRows(rows);
+      updatePager(totalPages);
+      refreshCredits().catch(() => {});
+    }
+
+    function updatePager(totalPages){
+      const show = totalRows > PAGE_SIZE;
+      $('pager').classList.toggle('hidden', !show);
+      $('pageLabel').textContent = `Страница ${currentPage} из ${totalPages}`;
+      $('prevPage').disabled = currentPage <= 1;
+      $('nextPage').disabled = currentPage >= totalPages;
+    }
+
+    async function refreshCredits(){
+      if (!currentUser) return;
+      const { data } = await supabaseClient.from('profiles').select('credits').eq('id', currentUser.id).single();
+      const credits = data && data.credits != null ? Number(data.credits) : null;
+      if (credits == null) return;
+      if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') {
+        window.HansoraHeader.setCredits(credits);
+      }
+    }
+
+    function previewQualityForRow(row){
+      const meta = parseMeta(row.meta);
+      const diagnostic = parseMeta(meta.client_diagnostic || meta.diagnostic || {});
+      return String(meta.quality || meta.resolution || diagnostic.resolution || '-');
+    }
+
+    function openPreview(row, url, kind, title){
+      if (!url) return;
+      const prompt = promptForRow(row);
+      const provider = row.provider || 'Hansora AI';
+      const created = row.created_at ? new Date(row.created_at).toLocaleDateString([], {year:'numeric', month:'short', day:'numeric'}) : '-';
+      $('previewContent').innerHTML = `
+        <div class="preview-layout">
+          <div class="preview-media-pane">${renderMedia(url, kind, title, true)}</div>
+          <aside class="preview-side">
+            <div class="preview-head">
+              <div class="preview-avatar"></div>
+              <div class="min-w-0">
+                <div class="preview-provider">${escapeHtml(provider)}</div>
+                <div class="preview-kind">${escapeHtml(kind)} — генерация</div>
+              </div>
+            </div>
+            <section class="preview-section">
+              <div class="preview-section-title"><span>Промпт</span><button class="preview-copy" type="button" ${prompt ? '' : 'disabled'}>Копировать</button></div>
+              <div class="preview-prompt">${escapeHtml(prompt || 'Для этой генерации промпт не сохранён.')}</div>
+            </section>
+            <section class="preview-section">
+              <div class="preview-section-title"><span>Подробности</span></div>
+              <div class="preview-detail-row"><span>Модель</span><strong>${escapeHtml(provider)}</strong></div>
+              <div class="preview-detail-row"><span>Тип</span><strong>${escapeHtml(kind.charAt(0).toUpperCase() + kind.slice(1))}</strong></div>
+              <div class="preview-detail-row"><span>Качество</span><strong>${escapeHtml(previewQualityForRow(row))}</strong></div>
+              <div class="preview-detail-row"><span>Создано</span><strong>${escapeHtml(created)}</strong></div>
+            </section>
+            <div class="preview-actions"></div>
+          </aside>
+        </div>`;
+      populatePreviewActions($('previewContent').querySelector('.preview-actions'), row, url, kind);
+      const previewCopy = $('previewContent').querySelector('.preview-copy');
+      if (previewCopy) {
+        previewCopy.addEventListener('click', async () => {
+          if (!prompt) return;
+          const ok = await copyText(prompt);
+          previewCopy.textContent = ok ? 'Скопировано' : 'Не удалось скопировать';
+          setTimeout(() => { previewCopy.textContent = 'Копировать'; }, 1200);
+        });
+      }
+      $('previewOverlay').classList.add('show');
+      $('previewOverlay').setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closePreview(){
+      $('previewOverlay').classList.remove('show');
+      $('previewOverlay').setAttribute('aria-hidden','true');
+      $('previewContent').innerHTML = '';
+      document.body.style.overflow = '';
+    }
+
+    function bindEvents(){
+      $('usageList').addEventListener('click', (event) => {
+        if (event.target.closest('.download-btn,.copy-prompt-btn,audio')) return;
+        const card = event.target.closest('.usage-card[data-url]');
+        if (!card) return;
+        openPreview(card.__usageRow, card.dataset.url, card.__usageKind || card.dataset.kind, card.dataset.title);
+      });
+      $('previewClose').addEventListener('click', closePreview);
+      $('previewOverlay').addEventListener('click', (event) => {
+        if (event.target === $('previewOverlay')) closePreview();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closePreview();
+      });
+      $('refreshBtn').addEventListener('click', () => loadUsage(currentPage));
+      $('prevPage').addEventListener('click', () => loadUsage(currentPage - 1));
+      $('nextPage').addEventListener('click', () => loadUsage(currentPage + 1));
+    }
+
+    async function init(){
+      bindEvents();
+      if (window.HansoraHeader && typeof window.HansoraHeader.init === 'function') {
+        try { window.HansoraHeader.init({ supabaseClient }); } catch {}
+      }
+      await loadUsage(1);
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
