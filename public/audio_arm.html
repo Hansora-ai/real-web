@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA • Աուդիոյի ստեղծում</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="/header.css" rel="stylesheet" />
+  <script defer src="/header.js"></script>
+  <style>
+    :root{
+      --base-bg:#0b0c10;
+      --surface:#15171c;
+      --surface-2:#1b1e25;
+      --border:rgba(255,255,255,.08);
+      --border-hover:rgba(255,255,255,.16);
+      --brand:#6366f1;
+      --brand-2:#818cf8;
+      --mint:#5ee9b5;
+      --mint-soft:rgba(94,233,181,.12);
+      --text:#f1f2f4;
+      --muted:rgba(241,242,244,.56);
+      --good:#4ade80;
+      --bad:#f87171;
+      --warn:#fbbf24;
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      min-height:100vh;
+      margin:0;
+      background:
+        radial-gradient(760px 440px at 82% 4%, rgba(52,211,153,.13), transparent 68%),
+        radial-gradient(620px 420px at 8% 82%, rgba(34,197,94,.07), transparent 70%),
+        var(--base-bg);
+      color:var(--text);
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      -webkit-font-smoothing:antialiased;
+    }
+    button,input,textarea,select{font:inherit}
+    .glass{border:1px solid rgba(94,233,181,.11); background:linear-gradient(145deg,rgba(21,23,28,.97),rgba(17,24,22,.94)); box-shadow:0 1px 0 rgba(255,255,255,.025) inset,0 20px 70px rgba(16,185,129,.035)}
+    .panel{border:1px solid rgba(94,233,181,.10); background:linear-gradient(145deg,var(--surface-2),rgba(18,28,25,.96)); box-shadow:0 18px 55px rgba(16,185,129,.025)}
+    .btn-brand{border:0; background:var(--brand); color:#fff; transition:background .15s ease, transform .1s ease}
+    .btn-brand:hover{background:var(--brand-2)}
+    .btn-brand:active{transform:scale(.98)}
+    .btn-brand:disabled{opacity:.5; cursor:not-allowed}
+    .btn-soft{border:1px solid var(--border); background:var(--surface-2); color:var(--text); transition:border-color .15s ease, background .15s ease}
+    .btn-soft:hover{border-color:var(--border-hover); background:#20232b}
+    .chip{border:1px solid var(--border); background:var(--surface-2); color:var(--muted); border-radius:999px; padding:8px 14px; font-size:12px; line-height:1; white-space:nowrap; transition:.15s ease}
+    .chip:hover{border-color:var(--border-hover); color:var(--text)}
+    .chip-active{border-color:transparent; background:var(--brand); color:white}
+    .chip-active:hover{background:var(--brand-2); color:#fff}
+    .field{width:100%; border:1px solid var(--border); background:#0e0f13; color:#fff; outline:none; border-radius:12px; padding:12px 14px; transition:border-color .15s ease}
+    .field:focus{border-color:var(--brand)}
+    .small-label{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:700}
+    .model-card{position:relative; overflow:hidden; border-radius:16px; border:1px solid var(--border); background:var(--surface-2); transition:.15s ease; cursor:pointer}
+    .model-card:hover{border-color:rgba(94,233,181,.30); background:rgba(24,34,31,.96)}
+    .model-card.active{border-color:rgba(94,233,181,.58); background:linear-gradient(135deg,rgba(99,102,241,.09),rgba(52,211,153,.08)); box-shadow:0 0 0 1px rgba(94,233,181,.08),0 14px 38px rgba(16,185,129,.06)}
+    .dialogue-line{border:1px solid var(--border); background:#0e0f13; border-radius:16px; padding:14px}
+    .dialogue-entry{display:flex; flex-direction:column; gap:12px}
+    .dialogue-text{min-height:150px; resize:vertical}
+    .remove-line{width:32px;height:32px;display:grid;place-items:center;border-radius:999px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted); transition:.15s ease}
+    .remove-line:hover:not(:disabled){border-color:var(--border-hover); color:#fff}
+    .remove-line:disabled{opacity:.35; cursor:not-allowed}
+    .upload-drop{position:relative; min-height:160px; border:1px dashed var(--border); background:#0e0f13; border-radius:16px; display:flex; align-items:center; justify-content:center; text-align:center; padding:18px; cursor:pointer; transition:.15s ease}
+    .upload-drop:hover{border-color:rgba(94,233,181,.34); background:rgba(15,27,23,.92)}
+    .upload-drop.drag{border-color:var(--mint); background:rgba(52,211,153,.08)}
+    .audio-card{border:1px solid rgba(94,233,181,.11); background:linear-gradient(145deg,var(--surface-2),rgba(17,27,24,.97)); border-radius:16px; overflow:hidden; box-shadow:0 15px 42px rgba(16,185,129,.035)}
+    .audio-card audio{width:100%}
+    .status-dot{width:8px;height:8px;border-radius:999px;background:var(--warn)}
+    .status-dot.ready{background:var(--good)}
+    .status-dot.failed{background:var(--bad)}
+    .audio-state{margin-top:16px; min-height:92px; border-radius:14px; border:1px solid var(--border); background:#0e0f13; display:flex; align-items:center; justify-content:center; gap:16px; padding:18px}
+    .audio-state-copy{min-width:0}
+    .audio-state-title{font-size:13px; font-weight:800; color:var(--text)}
+    .audio-state-detail{margin-top:3px; font-size:11px; color:var(--muted)}
+    .audio-bars{height:38px; display:flex; align-items:center; gap:4px}
+    .audio-bars span{display:block; width:4px; height:10px; border-radius:999px; background:linear-gradient(180deg,#a7f3d0,#34d399); box-shadow:0 0 12px rgba(52,211,153,.34); animation:audioBarPulse 1s ease-in-out infinite}
+    .audio-bars span:nth-child(2){animation-delay:-.82s}
+    .audio-bars span:nth-child(3){animation-delay:-.64s}
+    .audio-bars span:nth-child(4){animation-delay:-.46s}
+    .audio-bars span:nth-child(5){animation-delay:-.28s}
+    .audio-bars span:nth-child(6){animation-delay:-.10s}
+    @keyframes audioBarPulse{0%,100%{height:9px;opacity:.48}50%{height:36px;opacity:1}}
+    .audio-state.processing{border-color:rgba(94,233,181,.16); background:linear-gradient(135deg,rgba(14,15,19,.96),rgba(14,29,24,.94)); box-shadow:inset 0 0 35px rgba(52,211,153,.025)}
+    .audio-state.processing .audio-state-title{color:#d1fae5}
+    .audio-state.failed{justify-content:flex-start; border-color:rgba(248,113,113,.32); background:rgba(127,29,29,.14)}
+    .audio-fail-icon{width:38px;height:38px;flex:0 0 auto;border-radius:999px;display:grid;place-items:center;border:1px solid rgba(248,113,113,.42);background:rgba(248,113,113,.12);color:#fca5a5;font-size:19px;font-weight:900}
+    .audio-state.failed .audio-state-title{color:#fecaca}
+    .audio-state.failed .audio-state-detail{color:rgba(254,202,202,.65)}
+    .range-wrap input{width:100%; accent-color:var(--brand)}
+    .mode-note{border:1px solid var(--border); background:rgba(99,102,241,.06); border-radius:14px; padding:12px 14px; color:var(--muted); font-size:12px; line-height:1.55}
+    .voice-picker,.language-picker{position:relative}
+    .voice-picker-button,.language-picker-button{width:100%; min-height:48px; min-width:0; text-align:left; display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .voice-menu,.language-menu{position:absolute; top:calc(100% + 8px); right:0; width:100%; z-index:40; border:1px solid var(--border); background:#15171c; border-radius:14px; padding:10px; box-shadow:0 16px 40px rgba(0,0,0,.5); display:none}
+    .voice-menu.open,.language-menu.open{display:block}
+    .voice-search,.language-search{width:100%; border:1px solid var(--border); background:#0e0f13; color:#fff; outline:none; border-radius:10px; padding:10px 12px; font-size:13px; margin-bottom:8px}
+    .voice-search:focus,.language-search:focus{border-color:var(--brand)}
+    .voice-list,.language-list{max-height:220px; overflow-y:auto; padding-right:4px}
+    .language-option{width:100%; display:block; text-align:left; border:0; background:transparent; color:var(--muted); border-radius:10px; padding:9px 10px; font-size:13px}
+    .language-option:hover,.language-option.active{background:rgba(99,102,241,.14); color:#fff}
+    .voice-option-row{display:grid; grid-template-columns:1fr 34px; align-items:center; gap:6px; border-radius:10px}
+    .voice-option-row:hover,.voice-option-row.active{background:rgba(99,102,241,.14)}
+    .voice-label,.voice-option-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .voice-option-name{min-width:0; max-width:100%; border:0; background:transparent; color:var(--muted); text-align:left; border-radius:10px; padding:9px 10px; font-size:13px}
+    .voice-option-row:hover .voice-option-name,.voice-option-row.active .voice-option-name{color:#fff}
+    .voice-play-btn{width:28px;height:28px;display:grid;place-items:center;border-radius:999px;border:1px solid var(--border);background:#0e0f13;color:var(--muted);font-size:11px;line-height:1; transition:.15s ease}
+    .voice-play-btn:hover,.voice-play-btn.playing{border-color:var(--brand);background:rgba(99,102,241,.16);color:#fff}
+
+    .cost-panel-hidden{display:none!important}
+    .audio-actions .get-btn{min-width:86px; justify-content:center; border:0; background:var(--brand); color:#fff; transition:background .15s ease}
+    .audio-actions .get-btn:hover{background:var(--brand-2)}
+    .file-name-safe{display:block; max-width:10ch; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    .file-meta-safe{display:block; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    @media (min-width:901px){
+      .voice-label,.voice-option-name{white-space:normal; overflow:visible; text-overflow:clip; line-height:1.25}
+      .voice-picker-button{align-items:flex-start}
+      .voice-menu{min-width:min(440px, calc(100vw - 32px))}
+      .voice-option-row{align-items:start}
+    }
+    @media (max-width:900px){
+      .desktop-grid{grid-template-columns:1fr!important}.sticky-side{position:static!important}.hero-title{font-size:30px!important}.model-card{min-height:108px}.compact-stack{grid-template-columns:1fr!important}
+    }
+  </style>
+</head>
+<body>
+  <div id="sharedHeader"></div>
+
+  <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
+    <section class="grid desktop-grid grid-cols-[360px_1fr] gap-6 items-start">
+      <aside class="sticky-side sticky top-5 space-y-4">
+        <div class="glass rounded-2xl p-5">
+          <div class="flex items-center justify-between gap-3 mb-5">
+            <div>
+              <p class="small-label">Hansora Audio</p>
+              <h1 class="hero-title text-3xl font-black tracking-tight leading-none mt-1">Ստեղծել աուդիո</h1>
+            </div>
+            <div class="h-11 w-11 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] grid place-items-center text-xl">🎧</div>
+          </div>
+          <p class="text-sm text-[var(--muted)] leading-6 mb-5">Ստեղծեք ձայնային հոլովակներ ու ամբողջական երաժշտություն կամ մաքրեք ձայնագրություններն աղմուկից՝ մեկ հարմար աշխատանքային միջավայրում։</p>
+          <div id="modelList" class="space-y-2"></div>
+        </div>
+        <div class="panel rounded-2xl p-4 cost-panel-hidden">
+          <p class="small-label mb-2">Ընթացիկ արժեքը</p>
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p id="costText" class="text-lg font-extrabold text-white">—</p>
+              <p id="creditHint" class="text-xs text-slate-400 mt-1">Կրեդիտները կթարմացվեն, երբ ծառայությունն ընդունի առաջադրանքը։</p>
+            </div>
+            <button id="refreshCreditsBtn" type="button" class="btn-soft rounded-full px-3 py-2 text-xs">Թարմացնել</button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="space-y-5">
+        <div class="glass rounded-2xl p-5 sm:p-6">
+          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
+            <div>
+              <p id="activeSubtitle" class="small-label">Text to Dialogue</p>
+              <h2 id="activeTitle" class="text-2xl sm:text-3xl font-black tracking-tight">Բնական երկխոսության ստեղծում</h2>
+              <p id="activeDescription" class="text-sm text-slate-300/75 mt-2 max-w-2xl">Գրեք մեկ խոսք կամ ավելացրեք մի քանիսը՝ տարբեր կերպարների ձայներով երկխոսություն ստեղծելու համար։</p>
+            </div>
+            <span id="modelBadge" class="chip chip-active self-start sm:self-auto">ElevenLabs</span>
+          </div>
+
+          <form id="audioForm" class="space-y-5">
+            <section id="voicePanel" class="space-y-4">
+              <div class="mode-note">Պարզ ձայնային հոլովակի համար ավելացրեք մեկ խոսք։ Տարբեր կերպարների ձայներով երկխոսության համար ավելացրեք մի քանի խոսք։</div>
+              <div class="panel rounded-2xl p-4">
+                <p class="small-label mb-2">Լեզու</p>
+                <div id="languagePicker" class="language-picker">
+                  <input id="voiceLanguage" type="hidden" value="" />
+                  <button id="languagePickerButton" type="button" class="field language-picker-button !py-3 !rounded-xl">
+                    <span id="languagePickerLabel" class="truncate">Ինքնաշխատ որոշել</span>
+                    <span class="text-slate-400">⌄</span>
+                  </button>
+                  <div id="languageMenu" class="language-menu">
+                    <input id="languageSearch" type="text" class="language-search" placeholder="Որոնել լեզու..." autocomplete="off" />
+                    <div id="languageList" class="language-list"></div>
+                  </div>
+                </div>
+              </div>
+              <div id="dialogueLines" class="space-y-3"></div>
+              <button id="addDialogueLineBtn" type="button" class="btn-soft rounded-2xl w-full py-3 font-bold">+ Ավելացնել ևս մեկ խոսք</button>
+              <div class="panel rounded-2xl p-4 range-wrap">
+                <div class="flex justify-between gap-2 mb-2"><span class="small-label">Կայունություն</span><span id="stabilityValue" class="text-xs text-slate-300">0.50</span></div>
+                <input id="stability" type="range" min="0" max="1" step="0.5" value="0.5" />
+              </div>
+            </section>
+
+            <section id="isolationPanel" class="hidden space-y-4">
+              <input id="audioFileInput" type="file" class="sr-only" tabindex="-1" />
+              <div id="voiceChangerOptions" class="hidden panel rounded-2xl p-4">
+                <p class="small-label mb-2">Նպատակային ձայն</p>
+                <div id="changerVoicePicker" class="voice-picker">
+                  <input type="hidden" class="dialogue-voice" value="pNInz6obpgDQGcFmaJgB" />
+                  <button type="button" class="field voice-picker-button !py-3 !rounded-xl">
+                    <span class="voice-label" title="Adam - Dominant, Firm">Adam - Dominant, Firm</span>
+                    <span class="text-slate-400">⌄</span>
+                  </button>
+                  <div class="voice-menu">
+                    <input type="text" class="voice-search" placeholder="Որոնել նպատակային ձայն..." />
+                    <div class="voice-list"></div>
+                  </div>
+                </div>
+                <label class="mt-3 flex items-center gap-3 text-sm text-slate-300">
+                  <input id="removeBackgroundNoise" type="checkbox" checked class="h-4 w-4 accent-indigo-500" />
+                  Ձայնը փոխելիս հեռացնել ֆոնային աղմուկը
+                </label>
+              </div>
+              <label id="dropZone" for="audioFileInput" class="upload-drop">
+                <div>
+                  <div class="mx-auto h-14 w-14 rounded-2xl bg-indigo-500/15 border border-indigo-300/20 grid place-items-center text-2xl mb-3">🎙️</div>
+                  <p id="dropTitle" class="font-bold text-white">Վերբեռնել աուդիո</p>
+                  <p id="dropMeta" class="text-xs text-slate-400 mt-1">Միայն MP3 • picker fix v3</p>
+                </div>
+              </label>
+              <div id="selectedFileBox" class="hidden panel rounded-2xl p-4">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <p id="selectedFileName" class="font-bold file-name-safe">—</p>
+                    <p id="selectedFileSize" class="text-xs text-slate-400 mt-1 file-meta-safe">—</p>
+                  </div>
+                  <button id="clearFileBtn" type="button" class="btn-soft rounded-full px-3 py-2 text-xs shrink-0">Հեռացնել</button>
+                </div>
+              </div>
+            </section>
+
+            <section id="musicPanel" class="hidden space-y-4">
+              <div class="grid compact-stack grid-cols-3 gap-3">
+                <div class="panel rounded-2xl p-4 hidden">
+                  <p class="small-label mb-3">Ռեժիմ</p>
+                  <div class="flex flex-wrap gap-2">
+                    <button type="button" data-custom-mode="false" class="chip">Պարզ</button>
+                    <button type="button" data-custom-mode="true" class="chip chip-active">Ընդլայնված</button>
+                  </div>
+                </div>
+                <div class="panel rounded-2xl p-4">
+                  <p class="small-label mb-3">Երաժշտության տեսակ</p>
+                  <div class="flex flex-wrap gap-2">
+                    <button type="button" data-instrumental="false" class="chip chip-active">Երգ՝ բառերով</button>
+                    <button type="button" data-instrumental="true" class="chip">Միայն գործիքային</button>
+                  </div>
+                </div>
+                <div class="panel rounded-2xl p-4">
+                  <p class="small-label mb-3">Մոդել</p>
+                  <select id="sunoModel" class="field !py-2 !rounded-xl">
+                    <option value="V5_5">V5.5</option>
+                    <option value="V5">V5</option>
+                    <option value="V4_5PLUS">V4.5 Plus</option>
+                    <option value="V4_5">V4.5</option>
+                    <option value="V4_5ALL">V4.5 All</option>
+                    <option value="V4">V4</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="musicPromptWrap">
+                <label id="musicPromptLabel" class="small-label block mb-2" for="musicPrompt">Երաժշտության նկարագրություն</label>
+                <textarea id="musicPrompt" class="field min-h-[150px] resize-none" maxlength="5000" placeholder="Գրեք այն բառերը, որոնք պետք է երգի AI մոդելը։"></textarea>
+              </div>
+              <input id="musicTitle" class="hidden" maxlength="80" value="SONG" aria-hidden="true" tabindex="-1" />
+              <input id="negativeTags" class="hidden" maxlength="500" value="" aria-hidden="true" tabindex="-1" />
+              <div class="grid compact-stack grid-cols-2 gap-3">
+                <div>
+                  <label class="small-label block mb-2" for="musicStyle">Ոճ</label>
+                  <input id="musicStyle" class="field" maxlength="1000" placeholder="Pop, cinematic, piano, drill..." />
+                </div>
+                <div id="vocalGenderWrap">
+                  <label class="small-label block mb-2" for="vocalGender">Վոկալի սեռ</label>
+                  <select id="vocalGender" class="field">
+                    <option value="">Ինքնաշխատ</option>
+                    <option value="m">Արական</option>
+                    <option value="f">Իգական</option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid compact-stack grid-cols-3 gap-3">
+                <div class="panel rounded-2xl p-4 range-wrap">
+                  <div class="flex justify-between gap-2 mb-2"><span class="small-label">Ոճի ազդեցություն</span><span id="styleWeightValue" class="text-xs text-slate-300">0.65</span></div>
+                  <input id="styleWeight" type="range" min="0" max="1" step="0.05" value="0.65" />
+                </div>
+                <div class="panel rounded-2xl p-4 range-wrap">
+                  <div class="flex justify-between gap-2 mb-2"><span class="small-label">Փորձարարականություն</span><span id="weirdnessConstraintValue" class="text-xs text-slate-300">0.65</span></div>
+                  <input id="weirdnessConstraint" type="range" min="0" max="1" step="0.05" value="0.65" />
+                </div>
+                <div class="panel rounded-2xl p-4 range-wrap">
+                  <div class="flex justify-between gap-2 mb-2"><span class="small-label">Աուդիոյի ազդեցություն</span><span id="audioWeightValue" class="text-xs text-slate-300">0.65</span></div>
+                  <input id="audioWeight" type="range" min="0" max="1" step="0.05" value="0.65" />
+                </div>
+              </div>
+              <div id="musicModeNote" class="mode-note">Պարզ ռեժիմում բավական է երաժշտության նկարագրությունը։ Ընդլայնված ռեժիմում երգ ստեղծելիս օգտագործվում են վերնագիրը, ոճը և ճշգրիտ բառերը։</div>
+            </section>
+
+            <div id="errorBox" class="hidden rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100"></div>
+            <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-end pt-1">
+              <p id="formHint" class="hidden"></p>
+              <button id="runBtn" type="submit" class="btn-brand rounded-2xl px-6 py-4 font-black min-w-[180px] sm:ml-auto">Ստեղծել աուդիո</button>
+            </div>
+          </form>
+        </div>
+
+        <section class="panel rounded-2xl p-5 sm:p-6">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <p class="small-label">Պատմություն</p>
+              <h3 class="text-xl font-black mt-1">Վերջին աուդիոները</h3>
+            </div>
+            <button id="refreshResultsBtn" type="button" class="btn-soft rounded-full px-4 py-2 text-sm">Թարմացնել</button>
+          </div>
+          <div id="resultsList" class="grid md:grid-cols-2 gap-3"></div>
+          <div id="emptyResults" class="rounded-2xl border border-dashed border-white/14 p-8 text-center text-slate-400">Դեռ աուդիո չեք ստեղծել։</div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const supabaseClient = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__HANSORA_SB__ = supabaseClient;
+    window.hansoraSupabase = supabaseClient;
+
+    const MODELS = [
+      { id:'voice', title:'Text to Dialogue', subtitle:'Խոսք և երկխոսություն', icon:'🗣️', badge:'ElevenLabs', baseCostLabel:'1+⚡', description:'Գրեք մեկ խոսք կամ ավելացրեք մի քանիսը՝ տարբեր կերպարների ձայներով երկխոսություն ստեղծելու համար։' },
+      { id:'music', title:'Suno Music', subtitle:'Երգեր, բառեր և գործիքային երաժշտություն', icon:'🎵', badge:'Suno', baseCostLabel:'1.5⚡', description:'Ստեղծեք երաժշտություն՝ կարգավորելով բառերը, վերնագիրը, ոճը, վոկալի սեռը և գործիքային ռեժիմը։' },
+      { id:'isolation', title:'Voice Isolation', subtitle:'Աղմկոտ աուդիոյի մաքրում', icon:'🎙️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Վերբեռնեք աուդիոֆայլ և առանձնացրեք ձայնը ֆոնային աղմուկից։' },
+      { id:'voice-change', title:'Voice Changer', subtitle:'Վերբեռնված խոսքի ձայնափոխում', icon:'🎚️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Վերբեռնեք խոսքի ձայնագրություն, ընտրեք նպատակային ձայն և պահպանեք սկզբնական կատարումը նոր ձայնով։' }
+    ];
+    let VOICES = [
+      {"label":"Adam - Dominant, Firm","value":"pNInz6obpgDQGcFmaJgB","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/pNInz6obpgDQGcFmaJgB/d6905d7a-dd26-4187-bfff-1bd3a5ea7cac.mp3"},
+      {"label":"Alice - Clear, Engaging Educator","value":"Xb7hH8MSUJpSbSDYk0k2","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/Xb7hH8MSUJpSbSDYk0k2/d10f7534-11f6-41fe-a012-2de1e482d336.mp3"},
+      {"label":"Bella - Professional, Bright, Warm","value":"hpp4J3VqNfWAUOO0d1Us","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/hpp4J3VqNfWAUOO0d1Us/dab0f5ba-3aa4-48a8-9fad-f138fea1126d.mp3"},
+      {"label":"Bill - Wise, Mature, Balanced","value":"pqHfZKP75CvOlQylNhV4","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/pqHfZKP75CvOlQylNhV4/d782b3ff-84ba-4029-848c-acf01285524d.mp3"},
+      {"label":"Brian - Deep, Resonant and Comforting","value":"nPczCjzI2devNBz1zQrb","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/nPczCjzI2devNBz1zQrb/2dd3e72c-4fd3-42f1-93ea-abc5d4e5aa1d.mp3"},
+      {"label":"Callum - Husky Trickster","value":"N2lVS1w4EtoT3dr4eOWO","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/N2lVS1w4EtoT3dr4eOWO/ac833bd8-ffda-4938-9ebc-b0f99ca25481.mp3"},
+      {"label":"Charlie - Deep, Confident, Energetic","value":"IKne3meq5aSn9XLyUdCD","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/IKne3meq5aSn9XLyUdCD/102de6f2-22ed-43e0-a1f1-111fa75c5481.mp3"},
+      {"label":"Chris - Charming, Down-to-Earth","value":"iP95p4xoKVk53GoZ742B","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/iP95p4xoKVk53GoZ742B/3f4bde72-cc48-40dd-829f-57fbf906f4d7.mp3"},
+      {"label":"Daniel - Steady Broadcaster","value":"onwK4e9ZLuTAKqWW03F9","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/onwK4e9ZLuTAKqWW03F9/7eee0236-1a72-4b86-b303-5dcadc007ba9.mp3"},
+      {"label":"Eric - Smooth, Trustworthy","value":"cjVigY5qzO86Huf0OWal","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/cjVigY5qzO86Huf0OWal/d098fda0-6456-4030-b3d8-63aa048c9070.mp3"},
+      {"label":"George - Warm, Captivating Storyteller","value":"JBFqnCBsd6RMkjVDRZzb","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/JBFqnCBsd6RMkjVDRZzb/e6206d1a-0721-4787-aafb-06a6e705cac5.mp3"},
+      {"label":"Harry - Fierce Warrior","value":"SOYHLrjzK2X1ezoPC6cr","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/SOYHLrjzK2X1ezoPC6cr/86d178f6-f4b6-4e0e-85be-3de19f490794.mp3"},
+      {"label":"Jessica - Playful, Bright, Warm","value":"cgSgspJ2msm6clMCkdW9","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/cgSgspJ2msm6clMCkdW9/56a97bf8-b69b-448f-846c-c3a11683d45a.mp3"},
+      {"label":"Laura - Enthusiast, Quirky Attitude","value":"FGY2WhTYpPnrIDTdsKH5","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/FGY2WhTYpPnrIDTdsKH5/67341759-ad08-41a5-be6e-de12fe448618.mp3"},
+      {"label":"Liam - Energetic, Social Media Creator","value":"TX3LPaxmHKxFdv7VOQHJ","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/TX3LPaxmHKxFdv7VOQHJ/63148076-6363-42db-aea8-31424308b92c.mp3"},
+      {"label":"Lily - Velvety Actress","value":"pFZP5JQG7iQjIQuC4Bku","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/pFZP5JQG7iQjIQuC4Bku/89b68b35-b3dd-4348-a84a-a3c13a3c2b30.mp3"},
+      {"label":"Matilda - Knowledgable, Professional","value":"XrExE9yKIg1WjnnlVkGX","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/XrExE9yKIg1WjnnlVkGX/b930e18d-6b4d-466e-bab2-0ae97c6d8535.mp3"},
+      {"label":"River - Relaxed, Neutral, Informative","value":"SAz9YHcvj6GT2YYXdXww","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/SAz9YHcvj6GT2YYXdXww/e6c95f0b-2227-491a-b3d7-2249240decb7.mp3"},
+      {"label":"Roger - Laid-Back, Casual, Resonant","value":"CwhRBWXzGAHq8TQ4Fs17","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/CwhRBWXzGAHq8TQ4Fs17/58ee3ff5-f6f2-4628-93b8-e38eb31806b0.mp3"},
+      {"label":"Sarah - Mature, Reassuring, Confident","value":"EXAVITQu4vr4xnSDxMaL","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/EXAVITQu4vr4xnSDxMaL/01a3e33c-6e99-4ee7-8543-ff2216a32186.mp3"},
+      {"label":"Will - Relaxed Optimist","value":"bIHbv24MWmeRgasZH58o","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/bIHbv24MWmeRgasZH58o/8caf8f3d-ad29-4980-af41-53f20c72d7a4.mp3"}
+    ];
+    const LANGUAGES = [
+      { label:'Ինքնաշխատ որոշել', value:'' },
+      { label:'Անգլերեն', value:'en' },
+      { label:'Ճապոներեն', value:'ja' },
+      { label:'Չինարեն', value:'zh' },
+      { label:'Գերմաներեն', value:'de' },
+      { label:'Հինդի', value:'hi' },
+      { label:'Ֆրանսերեն', value:'fr' },
+      { label:'Կորեերեն', value:'ko' },
+      { label:'Պորտուգալերեն', value:'pt' },
+      { label:'Իտալերեն', value:'it' },
+      { label:'Իսպաներեն', value:'es' },
+      { label:'Ինդոնեզերեն', value:'id' },
+      { label:'Հոլանդերեն', value:'nl' },
+      { label:'Թուրքերեն', value:'tr' },
+      { label:'Ֆիլիպիներեն', value:'fil' },
+      { label:'Լեհերեն', value:'pl' },
+      { label:'Շվեդերեն', value:'sv' },
+      { label:'Բուլղարերեն', value:'bg' },
+      { label:'Ռումիներեն', value:'ro' },
+      { label:'Արաբերեն', value:'ar' },
+      { label:'Չեխերեն', value:'cs' },
+      { label:'Հունարեն', value:'el' },
+      { label:'Ֆիններեն', value:'fi' },
+      { label:'Խորվաթերեն', value:'hr' },
+      { label:'Մալայերեն', value:'ms' },
+      { label:'Սլովակերեն', value:'sk' },
+      { label:'Դանիերեն', value:'da' },
+      { label:'Թամիլերեն', value:'ta' },
+      { label:'Ուկրաիներեն', value:'uk' },
+      { label:'Ռուսերեն', value:'ru' },
+      { label:'Հունգարերեն', value:'hu' },
+      { label:'Նորվեգերեն', value:'no' },
+      { label:'Վիետնամերեն', value:'vi' },
+      { label:'Հայերեն', value:'hy' }
+    ];
+
+    let currentUser = null;
+    let currentCredits = 0;
+    let currentModelId = 'voice';
+    let customMode = true;
+    let instrumental = false;
+    let selectedAudioFile = null;
+    let selectedAudioDurationSeconds = 0;
+    let pollTimer = null;
+    let pollEmptyChecks = 0;
+    let pollStartedAt = 0;
+    const checkerStatusByRun = new Map();
+    let voicePreviewAudio = null;
+    let activeVoicePlayButton = null;
+
+    const $ = (id) => document.getElementById(id);
+    const FUNCTION_ORIGIN = window.location.protocol === 'file:' ? 'https://webhansora.netlify.app' : '';
+    function functionUrl(path){ return `${FUNCTION_ORIGIN}${path}`; }
+    function activeModel(){ return MODELS.find(m => m.id === currentModelId) || MODELS[0]; }
+    function parseCredits(value){ const n = Number(String(value ?? '').replace(/[^\d.-]/g,'')); return Number.isFinite(n) ? n : 0; }
+    function formatCredits(value){ const n = Number(value || 0); return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`; }
+    function setCreditsEverywhere(value){
+      currentCredits = parseCredits(value);
+      document.querySelectorAll('#navCredits').forEach((node)=>{ node.textContent = formatCredits(currentCredits); });
+      if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') window.HansoraHeader.setCredits(currentCredits);
+    }
+    function watchCreditsLive(durationMs = 90000){
+      if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') window.HansoraHeader.startCreditsPolling(durationMs, 1500);
+    }
+    function getVisibleHeaderCredits(){
+      let best = 0;
+      document.querySelectorAll('#navCredits').forEach((node)=>{
+        const value = parseCredits(node.textContent || '');
+        if (value > best) best = value;
+      });
+      return best;
+    }
+    function getSharedHeaderCredits(){
+      try{
+        if (window.HansoraHeader && typeof window.HansoraHeader.getCurrentCredits === 'function') {
+          return parseCredits(window.HansoraHeader.getCurrentCredits());
+        }
+      }catch(_){ }
+      return 0;
+    }
+    async function readSupabaseCredits(){
+      const { data: userRes } = await supabaseClient.auth.getUser();
+      const user = userRes && userRes.user ? userRes.user : null;
+      if (!user) return { user:null, profile:null, credits:0 };
+      const { data: profile, error } = await supabaseClient
+        .from('profiles')
+        .select('credits, avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return { user, profile, credits:parseCredits(profile && profile.credits) };
+    }
+    async function getAvailableCredits(required = 0){
+      const localBest = Math.max(getSharedHeaderCredits(), getVisibleHeaderCredits(), parseCredits(currentCredits));
+      if (localBest >= Number(required || 0)) return localBest;
+      try{
+        const result = await readSupabaseCredits();
+        const supabaseCredits = parseCredits(result.credits);
+        if (result.user) {
+          currentUser = result.user;
+          setCreditsEverywhere(supabaseCredits);
+        }
+        return Math.max(supabaseCredits, localBest);
+      }catch(error){
+        console.warn('credit read failed; falling back to header value', error);
+      }
+      return localBest;
+    }
+    function userFacingError(msg){
+      const raw = String(msg || 'Ինչ-որ բան սխալ ընթացավ։');
+      if (/eleven|background|invoke|internal error|500|audio-isolation|speech-to-speech/i.test(raw)) {
+        return 'ElevenLabs-ի ներքին սխալ է։ Փորձեք կրկին ավելի ուշ։';
+      }
+      if (/kie.*500|internal error/i.test(raw)) return 'Աուդիո ծառայության ներքին սխալ է։ Փորձեք կրկին ավելի ուշ։';
+      return raw;
+    }
+    function showError(msg){
+      const box=$('errorBox');
+      const raw = String(msg || '');
+      box.textContent=userFacingError(raw);
+      box.title=raw && raw !== box.textContent ? raw : '';
+      if (raw && raw !== box.textContent) console.warn('Audio error detail:', raw);
+      box.classList.remove('hidden');
+    }
+    function isNotEnoughCreditsMessage(message) {
+      return /not enough credits|not_enough_credits|insufficient credits|insufficient_credits/i.test(String(message || ''));
+    }
+    function openPricingOfferPopup() {
+      try {
+        if (window.HansoraHeader && typeof window.HansoraHeader.showPricingOfferNow === 'function') {
+          window.HansoraHeader.showPricingOfferNow();
+          return;
+        }
+        if (window.HansoraHeader && typeof window.HansoraHeader.showSignupOfferNow === 'function') {
+          window.HansoraHeader.showSignupOfferNow();
+        }
+      } catch (error) {
+        console.warn('Could not open pricing offer popup', error);
+      }
+    }
+    function clearError(){ const box=$('errorBox'); box.textContent=''; box.classList.add('hidden'); }
+
+    function renderModels(){
+      const list = $('modelList');
+      list.innerHTML = '';
+      MODELS.forEach((m)=>{
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `model-card w-full p-4 text-left min-h-[118px] ${m.id === currentModelId ? 'active' : ''}`;
+        btn.innerHTML = `<div class="relative z-10 flex items-start justify-between gap-3"><div><div class="text-3xl mb-3">${m.icon}</div><p class="text-lg font-black text-white">${m.title}</p><p class="text-xs text-slate-400 mt-1">${m.subtitle}</p></div></div>`;
+        btn.addEventListener('click',()=>{ currentModelId = m.id; renderModels(); syncPanels(); });
+        list.appendChild(btn);
+      });
+    }
+
+    function voiceLabel(value){
+      const found = VOICES.find((v)=>v.value === value) || VOICES[0];
+      return found ? found.label : 'Ընտրեք ձայնը';
+    }
+    function rawVoiceLabel(valueOrLabel){
+      return VOICES.find((v)=>v.value === valueOrLabel)?.label || String(valueOrLabel || 'Ընտրեք ձայնը');
+    }
+    function shortVoiceLabel(valueOrLabel){
+      const raw = rawVoiceLabel(valueOrLabel);
+      const parts = raw.split(/\s+-\s+/);
+      if (parts.length < 2) return raw.length > 22 ? `${raw.slice(0, 22)}...` : raw;
+      const name = parts.shift().trim();
+      const info = parts.join(' - ').trim();
+      return info ? `${name} - ${info.slice(0, 5)}${info.length > 5 ? '...' : ''}` : name;
+    }
+    function displayVoiceLabel(valueOrLabel){
+      return window.matchMedia('(max-width: 900px)').matches ? shortVoiceLabel(valueOrLabel) : rawVoiceLabel(valueOrLabel);
+    }
+    function voiceById(value){
+      return VOICES.find((v)=>v.value === value) || null;
+    }
+    function voiceValueByIndex(index){
+      return (VOICES[index] || VOICES[0]).value;
+    }
+    function refreshVoicePickers(){
+      document.querySelectorAll('.voice-picker').forEach((picker)=>{
+        const hidden = picker.querySelector('.dialogue-voice');
+        const label = picker.querySelector('.voice-label');
+        if (hidden && !voiceById(hidden.value) && VOICES[0]) hidden.value = VOICES[0].value;
+        if (label && hidden) {
+          label.textContent = displayVoiceLabel(hidden.value);
+          label.title = voiceLabel(hidden.value);
+        }
+        const search = picker.querySelector('.voice-search');
+        renderVoiceList(picker, search ? search.value : '');
+      });
+    }
+    async function loadElevenVoices(){
+      try{
+        const user = currentUser;
+        const sessionRes = await supabaseClient.auth.getSession();
+        const token = sessionRes?.data?.session?.access_token || '';
+        const resp = await fetch(functionUrl('/.netlify/functions/run-audio'), {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', ...(token ? { 'Authorization':`Bearer ${token}` } : {}) },
+          body: JSON.stringify({ uid:user && user.id || '', kind:'voice-list' })
+        });
+        const data = await resp.json().catch(()=>({}));
+        const liveVoices = Array.isArray(data.voices) ? data.voices : [];
+        if (!data.submitted || !liveVoices.length) {
+          return;
+        }
+        const seen = new Set();
+        VOICES = liveVoices.filter((voice)=>{
+          const value = String(voice.value || '').trim();
+          const label = String(voice.label || '').trim();
+          const previewUrl = String(voice.preview_url || voice.previewUrl || '').trim();
+          if (!value || !label || !previewUrl || seen.has(value)) return false;
+          seen.add(value);
+          voice.value = value;
+          voice.label = label;
+          voice.preview_url = previewUrl;
+          return true;
+        });
+        if (!VOICES.length) {
+          showError('ElevenLabs-ը ձայներ է վերադարձրել, սակայն preview_url նմուշներ չկան։');
+          return;
+        }
+        refreshVoicePickers();
+      }catch(error){
+        console.warn('voice list load failed; using built-in ElevenLabs previews', error);
+      }
+    }
+    function stopVoicePreview(){
+      if (voicePreviewAudio) {
+        voicePreviewAudio.pause();
+        voicePreviewAudio.currentTime = 0;
+      }
+      if (activeVoicePlayButton) {
+        activeVoicePlayButton.textContent = '▶';
+        activeVoicePlayButton.classList.remove('playing');
+        activeVoicePlayButton.disabled = false;
+      }
+      activeVoicePlayButton = null;
+    }
+    async function playVoiceOptionPreview(voice, button){
+      clearError();
+      try{
+        const sameButtonPlaying = activeVoicePlayButton === button && voicePreviewAudio && !voicePreviewAudio.paused;
+        stopVoicePreview();
+        if (sameButtonPlaying) return;
+        if (!voicePreviewAudio) {
+          voicePreviewAudio = new Audio();
+          voicePreviewAudio.addEventListener('ended', stopVoicePreview);
+          voicePreviewAudio.addEventListener('pause', ()=>{
+            if (activeVoicePlayButton && voicePreviewAudio && voicePreviewAudio.ended) stopVoicePreview();
+          });
+        }
+        activeVoicePlayButton = button;
+        button.classList.add('playing');
+        button.textContent = '…';
+        let src = String(voice && voice.preview_url || '').trim();
+        if (!src) {
+          throw new Error('Այս ձայնի համար ElevenLabs-ը preview_url նմուշ չի տրամադրել։');
+        }
+        voicePreviewAudio.src = src;
+        button.textContent = '❚❚';
+        await voicePreviewAudio.play();
+      }catch(err){
+        const message = String(err.message || err);
+        stopVoicePreview();
+        button.title = message;
+        button.textContent = '▶';
+        showError(message);
+      }
+    }
+    function renderVoiceList(picker, query = ''){
+      const list = picker.querySelector('.voice-list');
+      const hidden = picker.querySelector('.dialogue-voice');
+      const q = String(query || '').trim().toLowerCase();
+      const matches = VOICES.filter((v)=>v.label.toLowerCase().includes(q));
+      list.innerHTML = matches.length ? matches.map((v)=>`<div class="voice-option-row ${v.value === hidden.value ? 'active' : ''}" data-voice-value="${escapeHtml(v.value)}"><button type="button" class="voice-option-name" title="${escapeHtml(v.label)}">${escapeHtml(displayVoiceLabel(v.label))}</button><button type="button" class="voice-play-btn" aria-label="Լսել ${escapeHtml(v.label)} ձայնի նմուշը" title="Լսել ElevenLabs preview_url-ը">▶</button></div>`).join('') : '<div class="px-3 py-3 text-xs text-slate-400">ElevenLabs-ի ձայնային նմուշները չեն բեռնվել։</div>';
+      list.querySelectorAll('.voice-option-name').forEach((btn)=>{
+        btn.addEventListener('click',()=>{
+          const row = btn.closest('.voice-option-row');
+          hidden.value = row && row.dataset.voiceValue || VOICES[0].value;
+          const visibleLabel = picker.querySelector('.voice-label');
+          visibleLabel.textContent = displayVoiceLabel(hidden.value);
+          visibleLabel.title = voiceLabel(hidden.value);
+          stopVoicePreview();
+          picker.querySelector('.voice-menu').classList.remove('open');
+          renderVoiceList(picker, picker.querySelector('.voice-search').value);
+        });
+      });
+      list.querySelectorAll('.voice-play-btn').forEach((btn)=>{
+        btn.addEventListener('click',(event)=>{
+          event.stopPropagation();
+          const row = btn.closest('.voice-option-row');
+          const voice = row ? voiceById(row.dataset.voiceValue) : null;
+          if (voice) playVoiceOptionPreview(voice, btn);
+        });
+      });
+    }
+    function closeVoiceMenus(except){
+      document.querySelectorAll('.voice-menu.open').forEach((menu)=>{
+        if (!except || !except.contains(menu)) menu.classList.remove('open');
+      });
+    }
+    function wireVoicePicker(picker){
+      const button = picker.querySelector('.voice-picker-button');
+      const search = picker.querySelector('.voice-search');
+      renderVoiceList(picker, '');
+      button.addEventListener('click',()=>{
+        const menu = picker.querySelector('.voice-menu');
+        const willOpen = !menu.classList.contains('open');
+        closeVoiceMenus(picker);
+        menu.classList.toggle('open', willOpen);
+        if (willOpen) setTimeout(()=>search.focus(), 0);
+      });
+      search.addEventListener('input',()=>renderVoiceList(picker, search.value));
+    }
+    document.addEventListener('click',(e)=>{
+      if (!e.target.closest('.voice-picker')) closeVoiceMenus();
+      if (!e.target.closest('.language-picker')) closeLanguageMenu();
+    });
+    window.addEventListener('resize', refreshVoicePickers);
+    function languageLabel(value){
+      const found = LANGUAGES.find((language)=>language.value === value) || LANGUAGES[0];
+      return found.label;
+    }
+    function renderLanguageList(query = ''){
+      const list = $('languageList');
+      const current = $('voiceLanguage').value;
+      const q = String(query || '').trim().toLowerCase();
+      const matches = LANGUAGES.filter((language)=>{
+        return language.label.toLowerCase().includes(q) || String(language.value || '').toLowerCase().includes(q);
+      });
+      list.innerHTML = matches.length ? matches.map((language)=>`<button type="button" class="language-option ${language.value === current ? 'active' : ''}" data-language-value="${escapeHtml(language.value)}">${escapeHtml(language.label)}${language.value ? ` <span class="text-slate-500">${escapeHtml(language.value)}</span>` : ''}</button>`).join('') : '<div class="px-3 py-3 text-xs text-slate-400">Լեզու չի գտնվել։</div>';
+      list.querySelectorAll('.language-option').forEach((btn)=>{
+        btn.addEventListener('click',()=>{
+          const value = btn.dataset.languageValue || '';
+          $('voiceLanguage').value = value;
+          $('languagePickerLabel').textContent = languageLabel(value);
+          closeLanguageMenu();
+          renderLanguageList($('languageSearch').value);
+        });
+      });
+    }
+    function closeLanguageMenu(){
+      const menu = $('languageMenu');
+      if (menu) menu.classList.remove('open');
+    }
+    function wireLanguagePicker(){
+      const button = $('languagePickerButton');
+      const menu = $('languageMenu');
+      const search = $('languageSearch');
+      renderLanguageList('');
+      button.addEventListener('click',()=>{
+        const willOpen = !menu.classList.contains('open');
+        closeVoiceMenus();
+        menu.classList.toggle('open', willOpen);
+        if (willOpen) setTimeout(()=>search.focus(), 0);
+      });
+      search.addEventListener('input',()=>renderLanguageList(search.value));
+    }
+    function addDialogueLine(text = '', selectedIndex = 0){
+      const wrap = document.createElement('div');
+      const selectedVoice = voiceValueByIndex(selectedIndex);
+      wrap.className = 'dialogue-line';
+      wrap.innerHTML = `<div class="flex items-center justify-between gap-3 mb-3"><p class="small-label">Խոսք</p><button type="button" class="remove-line" aria-label="Հեռացնել խոսքը">×</button></div><div class="dialogue-entry"><div class="voice-picker"><input type="hidden" class="dialogue-voice" value="${escapeHtml(selectedVoice)}" /><button type="button" class="field voice-picker-button"><span class="voice-label" title="${escapeHtml(voiceLabel(selectedVoice))}">${escapeHtml(displayVoiceLabel(selectedVoice))}</span><span class="text-slate-400">⌄</span></button><div class="voice-menu"><input type="text" class="voice-search" placeholder="Որոնել կերպարի ձայն..." /><div class="voice-list"></div></div></div><textarea class="field dialogue-text" maxlength="4200" placeholder="Գրեք, թե ինչ պետք է ասի այս ձայնը..."></textarea></div>`;
+      wrap.querySelector('.dialogue-text').value = text;
+      wrap.querySelector('.dialogue-text').addEventListener('input', updateCostUI);
+      wrap.querySelector('.remove-line').addEventListener('click',()=>{ wrap.remove(); updateDialogueButtons(); updateCostUI(); });
+      $('dialogueLines').appendChild(wrap);
+      wireVoicePicker(wrap.querySelector('.voice-picker'));
+      updateDialogueButtons();
+      updateCostUI();
+    }
+    function updateDialogueButtons(){
+      const rows = Array.from(document.querySelectorAll('.dialogue-line'));
+      rows.forEach((row)=>{ row.querySelector('.remove-line').disabled = rows.length <= 1; });
+    }
+
+    function formatCostNumber(value){
+      const n = Number(value || 0);
+      return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
+    }
+    function voiceCharacterCount(){
+      return Array.from(document.querySelectorAll('.dialogue-text')).reduce((sum, el)=>sum + String(el.value || '').length, 0);
+    }
+    function voiceCost(){
+      return Math.max(1, Math.ceil(Math.max(voiceCharacterCount(), 1) / 1000));
+    }
+    function isolationCost(){
+      if (!selectedAudioDurationSeconds || selectedAudioDurationSeconds <= 0) return 1;
+      return Math.max(0.5, Math.ceil((selectedAudioDurationSeconds / 60) * 2) / 2);
+    }
+    function estimatedCostFor(kind){
+      if (kind === 'music') return 1.5;
+      if (kind === 'isolation' || kind === 'voice-change') return isolationCost();
+      return voiceCost();
+    }
+    function modelBadgeCost(model){
+      if (model.id === currentModelId) return `${formatCostNumber(estimatedCostFor(model.id))}⚡`;
+      return model.baseCostLabel;
+    }
+    function actionLabel(kind){
+      if (kind === 'isolation') return 'Մաքրել աուդիոն';
+      if (kind === 'voice-change') return 'Փոխել ձայնը';
+      if (kind === 'music') return 'Ստեղծել երաժշտություն';
+      return 'Ստեղծել ձայնային հոլովակ';
+    }
+    function updateCostUI(){
+      const m = activeModel();
+      const cost = estimatedCostFor(m.id);
+      $('costText').textContent = `${formatCostNumber(cost)} կրեդիտ`;
+      if (m.id === 'voice') $('creditHint').textContent = `${voiceCharacterCount()} նիշ • 1 կրեդիտ՝ յուրաքանչյուր 1000 նիշի համար։`;
+      else if (m.id === 'isolation' || m.id === 'voice-change') $('creditHint').textContent = selectedAudioDurationSeconds ? `Որոշված է ${formatDuration(selectedAudioDurationSeconds)} • կլորացվում է մինչև 30 վայրկյան։` : '1 կրեդիտ՝ յուրաքանչյուր րոպեի համար։ Վերբեռնեք աուդիո՝ տևողությունը որոշելու համար։';
+      else $('creditHint').textContent = 'Suno Music-ի մեկ գեներացիան արժե 1.5 կրեդիտ։';
+      const runBtn = $('runBtn');
+      if (runBtn && !runBtn.disabled) {
+        runBtn.textContent = `${actionLabel(m.id)} • ${formatCostNumber(cost)}⚡`;
+      }
+    }
+    function formatDuration(seconds){
+      const total = Math.max(0, Math.round(Number(seconds || 0)));
+      const m = Math.floor(total / 60);
+      const s = total % 60;
+      return `${m}:${String(s).padStart(2,'0')}`;
+    }
+    function shortFileName(name){
+      const clean = String(name || 'audio-file');
+      return clean.length > 10 ? `${clean.slice(0, 10)}....` : clean;
+    }
+
+    function syncPanels(){
+      const m = activeModel();
+      $('activeSubtitle').textContent = m.title;
+      $('activeTitle').textContent = m.id === 'voice' ? 'Բնական երկխոսության ստեղծում' : m.id === 'isolation' ? 'Voice Isolation' : m.id === 'voice-change' ? 'Voice Changer' : 'Suno Music';
+      $('activeDescription').textContent = m.description;
+      $('modelBadge').textContent = m.badge;
+      updateCostUI();
+      $('runBtn').textContent = `${actionLabel(m.id)} • ${formatCostNumber(estimatedCostFor(m.id))}⚡`;
+      $('voicePanel').classList.toggle('hidden', m.id !== 'voice');
+      $('isolationPanel').classList.toggle('hidden', !(m.id === 'isolation' || m.id === 'voice-change'));
+      $('voiceChangerOptions').classList.toggle('hidden', m.id !== 'voice-change');
+      $('musicPanel').classList.toggle('hidden', m.id !== 'music');
+      if (m.id === 'isolation') {
+        $('dropTitle').textContent = selectedAudioFile ? 'Ֆայլը պատրաստ է' : 'Վերբեռնել աուդիո';
+        $('dropMeta').textContent = selectedAudioFile ? 'Սեղմեք՝ ֆայլը փոխարինելու համար, կամ ներքևում ընտրեք «Հեռացնել»։' : 'Ձայնը կմաքրվի աղմուկից և ֆոնային ձայներից։';
+      } else if (m.id === 'voice-change') {
+        $('dropTitle').textContent = selectedAudioFile ? 'Ֆայլը պատրաստ է' : 'Վերբեռնել խոսքի ձայնագրություն';
+        $('dropMeta').textContent = selectedAudioFile ? 'Սեղմեք՝ ֆայլը փոխարինելու համար, կամ ներքևում ընտրեք «Հեռացնել»։' : 'Ընտրեք այն աուդիոն, որը ցանկանում եք փոխակերպել ընտրված ձայնով։';
+      }
+      syncMusicControls();
+      clearError();
+    }
+
+    function syncMusicControls(){
+      customMode = true;
+      const prompt = $('musicPrompt');
+      const label = $('musicPromptLabel');
+      const wrap = $('musicPromptWrap');
+      const genderWrap = $('vocalGenderWrap');
+      $('musicTitle').value = 'SONG';
+      if (instrumental) {
+        label.textContent = 'Երաժշտության նկարագրություն';
+        prompt.placeholder = 'Նկարագրեք գործիքային ստեղծագործությունը։ Օրինակ՝ կինեմատոգրաֆիկ հայկական դուդուկի մեղեդի՝ խորը հարվածայիններով, հուզական զարգացմամբ և ժամանակակից թրեյլերի տրամադրությամբ';
+        prompt.maxLength = 5000;
+        wrap.classList.remove('hidden');
+        genderWrap.classList.add('hidden');
+        $('musicModeNote').textContent = 'Գործիքային ռեժիմը փոխանցում է ձեր նկարագրությունը, ոճը և instrumental=true պարամետրը։';
+      } else {
+        label.textContent = 'Երգի բառերը';
+        prompt.placeholder = 'Գրեք այն բառերը, որոնք պետք է երգի AI մոդելը։';
+        prompt.maxLength = 5000;
+        wrap.classList.remove('hidden');
+        genderWrap.classList.remove('hidden');
+        $('musicModeNote').textContent = 'Երգի ռեժիմը փոխանցում է բառերը կամ երգի գաղափարը, ոճը և, ցանկության դեպքում, վոկալի սեռը։';
+      }
+    }
+
+    function wireChips(){
+      document.querySelectorAll('[data-custom-mode]').forEach((btn)=>{
+        btn.addEventListener('click',()=>{
+          customMode = true;
+          document.querySelectorAll('[data-custom-mode]').forEach((b)=>b.classList.toggle('chip-active', b.dataset.customMode === 'true'));
+          syncMusicControls();
+        });
+      });
+      document.querySelectorAll('[data-instrumental]').forEach((btn)=>{
+        btn.addEventListener('click',()=>{
+          instrumental = btn.dataset.instrumental === 'true';
+          document.querySelectorAll('[data-instrumental]').forEach((b)=>b.classList.toggle('chip-active', b === btn));
+          syncMusicControls();
+        });
+      });
+      ['stability','styleWeight','weirdnessConstraint','audioWeight'].forEach((id)=>{
+        const input = $(id), label = $(id + 'Value');
+        input.addEventListener('input',()=>{ label.textContent = Number(input.value).toFixed(2); });
+      });
+      $('addDialogueLineBtn').addEventListener('click',()=>addDialogueLine('', 1));
+      wireVoicePicker($('changerVoicePicker'));
+    }
+
+    function wireUpload(){
+      const input = $('audioFileInput');
+      const drop = $('dropZone');
+      input.addEventListener('change',()=>setAudioFile(input.files && input.files[0]));
+      ['dragenter','dragover'].forEach((eventName)=>drop.addEventListener(eventName,(e)=>{ e.preventDefault(); drop.classList.add('drag'); }));
+      ['dragleave','drop'].forEach((eventName)=>drop.addEventListener(eventName,(e)=>{ e.preventDefault(); drop.classList.remove('drag'); }));
+      drop.addEventListener('drop',(e)=>setAudioFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]));
+      $('clearFileBtn').addEventListener('click',()=>setAudioFile(null));
+    }
+
+    function setAudioFile(file){
+      if (file && !isSupportedAudioFile(file)) {
+        showError('Voice Isolation-ն ընդունում է միայն MP3 ֆայլեր։');
+        return;
+      }
+      clearError();
+      selectedAudioFile = file || null;
+      selectedAudioDurationSeconds = 0;
+      $('audioFileInput').value = '';
+      $('selectedFileBox').classList.toggle('hidden', !selectedAudioFile);
+      if (selectedAudioFile) {
+        $('selectedFileName').textContent = shortFileName(selectedAudioFile.name);
+        $('selectedFileName').title = selectedAudioFile.name;
+        $('selectedFileSize').textContent = `${(selectedAudioFile.size / 1024 / 1024).toFixed(2)} MB • որոշվում է տևողությունը...`;
+        $('dropTitle').textContent = 'Ֆայլը պատրաստ է';
+        $('dropMeta').textContent = 'Սեղմեք՝ ֆայլը փոխարինելու համար, կամ ներքևում ընտրեք «Հեռացնել»։';
+        readMediaDuration(selectedAudioFile).then((seconds)=>{
+          if (selectedAudioFile === file) {
+            selectedAudioDurationSeconds = seconds || 0;
+            $('selectedFileSize').textContent = `${(selectedAudioFile.size / 1024 / 1024).toFixed(2)} MB • ${selectedAudioFile.type || 'audio'}${selectedAudioDurationSeconds ? ` • ${formatDuration(selectedAudioDurationSeconds)}` : ' • տևողությունը չի որոշվել'}`;
+            updateCostUI();
+            renderModels();
+          }
+        });
+      } else {
+        $('selectedFileName').textContent = '—';
+        $('selectedFileName').title = '';
+        $('selectedFileSize').textContent = '—';
+        $('dropTitle').textContent = currentModelId === 'voice-change' ? 'Վերբեռնել խոսքի ձայնագրություն' : 'Վերբեռնել աուդիո';
+        $('dropMeta').textContent = currentModelId === 'voice-change' ? 'Ընտրեք այն աուդիոն, որը ցանկանում եք փոխակերպել ընտրված ձայնով։' : 'Ձայնը կմաքրվի աղմուկից և ֆոնային ձայներից։';
+      }
+      updateCostUI();
+      renderModels();
+    }
+
+    function readMediaDuration(file){
+      return new Promise((resolve)=>{
+        try{
+          const url = URL.createObjectURL(file);
+          const media = document.createElement((file.type || '').startsWith('video/') ? 'video' : 'audio');
+          media.preload = 'metadata';
+          media.onloadedmetadata = ()=>{
+            const duration = Number(media.duration || 0);
+            URL.revokeObjectURL(url);
+            resolve(Number.isFinite(duration) ? duration : 0);
+          };
+          media.onerror = ()=>{ URL.revokeObjectURL(url); resolve(0); };
+          media.src = url;
+        }catch{ resolve(0); }
+      });
+    }
+
+    function isSupportedAudioFile(file){
+      const type = String(file && file.type || '').toLowerCase();
+      const name = String(file && file.name || '').toLowerCase();
+      if (/\.mp3$/i.test(name)) return true;
+      if (type.startsWith('video/')) return false;
+      if (type === 'audio/mpeg' || type === 'audio/mp3') return true;
+      return false;
+    }
+    function guessAudioMimeType(name){
+      const lower = String(name || '').toLowerCase();
+      if (lower.endsWith('.wav')) return 'audio/wav';
+      if (lower.endsWith('.m4a')) return 'audio/mp4';
+      if (lower.endsWith('.aac')) return 'audio/aac';
+      if (lower.endsWith('.ogg')) return 'audio/ogg';
+      if (lower.endsWith('.flac')) return 'audio/flac';
+      return 'audio/mpeg';
+    }
+
+    function fileToDataURL(file){
+      return new Promise((resolve,reject)=>{
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('file_read_failed'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function buildDialogue(){
+      const rows = Array.from(document.querySelectorAll('.dialogue-line'));
+      const dialogue = rows.map((row)=>({
+        text: row.querySelector('.dialogue-text').value.trim(),
+        voice: row.querySelector('.dialogue-voice').value.trim()
+      })).filter((item)=>item.text && item.voice);
+      if (!dialogue.length) throw new Error('Խնդրում ենք ավելացնել առնվազն մեկ խոսք։');
+      return dialogue;
+    }
+
+    function buildMusicPayload(){
+      const prompt = $('musicPrompt').value.trim();
+      const model = $('sunoModel').value;
+      const style = $('musicStyle').value.trim();
+      if (!style) throw new Error('Նշեք երաժշտության ոճը։');
+      if (!instrumental && !prompt) throw new Error('Գրեք երգի բառերը կամ գաղափարը։');
+      if (instrumental && !prompt) throw new Error('Նկարագրեք գործիքային երաժշտությունը։');
+      const payload = {
+        customMode:true,
+        instrumental,
+        model,
+        title:'SONG',
+        style,
+        prompt,
+        styleWeight:Number($('styleWeight').value),
+        weirdnessConstraint:Number($('weirdnessConstraint').value),
+        audioWeight:Number($('audioWeight').value)
+      };
+      const vocalGender = $('vocalGender').value.trim();
+      if (!instrumental && vocalGender) payload.vocalGender = vocalGender;
+      return payload;
+    }
+
+    async function ensureUser(){
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      currentUser = user || null;
+      if (!currentUser) throw new Error('Նախ մուտք գործեք։');
+      return currentUser;
+    }
+
+    async function refreshCredits(){
+      try{
+        const { user, credits } = await readSupabaseCredits();
+        if (!user) return parseCredits(currentCredits);
+        currentUser = user;
+        setCreditsEverywhere(credits);
+      }catch(e){
+        console.warn('refreshCredits failed', e);
+      }
+      return parseCredits(currentCredits);
+    }
+
+    async function submitTask(e){
+      e.preventDefault();
+      clearError();
+      const button = $('runBtn');
+      const oldText = button.textContent;
+      try{
+        const user = await ensureUser();
+        const sessionRes = await supabaseClient.auth.getSession();
+        const token = sessionRes?.data?.session?.access_token || '';
+        if (!token) throw new Error('Կրկին մուտք գործեք։');
+        const model = activeModel();
+        const estimatedCost = estimatedCostFor(model.id);
+        const availableCredits = await getAvailableCredits(estimatedCost);
+        if (availableCredits < estimatedCost) throw new Error(`Կրեդիտները բավարար չեն։ Այս գործողության համար անհրաժեշտ է ${formatCostNumber(estimatedCost)} կրեդիտ։`);
+
+        const body = { uid:user.id, run_id:`${user.id}-audio-${Date.now()}`, kind:model.id };
+        if (model.id === 'voice') {
+          body.dialogue = buildDialogue();
+          body.stability = Math.round(Number($('stability').value || 0.5) * 2) / 2;
+          body.language_code = $('voiceLanguage').value.trim();
+          body.prompt = body.dialogue.map((line)=>line.text).join('\n');
+        } else if (model.id === 'isolation' || model.id === 'voice-change') {
+          if (!selectedAudioFile) throw new Error('Նախ վերբեռնեք աուդիո։');
+          if (selectedAudioFile.size > 10 * 1024 * 1024) throw new Error('Այս էջում վերբեռնելու համար օգտագործեք 10 ՄԲ-ից փոքր ֆայլ։');
+          body.fileName = selectedAudioFile.name || 'audio-file';
+          body.fileType = selectedAudioFile.type || guessAudioMimeType(selectedAudioFile.name);
+          body.fileBase64 = await fileToDataURL(selectedAudioFile);
+          body.durationSeconds = selectedAudioDurationSeconds || 0;
+          if (model.id === 'voice-change') {
+            body.voice = $('changerVoicePicker').querySelector('.dialogue-voice').value.trim();
+            body.remove_background_noise = $('removeBackgroundNoise').checked;
+            body.prompt = `Voice changer: ${body.fileName}`;
+          } else {
+            body.prompt = `Voice isolation: ${body.fileName}`;
+          }
+        } else if (model.id === 'music') {
+          Object.assign(body, buildMusicPayload());
+          body.prompt = body.prompt || body.title || 'Instrumental music';
+        }
+
+        button.disabled = true;
+        button.textContent = 'Ուղարկվում է...';
+        const resp = await fetch(functionUrl('/.netlify/functions/run-audio'), {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+          body: JSON.stringify(body)
+        });
+        const data = await resp.json().catch(()=>({}));
+        if (!data.submitted) throw new Error(data.error || 'submit_failed');
+        addPendingResult(body.run_id, model, body.prompt || body.title || 'Audio task');
+        await refreshCredits();
+        watchCreditsLive();
+        startPolling();
+      }catch(err){
+        const message = String(err.message || err);
+        showError(message);
+        if (isNotEnoughCreditsMessage(message)) setTimeout(openPricingOfferPopup, 80);
+      }finally{
+        button.disabled = false;
+        const finalModel = activeModel();
+        button.textContent = `${actionLabel(finalModel.id)} • ${formatCostNumber(estimatedCostFor(finalModel.id))}⚡`;
+      }
+    }
+
+    function addPendingResult(runId, model, prompt){
+      const list = $('resultsList');
+      $('emptyResults').classList.add('hidden');
+      const div = document.createElement('div');
+      div.className = 'audio-card p-4';
+      div.dataset.runId = runId;
+      div.innerHTML = `<div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-sm font-black truncate">${escapeHtml(model.title)}</p><p class="text-xs text-slate-400 truncate mt-1">${escapeHtml(prompt || '')}</p></div><span class="status-dot"></span></div>${renderAudioState('processing')}`;
+      list.prepend(div);
+    }
+
+    function isFailedAudioStatus(status){
+      return /(fail|failed|error|reject|rejected|cancel|cancelled|denied)/i.test(String(status || ''));
+    }
+    function renderAudioState(status){
+      if (isFailedAudioStatus(status)) {
+        return `<div class="audio-state failed"><div class="audio-fail-icon">!</div><div class="audio-state-copy"><div class="audio-state-title">Աուդիոյի ստեղծումը ձախողվեց</div><div class="audio-state-detail">Աուդիո ծառայությունը չկարողացավ կատարել հարցումը։ Փորձեք կրկին։</div></div></div>`;
+      }
+      return `<div class="audio-state processing"><div class="audio-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="audio-state-copy"><div class="audio-state-title">Աուդիոն ստեղծվում է</div><div class="audio-state-detail">Հարցումը դեռ մշակվում է։ Կարող եք փակել էջը և ավելի ուշ վերադառնալ։</div></div></div>`;
+    }
+
+    function escapeHtml(str){ return String(str || '').replace(/[&<>'"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+    function isUsableAudioUrl(url){
+      const value = String(url || '').trim();
+      const lower = value.toLowerCase();
+      if (!/^https?:\/\//i.test(value)) return false;
+      if (lower.includes('/.netlify/functions/audio-kie-callback') || lower.includes('/.netlify/functions/run-audio') || lower.includes('/api/callback') || lower.includes('callback')) return false;
+      return true;
+    }
+    function allAudioUrls(row){
+      const meta = row.meta || {};
+      if (String(meta.audio_kind || '').toLowerCase() === 'music' && meta.suno_complete !== true && meta.status !== 'ready') return [];
+      const candidates = [];
+      if (row.result_url) candidates.push(row.result_url);
+      if (meta.audio_url) candidates.push(meta.audio_url);
+      if (Array.isArray(meta.audio_urls)) candidates.push(...meta.audio_urls);
+      if (Array.isArray(meta.results)) meta.results.forEach((item)=>candidates.push(item && (item.audioUrl || item.sourceAudioUrl || item.downloadUrl || item.audio_url || item.audioUrl || item.url)));
+      const seen = new Set();
+      return candidates.filter(isUsableAudioUrl).filter((url)=>{
+        const key = String(url || '').trim();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    function firstAudioUrl(row){
+      return allAudioUrls(row)[0] || '';
+    }
+
+    function audioPlayerUrl(url){
+      return String(url || '').trim();
+    }
+    function audioDownloadUrl(url, name){
+      return `/.netlify/functions/audio-download?url=${encodeURIComponent(url)}&name=${encodeURIComponent((name || 'hansora-audio').replace(/[^a-z0-9._-]+/gi,'-').slice(0,80) || 'hansora-audio')}`;
+    }
+    function renderAudioControls(url, name, index){
+      const playerUrl = audioPlayerUrl(url);
+      const label = index ? `Հոլովակ ${index + 1}` : '';
+      const downloadUrl = audioDownloadUrl(url, index ? `${name}-track-${index + 1}` : name);
+      return `<div class="mt-4"><div class="text-xs text-slate-400 mb-2">${escapeHtml(label)}</div><audio controls preload="metadata" data-base-src="${escapeHtml(url)}" src="${escapeHtml(playerUrl)}"></audio><div class="audio-actions mt-3"><a class="get-btn rounded-full px-5 py-2 text-xs font-bold inline-flex" href="${escapeHtml(downloadUrl)}">Ներբեռնել</a></div></div>`;
+    }
+    function renderAllAudioControls(urls, name){
+      return (urls || []).map((url, index)=>renderAudioControls(url, name, index)).join('');
+    }
+
+    function wireAudioPlayers(root){
+      (root || document).querySelectorAll('audio[data-base-src]').forEach((audio)=>{
+        if (audio.dataset.wired === '1') return;
+        audio.dataset.wired = '1';
+      });
+    }
+    function isAnyAudioPlaying(){
+      return Array.from(document.querySelectorAll('audio')).some((audio)=>!audio.paused && !audio.ended);
+    }
+
+
+    async function loadRecentHistory(){
+      if (!currentUser) return;
+      const { data, error } = await supabaseClient
+        .from('user_generations')
+        .select('provider, kind, prompt, result_url, meta, created_at')
+        .eq('user_id', currentUser.id)
+        .eq('kind', 'audio')
+        .order('created_at', { ascending:false })
+        .limit(12);
+      if (error) return;
+      const list = $('resultsList');
+      list.innerHTML = '';
+      const rows = data || [];
+      $('emptyResults').classList.toggle('hidden', rows.length > 0);
+      rows.forEach((row)=>{
+        const meta = row.meta || {};
+        const urls = allAudioUrls(row);
+        const url = urls[0] || '';
+        const runId = String(meta.run_id || '');
+        const checkerStatus = runId ? checkerStatusByRun.get(runId) : '';
+        const status = (url ? 'ready' : (checkerStatus || meta.status || 'processing')).toString();
+        const div = document.createElement('div');
+        div.className = 'audio-card p-4';
+        if (runId) div.dataset.runId = runId;
+        const name = meta.title || row.provider || 'Audio';
+        const prompt = row.prompt || meta.prompt || '';
+        const dotClass = url ? 'ready' : isFailedAudioStatus(status) ? 'failed' : '';
+        div.innerHTML = `<div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="text-sm font-black truncate">${escapeHtml(name)}</p><p class="text-xs text-slate-400 truncate mt-1">${escapeHtml(prompt)}</p></div><span class="status-dot ${dotClass}"></span></div>${url ? renderAllAudioControls(urls, name) : renderAudioState(status)}`;
+        list.appendChild(div);
+      });
+      wireAudioPlayers(list);
+    }
+
+    async function checkPendingAudioRows(){
+      if (!currentUser) return 0;
+      const { data, error } = await supabaseClient
+        .from('user_generations')
+        .select('meta')
+        .eq('user_id', currentUser.id)
+        .eq('kind', 'audio')
+        .is('result_url', null)
+        .limit(24);
+      if (error) return 1;
+      const rows = (data || []).filter((row)=>{
+        const meta = row.meta || {};
+        const status = String(meta.status || 'processing').toLowerCase();
+        return !isFailedAudioStatus(status) && !['ready', 'done', 'complete', 'completed', 'success'].includes(status);
+      });
+      const states = await Promise.all(rows.map(async(row)=>{
+        const meta = row.meta || {};
+        const runId = meta.run_id || '';
+        const taskId = meta.task_id || meta.taskId || '';
+        if (!runId && !taskId) return 'pending';
+        try{
+          const response = await fetch(functionUrl(`/.netlify/functions/audio-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId)}`), { method:'GET' });
+          const result = await response.json().catch(()=>({}));
+          const status = String(result.status || 'pending').toLowerCase();
+          if (runId && (isFailedAudioStatus(status) || ['ready', 'done', 'complete', 'completed', 'success'].includes(status))) {
+            checkerStatusByRun.set(runId, status);
+          }
+          return status;
+        }catch(_){ return 'pending'; }
+      }));
+      return states.filter((status)=>!isFailedAudioStatus(status) && !['ready', 'done', 'complete', 'completed', 'success'].includes(status)).length;
+    }
+
+    function startPolling(){
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = null;
+      pollEmptyChecks = 0;
+      pollStartedAt = Date.now();
+      let checking = false;
+      const cycle = async()=>{
+        if (checking || !currentUser) return;
+        checking = true;
+        try {
+          const pendingCount = await checkPendingAudioRows();
+          if (!isAnyAudioPlaying()) await loadRecentHistory();
+          pollEmptyChecks = Number(pendingCount || 0) === 0 ? pollEmptyChecks + 1 : 0;
+          const graceFinished = Date.now() - pollStartedAt >= 12000;
+          if (pollEmptyChecks >= 3 && graceFinished && pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+          }
+        } finally {
+          checking = false;
+        }
+      };
+      cycle();
+      pollTimer = setInterval(cycle, 4000);
+    }
+
+
+    async function init(){
+      renderModels(); wireChips(); wireUpload(); wireLanguagePicker(); addDialogueLine('', 0); syncPanels(); updateCostUI();
+      $('audioForm').addEventListener('submit', submitTask);
+      $('refreshResultsBtn').addEventListener('click', async()=>{ await checkPendingAudioRows(); await loadRecentHistory(); startPolling(); });
+      $('refreshCreditsBtn').addEventListener('click', refreshCredits);
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      currentUser = user || null;
+      await loadElevenVoices();
+      if (currentUser) { await refreshCredits(); await loadRecentHistory(); startPolling(); }
+      if (window.HansoraHeader && typeof window.HansoraHeader.init === 'function') {
+        try { window.HansoraHeader.init({ supabaseClient }); } catch(e) {}
+      }
+    }
+    document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && currentUser) startPolling(); });
+    window.addEventListener('focus', ()=>{ if (currentUser) startPolling(); });
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

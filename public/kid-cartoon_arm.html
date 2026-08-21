@@ -1,0 +1,2337 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kid Cartoon Studio | Hansora AI</title>
+  <meta name="description" content="Երեխայի լուսանկարները վերածեք հմայիչ 3D անիմացիոն տեսանյութի Hansora AI-ի միջոցով։" />
+  <link rel="preconnect" href="https://qmaealblegvcwodlmeht.supabase.co" />
+  <link rel="dns-prefetch" href="//qmaealblegvcwodlmeht.supabase.co" />
+  <link href="./search-models-tailwind.css" rel="stylesheet" />
+  <link href="./header.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="./header.js"></script>
+  <script defer src="./kie-upload-bridge.js"></script>
+  <style>
+    :root{
+      --bg:#060712;
+      --panel:#11131d;
+      --panel-2:#181b27;
+      --line:rgba(255,255,255,.1);
+      --muted:rgba(255,255,255,.58);
+      --text:rgba(255,255,255,.94);
+      --accent:#8b5cf6;
+      --accent-2:#38bdf8;
+      --lime:#ccff38;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      min-height:100vh;
+      color:var(--text);
+      background:#05060b;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    main{ padding:28px 20px 24px; }
+    .page-shell{ width:min(1520px,100%); margin:0 auto; display:grid; grid-template-columns:420px minmax(0,1fr); gap:28px; align-items:start; }
+    .panel{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(23,25,36,.96),rgba(13,15,24,.96));
+      border-radius:24px;
+      box-shadow:0 22px 70px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
+      overflow:hidden;
+    }
+    .composer{
+      position:sticky;
+      top:calc(var(--header-height, 88px) + 18px);
+      max-height:calc(100svh - var(--header-height, 88px) - 36px);
+      overflow-y:auto;
+      overscroll-behavior:contain;
+      scrollbar-width:thin;
+    }
+    .panel-pad{ padding:18px; }
+    .title{ font-size:30px; line-height:1.02; margin:0 0 9px; letter-spacing:0; }
+    .sub{ margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
+    .field{ margin-top:16px; }
+    .label{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; color:rgba(255,255,255,.72); font-size:12px; font-weight:800; }
+    .hint{ color:rgba(255,255,255,.42); font-weight:700; }
+    .section{
+      margin-top:16px;
+      padding:14px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      background:rgba(255,255,255,.025);
+    }
+    .section-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
+      color:rgba(255,255,255,.72);
+      font-size:12px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .dropzone{
+      position:relative;
+      min-height:156px;
+      border:1px dashed rgba(255,255,255,.18);
+      border-radius:18px;
+      background:rgba(255,255,255,.035);
+      display:grid;
+      place-items:center;
+      text-align:center;
+      padding:18px;
+      cursor:pointer;
+      transition:border-color .16s ease, background .16s ease, transform .16s ease;
+    }
+    .dropzone:hover,
+    .dropzone.drag-over{ border-color:rgba(56,189,248,.85); background:rgba(56,189,248,.06); transform:translateY(-1px); }
+    .dropzone strong{ display:block; font-size:16px; margin-top:12px; line-height:1.25; }
+    .dropzone small{ display:block; color:var(--muted); margin-top:8px; font-size:12px; line-height:1.35; }
+    .dropzone.has-file{
+      min-height:132px;
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      overflow-x:auto;
+      overflow-y:hidden;
+      padding:10px;
+      scrollbar-width:thin;
+    }
+    .drop-icon{
+      width:54px;
+      height:54px;
+      border-radius:18px;
+      display:grid;
+      place-items:center;
+      margin:0 auto;
+      color:#061018;
+      background:linear-gradient(135deg,#d9ff5d,#7dd3fc);
+    }
+    .drop-icon svg{
+      width:28px;
+      height:28px;
+      stroke:currentColor;
+      stroke-width:2.6;
+      fill:none;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+    input[type=file]{ display:none; }
+    .upload-empty{ display:block; width:100%; }
+    .upload-empty[hidden],
+    .upload-grid[hidden]{ display:none !important; }
+    .upload-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+      width:100%;
+    }
+    .dropzone.has-file .upload-grid{
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      gap:10px;
+      overflow:visible;
+    }
+    .upload-thumb,
+    .add-image-tile{
+      position:relative;
+      flex:0 0 104px;
+      width:104px;
+      height:114px;
+      min-height:114px;
+      border-radius:16px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.12);
+      background:#080b15;
+    }
+    .upload-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .remove-image{
+      position:absolute;
+      top:7px;
+      right:7px;
+      width:26px;
+      height:26px;
+      border:0;
+      border-radius:999px;
+      background:rgba(0,0,0,.72);
+      color:#fff;
+      font-weight:950;
+      cursor:pointer;
+    }
+    .add-image-tile{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-style:dashed;
+      border-color:rgba(255,255,255,.16);
+      cursor:pointer;
+      color:rgba(255,255,255,.7);
+      font-weight:900;
+      text-align:center;
+    }
+    .add-image-tile span{
+      width:48px;
+      height:48px;
+      border-radius:16px;
+      display:grid;
+      place-items:center;
+      color:#d9ff5d;
+      border:1px solid rgba(204,255,56,.5);
+      background:rgba(204,255,56,.08);
+      line-height:1;
+      margin:0 auto;
+    }
+    .add-image-tile svg{
+      width:24px;
+      height:24px;
+      stroke:currentColor;
+      stroke-width:2.4;
+      fill:none;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+    .add-image-tile small{ display:block; margin-top:9px; color:rgba(255,255,255,.56); font-size:12px; line-height:1.1; }
+    textarea,
+    select{
+      width:100%;
+      color:#fff;
+      background:rgba(255,255,255,.055);
+      border:1px solid rgba(255,255,255,.11);
+      border-radius:16px;
+      padding:13px 14px;
+      outline:none;
+      font:inherit;
+    }
+    textarea{ resize:none; min-height:106px; line-height:1.45; }
+    textarea:focus,
+    select:focus{ border-color:rgba(139,92,246,.75); box-shadow:0 0 0 3px rgba(139,92,246,.18); }
+    .mention-wrap{ position:relative; }
+    .prompt-editor{
+      width:100%;
+      min-height:118px;
+      max-height:220px;
+      overflow:auto;
+      color:#fff;
+      background:rgba(255,255,255,.055);
+      border:1px solid rgba(255,255,255,.11);
+      border-radius:16px;
+      padding:13px 14px;
+      outline:none;
+      font:inherit;
+      line-height:1.45;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    .prompt-editor:focus{ border-color:rgba(139,92,246,.75); box-shadow:0 0 0 3px rgba(139,92,246,.18); }
+    .prompt-editor:empty:before{
+      content:attr(data-placeholder);
+      color:rgba(255,255,255,.36);
+      pointer-events:none;
+    }
+    .prompt-hidden{ display:none; }
+    .mention-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      min-height:26px;
+      margin:0 2px;
+      padding:2px 9px 2px 3px;
+      border-radius:999px;
+      color:#fff;
+      font-size:1.08em;
+      font-weight:900;
+      background:rgba(139,92,246,.62);
+      box-shadow:0 0 16px rgba(139,92,246,.28);
+      vertical-align:baseline;
+      white-space:nowrap;
+    }
+    .mention-chip img{
+      width:22px;
+      height:22px;
+      border-radius:999px;
+      object-fit:cover;
+      border:1px solid rgba(255,255,255,.32);
+    }
+    .mention-menu{
+      position:absolute;
+      left:10px;
+      right:10px;
+      bottom:calc(100% + 8px);
+      z-index:10;
+      padding:8px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:14px;
+      background:rgba(24,26,36,.98);
+      box-shadow:0 18px 45px rgba(0,0,0,.38);
+    }
+    .mention-menu.hidden{ display:none; }
+    .mention-item{
+      width:100%;
+      min-height:48px;
+      border:0;
+      border-radius:10px;
+      background:transparent;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      color:#fff;
+      padding:7px;
+      font:inherit;
+      font-weight:850;
+      cursor:pointer;
+      text-align:left;
+    }
+    .mention-item:hover{ background:rgba(255,255,255,.075); }
+    .mention-item img{
+      width:34px;
+      height:34px;
+      border-radius:8px;
+      object-fit:cover;
+    }
+    .seg{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .seg button,
+    .pill-row button{
+      border:1px solid rgba(255,255,255,.11);
+      background:rgba(255,255,255,.05);
+      color:rgba(255,255,255,.7);
+      min-height:42px;
+      border-radius:14px;
+      font-size:12px;
+      font-weight:850;
+      cursor:pointer;
+      transition:background .15s ease, border-color .15s ease, color .15s ease;
+    }
+    .seg button.active,
+    .pill-row button.active{
+      background:linear-gradient(135deg,rgba(139,92,246,.95),rgba(56,189,248,.82));
+      border-color:rgba(255,255,255,.2);
+      color:#fff;
+    }
+    .pill-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .pill-row.res{ grid-template-columns:1fr 1fr; }
+    .run{
+      width:100%;
+      min-height:56px;
+      margin-top:18px;
+      border:0;
+      border-radius:18px;
+      background:linear-gradient(90deg,#6366f1,#8b5cf6,#38bdf8);
+      color:#fff;
+      font-size:16px;
+      font-weight:950;
+      cursor:pointer;
+      box-shadow:0 16px 38px rgba(99,102,241,.28);
+    }
+    .run:disabled{ opacity:.58; cursor:not-allowed; box-shadow:none; }
+    .status{ min-height:20px; margin:12px 0 0; color:rgba(255,255,255,.66); font-size:12px; line-height:1.45; }
+    .status.good{ color:#67e8a6; }
+    .status.bad{ color:#fda4af; }
+    .run-status{
+      margin:14px 0 0;
+      padding:10px 12px;
+      border:1px solid rgba(255,255,255,.09);
+      border-radius:13px;
+      background:rgba(255,255,255,.035);
+    }
+    .run-status:empty{ display:none; }
+    .workspace{ min-height:calc(100vh - 128px); border-radius:22px; background:#05060b; }
+    .workspace-body{
+      min-height:520px;
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:22px;
+      background:#05060b;
+      padding:20px;
+    }
+    .workspace-title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      color:rgba(255,255,255,.78);
+      font-size:14px;
+      font-weight:900;
+    }
+    .workspace-title span{
+      color:rgba(255,255,255,.42);
+      font-size:12px;
+      font-weight:800;
+    }
+    .see-all-link{
+      flex:0 0 auto;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:999px;
+      padding:8px 12px;
+      color:rgba(255,255,255,.78);
+      background:rgba(255,255,255,.03);
+      font-size:11px;
+      font-weight:950;
+      line-height:1;
+      text-decoration:none;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+    .see-all-link:hover{
+      border-color:rgba(255,255,255,.22);
+      color:#fff;
+      background:rgba(255,255,255,.06);
+    }
+    .empty-results{
+      min-height:420px;
+      border:1px dashed rgba(255,255,255,.08);
+      border-radius:18px;
+      margin-top:16px;
+      padding:18px;
+      background:rgba(255,255,255,.018);
+    }
+    .empty-results.hidden{ display:none; }
+    .sample-head{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:14px;
+    }
+    .sample-head h2{ margin:0; font-size:20px; line-height:1.1; letter-spacing:0; }
+    .sample-head p{ margin:5px 0 0; max-width:540px; color:var(--muted); font-size:13px; line-height:1.45; }
+    .sample-badge{
+      flex:0 0 auto;
+      border:1px solid rgba(204,255,56,.35);
+      color:#d9ff5d;
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:11px;
+      font-weight:950;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      background:rgba(204,255,56,.06);
+    }
+    .before-after-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+    }
+    .ba-card{
+      min-height:360px;
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:18px;
+      overflow:hidden;
+      background:#070a14;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .ba-media{
+      min-height:270px;
+      position:relative;
+      overflow:hidden;
+      background:#050812;
+    }
+    .ba-media:before{
+      content:"";
+      position:absolute;
+      z-index:1;
+      inset:auto 0 0;
+      height:38%;
+      background:linear-gradient(180deg,transparent,rgba(0,0,0,.34));
+    }
+    .ba-media img,
+    .ba-media video{
+      width:100%;
+      height:100%;
+      min-height:270px;
+      display:block;
+      object-fit:cover;
+      background:#050812;
+    }
+    .ba-after video{
+      pointer-events:none;
+    }
+    .sample-after-video::-webkit-media-controls,
+    .sample-after-video::-webkit-media-controls-panel,
+    .sample-after-video::-webkit-media-controls-overlay-play-button{
+      display:none !important;
+      opacity:0 !important;
+      pointer-events:none !important;
+    }
+    .sample-video-empty{
+      min-height:270px;
+      display:grid;
+      place-items:center;
+      color:rgba(255,255,255,.62);
+      background:
+        radial-gradient(circle at 35% 24%,rgba(204,255,56,.22),transparent 25%),
+        radial-gradient(circle at 78% 26%,rgba(56,189,248,.26),transparent 23%),
+        linear-gradient(145deg,#15213a,#07101a);
+      font-weight:900;
+    }
+    .ba-footer{
+      padding:14px 16px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+    }
+    .ba-footer strong{ display:block; font-size:14px; }
+    .ba-footer span{ display:block; margin-top:3px; color:var(--muted); font-size:12px; line-height:1.35; }
+    .ba-label{
+      flex:0 0 auto;
+      padding:7px 10px;
+      border-radius:999px;
+      color:#fff;
+      font-size:11px;
+      font-weight:950;
+      background:rgba(255,255,255,.12);
+    }
+    .ba-label.after{ background:linear-gradient(135deg,#8b5cf6,#38bdf8); }
+    .results-list{
+      display:flex;
+      align-items:flex-start;
+      flex-wrap:wrap;
+      gap:14px;
+      margin-top:16px;
+    }
+    .results-list.hidden{ display:none; }
+    .result-card{
+      flex:0 0 260px;
+      width:260px;
+      height:330px;
+      max-height:330px;
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:18px;
+      overflow:hidden;
+      background:#070a14;
+      position:relative;
+      display:flex;
+      flex-direction:column;
+    }
+    @media (min-width:901px){
+      .results-list:not(.hidden){
+        display:grid !important;
+        grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+        align-items:start !important;
+        gap:14px !important;
+        width:100% !important;
+      }
+      .results-list:not(.hidden) .result-card{
+        width:100% !important;
+        min-width:0 !important;
+        max-width:none !important;
+        flex:initial !important;
+      }
+    }
+    .result-media{
+      position:relative;
+      height:238px;
+      min-height:238px;
+      max-height:238px;
+      flex:0 0 238px;
+      background:#050812;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:rgba(255,255,255,.45);
+      font-size:13px;
+      font-weight:850;
+      cursor:default;
+    }
+    .result-media video{
+      width:auto;
+      height:auto;
+      max-width:100%;
+      max-height:100%;
+      object-fit:contain;
+      display:block;
+      background:#050812;
+      cursor:pointer;
+    }
+    .result-preview-hit{
+      position:absolute;
+      inset:0;
+      z-index:1;
+      background:transparent;
+      cursor:pointer;
+    }
+    .result-chip{
+      position:absolute;
+      left:12px;
+      top:12px;
+      z-index:2;
+      border-radius:999px;
+      padding:6px 9px;
+      background:rgba(0,0,0,.72);
+      color:#fff;
+      font-size:11px;
+      font-weight:950;
+    }
+    .result-chip.ready{ background:rgba(16,185,129,.88); }
+    .result-chip.failed{ background:rgba(239,68,68,.88); }
+    .result-info{
+      height:92px;
+      min-height:92px;
+      padding:10px 10px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:3px;
+    }
+    .result-top-row,
+    .result-bottom-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      min-width:0;
+    }
+    .result-name{ display:block; min-width:0; font-size:13px; font-weight:850; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .result-kind{ flex:0 0 auto; color:rgba(255,255,255,.45); font-size:11px; font-weight:850; text-transform:uppercase; letter-spacing:.04em; }
+    .result-prompt{
+      margin:0;
+      color:rgba(255,255,255,.62);
+      font-size:12px;
+      line-height:1.25;
+      min-height:15px;
+      max-height:15px;
+      display:block;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .result-status-text{ color:#6ee7b7; font-size:12px; font-weight:850; }
+    .result-bottom-row{ min-height:34px; flex:0 0 34px; }
+    .result-actions{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-left:auto; }
+    .result-actions a,
+    .result-actions button{
+      min-height:34px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      color:#fff;
+      padding:0 12px;
+      font:inherit;
+      font-size:12px;
+      font-weight:900;
+      text-decoration:none;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .result-actions .result-get{
+      margin-left:auto;
+      min-width:78px;
+      border-color:rgba(139,92,246,.55);
+      background:rgba(99,102,241,.9);
+      box-shadow:0 10px 24px rgba(99,102,241,.22);
+    }
+    .creating-state{
+      width:100%;
+      height:100%;
+      display:grid;
+      place-items:center;
+      text-align:center;
+      background:
+        radial-gradient(circle at 50% 35%,rgba(139,92,246,.25),transparent 28%),
+        radial-gradient(circle at 64% 42%,rgba(56,189,248,.18),transparent 24%),
+        #050812;
+    }
+    .creating-icon{
+      width:48px;
+      height:48px;
+      margin:0 auto 13px;
+      border-radius:18px;
+      border:0;
+      background:linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8);
+      box-shadow:0 0 30px rgba(139,92,246,.52);
+      animation:creatingSpin 1.35s linear infinite;
+    }
+    .creating-state strong{ display:block; color:#fff; font-size:15px; }
+    .creating-state span{ display:block; margin-top:5px; color:rgba(255,255,255,.56); font-size:12px; }
+    .creating-dots{
+      display:inline-flex;
+      gap:4px;
+      margin-top:12px;
+    }
+    .creating-dots i{
+      width:6px;
+      height:6px;
+      border-radius:999px;
+      background:#d9ff5d;
+      animation:creatingDot 1s ease-in-out infinite;
+    }
+    .creating-dots i:nth-child(2){ animation-delay:.15s; }
+    .creating-dots i:nth-child(3){ animation-delay:.3s; }
+    @keyframes creatingPulse{
+      0%,100%{ transform:scale(1); filter:saturate(1); }
+      50%{ transform:scale(1.06); filter:saturate(1.35); }
+    }
+    @keyframes creatingSpin{ to{ transform:rotate(360deg); } }
+    @keyframes creatingDot{
+      0%,100%{ transform:translateY(0); opacity:.35; }
+      50%{ transform:translateY(-5px); opacity:1; }
+    }
+    #previewOverlay{
+      position:fixed;
+      inset:0;
+      z-index:2147483647;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      background:rgba(0,0,0,.85);
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
+    }
+    #previewOverlay.show{ display:flex; }
+    body.preview-open #sharedHeader,
+    body.preview-open #sharedHeader *,
+    body.preview-open header,
+    body.preview-open header *,
+    body.preview-open .site-header,
+    body.preview-open .site-header *,
+    body:has(#previewOverlay.show) #sharedHeader,
+    body:has(#previewOverlay.show) #sharedHeader *,
+    body:has(#previewOverlay.show) header,
+    body:has(#previewOverlay.show) header *,
+    body:has(#previewOverlay.show) .site-header,
+    body:has(#previewOverlay.show) .site-header *{
+      z-index:0 !important;
+      visibility:hidden !important;
+      pointer-events:none !important;
+    }
+    #previewOverlay .preview-card{
+      width:min(920px,100%);
+      max-height:min(88vh,900px);
+      border-radius:22px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(2,6,23,.88);
+      box-shadow:0 30px 90px rgba(0,0,0,.75);
+      overflow:hidden;
+      position:relative;
+    }
+    #previewOverlay .preview-close{
+      position:absolute;
+      top:12px;
+      right:12px;
+      width:40px;
+      height:40px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(0,0,0,.45);
+      color:rgba(255,255,255,.9);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:22px;
+      line-height:1;
+      cursor:pointer;
+      z-index:5;
+    }
+    #previewOverlay .preview-media{
+      width:100%;
+      height:100%;
+      max-height:min(88vh,900px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.35);
+    }
+    #previewOverlay video{
+      max-width:100%;
+      max-height:min(88vh,900px);
+      object-fit:contain;
+    }
+    .result{ margin-top:16px; padding:16px; border:1px solid rgba(255,255,255,.08); border-radius:18px; background:rgba(255,255,255,.035); }
+    .result.hidden{ display:none; }
+    .result h2{ margin:0 0 8px; font-size:16px; }
+    .result p{ margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
+    .result a{ color:#a5f3fc; font-weight:800; text-decoration:none; }
+    .prompt-preview{
+      margin-top:14px;
+      padding:14px;
+      border-radius:16px;
+      background:#090b13;
+      border:1px solid rgba(255,255,255,.08);
+      color:rgba(255,255,255,.66);
+      font-size:12px;
+      line-height:1.45;
+      max-height:150px;
+      overflow:auto;
+    }
+    @media (max-width:920px){
+      html,
+      body{
+        width:100%;
+        max-width:100%;
+        overflow-x:hidden;
+      }
+      main{
+        width:100%;
+        max-width:100%;
+        padding:14px 10px 24px;
+        overflow-x:hidden;
+      }
+      .page-shell{
+        width:100%;
+        max-width:100%;
+        min-width:0;
+        grid-template-columns:minmax(0,1fr);
+        gap:14px;
+        overflow:hidden;
+      }
+      .panel,
+      .composer,
+      .workspace,
+      .workspace-body,
+      .panel-pad,
+      .section,
+      .field,
+      .mention-wrap,
+      .dropzone,
+      .prompt-editor,
+      .seg,
+      .pill-row{
+        width:100%;
+        max-width:100%;
+        min-width:0;
+      }
+      .composer{
+        position:static;
+        max-height:none;
+        overflow:visible;
+        overscroll-behavior:auto;
+      }
+      .panel{ border-radius:20px; }
+      .panel-pad{ padding:14px; }
+      .title{
+        font-size:27px;
+        line-height:1.08;
+        overflow-wrap:anywhere;
+      }
+      .sub{
+        font-size:12px;
+        line-height:1.45;
+        overflow-wrap:anywhere;
+      }
+      .section{ padding:12px; border-radius:16px; }
+      .section-head,
+      .label{
+        min-width:0;
+      }
+      .section-head > *,
+      .label > *{
+        min-width:0;
+      }
+      .dropzone{
+        min-height:150px;
+        padding:14px;
+      }
+      .dropzone small,
+      .dropzone strong{
+        overflow-wrap:anywhere;
+      }
+      .seg,
+      .pill-row{
+        gap:8px;
+      }
+      .seg button,
+      .pill-row button{
+        min-width:0;
+        width:100%;
+        padding:0 8px;
+        white-space:normal;
+        overflow-wrap:anywhere;
+        line-height:1.15;
+      }
+      .seg button{
+        font-size:11px;
+      }
+      .prompt-editor{
+        min-height:112px;
+        overflow-wrap:anywhere;
+      }
+      .workspace{
+        min-height:0;
+        border-radius:20px;
+      }
+      .workspace-body{
+        min-height:0;
+        padding:14px 14px 2px;
+        border-radius:20px;
+      }
+      .before-after-grid{ grid-template-columns:minmax(0,1fr); }
+      .ba-card,
+      .empty-results{
+        min-width:0;
+      }
+      .results-list{
+        width:100%;
+        max-width:100%;
+        min-width:0;
+        flex-wrap:nowrap;
+        overflow-x:auto;
+        overflow-y:hidden;
+        padding-bottom:0;
+      }
+      .result-card{
+        flex:0 0 min(260px, calc(100vw - 48px));
+        width:min(260px, calc(100vw - 48px));
+      }
+      .sample-head{ align-items:flex-start; flex-direction:column; }
+    }
+  </style>
+</head>
+<body>
+  <div id="sharedHeader"></div>
+  <main>
+    <div class="page-shell">
+      <section class="panel composer">
+        <div class="panel-pad">
+          <h1 class="title">Kid Cartoon Studio</h1>
+          <p class="sub">Վերբեռնեք երեխայի լուսանկարները, կարճ նկարագրեք տեսարանը և գեներացրեք կերպարի արտաքին տեսքը պահպանող 3D անիմացիոն տեսանյութ։</p>
+
+          <div class="section">
+            <div class="section-head"><label for="kidImages">Երեխայի լուսանկարներ</label><span class="hint">Առավելագույնը՝ 4</span></div>
+            <input id="kidImages" type="file" accept="image/*" multiple hidden />
+            <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="Վերբեռնել երեխայի լուսանկարներ">
+              <div id="uploadEmpty" class="upload-empty">
+                <span class="drop-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M5 20h14"></path></svg>
+                </span>
+                <strong>Վերբեռնեք երեխայի<br>լուսանկարները</strong>
+                <small>Յուրաքանչյուր երեխայի համար օգտագործեք դեմքի հստակ լուսանկարներ։</small>
+              </div>
+              <div id="imageThumbs" class="upload-grid" hidden></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label"><span>Կերպարի ոճ</span></div>
+            <div class="seg" id="styleSeg">
+              <button type="button" data-style="realistic" class="active">Իրատեսական</button>
+              <button type="button" data-style="cartoon">Մուլտֆիլմային</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label"><span>Տեսարանի կարճ նկարագրություն</span><span class="hint">Հակիրճ</span></div>
+            <div class="mention-wrap">
+              <div id="promptEditor" class="prompt-editor" contenteditable="true" data-placeholder="երեխան կերակրում է ընկերասեր կենդանիներին կախարդական այգում"></div>
+              <div id="imageMentionMenu" class="mention-menu hidden"></div>
+            </div>
+            <textarea id="prompt" class="prompt-hidden" maxlength="500" aria-hidden="true"></textarea>
+          </div>
+
+          <div class="field">
+            <div class="label"><span>Չափս</span></div>
+            <div class="pill-row" id="aspectRow">
+              <button type="button" data-aspect="16:9" class="active">16:9</button>
+              <button type="button" data-aspect="9:16">9:16</button>
+              <button type="button" data-aspect="1:1">1:1</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label"><span>Որակ</span></div>
+            <div class="pill-row res" id="resolutionRow">
+              <button type="button" data-resolution="720p" class="active">720p</button>
+              <button type="button" data-resolution="1080p">1080p</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label"><span>Տևողություն</span><span id="durationLabel" class="hint">6 վրկ</span></div>
+            <input id="duration" type="range" min="4" max="15" step="1" value="6" style="width:100%;" />
+          </div>
+
+          <p id="status" class="status run-status"></p>
+          <button id="runBtn" class="run" type="button">Գեներացնել 15 ⚡</button>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <div class="workspace-body">
+          <div class="workspace-title">
+            <strong>Վերջին գեներացումները</strong>
+            <a class="see-all-link" href="./usage.html">ԴԻՏԵԼ ԲՈԼՈՐԸ</a>
+          </div>
+          <div class="empty-results">
+            <div class="sample-head">
+              <div>
+                <h2>Մինչև և հետո</h2>
+                <p>Նոր օգտատերերը կարող են տեսնել օրինակը՝ մինչև իրենց առաջին գեներացված տեսանյութը հայտնվի պատմության մեջ։</p>
+              </div>
+              <span class="sample-badge">Օրինակ</span>
+            </div>
+            <div class="before-after-grid" aria-label="Մինչև և հետո օրինակ">
+              <article class="ba-card">
+                <div class="ba-media ba-before">
+                  <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%2025,%202026,%2004_09_47%20PM.png" alt="Երեխայի լուսանկարի նախնական օրինակ" loading="lazy" />
+                </div>
+                <div class="ba-footer">
+                  <div>
+                    <strong>Մինչև</strong>
+                    <span>Վերբեռնված երեխայի լուսանկարը։</span>
+                  </div>
+                  <span class="ba-label">IMAGE</span>
+                </div>
+              </article>
+              <article class="ba-card">
+                <div class="ba-media ba-after">
+                  <video
+                    class="sample-after-video"
+                    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/kid-cartoon-1782389233676.mp4"
+                    muted
+                    autoplay
+                    playsinline
+                    loop
+                    preload="auto"
+                    disablepictureinpicture
+                    disableremoteplayback
+                    poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%2025,%202026,%2004_09_47%20PM.png"
+                    aria-label="Երեխայի անիմացիոն օրինակը"
+                  ></video>
+                </div>
+                <div class="ba-footer">
+                  <div>
+                    <strong>Հետո</strong>
+                    <span>Անիմացիոն արդյունք՝ կերպարի արտաքին տեսքի պահպանմամբ։</span>
+                  </div>
+                  <span class="ba-label after">VIDEO</span>
+                </div>
+              </article>
+            </div>
+          </div>
+          <div id="resultsList" class="results-list hidden"></div>
+          <div id="result" class="result hidden">
+            <h2>Հարցումն ուղարկված է</h2>
+            <p id="resultText"></p>
+            <div id="promptPreview" class="prompt-preview"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const sb = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__HANSORA_SB__ = sb;
+
+    let files = [];
+    let styleMode = 'realistic';
+    let aspectRatio = '16:9';
+    let resolution = '720p';
+    const maxFiles = 4;
+    let fileIdSeed = 0;
+    let activeMentionChip = null;
+
+    const els = {
+      input: document.getElementById('kidImages'),
+      drop: document.getElementById('dropzone'),
+      uploadEmpty: document.getElementById('uploadEmpty'),
+      imageThumbs: document.getElementById('imageThumbs'),
+      prompt: document.getElementById('prompt'),
+      editor: document.getElementById('promptEditor'),
+      mentionMenu: document.getElementById('imageMentionMenu'),
+      duration: document.getElementById('duration'),
+      durationLabel: document.getElementById('durationLabel'),
+      run: document.getElementById('runBtn'),
+      status: document.getElementById('status'),
+      emptyResults: document.querySelector('.empty-results'),
+      resultsList: document.getElementById('resultsList'),
+      result: document.getElementById('result'),
+      resultText: document.getElementById('resultText'),
+      promptPreview: document.getElementById('promptPreview'),
+    };
+    const activePolls = new Map();
+
+    function parseCredits(value) {
+      const n = Number(String(value ?? '').replace(/[^\d.-]/g, ''));
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function currentCost() {
+      const seconds = Math.max(4, Math.min(15, Number(els.duration.value || 6)));
+      const rate = resolution === '1080p' ? 5.5 : 2.5;
+      return Number((seconds * rate).toFixed(1));
+    }
+
+    function setStatus(message, type) {
+      els.status.textContent = message || '';
+      els.status.className = 'status' + (type ? ' ' + type : '');
+      els.status.classList.add('run-status');
+    }
+
+    function updateRunLabel() {
+      els.durationLabel.textContent = `${els.duration.value} վրկ`;
+      const cost = currentCost();
+      els.run.textContent = `Գեներացնել ${Number.isInteger(cost) ? cost : cost.toFixed(1)} ⚡`;
+    }
+
+    function renderImageThumbs() {
+      els.imageThumbs.innerHTML = '';
+      els.uploadEmpty.hidden = files.length > 0;
+      els.imageThumbs.hidden = files.length === 0;
+      els.drop.classList.toggle('has-file', files.length > 0);
+
+      files.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'upload-thumb';
+        const img = document.createElement('img');
+        img.src = item.url;
+        img.alt = `Երեխայի լուսանկար ${index + 1}`;
+        const remove = document.createElement('button');
+        remove.className = 'remove-image';
+        remove.type = 'button';
+        remove.textContent = '×';
+        remove.setAttribute('aria-label', `Հեռացնել պատկերը ${index + 1}`);
+        remove.addEventListener('click', (event) => {
+          event.stopPropagation();
+          removeKidFile(index);
+        });
+        card.appendChild(img);
+        card.appendChild(remove);
+        els.imageThumbs.appendChild(card);
+      });
+
+      if (files.length > 0 && files.length < maxFiles) {
+        const addTile = document.createElement('button');
+        addTile.className = 'add-image-tile';
+        addTile.type = 'button';
+        addTile.innerHTML = '<div><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M5 20h14"></path></svg></span><small>Ավելացնել պատկեր</small></div>';
+        addTile.addEventListener('click', (event) => {
+          event.stopPropagation();
+          els.input.click();
+        });
+        els.imageThumbs.appendChild(addTile);
+      }
+    }
+
+    function addFiles(list) {
+      const incoming = Array.from(list || []).filter((file) => String(file.type || '').startsWith('image/'));
+      incoming.slice(0, Math.max(0, maxFiles - files.length)).forEach((file) => {
+        files.push({
+          id: `kid-image-${Date.now()}-${fileIdSeed++}`,
+          file,
+          url: URL.createObjectURL(file)
+        });
+      });
+      renderImageThumbs();
+      normalizeMentionChips();
+      maybeShowMentionMenu();
+    }
+
+    function removeKidFile(index) {
+      const removed = files.splice(index, 1)[0];
+      if (removed && removed.url) URL.revokeObjectURL(removed.url);
+      renderImageThumbs();
+      normalizeMentionChips();
+      hideMentionMenu();
+      syncPromptFromEditor();
+    }
+
+    function getFileIndexById(id) {
+      return files.findIndex((item) => item.id === id);
+    }
+
+    function makeMentionChip(item) {
+      const index = getFileIndexById(item.id);
+      const chip = document.createElement('span');
+      chip.className = 'mention-chip';
+      chip.contentEditable = 'false';
+      chip.dataset.imageId = item.id;
+
+      const img = document.createElement('img');
+      img.src = item.url;
+      img.alt = '';
+      const label = document.createElement('span');
+      label.textContent = `@Image ${index + 1}`;
+      chip.appendChild(img);
+      chip.appendChild(label);
+      return chip;
+    }
+
+    function normalizeMentionChips() {
+      [...els.editor.querySelectorAll('.mention-chip')].forEach((chip) => {
+        const index = getFileIndexById(chip.dataset.imageId);
+        if (index < 0) {
+          chip.replaceWith(document.createTextNode('@image'));
+          return;
+        }
+        const item = files[index];
+        const img = chip.querySelector('img');
+        const label = chip.querySelector('span');
+        if (img) img.src = item.url;
+        if (label) label.textContent = `@Image ${index + 1}`;
+      });
+      syncPromptFromEditor();
+    }
+
+    function syncPromptFromEditor() {
+      els.prompt.value = (els.editor.innerText || '').replace(/\u00a0/g, ' ').trim();
+      return els.prompt.value;
+    }
+
+    function setCaretAfter(node) {
+      const range = document.createRange();
+      range.setStartAfter(node);
+      range.collapse(true);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    function getCaretTextBeforeEditor() {
+      const sel = window.getSelection();
+      if (!sel.rangeCount || !els.editor.contains(sel.anchorNode)) return '';
+      const range = sel.getRangeAt(0).cloneRange();
+      const pre = range.cloneRange();
+      pre.selectNodeContents(els.editor);
+      pre.setEnd(range.endContainer, range.endOffset);
+      return pre.toString();
+    }
+
+    function findTextPosition(root, targetOffset) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let count = 0;
+      let node = walker.nextNode();
+      while (node) {
+        const next = count + node.textContent.length;
+        if (targetOffset <= next) return { node, offset: Math.max(0, targetOffset - count) };
+        count = next;
+        node = walker.nextNode();
+      }
+      return { node: root, offset: root.childNodes.length };
+    }
+
+    function createTextRange(root, start, end) {
+      const range = document.createRange();
+      const startPos = findTextPosition(root, start);
+      const endPos = findTextPosition(root, end);
+      range.setStart(startPos.node, startPos.offset);
+      range.setEnd(endPos.node, endPos.offset);
+      return range;
+    }
+
+    function getMentionTrigger() {
+      const before = getCaretTextBeforeEditor();
+      const match = before.match(/(^|\s)@(image)?$/i);
+      if (!match) return null;
+      return {
+        start: before.length - match[0].length + (match[1] ? match[1].length : 0),
+        end: before.length
+      };
+    }
+
+    function renderMentionMenu() {
+      els.mentionMenu.innerHTML = '';
+      files.forEach((item, index) => {
+        const option = document.createElement('button');
+        option.className = 'mention-item';
+        option.type = 'button';
+        option.dataset.imageId = item.id;
+        option.innerHTML = `<img src="${item.url}" alt=""><span>Image ${index + 1}</span>`;
+        els.mentionMenu.appendChild(option);
+      });
+    }
+
+    function showMentionMenu() {
+      if (!files.length) {
+        hideMentionMenu();
+        return;
+      }
+      renderMentionMenu();
+      els.mentionMenu.classList.remove('hidden');
+    }
+
+    function hideMentionMenu() {
+      els.mentionMenu.classList.add('hidden');
+      if (!els.mentionMenu.contains(document.activeElement)) activeMentionChip = null;
+    }
+
+    function maybeShowMentionMenu() {
+      if (!files.length) {
+        hideMentionMenu();
+        return;
+      }
+      if (activeMentionChip || getMentionTrigger()) showMentionMenu();
+      else hideMentionMenu();
+    }
+
+    function chooseMention(item) {
+      if (activeMentionChip && els.editor.contains(activeMentionChip)) {
+        const replacement = makeMentionChip(item);
+        activeMentionChip.replaceWith(replacement);
+        setCaretAfter(replacement);
+      } else {
+        const trigger = getMentionTrigger();
+        if (!trigger) return;
+        const range = createTextRange(els.editor, trigger.start, trigger.end);
+        range.deleteContents();
+        const chip = makeMentionChip(item);
+        range.insertNode(chip);
+        const space = document.createTextNode(' ');
+        const after = document.createRange();
+        after.setStartAfter(chip);
+        after.collapse(true);
+        after.insertNode(space);
+        setCaretAfter(space);
+      }
+      activeMentionChip = null;
+      hideMentionMenu();
+      syncPromptFromEditor();
+    }
+
+    function selectButton(containerId, attr, value, setter) {
+      document.getElementById(containerId).addEventListener('click', (event) => {
+        const btn = event.target.closest('button[' + attr + ']');
+        if (!btn) return;
+        [...btn.parentElement.children].forEach((node) => node.classList.remove('active'));
+        btn.classList.add('active');
+        setter(btn.getAttribute(attr));
+        updateRunLabel();
+      });
+      value();
+    }
+
+    function withTimeout(promise, ms, fallback) {
+      let timer;
+      return Promise.race([
+        promise,
+        new Promise((resolve) => {
+          timer = setTimeout(() => resolve(fallback), ms);
+        })
+      ]).finally(() => clearTimeout(timer));
+    }
+
+    function readStoredAuth() {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i) || '';
+          if (!/^sb-.*-auth-token$/.test(key)) continue;
+          const parsed = JSON.parse(localStorage.getItem(key) || '{}');
+          const session = Array.isArray(parsed) ? parsed[0] : parsed;
+          const token = session && (session.access_token || session.currentSession && session.currentSession.access_token);
+          const user = session && (session.user || session.currentSession && session.currentSession.user);
+          if (token && user && user.id) return { user, token };
+        }
+      } catch (error) {
+        console.warn('Stored auth read failed', error);
+      }
+      return { user: null, token: '' };
+    }
+
+    async function getUserAndToken() {
+      const stored = readStoredAuth();
+      if (stored.user && stored.token) return stored;
+
+      const headerUser = window.HansoraHeader && typeof window.HansoraHeader.getCurrentUser === 'function'
+        ? window.HansoraHeader.getCurrentUser()
+        : null;
+      const sessionData = await withTimeout(sb.auth.getSession(), 2500, { data: { session: null }, error: 'timeout' });
+      const session = sessionData && sessionData.data ? sessionData.data.session : null;
+      if (session && session.access_token && session.user) return { user: session.user, token: session.access_token };
+      if (headerUser && headerUser.id && session && session.access_token) return { user: headerUser, token: session.access_token };
+
+      const userData = await withTimeout(sb.auth.getUser(), 2500, { data: { user: null }, error: 'timeout' });
+      const user = userData && userData.data && userData.data.user ? userData.data.user : headerUser;
+      return { user: user || null, token: session && session.access_token ? session.access_token : '' };
+    }
+
+    function resultStatus(row) {
+      const metaStatus = row && row.meta && row.meta.status ? String(row.meta.status) : '';
+      if (row && row.result_url) return 'ready';
+      if (/fail|error|cancel|reject/i.test(metaStatus)) return 'failed';
+      return metaStatus || 'processing';
+    }
+
+    function resultUrlFromPayload(payload) {
+      if (!payload || typeof payload !== 'object') return '';
+      const direct = payload.video_url || payload.result_url || payload.image_url;
+      if (typeof direct === 'string' && /^https?:\/\//i.test(direct)) return direct;
+      const pools = [payload.urls, payload.images, payload.result_urls, payload.results];
+      for (const pool of pools) {
+        if (!Array.isArray(pool)) continue;
+        const url = pool.find((item) => typeof item === 'string' && /^https?:\/\//i.test(item));
+        if (url) return url;
+      }
+      return '';
+    }
+
+    async function downloadAsset(url, kind = 'video', provider = 'kid-cartoon') {
+      if (!url) return;
+      const cleanProvider = String(provider || 'kid-cartoon').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'kid-cartoon';
+      const fallbackExt = String(kind).toLowerCase() === 'video' ? 'mp4' : 'png';
+      const urlExt = (String(url).split('?')[0].match(/\.([a-z0-9]{2,5})$/i) || [])[1];
+      const filename = `${cleanProvider}-${Date.now()}.${urlExt || fallbackExt}`;
+      try {
+        const response = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-store' });
+        if (!response.ok) throw new Error('download_fetch_failed');
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 2500);
+      } catch (error) {
+        window.open(url, '_blank', 'noopener');
+      }
+    }
+
+    function bindResultPreview(card, media, url) {
+      if (!card || !url) return;
+      card.dataset.previewUrl = url;
+      if (media) media.dataset.previewUrl = url;
+      let hit = media ? media.querySelector('.result-preview-hit') : null;
+      if (media && !hit) {
+        hit = document.createElement('div');
+        hit.className = 'result-preview-hit';
+        hit.setAttribute('aria-label', 'Բացել նախադիտումը');
+        media.appendChild(hit);
+      }
+      if (card.dataset.previewBound === '1') return;
+      card.dataset.previewBound = '1';
+      const open = (event) => {
+        if (event && event.target && event.target.closest('.result-get, .result-actions, a, button')) return;
+        const previewUrl = card.dataset.previewUrl || (media && media.dataset.previewUrl) || '';
+        if (!previewUrl || !window.openPreview) return;
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        window.openPreview(previewUrl);
+      };
+      card.addEventListener('click', open);
+      if (media) {
+        media.addEventListener('click', open);
+        hit.addEventListener('click', open);
+      }
+    }
+
+    (function initPreviewOverlay(){
+      let overlay = document.getElementById('previewOverlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'previewOverlay';
+        document.body.appendChild(overlay);
+      }
+      overlay.innerHTML = [
+        '<div class="preview-card">',
+        '<button type="button" class="preview-close" aria-label="Փակել նախադիտումը">&times;</button>',
+        '<div class="preview-media" id="previewMedia"></div>',
+        '</div>'
+      ].join('');
+      const mediaHost = overlay.querySelector('#previewMedia');
+      const closeBtn = overlay.querySelector('.preview-close');
+
+      function closePreview() {
+        overlay.classList.remove('show');
+        document.body.classList.remove('preview-open');
+        document.body.style.overflow = '';
+        mediaHost.innerHTML = '';
+      }
+
+      function openPreview(url) {
+        if (!url) return;
+        mediaHost.innerHTML = '';
+        const video = document.createElement('video');
+        video.src = url;
+        video.controls = true;
+        video.playsInline = true;
+        video.autoplay = true;
+        video.muted = false;
+        mediaHost.appendChild(video);
+        document.body.classList.add('preview-open');
+        overlay.classList.add('show');
+        document.body.style.overflow = 'hidden';
+      }
+
+      window.openPreview = openPreview;
+      window.closePreview = closePreview;
+      closeBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        closePreview();
+      });
+      overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) closePreview();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && overlay.classList.contains('show')) closePreview();
+      });
+    })();
+
+    function usesMobileResultThumb() {
+      return !!(window.matchMedia && window.matchMedia('(max-width:900px)').matches);
+    }
+
+    function applyResultCard(card, data) {
+      const status = String(data.status || '').toLowerCase();
+      const url = data.result_url || '';
+      const ready = !!url;
+      const failed = !ready && /fail|error|cancel|reject/i.test(status);
+      const mobileThumb = usesMobileResultThumb();
+      const chip = card.querySelector('.result-chip');
+      const media = card.querySelector('.result-media');
+      const statusText = card.querySelector('.result-status-text');
+      const actions = card.querySelector('.result-actions');
+      const kindText = card.querySelector('.result-kind');
+      const promptText = card.querySelector('.result-prompt');
+      chip.className = 'result-chip' + (ready ? ' ready' : failed ? ' failed' : '');
+      chip.textContent = ready && mobileThumb ? 'VIDEO' : ready ? 'Պատրաստ է' : failed ? 'Սխալ' : 'Մշակվում է';
+      statusText.textContent = ready ? 'Պատրաստ է' : failed ? 'Սխալ' : 'Մշակվում է';
+      if (kindText) kindText.textContent = 'VIDEO';
+      if (promptText && data.prompt) promptText.textContent = data.prompt;
+      if (ready) {
+        media.dataset.state = 'ready';
+        let video = media.querySelector('video');
+        if (!video || video.dataset.resultUrl !== url) {
+          media.innerHTML = '';
+          video = document.createElement('video');
+          video.controls = !mobileThumb;
+          video.muted = true;
+          video.playsInline = true;
+          video.loop = mobileThumb;
+          video.autoplay = mobileThumb;
+          video.preload = 'metadata';
+          video.dataset.resultUrl = url;
+          video.src = url;
+          video.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (window.openPreview) window.openPreview(video.dataset.resultUrl || video.src || '');
+          });
+          media.appendChild(video);
+        }
+        bindResultPreview(card, media, url);
+        let getBtn = actions.querySelector('.result-get');
+        if (!getBtn) {
+          actions.innerHTML = '';
+          getBtn = document.createElement('button');
+          getBtn.type = 'button';
+          getBtn.className = 'result-get';
+          getBtn.textContent = 'Ներբեռնել';
+          getBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            downloadAsset(getBtn.dataset.downloadUrl || '', 'video', 'kid-cartoon');
+          });
+          actions.appendChild(getBtn);
+        }
+        getBtn.textContent = 'Ներբեռնել';
+        getBtn.dataset.downloadUrl = url;
+      } else {
+        actions.innerHTML = '';
+        if (media.dataset.state === (failed ? 'failed' : 'processing')) return;
+        media.dataset.state = failed ? 'failed' : 'processing';
+        if (failed) {
+          media.textContent = 'Տեսանյութը չի գեներացվել';
+        } else {
+          media.innerHTML = [
+            '<div class="creating-state">',
+            '<div>',
+            '<div class="creating-icon" aria-hidden="true"></div>',
+            '<strong>Տեսանյութը գեներացվում է</strong>',
+            '<span>Մշակվում է ձեր մուլտֆիլմային պատմությունը</span>',
+            '<div class="creating-dots"><i></i><i></i><i></i></div>',
+            '</div>',
+            '</div>'
+          ].join('');
+        }
+      }
+    }
+
+    function createResultCard(row) {
+      const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
+      const card = document.createElement('article');
+      card.className = 'result-card';
+      card.dataset.runId = meta.run_id || '';
+      card.dataset.rowId = row.id || '';
+      card.dataset.taskId = meta.task_id || meta.taskId || '';
+      const prompt = row.prompt || 'Գեներացնել որակյալ կինեմատոգրաֆիկ 3D անիմացիոն տեսանյութ';
+      card.innerHTML = [
+        '<div class="result-chip">Մշակվում է</div>',
+        '<div class="result-media"></div>',
+        '<div class="result-info">',
+        '<div class="result-top-row">',
+        '<strong class="result-name">Kid Cartoon Studio</strong>',
+        '<span class="result-kind">VIDEO</span>',
+        '</div>',
+        '<p class="result-prompt"></p>',
+        '<div class="result-bottom-row">',
+        '<span class="result-status-text">Մշակվում է</span>',
+        '<div class="result-actions"></div>',
+        '</div>',
+        '</div>'
+      ].join('');
+      const promptEl = card.querySelector('.result-prompt');
+      if (promptEl) promptEl.textContent = prompt;
+      applyResultCard(card, { status: resultStatus(row), result_url: row.result_url || '', prompt });
+      return card;
+    }
+
+    function showProcessingCard({ userId, runId, taskId }) {
+      els.emptyResults.classList.add('hidden');
+      els.resultsList.classList.remove('hidden');
+      const existing = runId ? els.resultsList.querySelector(`[data-run-id="${CSS.escape(runId)}"]`) : null;
+      const card = existing || createResultCard({
+        result_url: null,
+        meta: { run_id: runId, task_id: taskId, status: 'processing' }
+      });
+      if (!existing) els.resultsList.prepend(card);
+      applyResultCard(card, { status: 'processing', result_url: '' });
+      if (userId && runId && taskId) startKidPoll({ userId, runId, taskId, card });
+      return card;
+    }
+
+    async function checkKidResult(params) {
+      const qs = new URLSearchParams();
+      if (params.taskId) qs.set('taskId', params.taskId);
+      if (params.uid) qs.set('uid', params.uid);
+      if (params.runId) qs.set('run_id', params.runId);
+      const res = await fetch('/.netlify/functions/kid-cartoon-check?' + qs.toString(), {
+        method: 'GET',
+        cache: 'no-store',
+        headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' }
+      });
+      return res.json().catch(() => ({}));
+    }
+
+    function isKidCartoonRow(row) {
+      const provider = String(row && row.provider || '').toLowerCase();
+      const engine = String(row && row.meta && row.meta.engine || '').toLowerCase();
+      const model = String(row && row.meta && row.meta.model || '').toLowerCase();
+      const source = String(row && row.meta && row.meta.source || '').toLowerCase();
+      return provider.includes('kid cartoon')
+        || engine.includes('kid-cartoon')
+        || source.includes('kid-cartoon')
+        || (model.includes('seedance-2') && engine.includes('kid'));
+    }
+
+    async function fetchGenerationRows(userId, token) {
+      if (token) {
+        const params = new URLSearchParams({
+          user_id: `eq.${userId}`,
+          select: 'id,provider,kind,prompt,result_url,meta,created_at',
+          order: 'created_at.desc',
+          limit: '100'
+        });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/user_generations?${params.toString()}`, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+            'Cache-Control': 'no-cache'
+          }
+        });
+        const rows = await res.json().catch(() => []);
+        if (!res.ok) throw new Error(Array.isArray(rows) ? 'history_read_failed' : (rows.message || rows.error || 'history_read_failed'));
+        return Array.isArray(rows) ? rows : [];
+      }
+
+      const { data, error } = await sb
+        .from('user_generations')
+        .select('id,provider,kind,prompt,result_url,meta,created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return Array.isArray(data) ? data : [];
+    }
+
+    async function loadRecentGenerations(userOverride) {
+      const auth = await getUserAndToken();
+      const user = userOverride || auth.user;
+      if (!user) {
+        if (!els.resultsList.children.length) {
+          els.emptyResults.classList.remove('hidden');
+          els.resultsList.classList.add('hidden');
+          els.resultsList.innerHTML = '';
+        }
+        return;
+      }
+      let allRows = [];
+      try {
+        allRows = await fetchGenerationRows(user.id, auth.token || '');
+      } catch (error) {
+        console.warn('Kid Cartoon history read failed', error);
+      }
+      const rows = allRows.filter(isKidCartoonRow).slice(0, 9);
+      if (!rows.length) {
+        if (els.resultsList.children.length) {
+          els.emptyResults.classList.add('hidden');
+          els.resultsList.classList.remove('hidden');
+          return;
+        }
+        els.emptyResults.classList.remove('hidden');
+        els.resultsList.classList.add('hidden');
+        els.resultsList.innerHTML = '';
+        return;
+      }
+      els.emptyResults.classList.add('hidden');
+      els.resultsList.classList.remove('hidden');
+      const seenKeys = new Set();
+      rows.forEach((row) => {
+        const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
+        const runId = meta.run_id || '';
+        const taskId = meta.task_id || meta.taskId || '';
+        const key = runId || row.id || '';
+        let card = key ? els.resultsList.querySelector(`[data-run-id="${CSS.escape(key)}"], [data-row-id="${CSS.escape(key)}"]`) : null;
+        if (!card) {
+          card = createResultCard(row);
+          els.resultsList.appendChild(card);
+        } else {
+          applyResultCard(card, { status: resultStatus(row), result_url: row.result_url || '' });
+        }
+        if (key) seenKeys.add(key);
+        const status = resultStatus(row).toLowerCase();
+        if (!row.result_url && runId && taskId && !/fail|error|cancel|reject/i.test(status)) {
+          startKidPoll({ userId: user.id, runId, taskId, card });
+        }
+      });
+      [...els.resultsList.querySelectorAll('.result-card')].forEach((card) => {
+        const key = card.dataset.runId || card.dataset.rowId || '';
+        if (key && !seenKeys.has(key)) card.remove();
+      });
+    }
+
+    async function startKidPoll({ userId, runId, taskId, card }) {
+      if (!userId || !runId || !taskId || activePolls.has(runId)) return;
+      const token = { cancelled: false };
+      activePolls.set(runId, token);
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      try {
+        for (let attempt = 0; attempt < 220; attempt++) {
+          if (token.cancelled) return;
+          if (document.visibilityState !== 'hidden') {
+            try {
+              const checked = await checkKidResult({ uid: userId, runId, taskId });
+              const checkStatus = String(checked.status || '').toLowerCase();
+              const checkedUrl = resultUrlFromPayload(checked);
+              if (checkedUrl) {
+                applyResultCard(card, { status: 'ready', result_url: checkedUrl });
+                setStatus('Մուլտֆիլմային տեսանյութը պատրաստ է։', 'good');
+                if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') {
+                  window.HansoraHeader.startCreditsPolling(15000, 1500);
+                }
+                return;
+              }
+              if (checked.failed || /fail|error|cancel|reject/i.test(checkStatus)) {
+                applyResultCard(card, { status: 'failed', result_url: '' });
+                setStatus(checked.error || 'Տեսանյութը չի գեներացվել։', 'bad');
+                return;
+              }
+            } catch (error) {}
+
+            const { data } = await sb
+              .from('user_generations')
+              .select('result_url,meta')
+              .eq('user_id', userId)
+              .eq('meta->>run_id', runId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (data) {
+              const status = data.meta && data.meta.status ? String(data.meta.status) : (data.result_url ? 'ready' : 'processing');
+              if (data.result_url) {
+                applyResultCard(card, { status: 'ready', result_url: data.result_url });
+                return;
+              }
+              if (/fail|error|cancel|reject/i.test(status)) {
+                applyResultCard(card, { status: 'failed', result_url: '' });
+                return;
+              }
+              applyResultCard(card, { status, result_url: '' });
+            }
+          }
+          await sleep(attempt < 8 ? 4000 : 8000);
+        }
+      } finally {
+        if (activePolls.get(runId) === token) activePolls.delete(runId);
+      }
+    }
+
+    async function uploadReferences() {
+      if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') {
+        throw new Error('Վերբեռնման ծառայությունն անհասանելի է։');
+      }
+      setStatus(`Վերբեռնվում է ${files.length} լուսանկար...`);
+      const urls = await Promise.all(files.map(async (item) => {
+        const uploaded = await window.kieUploadBridge.upload(item.file, { bucket: 'video' });
+        if (!uploaded || !uploaded.publicUrl) throw new Error('Չհաջողվեց ստանալ վերբեռնված ֆայլի հղումը։');
+        return uploaded.publicUrl;
+      }));
+      return urls;
+    }
+
+    async function run() {
+      try {
+        setStatus('Հարցումը պատրաստվում է...');
+        els.result.classList.add('hidden');
+        if (!files.length) {
+          setStatus('Նախ վերբեռնեք երեխայի առնվազն մեկ լուսանկար։', 'bad');
+          return;
+        }
+        const shortPrompt = syncPromptFromEditor();
+        if (!shortPrompt) {
+          setStatus('Նախ կարճ նկարագրեք տեսարանը։', 'bad');
+          return;
+        }
+        setStatus('Ստուգվում է մուտքը...');
+        const { user, token } = await getUserAndToken();
+        if (!user) {
+          setStatus('Նախ մուտք գործեք։', 'bad');
+          if (window.HansoraHeader && typeof window.HansoraHeader.openAuth === 'function') window.HansoraHeader.openAuth();
+          return;
+        }
+        if (!token) {
+          setStatus('Թարմացրեք էջը և կրկին մուտք գործեք։', 'bad');
+          return;
+        }
+        const cost = currentCost();
+        const currentCredits = window.HansoraHeader && typeof window.HansoraHeader.getCurrentCredits === 'function'
+          ? parseCredits(window.HansoraHeader.getCurrentCredits())
+          : 0;
+        if (currentCredits && currentCredits < cost) {
+          setStatus(`Կրեդիտները բավարար չեն։ Անհրաժեշտ է ${cost} կրեդիտ։`, 'bad');
+          return;
+        }
+        els.run.disabled = true;
+        const imageUrls = await uploadReferences();
+        const runId = `${user.id}-${Date.now()}`;
+        setStatus('Տեսանյութի գեներացման հարցումն ուղարկվում է...');
+        const res = await fetch('/.netlify/functions/run-kid-cartoon-seedance-2', {
+          method: 'POST',
+          headers: Object.assign(
+            { 'Content-Type': 'application/json', 'X-USER-ID': user.id },
+            token ? { Authorization: 'Bearer ' + token } : {}
+          ),
+          body: JSON.stringify({
+            uid: user.id,
+            run_id: runId,
+            prompt: shortPrompt,
+            style_mode: styleMode,
+            aspect_ratio: aspectRatio,
+            resolution,
+            duration: Number(els.duration.value || 6),
+            image_urls: imageUrls,
+            generate_audio: true
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          const details = typeof data.details === 'string' ? data.details : (data.error ? '' : JSON.stringify(data.details || data));
+          throw new Error(data.error || details || 'Հարցումը չի կատարվել։');
+        }
+        if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function' && data.credits !== undefined) {
+          window.HansoraHeader.setCredits(data.credits);
+        }
+        if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') {
+          window.HansoraHeader.startCreditsPolling(90000, 1500);
+        }
+        setStatus('Հարցումն ուղարկված է։ Ձեր մուլտֆիլմային տեսանյութը գեներացվում է։', 'good');
+        els.result.classList.add('hidden');
+        showProcessingCard({
+          userId: user.id,
+          runId: data.run_id || runId,
+          taskId: data.taskId || data.id || ''
+        });
+        setTimeout(() => loadRecentGenerations(), 1200);
+      } catch (error) {
+        setStatus(String(error && error.message || error), 'bad');
+        console.error('Kid Cartoon run failed', error);
+      } finally {
+        els.run.disabled = false;
+      }
+    }
+
+    els.input.addEventListener('change', (event) => {
+      addFiles(event.target.files);
+      els.input.value = '';
+    });
+    ['dragenter', 'dragover'].forEach((name) => els.drop.addEventListener(name, (event) => {
+      event.preventDefault();
+      els.drop.classList.add('drag-over');
+    }));
+    ['dragleave', 'drop'].forEach((name) => els.drop.addEventListener(name, (event) => {
+      event.preventDefault();
+      els.drop.classList.remove('drag-over');
+    }));
+    els.drop.addEventListener('drop', (event) => addFiles(event.dataTransfer.files));
+    els.drop.addEventListener('click', (event) => {
+      if (event.target.closest('.remove-image') || event.target.closest('.add-image-tile')) return;
+      els.input.click();
+    });
+    els.drop.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        els.input.click();
+      }
+    });
+    els.editor.addEventListener('input', () => {
+      syncPromptFromEditor();
+      maybeShowMentionMenu();
+    });
+    els.editor.addEventListener('keyup', maybeShowMentionMenu);
+    els.editor.addEventListener('click', (event) => {
+      const chip = event.target.closest('.mention-chip');
+      if (chip && files.length) {
+        activeMentionChip = chip;
+        showMentionMenu();
+        return;
+      }
+      activeMentionChip = null;
+      maybeShowMentionMenu();
+    });
+    els.editor.addEventListener('paste', (event) => {
+      event.preventDefault();
+      const text = (event.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
+    });
+    els.mentionMenu.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      const item = event.target.closest('.mention-item');
+      if (!item) return;
+      const image = files.find((file) => file.id === item.dataset.imageId);
+      if (image) chooseMention(image);
+    });
+    document.addEventListener('click', (event) => {
+      if (els.editor.contains(event.target) || els.mentionMenu.contains(event.target)) return;
+      hideMentionMenu();
+    });
+    document.getElementById('styleSeg').addEventListener('click', (event) => {
+      const btn = event.target.closest('button[data-style]');
+      if (!btn) return;
+      [...btn.parentElement.children].forEach((node) => node.classList.remove('active'));
+      btn.classList.add('active');
+      styleMode = btn.dataset.style;
+    });
+    selectButton('aspectRow', 'data-aspect', () => aspectRatio, (value) => { aspectRatio = value; });
+    selectButton('resolutionRow', 'data-resolution', () => resolution, (value) => { resolution = value; });
+    els.duration.addEventListener('input', updateRunLabel);
+    els.run.addEventListener('click', run);
+    if (sb.auth && typeof sb.auth.onAuthStateChange === 'function') {
+      sb.auth.onAuthStateChange(() => loadRecentGenerations());
+    }
+    function scheduleRecentGenerationLoads() {
+      [0, 700, 1800, 4000, 8000].forEach((delay) => {
+        setTimeout(() => loadRecentGenerations().catch((error) => console.warn('Kid Cartoon history load failed', error)), delay);
+      });
+    }
+    renderImageThumbs();
+    updateRunLabel();
+    scheduleRecentGenerationLoads();
+  </script>
+  <style id="kid-cartoon-result-fix-20260624">
+    .result-card{
+      flex:0 0 260px !important;
+      width:260px !important;
+      height:330px !important;
+      max-height:330px !important;
+      min-height:330px !important;
+      display:flex !important;
+      flex-direction:column !important;
+      overflow:hidden !important;
+    }
+    .result-media{
+      position:relative !important;
+      height:238px !important;
+      min-height:238px !important;
+      max-height:238px !important;
+      flex:0 0 238px !important;
+      overflow:hidden !important;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
+      background:#050812 !important;
+    }
+    .result-info{
+      height:92px !important;
+      min-height:92px !important;
+      max-height:92px !important;
+      padding:10px 10px !important;
+      display:flex !important;
+      flex-direction:column !important;
+      justify-content:space-between !important;
+      gap:3px !important;
+      overflow:hidden !important;
+    }
+    .result-prompt{
+      min-height:15px !important;
+      max-height:15px !important;
+      display:block !important;
+      white-space:nowrap !important;
+      overflow:hidden !important;
+      text-overflow:ellipsis !important;
+    }
+    .result-bottom-row{
+      min-height:34px !important;
+      flex:0 0 34px !important;
+    }
+    .result-actions{
+      margin-left:auto !important;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:flex-end !important;
+      gap:8px !important;
+    }
+    html[data-kid-cartoon-fix="20260625-0048"] .creating-icon,
+    .creating-icon{
+      width:48px !important;
+      height:48px !important;
+      border-radius:18px !important;
+      color:transparent !important;
+      font-size:0 !important;
+      line-height:0 !important;
+      text-indent:-9999px !important;
+      overflow:hidden !important;
+      background:linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8) !important;
+      box-shadow:0 0 30px rgba(139,92,246,.52) !important;
+      animation:creatingSpin 1.35s linear infinite !important;
+    }
+    .creating-icon::before,
+    .creating-icon::after{
+      content:none !important;
+      display:none !important;
+    }
+    .result-media video{
+      width:auto !important;
+      height:auto !important;
+      max-width:100% !important;
+      max-height:100% !important;
+      object-fit:contain !important;
+      background:#050812 !important;
+    }
+    .result-preview-hit{
+      position:absolute !important;
+      inset:0 !important;
+      z-index:1 !important;
+      background:transparent !important;
+      cursor:pointer !important;
+    }
+    @media (max-width:900px){
+      .workspace{
+        overflow:hidden !important;
+      }
+      .workspace-body{
+        overflow:hidden !important;
+        min-height:0 !important;
+        padding-bottom:10px !important;
+      }
+      .results-list{
+        display:flex !important;
+        flex-wrap:nowrap !important;
+        gap:12px !important;
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        overflow-x:auto !important;
+        overflow-y:hidden !important;
+        -webkit-overflow-scrolling:touch !important;
+        overscroll-behavior-x:contain !important;
+        scroll-snap-type:x mandatory !important;
+        scroll-padding-left:10px !important;
+        padding:10px 22% 0 10px !important;
+        margin-top:14px !important;
+        scrollbar-width:none !important;
+      }
+      .results-list::-webkit-scrollbar{ display:none !important; }
+      .result-card{
+        position:relative !important;
+        flex:0 0 78% !important;
+        width:auto !important;
+        min-width:0 !important;
+        max-width:none !important;
+        height:auto !important;
+        min-height:0 !important;
+        max-height:none !important;
+        aspect-ratio:2 / 3 !important;
+        display:block !important;
+        border-radius:18px !important;
+        overflow:hidden !important;
+        scroll-snap-align:start !important;
+        background:rgba(15,23,42,.55) !important;
+      }
+      .result-media{
+        position:absolute !important;
+        inset:0 !important;
+        width:100% !important;
+        height:100% !important;
+        min-height:0 !important;
+        max-height:none !important;
+        flex:none !important;
+        display:flex !important;
+        align-items:center !important;
+        justify-content:center !important;
+        background:rgba(2,6,23,.85) !important;
+      }
+      .result-media video{
+        width:100% !important;
+        height:100% !important;
+        max-width:none !important;
+        max-height:none !important;
+        object-fit:contain !important;
+        background:rgba(2,6,23,.85) !important;
+      }
+      .result-preview-hit{
+        z-index:1 !important;
+      }
+      .result-chip{
+        top:8px !important;
+        left:8px !important;
+        z-index:3 !important;
+        padding:4px 8px !important;
+        border-radius:999px !important;
+        border:1px solid rgba(255,255,255,.12) !important;
+        background:rgba(2,6,23,.70) !important;
+        color:rgba(255,255,255,.86) !important;
+        font-size:11px !important;
+        line-height:1.25 !important;
+        font-weight:800 !important;
+        backdrop-filter:blur(10px) !important;
+        -webkit-backdrop-filter:blur(10px) !important;
+      }
+      .result-chip.ready{
+        background:rgba(2,6,23,.70) !important;
+      }
+      .result-info{
+        position:absolute !important;
+        left:8px !important;
+        right:8px !important;
+        bottom:0 !important;
+        z-index:4 !important;
+        width:auto !important;
+        height:auto !important;
+        min-height:0 !important;
+        max-height:none !important;
+        padding:10px 12px !important;
+        border-radius:14px !important;
+        border:1px solid rgba(255,255,255,.10) !important;
+        background:rgba(2,6,23,.72) !important;
+        backdrop-filter:blur(10px) !important;
+        -webkit-backdrop-filter:blur(10px) !important;
+        display:flex !important;
+        flex-direction:column !important;
+        justify-content:stretch !important;
+        gap:4px !important;
+        overflow:hidden !important;
+      }
+      .result-top-row{
+        display:none !important;
+      }
+      .result-name{
+        font-size:11px !important;
+        font-weight:800 !important;
+        max-width:160px !important;
+      }
+      .result-kind{
+        display:none !important;
+      }
+      .result-prompt{
+        display:none !important;
+      }
+      .result-bottom-row{
+        min-height:34px !important;
+        flex:0 0 auto !important;
+        align-items:center !important;
+      }
+      .result-status-text{
+        font-size:13px !important;
+        font-weight:900 !important;
+        color:rgba(110,231,183,.95) !important;
+      }
+      .result-actions{
+        gap:8px !important;
+        flex-shrink:0 !important;
+      }
+      .result-actions .result-get{
+        min-width:74px !important;
+        min-height:34px !important;
+        padding:6px 16px !important;
+        border-radius:999px !important;
+        border:1px solid rgba(255,255,255,.14) !important;
+        background:rgba(99,102,241,.72) !important;
+        color:rgba(255,255,255,.95) !important;
+        font-size:13px !important;
+        font-weight:800 !important;
+        box-shadow:none !important;
+      }
+    }
+    #previewOverlay video{
+      max-width:100% !important;
+      max-height:min(88vh,900px) !important;
+      object-fit:contain !important;
+    }
+  </style>
+  <script>
+    window.KID_CARTOON_FIX_VERSION = '20260625-1618';
+    document.documentElement.dataset.kidCartoonFix = window.KID_CARTOON_FIX_VERSION;
+    (function hardenKidCartoonResultUi(){
+      const mobileQuery = window.matchMedia ? window.matchMedia('(max-width:900px)') : null;
+      const isMobileThumb = () => !!(mobileQuery && mobileQuery.matches);
+      function fixResultUi(root) {
+        const scope = root && root.querySelectorAll ? root : document;
+        scope.querySelectorAll('.result-card').forEach((card) => {
+          if (isMobileThumb()) {
+            card.style.setProperty('position', 'relative', 'important');
+            card.style.setProperty('flex', '0 0 78%', 'important');
+            card.style.setProperty('width', 'auto', 'important');
+            card.style.setProperty('height', 'auto', 'important');
+            card.style.setProperty('min-height', '0', 'important');
+            card.style.setProperty('max-height', 'none', 'important');
+            card.style.setProperty('aspect-ratio', '2 / 3', 'important');
+            card.style.setProperty('display', 'block', 'important');
+            card.style.setProperty('border-radius', '18px', 'important');
+          } else {
+            card.style.setProperty('width', '100%', 'important');
+            card.style.setProperty('height', '330px', 'important');
+            card.style.setProperty('min-height', '330px', 'important');
+            card.style.setProperty('max-height', '330px', 'important');
+            card.style.setProperty('display', 'flex', 'important');
+            card.style.setProperty('flex-direction', 'column', 'important');
+            card.style.setProperty('flex', 'initial', 'important');
+            card.style.removeProperty('aspect-ratio');
+          }
+          card.style.setProperty('overflow', 'hidden', 'important');
+        });
+        scope.querySelectorAll('.result-media').forEach((media) => {
+          if (isMobileThumb()) {
+            media.style.setProperty('position', 'absolute', 'important');
+            media.style.setProperty('inset', '0', 'important');
+            media.style.setProperty('width', '100%', 'important');
+            media.style.setProperty('height', '100%', 'important');
+            media.style.setProperty('min-height', '0', 'important');
+            media.style.setProperty('max-height', 'none', 'important');
+            media.style.setProperty('flex', 'none', 'important');
+          } else {
+            media.style.setProperty('position', 'relative', 'important');
+            media.style.removeProperty('inset');
+            media.style.setProperty('height', '238px', 'important');
+            media.style.setProperty('min-height', '238px', 'important');
+            media.style.setProperty('max-height', '238px', 'important');
+            media.style.setProperty('flex', '0 0 238px', 'important');
+          }
+          media.style.setProperty('overflow', 'hidden', 'important');
+        });
+        scope.querySelectorAll('.result-info').forEach((info) => {
+          if (isMobileThumb()) {
+            info.style.setProperty('position', 'absolute', 'important');
+            info.style.setProperty('left', '8px', 'important');
+            info.style.setProperty('right', '8px', 'important');
+            info.style.setProperty('bottom', '0', 'important');
+            info.style.setProperty('z-index', '4', 'important');
+            info.style.setProperty('height', 'auto', 'important');
+            info.style.setProperty('min-height', '0', 'important');
+            info.style.setProperty('max-height', 'none', 'important');
+            info.style.setProperty('justify-content', 'stretch', 'important');
+          } else {
+            info.style.setProperty('position', 'relative', 'important');
+            info.style.removeProperty('left');
+            info.style.removeProperty('right');
+            info.style.removeProperty('bottom');
+            info.style.setProperty('height', '92px', 'important');
+            info.style.setProperty('min-height', '92px', 'important');
+            info.style.setProperty('max-height', '92px', 'important');
+            info.style.setProperty('justify-content', 'space-between', 'important');
+          }
+          info.style.setProperty('overflow', 'hidden', 'important');
+        });
+        scope.querySelectorAll('.result-prompt').forEach((prompt) => {
+          if (isMobileThumb()) {
+            prompt.style.setProperty('display', 'none', 'important');
+            return;
+          }
+          prompt.style.setProperty('min-height', isMobileThumb() ? '12px' : '15px', 'important');
+          prompt.style.setProperty('max-height', isMobileThumb() ? '12px' : '15px', 'important');
+          prompt.style.setProperty('display', 'block', 'important');
+          prompt.style.setProperty('white-space', 'nowrap', 'important');
+          prompt.style.setProperty('overflow', 'hidden', 'important');
+          prompt.style.setProperty('text-overflow', 'ellipsis', 'important');
+        });
+        scope.querySelectorAll('.creating-icon').forEach((icon) => {
+          icon.textContent = '';
+          icon.setAttribute('aria-hidden', 'true');
+          icon.style.setProperty('color', 'transparent', 'important');
+          icon.style.setProperty('font-size', '0', 'important');
+          icon.style.setProperty('text-indent', '-9999px', 'important');
+          icon.style.setProperty('background', 'linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8)', 'important');
+        });
+        scope.querySelectorAll('.result-media video').forEach((video) => {
+          video.style.setProperty('object-fit', 'contain', 'important');
+          video.style.setProperty('width', isMobileThumb() ? '100%' : 'auto', 'important');
+          video.style.setProperty('height', isMobileThumb() ? '100%' : 'auto', 'important');
+          video.style.setProperty('max-width', isMobileThumb() ? 'none' : '100%', 'important');
+          video.style.setProperty('max-height', isMobileThumb() ? 'none' : '100%', 'important');
+          video.style.setProperty('background', '#050812', 'important');
+          if (isMobileThumb()) {
+            video.controls = false;
+            video.muted = true;
+            video.loop = true;
+            video.autoplay = true;
+            video.playsInline = true;
+            video.play && video.play().catch(() => {});
+          } else {
+            video.controls = true;
+            video.loop = false;
+            video.autoplay = false;
+          }
+          const media = video.closest('.result-media');
+          const card = video.closest('.result-card');
+          const url = video.dataset.resultUrl || video.currentSrc || video.src || '';
+          if (card && url) bindResultPreview(card, media, url);
+          if (video.dataset.previewBound === '1') return;
+          video.dataset.previewBound = '1';
+          video.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const url = video.dataset.resultUrl || video.currentSrc || video.src || '';
+            if (url && window.openPreview) window.openPreview(url);
+          });
+        });
+        scope.querySelectorAll('.sample-after-video').forEach((video) => {
+          video.controls = false;
+          video.muted = true;
+          video.loop = true;
+          video.autoplay = true;
+          video.playsInline = true;
+          video.removeAttribute('controls');
+          video.style.setProperty('pointer-events', 'none', 'important');
+          video.style.setProperty('object-fit', 'cover', 'important');
+          video.play && video.play().catch(() => {});
+        });
+        scope.querySelectorAll('.result-chip').forEach((chip) => {
+          const card = chip.closest('.result-card');
+          const media = card && card.querySelector('.result-media');
+          const state = media && media.dataset.state;
+          if (isMobileThumb() && state === 'ready') chip.textContent = 'VIDEO';
+          chip.style.setProperty('z-index', '3', 'important');
+        });
+        scope.querySelectorAll('.result-get').forEach((button) => {
+          button.textContent = 'Ներբեռնել';
+        });
+      }
+      fixResultUi(document);
+      if (mobileQuery && mobileQuery.addEventListener) {
+        mobileQuery.addEventListener('change', () => fixResultUi(document));
+      }
+      new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === 1) fixResultUi(node);
+          });
+        });
+      }).observe(document.documentElement, { childList:true, subtree:true });
+      setInterval(() => fixResultUi(document), 1500);
+    })();
+  </script>
+</body>
+</html>

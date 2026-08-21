@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA • Upscale</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="/header.css" rel="stylesheet" />
+  <script defer src="/header.js"></script>
+  <script src="/kie-upload-bridge.js"></script>
+  <style>
+    :root{
+      --base-bg:#050714;
+      --base-line:#15182a;
+      --brand:#6366f1;
+      --brand-2:#8b5cf6;
+      --cyan:#38bdf8;
+      --muted:rgba(226,232,240,.66);
+      --card:rgba(15,23,42,.72);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      color:#e5e7eb;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;
+      background:
+        radial-gradient(1000px 560px at 15% -10%, rgba(99,102,241,.24), transparent 60%),
+        radial-gradient(900px 520px at 90% 8%, rgba(56,189,248,.15), transparent 56%),
+        radial-gradient(800px 560px at 50% 100%, rgba(139,92,246,.13), transparent 64%),
+        var(--base-bg);
+    }
+    button,input,select{font:inherit}
+    .page-shell{max-width:1180px;margin:0 auto;padding:32px 18px 42px}
+    .hero{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:22px;align-items:start}
+    .glass,.panel{
+      border:1px solid rgba(255,255,255,.10);
+      background:linear-gradient(180deg,rgba(15,23,42,.86),rgba(2,6,23,.78));
+      backdrop-filter:blur(18px);
+      -webkit-backdrop-filter:blur(18px);
+      box-shadow:0 22px 70px rgba(0,0,0,.45);
+    }
+    .pill{
+      border:1px solid rgba(148,163,184,.32);
+      background:rgba(15,23,42,.65);
+      border-radius:999px;
+      color:#dbeafe;
+    }
+    .pill.active{
+      border-color:transparent;
+      color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      box-shadow:0 14px 34px rgba(99,102,241,.30);
+    }
+    .pill:disabled{
+      opacity:.34;
+      cursor:not-allowed;
+      filter:saturate(.45);
+      background:rgba(15,23,42,.38);
+      border-color:rgba(148,163,184,.16);
+      box-shadow:none;
+    }
+    .btn-main{
+      border:0;
+      color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));
+      border-radius:20px;
+      box-shadow:0 18px 40px rgba(99,102,241,.36);
+    }
+    .btn-main:disabled{opacity:.55;cursor:not-allowed}
+    .btn-soft{border:1px solid rgba(148,163,184,.28);background:rgba(15,23,42,.72);color:#e5e7eb;border-radius:999px}
+    .btn-soft:hover{border-color:rgba(129,140,248,.82);background:rgba(15,23,42,.9)}
+    .field{width:100%;border:1px solid rgba(148,163,184,.22);background:rgba(2,6,23,.58);outline:none;border-radius:18px;padding:13px 14px;color:#fff}
+    .field:focus{border-color:rgba(129,140,248,.9);box-shadow:0 0 0 4px rgba(99,102,241,.16)}
+    .small-label{font-size:11px;text-transform:uppercase;letter-spacing:.10em;color:rgba(226,232,240,.58);font-weight:850}
+    .drop{
+      min-height:300px;
+      border:1px dashed rgba(148,163,184,.34);
+      border-radius:30px;
+      background:rgba(2,6,23,.48);
+      display:grid;
+      place-items:center;
+      text-align:center;
+      padding:24px;
+      cursor:pointer;
+      transition:.18s ease;
+    }
+    .drop.drag{border-color:#a78bfa;background:rgba(99,102,241,.16);transform:translateY(-2px)}
+    .preview{border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,.10);background:rgba(2,6,23,.58)}
+    .preview img,.preview video{width:100%;max-height:330px;object-fit:contain;background:rgba(2,6,23,.82);display:block}
+    .safe-name{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #resultsList{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:start;gap:14px}
+    .result-card{border:1px solid rgba(255,255,255,.10);background:rgba(15,23,42,.68);border-radius:18px;overflow:hidden;cursor:pointer;min-width:0}
+    .result-card:hover{border-color:rgba(129,140,248,.72);background:rgba(15,23,42,.86)}
+    .status-dot{width:9px;height:9px;border-radius:999px;background:#fbbf24;box-shadow:0 0 0 5px rgba(251,191,36,.14)}
+    .status-dot.ready{background:#86efac;box-shadow:0 0 0 5px rgba(134,239,172,.14)}
+    .status-dot.failed{background:#f87171;box-shadow:0 0 0 5px rgba(248,113,113,.14)}
+    .result-media{width:100%;aspect-ratio:3/4;background:rgba(2,6,23,.58);display:grid;place-items:center;overflow:hidden;border-radius:14px}
+    .result-media img,.result-media video{width:100%;height:100%;object-fit:cover}
+    .result-placeholder{padding:10px;text-align:center;font-size:12px;color:#cbd5e1}
+    .processing-card .result-media{position:relative;background:radial-gradient(circle at 50% 38%,rgba(124,58,237,.34),rgba(15,23,42,.85) 58%,rgba(2,6,23,.98));}
+    .processing-orb{width:48px;height:48px;border-radius:18px;background:linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8);box-shadow:0 0 30px rgba(124,58,237,.52);animation:orbSpin 1.35s linear infinite}
+    .processing-label{font-size:12px;font-weight:900;color:rgba(255,255,255,.82)}
+    @keyframes orbSpin{to{transform:rotate(360deg)}}
+    .get-btn{display:inline-flex;width:100%;justify-content:center;align-items:center;padding:10px 14px;border:0;border-radius:999px;color:#fff;background:linear-gradient(135deg,#7c3aed,#6366f1);font-size:12px;font-weight:900}
+    #previewOverlay{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.86);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);padding:20px}
+    #previewOverlay.show{display:flex}
+    .preview-card{position:relative;width:min(900px,100%);max-height:90vh;border:1px solid rgba(255,255,255,.14);border-radius:26px;background:rgba(2,6,23,.92);overflow:hidden;box-shadow:0 30px 100px rgba(0,0,0,.72)}
+    .preview-card img,.preview-card video{width:100%;max-height:90vh;object-fit:contain;display:block;background:#020617}
+    .preview-close{position:absolute;top:12px;right:12px;z-index:3;width:42px;height:42px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.58);color:#fff;font-size:24px;cursor:pointer}
+    .mobile-bottom-space{height:0}
+    @media(max-width:900px){.page-shell{padding:18px 12px 28px}.hero{grid-template-columns:1fr}.drop{min-height:240px}.mobile-bottom-space{height:70px}.safe-name{max-width:240px}.desktop-title{font-size:42px!important}#resultsList{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.result-card{scroll-snap-align:start}}
+    @media(max-width:430px){.safe-name{max-width:180px}.controls-grid{grid-template-columns:1fr!important}.run-row{justify-content:stretch!important}.run-row button{width:100%}}
+  </style>
+</head>
+<body>
+  <div id="sharedHeader"></div>
+  <main class="page-shell">
+    <section class="hero">
+      <div class="glass rounded-[34px] p-6 sm:p-8">
+        <div class="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <p class="small-label">Hansora Upscale</p>
+            <h1 class="desktop-title text-5xl font-black tracking-tight leading-none mt-2">Դարձրեք ավելի հստակ</h1>
+            <p class="text-slate-300/80 mt-4 max-w-2xl">Վերբեռնեք մեկ պատկեր կամ տեսանյութ։</p>
+          </div>
+        </div>
+        <input id="mediaInput" type="file" accept="image/*,video/*" class="hidden" />
+        <div id="dropZone" class="drop">
+          <div id="dropEmpty">
+            <div class="mx-auto h-16 w-16 rounded-3xl bg-indigo-100 text-indigo-700 grid place-items-center text-3xl mb-4">⬆️</div>
+            <h2 class="text-2xl font-black">Վերբեռնել պատկեր կամ տեսանյութ</h2>
+            <p class="text-sm text-slate-400 mt-2">Մեկ պատկեր կամ տեսանյութ</p>
+          </div>
+          <div id="previewWrap" class="hidden w-full">
+            <div id="previewBox" class="preview mb-4"></div>
+            <div class="flex items-center justify-between gap-3 text-left">
+              <div class="min-w-0">
+                <p id="fileName" class="safe-name font-black">—</p>
+                <p id="fileMeta" class="text-xs text-slate-400 mt-1">—</p>
+              </div>
+              <button id="removeFileBtn" type="button" class="btn-soft px-4 py-2 text-sm shrink-0">Հեռացնել</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <aside class="space-y-4">
+        <div class="panel rounded-[30px] p-5">
+          <p class="small-label mb-3">Ռեժիմ</p>
+          <div class="grid grid-cols-2 gap-2 mb-5">
+            <button id="imageModeBtn" type="button" class="pill active px-4 py-3 font-bold">Պատկեր</button>
+            <button id="videoModeBtn" type="button" class="pill px-4 py-3 font-bold">Տեսանյութ</button>
+          </div>
+          <div id="imageControls" class="space-y-4">
+            <div>
+              <p class="small-label mb-2">Որակ</p>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" data-image-resolution="2K" class="pill active px-4 py-3 font-bold">2K</button>
+                <button type="button" data-image-resolution="4K" class="pill px-4 py-3 font-bold">4K</button>
+              </div>
+            </div>
+          </div>
+          <div id="videoControls" class="hidden space-y-4">
+            <div>
+              <p class="small-label mb-2">Մեծացում</p>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" data-video-scale="2" class="pill active px-4 py-3 font-bold">2×</button>
+                <button type="button" data-video-scale="4" class="pill px-4 py-3 font-bold">4×</button>
+              </div>
+            </div>
+          </div>
+          <form id="upscaleForm" class="mt-5 space-y-3">
+            <div id="errorBox" class="hidden rounded-2xl border border-red-400/30 bg-red-500/10 text-red-100 px-4 py-3 text-sm"></div>
+            <button id="runBtn" type="submit" class="btn-main w-full px-8 py-4 font-black">Upscale • —⚡</button>
+          </form>
+        </div>
+        <div class="hidden" aria-hidden="true">
+          <p id="costText">—</p>
+          <p id="costHint">Վերբեռնեք ֆայլ՝ ճշգրիտ արժեքը հաշվարկելու համար։</p>
+        </div>
+      </aside>
+    </section>
+    <section class="panel rounded-[30px] p-5 sm:p-6 mt-5">
+      <div class="flex items-center justify-between gap-3 mb-4"><div><p class="small-label">Պատմություն</p><h3 class="text-xl font-black mt-1">Վերջին Upscale արդյունքները</h3></div><button id="refreshResultsBtn" class="btn-soft px-4 py-2 text-sm" type="button">Թարմացնել</button></div>
+      <div id="resultsList" class="grid md:grid-cols-3 gap-3"></div>
+      <div id="emptyResults" class="rounded-2xl border border-dashed border-white/14 p-8 text-center text-slate-400">Upscale արդյունքներ դեռ չկան։</div>
+    </section>
+    <div class="mobile-bottom-space"></div>
+  </main>
+  <div id="previewOverlay" aria-hidden="true">
+    <div class="preview-card">
+      <button id="previewClose" class="preview-close" type="button" aria-label="Փակել նախադիտումը">×</button>
+      <div id="previewContent"></div>
+    </div>
+  </div>
+<script>
+  const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+  const supabaseClient = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  window.__HANSORA_SB__ = supabaseClient; window.hansoraSupabase = supabaseClient;
+  const $ = (id)=>document.getElementById(id);
+  let currentUser=null,currentCredits=0,selectedFile=null,selectedKind='image',imageResolution='2K',videoScale='2',videoDuration=0,pollTimer=null,lastHistorySignature='';
+  const IMAGE_PROMPT = 'Upscale and enhance this image with Nano Banana Pro. Preserve the original composition, identity, colors, and style. Improve resolution, natural detail, texture clarity, edge sharpness, lighting balance, and overall quality. Do not add new objects, text, logos, watermarks, or change the subject.';
+  function parseCredits(value){const n=Number(String(value??'').replace(/[^\d.-]/g,''));return Number.isFinite(n)?n:0}
+  function formatCredit(n){n=Number(n||0);return Number.isInteger(n)?String(n):n.toFixed(1).replace(/\.0$/,'')}
+  function setCreditsEverywhere(value){currentCredits=parseCredits(value);document.querySelectorAll('#navCredits').forEach(n=>{n.textContent=`${formatCredit(currentCredits)}⚡`});if(window.HansoraHeader&&typeof window.HansoraHeader.setCredits==='function')window.HansoraHeader.setCredits(currentCredits)}
+  function getVisibleHeaderCredits(){let best=0;document.querySelectorAll('#navCredits').forEach(n=>{best=Math.max(best,parseCredits(n.textContent||''))});return best}
+  function getSharedHeaderCredits(){try{return window.HansoraHeader&&typeof window.HansoraHeader.getCurrentCredits==='function'?parseCredits(window.HansoraHeader.getCurrentCredits()):0}catch{return 0}}
+  async function readSupabaseCredits(){const {data:{user}}=await supabaseClient.auth.getUser();if(!user)return{user:null,credits:0};const {data:profile,error}=await supabaseClient.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(error)throw error;return{user,credits:parseCredits(profile&&profile.credits)}}
+  async function getAvailableCredits(required=0){const localBest=Math.max(getSharedHeaderCredits(),getVisibleHeaderCredits(),parseCredits(currentCredits));if(localBest>=Number(required||0))return localBest;try{const r=await readSupabaseCredits();if(r.user){currentUser=r.user;setCreditsEverywhere(r.credits)}return Math.max(localBest,parseCredits(r.credits))}catch(e){console.warn(e)}return localBest}
+  async function refreshCredits(){try{const r=await readSupabaseCredits();if(r.user){currentUser=r.user;setCreditsEverywhere(r.credits)}}catch(e){console.warn(e)}return currentCredits}
+  function showError(msg){$('errorBox').textContent=msg;$('errorBox').classList.remove('hidden')}
+  function clearError(){$('errorBox').textContent='';$('errorBox').classList.add('hidden')}
+  function isImage(file){return String(file&&file.type||'').startsWith('image/')||/\.(png|jpe?g|webp)$/i.test(String(file&&file.name||''))}
+  function isVideo(file){return String(file&&file.type||'').startsWith('video/')||/\.(mp4|mov|webm|m4v)$/i.test(String(file&&file.name||''))}
+  function formatDuration(seconds){const total=Math.max(0,Math.round(Number(seconds||0)));return `${Math.floor(total/60)}:${String(total%60).padStart(2,'0')}`}
+  function estimateCost(){if(selectedKind==='image')return imageResolution==='4K'?3:2;const seconds=Math.max(0,videoDuration||0);if(!seconds)return videoScale==='4'?1:0.7;return Math.ceil(seconds)*(videoScale==='4'?1:0.7)}
+  function updateCostUI(){const cost=estimateCost();$('costText').textContent=`${formatCredit(cost)} կրեդիտ`;$('runBtn').textContent=`Upscale • ${formatCredit(cost)}⚡`;if(selectedKind==='image')$('costHint').textContent=`Պատկերի ${imageResolution} Upscale։`;else $('costHint').textContent=videoDuration?`Տևողությունը՝ ${formatDuration(videoDuration)} • տեսանյութի ${videoScale}× Upscale։`:`Տեսանյութի արժեքը հաշվարկվում է ըստ իրական տևողության։`}
+  function selectedFileKind(){if(!selectedFile)return '';return isVideo(selectedFile)?'video':isImage(selectedFile)?'image':''}
+  function updateModeAvailability(){const locked=selectedFileKind();$('imageModeBtn').disabled=locked==='video';$('videoModeBtn').disabled=locked==='image';}
+  function syncMode(kind){const locked=selectedFileKind();if(locked&&kind!==locked)kind=locked;selectedKind=kind;$('imageModeBtn').classList.toggle('active',kind==='image');$('videoModeBtn').classList.toggle('active',kind==='video');$('imageControls').classList.toggle('hidden',kind!=='image');$('videoControls').classList.toggle('hidden',kind!=='video');updateModeAvailability();updateCostUI()}
+  function readVideoDuration(file){return new Promise(resolve=>{try{const url=URL.createObjectURL(file);const v=document.createElement('video');v.preload='metadata';v.onloadedmetadata=()=>{const d=Number(v.duration||0);URL.revokeObjectURL(url);resolve(Number.isFinite(d)?d:0)};v.onerror=()=>{URL.revokeObjectURL(url);resolve(0)};v.src=url}catch{resolve(0)}})}
+  function shortName(name){const s=String(name||'file');return s.length>22?s.slice(0,10)+'....'+s.slice(-8):s}
+  async function setFile(file){clearError();selectedFile=file||null;videoDuration=0;if(!selectedFile){$('previewWrap').classList.add('hidden');$('dropEmpty').classList.remove('hidden');updateModeAvailability();updateCostUI();return}if(!isImage(selectedFile)&&!isVideo(selectedFile)){selectedFile=null;updateModeAvailability();showError('Վերբեռնեք մեկ պատկեր կամ տեսանյութ։');return}if(isVideo(selectedFile)&&selectedFile.size>50*1024*1024){selectedFile=null;updateModeAvailability();showError('Տեսանյութը պետք է լինի 50 ՄԲ-ից փոքր։');return}selectedKind=isVideo(selectedFile)?'video':'image';syncMode(selectedKind);$('dropEmpty').classList.add('hidden');$('previewWrap').classList.remove('hidden');$('fileName').textContent=shortName(selectedFile.name);$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} ՄԲ • ընթերցվում է...`;const url=URL.createObjectURL(selectedFile);$('previewBox').innerHTML=isVideo(selectedFile)?`<video src="${url}" controls muted playsinline></video>`:`<img src="${url}" alt="նախադիտում" />`;if(isVideo(selectedFile)){videoDuration=await readVideoDuration(selectedFile);if(videoDuration<4||videoDuration>30){showError('Տեսանյութի տևողությունը պետք է լինի 4-ից 30 վայրկյան։');}$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} ՄԲ • տեսանյութ • ${formatDuration(videoDuration)}`;}else{$('fileMeta').textContent=`${(selectedFile.size/1024/1024).toFixed(2)} ՄԲ • պատկեր`;}updateCostUI()}
+  function wireUpload(){const input=$('mediaInput'),drop=$('dropZone');drop.addEventListener('click',(e)=>{if(e.target.closest('#removeFileBtn'))return;input.click()});input.addEventListener('change',()=>setFile(input.files&&input.files[0]));['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>setFile(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]));$('removeFileBtn').addEventListener('click',e=>{e.stopPropagation();input.value='';setFile(null)})}
+  function wireControls(){$('imageModeBtn').addEventListener('click',()=>syncMode('image'));$('videoModeBtn').addEventListener('click',()=>syncMode('video'));document.querySelectorAll('[data-image-resolution]').forEach(b=>b.addEventListener('click',()=>{imageResolution=b.dataset.imageResolution;document.querySelectorAll('[data-image-resolution]').forEach(x=>x.classList.toggle('active',x===b));updateCostUI()}));document.querySelectorAll('[data-video-scale]').forEach(b=>b.addEventListener('click',()=>{videoScale=b.dataset.videoScale;document.querySelectorAll('[data-video-scale]').forEach(x=>x.classList.toggle('active',x===b));updateCostUI()}))}
+  async function ensureUser(){const {data:{user}}=await supabaseClient.auth.getUser();currentUser=user||null;if(!currentUser)throw new Error('Նախ մուտք գործեք։');return currentUser}
+  async function submit(e){e.preventDefault();clearError();const btn=$('runBtn'),old=btn.textContent;try{const user=await ensureUser();if(!selectedFile)throw new Error('Նախ վերբեռնեք մեկ պատկեր կամ տեսանյութ։');if(selectedKind==='video'){if(selectedFile.size>50*1024*1024)throw new Error('Տեսանյութը պետք է լինի 50 ՄԲ-ից փոքր։');if(videoDuration<4||videoDuration>30)throw new Error('Տեսանյութի տևողությունը պետք է լինի 4-ից 30 վայրկյան։')}const cost=estimateCost();const available=await getAvailableCredits(cost);if(available<cost)throw new Error(`Կրեդիտները բավարար չեն։ Անհրաժեշտ է ${formatCredit(cost)} կրեդիտ։`);if(!window.kieUploadBridge||typeof window.kieUploadBridge.upload!=='function')throw new Error('upload_bridge_missing');const session=await supabaseClient.auth.getSession();const token=session?.data?.session?.access_token||'';if(!token)throw new Error('Կրկին մուտք գործեք։');btn.disabled=true;btn.textContent='Վերբեռնվում է...';const uploaded=await window.kieUploadBridge.upload(selectedFile);if(!uploaded||!uploaded.publicUrl)throw new Error('upload_failed');const runId=`${user.id}-upscale-${Date.now()}`;const body={uid:user.id,run_id:runId,kind:selectedKind,fileUrl:uploaded.publicUrl,fileName:selectedFile.name,fileType:selectedFile.type,durationSeconds:videoDuration,imageResolution,videoScale,prompt:IMAGE_PROMPT};addPending(runId);btn.textContent='Ուղարկվում է...';const resp=await fetch('/.netlify/functions/run-upscale',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify(body)});const data=await resp.json().catch(()=>({}));if(!data.submitted)throw new Error(data.error||'submit_failed');await refreshCredits();if(window.HansoraHeader&&typeof window.HansoraHeader.startCreditsPolling==='function')window.HansoraHeader.startCreditsPolling(90000,1500);startPolling()}catch(err){showError(String(err.message||err))}finally{btn.disabled=false;btn.textContent=old;updateCostUI()}}
+  function addPending(runId){$('emptyResults').classList.add('hidden');const div=document.createElement('div');div.className='result-card processing-card p-3';div.dataset.runId=runId;div.innerHTML='<div class="flex items-start justify-between gap-3 mb-3"><div class="min-w-0"><p class="font-black safe-name">Upscale</p><p class="text-xs text-slate-400 mt-1 safe-name">Մշակվում է...</p></div><span class="status-dot"></span></div><div class="result-media result-placeholder"><div class="processing-orb"></div><div class="processing-label mt-3">Ստեղծվում է...</div></div>';$('resultsList').prepend(div);Array.from($('resultsList').children).slice(12).forEach(node=>node.remove())}
+  function isUsableUrl(url){const v=String(url||'').trim().toLowerCase();return /^https?:\/\//.test(v)&&!v.includes('callback')}
+  function collectUrls(row){const meta=row.meta||{};const arr=[];if(row.result_url)arr.push(row.result_url);if(meta.result_url)arr.push(meta.result_url);if(Array.isArray(meta.result_urls))arr.push(...meta.result_urls);if(Array.isArray(meta.urls))arr.push(...meta.urls);return [...new Set(arr.filter(isUsableUrl))]}
+  function downloadName(name,type){const base=String(name||'hansora-upscale').replace(/\.[a-z0-9]{2,5}$/i,'').replace(/[^a-z0-9._-]+/gi,'-').replace(/^-+|-+$/g,'').slice(0,80)||'hansora-upscale';return `${base}-upscaled.${type==='video'?'mp4':'png'}`}
+  async function downloadMedia(url,name,type,btn){const old=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Ներբեռնվում է...'}try{const res=await fetch(url,{mode:'cors'});if(!res.ok)throw new Error('download_failed');const blob=await res.blob();const objectUrl=URL.createObjectURL(blob);const a=document.createElement('a');a.href=objectUrl;a.download=downloadName(name,type);document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(objectUrl),1200)}catch(e){const a=document.createElement('a');a.href=url;a.download=downloadName(name,type);document.body.appendChild(a);a.click();a.remove()}finally{if(btn){btn.disabled=false;btn.textContent=old||'Ներբեռնել'}}}
+  function historySignature(rows){return rows.map(row=>{const meta=row.meta||{},urls=collectUrls(row);return [row.created_at||'',urls[0]||'',meta.status||'',meta.task_id||meta.taskId||'',meta.run_id||meta.runId||''].join('|')}).join('||')}
+  function primeResultVideos(){document.querySelectorAll('#resultsList video').forEach(video=>{video.muted=true;video.playsInline=true;video.preload='auto';const seek=()=>{try{if(Number(video.duration||0)>0&&video.currentTime<0.05)video.currentTime=Math.min(.2,Math.max(.05,video.duration*.04))}catch{}};video.addEventListener('loadedmetadata',seek,{once:true});video.load()})}
+  async function loadRecentHistory(force=false){if(!currentUser)return;if($('previewOverlay').classList.contains('show')&&!force)return;const {data,error}=await supabaseClient.from('user_generations').select('provider,kind,prompt,result_url,meta,created_at').eq('user_id',currentUser.id).eq('kind','upscale').order('created_at',{ascending:false}).limit(12);if(error)return;const rows=(data||[]).slice(0,12);const signature=historySignature(rows);if(!force&&signature===lastHistorySignature)return;lastHistorySignature=signature;$('resultsList').innerHTML='';$('emptyResults').classList.toggle('hidden',rows.length>0);rows.forEach(row=>{const meta=row.meta||{},urls=collectUrls(row),url=urls[0]||'',type=String(meta.media_type||'image'),status=url?'ready':String(meta.status||'processing'),name=type==='video'?'Video Upscale':'Image Upscale',fileName=meta.file_name||row.prompt||name;const media=url?`<div class="result-media">${type==='video'?`<video src="${escapeHtml(url)}" muted playsinline preload="auto"></video>`:`<img src="${escapeHtml(url)}" alt="արդյունք" loading="lazy" />`}</div>`:`<div class="result-media result-placeholder">${status==='failed'?'Չհաջողվեց':'<div class="processing-orb"></div><div class="processing-label mt-3">Ստեղծվում է...</div>'}</div>`;const div=document.createElement('div');div.className=`result-card p-3 ${!url&&status!=='failed'?'processing-card':''}`;if(url){div.dataset.url=url;div.dataset.type=type;div.dataset.name=fileName}div.innerHTML=`<div class="flex items-start justify-between gap-3 mb-3"><div class="min-w-0"><p class="font-black safe-name">${escapeHtml(name)}</p><p class="text-xs text-slate-400 mt-1 safe-name">${escapeHtml(fileName)}</p></div><span class="status-dot ${url?'ready':status==='failed'?'failed':''}"></span></div>${media}${url?'<div class="mt-3"><button class="get-btn" type="button">Ներբեռնել</button></div>':''}`;if(url){div.querySelector('.get-btn').addEventListener('click',(e)=>{e.stopPropagation();downloadMedia(url,fileName,type,e.currentTarget)})}$('resultsList').appendChild(div)});primeResultVideos()}
+  function isResultVideoPlaying(){return Array.from(document.querySelectorAll('#resultsList video')).some(v=>!v.paused&&!v.ended&&v.readyState>2)}
+  function shouldCheckUpscaleRow(row){const meta=row&&row.meta?row.meta:{};const status=String(meta.status||'').toLowerCase();if(status==='failed'||status==='error'||status==='refunded')return false;return collectUrls(row).length===0&&!!(meta.run_id||meta.runId)&&!!(meta.task_id||meta.taskId)}
+  async function hitUpscaleCheck(row){if(!currentUser||!shouldCheckUpscaleRow(row))return false;const meta=row.meta||{};const runId=meta.run_id||meta.runId||'',taskId=meta.task_id||meta.taskId||'';try{await fetch(`/.netlify/functions/upscale-check?uid=${encodeURIComponent(currentUser.id)}&run_id=${encodeURIComponent(runId)}&taskId=${encodeURIComponent(taskId)}`,{method:'GET',cache:'no-store',headers:{'Accept':'application/json'}});return true}catch{return false}}
+  async function checkPending(){if(!currentUser)return 0;const {data,error}=await supabaseClient.from('user_generations').select('result_url,meta,created_at').eq('user_id',currentUser.id).eq('kind','upscale').order('created_at',{ascending:false}).limit(30);if(error)return 0;const rows=(data||[]).filter(shouldCheckUpscaleRow);let checked=0;await Promise.all(rows.map(async row=>{if(await hitUpscaleCheck(row))checked++}));return checked}
+  function startPolling(){if(pollTimer)clearInterval(pollTimer);let ticks=0;const runOnce=async()=>{ticks++;const p=await checkPending();if(!isResultVideoPlaying())await loadRecentHistory();if((p===0&&ticks>2)||ticks>80){clearInterval(pollTimer);pollTimer=null}};runOnce();pollTimer=setInterval(runOnce,3000)}
+  function escapeHtml(str){return String(str||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+  function openPreview(url,type){if(!url)return;$('previewContent').innerHTML=type==='video'?`<video src="${escapeHtml(url)}" controls autoplay playsinline></video>`:`<img src="${escapeHtml(url)}" alt="Upscale նախադիտում" />`;$('previewOverlay').classList.add('show');$('previewOverlay').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
+  function closePreview(){$('previewOverlay').classList.remove('show');$('previewOverlay').setAttribute('aria-hidden','true');$('previewContent').innerHTML='';document.body.style.overflow='';loadRecentHistory().catch(()=>{})}
+  function wirePreview(){$('resultsList').addEventListener('click',(event)=>{if(event.target.closest('.get-btn'))return;const card=event.target.closest('.result-card[data-url]');if(!card)return;openPreview(card.dataset.url,card.dataset.type)});$('previewClose').addEventListener('click',closePreview);$('previewOverlay').addEventListener('click',(event)=>{if(event.target===$('previewOverlay'))closePreview()});document.addEventListener('keydown',(event)=>{if(event.key==='Escape')closePreview()})}
+  async function init(){wireUpload();wireControls();wirePreview();syncMode('image');$('upscaleForm').addEventListener('submit',submit);$('refreshResultsBtn').addEventListener('click',async()=>{const p=await checkPending();await loadRecentHistory(true);if(p>0)startPolling()});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser){checkPending().then(()=>loadRecentHistory()).then(()=>startPolling()).catch(()=>{})}});window.addEventListener('focus',()=>{if(currentUser){checkPending().then(()=>loadRecentHistory()).then(()=>startPolling()).catch(()=>{})}});const {data:{user}}=await supabaseClient.auth.getUser();currentUser=user||null;if(currentUser){await refreshCredits();const pending=await checkPending();await loadRecentHistory(true);if(pending>0)startPolling()}if(window.HansoraHeader&&typeof window.HansoraHeader.init==='function'){try{window.HansoraHeader.init({supabaseClient})}catch{}}}
+  document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

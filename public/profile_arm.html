@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA AI — Պրոֆիլ</title>
+  <meta name="description" content="Ձեր HANSORA պրոֆիլը, կրեդիտներն ու կարգավորումները։" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+                       var(--base-bg); color:#e5e7eb}
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .glass{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+
+
+    /* Shared index-style footer */
+    .shell {
+      width: min(1440px, calc(100% - 48px));
+      margin: 0 auto;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      min-width: max-content;
+      font-weight: 900;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .brand img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 14px rgba(56,189,248,.45));
+    }
+
+    .footer {
+      padding: 36px 0;
+      color: rgba(247,247,251,.42);
+      border-top: 1px solid rgba(255,255,255,.11);
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      font-size: .92rem;
+      font-weight: 760;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .footer-copy {
+      margin: 0;
+      color: rgba(247,247,251,.62);
+      font-weight: 760;
+    }
+
+
+
+    /* Օգտագործման պատմություն card and modal */
+    .usage-history-card {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid rgba(121, 231, 255, .22);
+      border-radius: 16px;
+      background:
+        radial-gradient(120px 80px at 20% 0%, rgba(56,189,248,.18), transparent 70%),
+        linear-gradient(135deg, rgba(99,102,241,.16), rgba(255,255,255,.045));
+      color: #f7f7fb;
+      text-align: left;
+      cursor: pointer;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.035), 0 14px 36px rgba(56,189,248,.08);
+    }
+
+    .usage-history-card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(121, 231, 255, .48);
+      background:
+        radial-gradient(140px 90px at 20% 0%, rgba(56,189,248,.26), transparent 70%),
+        linear-gradient(135deg, rgba(99,102,241,.22), rgba(255,255,255,.07));
+    }
+
+    .usage-history-icon {
+      width: 46px;
+      height: 46px;
+      flex: 0 0 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      border: 1px solid rgba(121, 231, 255, .3);
+      background: rgba(121, 231, 255, .1);
+      color: #79e7ff;
+      box-shadow: 0 0 24px rgba(56,189,248,.12);
+    }
+
+    .usage-history-arrow {
+      width: 30px;
+      height: 30px;
+      flex: 0 0 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      color: rgba(247,247,251,.72);
+    }
+
+    .usage-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .usage-modal.is-open { display: flex; }
+
+    .usage-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      border: 0;
+      background: rgba(0,0,0,.68);
+      backdrop-filter: blur(10px);
+      cursor: pointer;
+    }
+
+    .usage-modal-panel {
+      position: relative;
+      width: min(720px, 100%);
+      max-height: min(760px, calc(100vh - 40px));
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 24px;
+      background:
+        radial-gradient(650px 260px at 10% 0%, rgba(56,189,248,.14), transparent 65%),
+        radial-gradient(650px 260px at 90% 0%, rgba(167,139,250,.12), transparent 65%),
+        #10131d;
+      box-shadow: 0 30px 90px rgba(0,0,0,.55);
+    }
+
+    .usage-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 22px;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+    }
+
+    .usage-modal-body {
+      padding: 16px 22px 22px;
+      max-height: 490px;
+      overflow: auto;
+    }
+
+    .usage-modal-head .usage-history-icon {
+      width: 40px;
+      height: 40px;
+      flex: 0 0 40px;
+      border-radius: 13px;
+    }
+
+    .usage-modal-head .usage-history-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .usage-close-btn {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .usage-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 13px;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    .usage-row:last-child { border-bottom: 0; }
+
+    .usage-dot {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(255,255,255,.07);
+      font-weight: 900;
+    }
+
+    .usage-dot.positive { color: #86efac; background: rgba(34,197,94,.12); }
+    .usage-dot.negative { color: #fca5a5; background: rgba(239,68,68,.12); }
+    .usage-delta.positive { color: #86efac; }
+    .usage-delta.negative { color: #fca5a5; }
+
+    .subscription-plan-card {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(125, 211, 252, .24);
+      border-radius: 20px;
+      background:
+        radial-gradient(260px 130px at 0% 0%, rgba(56,189,248,.16), transparent 65%),
+        linear-gradient(135deg, rgba(99,102,241,.14), rgba(255,255,255,.045));
+      padding: 18px;
+      box-shadow: 0 18px 46px rgba(0,0,0,.22);
+    }
+
+    .subscription-plan-card::before {
+      content: "";
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      top: 0;
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #60a5fa, #a78bfa, #22d3ee);
+    }
+
+    .subscription-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid rgba(125, 211, 252, .28);
+      border-radius: 999px;
+      background: rgba(14, 165, 233, .1);
+      color: #bae6fd;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: .02em;
+    }
+
+    .subscription-plan-name {
+      margin-top: 12px;
+      color: #f8fafc;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -.03em;
+    }
+
+    .subscription-plan-meta {
+      margin-top: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: rgba(226,232,240,.76);
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .subscription-plan-meta span {
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 999px;
+      background: rgba(255,255,255,.055);
+      padding: 6px 9px;
+    }
+
+    .subscription-models {
+      margin-top: 12px;
+      color: rgba(226,232,240,.58);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .subscription-actions {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .subscription-cancel-btn {
+      border: 1px solid rgba(248,113,113,.32);
+      border-radius: 12px;
+      background: rgba(127,29,29,.18);
+      color: #fecaca;
+      padding: 9px 12px;
+      font-size: 12px;
+      font-weight: 850;
+      transition: background .16s, border-color .16s, transform .16s;
+    }
+
+    .subscription-cancel-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(248,113,113,.52);
+      background: rgba(127,29,29,.28);
+    }
+
+    .subscription-cancel-btn[disabled] {
+      cursor: not-allowed;
+      opacity: .55;
+      transform: none;
+    }
+
+    .subscription-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 95;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .subscription-modal.is-open { display: flex; }
+
+    .subscription-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      border: 0;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(12px);
+      cursor: pointer;
+    }
+
+    .subscription-modal-panel {
+      position: relative;
+      width: min(620px, 100%);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 24px;
+      background:
+        radial-gradient(500px 230px at 10% 0%, rgba(248,113,113,.14), transparent 64%),
+        radial-gradient(500px 230px at 95% 0%, rgba(125,211,252,.12), transparent 64%),
+        #10131d;
+      box-shadow: 0 30px 90px rgba(0,0,0,.58);
+      padding: 22px;
+    }
+
+    .subscription-reasons {
+      margin-top: 16px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .subscription-reason {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px;
+      background: rgba(255,255,255,.045);
+      padding: 11px 12px;
+      color: rgba(248,250,252,.86);
+      font-size: 13px;
+      font-weight: 760;
+      cursor: pointer;
+    }
+
+    .subscription-reason input { accent-color: #f87171; }
+
+    .subscription-other-note {
+      margin-top: 10px;
+      display: none;
+      width: 100%;
+      min-height: 78px;
+      resize: vertical;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      background: rgba(8,11,19,.7);
+      color: #f8fafc;
+      padding: 12px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .subscription-other-note.is-visible { display: block; }
+
+    .subscription-modal-actions {
+      margin-top: 18px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .subscription-modal-error {
+      margin-top: 12px;
+      min-height: 18px;
+      color: #fca5a5;
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    @media (max-width: 740px) {
+      .usage-modal { padding: 12px; }
+      .usage-modal-head { padding: 18px; }
+      .usage-modal-head .usage-history-icon {
+        width: 30px;
+        height: 30px;
+        flex: 0 0 30px;
+        border-radius: 10px;
+      }
+      .usage-modal-head .usage-history-icon svg {
+        width: 15px;
+        height: 15px;
+      }
+      .usage-modal-body {
+        padding: 12px 18px 18px;
+        max-height: 420px;
+      }
+      .usage-row { grid-template-columns: auto 1fr; }
+      .usage-delta { grid-column: 2; justify-self: start; }
+    }
+
+    @media (max-width: 740px) {
+      .shell { width: min(100% - 28px, 1440px); }
+      .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="/header.css" rel="stylesheet"/>
+</head>
+<body class="min-h-screen flex flex-col">
+  <div id="sharedHeader"></div>
+
+  <!-- PAGE -->
+  <main class="flex-1 mx-auto w-full max-w-6xl px-4 py-10">
+    <h1 class="text-3xl md:text-4xl font-semibold mb-8">Ձեր պրոֆիլը</h1>
+    <div class="grid md:grid-cols-3 gap-6">
+      <section class="md:col-span-1 p-5 rounded-2xl glass border border-base-line shadow-soft">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <h2 class="text-lg font-medium">Ստեղծագործողի վահանակ</h2>
+          <button id="btnUsageHistoryTop" data-usage-history-open type="button" class="inline-flex items-center gap-2 rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2 text-xs font-semibold text-cyan-100 hover:bg-cyan-300/15" aria-label="Բացել օգտագործման պատմությունը">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M7 3v18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M3 7h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M3 17h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16 6h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M18.5 3.5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16 17h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Օգտագործում
+          </button>
+        </div>
+        <div class="text-sm space-y-4">
+          <div class="flex items-center gap-2 opacity-80">
+            <svg width="16" height="16" fill="currentColor" class="opacity-70"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4zm2 0v8h8V4H4z"/></svg>
+            <div>
+              <div class="opacity-70">Ձեր էլ․ հասցեն</div>
+              <div id="userEmail" class="font-medium">—</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 opacity-80">
+            <svg width="16" height="16" fill="currentColor" class="opacity-70"><path d="M8 3a5 5 0 100 10A5 5 0 008 3zm.5 2.5a.5.5 0 00-1 0V8a.5.5 0 00.146.354l2 2a.5.5 0 10.708-.708L8.5 7.793V5.5z"/></svg>
+            <div>
+              <div class="opacity-70">Մեզ հետ եք՝</div>
+              <div id="joinedDate" class="font-medium">—</div>
+            </div>
+          </div>
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10">
+            <div class="text-xs opacity-70 mb-1">Հասանելի կրեդիտներ</div>
+            <div class="text-2xl font-semibold leading-none" id="totalCredits">—</div>
+          </div>
+          <button id="btnUsageHistory" data-usage-history-open type="button" class="usage-history-card" aria-label="Բացել օգտագործման պատմությունը">
+            <span class="usage-history-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 3v18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M3 7h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M3 17h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M16 6h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M18.5 3.5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M16 17h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="min-w-0">
+              <span class="block text-sm font-semibold">Օգտագործման պատմություն</span>
+              <span class="block text-xs text-white/60 mt-1">Դիտել կրեդիտների ավելացումներն ու ծախսերը</span>
+            </span>
+            <span class="usage-history-arrow" aria-hidden="true">›</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="md:col-span-2 p-5 rounded-2xl glass border border-base-line shadow-soft">
+        <h2 class="text-lg font-medium mb-4">Սկսեք ստեղծել</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="relative overflow-hidden p-5 rounded-2xl border border-cyan-300/25 bg-gradient-to-br from-indigo-500/20 via-white/5 to-cyan-400/10 shadow-soft">
+            <div class="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-cyan-300/20 blur-2xl" aria-hidden="true"></div>
+            <div class="absolute -left-12 bottom-0 h-28 w-28 rounded-full bg-indigo-400/20 blur-2xl" aria-hidden="true"></div>
+            <div class="relative">
+              <span class="inline-flex items-center rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-xs font-semibold text-cyan-100">Գործընկերային ծրագիր</span>
+              <h3 class="mt-4 text-2xl font-semibold leading-tight">Դարձեք HANSORA AI-ի գործընկեր</h3>
+              <p class="mt-3 text-sm opacity-90">Ստացեք 15% յուրաքանչյուր գնումից, որը կատարվել է ձեր գործընկերային հղումով։</p>
+              <a href="/affilate.html" class="mt-5 inline-flex items-center justify-center rounded-xl bg-indigo-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-400">Սկսել</a>
+            </div>
+          </div>
+          <div class="p-5 rounded-2xl bg-white/5 border border-white/10">
+            <h3 class="font-medium mb-2">Ավելացրեք ձեր հնարավորությունները</h3>
+              <p class="text-sm opacity-90">Ավելի շատ գեներացումներ են պե՞տք։ Գնեք լրացուցիչ կրեդիտներ զեղչված գնով և շարունակեք ստեղծել։</p>
+            <button id="btnBuyCredits" class="mt-4 btn-brand px-4 py-2 rounded-xl text-sm">Գնել կրեդիտներ</button>
+          </div>
+          <div id="subscriptionPlanCard" class="subscription-plan-card md:col-span-2">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <span id="subscriptionStatusPill" class="subscription-status-pill">Ամսական պլան</span>
+                <h3 id="subscriptionPlanName" class="subscription-plan-name">Ստուգում ենք ձեր ամսական պլանը...</h3>
+                <p id="subscriptionPlanText" class="mt-2 text-sm text-white/65">Բեռնում ենք բաժանորդագրության տվյալները։</p>
+                <div id="subscriptionPlanMeta" class="subscription-plan-meta hidden"></div>
+                <p id="subscriptionModels" class="subscription-models hidden"></p>
+              </div>
+            </div>
+            <div class="subscription-actions">
+              <a id="subscriptionUpgradeLink" href="/pricing.html?plan=monthly" class="btn-brand px-4 py-2 rounded-xl text-sm font-semibold">Դիտել ամսական պլանները</a>
+              <button id="btnCancelSubscription" type="button" class="subscription-cancel-btn hidden">Չեղարկել բաժանորդագրությունը</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+
+  <div id="usageHistoryModal" class="usage-modal" aria-hidden="true">
+    <button id="usageHistoryBackdrop" class="usage-modal-backdrop" type="button" aria-label="Փակել օգտագործման պատմությունը"></button>
+    <section class="usage-modal-panel" role="dialog" aria-modal="true" aria-labelledby="usageHistoryTitle">
+      <div class="usage-modal-head">
+        <div class="flex items-center gap-3">
+          <span class="usage-history-icon" aria-hidden="true">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 19V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M8 15l3-3 3 2 5-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <div>
+            <h2 id="usageHistoryTitle" class="text-xl font-semibold leading-tight">Օգտագործման պատմություն</h2>
+            <p class="text-sm text-white/55 mt-1">Կրեդիտների վերջին փոփոխությունները</p>
+          </div>
+        </div>
+        <button id="usageHistoryClose" class="usage-close-btn" type="button" aria-label="Փակել օգտագործման պատմությունը">×</button>
+      </div>
+      <div class="usage-modal-body">
+        <div id="usageHistoryStatus" class="text-sm text-white/60 py-6">Բեռնում ենք կրեդիտների պատմությունը…</div>
+        <div id="usageHistoryRows" class="hidden"></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="cancelSubscriptionModal" class="subscription-modal" aria-hidden="true">
+    <button id="cancelSubscriptionBackdrop" class="subscription-modal-backdrop" type="button" aria-label="Փակել չեղարկման պատուհանը"></button>
+    <section class="subscription-modal-panel" role="dialog" aria-modal="true" aria-labelledby="cancelSubscriptionTitle">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[.16em] text-red-200/70">Չեղարկել բաժանորդագրությունը</p>
+          <h2 id="cancelSubscriptionTitle" class="mt-2 text-2xl font-semibold leading-tight text-white">Համոզվա՞ծ եք։</h2>
+          <p id="cancelSubscriptionCopy" class="mt-2 text-sm leading-6 text-white/64">Ձեր անսահմանափակ մոդելները կմնան ակտիվ մինչև վճարված ժամանակաշրջանի ավարտը։ Չեղարկելուց առաջ ընտրեք պատճառը։</p>
+        </div>
+        <button id="cancelSubscriptionClose" class="usage-close-btn" type="button" aria-label="Փակել չեղարկման պատուհանը">×</button>
+      </div>
+
+      <form id="cancelSubscriptionForm">
+        <div class="subscription-reasons" role="radiogroup" aria-label="Չեղարկման պատճառ">
+          <label class="subscription-reason"><input type="radio" name="cancelReason" value="price_too_high"> Գինը չափազանց բարձր է</label>
+          <label class="subscription-reason"><input type="radio" name="cancelReason" value="did_not_use_unlimited"> Ես չեմ օգտվել անսահմանափակ մոդելներից</label>
+          <label class="subscription-reason"><input type="radio" name="cancelReason" value="missing_models"> Ինձ անհրաժեշտ մոդելները բացակայում են</label>
+          <label class="subscription-reason"><input type="radio" name="cancelReason" value="results_not_good_enough"> Արդյունքները բավարար չէին</label>
+          <label class="subscription-reason"><input type="radio" name="cancelReason" value="one_project_only"> Այն անհրաժեշտ էր միայն մեկ նախագծի համար</label>
+          <label class="subscription-reason"><input type="radio" name="cancelReason" value="other"> Այլ</label>
+        </div>
+        <textarea id="cancelSubscriptionOther" class="subscription-other-note" placeholder="Ցանկության դեպքում նշեք մանրամասներ"></textarea>
+        <div id="cancelSubscriptionError" class="subscription-modal-error"></div>
+        <div class="subscription-modal-actions">
+          <button id="keepSubscriptionBtn" type="button" class="btn px-4 py-2 rounded-xl text-sm font-semibold text-white">Պահպանել պլանը</button>
+          <button id="confirmCancelSubscriptionBtn" type="submit" class="subscription-cancel-btn">Չեղարկել ժամանակաշրջանի ավարտին</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="h-10"></div>
+
+  <script>
+    // === Supabase client for profile content ===
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+
+    const $ = (id) => document.getElementById(id);
+    const setText = (id, v) => { const el = $(id); if (el) el.textContent = v ?? '—'; };
+    const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString('hy-AM',{year:'numeric',month:'long',day:'numeric'}); } catch { return '—'; } };
+
+    const SUBSCRIPTION_PLAN_COPY = {
+      premium_monthly: {
+        name: 'Premium',
+        monthlyCredits: 300,
+        price: '$40 / ամիս'
+      },
+      pro_monthly: {
+        name: 'Pro',
+        monthlyCredits: 500,
+        price: '$64 / ամիս'
+      },
+      pro_max_monthly: {
+        name: 'Pro Max',
+        monthlyCredits: 1000,
+        price: '$120 / ամիս'
+      }
+    };
+
+    let currentSubscription = null;
+
+    function isSubscriptionUsable(row) {
+      if (!row || row.status !== 'active') return false;
+      if (!row.current_period_end) return true;
+      return Date.parse(row.current_period_end) > Date.now();
+    }
+
+    function setSubscriptionLoading() {
+      setText('subscriptionStatusPill', 'Ամսական պլան');
+      setText('subscriptionPlanName', 'Ստուգում ենք ձեր ամսական պլանը...');
+      setText('subscriptionPlanText', 'Բեռնում ենք բաժանորդագրության տվյալները։');
+      document.getElementById('subscriptionPlanMeta')?.classList.add('hidden');
+      document.getElementById('subscriptionModels')?.classList.add('hidden');
+      document.getElementById('btnCancelSubscription')?.classList.add('hidden');
+    }
+
+    function renderNoSubscription() {
+      currentSubscription = null;
+      setText('subscriptionStatusPill', 'Ամսական պլան չկա');
+      setText('subscriptionPlanName', "Այս պահին ամսական պլան չունեք");
+      setText('subscriptionPlanText', 'Կարող եք շարունակել օգտագործել առանձին գնված կրեդիտները կամ ընտրել ամսական պլան՝ ներառված կրեդիտներով և անսահմանափակ մոդելներով։');
+      document.getElementById('subscriptionPlanMeta')?.classList.add('hidden');
+      document.getElementById('subscriptionModels')?.classList.add('hidden');
+      document.getElementById('btnCancelSubscription')?.classList.add('hidden');
+    }
+
+    function renderSubscription(row) {
+      currentSubscription = row;
+      const plan = SUBSCRIPTION_PLAN_COPY[row.plan_id] || { name: row.plan_id || 'Ամսական պլան', monthlyCredits: null, price: '' };
+      const endsAt = row.current_period_end ? fmtDate(row.current_period_end) : 'այս ժամանակաշրջանի ավարտը';
+      const statusText = row.cancel_at_period_end ? 'Կչեղարկվի ժամանակաշրջանի ավարտին' : 'Ակտիվ ամսական պլան';
+
+      setText('subscriptionStatusPill', statusText);
+      setText('subscriptionPlanName', plan.name);
+      setText(
+        'subscriptionPlanText',
+        row.cancel_at_period_end
+          ? `Ձեր անսահմանափակ մոդելները հասանելի կլինեն մինչև ${endsAt}։ Այլևս գումար չի գանձվի։`
+          : 'Ձեր ամսական պլանն ակտիվ է։ Ամսական ներառված կրեդիտներն ու անսահմանափակ մոդելների հասանելիությունը միացված են։'
+      );
+
+      const meta = document.getElementById('subscriptionPlanMeta');
+      if (meta) {
+        meta.innerHTML = '';
+        [
+          plan.price,
+          plan.monthlyCredits ? `${plan.monthlyCredits} ամսական կրեդիտ` : '',
+          `Թարմացվում է մինչև ${endsAt}`
+        ].filter(Boolean).forEach((text) => {
+          const span = document.createElement('span');
+          span.textContent = text;
+          meta.appendChild(span);
+        });
+        meta.classList.remove('hidden');
+      }
+
+      const models = document.getElementById('subscriptionModels');
+      if (models) {
+        const list = Array.isArray(row.unlimited_models) ? row.unlimited_models : [];
+        models.textContent = list.length ? `Անսահմանափակ մոդելներ՝ ${list.join(', ')}` : 'Այս պլանի համար անսահմանափակ մոդելները միացված են։';
+        models.classList.remove('hidden');
+      }
+
+      const cancelBtn = document.getElementById('btnCancelSubscription');
+      if (cancelBtn) {
+        cancelBtn.classList.toggle('hidden', !!row.cancel_at_period_end);
+        cancelBtn.disabled = !!row.cancel_at_period_end;
+      }
+    }
+
+    async function loadSubscriptionStatus() {
+      const user = await ensureAuth();
+      if (!user) {
+        renderNoSubscription();
+        return;
+      }
+
+      setSubscriptionLoading();
+      try {
+        const { data, error } = await sb.from('user_subscriptions')
+          .select('status,plan_id,unlimited_models,current_period_start,current_period_end,cancel_at_period_end,canceled_at,provider_subscription_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (error) throw error;
+        if (!isSubscriptionUsable(data)) {
+          renderNoSubscription();
+          return;
+        }
+        renderSubscription(data);
+      } catch (error) {
+        console.warn('subscription read failed', error);
+        setText('subscriptionStatusPill', 'Ամսական պլան');
+        setText('subscriptionPlanName', 'Չհաջողվեց բեռնել ամսական պլանը');
+        setText('subscriptionPlanText', 'Թարմացրեք էջը և կրկին փորձեք։');
+        document.getElementById('subscriptionPlanMeta')?.classList.add('hidden');
+        document.getElementById('subscriptionModels')?.classList.add('hidden');
+        document.getElementById('btnCancelSubscription')?.classList.add('hidden');
+      }
+    }
+
+    function waitForInitialSession(timeoutMs = 2000) {
+      return new Promise((resolve) => {
+        let done = false;
+        const timer = setTimeout(() => {
+          if (done) return;
+          done = true;
+          resolve(null);
+        }, timeoutMs);
+
+        const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+          if (event !== 'INITIAL_SESSION') return;
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          subscription?.unsubscribe();
+          resolve(session || null);
+        });
+      });
+    }
+
+    async function ensureAuth() {
+      const { data: { user } } = await sb.auth.getUser();
+      return user ?? null;
+    }
+
+    async function loadProfileInfo() {
+      const user = await ensureAuth();
+      if (!user) return null;
+      setText('userEmail', user.email || '—');
+      setText('joinedDate', fmtDate(user.created_at));
+      return user;
+    }
+
+    async function loadCredits() {
+      const user = await ensureAuth();
+      if (!user) return;
+      try {
+        const { data: prof } = await sb.from('profiles')
+          .select('credits').eq('user_id', user.id).maybeSingle();
+        const c = prof?.credits ?? 0;
+        const totalCredits = document.getElementById('totalCredits');
+        if (totalCredits) totalCredits.textContent = String(c);
+      } catch (e) {
+        console.warn('credits read failed', e);
+      }
+    }
+
+    function startCreditsParity() {
+      loadCredits();
+      if (!window.__profileCreditsPoll) {
+        window.__profileCreditsPoll = setInterval(loadCredits, 15000);
+      }
+    }
+
+
+
+    function formatCreditNumber(value) {
+      const n = Number(value || 0);
+      if (!Number.isFinite(n)) return '0';
+      return Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
+    }
+
+    function formatUsageDate(value) {
+      if (!value) return 'Վերջին գործողություն';
+      try {
+        return new Date(value).toLocaleString('hy-AM', {
+          year: 'numeric', month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+      } catch {
+        return 'Վերջին գործողություն';
+      }
+    }
+
+    function renderUsageRows(rows) {
+      const status = document.getElementById('usageHistoryStatus');
+      const holder = document.getElementById('usageHistoryRows');
+      if (!status || !holder) return;
+
+      holder.innerHTML = '';
+      if (!Array.isArray(rows) || rows.length === 0) {
+        status.textContent = 'Կրեդիտների պատմություն դեռ չկա։';
+        status.classList.remove('hidden');
+        holder.classList.add('hidden');
+        return;
+      }
+
+      status.classList.add('hidden');
+      holder.classList.remove('hidden');
+
+      rows.forEach((row) => {
+        const delta = Number(row.delta || 0);
+        const positive = delta > 0;
+        const negative = delta < 0;
+        const sign = positive ? '+' : '';
+        const label = row.label || (positive ? 'Կրեդիտներ են ավելացվել' : negative ? 'Կրեդիտներ են օգտագործվել' : 'Մնացորդը թարմացվել է');
+        const oldCredits = formatCreditNumber(row.old_credits);
+        const newCredits = formatCreditNumber(row.new_credits);
+
+        const item = document.createElement('div');
+        item.className = 'usage-row';
+        item.innerHTML = `
+          <div class="usage-dot ${positive ? 'positive' : negative ? 'negative' : ''}">${positive ? '+' : negative ? '−' : '•'}</div>
+          <div class="min-w-0">
+            <div class="font-semibold text-sm">${label}</div>
+            <div class="text-xs text-white/50 mt-1">${formatUsageDate(row.changed_at)} · ${oldCredits}⚡ → ${newCredits}⚡</div>
+          </div>
+          <div class="usage-delta ${positive ? 'positive' : negative ? 'negative' : ''} text-base font-bold whitespace-nowrap">${sign}${formatCreditNumber(delta)}⚡</div>
+        `;
+        holder.appendChild(item);
+      });
+    }
+
+    async function loadUsageHistory() {
+      const status = document.getElementById('usageHistoryStatus');
+      const holder = document.getElementById('usageHistoryRows');
+      if (status) {
+        status.textContent = 'Բեռնում ենք կրեդիտների պատմությունը…';
+        status.classList.remove('hidden');
+      }
+      if (holder) {
+        holder.innerHTML = '';
+        holder.classList.add('hidden');
+      }
+
+      try {
+        const { data: sessionData } = await sb.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        if (!token) throw new Error('missing_session');
+
+        const res = await fetch('/.netlify/functions/credit-history?limit=60', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || 'credit_history_failed');
+        renderUsageRows(json.rows || []);
+      } catch (error) {
+        if (status) status.textContent = 'Չհաջողվեց բեռնել օգտագործման պատմությունը։ Թարմացրեք էջը և կրկին փորձեք։';
+        console.warn('usage history failed', error);
+      }
+    }
+
+    function openUsageHistory() {
+      const modal = document.getElementById('usageHistoryModal');
+      if (!modal) return;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      loadUsageHistory();
+    }
+
+    function closeUsageHistory() {
+      const modal = document.getElementById('usageHistoryModal');
+      if (!modal) return;
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    function initUsageHistory() {
+      document.querySelectorAll('[data-usage-history-open]').forEach((btn) => btn.addEventListener('click', openUsageHistory));
+      document.getElementById('usageHistoryClose')?.addEventListener('click', closeUsageHistory);
+      document.getElementById('usageHistoryBackdrop')?.addEventListener('click', closeUsageHistory);
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeUsageHistory();
+      });
+    }
+
+    function openCancelSubscription() {
+      const modal = document.getElementById('cancelSubscriptionModal');
+      if (!modal || !currentSubscription) return;
+      document.getElementById('cancelSubscriptionError').textContent = '';
+      document.getElementById('cancelSubscriptionOther')?.classList.remove('is-visible');
+      document.querySelectorAll('input[name="cancelReason"]').forEach((input) => { input.checked = false; });
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCancelSubscription() {
+      const modal = document.getElementById('cancelSubscriptionModal');
+      if (!modal) return;
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    async function submitCancelSubscription(event) {
+      event.preventDefault();
+      const error = document.getElementById('cancelSubscriptionError');
+      const submitBtn = document.getElementById('confirmCancelSubscriptionBtn');
+      const selected = document.querySelector('input[name="cancelReason"]:checked');
+      const note = document.getElementById('cancelSubscriptionOther')?.value || '';
+      if (!selected) {
+        if (error) error.textContent = 'Չեղարկելուց առաջ ընտրեք պատճառը։';
+        return;
+      }
+
+      try {
+        if (error) error.textContent = '';
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Չեղարկում ենք...';
+        }
+        const { data: sessionData } = await sb.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        if (!token) throw new Error('missing_session');
+
+        const res = await fetch('/.netlify/functions/cancel-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            reason: selected.value,
+            note: selected.value === 'other' ? note : '',
+            plan_id: currentSubscription?.plan_id || null
+          })
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || 'cancel_failed');
+
+        closeCancelSubscription();
+        await loadSubscriptionStatus();
+      } catch (cancelError) {
+        console.warn('cancel subscription failed', cancelError);
+        if (error) error.textContent = 'Այս պահին չհաջողվեց չեղարկել։ Կրկին փորձեք։';
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Չեղարկել ժամանակաշրջանի ավարտին';
+        }
+      }
+    }
+
+    function initSubscriptionControls() {
+      document.getElementById('btnCancelSubscription')?.addEventListener('click', openCancelSubscription);
+      document.getElementById('cancelSubscriptionBackdrop')?.addEventListener('click', closeCancelSubscription);
+      document.getElementById('cancelSubscriptionClose')?.addEventListener('click', closeCancelSubscription);
+      document.getElementById('keepSubscriptionBtn')?.addEventListener('click', closeCancelSubscription);
+      document.getElementById('cancelSubscriptionForm')?.addEventListener('submit', submitCancelSubscription);
+      document.querySelectorAll('input[name="cancelReason"]').forEach((input) => {
+        input.addEventListener('change', () => {
+          const other = document.getElementById('cancelSubscriptionOther');
+          if (!other) return;
+          other.classList.toggle('is-visible', input.value === 'other' && input.checked);
+        });
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeCancelSubscription();
+      });
+    }
+
+    function initActions() {
+      document.getElementById('btnCreateNow')?.addEventListener('click', () => { window.location.href = 'models.html'; });
+      document.getElementById('btnBuyCredits')?.addEventListener('click', () => { window.location.href = 'pricing.html'; });
+    }
+
+    (async () => {
+      await waitForInitialSession();
+      await loadProfileInfo();
+      startCreditsParity();
+      await loadSubscriptionStatus();
+      initUsageHistory();
+      initSubscriptionControls();
+      initActions();
+
+      sb.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'SIGNED_OUT') {
+          loadProfileInfo();
+          loadCredits();
+          loadSubscriptionStatus();
+        }
+      });
+    })();
+  </script>
+  <footer class="footer">
+<div class="shell footer-inner">
+<a aria-label="HANSORA AI home" class="brand" href="/">
+<img alt="" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(23).png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(23).png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(23).png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(23).png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(23).png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
+<span>HANSORA AI</span>
+</a>
+<p class="footer-copy">© HANSORA AI — Բոլոր իրավունքները պաշտպանված են։</p>
+<div class="footer-links">
+<a href="/termsofuse.html">Օգտագործման պայմաններ</a>
+<a href="/policy.html">Գաղտնիության քաղաքականություն</a>
+<a href="/affilate.html">Գործընկերային ծրագիր</a>
+<a href="/contact.html">Կապ</a>
+</div>
+</div>
+</footer>
+<script defer src="/header.js"></script>
+</body>
+</html>

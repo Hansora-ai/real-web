@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17704413676"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'AW-17704413676');
+  </script>
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA AI — Մոդելներ</title>
+  <meta name="description" content="Պատկերների և տեսանյութերի պարզ ու գեղեցիկ AI գեներացում։" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="/header.css" rel="stylesheet" />
+  <link href="header.css" rel="stylesheet" />
+  <script defer src="/header.js"></script>
+  <style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{background:radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+                       radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+                       var(--base-bg); color:#e5e7eb}
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .brand{color:var(--brand)}
+    .glass{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .hero-glow{position:absolute; inset:-20%; background:
+      radial-gradient(800px 400px at 0% 0%, rgba(99,102,241,.25), transparent 60%),
+      radial-gradient(800px 400px at 100% 100%, rgba(56,189,248,.18), transparent 60%);
+      filter: blur(40px); opacity:.6; pointer-events:none}
+    a{transition:all .15s}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+    #authCard{ background: var(--base-bg); }
+    
+    
+  
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+    :root{ --base-bg:#0b0d13; --base-line:#1a1f2b; --brand:#6366f1; }
+    body{
+      background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(99,102,241,.15), transparent 60%),
+        radial-gradient(1200px 600px at 100% 100%, rgba(56,189,248,.12), transparent 60%),
+        var(--base-bg);
+      color:#e5e7eb
+    }
+    .bg-base-bg{background:var(--base-bg)}
+    .border-base-line{border-color:var(--base-line)}
+    .glass{background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));}
+    .shadow-soft{box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    a{transition:all .15s}
+    .btn{border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06)}
+    .btn:hover{background:rgba(255,255,255,.1)}
+    .btn-brand{background:var(--brand); border-color:transparent; color:white}
+    .btn-brand:hover{background:#7c7ff6}
+	    .chip{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12)}
+	    .ring-muted{--tw-ring-color: rgba(255,255,255,.2)}
+	    .filter-btn{min-width:92px;text-align:center}
+	    .get-started-main{min-width:190px}
+	    .model-name-card h3{line-height:1.2}
+	    .model-thumb{aspect-ratio:16/9}
+	    .model-thumb img{display:block;width:100%;height:100%;object-fit:cover}
+	    .model-name-card{height:100%}
+	    .model-name-card > div:last-child{min-height:72px;display:flex;align-items:center}
+	  </style>
+
+  <!-- Meta Pixel Code -->
+  <script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '1336278884948294');
+  fbq('track', 'PageView');
+  </script>
+  <!-- End Meta Pixel Code -->
+
+</head>
+<body class="min-h-screen">
+  <!-- Meta Pixel (noscript) -->
+  <noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=1336278884948294&ev=PageView&noscript=1"
+  /></noscript>
+  <!-- End Meta Pixel (noscript) -->
+
+<div id="sharedHeader"></div>
+
+  <section class="relative">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight">
+            Բացահայտեք <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-blue-400 to-sky-300">բոլոր մոդելները</span>
+          </h1>
+          <p class="mt-4 text-zinc-400 max-w-xl">
+            Տեսանյութերի և պատկերների գեներացում՝ լավագույն AI մոդելները մեկ տեղում
+          </p>
+          <div class="mt-6 md:inline-block">
+          <div class="flex flex-col gap-3">
+            <div class="flex flex-wrap gap-2 md:w-max">
+	            <button data-filter="all" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">Բոլորը</button>
+	            <button data-filter="image" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">Պատկերներ</button>
+	            <button data-filter="video" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">Տեսանյութեր</button>
+	            <button data-filter="features" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">Գործիքներ</button>
+	            <button data-filter="audio" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">Աուդիո</button>
+	            </div>
+	            <a href="search-models.html" class="get-started-main w-full md:w-auto inline-flex items-center justify-center rounded-xl px-8 py-3 text-sm font-semibold text-white shadow-soft" style="background:linear-gradient(90deg,#2d0a57,#4c1d95); border:1px solid rgba(255,255,255,.10);">
+	              Սկսել
+	            </a>
+          </div>
+        </div>
+          <p class="mt-3 text-xs text-zinc-500">Նշում․ <b>բոլոր</b> մոդելներն օրիգինալ են և կեղծ չեն։</p>
+        </div>
+        <div>
+          <div class="glass rounded-2xl p-3 shadow-soft border border-white/10">
+            <div class="aspect-video w-full overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
+              <img id="heroPreview" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/HANSORA%20AI%20(3).png" alt="Նախադիտում" class="w-full h-full object-cover opacity-90" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="imageSection" data-category-section="image" class="pb-12">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <h2 class="text-2xl sm:text-3xl font-bold mb-6">Պատկերի մոդելներ</h2>
+      <div id="imageGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+  </section>
+
+  <section id="videoSection" data-category-section="video" class="pb-12">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <h2 class="text-2xl sm:text-3xl font-bold mb-6">Տեսանյութի մոդելներ</h2>
+      <div id="videoGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+  </section>
+
+  <section id="featuresSection" data-category-section="features" class="pb-12">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <h2 class="text-2xl sm:text-3xl font-bold mb-6">Գործիքներ</h2>
+      <div id="featuresGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+  </section>
+
+  <section id="audioSection" data-category-section="audio" class="pb-20">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <h2 class="text-2xl sm:text-3xl font-bold mb-6">Աուդիո</h2>
+      <div id="audioGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+  </section>
+
+
+  <script>
+    const MODEL_PLACEHOLDERS = [
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/1.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/2.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/3.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/4.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/5.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/6.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/7.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/8.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/9.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/10.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/11.png',
+      'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/12.png'
+    ];
+    const MODEL_IMAGE_BASE = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/IMAGEVIDEO%20UPSCALE';
+    const MODEL_IMAGE_URLS = {
+      'gpt-image-2': `${MODEL_IMAGE_BASE}/2.png`,
+      'nano-banana-2': `${MODEL_IMAGE_BASE}/4.png`,
+      'nano-banana-pro': `${MODEL_IMAGE_BASE}/3.png`,
+      'seedream-5-lite': `${MODEL_IMAGE_BASE}/6.png`,
+      'grok-image': `${MODEL_IMAGE_BASE}/7.png`,
+      'seedream-4-5': `${MODEL_IMAGE_BASE}/8.png`,
+      'wan-2-7': `${MODEL_IMAGE_BASE}/10.png`,
+      'qwen-2': `${MODEL_IMAGE_BASE}/11.png`,
+      'z-image': `${MODEL_IMAGE_BASE}/13.png`,
+      'gpt-image-1-5': `${MODEL_IMAGE_BASE}/12.png`,
+      'nano-banana': `${MODEL_IMAGE_BASE}/5.png`,
+      'seedance-2': `${MODEL_IMAGE_BASE}/14.png`,
+      'kling-3': `${MODEL_IMAGE_BASE}/1.png`,
+      'seedance-2-mini': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/ChatGPT%20Image%20Jun%2023,%202026,%2011_30_53%20PM.png',
+      'kling-3-turbo': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/generation-history/ChatGPT%20Image%20Jun%2023,%202026,%2011_32_23%20PM.png',
+      'gemini-omni': `${MODEL_IMAGE_BASE}/15.png`,
+      'happyhorse-1': `${MODEL_IMAGE_BASE}/16.png`,
+      'veo31': `${MODEL_IMAGE_BASE}/17.png`,
+      'grok-video': `${MODEL_IMAGE_BASE}/7.png`,
+      'kling26': `${MODEL_IMAGE_BASE}/18.png`,
+      'kling-2-5-turbo': `${MODEL_IMAGE_BASE}/19.png`,
+      'wan-2-7-video': `${MODEL_IMAGE_BASE}/10.png`,
+      'kling-motion-control': `${MODEL_IMAGE_BASE}/20.png`,
+      'aleph': `${MODEL_IMAGE_BASE}/21.png`,
+      '/upscale.html': `${MODEL_IMAGE_BASE}/22.png`,
+      '/expand.html?mode=angles': `${MODEL_IMAGE_BASE}/24.png`,
+      '/expand.html?mode=expand': `${MODEL_IMAGE_BASE}/25.png`,
+      '/expand.html?mode=face-swap': `${MODEL_IMAGE_BASE}/26.png`,
+      '/character.html': `${MODEL_IMAGE_BASE}/27.png`,
+      '/upscale.html?mode=video': `${MODEL_IMAGE_BASE}/22.png`,
+      '/lipsync.html': `${MODEL_IMAGE_BASE}/23.png`,
+      '/analyse.html': `${MODEL_IMAGE_BASE}/29.png`,
+      '/product_card.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%201,%202026,%2007_54_29%20PM.png',
+      '/prompt-builder.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/HANSORA%20AI%20(4).png',
+      '/kid-cartoon.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%2025,%202026,%2004_33_20%20PM.png',
+      '/video-edit.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/HANSORA.png',
+      '/background-change.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/HANSORA%20(1).png',
+      '/audio.html?tool=text-to-speech': `${MODEL_IMAGE_BASE}/28.png`,
+      '/audio.html?tool=voice-isolater': `${MODEL_IMAGE_BASE}/28.png`,
+      '/audio.html?tool=voice-changer': `${MODEL_IMAGE_BASE}/28.png`,
+      '/audio.html?tool=song-creation': `${MODEL_IMAGE_BASE}/30.png`
+    };
+
+    function modelHref(id) {
+      return `/search-models.html?model=${encodeURIComponent(id)}`;
+    }
+
+    function fromHeaderItems(items, type, offset) {
+      return items.map((item, index) => ({
+        type,
+        id: item.id || '',
+        name: item.label,
+        href: item.href || modelHref(item.id),
+        thumbnail: MODEL_IMAGE_URLS[item.id || item.href || item.label] || MODEL_PLACEHOLDERS[(index + offset) % MODEL_PLACEHOLDERS.length]
+      }));
+    }
+
+    const IMAGE_MODELS = fromHeaderItems([
+      { label: 'GPT Image 2', id: 'gpt-image-2' },
+      { label: 'Nano Banana 2', id: 'nano-banana-2' },
+      { label: 'Nano Banana Pro', id: 'nano-banana-pro' },
+      { label: 'Seedream 5.0 Lite', id: 'seedream-5-lite' },
+      { label: 'Grok Image', id: 'grok-image' },
+      { label: 'Seedream 4.5', id: 'seedream-4-5' },
+      { label: 'Wan 2.7', id: 'wan-2-7' },
+      { label: 'Qwen 2', id: 'qwen-2' },
+      { label: 'Z Image', id: 'z-image' },
+      { label: 'GPT Image 1.5', id: 'gpt-image-1-5' },
+      { label: 'Nano Banana', id: 'nano-banana' }
+    ], 'image', 0);
+
+    const VIDEO_MODELS = fromHeaderItems([
+      { label: 'Seedance 2.0', id: 'seedance-2' },
+      { label: 'Kling 3.0', id: 'kling-3' },
+      { label: 'Seedance 2.0 Mini', id: 'seedance-2-mini' },
+      { label: 'Kling 3 Turbo', id: 'kling-3-turbo' },
+      { label: 'Gemini Omni', id: 'gemini-omni' },
+      { label: 'HappyHorse 1.0', id: 'happyhorse-1' },
+      { label: 'Veo 3.1', id: 'veo31' },
+      { label: 'Grok', id: 'grok-video' },
+      { label: 'Kling 2.6', id: 'kling26' },
+      { label: 'Kling 2.5 Turbo', id: 'kling-2-5-turbo' },
+      { label: 'Wan 2.7', id: 'wan-2-7-video' },
+      { label: 'Kling Motion Control', id: 'kling-motion-control' },
+      { label: 'Aleph', id: 'aleph' },
+      { label: 'Video upscale', href: '/upscale.html?mode=video' },
+      { label: 'Lips sync / Avatar', href: '/lipsync.html' }
+    ], 'video', 3);
+
+    const FEATURES = fromHeaderItems([
+      { label: 'Video Edit', href: '/video-edit.html' },
+      { label: 'Video Background Change', href: '/background-change.html' },
+      { label: 'Kid Cartoon', href: '/kid-cartoon.html' },
+      { label: 'Image Upscale', href: '/upscale.html' },
+      { label: 'Full angles', href: '/expand.html?mode=angles' },
+      { label: 'Expand', href: '/expand.html?mode=expand' },
+      { label: 'Character', href: '/character.html' },
+      { label: 'Video upscale', href: '/upscale.html?mode=video' },
+      { label: 'Lipsync Avatar', href: '/lipsync.html' },
+      { label: 'Hook analyse', href: '/analyse.html' },
+      { label: 'Product Card', href: '/product_card.html' },
+      { label: 'Cartoon prompt builder', href: '/prompt-builder.html' }
+    ], 'features', 6);
+
+    const AUDIO_MODELS = fromHeaderItems([
+      { label: 'Text to speech', href: '/audio.html?tool=text-to-speech' },
+      { label: 'Voice isolater', href: '/audio.html?tool=voice-isolater' },
+      { label: 'Voice changer', href: '/audio.html?tool=voice-changer' },
+      { label: 'Song Creation', href: '/audio.html?tool=song-creation' }
+    ], 'audio', 9);
+
+    function tile(m) {
+      const dataModel = m.id ? ` data-hansora-model="${m.id}"` : '';
+      return `
+        <a href="${m.href}" data-model-link="1"${dataModel} class="model-name-card group glass rounded-2xl overflow-hidden border border-white/10 shadow-soft block focus:outline-none focus:ring-2 ring-muted">
+          <div class="model-thumb w-full overflow-hidden bg-base-bg/60">
+            <img src="${m.thumbnail}" alt="${m.name}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          </div>
+          <div class="p-4">
+            <h3 class="text-base sm:text-lg font-semibold">${m.name}</h3>
+          </div>
+        </a>`;
+    }
+
+    function renderSections() {
+      const grids = {
+        image: document.getElementById('imageGrid'),
+        video: document.getElementById('videoGrid'),
+        features: document.getElementById('featuresGrid'),
+        audio: document.getElementById('audioGrid')
+      };
+      if (grids.image) grids.image.innerHTML = IMAGE_MODELS.map(tile).join('');
+      if (grids.video) grids.video.innerHTML = VIDEO_MODELS.map(tile).join('');
+      if (grids.features) grids.features.innerHTML = FEATURES.map(tile).join('');
+      if (grids.audio) grids.audio.innerHTML = AUDIO_MODELS.map(tile).join('');
+    }
+
+    function setupFilters() {
+      const btns = Array.from(document.querySelectorAll('.filter-btn'));
+      const sections = Array.from(document.querySelectorAll('[data-category-section]'));
+      function activate(btn) {
+        btns.forEach(b => {
+          b.classList.remove('btn-brand');
+          b.classList.add('btn');
+        });
+        btn.classList.remove('btn');
+        btn.classList.add('btn-brand');
+      }
+      btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const filter = btn.getAttribute('data-filter');
+          activate(btn);
+          sections.forEach(section => {
+            const category = section.getAttribute('data-category-section');
+            section.style.display = filter === 'all' || filter === category ? '' : 'none';
+          });
+        });
+      });
+      if (btns[0]) activate(btns[0]);
+    }
+
+    renderSections();
+    setupFilters();
+</script>
+
+<footer class="border-t border-base-line/60">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 text-sm text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p>© <span id="y"></span> HANSORA AI — Բոլոր իրավունքները պաշտպանված են։</p>
+      <nav class="flex items-center gap-5">
+        <a href="/Termsofuse" class="hover:text-white/80">Պայմաններ</a>
+        <a href="/policy" class="hover:text-white/80">Գաղտնիություն</a>
+        <a href="/contact" class="hover:text-white/80">Կապ</a>
+      </nav>
+    </div>
+  </footer>
+<div id="legacyAuthModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 p-4">
+    <div id="legacyAuthCard" class="w-full max-w-md rounded-2xl border border-white/10 p-6 shadow-soft">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 id="legacyAuthTitle" class="text-lg font-semibold">Մուտք</h3>
+        <button id="legacyAuthClose" class="rounded-lg btn px-2 py-1 text-sm">✕</button>
+      </div>
+      <form id="legacyAuthForm" class="space-y-3">
+        <input id="legacyAuthEmail" type="email" placeholder="Էլ․ փոստ" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
+        <input id="legacyAuthPass" type="password" placeholder="Գաղտնաբառ" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none" required>
+        <input id="legacyAuthPass2" type="password" placeholder="Կրկնել գաղտնաբառը" class="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 outline-none hidden">
+        <div class="flex gap-2">
+          <button id="legacyBtnDoLogin" type="button" class="w-1/2 rounded-lg btn px-3 py-2 font-semibold">Մուտք</button>
+          <button id="legacyBtnDoSignup" type="button" class="w-1/2 rounded-lg btn px-3 py-2">Գրանցվել</button>
+        </div>
+        <p id="legacyAuthMsg" class="text-xs text-zinc-400"></p>
+      </form>
+    </div>
+  </div>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    window.__HANSORA_SB__ = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    var sb = window.__HANSORA_SB__;
+
+    
+  window.supabaseClient = window.__HANSORA_SB__; // expose for header bootstrap
+  window._supabase = window.__HANSORA_SB__;
+// Header elements are handled by HSHeader (persistent header)
+// Keep these null to prevent legacy header code from throwing.
+const $btnLoginNav = null;
+const $btnGetStarted = null;
+const $navUser = null;
+const $navCredits = null;
+const $navAvatar = null;
+const $navMenu = null;
+const $btnLogout = null;
+const $navAvatarImg = null;
+
+// Hero button
+    const $btnLogin = document.getElementById('btnLogin');
+
+    // Modal elements
+    const $modal = document.getElementById('legacyAuthModal');
+    const $close = document.getElementById('legacyAuthClose');
+    const $title = document.getElementById('legacyAuthTitle');
+    const $emailIn = document.getElementById('legacyAuthEmail');
+    const $passIn = document.getElementById('legacyAuthPass');
+    const $pass2In = document.getElementById('legacyAuthPass2');
+    const $msg = document.getElementById('legacyAuthMsg');
+    const $doLogin = document.getElementById('legacyBtnDoLogin');
+    const $doSignup = document.getElementById('legacyBtnDoSignup');
+
+    let authMode = 'login';
+    function openAuth(){ $modal.classList.remove('hidden'); $msg.textContent=''; }
+    function closeAuth(){ $modal.classList.add('hidden'); $msg.textContent=''; }
+    function setAuthMode(mode){
+      authMode = mode;
+      if(mode==='signup'){
+        $title.textContent = 'Գրանցվել';
+        $pass2In.classList.remove('hidden');
+        $doSignup.classList.add('btn-brand'); $doLogin.classList.remove('btn-brand');
+      }else{
+        $title.textContent = 'Մուտք';
+        $pass2In.classList.add('hidden');
+        $doLogin.classList.add('btn-brand'); $doSignup.classList.remove('btn-brand');
+      }
+    }
+    function showLoggedInUI(profile, user){
+      if($btnLoginNav) $btnLoginNav.classList.add('hidden');
+      if($btnGetStarted) $btnGetStarted.classList.add('hidden');
+      if($navUser) $navUser.classList.remove('hidden');
+      if($navUser) $navUser.classList.add('flex');
+      if($navCredits) $navCredits.textContent = (profile?.credits ?? 0) + '⚡';
+      if(user?.user_metadata?.avatar_url){
+        if($navAvatarImg) $navAvatarImg.src = user.user_metadata.avatar_url;
+        if($navAvatarImg) $navAvatarImg.classList.remove('hidden');
+      } else {
+        if($navAvatarImg) $navAvatarImg.classList.add('hidden');
+      }
+    }
+    function showLoggedOutUI(){
+      if($btnLoginNav) $btnLoginNav.classList.remove('hidden');
+      if($btnGetStarted) $btnGetStarted.classList.remove('hidden');
+      if($navUser) $navUser.classList.add('hidden');
+      if($navUser) $navUser.classList.remove('flex');
+    }
+    // Openers
+    if($btnLogin) $btnLogin.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+    if($btnLoginNav) $btnLoginNav.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('login'); openAuth(); });
+    if($btnGetStarted) $btnGetStarted.addEventListener('click', (e)=>{ e.preventDefault(); setAuthMode('signup'); openAuth(); });
+    if($close) $close.addEventListener('click', closeAuth);
+
+    async function getOrCreateProfile(user){
+      const { data, error } = await sb
+        .from('profiles')
+        .select('user_id,email,credits')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if(error){ throw error; }
+      if(!data){
+        const ins = await sb.from('profiles').insert({
+          user_id: user.id, email: user.email, credits: 3
+        }).select().single();
+        if(ins.error){ throw ins.error; }
+        return ins.data;
+      }
+      return data;
+    }
+    async function refreshCredits(){
+      try {
+        if (window.HSHeader && typeof window.HSHeader.refreshCredits === 'function') {
+          return await window.HSHeader.refreshCredits();
+        }
+        // fallback: no-op (header is handled by HSHeader)
+        return null;
+      } catch (e) {
+        console.warn('refreshCredits failed', e);
+        return null;
+      }
+    }
+    window.refreshCredits = refreshCredits; // kept for existing callbacks
+
+    // Sign up
+    $doSignup.addEventListener('click', async ()=>{
+      if(authMode!=='signup'){ setAuthMode('signup'); $msg.textContent=''; return; }
+      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Մուտքագրեք էլ․ փոստը և գաղտնաբառը։'; return; }
+      if($passIn.value !== $pass2In.value){ $msg.textContent='Գաղտնաբառերը չեն համընկնում։'; return; }
+      $msg.textContent = 'Հաշիվը ստեղծվում է…';
+      const { data, error } = await sb.auth.signUp({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+      if(error){ $msg.textContent = error.message; return; }
+      $msg.textContent = 'Հաստատեք էլ․ փոստը, ապա մուտք գործեք։';
+      setAuthMode('login');
+    });
+    // Log in
+    $doLogin.addEventListener('click', async ()=>{
+      if(!$emailIn.value || !$passIn.value){ $msg.textContent='Մուտքագրեք էլ․ փոստը և գաղտնաբառը։'; return; }
+      $msg.textContent = 'Մուտք է կատարվում…';
+      try{
+        const { data, error } = await sb.auth.signInWithPassword({ email: $emailIn.value.trim(), password: $passIn.value.trim() });
+        if(error){ $msg.textContent = error.message; return; }
+        const user = data.user;
+        const prof = await getOrCreateProfile(user);
+        showLoggedInUI(prof, user);
+        closeAuth();
+      }catch(e){ $msg.textContent = e.message || 'Չհաջողվեց մուտք գործել։'; }
+    });
+    // Logout
+    const legacyLogout = document.getElementById('btnLogout');
+    if(legacyLogout) legacyLogout.addEventListener('click', async ()=>{
+      await sb.auth.signOut();
+      showLoggedOutUI();
+    });
+    
+    // === Credit helpers (pure Supabase; no Make.com) ===
+    async function getUserId() {
+      const { data } = await sb.auth.getUser();
+      return data.user?.id || null;
+    }
+    async function setCredits(value) {
+      const uid = await getUserId();
+      if (!uid) throw new Error('Not logged in');
+      const { error } = await sb
+        .from('profiles')
+        .update({ credits: value })
+        .eq('user_id', uid);
+      if (error) throw error;
+      await window.refreshCredits();
+    }
+    async function addCredits(delta) {
+      const uid = await getUserId();
+      if (!uid) throw new Error('Not logged in');
+      const { data, error } = await sb
+        .from('profiles')
+        .select('credits')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (error) throw error;
+      const next = (data?.credits ?? 0) + delta;
+      await setCredits(next);
+    }
+    async function useCredits(cost) {
+      const uid = await getUserId();
+      if (!uid) throw new Error('Not logged in');
+      const { data, error } = await sb
+        .from('profiles')
+        .select('credits')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (error) throw error;
+      const current = data?.credits ?? 0;
+      if (current < cost) throw new Error('Not enough credits');
+      await setCredits(current - cost);
+    }
+    window.hansoraCredits = { addCredits, useCredits, setCredits };
+
+    // Restore session
+    (async ()=>{
+      const { data } = await sb.auth.getUser();
+      const user = data.user;
+      if(user){
+        try{
+          const prof = await getOrCreateProfile(user);
+          showLoggedInUI(prof, user);
+        }catch{ showLoggedOutUI(); }
+      }else{
+        showLoggedOutUI();
+      }
+    })();
+  </script>
+<script>
+  (function(){ 
+    function ready(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
+    ready(async function(){ 
+      try {
+        if (typeof sb === 'undefined' || !sb.auth) return;
+        const navCreditsEl = document.getElementById('navCredits');
+        const runBtn = document.getElementById('runBtn');
+        const R = (c)=>{ 
+          if (navCreditsEl) navCreditsEl.textContent = (c ?? 0) + '⚡';
+          if (runBtn) {
+            const ok = (c ?? 0) > 0;
+            runBtn.disabled = !ok;
+            runBtn.classList.toggle('opacity-50', !ok);
+            runBtn.classList.toggle('cursor-not-allowed', !ok);
+          }
+        };
+
+        const ures = await sb.auth.getUser();
+        const user = ures?.data?.user;
+        if(!user) return;
+
+        async function loadCreditsOnce(){ 
+          try {
+            const { data: prof } = await sb.from('profiles')
+              .select('credits').eq('user_id', user.id).maybeSingle();
+            const c = prof?.credits ?? 0;
+            R(c);
+            return c;
+          } catch(e) { console.warn('credits poll read failed', e); return null; }
+        }
+
+        // Long polling burst (3 minutes) every 2s
+        function startCreditsPolling(durationMs=180000, intervalMs=2000){
+          if (window.__creditsPoll) clearInterval(window.__creditsPoll);
+          const t0 = Date.now();
+          window.__creditsPoll = setInterval(async ()=>{
+            await loadCreditsOnce();
+            if (Date.now() - t0 > durationMs) clearInterval(window.__creditsPoll);
+          }, intervalMs);
+        }
+
+        // Initial load -> reflect current value
+        await loadCreditsOnce();
+
+        // If __run exists, wrap it so we start long polling right after Run
+        if (typeof window.__run === 'function') {
+          const __origRun = window.__run;
+          window.__run = async function(){ 
+            const c = await loadCreditsOnce();
+            if ((c ?? 0) <= 0) { alert('Կրեդիտները սպառվել են։'); return; }
+            startCreditsPolling(180000, 2000); // 3 minutes polling
+            return __origRun();
+          }
+        }
+      } catch(e){ console.warn('credits polling v2 error', e); }
+    });
+  })();
+  </script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const el = document.getElementById('btnLoginSignup');
+  if (!el || !window.supabase) return;
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.user) {
+      el.style.display = 'none';
+    }
+    sb.auth.onAuthStateChange((_e, session) => {
+      if (session && session.user) {
+        el.style.display = 'none';
+      } else {
+        el.style.display = '';
+      }
+    });
+  } catch (_) { /* silent */ }
+});
+</script>
+
+</body>
+</html>
