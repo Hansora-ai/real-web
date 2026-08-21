@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA AI — Գործընկերային ծրագիր</title>
+  <meta name="description" content="Ներկայացրեք HANSORA AI-ը ձեր լսարանին և հետևեք գործընկերային պարգևավճարներին։" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="/header.css" rel="stylesheet" />
+  <style>
+    :root{
+      --base-bg:#0b0d13;
+      --base-line:#1a1f2b;
+      --brand:#6366f1;
+      --cyan:#79e7ff;
+      --violet:#a78bfa;
+      --pink:#f472b6;
+      --lime:#bef264;
+    }
+    *{box-sizing:border-box}
+    body{
+      min-height:100vh;
+      background:
+        radial-gradient(900px 520px at 18% -10%, rgba(99,102,241,.24), transparent 62%),
+        radial-gradient(820px 520px at 86% 8%, rgba(56,189,248,.14), transparent 60%),
+        radial-gradient(760px 460px at 50% 100%, rgba(244,114,182,.10), transparent 62%),
+        var(--base-bg);
+      color:#f7f7fb;
+    }
+    a{color:inherit;text-decoration:none}
+    .shell{width:min(1180px,calc(100% - 32px));margin:0 auto}
+    .hero-card{
+      position:relative;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:32px;
+      background:
+        radial-gradient(620px 320px at 10% 0%, rgba(121,231,255,.18), transparent 65%),
+        radial-gradient(540px 280px at 90% 10%, rgba(167,139,250,.18), transparent 65%),
+        linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.035));
+      box-shadow:0 30px 90px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
+    }
+    .hero-card::before{
+      content:"";
+      position:absolute;
+      inset:-1px;
+      pointer-events:none;
+      background:
+        linear-gradient(90deg, transparent, rgba(121,231,255,.18), transparent),
+        radial-gradient(220px 120px at 70% 4%, rgba(255,255,255,.16), transparent 72%);
+      opacity:.85;
+    }
+    .hero-content{position:relative;z-index:1}
+    .glass-card{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:24px;
+      background:linear-gradient(180deg, rgba(255,255,255,.065), rgba(255,255,255,.032));
+      box-shadow:0 18px 52px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    .stat-card{
+      position:relative;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:22px;
+      background:
+        radial-gradient(170px 120px at 16% 0%, rgba(121,231,255,.14), transparent 68%),
+        rgba(255,255,255,.045);
+      min-height:128px;
+    }
+    .stat-card::after{
+      content:"";
+      position:absolute;
+      right:-40px;
+      top:-50px;
+      width:130px;
+      height:130px;
+      border-radius:999px;
+      background:rgba(255,255,255,.055);
+    }
+    .btn-primary{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      border:0;
+      border-radius:16px;
+      padding:12px 16px;
+      font-weight:900;
+      color:white;
+      background:linear-gradient(135deg, #6366f1, #38bdf8);
+      box-shadow:0 18px 44px rgba(99,102,241,.26);
+      cursor:pointer;
+      transition:transform .16s ease, filter .16s ease;
+    }
+    .btn-primary:hover{transform:translateY(-1px);filter:brightness(1.05)}
+    .btn-soft{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;
+      padding:12px 16px;
+      font-weight:850;
+      background:rgba(255,255,255,.06);
+      color:#fff;
+      cursor:pointer;
+      transition:background .16s ease, transform .16s ease;
+    }
+    .btn-soft:hover{background:rgba(255,255,255,.10);transform:translateY(-1px)}
+    .link-box{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:12px;
+      border:1px solid rgba(121,231,255,.22);
+      border-radius:18px;
+      background:rgba(3,7,18,.34);
+    }
+    .link-box input{
+      width:100%;
+      min-width:0;
+      border:0;
+      outline:0;
+      background:transparent;
+      color:#e5e7eb;
+      font-size:14px;
+      font-weight:750;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid rgba(121,231,255,.24);
+      border-radius:999px;
+      padding:7px 11px;
+      color:#cffafe;
+      background:rgba(121,231,255,.08);
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.02em;
+    }
+    .mini-icon{
+      width:42px;
+      height:42px;
+      display:grid;
+      place-items:center;
+      border-radius:15px;
+      color:#061018;
+      background:linear-gradient(135deg,#dbeafe,#7dd3fc,#a78bfa);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.62), 0 14px 34px rgba(56,189,248,.14);
+      font-weight:950;
+    }
+    .row-card{
+      display:grid;
+      grid-template-columns:1.1fr .7fr .55fr .8fr;
+      gap:12px;
+      align-items:center;
+      padding:14px 0;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .row-card:last-child{border-bottom:0}
+    .status-pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:max-content;
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:12px;
+      font-weight:900;
+      background:rgba(255,255,255,.07);
+      color:rgba(255,255,255,.74);
+    }
+    .status-paid{background:rgba(34,197,94,.13);color:#86efac;border:1px solid rgba(134,239,172,.18)}
+    .status-wait{background:rgba(250,204,21,.10);color:#fde68a;border:1px solid rgba(253,230,138,.14)}
+    .skeleton{
+      position:relative;
+      overflow:hidden;
+      background:rgba(255,255,255,.055);
+      border-radius:14px;
+    }
+    .skeleton::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      transform:translateX(-100%);
+      background:linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
+      animation:shine 1.4s infinite;
+    }
+    @keyframes shine{100%{transform:translateX(100%)}}
+    .affiliate-info-grid{align-items:start}
+    .compact-info-card{align-self:start}
+    .payout-card{
+      min-height:0;
+      position:relative;
+      overflow:hidden;
+    }
+    .payout-card::after{
+      content:"";
+      position:absolute;
+      right:-80px;
+      top:-80px;
+      width:220px;
+      height:220px;
+      border-radius:999px;
+      background:rgba(121,231,255,.08);
+      pointer-events:none;
+    }
+    .payout-modal{
+      position:fixed;
+      inset:0;
+      z-index:120;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    .payout-modal.is-open{display:flex}
+    .payout-backdrop{
+      position:absolute;
+      inset:0;
+      border:0;
+      background:rgba(0,0,0,.68);
+      backdrop-filter:blur(10px);
+      cursor:pointer;
+    }
+    .payout-panel{
+      position:relative;
+      width:min(560px,100%);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:26px;
+      background:
+        radial-gradient(520px 250px at 10% 0%, rgba(121,231,255,.16), transparent 68%),
+        radial-gradient(520px 250px at 90% 0%, rgba(167,139,250,.14), transparent 68%),
+        #10131d;
+      box-shadow:0 30px 90px rgba(0,0,0,.55);
+      overflow:hidden;
+    }
+    .payout-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding:22px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+    }
+    .payout-body{padding:22px}
+    .payout-close{
+      width:38px;
+      height:38px;
+      display:grid;
+      place-items:center;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      color:#fff;
+      cursor:pointer;
+      font-size:20px;
+      line-height:1;
+    }
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:24px;
+      z-index:100;
+      transform:translateX(-50%) translateY(14px);
+      opacity:0;
+      pointer-events:none;
+      border:1px solid rgba(134,239,172,.24);
+      border-radius:16px;
+      padding:12px 16px;
+      background:rgba(6,78,59,.92);
+      color:#dcfce7;
+      font-weight:850;
+      box-shadow:0 18px 48px rgba(0,0,0,.32);
+      transition:opacity .18s ease, transform .18s ease;
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .footer{padding:36px 0;color:rgba(247,247,251,.42);border-top:1px solid rgba(255,255,255,.11)}
+    .footer-inner{display:flex;align-items:center;justify-content:space-between;gap:18px;font-size:.92rem;font-weight:760}
+    .footer-links{display:flex;gap:16px;flex-wrap:wrap}
+    .brand{display:inline-flex;align-items:center;gap:12px;min-width:max-content;font-weight:900;color:inherit;text-decoration:none}
+    .brand img{width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 14px rgba(56,189,248,.45))}
+    .footer-copy{margin:0;color:rgba(247,247,251,.62);font-weight:760}
+    @media (max-width:820px){
+      .row-card{grid-template-columns:1fr;gap:8px;padding:16px 0}
+      .footer-inner{flex-direction:column;align-items:flex-start}
+    }
+    @media (max-width:640px){
+      .shell{width:min(100% - 22px,1180px)}
+      .hero-card{border-radius:24px}
+      .link-box{flex-direction:column;align-items:stretch}
+      .btn-primary,.btn-soft{width:100%}
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <div id="sharedHeader"></div>
+
+  <main class="flex-1 py-8 md:py-12">
+    <div class="shell space-y-6">
+      <section class="hero-card p-6 md:p-9">
+        <div class="hero-content grid lg:grid-cols-[1.1fr_.9fr] gap-8 items-center">
+          <div>
+            <div class="chip mb-5">15% ԳՈՐԾԸՆԿԵՐԱՅԻՆ ՊԱՐԳԵՎԱՎՃԱՐ</div>
+            <h1 class="text-4xl md:text-6xl font-black tracking-tight leading-[.95]">Գործընկերային ծրագիր</h1>
+            <p class="mt-5 max-w-2xl text-base md:text-lg text-white/68 font-medium leading-relaxed">
+              Ներկայացրեք HANSORA AI-ը ստեղծագործողներին։ Երբ որևէ մեկը գրանցվի ձեր գործընկերային հղմամբ և գնի կրեդիտներ, դուք կստանաք նրա գնման գումարի 15%-ը։
+            </p>
+            <div class="mt-7 flex flex-wrap gap-3">
+              <button id="copyHeroBtn" type="button" class="btn-primary">Պատճենել գործընկերային հղումը</button>
+              <a class="btn-soft" href="/profile.html">Վերադառնալ պրոֆիլ</a>
+            </div>
+          </div>
+          <div class="glass-card p-5 md:p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <span class="mini-icon">%</span>
+              <div>
+                <div class="text-sm text-white/50 font-bold uppercase tracking-[.16em]">Ձեր հղումը</div>
+                <div id="affiliateCodeLabel" class="text-xl font-black">Բեռնվում է…</div>
+              </div>
+            </div>
+            <div class="link-box">
+              <input id="affiliateLinkInput" value="Բեռնում ենք ձեր գործընկերային հղումը…" readonly aria-label="Գործընկերային հղում" />
+              <button id="copyLinkBtn" type="button" class="btn-primary shrink-0">Պատճենել</button>
+            </div>
+            <p class="mt-3 text-sm text-white/52 leading-relaxed">
+              Հղումը կարող է տանել գլխավոր էջ։ Նույնիսկ եթե օգտատերը մինչև գրանցվելը շրջի կայքի տարբեր բաժիններով, գործընկերային կոդը կպահպանվի նրա դիտարկիչում։
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="loggedOutPanel" class="hidden glass-card p-6 md:p-8 text-center">
+        <div class="mx-auto mini-icon mb-4">H</div>
+        <h2 class="text-2xl font-black">Մուտք գործեք՝ գործընկերային վահանակը տեսնելու համար</h2>
+        <p class="mt-2 text-white/60">Ձեր հղումը, հրավիրված օգտատերերը և պարգևավճարի հաշվարկը կապված են HANSORA հաշվի հետ։</p>
+        <a class="btn-primary mt-6" href="/login.html?mode=signup">Մուտք գործել կամ գրանցվել</a>
+      </section>
+
+      <section id="dashboardPanel" class="space-y-6">
+        <div id="loadingPanel" class="grid md:grid-cols-4 gap-4">
+          <div class="skeleton h-32"></div>
+          <div class="skeleton h-32"></div>
+          <div class="skeleton h-32"></div>
+          <div class="skeleton h-32"></div>
+        </div>
+
+        <div id="errorPanel" class="hidden glass-card p-5 border border-red-300/20 bg-red-500/10">
+          <div class="font-black text-red-100">Չհաջողվեց բեռնել գործընկերային վահանակը</div>
+          <p id="errorText" class="mt-1 text-sm text-red-100/72">Թարմացրեք էջը և կրկին փորձեք։</p>
+        </div>
+
+        <div id="statsGrid" class="hidden grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <article class="stat-card p-5">
+            <div class="relative z-10 text-sm text-white/52 font-bold">Հրավիրված օգտատերեր</div>
+            <div id="totalBrought" class="relative z-10 mt-4 text-4xl font-black">0</div>
+            <div class="relative z-10 mt-3 text-xs text-white/42">Ձեր հղմամբ գրանցված բոլոր օգտատերերը</div>
+          </article>
+          <article class="stat-card p-5">
+            <div class="relative z-10 text-sm text-white/52 font-bold">Գնում կատարած օգտատերեր</div>
+            <div id="paidUsers" class="relative z-10 mt-4 text-4xl font-black">0</div>
+            <div id="conversionRate" class="relative z-10 mt-3 text-xs text-white/42">Փոխարկում՝ 0%</div>
+          </article>
+          <article class="stat-card p-5">
+            <div class="relative z-10 text-sm text-white/52 font-bold">Գնված կրեդիտներ</div>
+            <div id="creditsBought" class="relative z-10 mt-4 text-4xl font-black">0</div>
+            <div class="relative z-10 mt-3 text-xs text-white/42">Հրավիրված օգտատերերի կողմից</div>
+          </article>
+          <article class="stat-card p-5">
+            <div class="relative z-10 text-sm text-white/52 font-bold">Նախնական պարգևավճար</div>
+            <div id="rewardCredits" class="relative z-10 mt-4 text-4xl font-black">$0</div>
+            <div class="relative z-10 mt-3 text-xs text-white/42">Վճարումների գումարի 15%-ը</div>
+          </article>
+        </div>
+
+        <div class="affiliate-info-grid grid lg:grid-cols-2 gap-6">
+          <section class="glass-card compact-info-card p-5">
+            <div class="flex items-start gap-4">
+              <span class="mini-icon">1</span>
+              <div>
+                <h2 class="text-xl font-black">Ինչպես է աշխատում</h2>
+                <p class="mt-1 text-sm text-white/58 leading-relaxed">Ընդամենը երկու քայլ՝ ձեր հղմամբ եկամուտ ստանալու համար։</p>
+              </div>
+            </div>
+            <div class="mt-6 space-y-4">
+              <div class="flex gap-3">
+                <span class="status-pill">Քայլ 1</span>
+                <p class="text-sm text-white/70">Օգտատերը գրանցվում է ձեր գործընկերային հղմամբ և գնում կրեդիտներ։</p>
+              </div>
+              <div class="flex gap-3">
+                <span class="status-pill">Քայլ 2</span>
+                <p class="text-sm text-white/70">Երբ հաշվեկշիռը հասնի $50-ի, կարող եք ստանալ հրավիրված օգտատերերի գնումների 15%-ը։</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="glass-card compact-info-card payout-card p-5">
+            <div class="relative z-10 flex items-start gap-4">
+              <span class="mini-icon">$</span>
+              <div>
+                <h2 class="text-xl font-black">Ստանալ վճարումը</h2>
+                <p class="mt-1 text-sm text-white/58 leading-relaxed">Երբ գործընկերային եկամուտը հասնի $50-ի, ուղարկեք վճարման հայտ։ Մենք անվտանգ եղանակով կճշտենք անհրաժեշտ վճարային տվյալները։</p>
+              </div>
+            </div>
+            <div class="relative z-10 mt-4 flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[.045] p-4">
+              <div class="min-w-0">
+                <div class="text-xs font-black uppercase tracking-[.16em] text-white/42">Նվազագույն վճարում</div>
+                <p class="mt-1 text-sm text-white/56 leading-relaxed">Նախ կապվեք մեզ հետ։ Սովորաբար պատասխանում ենք մի քանի ժամվա ընթացքում։</p>
+              </div>
+              <div class="shrink-0 text-4xl font-black">$50</div>
+            </div>
+            <button id="getPaidBtn" type="button" class="btn-primary relative z-10 mt-4 w-full">Ուղարկել վճարման հայտ</button>
+          </section>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div id="toast" class="toast">Գործընկերային հղումը պատճենված է</div>
+
+  <div id="payoutModal" class="payout-modal" aria-hidden="true">
+    <button id="payoutBackdrop" class="payout-backdrop" type="button" aria-label="Փակել վճարման տվյալները"></button>
+    <section class="payout-panel" role="dialog" aria-modal="true" aria-labelledby="payoutTitle">
+      <div class="payout-head">
+        <div class="flex items-center gap-3">
+          <span class="mini-icon">$</span>
+          <div>
+            <h2 id="payoutTitle" class="text-xl font-black leading-tight">Գործընկերային վճարման հայտ</h2>
+            <p class="text-sm text-white/50 mt-1">Նվազագույն գումարը՝ $50</p>
+          </div>
+        </div>
+        <button id="payoutClose" class="payout-close" type="button" aria-label="Փակել վճարման տվյալները">×</button>
+      </div>
+      <div class="payout-body">
+        <p class="text-sm text-white/68 leading-relaxed">
+          Քանի որ վճարման եղանակները տարբեր երկրներում տարբերվում են, նախ կապվեք մեզ հետ։ Մենք մի քանի ժամվա ընթացքում կպատասխանենք և կառաջարկենք ձեր երկրի համար հարմար վճարման տարբերակ։
+        </p>
+        <div class="mt-6 grid sm:grid-cols-2 gap-3">
+          <a class="btn-soft" href="https://t.me/Hansora_support" target="_self">Hansora-ի աջակցությունը Telegram-ում</a>
+          <a id="payoutContactBtn" class="btn-primary" href="/contact.html">Կապվել մեզ հետ</a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="footer">
+    <div class="shell footer-inner">
+      <a aria-label="HANSORA AI-ի գլխավոր էջ" class="brand" href="/">
+        <img alt="" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(23).png" loading="lazy" decoding="async">
+        <span>HANSORA AI</span>
+      </a>
+      <p class="footer-copy">© HANSORA AI — Բոլոր իրավունքները պաշտպանված են։</p>
+      <div class="footer-links">
+        <a href="/termsofuse.html">Օգտագործման պայմաններ</a>
+        <a href="/policy.html">Գաղտնիության քաղաքականություն</a>
+        <a href="/affilate.html">Գործընկերային ծրագիր</a>
+        <a href="/contact.html">Կապ</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const sb = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+
+    const $ = (id) => document.getElementById(id);
+    let currentAffiliateLink = '';
+    let currentUserEmail = '';
+
+    function setText(id, value) {
+      const el = $(id);
+      if (el) el.textContent = value;
+    }
+
+    function numberText(value) {
+      const n = Number(value || 0);
+      return Number.isInteger(n) ? n.toLocaleString('hy-AM') : n.toLocaleString('hy-AM', { maximumFractionDigits: 2 });
+    }
+
+    function moneyText(value) {
+      const n = Number(value || 0);
+      return `$${n.toLocaleString('hy-AM', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    function formatDate(value) {
+      if (!value) return '—';
+      try {
+        return new Date(value).toLocaleString('hy-AM', {
+          year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+      } catch {
+        return '—';
+      }
+    }
+
+    function maskId(value) {
+      if (!value || value.length < 12) return 'Օգտատեր';
+      return `Օգտատեր ${value.slice(0, 6)}…${value.slice(-4)}`;
+    }
+
+    function showToast(message) {
+      const toast = $('toast');
+      if (!toast) return;
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(window.__affiliateToastTimer);
+      window.__affiliateToastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+    }
+
+    async function copyAffiliateLink() {
+      if (!currentAffiliateLink) return;
+      try {
+        await navigator.clipboard.writeText(currentAffiliateLink);
+        showToast('Գործընկերային հղումը պատճենված է');
+      } catch {
+        const input = $('affiliateLinkInput');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+        showToast('Ընտրեք և պատճենեք հղումը');
+      }
+    }
+
+    function setLoading(isLoading) {
+      $('loadingPanel')?.classList.toggle('hidden', !isLoading);
+      $('statsGrid')?.classList.toggle('hidden', isLoading);
+    }
+
+    function setLoggedOut() {
+      $('dashboardPanel')?.classList.add('hidden');
+      $('loggedOutPanel')?.classList.remove('hidden');
+      setText('affiliateCodeLabel', 'Մուտք է պահանջվում');
+      const input = $('affiliateLinkInput');
+      if (input) input.value = 'Մուտք գործեք՝ գործընկերային հղումը ստանալու համար';
+    }
+
+    function setError(message) {
+      $('errorPanel')?.classList.remove('hidden');
+      setText('errorText', message || 'Թարմացրեք էջը և կրկին փորձեք։');
+    }
+
+    function renderDashboard(data) {
+      const summary = data.summary || {};
+      currentAffiliateLink = data.affiliate_link || `${location.origin}/?ref=${encodeURIComponent(data.affiliate_code || '')}`;
+
+      setText('affiliateCodeLabel', data.affiliate_code || '—');
+      const input = $('affiliateLinkInput');
+      if (input) input.value = currentAffiliateLink;
+
+      setText('totalBrought', numberText(summary.total_brought));
+      setText('paidUsers', numberText(summary.paid_users));
+      setText('conversionRate', `Փոխարկում՝ ${numberText(summary.conversion_rate)}%`);
+      setText('creditsBought', numberText(summary.total_credits_bought));
+      setText('rewardCredits', moneyText(summary.estimated_15_percent_reward_usd ?? summary.estimated_15_percent_reward_credits));
+
+    }
+
+    function renderRecentRows(rows) {
+      const holder = $('recentRows');
+      const empty = $('emptyRows');
+      if (!holder || !empty) return;
+
+      holder.innerHTML = '';
+      if (!rows.length) {
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      rows.forEach((row) => {
+        const paid = row.has_paid || Number(row.payment_count || 0) > 0;
+        const item = document.createElement('div');
+        item.className = 'row-card';
+        item.innerHTML = `
+          <div class="min-w-0">
+            <div class="font-black text-sm">${maskId(row.referred_user_id)}</div>
+            <div class="text-xs text-white/42 mt-1">Գրանցվել է՝ ${formatDate(row.referred_at)}</div>
+          </div>
+          <div>
+            <span class="status-pill ${paid ? 'status-paid' : 'status-wait'}">${paid ? 'Գնում է կատարել' : 'Գրանցված է'}</span>
+          </div>
+          <div>
+            <div class="text-sm font-black">${numberText(row.credits_bought)}⚡</div>
+            <div class="text-xs text-white/42 mt-1">Գնված է</div>
+          </div>
+          <div>
+            <div class="text-sm font-black">${moneyText(row.estimated_15_percent_reward_usd ?? row.estimated_15_percent_reward_credits)}</div>
+            <div class="text-xs text-white/42 mt-1">Նախնական 15%</div>
+          </div>
+        `;
+        holder.appendChild(item);
+      });
+    }
+
+    function buildPayoutContactLink() {
+      const message = 'Բարև ձեզ։ Իմ գործընկերային պարգևավճարը հասել է $50-ի։ Խնդրում եմ օգնել ստանալ վճարումը։';
+      const params = new URLSearchParams();
+      if (currentUserEmail) params.set('email', currentUserEmail);
+      params.set('message', message);
+      return `/contact.html?${params.toString()}`;
+    }
+
+    function updatePayoutContactLink() {
+      const link = $('payoutContactBtn');
+      if (link) link.href = buildPayoutContactLink();
+    }
+
+    function openPayoutModal() {
+      updatePayoutContactLink();
+      const modal = $('payoutModal');
+      if (!modal) return;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closePayoutModal() {
+      const modal = $('payoutModal');
+      if (!modal) return;
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    async function loadDashboard() {
+      $('errorPanel')?.classList.add('hidden');
+      setLoading(true);
+      try {
+        const { data: sessionData } = await sb.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        currentUserEmail = sessionData?.session?.user?.email || '';
+        updatePayoutContactLink();
+        if (!token) {
+          setLoggedOut();
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch('/.netlify/functions/affiliate-dashboard?limit=1', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || 'affiliate_dashboard_failed');
+
+        $('loggedOutPanel')?.classList.add('hidden');
+        $('dashboardPanel')?.classList.remove('hidden');
+        renderDashboard(json);
+      } catch (error) {
+        setError(error.message || 'Չհաջողվեց բեռնել գործընկերային վահանակը։');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    $('copyHeroBtn')?.addEventListener('click', copyAffiliateLink);
+    $('copyLinkBtn')?.addEventListener('click', copyAffiliateLink);
+    $('getPaidBtn')?.addEventListener('click', openPayoutModal);
+    $('payoutClose')?.addEventListener('click', closePayoutModal);
+    $('payoutBackdrop')?.addEventListener('click', closePayoutModal);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closePayoutModal();
+    });
+
+    loadDashboard();
+  </script>
+  <script defer src="/header.js"></script>
+</body>
+</html>
