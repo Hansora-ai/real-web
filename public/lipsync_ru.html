@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HANSORA • Talking Avatar</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link href="/header.css" rel="stylesheet" />
+  <script defer src="/header.js"></script>
+  <script src="/kie-upload-bridge.js"></script>
+  <style>
+    :root{
+      --bg:#070809;
+      --panel:#111318;
+      --panel2:#171a20;
+      --line:rgba(255,255,255,.08);
+      --line-strong:rgba(255,255,255,.15);
+      --muted:rgba(239,244,255,.56);
+      --brand:#6366f1;
+      --brand2:#8b5cf6;
+      --cyan:#38bdf8;
+      --good:#34d399;
+      --bad:#fb7185;
+      --lime:#ddff37;
+      --display:"Sora",Inter,system-ui,sans-serif;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ min-height:100%; background:var(--bg); color:#f4f6fb; font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+    body{ overflow:hidden; background:radial-gradient(1000px 560px at 82% -10%, rgba(99,102,241,.14), transparent 60%), radial-gradient(820px 520px at -6% 112%, rgba(56,189,248,.08), transparent 60%), var(--bg); }
+    button{ cursor:pointer; }
+    button:disabled{ opacity:.42; cursor:not-allowed; }
+    .app-shell{ min-height:calc(100vh - 58px); display:grid; grid-template-columns:360px minmax(0,1fr); gap:16px; padding:16px; }
+    .left-panel,.right-panel{ border:1px solid var(--line); background:rgba(16,18,23,.96); border-radius:20px; box-shadow:0 20px 70px rgba(0,0,0,.38); }
+    .left-panel{ height:calc(100vh - 90px); overflow:auto; padding:16px; }
+    .right-panel{ height:calc(100vh - 90px); overflow:auto; padding:18px; background:radial-gradient(700px 420px at 70% 0%,rgba(99,102,241,.16),transparent 60%),rgba(13,15,19,.92); }
+    .panel-title{ font-size:22px; font-weight:850; line-height:1.05; margin:0; }
+    .panel-subtitle{ color:var(--muted); font-size:12px; margin-top:7px; line-height:1.45; }
+    .section{ border:1px solid var(--line); background:rgba(24,26,31,.72); border-radius:16px; padding:12px; margin-top:12px; }
+    .label{ display:block; font-size:12px; color:var(--muted); font-weight:760; margin-bottom:8px; }
+    .model-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .choice{ min-height:72px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.045); color:#fff; padding:10px; text-align:left; }
+    .choice.active{ border-color:rgba(99,102,241,.9); background:linear-gradient(135deg,rgba(99,102,241,.28),rgba(139,92,246,.18)); box-shadow:0 0 0 1px rgba(99,102,241,.22) inset; }
+    .choice strong{ display:block; font-size:14px; }
+    .choice span{ display:block; color:rgba(255,255,255,.58); font-size:11px; margin-top:4px; }
+    .drop-card{ position:relative; border:1px dashed rgba(255,255,255,.16); background:rgba(255,255,255,.035); min-height:138px; border-radius:16px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    #imageDrop{ aspect-ratio:3 / 4; min-height:0; }
+    .drop-card.drag-over{ border-color:rgba(139,92,246,.95); background:rgba(99,102,241,.15); }
+    .drop-card.has-file{ border-style:solid; border-color:rgba(99,102,241,.42); }
+    .drop-button{ width:100%; height:100%; min-height:138px; border:0; background:transparent; color:rgba(255,255,255,.74); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:14px; }
+    .drop-icon{ width:44px; height:44px; border-radius:999px; background:rgba(255,255,255,.08); display:flex; align-items:center; justify-content:center; font-size:20px; }
+    .thumb-preview{ position:absolute; inset:0; background:rgba(0,0,0,.3); }
+    .thumb-preview img{ width:100%; height:100%; object-fit:cover; display:block; }
+    #imagePreview img{ aspect-ratio:3 / 4; }
+    .thumb-preview.audio{ display:flex; align-items:center; justify-content:center; padding:12px; flex-direction:column; gap:10px; color:#fff; background:linear-gradient(135deg,rgba(99,102,241,.24),rgba(14,165,233,.12)); }
+    .remove-btn{ position:absolute; right:8px; top:8px; z-index:3; width:28px; height:28px; border-radius:999px; background:rgba(0,0,0,.72); border:1px solid rgba(255,255,255,.18); color:#fff; display:flex; align-items:center; justify-content:center; }
+    .pill-row{ display:flex; flex-wrap:wrap; gap:8px; }
+    .pill{ min-height:34px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.045); color:rgba(255,255,255,.78); padding:0 12px; font-size:12px; font-weight:720; }
+    .pill.active{ color:#efffb2; background:rgba(221,255,55,.14); border-color:rgba(221,255,55,.48); }
+    .record-box{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .soft-btn{ min-height:38px; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.045); color:#fff; padding:0 12px; font-size:12px; font-weight:720; }
+    .soft-btn:hover{ background:rgba(255,255,255,.075); }
+    .mic-btn{
+      min-height:46px;
+      border:1px solid rgba(255,37,200,.55);
+      background:linear-gradient(135deg,rgba(255,37,200,.95),rgba(139,92,246,.95),rgba(56,189,248,.85));
+      color:#fff;
+      box-shadow:0 14px 36px rgba(255,37,200,.26),0 0 0 1px rgba(255,255,255,.10) inset;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:-.01em;
+    }
+    .mic-btn:hover{ filter:saturate(1.16) brightness(1.06); background:linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8); }
+    .mic-emoji{
+      width:28px;
+      height:28px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(255,255,255,.20);
+      box-shadow:0 0 18px rgba(255,255,255,.28);
+      font-size:16px;
+    }
+    .brand-btn{ width:100%; min-height:54px; border-radius:15px; border:0; background:linear-gradient(135deg,var(--brand),var(--brand2)); color:white; box-shadow:0 14px 38px rgba(99,102,241,.38); font-size:16px; font-weight:880; }
+    .cost-box{ margin-top:12px; border:1px solid rgba(221,255,55,.22); background:rgba(221,255,55,.075); color:#efffb2; border-radius:16px; padding:12px; }
+    .status{ min-height:20px; margin-top:10px; color:rgba(255,255,255,.68); font-size:12px; line-height:1.4; }
+    .status.error{ color:#fecdd3; }
+    .status.good{ color:#bbf7d0; }
+    .hero-board{ border:1px solid var(--line); border-radius:20px; min-height:250px; background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(14,165,233,.07)),rgba(255,255,255,.018); padding:22px; display:flex; align-items:flex-end; justify-content:space-between; gap:18px; }
+    .hero-board h1{ font-size:clamp(30px,4.4vw,58px); line-height:.95; margin:0; font-weight:920; letter-spacing:-.04em; }
+    .hero-board p{ color:var(--muted); max-width:610px; font-size:14px; line-height:1.55; margin-top:12px; }
+    .engine-note{ display:inline-block; margin-top:16px; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:rgba(255,255,255,.26); font-weight:700; }
+    .preview-orb{ width:190px; height:190px; border-radius:42px; border:1px solid rgba(255,255,255,.1); background:radial-gradient(circle at 32% 20%,rgba(255,255,255,.32),transparent 28%),linear-gradient(145deg,rgba(99,102,241,.68),rgba(14,165,233,.2)); display:flex; align-items:center; justify-content:center; font-size:64px; flex:0 0 auto; box-shadow:0 25px 70px rgba(99,102,241,.18); }
+    .results-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:18px 0 10px; }
+    .results-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .result-card{ position:relative; border:1px solid var(--line); background:rgba(17,19,24,.88); border-radius:16px; overflow:hidden; min-height:0; display:flex; flex-direction:column; }
+    .result-media{ aspect-ratio:9 / 16; background:rgba(0,0,0,.3); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .result-media video{ width:100%; height:100%; object-fit:cover; display:block; }
+    .result-media.pending{ flex-direction:column; gap:10px; color:rgba(255,255,255,.55); }
+    .result-media.failed-state{
+      flex-direction:column;
+      color:rgba(248,113,113,.92);
+      background:rgba(2,6,23,.82);
+    }
+    .loader{ width:28px; height:28px; border-radius:999px; border:3px solid rgba(148,163,184,.35); border-top-color:#a855f7; animation:spin 1s linear infinite; }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
+    .processing-orb{
+      width:48px;
+      height:48px;
+      border-radius:18px;
+      border:0;
+      background:linear-gradient(135deg,#ff25c8,#8b5cf6,#38bdf8);
+      box-shadow:0 0 30px rgba(139,92,246,.52);
+      animation:orbSpin 1.35s linear infinite;
+    }
+    @keyframes orbSpin{ to{ transform:rotate(360deg); } }
+    .result-media.pending{
+      background:rgba(2,6,23,.58);
+    }
+    .badge{ position:absolute; left:10px; top:10px; border-radius:999px; padding:4px 9px; background:rgba(2,6,23,.76); border:1px solid rgba(255,255,255,.12); color:rgba(255,255,255,.86); font-size:10px; z-index:2; }
+    .result-info{ padding:10px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .result-info strong{ display:block; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; }
+    .result-info span{ display:block; font-size:10px; color:rgba(255,255,255,.52); margin-top:3px; }
+    .get-btn{ min-height:30px; border-radius:999px; border:1px solid rgba(255,255,255,.15); background:rgba(99,102,241,.22); color:#fff; padding:0 12px; font-size:11px; }
+    #previewOverlay{ position:fixed; inset:0; z-index:2147483647 !important; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.85); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); padding:18px; }
+    #previewOverlay.show{ display:flex; }
+    body.preview-open #sharedHeader,
+    body.preview-open #sharedHeader *,
+    body.preview-open header,
+    body.preview-open header *,
+    body.preview-open .site-header,
+    body.preview-open .site-header *,
+    body:has(#previewOverlay.show) #sharedHeader,
+    body:has(#previewOverlay.show) #sharedHeader *,
+    body:has(#previewOverlay.show) header,
+    body:has(#previewOverlay.show) header *,
+    body:has(#previewOverlay.show) .site-header,
+    body:has(#previewOverlay.show) .site-header *{
+      z-index:0 !important;
+      visibility:hidden !important;
+      pointer-events:none !important;
+    }
+    .preview-card{ position:relative; width:min(920px,100%); max-height:88vh; border:1px solid rgba(255,255,255,.14); background:rgba(2,6,23,.88); border-radius:22px; overflow:hidden; }
+    .preview-close{ position:absolute; top:10px; right:10px; width:40px; height:40px; border-radius:999px; border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.55); color:#fff; font-size:24px; z-index:3; }
+    .preview-card video{ width:100%; max-height:88vh; object-fit:contain; display:block; background:#000; }
+    @media (max-width:980px){
+      body{ overflow:auto; }
+      .app-shell{ display:block; padding:12px; }
+      .left-panel,.right-panel{ height:auto; margin-bottom:12px; }
+      .left-panel{ padding:14px; }
+      .hero-board{ min-height:180px; align-items:flex-start; }
+      .preview-orb{ display:none; }
+      .results-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding-right:0; }
+      .result-card{ min-height:0; scroll-snap-align:start; }
+      .result-media{ height:auto; }
+      .model-grid{ grid-template-columns:1fr; }
+    }
+
+    /* ===== Modern polish pass ===== */
+    .panel-title,.hero-board h1{ font-family:var(--display); letter-spacing:-.03em; }
+    .panel-title{ font-size:24px; }
+
+    .left-panel,.right-panel{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.022);
+      border-radius:22px;
+      box-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 24px 60px rgba(0,0,0,.34);
+    }
+    .right-panel{ background:radial-gradient(760px 440px at 72% -4%, rgba(99,102,241,.14), transparent 62%), rgba(255,255,255,.018); }
+
+    .section{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.025);
+      border-radius:16px;
+      transition:border-color .18s ease, background .18s ease;
+    }
+    .section:hover{ border-color:var(--line-strong); }
+
+    .choice{
+      border-radius:14px;
+      background:rgba(255,255,255,.03);
+      transition:transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+    .choice:hover{ transform:translateY(-2px); border-color:var(--line-strong); }
+    .choice.active{
+      border-color:var(--brand);
+      background:linear-gradient(135deg, rgba(99,102,241,.26), rgba(139,92,246,.16));
+      box-shadow:0 0 0 1px rgba(99,102,241,.28) inset, 0 10px 28px rgba(99,102,241,.18);
+    }
+
+    .drop-card{ border-radius:16px; transition:border-color .18s ease, background .18s ease; }
+    .drop-card:hover{ border-color:rgba(139,92,246,.55); }
+    .drop-icon{ background:linear-gradient(135deg, rgba(99,102,241,.42), rgba(56,189,248,.26)); }
+
+    .soft-btn{ border-radius:12px; transition:background .15s ease, border-color .15s ease, transform .1s ease; }
+    .soft-btn:active{ transform:scale(.98); }
+
+    .brand-btn{
+      border-radius:16px;
+      background:linear-gradient(135deg, var(--brand), var(--brand2));
+      background-size:150% 150%;
+      box-shadow:0 16px 40px rgba(99,102,241,.4);
+      transition:background-position .5s ease, box-shadow .2s ease, transform .12s ease;
+      letter-spacing:-.01em;
+    }
+    .brand-btn:hover{ background-position:100% 0; box-shadow:0 22px 54px rgba(99,102,241,.55); }
+    .brand-btn:active{ transform:scale(.99); }
+
+    .cost-box{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(99,102,241,.12), rgba(99,102,241,.04));
+      color:#dfe3ff;
+      border-radius:16px;
+    }
+
+    .hero-board{
+      border:1px solid var(--line);
+      border-radius:22px;
+      min-height:0;
+      align-items:center;
+      background:
+        radial-gradient(620px 360px at 92% 10%, rgba(139,92,246,.2), transparent 62%),
+        linear-gradient(135deg, rgba(99,102,241,.15), rgba(56,189,248,.05)),
+        rgba(255,255,255,.02);
+    }
+    .preview-orb{
+      border-radius:36px;
+      background:
+        radial-gradient(circle at 30% 22%, rgba(255,255,255,.4), transparent 30%),
+        linear-gradient(150deg, rgba(99,102,241,.85), rgba(56,189,248,.35));
+      box-shadow:0 28px 70px rgba(99,102,241,.28);
+    }
+
+    .result-card{
+      border-radius:18px;
+      transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    }
+    .result-card:hover{ transform:translateY(-3px); border-color:var(--line-strong); box-shadow:0 18px 40px rgba(0,0,0,.4); }
+    .badge{ backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+    .get-btn{
+      background:linear-gradient(135deg, rgba(99,102,241,.95), rgba(139,92,246,.9));
+      border-color:transparent;
+      transition:filter .15s ease, transform .1s ease;
+    }
+    .get-btn:hover{ filter:brightness(1.1); }
+    .get-btn:active{ transform:scale(.97); }
+
+    .preview-card{ border-radius:24px; }
+
+    .left-panel::-webkit-scrollbar,.right-panel::-webkit-scrollbar{ width:10px; }
+    .left-panel::-webkit-scrollbar-thumb,.right-panel::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.08); border-radius:999px; border:3px solid transparent; background-clip:content-box; }
+    .left-panel::-webkit-scrollbar-thumb:hover,.right-panel::-webkit-scrollbar-thumb:hover{ background:rgba(255,255,255,.16); background-clip:content-box; }
+  </style>
+</head>
+<body>
+  <div id="sharedHeader"></div>
+
+  <div class="app-shell">
+    <aside class="left-panel">
+      <h1 class="panel-title">Создать</h1>
+      <p class="panel-subtitle">Создайте говорящий аватар из одного изображения и одного аудиофайла. Длительность аудио должна составлять от 5 до 90 секунд.</p>
+
+      <section class="section">
+        <span class="label">Модель</span>
+        <div class="model-grid">
+          <button id="modelAvatarV" class="choice active" type="button" data-model="avatar_v"><strong>Avatar IV</strong><span>0.7⚡ / секунду</span></button>
+          <button id="modelAvatarIII" class="choice" type="button" data-model="avatar_iii"><strong>Avatar III</strong><span>0.3⚡ / секунду</span></button>
+        </div>
+      </section>
+
+      <section class="section">
+        <span class="label">Исходное изображение</span>
+        <div id="imageDrop" class="drop-card">
+          <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" />
+          <button id="imageBtn" class="drop-button" type="button"><span class="drop-icon">📎</span><span>Загрузите одно изображение</span><small class="text-white/45">PNG, JPG, WEBP</small></button>
+          <div id="imagePreview" class="hidden"></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <span class="label">Исходное аудио</span>
+        <div id="audioDrop" class="drop-card">
+          <input id="audioInput" type="file" class="hidden" />
+          <button id="audioBtn" class="drop-button" type="button"><span class="drop-icon">🎙️</span><span>Загрузить MP3</span><small class="text-white/45">MP3 • 5–90 секунд</small></button>
+          <div id="audioPreview" class="hidden"></div>
+        </div>
+        <div class="record-box mt-3">
+          <button id="recordBtn" class="soft-btn mic-btn" type="button"><span class="mic-emoji">🎤</span><span>Использовать микрофон</span></button>
+          <button id="stopRecordBtn" class="soft-btn hidden" type="button">Остановить запись</button>
+          <button id="removeRecordBtn" class="soft-btn hidden" type="button">Удалить запись</button>
+          <span id="recordStatus" class="text-[11px] text-white/50"></span>
+        </div>
+      </section>
+
+
+      <div class="cost-box">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-xs text-white/60">Длительность аудио</span>
+          <strong id="durationLabel" class="text-sm">Выберите аудио</strong>
+        </div>
+        <div class="flex items-center justify-between gap-3 mt-2">
+          <span class="text-xs text-white/60">Примерная стоимость</span>
+          <strong id="costLabel" class="text-sm">0⚡</strong>
+        </div>
+      </div>
+
+      <button id="runBtn" class="brand-btn mt-3" type="button">Сгенерировать</button>
+      <p id="status" class="status"></p>
+    </aside>
+
+    <main class="right-panel">
+      <section class="hero-board">
+        <div>
+          <h1>Talking<br />Avatar</h1>
+          <p>Загрузите портретное изображение и добавьте аудиофайл или запишите голос с микрофона.</p>
+          <span class="engine-note">Работает на HeyGen</span>
+        </div>
+      </section>
+
+      <div class="results-head">
+        <div>
+          <h2 class="text-sm font-semibold text-white/85">Недавние генерации</h2>
+          <p class="text-[11px] text-white/45">Последние задачи этого аккаунта</p>
+        </div>
+        <button id="refreshBtn" class="soft-btn" type="button">Обновить</button>
+      </div>
+      <div id="resultsGrid" class="results-grid"></div>
+    </main>
+  </div>
+
+  <div id="previewOverlay">
+    <div class="preview-card">
+      <button id="previewClose" class="preview-close" type="button">×</button>
+      <video id="previewVideo" controls playsinline></video>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const supabaseClient = window.__HANSORA_SB__ || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__HANSORA_SB__ = supabaseClient;
+    window.hansoraSupabase = supabaseClient;
+
+    let currentUser = null;
+    let currentCredits = 0;
+    let currentModel = 'avatar_v';
+    let imageFile = null;
+    let audioFile = null;
+    let recordedAudioFile = null;
+    let audioDuration = 0;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recordingStartedAt = 0;
+    let recordTimer = null;
+
+    const $ = (id) => document.getElementById(id);
+
+    function parseCredits(value) {
+      const n = Number(String(value ?? '').replace(/[^\d.-]/g, ''));
+      return Number.isFinite(n) ? n : 0;
+    }
+    function formatCredits(value) {
+      const n = Number(value || 0);
+      return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
+    }
+    function setCreditsEverywhere(value) {
+      const n = parseCredits(value);
+      currentCredits = n;
+      document.querySelectorAll('#navCredits').forEach((node) => { node.textContent = formatCredits(n); });
+      if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') window.HansoraHeader.setCredits(n);
+    }
+    function watchCreditsLive(durationMs = 90000) {
+      if (window.HansoraHeader && typeof window.HansoraHeader.startCreditsPolling === 'function') window.HansoraHeader.startCreditsPolling(durationMs, 1500);
+    }
+    function getVisibleHeaderCredits() {
+      let best = 0;
+      document.querySelectorAll('#navCredits').forEach((node) => {
+        const value = parseCredits(node.textContent || '');
+        if (value > best) best = value;
+      });
+      return best;
+    }
+    function getSharedHeaderCredits() {
+      try {
+        if (window.HansoraHeader && typeof window.HansoraHeader.getCurrentCredits === 'function') {
+          return parseCredits(window.HansoraHeader.getCurrentCredits());
+        }
+      } catch (_) {}
+      return 0;
+    }
+    async function getAvailableCredits(required = 0) {
+      const localBest = Math.max(getSharedHeaderCredits(), getVisibleHeaderCredits(), parseCredits(currentCredits));
+      if (localBest >= Number(required || 0)) {
+        currentCredits = localBest;
+        return localBest;
+      }
+
+      try {
+        const result = await readSupabaseCredits();
+        const supabaseCredits = parseCredits(result.credits);
+        if (result.user) {
+          currentUser = result.user;
+          setCreditsEverywhere(supabaseCredits);
+        }
+        return Math.max(supabaseCredits, localBest);
+      } catch (error) {
+        console.warn('credit read failed; falling back to header value', error);
+      }
+      return localBest;
+    }
+    async function readSupabaseCredits() {
+      const { data: userRes } = await supabaseClient.auth.getUser();
+      const user = userRes && userRes.user ? userRes.user : null;
+      if (!user) return { user: null, profile: null, credits: 0 };
+      const { data: profile, error } = await supabaseClient.from('profiles').select('credits, avatar_url').eq('user_id', user.id).maybeSingle();
+      if (error) throw error;
+      return { user, profile, credits: parseCredits(profile && profile.credits) };
+    }
+    async function refreshCredits() {
+      try {
+        const { user, profile, credits } = await readSupabaseCredits();
+        currentUser = user;
+        if (!user) return 0;
+        setCreditsEverywhere(credits);
+        const avatarImg = $('navAvatarImg');
+        if (avatarImg && profile && profile.avatar_url) { avatarImg.src = profile.avatar_url; avatarImg.classList.remove('hidden'); }
+        return parseCredits(credits);
+      } catch (error) {
+        console.warn('refreshCredits failed', error);
+        return currentCredits;
+      }
+    }
+    async function loadUser() {
+      const { data } = await supabaseClient.auth.getUser();
+      currentUser = data && data.user ? data.user : null;
+      if (!currentUser) {
+        showStatus('Сначала войдите в аккаунт.', 'error');
+        return;
+      }
+      await refreshCredits();
+      await loadRecentHistory();
+    }
+
+    function showStatus(message, kind) {
+      const el = $('status');
+      el.textContent = message || '';
+      el.className = 'status' + (kind ? ' ' + kind : '');
+    }
+    function isNotEnoughCreditsMessage(message) {
+      return /not enough credits|not_enough_credits|insufficient credits|insufficient_credits/i.test(String(message || ''));
+    }
+    function openPricingOfferPopup() {
+      try {
+        if (window.HansoraHeader && typeof window.HansoraHeader.showPricingOfferNow === 'function') {
+          window.HansoraHeader.showPricingOfferNow();
+          return;
+        }
+        if (window.HansoraHeader && typeof window.HansoraHeader.showSignupOfferNow === 'function') {
+          window.HansoraHeader.showSignupOfferNow();
+        }
+      } catch (error) {
+        console.warn('Could not open pricing offer popup', error);
+      }
+    }
+    const GENERATION_FAILED_MESSAGE = 'Не удалось создать видео. Убедитесь, что изображение соответствует правилам в отношении контента, и попробуйте снова.';
+    function showGenerationFailedStatus() {
+      showStatus(GENERATION_FAILED_MESSAGE, 'error');
+    }
+    function selectedAudio() { return recordedAudioFile || audioFile || null; }
+    function getBillableSeconds() { return audioDuration ? Math.ceil(audioDuration) : 0; }
+    function getRate() { return currentModel === 'avatar_v' ? 0.7 : 0.3; }
+    function getCost() { return Math.round(getBillableSeconds() * getRate() * 100) / 100; }
+    function updateCost() {
+      $('durationLabel').textContent = audioDuration ? `${audioDuration.toFixed(1)} сек. → к оплате ${getBillableSeconds()} сек.` : 'Выберите аудио';
+      $('costLabel').textContent = `${getCost()}⚡`;
+      $('runBtn').textContent = getCost() ? `Сгенерировать ${getCost()}⚡` : 'Сгенерировать';
+    }
+
+    function setModel(model) {
+      currentModel = model;
+      document.querySelectorAll('.choice').forEach((btn) => btn.classList.toggle('active', btn.dataset.model === model));
+      updateCost();
+    }
+    function renderImagePreview() {
+      const wrap = $('imagePreview');
+      $('imageDrop').classList.toggle('has-file', !!imageFile);
+      if (!imageFile) { wrap.className = 'hidden'; wrap.innerHTML = ''; return; }
+      const url = URL.createObjectURL(imageFile);
+      wrap.className = 'thumb-preview';
+      wrap.innerHTML = `<button class="remove-btn" type="button" aria-label="Удалить изображение">×</button><img src="${url}" alt="Загруженное изображение" />`;
+      wrap.querySelector('button').onclick = () => { URL.revokeObjectURL(url); imageFile = null; $('imageInput').value = ''; renderImagePreview(); };
+    }
+    function renderAudioPreview(file, sourceLabel) {
+      const wrap = $('audioPreview');
+      $('audioDrop').classList.toggle('has-file', !!file);
+      if (!file) { wrap.className = 'hidden'; wrap.innerHTML = ''; return; }
+      const url = URL.createObjectURL(file);
+      wrap.className = 'thumb-preview audio';
+      wrap.innerHTML = `<button class="remove-btn" type="button" aria-label="Удалить аудио">×</button><div class="text-3xl">🎧</div><strong class="text-sm">${escapeHtml(sourceLabel || file.name || 'Аудио')}</strong><audio controls src="${url}" class="w-full"></audio>`;
+      wrap.querySelector('button').onclick = () => {
+        URL.revokeObjectURL(url);
+        audioFile = null;
+        recordedAudioFile = null;
+        audioDuration = 0;
+        $('audioInput').value = '';
+        syncAudioLocks();
+        renderAudioPreview(null);
+        updateCost();
+      };
+    }
+    function syncAudioLocks() {
+      const hasUpload = !!audioFile;
+      const hasRecording = !!recordedAudioFile;
+      $('audioBtn').disabled = hasRecording;
+      $('recordBtn').disabled = hasUpload || hasRecording;
+      $('removeRecordBtn').classList.toggle('hidden', !hasRecording);
+      if (hasRecording) $('recordStatus').textContent = 'Выбрана запись с микрофона. Удалите её, чтобы загрузить аудио.';
+      else if (hasUpload) $('recordStatus').textContent = 'Выбрано загруженное аудио. Удалите его, чтобы начать запись.';
+      else $('recordStatus').textContent = '';
+    }
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"]/g, (ch) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[ch]));
+    }
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/'/g, '&#39;');
+    }
+    function renderPlayableVideo(url) {
+      const src = url || '';
+      return `<video src="${escapeAttr(src)}" muted playsinline webkit-playsinline autoplay loop preload="auto"></video>`;
+    }
+    function firstVideoUrl(value) {
+      const seen = new Set();
+      const priorityKeys = new Set(['result_url', 'video_url', 'url', 'download_url', 'file_url', 'output_url']);
+      function clean(url) {
+        if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return '';
+        return url.replace(/[)"'\]}]+$/g, '').trim();
+      }
+      function acceptable(url) {
+        if (!url) return false;
+        try {
+          const parsed = new URL(url);
+          const host = parsed.hostname.toLowerCase();
+          if (host === 'app.heygen.com' && /^\/videos\//i.test(parsed.pathname)) return false;
+        } catch (_) {}
+        return /\.(mp4|webm|mov)(?:[?#].*)?$/i.test(url) || /files\.heygen\.com|resource2\.heygen\.ai/i.test(url);
+      }
+      function walk(node, trusted, depth) {
+        if (!node || depth > 10) return '';
+        if (typeof node === 'string') {
+          const direct = clean(node);
+          if (trusted && direct && acceptable(direct) && !seen.has(direct)) return direct;
+          const matches = node.match(/https?:\/\/[^\s"'<>]+/gi) || [];
+          for (const match of matches) {
+            const url = clean(match);
+            if (url && acceptable(url) && !seen.has(url)) return url;
+          }
+          return '';
+        }
+        if (Array.isArray(node)) {
+          for (const item of node) {
+            const url = walk(item, trusted, depth + 1);
+            if (url) return url;
+          }
+          return '';
+        }
+        if (typeof node === 'object') {
+          for (const [key, child] of Object.entries(node)) {
+            const url = walk(child, trusted || priorityKeys.has(String(key || '')), depth + 1);
+            if (url) return url;
+          }
+        }
+        return '';
+      }
+      return walk(value, false, 0);
+    }
+    function getAudioDuration(file) {
+      return new Promise((resolve, reject) => {
+        const audio = document.createElement('audio');
+        const url = URL.createObjectURL(file);
+        let done = false;
+        const finish = (value) => { if (done) return; done = true; URL.revokeObjectURL(url); resolve(value); };
+        audio.preload = 'metadata';
+        audio.onloadedmetadata = () => {
+          const d = Number(audio.duration || 0);
+          if (Number.isFinite(d) && d > 0) finish(Math.round(d * 100) / 100);
+          else finish(0);
+        };
+        audio.onerror = () => { URL.revokeObjectURL(url); reject(new Error('audio_duration_failed')); };
+        audio.src = url;
+      });
+    }
+    async function acceptAudioFile(file, sourceLabel, sourceKind) {
+      if (!file) return;
+      let duration = 0;
+      try {
+        duration = await getAudioDuration(file);
+      } catch (_) {
+        resetAudioSelection();
+        showStatus('Не удалось определить длительность аудио.', 'error');
+        return;
+      }
+      if (!duration) { resetAudioSelection(); showStatus('Не удалось определить длительность аудио.', 'error'); return; }
+      if (duration < 5) { resetAudioSelection(); showStatus('Аудио должно длиться не менее 5 секунд.', 'error'); return; }
+      if (duration > 90.25) { resetAudioSelection(); showStatus('Аудио должно длиться не более 90 секунд.', 'error'); return; }
+      if (sourceKind === 'recording') {
+        recordedAudioFile = file;
+        audioFile = null;
+      } else {
+        audioFile = file;
+        recordedAudioFile = null;
+      }
+      audioDuration = duration;
+      renderAudioPreview(file, sourceLabel || file.name || 'Аудио');
+      syncAudioLocks();
+      updateCost();
+      showStatus('Аудио готово.', 'good');
+    }
+    function isSupportedUploadedAudio(file) {
+      const name = String(file && file.name || '').toLowerCase();
+      const type = String(file && file.type || '').toLowerCase();
+      return /\.mp3$/i.test(name) || type === 'audio/mpeg' || type === 'audio/mp3';
+    }
+    function resetAudioSelection() {
+      audioFile = null;
+      recordedAudioFile = null;
+      audioDuration = 0;
+      $('audioInput').value = '';
+      renderAudioPreview(null);
+      syncAudioLocks();
+      updateCost();
+    }
+
+    function bindDrop(dropEl, inputEl, onFile) {
+      dropEl.addEventListener('dragover', (event) => { event.preventDefault(); dropEl.classList.add('drag-over'); });
+      dropEl.addEventListener('dragleave', () => dropEl.classList.remove('drag-over'));
+      dropEl.addEventListener('drop', (event) => {
+        event.preventDefault();
+        dropEl.classList.remove('drag-over');
+        const file = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files[0] : null;
+        if (file) onFile(file);
+      });
+      inputEl.addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0] ? event.target.files[0] : null;
+        if (file) onFile(file);
+      });
+    }
+
+    async function uploadFile(file) {
+      if (!file) throw new Error('missing_file');
+      if (!window.kieUploadBridge || typeof window.kieUploadBridge.upload !== 'function') throw new Error('upload_bridge_missing');
+      const maxMB = isSupportedUploadedAudio(file) || (file.type && file.type.startsWith('audio/')) ? 100 : 20;
+      if (file.size > maxMB * 1024 * 1024) throw new Error('file_too_large');
+      const up = await window.kieUploadBridge.upload(file);
+      if (!up || !up.publicUrl) throw new Error('upload_failed');
+      return up.publicUrl;
+    }
+
+    async function startRecording() {
+      if (audioFile || recordedAudioFile) return;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { showStatus('Этот браузер не поддерживает запись с микрофона.', 'error'); return; }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordedChunks = [];
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+      mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      mediaRecorder.ondataavailable = (event) => { if (event.data && event.data.size) recordedChunks.push(event.data); };
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        clearInterval(recordTimer);
+        $('stopRecordBtn').classList.add('hidden');
+        $('recordBtn').classList.remove('hidden');
+        const blob = new Blob(recordedChunks, { type: mimeType || 'audio/webm' });
+        const candidate = new File([blob], `heygen-recording-${Date.now()}.webm`, { type: blob.type || 'audio/webm' });
+        await acceptAudioFile(candidate, 'Запись с микрофона', 'recording');
+      };
+      mediaRecorder.start();
+      recordingStartedAt = Date.now();
+      $('recordBtn').classList.add('hidden');
+      $('stopRecordBtn').classList.remove('hidden');
+      $('recordStatus').textContent = 'Запись… 0 сек.';
+      recordTimer = setInterval(() => {
+        const secs = Math.floor((Date.now() - recordingStartedAt) / 1000);
+        $('recordStatus').textContent = `Запись… ${secs} сек.`;
+        if (secs >= 90 && mediaRecorder && mediaRecorder.state === 'recording') stopRecording();
+      }, 500);
+    }
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+    }
+
+    function createResultCard(row, prepend) {
+      const grid = $('resultsGrid');
+      const meta = row.meta || {};
+      const runId = meta.run_id || row.run_id || '';
+      const taskId = meta.task_id || meta.video_id || '';
+      const status = String(meta.status || (row.result_url ? 'done' : 'processing')).toLowerCase();
+      const failed = status.includes('fail') || status.includes('error') || status.includes('cancel');
+      const savedUrl = firstVideoUrl(row.result_url);
+      const url = failed ? '' : (savedUrl || firstVideoUrl(meta));
+      const modelLabel = String(row.provider || '').includes('iii') ? 'Avatar III' : 'Avatar IV';
+      const detailLabel = failed ? 'Ошибка' : (meta.billable_seconds ? meta.billable_seconds + ' сек.' : 'Видео Avatar');
+      const card = document.createElement('article');
+      card.className = 'result-card';
+      card.dataset.runId = runId;
+      card.dataset.taskId = taskId;
+      card.dataset.resultUrl = url;
+      card.innerHTML = `
+        <div class="badge">${failed ? 'Ошибка' : (url ? 'Готово' : 'Обработка')}</div>
+        <div class="result-media ${url ? '' : failed ? 'failed-state' : 'pending'}">${url ? renderPlayableVideo(url) : (failed ? '<span>Ошибка</span>' : '<div class="processing-orb"></div><span>Создаём...</span>')}</div>
+        <div class="result-info"><div><strong>${modelLabel}</strong><span>${detailLabel}</span></div>${url ? '<button class="get-btn" type="button">Скачать</button>' : ''}</div>`;
+      const media = card.querySelector('video');
+      if (media) bindPreviewVideo(media, url);
+      if (media) media.addEventListener('error', () => markVideoUnplayable(card, url));
+      const get = card.querySelector('.get-btn');
+      if (get) get.addEventListener('click', (event) => { event.stopPropagation(); downloadAsset(url, 'talking-avatar'); });
+      if (prepend) grid.prepend(card); else grid.appendChild(card);
+      while (grid.children.length > 12) grid.removeChild(grid.lastElementChild);
+      return {
+        card,
+        apply(next) {
+          const nextUrl = next.result_url || next.video_url || firstVideoUrl(next);
+          const nextStatus = String(next.status || (nextUrl ? 'done' : 'processing')).toLowerCase();
+          const nextFailed = nextStatus.includes('fail') || nextStatus.includes('error') || nextStatus.includes('cancel');
+          card.querySelector('.badge').textContent = nextFailed ? 'Ошибка' : (nextUrl ? 'Готово' : 'Обработка');
+          const mediaWrap = card.querySelector('.result-media');
+          if (nextFailed) {
+            card.dataset.resultUrl = '';
+            mediaWrap.className = 'result-media failed-state';
+            mediaWrap.innerHTML = '<span>Ошибка</span>';
+            const detail = card.querySelector('.result-info span');
+            if (detail) detail.textContent = 'Ошибка';
+            const get = card.querySelector('.result-info .get-btn');
+            if (get) get.remove();
+            return;
+          }
+          if (nextUrl) {
+            card.dataset.resultUrl = nextUrl;
+            mediaWrap.className = 'result-media';
+            mediaWrap.innerHTML = renderPlayableVideo(nextUrl);
+            const video = mediaWrap.querySelector('video');
+            bindPreviewVideo(video, nextUrl);
+            video.addEventListener('error', () => markVideoUnplayable(card, nextUrl));
+            const info = card.querySelector('.result-info');
+            if (!info.querySelector('.get-btn')) {
+              const btn = document.createElement('button');
+              btn.className = 'get-btn';
+              btn.type = 'button';
+              btn.textContent = 'Скачать';
+              btn.addEventListener('click', (event) => { event.stopPropagation(); downloadAsset(nextUrl, 'talking-avatar'); });
+              info.appendChild(btn);
+            }
+          }
+        }
+      };
+    }
+
+    function bindPreviewVideo(video, url) {
+      if (!video || !url) return;
+      prepareInlinePreviewVideo(video);
+      video.addEventListener('click', () => openPreview(url));
+      video.addEventListener('dblclick', (event) => {
+        event.preventDefault();
+        openPreview(url);
+      });
+      video.addEventListener('fullscreenchange', () => {
+        if (document.fullscreenElement === video) document.exitFullscreen().catch(() => {});
+      });
+      video.addEventListener('webkitbeginfullscreen', (event) => {
+        event.preventDefault();
+        try { video.webkitExitFullscreen(); } catch (_) {}
+        openPreview(url);
+      });
+    }
+
+    function prepareInlinePreviewVideo(video) {
+      if (!video) return;
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+      video.autoplay = true;
+      video.loop = true;
+      video.preload = 'auto';
+      video.setAttribute('muted', '');
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      video.setAttribute('autoplay', '');
+      video.setAttribute('loop', '');
+      video.setAttribute('preload', 'auto');
+      const tryPaintFrame = () => {
+        if (!video || video.readyState < 2) return;
+        try {
+          if (!video.currentTime || video.currentTime < 0.04) video.currentTime = 0.05;
+        } catch (_) {}
+        video.play().catch(() => {});
+      };
+      video.addEventListener('loadeddata', tryPaintFrame, { once: true });
+      video.addEventListener('canplay', tryPaintFrame, { once: true });
+      video.load();
+      setTimeout(tryPaintFrame, 120);
+    }
+
+    function markVideoUnplayable(card, url) {
+      if (!card || !url) return;
+      const mediaWrap = card.querySelector('.result-media');
+      if (!mediaWrap || mediaWrap.dataset.fallbackShown === 'true') return;
+      mediaWrap.dataset.fallbackShown = 'true';
+      mediaWrap.className = 'result-media pending';
+      mediaWrap.innerHTML = '<span>Видео готово</span><button class="get-btn" type="button">Открыть</button>';
+      const btn = mediaWrap.querySelector('button');
+      btn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        window.open(url, '_blank', 'noopener,noreferrer');
+      });
+    }
+
+    async function loadRecentHistory() {
+      if (!currentUser) return;
+      try {
+        const { data, error } = await supabaseClient.from('user_generations')
+          .select('provider, kind, prompt, result_url, meta, created_at')
+          .eq('user_id', currentUser.id)
+          .ilike('provider', 'heygen-avatar%')
+          .order('created_at', { ascending: false })
+          .limit(12);
+        if (error) throw error;
+        $('resultsGrid').innerHTML = '';
+        const pending = [];
+        (data || []).forEach((row) => {
+          const controller = createResultCard(row, false);
+          const meta = row.meta || {};
+          const st = String(meta.status || '').toLowerCase();
+          const hasUrl = !!(firstVideoUrl(row.result_url) || firstVideoUrl(meta));
+          if (controller && !hasUrl && (st === 'processing' || st === 'pending' || !st)) pending.push({ controller, runId: meta.run_id, taskId: meta.task_id || meta.video_id });
+        });
+        pending.forEach((item) => startPollResult(item.runId, item.taskId, item.controller));
+      } catch (error) { console.warn('loadRecentHistory failed', error); }
+    }
+
+    const activePolls = new Map();
+    function startPollResult(runId, taskId, controller) {
+      const key = runId || taskId;
+      if (!key || activePolls.has(key)) return;
+      const token = { cancelled: false };
+      activePolls.set(key, token);
+      pollResult(runId, taskId, controller, token).finally(() => activePolls.delete(key));
+    }
+
+    async function pollResult(runId, taskId, controller, token) {
+      if (!runId && !taskId) return;
+      const started = Date.now();
+      while (Date.now() - started < 20 * 60 * 1000) {
+        await delay(2500);
+        if (token && token.cancelled) return;
+        try {
+          const params = new URLSearchParams({ uid: currentUser.id, run_id: runId || '', taskId: taskId || '' });
+          const res = await fetch('/.netlify/functions/heygen-check?' + params.toString(), { cache: 'no-store' });
+          const data = await res.json().catch(() => ({}));
+          const resultUrl = data.result_url || data.video_url || firstVideoUrl(data);
+          if (data.status === 'done' || resultUrl) {
+            controller.apply({ status: 'done', result_url: resultUrl });
+            await refreshCredits();
+            return;
+          }
+          if (data.status === 'failed' || data.failed) {
+            controller.apply({ status: 'failed' });
+            showGenerationFailedStatus();
+            await refreshCredits();
+            return;
+          }
+        } catch (error) { console.warn('pollResult failed', error); }
+      }
+    }
+    function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+    async function submitGeneration() {
+      if (!currentUser) { showStatus('Сначала войдите в аккаунт.', 'error'); return; }
+      if (!imageFile) { showStatus('Сначала загрузите одно изображение.', 'error'); return; }
+      const audio = selectedAudio();
+      if (!audio) { showStatus('Сначала загрузите аудио или запишите его с микрофона.', 'error'); return; }
+      if (!audioDuration || audioDuration < 5 || audioDuration > 90.25) { showStatus('Аудио должно длиться от 5 до 90 секунд.', 'error'); return; }
+      const cost = getCost();
+      const availableCredits = await getAvailableCredits(cost);
+      if (availableCredits < cost) { showStatus(`Недостаточно кредитов. Необходимо ${cost}⚡.`, 'error'); setTimeout(openPricingOfferPopup, 80); return; }
+
+      $('runBtn').disabled = true;
+      let placeholder = null;
+      try {
+        showStatus('Загружаем файлы…');
+        const imageUrl = await uploadFile(imageFile);
+        const audioUrl = await uploadFile(audio);
+        const runId = `${currentUser.id}-${Date.now()}`;
+        placeholder = createResultCard({ provider: currentModel === 'avatar_v' ? 'heygen-avatar-v' : 'heygen-avatar-iii', kind: 'video', result_url: null, meta: { run_id: runId, status: 'processing', billable_seconds: getBillableSeconds() } }, true);
+        showStatus(`Запускаем генерацию с ${currentModel === 'avatar_v' ? 'Avatar IV' : 'Avatar III'}…`);
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        const token = sessionData && sessionData.session ? sessionData.session.access_token : '';
+        const resp = await fetch('/.netlify/functions/run-heygen-avatar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            uid: currentUser.id,
+            run_id: runId,
+            model: currentModel,
+            imageUrl,
+            audioUrl,
+            duration_seconds: audioDuration          })
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!data.submitted) throw new Error(data.error || 'submit_failed');
+        showStatus(`Генерация с ${currentModel === 'avatar_v' ? 'Avatar IV' : 'Avatar III'} запущена. Ожидаем результат…`, 'good');
+        await refreshCredits();
+        watchCreditsLive();
+        startPollResult(runId, data.taskId || data.video_id || '', placeholder);
+      } catch (error) {
+        console.warn('HeyGen generation submission failed', error);
+        if (placeholder && typeof placeholder.apply === 'function') placeholder.apply({ status: 'failed' });
+        if (isNotEnoughCreditsMessage(error && error.message ? error.message : error)) setTimeout(openPricingOfferPopup, 80);
+        showGenerationFailedStatus();
+      } finally {
+        $('runBtn').disabled = false;
+      }
+    }
+
+    function readableError(error) {
+      const text = (error && error.message ? error.message : String(error || '')).replace(/^Error:\s*/, '');
+      const map = {
+        upload_bridge_missing: 'Сервис загрузки временно недоступен. Попробуйте снова.',
+        upload_failed: 'Не удалось загрузить файлы. Попробуйте снова.',
+        file_too_large: 'Файл слишком большой.',
+        insufficient_credits: 'Недостаточно кредитов.',
+        audio_too_short_min_5_seconds: 'Аудио должно длиться не менее 5 секунд.',
+        audio_too_long_max_90_seconds: 'Аудио должно длиться не более 90 секунд.',
+        missing_heygen_api_key: GENERATION_FAILED_MESSAGE,
+        heygen_video_401: GENERATION_FAILED_MESSAGE,
+        heygen_avatar_create_401: GENERATION_FAILED_MESSAGE,
+        heygen_video_400: GENERATION_FAILED_MESSAGE,
+        debit_failed: GENERATION_FAILED_MESSAGE,
+        submit_failed: GENERATION_FAILED_MESSAGE
+      };
+      return map[text] || 'Что-то пошло не так. Попробуйте снова.';
+    }
+
+    async function downloadAsset(url, provider) {
+      if (!url) return;
+      const filename = `${provider || 'talking-avatar'}-${Date.now()}.mp4`;
+      try {
+        const response = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-store' });
+        if (!response.ok) throw new Error('download_fetch_failed');
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 2500);
+      } catch (_) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.rel = 'noopener noreferrer';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+    }
+    function openPreview(url) {
+      if (!url) return;
+      $('previewVideo').src = url;
+      document.body.classList.add('preview-open');
+      $('previewOverlay').classList.add('show');
+      document.body.style.overflow = 'hidden';
+      $('previewVideo').play().catch(() => {});
+    }
+    function closePreview() {
+      $('previewVideo').pause();
+      $('previewVideo').removeAttribute('src');
+      $('previewVideo').load();
+      $('previewOverlay').classList.remove('show');
+      document.body.classList.remove('preview-open');
+      document.body.style.overflow = '';
+    }
+
+    $('modelAvatarV').addEventListener('click', () => setModel('avatar_v'));
+    $('modelAvatarIII').addEventListener('click', () => setModel('avatar_iii'));
+    $('imageBtn').addEventListener('click', () => $('imageInput').click());
+    $('audioBtn').addEventListener('click', () => { if (!$('audioBtn').disabled) $('audioInput').click(); });
+    bindDrop($('imageDrop'), $('imageInput'), (file) => {
+      if (!String(file.type || '').startsWith('image/')) { showStatus('Выбранный файл должен быть изображением.', 'error'); return; }
+      imageFile = file;
+      renderImagePreview();
+    });
+    bindDrop($('audioDrop'), $('audioInput'), async (file) => {
+      if (recordedAudioFile) return;
+      if (!isSupportedUploadedAudio(file)) { showStatus('Аудиофайл должен быть в формате MP3.', 'error'); return; }
+      audioFile = file;
+      recordedAudioFile = null;
+      syncAudioLocks();
+      await acceptAudioFile(file, file.name, 'upload');
+    });
+    $('recordBtn').addEventListener('click', () => startRecording().catch((error) => showStatus(readableError(error), 'error')));
+    $('stopRecordBtn').addEventListener('click', stopRecording);
+    $('removeRecordBtn').addEventListener('click', () => {
+      recordedAudioFile = null;
+      audioDuration = 0;
+      renderAudioPreview(null);
+      syncAudioLocks();
+      updateCost();
+    });
+    $('runBtn').addEventListener('click', submitGeneration);
+    $('refreshBtn').addEventListener('click', loadRecentHistory);
+    $('previewClose').addEventListener('click', closePreview);
+    $('previewOverlay').addEventListener('click', (event) => { if (event.target === $('previewOverlay')) closePreview(); });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && currentUser) loadRecentHistory();
+    });
+    window.addEventListener('pageshow', () => {
+      if (currentUser) loadRecentHistory();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      updateCost();
+      syncAudioLocks();
+      setTimeout(loadUser, 350);
+    });
+  </script>
+</body>
+</html>
