@@ -80,6 +80,7 @@
 
   const LANGUAGE_STORAGE_KEY = 'hansora.language.v1';
   const REGISTRATION_LANGUAGE_CHOICE_KEY = 'hansora.registration.languageChoiceRequired.v1';
+  const REGISTRATION_LANGUAGE_COMPLETED_PREFIX = 'hansora.registration.languageChoiceCompleted.';
   const REGISTRATION_LANGUAGE_CHOICE_EVENT = 'hansora:registration-language-choice-required';
   const LANGUAGE_SUFFIX = { en: '', hy: '_arm', ru: '_ru' };
   const LANGUAGE_META = {
@@ -207,6 +208,24 @@
   function storeRegistrationLanguageChoice(user) {
     if (!user || !user.id) return;
     try { localStorage.setItem(REGISTRATION_LANGUAGE_CHOICE_KEY, user.id); } catch (_) {}
+  }
+
+  function registrationLanguageChoiceIsCompleted(user) {
+    const target = user || currentUser;
+    if (!target || !target.id) return false;
+    try {
+      return localStorage.getItem(`${REGISTRATION_LANGUAGE_COMPLETED_PREFIX}${target.id}`) === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function completeRegistrationLanguageChoice(user) {
+    const target = user || currentUser;
+    if (!target || !target.id) return;
+    try {
+      localStorage.setItem(`${REGISTRATION_LANGUAGE_COMPLETED_PREFIX}${target.id}`, '1');
+    } catch (_) {}
   }
 
   function clearRegistrationLanguageChoice(user) {
@@ -1136,29 +1155,45 @@
     }, true);
   }
 
-  function recordRegisteredClickEvent(eventName, details) {
+  async function recordRegisteredClickEvent(eventName, details) {
     const eventDetails = details || {};
     let auth = readAnalyticsAuth();
     if (!auth || !auth.userId || !auth.accessToken) {
       refreshAnalyticsAuthCache();
       auth = readAnalyticsAuth();
     }
+    if ((!auth || !auth.userId || !auth.accessToken) && sb && sb.auth) {
+      try {
+        const { data } = await sb.auth.getSession();
+        const activeSession = data && data.session ? data.session : null;
+        if (activeSession && activeSession.access_token && activeSession.user && activeSession.user.id) {
+          auth = {
+            accessToken: activeSession.access_token,
+            userId: activeSession.user.id,
+            email: activeSession.user.email || null
+          };
+          analyticsAuthCache = auth;
+          window.__hansoraAnalyticsAuth = auth;
+        }
+      } catch (_) {}
+    }
     if (!auth || !auth.userId || !auth.accessToken) return Promise.resolve(false);
 
     const target = eventDetails.target || null;
+    const eventLabel = String(eventName || 'course_event').slice(0, 80);
+    const eventDescription = String(eventDetails.label || '').replace(/\s+/g, ' ').trim();
     const payload = {
       user_id: auth.userId,
       email: auth.email,
       visitor_id: readExistingAnalyticsVisitorId(),
-      event_name: String(eventName || '').slice(0, 180),
+      event_name: 'click',
       element_type: String(
         eventDetails.elementType || (target && target.tagName) || 'course_preview'
       ).toLowerCase().slice(0, 80),
       element_id: String(
         eventDetails.elementId || (target && target.id) || ''
       ).slice(0, 180) || null,
-      element_label: String(eventDetails.label || eventName || 'course event')
-        .replace(/\s+/g, ' ').trim().slice(0, 180),
+      element_label: `${eventLabel}${eventDescription ? ` | ${eventDescription}` : ''}`.slice(0, 180),
       destination: eventDetails.destination || clickDestination(target),
       page_path: `${location.pathname}${location.hash || ''}`.slice(0, 300),
       session_id: analyticsSessionId(),
@@ -1167,7 +1202,8 @@
         : 'desktop'
     };
 
-    return fetch(`${SUPABASE_URL}/rest/v1/click_events`, {
+    try {
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/click_events`, {
       method: 'POST',
       keepalive: true,
       headers: {
@@ -1177,11 +1213,15 @@
         'Prefer': 'return=minimal'
       },
       body: JSON.stringify(payload)
-    }).then(function (response) {
+      });
+      if (!response.ok) {
+        console.warn(`Hansora course event write failed (${eventLabel}):`, response.status);
+      }
       return response.ok;
-    }).catch(function () {
+    } catch (error) {
+      console.warn(`Hansora course event write failed (${eventLabel}):`, error);
       return false;
-    });
+    }
   }
 
   function bindCoursePreviewFunnelTracking() {
@@ -2658,7 +2698,7 @@
     const authProfile = authProfileForUser(user);
     const { data, error } = await sb
       .from('profiles')
-      .select('user_id,email,credits,monthly_credits,payg_credits')
+      .select('user_id,email,credits,monthly_credits,payg_credits,language')
       .eq('user_id', user.id)
       .maybeSingle();
     if (error) throw error;
@@ -2679,7 +2719,7 @@
           avatar_url: authProfile.avatarUrl
         });
       }
-      const ins = await sb.from('profiles').insert(profileInsert).select('user_id,email,credits').single();
+      const ins = await sb.from('profiles').insert(profileInsert).select('user_id,email,credits,language').single();
       if (ins.error) throw ins.error;
       try {
         localStorage.removeItem(offerDismissedKey(user));
@@ -3262,6 +3302,7 @@
     async function applyLanguageChoice(languageCode) {
       const selectedLanguage = LANGUAGE_META[languageCode] ? languageCode : 'en';
       await saveProfileLanguagePreference(selectedLanguage);
+      completeRegistrationLanguageChoice();
       clearRegistrationLanguageChoice();
       const destination = localizedHref(location.href, selectedLanguage);
       if (destination === location.href || destination === `${location.pathname}${location.search}${location.hash}`) {
@@ -3449,7 +3490,10 @@
       throw error;
     }
     showLoggedInUI(profile, user);
-    if (profile.__hansoraNewSignup) storeRegistrationLanguageChoice(user);
+    const newAccountNeedsLanguage = !registrationLanguageChoiceIsCompleted(user) && (
+      profile.__hansoraNewSignup || isRecentlyCreatedAccount(user)
+    );
+    if (newAccountNeedsLanguage) storeRegistrationLanguageChoice(user);
     if (registrationLanguageChoiceIsRequired(user)) {
       window.dispatchEvent(new CustomEvent(REGISTRATION_LANGUAGE_CHOICE_EVENT, {
         detail: { userId: user.id }
