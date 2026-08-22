@@ -89,6 +89,52 @@ export async function handler(event) {
       status === "successful" ||
       (normalizedType === "payment" && !!transaction_id && !root.error_code && !data.error_code);
 
+    // Track the checkout outcome against the original public.buy_click_events row.
+    // This is analytics only: it never grants credits and never writes failed or
+    // abandoned attempts into public.payments.
+    const checkoutOutcome = checkoutOutcomeForWebhook(normalizedType);
+    let buyClickOutcome = null;
+    if (checkoutOutcome) {
+      const SUPABASE_URL = process.env.SUPABASE_URL;
+      const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+        return json(500, { error: "Missing Supabase env (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)" });
+      }
+      try {
+        buyClickOutcome = await trackBuyClickOutcome({
+          SUPABASE_URL,
+          SUPABASE_SERVICE_ROLE_KEY,
+          root,
+          data,
+          normalizedType,
+          outcome: checkoutOutcome
+        });
+      } catch (error) {
+        // Never delay successful credit delivery because analytics failed.
+        if (isSuccessfulPayment) {
+          console.error("Buy-click outcome tracking failed", error);
+          buyClickOutcome = { tracked: false, error: String(error?.message || error) };
+        } else {
+          // A non-2xx response asks Dodo to retry failed/cancelled/abandoned events.
+          return json(500, {
+            error: "buy_click_events outcome update failed",
+            detail: String(error?.message || error),
+            type: normalizedType
+          });
+        }
+      }
+    }
+
+    // These events are analytics outcomes only. A later payment.succeeded event
+    // remains the sole path that inserts public.payments and grants credits.
+    if (checkoutOutcome && !isSuccessfulPayment) {
+      return json(200, {
+        ok: true,
+        payment_outcome: checkoutOutcome,
+        buy_click: buyClickOutcome
+      });
+    }
+
     if (isSubscriptionWebhook) {
       const SUPABASE_URL = process.env.SUPABASE_URL;
       const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -288,7 +334,7 @@ export async function handler(event) {
       return_url
     });
 
-    return json(200, { ok: true, credited, meta_purchase: metaPurchase });
+    return json(200, { ok: true, credited, meta_purchase: metaPurchase, buy_click: buyClickOutcome });
   } catch (e) {
     return json(500, { error: String(e?.message || e) });
   }
@@ -468,6 +514,188 @@ function dateKey(value) {
 }
 
 async function sjson(res) { try { return await res.json(); } catch { return null; } }
+
+function checkoutOutcomeForWebhook(type) {
+  if (type === "payment.succeeded") return "succeeded";
+  if (type === "payment.failed") return "failed";
+  if (type === "payment.cancelled" || type === "payment.canceled") return "cancelled";
+  if (type === "abandoned_checkout.detected") return "abandoned";
+  if (type === "abandoned_checkout.recovered") return "recovered";
+  return null;
+}
+
+async function retrieveDodoPayment(paymentId) {
+  if (!paymentId) return null;
+  const apiKey = process.env.DODO_PAYMENTS_API_KEY;
+  if (!apiKey) {
+    throw new Error("Missing DODO_PAYMENTS_API_KEY required to correlate this checkout outcome");
+  }
+  const baseUrl = String(process.env.DODO_PAYMENTS_BASE_URL || "https://live.dodopayments.com").replace(/\/+$/, "");
+  const res = await fetch(`${baseUrl}/payments/${encodeURIComponent(paymentId)}`, {
+    headers: {
+      "Accept": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    }
+  });
+  const payload = await sjson(res);
+  if (!res.ok) {
+    throw new Error(`Dodo payment lookup failed (${res.status}): ${JSON.stringify(payload || {})}`);
+  }
+  return payload || null;
+}
+
+function firstProductId(value) {
+  const cart = value?.product_cart || value?.productCart || null;
+  if (!Array.isArray(cart) || cart.length === 0) return null;
+  return cart[0]?.product_id || cart[0]?.productId || null;
+}
+
+function buyClickFailureReason({ normalizedType, data, payment }) {
+  if (normalizedType === "abandoned_checkout.detected") {
+    return data.abandonment_reason || "checkout_incomplete";
+  }
+  return data.error_message || payment?.error_message || data.error_code || payment?.error_code || null;
+}
+
+async function supabaseRows(res, operation) {
+  const payload = await sjson(res);
+  if (!res.ok) {
+    throw new Error(`${operation} failed (${res.status}): ${JSON.stringify(payload || {})}`);
+  }
+  return Array.isArray(payload) ? payload : [];
+}
+
+async function trackBuyClickOutcome({
+  SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY,
+  root,
+  data,
+  normalizedType,
+  outcome
+}) {
+  const originalPaymentId =
+    data.payment_id || root.payment_id || data.transaction_id || root.transaction_id || null;
+  const recoveredPaymentId = data.recovered_payment_id || root.recovered_payment_id || null;
+
+  let payment = null;
+  let metadata = root.metadata || data.metadata || data.payment?.metadata || {};
+  let uid = metadata.uid || null;
+  let credits = Number(metadata.credits || 0);
+  let productId = firstProductId(data) || firstProductId(root);
+  let email = data.customer?.email || root.customer?.email || metadata.email || null;
+
+  // Abandoned-checkout payloads contain only recovery fields. Fetch the original
+  // payment to recover uid/credits/product metadata for deterministic matching.
+  if ((!uid || !credits || !productId) && originalPaymentId) {
+    payment = await retrieveDodoPayment(originalPaymentId);
+    const paymentMetadata = payment?.metadata || {};
+    metadata = { ...paymentMetadata, ...metadata };
+    uid = uid || metadata.uid || null;
+    credits = credits || Number(metadata.credits || 0);
+    productId = productId || firstProductId(payment);
+    email = email || payment?.customer?.email || metadata.email || null;
+  }
+
+  const authHeaders = {
+    "Accept": "application/json",
+    "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    "apikey": SUPABASE_SERVICE_ROLE_KEY
+  };
+
+  // Webhook retries and recovery payments should find the already-linked row first.
+  let rows = [];
+  if (originalPaymentId) {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/buy_click_events?payment_id=eq.${encodeURIComponent(originalPaymentId)}&select=id,payment_id,recovered_payment_id&limit=1`,
+      { headers: authHeaders }
+    );
+    rows = await supabaseRows(res, "buy_click_events payment lookup");
+  }
+  if (rows.length === 0 && originalPaymentId) {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/buy_click_events?recovered_payment_id=eq.${encodeURIComponent(originalPaymentId)}&select=id,payment_id,recovered_payment_id&limit=1`,
+      { headers: authHeaders }
+    );
+    rows = await supabaseRows(res, "buy_click_events recovered-payment lookup");
+  }
+
+  // First delivery for this checkout: match the latest still-unresolved click.
+  if (rows.length === 0 && uid) {
+    const filters = [
+      `user_id=eq.${encodeURIComponent(uid)}`,
+      "checkout_status=in.(clicked,processing)",
+      "select=id,payment_id,recovered_payment_id",
+      "order=created_at.desc",
+      "limit=1"
+    ];
+    if (credits > 0) filters.splice(1, 0, `credits=eq.${encodeURIComponent(credits)}`);
+    if (productId) filters.splice(1, 0, `product_id=eq.${encodeURIComponent(productId)}`);
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/buy_click_events?${filters.join("&")}`, {
+      headers: authHeaders
+    });
+    rows = await supabaseRows(res, "buy_click_events click lookup");
+  }
+
+  const failureReason = buyClickFailureReason({ normalizedType, data, payment });
+  const existing = rows[0] || null;
+  const outcomeFields = {
+    checkout_status: outcome,
+    payment_id: existing?.payment_id || originalPaymentId,
+    recovered_payment_id: recoveredPaymentId || existing?.recovered_payment_id || null,
+    dodo_event_type: normalizedType,
+    failure_reason: failureReason,
+    status_updated_at: new Date().toISOString(),
+    webhook_payload: root
+  };
+
+  if (existing?.id) {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/buy_click_events?id=eq.${encodeURIComponent(existing.id)}`,
+      {
+        method: "PATCH",
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify(outcomeFields)
+      }
+    );
+    const updated = await supabaseRows(res, "buy_click_events outcome update");
+    return { tracked: updated.length > 0, action: "updated", id: existing.id, status: outcome };
+  }
+
+  // If browser analytics failed but Dodo metadata is complete, retain the outcome
+  // as a reconstructed buy-click row rather than losing the payment attempt.
+  if (uid && credits > 0) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/buy_click_events`, {
+      method: "POST",
+      headers: {
+        ...authHeaders,
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify([{
+        user_id: uid,
+        email,
+        event_name: "buy_clicked",
+        credits,
+        product_id: productId,
+        page_path: null,
+        ...outcomeFields
+      }])
+    });
+    const inserted = await supabaseRows(res, "buy_click_events outcome insert");
+    return { tracked: inserted.length > 0, action: "inserted", id: inserted[0]?.id || null, status: outcome };
+  }
+
+  return {
+    tracked: false,
+    action: "unmatched",
+    status: outcome,
+    reason: "Dodo payment metadata did not contain uid and credits"
+  };
+}
 
 async function addCreditsOnce({
   SUPABASE_URL,
