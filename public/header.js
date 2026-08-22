@@ -22,6 +22,7 @@
   const SIGNUP_ATTRIBUTION_MAX_AGE_MS = 6 * 60 * 60 * 1000;
   const AUTH_FUNNEL_PENDING_KEY = 'hansora.auth_funnel.pending.v1';
   const AUTH_FUNNEL_MAX_AGE_MS = 30 * 60 * 1000;
+  const REGISTRATION_COMPLETED_EVENT_PREFIX = 'hansora.registration.completedEvent.';
   const AUTH_CALLBACK_SEARCH_SNAPSHOT = window.location.search || '';
   const AUTH_CALLBACK_HASH_SNAPSHOT = window.location.hash || '';
   const AUTH_CALLBACK_REFERRER_SNAPSHOT = document.referrer || '';
@@ -305,6 +306,9 @@
   let subscriptionUserId = null;
   let subscriptionPromise = null;
   let authCallbackArrivalWrite = Promise.resolve(false);
+  const profileResolutionPromises = new Map();
+  const authenticatedUserHandlingPromises = new Map();
+  const registrationCompletionPromises = new Map();
 
   const IMAGE_MENU_MODELS = [
     { label: 'GPT Image 2', id: 'gpt-image-2', icon: 'G2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/2.png', note: 'Latest image generation' },
@@ -848,6 +852,43 @@
     } finally {
       if (timer) clearTimeout(timer);
     }
+  }
+
+  function registrationCompletedEventWasRecorded(attempt) {
+    if (!attempt || !attempt.attemptId) return false;
+    try {
+      return localStorage.getItem(`${REGISTRATION_COMPLETED_EVENT_PREFIX}${attempt.attemptId}`) === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function recordRegistrationCompletedOnce(attempt, userId) {
+    if (!attempt || !attempt.attemptId) return false;
+    if (registrationCompletedEventWasRecorded(attempt)) return true;
+    const attemptId = attempt.attemptId;
+    const pendingWrite = registrationCompletionPromises.get(attemptId);
+    if (pendingWrite) return pendingWrite;
+
+    const write = recordAuthFunnelEvent(
+      'registration_completed',
+      attempt,
+      { userId: userId }
+    ).then(function (recorded) {
+      if (recorded) {
+        try {
+          localStorage.setItem(`${REGISTRATION_COMPLETED_EVENT_PREFIX}${attemptId}`, '1');
+        } catch (_) {}
+      }
+      return recorded;
+    }).finally(function () {
+      if (registrationCompletionPromises.get(attemptId) === write) {
+        registrationCompletionPromises.delete(attemptId);
+      }
+    });
+
+    registrationCompletionPromises.set(attemptId, write);
+    return write;
   }
 
   async function recordAuthFunnelFailure(error, attempt, userId) {
@@ -2693,15 +2734,35 @@
     }
   }
 
-  async function getOrCreateProfile(user) {
+  function getOrCreateProfile(user) {
     if (!sb || !user) throw new Error(copy('notLoggedIn'));
-    const authProfile = authProfileForUser(user);
-    const { data, error } = await sb
+    const userId = user.id;
+    if (!userId) return Promise.reject(new Error(copy('notLoggedIn')));
+    const pendingResolution = profileResolutionPromises.get(userId);
+    if (pendingResolution) return pendingResolution;
+
+    const resolution = getOrCreateProfileOnce(user).finally(function () {
+      if (profileResolutionPromises.get(userId) === resolution) {
+        profileResolutionPromises.delete(userId);
+      }
+    });
+    profileResolutionPromises.set(userId, resolution);
+    return resolution;
+  }
+
+  async function readProfileForAuth(userId) {
+    return sb
       .from('profiles')
       .select('user_id,email,credits,monthly_credits,payg_credits,language')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle();
-    if (error) throw error;
+  }
+
+  async function getOrCreateProfileOnce(user) {
+    const authProfile = authProfileForUser(user);
+    const initialRead = await readProfileForAuth(user.id);
+    if (initialRead.error) throw initialRead.error;
+    let data = initialRead.data;
     if (!data) {
       const profileInsert = {
         user_id: user.id,
@@ -2720,12 +2781,22 @@
         });
       }
       const ins = await sb.from('profiles').insert(profileInsert).select('user_id,email,credits,language').single();
-      if (ins.error) throw ins.error;
-      try {
-        localStorage.removeItem(offerDismissedKey(user));
-        localStorage.removeItem(offerPendingKey(user));
-      } catch (_) {}
-      return { ...ins.data, __hansoraNewSignup: true };
+      if (!ins.error) {
+        try {
+          localStorage.removeItem(offerDismissedKey(user));
+          localStorage.removeItem(offerPendingKey(user));
+        } catch (_) {}
+        return { ...ins.data, __hansoraNewSignup: true };
+      }
+
+      const duplicateInsert = String(ins.error.code || '') === '23505'
+        || /duplicate key|profiles_pkey/i.test(String(ins.error.message || ''));
+      if (!duplicateInsert) throw ins.error;
+
+      const existingRead = await readProfileForAuth(user.id);
+      if (existingRead.error) throw existingRead.error;
+      if (!existingRead.data) throw ins.error;
+      data = existingRead.data;
     }
     if (authProfile.isTelegram) {
       const telegramProfileUpdate = {
@@ -3470,8 +3541,22 @@
     }
   }
 
-  async function handleAuthenticatedUser(user) {
-    if (!user) return null;
+  function handleAuthenticatedUser(user) {
+    if (!user || !user.id) return Promise.resolve(null);
+    const userId = user.id;
+    const pendingHandling = authenticatedUserHandlingPromises.get(userId);
+    if (pendingHandling) return pendingHandling;
+
+    const handling = handleAuthenticatedUserOnce(user).finally(function () {
+      if (authenticatedUserHandlingPromises.get(userId) === handling) {
+        authenticatedUserHandlingPromises.delete(userId);
+      }
+    });
+    authenticatedUserHandlingPromises.set(userId, handling);
+    return handling;
+  }
+
+  async function handleAuthenticatedUserOnce(user) {
     const authAttempt = readAuthFunnelAttempt();
     clearTelegramOAuthStart();
     const pendingCourseReturn = getPendingAiCourseOrigin();
@@ -3515,11 +3600,7 @@
     const authSuccessRecorded = await authSuccessWrite;
     await attributionWrite;
     if (authAttempt && (profile.__hansoraNewSignup || isRecentlyCreatedAccount(user))) {
-      const registrationRecorded = await recordAuthFunnelEvent(
-        'registration_completed',
-        authAttempt,
-        { userId: user.id }
-      );
+      const registrationRecorded = await recordRegistrationCompletedOnce(authAttempt, user.id);
       if (registrationRecorded) clearAuthFunnelAttempt();
     } else if (authSuccessRecorded) {
       clearAuthFunnelAttempt();
