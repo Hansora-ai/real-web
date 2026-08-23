@@ -111,11 +111,12 @@
       startCreating: 'Start creating', profile: 'Profile', history: 'History', credits: 'Credits', aiCourse: 'AI Course', logout: 'Logout', language: 'Language',
       closeCourse: 'Close course selection', courseEyebrow: 'Hansora AI Course', courseTitle: 'Choose your course language', courseIntro: 'Select the language in which you would like to study.',
       closeLanguage: 'Close language selection', languageEyebrow: 'Hansora language', languageTitle: 'Choose website language', languageIntro: 'Select the language for this page and every Hansora menu and popup.', current: 'Current',
-      logIn: 'Log in', createAccount: 'Create your account', google: 'Continue with Google', telegram: 'Continue with Telegram', secureAuth: 'Continue securely with Google or Telegram. Telegram may not share an email address.',
+      logIn: 'Log in', createAccount: 'Create your account', google: 'Continue with Google', telegram: 'Continue with Telegram', secureAuth: 'Continue securely with Google, Telegram, or email and password.',
       or: 'or', email: 'Email', password: 'Password', signUp: 'Sign up', analyticsAria: 'Analytics preferences', analyticsQuestion: 'Allow anonymous analytics?', analyticsNotice: 'We use anonymous analytics. Reject to stop.',
       reject: 'Reject', acceptAnalytics: 'Accept analytics', continue: 'Continue', telegramFailure: 'Telegram login was not completed', telegramCancelled: 'Telegram login was cancelled or not completed. Please try again.',
       creatorOffer: 'Creator discount offer', pricingOffer: 'Hansora pricing offer', closeOffer: 'Close offer', openingGoogle: 'Opening Google login…', googleFailed: 'Google login failed.',
-      openingTelegram: 'Opening Telegram login…', tryAgain: 'Please try again.', enterCredentials: 'Enter email & password.', signingIn: 'Signing in…', loginFailed: 'Login failed.', notLoggedIn: 'Not logged in', notEnoughCredits: 'Not enough credits'
+      openingTelegram: 'Opening Telegram login…', tryAgain: 'Please try again.', enterCredentials: 'Enter email & password.', signingIn: 'Signing in…', loginFailed: 'Login failed.', notLoggedIn: 'Not logged in', notEnoughCredits: 'Not enough credits',
+      emailPassword: 'Email & password', backToOptions: 'Back to login options', repeatPassword: 'Repeat password', haveAccount: 'Already have an account? Log in', needAccount: 'New here? Sign up', createAccountButton: 'Create account', creatingAccount: 'Creating account…', passwordsDoNotMatch: 'Passwords do not match.', passwordTooShort: 'Password must contain at least 6 characters.', invalidEmail: 'Enter a valid email address.', verifyTitle: 'Verify your email', verificationSent: 'We sent a verification code to', verificationCode: 'Verification code', verifyCode: 'Verify and continue', verifyingCode: 'Verifying code…', resendCode: 'Resend code', codeResent: 'A new verification code was sent.', signupFailed: 'Could not create the account.', verificationFailed: 'The verification code is invalid or expired.', emailNotConfirmed: 'Verify your email before logging in.'
     },
     hy: {
       home: 'HANSORA AI գլխավոր էջ', primaryNav: 'Հիմնական նավիգացիա', image: 'Պատկեր', imageMenu: 'Պատկերի գործիքներ և մոդելներ', imageSection: 'Պատկերի մոդելներ և գործիքներ',
@@ -124,11 +125,12 @@
       startCreating: 'Սկսել ստեղծել', profile: 'Պրոֆիլ', history: 'Պատմություն', credits: 'Կրեդիտներ', aiCourse: 'AI դասընթաց', logout: 'Դուրս գալ', language: 'Լեզու',
       closeCourse: 'Փակել դասընթացի լեզվի ընտրությունը', courseEyebrow: 'Hansora AI դասընթաց', courseTitle: 'Ընտրեք դասընթացի լեզուն', courseIntro: 'Ընտրեք, թե որ լեզվով եք ցանկանում սովորել։',
       closeLanguage: 'Փակել լեզվի ընտրությունը', languageEyebrow: 'Hansora-ի լեզու', languageTitle: 'Ընտրեք կայքի լեզուն', languageIntro: 'Ընտրեք այս էջի, Hansora-ի ընտրացանկերի և պատուհանների լեզուն։', current: 'Ընտրված',
-      logIn: 'Մուտք գործել', createAccount: 'Ստեղծեք ձեր հաշիվը', google: 'Շարունակել Google-ով', telegram: 'Շարունակել Telegram-ով', secureAuth: 'Անվտանգ շարունակեք Google-ով կամ Telegram-ով։ Telegram-ը կարող է չտրամադրել էլփոստի հասցե։',
+      logIn: 'Մուտք գործել', createAccount: 'Ստեղծեք ձեր հաշիվը', google: 'Շարունակել Google-ով', telegram: 'Շարունակել Telegram-ով', secureAuth: 'Անվտանգ շարունակեք Google-ով, Telegram-ով կամ էլփոստով և գաղտնաբառով։',
       or: 'կամ', email: 'Էլփոստ', password: 'Գաղտնաբառ', signUp: 'Գրանցվել', analyticsAria: 'Վերլուծական տվյալների կարգավորումներ', analyticsQuestion: 'Թույլատրե՞լ անանուն վերլուծությունը։', analyticsNotice: 'Մենք օգտագործում ենք անանուն վերլուծություն։ Դադարեցնելու համար մերժեք։',
       reject: 'Մերժել', acceptAnalytics: 'Թույլատրել', continue: 'Շարունակել', telegramFailure: 'Telegram-ով մուտքը չի ավարտվել', telegramCancelled: 'Telegram-ով մուտքը չեղարկվել կամ չի ավարտվել։ Փորձեք կրկին։',
       creatorOffer: 'Զեղչային առաջարկ ստեղծողների համար', pricingOffer: 'Hansora-ի գնային առաջարկ', closeOffer: 'Փակել առաջարկը', openingGoogle: 'Բացվում է Google-ով մուտքը…', googleFailed: 'Google-ով մուտքը ձախողվեց։',
-      openingTelegram: 'Բացվում է Telegram-ով մուտքը…', tryAgain: 'Փորձեք կրկին։', enterCredentials: 'Մուտքագրեք էլփոստը և գաղտնաբառը։', signingIn: 'Մուտք է կատարվում…', loginFailed: 'Մուտքը ձախողվեց։', notLoggedIn: 'Մուտք չեք գործել', notEnoughCredits: 'Բավարար կրեդիտներ չկան'
+      openingTelegram: 'Բացվում է Telegram-ով մուտքը…', tryAgain: 'Փորձեք կրկին։', enterCredentials: 'Մուտքագրեք էլփոստը և գաղտնաբառը։', signingIn: 'Մուտք է կատարվում…', loginFailed: 'Մուտքը ձախողվեց։', notLoggedIn: 'Մուտք չեք գործել', notEnoughCredits: 'Բավարար կրեդիտներ չկան',
+      emailPassword: 'Էլփոստ և գաղտնաբառ', backToOptions: 'Վերադառնալ մուտքի տարբերակներին', repeatPassword: 'Կրկնել գաղտնաբառը', haveAccount: 'Արդեն ունե՞ք հաշիվ։ Մուտք գործել', needAccount: 'Նոր օգտատե՞ր եք։ Գրանցվել', createAccountButton: 'Ստեղծել հաշիվ', creatingAccount: 'Հաշիվը ստեղծվում է…', passwordsDoNotMatch: 'Գաղտնաբառերը չեն համընկնում։', passwordTooShort: 'Գաղտնաբառը պետք է պարունակի առնվազն 6 նիշ։', invalidEmail: 'Մուտքագրեք վավեր էլփոստի հասցե։', verifyTitle: 'Հաստատեք ձեր էլփոստը', verificationSent: 'Հաստատման կոդն ուղարկվել է՝', verificationCode: 'Հաստատման կոդ', verifyCode: 'Հաստատել և շարունակել', verifyingCode: 'Կոդը ստուգվում է…', resendCode: 'Կրկին ուղարկել կոդը', codeResent: 'Նոր հաստատման կոդն ուղարկվեց։', signupFailed: 'Չհաջողվեց ստեղծել հաշիվը։', verificationFailed: 'Հաստատման կոդը սխալ է կամ ժամկետանց։', emailNotConfirmed: 'Մուտք գործելուց առաջ հաստատեք ձեր էլփոստը։'
     },
     ru: {
       home: 'Главная страница HANSORA AI', primaryNav: 'Основная навигация', image: 'Изображения', imageMenu: 'Инструменты и модели изображений', imageSection: 'Модели и инструменты изображений',
@@ -137,11 +139,12 @@
       startCreating: 'Начать создавать', profile: 'Профиль', history: 'История', credits: 'Кредиты', aiCourse: 'AI-курс', logout: 'Выйти', language: 'Язык',
       closeCourse: 'Закрыть выбор языка курса', courseEyebrow: 'AI-курс Hansora', courseTitle: 'Выберите язык курса', courseIntro: 'Выберите язык, на котором хотите проходить обучение.',
       closeLanguage: 'Закрыть выбор языка', languageEyebrow: 'Язык Hansora', languageTitle: 'Выберите язык сайта', languageIntro: 'Выберите язык этой страницы, меню и всех окон Hansora.', current: 'Выбрано',
-      logIn: 'Войти', createAccount: 'Создайте аккаунт', google: 'Продолжить с Google', telegram: 'Продолжить с Telegram', secureAuth: 'Безопасно продолжите с Google или Telegram. Telegram может не передавать адрес электронной почты.',
+      logIn: 'Войти', createAccount: 'Создайте аккаунт', google: 'Продолжить с Google', telegram: 'Продолжить с Telegram', secureAuth: 'Безопасно продолжите через Google, Telegram или с помощью эл. почты и пароля.',
       or: 'или', email: 'Эл. почта', password: 'Пароль', signUp: 'Зарегистрироваться', analyticsAria: 'Настройки аналитики', analyticsQuestion: 'Разрешить анонимную аналитику?', analyticsNotice: 'Мы используем анонимную аналитику. Нажмите «Отклонить», чтобы остановить сбор.',
       reject: 'Отклонить', acceptAnalytics: 'Разрешить', continue: 'Продолжить', telegramFailure: 'Вход через Telegram не завершён', telegramCancelled: 'Вход через Telegram отменён или не завершён. Попробуйте ещё раз.',
       creatorOffer: 'Скидочное предложение для создателей', pricingOffer: 'Ценовое предложение Hansora', closeOffer: 'Закрыть предложение', openingGoogle: 'Открывается вход через Google…', googleFailed: 'Не удалось войти через Google.',
-      openingTelegram: 'Открывается вход через Telegram…', tryAgain: 'Попробуйте ещё раз.', enterCredentials: 'Введите эл. почту и пароль.', signingIn: 'Выполняется вход…', loginFailed: 'Не удалось войти.', notLoggedIn: 'Вход не выполнен', notEnoughCredits: 'Недостаточно кредитов'
+      openingTelegram: 'Открывается вход через Telegram…', tryAgain: 'Попробуйте ещё раз.', enterCredentials: 'Введите эл. почту и пароль.', signingIn: 'Выполняется вход…', loginFailed: 'Не удалось войти.', notLoggedIn: 'Вход не выполнен', notEnoughCredits: 'Недостаточно кредитов',
+      emailPassword: 'Эл. почта и пароль', backToOptions: 'Вернуться к вариантам входа', repeatPassword: 'Повторите пароль', haveAccount: 'Уже есть аккаунт? Войти', needAccount: 'Нет аккаунта? Зарегистрироваться', createAccountButton: 'Создать аккаунт', creatingAccount: 'Создаём аккаунт…', passwordsDoNotMatch: 'Пароли не совпадают.', passwordTooShort: 'Пароль должен содержать не менее 6 символов.', invalidEmail: 'Введите действительный адрес электронной почты.', verifyTitle: 'Подтвердите эл. почту', verificationSent: 'Мы отправили код подтверждения на', verificationCode: 'Код подтверждения', verifyCode: 'Подтвердить и продолжить', verifyingCode: 'Проверяем код…', resendCode: 'Отправить код ещё раз', codeResent: 'Новый код подтверждения отправлен.', signupFailed: 'Не удалось создать аккаунт.', verificationFailed: 'Код подтверждения неверен или истёк.', emailNotConfirmed: 'Подтвердите эл. почту перед входом.'
     }
   };
 
@@ -719,7 +722,7 @@
   }
 
   function beginAuthFunnelAttempt(provider, attribution) {
-    const normalizedProvider = provider === 'telegram' ? 'telegram' : 'google';
+    const normalizedProvider = provider === 'telegram' || provider === 'email' ? provider : 'google';
     const sourceAttribution = attribution || readSignupAttributionStart() || {};
     const visitorId = validAnalyticsId(sourceAttribution.visitorId)
       || readExistingAnalyticsVisitorId();
@@ -757,7 +760,7 @@
         attemptId: attemptId,
         visitorId: visitorId,
         sessionId: validAnalyticsId(value.sessionId),
-        provider: value.provider === 'telegram' ? 'telegram' : 'google',
+        provider: value.provider === 'telegram' || value.provider === 'email' ? value.provider : 'google',
         source: value.source === 'course_arm' || value.source === 'course_ru'
           ? value.source
           : 'index',
@@ -1774,7 +1777,39 @@
       .site-header .shell.nav{ position:relative; }
       .site-header .nav-links{ position:absolute; left:50%; transform:translateX(-50%); }
       .site-header .user-menu .hansora-ai-course-button{ width:100%; text-align:left; }
+      .hansora-auth-form .hansora-auth-view[hidden]{ display:none !important; }
       .hansora-auth-form .hansora-oauth-stack{ display:grid; gap:10px; }
+      .hansora-auth-form .hansora-email-btn{
+        min-height:48px;
+        border-color:rgba(167,139,250,.48);
+        background:linear-gradient(135deg,rgba(79,70,229,.96),rgba(124,58,237,.96));
+        color:#fff;
+        box-shadow:0 14px 34px rgba(99,102,241,.24),inset 0 1px 0 rgba(255,255,255,.18);
+      }
+      .hansora-auth-form .hansora-email-btn:hover{ filter:brightness(1.08); }
+      .hansora-auth-form .hansora-email-icon{ font-size:20px; line-height:1; }
+      .hansora-auth-form .hansora-auth-fields{ display:grid; gap:10px; }
+      .hansora-auth-form .hansora-auth-fields input{
+        width:100%;
+        min-height:48px;
+        padding:0 14px;
+        border:1px solid rgba(255,255,255,.16);
+        border-radius:12px;
+        background:rgba(255,255,255,.055);
+        color:#fff;
+        font:inherit;
+        outline:none;
+      }
+      .hansora-auth-form .hansora-auth-fields input:focus{ border-color:rgba(139,92,246,.78); box-shadow:0 0 0 3px rgba(139,92,246,.16); }
+      .hansora-auth-form .hansora-auth-fields input::placeholder{ color:rgba(255,255,255,.46); }
+      .hansora-auth-form .hansora-auth-actions{ display:grid; gap:9px; margin-top:12px; }
+      .hansora-auth-form .hansora-auth-link{ border:0; background:transparent; color:rgba(199,210,254,.92); padding:7px 8px; cursor:pointer; font:inherit; font-weight:700; }
+      .hansora-auth-form .hansora-auth-link:hover{ color:#fff; }
+      .hansora-auth-form .hansora-verify-copy{ margin:0 0 13px; color:rgba(255,255,255,.72); line-height:1.5; }
+      .hansora-auth-form .hansora-verify-email{ display:block; margin-top:4px; color:#fff; font-weight:800; overflow-wrap:anywhere; }
+      .hansora-auth-form .hansora-auth-msg:empty{ display:none; }
+      .hansora-auth-form .hansora-auth-msg{ margin-top:12px; }
+      .hansora-auth-form button[disabled]{ opacity:.64; cursor:wait; }
       .hansora-auth-form .hansora-telegram-btn{
         position:relative;
         min-height:48px;
@@ -2488,25 +2523,45 @@
             <button class="btn hansora-auth-close" id="authClose" type="button" aria-label="${copy('closeLanguage')}">✕</button>
           </div>
           <form class="hansora-auth-form" id="authForm">
-            <div class="hansora-oauth-stack">
-              <button class="btn hansora-google-btn" id="btnGoogleLogin" type="button">
-                <img alt="G" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
-                <span>${copy('google')}</span>
-              </button>
-              <button class="btn hansora-telegram-btn" id="btnTelegramLogin" type="button">
-                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M21.8 3.2 18.6 20c-.24 1.19-.88 1.48-1.78.92l-4.87-3.59-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.96 9.02-8.15c.39-.35-.09-.55-.61-.2L6.23 13.78l-4.8-1.5c-1.04-.33-1.06-1.04.22-1.54L20.4 3.52c.87-.32 1.63.2 1.4-.32Z"/></svg>
-                <span>${copy('telegram')}</span>
-              </button>
+            <div class="hansora-auth-view" id="authChooserView">
+              <div class="hansora-oauth-stack">
+                <button class="btn hansora-google-btn" id="btnGoogleLogin" type="button">
+                  <img alt="G" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
+                  <span>${copy('google')}</span>
+                </button>
+                <button class="btn hansora-telegram-btn" id="btnTelegramLogin" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M21.8 3.2 18.6 20c-.24 1.19-.88 1.48-1.78.92l-4.87-3.59-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.96 9.02-8.15c.39-.35-.09-.55-.61-.2L6.23 13.78l-4.8-1.5c-1.04-.33-1.06-1.04.22-1.54L20.4 3.52c.87-.32 1.63.2 1.4-.32Z"/></svg>
+                  <span>${copy('telegram')}</span>
+                </button>
+                <button class="btn hansora-email-btn" id="btnEmailAuth" type="button">
+                  <span class="hansora-email-icon" aria-hidden="true">✉</span>
+                  <span>${copy('emailPassword')}</span>
+                </button>
+              </div>
+              <p class="hansora-auth-msg" style="margin:12px 0 0;color:rgba(255,255,255,.72);line-height:1.45;">${copy('secureAuth')}</p>
             </div>
-            <p class="hansora-auth-msg" style="margin:12px 0 0;color:rgba(255,255,255,.72);line-height:1.45;">
-              ${copy('secureAuth')}
-            </p>
-            <div class="hansora-auth-divider" style="display:none;"><span>${copy('or')}</span></div>
-            <input id="authEmail" style="display:none;" placeholder="${copy('email')}" type="email" autocomplete="email">
-            <input id="authPass" style="display:none;" placeholder="${copy('password')}" type="password" autocomplete="current-password">
-            <div class="hansora-auth-actions" style="display:none;">
-              <button class="btn btn-brand" id="btnDoLogin" type="button">${copy('logIn')}</button>
-              <a class="btn" id="btnGoSignup" href="${siteHref('/login.html?mode=signup')}">${copy('signUp')}</a>
+            <div class="hansora-auth-view" id="authEmailView" hidden>
+              <div class="hansora-auth-fields">
+                <input id="authEmail" placeholder="${copy('email')}" type="email" autocomplete="email" required>
+                <input id="authPass" placeholder="${copy('password')}" type="password" autocomplete="current-password" required>
+                <input id="authPassRepeat" placeholder="${copy('repeatPassword')}" type="password" autocomplete="new-password" hidden>
+              </div>
+              <div class="hansora-auth-actions">
+                <button class="btn btn-brand" id="btnDoEmailAuth" type="submit">${copy('logIn')}</button>
+                <button class="hansora-auth-link" id="btnAuthSwitch" type="button">${copy('needAccount')}</button>
+                <button class="hansora-auth-link" id="btnAuthBack" type="button">← ${copy('backToOptions')}</button>
+              </div>
+            </div>
+            <div class="hansora-auth-view" id="authVerifyView" hidden>
+              <p class="hansora-verify-copy">${copy('verificationSent')}<strong class="hansora-verify-email" id="authVerifyEmail"></strong></p>
+              <div class="hansora-auth-fields">
+                <input id="authOtp" placeholder="${copy('verificationCode')}" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8">
+              </div>
+              <div class="hansora-auth-actions">
+                <button class="btn btn-brand" id="btnVerifyEmail" type="submit">${copy('verifyCode')}</button>
+                <button class="hansora-auth-link" id="btnResendCode" type="button">${copy('resendCode')}</button>
+                <button class="hansora-auth-link" id="btnVerifyBack" type="button">← ${copy('signUp')}</button>
+              </div>
             </div>
             <p class="hansora-auth-msg" id="authMsg"></p>
           </form>
@@ -2630,18 +2685,46 @@
     redirectLoggedOutHome();
   }
 
-  let authMode = 'login';
+  let authMode = 'chooser';
+  let pendingVerificationEmail = '';
 
   function setAuthMode(mode) {
-    authMode = mode === 'signup' ? 'signup' : 'login';
+    if (mode === 'signup' || mode === 'email-login' || mode === 'verify') authMode = mode;
+    else authMode = 'chooser';
     const title = el('authTitle');
     const msg = el('authMsg');
-    if (title) title.textContent = authMode === 'signup' ? copy('createAccount') : copy('logIn');
+    const chooserView = el('authChooserView');
+    const emailView = el('authEmailView');
+    const verifyView = el('authVerifyView');
+    const passIn = el('authPass');
+    const repeatIn = el('authPassRepeat');
+    const submit = el('btnDoEmailAuth');
+    const switchButton = el('btnAuthSwitch');
+    const verifyEmail = el('authVerifyEmail');
+    const isSignup = authMode === 'signup';
+    if (title) {
+      title.textContent = authMode === 'signup'
+        ? copy('createAccount')
+        : authMode === 'verify' ? copy('verifyTitle') : copy('logIn');
+    }
+    if (chooserView) chooserView.hidden = authMode !== 'chooser';
+    if (emailView) emailView.hidden = authMode !== 'email-login' && authMode !== 'signup';
+    if (verifyView) verifyView.hidden = authMode !== 'verify';
+    if (repeatIn) {
+      repeatIn.hidden = !isSignup;
+      repeatIn.required = isSignup;
+      if (!isSignup) repeatIn.value = '';
+    }
+    if (passIn) passIn.autocomplete = isSignup ? 'new-password' : 'current-password';
+    if (submit) submit.textContent = isSignup ? copy('createAccountButton') : copy('logIn');
+    if (switchButton) switchButton.textContent = isSignup ? copy('haveAccount') : copy('needAccount');
+    if (verifyEmail) verifyEmail.textContent = pendingVerificationEmail;
     if (msg) msg.textContent = '';
   }
 
   function openAuth(mode) {
-    if (mode) setAuthMode(mode);
+    if (mode === 'signup') setAuthMode('signup');
+    else setAuthMode('chooser');
     const modal = el('authModal');
     const msg = el('authMsg');
     if (msg) msg.textContent = '';
@@ -2649,16 +2732,29 @@
       modal.classList.add('is-open');
       modal.setAttribute('aria-hidden', 'false');
     }
+    setTimeout(function () {
+      const focusTarget = authMode === 'signup' || authMode === 'email-login'
+        ? el('authEmail')
+        : authMode === 'verify' ? el('authOtp') : el('btnGoogleLogin');
+      if (focusTarget) focusTarget.focus({ preventScroll: true });
+    }, 0);
   }
 
   function closeAuth() {
     const modal = el('authModal');
     const msg = el('authMsg');
+    const passIn = el('authPass');
+    const repeatIn = el('authPassRepeat');
+    const otpIn = el('authOtp');
     if (msg) msg.textContent = '';
+    if (passIn) passIn.value = '';
+    if (repeatIn) repeatIn.value = '';
+    if (otpIn) otpIn.value = '';
     if (modal) {
       modal.classList.remove('is-open');
       modal.setAttribute('aria-hidden', 'true');
     }
+    setAuthMode('chooser');
   }
 
   function rememberTelegramOAuthStart() {
@@ -3267,6 +3363,25 @@
     } catch (_) {}
   }
 
+  function readableEmailAuthError(error, fallbackKey) {
+    const message = String(error && error.message ? error.message : error || '').trim();
+    if (/email not confirmed/i.test(message)) return copy('emailNotConfirmed');
+    if (/invalid.*(?:otp|token|code)|(?:otp|token|code).*(?:expired|invalid)/i.test(message)) return copy('verificationFailed');
+    if (/invalid login credentials/i.test(message)) return copy('loginFailed');
+    return message || copy(fallbackKey || 'loginFailed');
+  }
+
+  function validEmailAddress(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+  }
+
+  function focusAuthField(id) {
+    setTimeout(function () {
+      const input = el(id);
+      if (input) input.focus({ preventScroll: true });
+    }, 0);
+  }
+
   function bindEvents() {
     const navAvatar = el('navAvatar');
     const navMenu = el('navMenu');
@@ -3280,7 +3395,14 @@
     const languageClose = el('languageClose');
     const btnLogout = el('btnLogout');
     const authClose = el('authClose');
-    const doLogin = el('btnDoLogin');
+    const authForm = el('authForm');
+    const btnEmailAuth = el('btnEmailAuth');
+    const doEmailAuth = el('btnDoEmailAuth');
+    const btnAuthSwitch = el('btnAuthSwitch');
+    const btnAuthBack = el('btnAuthBack');
+    const btnVerifyEmail = el('btnVerifyEmail');
+    const btnResendCode = el('btnResendCode');
+    const btnVerifyBack = el('btnVerifyBack');
     const btnGoogleLogin = el('btnGoogleLogin');
     const btnTelegramLogin = el('btnTelegramLogin');
     const modal = el('authModal');
@@ -3437,6 +3559,164 @@
       }
     });
 
+    if (btnEmailAuth) {
+      btnEmailAuth.addEventListener('click', function () {
+        setAuthMode('email-login');
+        focusAuthField('authEmail');
+      });
+    }
+    if (btnAuthSwitch) {
+      btnAuthSwitch.addEventListener('click', function () {
+        setAuthMode(authMode === 'signup' ? 'email-login' : 'signup');
+        focusAuthField('authEmail');
+      });
+    }
+    if (btnAuthBack) {
+      btnAuthBack.addEventListener('click', function () {
+        setAuthMode('chooser');
+        focusAuthField('btnGoogleLogin');
+      });
+    }
+    if (btnVerifyBack) {
+      btnVerifyBack.addEventListener('click', function () {
+        setAuthMode('signup');
+        const emailIn = el('authEmail');
+        if (emailIn && pendingVerificationEmail) emailIn.value = pendingVerificationEmail;
+        focusAuthField('authEmail');
+      });
+    }
+
+    let emailAuthSubmissionPending = false;
+    let emailVerificationSubmissionPending = false;
+
+    async function submitEmailCredentials() {
+      if (emailAuthSubmissionPending) return;
+      const emailIn = el('authEmail');
+      const passIn = el('authPass');
+      const repeatIn = el('authPassRepeat');
+      const msg = el('authMsg');
+      const email = String(emailIn && emailIn.value || '').trim().toLowerCase();
+      const password = String(passIn && passIn.value || '');
+      const isSignup = authMode === 'signup';
+      if (!validEmailAddress(email)) { if (msg) msg.textContent = copy('invalidEmail'); return; }
+      if (!password) { if (msg) msg.textContent = copy('enterCredentials'); return; }
+      if (isSignup && password.length < 6) { if (msg) msg.textContent = copy('passwordTooShort'); return; }
+      if (isSignup && password !== String(repeatIn && repeatIn.value || '')) { if (msg) msg.textContent = copy('passwordsDoNotMatch'); return; }
+      if (!sb || !sb.auth) { if (msg) msg.textContent = copy(isSignup ? 'signupFailed' : 'loginFailed'); return; }
+
+      emailAuthSubmissionPending = true;
+      doEmailAuth.disabled = true;
+      doEmailAuth.setAttribute('aria-busy', 'true');
+      doEmailAuth.textContent = copy(isSignup ? 'creatingAccount' : 'signingIn');
+      let authAttempt = null;
+      let sessionEstablished = false;
+      try {
+        const attribution = rememberSignupAttributionStart();
+        authAttempt = beginAuthFunnelAttempt('email', attribution);
+        await recordAuthFunnelEvent(isSignup ? 'auth_email_signup_clicked' : 'auth_email_login_clicked', authAttempt);
+        captureAffiliateRef();
+        const ref = getStoredAffiliateRef();
+        if (ref) rememberAffiliateRef(ref, 'email_password');
+
+        if (isSignup) {
+          const signupResult = await sb.auth.signUp({
+            email: email,
+            password: password,
+            options: { data: { hansora_auth_provider: 'email' } }
+          });
+          if (signupResult.error) throw signupResult.error;
+          pendingVerificationEmail = email;
+          if (signupResult.data && signupResult.data.session && signupResult.data.user) {
+            sessionEstablished = true;
+            await recordAuthFunnelEvent('auth_email_verified', authAttempt, { userId: signupResult.data.user.id });
+            await handleAuthenticatedUser(signupResult.data.user);
+            closeAuth();
+            return;
+          }
+          await recordAuthFunnelEvent('auth_email_verification_sent', authAttempt);
+          setAuthMode('verify');
+          focusAuthField('authOtp');
+          return;
+        }
+
+        const loginResult = await sb.auth.signInWithPassword({ email: email, password: password });
+        if (loginResult.error) throw loginResult.error;
+        if (!loginResult.data || !loginResult.data.user) throw new Error(copy('loginFailed'));
+        sessionEstablished = true;
+        await handleAuthenticatedUser(loginResult.data.user);
+        closeAuth();
+      } catch (error) {
+        if (!sessionEstablished) await recordAuthFunnelFailure(error, authAttempt);
+        if (msg) msg.textContent = readableEmailAuthError(error, isSignup ? 'signupFailed' : 'loginFailed');
+      } finally {
+        emailAuthSubmissionPending = false;
+        doEmailAuth.disabled = false;
+        doEmailAuth.removeAttribute('aria-busy');
+        doEmailAuth.textContent = authMode === 'signup' ? copy('createAccountButton') : copy('logIn');
+      }
+    }
+
+    async function submitVerificationCode() {
+      if (emailVerificationSubmissionPending) return;
+      const otpIn = el('authOtp');
+      const msg = el('authMsg');
+      const token = String(otpIn && otpIn.value || '').replace(/\s+/g, '');
+      const email = String(pendingVerificationEmail || '').trim().toLowerCase();
+      if (!email || !token) { if (msg) msg.textContent = copy('verificationFailed'); return; }
+      emailVerificationSubmissionPending = true;
+      btnVerifyEmail.disabled = true;
+      btnVerifyEmail.setAttribute('aria-busy', 'true');
+      btnVerifyEmail.textContent = copy('verifyingCode');
+      try {
+        const verification = await sb.auth.verifyOtp({ email: email, token: token, type: 'email' });
+        if (verification.error) throw verification.error;
+        const user = verification.data && verification.data.user;
+        if (!user) throw new Error(copy('verificationFailed'));
+        const authAttempt = readAuthFunnelAttempt();
+        await recordAuthFunnelEvent('auth_email_verified', authAttempt, { userId: user.id });
+        await handleAuthenticatedUser(user);
+        pendingVerificationEmail = '';
+        closeAuth();
+      } catch (error) {
+        await recordAuthFunnelEvent('auth_email_verification_failed', readAuthFunnelAttempt(), {
+          errorReason: error && error.message ? error.message : error
+        });
+        if (msg) msg.textContent = readableEmailAuthError(error, 'verificationFailed');
+      } finally {
+        emailVerificationSubmissionPending = false;
+        btnVerifyEmail.disabled = false;
+        btnVerifyEmail.removeAttribute('aria-busy');
+        btnVerifyEmail.textContent = copy('verifyCode');
+      }
+    }
+
+    if (authForm) {
+      authForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        if (authMode === 'verify') submitVerificationCode();
+        else if (authMode === 'email-login' || authMode === 'signup') submitEmailCredentials();
+      });
+    }
+    if (btnResendCode) {
+      btnResendCode.addEventListener('click', async function () {
+        const msg = el('authMsg');
+        if (!pendingVerificationEmail || !sb || !sb.auth) { if (msg) msg.textContent = copy('verificationFailed'); return; }
+        btnResendCode.disabled = true;
+        btnResendCode.setAttribute('aria-busy', 'true');
+        try {
+          const resend = await sb.auth.resend({ type: 'signup', email: pendingVerificationEmail });
+          if (resend.error) throw resend.error;
+          await recordAuthFunnelEvent('auth_email_verification_resent', readAuthFunnelAttempt());
+          if (msg) msg.textContent = copy('codeResent');
+        } catch (error) {
+          if (msg) msg.textContent = readableEmailAuthError(error, 'verificationFailed');
+        } finally {
+          btnResendCode.disabled = false;
+          btnResendCode.removeAttribute('aria-busy');
+        }
+      });
+    }
+
     if (btnGoogleLogin) {
       btnGoogleLogin.addEventListener('click', async function () {
         const msg = el('authMsg');
@@ -3486,27 +3766,6 @@
         } catch (error) {
           await recordAuthFunnelFailure(error, authAttempt);
           showTelegramOAuthFailure(error && error.message ? error.message : copy('tryAgain'));
-        }
-      });
-    }
-
-    if (doLogin) {
-      doLogin.addEventListener('click', async function () {
-        const emailIn = el('authEmail');
-        const passIn = el('authPass');
-        const msg = el('authMsg');
-        if (!emailIn.value || !passIn.value) { if (msg) msg.textContent = copy('enterCredentials'); return; }
-        if (msg) msg.textContent = copy('signingIn');
-        try {
-          const { data, error } = await sb.auth.signInWithPassword({ email: emailIn.value.trim(), password: passIn.value.trim() });
-          if (error) { if (msg) msg.textContent = error.message; return; }
-          const profile = await getOrCreateProfile(data.user);
-          showLoggedInUI(profile, data.user);
-          await registerAffiliateReferral(data.user);
-          handleSignupOffer(data.user, profile);
-          closeAuth();
-        } catch (error) {
-          if (msg) msg.textContent = error.message || copy('loginFailed');
         }
       });
     }
