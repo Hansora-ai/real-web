@@ -21,6 +21,7 @@
   const SIGNUP_ATTRIBUTION_PENDING_KEY = 'hansora.signup_attribution.pending.v1';
   const SIGNUP_ATTRIBUTION_MAX_AGE_MS = 6 * 60 * 60 * 1000;
   const AUTH_FUNNEL_PENDING_KEY = 'hansora.auth_funnel.pending.v1';
+  const AUTH_FUNNEL_VISITOR_KEY = 'hansora.auth_funnel.visitor.v1';
   const AUTH_FUNNEL_MAX_AGE_MS = 30 * 60 * 1000;
   const REGISTRATION_COMPLETED_EVENT_PREFIX = 'hansora.registration.completedEvent.';
   const AUTH_CALLBACK_SEARCH_SNAPSHOT = window.location.search || '';
@@ -116,7 +117,7 @@
       reject: 'Reject', acceptAnalytics: 'Accept analytics', continue: 'Continue', telegramFailure: 'Telegram login was not completed', telegramCancelled: 'Telegram login was cancelled or not completed. Please try again.',
       creatorOffer: 'Creator discount offer', pricingOffer: 'Hansora pricing offer', closeOffer: 'Close offer', openingGoogle: 'Opening Google login…', googleFailed: 'Google login failed.',
       openingTelegram: 'Opening Telegram login…', tryAgain: 'Please try again.', enterCredentials: 'Enter email & password.', signingIn: 'Signing in…', loginFailed: 'Login failed.', notLoggedIn: 'Not logged in', notEnoughCredits: 'Not enough credits',
-      emailPassword: 'Email & password', backToOptions: 'Back to login options', repeatPassword: 'Repeat password', haveAccount: 'Already have an account? Log in', needAccount: 'New here? Sign up', createAccountButton: 'Create account', creatingAccount: 'Creating account…', passwordsDoNotMatch: 'Passwords do not match.', passwordTooShort: 'Password must contain at least 6 characters.', invalidEmail: 'Enter a valid email address.', verifyTitle: 'Verify your email', verificationSent: 'We sent a verification code to', verificationCode: 'Verification code', verifyCode: 'Verify and continue', verifyingCode: 'Verifying code…', resendCode: 'Resend code', codeResent: 'A new verification code was sent.', signupFailed: 'Could not create the account.', verificationFailed: 'The verification code is invalid or expired.', emailNotConfirmed: 'Verify your email before logging in.'
+      emailPassword: 'Email & password', orEmail: 'OR', backToOptions: 'Back to options', repeatPassword: 'Repeat password', haveAccount: 'Already have an account? Log in', needAccount: 'New here? Sign up', createAccountButton: 'Create account', creatingAccount: 'Creating account…', passwordsDoNotMatch: 'Passwords do not match.', passwordTooShort: 'Password must contain at least 6 characters.', invalidEmail: 'Enter a valid email address.', invalidCredentials: 'Email or password is incorrect.', emailMayExist: 'This email may already have an account. Try logging in or use a different email.', verifyTitle: 'Check your inbox', verificationSent: 'Enter the verification code sent to', verificationCode: '6-digit code', verifyCode: 'Verify and continue', verifyingCode: 'Verifying code…', resendCode: 'Resend code', codeResent: 'A new verification code was sent.', signupFailed: 'Could not create the account.', verificationFailed: 'The verification code is invalid or expired.', emailNotConfirmed: 'Verify your email before logging in.'
     },
     hy: {
       home: 'HANSORA AI գլխավոր էջ', primaryNav: 'Հիմնական նավիգացիա', image: 'Պատկեր', imageMenu: 'Պատկերի գործիքներ և մոդելներ', imageSection: 'Պատկերի մոդելներ և գործիքներ',
@@ -130,7 +131,7 @@
       reject: 'Մերժել', acceptAnalytics: 'Թույլատրել', continue: 'Շարունակել', telegramFailure: 'Telegram-ով մուտքը չի ավարտվել', telegramCancelled: 'Telegram-ով մուտքը չեղարկվել կամ չի ավարտվել։ Փորձեք կրկին։',
       creatorOffer: 'Զեղչային առաջարկ ստեղծողների համար', pricingOffer: 'Hansora-ի գնային առաջարկ', closeOffer: 'Փակել առաջարկը', openingGoogle: 'Բացվում է Google-ով մուտքը…', googleFailed: 'Google-ով մուտքը ձախողվեց։',
       openingTelegram: 'Բացվում է Telegram-ով մուտքը…', tryAgain: 'Փորձեք կրկին։', enterCredentials: 'Մուտքագրեք էլփոստը և գաղտնաբառը։', signingIn: 'Մուտք է կատարվում…', loginFailed: 'Մուտքը ձախողվեց։', notLoggedIn: 'Մուտք չեք գործել', notEnoughCredits: 'Բավարար կրեդիտներ չկան',
-      emailPassword: 'Էլփոստ և գաղտնաբառ', backToOptions: 'Վերադառնալ մուտքի տարբերակներին', repeatPassword: 'Կրկնել գաղտնաբառը', haveAccount: 'Արդեն ունե՞ք հաշիվ։ Մուտք գործել', needAccount: 'Նոր օգտատե՞ր եք։ Գրանցվել', createAccountButton: 'Ստեղծել հաշիվ', creatingAccount: 'Հաշիվը ստեղծվում է…', passwordsDoNotMatch: 'Գաղտնաբառերը չեն համընկնում։', passwordTooShort: 'Գաղտնաբառը պետք է պարունակի առնվազն 6 նիշ։', invalidEmail: 'Մուտքագրեք վավեր էլփոստի հասցե։', verifyTitle: 'Հաստատեք ձեր էլփոստը', verificationSent: 'Հաստատման կոդն ուղարկվել է՝', verificationCode: 'Հաստատման կոդ', verifyCode: 'Հաստատել և շարունակել', verifyingCode: 'Կոդը ստուգվում է…', resendCode: 'Կրկին ուղարկել կոդը', codeResent: 'Նոր հաստատման կոդն ուղարկվեց։', signupFailed: 'Չհաջողվեց ստեղծել հաշիվը։', verificationFailed: 'Հաստատման կոդը սխալ է կամ ժամկետանց։', emailNotConfirmed: 'Մուտք գործելուց առաջ հաստատեք ձեր էլփոստը։'
+      emailPassword: 'Էլփոստ և գաղտնաբառ', orEmail: 'ԿԱՄ', backToOptions: 'Վերադառնալ տարբերակներին', repeatPassword: 'Կրկնել գաղտնաբառը', haveAccount: 'Արդեն ունե՞ք հաշիվ։ Մուտք գործել', needAccount: 'Նոր օգտատե՞ր եք։ Գրանցվել', createAccountButton: 'Ստեղծել հաշիվ', creatingAccount: 'Հաշիվը ստեղծվում է…', passwordsDoNotMatch: 'Գաղտնաբառերը չեն համընկնում։', passwordTooShort: 'Գաղտնաբառը պետք է պարունակի առնվազն 6 նիշ։', invalidEmail: 'Մուտքագրեք վավեր էլփոստի հասցե։', invalidCredentials: 'Էլփոստը կամ գաղտնաբառը սխալ է։', emailMayExist: 'Այս էլփոստով հնարավոր է արդեն հաշիվ կա։ Փորձեք մուտք գործել կամ օգտագործեք այլ էլփոստ։', verifyTitle: 'Ստուգեք ձեր փոստը', verificationSent: 'Մուտքագրեք այս հասցեին ուղարկված հաստատման կոդը՝', verificationCode: '6-նիշ կոդ', verifyCode: 'Հաստատել և շարունակել', verifyingCode: 'Կոդը ստուգվում է…', resendCode: 'Կրկին ուղարկել կոդը', codeResent: 'Նոր հաստատման կոդն ուղարկվեց։', signupFailed: 'Չհաջողվեց ստեղծել հաշիվը։', verificationFailed: 'Հաստատման կոդը սխալ է կամ ժամկետանց։', emailNotConfirmed: 'Մուտք գործելուց առաջ հաստատեք ձեր էլփոստը։'
     },
     ru: {
       home: 'Главная страница HANSORA AI', primaryNav: 'Основная навигация', image: 'Изображения', imageMenu: 'Инструменты и модели изображений', imageSection: 'Модели и инструменты изображений',
@@ -144,7 +145,7 @@
       reject: 'Отклонить', acceptAnalytics: 'Разрешить', continue: 'Продолжить', telegramFailure: 'Вход через Telegram не завершён', telegramCancelled: 'Вход через Telegram отменён или не завершён. Попробуйте ещё раз.',
       creatorOffer: 'Скидочное предложение для создателей', pricingOffer: 'Ценовое предложение Hansora', closeOffer: 'Закрыть предложение', openingGoogle: 'Открывается вход через Google…', googleFailed: 'Не удалось войти через Google.',
       openingTelegram: 'Открывается вход через Telegram…', tryAgain: 'Попробуйте ещё раз.', enterCredentials: 'Введите эл. почту и пароль.', signingIn: 'Выполняется вход…', loginFailed: 'Не удалось войти.', notLoggedIn: 'Вход не выполнен', notEnoughCredits: 'Недостаточно кредитов',
-      emailPassword: 'Эл. почта и пароль', backToOptions: 'Вернуться к вариантам входа', repeatPassword: 'Повторите пароль', haveAccount: 'Уже есть аккаунт? Войти', needAccount: 'Нет аккаунта? Зарегистрироваться', createAccountButton: 'Создать аккаунт', creatingAccount: 'Создаём аккаунт…', passwordsDoNotMatch: 'Пароли не совпадают.', passwordTooShort: 'Пароль должен содержать не менее 6 символов.', invalidEmail: 'Введите действительный адрес электронной почты.', verifyTitle: 'Подтвердите эл. почту', verificationSent: 'Мы отправили код подтверждения на', verificationCode: 'Код подтверждения', verifyCode: 'Подтвердить и продолжить', verifyingCode: 'Проверяем код…', resendCode: 'Отправить код ещё раз', codeResent: 'Новый код подтверждения отправлен.', signupFailed: 'Не удалось создать аккаунт.', verificationFailed: 'Код подтверждения неверен или истёк.', emailNotConfirmed: 'Подтвердите эл. почту перед входом.'
+      emailPassword: 'Эл. почта и пароль', orEmail: 'ИЛИ', backToOptions: 'Назад к вариантам', repeatPassword: 'Повторите пароль', haveAccount: 'Уже есть аккаунт? Войти', needAccount: 'Нет аккаунта? Зарегистрироваться', createAccountButton: 'Создать аккаунт', creatingAccount: 'Создаём аккаунт…', passwordsDoNotMatch: 'Пароли не совпадают.', passwordTooShort: 'Пароль должен содержать не менее 6 символов.', invalidEmail: 'Введите действительный адрес электронной почты.', invalidCredentials: 'Неверный адрес электронной почты или пароль.', emailMayExist: 'Возможно, для этой почты уже есть аккаунт. Попробуйте войти или используйте другую почту.', verifyTitle: 'Проверьте почту', verificationSent: 'Введите код подтверждения, отправленный на', verificationCode: '6-значный код', verifyCode: 'Подтвердить и продолжить', verifyingCode: 'Проверяем код…', resendCode: 'Отправить код ещё раз', codeResent: 'Новый код подтверждения отправлен.', signupFailed: 'Не удалось создать аккаунт.', verificationFailed: 'Код подтверждения неверен или истёк.', emailNotConfirmed: 'Подтвердите эл. почту перед входом.'
     }
   };
 
@@ -721,14 +722,28 @@
     return `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
   }
 
+  function readOrCreateAuthFunnelVisitorId() {
+    try {
+      let value = validAnalyticsId(sessionStorage.getItem(AUTH_FUNNEL_VISITOR_KEY));
+      if (!value) {
+        value = createAuthAttemptId();
+        sessionStorage.setItem(AUTH_FUNNEL_VISITOR_KEY, value);
+      }
+      return value;
+    } catch (_) {
+      return createAuthAttemptId();
+    }
+  }
+
   function beginAuthFunnelAttempt(provider, attribution) {
     const normalizedProvider = provider === 'telegram' || provider === 'email' ? provider : 'google';
     const sourceAttribution = attribution || readSignupAttributionStart() || {};
     const visitorId = validAnalyticsId(sourceAttribution.visitorId)
-      || readExistingAnalyticsVisitorId();
-    if (!visitorId) return null;
+      || readExistingAnalyticsVisitorId()
+      || readOrCreateAuthFunnelVisitorId();
     const sessionId = validAnalyticsId(sourceAttribution.sessionId)
-      || readExistingAnalyticsSessionId();
+      || readExistingAnalyticsSessionId()
+      || readOrCreateAuthFunnelVisitorId();
     const attempt = {
       attemptId: createAuthAttemptId(),
       visitorId: visitorId,
@@ -1778,8 +1793,26 @@
       .site-header .nav-links{ position:absolute; left:50%; transform:translateX(-50%); }
       .site-header .user-menu .hansora-ai-course-button{ width:100%; text-align:left; }
       .hansora-auth-form .hansora-auth-view[hidden]{ display:none !important; }
-      .hansora-auth-form .hansora-oauth-stack{ display:grid; gap:10px; }
+      .hansora-auth-card{ width:min(460px,calc(100vw - 28px)); }
+      .hansora-auth-form .hansora-oauth-stack{ display:grid !important; gap:10px !important; }
+      .hansora-auth-form .hansora-auth-divider{
+        display:flex;
+        align-items:center;
+        gap:12px;
+        margin:16px 0;
+        color:rgba(255,255,255,.46);
+        font-size:11px;
+        font-weight:800;
+        letter-spacing:.16em;
+      }
+      .hansora-auth-form .hansora-auth-divider::before,
+      .hansora-auth-form .hansora-auth-divider::after{ content:""; height:1px; flex:1; background:rgba(255,255,255,.12); }
       .hansora-auth-form .hansora-email-btn{
+        display:flex !important;
+        align-items:center !important;
+        justify-content:center !important;
+        gap:10px !important;
+        width:100% !important;
         min-height:48px;
         border-color:rgba(167,139,250,.48);
         background:linear-gradient(135deg,rgba(79,70,229,.96),rgba(124,58,237,.96));
@@ -1787,7 +1820,8 @@
         box-shadow:0 14px 34px rgba(99,102,241,.24),inset 0 1px 0 rgba(255,255,255,.18);
       }
       .hansora-auth-form .hansora-email-btn:hover{ filter:brightness(1.08); }
-      .hansora-auth-form .hansora-email-icon{ font-size:20px; line-height:1; }
+      .hansora-auth-form .hansora-email-icon{ display:inline-flex; width:20px; height:20px; flex:0 0 20px; }
+      .hansora-auth-form .hansora-email-icon svg{ display:block; width:20px; height:20px; }
       .hansora-auth-form .hansora-auth-fields{ display:grid; gap:10px; }
       .hansora-auth-form .hansora-auth-fields input{
         width:100%;
@@ -1802,13 +1836,56 @@
       }
       .hansora-auth-form .hansora-auth-fields input:focus{ border-color:rgba(139,92,246,.78); box-shadow:0 0 0 3px rgba(139,92,246,.16); }
       .hansora-auth-form .hansora-auth-fields input::placeholder{ color:rgba(255,255,255,.46); }
-      .hansora-auth-form .hansora-auth-actions{ display:grid; gap:9px; margin-top:12px; }
-      .hansora-auth-form .hansora-auth-link{ border:0; background:transparent; color:rgba(199,210,254,.92); padding:7px 8px; cursor:pointer; font:inherit; font-weight:700; }
+      .hansora-auth-form .hansora-auth-primary{ display:block !important; margin-top:14px !important; }
+      .hansora-auth-form .hansora-auth-primary .btn{ width:100% !important; min-height:48px !important; }
+      .hansora-auth-form .hansora-auth-secondary{
+        display:flex !important;
+        align-items:center !important;
+        justify-content:center !important;
+        flex-wrap:wrap !important;
+        gap:5px 16px !important;
+        margin-top:12px !important;
+      }
+      .hansora-auth-form .hansora-auth-link{
+        width:auto !important;
+        min-width:0 !important;
+        min-height:0 !important;
+        border:0 !important;
+        background:transparent !important;
+        box-shadow:none !important;
+        color:rgba(199,210,254,.88) !important;
+        padding:5px 2px !important;
+        cursor:pointer;
+        font:inherit !important;
+        font-size:13px !important;
+        line-height:1.35 !important;
+        font-weight:700 !important;
+        white-space:nowrap;
+      }
       .hansora-auth-form .hansora-auth-link:hover{ color:#fff; }
-      .hansora-auth-form .hansora-verify-copy{ margin:0 0 13px; color:rgba(255,255,255,.72); line-height:1.5; }
-      .hansora-auth-form .hansora-verify-email{ display:block; margin-top:4px; color:#fff; font-weight:800; overflow-wrap:anywhere; }
+      .hansora-auth-form .hansora-verify-panel{ text-align:center; }
+      .hansora-auth-form .hansora-verify-icon{
+        display:grid;
+        place-items:center;
+        width:54px;
+        height:54px;
+        margin:0 auto 13px;
+        border:1px solid rgba(129,140,248,.46);
+        border-radius:16px;
+        background:linear-gradient(145deg,rgba(99,102,241,.3),rgba(56,189,248,.15));
+        color:#c7d2fe;
+        box-shadow:0 12px 32px rgba(79,70,229,.18);
+      }
+      .hansora-auth-form .hansora-verify-icon svg{ width:26px; height:26px; }
+      .hansora-auth-form .hansora-verify-copy{ margin:0 0 15px; color:rgba(255,255,255,.7); line-height:1.5; font-size:14px; }
+      .hansora-auth-form .hansora-verify-email{ display:block; width:fit-content; max-width:100%; margin:7px auto 0; padding:6px 10px; border-radius:9px; background:rgba(255,255,255,.065); color:#fff; font-weight:800; overflow-wrap:anywhere; }
+      .hansora-auth-form #authOtp{ text-align:center; font-size:20px; font-weight:800; letter-spacing:.28em; }
       .hansora-auth-form .hansora-auth-msg:empty{ display:none; }
-      .hansora-auth-form .hansora-auth-msg{ margin-top:12px; }
+      .hansora-auth-form .hansora-auth-msg{ display:none; margin:14px 0 0; padding:10px 12px; border-radius:10px; font-size:13px; font-weight:750; line-height:1.4; text-align:left; }
+      .hansora-auth-form .hansora-auth-msg.is-error{ display:block !important; color:#fecaca !important; border:1px solid rgba(248,113,113,.52); background:rgba(127,29,29,.3); }
+      .hansora-auth-form .hansora-auth-msg.is-success{ display:block !important; color:#bbf7d0 !important; border:1px solid rgba(74,222,128,.4); background:rgba(20,83,45,.3); }
+      .hansora-auth-form .hansora-auth-msg.is-info{ display:block !important; color:#dbeafe !important; border:1px solid rgba(96,165,250,.4); background:rgba(30,64,175,.22); }
+      .hansora-auth-form .hansora-auth-helper{ margin:12px 0 0; color:rgba(255,255,255,.54); text-align:center; font-size:12px; line-height:1.45; }
       .hansora-auth-form button[disabled]{ opacity:.64; cursor:wait; }
       .hansora-auth-form .hansora-telegram-btn{
         position:relative;
@@ -2533,12 +2610,13 @@
                   <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M21.8 3.2 18.6 20c-.24 1.19-.88 1.48-1.78.92l-4.87-3.59-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.96 9.02-8.15c.39-.35-.09-.55-.61-.2L6.23 13.78l-4.8-1.5c-1.04-.33-1.06-1.04.22-1.54L20.4 3.52c.87-.32 1.63.2 1.4-.32Z"/></svg>
                   <span>${copy('telegram')}</span>
                 </button>
-                <button class="btn hansora-email-btn" id="btnEmailAuth" type="button">
-                  <span class="hansora-email-icon" aria-hidden="true">✉</span>
-                  <span>${copy('emailPassword')}</span>
-                </button>
               </div>
-              <p class="hansora-auth-msg" style="margin:12px 0 0;color:rgba(255,255,255,.72);line-height:1.45;">${copy('secureAuth')}</p>
+              <div class="hansora-auth-divider"><span>${copy('orEmail')}</span></div>
+              <button class="btn hansora-email-btn" id="btnEmailAuth" type="button">
+                <span class="hansora-email-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3.75 6.75A2.75 2.75 0 0 1 6.5 4h11a2.75 2.75 0 0 1 2.75 2.75v10.5A2.75 2.75 0 0 1 17.5 20h-11a2.75 2.75 0 0 1-2.75-2.75V6.75Z" stroke="currentColor" stroke-width="1.8"/><path d="m5 6.5 7 5.25 7-5.25" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                <span>${copy('emailPassword')}</span>
+              </button>
+              <p class="hansora-auth-helper">${copy('secureAuth')}</p>
             </div>
             <div class="hansora-auth-view" id="authEmailView" hidden>
               <div class="hansora-auth-fields">
@@ -2546,19 +2624,24 @@
                 <input id="authPass" placeholder="${copy('password')}" type="password" autocomplete="current-password" required>
                 <input id="authPassRepeat" placeholder="${copy('repeatPassword')}" type="password" autocomplete="new-password" hidden>
               </div>
-              <div class="hansora-auth-actions">
+              <div class="hansora-auth-primary">
                 <button class="btn btn-brand" id="btnDoEmailAuth" type="submit">${copy('logIn')}</button>
+              </div>
+              <div class="hansora-auth-secondary">
                 <button class="hansora-auth-link" id="btnAuthSwitch" type="button">${copy('needAccount')}</button>
                 <button class="hansora-auth-link" id="btnAuthBack" type="button">← ${copy('backToOptions')}</button>
               </div>
             </div>
-            <div class="hansora-auth-view" id="authVerifyView" hidden>
+            <div class="hansora-auth-view hansora-verify-panel" id="authVerifyView" hidden>
+              <div class="hansora-verify-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3.75 6.75A2.75 2.75 0 0 1 6.5 4h11a2.75 2.75 0 0 1 2.75 2.75v10.5A2.75 2.75 0 0 1 17.5 20h-11a2.75 2.75 0 0 1-2.75-2.75V6.75Z" stroke="currentColor" stroke-width="1.8"/><path d="m5 6.5 7 5.25 7-5.25" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
               <p class="hansora-verify-copy">${copy('verificationSent')}<strong class="hansora-verify-email" id="authVerifyEmail"></strong></p>
               <div class="hansora-auth-fields">
                 <input id="authOtp" placeholder="${copy('verificationCode')}" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8">
               </div>
-              <div class="hansora-auth-actions">
+              <div class="hansora-auth-primary">
                 <button class="btn btn-brand" id="btnVerifyEmail" type="submit">${copy('verifyCode')}</button>
+              </div>
+              <div class="hansora-auth-secondary">
                 <button class="hansora-auth-link" id="btnResendCode" type="button">${copy('resendCode')}</button>
                 <button class="hansora-auth-link" id="btnVerifyBack" type="button">← ${copy('signUp')}</button>
               </div>
@@ -2688,11 +2771,22 @@
   let authMode = 'chooser';
   let pendingVerificationEmail = '';
 
+  function setAuthMessage(message, tone) {
+    const msg = el('authMsg');
+    if (!msg) return;
+    msg.textContent = String(message || '');
+    msg.classList.remove('is-error', 'is-success', 'is-info');
+    if (message) msg.classList.add(tone === 'success' ? 'is-success' : tone === 'info' ? 'is-info' : 'is-error');
+  }
+
+  function clearAuthMessage() {
+    setAuthMessage('', 'error');
+  }
+
   function setAuthMode(mode) {
     if (mode === 'signup' || mode === 'email-login' || mode === 'verify') authMode = mode;
     else authMode = 'chooser';
     const title = el('authTitle');
-    const msg = el('authMsg');
     const chooserView = el('authChooserView');
     const emailView = el('authEmailView');
     const verifyView = el('authVerifyView');
@@ -2719,15 +2813,14 @@
     if (submit) submit.textContent = isSignup ? copy('createAccountButton') : copy('logIn');
     if (switchButton) switchButton.textContent = isSignup ? copy('haveAccount') : copy('needAccount');
     if (verifyEmail) verifyEmail.textContent = pendingVerificationEmail;
-    if (msg) msg.textContent = '';
+    clearAuthMessage();
   }
 
   function openAuth(mode) {
     if (mode === 'signup') setAuthMode('signup');
     else setAuthMode('chooser');
     const modal = el('authModal');
-    const msg = el('authMsg');
-    if (msg) msg.textContent = '';
+    clearAuthMessage();
     if (modal) {
       modal.classList.add('is-open');
       modal.setAttribute('aria-hidden', 'false');
@@ -2742,11 +2835,10 @@
 
   function closeAuth() {
     const modal = el('authModal');
-    const msg = el('authMsg');
     const passIn = el('authPass');
     const repeatIn = el('authPassRepeat');
     const otpIn = el('authOtp');
-    if (msg) msg.textContent = '';
+    clearAuthMessage();
     if (passIn) passIn.value = '';
     if (repeatIn) repeatIn.value = '';
     if (otpIn) otpIn.value = '';
@@ -3367,8 +3459,14 @@
     const message = String(error && error.message ? error.message : error || '').trim();
     if (/email not confirmed/i.test(message)) return copy('emailNotConfirmed');
     if (/invalid.*(?:otp|token|code)|(?:otp|token|code).*(?:expired|invalid)/i.test(message)) return copy('verificationFailed');
-    if (/invalid login credentials/i.test(message)) return copy('loginFailed');
+    if (/invalid login credentials|invalid email or password/i.test(message)) return copy('invalidCredentials');
+    if (/already (?:been )?registered|already exists|user.*registered/i.test(message)) return copy('emailMayExist');
     return message || copy(fallbackKey || 'loginFailed');
+  }
+
+  function signupResultMayBeExistingAccount(result) {
+    const user = result && result.data && result.data.user;
+    return Boolean(user && Array.isArray(user.identities) && user.identities.length === 0);
   }
 
   function validEmailAddress(value) {
@@ -3560,9 +3658,13 @@
     });
 
     if (btnEmailAuth) {
-      btnEmailAuth.addEventListener('click', function () {
+      btnEmailAuth.addEventListener('click', async function () {
+        const attribution = rememberSignupAttributionStart();
+        let authAttempt = readAuthFunnelAttempt();
+        if (!authAttempt || authAttempt.provider !== 'email') authAttempt = beginAuthFunnelAttempt('email', attribution);
         setAuthMode('email-login');
         focusAuthField('authEmail');
+        await recordAuthFunnelEvent('auth_email_option_clicked', authAttempt);
       });
     }
     if (btnAuthSwitch) {
@@ -3594,15 +3696,15 @@
       const emailIn = el('authEmail');
       const passIn = el('authPass');
       const repeatIn = el('authPassRepeat');
-      const msg = el('authMsg');
       const email = String(emailIn && emailIn.value || '').trim().toLowerCase();
       const password = String(passIn && passIn.value || '');
       const isSignup = authMode === 'signup';
-      if (!validEmailAddress(email)) { if (msg) msg.textContent = copy('invalidEmail'); return; }
-      if (!password) { if (msg) msg.textContent = copy('enterCredentials'); return; }
-      if (isSignup && password.length < 6) { if (msg) msg.textContent = copy('passwordTooShort'); return; }
-      if (isSignup && password !== String(repeatIn && repeatIn.value || '')) { if (msg) msg.textContent = copy('passwordsDoNotMatch'); return; }
-      if (!sb || !sb.auth) { if (msg) msg.textContent = copy(isSignup ? 'signupFailed' : 'loginFailed'); return; }
+      clearAuthMessage();
+      if (!validEmailAddress(email)) { setAuthMessage(copy('invalidEmail'), 'error'); return; }
+      if (!password) { setAuthMessage(copy('enterCredentials'), 'error'); return; }
+      if (isSignup && password.length < 6) { setAuthMessage(copy('passwordTooShort'), 'error'); return; }
+      if (isSignup && password !== String(repeatIn && repeatIn.value || '')) { setAuthMessage(copy('passwordsDoNotMatch'), 'error'); return; }
+      if (!sb || !sb.auth) { setAuthMessage(copy(isSignup ? 'signupFailed' : 'loginFailed'), 'error'); return; }
 
       emailAuthSubmissionPending = true;
       doEmailAuth.disabled = true;
@@ -3612,7 +3714,8 @@
       let sessionEstablished = false;
       try {
         const attribution = rememberSignupAttributionStart();
-        authAttempt = beginAuthFunnelAttempt('email', attribution);
+        authAttempt = readAuthFunnelAttempt();
+        if (!authAttempt || authAttempt.provider !== 'email') authAttempt = beginAuthFunnelAttempt('email', attribution);
         await recordAuthFunnelEvent(isSignup ? 'auth_email_signup_clicked' : 'auth_email_login_clicked', authAttempt);
         captureAffiliateRef();
         const ref = getStoredAffiliateRef();
@@ -3625,6 +3728,11 @@
             options: { data: { hansora_auth_provider: 'email' } }
           });
           if (signupResult.error) throw signupResult.error;
+          if (signupResultMayBeExistingAccount(signupResult)) {
+            await recordAuthFunnelEvent('auth_email_existing_account_possible', authAttempt);
+            setAuthMessage(copy('emailMayExist'), 'error');
+            return;
+          }
           pendingVerificationEmail = email;
           if (signupResult.data && signupResult.data.session && signupResult.data.user) {
             sessionEstablished = true;
@@ -3647,7 +3755,7 @@
         closeAuth();
       } catch (error) {
         if (!sessionEstablished) await recordAuthFunnelFailure(error, authAttempt);
-        if (msg) msg.textContent = readableEmailAuthError(error, isSignup ? 'signupFailed' : 'loginFailed');
+        setAuthMessage(readableEmailAuthError(error, isSignup ? 'signupFailed' : 'loginFailed'), 'error');
       } finally {
         emailAuthSubmissionPending = false;
         doEmailAuth.disabled = false;
@@ -3659,10 +3767,10 @@
     async function submitVerificationCode() {
       if (emailVerificationSubmissionPending) return;
       const otpIn = el('authOtp');
-      const msg = el('authMsg');
       const token = String(otpIn && otpIn.value || '').replace(/\s+/g, '');
       const email = String(pendingVerificationEmail || '').trim().toLowerCase();
-      if (!email || !token) { if (msg) msg.textContent = copy('verificationFailed'); return; }
+      clearAuthMessage();
+      if (!email || !token) { setAuthMessage(copy('verificationFailed'), 'error'); return; }
       emailVerificationSubmissionPending = true;
       btnVerifyEmail.disabled = true;
       btnVerifyEmail.setAttribute('aria-busy', 'true');
@@ -3681,7 +3789,7 @@
         await recordAuthFunnelEvent('auth_email_verification_failed', readAuthFunnelAttempt(), {
           errorReason: error && error.message ? error.message : error
         });
-        if (msg) msg.textContent = readableEmailAuthError(error, 'verificationFailed');
+        setAuthMessage(readableEmailAuthError(error, 'verificationFailed'), 'error');
       } finally {
         emailVerificationSubmissionPending = false;
         btnVerifyEmail.disabled = false;
@@ -3699,17 +3807,17 @@
     }
     if (btnResendCode) {
       btnResendCode.addEventListener('click', async function () {
-        const msg = el('authMsg');
-        if (!pendingVerificationEmail || !sb || !sb.auth) { if (msg) msg.textContent = copy('verificationFailed'); return; }
+        if (!pendingVerificationEmail || !sb || !sb.auth) { setAuthMessage(copy('verificationFailed'), 'error'); return; }
+        clearAuthMessage();
         btnResendCode.disabled = true;
         btnResendCode.setAttribute('aria-busy', 'true');
         try {
           const resend = await sb.auth.resend({ type: 'signup', email: pendingVerificationEmail });
           if (resend.error) throw resend.error;
           await recordAuthFunnelEvent('auth_email_verification_resent', readAuthFunnelAttempt());
-          if (msg) msg.textContent = copy('codeResent');
+          setAuthMessage(copy('codeResent'), 'success');
         } catch (error) {
-          if (msg) msg.textContent = readableEmailAuthError(error, 'verificationFailed');
+          setAuthMessage(readableEmailAuthError(error, 'verificationFailed'), 'error');
         } finally {
           btnResendCode.disabled = false;
           btnResendCode.removeAttribute('aria-busy');
@@ -3719,8 +3827,7 @@
 
     if (btnGoogleLogin) {
       btnGoogleLogin.addEventListener('click', async function () {
-        const msg = el('authMsg');
-        if (msg) msg.textContent = copy('openingGoogle');
+        setAuthMessage(copy('openingGoogle'), 'info');
         let authAttempt = null;
         try {
           const attribution = rememberSignupAttributionStart();
@@ -3737,15 +3844,14 @@
           if (error) throw error;
         } catch (error) {
           await recordAuthFunnelFailure(error, authAttempt);
-          if (msg) msg.textContent = error.message || copy('googleFailed');
+          setAuthMessage(error.message || copy('googleFailed'), 'error');
         }
       });
     }
 
     if (btnTelegramLogin) {
       btnTelegramLogin.addEventListener('click', async function () {
-        const msg = el('authMsg');
-        if (msg) msg.textContent = copy('openingTelegram');
+        setAuthMessage(copy('openingTelegram'), 'info');
         btnTelegramLogin.disabled = true;
         btnTelegramLogin.setAttribute('aria-busy', 'true');
         let authAttempt = null;
