@@ -23,6 +23,8 @@
   const AUTH_FUNNEL_PENDING_KEY = 'hansora.auth_funnel.pending.v1';
   const AUTH_FUNNEL_VISITOR_KEY = 'hansora.auth_funnel.visitor.v1';
   const AUTH_FUNNEL_MAX_AGE_MS = 30 * 60 * 1000;
+  const EMAIL_VERIFICATION_PENDING_KEY = 'hansora.email_verification.pending.v1';
+  const EMAIL_VERIFICATION_MAX_AGE_MS = 60 * 60 * 1000;
   const REGISTRATION_COMPLETED_EVENT_PREFIX = 'hansora.registration.completedEvent.';
   const AUTH_CALLBACK_SEARCH_SNAPSHOT = window.location.search || '';
   const AUTH_CALLBACK_HASH_SNAPSHOT = window.location.hash || '';
@@ -2771,6 +2773,40 @@
   let authMode = 'chooser';
   let pendingVerificationEmail = '';
 
+  function savePendingEmailVerification(email) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!validEmailAddress(normalizedEmail)) return false;
+    try {
+      localStorage.setItem(EMAIL_VERIFICATION_PENDING_KEY, JSON.stringify({
+        email: normalizedEmail,
+        createdAt: Date.now()
+      }));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function readPendingEmailVerification() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(EMAIL_VERIFICATION_PENDING_KEY) || 'null');
+      const email = String(saved && saved.email || '').trim().toLowerCase();
+      const createdAt = Number(saved && saved.createdAt);
+      if (!validEmailAddress(email) || !Number.isFinite(createdAt) || Date.now() - createdAt > EMAIL_VERIFICATION_MAX_AGE_MS) {
+        localStorage.removeItem(EMAIL_VERIFICATION_PENDING_KEY);
+        return null;
+      }
+      return { email: email, createdAt: createdAt };
+    } catch (_) {
+      try { localStorage.removeItem(EMAIL_VERIFICATION_PENDING_KEY); } catch (_) {}
+      return null;
+    }
+  }
+
+  function clearPendingEmailVerification() {
+    try { localStorage.removeItem(EMAIL_VERIFICATION_PENDING_KEY); } catch (_) {}
+  }
+
   function setAuthMessage(message, tone) {
     const msg = el('authMsg');
     if (!msg) return;
@@ -2790,8 +2826,10 @@
     const chooserView = el('authChooserView');
     const emailView = el('authEmailView');
     const verifyView = el('authVerifyView');
+    const emailIn = el('authEmail');
     const passIn = el('authPass');
     const repeatIn = el('authPassRepeat');
+    const otpIn = el('authOtp');
     const submit = el('btnDoEmailAuth');
     const switchButton = el('btnAuthSwitch');
     const verifyEmail = el('authVerifyEmail');
@@ -2804,10 +2842,17 @@
     if (chooserView) chooserView.hidden = authMode !== 'chooser';
     if (emailView) emailView.hidden = authMode !== 'email-login' && authMode !== 'signup';
     if (verifyView) verifyView.hidden = authMode !== 'verify';
+    if (emailIn) emailIn.disabled = authMode !== 'email-login' && authMode !== 'signup';
+    if (passIn) passIn.disabled = authMode !== 'email-login' && authMode !== 'signup';
     if (repeatIn) {
       repeatIn.hidden = !isSignup;
       repeatIn.required = isSignup;
+      repeatIn.disabled = !isSignup;
       if (!isSignup) repeatIn.value = '';
+    }
+    if (otpIn) {
+      otpIn.disabled = authMode !== 'verify';
+      otpIn.required = authMode === 'verify';
     }
     if (passIn) passIn.autocomplete = isSignup ? 'new-password' : 'current-password';
     if (submit) submit.textContent = isSignup ? copy('createAccountButton') : copy('logIn');
@@ -2817,8 +2862,18 @@
   }
 
   function openAuth(mode) {
-    if (mode === 'signup') setAuthMode('signup');
-    else setAuthMode('chooser');
+    if (mode === 'signup') {
+      setAuthMode('signup');
+    } else {
+      const savedVerification = readPendingEmailVerification();
+      if (savedVerification) {
+        pendingVerificationEmail = savedVerification.email;
+        setAuthMode('verify');
+      } else {
+        pendingVerificationEmail = '';
+        setAuthMode('chooser');
+      }
+    }
     const modal = el('authModal');
     clearAuthMessage();
     if (modal) {
@@ -3735,12 +3790,14 @@
           }
           pendingVerificationEmail = email;
           if (signupResult.data && signupResult.data.session && signupResult.data.user) {
+            clearPendingEmailVerification();
             sessionEstablished = true;
             await recordAuthFunnelEvent('auth_email_verified', authAttempt, { userId: signupResult.data.user.id });
             await handleAuthenticatedUser(signupResult.data.user);
             closeAuth();
             return;
           }
+          savePendingEmailVerification(email);
           await recordAuthFunnelEvent('auth_email_verification_sent', authAttempt);
           setAuthMode('verify');
           focusAuthField('authOtp');
@@ -3780,6 +3837,7 @@
         if (verification.error) throw verification.error;
         const user = verification.data && verification.data.user;
         if (!user) throw new Error(copy('verificationFailed'));
+        clearPendingEmailVerification();
         const authAttempt = readAuthFunnelAttempt();
         await recordAuthFunnelEvent('auth_email_verified', authAttempt, { userId: user.id });
         await handleAuthenticatedUser(user);
@@ -3814,6 +3872,7 @@
         try {
           const resend = await sb.auth.resend({ type: 'signup', email: pendingVerificationEmail });
           if (resend.error) throw resend.error;
+          savePendingEmailVerification(pendingVerificationEmail);
           await recordAuthFunnelEvent('auth_email_verification_resent', readAuthFunnelAttempt());
           setAuthMessage(copy('codeResent'), 'success');
         } catch (error) {
