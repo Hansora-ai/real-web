@@ -47,7 +47,7 @@ export default async (request, context) => {
       openCreate: 'Բացել ստեղծման ընտրացանկը',
       create: 'Ստեղծել',
       history: 'Պատմություն',
-      menu: 'Ընտրացանկ',
+      menu: 'Մենյու',
       chooseModel: 'Ընտրեք մոդելի տեսակը',
       image: 'Պատկեր',
       video: 'Տեսանյութ',
