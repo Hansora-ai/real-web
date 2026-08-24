@@ -840,20 +840,21 @@ Return only the final ready-to-use image-editing prompt.`,
         destroyPlayer();
         $('#playerWrap').innerHTML=`<video id="introNativeVideo" src="${esc(videoId)}" controls playsinline preload="metadata" controlslist="nodownload" style="width:100%;height:100%;display:block;background:#000;object-fit:contain"></video>`;
         const video=$('#introNativeVideo');
-        if(showOfferOnEnd)video.addEventListener('ended',openCredits,{once:false});
+        if(showOfferOnEnd)video.addEventListener('ended',()=>openCredits('lesson_1_completed',0),{once:false});
         return;
       }
       if(String(videoId).startsWith('https://player.mediadelivery.net/')){
         destroyPlayer();
         const source=new URL(videoId);source.searchParams.set('autoplay','false');source.searchParams.set('loop','false');source.searchParams.set('muted','false');source.searchParams.set('preload','true');source.searchParams.set('responsive','true');source.searchParams.set('context',Date.now().toString());
         $('#playerWrap').innerHTML=`<iframe id="bunnyPlayer" src="${esc(source.toString())}" loading="eager" title="Видеоурок Hansora AI" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe>`;
-        if(showOfferOnEnd&&window.playerjs){const player=new playerjs.Player('bunnyPlayer');player.on('ended',openCredits)}
+        if(showOfferOnEnd&&window.playerjs){const player=new playerjs.Player('bunnyPlayer');player.on('ended',()=>openCredits('lesson_1_completed',0))}
         return;
       }
       showEmpty('Неподдерживаемый формат видео');
     }
     function showRegistrationGate(index){
       const lesson=COURSE_CONFIG.lessons[index]||COURSE_CONFIG.lessons[0];
+      delete $('#playerWrap').dataset.courseLesson;
       activeIndex=index;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.remove('hidden');
       playerMeta('УРОК '+(index+1),lesson.title,lesson.description,'Требуется регистрация');
       const preview=LESSON_PREVIEWS[index]||LESSON_PREVIEWS[0]||'';
@@ -863,12 +864,16 @@ Return only the final ready-to-use image-editing prompt.`,
       const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Этот урок скоро станет доступен');return}
       if(!session){showRegistrationGate(0);requireUser();if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});return}
       if(index>0&&accessLoading)return;
-      if(index>0&&!hasAccess){openCredits();return}
-      activeIndex=index;renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('УРОК '+(index+1),l.title,l.description,index===0&&!hasAccess?'Бесплатно':'Доступ открыт');mountVideo(l.videoId,index===0&&!hasAccess);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
+      if(index>0&&!hasAccess){openCredits('locked_lesson_clicked',index);return}
+      activeIndex=index;$('#playerWrap').dataset.courseLesson=String(index+1);renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('УРОК '+(index+1),l.title,l.description,index===0&&!hasAccess?'Бесплатно':'Доступ открыт');mountVideo(l.videoId,index===0&&!hasAccess);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
     }
     function renderPrompts(lesson){$('#promptList').innerHTML=lesson.prompts.map((p,i)=>{const item=typeof p==='string'?{title:`Команда ${i+1}`,text:p,ru:''}:p;const initial=item.ru||item.text;return `<div class="prompt" data-prompt-index="${i}" data-lang="${item.ru?'ru':'en'}"><div class="prompt-main"><div class="prompt-body"><h3 class="prompt-title">${esc(item.title)}</h3><div class="prompt-text">${esc(initial)}</div></div><div class="prompt-actions">${item.ru?'<button type="button" class="mini-btn lang-btn">English</button>':''}<button type="button" class="mini-btn more-btn">Подробнее</button><button type="button" class="mini-btn copy-btn">Копировать</button></div></div></div>`}).join('')}
     function renderFeedback(lesson){$('#feedbackOptions').innerHTML=ANSWERS.map((a,i)=>`<label class="choice"><input type="radio" name="rating" value="${esc(a)}" ${i===0?'required':''}><span>${esc(a)}</span></label>`).join('');$('#feedbackComment').value='';$('#feedbackForm').dataset.lesson=lesson.id}
-    function openCredits(){openModal('#creditsModal')}
+    function openCredits(reason,lessonIndex){
+      const index=Number.isInteger(lessonIndex)?lessonIndex:(activeIndex>=0?activeIndex:0);
+      window.dispatchEvent(new CustomEvent('hansora:course-offer-open',{detail:{reason:reason||'manual',lessonNumber:index+1,coursePath:'/course_ru'}}));
+      openModal('#creditsModal');
+    }
     function renderPacks(){const isRu=paymentMethod==='ru';$('#creditPacks').innerHTML=PACKS.map(p=>`<article class="pack ${p.featured?'featured':''}">${p.featured?'<span class="pack-badge">ПОПУЛЯРНЫЙ ВЫБОР</span>':''}<div class="pack-top"><span class="pack-line">${esc(p.line)}</span><span class="pack-save">${esc(isRu?p.rubSave:p.usdSave)}</span></div><h3>${p.credits} кредитов</h3><div class="pack-prices"><div class="price">${isRu?p.rubPrice:p.usdPrice}</div><div class="old-price">${isRu?p.rubOld:p.usdOld}</div></div><div class="pack-gift">${esc(p.gift)}</div><button class="buy" type="button" data-credits="${p.credits}" data-product="${esc(p.product)}" data-ru-product="${esc(p.ruProduct)}">Купить</button></article>`).join('')}
     function checkout(button){
       if(!requireUser())return;
