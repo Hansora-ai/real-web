@@ -856,7 +856,8 @@ Return only the final ready-to-use image-editing prompt.`,
       const lesson=COURSE_CONFIG.lessons[index]||COURSE_CONFIG.lessons[0];
       activeIndex=index;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.remove('hidden');
       playerMeta('УРОК '+(index+1),lesson.title,lesson.description,'Требуется регистрация');
-      $('#playerWrap').innerHTML='<div class="video-empty"><div><div class="play">▶</div><strong>Зарегистрируйтесь, чтобы смотреть бесплатно</strong><small>Для первого урока покупать кредиты не нужно</small></div></div>';
+      const preview=LESSON_PREVIEWS[index]||LESSON_PREVIEWS[0]||'';
+      $('#playerWrap').innerHTML=`<div class="lesson-preview" style="background-image:url('${esc(preview)}')"><div class="lesson-preview-inner"><div class="play">▶</div><strong>Зарегистрируйтесь, чтобы смотреть бесплатно</strong><small>Для первого урока покупать кредиты не нужно</small></div></div>`;
     }
     function selectLesson(index,shouldScroll=true){
       const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Этот урок скоро станет доступен');return}
