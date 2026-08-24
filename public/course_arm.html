@@ -133,7 +133,7 @@
     <div class="modal-box signup-box">
       <button class="modal-close" data-close-modal aria-label="Փակել">×</button>
       <div class="icon">♙</div><h2 id="signupTitle">Գրանցումը պարտադիր է</h2>
-      <p>Կրեդիտներ գնելու և հաջորդ դասերը բացելու համար նախ խնդրում ենք գրանցվել կայքում։ Առաջին դասը մնում է անվճար։</p>
+      <p>Խնդրում ենք գրանցվել կայքում որպեսզի սկսեք</p>
       <div class="signup-actions"><a id="courseSignupLink" class="primary" href="/login.html?mode=signup">Գրանցվել</a></div>
     </div>
   </div>
@@ -157,7 +157,7 @@
     'use strict';
     const COURSE_CONFIG = {
       lessons: [
-        {id:'lesson-1', videoId:'https://player.mediadelivery.net/embed/719723/1429007c-5a9a-4671-8e5b-4714514db527?autoplay=false&loop=false&muted=false&preload=true&responsive=true', thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/1429007c-5a9a-4671-8e5b-4714514db527/thumbnail.jpg', title:'Դաս 1․ Պատկերի ստեղծում', duration:'31 րոպե', description:'Սովորեք Hansora AI-ի միջոցով ստեղծել որակյալ պատկերներ՝ ճիշտ գործիքների, կարգավորումների և prompt-երի օգնությամբ։', prompts:[
+        {id:'lesson-1', videoId:'https://player.mediadelivery.net/embed/719723/1429007c-5a9a-4671-8e5b-4714514db527?autoplay=false&loop=false&muted=false&preload=true&responsive=true', thumbnailUrl:'https://i.ytimg.com/vi/yqjvoOV78xk/hqdefault.jpg', title:'Դաս 1․ Պատկերի ստեղծում', duration:'31 րոպե', description:'Սովորեք Hansora AI-ի միջոցով ստեղծել որակյալ պատկերներ՝ ճիշտ գործիքների, կարգավորումների և prompt-երի օգնությամբ։', prompts:[
           'Ստեղծիր պրոֆեսիոնալ ապրանքային լուսանկար [ԱՊՐԱՆՔ]-ի համար։ Օգտագործիր փափուկ ստուդիական լուսավորություն, մաքուր ֆոն, իրատեսական նյութեր և գովազդային բարձր որակ։',
           'Ստեղծիր մանրամասն կինեմատոգրաֆիկ տեսարան հետևյալ գաղափարով՝ [ԳԱՂԱՓԱՐ]։ Նկարագրիր միջավայրը, լուսավորությունը, տեսախցիկի անկյունը և գունային տրամադրությունը։',
           'Վերափոխիր այս պարզ գաղափարը պրոֆեսիոնալ AI prompt-ի՝ [ԳՐԵՔ ԳԱՂԱՓԱՐԸ]։ Ավելացրու ոճ, կոմպոզիցիա, լուսավորություն և տեխնիկական մանրամասներ։'
@@ -843,7 +843,8 @@ Return only the final ready-to-use image-editing prompt.`,
       const lesson=COURSE_CONFIG.lessons[index]||COURSE_CONFIG.lessons[0];
       activeIndex=index;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.remove('hidden');
       playerMeta('ԴԱՍ '+(index+1),lesson.title,lesson.description,'Գրանցումը պարտադիր է');
-      $('#playerWrap').innerHTML='<div id="videoEmpty" class="video-empty"><div><div class="play">▶</div><strong>Գրանցվեք՝ անվճար դիտելու համար</strong><small>Առաջին դասի համար կրեդիտներ գնել պետք չէ</small></div></div>';
+      const preview=lesson.thumbnailUrl||(!String(lesson.videoId).startsWith('http')?`https://i.ytimg.com/vi/${encodeURIComponent(lesson.videoId)}/hqdefault.jpg`:'' );
+      $('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty" style="background-image:linear-gradient(to top,rgba(4,5,9,.78),rgba(4,5,9,.12) 62%),url('${esc(preview)}');background-size:cover;background-position:center"><div><div class="play">▶</div><strong style="text-shadow:0 2px 12px #000">Գրանցվեք՝ անվճար դիտելու համար</strong><small style="color:#e2e4eb;text-shadow:0 2px 10px #000">Առաջին դասի համար կրեդիտներ գնել պետք չէ</small></div></div>`;
     }
     function mountVideo(videoId,showOfferOnEnd){
       if(!videoId){showEmpty('Դասի տեսանյութը շուտով կավելացվի');return}
