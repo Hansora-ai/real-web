@@ -866,6 +866,9 @@
           })
         }
       );
+      if (!response.ok) {
+        console.warn(`Hansora auth funnel event write failed (${eventName}):`, response.status);
+      }
       return response.ok;
     } catch (_) {
       return false;
@@ -1285,153 +1288,216 @@
     }
   }
 
-  function bindCoursePreviewFunnelTracking() {
-    if (window.__hansoraCoursePreviewTrackingBound) return;
+  function bindCourseLessonFunnelTracking() {
+    if (window.__hansoraCourseLessonTrackingBound) return;
     const coursePath = normalizeAiCoursePath(location.pathname);
     if (coursePath !== '/course_arm' && coursePath !== '/course_ru') return;
 
-    const previewVideo = document.getElementById('introPopupVideo');
-    const introModal = document.getElementById('introModal');
+    const playerWrap = document.getElementById('playerWrap');
     const pricingModal = document.getElementById('creditsModal');
-    if (!previewVideo || !introModal || !pricingModal) return;
+    if (!playerWrap || !pricingModal) return;
 
-    window.__hansoraCoursePreviewTrackingBound = true;
-    const progressCheckpoints = new Set();
-    let previewEnded = false;
-    let lastProgress = 0;
-    let pricingPopupFromPreview = false;
-    let pricingPopupActionTaken = false;
+    window.__hansoraCourseLessonTrackingBound = true;
+    let activeVideoTracker = null;
+    let activeNextCoursesOffer = null;
 
-    function progressPercent() {
-      const duration = Number(previewVideo.duration);
-      const currentTime = Number(previewVideo.currentTime);
-      if (!Number.isFinite(duration) || duration <= 0 || !Number.isFinite(currentTime)) {
-        return lastProgress;
-      }
-      lastProgress = Math.max(0, Math.min(100, Math.round((currentTime / duration) * 100)));
-      return lastProgress;
+    function lessonNumber() {
+      const value = Number(playerWrap.dataset.courseLesson || '0');
+      return Number.isInteger(value) && value >= 1 && value <= 3 ? value : 0;
     }
 
-    function trackPreviewClose(method) {
-      if (!introModal.classList.contains('open') || previewEnded) return;
-      const percent = progressPercent();
-      recordRegisteredClickEvent('video_closed', {
+    function videoElementId(number) {
+      return `course_video_lesson_${number}`;
+    }
+
+    function recordVideoEvent(eventName, tracker, label) {
+      if (!tracker || !tracker.lessonNumber) return;
+      recordRegisteredClickEvent(eventName, {
         elementType: 'video',
-        elementId: 'introPopupVideo',
-        label: `Intro video closed before completion at ${percent}% (${method})`
+        elementId: videoElementId(tracker.lessonNumber),
+        label: `${coursePath} lesson ${tracker.lessonNumber}: ${label}`
       });
     }
 
-    function trackPricingClose(method) {
-      if (!pricingPopupFromPreview || !pricingModal.classList.contains('open')) return;
-      pricingPopupActionTaken = true;
-      recordRegisteredClickEvent('offer_closed', {
+    function updateProgress(tracker, currentTime, duration) {
+      if (!tracker || tracker.completed) return;
+      const seconds = Number(currentTime);
+      const total = Number(duration);
+      if (!Number.isFinite(seconds) || !Number.isFinite(total) || total <= 0) return;
+      tracker.lastProgress = Math.max(
+        tracker.lastProgress,
+        Math.max(0, Math.min(100, Math.round((seconds / total) * 100)))
+      );
+      [25, 50, 75].forEach(function (checkpoint) {
+        if (tracker.lastProgress < checkpoint || tracker.checkpoints.has(checkpoint)) return;
+        tracker.checkpoints.add(checkpoint);
+        recordVideoEvent(`video_${checkpoint}`, tracker, `video reached ${checkpoint}%`);
+      });
+    }
+
+    function markStarted(tracker) {
+      if (!tracker || tracker.started) return;
+      tracker.started = true;
+      recordVideoEvent('video_started', tracker, 'video playback started');
+    }
+
+    function markCompleted(tracker) {
+      if (!tracker || tracker.completed) return;
+      markStarted(tracker);
+      tracker.completed = true;
+      tracker.lastProgress = 100;
+      recordVideoEvent('video_completed', tracker, 'video reached the end (100%)');
+    }
+
+    function abandonActiveVideo(reason) {
+      const tracker = activeVideoTracker;
+      if (!tracker || !tracker.started || tracker.completed || tracker.abandoned) return;
+      tracker.abandoned = true;
+      recordVideoEvent(
+        'video_abandoned',
+        tracker,
+        `video left before completion at ${tracker.lastProgress}% (${reason})`
+      );
+    }
+
+    function createTracker(media, number, kind) {
+      if (!media || media.__hansoraCourseVideoTrackingBound || !number) return null;
+      abandonActiveVideo('lesson_changed');
+      media.__hansoraCourseVideoTrackingBound = true;
+      const tracker = {
+        media: media,
+        lessonNumber: number,
+        kind: kind,
+        checkpoints: new Set(),
+        started: false,
+        completed: false,
+        abandoned: false,
+        lastProgress: 0
+      };
+      activeVideoTracker = tracker;
+      return tracker;
+    }
+
+    function bindNativeVideo(video, number) {
+      const tracker = createTracker(video, number, 'native');
+      if (!tracker) return;
+      video.addEventListener('play', function () { markStarted(tracker); });
+      video.addEventListener('timeupdate', function () {
+        updateProgress(tracker, video.currentTime, video.duration);
+      });
+      video.addEventListener('ended', function () { markCompleted(tracker); });
+    }
+
+    function bindBunnyVideo(iframe, number, attempt) {
+      if (!iframe || iframe.__hansoraCourseVideoTrackingBound) return;
+      if (!window.playerjs || typeof window.playerjs.Player !== 'function') {
+        if ((attempt || 0) < 20) {
+          setTimeout(function () { bindBunnyVideo(iframe, number, (attempt || 0) + 1); }, 150);
+        }
+        return;
+      }
+      const tracker = createTracker(iframe, number, 'bunny');
+      if (!tracker) return;
+      try {
+        const player = new window.playerjs.Player(iframe.id || 'bunnyPlayer');
+        tracker.player = player;
+        player.on('play', function () { markStarted(tracker); });
+        player.on('timeupdate', function (data) {
+          const details = data || {};
+          updateProgress(
+            tracker,
+            details.seconds != null ? details.seconds : details.currentTime,
+            details.duration
+          );
+        });
+        player.on('ended', function () { markCompleted(tracker); });
+      } catch (error) {
+        iframe.__hansoraCourseVideoTrackingBound = false;
+        if (activeVideoTracker === tracker) activeVideoTracker = null;
+        console.warn('Hansora course video tracking could not bind:', error);
+        if ((attempt || 0) < 20) {
+          setTimeout(function () { bindBunnyVideo(iframe, number, (attempt || 0) + 1); }, 150);
+        }
+      }
+    }
+
+    function bindCurrentCourseVideo() {
+      const number = lessonNumber();
+      if (!number) return;
+      const nativeVideo = playerWrap.querySelector('video');
+      if (nativeVideo) {
+        bindNativeVideo(nativeVideo, number);
+        return;
+      }
+      const bunnyIframe = playerWrap.querySelector('#bunnyPlayer');
+      if (bunnyIframe) bindBunnyVideo(bunnyIframe, number, 0);
+    }
+
+    function closeNextCoursesOffer(method) {
+      if (!activeNextCoursesOffer || !pricingModal.classList.contains('open')) return;
+      const offer = activeNextCoursesOffer;
+      activeNextCoursesOffer = null;
+      recordRegisteredClickEvent('next_courses_offer_closed', {
         elementType: 'modal',
         elementId: 'creditsModal',
-        label: `Post-video offer closed (${method})`
+        label: `Next courses offer closed (${method}); source=${offer.reason}; lesson=${offer.lessonNumber}`
       });
-      pricingPopupFromPreview = false;
     }
+
+    window.addEventListener('hansora:course-offer-open', function (event) {
+      const detail = event && event.detail ? event.detail : {};
+      const number = Number(detail.lessonNumber || lessonNumber() || 1);
+      const reason = String(detail.reason || 'unknown');
+      activeNextCoursesOffer = { lessonNumber: number, reason: reason };
+      recordRegisteredClickEvent('next_courses_offer_shown', {
+        elementType: 'modal',
+        elementId: 'creditsModal',
+        label: `Next courses offer shown; source=${reason}; lesson=${number}`
+      });
+    });
 
     document.addEventListener('click', function (event) {
       const target = event.target && event.target.closest ? event.target : null;
       if (!target) return;
-
-      const lockedPreview = target.closest('.lesson-preview');
-      if (lockedPreview && lockedPreview.closest('#playerWrap')) {
-        previewEnded = false;
-        pricingPopupFromPreview = false;
-        recordRegisteredClickEvent('video_play_clicked', {
-          target: lockedPreview,
-          elementType: 'button',
-          elementId: 'playerWrap',
-          label: 'Non-buyer clicked intro video Play'
-        });
-      }
-
       const closeButton = target.closest('[data-close-modal]');
       const clickedBackdrop = target.classList && target.classList.contains('modal');
       if (closeButton || clickedBackdrop) {
-        trackPreviewClose(closeButton ? 'x' : 'backdrop');
-        trackPricingClose(closeButton ? 'x' : 'backdrop');
+        closeNextCoursesOffer(closeButton ? 'x' : 'backdrop');
       }
 
       const buyButton = target.closest('.buy');
-      if (pricingPopupFromPreview && buyButton && buyButton.closest('#creditsModal')) {
-        pricingPopupActionTaken = true;
-        recordRegisteredClickEvent('buy_clicked', {
+      if (activeNextCoursesOffer && buyButton && buyButton.closest('#creditsModal')) {
+        const offer = activeNextCoursesOffer;
+        activeNextCoursesOffer = null;
+        recordRegisteredClickEvent('next_courses_offer_buy_clicked', {
           target: buyButton,
           elementType: 'button',
-          label: `Post-video Buy clicked: ${buyButton.dataset.credits || 'unknown'} credits`
+          elementId: 'creditsModal',
+          label: `Next courses offer Buy clicked: ${buyButton.dataset.credits || 'unknown'} credits; source=${offer.reason}; lesson=${offer.lessonNumber}`
         });
-        pricingPopupFromPreview = false;
       }
     }, true);
 
     document.addEventListener('keydown', function (event) {
       if (event.key !== 'Escape') return;
-      trackPreviewClose('escape');
-      trackPricingClose('escape');
+      closeNextCoursesOffer('escape');
     }, true);
 
-    previewVideo.addEventListener('play', function () {
-      previewEnded = false;
-      recordRegisteredClickEvent('video_started', {
-        elementType: 'video',
-        elementId: 'introPopupVideo',
-        label: `Intro video playback started at ${progressPercent()}%`
-      });
+    const playerObserver = new MutationObserver(function () {
+      setTimeout(bindCurrentCourseVideo, 0);
     });
-
-    previewVideo.addEventListener('timeupdate', function () {
-      const percent = progressPercent();
-      [25, 50, 75].forEach(function (checkpoint) {
-        if (percent < checkpoint || progressCheckpoints.has(checkpoint)) return;
-        progressCheckpoints.add(checkpoint);
-        recordRegisteredClickEvent(`video_${checkpoint}`, {
-          elementType: 'video',
-          elementId: 'introPopupVideo',
-          label: `Intro video reached ${checkpoint}%`
-        });
-      });
-    });
-
-    previewVideo.addEventListener('ended', function () {
-      previewEnded = true;
-      lastProgress = 100;
-      pricingPopupFromPreview = false;
-      recordRegisteredClickEvent('video_completed', {
-        elementType: 'video',
-        elementId: 'introPopupVideo',
-        label: 'Intro video reached the end (100%)'
-      });
-      setTimeout(function () {
-        if (!pricingModal.classList.contains('open')) return;
-        pricingPopupFromPreview = true;
-        pricingPopupActionTaken = false;
-        recordRegisteredClickEvent('offer_shown', {
-          elementType: 'modal',
-          elementId: 'creditsModal',
-          label: 'Post-video offer shown after video reached 100%'
-        });
-      }, 0);
-    });
+    playerObserver.observe(playerWrap, { childList: true, subtree: true });
+    bindCurrentCourseVideo();
 
     window.addEventListener('pagehide', function () {
-      if (introModal.classList.contains('open') && !previewEnded) {
-        const percent = progressPercent();
-        recordRegisteredClickEvent('video_abandoned', {
-          elementType: 'video',
-          elementId: 'introPopupVideo',
-          label: `User left the page with intro video at ${percent}%`
-        });
-      }
-      if (!pricingPopupFromPreview || !pricingModal.classList.contains('open') || pricingPopupActionTaken) return;
-      pricingPopupActionTaken = true;
-      recordRegisteredClickEvent('offer_abandoned', {
+      abandonActiveVideo('page_left');
+      if (!activeNextCoursesOffer || !pricingModal.classList.contains('open')) return;
+      const offer = activeNextCoursesOffer;
+      activeNextCoursesOffer = null;
+      recordRegisteredClickEvent('next_courses_offer_abandoned', {
         elementType: 'modal',
         elementId: 'creditsModal',
-        label: 'User left the page while post-video offer was open'
+        label: `User left while next courses offer was open; source=${offer.reason}; lesson=${offer.lessonNumber}`
       });
     });
   }
@@ -3792,6 +3858,7 @@
           if (signupResult.data && signupResult.data.session && signupResult.data.user) {
             clearPendingEmailVerification();
             sessionEstablished = true;
+            refreshAnalyticsAuthCache();
             await recordAuthFunnelEvent('auth_email_verified', authAttempt, { userId: signupResult.data.user.id });
             await handleAuthenticatedUser(signupResult.data.user);
             closeAuth();
@@ -3838,6 +3905,7 @@
         const user = verification.data && verification.data.user;
         if (!user) throw new Error(copy('verificationFailed'));
         clearPendingEmailVerification();
+        refreshAnalyticsAuthCache();
         const authAttempt = readAuthFunnelAttempt();
         await recordAuthFunnelEvent('auth_email_verified', authAttempt, { userId: user.id });
         await handleAuthenticatedUser(user);
@@ -4118,7 +4186,7 @@
     exposeApi();
     bindEvents();
     bindGlobalClickTracking();
-    bindCoursePreviewFunnelTracking();
+    bindCourseLessonFunnelTracking();
     preserveAffiliateRefAcrossPageLinks();
     authCallbackArrivalWrite = captureAuthCallbackArrival().catch(function (error) {
       console.warn('Hansora auth callback tracking failed', error);
