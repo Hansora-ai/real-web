@@ -306,6 +306,7 @@
   let sb = null;
   let currentUser = null;
   let currentCredits = 0;
+  let authUiRevision = 0;
   let signupOfferTimer = null;
   let currentSubscription = null;
   let subscriptionLoadedAt = 0;
@@ -2794,6 +2795,7 @@
   }
 
   function showLoggedInUI(profile, user) {
+    authUiRevision += 1;
     currentUser = user || null;
     promoteAiCourseOriginForAuthenticatedUser();
     removeAnalyticsConsentBanner();
@@ -2814,7 +2816,13 @@
     setCreditsDisplay(profile && profile.credits != null ? profile.credits : 0);
   }
 
-  function showLoggedOutUI() {
+  function showLoggedOutUI(options) {
+    const force = Boolean(options && options.force);
+    // A slow/stale session read must never overwrite UI that a newer
+    // authenticated callback has already rendered. Only an explicit
+    // SIGNED_OUT event is allowed to force this transition.
+    if (!force && currentUser && currentUser.id) return false;
+    authUiRevision += 1;
     currentUser = null;
     currentCredits = 0;
     analyticsAuthCache = null;
@@ -2834,6 +2842,7 @@
     updateVideoLandingLink();
     injectAnalyticsConsentBanner();
     redirectLoggedOutHome();
+    return true;
   }
 
   let authMode = 'chooser';
@@ -3357,6 +3366,10 @@
     const { data } = await sb.auth.getUser();
     const user = data && data.user ? data.user : null;
     if (!user) {
+      if (currentUser && currentUser.id) {
+        console.warn('Hansora credits refresh returned no user; preserving the authenticated UI until Supabase confirms SIGNED_OUT.');
+        return currentCredits;
+      }
       showLoggedOutUI();
       return 0;
     }
@@ -4016,10 +4029,17 @@
       showLoggedOutUI();
       return;
     }
+    const startedRevision = authUiRevision;
     try {
-      const { data } = await sb.auth.getUser();
-      const user = data && data.user ? data.user : null;
+      // getSession() restores the persisted browser session. Running a
+      // separate getUser() request here races with INITIAL_SESSION and can
+      // return late after the authenticated UI has already been rendered.
+      const { data, error } = await sb.auth.getSession();
+      if (error) throw error;
+      const session = data && data.session ? data.session : null;
+      const user = session && session.user ? session.user : null;
       if (!user) {
+        if ((currentUser && currentUser.id) || authUiRevision !== startedRevision) return;
         showLoggedOutUI();
         if (telegramOAuthWasStarted()) {
           showTelegramOAuthFailure(telegramOAuthReturnError());
@@ -4029,6 +4049,9 @@
       await handleAuthenticatedUser(user);
     } catch (error) {
       console.warn('Hansora header session restore failed', error);
+      // Network/storage restoration errors are not proof of logout. Preserve
+      // any authenticated UI/cache and wait for Supabase's auth-state event.
+      if ((currentUser && currentUser.id) || authUiRevision !== startedRevision || readCache('loggedIn') === '1') return;
       showLoggedOutUI();
     }
   }
@@ -4114,7 +4137,7 @@
     sb.auth.onAuthStateChange(function (event, session) {
       const user = session && session.user ? session.user : null;
       if (!user) {
-        if (event === 'SIGNED_OUT') showLoggedOutUI();
+        if (event === 'SIGNED_OUT') showLoggedOutUI({ force: true });
         return;
       }
       setTimeout(function () {
