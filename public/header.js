@@ -24,7 +24,7 @@
   const AUTH_FUNNEL_VISITOR_KEY = 'hansora.auth_funnel.visitor.v1';
   const AUTH_FUNNEL_MAX_AGE_MS = 30 * 60 * 1000;
   const EMAIL_VERIFICATION_PENDING_KEY = 'hansora.email_verification.pending.v1';
-  const EMAIL_VERIFICATION_MAX_AGE_MS = 60 * 60 * 1000;
+  const EMAIL_VERIFICATION_MAX_AGE_MS = 15 * 60 * 1000;
   const REGISTRATION_COMPLETED_EVENT_PREFIX = 'hansora.registration.completedEvent.';
   const AUTH_CALLBACK_SEARCH_SNAPSHOT = window.location.search || '';
   const AUTH_CALLBACK_HASH_SNAPSHOT = window.location.hash || '';
@@ -565,6 +565,11 @@
     const ua = navigator.userAgent || '';
     const search = `${window.location.search || ''}${window.location.hash || ''}`;
     return !!tg || /\bTelegram\b/i.test(ua) || /tgWebApp/i.test(search);
+  }
+
+  function isSocialAuthWebView() {
+    const ua = navigator.userAgent || '';
+    return /Instagram|FBAN|FBAV|FB_IAB|Threads/i.test(ua);
   }
 
   function applyTelegramViewportFix() {
@@ -2847,6 +2852,7 @@
   }
 
   let authMode = 'chooser';
+  let emailAuthOpenedFromChooser = false;
   let pendingVerificationEmail = '';
 
   function savePendingEmailVerification(email) {
@@ -2908,6 +2914,7 @@
     const otpIn = el('authOtp');
     const submit = el('btnDoEmailAuth');
     const switchButton = el('btnAuthSwitch');
+    const backButton = el('btnAuthBack');
     const verifyEmail = el('authVerifyEmail');
     const isSignup = authMode === 'signup';
     if (title) {
@@ -2933,22 +2940,29 @@
     if (passIn) passIn.autocomplete = isSignup ? 'new-password' : 'current-password';
     if (submit) submit.textContent = isSignup ? copy('createAccountButton') : copy('logIn');
     if (switchButton) switchButton.textContent = isSignup ? copy('haveAccount') : copy('needAccount');
+    if (backButton) {
+      const socialDirectForm = isSocialAuthWebView() && !emailAuthOpenedFromChooser;
+      backButton.hidden = authMode === 'verify' || socialDirectForm;
+    }
     if (verifyEmail) verifyEmail.textContent = pendingVerificationEmail;
     clearAuthMessage();
   }
 
   function openAuth(mode) {
-    if (mode === 'signup') {
+    const savedVerification = readPendingEmailVerification();
+    emailAuthOpenedFromChooser = false;
+    if (savedVerification) {
+      pendingVerificationEmail = savedVerification.email;
+      setAuthMode('verify');
+    } else if (mode === 'signup') {
+      pendingVerificationEmail = '';
       setAuthMode('signup');
+    } else if (isSocialAuthWebView()) {
+      pendingVerificationEmail = '';
+      setAuthMode('email-login');
     } else {
-      const savedVerification = readPendingEmailVerification();
-      if (savedVerification) {
-        pendingVerificationEmail = savedVerification.email;
-        setAuthMode('verify');
-      } else {
-        pendingVerificationEmail = '';
-        setAuthMode('chooser');
-      }
+      pendingVerificationEmail = '';
+      setAuthMode('chooser');
     }
     const modal = el('authModal');
     clearAuthMessage();
@@ -2977,6 +2991,7 @@
       modal.classList.remove('is-open');
       modal.setAttribute('aria-hidden', 'true');
     }
+    emailAuthOpenedFromChooser = false;
     setAuthMode('chooser');
   }
 
@@ -3649,10 +3664,42 @@
     });
 
     if (navAvatar && navMenu) {
+      function positionNavMenu() {
+        if (!navMenu.classList.contains('is-open')) return;
+        if (!window.matchMedia || !window.matchMedia('(min-width: 721px)').matches) {
+          navMenu.style.removeProperty('position');
+          navMenu.style.removeProperty('top');
+          navMenu.style.removeProperty('right');
+          navMenu.style.removeProperty('left');
+          return;
+        }
+        const avatarRect = navAvatar.getBoundingClientRect();
+        const menuRect = navMenu.getBoundingClientRect();
+        const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+        const viewportHeight = document.documentElement.clientHeight || window.innerHeight;
+        const edge = 12;
+        const gap = 8;
+        const menuWidth = menuRect.width || 220;
+        const menuHeight = menuRect.height || 0;
+        const left = Math.min(
+          Math.max(edge, avatarRect.right - menuWidth),
+          Math.max(edge, viewportWidth - menuWidth - edge)
+        );
+        const top = Math.min(
+          avatarRect.bottom + gap,
+          Math.max(edge, viewportHeight - menuHeight - edge)
+        );
+        navMenu.style.position = 'fixed';
+        navMenu.style.top = `${Math.round(top)}px`;
+        navMenu.style.right = 'auto';
+        navMenu.style.left = `${Math.round(left)}px`;
+      }
       navAvatar.addEventListener('click', function (event) {
         event.stopPropagation();
         navMenu.classList.toggle('is-open');
+        positionNavMenu();
       });
+      window.addEventListener('resize', positionNavMenu, { passive: true });
       document.addEventListener('click', function (event) {
         if (!navMenu.contains(event.target) && !navAvatar.contains(event.target)) navMenu.classList.remove('is-open');
       });
@@ -3797,6 +3844,7 @@
         const attribution = rememberSignupAttributionStart();
         let authAttempt = readAuthFunnelAttempt();
         if (!authAttempt || authAttempt.provider !== 'email') authAttempt = beginAuthFunnelAttempt('email', attribution);
+        emailAuthOpenedFromChooser = true;
         setAuthMode('email-login');
         focusAuthField('authEmail');
         await recordAuthFunnelEvent('auth_email_option_clicked', authAttempt);
@@ -3804,12 +3852,20 @@
     }
     if (btnAuthSwitch) {
       btnAuthSwitch.addEventListener('click', function () {
+        if (authMode === 'signup' && isSocialAuthWebView()) {
+          emailAuthOpenedFromChooser = false;
+          setAuthMode('chooser');
+          focusAuthField('btnGoogleLogin');
+          return;
+        }
+        emailAuthOpenedFromChooser = false;
         setAuthMode(authMode === 'signup' ? 'email-login' : 'signup');
         focusAuthField('authEmail');
       });
     }
     if (btnAuthBack) {
       btnAuthBack.addEventListener('click', function () {
+        emailAuthOpenedFromChooser = false;
         setAuthMode('chooser');
         focusAuthField('btnGoogleLogin');
       });
