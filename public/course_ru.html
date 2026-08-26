@@ -132,7 +132,7 @@
     <div class="modal-box signup-box">
       <button class="modal-close" data-close-modal aria-label="Закрыть">×</button>
       <div class="icon">♙</div><h2 id="signupTitle">Требуется регистрация</h2>
-      <p>Зарегистрируйтесь, чтобы посмотреть уроки.</p>
+      <p>Зарегистрируйтесь, чтобы бесплатно посмотреть первый урок. Покупка кредитов потребуется только для следующих уроков.</p>
       <div class="signup-actions"><a id="courseSignupLink" class="primary" href="/login.html?mode=signup">Зарегистрироваться</a></div>
     </div>
   </div>
@@ -793,13 +793,13 @@ Return only the final ready-to-use image-editing prompt.`,
     ];
     const ANSWERS=['Отлично — всё было понятно','Было хорошо, но недостаточно','Было хорошо, но нужно больше примеров','Было хорошо, но материал был изложен слишком быстро','Я ожидал(а) большего — было не очень','Было непонятно — некоторые разделы я не понял(а)','Мне не понравилось — было плохо'];
     const LOCAL_PREVIEW=location.protocol==='file:'||location.hostname==='127.0.0.1'||location.hostname==='localhost';
-    let sb=null, session=LOCAL_PREVIEW?{user:{id:'local-preview',email:'preview@hansora.local'}}:null, hasAccess=LOCAL_PREVIEW, accessLoading=!LOCAL_PREVIEW, checkedUserId=null, activeIndex=-1, paymentMethod='international';
+    let sb=null, session=LOCAL_PREVIEW?{user:{id:'local-preview',email:'preview@hansora.local'}}:null, hasAccess=LOCAL_PREVIEW, accessLoading=!LOCAL_PREVIEW, authHydrated=LOCAL_PREVIEW, courseAuthRevision=0, lastCourseAuthEvent='', checkedUserId=null, activeIndex=-1, paymentMethod='international';
     const $=s=>document.querySelector(s);
     const esc=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
     function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2600)}
     function openModal(id){$(id).classList.add('open');document.body.style.overflow='hidden'}
     function closeModals(){document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open'));document.body.style.overflow=''}
-    function requireUser(){if(session?.user)return true;openModal('#signupModal');return false}
+    function requireUser(){if(!authHydrated){showAuthLoadingGate();return false}if(session?.user)return true;openModal('#signupModal');return false}
     async function authHeader(){const {data}=await sb.auth.getSession();session=data?.session||null;return session?{'Authorization':'Bearer '+session.access_token}: {}}
     async function checkAccess(){
       const userId=session?.user?.id||null;
@@ -860,8 +860,13 @@ Return only the final ready-to-use image-editing prompt.`,
       const preview=LESSON_PREVIEWS[index]||LESSON_PREVIEWS[0]||'';
       $('#playerWrap').innerHTML=`<div class="lesson-preview" style="background-image:url('${esc(preview)}')"><div class="lesson-preview-inner"><div class="play">▶</div><strong>Зарегистрируйтесь, чтобы смотреть бесплатно</strong><small>Для первого урока покупать кредиты не нужно</small></div></div>`;
     }
+    function showAuthLoadingGate(){
+      delete $('#playerWrap').dataset.courseLesson;activeIndex=-1;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.add('hidden');
+      $('#playerWrap').innerHTML='<div class="video-empty"><div><div class="play">…</div><strong>Проверяем ваш аккаунт</strong><small>Это займёт всего несколько секунд</small></div></div>';
+    }
     function selectLesson(index,shouldScroll=true){
       const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Этот урок скоро станет доступен');return}
+      if(!authHydrated){showAuthLoadingGate();return}
       if(!session){showRegistrationGate(0);requireUser();if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});return}
       if(index>0&&accessLoading)return;
       if(index>0&&!hasAccess){openCredits('locked_lesson_clicked',index);return}
@@ -919,8 +924,17 @@ Return only the final ready-to-use image-editing prompt.`,
         selectLesson(0,false);
         return;
       }
-      showRegistrationGate(0);
-      try{sb=window.__HANSORA_SB__||window.hansoraSupabase||window.supabaseClient;if(!sb){sb=window.supabase.createClient('https://qmaealblegvcwodlmeht.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c');window.__HANSORA_SB__=sb}const {data}=await sb.auth.getSession();session=data?.session||null;if(session)renderAccess();sb.auth.onAuthStateChange((event,s)=>{const previousUserId=session?.user?.id||null;session=s;if(event==='SIGNED_OUT'){hasAccess=false;checkedUserId=null;accessLoading=false;renderAccess()}else if(event==='SIGNED_IN'&&s?.user?.id!==previousUserId){checkedUserId=null;checkAccess()}});await checkAccess()}catch(e){console.warn(e);accessLoading=false;renderAccess()}
+      showAuthLoadingGate();
+      try{
+        sb=window.__HANSORA_SB__||window.hansoraSupabase||window.supabaseClient;
+        if(!sb){sb=window.supabase.createClient('https://qmaealblegvcwodlmeht.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c');window.__HANSORA_SB__=sb}
+        const applyCourseSession=async(event,nextSession)=>{const previousUserId=session?.user?.id||null;courseAuthRevision+=1;lastCourseAuthEvent=event;session=nextSession||null;authHydrated=true;const nextUserId=session?.user?.id||null;if(event==='SIGNED_OUT'||!nextUserId){hasAccess=false;checkedUserId=null;accessLoading=false;renderAccess();return}if(nextUserId!==previousUserId)checkedUserId=null;await checkAccess()};
+        const restoreRevision=courseAuthRevision;
+        sb.auth.onAuthStateChange((event,nextSession)=>{void applyCourseSession(event,nextSession)});
+        const {data,error}=await sb.auth.getSession();if(error)throw error;
+        const restoredSession=data?.session||null;
+        if(courseAuthRevision===restoreRevision||(restoredSession?.user&&!session?.user&&lastCourseAuthEvent!=='SIGNED_OUT'))await applyCourseSession('RESTORED_SESSION',restoredSession);
+      }catch(e){console.warn(e);if(!authHydrated){authHydrated=true;session=null;hasAccess=false;accessLoading=false;renderAccess()}}
       if(new URLSearchParams(location.search).get('checkout')==='success'&&session&&!hasAccess){toast('Проверяем оплату…');let tries=0;const poll=setInterval(async()=>{tries++;checkedUserId=null;await checkAccess();if(hasAccess||tries>=12){clearInterval(poll);if(hasAccess){toast('Доступ к курсу открыт');selectLesson(0)}}},2000)}
     }
     document.addEventListener('click',e=>{const lesson=e.target.closest('[data-lesson]');if(lesson)selectLesson(Number(lesson.dataset.lesson));if(e.target.closest('#playerWrap')&&!session)requireUser();if(e.target.closest('[data-close-modal]')||e.target.classList.contains('modal'))closeModals();const method=e.target.closest('[data-payment-method]');if(method){paymentMethod=method.dataset.paymentMethod;document.querySelectorAll('[data-payment-method]').forEach(button=>{const selected=button===method;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected))});renderPacks()}const more=e.target.closest('.more-btn');if(more){const box=more.closest('.prompt');box.classList.toggle('expanded');more.textContent=box.classList.contains('expanded')?'Свернуть':'Подробнее'}const lang=e.target.closest('.lang-btn');if(lang){const box=lang.closest('.prompt');const prompt=COURSE_CONFIG.lessons[activeIndex].prompts[Number(box.dataset.promptIndex)];const toRussian=box.dataset.lang!=='ru';box.dataset.lang=toRussian?'ru':'en';box.querySelector('.prompt-text').textContent=toRussian?prompt.ru:prompt.text;lang.textContent=toRussian?'English':'Русский'}const copy=e.target.closest('.copy-btn');if(copy){const text=copy.closest('.prompt').querySelector('.prompt-text').textContent;navigator.clipboard.writeText(text).then(()=>toast('Команда скопирована'))}const buy=e.target.closest('.buy');if(buy)checkout(buy)});
