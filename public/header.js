@@ -1860,6 +1860,7 @@
       .nav-links .hansora-nav-item{ position:relative; display:inline-flex; align-items:center; }
       .site-header .shell.nav{ position:relative; }
       .site-header .nav-links{ position:absolute; left:50%; transform:translateX(-50%); }
+      .site-header.auth-checking #btnLoginSignup{ visibility:hidden !important; pointer-events:none !important; }
       .site-header .user-menu .hansora-ai-course-button{ width:100%; text-align:left; }
       .hansora-auth-form .hansora-auth-view[hidden]{ display:none !important; }
       .hansora-auth-card{ width:min(460px,calc(100vw - 28px)); }
@@ -2562,7 +2563,7 @@
         </button>`;
     }).join('');
     mount.innerHTML = `
-      <header class="site-header" id="siteHeader">
+      <header class="site-header${cachedLoggedIn ? '' : ' auth-checking'}" id="siteHeader">
         <div class="shell nav">
           <a class="brand" href="${siteHref('/')}" aria-label="${copy('home')}">
             <img src="${LOGO_URL}" alt="">
@@ -4046,6 +4047,7 @@
         }
         return;
       }
+      if (authUiRevision !== startedRevision) return;
       await handleAuthenticatedUser(user);
     } catch (error) {
       console.warn('Hansora header session restore failed', error);
