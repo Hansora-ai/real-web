@@ -55,7 +55,8 @@
     .lesson-btn:nth-child(1) .lesson-thumb{background-image:url('https://i.ytimg.com/vi/yqjvoOV78xk/hqdefault.jpg')!important}
     .lesson-btn:nth-child(2) .lesson-thumb{background-image:url('https://i.ytimg.com/vi/KqXOQ6Edw6g/hqdefault.jpg')!important}
     .lesson-btn:nth-child(3) .lesson-thumb{background-image:url('https://i.ytimg.com/vi/khAT8qCwOxI/hqdefault.jpg')!important}
-    @media(max-width:640px){.shell{width:min(100% - 20px,1180px)}.side{width:100%;margin-left:0;transform:none}}
+    .pack-prices{flex-wrap:wrap}.approx-price{color:#d6c8ff;font-size:14px;font-weight:800;padding-bottom:3px}.pack-benefits{display:grid;gap:9px;min-height:105px;margin:14px 0 18px;padding:14px 0 0;list-style:none;border-top:1px solid rgba(255,255,255,.09)}.pack-benefits li{position:relative;padding-left:21px;color:#d8dbe5;font-size:11px;line-height:1.48}.pack-benefits li:before{content:"✓";position:absolute;left:0;top:0;color:#63e5aa;font-weight:900}.pack .buy{min-height:48px;white-space:normal;line-height:1.35}
+    @media(max-width:640px){.shell{width:min(100% - 20px,1180px)}.side{width:100%;margin-left:0;transform:none}.pack-benefits{min-height:0}.pack.featured{transform:none}}
   </style>
 </head>
 <body>
@@ -142,8 +143,8 @@
     <div class="modal-box">
       <button class="modal-close" data-close-modal aria-label="Փակել">×</button>
       <div class="pricing-sale">ՄԵԾ ԶԵՂՉԵՐ</div>
-      <h2 id="creditsTitle">Բացեք հաջորդ դասերը</h2>
-      <p class="modal-sub">Այս դասում սովորելու ենք AI տեսանյութերի ստեղծում։ Դասերի համար չեք վճարում․ վճարում եք միայն կրեդիտների համար, որոնք անհրաժեշտ են դասի ընթացքում գործնական փորձեր անելու համար։ Ընտրեք կրեդիտների փաթեթը և շարունակեք դասընթացը</p>
+      <h2 id="creditsTitle">Անցնե՞նք պրակտիկային 🎓</h2>
+      <p class="modal-sub">Հաջորդ դասերում դուք ինքներդ կստեղծեք AI տեսանյութեր։ Դասերն անվճար են․ անհրաժեշտ են միայն կրեդիտներ՝ դասի ընթացքում գեներացիաներ անելու համար։</p>
       <div id="creditPacks" class="packs"></div>
     </div>
   </div>
@@ -794,8 +795,8 @@ Return only the final ready-to-use image-editing prompt.`,
     COURSE_CONFIG.lessons[1].prompts = VIDEO_PROMPTS;
     COURSE_CONFIG.lessons[2].prompts = VIDEO_PROMPTS;
     const PACKS = [
-      {credits:100, line:'100 + 0 կրեդիտ', price:'$9.99', oldPrice:'$14.99', save:'Խնայեք $5', product:'https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1', gift:'Մեկնարկային զեղչված գին'},
-      {credits:210, line:'200 + 10 կրեդիտ', price:'$19.99', oldPrice:'$29.99', save:'Խնայեք $10', product:'https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1', featured:true, gift:'Ներառում է 10 նվեր կրեդիտ (5%)'}
+      {credits:100, line:'100 + 0 կրեդիտ', price:'$9.99', approxPrice:'≈ 3,700 ֏', oldPrice:'$14.99', save:'Խնայեք $5', product:'https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1', benefits:['Մինչև 200 պատկեր (կախված մոդելից)','Մինչև 55 տեսանյութ (կախված մոդելից)','Մինչև 100 աուդիո գեներացում (կախված մոդելից)']},
+      {credits:210, line:'200 + 10 կրեդիտ', price:'$19.99', approxPrice:'≈ 6,500 ֏', oldPrice:'$29.99', save:'Խնայեք $10', product:'https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1', featured:true, benefits:['Մինչև 420 պատկեր (կախված մոդելից)','Մինչև 115 տեսանյութ (կախված մոդելից)','Մինչև 210 աուդիո գեներացում (կախված մոդելից)']}
     ];
     const ANSWERS=['Գերազանց էր՝ ամեն ինչ հասկանալի էր','Լավ էր, բայց բավարար չէր','Լավ էր, բայց ավելի շատ օրինակներ են պետք','Լավ էր, բայց նյութը շատ արագ էր ներկայացված','Ավելին էի սպասում․ լավը չէր','Լավը չէր․ որոշ հատվածներ չհասկացա','Ինձ դուր չեկավ․ վատն էր'];
     let sb=null, session=null, hasAccess=false, accessLoading=true, authHydrated=false, courseAuthRevision=0, lastCourseAuthEvent='', checkedUserId=null, activeIndex=-1, ytPlayer=null, ytReady=false;
@@ -887,7 +888,7 @@ Return only the final ready-to-use image-editing prompt.`,
       window.dispatchEvent(new CustomEvent('hansora:course-offer-open',{detail:{reason:reason||'manual',lessonNumber:index+1,coursePath:'/course_arm'}}));
       openModal('#creditsModal');
     }
-    function renderPacks(){$('#creditPacks').innerHTML=PACKS.map(p=>`<article class="pack ${p.featured?'featured':''}">${p.featured?'<span class="pack-badge">ԱՄԵՆԱՊԱՀԱՆՋՎԱԾԸ</span>':''}<div class="pack-top"><span class="pack-line">${esc(p.line)}</span><span class="pack-save">${esc(p.save)}</span></div><h3>${p.credits} կրեդիտ</h3><div class="pack-prices"><div class="price">${p.price}</div><div class="old-price">${p.oldPrice}</div></div><div class="pack-gift">${esc(p.gift)}</div><button class="buy" type="button" data-credits="${p.credits}" data-product="${esc(p.product)}">Գնել</button></article>`).join('')}
+    function renderPacks(){$('#creditPacks').innerHTML=PACKS.map(p=>`<article class="pack ${p.featured?'featured':''}">${p.featured?'<span class="pack-badge">ԱՄԵՆԱՊԱՀԱՆՋՎԱԾԸ</span>':''}<div class="pack-top"><span class="pack-line">${esc(p.line)}</span><span class="pack-save">${esc(p.save)}</span></div><h3>${p.credits} կրեդիտ</h3><div class="pack-prices"><div class="price">${esc(p.price)}</div><div class="approx-price">${esc(p.approxPrice)}</div><div class="old-price">${esc(p.oldPrice)}</div></div><ul class="pack-benefits">${p.benefits.map(item=>`<li>${esc(item)}</li>`).join('')}</ul><button class="buy" type="button" data-credits="${p.credits}" data-product="${esc(p.product)}">Սկսել պրակտիկան</button></article>`).join('')}
     function checkout(button){
       if(!session?.user){closeModals();openModal('#signupModal');return}const url=new URL(button.dataset.product);url.searchParams.set('quantity','1');url.searchParams.set('minimalAddress','true');url.searchParams.set('redirect_url',location.origin+location.pathname+'?checkout=success');url.searchParams.set('metadata_uid',session.user.id);url.searchParams.set('metadata_credits',button.dataset.credits);url.searchParams.set('metadata_course_id','hansora-ai-course');if(session.user.email)url.searchParams.set('metadata_email',session.user.email);location.href=url.toString();
     }
