@@ -493,14 +493,20 @@
         return `<div class="media-box audio-box"><div class="w-full"><div class="audio-disc"></div><audio src="${safeUrl}" controls preload="none"></audio></div></div>`;
       }
       if (kind === 'video') {
-        return preview
-          ? `<video src="${safeUrl}" controls autoplay playsinline preload="metadata"></video>`
-          : `<div class="media-box"><video data-src="${safeUrl}" muted playsinline preload="none"></video><div class="video-badge">Video</div><div class="open-preview-hint"><span>Open preview</span></div></div>`;
+        if (preview) return `<video src="${safeUrl}" controls autoplay playsinline preload="metadata"></video>`;
+        const poster = cachedPoster(url);
+        const inner = poster
+          ? `<img src="${poster}" alt="${safeTitle}" />`
+          : `<video data-src="${safeUrl}" muted playsinline preload="none"></video>`;
+        return `<div class="media-box">${inner}<div class="video-badge">Video</div><div class="open-preview-hint"><span>Open preview</span></div></div>`;
       }
       if (kind === 'image') {
-        return preview
-          ? `<img src="${safeUrl}" alt="${safeTitle}" />`
-          : `<div class="media-box"><img src="${safeUrl}" alt="${safeTitle}" loading="lazy" decoding="async" /><div class="open-preview-hint"><span>Open preview</span></div></div>`;
+        if (preview) return `<img src="${safeUrl}" alt="${safeTitle}" />`;
+        const poster = cachedPoster(url);
+        const inner = poster
+          ? `<img src="${poster}" alt="${safeTitle}" />`
+          : `<img src="${safeUrl}" alt="${safeTitle}" loading="lazy" decoding="async" crossorigin="anonymous" data-cache-src="${safeUrl}" />`;
+        return `<div class="media-box">${inner}<div class="open-preview-hint"><span>Open preview</span></div></div>`;
       }
       return preview
         ? `<div class="preview-audio"><div><h2 class="text-xl font-black">Preview unavailable</h2><a class="download-btn mt-5" href="${safeUrl}" target="_blank" rel="noopener">Open file</a></div></div>`
@@ -568,7 +574,92 @@
     }
 
     const MAX_VIDEO_LOADS = 3;
+    const POSTER_PREFIX = 'hansora:poster:';
     let activeVideoLoads = 0;
+
+    function cachedPoster(url){
+      try { return sessionStorage.getItem(POSTER_PREFIX + url) || ''; } catch { return ''; }
+    }
+
+    function storePoster(url, dataUrl){
+      try { sessionStorage.setItem(POSTER_PREFIX + url, dataUrl); return; } catch {}
+      try {
+        const keys = [];
+        for (let i = 0; i < sessionStorage.length; i += 1) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith(POSTER_PREFIX)) keys.push(key);
+        }
+        keys.slice(0, 25).forEach((key) => sessionStorage.removeItem(key));
+        sessionStorage.setItem(POSTER_PREFIX + url, dataUrl);
+      } catch {}
+    }
+
+    function captureVideoPoster(video, srcUrl){
+      try {
+        if (!video.videoWidth || !video.videoHeight) return;
+        const scale = Math.min(1, 480 / video.videoWidth);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+        canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        let dataUrl = '';
+        try { dataUrl = canvas.toDataURL('image/jpeg', 0.72); } catch {}
+        if (!dataUrl) return;
+        storePoster(srcUrl, dataUrl);
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.alt = 'Video preview';
+        video.replaceWith(img);
+        try { video.removeAttribute('src'); video.load(); } catch {}
+      } catch {}
+    }
+
+    function cacheImagePoster(img, srcUrl){
+      try {
+        if (cachedPoster(srcUrl)) return;
+        const width = img.naturalWidth;
+        const height = img.naturalHeight;
+        if (!width || !height) return;
+        const scale = Math.min(1, 480 / width);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(width * scale));
+        canvas.height = Math.max(1, Math.round(height * scale));
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        let dataUrl = '';
+        try { dataUrl = canvas.toDataURL('image/jpeg', 0.72); } catch {}
+        if (dataUrl) storePoster(srcUrl, dataUrl);
+      } catch {}
+    }
+
+    function startVideoThumb(video, src, useCors){
+      activeVideoLoads += 1;
+      let released = false;
+      const release = () => {
+        if (released) return;
+        released = true;
+        activeVideoLoads = Math.max(0, activeVideoLoads - 1);
+        pumpLazyVideos();
+      };
+      video.addEventListener('loadeddata', () => {
+        const finish = () => { captureVideoPoster(video, src); release(); };
+        if (video.currentTime > 0) { finish(); return; }
+        video.addEventListener('seeked', finish, { once:true });
+        setTimeout(finish, 1500);
+        try { video.currentTime = 0.1; } catch { finish(); }
+      }, { once:true });
+      video.addEventListener('error', () => {
+        release();
+        if (useCors && video.isConnected) {
+          video.removeAttribute('crossorigin');
+          startVideoThumb(video, src, false);
+        }
+      }, { once:true });
+      setTimeout(release, 20000);
+      if (useCors) video.crossOrigin = 'anonymous';
+      video.preload = 'auto';
+      video.src = `${src}#t=0.1`;
+      try { video.load(); } catch {}
+    }
 
     function pumpLazyVideos(){
       if (activeVideoLoads >= MAX_VIDEO_LOADS) return;
@@ -580,19 +671,7 @@
         if (!nearViewport) continue;
         const src = video.dataset.src;
         video.removeAttribute('data-src');
-        activeVideoLoads += 1;
-        let released = false;
-        const release = () => {
-          if (released) return;
-          released = true;
-          activeVideoLoads = Math.max(0, activeVideoLoads - 1);
-          pumpLazyVideos();
-        };
-        video.addEventListener('loadeddata', release, { once:true });
-        video.addEventListener('error', release, { once:true });
-        setTimeout(release, 20000);
-        video.preload = 'auto';
-        video.src = `${src}#t=0.1`;
+        startVideoThumb(video, src, true);
       }
     }
 
@@ -645,6 +724,16 @@
             <button class="copy-prompt-btn" type="button" ${prompt ? '' : 'disabled'}>${prompt ? 'Copy prompt' : 'No prompt'}</button>
           </div>
         `;
+        const cacheImg = card.querySelector('img[data-cache-src]');
+        if (cacheImg) {
+          const imgSrc = cacheImg.dataset.cacheSrc;
+          cacheImg.addEventListener('load', () => cacheImagePoster(cacheImg, imgSrc), { once:true });
+          cacheImg.addEventListener('error', () => {
+            cacheImg.removeAttribute('crossorigin');
+            cacheImg.removeAttribute('data-cache-src');
+            cacheImg.src = imgSrc;
+          }, { once:true });
+        }
         const download = card.querySelector('.download-btn');
         if (download) download.addEventListener('click', (event) => event.stopPropagation());
         const copyPrompt = card.querySelector('.copy-prompt-btn');
