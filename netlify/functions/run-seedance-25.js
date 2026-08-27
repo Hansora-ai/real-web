@@ -1,5 +1,5 @@
 // netlify/functions/run-seedance-25.js
-// Launches KIE Seedance 2.5 jobs when the request includes media.
+// Launches KIE Seedance 2.5 jobs for text-only and media-reference requests.
 // The refund amount is written once by this run function as meta.refund_amount.
 const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/, '');
 const KIE_KEY = process.env.KIE_API_KEY || '';
@@ -76,7 +76,7 @@ function extractTaskId(data) {
 function clampDuration(value) {
   const duration = Number(value || 5);
   if (!Number.isFinite(duration)) return 5;
-  return Math.min(15, Math.max(4, Math.round(duration)));
+  return Math.min(30, Math.max(4, Math.round(duration)));
 }
 
 function costFor(body) {
@@ -186,8 +186,6 @@ exports.handler = async (event) => {
 
     const prompt = String(body.prompt || '').trim();
     if (!prompt) return json(400, { ok: false, error: 'missing_prompt' });
-    if (!hasMedia(body)) return json(409, { ok: false, error: 'text_only_requires_seedance_25_cheap_route' });
-
     const runId = String(body.run_id || `${uid}-${Date.now()}`);
     const existing = await fetchGeneration(uid, runId);
     const existingTask = existing?.meta?.task_id || existing?.meta?.taskId || '';
@@ -217,11 +215,12 @@ exports.handler = async (event) => {
     const hasFrameMode = !!(firstFrameUrl || lastFrameUrl);
     const requestedResolution = String(body.resolution || '720p').toLowerCase();
     const resolution = ['480p', '720p'].includes(requestedResolution) ? requestedResolution : '720p';
+    const aspectRatio = hasFrameMode ? 'adaptive' : String(body.aspect_ratio || '1:1');
     const input = {
       prompt,
       resolution,
       duration: clampDuration(body.duration),
-      aspect_ratio: String(body.aspect_ratio || '16:9'),
+      aspect_ratio: aspectRatio,
       generate_audio: body.generate_audio !== false,
       return_last_frame: !!body.return_last_frame,
       output_format: 'mp4',
