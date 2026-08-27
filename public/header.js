@@ -2959,7 +2959,7 @@
       setAuthMode('verify');
     } else if (isSocialAuthWebView()) {
       pendingVerificationEmail = '';
-      setAuthMode(requestedSignup ? 'signup' : 'email-login');
+      setAuthMode('signup');
     } else {
       pendingVerificationEmail = '';
       setAuthMode('chooser');
