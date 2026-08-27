@@ -20,6 +20,8 @@
   const AI_COURSE_SKIP_CAPTURE_KEY = 'hansora.ai_course.skip_next_capture';
   const SIGNUP_ATTRIBUTION_PENDING_KEY = 'hansora.signup_attribution.pending.v1';
   const SIGNUP_ATTRIBUTION_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+  const CAMPAIGN_ATTRIBUTION_KEY = 'hansora.campaign_attribution.v1';
+  const CAMPAIGN_ATTRIBUTION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
   const AUTH_FUNNEL_PENDING_KEY = 'hansora.auth_funnel.pending.v1';
   const AUTH_FUNNEL_VISITOR_KEY = 'hansora.auth_funnel.visitor.v1';
   const AUTH_FUNNEL_MAX_AGE_MS = 30 * 60 * 1000;
@@ -469,16 +471,86 @@
     return 'index';
   }
 
+  function cleanCampaignValue(value, maxLength) {
+    const cleaned = String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+    return cleaned ? cleaned.slice(0, maxLength || 500) : null;
+  }
+
+  function currentLandingPage() {
+    try {
+      return `${location.origin}${location.pathname || '/'}${location.search || ''}`.slice(0, 2000);
+    } catch (_) {
+      return `${location.pathname || '/'}${location.search || ''}`.slice(0, 2000);
+    }
+  }
+
+  function normalizeCampaignAttribution(value) {
+    if (!value || !Number.isFinite(Number(value.capturedAt))) return null;
+    if (Date.now() - Number(value.capturedAt) > CAMPAIGN_ATTRIBUTION_MAX_AGE_MS) return null;
+    return {
+      utmSource: cleanCampaignValue(value.utmSource, 500),
+      utmMedium: cleanCampaignValue(value.utmMedium, 500),
+      utmCampaign: cleanCampaignValue(value.utmCampaign, 500),
+      utmContent: cleanCampaignValue(value.utmContent, 500),
+      utmTerm: cleanCampaignValue(value.utmTerm, 500),
+      landingPage: cleanCampaignValue(value.landingPage, 2000),
+      capturedAt: Number(value.capturedAt)
+    };
+  }
+
+  function readCampaignAttribution() {
+    try {
+      const value = normalizeCampaignAttribution(
+        JSON.parse(localStorage.getItem(CAMPAIGN_ATTRIBUTION_KEY) || 'null')
+      );
+      if (!value) localStorage.removeItem(CAMPAIGN_ATTRIBUTION_KEY);
+      return value;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function captureCampaignAttribution() {
+    try {
+      const params = new URLSearchParams(location.search || '');
+      const names = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+      const hasCampaign = names.some(function (name) {
+        return cleanCampaignValue(params.get(name), 500) !== null;
+      });
+      if (!hasCampaign) return readCampaignAttribution();
+      const attribution = {
+        utmSource: cleanCampaignValue(params.get('utm_source'), 500),
+        utmMedium: cleanCampaignValue(params.get('utm_medium'), 500),
+        utmCampaign: cleanCampaignValue(params.get('utm_campaign'), 500),
+        utmContent: cleanCampaignValue(params.get('utm_content'), 500),
+        utmTerm: cleanCampaignValue(params.get('utm_term'), 500),
+        landingPage: currentLandingPage(),
+        capturedAt: Date.now()
+      };
+      localStorage.setItem(CAMPAIGN_ATTRIBUTION_KEY, JSON.stringify(attribution));
+      return attribution;
+    } catch (_) {
+      return readCampaignAttribution();
+    }
+  }
+
   function rememberSignupAttributionStart() {
     const coursePath = getPendingAiCourseOrigin();
     const source = signupSourceFromCoursePath(coursePath);
     const visitorId = readExistingAnalyticsVisitorId() || analyticsVisitorId();
     const sessionId = readExistingAnalyticsSessionId() || (visitorId ? analyticsSessionId() : null);
+    const campaign = captureCampaignAttribution();
     const attribution = {
       source: source,
       landingPath: coursePath || '/index.html',
       visitorId: visitorId,
       sessionId: sessionId,
+      utmSource: campaign ? campaign.utmSource : null,
+      utmMedium: campaign ? campaign.utmMedium : null,
+      utmCampaign: campaign ? campaign.utmCampaign : null,
+      utmContent: campaign ? campaign.utmContent : null,
+      utmTerm: campaign ? campaign.utmTerm : null,
+      landingPage: campaign && campaign.landingPage ? campaign.landingPage : currentLandingPage(),
       startedAt: Date.now()
     };
     try {
@@ -505,6 +577,12 @@
           : source === 'course_ru' ? '/course_ru' : '/index.html',
         visitorId: validAnalyticsId(value.visitorId),
         sessionId: validAnalyticsId(value.sessionId),
+        utmSource: cleanCampaignValue(value.utmSource, 500),
+        utmMedium: cleanCampaignValue(value.utmMedium, 500),
+        utmCampaign: cleanCampaignValue(value.utmCampaign, 500),
+        utmContent: cleanCampaignValue(value.utmContent, 500),
+        utmTerm: cleanCampaignValue(value.utmTerm, 500),
+        landingPage: cleanCampaignValue(value.landingPage, 2000),
         startedAt: Number(value.startedAt)
       };
     } catch (_) {
@@ -550,7 +628,13 @@
       p_signup_source: attribution.source,
       p_country_code: countryCode,
       p_visitor_id: attribution.visitorId,
-      p_session_id: attribution.sessionId
+      p_session_id: attribution.sessionId,
+      p_utm_source: attribution.utmSource,
+      p_utm_medium: attribution.utmMedium,
+      p_utm_campaign: attribution.utmCampaign,
+      p_utm_content: attribution.utmContent,
+      p_utm_term: attribution.utmTerm,
+      p_landing_page: attribution.landingPage
     });
     if (error) {
       console.warn('Hansora signup attribution write failed', error);
@@ -746,6 +830,7 @@
   function beginAuthFunnelAttempt(provider, attribution) {
     const normalizedProvider = provider === 'telegram' || provider === 'email' ? provider : 'google';
     const sourceAttribution = attribution || readSignupAttributionStart() || {};
+    const campaign = readCampaignAttribution() || {};
     const visitorId = validAnalyticsId(sourceAttribution.visitorId)
       || readExistingAnalyticsVisitorId()
       || readOrCreateAuthFunnelVisitorId();
@@ -760,6 +845,12 @@
       source: sourceAttribution.source === 'course_arm' || sourceAttribution.source === 'course_ru'
         ? sourceAttribution.source
         : 'index',
+      utmSource: cleanCampaignValue(sourceAttribution.utmSource || campaign.utmSource, 500),
+      utmMedium: cleanCampaignValue(sourceAttribution.utmMedium || campaign.utmMedium, 500),
+      utmCampaign: cleanCampaignValue(sourceAttribution.utmCampaign || campaign.utmCampaign, 500),
+      utmContent: cleanCampaignValue(sourceAttribution.utmContent || campaign.utmContent, 500),
+      utmTerm: cleanCampaignValue(sourceAttribution.utmTerm || campaign.utmTerm, 500),
+      landingPage: cleanCampaignValue(sourceAttribution.landingPage || campaign.landingPage, 2000),
       startedAt: Date.now()
     };
     try {
@@ -787,6 +878,12 @@
         source: value.source === 'course_arm' || value.source === 'course_ru'
           ? value.source
           : 'index',
+        utmSource: cleanCampaignValue(value.utmSource, 500),
+        utmMedium: cleanCampaignValue(value.utmMedium, 500),
+        utmCampaign: cleanCampaignValue(value.utmCampaign, 500),
+        utmContent: cleanCampaignValue(value.utmContent, 500),
+        utmTerm: cleanCampaignValue(value.utmTerm, 500),
+        landingPage: cleanCampaignValue(value.landingPage, 2000),
         startedAt: Number(value.startedAt)
       };
     } catch (_) {
@@ -865,6 +962,12 @@
             auth_provider: activeAttempt.provider,
             signup_source: activeAttempt.source,
             page_path: `${location.pathname || '/'}${location.search || ''}`.slice(0, 300),
+            utm_source: activeAttempt.utmSource,
+            utm_medium: activeAttempt.utmMedium,
+            utm_campaign: activeAttempt.utmCampaign,
+            utm_content: activeAttempt.utmContent,
+            utm_term: activeAttempt.utmTerm,
+            landing_page: activeAttempt.landingPage,
             error_reason: details.errorReason
               ? String(details.errorReason).replace(/\s+/g, ' ').trim().slice(0, 500)
               : null,
@@ -4257,10 +4360,12 @@
 
   captureAffiliateRef();
   captureAiCourseOrigin();
+  captureCampaignAttribution();
 
   ready(function () {
     captureAffiliateRef();
     captureAiCourseOrigin();
+    captureCampaignAttribution();
     applyOfferPopupPageMode();
     applyTelegramViewportFix();
     injectHeaderStyles();
