@@ -2853,6 +2853,7 @@
 
   let authMode = 'chooser';
   let emailAuthOpenedFromChooser = false;
+  let authChooserIntent = 'login';
   let pendingVerificationEmail = '';
 
   function savePendingEmailVerification(email) {
@@ -2950,16 +2951,15 @@
 
   function openAuth(mode) {
     const savedVerification = readPendingEmailVerification();
+    const requestedSignup = mode === 'signup';
     emailAuthOpenedFromChooser = false;
+    authChooserIntent = requestedSignup ? 'signup' : 'login';
     if (savedVerification) {
       pendingVerificationEmail = savedVerification.email;
       setAuthMode('verify');
-    } else if (mode === 'signup') {
-      pendingVerificationEmail = '';
-      setAuthMode('signup');
     } else if (isSocialAuthWebView()) {
       pendingVerificationEmail = '';
-      setAuthMode('email-login');
+      setAuthMode(requestedSignup ? 'signup' : 'email-login');
     } else {
       pendingVerificationEmail = '';
       setAuthMode('chooser');
@@ -2992,6 +2992,7 @@
       modal.setAttribute('aria-hidden', 'true');
     }
     emailAuthOpenedFromChooser = false;
+    authChooserIntent = 'login';
     setAuthMode('chooser');
   }
 
@@ -3845,21 +3846,23 @@
         let authAttempt = readAuthFunnelAttempt();
         if (!authAttempt || authAttempt.provider !== 'email') authAttempt = beginAuthFunnelAttempt('email', attribution);
         emailAuthOpenedFromChooser = true;
-        setAuthMode('email-login');
+        setAuthMode(authChooserIntent === 'signup' ? 'signup' : 'email-login');
         focusAuthField('authEmail');
         await recordAuthFunnelEvent('auth_email_option_clicked', authAttempt);
       });
     }
     if (btnAuthSwitch) {
       btnAuthSwitch.addEventListener('click', function () {
-        if (authMode === 'signup' && isSocialAuthWebView()) {
+        if (authMode === 'signup') {
           emailAuthOpenedFromChooser = false;
+          authChooserIntent = 'login';
           setAuthMode('chooser');
           focusAuthField('btnGoogleLogin');
           return;
         }
         emailAuthOpenedFromChooser = false;
-        setAuthMode(authMode === 'signup' ? 'email-login' : 'signup');
+        authChooserIntent = 'signup';
+        setAuthMode('signup');
         focusAuthField('authEmail');
       });
     }
