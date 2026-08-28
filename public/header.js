@@ -1404,15 +1404,18 @@
 
     const playerWrap = document.getElementById('playerWrap');
     const pricingModal = document.getElementById('creditsModal');
+    const practiceOfferModal = document.getElementById('practiceOfferModal');
     if (!playerWrap || !pricingModal) return;
 
     window.__hansoraCourseLessonTrackingBound = true;
     let activeVideoTracker = null;
     let activeNextCoursesOffer = null;
+    let activePracticeOffer = null;
+    const courseKey = coursePath.slice(1);
 
     function lessonNumber() {
       const value = Number(playerWrap.dataset.courseLesson || '0');
-      return Number.isInteger(value) && value >= 1 && value <= 3 ? value : 0;
+      return Number.isInteger(value) && value >= 1 && value <= 6 ? value : 0;
     }
 
     function videoElementId(number) {
@@ -1553,6 +1556,30 @@
       });
     }
 
+    function practiceEventName(lesson, action) {
+      return `${courseKey}_video_${lesson}_practice_offer_${action}`;
+    }
+
+    function recordPracticeOfferAction(action, method, target) {
+      if (!activePracticeOffer) return;
+      const offer = activePracticeOffer;
+      if (action !== 'shown') activePracticeOffer = null;
+      recordRegisteredClickEvent(practiceEventName(offer.lessonNumber, action), {
+        target: target || null,
+        elementType: action === 'buy_clicked' || action === 'next_clicked' ? 'button' : 'modal',
+        elementId: 'practiceOfferModal',
+        label: `${coursePath} video ${offer.lessonNumber} practice offer ${action}${method ? ` (${method})` : ''}; source=${offer.reason}`
+      });
+    }
+
+    window.addEventListener('hansora:course-practice-offer-open', function (event) {
+      const detail = event && event.detail ? event.detail : {};
+      const number = Number(detail.lessonNumber || lessonNumber() || 1);
+      if (!Number.isInteger(number) || number < 1 || number > 3) return;
+      activePracticeOffer = { lessonNumber: number, reason: String(detail.reason || 'unknown') };
+      recordPracticeOfferAction('shown');
+    });
+
     window.addEventListener('hansora:course-offer-open', function (event) {
       const detail = event && event.detail ? event.detail : {};
       const number = Number(detail.lessonNumber || lessonNumber() || 1);
@@ -1568,6 +1595,15 @@
     document.addEventListener('click', function (event) {
       const target = event.target && event.target.closest ? event.target : null;
       if (!target) return;
+      if (activePracticeOffer) {
+        const practiceClose = target.closest('[data-close-practice-offer]');
+        const practiceBackdrop = practiceOfferModal && target === practiceOfferModal;
+        const practiceBuy = target.closest('[data-practice-offer-buy]');
+        const practiceNext = target.closest('[data-practice-offer-next]');
+        if (practiceBuy) recordPracticeOfferAction('buy_clicked', '', practiceBuy);
+        else if (practiceNext) recordPracticeOfferAction('next_clicked', '', practiceNext);
+        else if (practiceClose || practiceBackdrop) recordPracticeOfferAction('closed', practiceClose ? 'x' : 'backdrop', practiceClose || target);
+      }
       const closeButton = target.closest('[data-close-modal]');
       const clickedBackdrop = target.classList && target.classList.contains('modal');
       if (closeButton || clickedBackdrop) {
@@ -1589,6 +1625,9 @@
 
     document.addEventListener('keydown', function (event) {
       if (event.key !== 'Escape') return;
+      if (activePracticeOffer && practiceOfferModal && practiceOfferModal.classList.contains('open')) {
+        recordPracticeOfferAction('closed', 'escape');
+      }
       closeNextCoursesOffer('escape');
     }, true);
 
@@ -1600,6 +1639,9 @@
 
     window.addEventListener('pagehide', function () {
       abandonActiveVideo('page_left');
+      if (activePracticeOffer && practiceOfferModal && practiceOfferModal.classList.contains('open')) {
+        recordPracticeOfferAction('abandoned', 'page_left');
+      }
       if (!activeNextCoursesOffer || !pricingModal.classList.contains('open')) return;
       const offer = activeNextCoursesOffer;
       activeNextCoursesOffer = null;
