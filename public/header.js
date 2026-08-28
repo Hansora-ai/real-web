@@ -1563,12 +1563,13 @@
     function recordPracticeOfferAction(action, method, target) {
       if (!activePracticeOffer) return;
       const offer = activePracticeOffer;
+      const credits = target && target.dataset ? String(target.dataset.credits || '') : '';
       if (action !== 'shown') activePracticeOffer = null;
       recordRegisteredClickEvent(practiceEventName(offer.lessonNumber, action), {
         target: target || null,
         elementType: action === 'buy_clicked' || action === 'next_clicked' ? 'button' : 'modal',
         elementId: 'practiceOfferModal',
-        label: `${coursePath} video ${offer.lessonNumber} practice offer ${action}${method ? ` (${method})` : ''}; source=${offer.reason}`
+        label: `${coursePath} video ${offer.lessonNumber} practice offer ${action}${method ? ` (${method})` : ''}; source=${offer.reason}${credits ? `; credits=${credits}` : ''}`
       });
     }
 
