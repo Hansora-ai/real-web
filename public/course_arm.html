@@ -57,7 +57,14 @@
     .lesson-btn:nth-child(3) .lesson-thumb{background-image:url('https://i.ytimg.com/vi/khAT8qCwOxI/hqdefault.jpg')!important}
     .pack-prices{flex-wrap:wrap}.approx-price{color:#d6c8ff;font-size:14px;font-weight:800;padding-bottom:3px}.pack-benefits{display:grid;gap:9px;min-height:105px;margin:14px 0 18px;padding:14px 0 0;list-style:none;border-top:1px solid rgba(255,255,255,.09)}.pack-benefits li{position:relative;padding-left:21px;color:#d8dbe5;font-size:11px;line-height:1.48}.pack-benefits li:before{content:"✓";position:absolute;left:0;top:0;color:#63e5aa;font-weight:900}.pack .buy{min-height:48px;white-space:normal;line-height:1.35}
     @media(max-width:640px){.shell{width:min(100% - 20px,1180px)}.side{width:100%;margin-left:0;transform:none}.pack-benefits{min-height:0}.pack.featured{transform:none}}
-  </style>
+    .lesson-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+    @media(max-width:900px){.lesson-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:640px){.lesson-list{grid-template-columns:1fr}}
+    .lesson-btn:nth-child(1) .lesson-thumb{background-image:url('https://vz-4ebbab26-4bc.b-cdn.net/f828ede8-3230-4b4b-b0a9-b4792f3f0d05/thumbnail.jpg')!important}
+    .lesson-btn:nth-child(2) .lesson-thumb{background-image:url('https://vz-4ebbab26-4bc.b-cdn.net/173056c9-86b0-4a85-b760-4de88c804b1f/thumbnail.jpg')!important}
+    .lesson-btn:nth-child(3) .lesson-thumb{background-image:url('https://vz-4ebbab26-4bc.b-cdn.net/eebc9bb3-2021-4f0d-bcbc-17e20fbb1e3e/thumbnail.jpg')!important}
+    .practice-offer-box{width:min(620px,100%);text-align:center}.practice-next{display:inline-flex;align-items:center;justify-content:center;margin:0 auto 18px;border:0;background:transparent;color:#91d7ff;font-weight:800;cursor:pointer}.practice-next:hover{color:#fff}.practice-offer-box .primary{width:min(330px,100%);min-height:52px;margin-top:5px}.practice-offer-box .modal-sub{margin-bottom:18px}
+</style>
 </head>
 <body>
   <div class="page-bg"></div>
@@ -68,7 +75,7 @@
       <div class="eyebrow"><i></i> HANSORA AI ԴԱՍԸՆԹԱՑ</div>
       <h1><span class="gradient">Սովորիր ստեղծել AI-ով՝ քայլ առ քայլ</span></h1>
       <p class="lead">AI դասեր, որոնք կօգնեն քեզ սովորել ստեղծել պատկերներ և տեսանյութեր արհեստական բանականության միջոցով։</p>
-      <div class="hero-meta"><span>3 գործնական դաս + նորերը շուտով</span><span>Պատրաստի prompt-եր</span><span>Մշտական հասանելիություն</span></div>
+      <div class="hero-meta"><span>6 գործնական տեսադաս</span><span>Պատրաստի prompt-եր</span><span>Մշտական հասանելիություն</span></div>
     </section>
 
     <section class="course-grid">
@@ -86,7 +93,7 @@
       </article>
 
       <aside class="card side">
-        <div class="side-title"><h2>Դասընթացի ծրագիր</h2><span id="progressText" class="progress">0 / 5 դաս հասանելի</span></div>
+        <div class="side-title"><h2>Դասընթացի ծրագիր</h2><span id="progressText" class="progress">0 / 6 դաս հասանելի</span></div>
         <div id="lessonList" class="lesson-list"></div>
       </aside>
     </section>
@@ -134,7 +141,7 @@
     <div class="modal-box signup-box">
       <button class="modal-close" data-close-modal aria-label="Փակել">×</button>
       <div class="icon">♙</div><h2 id="signupTitle">Գրանցումը պարտադիր է</h2>
-      <p>Կրեդիտներ գնելու և հաջորդ դասերը բացելու համար նախ խնդրում ենք գրանցվել կայքում։ Առաջին դասը մնում է անվճար։</p>
+      <p>Գրանցվեք՝ առաջին երեք դասերն անվճար դիտելու համար։ Հաջորդ դասերի գործնական աշխատանքի համար անհրաժեշտ են կրեդիտներ։</p>
       <div class="signup-actions"><a id="courseSignupLink" class="primary" href="/login.html?mode=signup">Գրանցվել</a></div>
     </div>
   </div>
@@ -148,6 +155,15 @@
       <div id="creditPacks" class="packs"></div>
     </div>
   </div>
+  <div id="practiceOfferModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="practiceOfferTitle">
+    <div class="modal-box practice-offer-box">
+      <button class="modal-close" data-close-practice-offer aria-label="Փակել">×</button>
+      <button class="practice-next" type="button" data-practice-offer-next>Ավարտեցի՞ք։ Անցնել հաջորդ դասին →</button>
+      <h2 id="practiceOfferTitle"></h2>
+      <p id="practiceOfferText" class="modal-sub"></p>
+      <button class="primary" type="button" data-practice-offer-buy>Սկսել պրակտիկան ⚡</button>
+    </div>
+  </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -158,23 +174,12 @@
     'use strict';
     const COURSE_CONFIG = {
       lessons: [
-        {id:'lesson-1', videoId:'https://player.mediadelivery.net/embed/719723/1429007c-5a9a-4671-8e5b-4714514db527?autoplay=false&loop=false&muted=false&preload=true&responsive=true', thumbnailUrl:'https://i.ytimg.com/vi/yqjvoOV78xk/hqdefault.jpg', title:'Դաս 1․ Պատկերի ստեղծում', duration:'31 րոպե', description:'Սովորեք Hansora AI-ի միջոցով ստեղծել որակյալ պատկերներ՝ ճիշտ գործիքների, կարգավորումների և prompt-երի օգնությամբ։', prompts:[
-          'Ստեղծիր պրոֆեսիոնալ ապրանքային լուսանկար [ԱՊՐԱՆՔ]-ի համար։ Օգտագործիր փափուկ ստուդիական լուսավորություն, մաքուր ֆոն, իրատեսական նյութեր և գովազդային բարձր որակ։',
-          'Ստեղծիր մանրամասն կինեմատոգրաֆիկ տեսարան հետևյալ գաղափարով՝ [ԳԱՂԱՓԱՐ]։ Նկարագրիր միջավայրը, լուսավորությունը, տեսախցիկի անկյունը և գունային տրամադրությունը։',
-          'Վերափոխիր այս պարզ գաղափարը պրոֆեսիոնալ AI prompt-ի՝ [ԳՐԵՔ ԳԱՂԱՓԱՐԸ]։ Ավելացրու ոճ, կոմպոզիցիա, լուսավորություն և տեխնիկական մանրամասներ։'
-        ]},
-        {id:'lesson-2', videoId:'https://player.mediadelivery.net/embed/719723/5394456c-2878-49a1-9e54-0713de3e8f11?autoplay=false&loop=false&muted=false&preload=true&responsive=true', thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/5394456c-2878-49a1-9e54-0713de3e8f11/thumbnail.jpg', title:'Դաս 2․ Տեսանյութի ստեղծում — Մաս 1', duration:'25 րոպե', description:'Ծանոթացեք Hansora AI-ի տեսանյութերի ստեղծման հիմնական գործիքներին և պատրաստեք ձեր առաջին AI տեսանյութը։', prompts:[
-          'Ստեղծիր սոցիալական ցանցերի համար 9:16 գովազդային տեսանյութ [ԱՊՐԱՆՔ]-ի մասին։ Առաջին 2 վայրկյանում օգտագործիր ուժեղ hook, ապա ցույց տուր հիմնական առավելությունը և ավարտիր հստակ գործողության կոչով։',
-          'Նկարագրիր նույն կերպարը երեք տարբեր տեսարաններում՝ պահպանելով դեմքը, հագուստը և գունային ոճը։ Կերպարի նկարագրություն՝ [ՆԿԱՐԱԳՐՈՒԹՅՈՒՆ]։',
-          'Ստեղծիր premium բրենդային visual [ԲՐԵՆԴ]-ի համար՝ մինիմալիստական կոմպոզիցիայով, հարուստ նյութերով և ժամանակակից գովազդային լուսավորությամբ։'
-        ]},
-        {id:'lesson-3', videoId:'https://player.mediadelivery.net/embed/719723/4facee7d-ad25-4c2b-bbdf-995ba4b841a1?autoplay=false&loop=false&muted=false&preload=true&responsive=true', thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/4facee7d-ad25-4c2b-bbdf-995ba4b841a1/thumbnail.jpg', title:'Դաս 3․ Տեսանյութի ստեղծում — Մաս 2', duration:'16 րոպե', description:'Շարունակեք տեսանյութերի ստեղծման աշխատանքը՝ ավելի առաջադեմ քայլերով, կարգավորումներով և գործնական օրինակներով։', prompts:[
-          'Կազմիր 5 քայլից բաղկացած AI content workflow [ԲԻԶՆԵՍԻ ՏԵՍԱԿ]-ի համար՝ ներառելով գաղափարը, visual-ը, տեսանյութը, տեքստը և հրապարակումը։',
-          'Ստեղծիր մեկ ապրանքից 5 տարբեր գովազդային creative-ի գաղափար։ Յուրաքանչյուրի համար տուր hook, հիմնական տեսարան, վերնագիր և գործողության կոչ։ Ապրանքը՝ [ԱՊՐԱՆՔ]։',
-          'Վերլուծիր այս creative գաղափարը՝ [ԳԱՂԱՓԱՐ]։ Առաջարկիր երեք բարելավում՝ ուշադրության, վստահության և վաճառքի հավանականության բարձրացման համար։'
-        ]},
-        {id:'lesson-4', videoId:'', title:'Դաս 4․ Շուտով', duration:'Շուտով', description:'Այս դասի վերնագիրը և բովանդակությունը շուտով կավելացվեն։', prompts:[], comingSoon:true},
-        {id:'lesson-5', videoId:'', title:'Դաս 5․ Շուտով', duration:'Շուտով', description:'Այս դասի վերնագիրը և բովանդակությունը շուտով կավելացվեն։', prompts:[], comingSoon:true}
+        {id:'lesson-1',videoId:'https://player.mediadelivery.net/embed/719723/f828ede8-3230-4b4b-b0a9-b4792f3f0d05?autoplay=false&loop=false&muted=false&preload=true&responsive=true',thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/f828ede8-3230-4b4b-b0a9-b4792f3f0d05/thumbnail.jpg',title:'Դաս 1․ Պատկերի ստեղծում — Մաս 1',duration:'Տեսադաս',description:'Սովորեք Hansora AI-ի միջոցով ստեղծել որակյալ պատկերներ՝ ճիշտ գործիքների, կարգավորումների և prompt-երի օգնությամբ։',prompts:[]},
+        {id:'lesson-2',videoId:'https://player.mediadelivery.net/embed/719723/173056c9-86b0-4a85-b760-4de88c804b1f?autoplay=false&loop=false&muted=false&preload=true&responsive=true',thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/173056c9-86b0-4a85-b760-4de88c804b1f/thumbnail.jpg',title:'Դաս 2․ Պատկերի ստեղծում — Մաս 2',duration:'Տեսադաս',description:'Շարունակեք պատկերների ստեղծումը՝ սովորելով ավելի ճշգրիտ prompt-եր և կարգավորումներ։',prompts:[]},
+        {id:'lesson-3',videoId:'https://player.mediadelivery.net/embed/719723/eebc9bb3-2021-4f0d-bcbc-17e20fbb1e3e?autoplay=false&loop=false&muted=false&preload=true&responsive=true',thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/eebc9bb3-2021-4f0d-bcbc-17e20fbb1e3e/thumbnail.jpg',title:'Դաս 3․ Պատկերի ստեղծում — Մաս 3',duration:'Տեսադաս',description:'Ամրապնդեք պատկերների ստեղծման գիտելիքները գործնական օրինակներով։',prompts:[]},
+        {id:'lesson-4',videoId:'https://player.mediadelivery.net/embed/719723/b789e3a6-d169-45fd-8564-396523baec05?autoplay=false&loop=false&muted=false&preload=true&responsive=true',thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/b789e3a6-d169-45fd-8564-396523baec05/thumbnail.jpg',title:'Դաս 4․ Տեսանյութի ստեղծում — Մաս 1',duration:'Տեսադաս',description:'Ծանոթացեք Hansora AI-ի տեսանյութերի ստեղծման հիմնական գործիքներին և պատրաստեք ձեր առաջին AI տեսանյութը։',prompts:[]},
+        {id:'lesson-5',videoId:'https://player.mediadelivery.net/embed/719723/3f8b78df-ff6b-40a5-a09e-9e06a2a4627b?autoplay=false&loop=false&muted=false&preload=true&responsive=true',thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/3f8b78df-ff6b-40a5-a09e-9e06a2a4627b/thumbnail.jpg',title:'Դաս 5․ Տեսանյութի ստեղծում — Մաս 1 շարունակություն',duration:'Տեսադաս',description:'Շարունակեք ձեր առաջին AI տեսանյութի ստեղծումը՝ կիրառելով դասի գործիքները։',prompts:[]},
+        {id:'lesson-6',videoId:'https://player.mediadelivery.net/embed/719723/4facee7d-ad25-4c2b-bbdf-995ba4b841a1?autoplay=false&loop=false&muted=false&preload=true&responsive=true',thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/4facee7d-ad25-4c2b-bbdf-995ba4b841a1/thumbnail.jpg',title:'Դաս 6․ Տեսանյութի ստեղծում — Մաս 2',duration:'16 րոպե',description:'Շարունակեք տեսանյութերի ստեղծման աշխատանքը՝ ավելի առաջադեմ քայլերով, կարգավորումներով և գործնական օրինակներով։',prompts:[]}
       ]
     };
     const IMAGE_PROMPTS = [
@@ -624,6 +629,8 @@ Return only the final ready-to-use image-editing prompt.`,
       }
     ];
     COURSE_CONFIG.lessons[0].prompts = IMAGE_PROMPTS;
+    COURSE_CONFIG.lessons[1].prompts = IMAGE_PROMPTS;
+    COURSE_CONFIG.lessons[2].prompts = IMAGE_PROMPTS;
     const VIDEO_PROMPTS = [
       {
         title:'1. Տեքստից տեսանյութ',
@@ -792,14 +799,22 @@ Return only the final ready-to-use image-editing prompt.`,
 **Не добавляйте, не удаляйте, не меняйте дизайн и не трансформируйте ничего, чего я не просил. Верните только финальный промпт для видео.**`
       }
     ];
-    COURSE_CONFIG.lessons[1].prompts = VIDEO_PROMPTS;
-    COURSE_CONFIG.lessons[2].prompts = VIDEO_PROMPTS;
+    COURSE_CONFIG.lessons[3].prompts = VIDEO_PROMPTS;
+    COURSE_CONFIG.lessons[4].prompts = VIDEO_PROMPTS;
+    COURSE_CONFIG.lessons[5].prompts = VIDEO_PROMPTS;
     const PACKS = [
       {credits:100, line:'100 + 0 կրեդիտ', price:'$9.99', approxPrice:'≈ 3,700 ֏', oldPrice:'$14.99', save:'Խնայեք $5', product:'https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1', benefits:['Մինչև 200 պատկեր (կախված մոդելից)','Մինչև 55 տեսանյութ (կախված մոդելից)','Մինչև 100 աուդիո գեներացում (կախված մոդելից)']},
       {credits:210, line:'200 + 10 կրեդիտ', price:'$19.99', approxPrice:'≈ 6,500 ֏', oldPrice:'$29.99', save:'Խնայեք $10', product:'https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1', featured:true, benefits:['Մինչև 420 պատկեր (կախված մոդելից)','Մինչև 115 տեսանյութ (կախված մոդելից)','Մինչև 210 աուդիո գեներացում (կախված մոդելից)']}
     ];
     const ANSWERS=['Գերազանց էր՝ ամեն ինչ հասկանալի էր','Լավ էր, բայց բավարար չէր','Լավ էր, բայց ավելի շատ օրինակներ են պետք','Լավ էր, բայց նյութը շատ արագ էր ներկայացված','Ավելին էի սպասում․ լավը չէր','Լավը չէր․ որոշ հատվածներ չհասկացա','Ինձ դուր չեկավ․ վատն էր'];
+    const PRACTICE_OFFERS=[
+      {title:'Հիանալի սկիզբ է։ 🎉',text:'Դուք արդեն տեսաք, թե ինչպես է տեքստը վերածվում պատկերի։ Ժամանակն է ինքներդ փորձելու՝ գործնական աշխատանքի համար նախատեսված կրեդիտներն այժմ զեղչով են։'},
+      {title:'Դուք արդեն հիմք ունեք 💪',text:'Դուք գիտեք, թե ինչպես է կառուցվում պրոմպտը։ Չե՞ք ցանկանում ամրապնդել գիտելիքները գործնականում։ Նույնիսկ ամենափոքր փաթեթով կարող եք գեներացնել մինչև 200 պատկեր։'},
+      {title:'Այժմ դուք ինքներդ կարող եք դա անել 🚀',text:'Գիտելիքները բավարար են ուշադրություն գրավող պատկեր գեներացնելու համար։ Մնում է միայն սեղմել կոճակը՝ կրեդիտներն այժմ մեծ զեղչերով են, բաց մի՛ թողեք հնարավորությունը։'}
+    ];
     let sb=null, session=null, hasAccess=false, accessLoading=true, authHydrated=false, courseAuthRevision=0, lastCourseAuthEvent='', checkedUserId=null, activeIndex=-1, ytPlayer=null, ytReady=false;
+    let practicePlayback={lessonNumber:0,started:false,completed:false};
+    const shownPracticeOffers=new Set();
     const $=s=>document.querySelector(s);
     const esc=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
     function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2600)}
@@ -830,12 +845,12 @@ Return only the final ready-to-use image-editing prompt.`,
       renderLessons();
       if(!session){showRegistrationGate(0);return}
       const requestedIndex=activeIndex>=0&&!COURSE_CONFIG.lessons[activeIndex]?.comingSoon?activeIndex:0;
-      selectLesson(hasAccess?requestedIndex:0,false);
+      selectLesson(hasAccess?requestedIndex:Math.min(requestedIndex,2),false);
     }
     function renderLessons(){
-      $('#lessonList').innerHTML=COURSE_CONFIG.lessons.map((l,i)=>{const unlocked=!l.comingSoon&&((i===0&&!!session)||hasAccess);const preview=l.thumbnailUrl||(!String(l.videoId).startsWith('http')?`https://i.ytimg.com/vi/${encodeURIComponent(l.videoId)}/hqdefault.jpg`:'');const thumb=l.comingSoon?'<span class="lesson-thumb coming-thumb">ՇՈՒՏՈՎ</span>':`<span class="lesson-thumb" style="background-image:url('${esc(preview)}')"><span class="lesson-thumb-play">▶</span></span>`;return `<button type="button" class="lesson-btn ${activeIndex===i?'active':''} ${unlocked?'unlocked':''} ${l.comingSoon?'coming':''}" data-lesson="${i}">${thumb}<span class="lesson-row"><span class="lesson-num">${i+1}</span><span class="lesson-copy"><strong>${esc(l.title)}</strong><small>${esc(l.duration)}</small></span><span class="lock">${l.comingSoon?'◷':(unlocked?'✓':'🔒')}</span></span></button>`}).join('');
+      $('#lessonList').innerHTML=COURSE_CONFIG.lessons.map((l,i)=>{const unlocked=(i<3&&!!session)||hasAccess;const preview=l.thumbnailUrl||'';const thumb=`<span class="lesson-thumb" style="background-image:url('${esc(preview)}')"><span class="lesson-thumb-play">▶</span></span>`;return `<button type="button" class="lesson-btn ${activeIndex===i?'active':''} ${unlocked?'unlocked':''}" data-lesson="${i}">${thumb}<span class="lesson-row"><span class="lesson-num">${i+1}</span><span class="lesson-copy"><strong>${esc(l.title)}</strong><small>${esc(l.duration)}</small></span><span class="lock">${unlocked?'✓':'🔒'}</span></span></button>`}).join('');
       const published=COURSE_CONFIG.lessons.filter(l=>!l.comingSoon).length;
-      $('#progressText').textContent=(hasAccess?published:(session?'1':'0'))+' / '+COURSE_CONFIG.lessons.length+' դաս հասանելի';
+      $('#progressText').textContent=(hasAccess?published:(session?'3':'0'))+' / '+COURSE_CONFIG.lessons.length+' դաս հասանելի';
     }
     function playerMeta(kicker,title,description,pill){$('#lessonKicker').textContent=kicker;$('#lessonTitle').textContent=title;$('#lessonDescription').textContent=description;$('#accessPill').textContent=pill}
     function showEmpty(message){destroyPlayer();$('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty"><div><div class="play">▶</div><strong>${esc(message)}</strong><small>Տեսանյութի հղումը կավելացվի այստեղ</small></div></div>`}
@@ -846,40 +861,53 @@ Return only the final ready-to-use image-editing prompt.`,
       activeIndex=index;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.remove('hidden');
       playerMeta('ԴԱՍ '+(index+1),lesson.title,lesson.description,'Գրանցումը պարտադիր է');
       const preview=lesson.thumbnailUrl||(!String(lesson.videoId).startsWith('http')?`https://i.ytimg.com/vi/${encodeURIComponent(lesson.videoId)}/hqdefault.jpg`:'' );
-      $('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty" style="background-image:linear-gradient(to top,rgba(4,5,9,.78),rgba(4,5,9,.12) 62%),url('${esc(preview)}');background-size:cover;background-position:center"><div><div class="play">▶</div><strong style="text-shadow:0 2px 12px #000">Գրանցվեք՝ անվճար դիտելու համար</strong><small style="color:#e2e4eb;text-shadow:0 2px 10px #000">Առաջին դասի համար կրեդիտներ գնել պետք չէ</small></div></div>`;
+      $('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty" style="background-image:linear-gradient(to top,rgba(4,5,9,.78),rgba(4,5,9,.12) 62%),url('${esc(preview)}');background-size:cover;background-position:center"><div><div class="play">▶</div><strong style="text-shadow:0 2px 12px #000">Գրանցվեք՝ անվճար դիտելու համար</strong><small style="color:#e2e4eb;text-shadow:0 2px 10px #000">Առաջին երեք դասերի համար կրեդիտներ գնել պետք չէ</small></div></div>`;
     }
     function showAuthLoadingGate(){
       delete $('#playerWrap').dataset.courseLesson;activeIndex=-1;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.add('hidden');
       $('#playerWrap').innerHTML='<div class="video-empty"><div><div class="play">…</div><strong>Ստուգում ենք ձեր հաշիվը</strong><small>Սա կտևի ընդամենը մի քանի վայրկյան</small></div></div>';
     }
-    function mountVideo(videoId,showOfferOnEnd){
+    function openPracticeOffer(lessonNumber,reason){
+      if(hasAccess||lessonNumber<1||lessonNumber>3||shownPracticeOffers.has(lessonNumber))return false;
+      const offer=PRACTICE_OFFERS[lessonNumber-1];if(!offer)return false;
+      shownPracticeOffers.add(lessonNumber);$('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').textContent=offer.text;$('#practiceOfferModal').dataset.lessonNumber=String(lessonNumber);
+      window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:reason||'unknown',lessonNumber,coursePath:'/course_arm'}}));openModal('#practiceOfferModal');return true;
+    }
+    function bindPracticePlayer(player,lessonNumber){
+      if(hasAccess||lessonNumber<1||lessonNumber>3||!player)return;
+      practicePlayback={lessonNumber,started:false,completed:false};
+      player.on('play',()=>{if(practicePlayback.lessonNumber===lessonNumber)practicePlayback.started=true});
+      player.on('ended',()=>{if(practicePlayback.lessonNumber===lessonNumber){practicePlayback.started=true;practicePlayback.completed=true;openPracticeOffer(lessonNumber,'video_ended')}});
+    }
+    function mountVideo(videoId,practiceLessonNumber){
       if(!videoId){showEmpty('Դասի տեսանյութը շուտով կավելացվի');return}
       if(/^https?:\/\/.+\.(mp4|webm|mov)(?:[?#].*)?$/i.test(String(videoId))){
         destroyPlayer();
         $('#playerWrap').innerHTML=`<video id="introNativeVideo" src="${esc(videoId)}" controls playsinline preload="metadata" controlslist="nodownload" style="width:100%;height:100%;display:block;background:#000;object-fit:contain"></video>`;
         const video=$('#introNativeVideo');
-        if(showOfferOnEnd)video.addEventListener('ended',()=>openCredits('lesson_1_completed',0),{once:false});
+        if(practiceLessonNumber){practicePlayback={lessonNumber:practiceLessonNumber,started:false,completed:false};video.addEventListener('play',()=>{practicePlayback.started=true});video.addEventListener('ended',()=>{practicePlayback.completed=true;openPracticeOffer(practiceLessonNumber,'video_ended')})}
         return;
       }
       if(String(videoId).startsWith('https://player.mediadelivery.net/')){
         destroyPlayer();
         const source=new URL(videoId);source.searchParams.set('autoplay','false');source.searchParams.set('loop','false');source.searchParams.set('muted','false');source.searchParams.set('preload','true');source.searchParams.set('responsive','true');source.searchParams.set('context',Date.now().toString());
         $('#playerWrap').innerHTML=`<iframe id="bunnyPlayer" src="${esc(source.toString())}" loading="eager" title="Hansora AI տեսադաս" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe>`;
-        if(showOfferOnEnd&&window.playerjs){const player=new playerjs.Player('bunnyPlayer');player.on('ended',()=>openCredits('lesson_1_completed',0))}
+        if(practiceLessonNumber&&window.playerjs)bindPracticePlayer(new playerjs.Player('bunnyPlayer'),practiceLessonNumber)
         return;
       }
       destroyPlayer();$('#playerWrap').innerHTML='<div id="ytPlayer" style="position:absolute;inset:0"></div>';
       const playerOrigin=location.protocol==='http:'||location.protocol==='https:'?location.origin:'https://hansora.co';
-      const create=()=>{ytPlayer=new YT.Player('ytPlayer',{videoId,host:'https://www.youtube-nocookie.com',playerVars:{rel:0,playsinline:1,iv_load_policy:3,origin:playerOrigin,widget_referrer:'https://hansora.co/course.html'},events:{onStateChange:e=>{if(showOfferOnEnd&&e.data===YT.PlayerState.ENDED)openCredits('lesson_1_completed',0)}}})};
+      const create=()=>{practicePlayback={lessonNumber:practiceLessonNumber||0,started:false,completed:false};ytPlayer=new YT.Player('ytPlayer',{videoId,host:'https://www.youtube-nocookie.com',playerVars:{rel:0,playsinline:1,iv_load_policy:3,origin:playerOrigin,widget_referrer:'https://hansora.co/course.html'},events:{onStateChange:e=>{if(!practiceLessonNumber)return;if(e.data===YT.PlayerState.PLAYING)practicePlayback.started=true;if(e.data===YT.PlayerState.ENDED){practicePlayback.completed=true;openPracticeOffer(practiceLessonNumber,'video_ended')}}}})};
       if(window.YT&&YT.Player)create();else{window.onYouTubeIframeAPIReady=()=>{ytReady=true;create()};if(!document.querySelector('script[src*="youtube.com/iframe_api"]')){const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s)}}
     }
     function selectLesson(index,shouldScroll=true){
       const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Այս դասը շուտով հասանելի կլինի');return}
       if(!authHydrated){showAuthLoadingGate();return}
       if(!session){showRegistrationGate(index);openModal('#signupModal');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});return}
-      if(index>0&&accessLoading){toast('Խնդրում ենք սպասել․ հասանելիությունը ստուգվում է');return}
-      if(index>0&&!hasAccess){openCredits('locked_lesson_clicked',index);return}
-      activeIndex=index;$('#playerWrap').dataset.courseLesson=String(index+1);renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('ԴԱՍ '+(index+1),l.title,l.description,index===0&&!hasAccess?'Անվճար':'Բացված է');mountVideo(l.videoId,index===0&&!hasAccess);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
+      if(index!==activeIndex&&!hasAccess&&practicePlayback.lessonNumber===activeIndex+1&&practicePlayback.started&&!practicePlayback.completed&&openPracticeOffer(practicePlayback.lessonNumber,'video_closed'))return;
+      if(index>2&&accessLoading){toast('Խնդրում ենք սպասել․ հասանելիությունը ստուգվում է');return}
+      if(index>2&&!hasAccess){openCredits('locked_lesson_clicked',index);return}
+      activeIndex=index;$('#playerWrap').dataset.courseLesson=String(index+1);renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('ԴԱՍ '+(index+1),l.title,l.description,index<3&&!hasAccess?'Անվճար':'Բացված է');mountVideo(l.videoId,index<3&&!hasAccess?index+1:0);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
     }
     function renderPrompts(lesson){$('#promptList').innerHTML=lesson.prompts.map((p,i)=>{const item=typeof p==='string'?{title:`Հրահանգ ${i+1}`,text:p,ru:''}:p;return `<div class="prompt" data-prompt-index="${i}" data-lang="en"><div class="prompt-main"><div class="prompt-body"><h3 class="prompt-title">${esc(item.title)}</h3><div class="prompt-text">${esc(item.text)}</div></div><div class="prompt-actions">${item.ru?'<button type="button" class="mini-btn lang-btn">Русский</button>':''}<button type="button" class="mini-btn more-btn">Տեսնել ավելին</button><button type="button" class="mini-btn copy-btn">Պատճենել</button></div></div></div>`}).join('')}
     function renderFeedback(lesson){$('#feedbackOptions').innerHTML=ANSWERS.map((a,i)=>`<label class="choice"><input type="radio" name="rating" value="${esc(a)}" ${i===0?'required':''}><span>${esc(a)}</span></label>`).join('');$('#feedbackComment').value='';$('#feedbackForm').dataset.lesson=lesson.id}
@@ -929,6 +957,7 @@ Return only the final ready-to-use image-editing prompt.`,
       }catch(e){console.warn(e);if(!authHydrated){authHydrated=true;session=null;hasAccess=false;accessLoading=false;renderAccess()}}
       if(new URLSearchParams(location.search).get('checkout')==='success'&&session&&!hasAccess){toast('Վճարումը ստուգվում է…');let tries=0;const poll=setInterval(async()=>{tries++;checkedUserId=null;await checkAccess();if(hasAccess||tries>=12){clearInterval(poll);if(hasAccess){toast('Դասընթացը բացված է');selectLesson(0)}}},2000)}
     }
+    document.addEventListener('click',e=>{const modal=$('#practiceOfferModal');const lessonNumber=Number(modal.dataset.lessonNumber||0);if(e.target.closest('[data-close-practice-offer]')||(e.target===modal&&modal.classList.contains('open'))){closeModals();return}if(e.target.closest('[data-practice-offer-next]')){closeModals();if(lessonNumber>=1&&lessonNumber<COURSE_CONFIG.lessons.length)selectLesson(lessonNumber);return}if(e.target.closest('[data-practice-offer-buy]')){closeModals();openCredits('free_lesson_practice_clicked',Math.max(0,lessonNumber-1));return}});
     document.addEventListener('click',e=>{const lesson=e.target.closest('[data-lesson]');if(lesson)selectLesson(Number(lesson.dataset.lesson));if(e.target.closest('#playerWrap')&&!session)requireUser();if(e.target.closest('[data-close-modal]')||e.target.classList.contains('modal'))closeModals();const more=e.target.closest('.more-btn');if(more){const box=more.closest('.prompt');box.classList.toggle('expanded');more.textContent=box.classList.contains('expanded')?'Փակել':'Տեսնել ավելին'}const lang=e.target.closest('.lang-btn');if(lang){const box=lang.closest('.prompt');const prompt=COURSE_CONFIG.lessons[activeIndex].prompts[Number(box.dataset.promptIndex)];const toRussian=box.dataset.lang!=='ru';box.dataset.lang=toRussian?'ru':'en';box.querySelector('.prompt-text').textContent=toRussian?prompt.ru:prompt.text;lang.textContent=toRussian?'English':'Русский'}const copy=e.target.closest('.copy-btn');if(copy){const text=copy.closest('.prompt').querySelector('.prompt-text').textContent;navigator.clipboard.writeText(text).then(()=>toast('Հրահանգը պատճենված է'))}const buy=e.target.closest('.buy');if(buy)checkout(buy)});
     $('#feedbackForm').addEventListener('submit',submitFeedback);document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModals()});
     document.addEventListener('DOMContentLoaded',init);
