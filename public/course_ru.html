@@ -824,6 +824,8 @@ Return only the final ready-to-use image-editing prompt.`,
     ];
     let sb=null, session=LOCAL_PREVIEW?{user:{id:'local-preview',email:'preview@hansora.local'}}:null, hasAccess=LOCAL_PREVIEW, accessLoading=!LOCAL_PREVIEW, authHydrated=LOCAL_PREVIEW, courseAuthRevision=0, lastCourseAuthEvent='', checkedUserId=null, activeIndex=-1, paymentMethod='international';
     let practicePlayback={lessonNumber:0,started:false,completed:false};
+    const dismissedPracticeOffers=new Set();
+    let pendingFreeLessonIndex=null;
     const $=s=>document.querySelector(s);
     const esc=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
     function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2600)}
@@ -865,10 +867,17 @@ Return only the final ready-to-use image-editing prompt.`,
     function showEmpty(message){destroyPlayer();$('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty"><div><div class="play">▶</div><strong>${esc(message)}</strong><small>Ссылка на видео появится здесь</small></div></div>`}
     function destroyPlayer(){const media=$('#introNativeVideo');if(media&&!media.paused)media.pause()}
     function openPracticeOffer(lessonNumber,reason){
-      if(hasAccess||lessonNumber<1||lessonNumber>3)return false;
+      if(hasAccess||lessonNumber<1||lessonNumber>3||dismissedPracticeOffers.has(lessonNumber))return false;
       const offer=PRACTICE_OFFERS[lessonNumber-1];if(!offer)return false;
       $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').textContent=offer.text;$('#practiceOfferModal').dataset.lessonNumber=String(lessonNumber);renderPacks();
       window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:reason||'unknown',lessonNumber,coursePath:'/course_ru'}}));openModal('#practiceOfferModal');return true;
+    }
+    function dismissPracticeOffer(goToPendingLesson){
+      const lessonNumber=Number($('#practiceOfferModal').dataset.lessonNumber||0);
+      if(lessonNumber>=1&&lessonNumber<=3)dismissedPracticeOffers.add(lessonNumber);
+      const target=goToPendingLesson&&Number.isInteger(pendingFreeLessonIndex)?pendingFreeLessonIndex:null;
+      pendingFreeLessonIndex=null;closeModals();
+      if(target!==null&&target>=0&&target<3&&target!==activeIndex)selectLesson(target);
     }
     function bindPracticePlayer(player,lessonNumber){
       if(hasAccess||lessonNumber<1||lessonNumber>3||!player)return;
@@ -912,7 +921,11 @@ Return only the final ready-to-use image-editing prompt.`,
       if(!session){showRegistrationGate(0);requireUser();if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});return}
       if(index>2&&accessLoading)return;
       if(index>2&&!hasAccess){openCredits('locked_lesson_clicked',index);return}
-      if(index!==activeIndex&&!hasAccess&&practicePlayback.lessonNumber===activeIndex+1&&practicePlayback.started&&!practicePlayback.completed&&openPracticeOffer(practicePlayback.lessonNumber,'video_closed'))return;
+      if(index<3&&index!==activeIndex&&!hasAccess&&practicePlayback.lessonNumber===activeIndex+1&&practicePlayback.started&&!practicePlayback.completed){
+        pendingFreeLessonIndex=index;
+        if(openPracticeOffer(practicePlayback.lessonNumber,'video_closed'))return;
+        pendingFreeLessonIndex=null;
+      }
       activeIndex=index;$('#playerWrap').dataset.courseLesson=String(index+1);renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('УРОК '+(index+1),l.title,l.description,index<3&&!hasAccess?'Бесплатно':'Доступ открыт');mountVideo(l.videoId,index<3&&!hasAccess?index+1:0);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
     }
     function renderPrompts(lesson){$('#promptList').innerHTML=lesson.prompts.map((p,i)=>{const item=typeof p==='string'?{title:`Команда ${i+1}`,text:p,ru:''}:p;const initial=item.ru||item.text;return `<div class="prompt" data-prompt-index="${i}" data-lang="${item.ru?'ru':'en'}"><div class="prompt-main"><div class="prompt-body"><h3 class="prompt-title">${esc(item.title)}</h3><div class="prompt-text">${esc(initial)}</div></div><div class="prompt-actions">${item.ru?'<button type="button" class="mini-btn lang-btn">English</button>':''}<button type="button" class="mini-btn more-btn">Подробнее</button><button type="button" class="mini-btn copy-btn">Копировать</button></div></div></div>`}).join('')}
@@ -983,9 +996,9 @@ Return only the final ready-to-use image-editing prompt.`,
       }catch(e){console.warn(e);if(!authHydrated){authHydrated=true;session=null;hasAccess=false;accessLoading=false;renderAccess()}}
       if(new URLSearchParams(location.search).get('checkout')==='success'&&session&&!hasAccess){toast('Проверяем оплату…');let tries=0;const poll=setInterval(async()=>{tries++;checkedUserId=null;await checkAccess();if(hasAccess||tries>=12){clearInterval(poll);if(hasAccess){toast('Доступ к курсу открыт');selectLesson(0)}}},2000)}
     }
-    document.addEventListener('click',e=>{const modal=$('#practiceOfferModal');const lessonNumber=Number(modal.dataset.lessonNumber||0);if(e.target.closest('[data-close-practice-offer]')||(e.target===modal&&modal.classList.contains('open'))){closeModals();return}if(e.target.closest('[data-practice-offer-next]')){e.preventDefault();closeModals();if(lessonNumber>=1&&lessonNumber<COURSE_CONFIG.lessons.length)selectLesson(lessonNumber);return}});
+    document.addEventListener('click',e=>{const modal=$('#practiceOfferModal');const lessonNumber=Number(modal.dataset.lessonNumber||0);if(e.target.closest('[data-close-practice-offer]')||(e.target===modal&&modal.classList.contains('open'))){dismissPracticeOffer(true);return}if(e.target.closest('[data-practice-offer-next]')){e.preventDefault();dismissedPracticeOffers.add(lessonNumber);const target=Number.isInteger(pendingFreeLessonIndex)?pendingFreeLessonIndex:lessonNumber;pendingFreeLessonIndex=null;closeModals();if(target>=0&&target<COURSE_CONFIG.lessons.length&&target!==activeIndex)selectLesson(target);return}});
     document.addEventListener('click',e=>{const lesson=e.target.closest('[data-lesson]');if(lesson)selectLesson(Number(lesson.dataset.lesson));if(e.target.closest('#playerWrap')&&!session)requireUser();if(e.target.closest('[data-close-modal]')||e.target.classList.contains('modal'))closeModals();const method=e.target.closest('[data-payment-method]');if(method){paymentMethod=method.dataset.paymentMethod;document.querySelectorAll('[data-payment-method]').forEach(button=>{const selected=button.dataset.paymentMethod===paymentMethod;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected))});renderPacks()}const more=e.target.closest('.more-btn');if(more){const box=more.closest('.prompt');box.classList.toggle('expanded');more.textContent=box.classList.contains('expanded')?'Свернуть':'Подробнее'}const lang=e.target.closest('.lang-btn');if(lang){const box=lang.closest('.prompt');const prompt=COURSE_CONFIG.lessons[activeIndex].prompts[Number(box.dataset.promptIndex)];const toRussian=box.dataset.lang!=='ru';box.dataset.lang=toRussian?'ru':'en';box.querySelector('.prompt-text').textContent=toRussian?prompt.ru:prompt.text;lang.textContent=toRussian?'English':'Русский'}const copy=e.target.closest('.copy-btn');if(copy){const text=copy.closest('.prompt').querySelector('.prompt-text').textContent;navigator.clipboard.writeText(text).then(()=>toast('Команда скопирована'))}const buy=e.target.closest('.buy');if(buy)checkout(buy)});
-    $('#feedbackForm').addEventListener('submit',submitFeedback);document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModals()});
+    $('#feedbackForm').addEventListener('submit',submitFeedback);document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('#practiceOfferModal').classList.contains('open'))dismissPracticeOffer(true);else closeModals()}});
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
   })();
   </script>
