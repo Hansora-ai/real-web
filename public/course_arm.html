@@ -63,7 +63,7 @@
     .lesson-btn:nth-child(1) .lesson-thumb{background-image:url('https://vz-4ebbab26-4bc.b-cdn.net/f828ede8-3230-4b4b-b0a9-b4792f3f0d05/thumbnail.jpg')!important}
     .lesson-btn:nth-child(2) .lesson-thumb{background-image:url('https://vz-4ebbab26-4bc.b-cdn.net/173056c9-86b0-4a85-b760-4de88c804b1f/thumbnail.jpg')!important}
     .lesson-btn:nth-child(3) .lesson-thumb{background-image:url('https://vz-4ebbab26-4bc.b-cdn.net/eebc9bb3-2021-4f0d-bcbc-17e20fbb1e3e/thumbnail.jpg')!important}
-    .practice-offer-box{width:min(920px,100%);text-align:center}.practice-next-heading{margin:0 auto 14px;font-size:15px;font-weight:800;color:#b9c0d3}.practice-next{color:#91d7ff;text-decoration:none;white-space:nowrap}.practice-next:hover{color:#fff}.practice-offer-box .modal-sub{margin-bottom:22px}
+    .practice-offer-box{width:min(920px,100%);text-align:center}.practice-offer-box .pack{text-align:left}.practice-next-heading{margin:0 auto 14px;font-size:15px;font-weight:800;color:#b9c0d3}.practice-next{color:#91d7ff;text-decoration:none;white-space:nowrap}.practice-next:hover{color:#fff}.practice-offer-box .modal-sub{margin-bottom:22px}
 </style>
 </head>
 <body>
@@ -180,7 +180,7 @@
         {id:'lesson-3',videoId:'https://player.mediadelivery.net/embed/719723/eebc9bb3-2021-4f0d-bcbc-17e20fbb1e3e?autoplay=false&loop=false&muted=false&preload=true&responsive=true',thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/eebc9bb3-2021-4f0d-bcbc-17e20fbb1e3e/thumbnail.jpg',title:'Դաս 3․ Պատկերի ստեղծում — Մաս 3',duration:'Տեսադաս',description:'Ամրապնդեք պատկերների ստեղծման գիտելիքները գործնական օրինակներով։',prompts:[]},
         {id:'lesson-4',videoId:'https://player.mediadelivery.net/embed/719723/b789e3a6-d169-45fd-8564-396523baec05?autoplay=false&loop=false&muted=false&preload=true&responsive=true',thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/b789e3a6-d169-45fd-8564-396523baec05/thumbnail.jpg',title:'Դաս 4․ Տեսանյութի ստեղծում — Մաս 1',duration:'Տեսադաս',description:'Ծանոթացեք Hansora AI-ի տեսանյութերի ստեղծման հիմնական գործիքներին և պատրաստեք ձեր առաջին AI տեսանյութը։',prompts:[]},
         {id:'lesson-5',videoId:'https://player.mediadelivery.net/embed/719723/3f8b78df-ff6b-40a5-a09e-9e06a2a4627b?autoplay=false&loop=false&muted=false&preload=true&responsive=true',thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/3f8b78df-ff6b-40a5-a09e-9e06a2a4627b/thumbnail.jpg',title:'Դաս 5․ Տեսանյութի ստեղծում — Մաս 1 շարունակություն',duration:'Տեսադաս',description:'Շարունակեք ձեր առաջին AI տեսանյութի ստեղծումը՝ կիրառելով դասի գործիքները։',prompts:[]},
-        {id:'lesson-6',videoId:'https://player.mediadelivery.net/embed/719723/4facee7d-ad25-4c2b-bbdf-995ba4b841a1?autoplay=false&loop=false&muted=false&preload=true&responsive=true',thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/4facee7d-ad25-4c2b-bbdf-995ba4b841a1/thumbnail.jpg',title:'Դաս 6․ Տեսանյութի ստեղծում — Մաս 2',duration:'16 րոպե',description:'Շարունակեք տեսանյութերի ստեղծման աշխատանքը՝ ավելի առաջադեմ քայլերով, կարգավորումներով և գործնական օրինակներով։',prompts:[]}
+        {id:'lesson-6',videoId:'https://player.mediadelivery.net/embed/719723/4facee7d-ad25-4c2b-bbdf-995ba4b841a1?autoplay=false&loop=false&muted=false&preload=true&responsive=true',thumbnailUrl:'https://vz-4ebbab26-4bc.b-cdn.net/4facee7d-ad25-4c2b-bbdf-995ba4b841a1/thumbnail_58861218.jpg',title:'Դաս 6․ Տեսանյութի ստեղծում — Մաս 2',duration:'16 րոպե',description:'Շարունակեք տեսանյութերի ստեղծման աշխատանքը՝ ավելի առաջադեմ քայլերով, կարգավորումներով և գործնական օրինակներով։',prompts:[]}
       ]
     };
     const IMAGE_PROMPTS = [
@@ -904,9 +904,9 @@ Return only the final ready-to-use image-editing prompt.`,
       const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Այս դասը շուտով հասանելի կլինի');return}
       if(!authHydrated){showAuthLoadingGate();return}
       if(!session){showRegistrationGate(index);openModal('#signupModal');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});return}
-      if(index!==activeIndex&&!hasAccess&&practicePlayback.lessonNumber===activeIndex+1&&practicePlayback.started&&!practicePlayback.completed&&openPracticeOffer(practicePlayback.lessonNumber,'video_closed'))return;
       if(index>2&&accessLoading){toast('Խնդրում ենք սպասել․ հասանելիությունը ստուգվում է');return}
       if(index>2&&!hasAccess){openCredits('locked_lesson_clicked',index);return}
+      if(index!==activeIndex&&!hasAccess&&practicePlayback.lessonNumber===activeIndex+1&&practicePlayback.started&&!practicePlayback.completed&&openPracticeOffer(practicePlayback.lessonNumber,'video_closed'))return;
       activeIndex=index;$('#playerWrap').dataset.courseLesson=String(index+1);renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('ԴԱՍ '+(index+1),l.title,l.description,index<3&&!hasAccess?'Անվճար':'Բացված է');mountVideo(l.videoId,index<3&&!hasAccess?index+1:0);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
     }
     function renderPrompts(lesson){$('#promptList').innerHTML=lesson.prompts.map((p,i)=>{const item=typeof p==='string'?{title:`Հրահանգ ${i+1}`,text:p,ru:''}:p;return `<div class="prompt" data-prompt-index="${i}" data-lang="en"><div class="prompt-main"><div class="prompt-body"><h3 class="prompt-title">${esc(item.title)}</h3><div class="prompt-text">${esc(item.text)}</div></div><div class="prompt-actions">${item.ru?'<button type="button" class="mini-btn lang-btn">Русский</button>':''}<button type="button" class="mini-btn more-btn">Տեսնել ավելին</button><button type="button" class="mini-btn copy-btn">Պատճենել</button></div></div></div>`}).join('')}
