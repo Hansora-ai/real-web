@@ -59,7 +59,7 @@
     .lesson-list{grid-template-columns:repeat(3,minmax(0,1fr))}
     @media(max-width:900px){.lesson-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:640px){.lesson-list{grid-template-columns:1fr}}
-    .practice-offer-box{width:min(920px,100%);text-align:center}.practice-next-heading{margin:0 auto 14px;font-size:15px;font-weight:800;color:#b9c0d3}.practice-next{color:#91d7ff;text-decoration:none;white-space:nowrap}.practice-next:hover{color:#fff}.practice-offer-box .modal-sub{margin-bottom:22px}
+    .practice-offer-box{width:min(920px,100%);text-align:center}.practice-offer-box .pack{text-align:left}.practice-next-heading{margin:0 auto 14px;font-size:15px;font-weight:800;color:#b9c0d3}.practice-next{color:#91d7ff;text-decoration:none;white-space:nowrap}.practice-next:hover{color:#fff}.practice-offer-box .modal-sub{margin-bottom:22px}
 </style>
 </head>
 <body>
@@ -910,9 +910,9 @@ Return only the final ready-to-use image-editing prompt.`,
       const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Этот урок скоро станет доступен');return}
       if(!authHydrated){showAuthLoadingGate();return}
       if(!session){showRegistrationGate(0);requireUser();if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});return}
-      if(index!==activeIndex&&!hasAccess&&practicePlayback.lessonNumber===activeIndex+1&&practicePlayback.started&&!practicePlayback.completed&&openPracticeOffer(practicePlayback.lessonNumber,'video_closed'))return;
       if(index>2&&accessLoading)return;
       if(index>2&&!hasAccess){openCredits('locked_lesson_clicked',index);return}
+      if(index!==activeIndex&&!hasAccess&&practicePlayback.lessonNumber===activeIndex+1&&practicePlayback.started&&!practicePlayback.completed&&openPracticeOffer(practicePlayback.lessonNumber,'video_closed'))return;
       activeIndex=index;$('#playerWrap').dataset.courseLesson=String(index+1);renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('УРОК '+(index+1),l.title,l.description,index<3&&!hasAccess?'Бесплатно':'Доступ открыт');mountVideo(l.videoId,index<3&&!hasAccess?index+1:0);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
     }
     function renderPrompts(lesson){$('#promptList').innerHTML=lesson.prompts.map((p,i)=>{const item=typeof p==='string'?{title:`Команда ${i+1}`,text:p,ru:''}:p;const initial=item.ru||item.text;return `<div class="prompt" data-prompt-index="${i}" data-lang="${item.ru?'ru':'en'}"><div class="prompt-main"><div class="prompt-body"><h3 class="prompt-title">${esc(item.title)}</h3><div class="prompt-text">${esc(initial)}</div></div><div class="prompt-actions">${item.ru?'<button type="button" class="mini-btn lang-btn">English</button>':''}<button type="button" class="mini-btn more-btn">Подробнее</button><button type="button" class="mini-btn copy-btn">Копировать</button></div></div></div>`}).join('')}
