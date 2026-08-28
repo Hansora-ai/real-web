@@ -59,7 +59,7 @@
     .lesson-list{grid-template-columns:repeat(3,minmax(0,1fr))}
     @media(max-width:900px){.lesson-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:640px){.lesson-list{grid-template-columns:1fr}}
-    .practice-offer-box{width:min(620px,100%);text-align:center}.practice-next{display:inline-flex;align-items:center;justify-content:center;margin:0 auto 18px;border:0;background:transparent;color:#91d7ff;font-weight:800;cursor:pointer}.practice-next:hover{color:#fff}.practice-offer-box .primary{width:min(330px,100%);min-height:52px;margin-top:5px}.practice-offer-box .modal-sub{margin-bottom:18px}
+    .practice-offer-box{width:min(920px,100%);text-align:center}.practice-next-heading{margin:0 auto 14px;font-size:15px;font-weight:800;color:#b9c0d3}.practice-next{color:#91d7ff;text-decoration:none;white-space:nowrap}.practice-next:hover{color:#fff}.practice-offer-box .modal-sub{margin-bottom:22px}
 </style>
 </head>
 <body>
@@ -158,10 +158,15 @@
   <div id="practiceOfferModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="practiceOfferTitle">
     <div class="modal-box practice-offer-box">
       <button class="modal-close" data-close-practice-offer aria-label="Закрыть">×</button>
-      <button class="practice-next" type="button" data-practice-offer-next>Закончили? Перейти к следующему уроку →</button>
+      <div class="practice-next-heading">Закончили? <a class="practice-next" href="#" data-practice-offer-next>Следующий урок →</a></div>
+      <div class="pricing-sale">БОЛЬШИЕ СКИДКИ</div>
       <h2 id="practiceOfferTitle"></h2>
       <p id="practiceOfferText" class="modal-sub"></p>
-      <button class="primary" type="button" data-practice-offer-buy>Начать практику ⚡</button>
+      <div class="payment-methods" role="group" aria-label="Способ оплаты">
+        <button class="payment-method active" type="button" data-payment-method="international" aria-pressed="true">🌍 Международная карта</button>
+        <button class="payment-method" type="button" data-payment-method="ru" aria-pressed="false">🇷🇺 Карта РФ</button>
+      </div>
+      <div id="practiceOfferPacks" class="packs"></div>
     </div>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -819,7 +824,6 @@ Return only the final ready-to-use image-editing prompt.`,
     ];
     let sb=null, session=LOCAL_PREVIEW?{user:{id:'local-preview',email:'preview@hansora.local'}}:null, hasAccess=LOCAL_PREVIEW, accessLoading=!LOCAL_PREVIEW, authHydrated=LOCAL_PREVIEW, courseAuthRevision=0, lastCourseAuthEvent='', checkedUserId=null, activeIndex=-1, paymentMethod='international';
     let practicePlayback={lessonNumber:0,started:false,completed:false};
-    const shownPracticeOffers=new Set();
     const $=s=>document.querySelector(s);
     const esc=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
     function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2600)}
@@ -861,9 +865,9 @@ Return only the final ready-to-use image-editing prompt.`,
     function showEmpty(message){destroyPlayer();$('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty"><div><div class="play">▶</div><strong>${esc(message)}</strong><small>Ссылка на видео появится здесь</small></div></div>`}
     function destroyPlayer(){const media=$('#introNativeVideo');if(media&&!media.paused)media.pause()}
     function openPracticeOffer(lessonNumber,reason){
-      if(hasAccess||lessonNumber<1||lessonNumber>3||shownPracticeOffers.has(lessonNumber))return false;
+      if(hasAccess||lessonNumber<1||lessonNumber>3)return false;
       const offer=PRACTICE_OFFERS[lessonNumber-1];if(!offer)return false;
-      shownPracticeOffers.add(lessonNumber);$('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').textContent=offer.text;$('#practiceOfferModal').dataset.lessonNumber=String(lessonNumber);
+      $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').textContent=offer.text;$('#practiceOfferModal').dataset.lessonNumber=String(lessonNumber);renderPacks();
       window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:reason||'unknown',lessonNumber,coursePath:'/course_ru'}}));openModal('#practiceOfferModal');return true;
     }
     function bindPracticePlayer(player,lessonNumber){
@@ -918,7 +922,10 @@ Return only the final ready-to-use image-editing prompt.`,
       window.dispatchEvent(new CustomEvent('hansora:course-offer-open',{detail:{reason:reason||'manual',lessonNumber:index+1,coursePath:'/course_ru'}}));
       openModal('#creditsModal');
     }
-    function renderPacks(){const isRu=paymentMethod==='ru';$('#creditPacks').innerHTML=PACKS.map(p=>`<article class="pack ${p.featured?'featured':''}">${p.featured?'<span class="pack-badge">ПОПУЛЯРНЫЙ ВЫБОР</span>':''}<div class="pack-top"><span class="pack-line">${esc(p.line)}</span><span class="pack-save">${esc(isRu?p.rubSave:p.usdSave)}</span></div><h3>${p.credits} кредитов</h3><div class="pack-prices"><div class="price">${esc(isRu?p.rubPrice:p.usdPrice)}</div><div class="old-price">${esc(isRu?p.rubOld:p.usdOld)}</div></div><ul class="pack-benefits">${p.benefits.map(item=>`<li>${esc(item)}</li>`).join('')}</ul><button class="buy" type="button" data-credits="${p.credits}" data-product="${esc(p.product)}" data-ru-product="${esc(p.ruProduct)}">Начать практику</button></article>`).join('')}
+    function renderPacks(){
+      const isRu=paymentMethod==='ru';const markup=practice=>PACKS.map(p=>`<article class="pack ${p.featured?'featured':''}">${p.featured?'<span class="pack-badge">ПОПУЛЯРНЫЙ ВЫБОР</span>':''}<div class="pack-top"><span class="pack-line">${esc(p.line)}</span><span class="pack-save">${esc(isRu?p.rubSave:p.usdSave)}</span></div><h3>${p.credits} кредитов</h3><div class="pack-prices"><div class="price">${esc(isRu?p.rubPrice:p.usdPrice)}</div><div class="old-price">${esc(isRu?p.rubOld:p.usdOld)}</div></div><ul class="pack-benefits">${p.benefits.map(item=>`<li>${esc(item)}</li>`).join('')}</ul><button class="buy" type="button" ${practice?'data-practice-offer-buy':''} data-credits="${p.credits}" data-product="${esc(p.product)}" data-ru-product="${esc(p.ruProduct)}">Начать практику</button></article>`).join('');
+      $('#creditPacks').innerHTML=markup(false);$('#practiceOfferPacks').innerHTML=markup(true);
+    }
     function checkout(button){
       if(!requireUser())return;
       const credits=button.dataset.credits;
@@ -976,8 +983,8 @@ Return only the final ready-to-use image-editing prompt.`,
       }catch(e){console.warn(e);if(!authHydrated){authHydrated=true;session=null;hasAccess=false;accessLoading=false;renderAccess()}}
       if(new URLSearchParams(location.search).get('checkout')==='success'&&session&&!hasAccess){toast('Проверяем оплату…');let tries=0;const poll=setInterval(async()=>{tries++;checkedUserId=null;await checkAccess();if(hasAccess||tries>=12){clearInterval(poll);if(hasAccess){toast('Доступ к курсу открыт');selectLesson(0)}}},2000)}
     }
-    document.addEventListener('click',e=>{const modal=$('#practiceOfferModal');const lessonNumber=Number(modal.dataset.lessonNumber||0);if(e.target.closest('[data-close-practice-offer]')||(e.target===modal&&modal.classList.contains('open'))){closeModals();return}if(e.target.closest('[data-practice-offer-next]')){closeModals();if(lessonNumber>=1&&lessonNumber<COURSE_CONFIG.lessons.length)selectLesson(lessonNumber);return}if(e.target.closest('[data-practice-offer-buy]')){closeModals();openCredits('free_lesson_practice_clicked',Math.max(0,lessonNumber-1));return}});
-    document.addEventListener('click',e=>{const lesson=e.target.closest('[data-lesson]');if(lesson)selectLesson(Number(lesson.dataset.lesson));if(e.target.closest('#playerWrap')&&!session)requireUser();if(e.target.closest('[data-close-modal]')||e.target.classList.contains('modal'))closeModals();const method=e.target.closest('[data-payment-method]');if(method){paymentMethod=method.dataset.paymentMethod;document.querySelectorAll('[data-payment-method]').forEach(button=>{const selected=button===method;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected))});renderPacks()}const more=e.target.closest('.more-btn');if(more){const box=more.closest('.prompt');box.classList.toggle('expanded');more.textContent=box.classList.contains('expanded')?'Свернуть':'Подробнее'}const lang=e.target.closest('.lang-btn');if(lang){const box=lang.closest('.prompt');const prompt=COURSE_CONFIG.lessons[activeIndex].prompts[Number(box.dataset.promptIndex)];const toRussian=box.dataset.lang!=='ru';box.dataset.lang=toRussian?'ru':'en';box.querySelector('.prompt-text').textContent=toRussian?prompt.ru:prompt.text;lang.textContent=toRussian?'English':'Русский'}const copy=e.target.closest('.copy-btn');if(copy){const text=copy.closest('.prompt').querySelector('.prompt-text').textContent;navigator.clipboard.writeText(text).then(()=>toast('Команда скопирована'))}const buy=e.target.closest('.buy');if(buy)checkout(buy)});
+    document.addEventListener('click',e=>{const modal=$('#practiceOfferModal');const lessonNumber=Number(modal.dataset.lessonNumber||0);if(e.target.closest('[data-close-practice-offer]')||(e.target===modal&&modal.classList.contains('open'))){closeModals();return}if(e.target.closest('[data-practice-offer-next]')){e.preventDefault();closeModals();if(lessonNumber>=1&&lessonNumber<COURSE_CONFIG.lessons.length)selectLesson(lessonNumber);return}});
+    document.addEventListener('click',e=>{const lesson=e.target.closest('[data-lesson]');if(lesson)selectLesson(Number(lesson.dataset.lesson));if(e.target.closest('#playerWrap')&&!session)requireUser();if(e.target.closest('[data-close-modal]')||e.target.classList.contains('modal'))closeModals();const method=e.target.closest('[data-payment-method]');if(method){paymentMethod=method.dataset.paymentMethod;document.querySelectorAll('[data-payment-method]').forEach(button=>{const selected=button.dataset.paymentMethod===paymentMethod;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected))});renderPacks()}const more=e.target.closest('.more-btn');if(more){const box=more.closest('.prompt');box.classList.toggle('expanded');more.textContent=box.classList.contains('expanded')?'Свернуть':'Подробнее'}const lang=e.target.closest('.lang-btn');if(lang){const box=lang.closest('.prompt');const prompt=COURSE_CONFIG.lessons[activeIndex].prompts[Number(box.dataset.promptIndex)];const toRussian=box.dataset.lang!=='ru';box.dataset.lang=toRussian?'ru':'en';box.querySelector('.prompt-text').textContent=toRussian?prompt.ru:prompt.text;lang.textContent=toRussian?'English':'Русский'}const copy=e.target.closest('.copy-btn');if(copy){const text=copy.closest('.prompt').querySelector('.prompt-text').textContent;navigator.clipboard.writeText(text).then(()=>toast('Команда скопирована'))}const buy=e.target.closest('.buy');if(buy)checkout(buy)});
     $('#feedbackForm').addEventListener('submit',submitFeedback);document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModals()});
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
   })();
