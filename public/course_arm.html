@@ -167,6 +167,16 @@
       <div id="practiceOfferPacks" class="packs"></div>
     </div>
   </div>
+  <div id="welcomeOfferModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="welcomeOfferTitle">
+    <div class="modal-box practice-offer-box">
+      <button class="modal-close" data-close-modal aria-label="Փակել">×</button>
+      <div class="pricing-sale">ՄԵԾ ԶԵՂՉԵՐ</div>
+      <h2 id="welcomeOfferTitle">Բարի գալուստ դասընթաց։ 👋</h2>
+      <p class="modal-sub">Ստացեք առավելագույնը յուրաքանչյուր դասից՝ գործնականում փորձելով սովորածը հենց դիտելու ընթացքում։ Ձեռք բերեք կրեդիտներ, որպեսզի ինքնուրույն փորձեք գործիքները, ամրապնդեք գիտելիքները և հասնեք ավելի լավ արդյունքների։</p>
+      <div class="payment-note">Ամսական վճար չէ</div>
+      <div id="welcomeOfferPacks" class="packs"></div>
+    </div>
+  </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -817,6 +827,7 @@ Return only the final ready-to-use image-editing prompt.`,
     ];
     let sb=null, session=null, hasAccess=false, accessLoading=true, authHydrated=false, courseAuthRevision=0, lastCourseAuthEvent='', checkedUserId=null, activeIndex=-1, ytPlayer=null, ytReady=false;
     let practicePlayback={lessonNumber:0,started:false,completed:false};
+    let welcomeOfferUserId=null;
     const dismissedPracticeOffers=new Set();
     let pendingFreeLessonIndex=null;
     const $=s=>document.querySelector(s);
@@ -825,6 +836,19 @@ Return only the final ready-to-use image-editing prompt.`,
     function openModal(id){$(id).classList.add('open');document.body.style.overflow='hidden'}
     function closeModals(){document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open'));document.body.style.overflow=''}
     function requireUser(){if(!authHydrated){showAuthLoadingGate();return false}if(session?.user)return true;openModal('#signupModal');return false}
+    function maybeShowWelcomeOffer(){
+      const userId=session?.user?.id||'';
+      if(!authHydrated||accessLoading||hasAccess||!userId||welcomeOfferUserId===userId||new URLSearchParams(location.search).get('checkout')==='success')return;
+      const storageKey='hansora-course-welcome-offer-v1:'+userId;
+      try{if(localStorage.getItem(storageKey)==='seen')return}catch(error){console.warn('Could not read welcome-offer state:',error)}
+      welcomeOfferUserId=userId;
+      setTimeout(()=>{
+        if(session?.user?.id!==userId||hasAccess){welcomeOfferUserId=null;return}
+        try{localStorage.setItem(storageKey,'seen')}catch(error){console.warn('Could not save welcome-offer state:',error)}
+        window.dispatchEvent(new CustomEvent('hansora:course-welcome-offer-open',{detail:{coursePath:'/course_arm'}}));
+        openModal('#welcomeOfferModal');
+      },300);
+    }
     async function authHeader(){const {data}=await sb.auth.getSession();session=data?.session||null;return session?{'Authorization':'Bearer '+session.access_token}: {}}
     async function checkAccess(){
       const userId=session?.user?.id||null;
@@ -850,6 +874,7 @@ Return only the final ready-to-use image-editing prompt.`,
       if(!session){showRegistrationGate(0);return}
       const requestedIndex=activeIndex>=0&&!COURSE_CONFIG.lessons[activeIndex]?.comingSoon?activeIndex:0;
       selectLesson(hasAccess?requestedIndex:Math.min(requestedIndex,2),false);
+      maybeShowWelcomeOffer();
     }
     function renderLessons(){
       $('#lessonList').innerHTML=COURSE_CONFIG.lessons.map((l,i)=>{const unlocked=(i<3&&!!session)||hasAccess;const preview=l.thumbnailUrl||'';const thumb=`<span class="lesson-thumb" style="background-image:url('${esc(preview)}')"><span class="lesson-thumb-play">▶</span></span>`;return `<button type="button" class="lesson-btn ${activeIndex===i?'active':''} ${unlocked?'unlocked':''}" data-lesson="${i}">${thumb}<span class="lesson-row"><span class="lesson-num">${i+1}</span><span class="lesson-copy"><strong>${esc(l.title)}</strong><small>${esc(l.duration)}</small></span><span class="lock">${unlocked?'✓':'🔒'}</span></span></button>`}).join('');
@@ -936,7 +961,7 @@ Return only the final ready-to-use image-editing prompt.`,
     }
     function renderPacks(){
       const markup=practice=>PACKS.map(p=>`<article class="pack ${p.featured?'featured':''}">${p.featured?'<span class="pack-badge">ԱՄԵՆԱՊԱՀԱՆՋՎԱԾԸ</span>':''}<div class="pack-top"><span class="pack-line">${esc(p.line)}</span><span class="pack-save">${esc(p.save)}</span></div><h3>${p.credits} կրեդիտ</h3><div class="pack-prices"><div class="price">${esc(p.price)}</div><div class="approx-price">${esc(p.approxPrice)}</div><div class="old-price">${esc(p.oldPrice)}</div></div><ul class="pack-benefits">${p.benefits.map(item=>`<li>${esc(item)}</li>`).join('')}</ul><button class="buy" type="button" ${practice?'data-practice-offer-buy':''} data-credits="${p.credits}" data-product="${esc(p.product)}">Սկսել պրակտիկան</button></article>`).join('');
-      $('#creditPacks').innerHTML=markup(false);$('#practiceOfferPacks').innerHTML=markup(true);
+      $('#creditPacks').innerHTML=markup(false);$('#practiceOfferPacks').innerHTML=markup(true);$('#welcomeOfferPacks').innerHTML=markup(true);
     }
     function checkout(button){
       if(!session?.user){closeModals();openModal('#signupModal');return}const url=new URL(button.dataset.product);url.searchParams.set('quantity','1');url.searchParams.set('minimalAddress','true');url.searchParams.set('redirect_url',location.origin+location.pathname+'?checkout=success');url.searchParams.set('metadata_uid',session.user.id);url.searchParams.set('metadata_credits',button.dataset.credits);url.searchParams.set('metadata_course_id','hansora-ai-course');if(session.user.email)url.searchParams.set('metadata_email',session.user.email);location.href=url.toString();
