@@ -171,6 +171,20 @@
       <div id="practiceOfferPacks" class="packs"></div>
     </div>
   </div>
+  <div id="welcomeOfferModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="welcomeOfferTitle">
+    <div class="modal-box practice-offer-box">
+      <button class="modal-close" data-close-modal aria-label="Закрыть">×</button>
+      <div class="pricing-sale">БОЛЬШИЕ СКИДКИ</div>
+      <h2 id="welcomeOfferTitle">Добро пожаловать на курс! 👋</h2>
+      <p class="modal-sub">Получайте максимум от каждого урока — практикуйтесь прямо во время просмотра. Приобретите кредиты, чтобы самостоятельно пробовать инструменты, закреплять знания и достигать лучших результатов.</p>
+      <div class="payment-note">Не ежемесячная оплата</div>
+      <div class="payment-methods" role="group" aria-label="Способ оплаты">
+        <button class="payment-method active" type="button" data-payment-method="international" aria-pressed="true">🌍 Международная карта</button>
+        <button class="payment-method" type="button" data-payment-method="ru" aria-pressed="false">🇷🇺 Карта РФ</button>
+      </div>
+      <div id="welcomeOfferPacks" class="packs"></div>
+    </div>
+  </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -826,6 +840,7 @@ Return only the final ready-to-use image-editing prompt.`,
     ];
     let sb=null, session=LOCAL_PREVIEW?{user:{id:'local-preview',email:'preview@hansora.local'}}:null, hasAccess=LOCAL_PREVIEW, accessLoading=!LOCAL_PREVIEW, authHydrated=LOCAL_PREVIEW, courseAuthRevision=0, lastCourseAuthEvent='', checkedUserId=null, activeIndex=-1, paymentMethod='international';
     let practicePlayback={lessonNumber:0,started:false,completed:false};
+    let welcomeOfferUserId=null;
     const dismissedPracticeOffers=new Set();
     let pendingFreeLessonIndex=null;
     const $=s=>document.querySelector(s);
@@ -834,6 +849,19 @@ Return only the final ready-to-use image-editing prompt.`,
     function openModal(id){$(id).classList.add('open');document.body.style.overflow='hidden'}
     function closeModals(){document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open'));document.body.style.overflow=''}
     function requireUser(){if(!authHydrated){showAuthLoadingGate();return false}if(session?.user)return true;openModal('#signupModal');return false}
+    function maybeShowWelcomeOffer(){
+      const userId=session?.user?.id||'';
+      if(!authHydrated||accessLoading||hasAccess||!userId||welcomeOfferUserId===userId||new URLSearchParams(location.search).get('checkout')==='success')return;
+      const storageKey='hansora-course-welcome-offer-v1:'+userId;
+      try{if(localStorage.getItem(storageKey)==='seen')return}catch(error){console.warn('Could not read welcome-offer state:',error)}
+      welcomeOfferUserId=userId;
+      setTimeout(()=>{
+        if(session?.user?.id!==userId||hasAccess){welcomeOfferUserId=null;return}
+        try{localStorage.setItem(storageKey,'seen')}catch(error){console.warn('Could not save welcome-offer state:',error)}
+        window.dispatchEvent(new CustomEvent('hansora:course-welcome-offer-open',{detail:{coursePath:'/course_ru'}}));
+        openModal('#welcomeOfferModal');
+      },300);
+    }
     async function authHeader(){const {data}=await sb.auth.getSession();session=data?.session||null;return session?{'Authorization':'Bearer '+session.access_token}: {}}
     async function checkAccess(){
       const userId=session?.user?.id||null;
@@ -859,6 +887,7 @@ Return only the final ready-to-use image-editing prompt.`,
       const requested=activeIndex>=0&&!COURSE_CONFIG.lessons[activeIndex]?.comingSoon?activeIndex:0;
       if(!session){showRegistrationGate(0);return}
       selectLesson(hasAccess?requested:Math.min(requested,2),false);
+      maybeShowWelcomeOffer();
     }
     function renderLessons(){
       $('#lessonList').innerHTML=COURSE_CONFIG.lessons.map((l,i)=>{const preview=l.thumbnailUrl||LESSON_PREVIEWS[i]||'';const unlocked=(i<3&&!!session)||hasAccess;const thumb=`<span class="lesson-thumb" style="background-image:url('${esc(preview)}')"><span class="lesson-thumb-play">▶</span></span>`;return `<button type="button" class="lesson-btn ${activeIndex===i?'active':''} ${unlocked?'unlocked':''}" data-lesson="${i}">${thumb}<span class="lesson-row"><span class="lesson-num">${i+1}</span><span class="lesson-copy"><strong>${esc(l.title)}</strong><small>${esc(l.duration)}</small></span><span class="lock">${unlocked?'✓':'🔒'}</span></span></button>`}).join('');
@@ -942,7 +971,7 @@ Return only the final ready-to-use image-editing prompt.`,
     }
     function renderPacks(){
       const isRu=paymentMethod==='ru';const markup=practice=>PACKS.map(p=>`<article class="pack ${p.featured?'featured':''}">${p.featured?'<span class="pack-badge">ПОПУЛЯРНЫЙ ВЫБОР</span>':''}<div class="pack-top"><span class="pack-line">${esc(p.line)}</span><span class="pack-save">${esc(isRu?p.rubSave:p.usdSave)}</span></div><h3>${p.credits} кредитов</h3><div class="pack-prices"><div class="price">${esc(isRu?p.rubPrice:p.usdPrice)}</div><div class="old-price">${esc(isRu?p.rubOld:p.usdOld)}</div></div><ul class="pack-benefits">${p.benefits.map(item=>`<li>${esc(item)}</li>`).join('')}</ul><button class="buy" type="button" ${practice?'data-practice-offer-buy':''} data-credits="${p.credits}" data-product="${esc(p.product)}" data-ru-product="${esc(p.ruProduct)}">Начать практику</button></article>`).join('');
-      $('#creditPacks').innerHTML=markup(false);$('#practiceOfferPacks').innerHTML=markup(true);
+      $('#creditPacks').innerHTML=markup(false);$('#practiceOfferPacks').innerHTML=markup(true);$('#welcomeOfferPacks').innerHTML=markup(true);
     }
     function checkout(button){
       if(!requireUser())return;
