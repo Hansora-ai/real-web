@@ -201,7 +201,7 @@
   }
 
   function isCourseLandingPath() {
-    return /\/(?:course_arm|course_ru)\/?$/i.test(location.pathname || '');
+    return /\/(?:course_arm|course_ru)(?:\.html)?\/?$/i.test(location.pathname || '');
   }
 
   function registrationLanguageChoiceIsRequired(user) {
@@ -3686,7 +3686,7 @@
   }
 
   function showSignupOffer(user, force) {
-    if (!user || !user.id || inOfferPopupFrame()) return;
+    if (!user || !user.id || inOfferPopupFrame() || isCourseLandingPath()) return;
     if (!force && isSignupOfferDismissed(user)) return;
     if (document.getElementById('hansoraSignupOffer')) return;
 
