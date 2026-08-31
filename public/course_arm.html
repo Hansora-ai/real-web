@@ -63,7 +63,7 @@
     .lesson-btn:nth-child(1) .lesson-thumb{background-image:url('https://vz-4ebbab26-4bc.b-cdn.net/f828ede8-3230-4b4b-b0a9-b4792f3f0d05/thumbnail.jpg')!important}
     .lesson-btn:nth-child(2) .lesson-thumb{background-image:url('https://vz-4ebbab26-4bc.b-cdn.net/173056c9-86b0-4a85-b760-4de88c804b1f/thumbnail.jpg')!important}
     .lesson-btn:nth-child(3) .lesson-thumb{background-image:url('https://vz-4ebbab26-4bc.b-cdn.net/eebc9bb3-2021-4f0d-bcbc-17e20fbb1e3e/thumbnail.jpg')!important}
-    .practice-offer-box{width:min(920px,100%);text-align:center}.practice-offer-box .pack{text-align:left}.practice-next-heading{margin:0 auto 14px;font-size:15px;font-weight:800;color:#b9c0d3}.practice-next{color:#91d7ff;text-decoration:none;white-space:nowrap}.practice-next:hover{color:#fff}.practice-offer-box .modal-sub{margin-bottom:12px}
+    .practice-offer-box{width:min(920px,100%);text-align:center}.practice-offer-box .pack{text-align:left}.practice-next-heading{margin:0 auto 14px;font-size:15px;font-weight:800;color:#b9c0d3}.practice-next{color:#91d7ff;text-decoration:none;white-space:nowrap}.practice-next:hover{color:#fff}.practice-offer-box .modal-sub{margin-bottom:12px}.course-free-highlight{color:#79d8ff;font-weight:900}
 </style>
 </head>
 <body>
@@ -821,7 +821,7 @@ Return only the final ready-to-use image-editing prompt.`,
     ];
     const ANSWERS=['Գերազանց էր՝ ամեն ինչ հասկանալի էր','Լավ էր, բայց բավարար չէր','Լավ էր, բայց ավելի շատ օրինակներ են պետք','Լավ էր, բայց նյութը շատ արագ էր ներկայացված','Ավելին էի սպասում․ լավը չէր','Լավը չէր․ որոշ հատվածներ չհասկացա','Ինձ դուր չեկավ․ վատն էր'];
     const PRACTICE_OFFERS=[
-      {title:'Հիանալի սկիզբ է։ 🎉',text:'Դուք արդեն տեսաք, թե ինչպես է տեքստը վերածվում պատկերի։ Ժամանակն է ինքներդ փորձելու՝ գործնական աշխատանքի համար նախատեսված կրեդիտներն այժմ զեղչով են։'},
+      {title:'Ժամանակն է անցնել պրակտիկայի 💪',html:'Ձեռք բերեք կրեդիտներ զեղչված գնով՝ գեներացնելու և դասը շարունակելու համար։ <span class="course-free-highlight">Դասընթացն անվճար է</span>․ կրեդիտներն անհրաժեշտ են միայն դասերի ընթացքում AI գործիքներով գործնական աշխատանք կատարելու համար։'},
       {title:'Դուք արդեն հիմք ունեք 💪',text:'Դուք գիտեք, թե ինչպես է կառուցվում պրոմպտը։ Չե՞ք ցանկանում ամրապնդել գիտելիքները գործնականում։ Նույնիսկ ամենափոքր փաթեթով կարող եք գեներացնել մինչև 200 պատկեր։'},
       {title:'Այժմ դուք ինքներդ կարող եք դա անել 🚀',text:'Գիտելիքները բավարար են ուշադրություն գրավող պատկեր գեներացնելու համար։ Մնում է միայն սեղմել կոճակը՝ կրեդիտներն այժմ մեծ զեղչերով են, բաց մի՛ թողեք հնարավորությունը։'}
     ];
@@ -901,7 +901,7 @@ Return only the final ready-to-use image-editing prompt.`,
     function openPracticeOffer(lessonNumber,reason){
       if(hasAccess||lessonNumber<1||lessonNumber>3||dismissedPracticeOffers.has(lessonNumber))return false;
       const offer=PRACTICE_OFFERS[lessonNumber-1];if(!offer)return false;
-      $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').textContent=offer.text;$('#practiceOfferModal').dataset.lessonNumber=String(lessonNumber);renderPacks();
+      $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').innerHTML=offer.html||esc(offer.text);$('#practiceOfferModal').dataset.lessonNumber=String(lessonNumber);renderPacks();
       window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:reason||'unknown',lessonNumber,coursePath:'/course_arm'}}));openModal('#practiceOfferModal');return true;
     }
     function dismissPracticeOffer(goToPendingLesson){
@@ -947,8 +947,8 @@ Return only the final ready-to-use image-editing prompt.`,
       if(!session){showRegistrationGate(index);openModal('#signupModal');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});return}
       if(index>0&&accessLoading){toast('Խնդրում ենք սպասել․ հասանելիությունը ստուգվում է');return}
       if((index===1||index===2)&&!hasAccess){
-        const offer=PRACTICE_OFFERS[index-1]||PRACTICE_OFFERS[0];
-        $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').textContent=offer.text;$('#practiceOfferModal').dataset.lessonNumber=String(index+1);pendingFreeLessonIndex=null;renderPacks();
+        const offer=PRACTICE_OFFERS[0];
+        $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').innerHTML=offer.html;$('#practiceOfferModal').dataset.lessonNumber=String(index+1);pendingFreeLessonIndex=null;renderPacks();
         window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:'locked_practice_lesson_clicked',lessonNumber:index+1,coursePath:'/course_arm'}}));openModal('#practiceOfferModal');return;
       }
       if(index>2&&!hasAccess){openCredits('locked_lesson_clicked',index);return}
