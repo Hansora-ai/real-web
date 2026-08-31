@@ -7352,6 +7352,26 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         minCredits: 5.2
       },
       {
+        id: 'gemini-omni-flash-1-1',
+        name: 'Gemini Omni 1.1 Flash',
+        emoji: 'GF',
+        subtitle: 'Տեքստ / պատկեր / տեսանյութ → տեսանյութ',
+        category: 'video',
+        description: 'Gemini Omni 1.1 Flash՝ տեքստային հարցմամբ, ընտրովի հղումային պատկերներով, ձայնային նախընտրանքներով և ելակետային տեսանյութի հատվածի ընտրությամբ։',
+        endpoint: '/.netlify/functions/run-gemini-omni-flash-1-1',
+        needsImage: false,
+        maxFiles: 0,
+        uploadMaxMB: 100,
+        specificUpload: 'geminiOmni',
+        aspectOptions: ['16:9', '9:16'],
+        defaultAspect: '16:9',
+        resolutionOptions: ['720p', '1080p', '4K'],
+        defaultResolution: '1080p',
+        durations: [4, 6, 8, 10],
+        costLabel: 'Առանց տեսանյութի 720p/1080p՝ 4վ — 4⚡, 6վ — 5.5⚡, 8վ — 6.9⚡, 10վ — 8.3⚡ / Առանց տեսանյութի 4K՝ 4վ — 10⚡, 6վ — 11⚡, 8վ — 12⚡, 10վ — 14⚡ / Տեսանյութով՝ 720p/1080p — 11⚡, 4K — 16⚡',
+        minCredits: 4
+      },
+      {
         id: 'gemini-omni-video',
         name: 'Gemini Omni',
         emoji: 'GO',
@@ -7573,7 +7593,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     // Models that should APPEND images when user uploads again (multi-image support)
 	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
 	    const IMAGE_MODEL_ORDER = ['gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-pro', 'seedream-5-lite', 'grok-image'];
-    const VIDEO_MODEL_ORDER = ['seedance25', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
+    const VIDEO_MODEL_ORDER = ['seedance25', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-flash-1-1', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function normalizeUnlimitedValue(value) {
       return String(value || '').trim().toLowerCase();
@@ -7965,7 +7985,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         return { inputId: 'seedanceAudioRefsInput', kind: 'audio', max: getSeedanceReferenceLimit('audio') };
       }
       if (id === 'videoRefImagesThumbs') {
-        const max = currentModel && (currentModel.id === 'grok-video' || currentModel.id === 'gemini-omni-video') ? 7 : 9;
+        const max = currentModel && (currentModel.id === 'grok-video' || currentModel.id.startsWith('gemini-omni')) ? 7 : 9;
         return { inputId: 'videoRefImagesInput', kind: 'image', max };
       }
       return byId[id] || null;
@@ -8832,6 +8852,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         'seedance-2-mini': 'seedance20-mini',
         'seedance-2.0-mini': 'seedance20-mini',
         'seedance20-mini': 'seedance20-mini',
+        'gemini-omni-flash': 'gemini-omni-flash-1-1',
+        'gemini-omni-1.1-flash': 'gemini-omni-flash-1-1',
+        'gemini-omni-flash-1-1': 'gemini-omni-flash-1-1',
         'gemini-omni': 'gemini-omni-video',
 	        'geminiomni': 'gemini-omni-video',
 	        'gemini-omni-video': 'gemini-omni-video',
@@ -9075,6 +9098,15 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const seconds = Math.max(1, Number(currentDuration || 5));
         return Number((seconds * 1.3).toFixed(1));
       }
+	      if (model.id === 'gemini-omni-flash-1-1') {
+	        const hasVideoInput = !!videoSourceFile;
+	        if (hasVideoInput) return currentResolution === '4K' ? 16 : 11;
+	        const seconds = [4, 6, 8, 10].includes(Number(currentDuration)) ? Number(currentDuration) : 4;
+	        const table = currentResolution === '4K'
+	          ? { 4: 10, 6: 11, 8: 12, 10: 14 }
+	          : { 4: 4, 6: 5.5, 8: 6.9, 10: 8.3 };
+	        return table[seconds];
+	      }
 	      if (model.id === 'gemini-omni-video') {
 	        const hasVideoInput = !!videoSourceFile;
 	        if (hasVideoInput) return currentResolution === '4K' ? 16 : 11;
@@ -10627,7 +10659,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	    }
 
 	    function openGeminiOmniTrimModal(file) {
-	      if (!file || !currentModel || currentModel.id !== 'gemini-omni-video') return;
+	      if (!file || !currentModel || !currentModel.id.startsWith('gemini-omni')) return;
 	      const overlay = document.getElementById('geminiOmniTrimOverlay');
 	      const video = document.getElementById('geminiTrimVideo');
 	      if (!overlay || !video) return;
@@ -10639,6 +10671,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      document.body.style.overflow = 'hidden';
 	      video.addEventListener('loadedmetadata', () => {
 	        geminiOmniSourceDuration = Math.max(0, Number(video.duration || 0));
+	        if (currentModel && currentModel.id === 'gemini-omni-flash-1-1' && geminiOmniSourceDuration > 30) {
+	          showStatus('Gemini Omni 1.1 Flash-ի ելակետային տեսանյութը պետք է լինի առավելագույնը 30 վայրկյան։', 'error');
+	          closeGeminiOmniTrimModal({ clearFile:true });
+	          return;
+	        }
 	        const clipLength = Math.min(getGeminiOmniTrimMaxDuration(), geminiOmniSourceDuration || getGeminiOmniTrimMaxDuration());
 	        setGeminiOmniTrimWindow(0, clipLength);
 	        geminiOmniTrimStartBeforeModal = geminiOmniVideoStart;
@@ -10670,7 +10707,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	    }
 
 	    function refreshGeminiOmniTrimForDuration() {
-	      if (!videoSourceFile || !currentModel || currentModel.id !== 'gemini-omni-video' || !geminiOmniSourceDuration) return;
+	      if (!videoSourceFile || !currentModel || !currentModel.id.startsWith('gemini-omni') || !geminiOmniSourceDuration) return;
 	      updateGeminiOmniTrimLabels();
 	    }
 
@@ -11123,6 +11160,15 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     });
 	    document.getElementById('videoSourceInput').addEventListener('change', (e) => {
 	      videoSourceFile = (e.target.files || [])[0] || null;
+	      if (videoSourceFile && currentModel && currentModel.id.startsWith('gemini-omni') && videoRefImageFiles.length > 5) {
+	        videoRefImageFiles = videoRefImageFiles.slice(0, 5);
+	        renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
+	          videoRefImageFiles.splice(index, 1);
+	          updateCostDisplay();
+	          updateRunButtonLabel();
+	        });
+	        showStatus('Ելակետային տեսանյութը զբաղեցնում է մուտքային տվյալների 2 միավոր, ուստի հղումային պատկերների քանակը սահմանափակվեց 5-ով։', 'info');
+	      }
 	      renderSingleThumb(videoSourceFile, document.getElementById('videoSourceThumb'), () => {
 	        videoSourceFile = null;
 	        resetGeminiOmniTrimState();
@@ -11130,12 +11176,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        updateCostDisplay();
 	        updateRunButtonLabel();
 	      });
-	      if (videoSourceFile && currentModel && currentModel.id === 'gemini-omni-video') openGeminiOmniTrimModal(videoSourceFile);
+	      if (videoSourceFile && currentModel && currentModel.id.startsWith('gemini-omni')) openGeminiOmniTrimModal(videoSourceFile);
 	      updateCostDisplay();
 	      updateRunButtonLabel();
 	    });
     document.getElementById('videoRefImagesInput').addEventListener('change', (e) => {
-      const max = currentModel && currentModel.id === 'grok-video' ? 7 : (currentModel && currentModel.id === 'gemini-omni-video' ? 7 : 9);
+      const max = currentModel && currentModel.id === 'grok-video' ? 7 : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : 7) : 9);
       videoRefImageFiles = appendFilesWithLimit(videoRefImageFiles, e.target.files, max, 'image/*');
       e.target.value = '';
       renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
@@ -12248,6 +12294,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             run_id: runId
           };
         }
+        case 'gemini-omni-flash-1-1':
         case 'gemini-omni-video': {
           const sourceVideoUrl = videoSourceFile ? (urls || [])[0] : '';
           const imageStartIndex = videoSourceFile ? 1 : 0;
@@ -12259,7 +12306,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             prompt,
             aspect_ratio: aspect || '16:9',
             duration: sourceVideoUrl ? selectedVideoDuration : (duration ? Number(duration) : 4),
-	            resolution: currentResolution === '4K' ? '4k' : '1080p',
+	            resolution: currentResolution === '4K' ? '4k' : (currentResolution === '720p' ? '720p' : '1080p'),
 	            image_urls: imageUrls,
 	            video_url: sourceVideoUrl || undefined,
 	            video_start: sourceVideoUrl ? Number(geminiOmniVideoStart || 0) : undefined,
