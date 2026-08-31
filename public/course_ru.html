@@ -59,7 +59,7 @@
     .lesson-list{grid-template-columns:repeat(3,minmax(0,1fr))}
     @media(max-width:900px){.lesson-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:640px){.lesson-list{grid-template-columns:1fr}}
-    .practice-offer-box{width:min(920px,100%);text-align:center}.practice-offer-box .pack{text-align:left}.practice-next-heading{margin:0 auto 14px;font-size:15px;font-weight:800;color:#b9c0d3}.practice-next{color:#91d7ff;text-decoration:none;white-space:nowrap}.practice-next:hover{color:#fff}.practice-offer-box .modal-sub{margin-bottom:12px}
+    .practice-offer-box{width:min(920px,100%);text-align:center}.practice-offer-box .pack{text-align:left}.practice-next-heading{margin:0 auto 14px;font-size:15px;font-weight:800;color:#b9c0d3}.practice-next{color:#91d7ff;text-decoration:none;white-space:nowrap}.practice-next:hover{color:#fff}.practice-offer-box .modal-sub{margin-bottom:12px}.course-free-highlight{color:#79d8ff;font-weight:900}
 </style>
 </head>
 <body>
@@ -834,7 +834,7 @@ Return only the final ready-to-use image-editing prompt.`,
     const ANSWERS=['Отлично — всё было понятно','Было хорошо, но недостаточно','Было хорошо, но нужно больше примеров','Было хорошо, но материал был изложен слишком быстро','Я ожидал(а) большего — было не очень','Было непонятно — некоторые разделы я не понял(а)','Мне не понравилось — было плохо'];
     const LOCAL_PREVIEW=location.protocol==='file:'||location.hostname==='127.0.0.1'||location.hostname==='localhost';
     const PRACTICE_OFFERS=[
-      {title:'Отличное начало! 🎉',text:'Вы уже видели, как текст превращается в изображение. Самое время попробовать самому — кредиты для практики сейчас со скидкой.'},
+      {title:'Теперь — к практике 💪',html:'Купите кредиты по сниженной цене, чтобы начать генерировать и продолжить урок. <span class="course-free-highlight">Курс бесплатный</span> — кредиты нужны только для практики с AI-инструментами во время занятий.'},
       {title:'У вас уже есть база 💪',text:'Вы знаете, как строится промпт. Не хотите закрепить на практике? Даже с самым маленьким пакетом вы можете сгенерировать до 200 изображений.'},
       {title:'Теперь вы умеете это сами 🚀',text:'Знаний достаточно, чтобы сгенерировать привлекающее внимание изображение. Осталось только нажать кнопку — кредиты сейчас с большими скидками, не упустите возможность.'}
     ];
@@ -902,7 +902,7 @@ Return only the final ready-to-use image-editing prompt.`,
     function openPracticeOffer(lessonNumber,reason){
       if(hasAccess||lessonNumber<1||lessonNumber>3||dismissedPracticeOffers.has(lessonNumber))return false;
       const offer=PRACTICE_OFFERS[lessonNumber-1];if(!offer)return false;
-      $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').textContent=offer.text;$('#practiceOfferModal').dataset.lessonNumber=String(lessonNumber);renderPacks();
+      $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').innerHTML=offer.html||esc(offer.text);$('#practiceOfferModal').dataset.lessonNumber=String(lessonNumber);renderPacks();
       window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:reason||'unknown',lessonNumber,coursePath:'/course_ru'}}));openModal('#practiceOfferModal');return true;
     }
     function dismissPracticeOffer(goToPendingLesson){
@@ -957,8 +957,8 @@ Return only the final ready-to-use image-editing prompt.`,
       if(!session){showRegistrationGate(0);requireUser();if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});return}
       if(index>0&&accessLoading)return;
       if((index===1||index===2)&&!hasAccess){
-        const offer=PRACTICE_OFFERS[index-1]||PRACTICE_OFFERS[0];
-        $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').textContent=offer.text;$('#practiceOfferModal').dataset.lessonNumber=String(index+1);pendingFreeLessonIndex=null;renderPacks();
+        const offer=PRACTICE_OFFERS[0];
+        $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').innerHTML=offer.html;$('#practiceOfferModal').dataset.lessonNumber=String(index+1);pendingFreeLessonIndex=null;renderPacks();
         window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:'locked_practice_lesson_clicked',lessonNumber:index+1,coursePath:'/course_ru'}}));openModal('#practiceOfferModal');return;
       }
       if(index>2&&!hasAccess){openCredits('locked_lesson_clicked',index);return}
