@@ -137,7 +137,7 @@
     <div class="modal-box signup-box">
       <button class="modal-close" data-close-modal aria-label="Закрыть">×</button>
       <div class="icon">♙</div><h2 id="signupTitle">Требуется регистрация</h2>
-      <p>Зарегистрируйтесь, чтобы бесплатно посмотреть первые три урока. Кредиты потребуются для практики в следующих уроках.</p>
+      <p>Зарегистрируйтесь, чтобы смотреть урок.</p>
       <div class="signup-actions"><a id="courseSignupLink" class="primary" href="/login.html?mode=signup">Зарегистрироваться</a></div>
     </div>
   </div>
@@ -855,12 +855,14 @@ Return only the final ready-to-use image-editing prompt.`,
       const storageKey='hansora-course-welcome-offer-v1:'+userId;
       try{if(localStorage.getItem(storageKey)==='seen')return}catch(error){console.warn('Could not read welcome-offer state:',error)}
       welcomeOfferUserId=userId;
-      setTimeout(()=>{
+      const openWhenReady=()=>{
         if(session?.user?.id!==userId||hasAccess){welcomeOfferUserId=null;return}
+        if(document.querySelector('.modal.open')){setTimeout(openWhenReady,1000);return}
         try{localStorage.setItem(storageKey,'seen')}catch(error){console.warn('Could not save welcome-offer state:',error)}
         window.dispatchEvent(new CustomEvent('hansora:course-welcome-offer-open',{detail:{coursePath:'/course_ru'}}));
         openModal('#welcomeOfferModal');
-      },300);
+      };
+      setTimeout(openWhenReady,5000);
     }
     async function authHeader(){const {data}=await sb.auth.getSession();session=data?.session||null;return session?{'Authorization':'Bearer '+session.access_token}: {}}
     async function checkAccess(){
@@ -886,13 +888,13 @@ Return only the final ready-to-use image-editing prompt.`,
       renderLessons();
       const requested=activeIndex>=0&&!COURSE_CONFIG.lessons[activeIndex]?.comingSoon?activeIndex:0;
       if(!session){showRegistrationGate(0);return}
-      selectLesson(hasAccess?requested:Math.min(requested,2),false);
+      selectLesson(hasAccess?requested:0,false);
       maybeShowWelcomeOffer();
     }
     function renderLessons(){
-      $('#lessonList').innerHTML=COURSE_CONFIG.lessons.map((l,i)=>{const preview=l.thumbnailUrl||LESSON_PREVIEWS[i]||'';const unlocked=(i<3&&!!session)||hasAccess;const thumb=`<span class="lesson-thumb" style="background-image:url('${esc(preview)}')"><span class="lesson-thumb-play">▶</span></span>`;return `<button type="button" class="lesson-btn ${activeIndex===i?'active':''} ${unlocked?'unlocked':''}" data-lesson="${i}">${thumb}<span class="lesson-row"><span class="lesson-num">${i+1}</span><span class="lesson-copy"><strong>${esc(l.title)}</strong><small>${esc(l.duration)}</small></span><span class="lock">${unlocked?'✓':'🔒'}</span></span></button>`}).join('');
+      $('#lessonList').innerHTML=COURSE_CONFIG.lessons.map((l,i)=>{const preview=l.thumbnailUrl||LESSON_PREVIEWS[i]||'';const unlocked=(i===0&&!!session)||hasAccess;const thumb=`<span class="lesson-thumb" style="background-image:url('${esc(preview)}')"><span class="lesson-thumb-play">▶</span></span>`;return `<button type="button" class="lesson-btn ${activeIndex===i?'active':''} ${unlocked?'unlocked':''}" data-lesson="${i}">${thumb}<span class="lesson-row"><span class="lesson-num">${i+1}</span><span class="lesson-copy"><strong>${esc(l.title)}</strong><small>${esc(l.duration)}</small></span><span class="lock">${unlocked?'✓':'🔒'}</span></span></button>`}).join('');
       const published=COURSE_CONFIG.lessons.filter(l=>!l.comingSoon).length;
-      $('#progressText').textContent='Доступно уроков: '+(hasAccess?published:(session?3:0))+' / '+COURSE_CONFIG.lessons.length;
+      $('#progressText').textContent='Доступно уроков: '+(hasAccess?published:(session?1:0))+' / '+COURSE_CONFIG.lessons.length;
     }
     function playerMeta(kicker,title,description,pill){$('#lessonKicker').textContent=kicker;$('#lessonTitle').textContent=title;$('#lessonDescription').textContent=description;$('#accessPill').textContent=pill}
     function showEmpty(message){destroyPlayer();$('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty"><div><div class="play">▶</div><strong>${esc(message)}</strong><small>Ссылка на видео появится здесь</small></div></div>`}
@@ -943,7 +945,7 @@ Return only the final ready-to-use image-editing prompt.`,
       activeIndex=index;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.remove('hidden');
       playerMeta('УРОК '+(index+1),lesson.title,lesson.description,'Требуется регистрация');
       const preview=lesson.thumbnailUrl||LESSON_PREVIEWS[index]||LESSON_PREVIEWS[0]||'';
-      $('#playerWrap').innerHTML=`<div class="lesson-preview" style="background-image:url('${esc(preview)}')"><div class="lesson-preview-inner"><div class="play">▶</div><strong>Зарегистрируйтесь, чтобы смотреть бесплатно</strong><small>Для первых трёх уроков покупать кредиты не нужно</small></div></div>`;
+      $('#playerWrap').innerHTML=`<div class="lesson-preview" style="background-image:url('${esc(preview)}')"><div class="lesson-preview-inner"><div class="play">▶</div><strong>Зарегистрируйтесь, чтобы смотреть</strong></div></div>`;
     }
     function showAuthLoadingGate(){
       delete $('#playerWrap').dataset.courseLesson;activeIndex=-1;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.add('hidden');
@@ -953,7 +955,12 @@ Return only the final ready-to-use image-editing prompt.`,
       const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Этот урок скоро станет доступен');return}
       if(!authHydrated){showAuthLoadingGate();return}
       if(!session){showRegistrationGate(0);requireUser();if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});return}
-      if(index>2&&accessLoading)return;
+      if(index>0&&accessLoading)return;
+      if((index===1||index===2)&&!hasAccess){
+        const offer=PRACTICE_OFFERS[index-1]||PRACTICE_OFFERS[0];
+        $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').textContent=offer.text;$('#practiceOfferModal').dataset.lessonNumber=String(index+1);pendingFreeLessonIndex=null;renderPacks();
+        window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:'locked_practice_lesson_clicked',lessonNumber:index+1,coursePath:'/course_ru'}}));openModal('#practiceOfferModal');return;
+      }
       if(index>2&&!hasAccess){openCredits('locked_lesson_clicked',index);return}
       if(index<3&&index!==activeIndex&&!hasAccess&&practicePlayback.lessonNumber===activeIndex+1&&practicePlayback.started&&!practicePlayback.completed){
         pendingFreeLessonIndex=index;
