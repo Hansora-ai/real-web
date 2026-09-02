@@ -681,7 +681,7 @@
         meta.innerHTML = '';
         [
           plan.price,
-          plan.monthlyCredits ? `${plan.monthlyCredits} monthly credits` : '',
+          plan.monthlyCredits ? `${formatCreditNumber(plan.monthlyCredits)} monthly credits` : '',
           `Renews until ${endsAt}`
         ].filter(Boolean).forEach((text) => {
           const span = document.createElement('span');
@@ -776,7 +776,7 @@
           .select('credits').eq('user_id', user.id).maybeSingle();
         const c = prof?.credits ?? 0;
         const totalCredits = document.getElementById('totalCredits');
-        if (totalCredits) totalCredits.textContent = String(c);
+        if (totalCredits) totalCredits.textContent = formatCreditNumber(c);
       } catch (e) {
         console.warn('credits read failed', e);
       }
@@ -792,7 +792,7 @@
 
 
     function formatCreditNumber(value) {
-      const n = Number(value || 0);
+      const n = Number(value || 0) * 10;
       if (!Number.isFinite(n)) return '0';
       return Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
     }
