@@ -325,10 +325,10 @@
     window.hansoraSupabase = supabaseClient;
 
     const MODELS = [
-      { id:'voice', title:'Text to Dialogue', subtitle:'Speech or conversation', icon:'🗣️', badge:'ElevenLabs', baseCostLabel:'1+⚡', description:'Write one voice line, or add more lines to create a conversation with different character voices.' },
-      { id:'music', title:'Suno Music', subtitle:'Songs, lyrics, and instrumentals', icon:'🎵', badge:'Suno', baseCostLabel:'1.5⚡', description:'Create music with custom mode, lyrics, title, style, gender control, and instrumental control.' },
-      { id:'isolation', title:'Voice Isolation', subtitle:'Clean noisy audio', icon:'🎙️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Upload an audio file and isolate the voice from background noise.' },
-      { id:'voice-change', title:'Voice Changer', subtitle:'Transform uploaded speech', icon:'🎚️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Upload speech audio, choose a target voice, and keep the original performance with a new voice.' }
+      { id:'voice', title:'Text to Dialogue', subtitle:'Speech or conversation', icon:'🗣️', badge:'ElevenLabs', baseCostLabel:'10+⚡', description:'Write one voice line, or add more lines to create a conversation with different character voices.' },
+      { id:'music', title:'Suno Music', subtitle:'Songs, lyrics, and instrumentals', icon:'🎵', badge:'Suno', baseCostLabel:'15⚡', description:'Create music with custom mode, lyrics, title, style, gender control, and instrumental control.' },
+      { id:'isolation', title:'Voice Isolation', subtitle:'Clean noisy audio', icon:'🎙️', badge:'ElevenLabs', baseCostLabel:'10/min⚡', description:'Upload an audio file and isolate the voice from background noise.' },
+      { id:'voice-change', title:'Voice Changer', subtitle:'Transform uploaded speech', icon:'🎚️', badge:'ElevenLabs', baseCostLabel:'10/min⚡', description:'Upload speech audio, choose a target voice, and keep the original performance with a new voice.' }
     ];
     let VOICES = [
       {"label":"Adam - Dominant, Firm","value":"pNInz6obpgDQGcFmaJgB","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/pNInz6obpgDQGcFmaJgB/d6905d7a-dd26-4187-bfff-1bd3a5ea7cac.mp3"},
@@ -409,10 +409,10 @@
     function functionUrl(path){ return `${FUNCTION_ORIGIN}${path}`; }
     function activeModel(){ return MODELS.find(m => m.id === currentModelId) || MODELS[0]; }
     function parseCredits(value){ const n = Number(String(value ?? '').replace(/[^\d.-]/g,'')); return Number.isFinite(n) ? n : 0; }
-    function formatCredits(value){ const n = Number(value || 0); return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`; }
+    function formatCredits(value){ const n = Number(value || 0) * 10; return `${Number.isInteger(n) ? n : Number(n.toFixed(2))}⚡`; }
     function setCreditsEverywhere(value){
       currentCredits = parseCredits(value);
-      document.querySelectorAll('#navCredits').forEach((node)=>{ node.textContent = formatCredits(currentCredits); });
+      document.querySelectorAll('#navCredits').forEach((node)=>{ node.dataset.internalCredits = String(currentCredits); node.textContent = formatCredits(currentCredits); });
       if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') window.HansoraHeader.setCredits(currentCredits);
     }
     function watchCreditsLive(durationMs = 90000){
@@ -421,7 +421,9 @@
     function getVisibleHeaderCredits(){
       let best = 0;
       document.querySelectorAll('#navCredits').forEach((node)=>{
-        const value = parseCredits(node.textContent || '');
+        const value = node.dataset.internalCredits !== undefined
+          ? parseCredits(node.dataset.internalCredits)
+          : parseCredits(node.textContent || '') / 10;
         if (value > best) best = value;
       });
       return best;
@@ -733,7 +735,7 @@
     }
 
     function formatCostNumber(value){
-      const n = Number(value || 0);
+      const n = Number(value || 0) * 10;
       return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
     }
     function voiceCharacterCount(){
@@ -764,10 +766,10 @@
     function updateCostUI(){
       const m = activeModel();
       const cost = estimatedCostFor(m.id);
-      $('costText').textContent = `${formatCostNumber(cost)} ${cost === 1 ? 'credit' : 'credits'}`;
-      if (m.id === 'voice') $('creditHint').textContent = `${voiceCharacterCount()} characters • 1 credit per 1000 characters.`;
-      else if (m.id === 'isolation' || m.id === 'voice-change') $('creditHint').textContent = selectedAudioDurationSeconds ? `${formatDuration(selectedAudioDurationSeconds)} detected • rounded up by 30 seconds.` : '1 credit per minute. Upload audio so the page can read duration.';
-      else $('creditHint').textContent = 'Suno music costs 1.5 credits per generation.';
+      $('costText').textContent = `${formatCostNumber(cost)} credits`;
+      if (m.id === 'voice') $('creditHint').textContent = `${voiceCharacterCount()} characters • 10 credits per 1000 characters.`;
+      else if (m.id === 'isolation' || m.id === 'voice-change') $('creditHint').textContent = selectedAudioDurationSeconds ? `${formatDuration(selectedAudioDurationSeconds)} detected • rounded up by 30 seconds.` : '10 credits per minute. Upload audio so the page can read duration.';
+      else $('creditHint').textContent = 'Suno music costs 15 credits per generation.';
       const runBtn = $('runBtn');
       if (runBtn && !runBtn.disabled) {
         runBtn.textContent = `${actionLabel(m.id)} • ${formatCostNumber(cost)}⚡`;

@@ -325,10 +325,10 @@
     window.hansoraSupabase = supabaseClient;
 
     const MODELS = [
-      { id:'voice', title:'Text to Dialogue', subtitle:'Խոսք և երկխոսություն', icon:'🗣️', badge:'ElevenLabs', baseCostLabel:'1+⚡', description:'Գրեք մեկ խոսք կամ ավելացրեք մի քանիսը՝ տարբեր կերպարների ձայներով երկխոսություն ստեղծելու համար։' },
-      { id:'music', title:'Suno Music', subtitle:'Երգեր, բառեր և գործիքային երաժշտություն', icon:'🎵', badge:'Suno', baseCostLabel:'1.5⚡', description:'Ստեղծեք երաժշտություն՝ կարգավորելով բառերը, վերնագիրը, ոճը, վոկալի սեռը և գործիքային ռեժիմը։' },
-      { id:'isolation', title:'Voice Isolation', subtitle:'Աղմկոտ աուդիոյի մաքրում', icon:'🎙️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Վերբեռնեք աուդիոֆայլ և առանձնացրեք ձայնը ֆոնային աղմուկից։' },
-      { id:'voice-change', title:'Voice Changer', subtitle:'Վերբեռնված խոսքի ձայնափոխում', icon:'🎚️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Վերբեռնեք խոսքի ձայնագրություն, ընտրեք նպատակային ձայն և պահպանեք սկզբնական կատարումը նոր ձայնով։' }
+      { id:'voice', title:'Text to Dialogue', subtitle:'Խոսք և երկխոսություն', icon:'🗣️', badge:'ElevenLabs', baseCostLabel:'10+⚡', description:'Գրեք մեկ խոսք կամ ավելացրեք մի քանիսը՝ տարբեր կերպարների ձայներով երկխոսություն ստեղծելու համար։' },
+      { id:'music', title:'Suno Music', subtitle:'Երգեր, բառեր և գործիքային երաժշտություն', icon:'🎵', badge:'Suno', baseCostLabel:'15⚡', description:'Ստեղծեք երաժշտություն՝ կարգավորելով բառերը, վերնագիրը, ոճը, վոկալի սեռը և գործիքային ռեժիմը։' },
+      { id:'isolation', title:'Voice Isolation', subtitle:'Աղմկոտ աուդիոյի մաքրում', icon:'🎙️', badge:'ElevenLabs', baseCostLabel:'10/min⚡', description:'Վերբեռնեք աուդիոֆայլ և առանձնացրեք ձայնը ֆոնային աղմուկից։' },
+      { id:'voice-change', title:'Voice Changer', subtitle:'Վերբեռնված խոսքի ձայնափոխում', icon:'🎚️', badge:'ElevenLabs', baseCostLabel:'10/min⚡', description:'Վերբեռնեք խոսքի ձայնագրություն, ընտրեք նպատակային ձայն և պահպանեք սկզբնական կատարումը նոր ձայնով։' }
     ];
     let VOICES = [
       {"label":"Adam - Dominant, Firm","value":"pNInz6obpgDQGcFmaJgB","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/pNInz6obpgDQGcFmaJgB/d6905d7a-dd26-4187-bfff-1bd3a5ea7cac.mp3"},
@@ -409,10 +409,10 @@
     function functionUrl(path){ return `${FUNCTION_ORIGIN}${path}`; }
     function activeModel(){ return MODELS.find(m => m.id === currentModelId) || MODELS[0]; }
     function parseCredits(value){ const n = Number(String(value ?? '').replace(/[^\d.-]/g,'')); return Number.isFinite(n) ? n : 0; }
-    function formatCredits(value){ const n = Number(value || 0); return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`; }
+    function formatCredits(value){ const n = Number(value || 0) * 10; return `${Number.isInteger(n) ? n : Number(n.toFixed(2))}⚡`; }
     function setCreditsEverywhere(value){
       currentCredits = parseCredits(value);
-      document.querySelectorAll('#navCredits').forEach((node)=>{ node.textContent = formatCredits(currentCredits); });
+      document.querySelectorAll('#navCredits').forEach((node)=>{ node.dataset.internalCredits = String(currentCredits); node.textContent = formatCredits(currentCredits); });
       if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') window.HansoraHeader.setCredits(currentCredits);
     }
     function watchCreditsLive(durationMs = 90000){
@@ -421,7 +421,9 @@
     function getVisibleHeaderCredits(){
       let best = 0;
       document.querySelectorAll('#navCredits').forEach((node)=>{
-        const value = parseCredits(node.textContent || '');
+        const value = node.dataset.internalCredits !== undefined
+          ? parseCredits(node.dataset.internalCredits)
+          : parseCredits(node.textContent || '') / 10;
         if (value > best) best = value;
       });
       return best;
@@ -733,7 +735,7 @@
     }
 
     function formatCostNumber(value){
-      const n = Number(value || 0);
+      const n = Number(value || 0) * 10;
       return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
     }
     function voiceCharacterCount(){
@@ -765,9 +767,9 @@
       const m = activeModel();
       const cost = estimatedCostFor(m.id);
       $('costText').textContent = `${formatCostNumber(cost)} կրեդիտ`;
-      if (m.id === 'voice') $('creditHint').textContent = `${voiceCharacterCount()} նիշ • 1 կրեդիտ՝ յուրաքանչյուր 1000 նիշի համար։`;
-      else if (m.id === 'isolation' || m.id === 'voice-change') $('creditHint').textContent = selectedAudioDurationSeconds ? `Որոշված է ${formatDuration(selectedAudioDurationSeconds)} • կլորացվում է մինչև 30 վայրկյան։` : '1 կրեդիտ՝ յուրաքանչյուր րոպեի համար։ Վերբեռնեք աուդիո՝ տևողությունը որոշելու համար։';
-      else $('creditHint').textContent = 'Suno Music-ի մեկ գեներացիան արժե 1.5 կրեդիտ։';
+      if (m.id === 'voice') $('creditHint').textContent = `${voiceCharacterCount()} նիշ • 10 կրեդիտ՝ յուրաքանչյուր 1000 նիշի համար։`;
+      else if (m.id === 'isolation' || m.id === 'voice-change') $('creditHint').textContent = selectedAudioDurationSeconds ? `Որոշված է ${formatDuration(selectedAudioDurationSeconds)} • կլորացվում է մինչև 30 վայրկյան։` : '10 կրեդիտ՝ յուրաքանչյուր րոպեի համար։ Վերբեռնեք աուդիո՝ տևողությունը որոշելու համար։';
+      else $('creditHint').textContent = 'Suno Music-ի մեկ գեներացիան արժե 15 կրեդիտ։';
       const runBtn = $('runBtn');
       if (runBtn && !runBtn.disabled) {
         runBtn.textContent = `${actionLabel(m.id)} • ${formatCostNumber(cost)}⚡`;

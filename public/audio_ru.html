@@ -325,10 +325,10 @@
     window.hansoraSupabase = supabaseClient;
 
     const MODELS = [
-      { id:'voice', title:'Text to Dialogue', subtitle:'Озвучка и диалоги', icon:'🗣️', badge:'ElevenLabs', baseCostLabel:'1+⚡', description:'Напишите одну реплику или добавьте несколько, чтобы создать диалог разными голосами.' },
-      { id:'music', title:'Suno Music', subtitle:'Песни, тексты и инструменталы', icon:'🎵', badge:'Suno', baseCostLabel:'1.5⚡', description:'Создавайте музыку, настраивая текст, название, стиль, тип вокала и инструментальный режим.' },
-      { id:'isolation', title:'Voice Isolation', subtitle:'Очистка аудио от шума', icon:'🎙️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Загрузите аудиофайл, чтобы отделить голос от фонового шума.' },
-      { id:'voice-change', title:'Voice Changer', subtitle:'Изменение голоса в записи', icon:'🎚️', badge:'ElevenLabs', baseCostLabel:'1/min⚡', description:'Загрузите речь, выберите целевой голос и сохраните исходную манеру исполнения с новым голосом.' }
+      { id:'voice', title:'Text to Dialogue', subtitle:'Озвучка и диалоги', icon:'🗣️', badge:'ElevenLabs', baseCostLabel:'10+⚡', description:'Напишите одну реплику или добавьте несколько, чтобы создать диалог разными голосами.' },
+      { id:'music', title:'Suno Music', subtitle:'Песни, тексты и инструменталы', icon:'🎵', badge:'Suno', baseCostLabel:'15⚡', description:'Создавайте музыку, настраивая текст, название, стиль, тип вокала и инструментальный режим.' },
+      { id:'isolation', title:'Voice Isolation', subtitle:'Очистка аудио от шума', icon:'🎙️', badge:'ElevenLabs', baseCostLabel:'10/min⚡', description:'Загрузите аудиофайл, чтобы отделить голос от фонового шума.' },
+      { id:'voice-change', title:'Voice Changer', subtitle:'Изменение голоса в записи', icon:'🎚️', badge:'ElevenLabs', baseCostLabel:'10/min⚡', description:'Загрузите речь, выберите целевой голос и сохраните исходную манеру исполнения с новым голосом.' }
     ];
     let VOICES = [
       {"label":"Adam - Dominant, Firm","value":"pNInz6obpgDQGcFmaJgB","preview_url":"https://storage.googleapis.com/eleven-public-prod/premade/voices/pNInz6obpgDQGcFmaJgB/d6905d7a-dd26-4187-bfff-1bd3a5ea7cac.mp3"},
@@ -409,10 +409,10 @@
     function functionUrl(path){ return `${FUNCTION_ORIGIN}${path}`; }
     function activeModel(){ return MODELS.find(m => m.id === currentModelId) || MODELS[0]; }
     function parseCredits(value){ const n = Number(String(value ?? '').replace(/[^\d.-]/g,'')); return Number.isFinite(n) ? n : 0; }
-    function formatCredits(value){ const n = Number(value || 0); return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`; }
+    function formatCredits(value){ const n = Number(value || 0) * 10; return `${Number.isInteger(n) ? n : Number(n.toFixed(2))}⚡`; }
     function setCreditsEverywhere(value){
       currentCredits = parseCredits(value);
-      document.querySelectorAll('#navCredits').forEach((node)=>{ node.textContent = formatCredits(currentCredits); });
+      document.querySelectorAll('#navCredits').forEach((node)=>{ node.dataset.internalCredits = String(currentCredits); node.textContent = formatCredits(currentCredits); });
       if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') window.HansoraHeader.setCredits(currentCredits);
     }
     function watchCreditsLive(durationMs = 90000){
@@ -421,7 +421,9 @@
     function getVisibleHeaderCredits(){
       let best = 0;
       document.querySelectorAll('#navCredits').forEach((node)=>{
-        const value = parseCredits(node.textContent || '');
+        const value = node.dataset.internalCredits !== undefined
+          ? parseCredits(node.dataset.internalCredits)
+          : parseCredits(node.textContent || '') / 10;
         if (value > best) best = value;
       });
       return best;
@@ -733,7 +735,7 @@
     }
 
     function formatCostNumber(value){
-      const n = Number(value || 0);
+      const n = Number(value || 0) * 10;
       return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
     }
     function voiceCharacterCount(){
@@ -764,10 +766,10 @@
     function updateCostUI(){
       const m = activeModel();
       const cost = estimatedCostFor(m.id);
-      $('costText').textContent = `${formatCostNumber(cost)} ${cost === 1 ? 'кредит' : 'кредита'}`;
-      if (m.id === 'voice') $('creditHint').textContent = `${voiceCharacterCount()} символов • 1 кредит за 1000 символов.`;
-      else if (m.id === 'isolation' || m.id === 'voice-change') $('creditHint').textContent = selectedAudioDurationSeconds ? `Определено ${formatDuration(selectedAudioDurationSeconds)} • округление до 30 секунд.` : '1 кредит за минуту. Загрузите аудио, чтобы определить длительность.';
-      else $('creditHint').textContent = 'Одна генерация Suno Music стоит 1,5 кредита.';
+      $('costText').textContent = `${formatCostNumber(cost)} кредитов`;
+      if (m.id === 'voice') $('creditHint').textContent = `${voiceCharacterCount()} символов • 10 кредитов за 1000 символов.`;
+      else if (m.id === 'isolation' || m.id === 'voice-change') $('creditHint').textContent = selectedAudioDurationSeconds ? `Определено ${formatDuration(selectedAudioDurationSeconds)} • округление до 30 секунд.` : '10 кредитов за минуту. Загрузите аудио, чтобы определить длительность.';
+      else $('creditHint').textContent = 'Одна генерация Suno Music стоит 15 кредитов.';
       const runBtn = $('runBtn');
       if (runBtn && !runBtn.disabled) {
         runBtn.textContent = `${actionLabel(m.id)} • ${formatCostNumber(cost)}⚡`;

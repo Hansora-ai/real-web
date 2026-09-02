@@ -1060,6 +1060,11 @@
       return Number((seconds * rate).toFixed(1));
     }
 
+    function displayedCost(value) {
+      const cost = Number(value || 0) * 10;
+      return Number.isInteger(cost) ? String(cost) : String(Number(cost.toFixed(2)));
+    }
+
     function setStatus(message, type) {
       els.status.textContent = message || '';
       els.status.className = 'status' + (type ? ' ' + type : '');
@@ -1069,7 +1074,7 @@
     function updateRunLabel() {
       els.durationLabel.textContent = `${els.duration.value} сек.`;
       const cost = currentCost();
-      els.run.textContent = `Сгенерировать ${Number.isInteger(cost) ? cost : cost.toFixed(1)} ⚡`;
+      els.run.textContent = `Сгенерировать ${displayedCost(cost)} ⚡`;
     }
 
     function renderImageThumbs() {
@@ -1802,7 +1807,7 @@
           ? parseCredits(window.HansoraHeader.getCurrentCredits())
           : 0;
         if (currentCredits && currentCredits < cost) {
-          setStatus(`Недостаточно кредитов. Требуется ${cost}.`, 'bad');
+          setStatus(`Недостаточно кредитов. Требуется ${displayedCost(cost)}.`, 'bad');
           return;
         }
         els.run.disabled = true;
