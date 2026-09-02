@@ -13527,6 +13527,31 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       updateRunButtonLabel();
     }
 
+    async function consumeArticlePresetFromUrl() {
+      const qs = new URLSearchParams(window.location.search);
+      if (qs.get('articlePreset') !== '1') return false;
+      let preset = null;
+      try { preset = JSON.parse(sessionStorage.getItem('hansora:article-preset') || 'null'); }
+      catch (error) { console.warn('Could not read article preset', error); }
+      if (!preset || !preset.prompt) return false;
+      sessionStorage.removeItem('hansora:article-preset');
+      setPromptForPreviewRun(preset.prompt);
+      applyPreviewOptions({ aspect_ratio: preset.aspectRatio, resolution: preset.resolution, duration: preset.duration });
+      const referenceUrls = Array.isArray(preset.referenceImageUrls) ? preset.referenceImageUrls.filter((url) => /^https?:\/\//i.test(String(url || ''))) : [];
+      if (referenceUrls.length) {
+        showStatus('Добавляем референсные изображения...', '');
+        const limit = currentModel && currentModel.specificUpload === 'seedance' ? getSeedanceReferenceLimit('image') : Math.max(1, Number(currentModel && currentModel.maxFiles || referenceUrls.length));
+        const files = await hydratePreviewFiles(referenceUrls, 'image', limit);
+        if (!applyReusableImagesToCurrentModel(files)) throw new Error('Не удалось добавить референсные изображения в эту модель.');
+      }
+      updateModelButtonLabels(); updateCostDisplay(); updateRunButtonLabel();
+      showStatus(referenceUrls.length ? 'Промпт и референсные изображения готовы.' : 'Промпт готов.', 'success');
+      const cleanUrl = new URL(window.location.href); cleanUrl.searchParams.delete('articlePreset');
+      window.history.replaceState({}, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+      setTimeout(() => { try { document.getElementById('generatorCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {} }, 120);
+      return true;
+    }
+
     window.hansoraPreviewActions = {
       download: async (data, setStatus) => {
         const url = String((data && data.result_url) || '').trim();
@@ -13674,6 +13699,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       configureControlsForModel();
       wireWorkspaceRedesign();
       wireUploadTileClicks();
+      consumeArticlePresetFromUrl().catch((error) => { console.warn('Could not apply article preset', error); showStatus(error && error.message ? error.message : 'Не удалось подготовить промпт.', 'error'); });
       setTimeout(() => {
         loadUser()
           .then(() => consumeQueuedUsageAction())
