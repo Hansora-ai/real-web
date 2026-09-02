@@ -1673,6 +1673,117 @@ Pay once, use credits across image, video, product card, audio, and creative too
   });
 })();
 </script>
+<script data-hansora-credit-display-scale="10">
+(function(){
+  const CREDIT_DISPLAY_MULTIPLIER = 10;
+  const lastDisplayedText = new WeakMap();
+  const correctedModelRows = new WeakSet();
+  let renderScheduled = false;
+
+  function formatNumber(value){
+    const number = Number(value || 0);
+    if (!Number.isFinite(number)) return "0";
+    const rounded = Number(number.toFixed(2));
+    return String(rounded);
+  }
+
+  function multiplyNumbers(text){
+    return String(text || "").replace(/\d+(?:[.,]\d+)?/g, function(token){
+      const number = Number(token.replace(",", "."));
+      return Number.isFinite(number) ? formatNumber(number * CREDIT_DISPLAY_MULTIPLIER) : token;
+    });
+  }
+
+  function scaleCreditTextNodes(element){
+    if (!element) return;
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function(node){
+      const current = node.nodeValue || "";
+      if (lastDisplayedText.get(node) === current) return;
+      const creditMatch = /credit|кредит|կրեդիտ/i.exec(current);
+      if (!creditMatch) return;
+      const beforeCredits = current.slice(0, creditMatch.index);
+      const converted = multiplyNumbers(beforeCredits) + current.slice(creditMatch.index);
+      lastDisplayedText.set(node, converted);
+      if (converted !== current) node.nodeValue = converted;
+    });
+  }
+
+  function setPackageTitle(title, internalCredits){
+    if (!title) return;
+    const numberNode = Array.from(title.childNodes).find(function(node){
+      return node.nodeType === Node.TEXT_NODE && /\d/.test(node.nodeValue || "");
+    });
+    if (!numberNode) return;
+    const displayed = formatNumber(internalCredits * CREDIT_DISPLAY_MULTIPLIER) + " ";
+    if (numberNode.nodeValue !== displayed) numberNode.nodeValue = displayed;
+  }
+
+  function correctChangedModelRows(){
+    const corrections = {
+      "GPT Image 2 1K-2K": { cost: "0.5–0.7", counts: ["142–200", "300–420", "764–1070", "1571–2200"] },
+      "Nano Banana 2 Lite": { cost: "0.3", counts: ["333", "700", "1783", "3666"] },
+      "Nano Banana 2 1K-2K": { cost: "0.5–0.8", counts: ["125–200", "262–420", "668–1070", "1375–2200"] },
+      "Nano Banana 2 4K": { cost: "1.3", counts: ["76", "161", "411", "846"] },
+      "Nano Banana Pro 4K": { cost: "1.5", counts: ["66", "140", "356", "733"] },
+      "GPT Image 2 4K": { cost: "1.2", counts: ["83", "175", "445", "916"] },
+      "Nano Banana Pro 1K-2K": { cost: "1.2", counts: ["83", "175", "445", "916"] }
+    };
+
+    document.querySelectorAll(".model-usage-row").forEach(function(row){
+      if (correctedModelRows.has(row)) return;
+      const name = row.querySelector(".model-usage-model strong")?.textContent.trim();
+      const correction = corrections[name];
+      if (!correction) return;
+      const cost = row.querySelector(".model-usage-model small");
+      if (cost) {
+        cost.textContent = cost.textContent.replace(/^\s*\d+(?:[.,]\d+)?(?:\s*[–-]\s*\d+(?:[.,]\d+)?)?/, correction.cost);
+      }
+      row.querySelectorAll(".model-usage-count").forEach(function(count, index){
+        if (!correction.counts[index]) return;
+        count.textContent = count.textContent.replace(/^\s*[\d.,]+(?:\s*[–-]\s*[\d.,]+)?/, correction.counts[index]);
+      });
+      correctedModelRows.add(row);
+    });
+  }
+
+  function renderCreditDisplays(){
+    correctChangedModelRows();
+
+    document.querySelectorAll(".buy-credits[data-credits]").forEach(function(button){
+      const internalCredits = Number(button.getAttribute("data-credits") || 0);
+      const card = button.closest(".rounded-2xl");
+      const title = card?.querySelector(".mt-3.text-5xl");
+      if (!card || !title || !Number.isFinite(internalCredits)) return;
+      setPackageTitle(title, internalCredits);
+      scaleCreditTextNodes(card.querySelector(".flex.items-center.justify-between .text-sm"));
+      scaleCreditTextNodes(card.querySelector(".mt-2.text-sm"));
+      card.querySelectorAll("ul li").forEach(scaleCreditTextNodes);
+    });
+
+    document.querySelectorAll(".monthly-credit-line, .plan-credit-line span, .model-usage-model small").forEach(scaleCreditTextNodes);
+  }
+
+  function scheduleRender(){
+    if (renderScheduled) return;
+    renderScheduled = true;
+    requestAnimationFrame(function(){
+      renderScheduled = false;
+      renderCreditDisplays();
+    });
+  }
+
+  function start(){
+    renderCreditDisplays();
+    new MutationObserver(scheduleRender).observe(document.body, { childList: true, subtree: true, characterData: true });
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
+  else start();
+})();
+</script>
 <script defer src="/header.js"></script>
 
 </body></html>
