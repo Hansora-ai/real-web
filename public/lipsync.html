@@ -271,8 +271,8 @@
       <section class="section">
         <span class="label">Model</span>
         <div class="model-grid">
-          <button id="modelAvatarV" class="choice active" type="button" data-model="avatar_v"><strong>Avatar IV</strong><span>0.7⚡ / second</span></button>
-          <button id="modelAvatarIII" class="choice" type="button" data-model="avatar_iii"><strong>Avatar III</strong><span>0.3⚡ / second</span></button>
+          <button id="modelAvatarV" class="choice active" type="button" data-model="avatar_v"><strong>Avatar IV</strong><span>7⚡ / second</span></button>
+          <button id="modelAvatarIII" class="choice" type="button" data-model="avatar_iii"><strong>Avatar III</strong><span>3⚡ / second</span></button>
         </div>
       </section>
 
@@ -370,13 +370,13 @@
       return Number.isFinite(n) ? n : 0;
     }
     function formatCredits(value) {
-      const n = Number(value || 0);
+      const n = Number(value || 0) * 10;
       return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
     }
     function setCreditsEverywhere(value) {
       const n = parseCredits(value);
       currentCredits = n;
-      document.querySelectorAll('#navCredits').forEach((node) => { node.textContent = formatCredits(n); });
+      document.querySelectorAll('#navCredits').forEach((node) => { node.dataset.internalCredits = String(n); node.textContent = formatCredits(n); });
       if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') window.HansoraHeader.setCredits(n);
     }
     function watchCreditsLive(durationMs = 90000) {
@@ -385,7 +385,7 @@
     function getVisibleHeaderCredits() {
       let best = 0;
       document.querySelectorAll('#navCredits').forEach((node) => {
-        const value = parseCredits(node.textContent || '');
+        const value = node.dataset.internalCredits !== undefined ? parseCredits(node.dataset.internalCredits) : parseCredits(node.textContent || '') / 10;
         if (value > best) best = value;
       });
       return best;
@@ -480,10 +480,11 @@
     function getBillableSeconds() { return audioDuration ? Math.ceil(audioDuration) : 0; }
     function getRate() { return currentModel === 'avatar_v' ? 0.7 : 0.3; }
     function getCost() { return Math.round(getBillableSeconds() * getRate() * 100) / 100; }
+    function getDisplayedCost() { return Math.round(getCost() * 10 * 100) / 100; }
     function updateCost() {
       $('durationLabel').textContent = audioDuration ? `${audioDuration.toFixed(1)}s → billed ${getBillableSeconds()}s` : 'Choose audio';
-      $('costLabel').textContent = `${getCost()}⚡`;
-      $('runBtn').textContent = getCost() ? `Run ${getCost()}⚡` : 'Run';
+      $('costLabel').textContent = `${getDisplayedCost()}⚡`;
+      $('runBtn').textContent = getCost() ? `Run ${getDisplayedCost()}⚡` : 'Run';
     }
 
     function setModel(model) {
@@ -934,7 +935,7 @@
       if (!audioDuration || audioDuration < 5 || audioDuration > 90.25) { showStatus('Audio must be 5–90 seconds.', 'error'); return; }
       const cost = getCost();
       const availableCredits = await getAvailableCredits(cost);
-      if (availableCredits < cost) { showStatus(`Not enough credits. Needed ${cost}⚡.`, 'error'); setTimeout(openPricingOfferPopup, 80); return; }
+      if (availableCredits < cost) { showStatus(`Not enough credits. Needed ${Math.round(cost * 10 * 100) / 100}⚡.`, 'error'); setTimeout(openPricingOfferPopup, 80); return; }
 
       $('runBtn').disabled = true;
       let placeholder = null;
