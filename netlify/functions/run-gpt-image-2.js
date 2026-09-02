@@ -2,7 +2,7 @@
 // GPT Image 2.0 launcher via KIE createTask with server-side credit debit (idempotent per run_id).
 // - Text to Image: model gpt-image-2-text-to-image
 // - Image to Image: model gpt-image-2-image-to-image
-// Credits: 1 for 1K/2K, 1.5 for 4K (server-side only; client must NOT debit)
+// Credits: 0.5 for 1K, 0.7 for 2K, 1.2 for 4K (server-side only; client must NOT debit)
 //
 // Env: KIE_CREATE_URL (optional), KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SITE_BASE (optional)
 //
@@ -249,7 +249,7 @@ exports.handler = async (event) => {
     const isImageToImage = input_urls.length > 0;
     const model = isImageToImage ? "gpt-image-2-image-to-image" : "gpt-image-2-text-to-image";
 
-    const cost = resolution === "4K" ? 1.5 : 1;
+    const cost = resolution === "4K" ? 1.2 : (resolution === "2K" ? 0.7 : 0.5);
     const queueAuthorized = process.env.HANSORA_QUEUE_SECRET
       && getHeader(event, "x-hansora-queue-secret") === process.env.HANSORA_QUEUE_SECRET;
     const subscriptionUnlimited = String(body.billing_mode || "").toLowerCase() === "unlimited"
