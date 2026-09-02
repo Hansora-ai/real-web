@@ -1875,8 +1875,15 @@
     if (location.href !== target) location.href = target;
   }
 
-  function formatCredits(value) {
+  const CREDIT_DISPLAY_MULTIPLIER = 10;
+
+  function toDisplayCredits(value) {
     const n = Number(value || 0);
+    return Number.isFinite(n) ? Number((n * CREDIT_DISPLAY_MULTIPLIER).toFixed(2)) : 0;
+  }
+
+  function formatCredits(value) {
+    const n = toDisplayCredits(value);
     return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
   }
 
@@ -2880,7 +2887,10 @@
     currentCredits = n;
     writeCache('credits', n);
     const navCredits = el('navCredits');
-    if (navCredits) navCredits.textContent = formatCredits(n);
+    if (navCredits) {
+      navCredits.dataset.internalCredits = String(n);
+      navCredits.textContent = formatCredits(n);
+    }
     updateVideoLandingLink();
   }
 
@@ -4370,6 +4380,8 @@
       isUnlimitedModel,
       getCurrentUser: function () { return currentUser; },
       getCurrentCredits: function () { return currentCredits; },
+      toDisplayCredits,
+      creditDisplayMultiplier: CREDIT_DISPLAY_MULTIPLIER,
       openAuth,
       closeAuth,
       startCreditsPolling,
