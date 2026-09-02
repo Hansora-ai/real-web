@@ -1146,13 +1146,17 @@
       return resolution === '4K' ? 16 : 11;
     }
 
+    function displayedRunCost() {
+      return runCost() * 10;
+    }
+
     function setStatus(message, type) {
       els.status.textContent = message || '';
       els.status.className = 'status' + (type ? ` ${type}` : '');
     }
 
     function updateRunLabel() {
-      els.run.textContent = `Run ${runCost()} ⚡`;
+      els.run.textContent = `Run ${displayedRunCost()} ⚡`;
     }
 
     function updateTimingLabel() {
@@ -1723,7 +1727,7 @@
           ? Number(String(window.HansoraHeader.getCurrentCredits()).replace(/[^0-9.]/g, '') || 0)
           : 0;
         if (currentCredits && currentCredits < runCost()) {
-          setStatus(`Not enough credits. Need ${runCost()} credits.`, 'bad');
+          setStatus(`Not enough credits. Need ${displayedRunCost()} credits.`, 'bad');
           return;
         }
         const runId = `${user.id}-${Date.now()}`;
