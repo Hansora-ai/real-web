@@ -279,7 +279,7 @@ exports.handler = async (event) => {
     const size   = normalizeImageSize(body.size);
     const resolution = normalizeResolution(body.resolution);
 
-    const cost = (resolution === "4K") ? 1.5 : 1;
+    const cost = resolution === "4K" ? 1.3 : (resolution === "2K" ? 0.8 : 0.5);
     const queueAuthorized = process.env.HANSORA_QUEUE_SECRET
       && getHeader(event, "x-hansora-queue-secret") === process.env.HANSORA_QUEUE_SECRET;
     const subscriptionUnlimited = String(body.billing_mode || "").toLowerCase() === "unlimited"
