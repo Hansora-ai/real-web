@@ -5119,9 +5119,15 @@ async function __mjFetchNbCheck(params){
     window.hansoraSupabase = supabaseClient;
     let currentUser = null;
     let currentCredits = 0;
+    const CREDIT_DISPLAY_MULTIPLIER = 10;
+
+    function toDisplayCredits(value) {
+      const n = Number(value || 0);
+      return Number.isFinite(n) ? Number((n * CREDIT_DISPLAY_MULTIPLIER).toFixed(2)) : 0;
+    }
 
     function formatCredits(value) {
-      const n = Number(value || 0);
+      const n = toDisplayCredits(value);
       return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
     }
 
@@ -5134,6 +5140,7 @@ async function __mjFetchNbCheck(params){
       const n = parseCredits(value);
       currentCredits = n;
       document.querySelectorAll('#navCredits').forEach((node) => {
+        node.dataset.internalCredits = String(n);
         node.textContent = formatCredits(n);
       });
       if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') {
@@ -5150,7 +5157,10 @@ async function __mjFetchNbCheck(params){
     function getVisibleHeaderCredits() {
       let best = 0;
       document.querySelectorAll('#navCredits').forEach((node) => {
-        const value = parseCredits(node.textContent || '');
+        const storedInternal = node.dataset ? node.dataset.internalCredits : '';
+        const value = storedInternal !== ''
+          ? parseCredits(storedInternal)
+          : parseCredits(node.textContent || '') / CREDIT_DISPLAY_MULTIPLIER;
         if (value > best) best = value;
       });
       return best;
@@ -9182,7 +9192,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     function formatCreditValue(value) {
       if (value === null || value === undefined || value === '') return '';
       const numeric = Number(value);
-      return Number.isFinite(numeric) ? String(numeric) : String(value);
+      return Number.isFinite(numeric) ? String(toDisplayCredits(numeric)) : String(value);
     }
 
     function getCurrentCostLabel() {
