@@ -306,7 +306,7 @@
       <section class="panel creator" aria-label="Создание карточки товара">
         <div class="panel-title">
           <h2>Создать карточку</h2>
-          <span class="cost-pill" id="costLabel">1⚡</span>
+          <span class="cost-pill" id="costLabel">10⚡</span>
         </div>
 
         <div class="section">
@@ -376,7 +376,7 @@
         </div>
 
         <div class="actions">
-          <button id="generateBtn" class="btn btn-primary" type="button">Сгенерировать 1 ⚡</button>
+          <button id="generateBtn" class="btn btn-primary" type="button">Сгенерировать 10 ⚡</button>
           <button id="resetBtn" class="btn btn-secondary" type="button">Сбросить</button>
         </div>
         <div id="status" class="status"></div>
@@ -409,7 +409,7 @@
         <h3>Простая анимация</h3>
         <div class="animation-spec"><span>Длительность</span><strong>6 сек.</strong></div>
         <p>Создаёт плавное видео, сохраняя карточку, товар и текст без изменений.</p>
-        <button type="button" id="animationRun" class="animation-run">Сгенерировать 2 ⚡</button>
+        <button type="button" id="animationRun" class="animation-run">Сгенерировать 20 ⚡</button>
       </div>
     </div>
   </div>
@@ -460,11 +460,11 @@
       return Number.isFinite(n) ? n : 0;
     }
     function formatCredits(value){
-      const n = parseCredits(value);
+      const n = parseCredits(value) * 10;
       return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
     }
     function formatCost(value){
-      const n = Number(value || 0);
+      const n = Number(value || 0) * 10;
       return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
     }
     function writeHeaderCache(key, value){
@@ -495,6 +495,7 @@
       if (loginBtn) loginBtn.style.display = 'none';
       if (navCredits) {
         navCredits.style.display = 'inline-flex';
+        navCredits.dataset.internalCredits = String(parseCredits(credits));
         navCredits.textContent = formatCredits(credits);
       }
       if (navAvatar) navAvatar.style.display = 'inline-flex';
@@ -515,7 +516,7 @@
       const n = parseCredits(value);
       currentCredits = n;
       writeHeaderCache('credits', n);
-      document.querySelectorAll('#navCredits').forEach((node) => { node.textContent = formatCredits(n); });
+      document.querySelectorAll('#navCredits').forEach((node) => { node.dataset.internalCredits = String(n); node.textContent = formatCredits(n); });
       if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') window.HansoraHeader.setCredits(n);
     }
     function getUnitCost(){ return selectedResolution === '4K' ? 1.5 : 1; }
@@ -899,7 +900,7 @@
       els.animationOverlay.classList.add('show');
       document.body.style.overflow = 'hidden';
       els.animationRun.disabled = false;
-      els.animationRun.textContent = 'Сгенерировать 2 ⚡';
+      els.animationRun.textContent = 'Сгенерировать 20 ⚡';
     }
     function closeAnimationModal(){
       els.animationOverlay.classList.remove('show');
@@ -1291,14 +1292,14 @@
         const msg = String(error && error.message ? error.message : error || 'animation_failed');
         if (msg === 'login_required') showStatus('Сначала войдите в аккаунт.', 'error');
         else if (msg === 'not_enough_credits') {
-          showStatus('Недостаточно кредитов. Для анимации требуется 2⚡.', 'error');
+          showStatus('Недостаточно кредитов. Для анимации требуется 20⚡.', 'error');
           setTimeout(openPricingOfferPopup, 80);
         }
         else showStatus(`Не удалось создать анимацию: ${msg}`, 'error');
         await refreshCredits();
       }finally{
         els.animationRun.disabled = false;
-        els.animationRun.textContent = 'Сгенерировать 2 ⚡';
+        els.animationRun.textContent = 'Сгенерировать 20 ⚡';
       }
     }
 

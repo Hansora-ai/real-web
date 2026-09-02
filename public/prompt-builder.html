@@ -443,7 +443,7 @@
         <div class="composer-inner">
           <textarea id="ideaInput" maxlength="2500" placeholder="Type your short idea here…"></textarea>
           <div class="run-area">
-            <button id="runBtn" type="submit">Run 0.5⚡</button>
+            <button id="runBtn" type="submit">Run 5⚡</button>
           </div>
         </div>
       </form>
@@ -542,7 +542,7 @@
     }
 
     function formatCredits(value) {
-      const n = parseCredits(value);
+      const n = parseCredits(value) * 10;
       return `${Number.isInteger(n) ? n : String(Number(n.toFixed(2)))}⚡`;
     }
 
@@ -550,6 +550,7 @@
       const n = parseCredits(value);
       currentCredits = n;
       document.querySelectorAll('#navCredits').forEach((node) => {
+        node.dataset.internalCredits = String(n);
         node.textContent = formatCredits(n);
       });
       if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') {
@@ -987,7 +988,7 @@
             setTimeout(openPricingOfferPopup, 80);
           } else if (js && js.error === 'worker_enqueue_failed') {
             setStatus('Sorry, your request failed. Please try again.', 'error');
-            setAssistantErrorText(thinkingRow, 'Could not start the Claude worker. Your credit was refunded.');
+            setAssistantErrorText(thinkingRow, 'Could not start the Claude worker. Your 5 credits were refunded.');
           } else {
             setStatus('Sorry, your request failed. Please try again.', 'error');
             setAssistantError(thinkingRow);

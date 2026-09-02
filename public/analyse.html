@@ -44,7 +44,7 @@
         </div>
       </div>
       <div id="videoPreview" class="video-card hidden"></div>
-      <button id="runBtn" class="run" type="button" disabled>Predict Viral Potential • 0.3⚡</button>
+      <button id="runBtn" class="run" type="button" disabled>Predict Viral Potential • 3⚡</button>
       <div id="errorBox" class="err hidden"></div>
       <div class="note">Scores are modeled estimates for creative direction, not guaranteed platform performance.</div>
     </section>
@@ -163,9 +163,9 @@
   }
 
   function parseCredits(value){const n=Number(String(value??'').replace(/[^\d.-]/g,''));return Number.isFinite(n)?n:0}
-  function formatCredit(n){n=Number(n||0);return Number.isInteger(n)?String(n):n.toFixed(1).replace(/\.0$/,'')}
-  function setCreditsEverywhere(value){currentCredits=parseCredits(value);document.querySelectorAll('#navCredits').forEach(n=>{n.textContent=`${formatCredit(currentCredits)}⚡`});if(window.HansoraHeader&&typeof window.HansoraHeader.setCredits==='function')window.HansoraHeader.setCredits(currentCredits)}
-  function getVisibleHeaderCredits(){let best=0;document.querySelectorAll('#navCredits').forEach(n=>{best=Math.max(best,parseCredits(n.textContent||''))});return best}
+  function formatCredit(n){n=Number(n||0)*10;return Number.isInteger(n)?String(n):n.toFixed(1).replace(/\.0$/,'')}
+  function setCreditsEverywhere(value){currentCredits=parseCredits(value);document.querySelectorAll('#navCredits').forEach(n=>{n.dataset.internalCredits=String(currentCredits);n.textContent=`${formatCredit(currentCredits)}⚡`});if(window.HansoraHeader&&typeof window.HansoraHeader.setCredits==='function')window.HansoraHeader.setCredits(currentCredits)}
+  function getVisibleHeaderCredits(){let best=0;document.querySelectorAll('#navCredits').forEach(n=>{const raw=n.dataset.internalCredits!==undefined?parseCredits(n.dataset.internalCredits):parseCredits(n.textContent||'')/10;best=Math.max(best,raw)});return best}
   function getSharedHeaderCredits(){try{return window.HansoraHeader&&typeof window.HansoraHeader.getCurrentCredits==='function'?parseCredits(window.HansoraHeader.getCurrentCredits()):0}catch{return 0}}
   async function readSupabaseCredits(){const {data:{user}}=await supabaseClient.auth.getUser();if(!user)return{user:null,credits:0};const {data:profile,error}=await supabaseClient.from('profiles').select('credits').eq('user_id',user.id).maybeSingle();if(error)throw error;return{user,credits:parseCredits(profile&&profile.credits)}}
   async function getAvailableCredits(required=0){const localBest=Math.max(getSharedHeaderCredits(),getVisibleHeaderCredits(),parseCredits(currentCredits));if(localBest>=Number(required||0))return localBest;try{const r=await readSupabaseCredits();if(r.user){currentUser=r.user;setCreditsEverywhere(r.credits)}return Math.max(localBest,parseCredits(r.credits))}catch(e){console.warn(e)}return localBest}
@@ -327,7 +327,7 @@
   function completeRun(){
     if(predictorPoll){clearTimeout(predictorPoll);predictorPoll=null}
     $('runBtn').disabled=!currentVideo;
-    $('runBtn').textContent='Predict Viral Potential • 0.3⚡';
+    $('runBtn').textContent='Predict Viral Potential • 3⚡';
   }
 
   function isFailedStatus(value){
@@ -337,7 +337,7 @@
   async function failRun(data,msg){
     const refunded=!!(data&&data.refunded);
     setState('error','Analysis failed. Please try again.');
-    showError(refunded?'Analysis failed. Your 0.3 credit was refunded. Please try again.':(msg||'Analysis failed. Please try again.'));
+    showError(refunded?'Analysis failed. Your 3 credits were refunded. Please try again.':(msg||'Analysis failed. Please try again.'));
     await refreshCredits();
     completeRun();
   }

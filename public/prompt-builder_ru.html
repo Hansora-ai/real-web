@@ -443,7 +443,7 @@
         <div class="composer-inner">
           <textarea id="ideaInput" maxlength="2500" placeholder="Введите краткое описание идеи…"></textarea>
           <div class="run-area">
-            <button id="runBtn" type="submit">Сгенерировать 0.5⚡</button>
+            <button id="runBtn" type="submit">Сгенерировать 5⚡</button>
           </div>
         </div>
       </form>
@@ -542,7 +542,7 @@
     }
 
     function formatCredits(value) {
-      const n = parseCredits(value);
+      const n = parseCredits(value) * 10;
       return `${Number.isInteger(n) ? n : String(Number(n.toFixed(2)))}⚡`;
     }
 
@@ -550,6 +550,7 @@
       const n = parseCredits(value);
       currentCredits = n;
       document.querySelectorAll('#navCredits').forEach((node) => {
+        node.dataset.internalCredits = String(n);
         node.textContent = formatCredits(n);
       });
       if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') {
@@ -987,7 +988,7 @@
             setTimeout(openPricingOfferPopup, 80);
           } else if (js && js.error === 'worker_enqueue_failed') {
             setStatus('Не удалось выполнить запрос. Попробуйте ещё раз.', 'error');
-            setAssistantErrorText(thinkingRow, 'Не удалось запустить Claude. Кредит возвращён на ваш баланс.');
+            setAssistantErrorText(thinkingRow, 'Не удалось запустить Claude. 5 кредитов возвращены на ваш баланс.');
           } else {
             setStatus('Не удалось выполнить запрос. Попробуйте ещё раз.', 'error');
             setAssistantError(thinkingRow);
