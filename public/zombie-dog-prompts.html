@@ -5,9 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Zombie dog character and video prompts for AI generation.">
   <title>Zombie dog prompts</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://qmaealblegvcwodlmeht.supabase.co">
   <script>
     (()=>{try{const saved=localStorage.getItem('hansora.language.v1');document.documentElement.lang=saved==='hy'||saved==='ru'?saved:'en'}catch(_){}})();
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://hansora.co/header.css" rel="stylesheet">
   <script defer src="./header.js"></script>
   <style>
     :root{color-scheme:dark;--bg:#111214;--panel:#17181b;--line:#2a2c30;--text:#f4f4f5;--muted:#b9bbc1;--green:#cfff19;--width:820px}
@@ -18,6 +22,7 @@
   </style>
 </head>
 <body>
+  <div id="sharedHeader"></div>
   <main class="page">
     <h1>Zombie dog prompts</h1>
     <div class="cover media"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/for%20generation%20page/zombi%20dog/IMAGE%202026-09-03%2000:02:14.jpg" alt="Zombie dog cinematic preview"><button class="preview-btn" type="button" data-preview aria-label="Open image preview">â†—</button></div>
@@ -81,7 +86,7 @@ close-up framing, dog as the dominant subject, camera approximately at the dogâ€
     const modal=document.getElementById('modal'),modalImage=document.getElementById('modalImage'),toast=document.getElementById('toast');let toastTimer=0;
     function findItem(key){const [type,index]=String(key).split('-');return type==='video'?videoItems[Number(index)]:characterItems[Number(index)]}
     function activeSiteLanguage(){const declared=String(document.documentElement.lang||'').toLowerCase();if(declared==='hy'||declared.startsWith('hy-'))return'hy';if(declared==='ru'||declared.startsWith('ru-'))return'ru';try{const saved=localStorage.getItem('hansora.language.v1');if(saved==='hy'||saved==='ru')return saved}catch(_){}return'en'}
-    function localizedSearchModels(){const lang=activeSiteLanguage();return lang==='hy'?'search-models_arm.html':lang==='ru'?'search-models_ru.html':'search-models.html'}
+    function localizedSearchModels(){const lang=activeSiteLanguage();const file=lang==='hy'?'search-models_arm.html':lang==='ru'?'search-models_ru.html':'search-models.html';return location.protocol==='file:'?file:`/${file}`}
     function notify(text){toast.textContent=text;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),1600)}
     document.addEventListener('click',async(event)=>{const preview=event.target.closest('[data-preview]');if(preview){const img=preview.parentElement.querySelector('img');modalImage.src=img.src;modalImage.alt=img.alt;modal.classList.add('open');document.body.style.overflow='hidden';return}const copy=event.target.closest('[data-copy]');if(copy){const item=findItem(copy.dataset.copy);try{await navigator.clipboard.writeText(item.prompt)}catch(_){const area=document.createElement('textarea');area.value=item.prompt;document.body.appendChild(area);area.select();document.execCommand('copy');area.remove()}notify('Prompt copied');return}const recreate=event.target.closest('[data-recreate]');if(recreate){const item=findItem(recreate.dataset.recreate);const isVideo=String(recreate.dataset.recreate).startsWith('video-');const preset={model:isVideo?'seedance25':'nano-banana-2',prompt:item.prompt,referenceImageUrls:isVideo?item.refs:[],duration:isVideo?item.duration:null,resolution:isVideo?'720p':'2K',aspectRatio:item.aspectRatio||'16:9'};sessionStorage.setItem('hansora:article-preset',JSON.stringify(preset));window.location.href=`${localizedSearchModels()}?model=${encodeURIComponent(preset.model)}&articlePreset=1`;}});
     document.addEventListener('click',(event)=>{const button=event.target.closest('[data-language-code]');if(!button)return;event.preventDefault();event.stopImmediatePropagation();const selected=button.getAttribute('data-language-code');const language=selected==='hy'||selected==='ru'?selected:'en';try{localStorage.setItem('hansora.language.v1',language)}catch(_){}document.documentElement.lang=language;window.location.reload()},true);
