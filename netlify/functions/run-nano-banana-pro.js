@@ -240,7 +240,7 @@ exports.handler = async (event) => {
     const size   = normalizeImageSize(body.size);
     const resolution = normalizeResolution(body.resolution);
 
-    const cost = (resolution === "4K") ? 2 : 1.5;
+    const cost = (resolution === "4K") ? 1.5 : 1.2;
 
     // Seed user_generations row (pending)
     const seeded = await seedUserGeneration(uid, run_id, prompt, { size, resolution, refund_amount: 0, charge_cost: cost });
