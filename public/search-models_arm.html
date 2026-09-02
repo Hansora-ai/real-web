@@ -5119,9 +5119,15 @@ async function __mjFetchNbCheck(params){
     window.hansoraSupabase = supabaseClient;
     let currentUser = null;
     let currentCredits = 0;
+    const CREDIT_DISPLAY_MULTIPLIER = 10;
+
+    function toDisplayCredits(value) {
+      const n = Number(value || 0);
+      return Number.isFinite(n) ? Number((n * CREDIT_DISPLAY_MULTIPLIER).toFixed(2)) : 0;
+    }
 
     function formatCredits(value) {
-      const n = Number(value || 0);
+      const n = toDisplayCredits(value);
       return `${Number.isInteger(n) ? n : n.toFixed(2)}⚡`;
     }
 
@@ -5134,6 +5140,7 @@ async function __mjFetchNbCheck(params){
       const n = parseCredits(value);
       currentCredits = n;
       document.querySelectorAll('#navCredits').forEach((node) => {
+        node.dataset.internalCredits = String(n);
         node.textContent = formatCredits(n);
       });
       if (window.HansoraHeader && typeof window.HansoraHeader.setCredits === 'function') {
@@ -5150,7 +5157,10 @@ async function __mjFetchNbCheck(params){
     function getVisibleHeaderCredits() {
       let best = 0;
       document.querySelectorAll('#navCredits').forEach((node) => {
-        const value = parseCredits(node.textContent || '');
+        const storedInternal = node.dataset ? node.dataset.internalCredits : '';
+        const value = storedInternal !== ''
+          ? parseCredits(storedInternal)
+          : parseCredits(node.textContent || '') / CREDIT_DISPLAY_MULTIPLIER;
         if (value > best) best = value;
       });
       return best;
@@ -6950,8 +6960,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         aspectOptions: ['1:1', '3:4', '4:3', '9:16', '16:9'],
         defaultAspect: '1:1',
         durations: null,
-        costLabel: '1.5⚡ per job',
-        minCredits: 1.5
+        costLabel: '12⚡–15⚡ per job',
+        minCredits: 1.2
       },
 	      {
 	        id: 'nano-banana-2',
@@ -6966,8 +6976,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         aspectOptions: ['auto', '1:1', '1:4', '1:8', '2:3', '3:2', '3:4', '4:1', '4:3', '4:5', '5:4', '8:1', '9:16', '16:9', '21:9'],
         defaultAspect: 'auto',
         durations: null,
-	        costLabel: '1⚡ per job',
-	        minCredits: 1
+	        costLabel: '5⚡–13⚡ per job',
+	        minCredits: 0.5
 	      },
 	      {
 	        id: 'nano-banana-2-lite',
@@ -6985,8 +6995,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        resolutionOptions: ['1K'],
 	        defaultResolution: '1K',
 	        durations: null,
-	        costLabel: '0.5⚡ per job',
-	        minCredits: 0.5
+	        costLabel: '3⚡ per job',
+	        minCredits: 0.3
 	      },
 
 	      {
@@ -7035,8 +7045,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         aspectOptions: ['auto', '1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'],
         defaultAspect: 'auto',
         durations: null,
-        costLabel: '1⚡ per job',
-        minCredits: 1
+        costLabel: '5⚡–12⚡ per job',
+        minCredits: 0.5
       },
       {
         id: 'seedream-5-lite',
@@ -9061,10 +9071,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
     function getModelUnitCreditValue(model = currentModel) {
 	      if (!model) return null;
-	      if (model.id === 'nano-banana-pro') return currentResolution === '4K' ? 2 : 1.5;
-	      if (model.id === 'nano-banana-2') return currentResolution === '4K' ? 1.5 : 1;
-	      if (model.id === 'nano-banana-2-lite') return 0.5;
-	      if (model.id === 'gpt-image-2') return currentResolution === '4K' ? 1.5 : 1;
+	      if (model.id === 'nano-banana-pro') return currentResolution === '4K' ? 1.5 : 1.2;
+	      if (model.id === 'nano-banana-2') return currentResolution === '4K' ? 1.3 : (currentResolution === '2K' ? 0.8 : 0.5);
+	      if (model.id === 'nano-banana-2-lite') return 0.3;
+	      if (model.id === 'gpt-image-2') return currentResolution === '4K' ? 1.2 : (currentResolution === '2K' ? 0.7 : 0.5);
 	      if (model.id === 'seedream-5-pro') return currentResolution === '2K' ? 1 : 0.5;
       if (model.id === 'wan-2-7-image') return currentWanTier === 'pro' ? 1 : 0.5;
       if (model.id === 'veo31-lite') return currentResolution === '1080p' ? 2.5 : 2;
@@ -9182,7 +9192,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     function formatCreditValue(value) {
       if (value === null || value === undefined || value === '') return '';
       const numeric = Number(value);
-      return Number.isFinite(numeric) ? String(numeric) : String(value);
+      return Number.isFinite(numeric) ? String(toDisplayCredits(numeric)) : String(value);
     }
 
     function getCurrentCostLabel() {
