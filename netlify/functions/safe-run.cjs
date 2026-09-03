@@ -2,7 +2,7 @@
 
 const crypto = require('node:crypto');
 
-const POLICY_VERSION = '2026-08-16.2';
+const POLICY_VERSION = '2026-09-03.1';
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const QUEUE_SECRET = process.env.HANSORA_QUEUE_SECRET || '';
@@ -13,7 +13,7 @@ const DIRECT_SEXUAL_TERMS = [
   'clit', 'cock', 'dick', 'erotic', 'explicit sex',
   'fetish', 'fuck', 'fucking', 'genital', 'genitals', 'hardcore', 'hentai',
   'jerk off', 'masturbate', 'masturbating', 'masturbation', 'milf',
-  'onlyfans', 'orgasm', 'penis', 'porn', 'pornographic', 'pussy', 'sex',
+  'onlyfans', 'orgasm', 'penis', 'porn', 'pornographic', 'pussy',
   'sexual', 'slut', 'vagina', 'vergina', 'whore', 'xxx', 'sexo',
   'pornografia', 'sexe', 'порно', 'секс'
 ];
@@ -134,11 +134,27 @@ function hasHumanNudityContext(normalized) {
   return patterns.some((pattern) => pattern.test(text));
 }
 
+// The standalone word "sex" is ambiguous: it can mean biological sex in an
+// ordinary person or animal description. Only treat it as sexual content when
+// the surrounding words describe sexual activity or sexualized media.
+function hasSexualActivityContext(normalized) {
+  const patterns = [
+    /\b(?:have|having|had|has|engage|engaging|engaged)\s+(?:in\s+)?sex\b/,
+    /\bsex\s+(?:act|acts|activity|activities|scene|scenes|position|positions|video|videos|image|images|photo|photos|content|show|tape|worker|workers|work)\b/,
+    /\b(?:during|after|before|while|watching|depicting|showing|performing)\s+sex\b/,
+    /\bsex\s+(?:with|between|involving)\b/,
+    /\b(?:oral|anal|group|rough|explicit|graphic|hardcore)\s+sex\b/
+  ];
+  return patterns.some((pattern) => pattern.test(normalized));
+}
+
 function evaluatePrompt(prompt) {
   const normalized = normalizePrompt(prompt);
   if (!normalized) return { allowed: true, category: null, policyVersion: POLICY_VERSION };
 
-  const sexual = containsTerm(normalized, DIRECT_SEXUAL_TERMS) || hasHumanNudityContext(normalized);
+  const sexual = containsTerm(normalized, DIRECT_SEXUAL_TERMS)
+    || hasSexualActivityContext(normalized)
+    || hasHumanNudityContext(normalized);
   const minor = containsTerm(normalized, MINOR_TERMS);
   if (sexual && minor) return { allowed: false, category: 'sexual_content_involving_minors', policyVersion: POLICY_VERSION };
   if (sexual) return { allowed: false, category: 'nsfw_sexual_content', policyVersion: POLICY_VERSION };
