@@ -8125,6 +8125,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let seedanceLastFrameFile = null;
     let seedanceImageRefFiles = [];
     let seedanceVideoRefFiles = [];
+    let seedanceSingleVideoDuration = null;
     let seedanceAudioRefFiles = [];
     let seedanceGenerateAudio = true;
     let seedanceWebSearch = false;
@@ -9100,7 +9101,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        return Number((seconds * rate).toFixed(1));
 	      }
       if (model.id === 'seedance25') {
-        const seconds = Math.max(1, Number(currentDuration || 5));
+        const seconds = seedance25UsesSourceVideoSettings()
+          ? Math.max(4, Math.min(30, Math.ceil(Number(seedanceSingleVideoDuration || 4))))
+          : Math.max(1, Number(currentDuration || 5));
         const rate = currentResolution === '480p' ? 1.7 : 3.8;
         return Number((seconds * rate).toFixed(1));
       }
@@ -9342,6 +9345,14 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const durationPills = document.getElementById('durationPills');
       const opts = getDurationOptionsForCurrentModel();
       const durationCurrentLabel = document.getElementById('durationCurrentLabel');
+      if (seedance25UsesSourceVideoSettings()) {
+        if (durationBlock) durationBlock.classList.add('hidden');
+        if (durationPills) durationPills.innerHTML = '';
+        if (durationCurrentLabel) durationCurrentLabel.textContent = 'Источник';
+        updateCostDisplay();
+        updateRunButtonLabel();
+        return;
+      }
       if (!opts.length) {
         if (durationBlock) durationBlock.classList.add('hidden');
         if (durationPills) durationPills.innerHTML = '';
@@ -9861,6 +9872,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       seedanceLastFrameFile = null;
       seedanceImageRefFiles = [];
       seedanceVideoRefFiles = [];
+      seedanceSingleVideoDuration = null;
       seedanceAudioRefFiles = [];
       seedanceGenerateAudio = true;
       seedanceWebSearch = false;
@@ -10148,7 +10160,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
       // Duration (ONLY for video models that actually have durations)
       const durationOptions = getDurationOptionsForCurrentModel();
-      if (currentModel.category === 'video' && durationOptions.length) {
+      if (currentModel.category === 'video' && durationOptions.length && !seedance25UsesSourceVideoSettings()) {
         durBtn.classList.remove('hidden');
         const val = (currentDuration != null ? String(currentDuration) : String(durationOptions[0]));
         durLabel.textContent = val + 's';
@@ -10733,8 +10745,43 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (card) card.classList.toggle('control-disabled', !!disabled);
     }
 
+    function seedance25UsesSourceVideoSettings() {
+      return !!(currentModel && currentModel.id === 'seedance25' && seedanceVideoRefFiles.length === 1);
+    }
+
     function seedance25UsesAdaptiveAspect() {
-      return !!(currentModel && currentModel.id === 'seedance25' && seedanceFirstFrameFile);
+      return !!(currentModel && currentModel.id === 'seedance25' && (seedanceFirstFrameFile || seedance25UsesSourceVideoSettings()));
+    }
+
+    function readVideoFileDuration(file) {
+      return new Promise((resolve) => {
+        if (!file) return resolve(null);
+        const video = document.createElement('video');
+        const url = URL.createObjectURL(file);
+        const finish = (value) => {
+          URL.revokeObjectURL(url);
+          video.removeAttribute('src');
+          resolve(Number.isFinite(value) ? value : null);
+        };
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => finish(Number(video.duration));
+        video.onerror = () => finish(null);
+        video.src = url;
+      });
+    }
+
+    async function syncSeedanceSingleVideoDuration() {
+      seedanceSingleVideoDuration = seedanceVideoRefFiles.length === 1
+        ? await readVideoFileDuration(seedanceVideoRefFiles[0])
+        : null;
+      if (seedance25UsesSourceVideoSettings() && (!seedanceSingleVideoDuration || seedanceSingleVideoDuration < 4 || seedanceSingleVideoDuration > 30)) {
+        showStatus('Для редактирования видео в Seedance загруженное видео должно длиться от 4 до 30 секунд.', 'error');
+      }
+      syncSeedanceAspectControl();
+      renderDurationControls();
+      updateMobileQuickOptions();
+      updateCostDisplay();
+      updateRunButtonLabel();
     }
 
     function syncSeedanceAspectControl() {
@@ -10742,8 +10789,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const locked = seedance25UsesAdaptiveAspect();
       const aspectBlock = document.getElementById('aspectBlock');
       const mobileAspectBtn = document.getElementById('mobileAspectBtn');
+      const durationBlock = document.getElementById('durationBlock');
+      const mobileDurationBtn = document.getElementById('mobileDurationBtn');
       if (aspectBlock) aspectBlock.classList.toggle('hidden', locked);
       if (mobileAspectBtn) mobileAspectBtn.classList.toggle('hidden', locked);
+      if (durationBlock) durationBlock.classList.toggle('hidden', seedance25UsesSourceVideoSettings());
+      if (mobileDurationBtn) mobileDurationBtn.classList.toggle('hidden', seedance25UsesSourceVideoSettings());
     }
 
     function syncSeedanceInputLocks() {
@@ -11094,7 +11145,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       });
       syncSeedanceInputLocks();
     });
-    document.getElementById('seedanceVideoRefsInput').addEventListener('change', (e) => {
+    document.getElementById('seedanceVideoRefsInput').addEventListener('change', async (e) => {
       if (seedanceFirstFrameFile || seedanceLastFrameFile) {
         e.target.value = '';
         syncSeedanceInputLocks();
@@ -11114,7 +11165,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       renderFileListThumbs(seedanceVideoRefFiles, document.getElementById('seedanceVideoRefsThumbs'), (index) => {
         seedanceVideoRefFiles.splice(index, 1);
         document.getElementById('seedanceVideoRefsInput').value = '';
+        syncSeedanceSingleVideoDuration();
       });
+      await syncSeedanceSingleVideoDuration();
       syncSeedanceInputLocks();
     });
     document.getElementById('seedanceAudioRefsInput').addEventListener('change', (e) => {
@@ -12290,8 +12343,9 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             prompt,
             variant: model.id === 'seedance20-mini' ? 'mini' : (currentSeedanceVariant === 'fast' ? 'fast' : 'standard'),
             model: model.id === 'seedance20-mini' ? 'bytedance/seedance-2-mini' : undefined,
-            aspect_ratio: model.id === 'seedance25' && (firstFrameUrl || lastFrameUrl) ? 'adaptive' : (aspect || '16:9'),
-            duration: duration ? Number(duration) : 5,
+            aspect_ratio: model.id === 'seedance25' && ((firstFrameUrl || lastFrameUrl) || seedance25UsesSourceVideoSettings()) ? 'adaptive' : (aspect || '16:9'),
+            duration: model.id === 'seedance25' && seedance25UsesSourceVideoSettings() ? -1 : (duration ? Number(duration) : 5),
+            source_video_duration: model.id === 'seedance25' && seedance25UsesSourceVideoSettings() ? seedanceSingleVideoDuration : undefined,
             resolution: model.id === 'seedance20-mini' ? (currentResolution || '720p') : (currentSeedanceVariant === 'fast' ? '720p' : (currentResolution || '720p')),
             generate_audio: !!seedanceGenerateAudio,
             enable_web_search: !!seedanceWebSearch,
@@ -12610,6 +12664,12 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       if (!currentUser) {
         removeClientRequestPlaceholder(initialRequestContext);
         showStatus('Сначала войдите в аккаунт.', 'error');
+        return;
+      }
+
+      if (seedance25UsesSourceVideoSettings() && (!seedanceSingleVideoDuration || seedanceSingleVideoDuration < 4 || seedanceSingleVideoDuration > 30)) {
+        removeClientRequestPlaceholder(initialRequestContext);
+        showStatus('Для редактирования видео в Seedance загруженное видео должно длиться от 4 до 30 секунд.', 'error');
         return;
       }
 
