@@ -1,12 +1,13 @@
-// netlify/functions/run-seedance-25.js
-// Launches KIE Seedance 2.5 jobs for text-only and media-reference requests.
-// The refund amount is written once by this run function as meta.refund_amount.
-const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/, '');
-const KIE_KEY = process.env.KIE_API_KEY || '';
+// netlify/functions/run-seedance-25-cheap.js
+// Text-only economy route for the Seedance 2.5 feature through BytePlus ModelArk.
+// Any request with uploaded media must stay on run-seedance-25.js.
+const ARK_BASE = (process.env.ARK_BASE_URL || 'https://ark.ap-southeast.bytepluses.com').replace(/\/+$/, '');
+const ARK_KEY = process.env.seedance_cheap || process.env.SEEDANCE_CHEAP || process.env.ARK_API_KEY || process.env.BYTEPLUS_ARK_API_KEY || '';
+const ARK_MODEL = 'dreamina-seedance-2-5-260628';
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SITE_BASE = (process.env.SITE_BASE || 'https://hansora.co').replace(/\/+$/, '');
-const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-check`;
+const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/seedance-cheap-check`;
 
 function cors() {
   return {
@@ -48,20 +49,24 @@ async function verifyAuth(event, uid) {
 function extractTaskId(data) {
   if (!data || typeof data !== 'object') return '';
   const direct = [
-    data?.data?.taskId,
-    data?.taskId,
-    data?.result?.taskId,
+    data?.data?.id,
     data?.data?.task_id,
-    data?.task_id,
+    data?.data?.taskId,
     data?.id,
+    data?.task_id,
+    data?.taskId,
+    data?.result?.id,
+    data?.result?.task_id,
+    data?.result?.taskId,
   ].map((v) => (v == null ? '' : String(v))).find((v) => v.length > 3);
   if (direct) return direct;
+
   const seen = new Set();
   const scan = (value) => {
     if (!value || typeof value !== 'object' || seen.has(value)) return '';
     seen.add(value);
     for (const [key, inner] of Object.entries(value)) {
-      if (/^(task[_-]?id|request[_-]?id|id)$/i.test(key) && (typeof inner === 'string' || typeof inner === 'number')) {
+      if (/^(id|task[_-]?id|request[_-]?id)$/i.test(key) && (typeof inner === 'string' || typeof inner === 'number')) {
         const out = String(inner);
         if (out.length > 3) return out;
       }
@@ -76,22 +81,25 @@ function extractTaskId(data) {
 function clampDuration(value) {
   const duration = Number(value || 5);
   if (!Number.isFinite(duration)) return 5;
-  return Math.min(30, Math.max(4, Math.round(duration)));
+  return Math.min(15, Math.max(4, Math.round(duration)));
 }
 
-function isSingleVideoEdit(body) {
-  const videos = Array.isArray(body.reference_video_urls) ? body.reference_video_urls.filter(Boolean) : [];
-  return videos.length === 1;
+function normalizeResolution(value) {
+  const raw = String(value || '720p').toLowerCase();
+  return raw === '480p' ? '480p' : '720p';
 }
 
-function billingDuration(body) {
-  if (!isSingleVideoEdit(body)) return clampDuration(body.duration);
-  const duration = Number(body.source_video_duration);
-  return Math.min(30, Math.max(4, Math.ceil(duration)));
+function normalizeRatio(value) {
+  const raw = String(value || '16:9').trim();
+  return ['16:9', '9:16', '1:1', '4:3', '3:4', '21:9'].includes(raw) ? raw : '16:9';
+}
+
+function normalizeModel() {
+  return ARK_MODEL;
 }
 
 function costFor(body) {
-  const duration = billingDuration(body);
+  const duration = clampDuration(body.duration);
   const resolution = String(body.resolution || '720p').toLowerCase();
   const rate = resolution === '480p' ? 1.7 : 3.8;
   return Number((duration * rate).toFixed(1));
@@ -188,7 +196,17 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'method_not_allowed' });
 
   try {
-    if (!KIE_KEY || !SUPABASE_URL || !SERVICE_KEY) return json(500, { ok: false, error: 'missing_env' });
+    if (!ARK_KEY || !SUPABASE_URL || !SERVICE_KEY) {
+      return json(500, {
+        ok: false,
+        error: 'missing_env',
+        missing: [
+          !ARK_KEY ? 'seedance_cheap' : '',
+          !SUPABASE_URL ? 'SUPABASE_URL' : '',
+          !SERVICE_KEY ? 'SUPABASE_SERVICE_ROLE_KEY' : '',
+        ].filter(Boolean),
+      });
+    }
     const body = JSON.parse(event.body || '{}');
     const uid = getUID(event, body);
     if (!uid) return json(401, { ok: false, error: 'missing_uid' });
@@ -197,28 +215,31 @@ exports.handler = async (event) => {
 
     const prompt = String(body.prompt || '').trim();
     if (!prompt) return json(400, { ok: false, error: 'missing_prompt' });
-    if (isSingleVideoEdit(body)) {
-      const sourceDuration = Number(body.source_video_duration);
-      if (!Number.isFinite(sourceDuration) || sourceDuration < 4 || sourceDuration > 30) {
-        return json(400, { ok: false, error: 'source_video_duration_must_be_4_to_30_seconds' });
-      }
-    }
+    if (hasMedia(body)) return json(409, { ok: false, error: 'media_requires_standard_seedance_route' });
+
     const runId = String(body.run_id || `${uid}-${Date.now()}`);
     const existing = await fetchGeneration(uid, runId);
     const existingTask = existing?.meta?.task_id || existing?.meta?.taskId || '';
     if (existingTask) return json(200, { ok: true, submitted: true, taskId: existingTask, run_id: runId, already_submitted: true });
 
-    const cost = costFor(body);
-    const videoEditMode = isSingleVideoEdit(body);
-    const chargedDuration = billingDuration(body);
+    const duration = clampDuration(body.duration);
+    const resolution = normalizeResolution(body.resolution);
+    const ratio = normalizeRatio(body.aspect_ratio || body.ratio);
+    const cost = costFor({ ...body, duration, resolution });
+    const model = normalizeModel();
+    const callback = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
+
     const metaBase = {
-      source: 'kie',
+      source: 'byteplus',
+      checker: 'seedance-cheap-check',
       engine: 'seedance-2.5',
+      provider_route: 'text_only_low_cost',
+      ratio,
+      resolution,
+      duration,
       run_id: runId,
       status: 'pending',
       refund_amount: cost,
-      video_edit_mode: videoEditMode,
-      charged_duration: chargedDuration,
     };
     const rowId = existing?.id || await insertGeneration(uid, runId, prompt, metaBase);
 
@@ -227,47 +248,35 @@ exports.handler = async (event) => {
       return json(402, { ok: false, error: 'not_enough_credits', credits: currentCredits, need: cost });
     }
 
-    const model = 'bytedance/seedance-2-5';
-    const firstFrameUrl = String(body.first_frame_url || '').trim();
-    const lastFrameUrl = String(body.last_frame_url || '').trim();
-    const referenceImageUrls = Array.isArray(body.reference_image_urls) ? body.reference_image_urls.filter(Boolean).map(String) : [];
-    const referenceVideoUrls = Array.isArray(body.reference_video_urls) ? body.reference_video_urls.filter(Boolean).map(String) : [];
-    const referenceAudioUrls = Array.isArray(body.reference_audio_urls) ? body.reference_audio_urls.filter(Boolean).map(String) : [];
-    const hasFrameMode = !!(firstFrameUrl || lastFrameUrl);
-    const requestedResolution = String(body.resolution || '720p').toLowerCase();
-    const resolution = ['480p', '720p'].includes(requestedResolution) ? requestedResolution : '720p';
-    const aspectRatio = (hasFrameMode || videoEditMode) ? 'adaptive' : String(body.aspect_ratio || '1:1');
-    const input = {
-      prompt,
+    const arkPayload = {
+      model,
+      content: [{ type: 'text', text: prompt }],
+      ratio,
       resolution,
-      duration: videoEditMode ? -1 : clampDuration(body.duration),
-      aspect_ratio: aspectRatio,
+      duration,
       generate_audio: body.generate_audio !== false,
       return_last_frame: !!body.return_last_frame,
-      output_format: 'mp4',
-      web_search: !!(body.enable_web_search || body.web_search),
-      nsfw_checker: body.nsfw_checker === undefined ? false : !!body.nsfw_checker,
-      ...(firstFrameUrl ? { first_frame_url: firstFrameUrl } : {}),
-      ...(lastFrameUrl ? { last_frame_url: lastFrameUrl } : {}),
-      ...(!hasFrameMode && referenceImageUrls.length ? { reference_image_urls: referenceImageUrls.slice(0, 30) } : {}),
-      ...(!hasFrameMode && referenceVideoUrls.length ? { reference_video_urls: referenceVideoUrls.slice(0, 10) } : {}),
-      ...(!hasFrameMode && referenceAudioUrls.length ? { reference_audio_urls: referenceAudioUrls.slice(0, 10) } : {}),
+      watermark: false,
+      callback_url: callback,
     };
-    const callback = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
-    const kieRes = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
+
+    const arkRes = await fetch(`${ARK_BASE}/api/v3/contents/generations/tasks`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${KIE_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, input, callBackUrl: callback }),
+      headers: { Authorization: `Bearer ${ARK_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(arkPayload),
     });
-    const data = await kieRes.json().catch(() => ({}));
-    if (!kieRes.ok) {
+    const data = await arkRes.json().catch(() => ({}));
+    if (!arkRes.ok) {
       await patchGeneration(rowId, { ...metaBase, status: 'failed', error: data });
-      return json(kieRes.status || 502, { ok: false, error: 'kie_create_failed', details: data });
+      return json(arkRes.status || 502, { ok: false, error: 'seedance_create_failed', details: data });
     }
-    if (data && data.code && Number(data.code) !== 200) {
+
+    const providerStatus = String(data?.data?.status || data?.status || '').toLowerCase();
+    if (/(fail|failed|error|rejected|denied|blocked)/.test(providerStatus)) {
       await patchGeneration(rowId, { ...metaBase, status: 'failed', error: data });
-      return json(422, { ok: false, error: 'kie_create_failed', details: data });
+      return json(422, { ok: false, error: 'seedance_create_failed', details: data });
     }
+
     const taskId = extractTaskId(data);
     if (!taskId) {
       await patchGeneration(rowId, { ...metaBase, status: 'failed', error: data || 'missing_task_id' });
@@ -289,7 +298,7 @@ exports.handler = async (event) => {
       refund_amount: cost,
     };
     await patchGeneration(rowId, meta);
-    return json(201, { ok: true, submitted: true, taskId, id: taskId, run_id: runId, row_id: rowId, debited: cost, credits: debit.credits });
+    return json(201, { ok: true, submitted: true, taskId, id: taskId, run_id: runId, row_id: rowId, debited: cost, credits: debit.credits, checker: 'seedance-cheap-check' });
   } catch (error) {
     return json(500, { ok: false, error: 'server_error', details: String(error && error.message || error) });
   }
