@@ -2395,7 +2395,7 @@
 <div class="shell">
 <!-- Wide clickable image/banner slot. Replace the background/media inside this link later. -->
 <a class="wide-banner aspect-wide" href="/search-models.html">
-<video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-05.webp" aria-label="One canvas banner" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/banner-final.mp4" data-lazy-video></video>
+<video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-05.webp" aria-label="One canvas banner" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/banner-final.mp4" data-mobile-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/banner-mobile-final.mp4" data-lazy-video></video>
 <div class="banner-content">
 <span class="kicker">New feature</span>
 <h2>One canvas.<br/>Every workflow.</h2>
@@ -3283,17 +3283,27 @@
         video.addEventListener('loadeddata', () => markMediaReady(video), { once: true });
       });
 
+      const getVideoSource = (video) =>
+        (isMobile.matches && video.dataset.mobileSrc) || video.dataset.src || '';
+
       const loadVideoNow = (video, preload = 'metadata') => {
         if (!pageVisible) return;
-        if (!video.dataset.src) return;
+        const source = getVideoSource(video);
+        if (!source) return;
         if (video.getAttribute('preload') !== 'auto') {
           video.setAttribute('preload', preload);
         }
         if (video.src) {
+          const resolvedSource = new URL(source, document.baseURI).href;
+          if (video.src !== resolvedSource) {
+            video.src = source;
+            video.load();
+            return;
+          }
           if (preload === 'auto') video.load();
           return;
         }
-        video.src = video.dataset.src;
+        video.src = source;
         video.load();
       };
 
@@ -3445,6 +3455,19 @@
       });
 
       window.setTimeout(scheduleSettledLoad, 1600);
+      const syncResponsiveSources = () => {
+        videos.filter((video) => video.dataset.mobileSrc && video.src).forEach((video) => {
+          const source = getVideoSource(video);
+          const resolvedSource = new URL(source, document.baseURI).href;
+          if (video.src === resolvedSource) return;
+          const resume = visibleVideos.has(video) && video.autoplay && !reduceMotion.matches;
+          video.src = source;
+          video.load();
+          if (resume) video.addEventListener('canplay', () => video.play().catch(() => {}), { once: true });
+        });
+      };
+      if (typeof isMobile.addEventListener === 'function') isMobile.addEventListener('change', syncResponsiveSources);
+      else isMobile.addListener(syncResponsiveSources);
       window.addEventListener('resize', () => {
         if (pageVisible) window.setTimeout(scheduleSettledLoad, 250);
       }, { passive: true });
