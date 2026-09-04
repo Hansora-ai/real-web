@@ -79,8 +79,19 @@ function clampDuration(value) {
   return Math.min(30, Math.max(4, Math.round(duration)));
 }
 
+function isSingleVideoEdit(body) {
+  const videos = Array.isArray(body.reference_video_urls) ? body.reference_video_urls.filter(Boolean) : [];
+  return videos.length === 1;
+}
+
+function billingDuration(body) {
+  if (!isSingleVideoEdit(body)) return clampDuration(body.duration);
+  const duration = Number(body.source_video_duration);
+  return Math.min(30, Math.max(4, Math.ceil(duration)));
+}
+
 function costFor(body) {
-  const duration = clampDuration(body.duration);
+  const duration = billingDuration(body);
   const resolution = String(body.resolution || '720p').toLowerCase();
   const rate = resolution === '480p' ? 1.7 : 3.8;
   return Number((duration * rate).toFixed(1));
@@ -186,18 +197,28 @@ exports.handler = async (event) => {
 
     const prompt = String(body.prompt || '').trim();
     if (!prompt) return json(400, { ok: false, error: 'missing_prompt' });
+    if (isSingleVideoEdit(body)) {
+      const sourceDuration = Number(body.source_video_duration);
+      if (!Number.isFinite(sourceDuration) || sourceDuration < 4 || sourceDuration > 30) {
+        return json(400, { ok: false, error: 'source_video_duration_must_be_4_to_30_seconds' });
+      }
+    }
     const runId = String(body.run_id || `${uid}-${Date.now()}`);
     const existing = await fetchGeneration(uid, runId);
     const existingTask = existing?.meta?.task_id || existing?.meta?.taskId || '';
     if (existingTask) return json(200, { ok: true, submitted: true, taskId: existingTask, run_id: runId, already_submitted: true });
 
     const cost = costFor(body);
+    const videoEditMode = isSingleVideoEdit(body);
+    const chargedDuration = billingDuration(body);
     const metaBase = {
       source: 'kie',
       engine: 'seedance-2.5',
       run_id: runId,
       status: 'pending',
       refund_amount: cost,
+      video_edit_mode: videoEditMode,
+      charged_duration: chargedDuration,
     };
     const rowId = existing?.id || await insertGeneration(uid, runId, prompt, metaBase);
 
@@ -215,11 +236,11 @@ exports.handler = async (event) => {
     const hasFrameMode = !!(firstFrameUrl || lastFrameUrl);
     const requestedResolution = String(body.resolution || '720p').toLowerCase();
     const resolution = ['480p', '720p'].includes(requestedResolution) ? requestedResolution : '720p';
-    const aspectRatio = hasFrameMode ? 'adaptive' : String(body.aspect_ratio || '1:1');
+    const aspectRatio = (hasFrameMode || videoEditMode) ? 'adaptive' : String(body.aspect_ratio || '1:1');
     const input = {
       prompt,
       resolution,
-      duration: clampDuration(body.duration),
+      duration: videoEditMode ? -1 : clampDuration(body.duration),
       aspect_ratio: aspectRatio,
       generate_audio: body.generate_audio !== false,
       return_last_frame: !!body.return_last_frame,
