@@ -423,9 +423,6 @@ exports.handler = async function handler(event) {
   const modelId = String(request.model_id || '').slice(0, 100);
   const mediaKind = String(request.kind || '').slice(0, 20);
 
-  if (prompt.length > 20000) {
-    return json(413, { ok: false, error: 'Prompt is too long.' });
-  }
   if (!ALLOWED_RUN_ENDPOINTS.has(targetEndpoint)) {
     return json(400, { ok: false, error: 'Unsupported generation endpoint.' });
   }
@@ -436,9 +433,6 @@ exports.handler = async function handler(event) {
   const promptParts = [prompt];
   collectPromptLikeText(request.payload, 'payload', promptParts, 0);
   const moderationText = Array.from(new Set(promptParts.map((part) => String(part || '').trim()).filter(Boolean))).join('\n');
-  if (moderationText.length > 60000) {
-    return json(413, { ok: false, error: 'Combined prompt content is too long.' });
-  }
 
   const decision = evaluatePrompt(moderationText);
   const decisionId = crypto.randomUUID();
