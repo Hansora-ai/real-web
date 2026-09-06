@@ -25,6 +25,8 @@
   const AUTH_FUNNEL_PENDING_KEY = 'hansora.auth_funnel.pending.v1';
   const AUTH_FUNNEL_VISITOR_KEY = 'hansora.auth_funnel.visitor.v1';
   const AUTH_FUNNEL_MAX_AGE_MS = 30 * 60 * 1000;
+  const COURSE_AUTH_RETURN_KEY = 'hansora.course.auth_return.v1';
+  const COURSE_AUTH_RETURN_MAX_AGE_MS = 6 * 60 * 60 * 1000;
   const EMAIL_VERIFICATION_PENDING_KEY = 'hansora.email_verification.pending.v1';
   const EMAIL_VERIFICATION_MAX_AGE_MS = 15 * 60 * 1000;
   const REGISTRATION_COMPLETED_EVENT_PREFIX = 'hansora.registration.completedEvent.';
@@ -403,6 +405,38 @@
     if (path === '/course_arm' || path === '/course_arm.html') return '/course_arm';
     if (path === '/course_ru' || path === '/course_ru.html') return '/course_ru';
     return '';
+  }
+
+  function rememberCourseAuthReturn(pathname) {
+    const coursePath = normalizeAiCoursePath(pathname);
+    if (!coursePath) return '';
+    try {
+      localStorage.setItem(COURSE_AUTH_RETURN_KEY, JSON.stringify({
+        path: coursePath,
+        createdAt: Date.now()
+      }));
+    } catch (_) {}
+    return coursePath;
+  }
+
+  function getPendingCourseAuthReturn() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(COURSE_AUTH_RETURN_KEY) || 'null');
+      const path = normalizeAiCoursePath(saved && saved.path);
+      const createdAt = Number(saved && saved.createdAt);
+      if (!path || !Number.isFinite(createdAt) || Date.now() - createdAt > COURSE_AUTH_RETURN_MAX_AGE_MS) {
+        localStorage.removeItem(COURSE_AUTH_RETURN_KEY);
+        return '';
+      }
+      return path;
+    } catch (_) {
+      try { localStorage.removeItem(COURSE_AUTH_RETURN_KEY); } catch (_) {}
+      return '';
+    }
+  }
+
+  function clearPendingCourseAuthReturn() {
+    try { localStorage.removeItem(COURSE_AUTH_RETURN_KEY); } catch (_) {}
   }
 
   function rememberAiCourseOrigin(pathname) {
@@ -3106,6 +3140,7 @@
   }
 
   function openAuth(mode) {
+    rememberCourseAuthReturn(location.pathname);
     const savedVerification = readPendingEmailVerification();
     const requestedSignup = mode === 'signup';
     emailAuthOpenedFromChooser = false;
@@ -4166,13 +4201,18 @@
         clearAuthMessage();
         btnResendCode.disabled = true;
         btnResendCode.setAttribute('aria-busy', 'true');
+        const authAttempt = readAuthFunnelAttempt();
+        await recordAuthFunnelEvent('auth_email_verification_resend_clicked', authAttempt);
         try {
           const resend = await sb.auth.resend({ type: 'signup', email: pendingVerificationEmail });
           if (resend.error) throw resend.error;
           savePendingEmailVerification(pendingVerificationEmail);
-          await recordAuthFunnelEvent('auth_email_verification_resent', readAuthFunnelAttempt());
+          await recordAuthFunnelEvent('auth_email_verification_resent', authAttempt);
           setAuthMessage(copy('codeResent'), 'success');
         } catch (error) {
+          await recordAuthFunnelEvent('auth_email_verification_resend_failed', authAttempt, {
+            errorReason: error && error.message ? error.message : error
+          });
           setAuthMessage(readableEmailAuthError(error, 'verificationFailed'), 'error');
         } finally {
           btnResendCode.disabled = false;
@@ -4291,7 +4331,7 @@
   async function handleAuthenticatedUserOnce(user) {
     const authAttempt = readAuthFunnelAttempt();
     clearTelegramOAuthStart();
-    const pendingCourseReturn = getPendingAiCourseOrigin();
+    const pendingCourseReturn = getPendingCourseAuthReturn() || getPendingAiCourseOrigin();
     const pendingAttribution = readSignupAttributionStart();
     if (pendingAttribution) restoreExistingAnalyticsSessionId(pendingAttribution.sessionId);
     refreshAnalyticsAuthCache();
@@ -4317,9 +4357,11 @@
       }));
     }
     if (pendingCourseReturn && normalizeAiCoursePath(location.pathname) !== pendingCourseReturn) {
+      clearPendingCourseAuthReturn();
       window.location.replace(pendingCourseReturn);
       return profile;
     }
+    clearPendingCourseAuthReturn();
     const authSuccessWrite = authCallbackArrivalWrite.then(function () {
       return recordAuthFunnelEvent('auth_success', authAttempt, {
         userId: user.id
