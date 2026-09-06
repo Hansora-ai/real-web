@@ -874,7 +874,7 @@ Return only the final ready-to-use image-editing prompt.`,
     function renderAccess(){
       const requested=activeIndex>=0&&!COURSE_CONFIG.lessons[activeIndex]?.comingSoon?activeIndex:0;
       renderLessons();
-      if(!session){closeModals();showPurchaseGate(requested);return}
+      if(!session){closeModals();showRegistrationGate(requested);return}
       if(!hasAccess){closeModals();showPurchaseGate(requested);return}
       closeModals();
       selectLesson(requested,false);
@@ -931,6 +931,14 @@ Return only the final ready-to-use image-editing prompt.`,
       const preview=lesson.thumbnailUrl||LESSON_PREVIEWS[index]||LESSON_PREVIEWS[0]||'';
       $('#playerWrap').innerHTML=`<div class="lesson-preview" style="background-image:url('${esc(preview)}')"><div class="lesson-preview-inner"><div class="play">▶</div><strong>Приобретите кредиты, чтобы смотреть</strong></div></div>`;
     }
+    function showRegistrationGate(index){
+      const lesson=COURSE_CONFIG.lessons[index]||COURSE_CONFIG.lessons[0];
+      delete $('#playerWrap').dataset.courseLesson;
+      activeIndex=index;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.remove('hidden');
+      playerMeta('УРОК '+(index+1),lesson.title,lesson.description,'Требуется регистрация');
+      const preview=lesson.thumbnailUrl||LESSON_PREVIEWS[index]||LESSON_PREVIEWS[0]||'';
+      $('#playerWrap').innerHTML=`<div class="lesson-preview" style="background-image:url('${esc(preview)}')"><div class="lesson-preview-inner"><div class="play">▶</div><strong>Зарегистрируйтесь, чтобы смотреть</strong></div></div>`;
+    }
     function showAuthLoadingGate(){
       delete $('#playerWrap').dataset.courseLesson;activeIndex=-1;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.add('hidden');
       $('#playerWrap').innerHTML='<div class="video-empty"><div><div class="play">…</div><strong>Проверяем ваш аккаунт</strong><small>Это займёт всего несколько секунд</small></div></div>';
@@ -939,7 +947,12 @@ Return only the final ready-to-use image-editing prompt.`,
       const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Этот урок скоро станет доступен');return}
       if(!authHydrated){showAuthLoadingGate();return}
       if(accessLoading)return;
-      if(!session||!hasAccess){
+      if(!session){
+        showRegistrationGate(index);
+        openModal('#signupModal');
+        return;
+      }
+      if(!hasAccess){
         showPurchaseGate(index);
         openPracticeOffer(index+1,'locked_lesson_clicked');
         return;
