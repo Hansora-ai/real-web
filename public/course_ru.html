@@ -60,6 +60,7 @@
     @media(max-width:900px){.lesson-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:640px){.lesson-list{grid-template-columns:1fr}}
     .practice-offer-box{width:min(920px,100%);text-align:center}.practice-offer-box .pack{text-align:left}.practice-next-heading{margin:0 auto 14px;font-size:15px;font-weight:800;color:#b9c0d3}.practice-next{color:#91d7ff;text-decoration:none;white-space:nowrap}.practice-next:hover{color:#fff}.practice-offer-box .modal-sub{margin-bottom:12px}.course-free-highlight{color:#79d8ff;font-weight:900}
+    .practice-intro-video{display:block;width:100%;max-width:660px;aspect-ratio:16/9;object-fit:contain;background:#000;border-radius:14px;margin:18px auto}
 </style>
 </head>
 <body>
@@ -137,7 +138,7 @@
     <div class="modal-box signup-box">
       <button class="modal-close" data-close-modal aria-label="Закрыть">×</button>
       <div class="icon">♙</div><h2 id="signupTitle">Требуется регистрация</h2>
-      <p>Зарегистрируйтесь, чтобы смотреть урок.</p>
+      <p>Приобретите кредиты, чтобы смотреть урок.</p>
       <div class="signup-actions"><a id="courseSignupLink" class="primary" href="/login.html?mode=signup">Зарегистрироваться</a></div>
     </div>
   </div>
@@ -159,10 +160,10 @@
   <div id="practiceOfferModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="practiceOfferTitle">
     <div class="modal-box practice-offer-box">
       <button class="modal-close" data-close-practice-offer aria-label="Закрыть">×</button>
-      <div class="practice-next-heading">Закончили? <a class="practice-next" href="#" data-practice-offer-next>Следующий урок →</a></div>
       <div class="pricing-sale">БОЛЬШИЕ СКИДКИ</div>
       <h2 id="practiceOfferTitle"></h2>
       <p id="practiceOfferText" class="modal-sub"></p>
+      <video id="practiceIntroVideo" class="practice-intro-video" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/intro-ru-0811-compressed.mp4" controls playsinline preload="none" aria-label="Учись на практике 💪"></video>
       <div class="payment-note">Не ежемесячная оплата</div>
       <div class="payment-methods" role="group" aria-label="Способ оплаты">
         <button class="payment-method active" type="button" data-payment-method="international" aria-pressed="true">🌍 Международная карта</button>
@@ -833,37 +834,22 @@ Return only the final ready-to-use image-editing prompt.`,
     ];
     const ANSWERS=['Отлично — всё было понятно','Было хорошо, но недостаточно','Было хорошо, но нужно больше примеров','Было хорошо, но материал был изложен слишком быстро','Я ожидал(а) большего — было не очень','Было непонятно — некоторые разделы я не понял(а)','Мне не понравилось — было плохо'];
     const LOCAL_PREVIEW=location.protocol==='file:'||location.hostname==='127.0.0.1'||location.hostname==='localhost';
-    const PRACTICE_OFFERS=[
-      {title:'Теперь — к практике 💪',html:'Купите кредиты по сниженной цене, чтобы начать генерировать и продолжить урок. <span class="course-free-highlight">Курс бесплатный</span> — кредиты нужны только для практики с AI-инструментами во время занятий.'},
-      {title:'У вас уже есть база 💪',text:'Вы знаете, как строится промпт. Не хотите закрепить на практике? Даже с самым маленьким пакетом вы можете сгенерировать до 200 изображений.'},
-      {title:'Теперь вы умеете это сами 🚀',text:'Знаний достаточно, чтобы сгенерировать привлекающее внимание изображение. Осталось только нажать кнопку — кредиты сейчас с большими скидками, не упустите возможность.'}
-    ];
+    const PURCHASE_OFFER={"title": "Учись на практике 💪", "text": "Курс бесплатный, а чтобы получить максимальный результат от уроков, тебе понадобятся кредиты для генерации изображений и видео и выполнения заданий во время занятий. Вы платите не за уроки, а за генерации, чтобы получить наилучший результат."};
     let sb=null, session=LOCAL_PREVIEW?{user:{id:'local-preview',email:'preview@hansora.local'}}:null, hasAccess=LOCAL_PREVIEW, accessLoading=!LOCAL_PREVIEW, authHydrated=LOCAL_PREVIEW, courseAuthRevision=0, lastCourseAuthEvent='', checkedUserId=null, activeIndex=-1, paymentMethod='international';
     let practicePlayback={lessonNumber:0,started:false,completed:false};
-    let welcomeOfferUserId=null;
-    const dismissedPracticeOffers=new Set();
-    let pendingFreeLessonIndex=null;
     const $=s=>document.querySelector(s);
     const esc=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
     function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2600)}
     function openModal(id){$(id).classList.add('open');document.body.style.overflow='hidden'}
-    function closeModals(){document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open'));document.body.style.overflow=''}
-    function requireUser(){if(!authHydrated){showAuthLoadingGate();return false}if(session?.user)return true;openModal('#signupModal');return false}
-    function maybeShowWelcomeOffer(){
-      const userId=session?.user?.id||'';
-      if(!authHydrated||accessLoading||hasAccess||!userId||welcomeOfferUserId===userId||new URLSearchParams(location.search).get('checkout')==='success')return;
-      const storageKey='hansora-course-welcome-offer-v1:'+userId;
-      try{if(localStorage.getItem(storageKey)==='seen')return}catch(error){console.warn('Could not read welcome-offer state:',error)}
-      welcomeOfferUserId=userId;
-      const openWhenReady=()=>{
-        if(session?.user?.id!==userId||hasAccess){welcomeOfferUserId=null;return}
-        if(document.querySelector('.modal.open')){setTimeout(openWhenReady,1000);return}
-        try{localStorage.setItem(storageKey,'seen')}catch(error){console.warn('Could not save welcome-offer state:',error)}
-        window.dispatchEvent(new CustomEvent('hansora:course-welcome-offer-open',{detail:{coursePath:'/course_ru'}}));
-        openModal('#welcomeOfferModal');
-      };
-      setTimeout(openWhenReady,5000);
+    function closeModals(){$('#practiceIntroVideo')?.pause();document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open'));document.body.style.overflow=''}
+    function closeSignupGate(){
+      const modal=$('#signupModal');
+      if(!modal||!modal.classList.contains('open'))return;
+      modal.classList.remove('open');
+      if(!document.querySelector('.modal.open, .hansora-course-modal.is-open'))document.body.style.overflow='';
     }
+    function requireUser(){if(!authHydrated){showAuthLoadingGate();return false}if(session?.user)return true;openModal('#signupModal');return false}
+
     async function authHeader(){const {data}=await sb.auth.getSession();session=data?.session||null;return session?{'Authorization':'Bearer '+session.access_token}: {}}
     async function checkAccess(){
       const userId=session?.user?.id||null;
@@ -877,6 +863,7 @@ Return only the final ready-to-use image-editing prompt.`,
           .eq('uid',userId)
           .gte('credits',100)
           .limit(1);
+        if(session?.user?.id!==userId)return;
         if(error)throw error;
         hasAccess=Array.isArray(data)&&data.length>0;
         checkedUserId=userId;
@@ -885,33 +872,29 @@ Return only the final ready-to-use image-editing prompt.`,
       renderAccess();
     }
     function renderAccess(){
-      renderLessons();
       const requested=activeIndex>=0&&!COURSE_CONFIG.lessons[activeIndex]?.comingSoon?activeIndex:0;
-      if(!session){showRegistrationGate(0);return}
-      selectLesson(hasAccess?requested:0,false);
-      maybeShowWelcomeOffer();
+      renderLessons();
+      if(!session){closeModals();showPurchaseGate(requested);return}
+      if(hasAccess)closeModals();
+      selectLesson(requested,false);
     }
     function renderLessons(){
-      $('#lessonList').innerHTML=COURSE_CONFIG.lessons.map((l,i)=>{const preview=l.thumbnailUrl||LESSON_PREVIEWS[i]||'';const unlocked=(i===0&&!!session)||hasAccess;const thumb=`<span class="lesson-thumb" style="background-image:url('${esc(preview)}')"><span class="lesson-thumb-play">▶</span></span>`;return `<button type="button" class="lesson-btn ${activeIndex===i?'active':''} ${unlocked?'unlocked':''}" data-lesson="${i}">${thumb}<span class="lesson-row"><span class="lesson-num">${i+1}</span><span class="lesson-copy"><strong>${esc(l.title)}</strong><small>${esc(l.duration)}</small></span><span class="lock">${unlocked?'✓':'🔒'}</span></span></button>`}).join('');
+      $('#lessonList').innerHTML=COURSE_CONFIG.lessons.map((l,i)=>{const preview=l.thumbnailUrl||LESSON_PREVIEWS[i]||'';const unlocked=hasAccess;const thumb=`<span class="lesson-thumb" style="background-image:url('${esc(preview)}')"><span class="lesson-thumb-play">▶</span></span>`;return `<button type="button" class="lesson-btn ${activeIndex===i?'active':''} ${unlocked?'unlocked':''}" data-lesson="${i}">${thumb}<span class="lesson-row"><span class="lesson-num">${i+1}</span><span class="lesson-copy"><strong>${esc(l.title)}</strong><small>${esc(l.duration)}</small></span><span class="lock">${unlocked?'✓':'🔒'}</span></span></button>`}).join('');
       const published=COURSE_CONFIG.lessons.filter(l=>!l.comingSoon).length;
-      $('#progressText').textContent='Доступно уроков: '+(hasAccess?published:(session?1:0))+' / '+COURSE_CONFIG.lessons.length;
+      $('#progressText').textContent='Доступно уроков: '+(hasAccess?published:0)+' / '+COURSE_CONFIG.lessons.length;
     }
     function playerMeta(kicker,title,description,pill){$('#lessonKicker').textContent=kicker;$('#lessonTitle').textContent=title;$('#lessonDescription').textContent=description;$('#accessPill').textContent=pill}
     function showEmpty(message){destroyPlayer();$('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty"><div><div class="play">▶</div><strong>${esc(message)}</strong><small>Ссылка на видео появится здесь</small></div></div>`}
     function destroyPlayer(){const media=$('#introNativeVideo');if(media&&!media.paused)media.pause()}
     function openPracticeOffer(lessonNumber,reason){
-      if(hasAccess||lessonNumber<1||lessonNumber>3||dismissedPracticeOffers.has(lessonNumber))return false;
-      const offer=PRACTICE_OFFERS[lessonNumber-1];if(!offer)return false;
-      $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').innerHTML=offer.html||esc(offer.text);$('#practiceOfferModal').dataset.lessonNumber=String(lessonNumber);renderPacks();
-      window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:reason||'unknown',lessonNumber,coursePath:'/course_ru'}}));openModal('#practiceOfferModal');return true;
+      if(hasAccess||lessonNumber<1||lessonNumber>COURSE_CONFIG.lessons.length)return false;
+      $('#practiceOfferTitle').textContent=PURCHASE_OFFER.title;
+      $('#practiceOfferText').textContent=PURCHASE_OFFER.text;
+      $('#practiceOfferModal').dataset.lessonNumber=String(lessonNumber);renderPacks();
+      window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:reason||'unknown',lessonNumber,coursePath:'/course_ru'}}));
+      openModal('#practiceOfferModal');return true;
     }
-    function dismissPracticeOffer(goToPendingLesson){
-      const lessonNumber=Number($('#practiceOfferModal').dataset.lessonNumber||0);
-      if(lessonNumber>=1&&lessonNumber<=3)dismissedPracticeOffers.add(lessonNumber);
-      const target=goToPendingLesson&&Number.isInteger(pendingFreeLessonIndex)?pendingFreeLessonIndex:null;
-      pendingFreeLessonIndex=null;closeModals();
-      if(target!==null&&target>=0&&target<3&&target!==activeIndex)selectLesson(target);
-    }
+    function dismissPracticeOffer(){closeModals()}
     function bindPracticePlayer(player,lessonNumber){
       if(hasAccess||lessonNumber<1||lessonNumber>3||!player)return;
       practicePlayback={lessonNumber,started:false,completed:false};
@@ -939,13 +922,13 @@ Return only the final ready-to-use image-editing prompt.`,
       }
       showEmpty('Неподдерживаемый формат видео');
     }
-    function showRegistrationGate(index){
+    function showPurchaseGate(index){
       const lesson=COURSE_CONFIG.lessons[index]||COURSE_CONFIG.lessons[0];
       delete $('#playerWrap').dataset.courseLesson;
       activeIndex=index;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.remove('hidden');
-      playerMeta('УРОК '+(index+1),lesson.title,lesson.description,'Требуется регистрация');
+      playerMeta('УРОК '+(index+1),lesson.title,lesson.description,'Нужны кредиты');
       const preview=lesson.thumbnailUrl||LESSON_PREVIEWS[index]||LESSON_PREVIEWS[0]||'';
-      $('#playerWrap').innerHTML=`<div class="lesson-preview" style="background-image:url('${esc(preview)}')"><div class="lesson-preview-inner"><div class="play">▶</div><strong>Зарегистрируйтесь, чтобы смотреть</strong></div></div>`;
+      $('#playerWrap').innerHTML=`<div class="lesson-preview" style="background-image:url('${esc(preview)}')"><div class="lesson-preview-inner"><div class="play">▶</div><strong>Приобретите кредиты, чтобы смотреть</strong></div></div>`;
     }
     function showAuthLoadingGate(){
       delete $('#playerWrap').dataset.courseLesson;activeIndex=-1;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.add('hidden');
@@ -954,27 +937,19 @@ Return only the final ready-to-use image-editing prompt.`,
     function selectLesson(index,shouldScroll=true){
       const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Этот урок скоро станет доступен');return}
       if(!authHydrated){showAuthLoadingGate();return}
-      if(!session){showRegistrationGate(0);requireUser();if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});return}
-      if(index>0&&accessLoading)return;
-      if((index===1||index===2)&&!hasAccess){
-        const offer=PRACTICE_OFFERS[0];
-        $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').innerHTML=offer.html;$('#practiceOfferModal').dataset.lessonNumber=String(index+1);pendingFreeLessonIndex=null;renderPacks();
-        window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:'locked_practice_lesson_clicked',lessonNumber:index+1,coursePath:'/course_ru'}}));openModal('#practiceOfferModal');return;
+      if(accessLoading)return;
+      if(!session||!hasAccess){
+        showPurchaseGate(index);
+        openPracticeOffer(index+1,'locked_lesson_clicked');
+        return;
       }
-      if(index>2&&!hasAccess){openCredits('locked_lesson_clicked',index);return}
-      if(index<3&&index!==activeIndex&&!hasAccess&&practicePlayback.lessonNumber===activeIndex+1&&practicePlayback.started&&!practicePlayback.completed){
-        pendingFreeLessonIndex=index;
-        if(openPracticeOffer(practicePlayback.lessonNumber,'video_closed'))return;
-        pendingFreeLessonIndex=null;
-      }
-      activeIndex=index;$('#playerWrap').dataset.courseLesson=String(index+1);renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('УРОК '+(index+1),l.title,l.description,index<3&&!hasAccess?'Бесплатно':'Доступ открыт');mountVideo(l.videoId,index<3&&!hasAccess?index+1:0);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
+      activeIndex=index;$('#playerWrap').dataset.courseLesson=String(index+1);renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('УРОК '+(index+1),l.title,l.description,'Доступ открыт');mountVideo(l.videoId,0);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
     }
     function renderPrompts(lesson){$('#promptList').innerHTML=lesson.prompts.map((p,i)=>{const item=typeof p==='string'?{title:`Команда ${i+1}`,text:p,ru:''}:p;const initial=item.ru||item.text;return `<div class="prompt" data-prompt-index="${i}" data-lang="${item.ru?'ru':'en'}"><div class="prompt-main"><div class="prompt-body"><h3 class="prompt-title">${esc(item.title)}</h3><div class="prompt-text">${esc(initial)}</div></div><div class="prompt-actions">${item.ru?'<button type="button" class="mini-btn lang-btn">English</button>':''}<button type="button" class="mini-btn more-btn">Подробнее</button><button type="button" class="mini-btn copy-btn">Копировать</button></div></div></div>`}).join('')}
     function renderFeedback(lesson){$('#feedbackOptions').innerHTML=ANSWERS.map((a,i)=>`<label class="choice"><input type="radio" name="rating" value="${esc(a)}" ${i===0?'required':''}><span>${esc(a)}</span></label>`).join('');$('#feedbackComment').value='';$('#feedbackForm').dataset.lesson=lesson.id}
     function openCredits(reason,lessonIndex){
       const index=Number.isInteger(lessonIndex)?lessonIndex:(activeIndex>=0?activeIndex:0);
-      window.dispatchEvent(new CustomEvent('hansora:course-offer-open',{detail:{reason:reason||'manual',lessonNumber:index+1,coursePath:'/course_ru'}}));
-      openModal('#creditsModal');
+      openPracticeOffer(index+1,reason||'manual');
     }
     function renderPacks(){
       const isRu=paymentMethod==='ru';const markup=practice=>PACKS.map(p=>`<article class="pack ${p.featured?'featured':''}">${p.featured?'<span class="pack-badge">ПОПУЛЯРНЫЙ ВЫБОР</span>':''}<div class="pack-top"><span class="pack-line">${esc(p.line)}</span><span class="pack-save">${esc(isRu?p.rubSave:p.usdSave)}</span></div><h3>${p.credits} кредитов</h3><div class="pack-prices"><div class="price">${esc(isRu?p.rubPrice:p.usdPrice)}</div><div class="old-price">${esc(isRu?p.rubOld:p.usdOld)}</div></div><ul class="pack-benefits">${p.benefits.map(item=>`<li>${esc(item)}</li>`).join('')}</ul><button class="buy" type="button" ${practice?'data-practice-offer-buy':''} data-credits="${p.credits}" data-product="${esc(p.product)}" data-ru-product="${esc(p.ruProduct)}">Начать практику</button></article>`).join('');
@@ -1028,7 +1003,7 @@ Return only the final ready-to-use image-editing prompt.`,
       try{
         sb=window.__HANSORA_SB__||window.hansoraSupabase||window.supabaseClient;
         if(!sb){sb=window.supabase.createClient('https://qmaealblegvcwodlmeht.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c');window.__HANSORA_SB__=sb}
-        const applyCourseSession=async(event,nextSession)=>{const previousUserId=session?.user?.id||null;courseAuthRevision+=1;lastCourseAuthEvent=event;session=nextSession||null;authHydrated=true;const nextUserId=session?.user?.id||null;if(event==='SIGNED_OUT'||!nextUserId){hasAccess=false;checkedUserId=null;accessLoading=false;renderAccess();return}if(nextUserId!==previousUserId)checkedUserId=null;await checkAccess()};
+        const applyCourseSession=async(event,nextSession)=>{const previousUserId=session?.user?.id||null;courseAuthRevision+=1;lastCourseAuthEvent=event;session=nextSession||null;authHydrated=true;const nextUserId=session?.user?.id||null;if(event==='SIGNED_OUT'||!nextUserId){hasAccess=false;checkedUserId=null;accessLoading=false;renderAccess();return}closeSignupGate();if(nextUserId!==previousUserId){checkedUserId=null;hasAccess=false;showAuthLoadingGate()}await checkAccess()};
         const restoreRevision=courseAuthRevision;
         sb.auth.onAuthStateChange((event,nextSession)=>{void applyCourseSession(event,nextSession)});
         const {data,error}=await sb.auth.getSession();if(error)throw error;
@@ -1037,8 +1012,8 @@ Return only the final ready-to-use image-editing prompt.`,
       }catch(e){console.warn(e);if(!authHydrated){authHydrated=true;session=null;hasAccess=false;accessLoading=false;renderAccess()}}
       if(new URLSearchParams(location.search).get('checkout')==='success'&&session&&!hasAccess){toast('Проверяем оплату…');let tries=0;const poll=setInterval(async()=>{tries++;checkedUserId=null;await checkAccess();if(hasAccess||tries>=12){clearInterval(poll);if(hasAccess){toast('Доступ к курсу открыт');selectLesson(0)}}},2000)}
     }
-    document.addEventListener('click',e=>{const modal=$('#practiceOfferModal');const lessonNumber=Number(modal.dataset.lessonNumber||0);if(e.target.closest('[data-close-practice-offer]')||(e.target===modal&&modal.classList.contains('open'))){dismissPracticeOffer(true);return}if(e.target.closest('[data-practice-offer-next]')){e.preventDefault();dismissedPracticeOffers.add(lessonNumber);const target=Number.isInteger(pendingFreeLessonIndex)?pendingFreeLessonIndex:lessonNumber;pendingFreeLessonIndex=null;closeModals();if(target>=0&&target<COURSE_CONFIG.lessons.length&&target!==activeIndex)selectLesson(target);return}});
-    document.addEventListener('click',e=>{const lesson=e.target.closest('[data-lesson]');if(lesson)selectLesson(Number(lesson.dataset.lesson));if(e.target.closest('#playerWrap')&&!session)requireUser();if(e.target.closest('[data-close-modal]')||e.target.classList.contains('modal'))closeModals();const method=e.target.closest('[data-payment-method]');if(method){paymentMethod=method.dataset.paymentMethod;document.querySelectorAll('[data-payment-method]').forEach(button=>{const selected=button.dataset.paymentMethod===paymentMethod;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected))});renderPacks()}const more=e.target.closest('.more-btn');if(more){const box=more.closest('.prompt');box.classList.toggle('expanded');more.textContent=box.classList.contains('expanded')?'Свернуть':'Подробнее'}const lang=e.target.closest('.lang-btn');if(lang){const box=lang.closest('.prompt');const prompt=COURSE_CONFIG.lessons[activeIndex].prompts[Number(box.dataset.promptIndex)];const toRussian=box.dataset.lang!=='ru';box.dataset.lang=toRussian?'ru':'en';box.querySelector('.prompt-text').textContent=toRussian?prompt.ru:prompt.text;lang.textContent=toRussian?'English':'Русский'}const copy=e.target.closest('.copy-btn');if(copy){const text=copy.closest('.prompt').querySelector('.prompt-text').textContent;navigator.clipboard.writeText(text).then(()=>toast('Команда скопирована'))}const buy=e.target.closest('.buy');if(buy)checkout(buy)});
+    document.addEventListener('click',e=>{if(e.target.closest('[data-close-practice-offer]'))dismissPracticeOffer()});
+    document.addEventListener('click',e=>{const lesson=e.target.closest('[data-lesson]');if(lesson)selectLesson(Number(lesson.dataset.lesson));if(e.target.closest('#playerWrap')&&(!session||!hasAccess))selectLesson(activeIndex>=0?activeIndex:0);if(e.target.closest('[data-close-modal]')||e.target.classList.contains('modal'))closeModals();const method=e.target.closest('[data-payment-method]');if(method){paymentMethod=method.dataset.paymentMethod;document.querySelectorAll('[data-payment-method]').forEach(button=>{const selected=button.dataset.paymentMethod===paymentMethod;button.classList.toggle('active',selected);button.setAttribute('aria-pressed',String(selected))});renderPacks()}const more=e.target.closest('.more-btn');if(more){const box=more.closest('.prompt');box.classList.toggle('expanded');more.textContent=box.classList.contains('expanded')?'Свернуть':'Подробнее'}const lang=e.target.closest('.lang-btn');if(lang){const box=lang.closest('.prompt');const prompt=COURSE_CONFIG.lessons[activeIndex].prompts[Number(box.dataset.promptIndex)];const toRussian=box.dataset.lang!=='ru';box.dataset.lang=toRussian?'ru':'en';box.querySelector('.prompt-text').textContent=toRussian?prompt.ru:prompt.text;lang.textContent=toRussian?'English':'Русский'}const copy=e.target.closest('.copy-btn');if(copy){const text=copy.closest('.prompt').querySelector('.prompt-text').textContent;navigator.clipboard.writeText(text).then(()=>toast('Команда скопирована'))}const buy=e.target.closest('.buy');if(buy)checkout(buy)});
     $('#feedbackForm').addEventListener('submit',submitFeedback);document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('#practiceOfferModal').classList.contains('open'))dismissPracticeOffer(true);else closeModals()}});
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
   })();
