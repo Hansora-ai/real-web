@@ -64,6 +64,7 @@
     .lesson-btn:nth-child(2) .lesson-thumb{background-image:url('https://vz-4ebbab26-4bc.b-cdn.net/173056c9-86b0-4a85-b760-4de88c804b1f/thumbnail.jpg')!important}
     .lesson-btn:nth-child(3) .lesson-thumb{background-image:url('https://vz-4ebbab26-4bc.b-cdn.net/eebc9bb3-2021-4f0d-bcbc-17e20fbb1e3e/thumbnail.jpg')!important}
     .practice-offer-box{width:min(920px,100%);text-align:center}.practice-offer-box .pack{text-align:left}.practice-next-heading{margin:0 auto 14px;font-size:15px;font-weight:800;color:#b9c0d3}.practice-next{color:#91d7ff;text-decoration:none;white-space:nowrap}.practice-next:hover{color:#fff}.practice-offer-box .modal-sub{margin-bottom:12px}.course-free-highlight{color:#79d8ff;font-weight:900}
+    .practice-intro-video{display:block;width:100%;max-width:660px;aspect-ratio:16/9;object-fit:contain;background:#000;border-radius:14px;margin:18px auto}
 </style>
 </head>
 <body>
@@ -140,7 +141,7 @@
   <div id="signupModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="signupTitle">
     <div class="modal-box signup-box">
       <button class="modal-close" data-close-modal aria-label="Փակել">×</button>
-      <div class="icon">♙</div><h2 id="signupTitle">Գրանցումը պարտադիր է</h2>
+      <div class="icon">♙</div><h2 id="signupTitle">Պահանջվում են կրեդիտներ</h2>
       <p>Գրանցվեք՝ դասը դիտելու համար։</p>
       <div class="signup-actions"><a id="courseSignupLink" class="primary" href="/login.html?mode=signup">Գրանցվել</a></div>
     </div>
@@ -159,10 +160,10 @@
   <div id="practiceOfferModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="practiceOfferTitle">
     <div class="modal-box practice-offer-box">
       <button class="modal-close" data-close-practice-offer aria-label="Փակել">×</button>
-      <div class="practice-next-heading">Ավարտեցի՞ք։ <a class="practice-next" href="#" data-practice-offer-next>Անցիր հաջորդ դասին →</a></div>
       <div class="pricing-sale">ՄԵԾ ԶԵՂՉԵՐ</div>
       <h2 id="practiceOfferTitle"></h2>
       <p id="practiceOfferText" class="modal-sub"></p>
+      <video id="practiceIntroVideo" class="practice-intro-video" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/intro-arm-compressed.mp4" controls playsinline preload="none" aria-label="Սովորիր պրակտիկա անելով 💪"></video>
       <div class="payment-note">Ամսական վճար չէ</div>
       <div id="practiceOfferPacks" class="packs"></div>
     </div>
@@ -820,37 +821,22 @@ Return only the final ready-to-use image-editing prompt.`,
       {credits:210, line:'200 + 10 կրեդիտ', price:'$19.99', approxPrice:'≈ 6,500 ֏', oldPrice:'$29.99', save:'Խնայեք $10', product:'https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1', featured:true, benefits:['Մինչև 420 պատկեր (կախված մոդելից)','Մինչև 115 տեսանյութ (կախված մոդելից)','Մինչև 210 աուդիո գեներացում (կախված մոդելից)']}
     ];
     const ANSWERS=['Գերազանց էր՝ ամեն ինչ հասկանալի էր','Լավ էր, բայց բավարար չէր','Լավ էր, բայց ավելի շատ օրինակներ են պետք','Լավ էր, բայց նյութը շատ արագ էր ներկայացված','Ավելին էի սպասում․ լավը չէր','Լավը չէր․ որոշ հատվածներ չհասկացա','Ինձ դուր չեկավ․ վատն էր'];
-    const PRACTICE_OFFERS=[
-      {title:'Ժամանակն է անցնել պրակտիկայի 💪',html:'Ձեռք բերեք կրեդիտներ զեղչված գնով՝ գեներացնելու և դասը շարունակելու համար։ <span class="course-free-highlight">Դասընթացն անվճար է</span>․ կրեդիտներն անհրաժեշտ են միայն դասերի ընթացքում AI գործիքներով գործնական աշխատանք կատարելու համար։'},
-      {title:'Դուք արդեն հիմք ունեք 💪',text:'Դուք գիտեք, թե ինչպես է կառուցվում պրոմպտը։ Չե՞ք ցանկանում ամրապնդել գիտելիքները գործնականում։ Նույնիսկ ամենափոքր փաթեթով կարող եք գեներացնել մինչև 200 պատկեր։'},
-      {title:'Այժմ դուք ինքներդ կարող եք դա անել 🚀',text:'Գիտելիքները բավարար են ուշադրություն գրավող պատկեր գեներացնելու համար։ Մնում է միայն սեղմել կոճակը՝ կրեդիտներն այժմ մեծ զեղչերով են, բաց մի՛ թողեք հնարավորությունը։'}
-    ];
+    const PURCHASE_OFFER={"title": "Սովորիր պրակտիկա անելով 💪", "text": "Դասընթացն անվճար է, isk դասերից լավագույն արդյունքն ունենալու համար քեզ պետք են կրեդիտներ՝ դասերի ժամանակ նկարներ, վիդեոներ գեներացնելու և աշխատանքներ անելու համար։ Չեք վճարում դասի համար, այլ generacianeri, որ լավագույն արդյունքն ունենաք։"};
     let sb=null, session=null, hasAccess=false, accessLoading=true, authHydrated=false, courseAuthRevision=0, lastCourseAuthEvent='', checkedUserId=null, activeIndex=-1, ytPlayer=null, ytReady=false;
     let practicePlayback={lessonNumber:0,started:false,completed:false};
-    let welcomeOfferUserId=null;
-    const dismissedPracticeOffers=new Set();
-    let pendingFreeLessonIndex=null;
     const $=s=>document.querySelector(s);
     const esc=s=>String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
     function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),2600)}
     function openModal(id){$(id).classList.add('open');document.body.style.overflow='hidden'}
-    function closeModals(){document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open'));document.body.style.overflow=''}
-    function requireUser(){if(!authHydrated){showAuthLoadingGate();return false}if(session?.user)return true;openModal('#signupModal');return false}
-    function maybeShowWelcomeOffer(){
-      const userId=session?.user?.id||'';
-      if(!authHydrated||accessLoading||hasAccess||!userId||welcomeOfferUserId===userId||new URLSearchParams(location.search).get('checkout')==='success')return;
-      const storageKey='hansora-course-welcome-offer-v1:'+userId;
-      try{if(localStorage.getItem(storageKey)==='seen')return}catch(error){console.warn('Could not read welcome-offer state:',error)}
-      welcomeOfferUserId=userId;
-      const openWhenReady=()=>{
-        if(session?.user?.id!==userId||hasAccess){welcomeOfferUserId=null;return}
-        if(document.querySelector('.modal.open')){setTimeout(openWhenReady,1000);return}
-        try{localStorage.setItem(storageKey,'seen')}catch(error){console.warn('Could not save welcome-offer state:',error)}
-        window.dispatchEvent(new CustomEvent('hansora:course-welcome-offer-open',{detail:{coursePath:'/course_arm'}}));
-        openModal('#welcomeOfferModal');
-      };
-      setTimeout(openWhenReady,5000);
+    function closeModals(){$('#practiceIntroVideo')?.pause();document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open'));document.body.style.overflow=''}
+    function closeSignupGate(){
+      const modal=$('#signupModal');
+      if(!modal||!modal.classList.contains('open'))return;
+      modal.classList.remove('open');
+      if(!document.querySelector('.modal.open, .hansora-course-modal.is-open'))document.body.style.overflow='';
     }
+    function requireUser(){if(!authHydrated){showAuthLoadingGate();return false}if(session?.user)return true;openModal('#signupModal');return false}
+
     async function authHeader(){const {data}=await sb.auth.getSession();session=data?.session||null;return session?{'Authorization':'Bearer '+session.access_token}: {}}
     async function checkAccess(){
       const userId=session?.user?.id||null;
@@ -864,6 +850,7 @@ Return only the final ready-to-use image-editing prompt.`,
           .eq('uid',userId)
           .gte('credits',100)
           .limit(1);
+        if(session?.user?.id!==userId)return;
         if(error)throw error;
         hasAccess=Array.isArray(data)&&data.length>0;
         checkedUserId=userId;
@@ -872,45 +859,41 @@ Return only the final ready-to-use image-editing prompt.`,
       renderAccess();
     }
     function renderAccess(){
+      const requested=activeIndex>=0&&!COURSE_CONFIG.lessons[activeIndex]?.comingSoon?activeIndex:0;
       renderLessons();
-      if(!session){showRegistrationGate(0);return}
-      const requestedIndex=activeIndex>=0&&!COURSE_CONFIG.lessons[activeIndex]?.comingSoon?activeIndex:0;
-      selectLesson(hasAccess?requestedIndex:0,false);
-      maybeShowWelcomeOffer();
+      if(!session){closeModals();showPurchaseGate(requested);return}
+      if(hasAccess)closeModals();
+      selectLesson(requested,false);
     }
     function renderLessons(){
-      $('#lessonList').innerHTML=COURSE_CONFIG.lessons.map((l,i)=>{const unlocked=(i===0&&!!session)||hasAccess;const preview=l.thumbnailUrl||'';const thumb=`<span class="lesson-thumb" style="background-image:url('${esc(preview)}')"><span class="lesson-thumb-play">▶</span></span>`;return `<button type="button" class="lesson-btn ${activeIndex===i?'active':''} ${unlocked?'unlocked':''}" data-lesson="${i}">${thumb}<span class="lesson-row"><span class="lesson-num">${i+1}</span><span class="lesson-copy"><strong>${esc(l.title)}</strong><small>${esc(l.duration)}</small></span><span class="lock">${unlocked?'✓':'🔒'}</span></span></button>`}).join('');
+      $('#lessonList').innerHTML=COURSE_CONFIG.lessons.map((l,i)=>{const unlocked=hasAccess;const preview=l.thumbnailUrl||'';const thumb=`<span class="lesson-thumb" style="background-image:url('${esc(preview)}')"><span class="lesson-thumb-play">▶</span></span>`;return `<button type="button" class="lesson-btn ${activeIndex===i?'active':''} ${unlocked?'unlocked':''}" data-lesson="${i}">${thumb}<span class="lesson-row"><span class="lesson-num">${i+1}</span><span class="lesson-copy"><strong>${esc(l.title)}</strong><small>${esc(l.duration)}</small></span><span class="lock">${unlocked?'✓':'🔒'}</span></span></button>`}).join('');
       const published=COURSE_CONFIG.lessons.filter(l=>!l.comingSoon).length;
-      $('#progressText').textContent=(hasAccess?published:(session?'1':'0'))+' / '+COURSE_CONFIG.lessons.length+' դաս հասանելի';
+      $('#progressText').textContent=(hasAccess?published:0)+' / '+COURSE_CONFIG.lessons.length+' դաս հասանելի';
     }
     function playerMeta(kicker,title,description,pill){$('#lessonKicker').textContent=kicker;$('#lessonTitle').textContent=title;$('#lessonDescription').textContent=description;$('#accessPill').textContent=pill}
     function showEmpty(message){destroyPlayer();$('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty"><div><div class="play">▶</div><strong>${esc(message)}</strong><small>Տեսանյութի հղումը կավելացվի այստեղ</small></div></div>`}
     function destroyPlayer(){if(ytPlayer&&typeof ytPlayer.destroy==='function'){try{ytPlayer.destroy()}catch(_){}}ytPlayer=null}
-    function showRegistrationGate(index){
+    function showPurchaseGate(index){
       const lesson=COURSE_CONFIG.lessons[index]||COURSE_CONFIG.lessons[0];
       delete $('#playerWrap').dataset.courseLesson;
       activeIndex=index;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.remove('hidden');
-      playerMeta('ԴԱՍ '+(index+1),lesson.title,lesson.description,'Գրանցումը պարտադիր է');
+      playerMeta('ԴԱՍ '+(index+1),lesson.title,lesson.description,'Պահանջվում են կրեդիտներ');
       const preview=lesson.thumbnailUrl||(!String(lesson.videoId).startsWith('http')?`https://i.ytimg.com/vi/${encodeURIComponent(lesson.videoId)}/hqdefault.jpg`:'' );
-      $('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty" style="background-image:linear-gradient(to top,rgba(4,5,9,.78),rgba(4,5,9,.12) 62%),url('${esc(preview)}');background-size:cover;background-position:center"><div><div class="play">▶</div><strong style="text-shadow:0 2px 12px #000">Գրանցվեք՝ դիտելու համար</strong></div></div>`;
+      $('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty" style="background-image:linear-gradient(to top,rgba(4,5,9,.78),rgba(4,5,9,.12) 62%),url('${esc(preview)}');background-size:cover;background-position:center"><div><div class="play">▶</div><strong style="text-shadow:0 2px 12px #000">Ձեռք բերեք կրեդիտներ՝ դիտելու համար</strong></div></div>`;
     }
     function showAuthLoadingGate(){
       delete $('#playerWrap').dataset.courseLesson;activeIndex=-1;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.add('hidden');
       $('#playerWrap').innerHTML='<div class="video-empty"><div><div class="play">…</div><strong>Ստուգում ենք ձեր հաշիվը</strong><small>Սա կտևի ընդամենը մի քանի վայրկյան</small></div></div>';
     }
     function openPracticeOffer(lessonNumber,reason){
-      if(hasAccess||lessonNumber<1||lessonNumber>3||dismissedPracticeOffers.has(lessonNumber))return false;
-      const offer=PRACTICE_OFFERS[lessonNumber-1];if(!offer)return false;
-      $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').innerHTML=offer.html||esc(offer.text);$('#practiceOfferModal').dataset.lessonNumber=String(lessonNumber);renderPacks();
-      window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:reason||'unknown',lessonNumber,coursePath:'/course_arm'}}));openModal('#practiceOfferModal');return true;
+      if(hasAccess||lessonNumber<1||lessonNumber>COURSE_CONFIG.lessons.length)return false;
+      $('#practiceOfferTitle').textContent=PURCHASE_OFFER.title;
+      $('#practiceOfferText').textContent=PURCHASE_OFFER.text;
+      $('#practiceOfferModal').dataset.lessonNumber=String(lessonNumber);renderPacks();
+      window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:reason||'unknown',lessonNumber,coursePath:'/course_arm'}}));
+      openModal('#practiceOfferModal');return true;
     }
-    function dismissPracticeOffer(goToPendingLesson){
-      const lessonNumber=Number($('#practiceOfferModal').dataset.lessonNumber||0);
-      if(lessonNumber>=1&&lessonNumber<=3)dismissedPracticeOffers.add(lessonNumber);
-      const target=goToPendingLesson&&Number.isInteger(pendingFreeLessonIndex)?pendingFreeLessonIndex:null;
-      pendingFreeLessonIndex=null;closeModals();
-      if(target!==null&&target>=0&&target<3&&target!==activeIndex)selectLesson(target);
-    }
+    function dismissPracticeOffer(){closeModals()}
     function bindPracticePlayer(player,lessonNumber){
       if(hasAccess||lessonNumber<1||lessonNumber>3||!player)return;
       practicePlayback={lessonNumber,started:false,completed:false};
@@ -944,27 +927,19 @@ Return only the final ready-to-use image-editing prompt.`,
     function selectLesson(index,shouldScroll=true){
       const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Այս դասը շուտով հասանելի կլինի');return}
       if(!authHydrated){showAuthLoadingGate();return}
-      if(!session){showRegistrationGate(index);openModal('#signupModal');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});return}
-      if(index>0&&accessLoading){toast('Խնդրում ենք սպասել․ հասանելիությունը ստուգվում է');return}
-      if((index===1||index===2)&&!hasAccess){
-        const offer=PRACTICE_OFFERS[0];
-        $('#practiceOfferTitle').textContent=offer.title;$('#practiceOfferText').innerHTML=offer.html;$('#practiceOfferModal').dataset.lessonNumber=String(index+1);pendingFreeLessonIndex=null;renderPacks();
-        window.dispatchEvent(new CustomEvent('hansora:course-practice-offer-open',{detail:{reason:'locked_practice_lesson_clicked',lessonNumber:index+1,coursePath:'/course_arm'}}));openModal('#practiceOfferModal');return;
+      if(accessLoading)return;
+      if(!session||!hasAccess){
+        showPurchaseGate(index);
+        openPracticeOffer(index+1,'locked_lesson_clicked');
+        return;
       }
-      if(index>2&&!hasAccess){openCredits('locked_lesson_clicked',index);return}
-      if(index<3&&index!==activeIndex&&!hasAccess&&practicePlayback.lessonNumber===activeIndex+1&&practicePlayback.started&&!practicePlayback.completed){
-        pendingFreeLessonIndex=index;
-        if(openPracticeOffer(practicePlayback.lessonNumber,'video_closed'))return;
-        pendingFreeLessonIndex=null;
-      }
-      activeIndex=index;$('#playerWrap').dataset.courseLesson=String(index+1);renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('ԴԱՍ '+(index+1),l.title,l.description,index<3&&!hasAccess?'Անվճար':'Բացված է');mountVideo(l.videoId,index<3&&!hasAccess?index+1:0);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
+      activeIndex=index;$('#playerWrap').dataset.courseLesson=String(index+1);renderLessons();$('#playerInfo').classList.remove('hidden');playerMeta('ԴԱՍ '+(index+1),l.title,l.description,'Բացված է');mountVideo(l.videoId,0);renderPrompts(l);renderFeedback(l);$('#lessonContent').classList.remove('hidden');if(shouldScroll)window.scrollTo({top:Math.max(0,$('.course-grid').offsetTop-90),behavior:'smooth'});
     }
     function renderPrompts(lesson){$('#promptList').innerHTML=lesson.prompts.map((p,i)=>{const item=typeof p==='string'?{title:`Հրահանգ ${i+1}`,text:p,ru:''}:p;return `<div class="prompt" data-prompt-index="${i}" data-lang="en"><div class="prompt-main"><div class="prompt-body"><h3 class="prompt-title">${esc(item.title)}</h3><div class="prompt-text">${esc(item.text)}</div></div><div class="prompt-actions">${item.ru?'<button type="button" class="mini-btn lang-btn">Русский</button>':''}<button type="button" class="mini-btn more-btn">Տեսնել ավելին</button><button type="button" class="mini-btn copy-btn">Պատճենել</button></div></div></div>`}).join('')}
     function renderFeedback(lesson){$('#feedbackOptions').innerHTML=ANSWERS.map((a,i)=>`<label class="choice"><input type="radio" name="rating" value="${esc(a)}" ${i===0?'required':''}><span>${esc(a)}</span></label>`).join('');$('#feedbackComment').value='';$('#feedbackForm').dataset.lesson=lesson.id}
     function openCredits(reason,lessonIndex){
       const index=Number.isInteger(lessonIndex)?lessonIndex:(activeIndex>=0?activeIndex:0);
-      window.dispatchEvent(new CustomEvent('hansora:course-offer-open',{detail:{reason:reason||'manual',lessonNumber:index+1,coursePath:'/course_arm'}}));
-      openModal('#creditsModal');
+      openPracticeOffer(index+1,reason||'manual');
     }
     function renderPacks(){
       const markup=practice=>PACKS.map(p=>`<article class="pack ${p.featured?'featured':''}">${p.featured?'<span class="pack-badge">ԱՄԵՆԱՊԱՀԱՆՋՎԱԾԸ</span>':''}<div class="pack-top"><span class="pack-line">${esc(p.line)}</span><span class="pack-save">${esc(p.save)}</span></div><h3>${p.credits} կրեդիտ</h3><div class="pack-prices"><div class="price">${esc(p.price)}</div><div class="approx-price">${esc(p.approxPrice)}</div><div class="old-price">${esc(p.oldPrice)}</div></div><ul class="pack-benefits">${p.benefits.map(item=>`<li>${esc(item)}</li>`).join('')}</ul><button class="buy" type="button" ${practice?'data-practice-offer-buy':''} data-credits="${p.credits}" data-product="${esc(p.product)}">Սկսել պրակտիկան</button></article>`).join('');
@@ -1001,7 +976,7 @@ Return only the final ready-to-use image-editing prompt.`,
       try{
         sb=window.__HANSORA_SB__||window.hansoraSupabase||window.supabaseClient;
         if(!sb){sb=window.supabase.createClient('https://qmaealblegvcwodlmeht.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c');window.__HANSORA_SB__=sb}
-        const applyCourseSession=async(event,nextSession)=>{const previousUserId=session?.user?.id||null;courseAuthRevision+=1;lastCourseAuthEvent=event;session=nextSession||null;authHydrated=true;const nextUserId=session?.user?.id||null;if(event==='SIGNED_OUT'||!nextUserId){hasAccess=false;checkedUserId=null;accessLoading=false;renderAccess();return}if(nextUserId!==previousUserId)checkedUserId=null;await checkAccess()};
+        const applyCourseSession=async(event,nextSession)=>{const previousUserId=session?.user?.id||null;courseAuthRevision+=1;lastCourseAuthEvent=event;session=nextSession||null;authHydrated=true;const nextUserId=session?.user?.id||null;if(event==='SIGNED_OUT'||!nextUserId){hasAccess=false;checkedUserId=null;accessLoading=false;renderAccess();return}closeSignupGate();if(nextUserId!==previousUserId){checkedUserId=null;hasAccess=false;showAuthLoadingGate()}await checkAccess()};
         const restoreRevision=courseAuthRevision;
         sb.auth.onAuthStateChange((event,nextSession)=>{void applyCourseSession(event,nextSession)});
         const {data,error}=await sb.auth.getSession();if(error)throw error;
@@ -1010,8 +985,8 @@ Return only the final ready-to-use image-editing prompt.`,
       }catch(e){console.warn(e);if(!authHydrated){authHydrated=true;session=null;hasAccess=false;accessLoading=false;renderAccess()}}
       if(new URLSearchParams(location.search).get('checkout')==='success'&&session&&!hasAccess){toast('Վճարումը ստուգվում է…');let tries=0;const poll=setInterval(async()=>{tries++;checkedUserId=null;await checkAccess();if(hasAccess||tries>=12){clearInterval(poll);if(hasAccess){toast('Դասընթացը բացված է');selectLesson(0)}}},2000)}
     }
-    document.addEventListener('click',e=>{const modal=$('#practiceOfferModal');const lessonNumber=Number(modal.dataset.lessonNumber||0);if(e.target.closest('[data-close-practice-offer]')||(e.target===modal&&modal.classList.contains('open'))){dismissPracticeOffer(true);return}if(e.target.closest('[data-practice-offer-next]')){e.preventDefault();dismissedPracticeOffers.add(lessonNumber);const target=Number.isInteger(pendingFreeLessonIndex)?pendingFreeLessonIndex:lessonNumber;pendingFreeLessonIndex=null;closeModals();if(target>=0&&target<COURSE_CONFIG.lessons.length&&target!==activeIndex)selectLesson(target);return}});
-    document.addEventListener('click',e=>{const lesson=e.target.closest('[data-lesson]');if(lesson)selectLesson(Number(lesson.dataset.lesson));if(e.target.closest('#playerWrap')&&!session)requireUser();if(e.target.closest('[data-close-modal]')||e.target.classList.contains('modal'))closeModals();const more=e.target.closest('.more-btn');if(more){const box=more.closest('.prompt');box.classList.toggle('expanded');more.textContent=box.classList.contains('expanded')?'Փակել':'Տեսնել ավելին'}const lang=e.target.closest('.lang-btn');if(lang){const box=lang.closest('.prompt');const prompt=COURSE_CONFIG.lessons[activeIndex].prompts[Number(box.dataset.promptIndex)];const toRussian=box.dataset.lang!=='ru';box.dataset.lang=toRussian?'ru':'en';box.querySelector('.prompt-text').textContent=toRussian?prompt.ru:prompt.text;lang.textContent=toRussian?'English':'Русский'}const copy=e.target.closest('.copy-btn');if(copy){const text=copy.closest('.prompt').querySelector('.prompt-text').textContent;navigator.clipboard.writeText(text).then(()=>toast('Հրահանգը պատճենված է'))}const buy=e.target.closest('.buy');if(buy)checkout(buy)});
+    document.addEventListener('click',e=>{if(e.target.closest('[data-close-practice-offer]'))dismissPracticeOffer()});
+    document.addEventListener('click',e=>{const lesson=e.target.closest('[data-lesson]');if(lesson)selectLesson(Number(lesson.dataset.lesson));if(e.target.closest('#playerWrap')&&(!session||!hasAccess))selectLesson(activeIndex>=0?activeIndex:0);if(e.target.closest('[data-close-modal]')||e.target.classList.contains('modal'))closeModals();const more=e.target.closest('.more-btn');if(more){const box=more.closest('.prompt');box.classList.toggle('expanded');more.textContent=box.classList.contains('expanded')?'Փակել':'Տեսնել ավելին'}const lang=e.target.closest('.lang-btn');if(lang){const box=lang.closest('.prompt');const prompt=COURSE_CONFIG.lessons[activeIndex].prompts[Number(box.dataset.promptIndex)];const toRussian=box.dataset.lang!=='ru';box.dataset.lang=toRussian?'ru':'en';box.querySelector('.prompt-text').textContent=toRussian?prompt.ru:prompt.text;lang.textContent=toRussian?'English':'Русский'}const copy=e.target.closest('.copy-btn');if(copy){const text=copy.closest('.prompt').querySelector('.prompt-text').textContent;navigator.clipboard.writeText(text).then(()=>toast('Հրահանգը պատճենված է'))}const buy=e.target.closest('.buy');if(buy)checkout(buy)});
     $('#feedbackForm').addEventListener('submit',submitFeedback);document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('#practiceOfferModal').classList.contains('open'))dismissPracticeOffer(true);else closeModals()}});
     document.addEventListener('DOMContentLoaded',init);
   })();
