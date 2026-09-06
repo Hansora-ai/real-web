@@ -141,8 +141,8 @@
   <div id="signupModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="signupTitle">
     <div class="modal-box signup-box">
       <button class="modal-close" data-close-modal aria-label="Փակել">×</button>
-      <div class="icon">♙</div><h2 id="signupTitle">Պահանջվում են կրեդիտներ</h2>
-      <p>Գրանցվեք՝ դասը դիտելու համար։</p>
+      <div class="icon">♙</div><h2 id="signupTitle">Գրանցում է պահանջվում</h2>
+      <p>Դեռ գրանցված չե՞ք։ Խնդրում եմ գրանցվեք։</p>
       <div class="signup-actions"><a id="courseSignupLink" class="primary" href="/login.html?mode=signup">Գրանցվել</a></div>
     </div>
   </div>
@@ -888,7 +888,7 @@ Return only the final ready-to-use image-editing prompt.`,
       activeIndex=index;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.remove('hidden');
       playerMeta('ԴԱՍ '+(index+1),lesson.title,lesson.description,'Գրանցումը պարտադիր է');
       const preview=lesson.thumbnailUrl||(!String(lesson.videoId).startsWith('http')?`https://i.ytimg.com/vi/${encodeURIComponent(lesson.videoId)}/hqdefault.jpg`:'' );
-      $('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty" style="background-image:linear-gradient(to top,rgba(4,5,9,.78),rgba(4,5,9,.12) 62%),url('${esc(preview)}');background-size:cover;background-position:center"><div><div class="play">▶</div><strong style="text-shadow:0 2px 12px #000">Գրանցվեք՝ դիտելու համար</strong></div></div>`;
+      $('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty" style="background-image:linear-gradient(to top,rgba(4,5,9,.78),rgba(4,5,9,.12) 62%),url('${esc(preview)}');background-size:cover;background-position:center"><div><div class="play">▶</div><strong style="text-shadow:0 2px 12px #000">Դեռ գրանցված չե՞ք։ Խնդրում եմ գրանցվեք։</strong></div></div>`;
     }
     function showAuthLoadingGate(){
       delete $('#playerWrap').dataset.courseLesson;activeIndex=-1;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.add('hidden');
