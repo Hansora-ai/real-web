@@ -861,7 +861,7 @@ Return only the final ready-to-use image-editing prompt.`,
     function renderAccess(){
       const requested=activeIndex>=0&&!COURSE_CONFIG.lessons[activeIndex]?.comingSoon?activeIndex:0;
       renderLessons();
-      if(!session){closeModals();showPurchaseGate(requested);return}
+      if(!session){closeModals();showRegistrationGate(requested);return}
       if(!hasAccess){closeModals();showPurchaseGate(requested);return}
       closeModals();
       selectLesson(requested,false);
@@ -881,6 +881,14 @@ Return only the final ready-to-use image-editing prompt.`,
       playerMeta('ԴԱՍ '+(index+1),lesson.title,lesson.description,'Պահանջվում են կրեդիտներ');
       const preview=lesson.thumbnailUrl||(!String(lesson.videoId).startsWith('http')?`https://i.ytimg.com/vi/${encodeURIComponent(lesson.videoId)}/hqdefault.jpg`:'' );
       $('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty" style="background-image:linear-gradient(to top,rgba(4,5,9,.78),rgba(4,5,9,.12) 62%),url('${esc(preview)}');background-size:cover;background-position:center"><div><div class="play">▶</div><strong style="text-shadow:0 2px 12px #000">Ձեռք բերեք կրեդիտներ՝ դիտելու համար</strong></div></div>`;
+    }
+    function showRegistrationGate(index){
+      const lesson=COURSE_CONFIG.lessons[index]||COURSE_CONFIG.lessons[0];
+      delete $('#playerWrap').dataset.courseLesson;
+      activeIndex=index;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.remove('hidden');
+      playerMeta('ԴԱՍ '+(index+1),lesson.title,lesson.description,'Գրանցումը պարտադիր է');
+      const preview=lesson.thumbnailUrl||(!String(lesson.videoId).startsWith('http')?`https://i.ytimg.com/vi/${encodeURIComponent(lesson.videoId)}/hqdefault.jpg`:'' );
+      $('#playerWrap').innerHTML=`<div id="videoEmpty" class="video-empty" style="background-image:linear-gradient(to top,rgba(4,5,9,.78),rgba(4,5,9,.12) 62%),url('${esc(preview)}');background-size:cover;background-position:center"><div><div class="play">▶</div><strong style="text-shadow:0 2px 12px #000">Գրանցվեք՝ դիտելու համար</strong></div></div>`;
     }
     function showAuthLoadingGate(){
       delete $('#playerWrap').dataset.courseLesson;activeIndex=-1;renderLessons();destroyPlayer();$('#lessonContent').classList.add('hidden');$('#playerInfo').classList.add('hidden');
@@ -929,7 +937,12 @@ Return only the final ready-to-use image-editing prompt.`,
       const l=COURSE_CONFIG.lessons[index];if(l.comingSoon){toast('Այս դասը շուտով հասանելի կլինի');return}
       if(!authHydrated){showAuthLoadingGate();return}
       if(accessLoading)return;
-      if(!session||!hasAccess){
+      if(!session){
+        showRegistrationGate(index);
+        openModal('#signupModal');
+        return;
+      }
+      if(!hasAccess){
         showPurchaseGate(index);
         openPracticeOffer(index+1,'locked_lesson_clicked');
         return;
