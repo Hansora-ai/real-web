@@ -1926,7 +1926,7 @@
   }
 
   function videoLandingHref(credits) {
-    return modelHref(Number(credits || 0) < GROK_VIDEO_CREDIT_THRESHOLD ? 'grok-video' : 'kling-3');
+    return modelHref(Number(credits || 0) < GROK_VIDEO_CREDIT_THRESHOLD ? 'grok-video' : 'gemini-omni-flash-1-1');
   }
 
   function updateVideoLandingLink() {
