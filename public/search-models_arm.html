@@ -9034,7 +9034,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         getSharedHeaderCredits(),
         getVisibleHeaderCredits()
       );
-      const defaultId = mode === 'image' ? 'gpt-image-2' : (instantCredits < 4 ? 'grok-video' : 'kling30');
+      const defaultId = mode === 'image' ? 'gpt-image-2' : (instantCredits < 4 ? 'grok-video' : 'gemini-omni-flash-1-1');
       const def = MODELS.find(m => m.id === defaultId);
       if (def) {
         selectWorkspaceModel(def.id);
@@ -13573,10 +13573,10 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     }
 
     async function restorePreviewImageForVideo(data, setStatus) {
-      const targetId = Math.max(parseCredits(currentCredits), getSharedHeaderCredits(), getVisibleHeaderCredits()) < 3 ? 'grok-video' : 'kling30';
+      const targetId = Math.max(parseCredits(currentCredits), getSharedHeaderCredits(), getVisibleHeaderCredits()) < 4 ? 'grok-video' : 'gemini-omni-flash-1-1';
       selectWorkspaceModel(targetId, { preserveUploads: false });
       setPromptForPreviewRun('');
-      applyPreviewOptions({ meta: { client_diagnostic: { aspect_ratio: '16:9', duration: targetId === 'grok-video' ? 6 : 5, resolution: targetId === 'grok-video' ? '720p' : '720p' } } });
+      applyPreviewOptions({ meta: { client_diagnostic: { aspect_ratio: '16:9', duration: targetId === 'grok-video' ? 6 : 4, resolution: targetId === 'grok-video' ? '720p' : '720p' } } });
       const imageUrl = String((data && data.result_url) || '').trim();
       if (!imageUrl) throw new Error('Create Video-ի համար պատկերի URL չի գտնվել։');
       if (typeof setStatus === 'function') setStatus('Պատկերը պատրաստվում է տեսանյութի համար...', '');
