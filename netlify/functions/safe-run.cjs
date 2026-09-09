@@ -204,6 +204,7 @@ const ALLOWED_RUN_ENDPOINTS = new Set([
   '/.netlify/functions/run-gemini-omni-flash-1-1',
   '/.netlify/functions/run-gemini-omni-video',
   '/.netlify/functions/run-gpt-image-1-5',
+  '/.netlify/functions/run-gpt-image-2-5',
   '/.netlify/functions/run-gpt-image-2',
   '/.netlify/functions/run-grok-image',
   '/.netlify/functions/run-grok-video',
@@ -321,13 +322,13 @@ function unlimitedEligibility(planId, modelId, mediaKind, payload) {
   if (kind === 'image' && model === 'nano-banana-2') {
     return resolution === '1K' || (planId === 'pro_max_monthly' && resolution === '2K');
   }
-  if (kind === 'image' && model === 'gpt-image-2') {
+  if (kind === 'image' && (model === 'gpt-image-2' || model === 'gpt-image-2-5')) {
     return resolution === '1K' || (planId === 'pro_max_monthly' && resolution === '2K');
   }
   if (kind === 'image' && model === 'wan-2-7-image') {
     return planId === 'pro_max_monthly' && normalizedToken(payload?.tier || payload?.quality || 'normal') === 'normal';
   }
-  if (kind === 'video' && model === 'grok-video') return duration === 6;
+  if (kind === 'video' && model === 'grok-video') return duration === 6 && (!resolution || resolution === '720P');
   if (kind === 'video' && model === 'veo31-lite') {
     if (duration !== 8 || normalizedToken(payload?.model) !== 'veo3-lite') return false;
     if (planId === 'pro_monthly') return resolution === '720P';
