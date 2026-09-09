@@ -7032,6 +7032,24 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         minCredits: 1.5
       },
       {
+        id: 'gpt-image-2-5',
+        name: 'GPT Image 2.5',
+        emoji: '🧠',
+        subtitle: 'Text / (Image) → Image',
+        category: 'image',
+        description: 'GPT Image 2.5 Sunburst for text-to-image and image editing.',
+        endpoint: '/.netlify/functions/run-gpt-image-2-5',
+        needsImage: false,
+        maxFiles: 16,
+        uploadMaxMB: 10,
+        aspectOptions: ['auto', '1:1', '3:2', '2:3', '4:3', '3:4', '16:9', '9:16', '21:9', '27:16', '16:27', '9:8', '8:9'],
+        defaultAspect: 'auto',
+        durations: null,
+        costLabel: '5⚡–12⚡ per job',
+        minCredits: 0.5,
+        isNew: true
+      },
+      {
         id: 'gpt-image-2',
         name: 'GPT Image 2.0',
         emoji: '🧠',
@@ -7455,10 +7473,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         specificUpload: 'grokVideo',
         aspectOptions: ['16:9', '9:16', '1:1'],
         defaultAspect: '16:9',
-        resolutionOptions: [],
+        resolutionOptions: ['720p', '1080p'],
         defaultResolution: '720p',
         durations: [6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30],
-        costLabel: '720p only · 0.3⚡/s',
+        costLabel: '720p 3⚡/s · 1080p 6⚡/s',
         minCredits: 1.8
       },
       {
@@ -7601,8 +7619,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let currentVeoVariant = 'fast'; // 'lite' | 'fast' | 'quality'
     let uploadedFiles = [];
     // Models that should APPEND images when user uploads again (multi-image support)
-	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
-	    const IMAGE_MODEL_ORDER = ['gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-pro', 'seedream-5-lite', 'grok-image'];
+	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2-5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
+	    const IMAGE_MODEL_ORDER = ['gpt-image-2-5', 'gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-pro', 'seedream-5-lite', 'grok-image'];
     const VIDEO_MODEL_ORDER = ['seedance25', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-flash-1-1', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function normalizeUnlimitedValue(value) {
@@ -7624,7 +7642,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (model.id === 'nano-banana-2') {
         return { model: 'nano-banana-2', type: 'image', quality: resolution || '1k' };
       }
-      if (model.id === 'gpt-image-2') {
+      if (model.id === 'gpt-image-2' || model.id === 'gpt-image-2-5') {
         return { model: 'gpt-image-2', type: 'image', quality: resolution || '1k' };
       }
       if (model.id === 'z-image') {
@@ -7644,7 +7662,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         return { model: 'wan-2-7-image', type: 'image', quality: 'normal' };
       }
       if (model.id === 'grok-video') {
-        return { model: 'grok-video', type: 'video', resolution: '720p', duration: getSelectedDurationNumber(6) };
+        return { model: 'grok-video', type: 'video', resolution: resolution || '720p', duration: getSelectedDurationNumber(6) };
       }
       if (model.id === 'veo31-lite') {
         return { model: 'veo31-lite', type: 'video', resolution: resolution || '720p', duration: getSelectedDurationNumber(8) };
@@ -7685,6 +7703,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         'nano-banana-2': 'nano-banana-2',
         'z-image': 'z-image',
         'gpt-image-2': 'gpt-image-2',
+        'gpt-image-2-5': 'gpt-image-2',
         'seedream-5-lite': 'seedream-5-lite',
         'grok-image': 'grok-image',
         'qwen-2': 'qwen-2',
@@ -7752,6 +7771,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
     function getModelLogoText(model) {
       const id = String(model?.id || '');
+	      if (id === 'gpt-image-2-5') return 'G25';
 	      if (id === 'gpt-image-2') return 'G2';
 	      if (id.includes('gpt')) return 'AI';
 	      if (id === 'nano-banana-2-lite') return 'NL';
@@ -7963,6 +7983,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       return uploadKindFromAccept(currentModel && currentModel.acceptTypes ? currentModel.acceptTypes : 'image/*');
     }
 
+    function getGrokVideoImageLimit() {
+      return currentResolution === '1080p' ? 1 : 7;
+    }
+
     function syncMainUploadUi() {
       const uploadBtn = document.getElementById('uploadBtn');
       const uploadBtnLabel = document.getElementById('uploadBtnLabel');
@@ -7995,7 +8019,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         return { inputId: 'seedanceAudioRefsInput', kind: 'audio', max: getSeedanceReferenceLimit('audio') };
       }
       if (id === 'videoRefImagesThumbs') {
-        const max = currentModel && (currentModel.id === 'grok-video' || currentModel.id.startsWith('gemini-omni')) ? 7 : 9;
+        const max = currentModel && currentModel.id === 'grok-video'
+          ? getGrokVideoImageLimit()
+          : (currentModel && currentModel.id.startsWith('gemini-omni') ? 7 : 9);
         return { inputId: 'videoRefImagesInput', kind: 'image', max };
       }
       return byId[id] || null;
@@ -8750,7 +8776,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         return true;
       }
       if (currentModel.specificUpload === 'grokVideo' || currentModel.specificUpload === 'geminiOmni') {
-        videoRefImageFiles = imageFiles.slice(0, 7);
+        const limit = currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : 7;
+        videoRefImageFiles = imageFiles.slice(0, limit);
         renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
           videoRefImageFiles.splice(index, 1);
           const input = document.getElementById('videoRefImagesInput');
@@ -8871,6 +8898,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        'gemini-omni-video': 'gemini-omni-video',
 	        'nano-banana-2-lite': 'nano-banana-2-lite',
 	        'nanobanana2lite': 'nano-banana-2-lite',
+	        'gpt-image-2.5': 'gpt-image-2-5',
+	        'gptimage25': 'gpt-image-2-5',
 	        'seedream-5-pro': 'seedream-5-pro',
 	        'seedream5pro': 'seedream-5-pro',
 	        'veo31-lite': 'veo31-lite',
@@ -8960,7 +8989,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         btn.type = 'button';
         const active = currentModel && (currentModel.id === model.id || (model.id === 'veo31-lite' && ['veo31-lite','veo31-fast','veo31'].includes(currentModel.id)));
         btn.className = 'model-tab' + (active ? ' active' : '');
-        btn.innerHTML = modelLogoHTML(model) + '<span>' + model.name + '</span>';
+        const newMark = model.isNew ? '<span class="text-[9px] font-bold uppercase tracking-wide text-emerald-300">NEW</span>' : '';
+        btn.innerHTML = modelLogoHTML(model) + '<span>' + model.name + '</span>' + newMark;
         btn.addEventListener('click', () => selectWorkspaceModel(model.id));
         rail.appendChild(btn);
       });
@@ -9034,7 +9064,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         getSharedHeaderCredits(),
         getVisibleHeaderCredits()
       );
-      const defaultId = mode === 'image' ? 'gpt-image-2' : (instantCredits < 4 ? 'grok-video' : 'gemini-omni-flash-1-1');
+      const defaultId = mode === 'image' ? 'gpt-image-2-5' : (instantCredits < 4 ? 'grok-video' : 'gemini-omni-flash-1-1');
       const def = MODELS.find(m => m.id === defaultId);
       if (def) {
         selectWorkspaceModel(def.id);
@@ -9075,7 +9105,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      if (model.id === 'nano-banana-pro') return currentResolution === '4K' ? 1.5 : 1.2;
 	      if (model.id === 'nano-banana-2') return currentResolution === '4K' ? 1.3 : (currentResolution === '2K' ? 0.8 : 0.5);
 	      if (model.id === 'nano-banana-2-lite') return 0.3;
-	      if (model.id === 'gpt-image-2') return currentResolution === '4K' ? 1.2 : (currentResolution === '2K' ? 0.7 : 0.5);
+	      if (model.id === 'gpt-image-2' || model.id === 'gpt-image-2-5') return currentResolution === '4K' ? 1.2 : (currentResolution === '2K' ? 0.7 : 0.5);
 	      if (model.id === 'seedream-5-pro') return currentResolution === '2K' ? 1 : 0.5;
       if (model.id === 'wan-2-7-image') return currentWanTier === 'pro' ? 1 : 0.5;
       if (model.id === 'veo31-lite') return currentResolution === '1080p' ? 2.5 : 2;
@@ -9093,7 +9123,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       if (model.id === 'grok-video') {
         const seconds = Math.max(1, Number(currentDuration || 6));
-        return Number((seconds * 0.3).toFixed(1));
+        const rate = currentResolution === '1080p' ? 0.6 : 0.3;
+        return Number((seconds * rate).toFixed(1));
       }
 	      if (model.id === 'seedance20') {
 	        const seconds = Math.max(1, Number(currentDuration || 5));
@@ -9257,7 +9288,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
     function getResolutionOptionsForCurrentModel() {
       if (!currentModel) return [];
-      if (currentModel.id === 'gpt-image-2') {
+      if (currentModel.id === 'gpt-image-2' || currentModel.id === 'gpt-image-2-5') {
         return ['1K', '2K', '4K'];
       }
       if (currentModel.id === 'nano-banana-pro' || currentModel.id === 'nano-banana-2') {
@@ -9551,6 +9582,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           'w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-slate-900/90 border-b border-white/5 last:border-b-0';
         const unlimitedModel = model.__defaultId ? (MODELS.find((m) => m.id === model.__defaultId) || model) : model;
         const unlimitedMark = isModelSelectionUnlimited(unlimitedModel) ? unlimitedBadgeMarkup('overlay-unlimited-badge') : '';
+        const newMark = model.isNew ? '<span class="text-[10px] font-bold uppercase tracking-wide text-emerald-300">NEW</span>' : '';
         row.innerHTML = `
           <div class="w-7 h-7 flex items-center justify-center">${modelLogoHTML(model)}</div>
           <div class="flex-1">
@@ -9559,6 +9591,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
               <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-950/70 border border-white/10 text-white/70">${
                 model.category === 'image' ? 'IMAGE' : 'VIDEO'
               }</span>
+              ${newMark}
               ${unlimitedMark}
             </div>
             <div class="mt-1 text-xs text-white/55">${model.subtitle || ''}</div>
@@ -11244,7 +11277,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      updateRunButtonLabel();
 	    });
     document.getElementById('videoRefImagesInput').addEventListener('change', (e) => {
-      const max = currentModel && currentModel.id === 'grok-video' ? 7 : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : 7) : 9);
+      const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : 7) : 9);
       videoRefImageFiles = appendFilesWithLimit(videoRefImageFiles, e.target.files, max, 'image/*');
       e.target.value = '';
       renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
@@ -12265,6 +12298,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         case 'gpt-image-1':
           return { prompt, aspect_ratio: aspect || '1:1', image_urls: urls && urls.length ? urls : undefined, run_id: runId };
         case 'gpt-image-2':
+        case 'gpt-image-2-5':
           return { urls, prompt: prompt || '.', format: 'png', aspect_ratio: aspect || 'auto', size: aspect || 'auto', resolution: (resolution || '1K'), run_id: runId };
         case 'grok-image':
           return { urls, prompt: prompt || '.', aspect_ratio: aspect || '1:1', resolution: '720p', run_id: runId };
@@ -12438,7 +12472,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             prompt,
             aspect_ratio: aspect || '16:9',
             duration: duration ? Number(duration) : 6,
-            resolution: '720p',
+            resolution: resolution || '720p',
             mode: 'normal',
             image_url: imageRefUrls[0] || undefined,
             image_urls: imageRefUrls,
@@ -12683,6 +12717,12 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           }
           return;
         }
+      }
+
+      if (currentModel.id === 'grok-video' && currentResolution === '1080p' && videoRefImageFiles.length > 1) {
+        removeClientRequestPlaceholder(initialRequestContext);
+        showStatus('Grok 1080p поддерживает одно референсное изображение. Удалите лишние изображения и попробуйте снова.', 'error');
+        return;
       }
 
       const uid = currentUser.id;
@@ -13261,6 +13301,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       const normalized = normalizePreviewModelToken(label);
       const compact = compactPreviewModelToken(label);
       const aliases = {
+        'gpt image 2.5': 'gpt-image-2-5',
+        'gptimage25': 'gpt-image-2-5',
         'gptimage20': 'gpt-image-2',
         'gptimage2': 'gpt-image-2',
         'nano banana 2 lite': 'nano-banana-2-lite',
@@ -13475,7 +13517,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       }
 
       if (currentModel.specificUpload === 'grokVideo') {
-        videoRefImageFiles = files.slice(0, currentModel.id === 'grok-video' ? 7 : 9);
+        videoRefImageFiles = files.slice(0, currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : 9);
         renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
           videoRefImageFiles.splice(index, 1);
           updateCostDisplay();
