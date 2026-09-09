@@ -59,11 +59,15 @@ function extractTaskId(data) {
 }
 function normalizeDuration(body) {
   const value = Number(body.duration || 6);
-  return Math.max(1, Math.round(Number.isFinite(value) ? value : 6));
+  return Math.max(6, Math.min(30, Math.round(Number.isFinite(value) ? value : 6)));
+}
+function normalizeResolution(value) {
+  const resolution = String(value || '720p').trim().toLowerCase();
+  return ['480p', '720p', '1080p'].includes(resolution) ? resolution : '720p';
 }
 function costFor(body) {
   const duration = normalizeDuration(body);
-  const rate = 0.3;
+  const rate = normalizeResolution(body.resolution) === '1080p' ? 0.6 : 0.3;
   return Number((duration * rate).toFixed(1));
 }
 function imageUrlsFromBody(body) {
@@ -116,7 +120,7 @@ function requestDiagnostic(event, body, duration) {
   return {
     aspect_ratio: String(body.aspect_ratio || '16:9'),
     duration,
-    resolution: String(body.resolution || '720p'),
+    resolution: normalizeResolution(body.resolution),
     image_count: images.length,
     image_urls: images.slice(0, 7),
     client: body.client_diagnostic || null,
@@ -167,7 +171,7 @@ async function debitCredits(uid, cost) {
   return { ok: true, credits: next };
 }
 
-async function hasUnlimitedSubscription(uid, duration) {
+async function hasUnlimitedSubscription(uid, duration, resolution) {
   if (!SUPABASE_URL || !SERVICE_KEY || !uid) return false;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/user_subscriptions?user_id=eq.${encodeURIComponent(uid)}&select=status,plan_id,current_period_end&limit=1`, {
@@ -180,6 +184,7 @@ async function hasUnlimitedSubscription(uid, duration) {
     const endMs = row.current_period_end ? Date.parse(row.current_period_end) : 0;
     if (!Number.isFinite(endMs) || endMs <= Date.now()) return false;
     if (Math.round(Number(duration || 0)) !== 6) return false;
+    if (normalizeResolution(resolution) !== '720p') return false;
     return row.plan_id === 'premium_monthly' || row.plan_id === 'pro_monthly' || row.plan_id === 'pro_max_monthly';
   } catch {
     return false;
@@ -211,7 +216,7 @@ async function createKieTask({ body, prompt, duration, uid, runId }) {
     prompt,
     aspect_ratio: String(body.aspect_ratio || '16:9'),
     duration,
-    resolution: String(body.resolution || '720p'),
+    resolution: normalizeResolution(body.resolution),
     mode: 'normal',
     ...(images.length ? { image_urls: images } : {}),
   };
@@ -234,6 +239,7 @@ exports.handler = async (event) => {
     if (!SUPABASE_URL || !SERVICE_KEY) return json(500, { ok: false, error: 'missing_env' });
     const body = JSON.parse(event.body || '{}');
     const duration = normalizeDuration(body);
+    const resolution = normalizeResolution(body.resolution);
     // Grok video must always route through KIE, regardless of duration.
     const useUnificAlly = false;
     const checker = useUnificAlly ? 'unifically-grok-check' : 'kie-check';
@@ -246,6 +252,10 @@ exports.handler = async (event) => {
     if (!auth.ok) return json(401, { ok: false, error: auth.error, details: auth });
     const prompt = String(body.prompt || '').trim();
     if (!prompt) return json(400, { ok: false, error: 'missing_prompt' });
+    const imageUrls = imageUrlsFromBody(body);
+    if (resolution === '1080p' && imageUrls.length > 1) {
+      return json(400, { ok: false, error: 'too_many_images_for_1080p', message: 'Grok 1080p supports one reference image.' });
+    }
 
     const runId = String(body.run_id || `${uid}-${Date.now()}`);
     const existing = await fetchGeneration(uid, runId);
@@ -265,7 +275,7 @@ exports.handler = async (event) => {
     const queueAuthorized = process.env.HANSORA_QUEUE_SECRET
       && getHeader(event, 'x-hansora-queue-secret') === process.env.HANSORA_QUEUE_SECRET;
     const subscriptionUnlimited = String(body.billing_mode || '').toLowerCase() === 'unlimited'
-      && queueAuthorized && await hasUnlimitedSubscription(uid, duration);
+      && queueAuthorized && await hasUnlimitedSubscription(uid, duration, resolution);
     const chargeCost = subscriptionUnlimited ? 0 : cost;
     const source = useUnificAlly ? 'unifically' : 'kie';
     const diagnostic = requestDiagnostic(event, body, duration);
