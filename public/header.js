@@ -322,6 +322,7 @@
   const registrationCompletionPromises = new Map();
 
   const IMAGE_MENU_MODELS = [
+    { label: 'GPT Image 2.5', id: 'gpt-image-2-5', icon: 'G2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/2.png', note: 'Latest image generation' },
     { label: 'GPT Image 2', id: 'gpt-image-2', icon: 'G2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/2.png', note: 'Latest image generation' },
     { label: 'Nano Banana 2', id: 'nano-banana-2', icon: 'N2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png', note: 'Fast image edits' },
     { label: 'Nano Banana 2 Lite', id: 'nano-banana-2-lite', icon: 'NL', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png', note: 'Low-cost 1K image edits' },
@@ -354,6 +355,7 @@
   };
 
   const VIDEO_MENU_ITEMS = [
+    { label: 'Seedance 2.5', id: 'seedance25', icon: 'S2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Cinematic video model' },
     { label: 'Seedance 2.0', id: 'seedance-2', icon: 'S2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Cinematic video model' },
     { label: 'Kling 3.0', id: 'kling-3', icon: 'K3', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/14.png', note: 'Advanced video generation' },
     { label: 'Seedance 2.0 Mini', id: 'seedance-2-mini', icon: 'SM', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Fast cinematic video model' },
