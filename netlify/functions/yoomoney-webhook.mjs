@@ -145,9 +145,8 @@ export async function handler(event) {
       }
 
       const profile = rows[0] || {};
-      if (email && profile.email && String(profile.email).toLowerCase() !== String(email).toLowerCase()) {
-        return json(409, { error: "Payment email does not match profile email" });
-      }
+      // YooMoney limits the label to 64 characters, so the optional email suffix
+      // can be truncated. The signed payment's validated user UUID is authoritative.
 
       const currentCredits = Number(profile.credits ?? 0);
       const newCredits = currentCredits + credits;
