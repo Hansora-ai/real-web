@@ -429,7 +429,7 @@ export default async (request, context) => {
       <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path><circle cx="8" cy="8" r="1.5"></circle></svg></span>
       <b>${copy.image}</b>
     </a>
-    <a class="hs-radial-item hs-radial-video" data-hs-video-landing href="${localizedPath('/search-models.html?model=kling-3')}">
+    <a class="hs-radial-item hs-radial-video" data-hs-video-landing href="${localizedPath('/search-models.html?model=gemini-omni-flash-1-1')}">
       <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg></span>
       <b>${copy.video}</b>
     </a>
@@ -462,7 +462,7 @@ export default async (request, context) => {
     </header>
     <div class="links">
       <a href="${localizedPath('/search-models.html')}"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path></svg> ${copy.image}</a>
-      <a data-hs-video-landing href="${localizedPath('/search-models.html?model=kling-3')}"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg> ${copy.video}</a>
+      <a data-hs-video-landing href="${localizedPath('/search-models.html?model=gemini-omni-flash-1-1')}"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg> ${copy.video}</a>
       <a href="${localizedPath('/audio.html')}"><svg viewBox="0 0 24 24"><path d="M5 10v4"></path><path d="M9 7v10"></path><path d="M13 5v14"></path><path d="M17 8v8"></path></svg> ${copy.audio}</a>
       <button class="hs-feature-toggle" id="hs-feature-toggle" type="button">
         <span><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path></svg> ${copy.features}</span>
@@ -632,7 +632,7 @@ export default async (request, context) => {
     };
     const localizedSearchModelsPath = ${JSON.stringify(localizedPath('/search-models.html'))};
     const updateVideoLandingLinks = () => {
-      const model = getCurrentCredits() < 4 ? 'grok-video' : 'kling-3';
+      const model = getCurrentCredits() < 4 ? 'grok-video' : 'gemini-omni-flash-1-1';
       document.querySelectorAll('[data-hs-video-landing]').forEach((link) => {
         link.setAttribute('href', localizedSearchModelsPath + '?model=' + encodeURIComponent(model));
       });
