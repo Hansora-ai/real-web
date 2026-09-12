@@ -5499,6 +5499,47 @@ async function __mjFetchNbCheck(params){
       }
     }
 
+    function prepareResultVideoThumbnail(video, url) {
+      if (!video) return;
+      const source = String(url || '').trim();
+      if (!source) return;
+      if (video.dataset.thumbnailSource === source) return;
+      video.dataset.thumbnailSource = source;
+      const userAgent = typeof navigator !== 'undefined' ? String(navigator.userAgent || '') : '';
+      const needsSafariFrame = /AppleWebKit/i.test(userAgent) && !/(?:Chrome|Chromium|Edg|OPR)/i.test(userAgent);
+      video.muted = true;
+      video.defaultMuted = true;
+      video.playsInline = true;
+      video.preload = needsSafariFrame ? 'auto' : 'metadata';
+      video.setAttribute('muted', '');
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      video.src = source;
+      if (!needsSafariFrame) return;
+
+      let frameRequested = false;
+      const requestFirstFrame = () => {
+        if (frameRequested || video.readyState < 1) return;
+        const duration = Number(video.duration);
+        const frameTime = Number.isFinite(duration) && duration > 0
+          ? Math.min(0.08, Math.max(0.001, duration / 2))
+          : 0.001;
+        try {
+          video.currentTime = frameTime;
+          frameRequested = true;
+        } catch (_) {}
+      };
+      const keepThumbnailPaused = () => {
+        try { video.pause(); } catch (_) {}
+      };
+
+      video.addEventListener('loadedmetadata', requestFirstFrame, { once: true });
+      video.addEventListener('loadeddata', requestFirstFrame, { once: true });
+      video.addEventListener('seeked', keepThumbnailPaused, { once: true });
+      try { video.load(); } catch (_) {}
+      requestFirstFrame();
+    }
+
     function createResultThumb(data) {
       if (!shouldShowResultGeneration(data)) return null;
       const provider = data.provider || 'Մոդել';
@@ -5526,12 +5567,11 @@ async function __mjFetchNbCheck(params){
       if (url) {
         if (kind === 'video') {
           const v = document.createElement('video');
-          v.src = url;
           v.muted = true;
           v.playsInline = true;
           v.loop = true;
-          v.preload = 'metadata';
           v.dataset.stripVideo = '1';
+          prepareResultVideoThumbnail(v, url);
           card.appendChild(v);
         } else {
           const img = document.createElement('img');
@@ -5716,12 +5756,11 @@ async function __mjFetchNbCheck(params){
             if (!existingMedia) {
               if (__thumb_kind === 'video') {
                 const v = document.createElement('video');
-                v.src = __thumb_url;
                 v.muted = true;
                 v.playsInline = true;
                 v.loop = true;
-                v.preload = 'metadata';
                 v.dataset.stripVideo = '1';
+                prepareResultVideoThumbnail(v, __thumb_url);
                 card.insertBefore(v, card.firstChild);
               } else {
                 const img = document.createElement('img');
@@ -5731,7 +5770,7 @@ async function __mjFetchNbCheck(params){
                 card.insertBefore(img, card.firstChild);
               }
             } else {
-              if (existingMedia.tagName.toLowerCase() === 'video') existingMedia.src = __thumb_url;
+              if (existingMedia.tagName.toLowerCase() === 'video') prepareResultVideoThumbnail(existingMedia, __thumb_url);
               else existingMedia.src = __thumb_url;
             }
           }
@@ -5837,7 +5876,6 @@ function createResultCard(data) {
         mediaEl.controls = true;
         mediaEl.muted = true;
         mediaEl.playsInline = true;
-        mediaEl.preload = 'metadata';
       } else {
         mediaEl.loading = 'lazy';
         mediaEl.decoding = 'async';
@@ -5957,7 +5995,8 @@ function createResultCard(data) {
         media.classList.toggle('result-media--failed', failedNow);
 
         if (hasUrlNow) {
-          mediaEl.src = newData.result_url;
+          if (kind === 'video') prepareResultVideoThumbnail(mediaEl, newData.result_url);
+          else mediaEl.src = newData.result_url;
           mediaEl.dataset.previewUrl = newData.result_url;
           mediaEl.classList.remove('hidden');
           loader.style.display = 'none';
