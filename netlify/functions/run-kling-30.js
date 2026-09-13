@@ -269,12 +269,17 @@ exports.handler = async (event) => {
     const promptForKie = klingElements.length && !body.multi_shots
       ? klingElements.reduce((out, element) => appendElementReference(out, element.name), prompt)
       : prompt;
-    const suppliedImageUrls = Array.isArray(body.image_urls) ? body.image_urls.map(String).filter(Boolean) : [];
-    const frameImageUrls = [
-      body.first_frame_url ? String(body.first_frame_url) : '',
-      ...suppliedImageUrls,
-      !body.multi_shots && body.last_frame_url ? String(body.last_frame_url) : '',
+    // Current clients send the ordered first/last frames in image_urls. Treat
+    // that array as authoritative so the same frame is not added again from
+    // the legacy first_frame_url/last_frame_url fields.
+    const suppliedImageUrls = Array.isArray(body.image_urls)
+      ? body.image_urls.map((url) => String(url || '').trim()).filter(Boolean)
+      : [];
+    const legacyFrameImageUrls = [
+      body.first_frame_url ? String(body.first_frame_url).trim() : '',
+      !body.multi_shots && body.last_frame_url ? String(body.last_frame_url).trim() : '',
     ].filter(Boolean);
+    const frameImageUrls = suppliedImageUrls.length ? suppliedImageUrls : legacyFrameImageUrls;
     const usesElementReference = /@[a-zA-Z_][a-zA-Z0-9_]*/.test(promptForKie);
     if (usesElementReference && !frameImageUrls.length) {
       const fallbackFirstFrame = klingElements
