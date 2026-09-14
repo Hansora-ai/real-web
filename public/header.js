@@ -553,12 +553,21 @@
       const hasCampaign = names.some(function (name) {
         return cleanCampaignValue(params.get(name), 500) !== null;
       });
-      if (!hasCampaign) return readCampaignAttribution();
+      // Short creative links: ?r1 (Reel 1), ?c1 (Creative 1), etc.
+      // Only recognize r/c + digits so unrelated query flags are not campaigns.
+      let creativeCode = null;
+      for (const [name, value] of params.entries()) {
+        if (value === '' && /^[rc]\d{1,10}$/i.test(name)) {
+          creativeCode = name.toLowerCase();
+          break;
+        }
+      }
+      if (!hasCampaign && !creativeCode) return readCampaignAttribution();
       const attribution = {
         utmSource: cleanCampaignValue(params.get('utm_source'), 500),
         utmMedium: cleanCampaignValue(params.get('utm_medium'), 500),
         utmCampaign: cleanCampaignValue(params.get('utm_campaign'), 500),
-        utmContent: cleanCampaignValue(params.get('utm_content'), 500),
+        utmContent: cleanCampaignValue(params.get('utm_content'), 500) || creativeCode,
         utmTerm: cleanCampaignValue(params.get('utm_term'), 500),
         landingPage: currentLandingPage(),
         capturedAt: Date.now()
