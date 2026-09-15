@@ -1461,7 +1461,25 @@ img, video { max-width: 100%; height: auto; }
     url.searchParams.set('minimalAddress', 'true');
     url.searchParams.set('metadata_uid', user.id);
     if (user.email) url.searchParams.set('metadata_email', user.email);
+    const chatSessionId = new URLSearchParams(location.search).get('chat_session') || '';
+    if (/^[0-9a-f-]{36}$/i.test(chatSessionId)) url.searchParams.set('metadata_chat_session_id', chatSessionId);
     return url;
+  }
+  async function recordSalesCheckout(user, packageId){
+    const chatSessionId = new URLSearchParams(location.search).get('chat_session') || '';
+    if (!/^[0-9a-f-]{36}$/i.test(chatSessionId)) return;
+    try {
+      const token = await window.HansoraHeader?.getAccessToken?.();
+      await fetch('/.netlify/functions/sales-chat-events', {
+        method: 'POST', credentials: 'same-origin', keepalive: true,
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          session_id: chatSessionId, type: 'checkout_started', language: document.documentElement.lang || 'ru',
+          package_id: packageId || null, metadata: { page: location.pathname, user_id: user.id },
+          idempotency_key: `checkout:${packageId || 'unknown'}:${Date.now()}`
+        })
+      });
+    } catch (_) {}
   }
   async function openSubscriptionCheckout(btn){
     if (btn.classList.contains('is-current-plan') || btn.getAttribute('aria-disabled') === 'true') return;
@@ -1473,6 +1491,7 @@ img, video { max-width: 100%; height: auto; }
     const url = addCommonDodoParams(new URL(base, location.href), user);
     url.searchParams.set('metadata_plan_id', planId);
     url.searchParams.set('metadata_monthly_credits', btn.getAttribute('data-monthly-credits') || '0');
+    recordSalesCheckout(user, planId);
     window.hansoraPricingNavigate(url.toString());
   }
   async function openPaygCheckout(btn){
@@ -1493,6 +1512,7 @@ img, video { max-width: 100%; height: auto; }
       addCommonDodoParams(url, user);
       url.searchParams.set('metadata_credits', String(credits));
     }
+    recordSalesCheckout(user, `credits_${credits}`);
     window.hansoraPricingNavigate(url.toString());
   }
   ready(async function(){
