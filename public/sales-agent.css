@@ -85,6 +85,10 @@
 .hsa-message-agent { border: 1px solid var(--hsa-border); border-bottom-left-radius: 5px; background: var(--hsa-panel); }
 .hsa-message-user { margin-left: auto; border-bottom-right-radius: 5px; background: linear-gradient(145deg, #7650dc, #4e5ad7); color: #fff; }
 .hsa-message-error { border-color: rgba(255, 107, 107, .4); color: #ffd0d0; }
+.hsa-empty-faqs { display: grid; gap: 2px; margin: 6px 0 12px; }
+.hsa-empty-faq { width: 100%; border: 0; border-bottom: 1px solid rgba(255, 255, 255, .07); padding: 10px 2px; background: transparent; color: #eef1f8; font: 600 12px/1.4 inherit; text-align: left; cursor: pointer; }
+.hsa-empty-faq:last-child { border-bottom: 0; }
+.hsa-empty-faq:hover { color: #cfc3ff; }
 .hsa-typing { display: flex; gap: 5px; align-items: center; width: max-content; }
 .hsa-typing i { width: 6px; height: 6px; border-radius: 50%; background: #aeb4c3; animation: hsa-bounce 1s infinite; }
 .hsa-typing i:nth-child(2) { animation-delay: .14s; }
@@ -95,14 +99,10 @@
 .hsa-action { border: 1px solid rgba(140, 92, 255, .52); border-radius: 999px; padding: 7px 11px; background: rgba(140, 92, 255, .12); color: #e9e1ff; font: 700 11px/1.2 inherit; cursor: pointer; }
 .hsa-action:hover { background: rgba(140, 92, 255, .23); }
 
-.hsa-foot { min-width: 0; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--hsa-border); background: #10131b; overflow: hidden; }
-.hsa-quick { position: relative; margin-bottom: 8px; }
-.hsa-faq-toggle { width: 100%; min-height: 36px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--hsa-border); border-radius: 11px; padding: 8px 11px; background: rgba(255, 255, 255, .045); color: #e7eaf2; font: 700 11px/1.25 inherit; text-align: left; cursor: pointer; }
-.hsa-faq-toggle span { font-size: 16px; transition: transform .16s ease; }
-.hsa-faq-toggle[aria-expanded="true"] span { transform: rotate(180deg); }
-.hsa-suggestions { position: absolute; right: 0; bottom: calc(100% + 7px); left: 0; z-index: 2; max-height: min(230px, 40dvh); overflow-y: auto; padding: 6px; border: 1px solid var(--hsa-border); border-radius: 13px; background: #151925; box-shadow: 0 16px 45px rgba(0, 0, 0, .48); }
-.hsa-suggestions[hidden] { display: none; }
-.hsa-suggestion { width: 100%; display: block; border: 0; border-radius: 9px; padding: 9px 10px; background: transparent; color: #e2e6f0; font: 600 11px/1.35 inherit; text-align: left; cursor: pointer; }
+.hsa-foot { min-width: 0; padding: 9px 12px calc(9px + env(safe-area-inset-bottom)); border-top: 1px solid var(--hsa-border); background: #10131b; overflow: hidden; }
+.hsa-suggestions { display: flex; gap: 7px; overflow-x: auto; padding: 0 0 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.hsa-suggestions::-webkit-scrollbar { display: none; }
+.hsa-suggestion { width: auto; max-width: 280px; flex: 0 0 auto; border: 1px solid var(--hsa-border); border-radius: 999px; padding: 7px 10px; background: rgba(255, 255, 255, .04); color: #d9deeb; font: 600 11px/1.2 inherit; white-space: nowrap; text-decoration: none; cursor: pointer; }
 .hsa-suggestion:hover { background: rgba(140, 92, 255, .16); }
 .hsa-form { min-width: 0; width: 100%; display: flex; align-items: flex-end; gap: 8px; }
 .hsa-input { width: 0; min-width: 0; min-height: 42px; max-height: 112px; flex: 1 1 0; resize: none; border: 1px solid var(--hsa-border); border-radius: 13px; padding: 10px 12px; background: rgba(255, 255, 255, .055); color: #fff; font: 13px/1.4 inherit; }
@@ -110,7 +110,7 @@
 .hsa-send { width: 42px; height: 42px; flex: 0 0 42px; border: 0; border-radius: 13px; padding: 0; display: grid; place-items: center; background: linear-gradient(145deg, #8c5cff, #5862e8); color: #fff; cursor: pointer; }
 .hsa-send:disabled { opacity: .45; cursor: default; }
 .hsa-send svg { width: 18px; height: 18px; }
-.hsa-telegram { width: 100%; min-height: 34px; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid rgba(41, 169, 235, .45); border-radius: 10px; padding: 7px 9px; background: rgba(41, 169, 235, .1); color: #bceaff; font: 700 10.5px/1.3 inherit; text-align: center; text-decoration: none; }
+.hsa-telegram { border-color: rgba(41, 169, 235, .45); background: rgba(41, 169, 235, .1); color: #bceaff; }
 .hsa-telegram:hover { background: rgba(41, 169, 235, .2); }
 .hsa-note { margin: 6px 2px 0; color: #788092; font-size: 9px; line-height: 1.3; text-align: center; }
 
@@ -122,14 +122,15 @@
   .hsa-launcher { right: 14px; bottom: calc(94px + env(safe-area-inset-bottom)); width: 54px; height: 54px; }
   .hsa-launcher-label { display: none; }
   .hsa-launcher[aria-expanded="true"] { display: none; }
-  .hsa-panel { top: 0; right: 0; bottom: 0; left: 0; width: auto; max-width: 100vw; height: 100dvh; max-height: 100dvh; border: 0; border-radius: 0; }
-  .hsa-head { padding: calc(12px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 12px max(12px, env(safe-area-inset-left)); }
+  .hsa-panel { top: auto; right: 10px; bottom: calc(76px + env(safe-area-inset-bottom)); left: 10px; width: auto; max-width: none; height: min(570px, calc(100dvh - 94px - env(safe-area-inset-bottom))); max-height: calc(100dvh - 94px - env(safe-area-inset-bottom)); border: 1px solid var(--hsa-border); border-radius: 18px; }
+  .hsa-head { padding: 12px max(12px, env(safe-area-inset-right)) 12px max(12px, env(safe-area-inset-left)); }
   .hsa-messages { padding: 14px max(12px, env(safe-area-inset-right)) 14px max(12px, env(safe-area-inset-left)); }
   .hsa-message { max-width: 92%; }
+  .hsa-input { font-size: 16px; }
   .hsa-foot { padding-right: max(10px, env(safe-area-inset-right)); padding-bottom: calc(9px + env(safe-area-inset-bottom)); padding-left: max(10px, env(safe-area-inset-left)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hsa-launcher, .hsa-messages, .hsa-faq-toggle span { transition: none; scroll-behavior: auto; }
+  .hsa-launcher, .hsa-messages { transition: none; scroll-behavior: auto; }
   .hsa-typing i, .hsa-navigating .hsa-launcher, .hsa-navigating .hsa-avatar { animation: none; }
 }
