@@ -93,13 +93,13 @@
     if (!document.querySelector('link[data-hansora-sales-agent]')) {
       const style = document.createElement('link');
       style.rel = 'stylesheet';
-      style.href = '/sales-agent.css?v=20260915.1';
+      style.href = '/sales-agent.css?v=20260915.2';
       style.dataset.hansoraSalesAgent = '1';
       document.head.appendChild(style);
     }
     if (!document.querySelector('script[data-hansora-sales-agent]')) {
       const script = document.createElement('script');
-      script.src = '/sales-agent.js?v=20260915.1';
+      script.src = '/sales-agent.js?v=20260915.2';
       script.defer = true;
       script.dataset.hansoraSalesAgent = '1';
       document.head.appendChild(script);
