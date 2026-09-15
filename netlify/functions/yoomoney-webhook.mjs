@@ -3,6 +3,7 @@
 // Adds credits exactly once by using the same payments-table CAS pattern as dodo-webhook.mjs.
 
 import { createHash, createHmac } from "node:crypto";
+import { attributePurchaseToChat } from "../../lib/sales-agent/attribution.mjs";
 
 const PACKS = {
   100: { rub: 750 },
@@ -168,7 +169,21 @@ export async function handler(event) {
       credited = true;
     }
 
-    return json(200, { ok: true, credited, transaction_id, credits, currency, amount_cents });
+    const purchaseAttribution = await attributePurchaseToChat({
+      supabaseUrl: SUPABASE_URL,
+      serviceKey: SUPABASE_SERVICE_ROLE_KEY,
+      userId: uid,
+      requestedSessionId: null,
+      provider,
+      transactionId: transaction_id,
+      amountCents: amount_cents,
+      currency
+    }).catch((error) => {
+      console.error("Chat purchase attribution failed", error);
+      return { attributed: false };
+    });
+
+    return json(200, { ok: true, credited, transaction_id, credits, currency, amount_cents, chat_attribution: purchaseAttribution });
   } catch (error) {
     return json(500, { error: String(error?.message || error) });
   }

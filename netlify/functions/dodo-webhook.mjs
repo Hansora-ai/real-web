@@ -8,6 +8,7 @@
 // - Sends a server-side Meta Purchase event. Meta deduplicates retries by transaction ID.
 
 import { createHash } from "node:crypto";
+import { attributePurchaseToChat } from "../../lib/sales-agent/attribution.mjs";
 
 const SUBSCRIPTION_PLANS = {
   premium_monthly: {
@@ -72,6 +73,7 @@ export async function handler(event) {
     const transaction_id =
       root.transaction_id || data.transaction_id || data.payment_id || root.payment_id || null;
     const uid = meta.uid || null;
+    const chat_session_id = meta.chat_session_id || null;
     const plan_id = meta.plan_id || null;
     const planConfig = plan_id ? SUBSCRIPTION_PLANS[plan_id] : null;
     const credits = Number(meta.credits || 0);
@@ -157,6 +159,7 @@ export async function handler(event) {
         provider,
         return_url,
         paid_at,
+        chat_session_id,
         subscriptionPaymentTransactionId: null
       });
     }
@@ -193,6 +196,7 @@ export async function handler(event) {
         provider,
         return_url,
         paid_at,
+        chat_session_id,
         subscriptionPaymentTransactionId: transaction_id
       });
     }
@@ -334,7 +338,21 @@ export async function handler(event) {
       return_url
     });
 
-    return json(200, { ok: true, credited, meta_purchase: metaPurchase, buy_click: buyClickOutcome });
+    const purchaseAttribution = await attributePurchaseToChat({
+      supabaseUrl: SUPABASE_URL,
+      serviceKey: SUPABASE_SERVICE_ROLE_KEY,
+      userId: uid,
+      requestedSessionId: chat_session_id,
+      provider,
+      transactionId: transaction_id,
+      amountCents: amount_cents,
+      currency
+    }).catch((error) => {
+      console.error("Chat purchase attribution failed", error);
+      return { attributed: false };
+    });
+
+    return json(200, { ok: true, credited, meta_purchase: metaPurchase, buy_click: buyClickOutcome, chat_attribution: purchaseAttribution });
   } catch (e) {
     return json(500, { error: String(e?.message || e) });
   }
@@ -356,6 +374,7 @@ async function handleSubscriptionWebhook({
   provider,
   return_url,
   paid_at,
+  chat_session_id = null,
   subscriptionPaymentTransactionId = null
 }) {
   if (!uid || !plan_id || !planConfig) {
@@ -457,6 +476,7 @@ async function handleSubscriptionWebhook({
 
   let credited = false;
   let creditReason = "not a monthly credit grant event";
+  let purchaseAttribution = { attributed: false };
   if (subscriptionStatus === "active" && monthly_credits > 0 && (type === "subscription.active" || type === "subscription.renewed" || subscriptionPaymentTransactionId)) {
     const monthlyTransactionId = [
       "subscription-period",
@@ -484,6 +504,19 @@ async function handleSubscriptionWebhook({
     });
     credited = creditResult.credited;
     creditReason = creditResult.reason;
+    purchaseAttribution = await attributePurchaseToChat({
+      supabaseUrl: SUPABASE_URL,
+      serviceKey: SUPABASE_SERVICE_ROLE_KEY,
+      userId: uid,
+      requestedSessionId: chat_session_id,
+      provider,
+      transactionId: monthlyTransactionId,
+      amountCents: amount_cents,
+      currency
+    }).catch((error) => {
+      console.error("Chat subscription attribution failed", error);
+      return { attributed: false };
+    });
   }
 
   return json(200, {
@@ -492,7 +525,8 @@ async function handleSubscriptionWebhook({
     status: subscriptionStatus,
     plan_id,
     credited,
-    credit_reason: creditReason
+    credit_reason: creditReason,
+    chat_attribution: purchaseAttribution
   });
 }
 
