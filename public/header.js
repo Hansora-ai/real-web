@@ -86,6 +86,26 @@
     document.head.appendChild(script);
   }
 
+  function loadSalesAgentWidget() {
+    if (window.top !== window.self || new URLSearchParams(location.search).get('offer_popup') === '1') return;
+    const path = String(location.pathname || '').toLowerCase();
+    if (/\/(?:login|russian-payment-success)(?:\.html)?\/?$/.test(path)) return;
+    if (!document.querySelector('link[data-hansora-sales-agent]')) {
+      const style = document.createElement('link');
+      style.rel = 'stylesheet';
+      style.href = '/sales-agent.css?v=20260915.1';
+      style.dataset.hansoraSalesAgent = '1';
+      document.head.appendChild(style);
+    }
+    if (!document.querySelector('script[data-hansora-sales-agent]')) {
+      const script = document.createElement('script');
+      script.src = '/sales-agent.js?v=20260915.1';
+      script.defer = true;
+      script.dataset.hansoraSalesAgent = '1';
+      document.head.appendChild(script);
+    }
+  }
+
   const LANGUAGE_STORAGE_KEY = 'hansora.language.v1';
   const REGISTRATION_LANGUAGE_CHOICE_KEY = 'hansora.registration.languageChoiceRequired.v1';
   const REGISTRATION_LANGUAGE_COMPLETED_PREFIX = 'hansora.registration.languageChoiceCompleted.';
@@ -4432,6 +4452,12 @@
       getSubscription: function () { return currentSubscription; },
       isUnlimitedModel,
       getCurrentUser: function () { return currentUser; },
+      getAccessToken: function () {
+        if (!sb || !sb.auth || typeof sb.auth.getSession !== 'function') return Promise.resolve('');
+        return sb.auth.getSession().then(function (result) {
+          return result && result.data && result.data.session ? result.data.session.access_token || '' : '';
+        });
+      },
       getCurrentCredits: function () { return currentCredits; },
       toDisplayCredits,
       creditDisplayMultiplier: CREDIT_DISPLAY_MULTIPLIER,
@@ -4481,6 +4507,7 @@
     injectAuthModal();
     ensureSupabaseClient();
     exposeApi();
+    loadSalesAgentWidget();
     bindEvents();
     bindGlobalClickTracking();
     bindCourseLessonFunnelTracking();
