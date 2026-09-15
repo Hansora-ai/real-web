@@ -49,76 +49,6 @@ function estimatedCost(usage) {
   return Number(((uncached * 0.20 + usage.cached * 0.02 + usage.output * 1.20) / 1_000_000).toFixed(8));
 }
 
-function instantSalesReply(message, language) {
-  const text = String(message || '').trim().toLowerCase();
-  const isCheapestVideo = /cheapest|most affordable/.test(text)
-    || /ամենամատչելի/.test(text)
-    || /сам(?:ая|ый|ое).*деш|сам(?:ая|ый|ое).*доступ/.test(text);
-  const isArmenianVideo = /armenian.*(?:speak|speech|video)/.test(text)
-    || /հայերեն.*(?:խոս|տեսանյութ|վիդեո)/.test(text)
-    || /армянск.*(?:реч|говор|видео)/.test(text);
-  const isPackageChoice = /(?:which|what).*credit package|credit package.*(?:choose|fit)/.test(text)
-    || /կրեդիտային.*փաթեթ|փաթեթ.*ընտր/.test(text)
-    || /какой.*пакет.*кредит|пакет.*кредит.*выб/.test(text);
-
-  if (isCheapestVideo) {
-    const messages = {
-      en: 'Grok Video is Hansora’s most affordable and most-used video model. It is a good starting point for frequent Reels and testing ideas with lower credit risk.',
-      hy: 'Grok Video-ը Hansora-ի ամենամատչելի և ամենաշատ օգտագործվող վիդեո մոդելն է։ Այն հարմար մեկնարկային տարբերակ է հաճախակի Reels ստեղծելու և գաղափարները քիչ կրեդիտային ռիսկով փորձարկելու համար։',
-      ru: 'Grok Video — самая доступная и наиболее используемая видеомодель Hansora. Это хороший стартовый вариант для регулярных Reels и тестирования идей с меньшими затратами кредитов.'
-    };
-    const labels = { en: 'Open Grok Video', hy: 'Բացել Grok Video-ը', ru: 'Открыть Grok Video' };
-    return {
-      message: messages[language] || messages.en,
-      language,
-      intent: 'model_recommendation',
-      recommended_model: 'grok-video',
-      recommended_package: null,
-      quote_id: null,
-      memory: { business_type: null, main_goal: 'Affordable video', objection: 'price', purchase_intent: 'low' },
-      actions: [{ type: 'open_model', label: labels[language] || labels.en, model: 'grok-video', package: null }]
-    };
-  }
-
-  if (isArmenianVideo) {
-    const messages = {
-      en: 'For Armenian-speaking video, Gemini Omni or a suitable Veo model is the best direction. Do you need a talking person/avatar, or a narrated advertising video?',
-      hy: 'Հայերեն խոսող տեսանյութի համար լավագույն ուղղությունը Gemini Omni-ն կամ համապատասխան Veo մոդելն է։ Ձեզ խոսող անձ/ավատա՞ր է անհրաժեշտ, թե՞ ձայնային գովազդային տեսանյութ։',
-      ru: 'Для видео с армянской речью лучше всего подойдут Gemini Omni или соответствующая модель Veo. Вам нужен говорящий человек/аватар или рекламный ролик с озвучкой?'
-    };
-    return {
-      message: messages[language] || messages.en,
-      language,
-      intent: 'qualification',
-      recommended_model: null,
-      recommended_package: null,
-      quote_id: null,
-      memory: { business_type: null, main_goal: 'Armenian-speaking video', objection: null, purchase_intent: 'unknown' },
-      actions: []
-    };
-  }
-
-  if (isPackageChoice) {
-    const messages = {
-      en: 'To recommend the smallest suitable package, will you create images or videos, and approximately how many?',
-      hy: 'Ամենափոքր համապատասխան փաթեթն առաջարկելու համար նշեք՝ պատկերնե՞ր եք ստեղծելու, թե՞ տեսանյութեր, և մոտավորապես քանի հատ։',
-      ru: 'Чтобы предложить минимальный подходящий пакет, уточните: Вы будете создавать изображения или видео и примерно в каком количестве?'
-    };
-    return {
-      message: messages[language] || messages.en,
-      language,
-      intent: 'qualification',
-      recommended_model: null,
-      recommended_package: null,
-      quote_id: null,
-      memory: { business_type: null, main_goal: 'Choose a credit package', objection: null, purchase_intent: 'medium' },
-      actions: []
-    };
-  }
-
-  return null;
-}
-
 export async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return response(204, {});
   if (!['GET', 'POST'].includes(event.httpMethod)) return response(405, { error: 'method_not_allowed' });
@@ -185,17 +115,7 @@ export async function handler(event) {
     }
 
     const history = [...before, { role: 'user', content: message }].slice(-16);
-    const instantReply = instantSalesReply(message, language);
-    const generated = instantReply ? {
-      reply: instantReply,
-      usage: { input: 0, cached: 0, output: 0 },
-      provider: 'local',
-      providerCredits: 0,
-      model: 'hansora-instant-v1',
-      latencyMs: 0,
-      retries: 0,
-      toolCalls: []
-    } : await generateSalesReply({
+    const generated = await generateSalesReply({
       instructions: buildInstructions({ language, summary: session.summary, salesMemory: session.sales_memory }),
       messages: history,
       executeTool: (name, args) => executeTool(name, args, { user }),
