@@ -16,7 +16,7 @@
   memory = 512
 
 [functions."sales-chat"]
-  timeout = 26
+  timeout = 60
   memory = 512
 
 # Unlimited generation queue dispatcher (runs once per minute)
