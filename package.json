@@ -2,6 +2,9 @@
   "name": "nano-banna",
   "private": true,
   "type": "commonjs",
+  "scripts": {
+    "test:sales-agent": "node --test test/sales-agent/*.test.mjs"
+  },
   "dependencies": {
     "busboy": "^1.6.0"
   }
