@@ -65,9 +65,13 @@
 
   function detectLanguage() {
     const path = location.pathname.toLowerCase();
-    const stored = localStorage.getItem('hansora.language.v1');
     if (path.includes('_arm.') || path === '/course_arm' || path === '/course_arm/') return 'hy';
     if (path.includes('_ru.') || path === '/course_ru' || path === '/course_ru/') return 'ru';
+    const declared = String(document.documentElement.lang || '').toLowerCase();
+    if (declared === 'hy' || declared.indexOf('hy-') === 0) return 'hy';
+    if (declared === 'ru' || declared.indexOf('ru-') === 0) return 'ru';
+    if (declared === 'en' || declared.indexOf('en-') === 0) return 'en';
+    const stored = localStorage.getItem('hansora.language.v1');
     if (stored === 'hy' || stored === 'ru') return stored;
     return 'en';
   }
@@ -213,6 +217,7 @@
 
   function addEmptyQuestions() {
     if (messages.querySelector('.hsa-empty-faqs')) return;
+    messages.classList.add('hsa-empty-mode');
     const list = document.createElement('div');
     list.className = 'hsa-empty-faqs';
     copy.faqs.forEach(function (faq) {
@@ -227,6 +232,7 @@
   }
 
   function clearEmptyQuestions() {
+    messages.classList.remove('hsa-empty-mode');
     messages.querySelector('.hsa-empty-faqs')?.remove();
   }
 

@@ -126,6 +126,10 @@
   .hsa-head { padding: 12px max(12px, env(safe-area-inset-right)) 12px max(12px, env(safe-area-inset-left)); }
   .hsa-messages { padding: 14px max(12px, env(safe-area-inset-right)) 14px max(12px, env(safe-area-inset-left)); }
   .hsa-message { max-width: 92%; }
+  .hsa-messages.hsa-empty-mode { padding-top: 10px; padding-bottom: 8px; }
+  .hsa-messages.hsa-empty-mode .hsa-message-agent:first-child { margin-bottom: 3px; padding: 8px 10px; font-size: 10.5px; line-height: 1.3; }
+  .hsa-empty-faqs { gap: 0; margin: 0; }
+  .hsa-empty-faq { padding: 5px 2px; font-size: 10.5px; line-height: 1.22; }
   .hsa-input { font-size: 16px; }
   .hsa-foot { padding-right: max(10px, env(safe-area-inset-right)); padding-bottom: calc(9px + env(safe-area-inset-bottom)); padding-left: max(10px, env(safe-area-inset-left)); }
 }
