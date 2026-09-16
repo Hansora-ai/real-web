@@ -8,17 +8,46 @@
 
 .tutorial-app .reading{max-width:868px;padding-top:72px}.tutorial-app .cover.media{margin:30px 0 64px;width:100%;max-height:none}.tutorial-app .cover.media img{width:100%;max-height:440px;object-fit:cover}.tutorial-app .visual.media img{max-height:500px;object-fit:contain}.tutorial-app .prompt-box{background:#1d1925;border-color:#513c70}.tutorial-app .prompt-bar{background:#251d33}.tutorial-app .prompt-box .prompt-text{color:#d7cde4}.tutorial-app .before-prompt{margin-bottom:14px}.tutorial-app .before-image{margin-bottom:14px}.tutorial-app .before-image h2{margin-bottom:0}.tutorial-app .visual{position:relative}.tutorial-app .prompt-text{overflow-wrap:anywhere}.tutorial-app .top h1{margin-bottom:0}@media(max-width:640px){.tutorial-app .reading{padding-top:42px}.tutorial-app .cover.media{margin-bottom:50px}}/* Natural media dimensions: no forced landscape crop or empty image frame. */.tutorial-app #gallery .card img{display:block;width:100%;height:auto;max-height:none;aspect-ratio:auto;object-fit:contain}.tutorial-app .gallery-column{display:flex;flex-direction:column;gap:28px;min-width:0}.tutorial-app .cover.media{height:auto;max-height:none;aspect-ratio:auto}.tutorial-app .cover.media img,.tutorial-app .visual.media img,.tutorial-app .visual.media video{display:block;width:100%;height:auto;max-height:none;aspect-ratio:auto;object-fit:contain}/* Match the homepage's inherited header foundations without duplicating it. */#sharedHeader{--line:rgba(255,255,255,.11);--line-strong:rgba(255,255,255,.2);--text:#f7f7fb;--muted:rgba(247,247,251,.62);--max:1440px;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.45;letter-spacing:0}#sharedHeader,#sharedHeader *{box-sizing:border-box}#sharedHeader *::before,#sharedHeader *::after{box-sizing:border-box}:where(#sharedHeader) a{color:inherit;text-decoration:none}:where(#sharedHeader) button{font:inherit;color:inherit}:where(#sharedHeader) img,:where(#sharedHeader) video{display:block;max-width:100%}</style><script>    (()=>{try{const saved=localStorage.getItem('hansora.language.v1');document.documentElement.lang=saved==='hy'||saved==='ru'?saved:'en'}catch(_){}})();
 </script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script defer src="/header.js"></script><style id="tutorial-cover-size-fix">
-/* Resize only the first cover image inside a tutorial. Gallery and section images are unchanged. */
+/* Resize only the first cover video inside a tutorial. Gallery and section videos are unchanged. */
 .tutorial-app .cover.media.tutorial-cover-9x16 {
-  width: 30%;
+  width: min(44%, 380px);
   margin-left: auto;
   margin-right: auto;
 }
+.tutorial-app .cover.media.tutorial-cover-9x16 .trend-media { aspect-ratio: 9 / 16; }
 .tutorial-app .cover.media.tutorial-cover-16x9 {
-  width: 70%;
+  width: 100%;
   margin-left: auto;
   margin-right: auto;
 }
+.tutorial-app .cover.media.tutorial-cover-16x9 .trend-media { aspect-ratio: 16 / 9; }
+@media(max-width:640px){.tutorial-app .cover.media.tutorial-cover-9x16{width:min(72%,380px)}}
+</style><style id="trend-video-gallery-styles">
+/* Lightweight trend-video gallery: sources are attached only near the viewport. */
+.tutorial-app #gallery{gap:22px}
+.tutorial-app #gallery .gallery-column{gap:22px}
+.tutorial-app #gallery .card{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.09);border-radius:22px;background:linear-gradient(145deg,#202127,#15161a);box-shadow:0 18px 50px rgba(0,0,0,.2);transition:transform .28s ease,border-color .28s ease,box-shadow .28s ease}
+.tutorial-app #gallery .card:hover{transform:translateY(-5px);border-color:rgba(207,255,25,.34);box-shadow:0 24px 65px rgba(0,0,0,.34)}
+.tutorial-app .trend-media{position:relative;display:block;overflow:hidden;aspect-ratio:4/5;background:radial-gradient(circle at 30% 20%,rgba(146,100,237,.34),transparent 42%),linear-gradient(145deg,#292b32,#101114)}
+.tutorial-app .trend-media::before{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(110deg,transparent 25%,rgba(255,255,255,.08) 42%,transparent 60%);transform:translateX(-100%);animation:trend-shimmer 1.8s infinite}
+.tutorial-app .trend-media::after{display:none;content:"▶";position:absolute;left:16px;bottom:16px;z-index:2;place-items:center;width:38px;height:38px;border:1px solid rgba(255,255,255,.22);border-radius:50%;background:rgba(7,8,10,.48);color:white;font-size:13px;backdrop-filter:blur(12px);transition:opacity .2s ease}
+.tutorial-app .trend-media.is-video::after{display:grid}
+.tutorial-app .trend-video{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s ease,transform .6s ease}
+.tutorial-app .trend-video.is-ready{opacity:1}
+.tutorial-app .trend-image{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:cover;transition:transform .6s ease}
+.tutorial-app #gallery .card .trend-image{width:100%;height:100%;max-height:none;aspect-ratio:auto;object-fit:cover}
+.tutorial-app #gallery .card:hover .trend-video,.tutorial-app #gallery .card:hover .trend-image{transform:scale(1.025)}
+.tutorial-app #gallery .card h2{margin:0;padding:17px 18px 4px;font-size:19px;line-height:1.25}
+.tutorial-app #gallery .card .badge{display:block;padding:0 18px 16px}
+.tutorial-app .video-placeholder{display:grid;place-items:center;min-height:280px;padding:24px;text-align:center;color:var(--muted);background:radial-gradient(circle at 50% 30%,rgba(146,100,237,.24),transparent 50%),#15161a}
+.tutorial-app .cover.media .trend-media{aspect-ratio:16/9;border-radius:16px}
+.tutorial-app .cover.media .trend-media::after{display:none}
+.tutorial-app .cover.media .trend-video{max-height:540px;object-fit:cover}
+.tutorial-app .editor-cover-media{display:block;width:min(100%,420px);max-height:260px;object-fit:cover;border-radius:12px;background:#0b0c0e}
+.tutorial-app .video-help{display:block;margin-top:7px;color:var(--muted);font-size:12px;line-height:1.45}
+@keyframes trend-shimmer{to{transform:translateX(100%)}}
+@media(max-width:760px){.tutorial-app #gallery{gap:16px}.tutorial-app #gallery .gallery-column{gap:16px}.tutorial-app #gallery .card{border-radius:18px}.tutorial-app #gallery .card h2{font-size:17px;padding:14px 14px 3px}}
+@media(prefers-reduced-motion:reduce){.tutorial-app #gallery .card,.tutorial-app .trend-video{transition:none}.tutorial-app .trend-media::before{animation:none}}
 </style></head><body><div id="sharedHeader"></div><div class="tutorial-app"><main class="wrap reading"><a class="back" href="examples.html">← Examples</a><p id="status" class="status" role="status">Loading tutorial…</p><div id="reader"></div><div id="editor" hidden></div></main><dialog id="lightbox"><button id="close-lightbox">Close ×</button><img id="large-image" alt=""></dialog><div id="toast" class="toast" role="status" hidden></div></div><script>window.TUTORIAL_MODELS = [
   {
     "id": "nano-banana",
@@ -719,7 +748,7 @@
 ];
 </script><script>(() => {
 'use strict';
-const OWNER='45c5cfc7-090e-491f-a304-05f863bbdf85', BUCKET='tutorial-media', PAGE=18;
+const OWNER='45c5cfc7-090e-491f-a304-05f863bbdf85', BUCKET='tutorial-media', PAGE=12;
 const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl=v=>{try{const u=new URL(v);return u.protocol==='https:'?u.href:''}catch{return ''}};
 const models=window.TUTORIAL_MODELS, modelFor=b=>models.find(m=>m.id===b.model);
@@ -728,7 +757,20 @@ const status=(message,error=false)=>{const el=$('#status');el.textContent=messag
 const toast=message=>{$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').hidden=true,2400)};
 function mark(){dirty=true;const s=$('#save-state');if(s)s.textContent='Unsaved changes'}
 function image(url,alt,cls=''){const u=safeUrl(url);return u?`<img class="${cls}" src="${esc(u)}" alt="${esc(alt)}" loading="lazy" decoding="async">`:''}
-function coverMarkup(url,title){return '<div class="cover media">'+image(url,title)+'<button class="preview-btn" type="button" data-preview aria-label="Open image preview">↗</button></div>'}
+function isVideoUrl(value){const u=safeUrl(value);if(!u)return false;try{return /\.(?:mp4|webm|mov|m4v)$/i.test(new URL(u).pathname)}catch{return false}}
+function trendVideo(url,label,cls=''){const u=safeUrl(url);return u&&isVideoUrl(u)?`<span class="trend-media is-video"><video class="trend-video ${cls}" data-video-src="${esc(u)}" muted loop playsinline preload="none" aria-label="${esc(label)}"></video></span>`:''}
+function trendImage(url,label,cls=''){const u=safeUrl(url);return u&&!isVideoUrl(u)?`<span class="trend-media is-image"><img class="trend-image ${cls}" src="${esc(u)}" alt="${esc(label)}" loading="lazy" decoding="async"></span>`:''}
+function trendCover(url,label,cls=''){return trendVideo(url,label,cls)||trendImage(url,label,cls)||'<div class="video-placeholder">Upload an image or short video preview</div>'}
+function coverMarkup(url,title){return '<div class="cover media">'+trendCover(url,title,'cover-media')+'</div>'}
+const activeTrendVideos=[];
+function playTrendVideo(video){
+ if(!video.src){video.src=video.dataset.videoSrc;video.load()}
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ video.play().then(()=>{const old=activeTrendVideos.indexOf(video);if(old>=0)activeTrendVideos.splice(old,1);activeTrendVideos.push(video);while(activeTrendVideos.length>1)activeTrendVideos.shift()?.pause()}).catch(()=>{});
+}
+const trendObserver='IntersectionObserver'in window?new IntersectionObserver(entries=>{for(const entry of entries){const video=entry.target;if(entry.isIntersecting&&entry.intersectionRatio>=.08)playTrendVideo(video);else video.pause()}},{rootMargin:'0px',threshold:[0,.08,.55]}):null;
+function hydrateTrendVideos(scope=document){scope.querySelectorAll('video[data-video-src]').forEach(video=>{if(video.dataset.observed)return;video.dataset.observed='1';video.addEventListener('loadeddata',()=>video.classList.add('is-ready'),{once:true});if(trendObserver)trendObserver.observe(video);else playTrendVideo(video)})}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)activeTrendVideos.forEach(video=>video.pause());else document.querySelectorAll('.trend-video.is-ready').forEach(video=>{const r=video.getBoundingClientRect();if(r.bottom>0&&r.top<innerHeight)playTrendVideo(video)})});
 function media(b){const u=safeUrl(b.url);if(!u)return '';const width=Math.max(25,Math.min(100,Number(b.width)||100));return `<figure class="visual media" style="width:${width}%">${b.type==='video'?`<video src="${esc(u)}" controls playsinline preload="none"></video>`:image(u,b.caption||'Tutorial image')+'<button class="preview-btn" type="button" data-preview aria-label="Open image preview">↗</button>'} ${b.caption?`<figcaption class="muted">${esc(b.caption)}</figcaption>`:''}</figure>`}
 function blocksMarkup(blocks){return blocks.map((b,i)=>`<section class="block ${b.type==='image'&&blocks[i+1]?.type==='prompt'?'before-prompt':b.type==='headline'&&blocks[i+1]?.type==='image'?'before-image':''}">${b.type==='headline'?`<h2 class="section-title">${esc(b.text)}</h2>`:b.type==='image'||b.type==='video'?media(b):b.type==='prompt'?`<div class="prompt-box"><div class="prompt-bar"><strong><span class="prompt-icon">✦</span>${esc(modelFor(b)?.name||'Prompt')}</strong><div class="actions"><button data-copy="${esc(b.id)}">Copy</button><button class="purple" data-recreate="${esc(b.id)}">Recreate ↗</button></div></div><pre class="prompt-text">${esc(b.text)}</pre>${(b.refs||[]).length?`<div class="refs">${b.refs.map((u,i)=>`<div class="ref">${image(u,'Reference '+(i+1))}<span>Image ${i+1}</span></div>`).join('')}</div>`:''}</div>`:''}</section>`).join('')}
 // Like Search Models: place the next card in the shortest column.
@@ -744,8 +786,8 @@ function layoutGallery(){
 }
 let galleryFrame=0;
 function scheduleGalleryLayout(){if(galleryFrame)cancelAnimationFrame(galleryFrame);galleryFrame=requestAnimationFrame(()=>{galleryFrame=0;layoutGallery()})}
-document.addEventListener('load',event=>{if(event.target.tagName==='IMG'&&event.target.closest('#gallery'))scheduleGalleryLayout()},true);
-document.addEventListener('error',event=>{if(event.target.tagName==='IMG'&&event.target.closest('#gallery'))scheduleGalleryLayout()},true);
+document.addEventListener('load',event=>{if((event.target.tagName==='IMG'||event.target.tagName==='VIDEO')&&event.target.closest('#gallery'))scheduleGalleryLayout()},true);
+document.addEventListener('error',event=>{if((event.target.tagName==='IMG'||event.target.tagName==='VIDEO')&&event.target.closest('#gallery'))scheduleGalleryLayout()},true);
 window.addEventListener('resize',scheduleGalleryLayout);
 
 async function gallery(reset=false){
@@ -754,34 +796,63 @@ async function gallery(reset=false){
  let q=sb.from('tutorials').select('id,title,cover_url,published,created_at').order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+PAGE);
  if(!owner)q=q.eq('published',true);
  const {data,error}=await q;if(error)throw error;
- $('#gallery').insertAdjacentHTML('beforeend',data.slice(0,PAGE).map((t,i)=>`<a class="card" data-gallery-order="${offset+i}" href="tutorial.html?id=${encodeURIComponent(t.id)}">${image(t.cover_url,t.title)}<h2>${esc(t.title)}</h2>${!t.published?'<span class="badge">Draft · Only you</span>':''}</a>`).join(''));
- layoutGallery();offset+=Math.min(data.length,PAGE);$('#more').hidden=data.length<=PAGE;status('');
+ $('#gallery').insertAdjacentHTML('beforeend',data.slice(0,PAGE).map((t,i)=>`<a class="card" data-gallery-order="${offset+i}" href="tutorial.html?id=${encodeURIComponent(t.id)}">${trendCover(t.cover_url,t.title,'card-media')}<h2>${esc(t.title)}</h2>${!t.published?'<span class="badge">Draft · Only you</span>':''}</a>`).join(''));
+ hydrateTrendVideos($('#gallery'));layoutGallery();offset+=Math.min(data.length,PAGE);$('#more').hidden=data.length<=PAGE;status('');
  if(!offset)$('#gallery').innerHTML='<div class="empty">No tutorials published yet.</div>';
  }catch(e){status('Could not load examples. '+e.message,true)}finally{busy=false;$('#more').disabled=false}
 }
-function renderReader(){document.title=record.title+' · Hansora';$('#reader').innerHTML=`<div class="top"><h1>${esc(record.title)}</h1>${owner?'<button id="edit">Edit tutorial</button>':''}</div>${!record.published?'<p class="badge">Draft · Only you</p>':''}${coverMarkup(record.cover_url,record.title)}${blocksMarkup(record.blocks)}`;$('#editor').hidden=true;$('#reader').hidden=false;$('#edit')?.addEventListener('click',editor)}
+function renderReader(){document.title=record.title+' · Hansora';$('#reader').innerHTML=`<div class="top"><h1>${esc(record.title)}</h1>${owner?'<button id="edit">Edit tutorial</button>':''}</div>${!record.published?'<p class="badge">Draft · Only you</p>':''}${coverMarkup(record.cover_url,record.title)}${blocksMarkup(record.blocks)}`;$('#editor').hidden=true;$('#reader').hidden=false;hydrateTrendVideos($('#reader'));$('#edit')?.addEventListener('click',editor)}
 const options=(items,value)=>items.map(x=>`<option value="${esc(x)}" ${String(x)===String(value)?'selected':''}>${esc(x||'Model default')}</option>`).join('');
 function select(label,field,items,value){return `<label>${label}<select data-field="${field}">${options(items,value)}</select></label>`}
 function modelSettings(b){const m=modelFor(b);return `<label>Generation model<select data-field="model">${models.map(m=>`<option value="${esc(m.id)}" ${m.id===b.model?'selected':''}>${esc(m.name)} · ${m.category}</option>`).join('')}</select></label><div class="fields">${select('Aspect ratio','aspectRatio',m?.aspects||[],b.aspectRatio)}${select('Resolution','resolution',['',...(m?.resolutions||[])],b.resolution)}${m?.durations.length?select('Duration (seconds)','duration',m.durations,b.duration):''}</div><label>Prompt<textarea data-field="text" placeholder="Write your prompt…">${esc(b.text)}</textarea></label><label>Reference images · ${m?.maxFiles||0} maximum<input type="file" data-upload="refs" accept="image/jpeg,image/png,image/webp" multiple ${!m?.maxFiles?'disabled':''}></label><p class="muted">These images are inserted with the prompt when someone clicks Recreate. Their order matches Image 1, Image 2, and so on.</p><div class="refs">${(b.refs||[]).map((u,i)=>`<div class="ref">${image(u,'Reference '+(i+1))}<span>Image ${i+1}</span><button data-remove-ref="${i}" aria-label="Remove reference ${i+1}">×</button>${i?`<button data-ref-left="${i}" aria-label="Move reference ${i+1} left">←</button>`:''}</div>`).join('')}</div>`}
 function blockEditor(b,i){return `<section class="editor-block" data-block="${esc(b.id)}"><div class="block-tools"><strong>${i+1}. ${esc(b.type==='headline'?'Headline':b.type==='prompt'?'Prompt':b.type==='video'?'Video':'Image')}</strong><div class="actions"><button data-move="-1" ${!i?'disabled':''} aria-label="Move section up">↑</button><button data-move="1" ${i===record.blocks.length-1?'disabled':''} aria-label="Move section down">↓</button><button data-remove aria-label="Remove section">×</button></div></div>${b.type==='headline'?`<label>Headline<input class="title-input" data-field="text" value="${esc(b.text)}" placeholder="Section headline"></label>`:b.type==='prompt'?modelSettings(b):`<label>Upload ${b.type}<input type="file" data-upload="media" accept="${b.type==='video'?'video/mp4,video/webm,video/quicktime':'image/jpeg,image/png,image/webp,image/gif,image/avif'}"></label>${media(b)}<label>Display width: <span data-width-label>${b.width}%</span><input type="range" min="25" max="100" step="5" data-field="width" value="${b.width}"></label><label>Caption (optional)<input data-field="caption" value="${esc(b.caption||'')}"></label>`}</section>`}
 function renderBlocks(){ $('#blocks').innerHTML=record.blocks.map(blockEditor).join('') }
-function editor(){if(!owner)return;$('#reader').hidden=true;$('#editor').hidden=false;$('#editor').innerHTML=`<div class="top"><h1>${record.created_at?'Edit tutorial':'New tutorial'}</h1><button id="preview-toggle">Preview</button></div><div class="editor-head"><label>Tutorial title<input id="title" class="title-input" maxlength="300" value="${esc(record.title)}" placeholder="Name your tutorial"></label><label>Cover image · also shown in Examples<input id="cover-upload" type="file" accept="image/jpeg,image/png,image/webp"></label><div id="cover-preview">${image(record.cover_url,'Cover','editor-image')}</div></div><div id="blocks"></div><div class="add-menu"><strong>Add a section</strong><button data-add="headline">＋ Headline</button><button data-add="image">＋ Image</button><button data-add="video">＋ Video</button><button data-add="prompt">＋ Prompt</button></div><div class="save-bar"><label><input id="published" type="checkbox" ${record.published?'checked':''}> Published</label><span class="muted" id="save-state">${dirty?'Unsaved changes':'Saved'}</span><button id="save" class="primary">Save tutorial</button><button id="done">Done</button></div><div id="preview" hidden></div>`;renderBlocks();
- $('#title').addEventListener('input',e=>{record.title=e.target.value;mark()});$('#published').addEventListener('change',e=>{record.published=e.target.checked;mark()});$('#save').addEventListener('click',save);$('#done').addEventListener('click',()=>{if(dirty){toast('Save your changes first.');return}if(!record.created_at){location.href='examples.html';return}renderReader()});$('#preview-toggle').addEventListener('click',()=>{const p=$('#preview');p.hidden=!p.hidden;if(!p.hidden){p.innerHTML=`<h1>${esc(record.title||'Untitled tutorial')}</h1>${coverMarkup(record.cover_url,'Cover')}${blocksMarkup(record.blocks)}`;p.scrollIntoView({behavior:'smooth'})}});
+function editor(){if(!owner)return;$('#reader').hidden=true;$('#editor').hidden=false;$('#editor').innerHTML=`<div class="top"><h1>${record.created_at?'Edit tutorial':'New tutorial'}</h1><button id="preview-toggle">Preview</button></div><div class="editor-head"><label>Tutorial title<input id="title" class="title-input" maxlength="300" value="${esc(record.title)}" placeholder="Name your tutorial"></label><label>Cover image or video · shown in Examples<input id="cover-upload" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"><span class="video-help">Images are optimized to WebP. Video previews are trimmed to 8 seconds and compressed to a lightweight 720px file without audio—usually about 300–700 KB. The full-quality result can stay inside the tutorial.</span></label><div id="cover-preview">${trendCover(record.cover_url,'Cover preview','editor-cover-media')}</div></div><div id="blocks"></div><div class="add-menu"><strong>Add a section</strong><button data-add="headline">＋ Headline</button><button data-add="image">＋ Image</button><button data-add="video">＋ Video</button><button data-add="prompt">＋ Prompt</button></div><div class="save-bar"><label><input id="published" type="checkbox" ${record.published?'checked':''}> Published</label><span class="muted" id="save-state">${dirty?'Unsaved changes':'Saved'}</span><button id="save" class="primary">Save tutorial</button><button id="done">Done</button></div><div id="preview" hidden></div>`;renderBlocks();
+ $('#title').addEventListener('input',e=>{record.title=e.target.value;mark()});$('#published').addEventListener('change',e=>{record.published=e.target.checked;mark()});$('#save').addEventListener('click',save);$('#done').addEventListener('click',()=>{if(dirty){toast('Save your changes first.');return}if(!record.created_at){location.href='examples.html';return}renderReader()});$('#preview-toggle').addEventListener('click',()=>{const p=$('#preview');p.hidden=!p.hidden;if(!p.hidden){p.innerHTML=`<h1>${esc(record.title||'Untitled tutorial')}</h1>${coverMarkup(record.cover_url,'Cover')}${blocksMarkup(record.blocks)}`;hydrateTrendVideos(p);p.scrollIntoView({behavior:'smooth'})}});
 }
-async function optimizeCover(file){
+async function optimizeCoverImage(file){
  if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Use a JPEG, PNG, or WebP cover image.');
  if(file.size>20*1024*1024)throw Error('Cover image must be smaller than 20 MB.');
- const bitmap=await createImageBitmap(file);try{const scale=Math.min(1,1200/bitmap.width);const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',0.82));if(!blob)throw Error('Could not prepare cover image.');return new File([blob],'cover.webp',{type:blob.type})}finally{bitmap.close()}
+ const bitmap=await createImageBitmap(file);try{const scale=Math.min(1,1200/Math.max(bitmap.width,bitmap.height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',.82));if(!blob)throw Error('Could not optimize the cover image.');return new File([blob],'cover.webp',{type:blob.type})}finally{bitmap.close()}
+}
+async function videoMetadata(file){
+ const url=URL.createObjectURL(file),video=document.createElement('video');video.preload='metadata';video.muted=true;video.playsInline=true;video.src=url;
+ try{await new Promise((resolve,reject)=>{video.onloadedmetadata=resolve;video.onerror=()=>reject(Error('This video cannot be read. Use MP4, WebM, or MOV.'))});return{duration:Number(video.duration)||0,width:video.videoWidth||0,height:video.videoHeight||0}}
+ finally{video.removeAttribute('src');video.load();URL.revokeObjectURL(url)}
+}
+async function transcodePreview(file,meta){
+ if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)throw Error('This browser cannot compress this video. Upload a preview already under 900 KB.');
+ const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/mp4;codecs=avc1'].find(type=>MediaRecorder.isTypeSupported(type));
+ if(!mime)throw Error('This browser cannot compress this video. Upload a preview already under 900 KB.');
+ const url=URL.createObjectURL(file),video=document.createElement('video'),canvas=document.createElement('canvas');video.src=url;video.muted=true;video.playsInline=true;video.preload='auto';
+ try{
+  await new Promise((resolve,reject)=>{video.onloadeddata=resolve;video.onerror=()=>reject(Error('This video cannot be decoded. Try an MP4 video.'))});
+  const maxEdge=720,scale=Math.min(1,maxEdge/Math.max(meta.width,meta.height));canvas.width=Math.max(2,Math.round(meta.width*scale/2)*2);canvas.height=Math.max(2,Math.round(meta.height*scale/2)*2);
+  const ctx=canvas.getContext('2d',{alpha:false}),stream=canvas.captureStream(20),recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:650000}),chunks=[];
+  recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data)};
+  const stopped=new Promise((resolve,reject)=>{recorder.onstop=resolve;recorder.onerror=()=>reject(Error('Video compression failed.'))});
+  const limit=Math.min(meta.duration,8);let frame=0;
+  function draw(){ctx.drawImage(video,0,0,canvas.width,canvas.height);if(!video.ended&&video.currentTime<limit)frame=requestAnimationFrame(draw);else recorder.state==='recording'&&recorder.stop()}
+  recorder.start(500);await video.play();draw();await stopped;cancelAnimationFrame(frame);stream.getTracks().forEach(track=>track.stop());
+  const blob=new Blob(chunks,{type:mime.split(';')[0]}),ext=blob.type==='video/mp4'?'mp4':'webm';if(!blob.size)throw Error('Video compression produced an empty file.');return new File([blob],'cover.'+ext,{type:blob.type});
+ }finally{video.pause();video.removeAttribute('src');video.load();URL.revokeObjectURL(url)}
+}
+async function optimizeCoverVideo(file){
+ if(!['video/mp4','video/webm','video/quicktime'].includes(file.type))throw Error('Use an MP4, WebM, or MOV cover video.');
+ if(file.size>250*1024*1024)throw Error('The original video must be smaller than 250 MB.');
+ const meta=await videoMetadata(file);if(!meta.duration||!meta.width||!meta.height)throw Error('The video has invalid dimensions or duration.');
+ if(file.size<=900*1024&&meta.duration<=8&&Math.max(meta.width,meta.height)<=720)return file;
+ const optimized=await transcodePreview(file,meta);return optimized.size<file.size||meta.duration>8?optimized:file;
 }
 async function upload(file,kind,maxMB=100){if(!owner)throw Error('Sign in with the owner account.');const allowed=kind==='video'?['video/mp4','video/webm','video/quicktime']:['image/jpeg','image/png','image/webp','image/gif','image/avif'];if(!allowed.includes(file.type))throw Error('Unsupported file type. Use a supported image or MP4/WebM video.');if(file.size>maxMB*1024*1024)throw Error('File must be smaller than '+maxMB+' MB.');const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','image/avif':'avif','video/mp4':'mp4','video/webm':'webm','video/quicktime':'mov'}[file.type];const path=record.id+'/'+crypto.randomUUID()+'.'+ext;const {error}=await sb.storage.from(BUCKET).upload(path,file,{contentType:file.type,upsert:false});if(error)throw Error('Upload failed. '+error.message);return sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl}
-function validate(){if(!record.title.trim())throw Error('Add a tutorial title.');if(!safeUrl(record.cover_url))throw Error('Upload a cover image.');if(!record.blocks.length&&record.published)throw Error('Add a section before publishing.');for(const [i,b] of record.blocks.entries()){const label='Section '+(i+1)+': ';if(['headline','prompt'].includes(b.type)&&!b.text.trim())throw Error(label+'add text.');if(['image','video'].includes(b.type)&&!safeUrl(b.url))throw Error(label+'upload your '+b.type+'.');if(b.type==='prompt'){const m=modelFor(b);if(!m)throw Error(label+'choose a model.');if(b.refs.length>m.maxFiles)throw Error(label+'too many reference images for this model.');if(m.needsImage&&!b.refs.length)throw Error(label+'this model requires a reference image.')}}}
+function validate(){if(!record.title.trim())throw Error('Add a tutorial title.');if(!safeUrl(record.cover_url))throw Error('Upload a cover image or video.');if(!record.blocks.length&&record.published)throw Error('Add a section before publishing.');for(const [i,b] of record.blocks.entries()){const label='Section '+(i+1)+': ';if(['headline','prompt'].includes(b.type)&&!b.text.trim())throw Error(label+'add text.');if(['image','video'].includes(b.type)&&!safeUrl(b.url))throw Error(label+'upload your '+b.type+'.');if(b.type==='prompt'){const m=modelFor(b);if(!m)throw Error(label+'choose a model.');if(b.refs.length>m.maxFiles)throw Error(label+'too many reference images for this model.');if(m.needsImage&&!b.refs.length)throw Error(label+'this model requires a reference image.')}}}
 async function save(){if(!owner||busy)return;try{validate();busy=true;$('#editor').inert=true;$('#save').disabled=true;status('Saving…');const now=new Date().toISOString();const payload={id:record.id,title:record.title.trim(),cover_url:record.cover_url,blocks:record.blocks,published:record.published,updated_at:now};let q=record.created_at?sb.from('tutorials').update(payload).eq('id',record.id).eq('updated_at',record.updated_at):sb.from('tutorials').insert(payload);const {data,error}=await q.select().maybeSingle();if(error)throw error;if(!data)throw Error('This tutorial changed in another tab, or your editing permission changed. Reload before saving.');record=data;dirty=false;history.replaceState({},'',`tutorial.html?id=${record.id}`);$('#save-state').textContent='Saved';status('');toast(record.published?'Tutorial published':'Draft saved')}catch(e){status(e.message,true)}finally{busy=false;if($('#editor'))$('#editor').inert=false;if($('#save'))$('#save').disabled=false}}
     function activeSiteLanguage(){const declared=String(document.documentElement.lang||'').toLowerCase();if(declared==='hy'||declared.startsWith('hy-'))return'hy';if(declared==='ru'||declared.startsWith('ru-'))return'ru';try{const saved=localStorage.getItem('hansora.language.v1');if(saved==='hy'||saved==='ru')return saved}catch(_){}return'en'}
     function localizedSearchModels(){const lang=activeSiteLanguage();const file=lang==='hy'?'search-models_arm.html':lang==='ru'?'search-models_ru.html':'search-models.html';return location.protocol==='file:'?file:`/${file}`}
 
 async function recreate(b){if(!modelFor(b)){toast('This model is unavailable.');return}try{sessionStorage.setItem('hansora:article-preset',JSON.stringify({model:b.model,prompt:b.text,referenceImageUrls:b.refs||[],aspectRatio:b.aspectRatio,resolution:b.resolution||null,duration:b.duration?Number(b.duration):null}));location.href=localizedSearchModels()+'?model='+encodeURIComponent(b.model)+'&articlePreset=1'}catch{toast('Your browser could not save the prompt. Allow site storage and try again.')}}
 document.addEventListener('input',e=>{const el=e.target,b=record?.blocks.find(b=>b.id===el.closest('[data-block]')?.dataset.block);if(!owner||!b||!el.dataset.field||el.dataset.field==='model')return;const f=el.dataset.field;b[f]=['width','duration'].includes(f)?Number(el.value):el.value;mark();if(f==='width'){const host=el.closest('[data-block]');host.querySelector('[data-width-label]').textContent=b.width+'%';const v=host.querySelector('.visual');if(v)v.style.width=b.width+'%'}});
-document.addEventListener('change',async e=>{const el=e.target;if(!owner||busy)return;const b=record?.blocks.find(b=>b.id===el.closest('[data-block]')?.dataset.block);if(el.dataset.field==='model'&&b){const m=models.find(m=>m.id===el.value);Object.assign(b,{model:m.id,aspectRatio:m.defaultAspect,resolution:m.defaultResolution,duration:m.durations[0]||null});mark();renderBlocks();return}if(!el.matches('[data-upload],#cover-upload')||!el.files.length)return;busy=true;$('#editor').inert=true;status('Uploading…');try{if(el.id==='cover-upload'){record.cover_url=await upload(await optimizeCover(el.files[0]),'image',20);$('#cover-preview').innerHTML=image(record.cover_url,'Cover','editor-image')}else if(el.dataset.upload==='refs'){const m=modelFor(b);if(b.refs.length+el.files.length>m.maxFiles)throw Error('This model supports up to '+m.maxFiles+' reference images.');for(const f of el.files){b.refs.push(await upload(f,'image',Math.min(100,m.uploadMaxMB)));mark()}}else b.url=await upload(el.files[0],b.type,b.type==='image'?20:100);mark();status('');}catch(err){status(err.message,true)}finally{busy=false;$('#editor').inert=false;el.value='';renderBlocks()}});
+document.addEventListener('change',async e=>{const el=e.target;if(!owner||busy)return;const b=record?.blocks.find(b=>b.id===el.closest('[data-block]')?.dataset.block);if(el.dataset.field==='model'&&b){const m=models.find(m=>m.id===el.value);Object.assign(b,{model:m.id,aspectRatio:m.defaultAspect,resolution:m.defaultResolution,duration:m.durations[0]||null});mark();renderBlocks();return}if(!el.matches('[data-upload],#cover-upload')||!el.files.length)return;busy=true;$('#editor').inert=true;status('Uploading…');try{if(el.id==='cover-upload'){const source=el.files[0],video=source.type.startsWith('video/');status(video?'Optimizing lightweight video preview…':'Optimizing cover image…');const cover=video?await optimizeCoverVideo(source):await optimizeCoverImage(source);status(video?'Uploading video preview…':'Uploading cover image…');record.cover_url=await upload(cover,video?'video':'image',video?3:20);$('#cover-preview').innerHTML=trendCover(record.cover_url,'Cover preview','editor-cover-media');hydrateTrendVideos($('#cover-preview'))}else if(el.dataset.upload==='refs'){const m=modelFor(b);if(b.refs.length+el.files.length>m.maxFiles)throw Error('This model supports up to '+m.maxFiles+' reference images.');for(const f of el.files){b.refs.push(await upload(f,'image',Math.min(100,m.uploadMaxMB)));mark()}}else b.url=await upload(el.files[0],b.type,b.type==='image'?20:100);mark();status('');}catch(err){status(err.message,true)}finally{busy=false;$('#editor').inert=false;el.value='';renderBlocks()}});
 document.addEventListener('click',async e=>{const btn=e.target.closest('button');if(!btn)return;const block=record?.blocks.find(b=>b.id===btn.closest('[data-block]')?.dataset.block);if(btn.hasAttribute('data-copy')){const b=record.blocks.find(b=>b.id===btn.dataset.copy);try{await navigator.clipboard.writeText(b.text);toast('Prompt copied')}catch{toast('Copy failed. Select and copy the prompt text.')}return}if(btn.hasAttribute('data-recreate')){if(dirty&&!confirm('Leave with unsaved changes to try this prompt?'))return;await recreate(record.blocks.find(b=>b.id===btn.dataset.recreate));return}if(!owner||busy)return;if(btn.dataset.add){const type=btn.dataset.add,m=models.find(m=>m.id==='nano-banana-2');record.blocks.push({id:crypto.randomUUID(),type,...(type==='prompt'?{text:'',model:m.id,refs:[],aspectRatio:m.defaultAspect,resolution:m.defaultResolution,duration:null}:type==='headline'?{text:''}:{url:'',width:100,caption:''})});mark();renderBlocks();$('#blocks').lastElementChild.scrollIntoView({behavior:'smooth',block:'center'})}else if(block){const i=record.blocks.indexOf(block);if(btn.hasAttribute('data-remove')){if(!confirm('Remove this section?'))return;record.blocks.splice(i,1)}else if(btn.dataset.move){const next=i+Number(btn.dataset.move);if(next<0||next>=record.blocks.length)return;[record.blocks[i],record.blocks[next]]=[record.blocks[next],record.blocks[i]]}else if(btn.hasAttribute('data-remove-ref'))block.refs.splice(Number(btn.dataset.removeRef),1);else if(btn.hasAttribute('data-ref-left')){const j=Number(btn.dataset.refLeft);[block.refs[j-1],block.refs[j]]=[block.refs[j],block.refs[j-1]]}else return;mark();renderBlocks()}});
 document.addEventListener('click',e=>{const img=e.target.closest('[data-preview]')?.parentElement.querySelector('img')||(e.target.matches('.visual img,.refs img,.cover img')?e.target:null);if(img&&$('#lightbox')){$('#large-image').src=img.src;$('#large-image').alt=img.alt;$('#lightbox').showModal()}});$('#close-lightbox')?.addEventListener('click',()=>$('#lightbox').close());$('#lightbox')?.addEventListener('click',e=>{if(e.target===$('#lightbox'))$('#lightbox').close()});window.addEventListener('beforeunload',e=>{if(dirty||busy){e.preventDefault();e.returnValue=''}});
 async function loadTutorial(){const p=new URLSearchParams(location.search);if(p.get('new')==='1'){if(!owner){status('Sign in with your owner account to create a tutorial.',true);return}record={id:crypto.randomUUID(),title:'',cover_url:'',blocks:[],published:false};status('');editor();return}const id=p.get('id');if(!id){status('Choose a tutorial from Examples.',true);return}const {data,error}=await sb.from('tutorials').select('*').eq('id',id).maybeSingle();if(error)throw error;if(!data){status('This tutorial is unavailable or has not been published.',true);return}record=data;record.blocks=Array.isArray(record.blocks)?record.blocks:[];status('');renderReader()}
@@ -790,14 +861,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script><script id="tutorial-cover-size-fix-script">
 (() => {
-  const selector = '.tutorial-app .cover.media img';
+  const selector = '.tutorial-app .cover.media video';
   const withinRatio = (value, target) => Math.abs(value - target) / target <= 0.08;
 
-  function resizeTutorialCover(img) {
-    if (!img || !img.naturalWidth || !img.naturalHeight) return;
-    const cover = img.closest('.cover.media');
+  function resizeTutorialCover(video) {
+    if (!video || !video.videoWidth || !video.videoHeight) return;
+    const cover = video.closest('.cover.media');
     if (!cover) return;
-    const ratio = img.naturalWidth / img.naturalHeight;
+    const ratio = video.videoWidth / video.videoHeight;
     cover.classList.remove('tutorial-cover-9x16', 'tutorial-cover-16x9');
     if (withinRatio(ratio, 9 / 16)) cover.classList.add('tutorial-cover-9x16');
     else if (withinRatio(ratio, 16 / 9)) cover.classList.add('tutorial-cover-16x9');
@@ -805,12 +876,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
   document.addEventListener('load', (event) => {
     const target = event.target;
-    if (target && target.tagName === 'IMG' && target.matches(selector)) resizeTutorialCover(target);
+    if (target && target.tagName === 'VIDEO' && target.matches(selector)) resizeTutorialCover(target);
   }, true);
 
   function resizeLoadedCovers() {
-    document.querySelectorAll(selector).forEach((img) => {
-      if (img.complete) resizeTutorialCover(img);
+    document.querySelectorAll(selector).forEach((video) => {
+      if (video.readyState >= 1) resizeTutorialCover(video);
     });
   }
 
