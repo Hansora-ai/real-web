@@ -28,10 +28,12 @@
 .tutorial-app #gallery .gallery-column{gap:22px}
 .tutorial-app #gallery .card{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.09);border-radius:22px;background:linear-gradient(145deg,#202127,#15161a);box-shadow:0 18px 50px rgba(0,0,0,.2);transition:transform .28s ease,border-color .28s ease,box-shadow .28s ease}
 .tutorial-app #gallery .card:hover{transform:translateY(-5px);border-color:rgba(207,255,25,.34);box-shadow:0 24px 65px rgba(0,0,0,.34)}
-.tutorial-app .trend-media{position:relative;display:block;overflow:hidden;aspect-ratio:4/5;background:radial-gradient(circle at 30% 20%,rgba(146,100,237,.34),transparent 42%),linear-gradient(145deg,#292b32,#101114)}
+.tutorial-app .trend-media{position:relative;display:block;overflow:hidden;aspect-ratio:16/9;background:radial-gradient(circle at 30% 20%,rgba(146,100,237,.34),transparent 42%),linear-gradient(145deg,#292b32,#101114)}
 .tutorial-app .trend-media::before{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(110deg,transparent 25%,rgba(255,255,255,.08) 42%,transparent 60%);transform:translateX(-100%);animation:trend-shimmer 1.8s infinite}
 .tutorial-app .trend-media::after{display:none;content:"▶";position:absolute;left:16px;bottom:16px;z-index:2;place-items:center;width:38px;height:38px;border:1px solid rgba(255,255,255,.22);border-radius:50%;background:rgba(7,8,10,.48);color:white;font-size:13px;backdrop-filter:blur(12px);transition:opacity .2s ease}
 .tutorial-app .trend-media.is-video::after{display:grid}
+.tutorial-app .trend-media.is-portrait{aspect-ratio:9/16}
+.tutorial-app .trend-media.is-landscape{aspect-ratio:16/9}
 .tutorial-app .trend-video{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s ease,transform .6s ease}
 .tutorial-app .trend-video.is-ready{opacity:1}
 .tutorial-app .trend-image{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:cover;transition:transform .6s ease}
@@ -769,7 +771,8 @@ function playTrendVideo(video){
  video.play().then(()=>{const old=activeTrendVideos.indexOf(video);if(old>=0)activeTrendVideos.splice(old,1);activeTrendVideos.push(video);while(activeTrendVideos.length>1)activeTrendVideos.shift()?.pause()}).catch(()=>{});
 }
 const trendObserver='IntersectionObserver'in window?new IntersectionObserver(entries=>{for(const entry of entries){const video=entry.target;if(entry.isIntersecting&&entry.intersectionRatio>=.08)playTrendVideo(video);else video.pause()}},{rootMargin:'0px',threshold:[0,.08,.55]}):null;
-function hydrateTrendVideos(scope=document){scope.querySelectorAll('video[data-video-src]').forEach(video=>{if(video.dataset.observed)return;video.dataset.observed='1';video.addEventListener('loadeddata',()=>video.classList.add('is-ready'),{once:true});if(trendObserver)trendObserver.observe(video);else playTrendVideo(video)})}
+function setTrendRatio(media){const frame=media?.closest('.trend-media');if(!frame)return;const width=media.videoWidth||media.naturalWidth||0,height=media.videoHeight||media.naturalHeight||0;if(!width||!height)return;frame.classList.toggle('is-portrait',width/height<1);frame.classList.toggle('is-landscape',width/height>=1)}
+function hydrateTrendVideos(scope=document){scope.querySelectorAll('.trend-image').forEach(image=>{if(image.complete)setTrendRatio(image)});scope.querySelectorAll('video[data-video-src]').forEach(video=>{if(video.dataset.observed)return;video.dataset.observed='1';video.addEventListener('loadedmetadata',()=>{setTrendRatio(video);scheduleGalleryLayout()},{once:true});video.addEventListener('loadeddata',()=>video.classList.add('is-ready'),{once:true});if(trendObserver)trendObserver.observe(video);else playTrendVideo(video)})}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)activeTrendVideos.forEach(video=>video.pause());else document.querySelectorAll('.trend-video.is-ready').forEach(video=>{const r=video.getBoundingClientRect();if(r.bottom>0&&r.top<innerHeight)playTrendVideo(video)})});
 function media(b){const u=safeUrl(b.url);if(!u)return '';const width=Math.max(25,Math.min(100,Number(b.width)||100));return `<figure class="visual media" style="width:${width}%">${b.type==='video'?`<video src="${esc(u)}" controls playsinline preload="none"></video>`:image(u,b.caption||'Tutorial image')+'<button class="preview-btn" type="button" data-preview aria-label="Open image preview">↗</button>'} ${b.caption?`<figcaption class="muted">${esc(b.caption)}</figcaption>`:''}</figure>`}
 function blocksMarkup(blocks){return blocks.map((b,i)=>`<section class="block ${b.type==='image'&&blocks[i+1]?.type==='prompt'?'before-prompt':b.type==='headline'&&blocks[i+1]?.type==='image'?'before-image':''}">${b.type==='headline'?`<h2 class="section-title">${esc(b.text)}</h2>`:b.type==='image'||b.type==='video'?media(b):b.type==='prompt'?`<div class="prompt-box"><div class="prompt-bar"><strong><span class="prompt-icon">✦</span>${esc(modelFor(b)?.name||'Prompt')}</strong><div class="actions"><button data-copy="${esc(b.id)}">Copy</button><button class="purple" data-recreate="${esc(b.id)}">Recreate ↗</button></div></div><pre class="prompt-text">${esc(b.text)}</pre>${(b.refs||[]).length?`<div class="refs">${b.refs.map((u,i)=>`<div class="ref">${image(u,'Reference '+(i+1))}<span>Image ${i+1}</span></div>`).join('')}</div>`:''}</div>`:''}</section>`).join('')}
@@ -786,7 +789,7 @@ function layoutGallery(){
 }
 let galleryFrame=0;
 function scheduleGalleryLayout(){if(galleryFrame)cancelAnimationFrame(galleryFrame);galleryFrame=requestAnimationFrame(()=>{galleryFrame=0;layoutGallery()})}
-document.addEventListener('load',event=>{if((event.target.tagName==='IMG'||event.target.tagName==='VIDEO')&&event.target.closest('#gallery'))scheduleGalleryLayout()},true);
+document.addEventListener('load',event=>{if((event.target.tagName==='IMG'||event.target.tagName==='VIDEO')&&event.target.closest('#gallery')){setTrendRatio(event.target);scheduleGalleryLayout()}},true);
 document.addEventListener('error',event=>{if((event.target.tagName==='IMG'||event.target.tagName==='VIDEO')&&event.target.closest('#gallery'))scheduleGalleryLayout()},true);
 window.addEventListener('resize',scheduleGalleryLayout);
 
