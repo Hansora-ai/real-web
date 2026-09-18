@@ -2479,15 +2479,17 @@
       margin: 0 !important;
       overflow: hidden !important;
       box-sizing: border-box !important;
-      background: #0b0e17 !important;
+      background:
+        radial-gradient(120% 68% at 50% 106%, rgba(76, 93, 190, .92), transparent 74%),
+        linear-gradient(180deg, #10131d 0%, #101522 58%, #263760 100%) !important;
     }
 
     .seedance-showcase-section .model-info-card > img {
       position: absolute !important;
       left: 50% !important;
-      top: 50% !important;
+      top: 49% !important;
       display: block !important;
-      width: 130% !important;
+      width: 112% !important;
       max-width: none !important;
       height: auto !important;
       max-height: none !important;
@@ -2497,61 +2499,50 @@
       transform: translate(-50%, -50%) !important;
     }
 
-    /* Balance the six Seedance previews without changing their media ratios. */
+    .seedance-showcase-section .model-info-card::after {
+      display: block !important;
+      z-index: 1 !important;
+      pointer-events: none !important;
+      background: linear-gradient(180deg, transparent 76%, rgba(76, 91, 183, .1) 88%, rgba(54, 70, 146, .32) 100%) !important;
+    }
+
+    /* Restore the original two-column mobile rhythm. */
     .seedance-showcase-section .mobile-mosaic-only {
-      container-type: inline-size;
       display: grid !important;
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-      grid-template-rows: repeat(6, calc((100cqw - 30px) * 9 / 32)) !important;
+      grid-template-rows: none !important;
       gap: 10px !important;
       padding: 10px !important;
       height: auto !important;
-      align-items: stretch !important;
+      align-items: start !important;
     }
 
     .seedance-showcase-section .mobile-mosaic-only > .mosaic-column {
-      display: contents !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 10px !important;
+      min-width: 0 !important;
     }
 
     .seedance-showcase-section .mobile-mosaic-only .slot {
       width: 100% !important;
       max-width: 100% !important;
-      height: 100% !important;
+      height: auto !important;
       min-height: 0 !important;
-      aspect-ratio: auto !important;
       margin: 0 !important;
       overflow: hidden !important;
+      grid-column: auto !important;
+      grid-row: auto !important;
     }
 
-    .seedance-showcase-section .mobile-mosaic-only > .mosaic-column:nth-child(1) > .slot:nth-child(1) {
-      grid-column: 1 !important;
-      grid-row: 1 / span 3 !important;
+    .seedance-showcase-section .mobile-mosaic-only .slot.aspect-tall {
+      aspect-ratio: 9 / 16 !important;
     }
 
-    .seedance-showcase-section .mobile-mosaic-only > .mosaic-column:nth-child(1) > .slot:nth-child(2) {
-      grid-column: 1 !important;
-      grid-row: 4 !important;
+    .seedance-showcase-section .mobile-mosaic-only .slot.aspect-16x9 {
+      aspect-ratio: 16 / 9 !important;
     }
 
-    .seedance-showcase-section .mobile-mosaic-only > .mosaic-column:nth-child(1) > .slot:nth-child(3) {
-      grid-column: 1 !important;
-      grid-row: 5 !important;
-    }
-
-    .seedance-showcase-section .mobile-mosaic-only > .mosaic-column:nth-child(2) > .slot:nth-child(1) {
-      grid-column: 2 !important;
-      grid-row: 1 / span 3 !important;
-    }
-
-    .seedance-showcase-section .mobile-mosaic-only > .mosaic-column:nth-child(2) > .slot:nth-child(2) {
-      grid-column: 2 !important;
-      grid-row: 4 / span 3 !important;
-    }
-
-    .seedance-showcase-section .mobile-mosaic-only > .mosaic-column:nth-child(2) > .slot:nth-child(3) {
-      grid-column: 1 !important;
-      grid-row: 6 !important;
-    }
   }
 </style>
 </head>
@@ -2842,14 +2833,14 @@
     </a>
   </div>
   <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video
+    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
+      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-17.webp"
         aria-label="Action shot"
         autoplay
         loop
         muted
         playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/images/user-uploads/2026/09/18/b4fa40090a38edb9-seedance-action.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-17.mp4" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action shot</strong>
