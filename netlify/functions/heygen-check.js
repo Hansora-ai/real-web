@@ -202,33 +202,50 @@ function failureReason(value) {
 }
 
 function collectResultUrls(value) {
-  const urls = [];
-  const seen = new Set();
-  const priorityKeys = new Set(["video_url", "url", "download_url", "output_url", "file_url", "result_url"]);
-  function push(url) {
+  const candidates = [];
+  const seen = new Map();
+  const priorityKeys = new Map([
+    ["video_url", 100],
+    ["download_url", 90],
+    ["output_url", 80],
+    ["file_url", 70],
+    ["result_url", 60],
+    ["url", 10]
+  ]);
+  function push(url, priority = 0) {
     if (typeof url !== "string" || !/^https?:\/\//i.test(url)) return;
     const clean = url.replace(/[)"'\]}]+$/g, "").trim();
     if (isHeyGenPageUrl(clean)) return;
     if (!/\.(mp4|webm|mov)(?:[?#].*)?$/i.test(clean) && !/files\.heygen\.com|resource2\.heygen\.ai/i.test(clean)) return;
-    if (seen.has(clean)) return;
-    seen.add(clean);
-    urls.push(clean);
-  }
-  function walk(node, trusted = false, depth = 0) {
-    if (!node || depth > 10) return;
-    if (typeof node === "string") {
-      if (trusted) push(node);
-      const matches = node.match(/https?:\/\/[^\s"'<>]+/gi);
-      if (matches) matches.forEach(push);
+    const existing = seen.get(clean);
+    if (existing) {
+      existing.priority = Math.max(existing.priority, priority);
       return;
     }
-    if (Array.isArray(node)) { node.forEach((item) => walk(item, trusted, depth + 1)); return; }
+    const candidate = { url: clean, priority, order: candidates.length };
+    seen.set(clean, candidate);
+    candidates.push(candidate);
+  }
+  function walk(node, priority = 0, depth = 0) {
+    if (!node || depth > 10) return;
+    if (typeof node === "string") {
+      if (priority > 0) push(node, priority);
+      const matches = node.match(/https?:\/\/[^\s"'<>]+/gi);
+      if (matches) matches.forEach((url) => push(url, priority));
+      return;
+    }
+    if (Array.isArray(node)) { node.forEach((item) => walk(item, priority, depth + 1)); return; }
     if (typeof node === "object") {
-      for (const [key, child] of Object.entries(node)) walk(child, trusted || priorityKeys.has(String(key || "")), depth + 1);
+      for (const [key, child] of Object.entries(node)) {
+        const keyPriority = priorityKeys.get(String(key || "").toLowerCase()) || 0;
+        walk(child, Math.max(priority, keyPriority), depth + 1);
+      }
     }
   }
   walk(value);
-  return urls.slice(0, 4);
+  return candidates
+    .sort((a, b) => b.priority - a.priority || a.order - b.order)
+    .map((candidate) => candidate.url);
 }
 function isHeyGenPageUrl(value) {
   try {
@@ -240,14 +257,32 @@ function isHeyGenPageUrl(value) {
 }
 
 async function markDone({ row, ids, urls, raw }) {
-  const originalResultUrl = urls[0];
   const existingMeta = row.meta && typeof row.meta === "object" ? row.meta : {};
-  const alreadyArchived = !!existingMeta.storage_path &&
+  const alreadyArchived = existingMeta.archive_validated_video === true &&
+    !!existingMeta.storage_path &&
     typeof row.result_url === "string" &&
     row.result_url.includes(`/storage/v1/object/public/${HISTORY_BUCKET}/`);
-  const archive = alreadyArchived
+  let originalResultUrl = existingMeta.original_result_url || "";
+  let archive = alreadyArchived
     ? { ok: true, path: existingMeta.storage_path, publicUrl: row.result_url }
-    : await archiveHeyGenVideo({ row, sourceUrl: originalResultUrl });
+    : null;
+
+  if (!archive) {
+    const failures = [];
+    for (const sourceUrl of urls) {
+      const candidate = await archiveHeyGenVideo({ row, sourceUrl });
+      if (candidate.ok) {
+        archive = candidate;
+        originalResultUrl = sourceUrl;
+        break;
+      }
+      failures.push(candidate.error || "unknown_candidate_error");
+    }
+    if (!archive) {
+      throw new Error(`no_valid_heygen_video:${failures.slice(0, 6).join("|") || "no_candidate_urls"}`);
+    }
+  }
+
   const meta = {
     ...existingMeta,
     run_id: ids.run_id || row.meta?.run_id || "",
@@ -257,16 +292,13 @@ async function markDone({ row, ids, urls, raw }) {
     completed_at: new Date().toISOString(),
     heygen_status_response: raw || row.meta?.heygen_status_response || null,
     original_result_url: originalResultUrl,
-    ...(archive.ok ? {
-      storage_bucket: HISTORY_BUCKET,
-      storage_path: archive.path,
-      archived_at: existingMeta.archived_at || new Date().toISOString(),
-      archive_error: null
-    } : {
-      archive_error: archive.error || "archive_failed"
-    })
+    storage_bucket: HISTORY_BUCKET,
+    storage_path: archive.path,
+    archived_at: existingMeta.archived_at || new Date().toISOString(),
+    archive_validated_video: true,
+    archive_error: null
   };
-  const savedUrl = archive.ok ? archive.publicUrl : originalResultUrl;
+  const savedUrl = archive.publicUrl;
   await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
     method: "PATCH",
     headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=minimal" },
@@ -290,8 +322,14 @@ async function archiveHeyGenVideo({ row, sourceUrl }) {
     if (!bytes.byteLength) return { ok: false, error: "archive_empty_file" };
     if (bytes.byteLength > MAX_ARCHIVE_BYTES) return { ok: false, error: "archive_file_too_large" };
 
-    const contentType = normalizeVideoContentType(sourceRes.headers.get("content-type"), sourceUrl);
-    const extension = extensionForVideo(contentType, sourceUrl);
+    const detected = detectVideoFile(bytes);
+    if (!detected.ok) {
+      const reportedType = String(sourceRes.headers.get("content-type") || "unknown").split(";")[0];
+      return { ok: false, error: `${detected.error}:reported_${reportedType}` };
+    }
+
+    const contentType = detected.contentType;
+    const extension = detected.extension;
     const path = `${row.user_id}/${row.id}.${extension}`;
     const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(HISTORY_BUCKET)}/${path.split("/").map(encodeURIComponent).join("/")}`;
     const uploadRes = await fetch(uploadUrl, {
@@ -319,18 +357,29 @@ async function archiveHeyGenVideo({ row, sourceUrl }) {
   }
 }
 
-function normalizeVideoContentType(value, url) {
-  const type = String(value || "").split(";")[0].trim().toLowerCase();
-  if (type === "video/mp4" || type === "video/webm" || type === "video/quicktime") return type;
-  if (/\.webm(?:[?#]|$)/i.test(String(url || ""))) return "video/webm";
-  if (/\.mov(?:[?#]|$)/i.test(String(url || ""))) return "video/quicktime";
-  return "video/mp4";
-}
+function detectVideoFile(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  if (bytes.length < 12) return { ok: false, error: "source_not_video_too_small" };
 
-function extensionForVideo(contentType, url) {
-  if (contentType === "video/webm" || /\.webm(?:[?#]|$)/i.test(String(url || ""))) return "webm";
-  if (contentType === "video/quicktime" || /\.mov(?:[?#]|$)/i.test(String(url || ""))) return "mov";
-  return "mp4";
+  const firstSix = Buffer.from(bytes.subarray(0, 6)).toString("ascii");
+  if (firstSix === "GIF87a" || firstSix === "GIF89a") {
+    return { ok: false, error: "source_not_video_gif" };
+  }
+
+  if (bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) {
+    return { ok: true, contentType: "video/webm", extension: "webm" };
+  }
+
+  const firstBoxType = Buffer.from(bytes.subarray(4, 8)).toString("ascii");
+  if (firstBoxType === "ftyp") {
+    const majorBrand = Buffer.from(bytes.subarray(8, 12)).toString("ascii");
+    if (majorBrand === "qt  ") {
+      return { ok: true, contentType: "video/quicktime", extension: "mov" };
+    }
+    return { ok: true, contentType: "video/mp4", extension: "mp4" };
+  }
+
+  return { ok: false, error: "source_not_supported_video" };
 }
 
 async function patchGeneration(id, patch) {
