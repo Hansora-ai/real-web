@@ -3523,6 +3523,104 @@
     })();
   </script>
 
+<script id="hansora-mobile-seedance-video-recovery">
+(() => {
+  if (!window.matchMedia('(max-width: 740px)').matches) return;
+
+  const section = document.querySelector('.seedance-showcase-section');
+  if (!section) return;
+
+  const videos = Array.from(section.querySelectorAll('.mobile-mosaic-only video[data-src]'));
+  if (!videos.length) return;
+
+  let started = false;
+  const retryTimers = new WeakMap();
+
+  const tryPlay = (video) => {
+    if (document.hidden || video.readyState < 2) return;
+    video.play().catch(() => {});
+  };
+
+  const loadOne = (video, index, force = false) => {
+    window.setTimeout(() => {
+      const source = video.dataset.src;
+      if (!source) return;
+
+      if (!video.src || force) {
+        if (force) {
+          const retryUrl = new URL(source, document.baseURI);
+          retryUrl.searchParams.set('hansora_retry', String(Date.now()));
+          video.src = retryUrl.href;
+        } else {
+          video.src = source;
+        }
+        video.preload = 'auto';
+        video.load();
+      }
+      tryPlay(video);
+    }, index * 220);
+  };
+
+  const scheduleRetry = (video) => {
+    const attempts = Number(video.dataset.mobileLoadAttempts || 0);
+    if (attempts >= 2 || retryTimers.has(video)) return;
+
+    video.dataset.mobileLoadAttempts = String(attempts + 1);
+    const timer = window.setTimeout(() => {
+      retryTimers.delete(video);
+      if (video.readyState < 2) loadOne(video, 0, true);
+    }, 1800 + attempts * 1600);
+    retryTimers.set(video, timer);
+  };
+
+  videos.forEach((video, index) => {
+    video.preload = 'auto';
+    video.addEventListener('loadeddata', () => {
+      const timer = retryTimers.get(video);
+      if (timer) window.clearTimeout(timer);
+      retryTimers.delete(video);
+      video.closest('.slot')?.classList.add('is-media-ready');
+      tryPlay(video);
+    });
+    video.addEventListener('canplay', () => tryPlay(video));
+    video.addEventListener('error', () => scheduleRetry(video));
+    video.addEventListener('stalled', () => scheduleRetry(video));
+    video.addEventListener('suspend', () => {
+      if (video.readyState < 2) scheduleRetry(video);
+    });
+  });
+
+  const start = () => {
+    if (started) return;
+    started = true;
+    videos.forEach((video, index) => {
+      loadOne(video, index);
+      window.setTimeout(() => {
+        if (video.readyState < 2) scheduleRetry(video);
+      }, 2400 + index * 220);
+    });
+  };
+
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      observer.disconnect();
+      start();
+    }, { rootMargin: '1000px 0px', threshold: 0 });
+    observer.observe(section);
+  } else {
+    start();
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || !started) return;
+    videos.forEach((video, index) => {
+      if (video.readyState < 2) loadOne(video, index);
+      else tryPlay(video);
+    });
+  });
+})();
+</script>
 <script id="hansora-home-payg-checkout">
 (() => {
   const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
