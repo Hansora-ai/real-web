@@ -664,7 +664,7 @@
       display: grid;
       height: 430px;
       grid-template-columns: 1.12fr 1fr 1fr 1.12fr;
-      grid-template-rows: repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(4, minmax(0, 1fr));
       gap: 10px;
       padding: 10px;
       min-width: 0;
@@ -1375,8 +1375,8 @@
       --promo-art: url("https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Copy%20of%20WEBSITE%20(1200%20x%201200%20px).png");
     }
 
-    .model-section > .model-info-card:has(> img[src*="/images/12.png"]) {
-      --promo-art: url("https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/fdf/Copy%20of%20WEBSITE%20(1200%20x%201200%20px)/3.png");
+    .model-section > .model-info-card:has(> img[alt="Seedance 2.0 info image"]) {
+      --promo-art: url("https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/Copy%20of%20WEBSITE%20%281200%20x%201200%20px%29%20%281%29.png");
     }
 
     .model-section > .model-info-card:has(> img[src*="/images/13.png"]) {
@@ -2360,6 +2360,200 @@
   }
 </style>
 
+
+<style id="hansora-final-home-sections-20260917">
+  .latest-models-section {
+    padding-top: 34px;
+  }
+
+  .latest-models-head {
+    margin-bottom: 18px;
+  }
+
+  .latest-models-head h2 {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+
+  .latest-models-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .latest-model-card {
+    display: block;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 18px;
+    background: #0b0d14;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .22);
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+
+  .latest-model-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(121, 231, 255, .55);
+    box-shadow: 0 18px 42px rgba(56, 189, 248, .13);
+  }
+
+  .latest-model-card img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .creative-studio-image-section {
+    padding-top: 30px;
+    padding-bottom: 28px;
+  }
+
+  .creative-studio-image-wrap {
+    width: min(100%, 1120px);
+    margin: 0 auto;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .09);
+    border-radius: 18px;
+    background: #080b12;
+  }
+
+  .creative-studio-image-wrap picture,
+  .creative-studio-image-wrap img {
+    display: block;
+    width: 100%;
+  }
+
+  .creative-studio-image-wrap img {
+    height: auto;
+  }
+
+  #image-models .home-feature-card.phone-hidden-feature {
+    display: none !important;
+  }
+
+  @media (max-width: 900px) {
+    .latest-models-section {
+      display: none !important;
+    }
+
+    .creative-studio-image-section {
+      padding-top: 18px;
+      padding-bottom: 18px;
+    }
+
+    .creative-studio-image-wrap {
+      border-radius: 14px;
+    }
+  }
+</style>
+
+
+<style id="hansora-seedance-mobile-fit-and-spacing-fix">
+  @media (max-width: 740px) {
+    .seedance-showcase-section {
+      padding-bottom: 0 !important;
+    }
+
+    .top-used-models-section {
+      padding-top: 14px !important;
+    }
+
+    .seedance-showcase-section .model-section {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      overflow: hidden !important;
+    }
+
+    .seedance-showcase-section .model-info-card {
+      display: block !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      height: auto !important;
+      min-height: 0 !important;
+      aspect-ratio: 2 / 3 !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+      background: #0b0e17 !important;
+    }
+
+    .seedance-showcase-section .model-info-card > img {
+      position: absolute !important;
+      left: 50% !important;
+      top: 50% !important;
+      display: block !important;
+      width: 130% !important;
+      max-width: none !important;
+      height: auto !important;
+      max-height: none !important;
+      opacity: 1 !important;
+      object-fit: contain !important;
+      object-position: center !important;
+      transform: translate(-50%, -50%) !important;
+    }
+
+    /* Balance the six Seedance previews without changing their media ratios. */
+    .seedance-showcase-section .mobile-mosaic-only {
+      container-type: inline-size;
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      grid-template-rows: repeat(6, calc((100cqw - 30px) * 9 / 32)) !important;
+      gap: 10px !important;
+      padding: 10px !important;
+      height: auto !important;
+      align-items: stretch !important;
+    }
+
+    .seedance-showcase-section .mobile-mosaic-only > .mosaic-column {
+      display: contents !important;
+    }
+
+    .seedance-showcase-section .mobile-mosaic-only .slot {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      aspect-ratio: auto !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+
+    .seedance-showcase-section .mobile-mosaic-only > .mosaic-column:nth-child(1) > .slot:nth-child(1) {
+      grid-column: 1 !important;
+      grid-row: 1 / span 3 !important;
+    }
+
+    .seedance-showcase-section .mobile-mosaic-only > .mosaic-column:nth-child(1) > .slot:nth-child(2) {
+      grid-column: 1 !important;
+      grid-row: 4 !important;
+    }
+
+    .seedance-showcase-section .mobile-mosaic-only > .mosaic-column:nth-child(1) > .slot:nth-child(3) {
+      grid-column: 1 !important;
+      grid-row: 5 !important;
+    }
+
+    .seedance-showcase-section .mobile-mosaic-only > .mosaic-column:nth-child(2) > .slot:nth-child(1) {
+      grid-column: 2 !important;
+      grid-row: 1 / span 3 !important;
+    }
+
+    .seedance-showcase-section .mobile-mosaic-only > .mosaic-column:nth-child(2) > .slot:nth-child(2) {
+      grid-column: 2 !important;
+      grid-row: 4 / span 3 !important;
+    }
+
+    .seedance-showcase-section .mobile-mosaic-only > .mosaic-column:nth-child(2) > .slot:nth-child(3) {
+      grid-column: 1 !important;
+      grid-row: 6 !important;
+    }
+  }
+</style>
 </head>
 <body>
 <noscript><img alt="" height="1" src="https://www.facebook.com/tr?id=1336278884948294&amp;ev=PageView&amp;noscript=1" style="display:none" width="1" loading="lazy" decoding="async"><img alt="" height="1" src="https://www.facebook.com/tr?id=970925395839377&amp;ev=PageView&amp;noscript=1" style="display:none" width="1" loading="lazy" decoding="async"></noscript>
@@ -2376,10 +2570,11 @@
 </div>
 <div class="x-scroll" id="topVideos">
 <!-- Replace each media placeholder with a 16:9 video or image. Keep the link href for click target. -->
-<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/header-video-4-final-poster.jpg" aria-label="New inputs" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/header-video-4-final.mp4" data-lazy-video data-eager-video></video><span class="slot-label"><strong>New inputs</strong><span>Video 01</span></span></a>
-<a class="slot aspect-16x9" href="/kid-cartoon.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-02.webp" aria-label="Marketing studio hooks" autoplay="" loop="" muted="" playsinline="" preload="metadata" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/top-video-2-final.mp4" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/top-video-2-final.mp4" data-lazy-video data-eager-video></video><span class="slot-label"><strong>Marketing studio hooks</strong><span>Video 02</span></span></a>
-<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/header-video-3-final-poster.jpg" aria-label="HANSORA CLI" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/header-video-3-final.mp4" data-lazy-video data-eager-video></video><span class="slot-label"><strong>HANSORA CLI</strong><span>Video 03</span></span></a>
-<a class="slot aspect-16x9" href="/analyse.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/header-video-1-final-poster.jpg" aria-label="Image to video" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/header-video-1-final.mp4" data-lazy-video data-eager-video></video><span class="slot-label"><strong>Image to video</strong><span>Video 04</span></span></a>
+<a class="slot aspect-16x9" href="/examples.html"><video aria-label="Trend videos" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/12fcca82-156b-4ef2-a5f3-6dd2d502763f.webm" data-lazy-video data-eager-video></video><span class="slot-label"><strong>Trend videos</strong><span>Video 01</span></span></a>
+<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/header-video-4-final-poster.jpg" aria-label="New inputs" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/header-video-4-final.mp4" data-lazy-video data-eager-video></video><span class="slot-label"><strong>New inputs</strong><span>Video 02</span></span></a>
+<a class="slot aspect-16x9" href="/kid-cartoon.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-02.webp" aria-label="Marketing studio hooks" autoplay="" loop="" muted="" playsinline="" preload="metadata" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/top-video-2-final.mp4" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/top-video-2-final.mp4" data-lazy-video data-eager-video></video><span class="slot-label"><strong>Marketing studio hooks</strong><span>Video 03</span></span></a>
+<a class="slot aspect-16x9" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/header-video-3-final-poster.jpg" aria-label="HANSORA CLI" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/header-video-3-final.mp4" data-lazy-video data-eager-video></video><span class="slot-label"><strong>HANSORA CLI</strong><span>Video 04</span></span></a>
+<a class="slot aspect-16x9" href="/analyse.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/header-video-1-final-poster.jpg" aria-label="Image to video" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/new%20header%20videos/header-video-1-final.mp4" data-lazy-video data-eager-video></video><span class="slot-label"><strong>Image to video</strong><span>Video 05</span></span></a>
 </div>
 </div>
 </section>
@@ -2432,7 +2627,7 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(29).png" alt="Product Card" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/lipsync.html" style="--feature-desktop-order: 13; --feature-mobile-order: 8;">
+<a class="home-feature-card" href="/lipsync.html" style="--feature-desktop-order: 13; --feature-mobile-order: 3;">
 <div class="home-feature-copy">
 <h3>Lipsync <span>Avatar</span></h3>
 <p>Sync voice with avatar video.</p>
@@ -2450,7 +2645,7 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(37).png" alt="Kid Cartoon" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/video-edit.html" style="--feature-desktop-order: 3; --feature-mobile-order: 3;">
+<a class="home-feature-card" href="/video-edit.html" style="--feature-desktop-order: 3; --feature-mobile-order: 8;">
 <div class="home-feature-copy">
 <h3>Video <span>Edit</span></h3>
 <p>Edit uploaded videos with prompts.</p>
@@ -2495,7 +2690,7 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/5.png" alt="Character" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card phone-hidden-feature" href="/audio.html?tool=song-creation" style="--feature-desktop-order: 10; --feature-mobile-order: 14;">
+<a class="home-feature-card" href="/audio.html?tool=song-creation" style="--feature-desktop-order: 10; --feature-mobile-order: 11;">
 <div class="home-feature-copy">
 <h3>Suno <span>Music</span></h3>
 <p>Create songs and music tracks.</p>
@@ -2504,15 +2699,6 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(38).png" alt="Suno Music" loading="lazy" decoding="async">
 </div>
 </a>
-<div class="home-feature-card" aria-disabled="true" style="--feature-desktop-order: 11; --feature-mobile-order: 11;">
-<div class="home-feature-copy">
-<h3>UGC</h3>
-<p>Coming soon.</p>
-</div>
-<div class="home-feature-media">
-<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(45).png" alt="UGC" loading="lazy" decoding="async">
-</div>
-</div>
 <a class="home-feature-card" href="/video-relight.html" style="--feature-desktop-order: 12; --feature-mobile-order: 12;">
 <div class="home-feature-copy">
 <h3>Relight <span>Video</span></h3>
@@ -2596,13 +2782,13 @@
 </div>
 </div>
 </section>
-<section class="section">
+<section class="section seedance-showcase-section">
 <div class="shell">
 <div class="model-section">
 <a class="slot model-info-card" href="/search-models.html?model=seedance-2">
   <img
     alt="Seedance 2.0 info image"
-    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/12.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/12.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/12.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/12.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/12.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
+    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/Copy%20of%20WEBSITE%20%281200%20x%201200%20px%29%20%281%29.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/website%20content/Untitled%20design/Copy%20of%20WEBSITE%20%281200%20x%201200%20px%29%20%281%29.png?width=480&quality=78&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/website%20content/Untitled%20design/Copy%20of%20WEBSITE%20%281200%20x%201200%20px%29%20%281%29.png?width=720&quality=78&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/website%20content/Untitled%20design/Copy%20of%20WEBSITE%20%281200%20x%201200%20px%29%20%281%29.png?width=960&quality=78&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/website%20content/Untitled%20design/Copy%20of%20WEBSITE%20%281200%20x%201200%20px%29%20%281%29.png?width=1200&quality=78&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
   <span class="slot-label">
     <span>Info image</span>
     <strong>Seedance 2.0</strong>
@@ -2611,13 +2797,13 @@
 <div class="model-grid video-grid media-mosaic mobile-mosaic-only">
   <div class="mosaic-column">
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-14.webp"
+      <video
         aria-label="Skate shot"
         autoplay
         loop
         muted
         playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-14.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/72b360c5-7b0c-4d7d-b069-9472ac21ca9d%20%281%29.webm" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Skate shot</strong>
@@ -2626,13 +2812,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-15.webp"
+      <video
         aria-label="Energy effect"
         autoplay
         loop
         muted
         playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-15.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/ead486e2-10b4-48e8-b462-2f7dcb12267d.webm" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Energy effect</strong>
@@ -2656,14 +2842,14 @@
     </a>
   </div>
   <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-17.webp"
+    <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
+      <video
         aria-label="Action shot"
         autoplay
         loop
         muted
         playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-17.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/1098f504-d169-417e-8ce8-d4611b83bdbc.webm" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action shot</strong>
@@ -2672,13 +2858,13 @@
     </a>
 
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-18.webp"
+      <video
         aria-label="Fantasy scene"
         autoplay
         loop
         muted
         playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-18.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/bbea2680-8878-49f8-812d-49f61842cf0c.webm" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fantasy scene</strong>
@@ -2704,13 +2890,13 @@
 </div><div class="model-grid video-grid media-mosaic-desktop desktop-mosaic-only">
   <div class="mosaic-column">
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-14.webp"
+      <video
         aria-label="Skate shot"
         autoplay
         loop
         muted
         playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-14.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/72b360c5-7b0c-4d7d-b069-9472ac21ca9d%20%281%29.webm" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Skate shot</strong>
@@ -2719,13 +2905,13 @@
     </a>
 
     <a class="slot aspect-16x9" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-17.webp"
+      <video
         aria-label="Energy effect"
         autoplay
         loop
         muted
         playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-17.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/ead486e2-10b4-48e8-b462-2f7dcb12267d.webm" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Energy effect</strong>
@@ -2750,13 +2936,13 @@
     </a>
 
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-20.webp"
+      <video
         aria-label="Action shot"
         autoplay
         loop
         muted
         playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-20.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/1098f504-d169-417e-8ce8-d4611b83bdbc.webm" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Action shot</strong>
@@ -2766,13 +2952,13 @@
   </div>
   <div class="mosaic-column">
     <a class="slot aspect-tall" href="/search-models.html?model=seedance-2">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-18.webp"
+      <video
         aria-label="Fantasy scene"
         autoplay
         loop
         muted
         playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-18.mp4" data-lazy-video>
+        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/bbea2680-8878-49f8-812d-49f61842cf0c.webm" data-lazy-video>
       </video>
       <span class="slot-label">
         <strong>Fantasy scene</strong>
@@ -2830,26 +3016,8 @@
 </div>
 </div>
 </section>
-<section class="section" id="features">
-<div class="shell">
-<div class="feature-banner">
-<div>
-<span class="kicker">All features</span>
-<h2>What will you create today?</h2>
-<p>Create authentic images and videos with natural texture, fast workflows, and easy style control.</p>
-<a class="btn btn-primary" href="/models.html" style="margin-top:24px;">Explore all</a>
-</div>
-<div class="feature-icons">
-<a class="feature-icon" href="/search-models.html?type=image"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-22.webp" aria-label="Create image" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-22.mp4" data-lazy-video></video><b>Create image</b></a>
-<a class="feature-icon" href="/search-models.html?model=seedance-2"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-23.webp" aria-label="Create video" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-23.mp4" data-lazy-video></video><b>Create video</b></a>
-<a class="feature-icon" href="/search-models.html?model=kling-motion-control"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-24.webp" aria-label="Motion control" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-24.mp4" data-lazy-video></video><b>Motion control</b></a>
-<a class="feature-icon" href="/upscale.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-25.webp" aria-label="Upscale" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-25.mp4" data-lazy-video></video><b>Upscale</b></a>
-<a class="feature-icon" href="/audio.html"><video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-26.webp" aria-label="Create audio" autoplay="" loop="" muted="" playsinline="" preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-26.mp4" data-lazy-video></video><b>Create audio</b></a>
-</div>
-</div>
-</div>
-</section>
-<section class="section">
+
+<section class="section top-used-models-section">
 <div class="shell">
 <div class="section-head">
 <div>
@@ -2870,251 +3038,35 @@
 </div>
 </div>
 </section>
-<section class="section mobile-hide-kling-promo">
+<section class="section latest-models-section" aria-labelledby="latest-models-title">
 <div class="shell">
-<div class="model-section">
-<a class="slot model-info-card" href="/search-models.html">
-  <img
-    alt="Kling 3.0 info image"
-    src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/13.png" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/13.png?width=480&quality=62&format=webp 480w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/13.png?width=720&quality=62&format=webp 720w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/13.png?width=960&quality=62&format=webp 960w, https://qmaealblegvcwodlmeht.supabase.co/storage/v1/render/image/public/for%20the%20examples%20and%20news/images/13.png?width=1200&quality=62&format=webp 1200w" sizes="(max-width: 740px) calc(100vw - 36px), 34vw" loading="lazy" decoding="async">
-  <span class="slot-label">
-    <span>Info image</span>
-    <strong>Kling 3.0</strong>
-  </span>
-</a>
-<div class="model-grid video-grid media-mosaic mobile-mosaic-only">
-  <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-27.webp"
-        aria-label="Camera move"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-27.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Camera move</strong>
-        <span>Video</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-28.webp"
-        aria-label="Action scene"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-28.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Action scene</strong>
-        <span>Video</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-29.webp"
-        aria-label="Vertical clip"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-29.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Vertical clip</strong>
-        <span>9:16</span>
-      </span>
-    </a>
-  </div>
-  <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-30.webp"
-        aria-label="Product motion"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-30.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Product motion</strong>
-        <span>Video</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-tall" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-31.webp"
-        aria-label="Social crop"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-31.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Social crop</strong>
-        <span>1:1</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-32.webp"
-        aria-label="Film scene"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-32.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Film scene</strong>
-        <span>Video</span>
-      </span>
-    </a>
-  </div>
-</div><div class="model-grid video-grid media-mosaic-desktop desktop-mosaic-only">
-  <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-31.webp"
-        aria-label="Camera move"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-31.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Camera move</strong>
-        <span>Video</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-29.webp"
-        aria-label="Action scene"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-29.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Action scene</strong>
-        <span>Video</span>
-      </span>
-    </a>
-  </div>
-  <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-30.webp"
-        aria-label="Vertical clip"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-30.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Vertical clip</strong>
-        <span>9:16</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-tall" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-33.webp"
-        aria-label="Product motion"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-33.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Product motion</strong>
-        <span>Video</span>
-      </span>
-    </a>
-  </div>
-  <div class="mosaic-column">
-    <a class="slot aspect-tall" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-27.webp"
-        aria-label="Social crop"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-27.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Social crop</strong>
-        <span>1:1</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-28.webp"
-        aria-label="Film scene"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-28.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Film scene</strong>
-        <span>Video</span>
-      </span>
-    </a>
-  </div>
-  <div class="mosaic-column">
-    <a class="slot aspect-16x9" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-32.webp"
-        aria-label="Preview 07"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-32.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Preview 07</strong>
-        <span>1:1</span>
-      </span>
-    </a>
-
-    <a class="slot aspect-tall" href="/search-models.html">
-      <video poster="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/posters/video-34.webp"
-        aria-label="Preview 08"
-        autoplay
-        loop
-        muted
-        playsinline
-        preload="metadata" data-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/videos/video-34.mp4" data-lazy-video>
-      </video>
-      <span class="slot-label">
-        <strong>Preview 08</strong>
-        <span>Video</span>
-      </span>
-    </a>
-  </div>
+<div class="section-head latest-models-head">
+<div><h2 id="latest-models-title">Latest Models</h2></div>
 </div>
+<div class="latest-models-grid">
+<a class="latest-model-card" href="/search-models.html?model=seedance25" aria-label="Open Seedance 2.5">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%282%29.jpg" alt="Seedance 2.5" loading="lazy" decoding="async">
+</a>
+<a class="latest-model-card" href="/search-models.html?model=gpt-image-2-5" aria-label="Open GPT Image 2.5">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%281%29.jpg" alt="GPT Image 2.5" loading="lazy" decoding="async">
+</a>
+<a class="latest-model-card" href="/search-models.html?model=gemini-omni-video" aria-label="Open Gemini Omni 1.1 Flash">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%283%29.jpg" alt="Gemini Omni 1.1 Flash" loading="lazy" decoding="async">
+</a>
+<a class="latest-model-card" href="/search-models.html?model=wan-3" aria-label="Open Wan 3.0">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%284%29.jpg" alt="Wan 3.0" loading="lazy" decoding="async">
+</a>
 </div>
 </div>
 </section>
-<section class="section mobile-hide-creative-studio-banner">
+<section class="section creative-studio-image-section">
 <div class="shell">
-<a class="wide-banner design-only-banner aspect-wide" href="/search-models.html">
+<div class="creative-studio-image-wrap">
 <picture>
-<!-- Mobile banner image: replace this srcset with your smaller mobile banner URL. -->
-<source media="(max-width: 740px)" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(2).png"/>
-<!-- Desktop banner image. -->
-<img alt="USA AI marketing and ads banner" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/for%20the%20examples%20and%20news/images/video%20models/seedance%202/kling%203.0/Untitled%20(3000%20x%20600%20px)%20(1).png" loading="lazy" decoding="async">
+<source media="(min-width: 901px)" srcset="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/ChatGPT%20Image%20Sep%2018%2C%202026%2C%2002_44_40%20PM.png">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/Untitled%20design.jpg" alt="Hansora complete creative studio" loading="lazy" decoding="async">
 </picture>
-<span class="design-banner-fallback"><strong>Top video models.</strong><span>One platform.</span></span>
-</a>
+</div>
 </div>
 </section>
 <section class="section pricing" id="pricing">
@@ -3123,34 +3075,34 @@
 <p class="pricing-sub"><span class="no-expire-badge"><i>✦</i>Credits Never Expire<i>✦</i></span></p>
 <div class="price-grid">
 <article class="price-card">
-<div class="price-top-row"><small>100 + 0 credits</small><span class="save-pill">Save $5</span></div>
-<h3>100 <em>credits</em></h3>
+<div class="price-top-row"><small>1000 + 0 credits</small><span class="save-pill">Save $5</span></div>
+<h3>1000 <em>credits</em></h3>
 <p class="price-line"><span class="price-now">$9.99</span><span class="price-was">$14.99</span></p>
 <p class="price-note-line">Launch discount price</p>
-<a class="btn btn-primary" href="https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
+<a class="btn btn-primary buy-credits" data-credits="100" data-product="https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="750" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=750.00&amp;targets=HANSORA%20AI%20100%20credits&amp;label=hansora_web_100" href="https://checkout.dodopayments.com/buy/pdt_Gi01FZTv21T44htKut7lG?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
 </article>
 <article class="price-card popular">
 <span class="plan-badge">Most Popular</span>
-<div class="price-top-row"><small>200 + 20 credits</small><span class="save-pill">Save $10</span></div>
-<h3>220 <em>credits</em></h3>
+<div class="price-top-row"><small>2000 + 100 credits</small><span class="save-pill">Save $10</span></div>
+<h3>2100 <em>credits</em></h3>
 <p class="price-line"><span class="price-now">$19.99</span><span class="price-was">$29.99</span></p>
-<p class="price-note-line">Includes 20 gift credits</p>
-<a class="btn btn-primary" href="https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
+<p class="price-note-line">Includes 100 gift credits (5%)</p>
+<a class="btn btn-primary buy-credits" data-credits="210" data-product="https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="1500" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=1500.00&amp;targets=HANSORA%20AI%20210%20credits&amp;label=hansora_web_210" href="https://checkout.dodopayments.com/buy/pdt_YNeJAH4NMLe8gJF7ff0Fe?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
 </article>
 <article class="price-card">
-<div class="price-top-row"><small>500 + 50 credits</small><span class="save-pill">Save $25</span></div>
-<h3>550 <em>credits</em></h3>
+<div class="price-top-row"><small>5000 + 350 credits</small><span class="save-pill">Save $25</span></div>
+<h3>5350 <em>credits</em></h3>
 <p class="price-line"><span class="price-now">$49.99</span><span class="price-was">$74.99</span></p>
-<p class="price-note-line">Includes 50 gift credits</p>
-<a class="btn btn-primary" href="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
+<p class="price-note-line">Includes 350 gift credits (7%)</p>
+<a class="btn btn-primary buy-credits" data-credits="535" data-product="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="3700" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=3700.00&amp;targets=HANSORA%20AI%20535%20credits&amp;label=hansora_web_535" href="https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
 </article>
 <article class="price-card">
 <span class="plan-badge best-value">Best Value</span>
-<div class="price-top-row"><small>1000 + 100 credits</small><span class="save-pill">Save $50</span></div>
-<h3>1100 <em>credits</em></h3>
+<div class="price-top-row"><small>10000 + 1000 credits</small><span class="save-pill">Save $30</span></div>
+<h3>11000 <em>credits</em></h3>
 <p class="price-line"><span class="price-now">$99.99</span><span class="price-was">$149.99</span></p>
-<p class="price-note-line">Includes 100 gift credits</p>
-<a class="btn btn-primary" href="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
+<p class="price-note-line">Includes 1000 gift credits (10%)</p>
+<a class="btn btn-primary buy-credits" data-credits="1100" data-product="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="7400" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=7400.00&amp;targets=HANSORA%20AI%201100%20credits&amp;label=hansora_web_1100" href="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing">Buy</a>
 </article>
 </div>
 </div>
@@ -3570,5 +3522,62 @@
       check();
     })();
   </script>
+
+<script id="hansora-home-payg-checkout">
+(() => {
+  const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+
+  const getUser = async () => {
+    try {
+      const headerUser = await window.HansoraHeader?.getCurrentUser?.();
+      if (headerUser?.id) return headerUser;
+    } catch (_) {}
+    try {
+      if (window.supabase?.createClient) {
+        const client = window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
+        const { data } = await client.auth.getUser();
+        if (data?.user?.id) return data.user;
+        const session = await client.auth.getSession();
+        if (session?.data?.session?.user?.id) return session.data.session.user;
+      }
+    } catch (_) {}
+    return null;
+  };
+
+  document.addEventListener('click', async (event) => {
+    const button = event.target.closest('.pricing .buy-credits[data-credits]');
+    if (!button) return;
+    event.preventDefault();
+    const user = await getUser();
+    if (!user?.id) {
+      window.location.href = '/login.html';
+      return;
+    }
+    const credits = Number(button.dataset.credits || 0);
+    if (!Number.isFinite(credits) || credits <= 0) return;
+    const russian = document.documentElement.lang === 'ru' || new URLSearchParams(location.search).get('method') === 'ru';
+    const base = russian ? button.dataset.ruProduct : button.dataset.product;
+    if (!base) return;
+    const url = new URL(base, location.href);
+    if (russian) {
+      url.searchParams.set('successURL', 'https://hansora.co/russian-payment-success.html');
+      url.searchParams.set('credits', String(credits));
+      url.searchParams.set('user_id', user.id);
+      if (user.email) url.searchParams.set('email', user.email);
+      url.searchParams.set('label', `hansora_web|${credits}|${user.id}|${String(user.email || '').replace(/\|/g, '')}`);
+    } else {
+      if (!url.searchParams.has('quantity')) url.searchParams.set('quantity', '1');
+      url.searchParams.set('minimalAddress', 'true');
+      url.searchParams.set('metadata_uid', user.id);
+      if (user.email) url.searchParams.set('metadata_email', user.email);
+      url.searchParams.set('metadata_credits', String(credits));
+      const chatSessionId = new URLSearchParams(location.search).get('chat_session') || '';
+      if (/^[0-9a-f-]{36}$/i.test(chatSessionId)) url.searchParams.set('metadata_chat_session_id', chatSessionId);
+    }
+    window.location.href = url.toString();
+  }, true);
+})();
+</script>
 </body>
 </html>
