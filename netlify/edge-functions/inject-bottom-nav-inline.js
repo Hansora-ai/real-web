@@ -33,6 +33,7 @@ export default async (request, context) => {
       image: 'Image',
       video: 'Video',
       audio: 'Audio',
+      trend: 'Trend',
       more: 'See more',
       closeModels: 'Close models menu',
       closeMenu: 'Close menu',
@@ -52,6 +53,7 @@ export default async (request, context) => {
       image: 'Պատկեր',
       video: 'Տեսանյութ',
       audio: 'Ձայն',
+      trend: 'Թրենդ',
       more: 'Տեսնել ավելին',
       closeModels: 'Փակել մոդելների ընտրացանկը',
       closeMenu: 'Փակել ընտրացանկը',
@@ -71,6 +73,7 @@ export default async (request, context) => {
       image: 'Изображение',
       video: 'Видео',
       audio: 'Аудио',
+      trend: 'Тренды',
       more: 'Смотреть ещё',
       closeModels: 'Закрыть меню моделей',
       closeMenu: 'Закрыть меню',
@@ -269,7 +272,7 @@ export default async (request, context) => {
     .hs-radial-image{ left:28%; top:38%; }
     .hs-radial-video{ left:50%; top:24%; }
     .hs-radial-audio{ left:72%; top:38%; }
-    .hs-radial-character{ left:16%; top:70%; }
+    .hs-radial-trend{ left:16%; top:70%; }
     .hs-radial-more{ left:84%; top:70%; }
     .hs-radial-close{
       position:absolute;
@@ -437,9 +440,9 @@ export default async (request, context) => {
       <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M5 10v4"></path><path d="M9 7v10"></path><path d="M13 5v14"></path><path d="M17 8v8"></path><path d="M21 11v2"></path></svg></span>
       <b>${copy.audio}</b>
     </a>
-    <a class="hs-radial-item hs-radial-character" href="${localizedPath('/character.html')}">
-      <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg></span>
-      <b>Character</b>
+    <a class="hs-radial-item hs-radial-trend" href="${localizedPath('/examples.html')}">
+      <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M4 17l5-5 4 3 7-8"></path><path d="M15 7h5v5"></path></svg></span>
+      <b>${copy.trend}</b>
     </a>
     <a class="hs-radial-item hs-radial-more" href="${localizedPath('/models.html')}">
       <span class="hs-radial-icon"><svg viewBox="0 0 24 24"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"></path><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14z"></path></svg></span>
