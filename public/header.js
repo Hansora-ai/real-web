@@ -134,7 +134,7 @@
     en: {
       home: 'HANSORA AI home', primaryNav: 'Primary navigation', image: 'Image', imageMenu: 'Image tools and models', imageSection: 'Image models and tools',
       video: 'Video', videoMenu: 'Video models', features: 'Features', featureMenu: 'Feature tools', imageTools: 'Image tools', videoAudioTools: 'Video and audio tools',
-      audio: 'Audio', audioTools: 'Audio tools', pricing: 'Pricing', pricingAria: 'Pricing, 30% off', discount: '30% OFF', login: 'Login', openAccount: 'Open account menu',
+      audio: 'Audio', audioTools: 'Audio tools', trend: 'Trend', pricing: 'Pricing', pricingAria: 'Pricing, 30% off', discount: '30% OFF', login: 'Login', openAccount: 'Open account menu',
       startCreating: 'Start creating', profile: 'Profile', history: 'History', credits: 'Credits', aiCourse: 'AI Course', logout: 'Logout', language: 'Language',
       closeCourse: 'Close course selection', courseEyebrow: 'Hansora AI Course', courseTitle: 'Choose your course language', courseIntro: 'Select the language in which you would like to study.',
       closeLanguage: 'Close language selection', languageEyebrow: 'Hansora language', languageTitle: 'Choose website language', languageIntro: 'Select the language for this page and every Hansora menu and popup.', current: 'Current',
@@ -148,7 +148,7 @@
     hy: {
       home: 'HANSORA AI գլխավոր էջ', primaryNav: 'Հիմնական նավիգացիա', image: 'Պատկեր', imageMenu: 'Պատկերի գործիքներ և մոդելներ', imageSection: 'Պատկերի մոդելներ և գործիքներ',
       video: 'Տեսանյութ', videoMenu: 'Տեսանյութի մոդելներ', features: 'Գործիքներ', featureMenu: 'Լրացուցիչ գործիքներ', imageTools: 'Պատկերի գործիքներ', videoAudioTools: 'Տեսանյութի և ձայնի գործիքներ',
-      audio: 'Ձայն', audioTools: 'Ձայնային գործիքներ', pricing: 'Գներ', pricingAria: 'Գներ՝ 30% զեղչով', discount: '30% ԶԵՂՉ', login: 'Մուտք', openAccount: 'Բացել հաշվի ընտրացանկը',
+      audio: 'Ձայն', audioTools: 'Ձայնային գործիքներ', trend: 'Թրենդ', pricing: 'Գներ', pricingAria: 'Գներ՝ 30% զեղչով', discount: '30% ԶԵՂՉ', login: 'Մուտք', openAccount: 'Բացել հաշվի ընտրացանկը',
       startCreating: 'Սկսել ստեղծել', profile: 'Պրոֆիլ', history: 'Պատմություն', credits: 'Կրեդիտներ', aiCourse: 'AI դասընթաց', logout: 'Դուրս գալ', language: 'Լեզու',
       closeCourse: 'Փակել դասընթացի լեզվի ընտրությունը', courseEyebrow: 'Hansora AI դասընթաց', courseTitle: 'Ընտրեք դասընթացի լեզուն', courseIntro: 'Ընտրեք, թե որ լեզվով եք ցանկանում սովորել։',
       closeLanguage: 'Փակել լեզվի ընտրությունը', languageEyebrow: 'Hansora-ի լեզու', languageTitle: 'Ընտրեք կայքի լեզուն', languageIntro: 'Ընտրեք այս էջի, Hansora-ի ընտրացանկերի և պատուհանների լեզուն։', current: 'Ընտրված',
@@ -162,7 +162,7 @@
     ru: {
       home: 'Главная страница HANSORA AI', primaryNav: 'Основная навигация', image: 'Изображения', imageMenu: 'Инструменты и модели изображений', imageSection: 'Модели и инструменты изображений',
       video: 'Видео', videoMenu: 'Видеомодели', features: 'Инструменты', featureMenu: 'Дополнительные инструменты', imageTools: 'Инструменты для изображений', videoAudioTools: 'Инструменты для видео и аудио',
-      audio: 'Аудио', audioTools: 'Аудиоинструменты', pricing: 'Цены', pricingAria: 'Цены со скидкой 30%', discount: 'СКИДКА 30%', login: 'Войти', openAccount: 'Открыть меню аккаунта',
+      audio: 'Аудио', audioTools: 'Аудиоинструменты', trend: 'Тренды', pricing: 'Цены', pricingAria: 'Цены со скидкой 30%', discount: 'СКИДКА 30%', login: 'Войти', openAccount: 'Открыть меню аккаунта',
       startCreating: 'Начать создавать', profile: 'Профиль', history: 'История', credits: 'Кредиты', aiCourse: 'AI-курс', logout: 'Выйти', language: 'Язык',
       closeCourse: 'Закрыть выбор языка курса', courseEyebrow: 'AI-курс Hansora', courseTitle: 'Выберите язык курса', courseIntro: 'Выберите язык, на котором хотите проходить обучение.',
       closeLanguage: 'Закрыть выбор языка', languageEyebrow: 'Язык Hansora', languageTitle: 'Выберите язык сайта', languageIntro: 'Выберите язык этой страницы, меню и всех окон Hansora.', current: 'Выбрано',
@@ -376,11 +376,12 @@
 
   const VIDEO_MENU_ITEMS = [
     { label: 'Seedance 2.5', id: 'seedance25', icon: 'S2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Cinematic video model' },
+    { label: 'Gemini Omni Flash 1.1', id: 'gemini-omni-flash-1-1', icon: 'GO', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/3.png', note: 'Prompt, image, and video inputs' },
+    { label: 'Wan 3.0', id: 'wan-3', icon: 'W3', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/6.png', note: 'Advanced video generation' },
     { label: 'Seedance 2.0', id: 'seedance-2', icon: 'S2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Cinematic video model' },
     { label: 'Kling 3.0', id: 'kling-3', icon: 'K3', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/14.png', note: 'Advanced video generation' },
     { label: 'Seedance 2.0 Mini', id: 'seedance-2-mini', icon: 'SM', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Fast cinematic video model' },
     { label: 'Kling 3 Turbo', id: 'kling-3-turbo', icon: 'KT', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/14.png', note: 'Fast text or image video model' },
-    { label: 'Gemini Omni', id: 'gemini-omni-video', icon: 'GO', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/3.png', note: 'Prompt, image, and video inputs' },
     { label: 'Video Edit', href: '/video-edit.html', icon: 'VE', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/22.png', note: 'Edit uploaded video' },
     { label: 'Background Change', href: '/background-change.html', icon: 'BG', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/23.png', note: 'Change video background' },
     { label: 'Video Relight', href: '/video-relight.html', icon: 'VR', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/24.png', note: 'Change video lighting' },
@@ -2082,7 +2083,7 @@
     style.textContent = `
       .nav-links .hansora-nav-item{ position:relative; display:inline-flex; align-items:center; }
       .site-header .shell.nav{ position:relative; }
-      .site-header .nav-links{ position:absolute; left:50%; transform:translateX(-50%); }
+      .site-header .nav-links{ position:absolute; left:48%; transform:translateX(-50%); }
       .site-header.auth-checking #btnLoginSignup{ visibility:hidden !important; pointer-events:none !important; }
       .site-header .user-menu .hansora-ai-course-button{ width:100%; text-align:left; }
       .hansora-auth-form .hansora-auth-view[hidden]{ display:none !important; }
@@ -2350,6 +2351,7 @@
       }
       .hansora-brand-mobile{ display:none; }
       .nav-links .hansora-nav-trigger{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; color:inherit; }
+      .nav-links .hansora-nav-trend{ display:inline-flex; align-items:center; color:inherit; text-decoration:none; }
       .nav-links .hansora-nav-trigger::after{ content:""; width:6px; height:6px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); opacity:.55; margin-top:-3px; transition:transform .18s ease, opacity .18s ease; }
       .nav-links .hansora-nav-item:hover .hansora-nav-trigger::after,
       .nav-links .hansora-nav-item:focus-within .hansora-nav-trigger::after{ transform:rotate(225deg); margin-top:3px; opacity:.9; }
@@ -2823,6 +2825,7 @@
                 { title: copy('audioTools'), items: AUDIO_MENU_ITEMS },
               ]
             })}
+            <a class="hansora-nav-trend" href="${siteHref('/examples.html')}">${copy('trend')}</a>
           </nav>
           <div class="nav-actions">
             <a class="hansora-mobile-pricing" href="${siteHref('/pricing.html')}" aria-label="${copy('pricingAria')}">
