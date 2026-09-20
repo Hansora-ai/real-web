@@ -272,6 +272,12 @@ exports.handler = async (event) => {
     const existingTask = existing?.meta?.task_id || existing?.meta?.taskId || '';
     if (existingTask) return json(200, { ok: true, submitted: true, taskId: existingTask, run_id: runId, already_submitted: true });
 
+    const firstFrameUrl = String(body.first_frame_url || '').trim();
+    const lastFrameUrl = String(body.last_frame_url || '').trim();
+    if (firstFrameUrl && !/^https:\/\//i.test(firstFrameUrl)) return json(400, { ok: false, error: 'invalid_first_frame_url' });
+    if (lastFrameUrl && !/^https:\/\//i.test(lastFrameUrl)) return json(400, { ok: false, error: 'invalid_last_frame_url' });
+    if (lastFrameUrl && !firstFrameUrl) return json(400, { ok: false, error: 'last_frame_requires_first_frame' });
+
     const rawImageUrls = Array.isArray(body.image_urls) ? body.image_urls.filter(Boolean).map(String) : [];
     if (rawImageUrls.length > 7) return json(400, { ok: false, error: 'too_many_images' });
     const imageUrls = rawImageUrls.slice(0, 7);
@@ -280,6 +286,13 @@ exports.handler = async (event) => {
     const requestedAudioIds = Array.isArray(body.audio_ids)
       ? body.audio_ids.filter(Boolean).map(String)
       : String(body.audio_ids || '').split(/[\n,]+/).map((item) => item.trim()).filter(Boolean);
+    if (firstFrameUrl && (imageUrls.length || videoUrl || requestedAudioIds.length)) {
+      return json(400, {
+        ok: false,
+        error: 'frames_cannot_mix_with_references',
+        message: 'First/last frames cannot be combined with image, video, audio, or character references.',
+      });
+    }
     const quotaUnits = imageUrls.length + (videoUrl ? 2 : 0);
     if (quotaUnits > 7) return json(400, { ok: false, error: 'too_many_inputs', message: 'Gemini Omni supports up to 7 input units. Each image is 1 unit and one video is 2 units.' });
     const duration = normalizeDuration(body.duration);
@@ -318,6 +331,8 @@ exports.handler = async (event) => {
       ...(!videoUrl ? { duration: String(duration) } : {}),
       aspect_ratio: aspectRatio,
       resolution,
+      ...(firstFrameUrl ? { first_frame_url: firstFrameUrl } : {}),
+      ...(lastFrameUrl ? { last_frame_url: lastFrameUrl } : {}),
       ...(imageUrls.length ? { image_urls: imageUrls } : {}),
       ...(videoUrl ? { video_list: [{ url: videoUrl, start: videoWindow.start, ends: videoWindow.ends }] } : {}),
       ...(audioIds.length ? { audio_ids: audioIds } : {}),
