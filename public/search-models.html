@@ -6836,7 +6836,7 @@ function extractGenerationFailureReason(payload) {
   const seen = new Set();
   const keyPattern = /^(error|error_message|message|msg|reason|fail_reason|failure_reason|failed_reason|detail|details|code|status|state)$/i;
   const badStatusPattern = /(fail|failed|error|reject|rejected|invalid|denied|blocked|unsafe|moderation|policy|cancel|cancelled)/i;
-  const genericErrorPattern = /^(server_error|internal_error|unknown_error|request_failed|provider_error|kie_create_failed|unifically_create_failed|failed|error)$/i;
+  const genericErrorPattern = /^(server_error|internal_error|unknown_error|request_failed|provider_error|kie_failed|kie_check_failed|kie_create_failed|unifically_create_failed|failed|error|\[object Object\])$/i;
   const neutralStatusPattern = /^(ok|success|succeeded|done|complete|completed|processing|pending|ready|200|201|202)$/i;
 
   const stringifyValue = (value) => {
@@ -6893,7 +6893,7 @@ function extractGenerationFailureReason(payload) {
 function cleanGenerationFailureReason(reason) {
   const text = String(reason || '').trim().replace(/\s+/g, ' ');
   if (!text) return '';
-  if (/^(fail|failed|error|server_error|internal_error|unknown_error|request_failed|provider_error|false|null|undefined)$/i.test(text)) return '';
+  if (/^(fail|failed|error|server_error|internal_error|unknown_error|request_failed|provider_error|kie_failed|kie_check_failed|kie_create_failed|false|null|undefined|\[object Object\])$/i.test(text)) return '';
   if (/^status\s+(fail|failed|error)$/i.test(text)) return '';
   return text.replace(/[.。]+$/g, '').slice(0, 220);
 }
@@ -13426,7 +13426,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           try {
             const j = JSON.parse(txt);
             safetyBlocked = j && j.code === 'CONTENT_POLICY_BLOCKED';
-            const parsedMsg = cleanGenerationFailureReason(j.message || extractGenerationFailureReason(j) || extractProviderError(j) || j.error);
+            const parsedMsg = cleanGenerationFailureReason(j.message) || cleanGenerationFailureReason(extractGenerationFailureReason(j)) || cleanGenerationFailureReason(extractProviderError(j)) || cleanGenerationFailureReason(j.error);
             if (parsedMsg) msg = parsedMsg;
           } catch {}
           console.warn('model request failed', { runId, model: currentModel.id, endpoint: runEndpoint, status: res.status, message: msg, raw: txt });
@@ -13446,7 +13446,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
           const submittedTaskId = extractSubmittedTaskId(j);
           const acceptedSubmission = isAcceptedSubmission(j, submittedTaskId);
-          const providerError = acceptedSubmission ? '' : cleanGenerationFailureReason(extractProviderError(j) || extractGenerationFailureReason(j));
+          const providerError = acceptedSubmission ? '' : (cleanGenerationFailureReason(extractProviderError(j)) || cleanGenerationFailureReason(extractGenerationFailureReason(j)));
           if (providerError) {
             console.warn('provider rejected generation', providerError);
             removeClientRequestPlaceholder(requestContext);
