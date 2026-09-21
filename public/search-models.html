@@ -1116,7 +1116,7 @@
       color:#fff;
     }
     body.workspace-redesign #modelButton::before{
-      content:'Մոդել';
+      content:'Model';
       font-size:12px;
       color:var(--tool-muted);
       margin-right:8px;
@@ -4227,18 +4227,50 @@
 
 
     /* Grouped reference layout shared by Gemini Omni Flash and Wan 3.0. */
-    body.workspace-redesign #videoRefsUploadWrap:not(.hidden){display:grid !important;grid-template-columns:1fr !important;gap:12px !important;width:100% !important;}
-    body.workspace-redesign #videoRefsUploadWrap > .upload-section-card.hidden{display:none !important;}
-    body.workspace-redesign #videoRefsUploadWrap .frame-pair-grid{display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;gap:10px !important;}
-    body.workspace-redesign #videoRefsUploadWrap .frame-pair-grid > .upload-drop-card{grid-column:auto !important;grid-row:auto !important;min-width:0 !important;min-height:116px !important;}
-    body.workspace-redesign #videoRefsUploadWrap .video-reference-stack{display:grid !important;grid-template-columns:1fr !important;gap:10px !important;}
+    body.workspace-redesign #videoRefsUploadWrap:not(.hidden){
+      display:grid !important;
+      grid-template-columns:1fr !important;
+      gap:12px !important;
+      width:100% !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap > .upload-section-card.hidden{
+      display:none !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap .frame-pair-grid{
+      display:grid !important;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+      gap:10px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap .frame-pair-grid > .upload-drop-card{
+      grid-column:auto !important;
+      grid-row:auto !important;
+      min-width:0 !important;
+      min-height:116px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap .video-reference-stack{
+      display:grid !important;
+      grid-template-columns:1fr !important;
+      gap:10px !important;
+    }
     body.workspace-redesign #videoRefsUploadWrap #videoImageReferencesSection > .upload-drop-card,
     body.workspace-redesign #videoRefsUploadWrap #videoVideoReferencesSection .upload-drop-card,
-    body.workspace-redesign #videoRefsUploadWrap #videoAudioReferencesSection > .upload-drop-card{min-height:126px !important;}
-    body.workspace-redesign #videoRefsUploadWrap #geminiAudioIdsControl,
-    body.workspace-redesign #videoRefsUploadWrap #wanPromptExtendControl{margin-top:0 !important;}
-    body.workspace-redesign #videoRefsUploadWrap #geminiAudioIdsControl > label{display:none !important;}
-    @media (max-width:900px){body.workspace-redesign #videoRefsUploadWrap .frame-pair-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;}}
+    body.workspace-redesign #videoRefsUploadWrap #videoAudioReferencesSection > .upload-drop-card{
+      min-height:126px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap #geminiAudioIdsControl{
+      margin-top:0 !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap #geminiAudioIdsControl > label{
+      display:none !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap #wanPromptExtendControl{
+      margin-top:0 !important;
+    }
+    @media (max-width:900px){
+      body.workspace-redesign #videoRefsUploadWrap .frame-pair-grid{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+      }
+    }
 
 	    </style>
 </head>
@@ -4252,17 +4284,17 @@
         <!-- Mode + Mobile quick options -->
         <div class="flex items-center justify-between w-full sm:w-auto gap-2">
           <div class="flex rounded-full bg-slate-900/80 border border-white/15 p-1 text-[11px] w-fit">
-          <button id="btnModeImage" class="px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-[11px] font-semibold shadow-sm">Պատկեր</button>
-          <button id="btnModeVideo" class="px-3 py-1.5 rounded-full text-white/70">Տեսանյութ</button>
+          <button id="btnModeImage" class="px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-[11px] font-semibold shadow-sm">Image</button>
+          <button id="btnModeVideo" class="px-3 py-1.5 rounded-full text-white/70">Video</button>
         </div>
           <div id="mobileQuickOptions" class="md:hidden flex items-center gap-2">
             <button id="mobileAspectBtn" type="button" class="opt-btn hidden">
-              <span class="opacity-70">Չափս</span>
+              <span class="opacity-70">AR</span>
               <span id="mobileAspectLabel">1:1</span>
               <span class="opt-chev">▾</span>
             </button>
             <button id="mobileDurationBtn" type="button" class="opt-btn hidden">
-              <span class="opacity-70">Տև.</span>
+              <span class="opacity-70">Dur</span>
               <span id="mobileDurationLabel">5s</span>
               <span class="opt-chev">▾</span>
             </button>
@@ -4274,7 +4306,7 @@
           <textarea
             id="promptBox"
             rows="2"
-            placeholder="Նկարագրեք՝ ինչ եք ցանկանում ստեղծել…"
+            placeholder="Describe what you want to create…"
             class="prompt-mention-source w-full bg-transparent text-sm sm:text-[15px] outline-none placeholder:text-white/40 leading-5"
           ></textarea>
           <div
@@ -4283,9 +4315,9 @@
             contenteditable="true"
             role="textbox"
             aria-multiline="true"
-            data-placeholder="Նկարագրեք՝ ինչ եք ցանկանում ստեղծել…"
+            data-placeholder="Describe what you want to create…"
           ></div>
-          <div id="promptImageMentionMenu" class="prompt-image-mention-menu hidden" role="listbox" aria-label="Վերբեռնված պատկերներ"></div>
+          <div id="promptImageMentionMenu" class="prompt-image-mention-menu hidden" role="listbox" aria-label="Uploaded images"></div>
         </div>
 
         <!-- Model button -->
@@ -4293,11 +4325,11 @@
           id="modelButton"
           class="inline-flex items-center justify-center gap-2 btn-brand px-4 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap"
         >
-          <span class="text-xs opacity-80 hidden sm:inline">Մոդել</span>
+          <span class="text-xs opacity-80 hidden sm:inline">Model</span>
           <span id="modelButtonLabel" class="truncate max-w-[150px] sm:max-w-[180px]">Nano Banana</span>
-          <span id="modelUnlimitedBadge" class="subscription-unlimited-badge model-unlimited-badge is-hidden" aria-label="Անսահմանափակ՝ ձեր ամսական պլանով">
+          <span id="modelUnlimitedBadge" class="subscription-unlimited-badge model-unlimited-badge is-hidden" aria-label="Unlimited with your monthly plan">
             <span class="subscription-infinity" aria-hidden="true">∞</span>
-            <span>Անսահմանափակ</span>
+            <span>Unlimited</span>
           </span>
           <span aria-hidden="true" class="ml-1 text-white/70 text-base leading-none">&gt;</span>
         </button>
@@ -4315,7 +4347,7 @@
             class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]"
           >
             <span class="text-lg leading-none">📎</span>
-            <span id="uploadBtnLabel">Վերբեռնել պատկեր</span>
+            <span id="uploadBtnLabel">Upload image</span>
           </button>
           <div id="imageThumbs" class="flex gap-1.5 flex-nowrap overflow-x-auto max-w-full pr-1"></div>
 
@@ -4325,8 +4357,8 @@
               <input id="startFrameInput" type="file" accept="image/*" class="hidden" />
               <button id="startFrameBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
                 <span class="text-lg leading-none">➕</span>
-                <span>Սկիզբ</span>
-                <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+                <span>Start</span>
+                <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
               </button>
               <div id="startFrameThumb" class="flex gap-1.5"></div>
             </div>
@@ -4335,8 +4367,8 @@
               <input id="lastFrameInput" type="file" accept="image/*" class="hidden" />
               <button id="lastFrameBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
                 <span class="text-lg leading-none">➕</span>
-                <span>Վերջ</span>
-                <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+                <span>Last</span>
+                <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
               </button>
               <div id="lastFrameThumb" class="flex gap-1.5"></div>
             </div>
@@ -4348,8 +4380,8 @@
               <input id="veoReferenceInput" type="file" accept="image/*" class="hidden" multiple />
               <button id="veoReferenceBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
                 <span class="text-lg leading-none">📎</span>
-                <span>Հղումներ</span>
-                <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+                <span>References</span>
+                <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
               </button>
               <div id="veoReferenceThumbs" class="flex gap-1.5"></div>
             </div>
@@ -4361,7 +4393,7 @@
               <input id="alephVideoInput" type="file" accept="video/*" class="hidden" />
               <button id="alephVideoBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
                 <span class="text-lg leading-none">📎</span>
-                <span>Վերբեռնել տեսանյութ</span>
+                <span>Upload video</span>
               </button>
               <div id="alephVideoThumb" class="flex gap-1.5"></div>
             </div>
@@ -4370,8 +4402,8 @@
               <input id="alephImageInput" type="file" accept="image/*" class="hidden" />
               <button id="alephImageBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
                 <span class="text-lg leading-none">📎</span>
-                <span>Վերբեռնել պատկեր</span>
-                <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+                <span>Upload image</span>
+                <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
               </button>
               <div id="alephImageThumb" class="flex gap-1.5"></div>
             </div>
@@ -4383,7 +4415,7 @@
               <input id="motionVideoInput" type="file" accept="video/*" class="hidden" />
               <button id="motionVideoBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
                 <span class="text-lg leading-none">📎</span>
-                <span>Վերբեռնել տեսանյութ</span>
+                <span>Upload video</span>
               </button>
               <div id="motionVideoThumb" class="flex gap-1.5"></div>
             </div>
@@ -4391,7 +4423,7 @@
               <input id="motionImageInput" type="file" accept="image/*" class="hidden" />
               <button id="motionImageBtn" class="inline-flex items-center gap-1.5 btn-soft px-3 py-1.5 text-[11px]" type="button">
                 <span class="text-lg leading-none">📎</span>
-                <span>Հղում</span>
+                <span>Reference</span>
               </button>
               <div id="motionImageThumb" class="flex gap-1.5"></div>
             </div>
@@ -4403,24 +4435,24 @@
               <div class="upload-section-head">
                 <span class="upload-section-icon">🎬</span>
                 <div>
-                  <p>Կադրեր</p>
-                  <small>Առաջին և վերջին կադրերն օգտագործվում են միասին</small>
+                  <p>Frames</p>
+                  <small>First and last frame stay together</small>
                 </div>
               </div>
               <div class="frame-pair-grid">
                 <div class="upload-drop-card">
                   <input id="seedanceFirstInput" type="file" accept="image/*" class="hidden" />
                   <button id="seedanceFirstBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">➕</span><span>Առաջին կադր</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+                    <span class="upload-plus">➕</span><span>First frame</span>
+                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
                   </button>
                   <div id="seedanceFirstThumb" class="upload-thumb-zone"></div>
                 </div>
                 <div class="upload-drop-card">
                   <input id="seedanceLastInput" type="file" accept="image/*" class="hidden" />
                   <button id="seedanceLastBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">➕</span><span>Վերջին կադր</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+                    <span class="upload-plus">➕</span><span>Last frame</span>
+                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
                   </button>
                   <div id="seedanceLastThumb" class="upload-thumb-zone"></div>
                 </div>
@@ -4431,15 +4463,15 @@
               <div class="upload-section-head">
                 <span class="upload-section-icon">🖼️</span>
                 <div>
-                  <p>Պատկերային հղումներ</p>
-                  <small>Միայն պատկերների հղման դաշտ</small>
+                  <p>Image references</p>
+                  <small>Image-only reference box</small>
                 </div>
               </div>
               <div class="upload-drop-card upload-drop-card-wide">
                 <input id="seedanceImageRefsInput" type="file" accept="image/*" class="hidden" multiple />
                 <button id="seedanceImageRefsBtn" class="upload-drop-btn" type="button">
-                  <span class="upload-plus">📎</span><span>Ավելացնել պատկերային հղումներ</span>
-                  <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+                  <span class="upload-plus">📎</span><span>Add image refs</span>
+                  <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
                 </button>
                 <div id="seedanceImageRefsThumbs" class="upload-thumb-zone upload-thumb-list"></div>
               </div>
@@ -4449,15 +4481,15 @@
               <div class="upload-section-head">
                 <span class="upload-section-icon">🎞️</span>
                 <div>
-                  <p>Տեսանյութերի հղումներ</p>
-                  <small>Միայն տեսանյութերի հղման դաշտ</small>
+                  <p>Video references</p>
+                  <small>Video-only reference box</small>
                 </div>
               </div>
               <div class="upload-drop-card upload-drop-card-wide">
                 <input id="seedanceVideoRefsInput" type="file" accept="video/*" class="hidden" multiple />
                 <button id="seedanceVideoRefsBtn" class="upload-drop-btn" type="button">
-                  <span class="upload-plus">📎</span><span>Ավելացնել տեսանյութերի հղումներ</span>
-                  <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+                  <span class="upload-plus">📎</span><span>Add video refs</span>
+                  <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
                 </button>
                 <div id="seedanceVideoRefsThumbs" class="upload-thumb-zone upload-thumb-list"></div>
               </div>
@@ -4467,23 +4499,23 @@
               <div class="upload-section-head">
                 <span class="upload-section-icon">🔊</span>
                 <div>
-                  <p>Աուդիո հղումներ</p>
-                  <small>Միայն աուդիոյի հղման դաշտ</small>
+                  <p>Audio references</p>
+                  <small>Audio-only reference box</small>
                 </div>
               </div>
               <div class="upload-drop-card upload-drop-card-wide">
                 <input id="seedanceAudioRefsInput" type="file" accept="audio/*" class="hidden" multiple />
                 <button id="seedanceAudioRefsBtn" class="upload-drop-btn" type="button">
-                  <span class="upload-plus">📎</span><span>Ավելացնել աուդիո հղումներ</span>
-                  <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+                  <span class="upload-plus">📎</span><span>Add audio refs</span>
+                  <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
                 </button>
                 <div id="seedanceAudioRefsThumbs" class="upload-thumb-zone upload-thumb-list"></div>
               </div>
             </div>
 
             <div class="upload-section-card upload-toggle-card upload-section-wide">
-              <button id="seedanceAudioToggle" type="button" class="chip chip-active px-3 py-1 hidden">Աուդիոն միացված է</button>
-              <button id="seedanceWebToggle" type="button" class="chip px-3 py-1">Վեբ որոնումն անջատված է</button>
+              <button id="seedanceAudioToggle" type="button" class="chip chip-active px-3 py-1 hidden">Audio on</button>
+              <button id="seedanceWebToggle" type="button" class="chip px-3 py-1">Web search off</button>
             </div>
           </div>
 
@@ -4493,24 +4525,24 @@
               <div class="upload-section-head">
                 <span class="upload-section-icon">🎬</span>
                 <div>
-                  <p>Կադրեր</p>
-                  <small>Առաջին և վերջին կադրերն օգտագործվում են միասին</small>
+                  <p>Frames</p>
+                  <small>First and last frame stay together</small>
                 </div>
               </div>
               <div class="frame-pair-grid">
                 <div class="upload-drop-card kling30-frame-box">
                   <input id="kling30FirstInput" type="file" accept="image/*" class="hidden" />
                   <button id="kling30FirstBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">➕</span><span>Առաջին կադր</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+                    <span class="upload-plus">➕</span><span>First frame</span>
+                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
                   </button>
                   <div id="kling30FirstThumb" class="upload-thumb-zone"></div>
                 </div>
                 <div class="upload-drop-card kling30-frame-box">
                   <input id="kling30LastInput" type="file" accept="image/*" class="hidden" />
                   <button id="kling30LastBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">➕</span><span>Վերջին կադր</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+                    <span class="upload-plus">➕</span><span>Last frame</span>
+                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
                   </button>
                   <div id="kling30LastThumb" class="upload-thumb-zone"></div>
                 </div>
@@ -4521,8 +4553,8 @@
               <button id="kling30SingleElementBtn" type="button" class="kling30-control-row">
                 <span class="upload-section-icon">🧩</span>
                 <span class="kling30-control-copy">
-                  <strong>Տարրեր</strong>
-                  <small>Ավելացրեք պատկերային տարր այս մեկ կադրով տեսանյութի համար</small>
+                  <strong>Elements</strong>
+                  <small>Add an image element for this single-shot video</small>
                 </span>
                 <span id="kling30SingleElementCount" class="kling30-count-pill">0</span>
                 <span class="kling30-row-chev">›</span>
@@ -4533,20 +4565,20 @@
               <button id="kling30MultiToggle" type="button" class="kling30-control-row">
                 <span class="upload-section-icon">🎞️</span>
                 <span class="kling30-control-copy">
-                  <strong id="kling30MultiLabel">Բազմակադր ռեժիմն անջատված է</strong>
-                  <small>Միացրեք բազմակադր սցենարը՝ prompt-ով, տևողությամբ և տարրերով</small>
+                  <strong id="kling30MultiLabel">Multi-shot inactive</strong>
+                  <small>Activate multi-shot storyboard with prompt, duration and elements</small>
                 </span>
                 <span id="kling30ElementsCount" class="kling30-count-pill">0</span>
                 <span id="kling30MultiState" class="kling30-switch" aria-hidden="true"><span class="kling30-switch-knob"></span></span>
               </button>
               <div id="kling30MultiPanel" class="hidden kling30-panel mt-3">
                 <div class="kling30-panel-head">
-                  <span>Բազմակադր սցենար</span>
-                  <button id="kling30AddShotBtn" type="button">+ Ավելացնել կադր</button>
+                  <span>Multi-shot storyboard</span>
+                  <button id="kling30AddShotBtn" type="button">+ Add shot</button>
                 </div>
                 <div id="kling30ShotsContainer" class="kling30-shot-list"></div>
                 <textarea id="kling30ShotsBox" rows="4" class="hidden" aria-hidden="true"></textarea>
-                <p class="kling30-panel-note">Յուրաքանչյուր կադր ունի իր prompt-ը, տևողությունը և տարրը։ Ընդհանուր տևողությունը առավելագույնը 15 վայրկյան է։</p>
+                <p class="kling30-panel-note">Each shot has its own prompt, duration and element. Total duration stays max 15s.</p>
               </div>
             </div>
 
@@ -4556,39 +4588,39 @@
                   <div class="upload-section-head">
                     <span class="upload-section-icon">🧩</span>
                     <div>
-                      <p id="kling30ElementDrawerTitle">Կադրի տարր</p>
-                      <small>Անուն, տարրի նկարագրություն և 2–4 պատկեր</small>
+                      <p id="kling30ElementDrawerTitle">Shot element</p>
+                      <small>Name, element description and 2–4 images</small>
                     </div>
                   </div>
                   <button id="kling30CloseElementsBtn" type="button" class="kling30-close-btn">×</button>
                 </div>
                 <div class="kling30-element-editor">
                   <div class="kling30-editor-field">
-                    <label for="kling30ElementNameInput" class="required">Անուն</label>
+                    <label for="kling30ElementNameInput" class="required">Name</label>
                     <input id="kling30ElementNameInput" type="text" placeholder="element_character" />
                   </div>
                   <div class="kling30-editor-field">
-                    <label>Տեսակ</label>
+                    <label>Type</label>
                     <div class="kling30-type-row">
-                      <button id="kling30ElementTypeImage" type="button" class="kling30-type-btn active">🖼️ Պատկեր</button>
+                      <button id="kling30ElementTypeImage" type="button" class="kling30-type-btn active">🖼️ Image</button>
                     </div>
                   </div>
                   <div class="kling30-editor-field">
-                    <label for="kling30ElementDescInput" class="required">Նկարագրություն</label>
-                    <textarea id="kling30ElementDescInput" rows="3" placeholder="Տարր․ նկարագրեք այս կերպարը, առարկան կամ միջավայրը">Տարր․ </textarea>
+                    <label for="kling30ElementDescInput" class="required">Description</label>
+                    <textarea id="kling30ElementDescInput" rows="3" placeholder="Element: describe this character, object, or environment">Element: </textarea>
                   </div>
                   <div class="upload-drop-card upload-drop-card-wide kling30-elements-box">
                     <input id="kling30ElementsInput" type="file" accept="image/*" class="hidden" multiple />
                     <button id="kling30ElementsBtn" class="upload-drop-btn" type="button">
-                      <span class="upload-plus">📎</span><span id="kling30ElementsBtnLabel">Ավելացնել տարրի պատկերներ</span>
-                      <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+                      <span class="upload-plus">📎</span><span id="kling30ElementsBtnLabel">Add element images</span>
+                      <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
                     </button>
                     <div id="kling30ElementsThumbs" class="upload-thumb-zone upload-thumb-list"></div>
                   </div>
-                  <p id="kling30ElementHelp" class="kling30-panel-note">Պատկերային տարրի համար անհրաժեշտ է 2–4 պատկեր։ Պատկերներ ավելացնելու դեպքում անունն ու նկարագրությունը պարտադիր են։</p>
+                  <p id="kling30ElementHelp" class="kling30-panel-note">Image element requires 2–4 images. Name and description are required when images are added.</p>
                   <p id="kling30ElementError" class="hidden text-[10px] text-rose-300 mt-2"></p>
                   <div class="kling30-drawer-actions">
-                    <button id="kling30DoneElementsBtn" type="button">Պատրաստ է</button>
+                    <button id="kling30DoneElementsBtn" type="button">Done</button>
                   </div>
                 </div>
               </div>
@@ -4598,117 +4630,152 @@
           <!-- New KIE video models: Wan 2.7 / HappyHorse / Grok -->
           <div id="videoRefsUploadWrap" class="hidden flex-col gap-3 model-upload-grid">
             <div id="videoFramesSection" class="upload-section-card upload-section-wide">
-              <div class="upload-section-head"><span class="upload-section-icon">🎬</span><div><p>Կադրեր</p><small>Առաջին և վերջին կադրերը կիրառվում են միասին</small></div></div>
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🎬</span>
+                <div>
+                  <p>Frames</p>
+                  <small>First and last frame stay together</small>
+                </div>
+              </div>
               <div class="frame-pair-grid">
               <div id="videoFirstFrameControl" class="upload-drop-card">
               <input id="videoFirstFrameInput" type="file" accept="image/*" class="hidden" />
               <button id="videoFirstFrameBtn" class="upload-drop-btn" type="button">
-              <span class="upload-plus">➕</span><span>Վերբեռնել պատկեր</span>
-              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+              <span class="upload-plus">➕</span><span>Upload image</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
               </button>
               <div id="videoFirstFrameThumb" class="upload-thumb-zone"></div>
               </div>
               <div id="videoLastFrameControl" class="upload-drop-card">
               <input id="videoLastFrameInput" type="file" accept="image/*" class="hidden" />
               <button id="videoLastFrameBtn" class="upload-drop-btn" type="button">
-              <span class="upload-plus">➕</span><span>Վերբեռնել պատկեր</span>
-              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+              <span class="upload-plus">➕</span><span>Upload image</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
               </button>
               <div id="videoLastFrameThumb" class="upload-thumb-zone"></div>
               </div>
               </div>
             </div>
+
             <div id="videoImageReferencesSection" class="upload-section-card upload-section-wide">
-              <div class="upload-section-head"><span class="upload-section-icon">🖼️</span><div><p>Պատկերի հղումներ</p><small>Միայն պատկերների համար</small></div></div>
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🖼️</span>
+                <div>
+                  <p>Image references</p>
+                  <small>Image-only reference box</small>
+                </div>
+              </div>
               <div id="videoRefImagesControl" class="upload-drop-card">
               <input id="videoRefImagesInput" type="file" accept="image/*" class="hidden" multiple />
               <button id="videoRefImagesBtn" class="upload-drop-btn" type="button">
-              <span class="upload-plus">📎</span><span id="videoRefImagesLabel">Վերբեռնել պատկերներ</span>
-              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+              <span class="upload-plus">📎</span><span id="videoRefImagesLabel">Image refs</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
               </button>
               <div id="videoRefImagesThumbs" class="upload-thumb-zone upload-thumb-list"></div>
               </div>
             </div>
+
             <div id="videoVideoReferencesSection" class="upload-section-card upload-section-wide">
-              <div class="upload-section-head"><span class="upload-section-icon">🎞️</span><div><p>Տեսանյութի հղումներ</p><small>Միայն տեսանյութերի համար</small></div></div>
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🎞️</span>
+                <div>
+                  <p>Video references</p>
+                  <small>Video-only reference box</small>
+                </div>
+              </div>
               <div class="video-reference-stack">
               <div id="videoSourceControl" class="upload-drop-card">
               <input id="videoSourceInput" type="file" accept="video/*" class="hidden" />
               <button id="videoSourceBtn" class="upload-drop-btn" type="button">
-              <span class="upload-plus">📎</span><span>Վերբեռնել տեսանյութ</span>
-              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+              <span class="upload-plus">📎</span><span>Upload video</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
               </button>
               <div id="videoSourceThumb" class="upload-thumb-zone"></div>
               </div>
               <div id="videoRefVideosControl" class="upload-drop-card">
               <input id="videoRefVideosInput" type="file" accept="video/*" class="hidden" multiple />
               <button id="videoRefVideosBtn" class="upload-drop-btn" type="button">
-              <span class="upload-plus">📎</span><span>Վերբեռնել տեսանյութեր</span>
-              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+              <span class="upload-plus">📎</span><span>Upload videos</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
               </button>
               <div id="videoRefVideosThumbs" class="upload-thumb-zone upload-thumb-list"></div>
               </div>
               </div>
             </div>
+
             <div id="videoAudioReferencesSection" class="upload-section-card upload-section-wide">
-              <div class="upload-section-head"><span class="upload-section-icon">🔊</span><div><p>Ձայնային հղումներ</p><small>Միայն ձայնի համար</small></div></div>
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🔊</span>
+                <div>
+                  <p>Audio references</p>
+                  <small>Audio-only reference box</small>
+                </div>
+              </div>
               <div id="videoRefAudioControl" class="upload-drop-card">
               <input id="videoRefAudioInput" type="file" accept="audio/*" class="hidden" multiple />
               <button id="videoRefAudioBtn" class="upload-drop-btn" type="button">
-              <span class="upload-plus">📎</span><span>Վերբեռնել աուդիո</span>
-              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+              <span class="upload-plus">📎</span><span>Upload audio</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
               </button>
               <div id="videoRefAudioThumbs" class="upload-thumb-zone upload-thumb-list"></div>
               </div>
             </div>
+
             <div id="geminiVoiceSection" class="upload-section-card upload-section-wide">
-              <div class="upload-section-head"><span class="upload-section-icon">🎙️</span><div><p>Ձայն</p><small>Ընտրովի ձայնային հղում</small></div></div>
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🎙️</span>
+                <div>
+                  <p>Voice</p>
+                  <small>Optional voice reference</small>
+                </div>
+              </div>
               <div id="geminiAudioIdsControl" class="hidden mt-3">
-              <label for="geminiVoiceButton" class="block text-[11px] font-semibold text-white/70 mb-2">Ձայն</label>
+              <label for="geminiVoiceButton" class="block text-[11px] font-semibold text-white/70 mb-2">Voice</label>
               <div class="gemini-voice-picker">
               <button id="geminiVoiceButton" type="button" aria-haspopup="listbox" aria-expanded="false">
-              <span id="geminiVoiceLabel">Ձայնային հղում չկա</span>
+              <span id="geminiVoiceLabel">No voice reference</span>
               <span aria-hidden="true">▾</span>
               </button>
-              <div id="geminiVoiceMenu" class="hidden" role="listbox" aria-label="Ձայն">
-              <button type="button" data-voice="" data-label="Ձայնային հղում չկա" class="is-selected">Ձայնային հղում չկա <small>լռելյայն</small></button>
-              <button type="button" data-voice="achernar" data-label="Achernar - իգական, մեղմ, բարձր տոնայնություն">Achernar <small>իգական, մեղմ, բարձր տոնայնություն</small></button>
-              <button type="button" data-voice="achird" data-label="Achird - արական, ընկերական, միջին տոնայնություն">Achird <small>արական, ընկերական, միջին տոնայնություն</small></button>
-              <button type="button" data-voice="algenib" data-label="Algenib - արական, խռպոտ, ցածր տոնայնություն">Algenib <small>արական, խռպոտ, ցածր տոնայնություն</small></button>
-              <button type="button" data-voice="algieba" data-label="Algieba - արական, հանգիստ, միջինից ցածր տոնայնություն">Algieba <small>արական, հանգիստ, միջինից ցածր տոնայնություն</small></button>
-              <button type="button" data-voice="alnilam" data-label="Alnilam - արական, կայուն, միջինից ցածր տոնայնություն">Alnilam <small>արական, կայուն, միջինից ցածր տոնայնություն</small></button>
-              <button type="button" data-voice="aoede" data-label="Aoede - իգական, աշխույժ, միջին տոնայնություն">Aoede <small>իգական, աշխույժ, միջին տոնայնություն</small></button>
-              <button type="button" data-voice="autonoe" data-label="Autonoe - իգական, պայծառ, միջին տոնայնություն">Autonoe <small>իգական, պայծառ, միջին տոնայնություն</small></button>
-              <button type="button" data-voice="callirrhoe" data-label="Callirrhoe - իգական, հանգիստ, միջին տոնայնություն">Callirrhoe <small>իգական, հանգիստ, միջին տոնայնություն</small></button>
-              <button type="button" data-voice="charon" data-label="Charon - արական, խոհուն, ցածր տոնայնություն">Charon <small>արական, խոհուն, ցածր տոնայնություն</small></button>
-              <button type="button" data-voice="despina" data-label="Despina - իգական, սահուն, միջին տոնայնություն">Despina <small>իգական, սահուն, միջին տոնայնություն</small></button>
-              <button type="button" data-voice="enceladus" data-label="Enceladus - արական, շնչային, ցածր տոնայնություն">Enceladus <small>արական, շնչային, ցածր տոնայնություն</small></button>
-              <button type="button" data-voice="erinome" data-label="Erinome - իգական, հստակ, միջին տոնայնություն">Erinome <small>իգական, հստակ, միջին տոնայնություն</small></button>
-              <button type="button" data-voice="fenrir" data-label="Fenrir - արական, աշխույժ, երիտասարդ տոնայնություն">Fenrir <small>արական, աշխույժ, երիտասարդ տոնայնություն</small></button>
-              <button type="button" data-voice="gacrux" data-label="Gacrux - իգական, հասուն, միջին տոնայնություն">Gacrux <small>իգական, հասուն, միջին տոնայնություն</small></button>
-              <button type="button" data-voice="iapetus" data-label="Iapetus - արական, հստակ, միջինից ցածր տոնայնություն">Iapetus <small>արական, հստակ, միջինից ցածր տոնայնություն</small></button>
-              <button type="button" data-voice="kore" data-label="Kore - իգական, վստահ, միջին տոնայնություն">Kore <small>իգական, վստահ, միջին տոնայնություն</small></button>
-              <button type="button" data-voice="laomedeia" data-label="Laomedeia - իգական, ուրախ, միջինից բարձր տոնայնություն">Laomedeia <small>իգական, ուրախ, միջինից բարձր տոնայնություն</small></button>
-              <button type="button" data-voice="leda" data-label="Leda - իգական, երիտասարդ, միջինից բարձր տոնայնություն">Leda <small>իգական, երիտասարդ, միջինից բարձր տոնայնություն</small></button>
-              <button type="button" data-voice="orus" data-label="Orus - արական, կայուն, միջինից ցածր տոնայնություն">Orus <small>արական, կայուն, միջինից ցածր տոնայնություն</small></button>
-              <button type="button" data-voice="puck" data-label="Puck - արական, ուրախ, միջին տոնայնություն">Puck <small>արական, ուրախ, միջին տոնայնություն</small></button>
-              <button type="button" data-voice="pulcherrima" data-label="Pulcherrima - չեզոք, արտահայտիչ, միջինից բարձր տոնայնություն">Pulcherrima <small>չեզոք, արտահայտիչ, միջինից բարձր տոնայնություն</small></button>
-              <button type="button" data-voice="rasalgethi" data-label="Rasalgethi - արական, խոհուն, միջին տոնայնություն">Rasalgethi <small>արական, խոհուն, միջին տոնայնություն</small></button>
-              <button type="button" data-voice="sadachbia" data-label="Sadachbia - արական, վառ, ցածր տոնայնություն">Sadachbia <small>արական, վառ, ցածր տոնայնություն</small></button>
-              <button type="button" data-voice="sadaltager" data-label="Sadaltager - արական, բանիմաց, միջին տոնայնություն">Sadaltager <small>արական, բանիմաց, միջին տոնայնություն</small></button>
-              <button type="button" data-voice="schedar" data-label="Schedar - արական, սահուն, միջինից ցածր տոնայնություն">Schedar <small>արական, սահուն, միջինից ցածր տոնայնություն</small></button>
-              <button type="button" data-voice="sulafat" data-label="Sulafat - իգական, ջերմ, միջին տոնայնություն">Sulafat <small>իգական, ջերմ, միջին տոնայնություն</small></button>
-              <button type="button" data-voice="umbriel" data-label="Umbriel - արական, սահուն, ցածր տոնայնություն">Umbriel <small>արական, սահուն, ցածր տոնայնություն</small></button>
-              <button type="button" data-voice="vindemiatrix" data-label="Vindemiatrix - իգական, նուրբ, միջին տոնայնություն">Vindemiatrix <small>իգական, նուրբ, միջին տոնայնություն</small></button>
-              <button type="button" data-voice="zephyr" data-label="Zephyr - իգական, պայծառ, միջինից բարձր տոնայնություն">Zephyr <small>իգական, պայծառ, միջինից բարձր տոնայնություն</small></button>
-              <button type="button" data-voice="zubenelgenubi" data-label="Zubenelgenubi - արական, անկաշկանդ, միջինից ցածր տոնայնություն">Zubenelgenubi <small>արական, անկաշկանդ, միջինից ցածր տոնայնություն</small></button>
+              <div id="geminiVoiceMenu" class="hidden" role="listbox" aria-label="Voice">
+              <button type="button" data-voice="" data-label="No voice reference" class="is-selected">No voice reference <small>default</small></button>
+              <button type="button" data-voice="achernar" data-label="Achernar - female, soft, high pitch">Achernar <small>female, soft, high pitch</small></button>
+              <button type="button" data-voice="achird" data-label="Achird - male, friendly, mid pitch">Achird <small>male, friendly, mid pitch</small></button>
+              <button type="button" data-voice="algenib" data-label="Algenib - male, raspy, low pitch">Algenib <small>male, raspy, low pitch</small></button>
+              <button type="button" data-voice="algieba" data-label="Algieba - male, easygoing, mid-low pitch">Algieba <small>male, easygoing, mid-low pitch</small></button>
+              <button type="button" data-voice="alnilam" data-label="Alnilam - male, steady, mid-low pitch">Alnilam <small>male, steady, mid-low pitch</small></button>
+              <button type="button" data-voice="aoede" data-label="Aoede - female, brisk, mid pitch">Aoede <small>female, brisk, mid pitch</small></button>
+              <button type="button" data-voice="autonoe" data-label="Autonoe - female, bright, mid pitch">Autonoe <small>female, bright, mid pitch</small></button>
+              <button type="button" data-voice="callirrhoe" data-label="Callirrhoe - female, easygoing, mid pitch">Callirrhoe <small>female, easygoing, mid pitch</small></button>
+              <button type="button" data-voice="charon" data-label="Charon - male, intellectual, low pitch">Charon <small>male, intellectual, low pitch</small></button>
+              <button type="button" data-voice="despina" data-label="Despina - female, smooth, mid pitch">Despina <small>female, smooth, mid pitch</small></button>
+              <button type="button" data-voice="enceladus" data-label="Enceladus - male, breathy, low pitch">Enceladus <small>male, breathy, low pitch</small></button>
+              <button type="button" data-voice="erinome" data-label="Erinome - female, clear, mid pitch">Erinome <small>female, clear, mid pitch</small></button>
+              <button type="button" data-voice="fenrir" data-label="Fenrir - male, lively, younger pitch">Fenrir <small>male, lively, younger pitch</small></button>
+              <button type="button" data-voice="gacrux" data-label="Gacrux - female, mature, mid pitch">Gacrux <small>female, mature, mid pitch</small></button>
+              <button type="button" data-voice="iapetus" data-label="Iapetus - male, clear, mid-low pitch">Iapetus <small>male, clear, mid-low pitch</small></button>
+              <button type="button" data-voice="kore" data-label="Kore - female, capable, mid pitch">Kore <small>female, capable, mid pitch</small></button>
+              <button type="button" data-voice="laomedeia" data-label="Laomedeia - female, cheerful, mid-high pitch">Laomedeia <small>female, cheerful, mid-high pitch</small></button>
+              <button type="button" data-voice="leda" data-label="Leda - female, young, mid-high pitch">Leda <small>female, young, mid-high pitch</small></button>
+              <button type="button" data-voice="orus" data-label="Orus - male, steady, mid-low pitch">Orus <small>male, steady, mid-low pitch</small></button>
+              <button type="button" data-voice="puck" data-label="Puck - male, cheerful, mid pitch">Puck <small>male, cheerful, mid pitch</small></button>
+              <button type="button" data-voice="pulcherrima" data-label="Pulcherrima - genderless, forward, mid-high pitch">Pulcherrima <small>genderless, forward, mid-high pitch</small></button>
+              <button type="button" data-voice="rasalgethi" data-label="Rasalgethi - male, intellectual, mid pitch">Rasalgethi <small>male, intellectual, mid pitch</small></button>
+              <button type="button" data-voice="sadachbia" data-label="Sadachbia - male, vivid, low pitch">Sadachbia <small>male, vivid, low pitch</small></button>
+              <button type="button" data-voice="sadaltager" data-label="Sadaltager - male, knowledgeable, mid pitch">Sadaltager <small>male, knowledgeable, mid pitch</small></button>
+              <button type="button" data-voice="schedar" data-label="Schedar - male, smooth, mid-low pitch">Schedar <small>male, smooth, mid-low pitch</small></button>
+              <button type="button" data-voice="sulafat" data-label="Sulafat - female, warm, mid pitch">Sulafat <small>female, warm, mid pitch</small></button>
+              <button type="button" data-voice="umbriel" data-label="Umbriel - male, smooth, low pitch">Umbriel <small>male, smooth, low pitch</small></button>
+              <button type="button" data-voice="vindemiatrix" data-label="Vindemiatrix - female, gentle, mid pitch">Vindemiatrix <small>female, gentle, mid pitch</small></button>
+              <button type="button" data-voice="zephyr" data-label="Zephyr - female, bright, mid-high pitch">Zephyr <small>female, bright, mid-high pitch</small></button>
+              <button type="button" data-voice="zubenelgenubi" data-label="Zubenelgenubi - male, casual, mid-low pitch">Zubenelgenubi <small>male, casual, mid-low pitch</small></button>
               </div>
               </div>
               </div>
             </div>
+
             <div id="wanPromptExtendSection" class="upload-section-card upload-toggle-card upload-section-wide">
               <div id="wanPromptExtendControl" class="flex items-center gap-2 mt-3 text-[11px] text-white/70">
-              <button id="wanPromptExtendToggle" type="button" class="chip chip-active px-3 py-1">Prompt-ի ընդլայնումը միացված է</button>
+              <button id="wanPromptExtendToggle" type="button" class="chip chip-active px-3 py-1">Prompt extend on</button>
               </div>
             </div>
           </div>
@@ -4731,14 +4798,14 @@
               class="unlimited-run-btn hidden items-center justify-center rounded-full px-5 py-2 text-xs sm:text-sm font-black whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
               type="button"
             >
-              <span class="run-unlimited-label"><span class="subscription-infinity" aria-hidden="true">∞</span><span>Անսահմանափակ</span></span>
+              <span class="run-unlimited-label"><span class="subscription-infinity" aria-hidden="true">∞</span><span>Unlimited</span></span>
             </button>
             <button
               id="runBtn"
               class="credit-run-btn inline-flex items-center justify-center rounded-full px-5 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
               type="button"
             >
-              Գեներացնել
+              Run
             </button>
           </div>
 
@@ -4746,16 +4813,16 @@
           <div class="w-full flex justify-end">
             <div class="flex items-center gap-3">
               <div id="veoQualityBlock" class="flex items-center gap-1.5 hidden">
-                <span id="veoQualityLabel" class="control-label">Որակ</span>
+                <span id="veoQualityLabel" class="control-label">Quality</span>
                 <div id="veoQualityPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
               </div>
 
               <div id="quantityBlock" class="model-quantity-block">
-                <span class="model-quantity-label">Քանակ</span>
-                <div class="model-quantity-picker" role="group" aria-label="Գեներացումների քանակ">
-                  <button id="quantityMinusBtn" type="button" aria-label="Նվազեցնել քանակը">−</button>
+                <span class="model-quantity-label">Quantity</span>
+                <div class="model-quantity-picker" role="group" aria-label="Generation quantity">
+                  <button id="quantityMinusBtn" type="button" aria-label="Decrease quantity">−</button>
                   <output id="generationQuantityValue" aria-live="polite">1</output>
-                  <button id="quantityPlusBtn" type="button" aria-label="Ավելացնել քանակը">+</button>
+                  <button id="quantityPlusBtn" type="button" aria-label="Increase quantity">+</button>
                 </div>
               </div>
 
@@ -4765,7 +4832,7 @@
               </div>
 
               <div id="klingSoundBlock" class="flex items-center gap-1.5 hidden">
-                <span class="text-white/50">Ձայն</span>
+                <span class="text-white/50">Sound</span>
                 <div id="klingSoundPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
               </div>
 
@@ -4773,8 +4840,8 @@
                 <details class="duration-menu">
                   <summary>
                     <span class="duration-clock">⏱</span>
-                    <span class="duration-title">Տևողություն</span>
-                    <span id="durationCurrentLabel" class="duration-current">Ընտրել</span>
+                    <span class="duration-title">Duration</span>
+                    <span id="durationCurrentLabel" class="duration-current">Choose</span>
                     <span class="duration-chev">▾</span>
                   </summary>
                   <div id="durationPills" class="duration-scroll-pills"></div>
@@ -4782,12 +4849,12 @@
               </div>
 
               <div id="resolutionBlock" class="flex items-center gap-1.5 hidden">
-                <span class="text-white/50">Որակ</span>
+                <span class="text-white/50">Res</span>
                 <div id="resolutionPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
               </div>
 
               <div id="aspectBlock" class="flex items-center gap-1.5 hidden">
-                <span class="text-white/50">Չափս</span>
+                <span class="text-white/50">AR</span>
                 <div id="aspectPills" class="flex rounded-full bg-slate-950/70 border border-white/15 overflow-hidden"></div>
               </div>
             </div>
@@ -4805,8 +4872,8 @@
     <div class="absolute left-1/2 top-1/2 translate-x-[-50%] translate-y-[-50%] w-[92vw] max-w-[420px] rounded-3xl border border-white/10 bg-slate-950/80 backdrop-blur-xl shadow-2xl overflow-hidden max-h-[80vh]">
       <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div class="flex flex-col">
-          <span class="text-xs font-semibold text-white/80">ՊԱՏԿԵՐԻ / ՏԵՍԱՆՅՈՒԹԻ ՄՈԴԵԼՆԵՐ</span>
-          <span class="text-[11px] text-white/50">Ընտրեք ձեր գաղափարին համապատասխան մոդելը։</span>
+          <span class="text-xs font-semibold text-white/80">IMAGE / VIDEO MODELS</span>
+          <span class="text-[11px] text-white/50">Choose a model that fits your idea.</span>
         </div>
         <button id="closeOverlay" class="text-white/60 hover:text-white text-lg">&times;</button>
       </div>
@@ -4814,7 +4881,7 @@
         <input
           id="overlayModelSearch"
           type="text"
-          placeholder="Որոնել Nano Banana, GPT-Image, Veo, Kling…"
+          placeholder="Search Nano Banana, GPT-Image, Veo, Kling…"
           class="w-full rounded-full bg-slate-900 border border-white/15 px-3 py-2 text-xs outline-none placeholder:text-white/40"
         />
       </div>
@@ -4831,16 +4898,16 @@
     <section id="heroSection" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-10 text-center">
       <div class="workspace-board">
         <div class="workspace-toolbar">
-          <div id="modelRail" class="model-rail" aria-label="Մոդելի ընտրություն"></div>
-          <input id="workspaceModelSearch" class="workspace-search" type="search" placeholder="Որոնել մոդելներ" />
+          <div id="modelRail" class="model-rail" aria-label="Model chooser"></div>
+          <input id="workspaceModelSearch" class="workspace-search" type="search" placeholder="Search models" />
         </div>
       </div>
     </section>
 
     <section id="resultsSection" class="hidden mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-36">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm pt-8 font-semibold text-white/80">Վերջին 15 գեներացումները</h2>
-        <a href="usage.html" class="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/[.045] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/70 hover:bg-white/10 hover:text-white">Տեսնել բոլորը</a>
+        <h2 class="text-sm pt-8 font-semibold text-white/80">Recent 15 generations</h2>
+        <a href="usage.html" class="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/[.045] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/70 hover:bg-white/10 hover:text-white">See all</a>
       </div>
       <div id="resultsStrip" class="flex gap-3 overflow-x-auto pb-2"></div>
     </section>
@@ -4852,12 +4919,12 @@
 	  <div id="geminiOmniTrimOverlay" aria-hidden="true">
 	    <div class="gemini-trim-card" role="dialog" aria-modal="true" aria-labelledby="geminiTrimTitle">
 	      <div class="gemini-trim-head">
-	        <h3 id="geminiTrimTitle">Ընտրեք տեսանյութի հատվածը</h3>
-	        <p id="geminiTrimSubtitle">Ընտրեք խմբագրման համար 10 վայրկյան</p>
+	        <h3 id="geminiTrimTitle">Choose Video Part</h3>
+	        <p id="geminiTrimSubtitle">Select the 10 seconds to edit</p>
 	      </div>
 	      <div class="gemini-trim-video-wrap"><video id="geminiTrimVideo" controls playsinline preload="metadata"></video></div>
 	      <div class="gemini-trim-controls">
-	        <div id="geminiTrimStrip" class="gemini-trim-strip" aria-label="Ընտրել տեսանյութի հատվածը">
+	        <div id="geminiTrimStrip" class="gemini-trim-strip" aria-label="Choose video segment">
 	          <div id="geminiTrimFilm" class="gemini-trim-film" aria-hidden="true"></div>
 	          <div id="geminiTrimSelection" class="gemini-trim-selection">
 	            <span id="geminiTrimStartHandle" class="gemini-trim-handle left" aria-hidden="true"></span>
@@ -4867,12 +4934,12 @@
 	        </div>
 	        <div class="gemini-trim-meta">
 	          <span id="geminiTrimRangeLabel">0.0s -> 10.0s</span>
-	          <span id="geminiTrimMaxLabel">10 վրկ․ տեսանյութից</span>
+	          <span id="geminiTrimMaxLabel">10s from video</span>
 	        </div>
 	      </div>
 	      <div class="gemini-trim-actions">
-	        <button id="geminiTrimCancel" type="button">Չեղարկել</button>
-	        <button id="geminiTrimConfirm" type="button">Հաստատել</button>
+	        <button id="geminiTrimCancel" type="button">Cancel</button>
+	        <button id="geminiTrimConfirm" type="button">Confirm</button>
 	      </div>
 	    </div>
 	  </div>
@@ -4949,7 +5016,7 @@ async function __mjFetchNbCheck(params){
   }
   overlay.innerHTML = `
     <div class="preview-card">
-      <button type="button" class="preview-close" aria-label="Փակել նախադիտումը">&times;</button>
+      <button type="button" class="preview-close" aria-label="Close preview">&times;</button>
       <div class="preview-media" id="previewMedia"></div>
       <aside class="preview-info-panel">
         <div class="preview-author-row">
@@ -4957,24 +5024,24 @@ async function __mjFetchNbCheck(params){
             <div class="preview-author-avatar" aria-hidden="true"></div>
             <div>
               <strong id="previewProvider">Hansora AI</strong>
-              <span id="previewKindLabel">Գեներացում</span>
+              <span id="previewKindLabel">Generation</span>
             </div>
           </div>
         </div>
         <section id="previewPromptSection" class="preview-section">
           <div class="preview-section-head">
             <span>Prompt</span>
-            <button id="previewCopyPrompt" type="button" class="preview-copy-btn">Պատճենել</button>
+            <button id="previewCopyPrompt" type="button" class="preview-copy-btn">Copy</button>
           </div>
           <div id="previewPromptText" class="preview-prompt-text"></div>
         </section>
         <section id="previewDetailsSection" class="preview-section">
-          <div class="preview-section-head"><span>Մանրամասներ</span></div>
+          <div class="preview-section-head"><span>Details</span></div>
           <div class="preview-details">
-            <div class="preview-detail-row"><span>Մոդել</span><strong id="previewModelDetail">Մոդել</strong></div>
-            <div class="preview-detail-row"><span>Տեսակ</span><strong id="previewTypeDetail">Պատկեր</strong></div>
-            <div class="preview-detail-row"><span>Որակ</span><strong id="previewQualityDetail">-</strong></div>
-            <div class="preview-detail-row"><span>Ստեղծվել է</span><strong id="previewCreatedDetail">-</strong></div>
+            <div class="preview-detail-row"><span>Model</span><strong id="previewModelDetail">Model</strong></div>
+            <div class="preview-detail-row"><span>Type</span><strong id="previewTypeDetail">Image</strong></div>
+            <div class="preview-detail-row"><span>Quality</span><strong id="previewQualityDetail">-</strong></div>
+            <div class="preview-detail-row"><span>Created</span><strong id="previewCreatedDetail">-</strong></div>
           </div>
         </section>
         <div id="previewActionStatus" class="preview-action-status"></div>
@@ -5048,8 +5115,8 @@ async function __mjFetchNbCheck(params){
     actionsHost.innerHTML = '';
     const isVideo = String(data.kind || '').toLowerCase() === 'video';
     if (!isVideo) actionsHost.appendChild(button('Create Video', 'create-video', true));
-    actionsHost.appendChild(button('Վերստեղծել', 'recreate', false));
-    actionsHost.appendChild(button('Ներբեռնել', 'download', false));
+    actionsHost.appendChild(button('Recreate', 'recreate', false));
+    actionsHost.appendChild(button('Download', 'download', false));
   }
 
   function open(url, kind, data){
@@ -5078,13 +5145,13 @@ async function __mjFetchNbCheck(params){
     const provider = currentPreview.provider || currentPreview.model || 'Hansora AI';
     const prompt = String(currentPreview.prompt || '').trim();
     overlay.querySelector('#previewProvider').textContent = provider;
-    overlay.querySelector('#previewKindLabel').textContent = k === 'video' ? 'Տեսանյութի գեներացում' : 'Պատկերի գեներացում';
+    overlay.querySelector('#previewKindLabel').textContent = k === 'video' ? 'Video generation' : 'Image generation';
     overlay.querySelector('#previewModelDetail').textContent = provider;
-    overlay.querySelector('#previewTypeDetail').textContent = k === 'video' ? 'Տեսանյութ' : 'Պատկեր';
+    overlay.querySelector('#previewTypeDetail').textContent = k === 'video' ? 'Video' : 'Image';
     overlay.querySelector('#previewQualityDetail').textContent = getPreviewQuality(currentPreview);
     overlay.querySelector('#previewCreatedDetail').textContent = previewCreatedLabel(currentPreview.created_at);
     if (promptSection) promptSection.style.display = '';
-    if (promptText) promptText.textContent = prompt || 'Այս գեներացման համար prompt չի պահպանվել։';
+    if (promptText) promptText.textContent = prompt || 'No prompt saved for this generation.';
     renderActions(currentPreview);
     setPreviewStatus('', '');
     document.body.classList.add('preview-open');
@@ -5368,8 +5435,8 @@ async function __mjFetchNbCheck(params){
           <div class="empty-placeholder">
             <div class="inner">
               <div class="icon">H</div>
-              <div style="font-weight:700; margin-bottom:6px;">Դեռ գեներացումներ չկան</div>
-              <div style="font-size:12px; line-height:1.35;">Ձեր վերջին 10 արդյունքներն այստեղ կհայտնվեն առաջին գեներացումից հետո։</div>
+              <div style="font-weight:700; margin-bottom:6px;">No generations yet</div>
+              <div style="font-size:12px; line-height:1.35;">Your last 10 results will appear here after you run your first job.</div>
             </div>
           </div>
         `;
@@ -5418,18 +5485,18 @@ async function __mjFetchNbCheck(params){
       if (isQueuedResultStatus(status)) {
         return {
           stage: 'queued',
-          label: 'Հերթում'
+          label: 'In Queue'
         };
       }
       if (isRequestingResultStatus(status)) {
         return {
           stage: 'requesting',
-          label: 'Հարցումը մշակվում է…'
+          label: 'Processing request…'
         };
       }
       return {
         stage: 'generating',
-        label: 'Գեներացվում է'
+        label: 'Generating'
       };
     }
 
@@ -5465,8 +5532,8 @@ async function __mjFetchNbCheck(params){
         <path d="m15.5 8.5-7 7"></path>
       </svg>
     </div>
-    <div class="result-failed-title">Չհաջողվեց</div>
-    <div class="result-failed-copy">Գեներացումը ձախողվեց</div>
+    <div class="result-failed-title">Failed</div>
+    <div class="result-failed-copy">Generation wasn’t completed</div>
   `;
       return failedState;
     }
@@ -5570,7 +5637,7 @@ async function __mjFetchNbCheck(params){
 
     function createResultThumb(data) {
       if (!shouldShowResultGeneration(data)) return null;
-      const provider = data.provider || 'Մոդել';
+      const provider = data.provider || 'Model';
       const kind = (data.kind || 'image').toLowerCase();
       const prompt = (data.prompt || '').toString();
       const statusRaw = (data.status || '').toString();
@@ -5662,10 +5729,10 @@ async function __mjFetchNbCheck(params){
       const isFailed = initialFailed;
       const isReady = initialReady;
       if (isFailed) {
-        state.textContent = 'Չհաջողվեց';
+        state.textContent = 'Failed';
         state.classList.add('failed');
       } else if (isReady) {
-        state.textContent = 'Պատրաստ է';
+        state.textContent = 'Ready';
         state.classList.add('ready');
       } else {
         state.textContent = '…';
@@ -5674,9 +5741,9 @@ async function __mjFetchNbCheck(params){
       const getBtn = document.createElement('button');
       getBtn.type = 'button';
       getBtn.className = 'thumb-get';
-      getBtn.textContent = 'Ստանալ';
-      getBtn.title = 'Ներբեռնել';
-      getBtn.setAttribute('aria-label', 'Ներբեռնել');
+      getBtn.textContent = 'Get';
+      getBtn.title = 'Download';
+      getBtn.setAttribute('aria-label', 'Download');
       if (!isReady || isFailed) getBtn.classList.add('hidden');
 
       // download helper (best-effort; fallback to opening)
@@ -5737,13 +5804,13 @@ async function __mjFetchNbCheck(params){
           // update state chip
           state.classList.remove('failed', 'processing', 'ready');
           if (failed) {
-            state.textContent = 'Չհաջողվեց';
+            state.textContent = 'Failed';
             state.classList.add('failed');
           } else if (ready) {
-            state.textContent = 'Պատրաստ է';
+            state.textContent = 'Ready';
             state.classList.add('ready');
           } else {
-            state.textContent = isQueuedResultStatus(nextStatusRaw) ? 'Հերթում' : (isRequestingResultStatus(nextStatusRaw) ? 'Հարցումը մշակվում է…' : 'Գեներացվում է');
+            state.textContent = isQueuedResultStatus(nextStatusRaw) ? 'In Queue' : (isRequestingResultStatus(nextStatusRaw) ? 'Processing request…' : 'Generating');
             state.classList.add('processing');
           }
 
@@ -5868,7 +5935,7 @@ async function __mjFetchNbCheck(params){
 
 function createResultCard(data) {
       if (!shouldShowResultGeneration(data)) return null;
-      const provider = data.provider || 'Մոդել';
+      const provider = data.provider || 'Model';
       const kind = (data.kind || 'image').toLowerCase();
       const prompt = data.prompt || '';
       const statusRaw = (data.status || '').toString();
@@ -5939,7 +6006,7 @@ function createResultCard(data) {
       if (kind === 'video') {
         const previewButton = document.createElement('button');
         previewButton.type = 'button';
-        previewButton.textContent = 'Բացել նախադիտումը';
+        previewButton.textContent = 'Open preview';
         previewButton.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -5949,7 +6016,7 @@ function createResultCard(data) {
         previewHover.appendChild(previewButton);
       } else {
         const previewLabel = document.createElement('span');
-        previewLabel.textContent = 'Բացել նախադիտումը';
+        previewLabel.textContent = 'Open preview';
         previewHover.appendChild(previewLabel);
       }
       media.appendChild(previewHover);
@@ -5980,8 +6047,8 @@ function createResultCard(data) {
       const cardActions = document.createElement('div');
       cardActions.className = 'result-shortcuts';
       const createVideoBtn = createResultShortcutButton('create-video', 'Create video');
-      const recreateBtn = createResultShortcutButton('recreate', 'Վերստեղծել');
-      const downloadBtn = createResultShortcutButton('download', 'Ներբեռնել');
+      const recreateBtn = createResultShortcutButton('recreate', 'Recreate');
+      const downloadBtn = createResultShortcutButton('download', 'Download');
       downloadBtn.classList.add('hidden');
       createVideoBtn.classList.add('hidden');
       createVideoBtn.addEventListener('click', (event) => {
@@ -6051,7 +6118,7 @@ function createResultCard(data) {
         }
         createVideoBtn.classList.toggle('hidden', kind !== 'image' || !readyNow || failedNow);
 
-        let label = isQueuedResultStatus(stRaw) ? 'Հերթում' : (isRequestingResultStatus(stRaw) ? 'Հարցումը մշակվում է…' : 'Գեներացվում է…');
+        let label = isQueuedResultStatus(stRaw) ? 'In Queue' : (isRequestingResultStatus(stRaw) ? 'Processing request…' : 'Generating…');
         let pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-black/70 text-white/80';
         let statusClass = 'text-[10px] text-indigo-200/80';
 
@@ -6061,11 +6128,11 @@ function createResultCard(data) {
         }
 
         if (failedNow) {
-          label = 'Չհաջողվեց';
+          label = 'Failed';
           pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-red-500/85 text-white';
           statusClass = 'text-[10px] text-red-300';
         } else if (readyNow) {
-          label = 'Պատրաստ է';
+          label = 'Ready';
           pillClass = 'absolute left-2 top-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/85 text-white';
           statusClass = 'text-[10px] text-emerald-300';
         }
@@ -6206,7 +6273,7 @@ function createResultCard(data) {
       const runId = String(data.runId || createClientRunId(data.uid || 'run'));
       const built = addResultCard({
         run_id: runId,
-        provider: model.name || 'Մոդել',
+        provider: model.name || 'Model',
         kind: model.category || 'image',
         prompt: data.prompt || '',
         result_url: null,
@@ -6326,8 +6393,8 @@ function createResultCard(data) {
 
     function queuedStartCopy(eligibleAt) {
       const time = Date.parse(eligibleAt || '');
-      if (!Number.isFinite(time) || time <= Date.now() + 5000) return 'Անսահմանափակ գեներացումը հերթում է և շուտով կսկսվի։';
-      return `Անսահմանափակ գեներացումը հերթում է։ Մոտավոր սկիզբը՝ ${new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}։`;
+      if (!Number.isFinite(time) || time <= Date.now() + 5000) return 'Unlimited generation is in queue and will begin shortly.';
+      return `Unlimited generation is in queue. Approximate start: ${new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`;
     }
 
     function extractQueuedTaskId(value, depth = 0, seen = new Set()) {
@@ -6368,7 +6435,7 @@ function createResultCard(data) {
         try {
           const { data: sessionData } = await supabaseClient.auth.getSession();
           const token = sessionData?.session?.access_token || '';
-          if (!token) throw new Error('Մուտքի ժամկետը լրացել է հերթում սպասելիս։');
+          if (!token) throw new Error('Authentication expired while waiting in queue.');
           const response = await fetch('/.netlify/functions/safe-run', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -6380,7 +6447,7 @@ function createResultCard(data) {
             eligibleAt = payload.eligible_at || eligibleAt;
             if (context) context.markQueued();
             if (currentModel && currentModel.category === mediaKind) {
-              showStatus(`${queuedStartCopy(eligibleAt)} Կրեդիտային գեներացումները շարունակում են հասանելի լինել առաջնահերթ մշակմամբ։`);
+              showStatus(`${queuedStartCopy(eligibleAt)} Credit generations remain available with priority processing.`);
             }
             continue;
           }
@@ -6406,7 +6473,7 @@ function createResultCard(data) {
           if (payload.queue_status === 'failed' || payload.queue_status === 'cancelled' || !payload.ok) {
             clearActiveUnlimitedQueue(mediaKind, jobId);
             if (context?.controller) context.controller.apply({ status: 'failed', result_url: null });
-            showGenerationFailedStatus(payload.error || 'Հերթում գտնվող գեներացումը ձախողվեց։', details.runId);
+            showGenerationFailedStatus(payload.error || 'Queued generation failed.', details.runId);
             return;
           }
           throw new Error(payload.error || `Queue status ${response.status}`);
@@ -6523,7 +6590,7 @@ function createResultCard(data) {
 
           const controller = addResultCard({
             run_id: runId,
-            provider: row.provider || 'Մոդել',
+            provider: row.provider || 'Model',
             kind: row.kind || 'image',
             prompt: row.prompt || '',
             result_url: row.result_url,
@@ -6746,7 +6813,7 @@ function createResultCard(data) {
 
 
 const __activePolls = new Map(); // runId -> token
-const GENERATION_FAILED_MESSAGE = 'Գեներացումը չհաջողվեց։ Կրկին փորձեք և համոզվեք, որ prompt-ն ու պատկերը չեն խախտում կանոնները։';
+const GENERATION_FAILED_MESSAGE = 'Generation failed. Please try again and make sure your prompt and image do not violate any policy.';
 
 function cancelActiveGenerationPolls() {
   for (const token of __activePolls.values()) {
@@ -7114,6 +7181,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         durations: null,
         costLabel: '5⚡–12⚡ per job',
         minCredits: 0.5,
+        isNew: true
       },
       {
         id: 'gpt-image-2',
@@ -7399,7 +7467,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         defaultAspect: '1:1',
         resolutionOptions: ['480p', '720p'],
         defaultResolution: '720p',
-        durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
         costLabel: '480p 1.7⚡/s · 720p 3.8⚡/s',
         minCredits: 6.8
       },
@@ -7449,9 +7517,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         id: 'gemini-omni-flash-1-1',
         name: 'Gemini Omni 1.1 Flash',
         emoji: 'GF',
-        subtitle: 'Տեքստ / կադրեր / պատկեր / տեսանյութ → տեսանյութ',
+        subtitle: 'Text / Frames / Image / Video → Video',
         category: 'video',
-        description: 'Gemini Omni 1.1 Flash՝ առաջին/վերջին կադրով, ընտրովի հղումներով, ձայնային նախընտրանքներով և ելակետային տեսանյութի հատվածի ընտրությամբ։',
+        description: 'Gemini Omni 1.1 Flash with first/last frame, optional references, voice presets, and source-video trimming.',
         endpoint: '/.netlify/functions/run-gemini-omni-flash-1-1',
         needsImage: false,
         maxFiles: 0,
@@ -7462,7 +7530,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         resolutionOptions: ['720p', '1080p', '4K'],
         defaultResolution: '1080p',
         durations: [4, 6, 8, 10],
-        costLabel: 'Առանց տեսանյութի 720p/1080p՝ 4վ — 4⚡, 6վ — 5.5⚡, 8վ — 6.9⚡, 10վ — 8.3⚡ / Առանց տեսանյութի 4K՝ 4վ — 10⚡, 6վ — 11⚡, 8վ — 12⚡, 10վ — 14⚡ / Տեսանյութով՝ 720p/1080p — 11⚡, 4K — 16⚡',
+        costLabel: 'No video 720p/1080p: 4s-4⚡ 6s-5.5⚡ 8s-6.9⚡ 10s-8.3⚡ / No video 4K: 4s-10⚡ 6s-11⚡ 8s-12⚡ 10s-14⚡ / Video: 720p/1080p 11⚡ 4K 16⚡',
         minCredits: 4
       },
       {
@@ -7489,9 +7557,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         id: 'wan-3',
         name: 'Wan 3.0',
         emoji: 'W3',
-        subtitle: 'Տեքստ / կադրեր / մեդիա հղումներ → տեսանյութ',
+        subtitle: 'Text / Frames / Media refs → Video',
         category: 'video',
-        description: 'Wan 3.0՝ առաջին/վերջին կադրով և ընտրովի պատկերի, տեսանյութի կամ ձայնի հղումներով։',
+        description: 'Wan 3.0 with first/last frame and optional image, video, or audio references.',
         endpoint: '/.netlify/functions/run-wan-3',
         needsImage: false,
         maxFiles: 0,
@@ -7502,7 +7570,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         resolutionOptions: ['480p', '720p', '1080p'],
         defaultResolution: '1080p',
         durations: Array.from({ length: 29 }, (_, index) => index + 2),
-        costLabel: '480p 6⚡/վ · 720p 10⚡/վ · 1080p 20⚡/վ',
+        costLabel: '480p 6⚡/s · 720p 10⚡/s · 1080p 20⚡/s',
         minCredits: 1.2
       },
       {
@@ -7807,7 +7875,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function unlimitedBadgeMarkup(extraClass = '') {
-      return `<span class="subscription-unlimited-badge ${extraClass}" aria-label="Անսահմանափակ՝ ձեր ամսական պլանով"><span class="subscription-infinity" aria-hidden="true">∞</span><span>Անսահմանափակ</span></span>`;
+      return `<span class="subscription-unlimited-badge ${extraClass}" aria-label="Unlimited with your monthly plan"><span class="subscription-infinity" aria-hidden="true">∞</span><span>Unlimited</span></span>`;
     }
 
     function setCostLabelContent(el) {
@@ -8133,25 +8201,25 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const max = Number(currentModel && currentModel.maxFiles ? currentModel.maxFiles : 0);
       setUploadButtonCopy('uploadBtn', `Upload ${uploadNoun(getMainUploadKind(), max > 1)}`);
       [
-        ['startFrameBtn', 'Վերբեռնել պատկեր'],
-        ['lastFrameBtn', 'Վերբեռնել պատկեր'],
-        ['veoReferenceBtn', 'Վերբեռնել պատկերներ'],
-        ['alephVideoBtn', 'Վերբեռնել տեսանյութ'],
-        ['alephImageBtn', 'Վերբեռնել պատկեր'],
-        ['motionVideoBtn', 'Վերբեռնել տեսանյութ'],
-        ['motionImageBtn', 'Վերբեռնել պատկեր'],
-        ['seedanceFirstBtn', 'Վերբեռնել պատկեր'],
-        ['seedanceLastBtn', 'Վերբեռնել պատկեր'],
-        ['seedanceImageRefsBtn', 'Վերբեռնել պատկերներ'],
+        ['startFrameBtn', 'Upload image'],
+        ['lastFrameBtn', 'Upload image'],
+        ['veoReferenceBtn', 'Upload images'],
+        ['alephVideoBtn', 'Upload video'],
+        ['alephImageBtn', 'Upload image'],
+        ['motionVideoBtn', 'Upload video'],
+        ['motionImageBtn', 'Upload image'],
+        ['seedanceFirstBtn', 'Upload image'],
+        ['seedanceLastBtn', 'Upload image'],
+        ['seedanceImageRefsBtn', 'Upload images'],
         ['seedanceVideoRefsBtn', 'Upload videos'],
         ['seedanceAudioRefsBtn', 'Upload audio'],
-        ['kling30FirstBtn', 'Վերբեռնել պատկեր'],
-        ['kling30LastBtn', 'Վերբեռնել պատկեր'],
-        ['kling30ElementsBtn', 'Վերբեռնել պատկերներ'],
-        ['videoFirstFrameBtn', 'Վերբեռնել պատկեր'],
-        ['videoLastFrameBtn', 'Վերբեռնել պատկեր'],
-        ['videoSourceBtn', 'Վերբեռնել տեսանյութ'],
-        ['videoRefImagesBtn', 'Վերբեռնել պատկերներ'],
+        ['kling30FirstBtn', 'Upload image'],
+        ['kling30LastBtn', 'Upload image'],
+        ['kling30ElementsBtn', 'Upload images'],
+        ['videoFirstFrameBtn', 'Upload image'],
+        ['videoLastFrameBtn', 'Upload image'],
+        ['videoSourceBtn', 'Upload video'],
+        ['videoRefImagesBtn', 'Upload images'],
         ['videoRefVideosBtn', 'Upload videos'],
         ['videoRefAudioBtn', 'Upload audio']
       ].forEach(([id, label]) => setUploadButtonCopy(id, label));
@@ -8279,7 +8347,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         });
         if (showMessage) {
           runBtn.dataset.promptSafetyMessage = '1';
-          showStatus('Այս հարցումը չի թույլատրվում բովանդակության անվտանգության կանոններով։', 'error');
+          showStatus('This request is not allowed by our content safety policy.', 'error');
         }
         return false;
       }
@@ -9167,7 +9235,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
 
     function updateModelButtonLabels() {
-      const labelText = currentModel ? currentModel.name : 'Ընտրեք մոդել';
+      const labelText = currentModel ? currentModel.name : 'Choose model';
       const btnLabel = document.getElementById('modelButtonLabel');
       if (btnLabel) btnLabel.textContent = labelText;
 
@@ -9351,7 +9419,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const unlimitedBtn = document.getElementById('unlimitedRunBtn');
       if (!runBtn) return;
       const credits = getRunCreditLabel();
-      runBtn.textContent = credits ? `Գեներացնել ${credits} ⚡` : 'Գեներացնել';
+      runBtn.textContent = credits ? `Run ${credits} ⚡` : 'Run';
       if (unlimitedBtn) {
         const modelIncluded = isModelIncludedInCurrentUnlimitedPlan();
         const unlimited = isCurrentSelectionUnlimited();
@@ -9364,21 +9432,21 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           unlimitedBtn.disabled = true;
           unlimitedBtn.classList.remove('is-queued');
           unlimitedBtn.classList.add('is-unavailable');
-          unlimitedBtn.innerHTML = '<span class="run-unlimited-label"><span class="subscription-infinity" aria-hidden="true">∞</span><span>Անսահմանափակ</span></span>';
+          unlimitedBtn.innerHTML = '<span class="run-unlimited-label"><span class="subscription-infinity" aria-hidden="true">∞</span><span>Unlimited</span></span>';
           unlimitedBtn.title = normalizedGenerationQuantity(generationQuantity) > 1
-            ? 'Անսահմանափակ ռեժիմը մեկ հարցմամբ աջակցում է մեկ գեներացման։ 2 արդյունքի համար օգտագործեք կրեդիտներով գեներացումը։'
-            : 'Ընտրված կարգավորումները ներառված չեն Անսահմանափակ ռեժիմում։ Օգտագործեք կրեդիտներով գեներացումը կամ ընտրեք ներառված կարգավորում։';
+            ? 'Unlimited supports one generation per request. Use Run with credits for quantity 2.'
+            : 'These selected settings are not included in Unlimited. Use Run with credits or choose an included setting.';
         } else if (unlimited && activeQueue) {
           unlimitedBtn.disabled = true;
           unlimitedBtn.classList.remove('is-unavailable');
           unlimitedBtn.classList.add('is-queued');
-          unlimitedBtn.innerHTML = '<span class="queue-button-spinner" aria-hidden="true"></span><span>Հերթում</span>';
-          unlimitedBtn.title = 'Այս կատեգորիայի Անսահմանափակ գեներացումն արդեն հերթում է կամ մեկնարկում է։ Կրեդիտներով գեներացումը հասանելի է։';
+          unlimitedBtn.innerHTML = '<span class="queue-button-spinner" aria-hidden="true"></span><span>In Queue</span>';
+          unlimitedBtn.title = `Unlimited ${currentModel.category} generation is already queued or starting. Credit generation remains available.`;
         } else {
           unlimitedBtn.disabled = false;
           unlimitedBtn.classList.remove('is-queued', 'is-unavailable');
-          unlimitedBtn.innerHTML = '<span class="run-unlimited-label"><span class="subscription-infinity" aria-hidden="true">∞</span><span>Անսահմանափակ</span></span>';
-          unlimitedBtn.title = 'Գեներացնել առանց կրեդիտների՝ Անսահմանափակ արդար օգտագործման հերթով։';
+          unlimitedBtn.innerHTML = '<span class="run-unlimited-label"><span class="subscription-infinity" aria-hidden="true">∞</span><span>Unlimited</span></span>';
+          unlimitedBtn.title = 'Generate without credits using the Unlimited fair-use queue.';
         }
       }
       syncKlingMotionRunState(false);
@@ -9478,7 +9546,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (seedance25UsesSourceVideoSettings()) {
         if (durationBlock) durationBlock.classList.add('hidden');
         if (durationPills) durationPills.innerHTML = '';
-        if (durationCurrentLabel) durationCurrentLabel.textContent = 'Աղբյուր';
+        if (durationCurrentLabel) durationCurrentLabel.textContent = 'Source';
         updateCostDisplay();
         updateRunButtonLabel();
         return;
@@ -9486,7 +9554,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (!opts.length) {
         if (durationBlock) durationBlock.classList.add('hidden');
         if (durationPills) durationPills.innerHTML = '';
-        if (durationCurrentLabel) durationCurrentLabel.textContent = 'Ընտրել';
+        if (durationCurrentLabel) durationCurrentLabel.textContent = 'Choose';
         currentDuration = null;
         updateCostDisplay();
         updateRunButtonLabel();
@@ -9534,11 +9602,21 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           : 'text-amber-200/80');
     }
 
+    function publicGenerationFailureReason(reason) {
+      let text = cleanGenerationFailureReason(reason);
+      if (!text || /^\[object Object\]$/i.test(text)) return '';
+      text = text
+        .replace(/https?:\/\/(?:www\.)?kie\.ai\S*/gi, '')
+        .replace(/\bkie(?:\s+ai|\.ai)?\b/gi, '')
+        .replace(/^\s*(?:api|service)?\s*(?:error|message)\s*[:\-]\s*/i, '')
+        .replace(/\s+([,.;:!?])/g, '$1')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+      return text.replace(/^[\s:;,.\-]+|[\s:;,.\-]+$/g, '').slice(0, 220);
+    }
+
     function showGenerationFailedStatus(reason, runId) {
-      const text = String(reason || '');
-      showStatus(/nsfw|sexual|sexually|nude|nudity|pornographic|pornography/i.test(text)
-        ? 'Սեռական բովանդակությունն անթույլատրելի է։'
-        : GENERATION_FAILED_MESSAGE, 'error');
+      showStatus(publicGenerationFailureReason(reason) || GENERATION_FAILED_MESSAGE, 'error');
     }
 
     function isNotEnoughCreditsMessage(message) {
@@ -9560,7 +9638,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function showNotEnoughCreditsStatus(message) {
-      showStatus(message || 'Վարկերը բավարար չեն։', 'error');
+      showStatus(message || 'Not enough credits.', 'error');
       setTimeout(openPricingOfferPopup, 80);
     }
 
@@ -9568,7 +9646,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (!currentModel || currentModel.id !== 'kling-motion-control') return '';
       if (!motionVideoFile || !Number.isFinite(Number(motionVideoSeconds))) return '';
       const seconds = Number(motionVideoSeconds);
-      if (seconds <= 3 || seconds > 30) return 'Տեսանյութը պետք է լինի 3 վայրկյանից երկար և ոչ ավելի, քան 30 վայրկյան։';
+      if (seconds <= 3 || seconds > 30) return 'Video must be longer than 3 seconds and no more than 30 seconds.';
       return '';
     }
 
@@ -9726,7 +9804,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (!overlayModels.length) {
         const empty = document.createElement('div');
         empty.className = 'p-6 text-center text-white/55 text-sm';
-        empty.textContent = 'Մոդելներ չեն գտնվել։';
+        empty.textContent = 'No models found.';
         listEl.appendChild(empty);
       }
     }
@@ -9756,7 +9834,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const isWan27 = currentModel.id === 'wan-2-7-image';
       const isMotionControl = currentModel.id === 'kling-motion-control';
       if (isWan27) {
-        if (veoQualityLabel) veoQualityLabel.textContent = 'Որակ';
+        if (veoQualityLabel) veoQualityLabel.textContent = 'Quality';
         currentVeoFamily = null;
         currentVeoVariant = 'fast';
         currentWanTier = currentWanTier === 'pro' ? 'pro' : 'normal';
@@ -9782,7 +9860,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           veoQualityPills.appendChild(makeBtn('Pro', 'pro'));
         }
       } else if (currentModel.id === 'seedance20') {
-        if (veoQualityLabel) veoQualityLabel.textContent = 'Մոդել';
+        if (veoQualityLabel) veoQualityLabel.textContent = 'Model';
         currentWanTier = 'normal';
         currentVeoFamily = null;
         currentVeoVariant = 'fast';
@@ -9811,7 +9889,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           veoQualityPills.appendChild(makeBtn('Fast', 'fast'));
         }
       } else if (isMotionControl) {
-        if (veoQualityLabel) veoQualityLabel.textContent = 'Մոդել';
+        if (veoQualityLabel) veoQualityLabel.textContent = 'Model';
         currentWanTier = 'normal';
         currentVeoFamily = null;
         currentVeoVariant = 'fast';
@@ -9838,7 +9916,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           veoQualityPills.appendChild(makeBtn('Kling 3.0', 'kling30'));
         }
       } else if (isVeo3 || isVeo31) {
-        if (veoQualityLabel) veoQualityLabel.textContent = 'Որակ';
+        if (veoQualityLabel) veoQualityLabel.textContent = 'Quality';
         currentWanTier = 'normal';
         currentVeoFamily = isVeo31 ? 'veo31' : 'veo3';
         currentVeoVariant = currentModel.id.endsWith('-lite') ? 'lite' : (currentModel.id.endsWith('-fast') ? 'fast' : 'quality');
@@ -9868,7 +9946,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           };
           if (isVeo31) veoQualityPills.appendChild(makeBtn('Lite', 'lite'));
           veoQualityPills.appendChild(makeBtn('Fast', 'fast'));
-          veoQualityPills.appendChild(makeBtn('Որակ', 'quality'));
+          veoQualityPills.appendChild(makeBtn('Quality', 'quality'));
         }
       } else {
         currentWanTier = 'normal';
@@ -10091,7 +10169,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       if (kling30MultiToggle) {
         const multiLabel = document.getElementById('kling30MultiLabel');
-        if (multiLabel) multiLabel.textContent = 'Բազմակադր ռեժիմն անջատված է';
+        if (multiLabel) multiLabel.textContent = 'Multi-shot inactive';
         const multiState = document.getElementById('kling30MultiState');
         if (multiState) multiState.setAttribute('aria-label', 'Activate multi-shot');
         kling30MultiToggle.classList.remove('chip-active');
@@ -10110,11 +10188,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (typeof syncKling30InputLocks === 'function') syncKling30InputLocks();
       if (typeof syncVeo31InputLocks === 'function') syncVeo31InputLocks();
       if (seedanceAudioToggle) {
-        seedanceAudioToggle.textContent = 'Աուդիոն միացված է';
+        seedanceAudioToggle.textContent = 'Audio on';
         seedanceAudioToggle.classList.add('chip-active');
       }
       if (seedanceWebToggle) {
-        seedanceWebToggle.textContent = 'Վեբ որոնումն անջատված է';
+        seedanceWebToggle.textContent = 'Web search off';
         seedanceWebToggle.classList.remove('chip-active');
       }
       if (typeof syncSeedanceInputLocks === 'function') syncSeedanceInputLocks();
@@ -10129,7 +10207,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const geminiVoiceButton = document.getElementById('geminiVoiceButton');
       const geminiVoiceLabel = document.getElementById('geminiVoiceLabel');
       const geminiVoiceMenu = document.getElementById('geminiVoiceMenu');
-      if (geminiVoiceLabel) geminiVoiceLabel.textContent = 'Ձայնային հղում չկա';
+      if (geminiVoiceLabel) geminiVoiceLabel.textContent = 'No voice reference';
       if (geminiVoiceButton) geminiVoiceButton.setAttribute('aria-expanded', 'false');
       if (geminiVoiceMenu) {
         geminiVoiceMenu.classList.add('hidden');
@@ -10137,7 +10215,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       }
       const wanPromptExtendToggle = document.getElementById('wanPromptExtendToggle');
       if (wanPromptExtendToggle) {
-        wanPromptExtendToggle.textContent = 'Prompt-ի ընդլայնումը միացված է';
+        wanPromptExtendToggle.textContent = 'Prompt extend on';
         wanPromptExtendToggle.classList.add('chip-active');
       }
 
@@ -10241,6 +10319,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         if (!el) return;
         el.classList.toggle('hidden', !visible);
       };
+      const title = document.getElementById('videoRefsTitle');
+      const hint = document.getElementById('videoRefsHint');
       const imageLabel = document.getElementById('videoRefImagesLabel');
       const wrap = document.getElementById('videoRefsUploadWrap');
       if (wrap) {
@@ -10251,7 +10331,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         if (kind === 'geminiOmni') wrap.classList.add('video-refs-gemini');
       }
       const imageInput = document.getElementById('videoRefImagesInput');
-      if (imageLabel) imageLabel.textContent = 'Վերբեռնել պատկերներ';
+      if (title) title.textContent = '';
+      if (hint) hint.textContent = '';
+      if (imageLabel) imageLabel.textContent = 'Upload images';
       if (imageInput) imageInput.multiple = true;
       const isGeminiFlash = kind === 'geminiOmni' && currentModel && currentModel.id === 'gemini-omni-flash-1-1';
       const showsFirstFrame = kind === 'wan27' || kind === 'wan30' || kind === 'happyhorse' || isGeminiFlash;
@@ -10325,14 +10407,14 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         if (seedance25UsesAdaptiveAspect()) return;
         options = (currentModel.aspectOptions || []).slice();
         current = String(currentAspect || '');
-        title.textContent = 'Չափս';
+        title.textContent = 'Aspect ratio';
       } else if (type === 'duration') {
         // Only allow for proper video models
         const durationOptions = getDurationOptionsForCurrentModel();
         if (!(currentModel.category === 'video' && durationOptions.length)) return;
         options = durationOptions.map((v) => String(v));
         current = String(currentDuration != null ? currentDuration : '');
-        title.textContent = 'Տևողություն';
+        title.textContent = 'Duration';
       } else {
         return;
       }
@@ -10347,7 +10429,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         left.textContent = type === 'duration' ? (opt + 's') : opt;
         const right = document.createElement('span');
         right.className = 'text-white/60';
-        right.textContent = String(opt) === String(current) ? 'Ընտրված է' : '';
+        right.textContent = String(opt) === String(current) ? 'Selected' : '';
         btn.appendChild(left);
         btn.appendChild(right);
 
@@ -10545,7 +10627,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
             const wantsVideo = wrapId === 'klingMotionUploadWrap' && index === 0;
             const file = files.find((item) => fileIsKind(item, wantsVideo ? 'video' : 'image'));
             if (!file) {
-              showStatus(wantsVideo ? 'Քաշեք տեսանյութի ֆայլը այստեղ։' : 'Քաշեք պատկերի ֆայլը այստեղ։', 'error');
+              showStatus(wantsVideo ? 'Drop a video file here.' : 'Drop an image file here.', 'error');
               return;
             }
             if (wrapId === 'framesUploadWrap') {
@@ -10698,8 +10780,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      }
 	      if (bubble) bubble.textContent = formatGeminiTrimTime(selected);
 	      if (rangeLabel) rangeLabel.textContent = `${formatGeminiTrimTime(geminiOmniVideoStart)} -> ${formatGeminiTrimTime(geminiOmniVideoEnd)}`;
-	      if (maxLabel) maxLabel.textContent = `${formatGeminiTrimTime(selected)} տեսանյութից`;
-	      if (subtitle) subtitle.textContent = `Ընտրեք տեսանյութից 4–10 վայրկյան`;
+	      if (maxLabel) maxLabel.textContent = `${formatGeminiTrimTime(selected)} from video`;
+	      if (subtitle) subtitle.textContent = `Select 4 to 10 seconds from the video`;
 	    }
 
 	    function setGeminiOmniTrimWindow(start, end) {
@@ -10837,7 +10919,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      video.addEventListener('loadedmetadata', () => {
 	        geminiOmniSourceDuration = Math.max(0, Number(video.duration || 0));
 	        if (currentModel && currentModel.id === 'gemini-omni-flash-1-1' && geminiOmniSourceDuration > 30) {
-	          showStatus('Gemini Omni 1.1 Flash-ի ելակետային տեսանյութը պետք է լինի առավելագույնը 30 վայրկյան։', 'error');
+	          showStatus('Gemini Omni 1.1 Flash source video must be 30 seconds or shorter.', 'error');
 	          closeGeminiOmniTrimModal({ clearFile:true });
 	          return;
 	        }
@@ -10934,13 +11016,19 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (!currentModel || currentModel.id !== 'wan-3') return { ok: true };
       const videoDurations = (await Promise.all(videoRefVideoFiles.map(readVideoFileDuration))).filter(Number.isFinite);
       const audioDurations = (await Promise.all(videoRefAudioFiles.map(readAudioFileDuration))).filter(Number.isFinite);
-      if (videoDurations.some((value) => value < 1 || value > 15)) return { ok: false, message: 'Wan 3.0-ի յուրաքանչյուր հղումային տեսանյութ պետք է տևի 1-ից 15 վայրկյան։' };
-      if (audioDurations.some((value) => value < 1 || value > 15)) return { ok: false, message: 'Wan 3.0-ի յուրաքանչյուր ձայնային հղում պետք է տևի 1-ից 15 վայրկյան։' };
+      if (videoDurations.some((value) => value < 1 || value > 15)) {
+        return { ok: false, message: 'Each Wan 3.0 reference video must be between 1 and 15 seconds.' };
+      }
+      if (audioDurations.some((value) => value < 1 || value > 15)) {
+        return { ok: false, message: 'Each Wan 3.0 reference audio file must be between 1 and 15 seconds.' };
+      }
       const videoTotal = videoDurations.reduce((sum, value) => sum + value, 0);
       const audioTotal = audioDurations.reduce((sum, value) => sum + value, 0);
-      if (videoTotal > 15.0001) return { ok: false, message: 'Wan 3.0-ի հղումային տեսանյութերի ընդհանուր տևողությունը չի կարող գերազանցել 15 վայրկյանը։' };
-      if (audioTotal > 15.0001) return { ok: false, message: 'Wan 3.0-ի ձայնային հղումների ընդհանուր տևողությունը չի կարող գերազանցել 15 վայրկյանը։' };
-      if (videoTotal && videoTotal + Number(currentDuration || 5) > 30.0001) return { ok: false, message: 'Wan 3.0-ի հղումային տեսանյութերի և արդյունքի ընդհանուր տևողությունը չի կարող գերազանցել 30 վայրկյանը։' };
+      if (videoTotal > 15.0001) return { ok: false, message: 'Wan 3.0 reference videos can total no more than 15 seconds.' };
+      if (audioTotal > 15.0001) return { ok: false, message: 'Wan 3.0 reference audio can total no more than 15 seconds.' };
+      if (videoTotal && videoTotal + Number(currentDuration || 5) > 30.0001) {
+        return { ok: false, message: 'For Wan 3.0, reference-video duration plus output duration cannot exceed 30 seconds.' };
+      }
       return { ok: true };
     }
 
@@ -10949,7 +11037,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         ? await readVideoFileDuration(seedanceVideoRefFiles[0])
         : null;
       if (seedance25UsesSourceVideoSettings() && (!seedanceSingleVideoDuration || seedanceSingleVideoDuration < 4 || seedanceSingleVideoDuration > 30)) {
-        showStatus('Seedance-ում տեսանյութ խմբագրելու համար վերբեռնված տեսանյութի տևողությունը պետք է լինի 4–30 վայրկյան։', 'error');
+        showStatus('For Seedance video editing, the uploaded video must be 4 to 30 seconds long.', 'error');
       }
       syncSeedanceAspectControl();
       renderDurationControls();
@@ -11068,7 +11156,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
       if (!startFrameFile && file) {
         document.getElementById('lastFrameInput').value = '';
-        showStatus('Վերջին կադրն ավելացնելուց առաջ անհրաժեշտ է սկզբնական կադր։', 'error');
+        showStatus('Last frame requires a Start frame first.', 'error');
         return;
       }
 
@@ -11148,7 +11236,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const maxBytes = maxMB * 1024 * 1024;
       const accepted = incoming.filter((file) => Number(file.size || 0) <= maxBytes);
       if (accepted.length !== incoming.length) {
-        showStatus(`Seedance 2.5-ի յուրաքանչյուր ${kind} հղումը պետք է լինի առավելագույնը ${maxMB} ՄԲ։`, 'error');
+        showStatus(`Each Seedance 2.5 ${kind} reference must be ${maxMB} MB or smaller.`, 'error');
       }
       return accepted;
     }
@@ -11183,7 +11271,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const files = Array.from((event.dataTransfer && event.dataTransfer.files) || [])
           .filter((file) => fileMatchesAccept(file, input.accept));
         if (!files.length) {
-          showStatus('Խնդրում ենք ավելացնել աջակցվող ֆայլ։', 'error');
+          showStatus('Please drop a supported file for this input.', 'error');
           return;
         }
         try {
@@ -11193,7 +11281,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           input.dispatchEvent(new Event('change', { bubbles: true }));
         } catch (error) {
           console.warn('drop upload failed', error);
-          showStatus('Չհաջողվեց կցել ֆայլը։ Խնդրում ենք կրկին փորձել։', 'error');
+          showStatus('We could not attach that file. Please try again.', 'error');
         }
       });
     };
@@ -11262,8 +11350,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 
     function hasVideoReferenceInputs() {
       if (!currentModel) return false;
-      if (currentModel.id === 'gemini-omni-flash-1-1') return !!(videoSourceFile || videoRefImageFiles.length || geminiOmniAudioIds.length);
-      if (currentModel.id === 'wan-3') return !!(videoRefImageFiles.length || videoRefVideoFiles.length || videoRefAudioFiles.length);
+      if (currentModel.id === 'gemini-omni-flash-1-1') {
+        return !!(videoSourceFile || videoRefImageFiles.length || geminiOmniAudioIds.length);
+      }
+      if (currentModel.id === 'wan-3') {
+        return !!(videoRefImageFiles.length || videoRefVideoFiles.length || videoRefAudioFiles.length);
+      }
       return false;
     }
 
@@ -11271,18 +11363,24 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const lastControl = document.getElementById('videoLastFrameControl');
       const lastIsVisible = !!(lastControl && !lastControl.classList.contains('hidden'));
       if (lastIsVisible && !videoFirstFrameFile && videoLastFrameFile) clearVideoLastFrame();
-      if (lastIsVisible) setVideoRefsControlDisabled('videoLastFrameBtn', 'videoLastFrameInput', !videoFirstFrameFile, 'Նախ ընտրեք առաջին կադրը, ապա ավելացրեք վերջինը։');
+      if (lastIsVisible) {
+        setVideoRefsControlDisabled('videoLastFrameBtn', 'videoLastFrameInput', !videoFirstFrameFile, 'Choose a First frame before adding a Last frame.');
+      }
+
       if (!usesExclusiveVideoFramePair()) return;
       const hasFrames = !!(videoFirstFrameFile || videoLastFrameFile);
       const hasReferences = hasVideoReferenceInputs();
-      setVideoRefsControlDisabled('videoFirstFrameBtn', 'videoFirstFrameInput', !hasFrames && hasReferences, 'Հեռացրեք հղումները՝ կադրեր ավելացնելուց առաջ։');
-      setVideoRefsControlDisabled('videoSourceBtn', 'videoSourceInput', hasFrames, 'Հեռացրեք կադրերը՝ ելակետային տեսանյութ ավելացնելուց առաջ։');
-      setVideoRefsControlDisabled('videoRefImagesBtn', 'videoRefImagesInput', hasFrames, 'Հեռացրեք կադրերը՝ պատկերի հղումներ ավելացնելուց առաջ։');
-      setVideoRefsControlDisabled('videoRefVideosBtn', 'videoRefVideosInput', hasFrames, 'Հեռացրեք կադրերը՝ տեսանյութի հղումներ ավելացնելուց առաջ։');
-      setVideoRefsControlDisabled('videoRefAudioBtn', 'videoRefAudioInput', hasFrames, 'Հեռացրեք կադրերը՝ ձայնային հղումներ ավելացնելուց առաջ։');
+      setVideoRefsControlDisabled('videoFirstFrameBtn', 'videoFirstFrameInput', !hasFrames && hasReferences, 'Remove the reference inputs before adding frames.');
+      setVideoRefsControlDisabled('videoSourceBtn', 'videoSourceInput', hasFrames, 'Remove the frames before adding a source video.');
+      setVideoRefsControlDisabled('videoRefImagesBtn', 'videoRefImagesInput', hasFrames, 'Remove the frames before adding image references.');
+      setVideoRefsControlDisabled('videoRefVideosBtn', 'videoRefVideosInput', hasFrames, 'Remove the frames before adding video references.');
+      setVideoRefsControlDisabled('videoRefAudioBtn', 'videoRefAudioInput', hasFrames, 'Remove the frames before adding audio references.');
       const voiceButton = document.getElementById('geminiVoiceButton');
       const voicePicker = voiceButton ? voiceButton.closest('.gemini-voice-picker') : null;
-      if (voiceButton) { voiceButton.disabled = hasFrames; voiceButton.title = hasFrames ? 'Հեռացրեք կադրերը՝ ձայնային հղում ընտրելուց առաջ։' : ''; }
+      if (voiceButton) {
+        voiceButton.disabled = hasFrames;
+        voiceButton.title = hasFrames ? 'Remove the frames before choosing a voice reference.' : '';
+      }
       if (voicePicker) voicePicker.classList.toggle('control-disabled', hasFrames);
     }
 
@@ -11312,7 +11410,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         e.target.value = '';
         clearSeedanceLastFrame();
         syncSeedanceInputLocks();
-        showStatus('Վերջին կադրն ավելացնելուց առաջ անհրաժեշտ է առաջին կադր։', 'error');
+        showStatus('Last frame requires a First frame first.', 'error');
         return;
       }
       seedanceLastFrameFile = (e.target.files || [])[0] || null;
@@ -11332,7 +11430,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const incoming = filterSeedance25ReferenceFiles(e.target.files, 'image');
       const maxImages = getSeedanceReferenceLimit('image');
       if (currentModel && currentModel.id === 'seedance25' && seedanceImageRefFiles.length + incoming.length > maxImages) {
-        showStatus(`Seedance 2.5-ը ընդունում է առավելագույնը ${maxImages} պատկերային հղում։`, 'error');
+        showStatus(`Seedance 2.5 accepts up to ${maxImages} image references.`, 'error');
       }
       seedanceImageRefFiles = appendFilesWithLimit(seedanceImageRefFiles, incoming, maxImages, 'image/*');
       e.target.value = '';
@@ -11352,7 +11450,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const incoming = filterSeedance25ReferenceFiles(e.target.files, 'video');
         const maxVideos = getSeedanceReferenceLimit('video');
         if (seedanceVideoRefFiles.length + incoming.length > maxVideos) {
-          showStatus(`Seedance 2.5-ը ընդունում է առավելագույնը ${maxVideos} տեսանյութի հղում։`, 'error');
+          showStatus(`Seedance 2.5 accepts up to ${maxVideos} video references.`, 'error');
         }
         seedanceVideoRefFiles = appendFilesWithLimit(seedanceVideoRefFiles, incoming, maxVideos, 'video/*');
         e.target.value = '';
@@ -11382,12 +11480,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     });
     document.getElementById('seedanceAudioToggle').addEventListener('click', (e) => {
       seedanceGenerateAudio = !seedanceGenerateAudio;
-      e.currentTarget.textContent = seedanceGenerateAudio ? 'Աուդիոն միացված է' : 'Աուդիոն անջատված է';
+      e.currentTarget.textContent = seedanceGenerateAudio ? 'Audio on' : 'Audio off';
       e.currentTarget.classList.toggle('chip-active', seedanceGenerateAudio);
     });
     document.getElementById('seedanceWebToggle').addEventListener('click', (e) => {
       seedanceWebSearch = !seedanceWebSearch;
-      e.currentTarget.textContent = seedanceWebSearch ? 'Վեբ որոնումը միացված է' : 'Վեբ որոնումն անջատված է';
+      e.currentTarget.textContent = seedanceWebSearch ? 'Web search on' : 'Web search off';
       e.currentTarget.classList.toggle('chip-active', seedanceWebSearch);
     });
 
@@ -11413,7 +11511,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         e.target.value = '';
         clearVideoLastFrame();
         syncVideoRefsInputLocks();
-        showStatus('Նախ ընտրեք առաջին կադրը, ապա ավելացրեք վերջինը։', 'error');
+        showStatus('Last frame requires a First frame first.', 'error');
         return;
       }
       videoLastFrameFile = (e.target.files || [])[0] || null;
@@ -11428,7 +11526,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      if (usesExclusiveVideoFramePair() && (videoFirstFrameFile || videoLastFrameFile)) {
 	        e.target.value = '';
 	        syncVideoRefsInputLocks();
-	        showStatus('Հեռացրեք կադրերը՝ ելակետային տեսանյութ ավելացնելուց առաջ։', 'error');
+	        showStatus('Remove the frames before adding a source video.', 'error');
 	        return;
 	      }
 	      videoSourceFile = (e.target.files || [])[0] || null;
@@ -11439,7 +11537,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	          updateCostDisplay();
 	          updateRunButtonLabel();
 	        });
-	        showStatus('Ելակետային տեսանյութը զբաղեցնում է մուտքի 2 միավոր, ուստի պատկերի հղումները սահմանափակվել են 5-ով։', 'info');
+	        showStatus('A source video uses 2 input units, so image references were limited to 5.', 'info');
 	      }
 	      renderSingleThumb(videoSourceFile, document.getElementById('videoSourceThumb'), () => {
 	        videoSourceFile = null;
@@ -11458,7 +11556,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (usesExclusiveVideoFramePair() && (videoFirstFrameFile || videoLastFrameFile)) {
         e.target.value = '';
         syncVideoRefsInputLocks();
-        showStatus('Հեռացրեք կադրերը՝ պատկերի հղումներ ավելացնելուց առաջ։', 'error');
+        showStatus('Remove the frames before adding image references.', 'error');
         return;
       }
       const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : 7) : (currentModel && currentModel.id === 'wan-3' ? 10 : 9));
@@ -11479,7 +11577,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (usesExclusiveVideoFramePair() && (videoFirstFrameFile || videoLastFrameFile)) {
         e.target.value = '';
         syncVideoRefsInputLocks();
-        showStatus('Հեռացրեք կադրերը՝ տեսանյութի հղումներ ավելացնելուց առաջ։', 'error');
+        showStatus('Remove the frames before adding video references.', 'error');
         return;
       }
       videoRefVideoFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && currentModel.id === 'wan-3' ? 5 : 3);
@@ -11494,7 +11592,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	      if (usesExclusiveVideoFramePair() && (videoFirstFrameFile || videoLastFrameFile)) {
 	        e.target.value = '';
 	        syncVideoRefsInputLocks();
-	        showStatus('Հեռացրեք կադրերը՝ ձայնային հղումներ ավելացնելուց առաջ։', 'error');
+	        showStatus('Remove the frames before adding audio references.', 'error');
 	        return;
 	      }
 	      videoRefAudioFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && currentModel.id === 'wan-3' ? 5 : 1);
@@ -11552,7 +11650,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	    });
 	    document.getElementById('wanPromptExtendToggle').addEventListener('click', (e) => {
 	      wanPromptExtend = !wanPromptExtend;
-	      e.currentTarget.textContent = wanPromptExtend ? 'Prompt-ի ընդլայնումը միացված է' : 'Prompt-ի ընդլայնումն անջատված է';
+	      e.currentTarget.textContent = wanPromptExtend ? 'Prompt extend on' : 'Prompt extend off';
       e.currentTarget.classList.toggle('chip-active', wanPromptExtend);
     });
     const geminiVoiceButton = document.getElementById('geminiVoiceButton');
@@ -11566,13 +11664,18 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       });
       geminiVoiceMenu.querySelectorAll('button[data-voice]').forEach((btn) => {
         btn.addEventListener('click', () => {
+          if (usesExclusiveVideoFramePair() && (videoFirstFrameFile || videoLastFrameFile) && btn.dataset.voice) {
+            showStatus('Remove the frames before choosing a voice reference.', 'error');
+            return;
+          }
           const voice = String(btn.dataset.voice || '').trim();
           geminiOmniAudioIds = voice ? [voice] : [];
-          if (geminiVoiceLabel) geminiVoiceLabel.textContent = btn.dataset.label || 'Ձայնային հղում չկա';
+          if (geminiVoiceLabel) geminiVoiceLabel.textContent = btn.dataset.label || 'No voice reference';
           geminiVoiceMenu.querySelectorAll('button[data-voice]').forEach((item) => item.classList.remove('is-selected'));
           btn.classList.add('is-selected');
           geminiVoiceMenu.classList.add('hidden');
           geminiVoiceButton.setAttribute('aria-expanded', 'false');
+          syncVideoRefsInputLocks();
         });
       });
       document.addEventListener('click', (event) => {
@@ -11596,7 +11699,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (!kling30FirstFrameFile) {
         e.target.value = '';
         syncKling30InputLocks();
-        showStatus('Վերջին կադրն ավելացնելուց առաջ անհրաժեշտ է առաջին կադր։', 'error');
+        showStatus('Last frame requires a First frame first.', 'error');
         return;
       }
       if (kling30MultiShots) {
@@ -11621,7 +11724,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         element: {
           name: 'element_' + num,
           type: 'image',
-          description: 'Տարր․ ',
+          description: 'Element: ',
           files: []
         }
       };
@@ -11825,7 +11928,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         top.className = 'kling30-shot-top';
         const title = document.createElement('div');
         title.className = 'kling30-shot-title';
-        title.textContent = 'Կադր ' + (index + 1);
+        title.textContent = 'Shot ' + (index + 1);
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.className = 'kling30-shot-remove';
@@ -11835,9 +11938,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           if (kling30Shots.length <= 1) return;
           kling30Shots.splice(index, 1);
           kling30Shots.forEach((s, i) => {
-            if (!s.element) s.element = { name: 'element_' + (i + 1), type: 'image', description: 'Տարր․ ', files: [] };
+            if (!s.element) s.element = { name: 'element_' + (i + 1), type: 'image', description: 'Element: ', files: [] };
             if (!String(s.element.name || '').trim()) s.element.name = 'element_' + (i + 1);
-            if (!String(s.element.description || '').trim()) s.element.description = 'Տարր․ ';
+            if (!String(s.element.description || '').trim()) s.element.description = 'Element: ';
           });
           renderKling30Shots();
           syncKling30LegacyData();
@@ -11863,7 +11966,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const durWrap = document.createElement('div');
         const durLabel = document.createElement('label');
         durLabel.className = 'kling30-shot-label';
-        durLabel.textContent = 'Տևողություն';
+        durLabel.textContent = 'Duration';
         const select = document.createElement('select');
         const otherSum = kling30Shots.reduce((sum, s, i) => i === index ? sum : sum + Math.max(3, Math.min(12, Number(s.duration || 3))), 0);
         const maxAllowed = Math.max(3, Math.min(12, 15 - otherSum));
@@ -11887,7 +11990,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const elementWrap = document.createElement('div');
         const elementLabel = document.createElement('label');
         elementLabel.className = 'kling30-shot-label';
-        elementLabel.textContent = 'Տարր';
+        elementLabel.textContent = 'Element';
         const elementBtn = document.createElement('button');
         elementBtn.type = 'button';
         elementBtn.className = 'kling30-shot-element-btn';
@@ -11914,10 +12017,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       ensureKling30Shots();
       const shot = kling30Shots[kling30ActiveShotIndex];
       if (!shot) return;
-      if (!shot.element) shot.element = { name: 'element_' + (kling30ActiveShotIndex + 1), type: 'image', description: 'Տարր․ ', files: [] };
+      if (!shot.element) shot.element = { name: 'element_' + (kling30ActiveShotIndex + 1), type: 'image', description: 'Element: ', files: [] };
       const el = shot.element;
       const title = document.getElementById('kling30ElementDrawerTitle');
-      if (title) title.textContent = kling30MultiShots ? ('Կադր ' + (kling30ActiveShotIndex + 1) + '․ տարր') : 'Տարրեր';
+      if (title) title.textContent = kling30MultiShots ? ('Shot ' + (kling30ActiveShotIndex + 1) + ' element') : 'Elements';
       const nameInput = document.getElementById('kling30ElementNameInput');
       const descInput = document.getElementById('kling30ElementDescInput');
       const typeImage = document.getElementById('kling30ElementTypeImage');
@@ -11926,9 +12029,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const btnLabel = document.getElementById('kling30ElementsBtnLabel');
       const thumbs = document.getElementById('kling30ElementsThumbs');
       if (nameInput) nameInput.value = el.name || ('element_' + (kling30ActiveShotIndex + 1));
-      if (!String(el.description || '').trim()) el.description = 'Տարր․ ';
-      else if (!/\belement\b/i.test(String(el.description || ''))) el.description = 'Տարր․ ' + String(el.description || '').trim();
-      if (descInput) descInput.value = el.description || 'Տարր․ ';
+      if (!String(el.description || '').trim()) el.description = 'Element: ';
+      else if (!/\belement\b/i.test(String(el.description || ''))) el.description = 'Element: ' + String(el.description || '').trim();
+      if (descInput) descInput.value = el.description || 'Element: ';
       el.type = 'image';
       if (typeImage) typeImage.classList.add('active');
       if (input) {
@@ -11936,7 +12039,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         input.accept = 'image/*';
         input.multiple = true;
       }
-      if (btnLabel) btnLabel.textContent = Array.isArray(el.files) && el.files.length ? 'Ավելացնել ավելի շատ պատկերներ' : 'Ավելացնել տարրի պատկերներ';
+      if (btnLabel) btnLabel.textContent = Array.isArray(el.files) && el.files.length ? 'Add more images' : 'Add element images';
       renderFileListThumbs(Array.isArray(el.files) ? el.files : [], thumbs, (fileIndex) => {
         if (!Array.isArray(el.files)) el.files = [];
         el.files.splice(fileIndex, 1);
@@ -12050,7 +12153,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     document.getElementById('kling30MultiToggle').addEventListener('click', (e) => {
       kling30MultiShots = !kling30MultiShots;
       const label = document.getElementById('kling30MultiLabel');
-      if (label) label.textContent = kling30MultiShots ? 'Բազմակադր ռեժիմը միացված է' : 'Բազմակադր ռեժիմն անջատված է';
+      if (label) label.textContent = kling30MultiShots ? 'Multi-shot active' : 'Multi-shot inactive';
       const state = document.getElementById('kling30MultiState');
       if (state) state.setAttribute('aria-label', kling30MultiShots ? 'Deactivate multi-shot' : 'Activate multi-shot');
       e.currentTarget.classList.toggle('kling30-active', kling30MultiShots);
@@ -12414,7 +12517,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
                 if (up && up.publicUrl) {
                   urls[index] = up.publicUrl;
                   completed += 1;
-                  showStatus(`Մուտքային ֆայլերը վերբեռնվում են (${completed}/${list.length})…`);
+                  showStatus(`Uploading input files (${completed}/${list.length})…`);
                   return;
                 }
               } catch (retryError) {
@@ -12452,7 +12555,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         }
         urls[index] = up.publicUrl;
         completed += 1;
-        showStatus(`Մուտքային ֆայլերը վերբեռնվում են (${completed}/${list.length})…`);
+        showStatus(`Uploading input files (${completed}/${list.length})…`);
       };
 
       const worker = async () => {
@@ -12463,7 +12566,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         }
       };
 
-      showStatus(`Մուտքային ֆայլերը վերբեռնվում են (0/${list.length})…`);
+      showStatus(`Uploading input files (0/${list.length})…`);
       await Promise.all(Array.from({ length: concurrency }, worker));
       return urls;
     }
@@ -12907,7 +13010,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     async function runSingleCurrentModel(batchManaged = false, initialRequestContext = null, usageMode = 'credits') {
       if (!currentModel) {
         removeClientRequestPlaceholder(initialRequestContext);
-        showStatus('Նախ ընտրեք մոդելը։', 'error');
+        showStatus('Please choose a model first.', 'error');
         return;
       }
       const submittedModel = currentModel;
@@ -12917,7 +13020,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       const prompt = rawPrompt.trim();
       if (!prompt && (!currentModel || currentModel.id !== 'kling-motion-control')) {
         removeClientRequestPlaceholder(initialRequestContext);
-        showStatus('Մուտքագրեք prompt։', 'error');
+        showStatus('Please enter a prompt.', 'error');
         return;
       }
       if (promptHasBlockedSexualTerms(prompt)) {
@@ -12928,13 +13031,13 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
       if (!currentUser) {
         removeClientRequestPlaceholder(initialRequestContext);
-        showStatus('Նախ մուտք գործեք։', 'error');
+        showStatus('Please log in first.', 'error');
         return;
       }
 
       if (seedance25UsesSourceVideoSettings() && (!seedanceSingleVideoDuration || seedanceSingleVideoDuration < 4 || seedanceSingleVideoDuration > 30)) {
         removeClientRequestPlaceholder(initialRequestContext);
-        showStatus('Seedance-ում տեսանյութ խմբագրելու համար վերբեռնված տեսանյութի տևողությունը պետք է լինի 4–30 վայրկյան։', 'error');
+        showStatus('For Seedance video editing, the uploaded video must be 4 to 30 seconds long.', 'error');
         return;
       }
 
@@ -12952,7 +13055,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
       if (currentModel.id === 'grok-video' && currentResolution === '1080p' && videoRefImageFiles.length > 1) {
         removeClientRequestPlaceholder(initialRequestContext);
-        showStatus('Grok 1080p-ը աջակցում է մեկ հղման պատկերի։ Հեռացրեք ավելորդ պատկերները և կրկին փորձեք։', 'error');
+        showStatus('Grok 1080p supports one reference image. Remove the extra images and try again.', 'error');
         return;
       }
 
@@ -12990,7 +13093,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           shared: getSharedHeaderCredits()
         });
         removeClientRequestPlaceholder(requestContext);
-        showNotEnoughCreditsStatus('Այս մոդելի համար վարկերը բավարար չեն։');
+        showNotEnoughCreditsStatus('Not enough credits for this model.');
         return;
       }
 
@@ -13009,7 +13112,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             shared: getSharedHeaderCredits()
           });
           removeClientRequestPlaceholder(requestContext);
-          showNotEnoughCreditsStatus('Այս ընտրության համար վարկերը բավարար չեն։');
+          showNotEnoughCreditsStatus('Not enough credits for this selection.');
           return;
         }
       }
@@ -13020,36 +13123,36 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         // Kling 2.1 requires start frame; Veo 3.1 start frame is optional
         if (!currentModel.startOptional && !startFrameFile) {
           removeClientRequestPlaceholder(requestContext);
-          showStatus('Այս մոդելի համար անհրաժեշտ է սկզբնական կադրի պատկեր։', 'error');
+          showStatus('This model requires a Start frame image.', 'error');
           return;
         }
         if (lastFrameFile && !startFrameFile) {
           removeClientRequestPlaceholder(requestContext);
-          showStatus('Վերջին կադրն ավելացնելուց առաջ անհրաժեշտ է սկզբնական կադր։', 'error');
+          showStatus('Last frame requires a Start frame first.', 'error');
           return;
         }
       } else if (currentModel.specificUpload === 'seedance' && seedanceLastFrameFile && !seedanceFirstFrameFile) {
         removeClientRequestPlaceholder(requestContext);
-        showStatus('Վերջին կադրն ավելացնելուց առաջ անհրաժեշտ է առաջին կադր։', 'error');
+        showStatus('Last frame requires a First frame first.', 'error');
         return;
       } else if (['wan27', 'wan30', 'geminiOmni'].includes(currentModel.specificUpload) && videoLastFrameFile && !videoFirstFrameFile) {
         removeClientRequestPlaceholder(requestContext);
-        showStatus('Վերջին կադրն ավելացնելուց առաջ անհրաժեշտ է առաջին կադր։', 'error');
+        showStatus('Last frame requires a First frame first.', 'error');
         return;
       } else if (currentModel.specificUpload === 'kling30' && kling30LastFrameFile && !kling30FirstFrameFile) {
         removeClientRequestPlaceholder(requestContext);
-        showStatus('Վերջին կադրն ավելացնելուց առաջ անհրաժեշտ է առաջին կադր։', 'error');
+        showStatus('Last frame requires a First frame first.', 'error');
         return;
       } else if (currentModel.needsVideo) {
         if (!alephVideoFile) {
           removeClientRequestPlaceholder(requestContext);
-          showStatus('Այս մոդելի համար անհրաժեշտ է տեսանյութ վերբեռնել։', 'error');
+          showStatus('This model requires a video upload.', 'error');
           return;
         }
       } else if (currentModel.needsMotionVideo) {
         if (!motionVideoFile) {
           removeClientRequestPlaceholder(requestContext);
-          showStatus('Այս մոդելի համար անհրաժեշտ է սկզբնական տեսանյութ վերբեռնել։', 'error');
+          showStatus('This model requires a source video upload.', 'error');
           return;
         }
         if (!syncKlingMotionRunState(true)) {
@@ -13058,25 +13161,25 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         }
         if (!motionImageFile) {
           removeClientRequestPlaceholder(requestContext);
-          showStatus('Այս մոդելի համար անհրաժեշտ է հղումային պատկեր։', 'error');
+          showStatus('This model requires a reference image.', 'error');
           return;
         }
       } else if (currentModel.needsImage && !uploadedFiles.length) {
         removeClientRequestPlaceholder(requestContext);
-        showStatus('Այս մոդելի համար անհրաժեշտ է առնվազն մեկ պատկեր։', 'error');
+        showStatus('This model requires at least one image.', 'error');
         return;
       }
 
       if (usesExclusiveVideoFramePair() && (videoFirstFrameFile || videoLastFrameFile) && hasVideoReferenceInputs()) {
         removeClientRequestPlaceholder(requestContext);
-        showStatus('Այս մոդելի համար առաջին/վերջին կադրերը չեն կարող համակցվել այլ հղումների հետ։', 'error');
+        showStatus('First/last frames cannot be combined with other reference inputs for this model.', 'error');
         return;
       }
 
       const runBtn = document.getElementById('runBtn');
       const submitBtn = isUnlimitedRun ? document.getElementById('unlimitedRunBtn') : runBtn;
       if (submitBtn) submitBtn.disabled = true;
-      showStatus('Հարցումը մշակվում է…');
+      showStatus('Processing request…');
 
       try {
         const frameFiles = currentModel.useFrames
@@ -13103,7 +13206,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             : [videoFirstFrameFile, videoLastFrameFile, videoSourceFile, ...videoRefImageFiles, ...videoRefVideoFiles, ...videoRefAudioFiles]).filter(Boolean))
           : await uploadImagesAndGetUrls(uploadedFiles);
         if (requestContext && requestContext.removed) return;
-        showStatus('Հարցումը մշակվում է…');
+        showStatus('Processing request…');
 
         // Sora 2 requires a seeded user_generations row id (1:1 with working sora2 page)
         let __genId = null;
@@ -13293,14 +13396,14 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           const queued = await res.json().catch(() => ({}));
           if (!queued.ok || !queued.queue_job_id) {
             removeClientRequestPlaceholder(requestContext);
-            showGenerationFailedStatus(queued.error || 'Չհաջողվեց ավելացնել անսահմանափակ հերթ։', runId);
+            showGenerationFailedStatus(queued.error || 'Could not enter the Unlimited queue.', runId);
             return;
           }
           if (requestContext) requestContext.markQueued();
           const queueMessage = queued.message || queuedStartCopy(queued.eligible_at);
-          showStatus(/Credit generations remain available|Կրեդիտային գեներացումները/i.test(queueMessage)
+          showStatus(/Credit generations remain available/i.test(queueMessage)
             ? queueMessage
-            : `${queueMessage} Կրեդիտային գեներացումները շարունակում են հասանելի լինել առաջնահերթ մշակմամբ։`);
+            : `${queueMessage} Credit generations remain available with priority processing.`);
           monitorUnlimitedQueueJob({
             jobId: queued.queue_job_id,
             mediaKind: submittedModel.category,
@@ -13329,7 +13432,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           console.warn('model request failed', { runId, model: currentModel.id, endpoint: runEndpoint, status: res.status, message: msg, raw: txt });
           removeClientRequestPlaceholder(requestContext, safetyBlocked ? { suppressEmptyState: true } : null);
           if (safetyBlocked) {
-            showStatus(/nsfw|sexual|sexually|nude|nudity|pornographic|pornography/i.test(String(msg || '')) ? 'Սեռական բովանդակությունն անթույլատրելի է։' : 'Այս հարցումն արգելափակվել է բովանդակության անվտանգության կանոններով։', 'error');
+            showStatus(publicGenerationFailureReason(msg) || 'This request was blocked by our content safety policy.', 'error');
           } else if (isNotEnoughCreditsMessage(msg)) {
             showNotEnoughCreditsStatus(msg);
           } else {
@@ -13372,7 +13475,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
               markRequestAccepted();
               watchCreditsLive(120000);
               showStatus(
-                `✅ Հարցումն ուղարկվել է ${currentModel.name}-ին։ Մշակման ընթացքում կարող եք սկսել մեկ այլ գեներացում։`,
+                `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
                 'success'
               );
               lastAcceptedRunMarker = Date.now();
@@ -13393,7 +13496,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             markRequestAccepted();
             watchCreditsLive(120000);
             showStatus(
-              `✅ Հարցումն ուղարկվել է ${currentModel.name}-ին։ Մշակման ընթացքում կարող եք սկսել մեկ այլ գեներացում։`,
+              `✅ Request submitted to ${currentModel.name}. You can generate another request while this one is processing.`,
               'success'
             );
             lastAcceptedRunMarker = Date.now();
@@ -13419,11 +13522,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           const limitMb = (typeof currentModel !== 'undefined' && currentModel && currentModel.uploadMaxMB)
             ? Number(currentModel.uploadMaxMB)
             : ((typeof currentModel !== 'undefined' && currentModel && currentModel.id === 'nano-banana-pro') ? 25 : 10);
-          showStatus(`Ընտրված ֆայլերից մեկը գերազանցում է ${limitMb} ՄԲ-ը։`, 'error');
+          showStatus(`One of the selected files is larger than ${limitMb}MB.`, 'error');
         } else if (err && err.message === 'upload_bridge_missing') {
-          showGenerationFailedStatus('Վերբեռնման ծառայությունն այս էջում հասանելի չէ։', runId);
+          showGenerationFailedStatus('Upload service is not available on this page.', runId);
         } else if (err && err.message === 'upload_failed') {
-          showGenerationFailedStatus('Վերբեռնումը չհաջողվեց՝ նախքան հարցումը մոդելին ուղարկելը։', runId);
+          showGenerationFailedStatus('Upload failed before the model request was sent.', runId);
         } else {
           showGenerationFailedStatus(err && err.message ? err.message : '', runId);
         }
@@ -13444,12 +13547,12 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       if (quantity === 1) return runSingleCurrentModel(false);
 
       if (!currentModel) {
-        showStatus('Նախ ընտրեք մոդելը։', 'error');
+        showStatus('Please choose a model first.', 'error');
         return;
       }
       const prompt = String(document.getElementById('promptBox')?.value || '').trim();
       if (!prompt && currentModel.id !== 'kling-motion-control') {
-        showStatus('Մուտքագրեք prompt։', 'error');
+        showStatus('Please enter a prompt.', 'error');
         return;
       }
       if (promptHasBlockedSexualTerms(prompt)) {
@@ -13457,7 +13560,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         return;
       }
       if (!currentUser) {
-        showStatus('Նախ մուտք գործեք։', 'error');
+        showStatus('Please log in first.', 'error');
         return;
       }
       if (currentModel && currentModel.id === 'kling30') {
@@ -13479,7 +13582,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       }));
       const runBtn = document.getElementById('runBtn');
       if (runBtn) runBtn.disabled = true;
-      showStatus('Հարցումները մշակվում են…');
+      showStatus('Processing requests…');
 
       const totalRequiredCredits = Number(getModelCreditValue(currentModel, quantity) || 0);
       const availableCredits = await getAvailableCredits(totalRequiredCredits);
@@ -13491,7 +13594,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       }
       if (totalRequiredCredits > 0 && availableCredits < totalRequiredCredits) {
         requestContexts.forEach(removeClientRequestPlaceholder);
-        showNotEnoughCreditsStatus(`Վարկերը բավարար չեն ${quantity} գեներացման համար։`);
+        showNotEnoughCreditsStatus(`Not enough credits for ${quantity} generations.`);
         if (runBtn) runBtn.disabled = false;
         updateRunButtonLabel();
         return;
@@ -13701,7 +13804,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
     async function fileFromPreviewUrl(url, fallbackName, fallbackMime) {
       const res = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-store' });
-      if (!res.ok) throw new Error('Չհաջողվեց բեռնել այս գործողության համար պահպանված ֆայլը։');
+      if (!res.ok) throw new Error('Could not load the saved file for this action.');
       const blob = await res.blob();
       const mime = blob.type || fallbackMime || 'application/octet-stream';
       const ext = mime.includes('video') ? 'mp4' : (mime.includes('webp') ? 'webp' : (mime.includes('jpeg') ? 'jpg' : 'png'));
@@ -13883,7 +13986,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         return true;
       }
       if (typeof setStatus === 'function') {
-        setStatus('Գեներացումը չհաջողվեց։ Ստուգեք prompt-ը կամ պատկերը և կրկին փորձեք։', 'error');
+        setStatus('Generation failed. Check your prompt or image, then try again.', 'error');
       }
       return false;
     }
@@ -13908,11 +14011,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         urls.push(String(data.result_url));
       }
       if (urls.length) {
-        if (typeof setStatus === 'function') setStatus('Վերբեռնված ֆայլը վերականգնվում է...', '');
+        if (typeof setStatus === 'function') setStatus('Restoring uploaded file...', '');
         const files = await hydratePreviewFiles(urls, 'image', currentModel ? Math.max(1, Number(currentModel.maxFiles || 1)) : 1);
         const applied = applyPreviewFilesToCurrentModel(files, 'recreate');
         if (!applied && (currentModel && (currentModel.needsImage || hadUploadedInput))) {
-          throw new Error('Չհաջողվեց վերականգնել այս գեներացման վերբեռնված պատկերը։');
+          throw new Error('Could not restore the uploaded image for this generation.');
         }
       }
     }
@@ -13923,8 +14026,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       setPromptForPreviewRun('');
       applyPreviewOptions({ meta: { client_diagnostic: { aspect_ratio: '16:9', duration: targetId === 'grok-video' ? 6 : 4, resolution: targetId === 'grok-video' ? '720p' : '720p' } } });
       const imageUrl = String((data && data.result_url) || '').trim();
-      if (!imageUrl) throw new Error('Create Video-ի համար պատկերի URL չի գտնվել։');
-      if (typeof setStatus === 'function') setStatus('Պատկերը պատրաստվում է տեսանյութի համար...', '');
+      if (!imageUrl) throw new Error('No image URL found for Create Video.');
+      if (typeof setStatus === 'function') setStatus('Preparing image for video...', '');
       const file = await fileFromPreviewUrl(imageUrl, 'hansora-video-reference.png', 'image/png');
       applyPreviewFilesToCurrentModel([file], 'video-source');
       updateModelButtonLabels();
@@ -13935,52 +14038,74 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     async function consumeArticlePresetFromUrl() {
       const qs = new URLSearchParams(window.location.search);
       if (qs.get('articlePreset') !== '1') return false;
+
       let preset = null;
-      try { preset = JSON.parse(sessionStorage.getItem('hansora:article-preset') || 'null'); }
-      catch (error) { console.warn('Could not read article preset', error); }
+      try {
+        preset = JSON.parse(sessionStorage.getItem('hansora:article-preset') || 'null');
+      } catch (error) {
+        console.warn('Could not read article preset', error);
+      }
       if (!preset || !preset.prompt) return false;
+
       sessionStorage.removeItem('hansora:article-preset');
       setPromptForPreviewRun(preset.prompt);
-      applyPreviewOptions({ aspect_ratio: preset.aspectRatio, resolution: preset.resolution, duration: preset.duration });
-      const referenceUrls = Array.isArray(preset.referenceImageUrls) ? preset.referenceImageUrls.filter((url) => /^https?:\/\//i.test(String(url || ''))) : [];
+      applyPreviewOptions({
+        aspect_ratio: preset.aspectRatio,
+        resolution: preset.resolution,
+        duration: preset.duration
+      });
+
+      const referenceUrls = Array.isArray(preset.referenceImageUrls)
+        ? preset.referenceImageUrls.filter((url) => /^https?:\/\//i.test(String(url || '')))
+        : [];
       const referenceVideoUrl = /^https?:\/\//i.test(String(preset.referenceVideoUrl || '')) ? String(preset.referenceVideoUrl) : '';
       if (referenceUrls.length) {
-        showStatus('Ավելացվում են հղման պատկերները...', '');
-        const limit = currentModel && currentModel.specificUpload === 'seedance' ? getSeedanceReferenceLimit('image') : Math.max(1, Number(currentModel && currentModel.maxFiles || referenceUrls.length));
+        showStatus('Adding article reference images...', '');
+        const limit = currentModel && currentModel.specificUpload === 'seedance'
+          ? getSeedanceReferenceLimit('image')
+          : Math.max(1, Number(currentModel && currentModel.maxFiles || referenceUrls.length));
         const files = await hydratePreviewFiles(referenceUrls, 'image', limit);
-        if (!applyReusableImagesToCurrentModel(files)) throw new Error('Չհաջողվեց հղման պատկերներն ավելացնել այս մոդելին։');
-      }
-      if (referenceVideoUrl) {
-        showStatus('Ավելացնում ենք հղման տեսանյութը...', '');
-        if (!await applyArticleVideoToCurrentModel(referenceVideoUrl)) {
-          throw new Error('Այս մոդելը չի ընդունում հղման տեսանյութ։');
+        if (!applyReusableImagesToCurrentModel(files)) {
+          throw new Error('Could not add the article reference images to this model.');
         }
       }
 
-      updateModelButtonLabels(); updateCostDisplay(); updateRunButtonLabel();
-      showStatus(referenceVideoUrl ? (referenceUrls.length ? 'Հուշումը, պատկերները և տեսանյութը պատրաստ են։' : 'Հուշումն ու հղման տեսանյութը պատրաստ են։') : (referenceUrls.length ? 'Հուշումն ու հղման պատկերները պատրաստ են։' : 'Հուշումը պատրաստ է։'), 'success');
-      const cleanUrl = new URL(window.location.href); cleanUrl.searchParams.delete('articlePreset');
+      if (referenceVideoUrl) {
+        showStatus('Adding article reference video...', '');
+        if (!await applyArticleVideoToCurrentModel(referenceVideoUrl)) {
+          throw new Error('This model does not accept a reference video.');
+        }
+      }
+
+      updateModelButtonLabels();
+      updateCostDisplay();
+      updateRunButtonLabel();
+      showStatus(referenceVideoUrl ? (referenceUrls.length ? 'Prompt, reference images, and video are ready.' : 'Prompt and reference video are ready.') : (referenceUrls.length ? 'Prompt and reference images are ready.' : 'Prompt is ready.'), 'success');
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('articlePreset');
       window.history.replaceState({}, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
-      setTimeout(() => { try { document.getElementById('generatorCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {} }, 120);
+      setTimeout(() => {
+        try { document.getElementById('generatorCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+      }, 120);
       return true;
     }
 
     window.hansoraPreviewActions = {
       download: async (data, setStatus) => {
         const url = String((data && data.result_url) || '').trim();
-        if (!url) throw new Error('Ներբեռնման համար ֆայլ չկա։');
+        if (!url) throw new Error('No file to download.');
         await downloadAsset(url, data && data.kind, data && data.provider);
-        if (typeof setStatus === 'function') setStatus('Ներբեռնումը սկսվել է։', 'success');
+        if (typeof setStatus === 'function') setStatus('Download started.', 'success');
       },
       recreate: async (data, setStatus) => {
-        if (typeof setStatus === 'function') setStatus('Գեներացումը վերականգնվում է...', '');
+        if (typeof setStatus === 'function') setStatus('Restoring generation...', '');
         await restorePreviewGeneration(data || {}, setStatus);
         await submitPreviewRun(setStatus);
       },
       'create-video': async (data, setStatus) => {
         if (!data || String(data.kind || '').toLowerCase() === 'video') return;
         await restorePreviewImageForVideo(data, setStatus);
-        if (typeof setStatus === 'function') setStatus('Պատկերը պատրաստ է տեսանյութի մոդելում։', 'success');
+        if (typeof setStatus === 'function') setStatus('Image is ready in the video model.', 'success');
         setTimeout(() => {
           if (window.closePreview) window.closePreview();
           try { document.getElementById('generatorCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
@@ -14094,7 +14219,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 
       const reportStatus = (message, type) => showStatus(message, type || '');
       try {
-        reportStatus(requestedAction === 'create-video' ? 'Պատկերը պատրաստվում է տեսանյութի համար...' : 'Գեներացումը վերականգնվում է...', '');
+        reportStatus(requestedAction === 'create-video' ? 'Preparing image for video...' : 'Restoring generation...', '');
         await handler(payload.data || {}, reportStatus);
       } catch (error) {
         reportStatus(error && error.message ? error.message : 'Could not restore this generation.', 'error');
@@ -14112,7 +14237,10 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       configureControlsForModel();
       wireWorkspaceRedesign();
       wireUploadTileClicks();
-      consumeArticlePresetFromUrl().catch((error) => { console.warn('Could not apply article preset', error); showStatus(error && error.message ? error.message : 'Չհաջողվեց պատրաստել պրոմպտը։', 'error'); });
+      consumeArticlePresetFromUrl().catch((error) => {
+        console.warn('Could not apply article preset', error);
+        showStatus(error && error.message ? error.message : 'Could not prepare this prompt.', 'error');
+      });
       setTimeout(() => {
         loadUser()
           .then(() => consumeQueuedUsageAction())
@@ -14126,8 +14254,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     <button id="mobileOptionOverlayBg" type="button" class="absolute inset-0 bg-black/60"></button>
     <div class="relative z-10 mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-slate-950/95 backdrop-blur-xl p-4 max-h-[75vh] overflow-hidden">
       <div class="flex items-center justify-between mb-3">
-        <div id="mobileOptionTitle" class="text-sm font-semibold">Ընտրել</div>
-        <button id="mobileOptionClose" class="btn-soft px-3 py-1.5 text-[11px]" type="button">Փակել</button>
+        <div id="mobileOptionTitle" class="text-sm font-semibold">Select</div>
+        <button id="mobileOptionClose" class="btn-soft px-3 py-1.5 text-[11px]" type="button">Close</button>
       </div>
       <div id="mobileOptionList" class="space-y-2 max-h-[45vh] overflow-auto pr-1"></div>
     </div>
