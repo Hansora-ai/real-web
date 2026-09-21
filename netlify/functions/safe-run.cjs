@@ -235,6 +235,7 @@ const ALLOWED_RUN_ENDPOINTS = new Set([
   '/.netlify/functions/run-veo31',
   '/.netlify/functions/run-wan-2-7-image',
   '/.netlify/functions/run-wan-27-video',
+  '/.netlify/functions/run-wan-3',
   '/.netlify/functions/run-z-image'
 ]);
 
