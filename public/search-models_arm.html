@@ -9535,7 +9535,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function showGenerationFailedStatus(reason, runId) {
-      showStatus(GENERATION_FAILED_MESSAGE, 'error');
+      const text = String(reason || '');
+      showStatus(/nsfw|sexual|sexually|nude|nudity|pornographic|pornography/i.test(text)
+        ? 'Սեռական բովանդակությունն անթույլատրելի է։'
+        : GENERATION_FAILED_MESSAGE, 'error');
     }
 
     function isNotEnoughCreditsMessage(message) {
@@ -13326,7 +13329,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           console.warn('model request failed', { runId, model: currentModel.id, endpoint: runEndpoint, status: res.status, message: msg, raw: txt });
           removeClientRequestPlaceholder(requestContext, safetyBlocked ? { suppressEmptyState: true } : null);
           if (safetyBlocked) {
-            showStatus(msg || 'Այս հարցումն արգելափակվել է բովանդակության անվտանգության կանոններով։', 'error');
+            showStatus(/nsfw|sexual|sexually|nude|nudity|pornographic|pornography/i.test(String(msg || '')) ? 'Սեռական բովանդակությունն անթույլատրելի է։' : 'Այս հարցումն արգելափակվել է բովանդակության անվտանգության կանոններով։', 'error');
           } else if (isNotEnoughCreditsMessage(msg)) {
             showNotEnoughCreditsStatus(msg);
           } else {
@@ -13808,6 +13811,63 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       return false;
     }
 
+
+    async function applyArticleVideoToCurrentModel(url) {
+      if (!currentModel || !/^https?:\/\//i.test(String(url || ''))) return false;
+      const file = await fileFromPreviewUrl(url, 'article-reference-video.mp4', 'video/mp4');
+      clearPreviewInputValues();
+      if (currentModel.specificUpload === 'seedance') {
+        seedanceVideoRefFiles = [file];
+        renderFileListThumbs(seedanceVideoRefFiles, document.getElementById('seedanceVideoRefsThumbs'), (index) => {
+          seedanceVideoRefFiles.splice(index, 1);
+          const input = document.getElementById('seedanceVideoRefsInput');
+          if (input) input.value = '';
+          syncSeedanceSingleVideoDuration();
+          syncSeedanceInputLocks();
+        });
+        await syncSeedanceSingleVideoDuration();
+        syncSeedanceInputLocks();
+        updateCostDisplay();
+        updateRunButtonLabel();
+        return true;
+      }
+      if (currentModel.specificUpload === 'geminiOmni') {
+        videoSourceFile = file;
+        if (videoRefImageFiles.length > 5) videoRefImageFiles = videoRefImageFiles.slice(0, 5);
+        renderSingleThumb(videoSourceFile, document.getElementById('videoSourceThumb'), () => {
+          videoSourceFile = null;
+          resetGeminiOmniTrimState();
+          const input = document.getElementById('videoSourceInput');
+          if (input) input.value = '';
+          syncVideoRefsInputLocks();
+          updateCostDisplay();
+          updateRunButtonLabel();
+        });
+        resetGeminiOmniTrimState();
+        geminiOmniSourceDuration = await readVideoFileDuration(file) || 0;
+        geminiOmniVideoStart = 0;
+        geminiOmniVideoEnd = geminiOmniSourceDuration;
+        syncVideoRefsInputLocks();
+        updateCostDisplay();
+        updateRunButtonLabel();
+        return true;
+      }
+      if (['wan27', 'wan30', 'happyhorse'].includes(currentModel.specificUpload)) {
+        videoRefVideoFiles = [file];
+        renderFileListThumbs(videoRefVideoFiles, document.getElementById('videoRefVideosThumbs'), (index) => {
+          videoRefVideoFiles.splice(index, 1);
+          const input = document.getElementById('videoRefVideosInput');
+          if (input) input.value = '';
+          syncVideoRefsInputLocks();
+        });
+        syncVideoRefsInputLocks();
+        updateCostDisplay();
+        updateRunButtonLabel();
+        return true;
+      }
+      return false;
+    }
+
     function resultCardCount() {
       const strip = document.getElementById('resultsStrip');
       return strip ? Array.from(strip.children || []).filter((child) => child && !child.classList.contains('empty-placeholder')).length : 0;
@@ -13883,14 +13943,22 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
       setPromptForPreviewRun(preset.prompt);
       applyPreviewOptions({ aspect_ratio: preset.aspectRatio, resolution: preset.resolution, duration: preset.duration });
       const referenceUrls = Array.isArray(preset.referenceImageUrls) ? preset.referenceImageUrls.filter((url) => /^https?:\/\//i.test(String(url || ''))) : [];
+      const referenceVideoUrl = /^https?:\/\//i.test(String(preset.referenceVideoUrl || '')) ? String(preset.referenceVideoUrl) : '';
       if (referenceUrls.length) {
         showStatus('Ավելացվում են հղման պատկերները...', '');
         const limit = currentModel && currentModel.specificUpload === 'seedance' ? getSeedanceReferenceLimit('image') : Math.max(1, Number(currentModel && currentModel.maxFiles || referenceUrls.length));
         const files = await hydratePreviewFiles(referenceUrls, 'image', limit);
         if (!applyReusableImagesToCurrentModel(files)) throw new Error('Չհաջողվեց հղման պատկերներն ավելացնել այս մոդելին։');
       }
+      if (referenceVideoUrl) {
+        showStatus('Ավելացնում ենք հղման տեսանյութը...', '');
+        if (!await applyArticleVideoToCurrentModel(referenceVideoUrl)) {
+          throw new Error('Այս մոդելը չի ընդունում հղման տեսանյութ։');
+        }
+      }
+
       updateModelButtonLabels(); updateCostDisplay(); updateRunButtonLabel();
-      showStatus(referenceUrls.length ? 'Պրոմպտն ու հղման պատկերները պատրաստ են։' : 'Պրոմպտը պատրաստ է։', 'success');
+      showStatus(referenceVideoUrl ? (referenceUrls.length ? 'Հուշումը, պատկերները և տեսանյութը պատրաստ են։' : 'Հուշումն ու հղման տեսանյութը պատրաստ են։') : (referenceUrls.length ? 'Հուշումն ու հղման պատկերները պատրաստ են։' : 'Հուշումը պատրաստ է։'), 'success');
       const cleanUrl = new URL(window.location.href); cleanUrl.searchParams.delete('articlePreset');
       window.history.replaceState({}, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
       setTimeout(() => { try { document.getElementById('generatorCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {} }, 120);
