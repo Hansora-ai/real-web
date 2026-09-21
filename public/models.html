@@ -70,7 +70,8 @@
 	    .model-thumb{aspect-ratio:16/9}
 	    .model-thumb img{display:block;width:100%;height:100%;object-fit:cover}
 	    .model-name-card{height:100%}
-	    .model-name-card > div:last-child{min-height:72px;display:flex;align-items:center}
+	    .model-name-card > div:last-child{min-height:56px;display:flex;align-items:center;justify-content:center;text-align:center}
+	    @media (min-width:640px){.model-name-card > div:last-child{min-height:72px}}
 	  </style>
 
   <!-- Meta Pixel Code -->
@@ -138,28 +139,28 @@
   <section id="imageSection" data-category-section="image" class="pb-12">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <h2 class="text-2xl sm:text-3xl font-bold mb-6">Image Models</h2>
-      <div id="imageGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      <div id="imageGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6"></div>
     </div>
   </section>
 
   <section id="videoSection" data-category-section="video" class="pb-12">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <h2 class="text-2xl sm:text-3xl font-bold mb-6">Video Models</h2>
-      <div id="videoGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      <div id="videoGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6"></div>
     </div>
   </section>
 
   <section id="featuresSection" data-category-section="features" class="pb-12">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <h2 class="text-2xl sm:text-3xl font-bold mb-6">Features</h2>
-      <div id="featuresGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      <div id="featuresGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6"></div>
     </div>
   </section>
 
   <section id="audioSection" data-category-section="audio" class="pb-20">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <h2 class="text-2xl sm:text-3xl font-bold mb-6">Audio</h2>
-      <div id="audioGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      <div id="audioGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6"></div>
     </div>
   </section>
 
@@ -181,6 +182,9 @@
     ];
     const MODEL_IMAGE_BASE = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/IMAGEVIDEO%20UPSCALE';
     const MODEL_IMAGE_URLS = {
+      'gpt-image-2-5': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%285%29.jpg',
+      'seedance25': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%286%29.jpg',
+      'wan-3': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%287%29.jpg',
       'gpt-image-2': `${MODEL_IMAGE_BASE}/2.png`,
       'nano-banana-2': `${MODEL_IMAGE_BASE}/4.png`,
       'nano-banana-pro': `${MODEL_IMAGE_BASE}/3.png`,
@@ -239,6 +243,7 @@
     }
 
     const IMAGE_MODELS = fromHeaderItems([
+      { label: 'GPT Image 2.5', id: 'gpt-image-2-5' },
       { label: 'GPT Image 2', id: 'gpt-image-2' },
       { label: 'Nano Banana 2', id: 'nano-banana-2' },
       { label: 'Nano Banana Pro', id: 'nano-banana-pro' },
@@ -253,6 +258,8 @@
     ], 'image', 0);
 
     const VIDEO_MODELS = fromHeaderItems([
+      { label: 'Seedance 2.5', id: 'seedance25' },
+      { label: 'Wan 3.0', id: 'wan-3' },
       { label: 'Seedance 2.0', id: 'seedance-2' },
       { label: 'Kling 3.0', id: 'kling-3' },
       { label: 'Seedance 2.0 Mini', id: 'seedance-2-mini' },
@@ -299,8 +306,8 @@
           <div class="model-thumb w-full overflow-hidden bg-base-bg/60">
             <img src="${m.thumbnail}" alt="${m.name}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
           </div>
-          <div class="p-4">
-            <h3 class="text-base sm:text-lg font-semibold">${m.name}</h3>
+          <div class="p-3 sm:p-4">
+            <h3 class="text-sm sm:text-lg font-semibold">${m.name}</h3>
           </div>
         </a>`;
     }
