@@ -6856,14 +6856,21 @@ function extractGenerationFailureReason(payload) {
       value.details,
       value.detail,
       value.message,
+      value.msg,
       value.error_message,
       value.errorMessage,
       value.reason,
       value.data && value.data.details,
       value.data && value.data.detail,
       value.data && value.data.message,
+      value.data && value.data.msg,
     ];
     for (const candidate of detailCandidates) {
+      if (candidate && typeof candidate === 'object') {
+        const nested = walk(candidate, depth + 1);
+        if (nested) return nested;
+        continue;
+      }
       const text = stringifyValue(candidate);
       if (text && !genericErrorPattern.test(text) && !neutralStatusPattern.test(text)) {
         return text.slice(0, 220);
