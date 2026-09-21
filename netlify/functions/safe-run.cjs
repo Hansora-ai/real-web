@@ -250,10 +250,39 @@ function json(statusCode, body, extraHeaders) {
   };
 }
 
+function validOrigin(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    if (!/^https?:$/.test(url.protocol) || url.username || url.password) return '';
+    return url.origin;
+  } catch (_) {
+    return '';
+  }
+}
+
+function firstForwardedValue(value) {
+  return String(value || '').split(',')[0].trim();
+}
+
 function requestBaseUrl(event) {
   const headers = event.headers || {};
-  const host = headers['x-forwarded-host'] || headers.host;
-  const protocol = headers['x-forwarded-proto'] || 'https';
+
+  // Netlify provides the canonical deploy URL in one of these variables. Using
+  // it avoids depending on proxy-specific Host header formatting.
+  for (const candidate of [process.env.URL, process.env.DEPLOY_PRIME_URL, process.env.DEPLOY_URL]) {
+    const origin = validOrigin(candidate);
+    if (origin) return origin;
+  }
+
+  // rawUrl contains the actual request origin in Netlify's Lambda event.
+  const rawOrigin = validOrigin(event.rawUrl);
+  if (rawOrigin) return rawOrigin;
+
+  const host = firstForwardedValue(headers['x-forwarded-host'] || headers.host);
+  const forwardedProtocol = firstForwardedValue(headers['x-forwarded-proto']).toLowerCase();
+  const protocol = forwardedProtocol === 'http' || forwardedProtocol === 'https'
+    ? forwardedProtocol
+    : 'https';
   if (!host || !/^[a-z0-9.-]+(?::\d+)?$/i.test(host)) return '';
   return `${protocol}://${host}`;
 }
@@ -474,8 +503,8 @@ exports.handler = async function handler(event) {
   if (!baseUrl) {
     return json(503, {
       ok: false,
-      code: 'CONTENT_SAFETY_UNAVAILABLE',
-      message: 'Safety verification is temporarily unavailable. Please try again.'
+      code: 'GENERATION_GATEWAY_UNAVAILABLE',
+      message: 'The generation service is temporarily unavailable. Please try again.'
     });
   }
 
@@ -585,11 +614,18 @@ exports.handler = async function handler(event) {
       body: responseBody
     };
   } catch (error) {
-    console.error('safe_run_forward_failed', JSON.stringify({ decisionId, modelId, message: error && error.message }));
+    console.error('safe_run_forward_failed', JSON.stringify({
+      decisionId,
+      modelId,
+      targetEndpoint,
+      errorName: error && error.name,
+      errorCode: error && error.cause && error.cause.code,
+      message: error && error.message
+    }));
     return json(503, {
       ok: false,
-      code: 'CONTENT_SAFETY_UNAVAILABLE',
-      message: 'Safety verification is temporarily unavailable. Please try again.'
+      code: 'GENERATION_SERVICE_UNAVAILABLE',
+      message: 'The generation service is temporarily unavailable. Please try again.'
     });
   }
 };
