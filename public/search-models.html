@@ -4225,6 +4225,53 @@
         letter-spacing:.005em !important;
       }
 
+
+    /* Grouped reference layout shared by Gemini Omni Flash and Wan 3.0. */
+    body.workspace-redesign #videoRefsUploadWrap:not(.hidden){
+      display:grid !important;
+      grid-template-columns:1fr !important;
+      gap:12px !important;
+      width:100% !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap > .upload-section-card.hidden{
+      display:none !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap .frame-pair-grid{
+      display:grid !important;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+      gap:10px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap .frame-pair-grid > .upload-drop-card{
+      grid-column:auto !important;
+      grid-row:auto !important;
+      min-width:0 !important;
+      min-height:116px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap .video-reference-stack{
+      display:grid !important;
+      grid-template-columns:1fr !important;
+      gap:10px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap #videoImageReferencesSection > .upload-drop-card,
+    body.workspace-redesign #videoRefsUploadWrap #videoVideoReferencesSection .upload-drop-card,
+    body.workspace-redesign #videoRefsUploadWrap #videoAudioReferencesSection > .upload-drop-card{
+      min-height:126px !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap #geminiAudioIdsControl{
+      margin-top:0 !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap #geminiAudioIdsControl > label{
+      display:none !important;
+    }
+    body.workspace-redesign #videoRefsUploadWrap #wanPromptExtendControl{
+      margin-top:0 !important;
+    }
+    @media (max-width:900px){
+      body.workspace-redesign #videoRefsUploadWrap .frame-pair-grid{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+      }
+    }
+
 	    </style>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
@@ -4582,105 +4629,153 @@
 
           <!-- New KIE video models: Wan 2.7 / HappyHorse / Grok -->
           <div id="videoRefsUploadWrap" class="hidden flex-col gap-3 model-upload-grid">
-            <div class="upload-section-card upload-section-wide">
-              <div class="upload-section-title">
-                <span id="videoRefsTitle">References</span>
-                <span id="videoRefsHint">Optional model inputs</span>
+            <div id="videoFramesSection" class="upload-section-card upload-section-wide">
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🎬</span>
+                <div>
+                  <p>Frames</p>
+                  <small>First and last frame stay together</small>
+                </div>
               </div>
-              <div class="upload-grid">
-                <div id="videoFirstFrameControl" class="upload-drop-card">
-                  <input id="videoFirstFrameInput" type="file" accept="image/*" class="hidden" />
-                  <button id="videoFirstFrameBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">➕</span><span>First frame</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
-                  </button>
-                  <div id="videoFirstFrameThumb" class="upload-thumb-zone"></div>
+              <div class="frame-pair-grid">
+              <div id="videoFirstFrameControl" class="upload-drop-card">
+              <input id="videoFirstFrameInput" type="file" accept="image/*" class="hidden" />
+              <button id="videoFirstFrameBtn" class="upload-drop-btn" type="button">
+              <span class="upload-plus">➕</span><span>Upload image</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
+              </button>
+              <div id="videoFirstFrameThumb" class="upload-thumb-zone"></div>
+              </div>
+              <div id="videoLastFrameControl" class="upload-drop-card">
+              <input id="videoLastFrameInput" type="file" accept="image/*" class="hidden" />
+              <button id="videoLastFrameBtn" class="upload-drop-btn" type="button">
+              <span class="upload-plus">➕</span><span>Upload image</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
+              </button>
+              <div id="videoLastFrameThumb" class="upload-thumb-zone"></div>
+              </div>
+              </div>
+            </div>
+
+            <div id="videoImageReferencesSection" class="upload-section-card upload-section-wide">
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🖼️</span>
+                <div>
+                  <p>Image references</p>
+                  <small>Image-only reference box</small>
                 </div>
-                <div id="videoLastFrameControl" class="upload-drop-card">
-                  <input id="videoLastFrameInput" type="file" accept="image/*" class="hidden" />
-                  <button id="videoLastFrameBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">➕</span><span>Last frame</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
-                  </button>
-                  <div id="videoLastFrameThumb" class="upload-thumb-zone"></div>
+              </div>
+              <div id="videoRefImagesControl" class="upload-drop-card">
+              <input id="videoRefImagesInput" type="file" accept="image/*" class="hidden" multiple />
+              <button id="videoRefImagesBtn" class="upload-drop-btn" type="button">
+              <span class="upload-plus">📎</span><span id="videoRefImagesLabel">Image refs</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
+              </button>
+              <div id="videoRefImagesThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+              </div>
+            </div>
+
+            <div id="videoVideoReferencesSection" class="upload-section-card upload-section-wide">
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🎞️</span>
+                <div>
+                  <p>Video references</p>
+                  <small>Video-only reference box</small>
                 </div>
-                <div id="videoSourceControl" class="upload-drop-card">
-                  <input id="videoSourceInput" type="file" accept="video/*" class="hidden" />
-                  <button id="videoSourceBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">📎</span><span>Source video</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
-                  </button>
-                  <div id="videoSourceThumb" class="upload-thumb-zone"></div>
+              </div>
+              <div class="video-reference-stack">
+              <div id="videoSourceControl" class="upload-drop-card">
+              <input id="videoSourceInput" type="file" accept="video/*" class="hidden" />
+              <button id="videoSourceBtn" class="upload-drop-btn" type="button">
+              <span class="upload-plus">📎</span><span>Upload video</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
+              </button>
+              <div id="videoSourceThumb" class="upload-thumb-zone"></div>
+              </div>
+              <div id="videoRefVideosControl" class="upload-drop-card">
+              <input id="videoRefVideosInput" type="file" accept="video/*" class="hidden" multiple />
+              <button id="videoRefVideosBtn" class="upload-drop-btn" type="button">
+              <span class="upload-plus">📎</span><span>Upload videos</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
+              </button>
+              <div id="videoRefVideosThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+              </div>
+              </div>
+            </div>
+
+            <div id="videoAudioReferencesSection" class="upload-section-card upload-section-wide">
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🔊</span>
+                <div>
+                  <p>Audio references</p>
+                  <small>Audio-only reference box</small>
                 </div>
-                <div id="videoRefImagesControl" class="upload-drop-card">
-                  <input id="videoRefImagesInput" type="file" accept="image/*" class="hidden" multiple />
-                  <button id="videoRefImagesBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">📎</span><span id="videoRefImagesLabel">Image refs</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
-                  </button>
-                  <div id="videoRefImagesThumbs" class="upload-thumb-zone upload-thumb-list"></div>
-                </div>
-                <div id="videoRefVideosControl" class="upload-drop-card">
-                  <input id="videoRefVideosInput" type="file" accept="video/*" class="hidden" multiple />
-                  <button id="videoRefVideosBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">📎</span><span>Video refs</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
-                  </button>
-                  <div id="videoRefVideosThumbs" class="upload-thumb-zone upload-thumb-list"></div>
-                </div>
-                <div id="videoRefAudioControl" class="upload-drop-card">
-                  <input id="videoRefAudioInput" type="file" accept="audio/*" class="hidden" multiple />
-                  <button id="videoRefAudioBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">📎</span><span>Audio ref</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
-                  </button>
-                  <div id="videoRefAudioThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+              </div>
+              <div id="videoRefAudioControl" class="upload-drop-card">
+              <input id="videoRefAudioInput" type="file" accept="audio/*" class="hidden" multiple />
+              <button id="videoRefAudioBtn" class="upload-drop-btn" type="button">
+              <span class="upload-plus">📎</span><span>Upload audio</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Optional</span>
+              </button>
+              <div id="videoRefAudioThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+              </div>
+            </div>
+
+            <div id="geminiVoiceSection" class="upload-section-card upload-section-wide">
+              <div class="upload-section-head">
+                <span class="upload-section-icon">🎙️</span>
+                <div>
+                  <p>Voice</p>
+                  <small>Optional voice reference</small>
                 </div>
               </div>
               <div id="geminiAudioIdsControl" class="hidden mt-3">
-                <label for="geminiVoiceButton" class="block text-[11px] font-semibold text-white/70 mb-2">Voice</label>
-                <div class="gemini-voice-picker">
-                  <button id="geminiVoiceButton" type="button" aria-haspopup="listbox" aria-expanded="false">
-                    <span id="geminiVoiceLabel">No voice reference</span>
-                    <span aria-hidden="true">▾</span>
-                  </button>
-                  <div id="geminiVoiceMenu" class="hidden" role="listbox" aria-label="Voice">
-                    <button type="button" data-voice="" data-label="No voice reference" class="is-selected">No voice reference <small>default</small></button>
-                    <button type="button" data-voice="achernar" data-label="Achernar - female, soft, high pitch">Achernar <small>female, soft, high pitch</small></button>
-                    <button type="button" data-voice="achird" data-label="Achird - male, friendly, mid pitch">Achird <small>male, friendly, mid pitch</small></button>
-                    <button type="button" data-voice="algenib" data-label="Algenib - male, raspy, low pitch">Algenib <small>male, raspy, low pitch</small></button>
-                    <button type="button" data-voice="algieba" data-label="Algieba - male, easygoing, mid-low pitch">Algieba <small>male, easygoing, mid-low pitch</small></button>
-                    <button type="button" data-voice="alnilam" data-label="Alnilam - male, steady, mid-low pitch">Alnilam <small>male, steady, mid-low pitch</small></button>
-                    <button type="button" data-voice="aoede" data-label="Aoede - female, brisk, mid pitch">Aoede <small>female, brisk, mid pitch</small></button>
-                    <button type="button" data-voice="autonoe" data-label="Autonoe - female, bright, mid pitch">Autonoe <small>female, bright, mid pitch</small></button>
-                    <button type="button" data-voice="callirrhoe" data-label="Callirrhoe - female, easygoing, mid pitch">Callirrhoe <small>female, easygoing, mid pitch</small></button>
-                    <button type="button" data-voice="charon" data-label="Charon - male, intellectual, low pitch">Charon <small>male, intellectual, low pitch</small></button>
-                    <button type="button" data-voice="despina" data-label="Despina - female, smooth, mid pitch">Despina <small>female, smooth, mid pitch</small></button>
-                    <button type="button" data-voice="enceladus" data-label="Enceladus - male, breathy, low pitch">Enceladus <small>male, breathy, low pitch</small></button>
-                    <button type="button" data-voice="erinome" data-label="Erinome - female, clear, mid pitch">Erinome <small>female, clear, mid pitch</small></button>
-                    <button type="button" data-voice="fenrir" data-label="Fenrir - male, lively, younger pitch">Fenrir <small>male, lively, younger pitch</small></button>
-                    <button type="button" data-voice="gacrux" data-label="Gacrux - female, mature, mid pitch">Gacrux <small>female, mature, mid pitch</small></button>
-                    <button type="button" data-voice="iapetus" data-label="Iapetus - male, clear, mid-low pitch">Iapetus <small>male, clear, mid-low pitch</small></button>
-                    <button type="button" data-voice="kore" data-label="Kore - female, capable, mid pitch">Kore <small>female, capable, mid pitch</small></button>
-                    <button type="button" data-voice="laomedeia" data-label="Laomedeia - female, cheerful, mid-high pitch">Laomedeia <small>female, cheerful, mid-high pitch</small></button>
-                    <button type="button" data-voice="leda" data-label="Leda - female, young, mid-high pitch">Leda <small>female, young, mid-high pitch</small></button>
-                    <button type="button" data-voice="orus" data-label="Orus - male, steady, mid-low pitch">Orus <small>male, steady, mid-low pitch</small></button>
-                    <button type="button" data-voice="puck" data-label="Puck - male, cheerful, mid pitch">Puck <small>male, cheerful, mid pitch</small></button>
-                    <button type="button" data-voice="pulcherrima" data-label="Pulcherrima - genderless, forward, mid-high pitch">Pulcherrima <small>genderless, forward, mid-high pitch</small></button>
-                    <button type="button" data-voice="rasalgethi" data-label="Rasalgethi - male, intellectual, mid pitch">Rasalgethi <small>male, intellectual, mid pitch</small></button>
-                    <button type="button" data-voice="sadachbia" data-label="Sadachbia - male, vivid, low pitch">Sadachbia <small>male, vivid, low pitch</small></button>
-                    <button type="button" data-voice="sadaltager" data-label="Sadaltager - male, knowledgeable, mid pitch">Sadaltager <small>male, knowledgeable, mid pitch</small></button>
-                    <button type="button" data-voice="schedar" data-label="Schedar - male, smooth, mid-low pitch">Schedar <small>male, smooth, mid-low pitch</small></button>
-                    <button type="button" data-voice="sulafat" data-label="Sulafat - female, warm, mid pitch">Sulafat <small>female, warm, mid pitch</small></button>
-                    <button type="button" data-voice="umbriel" data-label="Umbriel - male, smooth, low pitch">Umbriel <small>male, smooth, low pitch</small></button>
-                    <button type="button" data-voice="vindemiatrix" data-label="Vindemiatrix - female, gentle, mid pitch">Vindemiatrix <small>female, gentle, mid pitch</small></button>
-                    <button type="button" data-voice="zephyr" data-label="Zephyr - female, bright, mid-high pitch">Zephyr <small>female, bright, mid-high pitch</small></button>
-                    <button type="button" data-voice="zubenelgenubi" data-label="Zubenelgenubi - male, casual, mid-low pitch">Zubenelgenubi <small>male, casual, mid-low pitch</small></button>
-                  </div>
-                </div>
+              <label for="geminiVoiceButton" class="block text-[11px] font-semibold text-white/70 mb-2">Voice</label>
+              <div class="gemini-voice-picker">
+              <button id="geminiVoiceButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span id="geminiVoiceLabel">No voice reference</span>
+              <span aria-hidden="true">▾</span>
+              </button>
+              <div id="geminiVoiceMenu" class="hidden" role="listbox" aria-label="Voice">
+              <button type="button" data-voice="" data-label="No voice reference" class="is-selected">No voice reference <small>default</small></button>
+              <button type="button" data-voice="achernar" data-label="Achernar - female, soft, high pitch">Achernar <small>female, soft, high pitch</small></button>
+              <button type="button" data-voice="achird" data-label="Achird - male, friendly, mid pitch">Achird <small>male, friendly, mid pitch</small></button>
+              <button type="button" data-voice="algenib" data-label="Algenib - male, raspy, low pitch">Algenib <small>male, raspy, low pitch</small></button>
+              <button type="button" data-voice="algieba" data-label="Algieba - male, easygoing, mid-low pitch">Algieba <small>male, easygoing, mid-low pitch</small></button>
+              <button type="button" data-voice="alnilam" data-label="Alnilam - male, steady, mid-low pitch">Alnilam <small>male, steady, mid-low pitch</small></button>
+              <button type="button" data-voice="aoede" data-label="Aoede - female, brisk, mid pitch">Aoede <small>female, brisk, mid pitch</small></button>
+              <button type="button" data-voice="autonoe" data-label="Autonoe - female, bright, mid pitch">Autonoe <small>female, bright, mid pitch</small></button>
+              <button type="button" data-voice="callirrhoe" data-label="Callirrhoe - female, easygoing, mid pitch">Callirrhoe <small>female, easygoing, mid pitch</small></button>
+              <button type="button" data-voice="charon" data-label="Charon - male, intellectual, low pitch">Charon <small>male, intellectual, low pitch</small></button>
+              <button type="button" data-voice="despina" data-label="Despina - female, smooth, mid pitch">Despina <small>female, smooth, mid pitch</small></button>
+              <button type="button" data-voice="enceladus" data-label="Enceladus - male, breathy, low pitch">Enceladus <small>male, breathy, low pitch</small></button>
+              <button type="button" data-voice="erinome" data-label="Erinome - female, clear, mid pitch">Erinome <small>female, clear, mid pitch</small></button>
+              <button type="button" data-voice="fenrir" data-label="Fenrir - male, lively, younger pitch">Fenrir <small>male, lively, younger pitch</small></button>
+              <button type="button" data-voice="gacrux" data-label="Gacrux - female, mature, mid pitch">Gacrux <small>female, mature, mid pitch</small></button>
+              <button type="button" data-voice="iapetus" data-label="Iapetus - male, clear, mid-low pitch">Iapetus <small>male, clear, mid-low pitch</small></button>
+              <button type="button" data-voice="kore" data-label="Kore - female, capable, mid pitch">Kore <small>female, capable, mid pitch</small></button>
+              <button type="button" data-voice="laomedeia" data-label="Laomedeia - female, cheerful, mid-high pitch">Laomedeia <small>female, cheerful, mid-high pitch</small></button>
+              <button type="button" data-voice="leda" data-label="Leda - female, young, mid-high pitch">Leda <small>female, young, mid-high pitch</small></button>
+              <button type="button" data-voice="orus" data-label="Orus - male, steady, mid-low pitch">Orus <small>male, steady, mid-low pitch</small></button>
+              <button type="button" data-voice="puck" data-label="Puck - male, cheerful, mid pitch">Puck <small>male, cheerful, mid pitch</small></button>
+              <button type="button" data-voice="pulcherrima" data-label="Pulcherrima - genderless, forward, mid-high pitch">Pulcherrima <small>genderless, forward, mid-high pitch</small></button>
+              <button type="button" data-voice="rasalgethi" data-label="Rasalgethi - male, intellectual, mid pitch">Rasalgethi <small>male, intellectual, mid pitch</small></button>
+              <button type="button" data-voice="sadachbia" data-label="Sadachbia - male, vivid, low pitch">Sadachbia <small>male, vivid, low pitch</small></button>
+              <button type="button" data-voice="sadaltager" data-label="Sadaltager - male, knowledgeable, mid pitch">Sadaltager <small>male, knowledgeable, mid pitch</small></button>
+              <button type="button" data-voice="schedar" data-label="Schedar - male, smooth, mid-low pitch">Schedar <small>male, smooth, mid-low pitch</small></button>
+              <button type="button" data-voice="sulafat" data-label="Sulafat - female, warm, mid pitch">Sulafat <small>female, warm, mid pitch</small></button>
+              <button type="button" data-voice="umbriel" data-label="Umbriel - male, smooth, low pitch">Umbriel <small>male, smooth, low pitch</small></button>
+              <button type="button" data-voice="vindemiatrix" data-label="Vindemiatrix - female, gentle, mid pitch">Vindemiatrix <small>female, gentle, mid pitch</small></button>
+              <button type="button" data-voice="zephyr" data-label="Zephyr - female, bright, mid-high pitch">Zephyr <small>female, bright, mid-high pitch</small></button>
+              <button type="button" data-voice="zubenelgenubi" data-label="Zubenelgenubi - male, casual, mid-low pitch">Zubenelgenubi <small>male, casual, mid-low pitch</small></button>
               </div>
+              </div>
+              </div>
+            </div>
+
+            <div id="wanPromptExtendSection" class="upload-section-card upload-toggle-card upload-section-wide">
               <div id="wanPromptExtendControl" class="flex items-center gap-2 mt-3 text-[11px] text-white/70">
-                <button id="wanPromptExtendToggle" type="button" class="chip chip-active px-3 py-1">Prompt extend on</button>
+              <button id="wanPromptExtendToggle" type="button" class="chip chip-active px-3 py-1">Prompt extend on</button>
               </div>
             </div>
           </div>
@@ -10229,12 +10324,23 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (imageLabel) imageLabel.textContent = 'Upload images';
       if (imageInput) imageInput.multiple = true;
       const isGeminiFlash = kind === 'geminiOmni' && currentModel && currentModel.id === 'gemini-omni-flash-1-1';
-      show('videoFirstFrameControl', kind === 'wan27' || kind === 'wan30' || kind === 'happyhorse' || isGeminiFlash);
-      show('videoLastFrameControl', kind === 'wan27' || kind === 'wan30' || isGeminiFlash);
-      show('videoSourceControl', kind === 'wan27' || kind === 'happyhorse' || kind === 'geminiOmni');
+      const showsFirstFrame = kind === 'wan27' || kind === 'wan30' || kind === 'happyhorse' || isGeminiFlash;
+      const showsLastFrame = kind === 'wan27' || kind === 'wan30' || isGeminiFlash;
+      const showsSourceVideo = kind === 'wan27' || kind === 'happyhorse' || kind === 'geminiOmni';
+      const showsVideoReferences = kind === 'wan27' || kind === 'wan30';
+      const showsAudioReferences = kind === 'wan27' || kind === 'wan30';
+      show('videoFramesSection', showsFirstFrame || showsLastFrame);
+      show('videoImageReferencesSection', true);
+      show('videoVideoReferencesSection', showsSourceVideo || showsVideoReferences);
+      show('videoAudioReferencesSection', showsAudioReferences);
+      show('geminiVoiceSection', kind === 'geminiOmni');
+      show('wanPromptExtendSection', kind === 'wan27');
+      show('videoFirstFrameControl', showsFirstFrame);
+      show('videoLastFrameControl', showsLastFrame);
+      show('videoSourceControl', showsSourceVideo);
       show('videoRefImagesControl', true);
-      show('videoRefVideosControl', kind === 'wan27' || kind === 'wan30');
-      show('videoRefAudioControl', kind === 'wan27' || kind === 'wan30');
+      show('videoRefVideosControl', showsVideoReferences);
+      show('videoRefAudioControl', showsAudioReferences);
       show('geminiAudioIdsControl', kind === 'geminiOmni');
       show('wanPromptExtendControl', kind === 'wan27');
       syncUploadButtonCopy();
