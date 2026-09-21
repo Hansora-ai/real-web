@@ -4225,6 +4225,21 @@
         letter-spacing:.005em !important;
       }
 
+
+    /* Grouped reference layout shared by Gemini Omni Flash and Wan 3.0. */
+    body.workspace-redesign #videoRefsUploadWrap:not(.hidden){display:grid !important;grid-template-columns:1fr !important;gap:12px !important;width:100% !important;}
+    body.workspace-redesign #videoRefsUploadWrap > .upload-section-card.hidden{display:none !important;}
+    body.workspace-redesign #videoRefsUploadWrap .frame-pair-grid{display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;gap:10px !important;}
+    body.workspace-redesign #videoRefsUploadWrap .frame-pair-grid > .upload-drop-card{grid-column:auto !important;grid-row:auto !important;min-width:0 !important;min-height:116px !important;}
+    body.workspace-redesign #videoRefsUploadWrap .video-reference-stack{display:grid !important;grid-template-columns:1fr !important;gap:10px !important;}
+    body.workspace-redesign #videoRefsUploadWrap #videoImageReferencesSection > .upload-drop-card,
+    body.workspace-redesign #videoRefsUploadWrap #videoVideoReferencesSection .upload-drop-card,
+    body.workspace-redesign #videoRefsUploadWrap #videoAudioReferencesSection > .upload-drop-card{min-height:126px !important;}
+    body.workspace-redesign #videoRefsUploadWrap #geminiAudioIdsControl,
+    body.workspace-redesign #videoRefsUploadWrap #wanPromptExtendControl{margin-top:0 !important;}
+    body.workspace-redesign #videoRefsUploadWrap #geminiAudioIdsControl > label{display:none !important;}
+    @media (max-width:900px){body.workspace-redesign #videoRefsUploadWrap .frame-pair-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;}}
+
 	    </style>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
@@ -4582,105 +4597,118 @@
 
           <!-- New KIE video models: Wan 2.7 / HappyHorse / Grok -->
           <div id="videoRefsUploadWrap" class="hidden flex-col gap-3 model-upload-grid">
-            <div class="upload-section-card upload-section-wide">
-              <div class="upload-section-title">
-                <span id="videoRefsTitle">Հղումներ</span>
-                <span id="videoRefsHint">Մոդելի լրացուցիչ մուտքային տվյալներ</span>
+            <div id="videoFramesSection" class="upload-section-card upload-section-wide">
+              <div class="upload-section-head"><span class="upload-section-icon">🎬</span><div><p>Կադրեր</p><small>Առաջին և վերջին կադրերը կիրառվում են միասին</small></div></div>
+              <div class="frame-pair-grid">
+              <div id="videoFirstFrameControl" class="upload-drop-card">
+              <input id="videoFirstFrameInput" type="file" accept="image/*" class="hidden" />
+              <button id="videoFirstFrameBtn" class="upload-drop-btn" type="button">
+              <span class="upload-plus">➕</span><span>Վերբեռնել պատկեր</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+              </button>
+              <div id="videoFirstFrameThumb" class="upload-thumb-zone"></div>
               </div>
-              <div class="upload-grid">
-                <div id="videoFirstFrameControl" class="upload-drop-card">
-                  <input id="videoFirstFrameInput" type="file" accept="image/*" class="hidden" />
-                  <button id="videoFirstFrameBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">➕</span><span>Առաջին կադր</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
-                  </button>
-                  <div id="videoFirstFrameThumb" class="upload-thumb-zone"></div>
-                </div>
-                <div id="videoLastFrameControl" class="upload-drop-card">
-                  <input id="videoLastFrameInput" type="file" accept="image/*" class="hidden" />
-                  <button id="videoLastFrameBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">➕</span><span>Վերջին կադր</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
-                  </button>
-                  <div id="videoLastFrameThumb" class="upload-thumb-zone"></div>
-                </div>
-                <div id="videoSourceControl" class="upload-drop-card">
-                  <input id="videoSourceInput" type="file" accept="video/*" class="hidden" />
-                  <button id="videoSourceBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">📎</span><span>Սկզբնական տեսանյութ</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
-                  </button>
-                  <div id="videoSourceThumb" class="upload-thumb-zone"></div>
-                </div>
-                <div id="videoRefImagesControl" class="upload-drop-card">
-                  <input id="videoRefImagesInput" type="file" accept="image/*" class="hidden" multiple />
-                  <button id="videoRefImagesBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">📎</span><span id="videoRefImagesLabel">Պատկերային հղումներ</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
-                  </button>
-                  <div id="videoRefImagesThumbs" class="upload-thumb-zone upload-thumb-list"></div>
-                </div>
-                <div id="videoRefVideosControl" class="upload-drop-card">
-                  <input id="videoRefVideosInput" type="file" accept="video/*" class="hidden" multiple />
-                  <button id="videoRefVideosBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">📎</span><span>Տեսանյութերի հղումներ</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
-                  </button>
-                  <div id="videoRefVideosThumbs" class="upload-thumb-zone upload-thumb-list"></div>
-                </div>
-                <div id="videoRefAudioControl" class="upload-drop-card">
-                  <input id="videoRefAudioInput" type="file" accept="audio/*" class="hidden" multiple />
-                  <button id="videoRefAudioBtn" class="upload-drop-btn" type="button">
-                    <span class="upload-plus">📎</span><span>Աուդիո հղում</span>
-                    <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
-                  </button>
-                  <div id="videoRefAudioThumbs" class="upload-thumb-zone upload-thumb-list"></div>
-                </div>
+              <div id="videoLastFrameControl" class="upload-drop-card">
+              <input id="videoLastFrameInput" type="file" accept="image/*" class="hidden" />
+              <button id="videoLastFrameBtn" class="upload-drop-btn" type="button">
+              <span class="upload-plus">➕</span><span>Վերբեռնել պատկեր</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+              </button>
+              <div id="videoLastFrameThumb" class="upload-thumb-zone"></div>
               </div>
+              </div>
+            </div>
+            <div id="videoImageReferencesSection" class="upload-section-card upload-section-wide">
+              <div class="upload-section-head"><span class="upload-section-icon">🖼️</span><div><p>Պատկերի հղումներ</p><small>Միայն պատկերների համար</small></div></div>
+              <div id="videoRefImagesControl" class="upload-drop-card">
+              <input id="videoRefImagesInput" type="file" accept="image/*" class="hidden" multiple />
+              <button id="videoRefImagesBtn" class="upload-drop-btn" type="button">
+              <span class="upload-plus">📎</span><span id="videoRefImagesLabel">Վերբեռնել պատկերներ</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+              </button>
+              <div id="videoRefImagesThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+              </div>
+            </div>
+            <div id="videoVideoReferencesSection" class="upload-section-card upload-section-wide">
+              <div class="upload-section-head"><span class="upload-section-icon">🎞️</span><div><p>Տեսանյութի հղումներ</p><small>Միայն տեսանյութերի համար</small></div></div>
+              <div class="video-reference-stack">
+              <div id="videoSourceControl" class="upload-drop-card">
+              <input id="videoSourceInput" type="file" accept="video/*" class="hidden" />
+              <button id="videoSourceBtn" class="upload-drop-btn" type="button">
+              <span class="upload-plus">📎</span><span>Վերբեռնել տեսանյութ</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+              </button>
+              <div id="videoSourceThumb" class="upload-thumb-zone"></div>
+              </div>
+              <div id="videoRefVideosControl" class="upload-drop-card">
+              <input id="videoRefVideosInput" type="file" accept="video/*" class="hidden" multiple />
+              <button id="videoRefVideosBtn" class="upload-drop-btn" type="button">
+              <span class="upload-plus">📎</span><span>Վերբեռնել տեսանյութեր</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+              </button>
+              <div id="videoRefVideosThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+              </div>
+              </div>
+            </div>
+            <div id="videoAudioReferencesSection" class="upload-section-card upload-section-wide">
+              <div class="upload-section-head"><span class="upload-section-icon">🔊</span><div><p>Ձայնային հղումներ</p><small>Միայն ձայնի համար</small></div></div>
+              <div id="videoRefAudioControl" class="upload-drop-card">
+              <input id="videoRefAudioInput" type="file" accept="audio/*" class="hidden" multiple />
+              <button id="videoRefAudioBtn" class="upload-drop-btn" type="button">
+              <span class="upload-plus">📎</span><span>Վերբեռնել աուդիո</span>
+              <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
+              </button>
+              <div id="videoRefAudioThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+              </div>
+            </div>
+            <div id="geminiVoiceSection" class="upload-section-card upload-section-wide">
+              <div class="upload-section-head"><span class="upload-section-icon">🎙️</span><div><p>Ձայն</p><small>Ընտրովի ձայնային հղում</small></div></div>
               <div id="geminiAudioIdsControl" class="hidden mt-3">
-                <label for="geminiVoiceButton" class="block text-[11px] font-semibold text-white/70 mb-2">Ձայն</label>
-                <div class="gemini-voice-picker">
-                  <button id="geminiVoiceButton" type="button" aria-haspopup="listbox" aria-expanded="false">
-                    <span id="geminiVoiceLabel">Ձայնային հղում չկա</span>
-                    <span aria-hidden="true">▾</span>
-                  </button>
-                  <div id="geminiVoiceMenu" class="hidden" role="listbox" aria-label="Ձայն">
-                    <button type="button" data-voice="" data-label="Ձայնային հղում չկա" class="is-selected">Ձայնային հղում չկա <small>լռելյայն</small></button>
-                    <button type="button" data-voice="achernar" data-label="Achernar - իգական, մեղմ, բարձր տոնայնություն">Achernar <small>իգական, մեղմ, բարձր տոնայնություն</small></button>
-                    <button type="button" data-voice="achird" data-label="Achird - արական, ընկերական, միջին տոնայնություն">Achird <small>արական, ընկերական, միջին տոնայնություն</small></button>
-                    <button type="button" data-voice="algenib" data-label="Algenib - արական, խռպոտ, ցածր տոնայնություն">Algenib <small>արական, խռպոտ, ցածր տոնայնություն</small></button>
-                    <button type="button" data-voice="algieba" data-label="Algieba - արական, հանգիստ, միջինից ցածր տոնայնություն">Algieba <small>արական, հանգիստ, միջինից ցածր տոնայնություն</small></button>
-                    <button type="button" data-voice="alnilam" data-label="Alnilam - արական, կայուն, միջինից ցածր տոնայնություն">Alnilam <small>արական, կայուն, միջինից ցածր տոնայնություն</small></button>
-                    <button type="button" data-voice="aoede" data-label="Aoede - իգական, աշխույժ, միջին տոնայնություն">Aoede <small>իգական, աշխույժ, միջին տոնայնություն</small></button>
-                    <button type="button" data-voice="autonoe" data-label="Autonoe - իգական, պայծառ, միջին տոնայնություն">Autonoe <small>իգական, պայծառ, միջին տոնայնություն</small></button>
-                    <button type="button" data-voice="callirrhoe" data-label="Callirrhoe - իգական, հանգիստ, միջին տոնայնություն">Callirrhoe <small>իգական, հանգիստ, միջին տոնայնություն</small></button>
-                    <button type="button" data-voice="charon" data-label="Charon - արական, խոհուն, ցածր տոնայնություն">Charon <small>արական, խոհուն, ցածր տոնայնություն</small></button>
-                    <button type="button" data-voice="despina" data-label="Despina - իգական, սահուն, միջին տոնայնություն">Despina <small>իգական, սահուն, միջին տոնայնություն</small></button>
-                    <button type="button" data-voice="enceladus" data-label="Enceladus - արական, շնչային, ցածր տոնայնություն">Enceladus <small>արական, շնչային, ցածր տոնայնություն</small></button>
-                    <button type="button" data-voice="erinome" data-label="Erinome - իգական, հստակ, միջին տոնայնություն">Erinome <small>իգական, հստակ, միջին տոնայնություն</small></button>
-                    <button type="button" data-voice="fenrir" data-label="Fenrir - արական, աշխույժ, երիտասարդ տոնայնություն">Fenrir <small>արական, աշխույժ, երիտասարդ տոնայնություն</small></button>
-                    <button type="button" data-voice="gacrux" data-label="Gacrux - իգական, հասուն, միջին տոնայնություն">Gacrux <small>իգական, հասուն, միջին տոնայնություն</small></button>
-                    <button type="button" data-voice="iapetus" data-label="Iapetus - արական, հստակ, միջինից ցածր տոնայնություն">Iapetus <small>արական, հստակ, միջինից ցածր տոնայնություն</small></button>
-                    <button type="button" data-voice="kore" data-label="Kore - իգական, վստահ, միջին տոնայնություն">Kore <small>իգական, վստահ, միջին տոնայնություն</small></button>
-                    <button type="button" data-voice="laomedeia" data-label="Laomedeia - իգական, ուրախ, միջինից բարձր տոնայնություն">Laomedeia <small>իգական, ուրախ, միջինից բարձր տոնայնություն</small></button>
-                    <button type="button" data-voice="leda" data-label="Leda - իգական, երիտասարդ, միջինից բարձր տոնայնություն">Leda <small>իգական, երիտասարդ, միջինից բարձր տոնայնություն</small></button>
-                    <button type="button" data-voice="orus" data-label="Orus - արական, կայուն, միջինից ցածր տոնայնություն">Orus <small>արական, կայուն, միջինից ցածր տոնայնություն</small></button>
-                    <button type="button" data-voice="puck" data-label="Puck - արական, ուրախ, միջին տոնայնություն">Puck <small>արական, ուրախ, միջին տոնայնություն</small></button>
-                    <button type="button" data-voice="pulcherrima" data-label="Pulcherrima - չեզոք, արտահայտիչ, միջինից բարձր տոնայնություն">Pulcherrima <small>չեզոք, արտահայտիչ, միջինից բարձր տոնայնություն</small></button>
-                    <button type="button" data-voice="rasalgethi" data-label="Rasalgethi - արական, խոհուն, միջին տոնայնություն">Rasalgethi <small>արական, խոհուն, միջին տոնայնություն</small></button>
-                    <button type="button" data-voice="sadachbia" data-label="Sadachbia - արական, վառ, ցածր տոնայնություն">Sadachbia <small>արական, վառ, ցածր տոնայնություն</small></button>
-                    <button type="button" data-voice="sadaltager" data-label="Sadaltager - արական, բանիմաց, միջին տոնայնություն">Sadaltager <small>արական, բանիմաց, միջին տոնայնություն</small></button>
-                    <button type="button" data-voice="schedar" data-label="Schedar - արական, սահուն, միջինից ցածր տոնայնություն">Schedar <small>արական, սահուն, միջինից ցածր տոնայնություն</small></button>
-                    <button type="button" data-voice="sulafat" data-label="Sulafat - իգական, ջերմ, միջին տոնայնություն">Sulafat <small>իգական, ջերմ, միջին տոնայնություն</small></button>
-                    <button type="button" data-voice="umbriel" data-label="Umbriel - արական, սահուն, ցածր տոնայնություն">Umbriel <small>արական, սահուն, ցածր տոնայնություն</small></button>
-                    <button type="button" data-voice="vindemiatrix" data-label="Vindemiatrix - իգական, նուրբ, միջին տոնայնություն">Vindemiatrix <small>իգական, նուրբ, միջին տոնայնություն</small></button>
-                    <button type="button" data-voice="zephyr" data-label="Zephyr - իգական, պայծառ, միջինից բարձր տոնայնություն">Zephyr <small>իգական, պայծառ, միջինից բարձր տոնայնություն</small></button>
-                    <button type="button" data-voice="zubenelgenubi" data-label="Zubenelgenubi - արական, անկաշկանդ, միջինից ցածր տոնայնություն">Zubenelgenubi <small>արական, անկաշկանդ, միջինից ցածր տոնայնություն</small></button>
-                  </div>
-                </div>
+              <label for="geminiVoiceButton" class="block text-[11px] font-semibold text-white/70 mb-2">Ձայն</label>
+              <div class="gemini-voice-picker">
+              <button id="geminiVoiceButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span id="geminiVoiceLabel">Ձայնային հղում չկա</span>
+              <span aria-hidden="true">▾</span>
+              </button>
+              <div id="geminiVoiceMenu" class="hidden" role="listbox" aria-label="Ձայն">
+              <button type="button" data-voice="" data-label="Ձայնային հղում չկա" class="is-selected">Ձայնային հղում չկա <small>լռելյայն</small></button>
+              <button type="button" data-voice="achernar" data-label="Achernar - իգական, մեղմ, բարձր տոնայնություն">Achernar <small>իգական, մեղմ, բարձր տոնայնություն</small></button>
+              <button type="button" data-voice="achird" data-label="Achird - արական, ընկերական, միջին տոնայնություն">Achird <small>արական, ընկերական, միջին տոնայնություն</small></button>
+              <button type="button" data-voice="algenib" data-label="Algenib - արական, խռպոտ, ցածր տոնայնություն">Algenib <small>արական, խռպոտ, ցածր տոնայնություն</small></button>
+              <button type="button" data-voice="algieba" data-label="Algieba - արական, հանգիստ, միջինից ցածր տոնայնություն">Algieba <small>արական, հանգիստ, միջինից ցածր տոնայնություն</small></button>
+              <button type="button" data-voice="alnilam" data-label="Alnilam - արական, կայուն, միջինից ցածր տոնայնություն">Alnilam <small>արական, կայուն, միջինից ցածր տոնայնություն</small></button>
+              <button type="button" data-voice="aoede" data-label="Aoede - իգական, աշխույժ, միջին տոնայնություն">Aoede <small>իգական, աշխույժ, միջին տոնայնություն</small></button>
+              <button type="button" data-voice="autonoe" data-label="Autonoe - իգական, պայծառ, միջին տոնայնություն">Autonoe <small>իգական, պայծառ, միջին տոնայնություն</small></button>
+              <button type="button" data-voice="callirrhoe" data-label="Callirrhoe - իգական, հանգիստ, միջին տոնայնություն">Callirrhoe <small>իգական, հանգիստ, միջին տոնայնություն</small></button>
+              <button type="button" data-voice="charon" data-label="Charon - արական, խոհուն, ցածր տոնայնություն">Charon <small>արական, խոհուն, ցածր տոնայնություն</small></button>
+              <button type="button" data-voice="despina" data-label="Despina - իգական, սահուն, միջին տոնայնություն">Despina <small>իգական, սահուն, միջին տոնայնություն</small></button>
+              <button type="button" data-voice="enceladus" data-label="Enceladus - արական, շնչային, ցածր տոնայնություն">Enceladus <small>արական, շնչային, ցածր տոնայնություն</small></button>
+              <button type="button" data-voice="erinome" data-label="Erinome - իգական, հստակ, միջին տոնայնություն">Erinome <small>իգական, հստակ, միջին տոնայնություն</small></button>
+              <button type="button" data-voice="fenrir" data-label="Fenrir - արական, աշխույժ, երիտասարդ տոնայնություն">Fenrir <small>արական, աշխույժ, երիտասարդ տոնայնություն</small></button>
+              <button type="button" data-voice="gacrux" data-label="Gacrux - իգական, հասուն, միջին տոնայնություն">Gacrux <small>իգական, հասուն, միջին տոնայնություն</small></button>
+              <button type="button" data-voice="iapetus" data-label="Iapetus - արական, հստակ, միջինից ցածր տոնայնություն">Iapetus <small>արական, հստակ, միջինից ցածր տոնայնություն</small></button>
+              <button type="button" data-voice="kore" data-label="Kore - իգական, վստահ, միջին տոնայնություն">Kore <small>իգական, վստահ, միջին տոնայնություն</small></button>
+              <button type="button" data-voice="laomedeia" data-label="Laomedeia - իգական, ուրախ, միջինից բարձր տոնայնություն">Laomedeia <small>իգական, ուրախ, միջինից բարձր տոնայնություն</small></button>
+              <button type="button" data-voice="leda" data-label="Leda - իգական, երիտասարդ, միջինից բարձր տոնայնություն">Leda <small>իգական, երիտասարդ, միջինից բարձր տոնայնություն</small></button>
+              <button type="button" data-voice="orus" data-label="Orus - արական, կայուն, միջինից ցածր տոնայնություն">Orus <small>արական, կայուն, միջինից ցածր տոնայնություն</small></button>
+              <button type="button" data-voice="puck" data-label="Puck - արական, ուրախ, միջին տոնայնություն">Puck <small>արական, ուրախ, միջին տոնայնություն</small></button>
+              <button type="button" data-voice="pulcherrima" data-label="Pulcherrima - չեզոք, արտահայտիչ, միջինից բարձր տոնայնություն">Pulcherrima <small>չեզոք, արտահայտիչ, միջինից բարձր տոնայնություն</small></button>
+              <button type="button" data-voice="rasalgethi" data-label="Rasalgethi - արական, խոհուն, միջին տոնայնություն">Rasalgethi <small>արական, խոհուն, միջին տոնայնություն</small></button>
+              <button type="button" data-voice="sadachbia" data-label="Sadachbia - արական, վառ, ցածր տոնայնություն">Sadachbia <small>արական, վառ, ցածր տոնայնություն</small></button>
+              <button type="button" data-voice="sadaltager" data-label="Sadaltager - արական, բանիմաց, միջին տոնայնություն">Sadaltager <small>արական, բանիմաց, միջին տոնայնություն</small></button>
+              <button type="button" data-voice="schedar" data-label="Schedar - արական, սահուն, միջինից ցածր տոնայնություն">Schedar <small>արական, սահուն, միջինից ցածր տոնայնություն</small></button>
+              <button type="button" data-voice="sulafat" data-label="Sulafat - իգական, ջերմ, միջին տոնայնություն">Sulafat <small>իգական, ջերմ, միջին տոնայնություն</small></button>
+              <button type="button" data-voice="umbriel" data-label="Umbriel - արական, սահուն, ցածր տոնայնություն">Umbriel <small>արական, սահուն, ցածր տոնայնություն</small></button>
+              <button type="button" data-voice="vindemiatrix" data-label="Vindemiatrix - իգական, նուրբ, միջին տոնայնություն">Vindemiatrix <small>իգական, նուրբ, միջին տոնայնություն</small></button>
+              <button type="button" data-voice="zephyr" data-label="Zephyr - իգական, պայծառ, միջինից բարձր տոնայնություն">Zephyr <small>իգական, պայծառ, միջինից բարձր տոնայնություն</small></button>
+              <button type="button" data-voice="zubenelgenubi" data-label="Zubenelgenubi - արական, անկաշկանդ, միջինից ցածր տոնայնություն">Zubenelgenubi <small>արական, անկաշկանդ, միջինից ցածր տոնայնություն</small></button>
               </div>
+              </div>
+              </div>
+            </div>
+            <div id="wanPromptExtendSection" class="upload-section-card upload-toggle-card upload-section-wide">
               <div id="wanPromptExtendControl" class="flex items-center gap-2 mt-3 text-[11px] text-white/70">
-                <button id="wanPromptExtendToggle" type="button" class="chip chip-active px-3 py-1">Prompt-ի ընդլայնումը միացված է</button>
+              <button id="wanPromptExtendToggle" type="button" class="chip chip-active px-3 py-1">Prompt-ի ընդլայնումը միացված է</button>
               </div>
             </div>
           </div>
@@ -7086,7 +7114,6 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         durations: null,
         costLabel: '5⚡–12⚡ per job',
         minCredits: 0.5,
-        isNew: true
       },
       {
         id: 'gpt-image-2',
@@ -7422,9 +7449,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         id: 'gemini-omni-flash-1-1',
         name: 'Gemini Omni 1.1 Flash',
         emoji: 'GF',
-        subtitle: 'Տեքստ / պատկեր / տեսանյութ → տեսանյութ',
+        subtitle: 'Տեքստ / կադրեր / պատկեր / տեսանյութ → տեսանյութ',
         category: 'video',
-        description: 'Gemini Omni 1.1 Flash՝ տեքստային հարցմամբ, ընտրովի հղումային պատկերներով, ձայնային նախընտրանքներով և ելակետային տեսանյութի հատվածի ընտրությամբ։',
+        description: 'Gemini Omni 1.1 Flash՝ առաջին/վերջին կադրով, ընտրովի հղումներով, ձայնային նախընտրանքներով և ելակետային տեսանյութի հատվածի ընտրությամբ։',
         endpoint: '/.netlify/functions/run-gemini-omni-flash-1-1',
         needsImage: false,
         maxFiles: 0,
@@ -7458,6 +7485,26 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 		        costLabel: 'No video 1080p: 4s-4.5⚡ 6s-6⚡ 8s-7.5⚡ 10s-9⚡ / No video 4K: 4s-9⚡ 6s-11⚡ 8s-12⚡ 10s-13⚡ / Video: 1080p 11⚡ 4K 16⚡',
 	        minCredits: 4.5
 	      },
+      {
+        id: 'wan-3',
+        name: 'Wan 3.0',
+        emoji: 'W3',
+        subtitle: 'Տեքստ / կադրեր / մեդիա հղումներ → տեսանյութ',
+        category: 'video',
+        description: 'Wan 3.0՝ առաջին/վերջին կադրով և ընտրովի պատկերի, տեսանյութի կամ ձայնի հղումներով։',
+        endpoint: '/.netlify/functions/run-wan-3',
+        needsImage: false,
+        maxFiles: 0,
+        uploadMaxMB: 100,
+        specificUpload: 'wan30',
+        aspectOptions: ['adaptive', '16:9', '4:3', '1:1', '3:4', '9:16'],
+        defaultAspect: 'adaptive',
+        resolutionOptions: ['480p', '720p', '1080p'],
+        defaultResolution: '1080p',
+        durations: Array.from({ length: 29 }, (_, index) => index + 2),
+        costLabel: '480p 6⚡/վ · 720p 10⚡/վ · 1080p 20⚡/վ',
+        minCredits: 1.2
+      },
       {
         id: 'wan27-video',
         name: 'Wan 2.7',
@@ -7660,7 +7707,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     // Models that should APPEND images when user uploads again (multi-image support)
 	    const __MULTI_APPEND_IMAGE_MODELS = new Set(['nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana', 'gpt-image-1', 'gpt-image-1.5', 'gpt-image-2-5', 'gpt-image-2', 'seedream-4-5', 'seedream-5-lite', 'seedream-5-pro', 'grok-image', 'wan-2-7-image', 'qwen-2']);
 	    const IMAGE_MODEL_ORDER = ['gpt-image-2-5', 'gpt-image-2', 'nano-banana-2', 'nano-banana-2-lite', 'nano-banana-pro', 'seedream-5-pro', 'seedream-5-lite', 'grok-image'];
-    const VIDEO_MODEL_ORDER = ['seedance25', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-flash-1-1', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
+    const VIDEO_MODEL_ORDER = ['seedance25', 'gemini-omni-flash-1-1', 'wan-3', 'seedance20', 'kling30', 'seedance20-mini', 'kling3-turbo', 'gemini-omni-video', 'happyhorse10', 'veo31-lite', 'veo31-fast', 'grok-video', 'kling26', 'wan27-video'];
 
     function normalizeUnlimitedValue(value) {
       return String(value || '').trim().toLowerCase();
@@ -8044,10 +8091,14 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       const id = String(containerId || '');
       const byId = {
         veoReferenceThumbs: { inputId: 'veoReferenceInput', kind: 'image', max: 3 },
-        videoRefVideosThumbs: { inputId: 'videoRefVideosInput', kind: 'video', max: 3 },
-        videoRefAudioThumbs: { inputId: 'videoRefAudioInput', kind: 'audio', max: 1 },
         kling30ElementsThumbs: { inputId: 'kling30ElementsInput', kind: 'image', max: 4 }
       };
+      if (id === 'videoRefVideosThumbs') {
+        return { inputId: 'videoRefVideosInput', kind: 'video', max: currentModel && currentModel.id === 'wan-3' ? 5 : 3 };
+      }
+      if (id === 'videoRefAudioThumbs') {
+        return { inputId: 'videoRefAudioInput', kind: 'audio', max: currentModel && currentModel.id === 'wan-3' ? 5 : 1 };
+      }
       if (id === 'seedanceImageRefsThumbs') {
         return { inputId: 'seedanceImageRefsInput', kind: 'image', max: getSeedanceReferenceLimit('image') };
       }
@@ -8060,7 +8111,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (id === 'videoRefImagesThumbs') {
         const max = currentModel && currentModel.id === 'grok-video'
           ? getGrokVideoImageLimit()
-          : (currentModel && currentModel.id.startsWith('gemini-omni') ? 7 : 9);
+          : (currentModel && currentModel.id.startsWith('gemini-omni') ? 7 : (currentModel && currentModel.id === 'wan-3' ? 10 : 9));
         return { inputId: 'videoRefImagesInput', kind: 'image', max };
       }
       return byId[id] || null;
@@ -8841,7 +8892,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         updateRunButtonLabel();
         return true;
       }
-      if (currentModel.specificUpload === 'wan27' || currentModel.specificUpload === 'happyhorse') {
+      if (currentModel.specificUpload === 'wan27' || currentModel.specificUpload === 'wan30' || currentModel.specificUpload === 'happyhorse') {
         videoFirstFrameFile = imageFiles[0] || null;
         renderSingleThumb(videoFirstFrameFile, document.getElementById('videoFirstFrameThumb'), () => {
           videoFirstFrameFile = null;
@@ -8954,6 +9005,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         'wan27': 'wan27-video',
         'wan-27': 'wan27-video',
         'wan-2.7': 'wan27-video',
+        'wan3': 'wan-3',
+        'wan-3': 'wan-3',
+        'wan-3.0': 'wan-3',
+        'wan30': 'wan-3',
         'happyhorse': 'happyhorse10',
         'happyhorse-1': 'happyhorse10',
         'happyhorse-1.1': 'happyhorse10',
@@ -9154,6 +9209,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const seconds = Math.max(1, Number(currentDuration || 5));
         const rate = currentResolution === '1080p' ? 2 : 1.5;
         return Number((seconds * rate).toFixed(1));
+      }
+      if (model.id === 'wan-3') {
+        const seconds = Math.max(2, Math.min(30, Number(currentDuration || 5)));
+        const rate = currentResolution === '480p' ? 0.6 : (currentResolution === '720p' ? 1 : 2);
+        return Number((seconds * rate).toFixed(2));
       }
       if (model.id === 'happyhorse10') {
         const seconds = Math.max(1, Number(currentDuration || 5));
@@ -10148,7 +10208,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
           kling30Wrap.classList.remove('hidden');
           kling30Wrap.classList.add('flex');
         }
-      } else if (['wan27', 'happyhorse', 'grokVideo', 'geminiOmni'].includes(currentModel.specificUpload)) {
+      } else if (['wan27', 'wan30', 'happyhorse', 'grokVideo', 'geminiOmni'].includes(currentModel.specificUpload)) {
         if (videoRefsWrap) {
           videoRefsWrap.classList.remove('hidden');
           videoRefsWrap.classList.add('flex');
@@ -10178,28 +10238,36 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         if (!el) return;
         el.classList.toggle('hidden', !visible);
       };
-      const title = document.getElementById('videoRefsTitle');
-      const hint = document.getElementById('videoRefsHint');
       const imageLabel = document.getElementById('videoRefImagesLabel');
       const wrap = document.getElementById('videoRefsUploadWrap');
       if (wrap) {
         wrap.classList.remove('video-refs-wan', 'video-refs-happyhorse', 'video-refs-grok', 'video-refs-gemini');
-        if (kind === 'wan27') wrap.classList.add('video-refs-wan');
+        if (kind === 'wan27' || kind === 'wan30') wrap.classList.add('video-refs-wan');
         if (kind === 'happyhorse') wrap.classList.add('video-refs-happyhorse');
         if (kind === 'grokVideo') wrap.classList.add('video-refs-grok');
         if (kind === 'geminiOmni') wrap.classList.add('video-refs-gemini');
       }
       const imageInput = document.getElementById('videoRefImagesInput');
-      if (title) title.textContent = '';
-      if (hint) hint.textContent = '';
       if (imageLabel) imageLabel.textContent = 'Վերբեռնել պատկերներ';
       if (imageInput) imageInput.multiple = true;
-      show('videoFirstFrameControl', kind === 'wan27' || kind === 'happyhorse');
-      show('videoLastFrameControl', kind === 'wan27');
-      show('videoSourceControl', kind === 'wan27' || kind === 'happyhorse' || kind === 'geminiOmni');
+      const isGeminiFlash = kind === 'geminiOmni' && currentModel && currentModel.id === 'gemini-omni-flash-1-1';
+      const showsFirstFrame = kind === 'wan27' || kind === 'wan30' || kind === 'happyhorse' || isGeminiFlash;
+      const showsLastFrame = kind === 'wan27' || kind === 'wan30' || isGeminiFlash;
+      const showsSourceVideo = kind === 'wan27' || kind === 'happyhorse' || kind === 'geminiOmni';
+      const showsVideoReferences = kind === 'wan27' || kind === 'wan30';
+      const showsAudioReferences = kind === 'wan27' || kind === 'wan30';
+      show('videoFramesSection', showsFirstFrame || showsLastFrame);
+      show('videoImageReferencesSection', true);
+      show('videoVideoReferencesSection', showsSourceVideo || showsVideoReferences);
+      show('videoAudioReferencesSection', showsAudioReferences);
+      show('geminiVoiceSection', kind === 'geminiOmni');
+      show('wanPromptExtendSection', kind === 'wan27');
+      show('videoFirstFrameControl', showsFirstFrame);
+      show('videoLastFrameControl', showsLastFrame);
+      show('videoSourceControl', showsSourceVideo);
       show('videoRefImagesControl', true);
-      show('videoRefVideosControl', kind === 'wan27');
-      show('videoRefAudioControl', kind === 'wan27');
+      show('videoRefVideosControl', showsVideoReferences);
+      show('videoRefAudioControl', showsAudioReferences);
       show('geminiAudioIdsControl', kind === 'geminiOmni');
       show('wanPromptExtendControl', kind === 'wan27');
       syncUploadButtonCopy();
@@ -10842,6 +10910,37 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       });
     }
 
+    function readAudioFileDuration(file) {
+      return new Promise((resolve) => {
+        if (!file) return resolve(null);
+        const audio = document.createElement('audio');
+        const url = URL.createObjectURL(file);
+        const finish = (value) => {
+          URL.revokeObjectURL(url);
+          audio.removeAttribute('src');
+          resolve(Number.isFinite(value) ? value : null);
+        };
+        audio.preload = 'metadata';
+        audio.onloadedmetadata = () => finish(Number(audio.duration));
+        audio.onerror = () => finish(null);
+        audio.src = url;
+      });
+    }
+
+    async function validateWan3ReferenceDurations() {
+      if (!currentModel || currentModel.id !== 'wan-3') return { ok: true };
+      const videoDurations = (await Promise.all(videoRefVideoFiles.map(readVideoFileDuration))).filter(Number.isFinite);
+      const audioDurations = (await Promise.all(videoRefAudioFiles.map(readAudioFileDuration))).filter(Number.isFinite);
+      if (videoDurations.some((value) => value < 1 || value > 15)) return { ok: false, message: 'Wan 3.0-ի յուրաքանչյուր հղումային տեսանյութ պետք է տևի 1-ից 15 վայրկյան։' };
+      if (audioDurations.some((value) => value < 1 || value > 15)) return { ok: false, message: 'Wan 3.0-ի յուրաքանչյուր ձայնային հղում պետք է տևի 1-ից 15 վայրկյան։' };
+      const videoTotal = videoDurations.reduce((sum, value) => sum + value, 0);
+      const audioTotal = audioDurations.reduce((sum, value) => sum + value, 0);
+      if (videoTotal > 15.0001) return { ok: false, message: 'Wan 3.0-ի հղումային տեսանյութերի ընդհանուր տևողությունը չի կարող գերազանցել 15 վայրկյանը։' };
+      if (audioTotal > 15.0001) return { ok: false, message: 'Wan 3.0-ի ձայնային հղումների ընդհանուր տևողությունը չի կարող գերազանցել 15 վայրկյանը։' };
+      if (videoTotal && videoTotal + Number(currentDuration || 5) > 30.0001) return { ok: false, message: 'Wan 3.0-ի հղումային տեսանյութերի և արդյունքի ընդհանուր տևողությունը չի կարող գերազանցել 30 վայրկյանը։' };
+      return { ok: true };
+    }
+
     async function syncSeedanceSingleVideoDuration() {
       seedanceSingleVideoDuration = seedanceVideoRefFiles.length === 1
         ? await readVideoFileDuration(seedanceVideoRefFiles[0])
@@ -11154,11 +11253,34 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       if (card) card.classList.toggle('control-disabled', !!disabled);
     }
 
+    function usesExclusiveVideoFramePair() {
+      return !!(currentModel && (currentModel.id === 'gemini-omni-flash-1-1' || currentModel.id === 'wan-3'));
+    }
+
+    function hasVideoReferenceInputs() {
+      if (!currentModel) return false;
+      if (currentModel.id === 'gemini-omni-flash-1-1') return !!(videoSourceFile || videoRefImageFiles.length || geminiOmniAudioIds.length);
+      if (currentModel.id === 'wan-3') return !!(videoRefImageFiles.length || videoRefVideoFiles.length || videoRefAudioFiles.length);
+      return false;
+    }
+
     function syncVideoRefsInputLocks() {
       const lastControl = document.getElementById('videoLastFrameControl');
-      if (!lastControl || lastControl.classList.contains('hidden')) return;
-      if (!videoFirstFrameFile && videoLastFrameFile) clearVideoLastFrame();
-      setVideoRefsControlDisabled('videoLastFrameBtn', 'videoLastFrameInput', !videoFirstFrameFile, 'Choose a First frame before adding a Last frame.');
+      const lastIsVisible = !!(lastControl && !lastControl.classList.contains('hidden'));
+      if (lastIsVisible && !videoFirstFrameFile && videoLastFrameFile) clearVideoLastFrame();
+      if (lastIsVisible) setVideoRefsControlDisabled('videoLastFrameBtn', 'videoLastFrameInput', !videoFirstFrameFile, 'Նախ ընտրեք առաջին կադրը, ապա ավելացրեք վերջինը։');
+      if (!usesExclusiveVideoFramePair()) return;
+      const hasFrames = !!(videoFirstFrameFile || videoLastFrameFile);
+      const hasReferences = hasVideoReferenceInputs();
+      setVideoRefsControlDisabled('videoFirstFrameBtn', 'videoFirstFrameInput', !hasFrames && hasReferences, 'Հեռացրեք հղումները՝ կադրեր ավելացնելուց առաջ։');
+      setVideoRefsControlDisabled('videoSourceBtn', 'videoSourceInput', hasFrames, 'Հեռացրեք կադրերը՝ ելակետային տեսանյութ ավելացնելուց առաջ։');
+      setVideoRefsControlDisabled('videoRefImagesBtn', 'videoRefImagesInput', hasFrames, 'Հեռացրեք կադրերը՝ պատկերի հղումներ ավելացնելուց առաջ։');
+      setVideoRefsControlDisabled('videoRefVideosBtn', 'videoRefVideosInput', hasFrames, 'Հեռացրեք կադրերը՝ տեսանյութի հղումներ ավելացնելուց առաջ։');
+      setVideoRefsControlDisabled('videoRefAudioBtn', 'videoRefAudioInput', hasFrames, 'Հեռացրեք կադրերը՝ ձայնային հղումներ ավելացնելուց առաջ։');
+      const voiceButton = document.getElementById('geminiVoiceButton');
+      const voicePicker = voiceButton ? voiceButton.closest('.gemini-voice-picker') : null;
+      if (voiceButton) { voiceButton.disabled = hasFrames; voiceButton.title = hasFrames ? 'Հեռացրեք կադրերը՝ ձայնային հղում ընտրելուց առաջ։' : ''; }
+      if (voicePicker) voicePicker.classList.toggle('control-disabled', hasFrames);
     }
 
     document.getElementById('seedanceFirstInput').addEventListener('change', (e) => {
@@ -11267,6 +11389,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     });
 
     document.getElementById('videoFirstFrameInput').addEventListener('change', (e) => {
+      if (usesExclusiveVideoFramePair() && hasVideoReferenceInputs()) {
+        e.target.value = '';
+        syncVideoRefsInputLocks();
+        showStatus('Remove the other reference inputs before adding first/last frames.', 'error');
+        return;
+      }
       videoFirstFrameFile = (e.target.files || [])[0] || null;
       if (!videoFirstFrameFile) clearVideoLastFrame();
       renderSingleThumb(videoFirstFrameFile, document.getElementById('videoFirstFrameThumb'), () => {
@@ -11282,7 +11410,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         e.target.value = '';
         clearVideoLastFrame();
         syncVideoRefsInputLocks();
-        showStatus('Վերջին կադրն ավելացնելուց առաջ անհրաժեշտ է առաջին կադր։', 'error');
+        showStatus('Նախ ընտրեք առաջին կադրը, ապա ավելացրեք վերջինը։', 'error');
         return;
       }
       videoLastFrameFile = (e.target.files || [])[0] || null;
@@ -11294,6 +11422,12 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       syncVideoRefsInputLocks();
     });
 	    document.getElementById('videoSourceInput').addEventListener('change', (e) => {
+	      if (usesExclusiveVideoFramePair() && (videoFirstFrameFile || videoLastFrameFile)) {
+	        e.target.value = '';
+	        syncVideoRefsInputLocks();
+	        showStatus('Հեռացրեք կադրերը՝ ելակետային տեսանյութ ավելացնելուց առաջ։', 'error');
+	        return;
+	      }
 	      videoSourceFile = (e.target.files || [])[0] || null;
 	      if (videoSourceFile && currentModel && currentModel.id.startsWith('gemini-omni') && videoRefImageFiles.length > 5) {
 	        videoRefImageFiles = videoRefImageFiles.slice(0, 5);
@@ -11302,7 +11436,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	          updateCostDisplay();
 	          updateRunButtonLabel();
 	        });
-	        showStatus('Ելակետային տեսանյութը զբաղեցնում է մուտքային տվյալների 2 միավոր, ուստի հղումային պատկերների քանակը սահմանափակվեց 5-ով։', 'info');
+	        showStatus('Ելակետային տեսանյութը զբաղեցնում է մուտքի 2 միավոր, ուստի պատկերի հղումները սահմանափակվել են 5-ով։', 'info');
 	      }
 	      renderSingleThumb(videoSourceFile, document.getElementById('videoSourceThumb'), () => {
 	        videoSourceFile = null;
@@ -11310,13 +11444,21 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        document.getElementById('videoSourceInput').value = '';
 	        updateCostDisplay();
 	        updateRunButtonLabel();
+	        syncVideoRefsInputLocks();
 	      });
 	      if (videoSourceFile && currentModel && currentModel.id.startsWith('gemini-omni')) openGeminiOmniTrimModal(videoSourceFile);
 	      updateCostDisplay();
 	      updateRunButtonLabel();
+	      syncVideoRefsInputLocks();
 	    });
     document.getElementById('videoRefImagesInput').addEventListener('change', (e) => {
-      const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : 7) : 9);
+      if (usesExclusiveVideoFramePair() && (videoFirstFrameFile || videoLastFrameFile)) {
+        e.target.value = '';
+        syncVideoRefsInputLocks();
+        showStatus('Հեռացրեք կադրերը՝ պատկերի հղումներ ավելացնելուց առաջ։', 'error');
+        return;
+      }
+      const max = currentModel && currentModel.id === 'grok-video' ? getGrokVideoImageLimit() : (currentModel && currentModel.id.startsWith('gemini-omni') ? (videoSourceFile ? 5 : 7) : (currentModel && currentModel.id === 'wan-3' ? 10 : 9));
       videoRefImageFiles = appendFilesWithLimit(videoRefImageFiles, e.target.files, max, 'image/*');
       e.target.value = '';
       renderFileListThumbs(videoRefImageFiles, document.getElementById('videoRefImagesThumbs'), (index) => {
@@ -11324,23 +11466,41 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         document.getElementById('videoRefImagesInput').value = '';
         updateCostDisplay();
         updateRunButtonLabel();
+        syncVideoRefsInputLocks();
       });
       updateCostDisplay();
       updateRunButtonLabel();
+      syncVideoRefsInputLocks();
     });
     document.getElementById('videoRefVideosInput').addEventListener('change', (e) => {
-      videoRefVideoFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, 3);
+      if (usesExclusiveVideoFramePair() && (videoFirstFrameFile || videoLastFrameFile)) {
+        e.target.value = '';
+        syncVideoRefsInputLocks();
+        showStatus('Հեռացրեք կադրերը՝ տեսանյութի հղումներ ավելացնելուց առաջ։', 'error');
+        return;
+      }
+      videoRefVideoFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && currentModel.id === 'wan-3' ? 5 : 3);
       renderFileListThumbs(videoRefVideoFiles, document.getElementById('videoRefVideosThumbs'), (index) => {
         videoRefVideoFiles.splice(index, 1);
         document.getElementById('videoRefVideosInput').value = '';
+        syncVideoRefsInputLocks();
       });
+      syncVideoRefsInputLocks();
     });
 	    document.getElementById('videoRefAudioInput').addEventListener('change', (e) => {
-	      videoRefAudioFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, 1);
+	      if (usesExclusiveVideoFramePair() && (videoFirstFrameFile || videoLastFrameFile)) {
+	        e.target.value = '';
+	        syncVideoRefsInputLocks();
+	        showStatus('Հեռացրեք կադրերը՝ ձայնային հղումներ ավելացնելուց առաջ։', 'error');
+	        return;
+	      }
+	      videoRefAudioFiles = Array.from(e.target.files || []).filter(Boolean).slice(0, currentModel && currentModel.id === 'wan-3' ? 5 : 1);
 	      renderFileListThumbs(videoRefAudioFiles, document.getElementById('videoRefAudioThumbs'), (index) => {
 	        videoRefAudioFiles.splice(index, 1);
 	        document.getElementById('videoRefAudioInput').value = '';
+	        syncVideoRefsInputLocks();
 	      });
+	      syncVideoRefsInputLocks();
 	    });
 	    const geminiTrimStrip = document.getElementById('geminiTrimStrip');
 	    const geminiTrimFilm = document.getElementById('geminiTrimFilm');
@@ -12433,9 +12593,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         }
         case 'gemini-omni-flash-1-1':
         case 'gemini-omni-video': {
-          const sourceVideoUrl = videoSourceFile ? (urls || [])[0] : '';
-          const imageStartIndex = videoSourceFile ? 1 : 0;
-          const imageUrls = (urls || []).slice(imageStartIndex, imageStartIndex + videoRefImageFiles.length);
+          let cursor = 0;
+          const firstFrameUrl = videoFirstFrameFile ? (urls || [])[cursor++] : '';
+          const lastFrameUrl = videoLastFrameFile ? (urls || [])[cursor++] : '';
+          const sourceVideoUrl = videoSourceFile ? (urls || [])[cursor++] : '';
+          const imageUrls = (urls || []).slice(cursor, cursor + videoRefImageFiles.length);
           const selectedVideoDuration = sourceVideoUrl ? getGeminiOmniSelectedVideoDuration() : 0;
           return {
             uid,
@@ -12444,6 +12606,8 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             aspect_ratio: aspect || '16:9',
             duration: sourceVideoUrl ? selectedVideoDuration : (duration ? Number(duration) : 4),
 	            resolution: currentResolution === '4K' ? '4k' : (currentResolution === '720p' ? '720p' : '1080p'),
+	            first_frame_url: firstFrameUrl || undefined,
+	            last_frame_url: lastFrameUrl || undefined,
 	            image_urls: imageUrls,
 	            video_url: sourceVideoUrl || undefined,
 	            video_start: sourceVideoUrl ? Number(geminiOmniVideoStart || 0) : undefined,
@@ -12451,6 +12615,31 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
 	            audio_ids: geminiOmniAudioIds,
 	            run_id: runId
 	          };
+        }
+        case 'wan-3': {
+          let cursor = 0;
+          const firstFrameUrl = videoFirstFrameFile ? (urls || [])[cursor++] : '';
+          const lastFrameUrl = videoLastFrameFile ? (urls || [])[cursor++] : '';
+          const imageRefUrls = (urls || []).slice(cursor, cursor + videoRefImageFiles.length);
+          cursor += videoRefImageFiles.length;
+          const videoRefUrls = (urls || []).slice(cursor, cursor + videoRefVideoFiles.length);
+          cursor += videoRefVideoFiles.length;
+          const audioRefUrls = (urls || []).slice(cursor, cursor + videoRefAudioFiles.length);
+          return {
+            uid,
+            user_id: uid,
+            prompt,
+            aspect_ratio: aspect || 'adaptive',
+            duration: duration ? Number(duration) : 5,
+            resolution: currentResolution || '1080p',
+            audio: true,
+            first_frame_url: firstFrameUrl || undefined,
+            last_frame_url: lastFrameUrl || undefined,
+            reference_image_urls: imageRefUrls,
+            reference_video_urls: videoRefUrls,
+            reference_audio_urls: audioRefUrls,
+            run_id: runId
+          };
         }
         case 'wan27-video': {
           let cursor = 0;
@@ -12764,6 +12953,15 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         return;
       }
 
+      if (currentModel.id === 'wan-3') {
+        const wan3ReferenceValidation = await validateWan3ReferenceDurations();
+        if (!wan3ReferenceValidation.ok) {
+          removeClientRequestPlaceholder(initialRequestContext);
+          showStatus(wan3ReferenceValidation.message, 'error');
+          return;
+        }
+      }
+
       const uid = currentUser.id;
       const requestContext = initialRequestContext || createClientRequestPlaceholder({
         uid,
@@ -12831,7 +13029,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         removeClientRequestPlaceholder(requestContext);
         showStatus('Վերջին կադրն ավելացնելուց առաջ անհրաժեշտ է առաջին կադր։', 'error');
         return;
-      } else if (currentModel.specificUpload === 'wan27' && videoLastFrameFile && !videoFirstFrameFile) {
+      } else if (['wan27', 'wan30', 'geminiOmni'].includes(currentModel.specificUpload) && videoLastFrameFile && !videoFirstFrameFile) {
         removeClientRequestPlaceholder(requestContext);
         showStatus('Վերջին կադրն ավելացնելուց առաջ անհրաժեշտ է առաջին կադր։', 'error');
         return;
@@ -12866,6 +13064,12 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         return;
       }
 
+      if (usesExclusiveVideoFramePair() && (videoFirstFrameFile || videoLastFrameFile) && hasVideoReferenceInputs()) {
+        removeClientRequestPlaceholder(requestContext);
+        showStatus('Այս մոդելի համար առաջին/վերջին կադրերը չեն կարող համակցվել այլ հղումների հետ։', 'error');
+        return;
+      }
+
       const runBtn = document.getElementById('runBtn');
       const submitBtn = isUnlimitedRun ? document.getElementById('unlimitedRunBtn') : runBtn;
       if (submitBtn) submitBtn.disabled = true;
@@ -12888,11 +13092,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           ? await uploadImagesAndGetUrls([seedanceFirstFrameFile, seedanceLastFrameFile, ...seedanceImageRefFiles, ...seedanceVideoRefFiles, ...seedanceAudioRefFiles].filter(Boolean))
           : currentModel.specificUpload === 'kling30'
           ? (syncKling30LegacyData(), await uploadImagesAndGetUrls([kling30FirstFrameFile, ...(kling30MultiShots ? [] : [kling30LastFrameFile]), ...kling30ElementFiles].filter(Boolean)))
-          : ['wan27', 'happyhorse', 'grokVideo', 'geminiOmni'].includes(currentModel.specificUpload)
+          : ['wan27', 'wan30', 'happyhorse', 'grokVideo', 'geminiOmni'].includes(currentModel.specificUpload)
           ? await uploadImagesAndGetUrls((currentModel.specificUpload === 'grokVideo'
             ? videoRefImageFiles
             : currentModel.specificUpload === 'geminiOmni'
-            ? [videoSourceFile, ...videoRefImageFiles]
+            ? [videoFirstFrameFile, videoLastFrameFile, videoSourceFile, ...videoRefImageFiles]
             : [videoFirstFrameFile, videoLastFrameFile, videoSourceFile, ...videoRefImageFiles, ...videoRefVideoFiles, ...videoRefAudioFiles]).filter(Boolean))
           : await uploadImagesAndGetUrls(uploadedFiles);
         if (requestContext && requestContext.removed) return;
