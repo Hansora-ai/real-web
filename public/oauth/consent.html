@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Connect Hansora AI</title>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 20% 0,rgba(124,92,255,.22),transparent 38%),radial-gradient(circle at 100% 100%,rgba(27,188,255,.16),transparent 40%),#080a10;color:#f6f7fb}
+    .card{width:min(100%,520px);padding:32px;border:1px solid rgba(255,255,255,.12);border-radius:24px;background:rgba(14,17,25,.94);box-shadow:0 24px 80px rgba(0,0,0,.45)}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:900;letter-spacing:.03em}.logo{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#8b5cf6,#24c7ff);font-size:22px}
+    h1{margin:28px 0 10px;font-size:30px;line-height:1.1}p{color:#aeb4c4;line-height:1.6}.client{color:#fff;font-weight:700}.permissions{margin:22px 0;padding:0;list-style:none;display:grid;gap:12px}.permissions li{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.035)}.tick{color:#4ade80;font-weight:900}.actions{display:grid;grid-template-columns:1fr 1.35fr;gap:12px;margin-top:26px}button{border:0;border-radius:14px;padding:14px 18px;font:inherit;font-weight:800;cursor:pointer}.deny{background:#212530;color:#dce0ea}.approve{background:linear-gradient(110deg,#7657f6,#20bdf5);color:white}.status{min-height:24px;margin:16px 0 0;color:#ff9a9a;font-size:14px}.fine{margin-top:20px;font-size:12px;color:#7f8798}@media(max-width:520px){.card{padding:24px}.actions{grid-template-columns:1fr}h1{font-size:26px}}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="brand"><span class="logo">H</span><span>HANSORA AI</span></div>
+    <h1>Connect your Hansora account</h1>
+    <p><span class="client" id="clientName">An AI assistant</span> is requesting access to Hansora.</p>
+    <p id="requestedScopes" hidden></p>
+    <ul class="permissions">
+      <li><span class="tick">✓</span><span>See Hansora's complete image, video, and audio catalog.</span></li>
+      <li><span class="tick">✓</span><span>Create images, videos, speech, and music using your Hansora account and credit balance.</span></li>
+      <li><span class="tick">✓</span><span>Check your balance and your own recent generations.</span></li>
+    </ul>
+    <div class="actions">
+      <button class="deny" id="deny" type="button">Cancel</button>
+      <button class="approve" id="approve" type="button">Connect Hansora</button>
+    </div>
+    <p class="status" id="status" role="alert"></p>
+    <p class="fine">The assistant cannot see your password. Every generation uses Hansora's existing safety and billing checks.</p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const statusEl = document.getElementById('status');
+    const approveButton = document.getElementById('approve');
+    const denyButton = document.getElementById('deny');
+    const authorizationId = new URLSearchParams(location.search).get('authorization_id') || '';
+
+    function fail(message) {
+      statusEl.textContent = message;
+      approveButton.disabled = false;
+      denyButton.disabled = false;
+    }
+
+    function redirectToLogin() {
+      const returnTo = `${location.pathname}${location.search}`;
+      location.replace(`/index.html?mcp_return_to=${encodeURIComponent(returnTo)}`);
+    }
+
+    async function initialize() {
+      if (!authorizationId) return fail('This connection request is missing its authorization ID. Please start again from your AI assistant.');
+      const { data: sessionData } = await sb.auth.getSession();
+      if (!sessionData || !sessionData.session) return redirectToLogin();
+      const { data, error } = await sb.auth.oauth.getAuthorizationDetails(authorizationId);
+      if (error) return fail(error.message || 'This connection request could not be loaded.');
+      if (data && data.redirect_url) return location.replace(data.redirect_url);
+      const client = data && (data.client || data.oauth_client);
+      document.getElementById('clientName').textContent = (client && (client.name || client.client_name)) || 'An AI assistant';
+      const scopes = String((data && data.scope) || '').split(/\s+/).filter(Boolean);
+      if (scopes.length) {
+        const scopeEl = document.getElementById('requestedScopes');
+        scopeEl.hidden = false;
+        scopeEl.textContent = `Requested account permissions: ${scopes.join(', ')}`;
+      }
+    }
+
+    approveButton.addEventListener('click', async () => {
+      approveButton.disabled = true;
+      denyButton.disabled = true;
+      statusEl.textContent = 'Connecting…';
+      const { data, error } = await sb.auth.oauth.approveAuthorization(authorizationId);
+      if (error) return fail(error.message || 'Hansora could not approve this connection.');
+      if (!data || !data.redirect_url) return fail('The assistant did not provide a return address.');
+      location.replace(data.redirect_url);
+    });
+
+    denyButton.addEventListener('click', async () => {
+      approveButton.disabled = true;
+      denyButton.disabled = true;
+      statusEl.textContent = 'Cancelling…';
+      const { data, error } = await sb.auth.oauth.denyAuthorization(authorizationId);
+      if (error) return fail(error.message || 'Hansora could not cancel this connection.');
+      if (!data || !data.redirect_url) return fail('The assistant did not provide a return address.');
+      location.replace(data.redirect_url);
+    });
+
+    initialize().catch((error) => fail(error && error.message ? error.message : 'The connection request failed.'));
+  </script>
+</body>
+</html>
