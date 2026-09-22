@@ -1369,6 +1369,36 @@ Pay once, use credits across image, video, product card, audio, and creative too
     if (!window.supabase || !window.supabase.createClient) return null;
     return window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
   }
+  const attributionCountryRequests = new Map();
+  function loadAttributionCountry(user){
+    const key = String(user?.id || user?.email || '').trim();
+    if (!key || !user?.email) return Promise.resolve('');
+    if (attributionCountryRequests.has(key)) return attributionCountryRequests.get(key);
+    const request = (async function(){
+      const sb = getSupabase();
+      if (!sb) return '';
+      try {
+        const { data, error } = await sb
+          .from('registration_attributions')
+          .select('country_code')
+          .eq('email', user.email)
+          .order('recorded_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (error) return '';
+        return String(data?.country_code || '').trim().toUpperCase();
+      } catch(e) { return ''; }
+    })();
+    attributionCountryRequests.set(key, request);
+    return request;
+  }
+  async function getDodoCheckoutDefaults(user){
+    const countryCode = await loadAttributionCountry(user);
+    if (countryCode === 'AM') {
+      return { forceLanguage: 'ru', country: 'AM', zipCode: '0012' };
+    }
+    return { forceLanguage: 'en' };
+  }
   async function getUser(){
     const sb = getSupabase();
     try {
@@ -1453,11 +1483,15 @@ Pay once, use credits across image, video, product card, audio, and creative too
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
   }
-  function addCommonDodoParams(url, user){
+  async function addCommonDodoParams(url, user){
     if (!url.searchParams.has('quantity')) url.searchParams.set('quantity', '1');
     if (!url.searchParams.has('redirect_url')) {
       url.searchParams.set('redirect_url', 'https://hansora.co/profile.html?checkout=success');
     }
+    const checkoutDefaults = await getDodoCheckoutDefaults(user);
+    Object.entries(checkoutDefaults).forEach(function([key, value]){
+      url.searchParams.set(key, value);
+    });
     url.searchParams.set('minimalAddress', 'true');
     url.searchParams.set('metadata_uid', user.id);
     if (user.email) url.searchParams.set('metadata_email', user.email);
@@ -1488,7 +1522,7 @@ Pay once, use credits across image, video, product card, audio, and creative too
     const base = (btn.getAttribute('data-product') || '').trim();
     const planId = (btn.getAttribute('data-plan-id') || '').trim();
     if (!base || !planId) return;
-    const url = addCommonDodoParams(new URL(base, location.href), user);
+    const url = await addCommonDodoParams(new URL(base, location.href), user);
     url.searchParams.set('metadata_plan_id', planId);
     url.searchParams.set('metadata_monthly_credits', btn.getAttribute('data-monthly-credits') || '0');
     recordSalesCheckout(user, planId);
@@ -1510,7 +1544,7 @@ Pay once, use credits across image, video, product card, audio, and creative too
       if (user.email) url.searchParams.set('email', user.email);
       url.searchParams.set('label', `hansora_web|${credits}|${user.id}|${String(user.email || '').replace(/\|/g, '')}`);
     } else {
-      addCommonDodoParams(url, user);
+      await addCommonDodoParams(url, user);
       url.searchParams.set('metadata_credits', String(credits));
     }
     recordSalesCheckout(user, `credits_${credits}`);
@@ -1557,6 +1591,7 @@ Pay once, use credits across image, video, product card, audio, and creative too
     }, true);
     const user = await getUser();
     if (user?.id) {
+      getDodoCheckoutDefaults(user);
       const sub = await loadCurrentSubscription(user.id);
       if (sub?.plan_id) markCurrentPlan(sub.plan_id);
     }
