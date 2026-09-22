@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Connect Hansora to your AI assistant</title>
+  <meta name="description" content="Use every available Hansora image, video, and audio model from ChatGPT, Claude, and other MCP clients.">
+  <style>
+    :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}*{box-sizing:border-box}body{margin:0;background:#080a10;color:#f7f8fc}.wrap{width:min(1100px,calc(100% - 32px));margin:auto;padding:72px 0 96px}.eyebrow{color:#55d6ff;font-weight:800;letter-spacing:.14em;text-transform:uppercase}.hero{max-width:820px}h1{font-size:clamp(42px,7vw,76px);line-height:.98;margin:18px 0 24px;background:linear-gradient(100deg,#fff 10%,#a88aff 50%,#37ceff);-webkit-background-clip:text;color:transparent}p{font-size:19px;line-height:1.65;color:#adb4c5}.endpoint{display:flex;gap:12px;align-items:center;margin:34px 0;padding:17px 19px;border:1px solid #2b3342;border-radius:16px;background:#10141d;overflow:auto}.endpoint code{white-space:nowrap;color:#fff}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:44px}.card{padding:24px;border:1px solid #242a37;border-radius:20px;background:linear-gradient(145deg,#11151f,#0c0f16)}.card h2{margin:0 0 10px;font-size:21px}.card p{font-size:15px;margin:0}.steps{margin-top:64px;max-width:820px}.steps li{margin:16px 0;padding-left:8px;color:#d5d9e4;line-height:1.6}.note{margin-top:36px;padding:20px;border-left:3px solid #745df6;background:#11151e;border-radius:0 14px 14px 0;font-size:15px}@media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding-top:46px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div class="eyebrow">Hansora MCP</div>
+      <h1>Create with Hansora inside your AI chat.</h1>
+      <p>Connect your Hansora account to ChatGPT, Claude, or another MCP client. The assistant can discover the complete live Hansora catalog, quote the cost, create media, and check results using your existing account.</p>
+      <div class="endpoint"><strong>MCP URL</strong><code>https://hansora.co/mcp</code></div>
+    </section>
+    <section class="grid">
+      <article class="card"><h2>All current models</h2><p>The connector covers every available Hansora image and video model, plus text to speech, voice isolation, voice changing, and song creation.</p></article>
+      <article class="card"><h2>Your Hansora balance</h2><p>Generation requests use the connected user's balance and the same model-specific billing logic as the website.</p></article>
+      <article class="card"><h2>Existing safeguards</h2><p>Requests pass through Hansora's existing safe-run gateway and fixed runner allowlist.</p></article>
+    </section>
+    <section class="steps">
+      <h2>Connect it</h2>
+      <ol>
+        <li>In ChatGPT or Claude, open the area for connectors or custom integrations.</li>
+        <li>Add a custom MCP connector and enter <code>https://hansora.co/mcp</code>.</li>
+        <li>Sign in to Hansora and approve the connection.</li>
+        <li>Ask the assistant to list Hansora models, quote a generation, or create an image, video, speech track, or song.</li>
+      </ol>
+      <div class="note">Wan 3.0 is available through the connector with frames and image, video, or audio references.</div>
+    </section>
+  </main>
+</body>
+</html>

@@ -34,6 +34,8 @@
   const AUTH_CALLBACK_HASH_SNAPSHOT = window.location.hash || '';
   const AUTH_CALLBACK_REFERRER_SNAPSHOT = document.referrer || '';
   const TELEGRAM_OAUTH_STARTED_KEY = 'hansora.telegram_oauth.started.v1';
+  const MCP_AUTH_RETURN_KEY = 'hansora.mcp.auth_return.v1';
+  const MCP_AUTH_RETURN_MAX_AGE_MS = 15 * 60 * 1000;
   let aiCourseOriginCaptureDone = false;
   const GROK_VIDEO_CREDIT_THRESHOLD = 4;
   const SUBSCRIPTION_CACHE_MS = 60 * 1000;
@@ -322,7 +324,54 @@
     return withAffiliateRef(localizedHref(href, language));
   }
 
+  function normalizeMcpAuthReturn(value) {
+    try {
+      const target = new URL(String(value || ''), location.origin);
+      if (target.origin !== location.origin) return '';
+      if (!/^\/oauth\/consent(?:\.html)?\/?$/i.test(target.pathname)) return '';
+      if (!target.searchParams.get('authorization_id')) return '';
+      return `${target.pathname}${target.search}${target.hash}`;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function captureMcpAuthReturn() {
+    const returnTo = normalizeMcpAuthReturn(new URLSearchParams(location.search).get('mcp_return_to'));
+    if (!returnTo) return '';
+    try {
+      sessionStorage.setItem(MCP_AUTH_RETURN_KEY, JSON.stringify({ returnTo: returnTo, createdAt: Date.now() }));
+    } catch (_) {}
+    return returnTo;
+  }
+
+  function getPendingMcpAuthReturn() {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(MCP_AUTH_RETURN_KEY) || 'null');
+      const returnTo = normalizeMcpAuthReturn(saved && saved.returnTo);
+      const createdAt = Number(saved && saved.createdAt);
+      if (!returnTo || !Number.isFinite(createdAt) || Date.now() - createdAt > MCP_AUTH_RETURN_MAX_AGE_MS) {
+        sessionStorage.removeItem(MCP_AUTH_RETURN_KEY);
+        return '';
+      }
+      return returnTo;
+    } catch (_) {
+      try { sessionStorage.removeItem(MCP_AUTH_RETURN_KEY); } catch (_) {}
+      return '';
+    }
+  }
+
+  function clearPendingMcpAuthReturn() {
+    try { sessionStorage.removeItem(MCP_AUTH_RETURN_KEY); } catch (_) {}
+  }
+
   function oauthReturnUrl() {
+    const mcpReturn = getPendingMcpAuthReturn();
+    if (mcpReturn) {
+      const callback = new URL('/index.html', location.origin);
+      callback.searchParams.set('mcp_return_to', mcpReturn);
+      return callback.href;
+    }
     const target = localizedHref('/index.html');
     try { return new URL(target, location.origin).href; } catch (_) { return `${location.origin}${target}`; }
   }
@@ -4381,6 +4430,12 @@
       throw error;
     }
     showLoggedInUI(profile, user);
+    const pendingMcpReturn = getPendingMcpAuthReturn();
+    if (pendingMcpReturn) {
+      clearPendingMcpAuthReturn();
+      window.location.replace(pendingMcpReturn);
+      return profile;
+    }
     const newAccountNeedsLanguage = !registrationLanguageChoiceIsCompleted(user) && (
       profile.__hansoraNewSignup || isRecentlyCreatedAccount(user)
     );
@@ -4498,6 +4553,7 @@
   captureAffiliateRef();
   captureAiCourseOrigin();
   captureCampaignAttribution();
+  captureMcpAuthReturn();
 
   ready(function () {
     captureAffiliateRef();
@@ -4520,6 +4576,8 @@
       return false;
     });
     bindAuthStateChanges();
-    restoreSession().finally(initializeRegionalAnalyticsConsent);
+    restoreSession().then(function () {
+      if (getPendingMcpAuthReturn() && !currentUser) openAuth('login');
+    }).finally(initializeRegionalAnalyticsConsent);
   });
 })();
