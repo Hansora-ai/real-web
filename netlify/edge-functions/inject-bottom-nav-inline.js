@@ -3,6 +3,12 @@
 
 export default async (request, context) => {
   const res = await context.next();
+  const requestPath = new URL(request.url).pathname.toLowerCase();
+
+  // Authentication and connector documentation use focused standalone layouts.
+  if (requestPath === '/oauth/consent' || requestPath === '/oauth/consent.html' || requestPath === '/mcp-setup.html') {
+    return res;
+  }
 
   const ct = res.headers.get('content-type') || '';
   if (!ct.includes('text/html')) return res;
@@ -13,7 +19,6 @@ export default async (request, context) => {
     return new Response(html, { status: res.status, headers: res.headers });
   }
 
-  const requestPath = new URL(request.url).pathname.toLowerCase();
   const language = /_arm(?:\.html)?\/?$/.test(requestPath)
     ? 'arm'
     : /_ru(?:\.html)?\/?$/.test(requestPath)
