@@ -3,9 +3,13 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "test:sales-agent": "node --test test/sales-agent/*.test.mjs"
+    "test:sales-agent": "node --test test/sales-agent/*.test.mjs",
+    "test:mcp": "node --test test/hansora-mcp/*.test.mjs"
   },
   "dependencies": {
-    "busboy": "^1.6.0"
+    "@modelcontextprotocol/core": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "busboy": "^1.6.0",
+    "zod": "^4.6.5"
   }
 }

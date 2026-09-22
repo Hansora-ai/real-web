@@ -15,7 +15,19 @@
   timeout = 26
   memory = 512
 
+[functions."safe-run"]
+  timeout = 60
+  memory = 512
+
+[functions."run-gemini-omni-flash-1-1"]
+  timeout = 45
+  memory = 512
+
 [functions."sales-chat"]
+  timeout = 60
+  memory = 512
+
+[functions."hansora-mcp"]
   timeout = 60
   memory = 512
 
