@@ -124,6 +124,94 @@ const handler = createMcpHandler((ctx) => {
     try { return jsonText(await getAccount(userId)); } catch (error) { return toolError(error); }
   });
 
+  server.registerTool('start_image_generation', {
+    title: 'Animate an uploaded image',
+    description: 'Open Hansora’s in-chat upload card when the user wants to animate a local image and does not have a public image URL. Use this instead of asking the user to host the image. The card uploads the file, shows the credit quote, and starts the selected Hansora video model after the user confirms.',
+    inputSchema: z.object({
+      model_id: z.string().min(1).describe('Available Hansora video model that accepts an image input.'),
+      prompt: z.string().min(1),
+      aspect_ratio: z.string().optional(),
+      duration: z.number().positive().optional(),
+      resolution: z.string().optional(),
+      quality: z.string().optional(),
+      sound: z.boolean().optional(),
+      generate_audio: z.boolean().optional(),
+      prompt_extend: z.boolean().optional(),
+      usage_mode: z.enum(['credits', 'unlimited']).default('credits')
+    }),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: generationToolMeta('Opening Hansora image upload…', 'Hansora image upload ready')
+  }, async (input) => {
+    try {
+      const model = getModel(input.model_id);
+      const limits = model?.input || {};
+      const acceptsImage = Boolean(
+        Number(limits.max_images) > 0 || limits.first_frame || limits.first_last_frames ||
+        limits.image_references || limits.image_video_audio_references
+      );
+      if (!model) throw new Error('unsupported_model');
+      if (model.category !== 'video' || limits.requires_video || !acceptsImage) throw new Error('model_does_not_support_image_animation');
+      if (model.availability !== 'available' || !getRunner(model.id)) throw new Error('model_not_available');
+      const price = quote(model.id, {
+        duration: input.duration,
+        resolution: input.resolution || input.quality,
+        sound: input.sound,
+        quantity: 1,
+        has_video_input: false
+      });
+      return jsonText({
+        mode: 'image_upload',
+        status: 'awaiting_upload',
+        model_id: model.id,
+        model_name: model.name,
+        media_type: 'video',
+        prompt: input.prompt,
+        aspect_ratio: input.aspect_ratio || null,
+        duration: input.duration || null,
+        resolution: input.resolution || input.quality || null,
+        quality: input.quality || null,
+        sound: input.sound,
+        generate_audio: input.generate_audio,
+        prompt_extend: input.prompt_extend,
+        usage_mode: input.usage_mode,
+        quote: price
+      });
+    } catch (error) { return toolError(error); }
+  });
+
+  server.registerTool('prepare_image_upload', {
+    title: 'Prepare Hansora image upload',
+    description: 'Internal app-only tool that creates a short-lived upload URL for the authenticated Hansora user.',
+    inputSchema: z.object({
+      filename: z.string().min(1).max(255),
+      mime: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/heic', 'image/heif']),
+      size: z.number().int().positive().max(25 * 1024 * 1024)
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    _meta: { ui: { visibility: ['app'] }, 'openai/visibility': 'private' }
+  }, async ({ filename, mime, size }) => {
+    try {
+      const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
+      const response = await fetch(`${origin}/.netlify/functions/sign-upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ filename, mime, size }),
+        signal: AbortSignal.timeout(30000)
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.uploadUrl || !result.publicUrl) {
+        throw new Error(result.error || result.detail || `upload_sign_failed_${response.status}`);
+      }
+      return jsonText({
+        ok: true,
+        upload_url: result.uploadUrl,
+        public_url: result.publicUrl,
+        mime: result.mime || mime,
+        size
+      });
+    } catch (error) { return toolError(error); }
+  });
+
   server.registerTool('list_audio_voices', {
     title: 'List Hansora audio voices',
     description: 'List the current voices available for text to speech and voice changing.',
