@@ -12,6 +12,7 @@ import { buildAudioPayload, buildGenerationPayload, getModel, getRunner, listMod
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
+const PUBLIC_GENERATION_FAILURE = 'Generation failed. Please try again and make sure your prompt and image do not violate any policy.';
 
 function jsonText(value) {
   return { content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
@@ -32,10 +33,33 @@ function generationToolMeta(invoking, invoked) {
 
 function presentGeneration(generation, runId) {
   const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
+  const status = generation?.result_url ? 'ready' : String(meta.status || 'processing');
+  if (/(fail|error|refund|cancel)/i.test(status)) {
+    return {
+      id: generation?.id,
+      provider: generation?.provider,
+      kind: generation?.kind,
+      prompt: generation?.prompt,
+      result_url: null,
+      created_at: generation?.created_at,
+      run_id: String(meta.run_id || runId || ''),
+      status: 'failed',
+      media_type: String(meta.media_type || generation?.kind || ''),
+      error: PUBLIC_GENERATION_FAILURE,
+      message: PUBLIC_GENERATION_FAILURE,
+      meta: {
+        run_id: String(meta.run_id || runId || ''),
+        status: 'failed',
+        media_type: String(meta.media_type || generation?.kind || ''),
+        error: PUBLIC_GENERATION_FAILURE,
+        fail_reason: PUBLIC_GENERATION_FAILURE
+      }
+    };
+  }
   return {
     ...generation,
     run_id: String(meta.run_id || runId || ''),
-    status: generation?.result_url ? 'ready' : String(meta.status || 'processing'),
+    status,
     media_type: String(meta.media_type || generation?.kind || '')
   };
 }
@@ -61,6 +85,27 @@ function withCors(response) {
   headers.set('Access-Control-Expose-Headers', 'Mcp-Session-Id, WWW-Authenticate');
   headers.set('Cache-Control', 'no-store');
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
+async function signUploadForApp(ctx, token, { filename, mime, size }) {
+  const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
+  const response = await fetch(`${origin}/.netlify/functions/sign-upload`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ filename, mime, size }),
+    signal: AbortSignal.timeout(30000)
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result.uploadUrl || !result.publicUrl) {
+    throw new Error(result.error || result.detail || `upload_sign_failed_${response.status}`);
+  }
+  return jsonText({
+    ok: true,
+    upload_url: result.uploadUrl,
+    public_url: result.publicUrl,
+    mime: result.mime || mime,
+    size
+  });
 }
 
 const handler = createMcpHandler((ctx) => {
@@ -110,7 +155,8 @@ const handler = createMcpHandler((ctx) => {
       sound: z.boolean().optional(),
       has_video_input: z.boolean().optional()
     }),
-    annotations: { readOnlyHint: true, openWorldHint: false }
+    annotations: { readOnlyHint: true, openWorldHint: false },
+    _meta: { ui: { visibility: ['model', 'app'] }, 'openai/widgetAccessible': true }
   }, async ({ model_id, ...options }) => {
     try { return jsonText(quote(model_id, options)); } catch (error) { return toolError(error); }
   });
@@ -179,37 +225,221 @@ const handler = createMcpHandler((ctx) => {
     } catch (error) { return toolError(error); }
   });
 
+  server.registerTool('start_video_generation', {
+    title: 'Transform an uploaded video',
+    description: 'Open Hansora’s in-chat upload card when the user wants to transform, edit, or use a local video as a reference and does not have a public video URL. Use this instead of asking the user to host the video. The card accepts MP4, MOV, or WebM, shows the credit quote, and starts the selected compatible Hansora model after the user confirms.',
+    inputSchema: z.object({
+      model_id: z.string().min(1).describe('Available Hansora video model that accepts a source or reference video.'),
+      prompt: z.string().min(1),
+      aspect_ratio: z.string().optional(),
+      duration: z.number().positive().optional(),
+      resolution: z.string().optional(),
+      quality: z.string().optional(),
+      sound: z.boolean().optional(),
+      generate_audio: z.boolean().optional(),
+      prompt_extend: z.boolean().optional(),
+      video_start: z.number().min(0).optional(),
+      video_end: z.number().positive().optional(),
+      motion_model: z.enum(['kling26', 'kling30']).optional(),
+      image_url: z.string().url().optional().describe('Optional public image URL for a model that also requires an image.'),
+      usage_mode: z.enum(['credits', 'unlimited']).default('credits')
+    }),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: generationToolMeta('Opening Hansora video upload…', 'Hansora video upload ready')
+  }, async (input) => {
+    try {
+      const model = getModel(input.model_id);
+      const limits = model?.input || {};
+      const acceptsVideo = Boolean(Number(limits.max_videos) > 0 || limits.image_video_audio_references || limits.requires_video);
+      if (!model) throw new Error('unsupported_model');
+      if (model.category !== 'video' || !acceptsVideo) throw new Error('model_does_not_support_video_input');
+      if (limits.requires_image && !input.image_url) throw new Error('model_also_requires_image_url');
+      if (model.availability !== 'available' || !getRunner(model.id)) throw new Error('model_not_available');
+      const price = quote(model.id, {
+        duration: input.duration,
+        resolution: input.resolution || input.quality,
+        sound: input.sound,
+        quantity: 1,
+        has_video_input: true
+      });
+      return jsonText({
+        mode: 'video_upload',
+        status: 'awaiting_upload',
+        model_id: model.id,
+        model_name: model.name,
+        media_type: 'video',
+        prompt: input.prompt,
+        aspect_ratio: input.aspect_ratio || null,
+        duration: input.duration || null,
+        resolution: input.resolution || input.quality || null,
+        quality: input.quality || null,
+        sound: input.sound,
+        generate_audio: input.generate_audio,
+        prompt_extend: input.prompt_extend,
+        video_start: input.video_start,
+        video_end: input.video_end,
+        motion_model: input.motion_model,
+        image_url: input.image_url || null,
+        usage_mode: input.usage_mode,
+        quote: price
+      });
+    } catch (error) { return toolError(error); }
+  });
+
+  server.registerTool('start_multimedia_generation', {
+    title: 'Create with uploaded reference media',
+    description: 'Open one Hansora upload card for local reference files. Use this when a generation needs one or more local images, videos, or audio files. Select only the input types the request needs; Hansora checks them against the chosen model and the card shows exactly those supported upload choices. Never ask the user to host these files elsewhere.',
+    inputSchema: z.object({
+      model_id: z.string().min(1).describe('Available Hansora image or video model.'),
+      prompt: z.string().min(1),
+      required_inputs: z.array(z.enum(['image', 'video', 'audio'])).min(1).max(3).describe('Local media types needed for this request. Use every required type once; the card supports multiple files per type when the model allows it.'),
+      aspect_ratio: z.string().optional(),
+      duration: z.number().positive().optional(),
+      resolution: z.string().optional(),
+      quality: z.string().optional(),
+      sound: z.boolean().optional(),
+      generate_audio: z.boolean().optional(),
+      enable_web_search: z.boolean().optional(),
+      prompt_extend: z.boolean().optional(),
+      video_start: z.number().min(0).optional(),
+      video_end: z.number().positive().optional(),
+      motion_model: z.enum(['kling26', 'kling30']).optional(),
+      usage_mode: z.enum(['credits', 'unlimited']).default('credits')
+    }),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: generationToolMeta('Opening Hansora media upload…', 'Hansora media upload ready')
+  }, async (input) => {
+    try {
+      const model = getModel(input.model_id);
+      if (!model) throw new Error('unsupported_model');
+      if (!['image', 'video'].includes(model.category)) throw new Error('model_does_not_support_reference_media');
+      if (model.availability !== 'available' || !getRunner(model.id)) throw new Error('model_not_available');
+      const limits = model.input || {};
+      const supported = {
+        image: Boolean(Number(limits.max_images) > 0 || limits.requires_image || limits.first_frame || limits.first_last_frames || limits.image_references || limits.image_video_audio_references),
+        video: Boolean(Number(limits.max_videos) > 0 || limits.requires_video || limits.image_video_audio_references),
+        audio: Boolean(Number(limits.max_audio) > 0 || limits.image_video_audio_references)
+      };
+      const requested = [...new Set(input.required_inputs)];
+      if (limits.requires_image && !requested.includes('image')) requested.push('image');
+      if (limits.requires_video && !requested.includes('video')) requested.push('video');
+      for (const kind of requested) {
+        if (!supported[kind]) throw new Error(`model_does_not_support_${kind}_input`);
+      }
+      const defaultCounts = limits.image_video_audio_references
+        ? { image: 9, video: 3, audio: 3 }
+        : { image: limits.first_last_frames ? 2 : 1, video: 1, audio: 1 };
+      const uploadLimits = {
+        image: { max_files: Number(limits.max_images) || defaultCounts.image, max_mb: 30 },
+        video: { max_files: Number(limits.max_videos) || defaultCounts.video, max_mb: 200 },
+        audio: { max_files: Number(limits.max_audio) || defaultCounts.audio, max_mb: model.id === 'seedance25' ? 15 : 200 }
+      };
+      const price = quote(model.id, {
+        duration: input.duration,
+        resolution: input.resolution || input.quality,
+        sound: input.sound,
+        quantity: 1,
+        has_video_input: requested.includes('video')
+      });
+      return jsonText({
+        mode: 'multi_upload',
+        status: 'awaiting_upload',
+        model_id: model.id,
+        model_name: model.name,
+        media_type: model.category,
+        prompt: input.prompt,
+        required_inputs: requested,
+        supported_inputs: Object.keys(supported).filter((kind) => supported[kind]),
+        upload_limits: Object.fromEntries(requested.map((kind) => [kind, uploadLimits[kind]])),
+        aspect_ratio: input.aspect_ratio || null,
+        duration: input.duration || null,
+        resolution: input.resolution || input.quality || null,
+        quality: input.quality || null,
+        sound: input.sound,
+        generate_audio: input.generate_audio,
+        enable_web_search: input.enable_web_search,
+        prompt_extend: input.prompt_extend,
+        video_start: input.video_start,
+        video_end: input.video_end,
+        motion_model: input.motion_model,
+        usage_mode: input.usage_mode,
+        quote: price
+      });
+    } catch (error) { return toolError(error); }
+  });
+
+  server.registerTool('start_audio_generation', {
+    title: 'Process an uploaded audio file',
+    description: 'Open Hansora’s in-chat audio upload card for Voice Isolation or Voice Changer. Use this instead of asking the user to host a local audio file. The card accepts MP3, WAV, M4A, AAC, OGG, or FLAC, reads its duration, calculates the credit quote, and starts processing after the user confirms.',
+    inputSchema: z.object({
+      audio_tool_id: z.enum(['isolation', 'voice-change']),
+      voice_id: z.string().optional().describe('Required for Voice Changer. Call list_audio_voices first.'),
+      remove_background_noise: z.boolean().default(true)
+    }),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: generationToolMeta('Opening Hansora audio upload…', 'Hansora audio upload ready')
+  }, async (input) => {
+    try {
+      const model = getModel(input.audio_tool_id);
+      if (!model || model.category !== 'audio' || !['isolation', 'voice-change'].includes(model.id)) throw new Error('audio_tool_does_not_accept_uploads');
+      if (model.id === 'voice-change' && !input.voice_id) throw new Error('voice_id_required');
+      return jsonText({
+        mode: 'audio_upload',
+        status: 'awaiting_upload',
+        audio_tool_id: model.id,
+        model_id: model.id,
+        model_name: model.name,
+        media_type: 'audio',
+        voice_id: input.voice_id || null,
+        remove_background_noise: input.remove_background_noise !== false,
+        quote: null
+      });
+    } catch (error) { return toolError(error); }
+  });
+
   server.registerTool('prepare_image_upload', {
     title: 'Prepare Hansora image upload',
     description: 'Internal app-only tool that creates a short-lived upload URL for the authenticated Hansora user.',
     inputSchema: z.object({
       filename: z.string().min(1).max(255),
       mime: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/heic', 'image/heif']),
-      size: z.number().int().positive().max(25 * 1024 * 1024)
+      size: z.number().int().positive().max(30 * 1024 * 1024)
     }),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     _meta: { ui: { visibility: ['app'] }, 'openai/visibility': 'private' }
   }, async ({ filename, mime, size }) => {
-    try {
-      const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
-      const response = await fetch(`${origin}/.netlify/functions/sign-upload`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ filename, mime, size }),
-        signal: AbortSignal.timeout(30000)
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result.uploadUrl || !result.publicUrl) {
-        throw new Error(result.error || result.detail || `upload_sign_failed_${response.status}`);
-      }
-      return jsonText({
-        ok: true,
-        upload_url: result.uploadUrl,
-        public_url: result.publicUrl,
-        mime: result.mime || mime,
-        size
-      });
-    } catch (error) { return toolError(error); }
+    try { return await signUploadForApp(ctx, token, { filename, mime, size }); }
+    catch (error) { return toolError(error); }
+  });
+
+  server.registerTool('prepare_video_upload', {
+    title: 'Prepare Hansora video upload',
+    description: 'Internal app-only tool that creates a short-lived video upload URL for the authenticated Hansora user.',
+    inputSchema: z.object({
+      filename: z.string().min(1).max(255),
+      mime: z.enum(['video/mp4', 'video/quicktime', 'video/webm']),
+      size: z.number().int().positive().max(200 * 1024 * 1024)
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    _meta: { ui: { visibility: ['app'] }, 'openai/visibility': 'private' }
+  }, async ({ filename, mime, size }) => {
+    try { return await signUploadForApp(ctx, token, { filename, mime, size }); }
+    catch (error) { return toolError(error); }
+  });
+
+  server.registerTool('prepare_audio_upload', {
+    title: 'Prepare Hansora audio upload',
+    description: 'Internal app-only tool that creates a short-lived audio upload URL for the authenticated Hansora user.',
+    inputSchema: z.object({
+      filename: z.string().min(1).max(255),
+      mime: z.enum(['audio/mpeg', 'audio/wav', 'audio/mp4', 'audio/aac', 'audio/ogg', 'audio/flac']),
+      size: z.number().int().positive().max(200 * 1024 * 1024)
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    _meta: { ui: { visibility: ['app'] }, 'openai/visibility': 'private' }
+  }, async ({ filename, mime, size }) => {
+    try { return await signUploadForApp(ctx, token, { filename, mime, size }); }
+    catch (error) { return toolError(error); }
   });
 
   server.registerTool('list_audio_voices', {
