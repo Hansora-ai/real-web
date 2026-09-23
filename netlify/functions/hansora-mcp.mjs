@@ -2,6 +2,12 @@ import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { authenticateToken, getAccount, getGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import {
+  GENERATION_APP_MIME,
+  GENERATION_APP_URI,
+  GENERATION_TOOL_META,
+  generationAppResource
+} from '../../lib/hansora-mcp/generation-app.mjs';
 import { buildAudioPayload, buildGenerationPayload, getModel, getRunner, listModels, quote } from '../../lib/hansora-mcp/registry.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
@@ -14,6 +20,24 @@ function jsonText(value) {
 function toolError(error) {
   const message = error instanceof Error ? error.message : String(error || 'unknown_error');
   return { isError: true, content: [{ type: 'text', text: message }] };
+}
+
+function generationToolMeta(invoking, invoked) {
+  return {
+    ...GENERATION_TOOL_META,
+    'openai/toolInvocation/invoking': invoking,
+    'openai/toolInvocation/invoked': invoked
+  };
+}
+
+function presentGeneration(generation, runId) {
+  const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
+  return {
+    ...generation,
+    run_id: String(meta.run_id || runId || ''),
+    status: generation?.result_url ? 'ready' : String(meta.status || 'processing'),
+    media_type: String(meta.media_type || generation?.kind || '')
+  };
 }
 
 function bearerToken(request) {
@@ -43,6 +67,12 @@ const handler = createMcpHandler((ctx) => {
   const userId = String(ctx.authInfo?.extra?.userId || '');
   const token = String(ctx.authInfo?.token || '');
   const server = new McpServer({ name: 'Hansora AI', version: '1.0.0' }, { capabilities: { tools: {} } });
+
+  server.registerResource('hansora-generation-app', GENERATION_APP_URI, {
+    title: 'Hansora generation',
+    description: 'Animated progress and inline media result for a Hansora generation.',
+    mimeType: GENERATION_APP_MIME
+  }, async () => generationAppResource());
 
   server.registerTool('list_models', {
     title: 'List Hansora models',
@@ -140,7 +170,8 @@ const handler = createMcpHandler((ctx) => {
       motion_model: z.enum(['kling26', 'kling30']).optional(),
       usage_mode: z.enum(['credits', 'unlimited']).default('credits')
     }),
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    _meta: generationToolMeta('Starting Hansora generation…', 'Hansora generation started')
   }, async (input) => {
     try {
       const model = getModel(input.model_id);
@@ -169,7 +200,19 @@ const handler = createMcpHandler((ctx) => {
       let result;
       try { result = JSON.parse(raw); } catch { result = { message: raw }; }
       if (!response.ok) throw new Error(result.message || result.error || `generation_submit_failed_${response.status}`);
-      return jsonText({ ok: true, run_id: runId, model_id: model.id, status: response.status === 202 ? 'queued' : 'submitted', provider: result });
+      return jsonText({
+        ok: true,
+        run_id: runId,
+        model_id: model.id,
+        model_name: model.name,
+        media_type: model.category,
+        status: response.status === 202 ? 'queued' : 'submitted',
+        prompt: input.prompt,
+        aspect_ratio: input.aspect_ratio || null,
+        duration: input.duration || null,
+        resolution: input.resolution || input.quality || null,
+        provider: result
+      });
     } catch (error) {
       return toolError(error);
     }
@@ -202,7 +245,8 @@ const handler = createMcpHandler((ctx) => {
       weirdness_constraint: z.number().min(0).max(1).optional(),
       audio_weight: z.number().min(0).max(1).optional()
     }),
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    _meta: generationToolMeta('Starting Hansora audio…', 'Hansora audio started')
   }, async (input) => {
     try {
       const model = getModel(input.audio_tool_id);
@@ -228,7 +272,16 @@ const handler = createMcpHandler((ctx) => {
       let result;
       try { result = JSON.parse(raw); } catch { result = { message: raw }; }
       if (!response.ok || !result.submitted) throw new Error(result.message || result.error || `audio_submit_failed_${response.status}`);
-      return jsonText({ ok: true, run_id: runId, model_id: model.id, status: 'queued', provider: result });
+      return jsonText({
+        ok: true,
+        run_id: runId,
+        model_id: model.id,
+        model_name: model.name,
+        media_type: 'audio',
+        status: 'queued',
+        prompt: payload.prompt || input.text || input.title || '',
+        provider: result
+      });
     } catch (error) { return toolError(error); }
   });
 
@@ -236,11 +289,12 @@ const handler = createMcpHandler((ctx) => {
     title: 'Get Hansora generation',
     description: 'Check one Hansora image, video, or audio generation by the run_id returned from a create tool.',
     inputSchema: z.object({ run_id: z.string().min(1) }),
-    annotations: { readOnlyHint: true, openWorldHint: false }
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: generationToolMeta('Checking Hansora generation…', 'Hansora generation updated')
   }, async ({ run_id }) => {
     try {
       const generation = await getGeneration(userId, run_id);
-      return generation ? jsonText(generation) : toolError(new Error('generation_not_found'));
+      return generation ? jsonText(presentGeneration(generation, run_id)) : toolError(new Error('generation_not_found'));
     } catch (error) { return toolError(error); }
   });
 
