@@ -186,15 +186,15 @@ html[data-pricing-plan-mode="monthly"] .monthly-plans { display: block; }
 
 .buy-credits { margin-top: 18px !important; }
 
-html[data-payment-mode="ru"] .buy-credits { margin-top: 18px !important; }
+html[data-payment-mode="ru"] .buy-credits { margin-top: 12px !important; }
 
-html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="100"]) .buy-credits { margin-top: 36px !important; }
+html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="100"]) .buy-credits { margin-top: 12px !important; }
 
-html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="535"]) .buy-credits { margin-top: 20px !important; }
+html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="535"]) .buy-credits { margin-top: 12px !important; }
 
-html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="1100"]) .buy-credits { margin-top: 16px !important; }
+html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits[data-credits="1100"]) .buy-credits { margin-top: 12px !important; }
 
-html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits) > .mt-2.text-sm { min-height: 44px; display: flex; align-items: flex-start; }
+html[data-payment-mode="ru"] .rounded-2xl:has(.buy-credits) > .mt-2.text-sm { min-height: 38px; display: flex; align-items: flex-start; }
 
 html[data-payment-mode="ru"] [data-pricing-choice="monthly"],
 html[data-payment-mode="ru"] .monthly-plans,
@@ -204,7 +204,7 @@ html[data-payment-mode="ru"] .model-usage-section { display: none !important; }
 html[data-payment-mode="ru"] .pricing-choice { grid-template-columns: 1fr; }
 
 html[data-payment-mode="ru"] [data-payg-offers].grid > .rounded-2xl > .flex.items-center.justify-between {
-  min-height: 54px;
+  min-height: 26px;
   align-items: flex-start;
   margin-top: 0 !important;
 }
@@ -220,21 +220,94 @@ html[data-payment-mode="ru"] [data-plan-badge] {
 }
 
 html[data-payment-mode="ru"] [data-payg-offers].grid > .rounded-2xl > .mt-3.text-5xl {
-  min-height: 64px;
+  min-height: 48px;
   display: flex;
   align-items: center;
 }
 
 html[data-payment-mode="ru"] [data-payg-offers].grid > .rounded-2xl > .mt-4 {
-  min-height: 54px;
+  min-height: 43px;
 }
 
 html[data-payment-mode="ru"] [data-payg-offers].grid > .rounded-2xl > .mt-2.text-sm {
-  min-height: 48px;
+  min-height: 38px;
 }
 
 html[data-payment-mode="ru"] [data-payg-offers].grid > .rounded-2xl > .buy-credits {
-  margin-top: 18px !important;
+  margin-top: 12px !important;
+}
+
+/* Keep the pay-as-you-go card summaries and purchase buttons aligned. */
+[data-payg-offers].grid [data-plan-badge] {
+  width: max-content;
+  max-width: none;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+@media (min-width: 768px) {
+  [data-payg-offers].grid > .rounded-2xl > .flex.items-center.justify-between {
+    min-height: 26px;
+    margin-top: 0 !important;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  [data-payg-offers].grid > .rounded-2xl > .flex.items-center.justify-between > .text-sm {
+    min-width: 0;
+    padding-top: 5px;
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+  [data-payg-offers].grid > .rounded-2xl > .flex.items-center.justify-between > span {
+    flex: 0 0 auto;
+    padding: 5px 9px;
+    font-size: 11px;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+  [data-payg-offers].grid > .rounded-2xl > .mt-3.text-5xl {
+    min-height: 48px;
+    margin-top: 10px !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: clamp(2rem, 2.45vw, 3rem);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    white-space: nowrap;
+  }
+  [data-payg-offers].grid > .rounded-2xl > .mt-3.text-5xl > span {
+    font-size: clamp(1rem, 1.25vw, 1.5rem);
+    letter-spacing: -0.025em;
+    white-space: nowrap;
+  }
+  [data-payg-offers].grid > .rounded-2xl > .mt-4 {
+    min-height: 43px;
+    margin-top: 10px !important;
+  }
+  [data-payg-offers].grid > .rounded-2xl > .mt-2.text-sm {
+    min-height: 38px;
+    margin-top: 6px !important;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  [data-payg-offers].grid > .rounded-2xl > .buy-credits {
+    min-height: 50px;
+    margin-top: 12px !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  [data-payg-offers].grid > .rounded-2xl > .flex.items-center.justify-between {
+    flex-direction: column;
+    gap: 3px;
+    min-height: 45px;
+  }
+  [data-payg-offers].grid > .rounded-2xl > .flex.items-center.justify-between > .text-sm {
+    padding-top: 0;
+  }
 }
 
 @media (max-width: 767px) {
@@ -913,7 +986,7 @@ img, video { max-width: 100%; height: auto; }
 <div class="absolute -top-3 left-1/2 -translate-x-1/2"><span class="inline-flex items-center px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-sky-500 to-purple-500 text-white shadow-lg shadow-sky-500/20" data-plan-badge="value">Best Value</span></div>
 <div class="flex items-center justify-between gap-3 mt-1">
 <div class="text-sm text-white/60">1000 + 100 credits</div>
-<span class="rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20 px-3 py-1 text-xs font-bold">Save $30</span>
+<span class="rounded-full bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20 px-3 py-1 text-xs font-bold">Save $50</span>
 </div>
 <div class="mt-3 text-5xl font-extrabold tracking-tight">1100 <span class="text-2xl align-baseline text-white">credits</span></div>
 <div class="mt-4 flex items-end gap-3">
@@ -1072,7 +1145,7 @@ Pay once, use credits across image, video, product card, audio, and creative too
 </div>
 <div class="plan-cell plan-featured">
 <strong>Large</strong>
-<div class="plan-credit-line"><span>1000 + 100 credits (10%)</span><em class="plan-save">Save $30</em></div>
+<div class="plan-credit-line"><span>1000 + 100 credits (10%)</span><em class="plan-save">Save $50</em></div>
 <div class="plan-price">$99.99 <span class="plan-old-price">$149.99</span></div>
 <a class="plan-buy inline-flex justify-center items-center font-semibold buy-credits" data-credits="1100" data-product="https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF?quantity=1&amp;redirect_url=https://hansora.co%2Fpricing" data-rub-amount="7400" data-ru-product="https://yoomoney.ru/quickpay/confirm.xml?receiver=4100119285004528&amp;quickpay-form=donate&amp;paymentType=AC&amp;sum=7400.00&amp;targets=HANSORA%20AI%201100%20credits&amp;label=hansora_web_1100" href="#buy-1100">Buy</a>
 </div>
