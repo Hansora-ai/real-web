@@ -1442,19 +1442,34 @@ img, video { max-width: 100%; height: auto; }
     if (!window.supabase || !window.supabase.createClient) return null;
     return window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
   }
+  let cachedCheckoutUser = null;
+  function isTelegramUser(user){
+    const identities = Array.isArray(user?.identities) ? user.identities : [];
+    const provider = String(user?.app_metadata?.provider || '').toLowerCase();
+    return provider === 'telegram' || provider === 'custom:telegram' || identities.some(function(identity){
+      const identityProvider = String(identity?.provider || '').toLowerCase();
+      return identityProvider === 'telegram' || identityProvider === 'custom:telegram' || identity?.identity_data?.iss === 'https://oauth.telegram.org';
+    }) || user?.user_metadata?.iss === 'https://oauth.telegram.org';
+  }
+  function getCheckoutEmail(user){
+    if (!user || isTelegramUser(user)) return '';
+    const email = String(user.email || '').trim();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
+  }
   async function getDodoCheckoutDefaults(){
     return { forceLanguage: 'ru', country: 'AM', zipCode: '0010' };
   }
   async function getUser(){
+    if (cachedCheckoutUser?.id) return cachedCheckoutUser;
     const sb = getSupabase();
     try {
-      if (sb?.auth?.getUser) {
-        const { data } = await sb.auth.getUser();
-        if (data?.user?.id) return data.user;
-      }
       if (sb?.auth?.getSession) {
         const { data } = await sb.auth.getSession();
-        if (data?.session?.user?.id) return data.session.user;
+        if (data?.session?.user?.id) return (cachedCheckoutUser = data.session.user);
+      }
+      if (sb?.auth?.getUser) {
+        const { data } = await sb.auth.getUser();
+        if (data?.user?.id) return (cachedCheckoutUser = data.user);
       }
     } catch(e) {}
     try {
@@ -1463,7 +1478,7 @@ img, video { max-width: 100%; height: auto; }
         if (!/^sb-.*-auth-token$/.test(key || '')) continue;
         const parsed = JSON.parse(localStorage.getItem(key) || '{}');
         const user = parsed?.user || parsed?.currentSession?.user || parsed?.session?.user;
-        if (user?.id) return user;
+        if (user?.id) return (cachedCheckoutUser = user);
       }
     } catch(e) {}
     return null;
@@ -1540,7 +1555,11 @@ img, video { max-width: 100%; height: auto; }
     });
     url.searchParams.set('minimalAddress', 'true');
     url.searchParams.set('metadata_uid', user.id);
-    if (user.email) url.searchParams.set('metadata_email', user.email);
+    const checkoutEmail = getCheckoutEmail(user);
+    if (checkoutEmail) {
+      url.searchParams.set('email', checkoutEmail);
+      url.searchParams.set('metadata_email', checkoutEmail);
+    }
     const chatSessionId = new URLSearchParams(location.search).get('chat_session') || '';
     if (/^[0-9a-f-]{36}$/i.test(chatSessionId)) url.searchParams.set('metadata_chat_session_id', chatSessionId);
     return url;
@@ -1584,10 +1603,11 @@ img, video { max-width: 100%; height: auto; }
     if (!base) return;
     const url = new URL(base, location.href);
     if (mode === 'ru') {
+      const checkoutEmail = getCheckoutEmail(user);
       url.searchParams.set('credits', String(credits));
       url.searchParams.set('user_id', user.id);
-      if (user.email) url.searchParams.set('email', user.email);
-      url.searchParams.set('label', `hansora_web|${credits}|${user.id}|${String(user.email || '').replace(/\|/g, '')}`);
+      if (checkoutEmail) url.searchParams.set('email', checkoutEmail);
+      url.searchParams.set('label', `hansora_web|${credits}|${user.id}|${checkoutEmail.replace(/\|/g, '')}`);
     } else {
       await addCommonDodoParams(url, user);
       url.searchParams.set('metadata_credits', String(credits));

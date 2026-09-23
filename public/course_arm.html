@@ -836,6 +836,19 @@ Return only the final ready-to-use image-editing prompt.`,
       if(!document.querySelector('.modal.open, .hansora-course-modal.is-open'))document.body.style.overflow='';
     }
     function requireUser(){if(!authHydrated){showAuthLoadingGate();return false}if(session?.user)return true;closeModals();openModal('#signupModal');return false}
+    function isTelegramUser(user){
+      const identities=Array.isArray(user?.identities)?user.identities:[];
+      const provider=String(user?.app_metadata?.provider||'').toLowerCase();
+      return provider==='telegram'||provider==='custom:telegram'||identities.some(identity=>{
+        const identityProvider=String(identity?.provider||'').toLowerCase();
+        return identityProvider==='telegram'||identityProvider==='custom:telegram'||identity?.identity_data?.iss==='https://oauth.telegram.org';
+      })||user?.user_metadata?.iss==='https://oauth.telegram.org';
+    }
+    function getCheckoutEmail(user){
+      if(!user||isTelegramUser(user))return '';
+      const email=String(user.email||'').trim();
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)?email:'';
+    }
 
     async function authHeader(){const {data}=await sb.auth.getSession();session=data?.session||null;return session?{'Authorization':'Bearer '+session.access_token}: {}}
     async function checkAccess(){
@@ -960,7 +973,20 @@ Return only the final ready-to-use image-editing prompt.`,
       $('#creditPacks').innerHTML=markup(false);$('#practiceOfferPacks').innerHTML=markup(true);$('#welcomeOfferPacks').innerHTML=markup(true);
     }
     function checkout(button){
-      if(!session?.user){closeModals();openModal('#signupModal');return}const url=new URL(button.dataset.product);url.searchParams.set('quantity','1');url.searchParams.set('minimalAddress','true');url.searchParams.set('redirect_url',location.origin+location.pathname+'?checkout=success');url.searchParams.set('metadata_uid',session.user.id);url.searchParams.set('metadata_credits',button.dataset.credits);url.searchParams.set('metadata_course_id','hansora-ai-course');if(session.user.email)url.searchParams.set('metadata_email',session.user.email);location.href=url.toString();
+      if(!session?.user){closeModals();openModal('#signupModal');return}
+      const email=getCheckoutEmail(session.user);
+      const url=new URL(button.dataset.product);
+      url.searchParams.set('quantity','1');
+      url.searchParams.set('forceLanguage','ru');
+      url.searchParams.set('country','AM');
+      url.searchParams.set('zipCode','0010');
+      url.searchParams.set('minimalAddress','true');
+      url.searchParams.set('redirect_url',location.origin+location.pathname+'?checkout=success');
+      url.searchParams.set('metadata_uid',session.user.id);
+      url.searchParams.set('metadata_credits',button.dataset.credits);
+      url.searchParams.set('metadata_course_id','hansora-ai-course');
+      if(email){url.searchParams.set('email',email);url.searchParams.set('metadata_email',email)}
+      location.href=url.toString();
     }
     async function submitFeedback(event){
       event.preventDefault();if(!requireUser())return;const form=event.currentTarget;const choice=form.querySelector('input[name="rating"]:checked');if(!choice){toast('Խնդրում ենք ընտրել պատասխաններից մեկը');return}const btn=$('#feedbackSubmit');btn.disabled=true;
