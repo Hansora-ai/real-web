@@ -29,6 +29,8 @@
   const COURSE_AUTH_RETURN_MAX_AGE_MS = 6 * 60 * 60 * 1000;
   const EMAIL_VERIFICATION_PENDING_KEY = 'hansora.email_verification.pending.v1';
   const EMAIL_VERIFICATION_MAX_AGE_MS = 15 * 60 * 1000;
+  const PASSWORD_RECOVERY_PENDING_KEY = 'hansora.password_recovery.pending.v1';
+  const PASSWORD_RECOVERY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
   const REGISTRATION_COMPLETED_EVENT_PREFIX = 'hansora.registration.completedEvent.';
   const AUTH_CALLBACK_SEARCH_SNAPSHOT = window.location.search || '';
   const AUTH_CALLBACK_HASH_SNAPSHOT = window.location.hash || '';
@@ -146,7 +148,7 @@
       creatorOffer: 'Creator discount offer', pricingOffer: 'Hansora pricing offer', closeOffer: 'Close offer', openingGoogle: 'Opening Google login…', googleFailed: 'Google login failed.',
       openingTelegram: 'Opening Telegram login…', tryAgain: 'Please try again.', enterCredentials: 'Enter email & password.', signingIn: 'Signing in…', loginFailed: 'Login failed.', notLoggedIn: 'Not logged in', notEnoughCredits: 'Not enough credits',
       emailPassword: 'Email & password', orEmail: 'OR', backToOptions: 'Back to options', repeatPassword: 'Repeat password', haveAccount: 'Already have an account? Log in', needAccount: 'New here? Sign up', createAccountButton: 'Create account', creatingAccount: 'Creating account…', passwordsDoNotMatch: 'Passwords do not match.', passwordTooShort: 'Password must contain at least 6 characters.', invalidEmail: 'Enter a valid email address.', invalidCredentials: 'Email or password is incorrect.', emailMayExist: 'This email may already have an account. Try logging in or use a different email.', verifyTitle: 'Check your inbox', verificationSent: 'Enter the verification code sent to', verificationCode: '6-digit code', verifyCode: 'Verify and continue', verifyingCode: 'Verifying code…', resendCode: 'Resend code', codeResent: 'A new verification code was sent.', signupFailed: 'Could not create the account.', verificationFailed: 'The verification code is invalid or expired.', emailNotConfirmed: 'Verify your email before logging in.',
-      forgotPassword: 'Forgot password?', sendRecoveryEmail: 'Send recovery email', sendingRecoveryEmail: 'Sending recovery email…', recoveryEmailSent: 'If an account exists for this email, a recovery link has been sent.', recoveryFailed: 'Could not send the recovery email. Please try again.', resetPasswordTitle: 'Create a new password', recoveryInstructions: 'Enter and confirm your new password.', newPassword: 'New password', repeatNewPassword: 'Repeat new password', updatePassword: 'Update password', updatingPassword: 'Updating password…', passwordUpdated: 'Your password has been updated. You can continue using Hansora.', showPassword: 'Show password', hidePassword: 'Hide password'
+      forgotPassword: 'Forgot password?', recoveryEmailTitle: 'Recover your password', recoveryEmailInstructions: 'Enter the email address used for your Hansora account.', sendRecoveryEmail: 'Send recovery email', sendingRecoveryEmail: 'Sending recovery email…', recoveryEmailSent: 'If an account exists for this email, a recovery link has been sent.', recoveryFailed: 'Could not send the recovery email. Please try again.', backToLogin: 'Back to login', resetPasswordTitle: 'Create a new password', recoveryInstructions: 'Enter and confirm your new password.', newPassword: 'New password', repeatNewPassword: 'Repeat new password', updatePassword: 'Update password', updatingPassword: 'Updating password…', passwordUpdated: 'Your password has been updated. You can continue using Hansora.', showPassword: 'Show password', hidePassword: 'Hide password'
     },
     hy: {
       home: 'HANSORA AI գլխավոր էջ', primaryNav: 'Հիմնական նավիգացիա', image: 'Պատկեր', imageMenu: 'Պատկերի գործիքներ և մոդելներ', imageSection: 'Պատկերի մոդելներ և գործիքներ',
@@ -161,7 +163,7 @@
       creatorOffer: 'Զեղչային առաջարկ ստեղծողների համար', pricingOffer: 'Hansora-ի գնային առաջարկ', closeOffer: 'Փակել առաջարկը', openingGoogle: 'Բացվում է Google-ով մուտքը…', googleFailed: 'Google-ով մուտքը ձախողվեց։',
       openingTelegram: 'Բացվում է Telegram-ով մուտքը…', tryAgain: 'Փորձեք կրկին։', enterCredentials: 'Մուտքագրեք էլփոստը և գաղտնաբառը։', signingIn: 'Մուտք է կատարվում…', loginFailed: 'Մուտքը ձախողվեց։', notLoggedIn: 'Մուտք չեք գործել', notEnoughCredits: 'Բավարար կրեդիտներ չկան',
       emailPassword: 'Էլփոստ և գաղտնաբառ', orEmail: 'ԿԱՄ', backToOptions: 'Վերադառնալ տարբերակներին', repeatPassword: 'Կրկնել գաղտնաբառը', haveAccount: 'Արդեն ունե՞ք հաշիվ։ Մուտք գործել', needAccount: 'Նոր օգտատե՞ր եք։ Գրանցվել', createAccountButton: 'Ստեղծել հաշիվ', creatingAccount: 'Հաշիվը ստեղծվում է…', passwordsDoNotMatch: 'Գաղտնաբառերը չեն համընկնում։', passwordTooShort: 'Գաղտնաբառը պետք է պարունակի առնվազն 6 նիշ։', invalidEmail: 'Մուտքագրեք վավեր էլփոստի հասցե։', invalidCredentials: 'Էլփոստը կամ գաղտնաբառը սխալ է։', emailMayExist: 'Այս էլփոստով հնարավոր է արդեն հաշիվ կա։ Փորձեք մուտք գործել կամ օգտագործեք այլ էլփոստ։', verifyTitle: 'Ստուգեք ձեր փոստը', verificationSent: 'Մուտքագրեք այս հասցեին ուղարկված հաստատման կոդը՝', verificationCode: '6-նիշ կոդ', verifyCode: 'Հաստատել և շարունակել', verifyingCode: 'Կոդը ստուգվում է…', resendCode: 'Կրկին ուղարկել կոդը', codeResent: 'Նոր հաստատման կոդն ուղարկվեց։', signupFailed: 'Չհաջողվեց ստեղծել հաշիվը։', verificationFailed: 'Հաստատման կոդը սխալ է կամ ժամկետանց։', emailNotConfirmed: 'Մուտք գործելուց առաջ հաստատեք ձեր էլփոստը։',
-      forgotPassword: 'Մոռացե՞լ եք գաղտնաբառը', sendRecoveryEmail: 'Ուղարկել վերականգնման նամակ', sendingRecoveryEmail: 'Վերականգնման նամակն ուղարկվում է…', recoveryEmailSent: 'Եթե այս էլփոստով հաշիվ կա, վերականգնման հղումն ուղարկվել է։', recoveryFailed: 'Չհաջողվեց ուղարկել վերականգնման նամակը։ Փորձեք կրկին։', resetPasswordTitle: 'Ստեղծեք նոր գաղտնաբառ', recoveryInstructions: 'Մուտքագրեք և հաստատեք ձեր նոր գաղտնաբառը։', newPassword: 'Նոր գաղտնաբառ', repeatNewPassword: 'Կրկնել նոր գաղտնաբառը', updatePassword: 'Թարմացնել գաղտնաբառը', updatingPassword: 'Գաղտնաբառը թարմացվում է…', passwordUpdated: 'Ձեր գաղտնաբառը թարմացվել է։ Կարող եք շարունակել օգտվել Hansora-ից։', showPassword: 'Ցուցադրել գաղտնաբառը', hidePassword: 'Թաքցնել գաղտնաբառը'
+      forgotPassword: 'Մոռացե՞լ եք գաղտնաբառը', recoveryEmailTitle: 'Վերականգնել գաղտնաբառը', recoveryEmailInstructions: 'Մուտքագրեք ձեր Hansora հաշվի էլփոստի հասցեն։', sendRecoveryEmail: 'Ուղարկել վերականգնման նամակ', sendingRecoveryEmail: 'Վերականգնման նամակն ուղարկվում է…', recoveryEmailSent: 'Եթե այս էլփոստով հաշիվ կա, վերականգնման հղումն ուղարկվել է։', recoveryFailed: 'Չհաջողվեց ուղարկել վերականգնման նամակը։ Փորձեք կրկին։', backToLogin: 'Վերադառնալ մուտքին', resetPasswordTitle: 'Ստեղծեք նոր գաղտնաբառ', recoveryInstructions: 'Մուտքագրեք և հաստատեք ձեր նոր գաղտնաբառը։', newPassword: 'Նոր գաղտնաբառ', repeatNewPassword: 'Կրկնել նոր գաղտնաբառը', updatePassword: 'Թարմացնել գաղտնաբառը', updatingPassword: 'Գաղտնաբառը թարմացվում է…', passwordUpdated: 'Ձեր գաղտնաբառը թարմացվել է։ Կարող եք շարունակել օգտվել Hansora-ից։', showPassword: 'Ցուցադրել գաղտնաբառը', hidePassword: 'Թաքցնել գաղտնաբառը'
     },
     ru: {
       home: 'Главная страница HANSORA AI', primaryNav: 'Основная навигация', image: 'Изображения', imageMenu: 'Инструменты и модели изображений', imageSection: 'Модели и инструменты изображений',
@@ -176,7 +178,7 @@
       creatorOffer: 'Скидочное предложение для создателей', pricingOffer: 'Ценовое предложение Hansora', closeOffer: 'Закрыть предложение', openingGoogle: 'Открывается вход через Google…', googleFailed: 'Не удалось войти через Google.',
       openingTelegram: 'Открывается вход через Telegram…', tryAgain: 'Попробуйте ещё раз.', enterCredentials: 'Введите эл. почту и пароль.', signingIn: 'Выполняется вход…', loginFailed: 'Не удалось войти.', notLoggedIn: 'Вход не выполнен', notEnoughCredits: 'Недостаточно кредитов',
       emailPassword: 'Эл. почта и пароль', orEmail: 'ИЛИ', backToOptions: 'Назад к вариантам', repeatPassword: 'Повторите пароль', haveAccount: 'Уже есть аккаунт? Войти', needAccount: 'Нет аккаунта? Зарегистрироваться', createAccountButton: 'Создать аккаунт', creatingAccount: 'Создаём аккаунт…', passwordsDoNotMatch: 'Пароли не совпадают.', passwordTooShort: 'Пароль должен содержать не менее 6 символов.', invalidEmail: 'Введите действительный адрес электронной почты.', invalidCredentials: 'Неверный адрес электронной почты или пароль.', emailMayExist: 'Возможно, для этой почты уже есть аккаунт. Попробуйте войти или используйте другую почту.', verifyTitle: 'Проверьте почту', verificationSent: 'Введите код подтверждения, отправленный на', verificationCode: '6-значный код', verifyCode: 'Подтвердить и продолжить', verifyingCode: 'Проверяем код…', resendCode: 'Отправить код ещё раз', codeResent: 'Новый код подтверждения отправлен.', signupFailed: 'Не удалось создать аккаунт.', verificationFailed: 'Код подтверждения неверен или истёк.', emailNotConfirmed: 'Подтвердите эл. почту перед входом.',
-      forgotPassword: 'Забыли пароль?', sendRecoveryEmail: 'Отправить письмо для восстановления', sendingRecoveryEmail: 'Отправляем письмо…', recoveryEmailSent: 'Если для этой почты есть аккаунт, ссылка для восстановления отправлена.', recoveryFailed: 'Не удалось отправить письмо для восстановления. Попробуйте ещё раз.', resetPasswordTitle: 'Создайте новый пароль', recoveryInstructions: 'Введите и подтвердите новый пароль.', newPassword: 'Новый пароль', repeatNewPassword: 'Повторите новый пароль', updatePassword: 'Обновить пароль', updatingPassword: 'Обновляем пароль…', passwordUpdated: 'Ваш пароль обновлён. Можно продолжать пользоваться Hansora.', showPassword: 'Показать пароль', hidePassword: 'Скрыть пароль'
+      forgotPassword: 'Забыли пароль?', recoveryEmailTitle: 'Восстановление пароля', recoveryEmailInstructions: 'Введите адрес электронной почты вашего аккаунта Hansora.', sendRecoveryEmail: 'Отправить письмо для восстановления', sendingRecoveryEmail: 'Отправляем письмо…', recoveryEmailSent: 'Если для этой почты есть аккаунт, ссылка для восстановления отправлена.', recoveryFailed: 'Не удалось отправить письмо для восстановления. Попробуйте ещё раз.', backToLogin: 'Вернуться ко входу', resetPasswordTitle: 'Создайте новый пароль', recoveryInstructions: 'Введите и подтвердите новый пароль.', newPassword: 'Новый пароль', repeatNewPassword: 'Повторите новый пароль', updatePassword: 'Обновить пароль', updatingPassword: 'Обновляем пароль…', passwordUpdated: 'Ваш пароль обновлён. Можно продолжать пользоваться Hansora.', showPassword: 'Показать пароль', hidePassword: 'Скрыть пароль'
     }
   };
 
@@ -3036,6 +3038,18 @@
                 <button class="hansora-auth-link" id="btnVerifyBack" type="button">← ${copy('signUp')}</button>
               </div>
             </div>
+            <div class="hansora-auth-view" id="authForgotView" hidden>
+              <p class="hansora-recovery-copy">${copy('recoveryEmailInstructions')}</p>
+              <div class="hansora-auth-fields">
+                <input id="authRecoveryEmail" placeholder="${copy('email')}" type="email" autocomplete="email">
+              </div>
+              <div class="hansora-auth-primary">
+                <button class="btn btn-brand" id="btnSendRecoveryEmail" type="submit">${copy('sendRecoveryEmail')}</button>
+              </div>
+              <div class="hansora-auth-secondary">
+                <button class="hansora-auth-link" id="btnForgotBack" type="button">← ${copy('backToLogin')}</button>
+              </div>
+            </div>
             <div class="hansora-auth-view" id="authRecoveryView" hidden>
               <p class="hansora-recovery-copy">${copy('recoveryInstructions')}</p>
               <div class="hansora-auth-fields">
@@ -3242,12 +3256,54 @@
     return url.href;
   }
 
+  function rememberPasswordRecoveryRequest(email) {
+    try {
+      localStorage.setItem(PASSWORD_RECOVERY_PENDING_KEY, JSON.stringify({
+        email: String(email || '').trim().toLowerCase(),
+        requestedAt: Date.now(),
+        requestedWhileAuthenticated: Boolean(currentUser && currentUser.id)
+      }));
+    } catch (_) {}
+  }
+
+  function readPasswordRecoveryRequest() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PASSWORD_RECOVERY_PENDING_KEY) || 'null');
+      const requestedAt = Number(saved && saved.requestedAt);
+      if (!Number.isFinite(requestedAt) || Date.now() - requestedAt > PASSWORD_RECOVERY_MAX_AGE_MS) {
+        localStorage.removeItem(PASSWORD_RECOVERY_PENDING_KEY);
+        return null;
+      }
+      return saved;
+    } catch (_) {
+      try { localStorage.removeItem(PASSWORD_RECOVERY_PENDING_KEY); } catch (_) {}
+      return null;
+    }
+  }
+
+  function clearPasswordRecoveryRequest() {
+    try { localStorage.removeItem(PASSWORD_RECOVERY_PENDING_KEY); } catch (_) {}
+  }
+
   function isPasswordRecoveryReturn() {
-    const search = new URLSearchParams(location.search || '');
-    const hash = new URLSearchParams(String(location.hash || '').replace(/^#/, ''));
-    return search.get('password_recovery') === '1'
-      || search.get('type') === 'recovery'
-      || hash.get('type') === 'recovery';
+    if (window.__HANSORA_PASSWORD_RECOVERY_RETURN__ === true) return true;
+    const snapshot = window.__HANSORA_AUTH_CALLBACK_SNAPSHOT__ || {};
+    const parameterSets = [
+      new URLSearchParams(location.search || ''),
+      new URLSearchParams(String(location.hash || '').replace(/^#/, '')),
+      new URLSearchParams(AUTH_CALLBACK_SEARCH_SNAPSHOT),
+      new URLSearchParams(String(AUTH_CALLBACK_HASH_SNAPSHOT).replace(/^#/, '')),
+      new URLSearchParams(snapshot.search || ''),
+      new URLSearchParams(String(snapshot.hash || '').replace(/^#/, ''))
+    ];
+    const explicitRecovery = parameterSets.some(function (params) {
+      return params.get('password_recovery') === '1' || params.get('type') === 'recovery';
+    });
+    if (explicitRecovery) return true;
+    if (!readPasswordRecoveryRequest()) return false;
+    return parameterSets.some(function (params) {
+      return params.has('code') || params.has('token_hash') || params.has('access_token');
+    });
   }
 
   function clearPasswordRecoveryReturn() {
@@ -3262,6 +3318,8 @@
       url.hash = hash.toString() ? `#${hash.toString()}` : '';
       history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`);
     } catch (_) {}
+    clearPasswordRecoveryRequest();
+    window.__HANSORA_PASSWORD_RECOVERY_RETURN__ = false;
   }
 
   function resetPasswordVisibility(scope) {
@@ -3289,18 +3347,20 @@
   }
 
   function setAuthMode(mode) {
-    if (mode === 'signup' || mode === 'email-login' || mode === 'verify' || mode === 'recovery') authMode = mode;
+    if (mode === 'signup' || mode === 'email-login' || mode === 'verify' || mode === 'forgot-password' || mode === 'recovery') authMode = mode;
     else authMode = 'chooser';
     const title = el('authTitle');
     const chooserView = el('authChooserView');
     const emailView = el('authEmailView');
     const verifyView = el('authVerifyView');
+    const forgotView = el('authForgotView');
     const recoveryView = el('authRecoveryView');
     const emailIn = el('authEmail');
     const passIn = el('authPass');
     const repeatIn = el('authPassRepeat');
     const repeatWrap = el('authPassRepeatWrap');
     const otpIn = el('authOtp');
+    const recoveryEmail = el('authRecoveryEmail');
     const recoveryPass = el('authRecoveryPass');
     const recoveryPassRepeat = el('authRecoveryPassRepeat');
     const submit = el('btnDoEmailAuth');
@@ -3313,11 +3373,13 @@
       title.textContent = authMode === 'signup'
         ? copy('createAccount')
         : authMode === 'verify' ? copy('verifyTitle')
+          : authMode === 'forgot-password' ? copy('recoveryEmailTitle')
           : authMode === 'recovery' ? copy('resetPasswordTitle') : copy('logIn');
     }
     if (chooserView) chooserView.hidden = authMode !== 'chooser';
     if (emailView) emailView.hidden = authMode !== 'email-login' && authMode !== 'signup';
     if (verifyView) verifyView.hidden = authMode !== 'verify';
+    if (forgotView) forgotView.hidden = authMode !== 'forgot-password';
     if (recoveryView) recoveryView.hidden = authMode !== 'recovery';
     if (emailIn) emailIn.disabled = authMode !== 'email-login' && authMode !== 'signup';
     if (passIn) passIn.disabled = authMode !== 'email-login' && authMode !== 'signup';
@@ -3330,6 +3392,10 @@
     if (otpIn) {
       otpIn.disabled = authMode !== 'verify';
       otpIn.required = authMode === 'verify';
+    }
+    if (recoveryEmail) {
+      recoveryEmail.disabled = authMode !== 'forgot-password';
+      recoveryEmail.required = authMode === 'forgot-password';
     }
     if (recoveryPass) {
       recoveryPass.disabled = authMode !== 'recovery';
@@ -3352,6 +3418,7 @@
   }
 
   function openPasswordRecovery() {
+    window.__HANSORA_PASSWORD_RECOVERY_RETURN__ = true;
     pendingVerificationEmail = '';
     setAuthMode('recovery');
     const modal = el('authModal');
@@ -3398,12 +3465,14 @@
     const repeatIn = el('authPassRepeat');
     const recoveryPass = el('authRecoveryPass');
     const recoveryPassRepeat = el('authRecoveryPassRepeat');
+    const recoveryEmail = el('authRecoveryEmail');
     const otpIn = el('authOtp');
     clearAuthMessage();
     if (passIn) passIn.value = '';
     if (repeatIn) repeatIn.value = '';
     if (recoveryPass) recoveryPass.value = '';
     if (recoveryPassRepeat) recoveryPassRepeat.value = '';
+    if (recoveryEmail) recoveryEmail.value = '';
     if (otpIn) otpIn.value = '';
     if (modal) {
       modal.classList.remove('is-open');
@@ -4069,6 +4138,8 @@
     const btnAuthSwitch = el('btnAuthSwitch');
     const btnAuthBack = el('btnAuthBack');
     const btnForgotPassword = el('btnForgotPassword');
+    const btnSendRecoveryEmail = el('btnSendRecoveryEmail');
+    const btnForgotBack = el('btnForgotBack');
     const btnCompletePasswordRecovery = el('btnCompletePasswordRecovery');
     const btnVerifyEmail = el('btnVerifyEmail');
     const btnResendCode = el('btnResendCode');
@@ -4321,40 +4392,59 @@
     let passwordRecoverySubmissionPending = false;
 
     if (btnForgotPassword) {
-      btnForgotPassword.addEventListener('click', async function () {
-        if (recoveryEmailSubmissionPending) return;
-        const emailIn = el('authEmail');
-        const email = String(emailIn && emailIn.value || '').trim().toLowerCase();
-        clearAuthMessage();
-        if (!validEmailAddress(email)) {
-          setAuthMessage(copy('invalidEmail'), 'error');
-          focusAuthField('authEmail');
-          return;
-        }
-        if (!sb || !sb.auth) {
-          setAuthMessage(copy('recoveryFailed'), 'error');
-          return;
-        }
-        recoveryEmailSubmissionPending = true;
-        btnForgotPassword.disabled = true;
-        btnForgotPassword.setAttribute('aria-busy', 'true');
-        btnForgotPassword.textContent = copy('sendingRecoveryEmail');
-        try {
-          const result = await sb.auth.resetPasswordForEmail(email, {
-            redirectTo: passwordRecoveryReturnUrl()
-          });
-          if (result.error) throw result.error;
-          setAuthMessage(copy('recoveryEmailSent'), 'success');
-        } catch (error) {
-          console.warn('Hansora password recovery email failed', error);
-          setAuthMessage(copy('recoveryFailed'), 'error');
-        } finally {
-          recoveryEmailSubmissionPending = false;
-          btnForgotPassword.disabled = false;
-          btnForgotPassword.removeAttribute('aria-busy');
-          btnForgotPassword.textContent = copy('forgotPassword');
-        }
+      btnForgotPassword.addEventListener('click', function () {
+        const loginEmail = el('authEmail');
+        const recoveryEmail = el('authRecoveryEmail');
+        if (recoveryEmail) recoveryEmail.value = String(loginEmail && loginEmail.value || '').trim();
+        setAuthMode('forgot-password');
+        focusAuthField('authRecoveryEmail');
       });
+    }
+    if (btnForgotBack) {
+      btnForgotBack.addEventListener('click', function () {
+        const loginEmail = el('authEmail');
+        const recoveryEmail = el('authRecoveryEmail');
+        if (loginEmail && recoveryEmail) loginEmail.value = recoveryEmail.value;
+        setAuthMode('email-login');
+        focusAuthField('authEmail');
+      });
+    }
+
+    async function submitRecoveryEmail() {
+      if (recoveryEmailSubmissionPending) return;
+      const emailIn = el('authRecoveryEmail');
+      const email = String(emailIn && emailIn.value || '').trim().toLowerCase();
+      clearAuthMessage();
+      if (!validEmailAddress(email)) {
+        setAuthMessage(copy('invalidEmail'), 'error');
+        focusAuthField('authRecoveryEmail');
+        return;
+      }
+      if (!sb || !sb.auth) {
+        setAuthMessage(copy('recoveryFailed'), 'error');
+        return;
+      }
+      recoveryEmailSubmissionPending = true;
+      btnSendRecoveryEmail.disabled = true;
+      btnSendRecoveryEmail.setAttribute('aria-busy', 'true');
+      btnSendRecoveryEmail.textContent = copy('sendingRecoveryEmail');
+      rememberPasswordRecoveryRequest(email);
+      try {
+        const result = await sb.auth.resetPasswordForEmail(email, {
+          redirectTo: passwordRecoveryReturnUrl()
+        });
+        if (result.error) throw result.error;
+        setAuthMessage(copy('recoveryEmailSent'), 'success');
+      } catch (error) {
+        clearPasswordRecoveryRequest();
+        console.warn('Hansora password recovery email failed', error);
+        setAuthMessage(copy('recoveryFailed'), 'error');
+      } finally {
+        recoveryEmailSubmissionPending = false;
+        btnSendRecoveryEmail.disabled = false;
+        btnSendRecoveryEmail.removeAttribute('aria-busy');
+        btnSendRecoveryEmail.textContent = copy('sendRecoveryEmail');
+      }
     }
 
     async function submitPasswordRecovery() {
@@ -4452,6 +4542,7 @@
         const loginResult = await sb.auth.signInWithPassword({ email: email, password: password });
         if (loginResult.error) throw loginResult.error;
         if (!loginResult.data || !loginResult.data.user) throw new Error(copy('loginFailed'));
+        clearPasswordRecoveryRequest();
         sessionEstablished = true;
         await handleAuthenticatedUser(loginResult.data.user);
         closeAuth();
@@ -4506,6 +4597,7 @@
       authForm.addEventListener('submit', function (event) {
         event.preventDefault();
         if (authMode === 'verify') submitVerificationCode();
+        else if (authMode === 'forgot-password') submitRecoveryEmail();
         else if (authMode === 'recovery') submitPasswordRecovery();
         else if (authMode === 'email-login' || authMode === 'signup') submitEmailCredentials();
       });
@@ -4716,12 +4808,21 @@
     if (!sb || !sb.auth || typeof sb.auth.onAuthStateChange !== 'function') return;
     sb.auth.onAuthStateChange(function (event, session) {
       const user = session && session.user ? session.user : null;
+      if (event === 'PASSWORD_RECOVERY') {
+        rememberPasswordRecoveryRequest(user && user.email ? user.email : '');
+        openPasswordRecovery();
+        return;
+      }
+      const pendingRecovery = readPasswordRecoveryRequest();
+      if (event === 'INITIAL_SESSION' && user && pendingRecovery && pendingRecovery.requestedWhileAuthenticated !== true) {
+        openPasswordRecovery();
+        return;
+      }
       if (!user) {
         if (event === 'SIGNED_OUT') showLoggedOutUI({ force: true });
         return;
       }
       setTimeout(function () {
-        if (event === 'PASSWORD_RECOVERY') openPasswordRecovery();
         handleAuthenticatedUser(user).catch(function (error) {
           console.warn('Hansora auth state handling failed', error);
         });
@@ -4808,12 +4909,14 @@
       console.warn('Hansora auth callback tracking failed', error);
       return false;
     });
+    const passwordRecoveryReturn = isPasswordRecoveryReturn();
     bindAuthStateChanges();
+    if (passwordRecoveryReturn) {
+      openPasswordRecovery();
+      initializeRegionalAnalyticsConsent();
+      return;
+    }
     restoreSession().then(function () {
-      if (isPasswordRecoveryReturn()) {
-        openPasswordRecovery();
-        return;
-      }
       if (getPendingMcpAuthReturn() && !currentUser) openAuth('login');
     }).finally(initializeRegionalAnalyticsConsent);
   });

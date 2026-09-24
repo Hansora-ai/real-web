@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HANSORA AI — Profile</title>
   <meta name="description" content="Your HANSORA profile, credits, and settings." />
+  <script>
+    window.__HANSORA_AUTH_CALLBACK_SNAPSHOT__ = {
+      search: window.location.search || '',
+      hash: window.location.hash || ''
+    };
+    (() => {
+      const search = new URLSearchParams(window.__HANSORA_AUTH_CALLBACK_SNAPSHOT__.search);
+      const hash = new URLSearchParams(String(window.__HANSORA_AUTH_CALLBACK_SNAPSHOT__.hash).replace(/^#/, ''));
+      if (search.get('password_recovery') === '1' || search.get('type') === 'recovery' || hash.get('type') === 'recovery') {
+        window.__HANSORA_PASSWORD_RECOVERY_RETURN__ = true;
+      }
+    })();
+  </script>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -980,12 +993,20 @@
       button.textContent = 'Sending recovery email…';
       setPasswordSecurityStatus('');
       try {
+        try {
+          localStorage.setItem('hansora.password_recovery.pending.v1', JSON.stringify({
+            email: user.email,
+            requestedAt: Date.now(),
+            requestedWhileAuthenticated: true
+          }));
+        } catch {}
         const result = await sb.auth.resetPasswordForEmail(user.email, {
           redirectTo: profilePasswordRecoveryReturnUrl()
         });
         if (result.error) throw result.error;
         setPasswordSecurityStatus('A recovery link has been sent to your email.', 'success');
       } catch (error) {
+        try { localStorage.removeItem('hansora.password_recovery.pending.v1'); } catch {}
         console.warn('profile password recovery email failed', error);
         setPasswordSecurityStatus('Could not send the recovery email. Please try again.', 'error');
       } finally {
