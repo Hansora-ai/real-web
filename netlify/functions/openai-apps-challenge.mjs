@@ -1,4 +1,4 @@
-const TOKEN = "YYsKRqwntc4YZKCCk0Cy150hUq-QCEMfUTiknmQyKsY";
+const TOKEN = "YYsKRqwntc4YZKCCkOCy150hUq-QCEMfUTiknmQyKsY";
 
 export default async () =>
   new Response(TOKEN, {
