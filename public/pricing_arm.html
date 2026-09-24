@@ -1427,6 +1427,31 @@ img, video { max-width: 100%; height: auto; }
 
 
 
+<style id="hansora-checkout-loading-style">
+@keyframes hansora-checkout-spin { to { transform: rotate(360deg); } }
+.buy-credits.is-opening-checkout,
+.buy-subscription.is-opening-checkout {
+  gap: 9px;
+  cursor: wait !important;
+  pointer-events: none;
+  opacity: 0.92;
+}
+.buy-credits.is-opening-checkout::before,
+.buy-subscription.is-opening-checkout::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border: 2px solid rgba(255, 255, 255, 0.38);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: hansora-checkout-spin 0.7s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .buy-credits.is-opening-checkout::before,
+  .buy-subscription.is-opening-checkout::before { animation-duration: 1.5s; }
+}
+</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script id="hansora-recovered-pricing-logic">
 (function(){
@@ -1438,6 +1463,27 @@ img, video { max-width: 100%; height: auto; }
     else window.location.href = url;
   }
   window.hansoraPricingNavigate = window.hansoraPricingNavigate || navigate;
+  const CHECKOUT_OPENING_TEXT = 'Բացվում է վճարման էջը…';
+  function beginCheckoutOpening(btn){
+    if (!btn || btn.getAttribute('aria-busy') === 'true') return false;
+    btn.dataset.checkoutOriginalText = btn.textContent;
+    btn.classList.add('is-opening-checkout');
+    btn.setAttribute('aria-busy', 'true');
+    btn.textContent = CHECKOUT_OPENING_TEXT;
+    return true;
+  }
+  function endCheckoutOpening(btn){
+    if (!btn) return;
+    if (Object.prototype.hasOwnProperty.call(btn.dataset, 'checkoutOriginalText')) {
+      btn.textContent = btn.dataset.checkoutOriginalText;
+      delete btn.dataset.checkoutOriginalText;
+    }
+    btn.classList.remove('is-opening-checkout');
+    btn.removeAttribute('aria-busy');
+  }
+  window.addEventListener('pageshow', function(){
+    document.querySelectorAll('.is-opening-checkout').forEach(endCheckoutOpening);
+  });
   function getSupabase(){
     if (!window.supabase || !window.supabase.createClient) return null;
     return window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
@@ -1582,38 +1628,50 @@ img, video { max-width: 100%; height: auto; }
   }
   async function openSubscriptionCheckout(btn){
     if (btn.classList.contains('is-current-plan') || btn.getAttribute('aria-disabled') === 'true') return;
-    const user = await getUser();
-    if (!user?.id) return;
-    const base = (btn.getAttribute('data-product') || '').trim();
-    const planId = (btn.getAttribute('data-plan-id') || '').trim();
-    if (!base || !planId) return;
-    const url = await addCommonDodoParams(new URL(base, location.href), user);
-    url.searchParams.set('metadata_plan_id', planId);
-    url.searchParams.set('metadata_monthly_credits', btn.getAttribute('data-monthly-credits') || '0');
-    recordSalesCheckout(user, planId);
-    window.hansoraPricingNavigate(url.toString());
+    if (!beginCheckoutOpening(btn)) return;
+    try {
+      const user = await getUser();
+      if (!user?.id) { endCheckoutOpening(btn); return; }
+      const base = (btn.getAttribute('data-product') || '').trim();
+      const planId = (btn.getAttribute('data-plan-id') || '').trim();
+      if (!base || !planId) { endCheckoutOpening(btn); return; }
+      const url = await addCommonDodoParams(new URL(base, location.href), user);
+      url.searchParams.set('metadata_plan_id', planId);
+      url.searchParams.set('metadata_monthly_credits', btn.getAttribute('data-monthly-credits') || '0');
+      recordSalesCheckout(user, planId);
+      window.hansoraPricingNavigate(url.toString());
+    } catch (error) {
+      endCheckoutOpening(btn);
+      console.error('Unable to open checkout.', error);
+    }
   }
   async function openPaygCheckout(btn){
-    const user = await getUser();
-    if (!user?.id) return;
-    const credits = Number(btn.getAttribute('data-credits') || '0');
-    if (!Number.isFinite(credits) || credits <= 0) return;
-    const mode = document.documentElement.getAttribute('data-payment-mode') === 'ru' ? 'ru' : 'international';
-    const base = (mode === 'ru' ? btn.getAttribute('data-ru-product') : btn.getAttribute('data-product') || '').trim();
-    if (!base) return;
-    const url = new URL(base, location.href);
-    if (mode === 'ru') {
-      const checkoutEmail = getCheckoutEmail(user);
-      url.searchParams.set('credits', String(credits));
-      url.searchParams.set('user_id', user.id);
-      if (checkoutEmail) url.searchParams.set('email', checkoutEmail);
-      url.searchParams.set('label', `hansora_web|${credits}|${user.id}|${checkoutEmail.replace(/\|/g, '')}`);
-    } else {
-      await addCommonDodoParams(url, user);
-      url.searchParams.set('metadata_credits', String(credits));
+    if (!beginCheckoutOpening(btn)) return;
+    try {
+      const user = await getUser();
+      if (!user?.id) { endCheckoutOpening(btn); return; }
+      const credits = Number(btn.getAttribute('data-credits') || '0');
+      if (!Number.isFinite(credits) || credits <= 0) { endCheckoutOpening(btn); return; }
+      const mode = document.documentElement.getAttribute('data-payment-mode') === 'ru' ? 'ru' : 'international';
+      const base = (mode === 'ru' ? btn.getAttribute('data-ru-product') : btn.getAttribute('data-product') || '').trim();
+      if (!base) { endCheckoutOpening(btn); return; }
+      const url = new URL(base, location.href);
+      if (mode === 'ru') {
+        const checkoutEmail = getCheckoutEmail(user);
+        url.searchParams.set('credits', String(credits));
+        url.searchParams.set('user_id', user.id);
+        if (checkoutEmail) url.searchParams.set('email', checkoutEmail);
+        url.searchParams.set('label', `hansora_web|${credits}|${user.id}|${checkoutEmail.replace(/\|/g, '')}`);
+      } else {
+        await addCommonDodoParams(url, user);
+        url.searchParams.set('metadata_credits', String(credits));
+      }
+      recordSalesCheckout(user, `credits_${credits}`);
+      window.hansoraPricingNavigate(url.toString());
+    } catch (error) {
+      endCheckoutOpening(btn);
+      console.error('Unable to open checkout.', error);
     }
-    recordSalesCheckout(user, `credits_${credits}`);
-    window.hansoraPricingNavigate(url.toString());
   }
   ready(async function(){
     setPlanMode(new URLSearchParams(location.search).get('plan') === 'monthly' ? 'monthly' : 'payg');
