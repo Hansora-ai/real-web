@@ -373,11 +373,42 @@
       return 'file';
     }
 
+    function hasProviderSubmissionEvidence(row){
+      const meta = parseMeta(row.meta);
+      const details = parseMeta(meta.details || {});
+      const provider = parseMeta(meta.provider || meta.provider_response || meta.providerResponse || {});
+      const containers = [meta, details, provider];
+      const idKeys = [
+        'task_id','taskId','provider_task_id','providerTaskId',
+        'job_id','jobId','queue_job_id','queueJobId',
+        'request_id','requestId','prediction_id','predictionId',
+        'generation_id','generationId','operation_id','operationId'
+      ];
+      const hasProviderId = containers.some((container) => idKeys.some((key) => {
+        const value = container && container[key];
+        return value !== undefined && value !== null && String(value).trim().length > 3;
+      }));
+      return hasProviderId ||
+        meta.submitted === true || meta.accepted === true || meta.charged === true ||
+        details.submitted === true || details.accepted === true ||
+        provider.submitted === true || provider.accepted === true;
+    }
+
+    function isUnstartedPlaceholderRow(row){
+      // Run functions seed a `pending` row before contacting the provider. If the
+      // provider rejects that initial request, older handlers leave the seed row
+      // behind. Hide only that orphan shape; explicit later failures stay visible.
+      if (isFailedRow(row) || hasCompletedOutput(row)) return false;
+      const status = statusForRow(row).trim().toLowerCase().replace(/[\s-]+/g, '_');
+      return status === 'pending' && !hasProviderSubmissionEvidence(row);
+    }
+
     function shouldHideRow(row){
       const provider = String(row.provider || '').trim().toLowerCase();
       const kind = String(row.kind || '').trim().toLowerCase();
       const normalizedKind = kind.replace(/[-\s]+/g, '_');
-      return provider === 'gemini-3.1-pro' && normalizedKind.includes('virality_predictor');
+      return (provider === 'gemini-3.1-pro' && normalizedKind.includes('virality_predictor')) ||
+        isUnstartedPlaceholderRow(row);
     }
 
     function titleForRow(row){
