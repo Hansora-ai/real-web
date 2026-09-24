@@ -429,6 +429,34 @@
     }
 
     .password-security-card[hidden] { display: none !important; }
+    .password-security-toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border: 0;
+      background: transparent;
+      color: #f8fafc;
+      padding: 0;
+      text-align: left;
+      cursor: pointer;
+    }
+    .password-security-toggle-icon {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(255,255,255,.07);
+      color: #c7d2fe;
+      font-size: 22px;
+      transition: transform .18s ease;
+    }
+    .password-security-toggle[aria-expanded="true"] .password-security-toggle-icon { transform: rotate(90deg); }
+    .password-security-panel[hidden] { display: none !important; }
+    .password-security-panel { padding-top: 16px; border-top: 1px solid rgba(255,255,255,.1); margin-top: 16px; }
     .password-security-form { display: grid; gap: 12px; margin-top: 18px; }
     .profile-password-field { position: relative; }
     .profile-password-field input {
@@ -621,11 +649,16 @@
     </div>
 
     <section id="passwordSecuritySection" class="password-security-card mt-6 p-5 rounded-2xl glass border border-base-line shadow-soft" hidden>
-      <div>
-        <h2 class="text-lg font-medium">Password &amp; security</h2>
-        <p class="mt-1 text-sm text-white/60">Change the password for your email and password account.</p>
-      </div>
-      <form id="changePasswordForm" class="password-security-form" novalidate>
+      <button id="passwordSecurityToggle" class="password-security-toggle" type="button" aria-expanded="false" aria-controls="passwordSecurityPanel">
+        <span>
+          <span class="block text-lg font-medium">Change password</span>
+          <span class="block mt-1 text-sm text-white/60">Available for your email and password account.</span>
+        </span>
+        <span class="password-security-toggle-icon" aria-hidden="true">›</span>
+      </button>
+      <div id="passwordSecurityPanel" class="password-security-panel" hidden>
+        <p class="text-sm text-white/60">Enter your current password, then enter and repeat the new password.</p>
+        <form id="changePasswordForm" class="password-security-form" novalidate>
         <div class="grid md:grid-cols-3 gap-3">
           <div class="profile-password-field">
             <input id="currentPassword" type="password" autocomplete="current-password" placeholder="Current password" required>
@@ -645,7 +678,8 @@
           <button id="changePasswordButton" type="submit" class="btn-brand px-4 py-2.5 rounded-xl text-sm font-semibold">Change password</button>
           <button id="sendProfileRecoveryEmail" type="button" class="password-recovery-button">Forgot current password? Send recovery email</button>
         </div>
-      </form>
+        </form>
+      </div>
     </section>
   </main>
 
@@ -877,14 +911,25 @@
         || declaredProvider === 'email';
     }
 
+    function setPasswordSecurityExpanded(expanded) {
+      const toggle = document.getElementById('passwordSecurityToggle');
+      const panel = document.getElementById('passwordSecurityPanel');
+      if (!toggle || !panel) return;
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      panel.hidden = !expanded;
+      if (!expanded) {
+        document.getElementById('changePasswordForm')?.reset();
+        setPasswordSecurityStatus('');
+        resetProfilePasswordVisibility();
+      }
+    }
+
     function renderPasswordSecurity(user) {
       const section = document.getElementById('passwordSecuritySection');
       if (!section) return;
       section.hidden = !isEmailPasswordUser(user);
       if (section.hidden) {
-        document.getElementById('changePasswordForm')?.reset();
-        setPasswordSecurityStatus('');
-        resetProfilePasswordVisibility();
+        setPasswordSecurityExpanded(false);
       }
     }
 
@@ -1016,6 +1061,10 @@
     }
 
     function initPasswordSecurity() {
+      document.getElementById('passwordSecurityToggle')?.addEventListener('click', () => {
+        const toggle = document.getElementById('passwordSecurityToggle');
+        setPasswordSecurityExpanded(toggle?.getAttribute('aria-expanded') !== 'true');
+      });
       document.getElementById('changePasswordForm')?.addEventListener('submit', submitProfilePasswordChange);
       document.getElementById('sendProfileRecoveryEmail')?.addEventListener('click', sendProfileRecoveryEmail);
       document.querySelectorAll('[data-profile-password-target]').forEach((button) => {

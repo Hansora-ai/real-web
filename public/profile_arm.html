@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HANSORA AI — Պրոֆիլ</title>
   <meta name="description" content="Ձեր HANSORA պրոֆիլը, կրեդիտներն ու կարգավորումները։" />
+  <script>
+    window.__HANSORA_AUTH_CALLBACK_SNAPSHOT__ = { search: window.location.search || '', hash: window.location.hash || '' };
+    (() => {
+      const search = new URLSearchParams(window.__HANSORA_AUTH_CALLBACK_SNAPSHOT__.search);
+      const hash = new URLSearchParams(String(window.__HANSORA_AUTH_CALLBACK_SNAPSHOT__.hash).replace(/^#/, ''));
+      if (search.get('password_recovery') === '1' || search.get('type') === 'recovery' || hash.get('type') === 'recovery') window.__HANSORA_PASSWORD_RECOVERY_RETURN__ = true;
+    })();
+  </script>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%235b5ce2'/%3E%3Ctext x='50' y='60' font-size='54' text-anchor='middle' fill='white' font-family='Arial'%3EH%3C/text%3E%3C/svg%3E" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -415,6 +423,28 @@
       font-weight: 760;
     }
 
+    .password-security-card[hidden], .password-security-panel[hidden] { display: none !important; }
+    .password-security-toggle { width:100%; display:flex; align-items:center; justify-content:space-between; gap:16px; border:0; background:transparent; color:#f8fafc; padding:0; text-align:left; cursor:pointer; }
+    .password-security-toggle-icon { width:34px; height:34px; flex:0 0 34px; display:grid; place-items:center; border-radius:999px; background:rgba(255,255,255,.07); color:#c7d2fe; font-size:22px; transition:transform .18s ease; }
+    .password-security-toggle[aria-expanded="true"] .password-security-toggle-icon { transform:rotate(90deg); }
+    .password-security-panel { padding-top:16px; border-top:1px solid rgba(255,255,255,.1); margin-top:16px; }
+    .password-security-form { display:grid; gap:12px; margin-top:18px; }
+    .profile-password-field { position:relative; }
+    .profile-password-field input { width:100%; min-height:48px; padding:0 48px 0 14px; border:1px solid rgba(255,255,255,.13); border-radius:12px; background:rgba(8,11,19,.66); color:#f8fafc; outline:none; }
+    .profile-password-field input:focus { border-color:rgba(129,140,248,.76); box-shadow:0 0 0 3px rgba(99,102,241,.16); }
+    .profile-password-field input::placeholder { color:rgba(255,255,255,.42); }
+    .profile-password-toggle { position:absolute; top:50%; right:8px; width:34px; height:34px; display:grid; place-items:center; transform:translateY(-50%); border:0; border-radius:9px; background:transparent; color:rgba(255,255,255,.62); cursor:pointer; }
+    .profile-password-toggle:hover, .profile-password-toggle:focus-visible { background:rgba(255,255,255,.08); color:#fff; }
+    .profile-password-toggle svg { width:19px; height:19px; pointer-events:none; }
+    .profile-password-toggle.is-visible::after { content:""; position:absolute; width:20px; height:2px; border-radius:2px; background:currentColor; transform:rotate(-45deg); }
+    .password-security-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .password-security-status { min-height:20px; font-size:13px; font-weight:700; }
+    .password-security-status.is-error { color:#fca5a5; }
+    .password-security-status.is-success { color:#86efac; }
+    .password-recovery-button { border:0; background:transparent; color:#c7d2fe; padding:8px 2px; font-size:13px; font-weight:700; cursor:pointer; }
+    .password-recovery-button:hover { color:#fff; }
+    .password-security-form button:disabled { opacity:.62; cursor:wait; }
+
     @media (max-width: 740px) {
       .usage-modal { padding: 12px; }
       .usage-modal-head { padding: 18px; }
@@ -544,6 +574,40 @@
         </div>
       </section>
     </div>
+
+    <section id="passwordSecuritySection" class="password-security-card mt-6 p-5 rounded-2xl glass border border-base-line shadow-soft" hidden>
+      <button id="passwordSecurityToggle" class="password-security-toggle" type="button" aria-expanded="false" aria-controls="passwordSecurityPanel">
+        <span>
+          <span class="block text-lg font-medium">Փոխել գաղտնաբառը</span>
+          <span class="block mt-1 text-sm text-white/60">Հասանելի է էլփոստով և գաղտնաբառով մուտք գործող հաշվի համար։</span>
+        </span>
+        <span class="password-security-toggle-icon" aria-hidden="true">›</span>
+      </button>
+      <div id="passwordSecurityPanel" class="password-security-panel" hidden>
+        <p class="text-sm text-white/60">Մուտքագրեք ընթացիկ գաղտնաբառը, ապա նոր գաղտնաբառը և կրկնեք այն։</p>
+        <form id="changePasswordForm" class="password-security-form" novalidate>
+          <div class="grid md:grid-cols-3 gap-3">
+            <div class="profile-password-field">
+              <input id="currentPassword" type="password" autocomplete="current-password" placeholder="Ընթացիկ գաղտնաբառ" required>
+              <button class="profile-password-toggle" type="button" data-profile-password-target="currentPassword" aria-label="Ցուցադրել գաղտնաբառը" title="Ցուցադրել գաղտնաբառը"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.7"/></svg></button>
+            </div>
+            <div class="profile-password-field">
+              <input id="newPassword" type="password" autocomplete="new-password" placeholder="Նոր գաղտնաբառ" required>
+              <button class="profile-password-toggle" type="button" data-profile-password-target="newPassword" aria-label="Ցուցադրել գաղտնաբառը" title="Ցուցադրել գաղտնաբառը"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.7"/></svg></button>
+            </div>
+            <div class="profile-password-field">
+              <input id="repeatNewPassword" type="password" autocomplete="new-password" placeholder="Կրկնել նոր գաղտնաբառը" required>
+              <button class="profile-password-toggle" type="button" data-profile-password-target="repeatNewPassword" aria-label="Ցուցադրել գաղտնաբառը" title="Ցուցադրել գաղտնաբառը"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.7"/></svg></button>
+            </div>
+          </div>
+          <div id="passwordSecurityStatus" class="password-security-status" role="status" aria-live="polite"></div>
+          <div class="password-security-actions">
+            <button id="changePasswordButton" type="submit" class="btn-brand px-4 py-2.5 rounded-xl text-sm font-semibold">Փոխել գաղտնաբառը</button>
+            <button id="sendProfileRecoveryEmail" type="button" class="password-recovery-button">Մոռացե՞լ եք ընթացիկ գաղտնաբառը։ Ուղարկել վերականգնման նամակ</button>
+          </div>
+        </form>
+      </div>
+    </section>
   </main>
 
 
@@ -760,8 +824,156 @@
       return user ?? null;
     }
 
+    const PASSWORD_SECURITY_COPY = {
+      show: 'Ցուցադրել գաղտնաբառը', hide: 'Թաքցնել գաղտնաբառը', enterCurrent: 'Մուտքագրեք ընթացիկ գաղտնաբառը։',
+      tooShort: 'Նոր գաղտնաբառը պետք է պարունակի առնվազն 6 նիշ։', mismatch: 'Նոր գաղտնաբառերը չեն համընկնում։',
+      unavailable: 'Գաղտնաբառի փոփոխությունը հասանելի է միայն էլփոստով և գաղտնաբառով հաշիվների համար։',
+      changing: 'Գաղտնաբառը փոխվում է…', changed: 'Ձեր գաղտնաբառը փոխվել է։', incorrect: 'Ընթացիկ գաղտնաբառը սխալ է։',
+      changeFailed: 'Չհաջողվեց փոխել գաղտնաբառը։ Փորձեք կրկին։', changeButton: 'Փոխել գաղտնաբառը',
+      sending: 'Նամակն ուղարկվում է…', sent: 'Վերականգնման հղումով նամակն ուղարկվել է ձեր էլփոստին։',
+      sendFailed: 'Չհաջողվեց ուղարկել նամակը։ Փորձեք կրկին։', recoveryButton: 'Մոռացե՞լ եք ընթացիկ գաղտնաբառը։ Ուղարկել վերականգնման նամակ',
+      recoveryPath: '/profile_arm.html'
+    };
+
+    function isEmailPasswordUser(user) {
+      if (!user) return false;
+      const identities = Array.isArray(user.identities) ? user.identities : [];
+      const providers = user.app_metadata && Array.isArray(user.app_metadata.providers) ? user.app_metadata.providers : [];
+      return identities.some((identity) => identity && identity.provider === 'email')
+        || providers.includes('email')
+        || String(user.app_metadata?.provider || '') === 'email'
+        || String(user.user_metadata?.hansora_auth_provider || '') === 'email';
+    }
+
+    function setPasswordSecurityStatus(message, tone = '') {
+      const status = document.getElementById('passwordSecurityStatus');
+      if (!status) return;
+      status.textContent = message || '';
+      status.classList.remove('is-error', 'is-success');
+      if (message && tone) status.classList.add(`is-${tone}`);
+    }
+
+    function resetProfilePasswordVisibility() {
+      document.querySelectorAll('[data-profile-password-target]').forEach((button) => {
+        const input = document.getElementById(button.dataset.profilePasswordTarget || '');
+        if (input) input.type = 'password';
+        button.classList.remove('is-visible');
+        button.setAttribute('aria-pressed', 'false');
+        button.setAttribute('aria-label', PASSWORD_SECURITY_COPY.show);
+        button.setAttribute('title', PASSWORD_SECURITY_COPY.show);
+      });
+    }
+
+    function setPasswordSecurityExpanded(expanded) {
+      const toggle = document.getElementById('passwordSecurityToggle');
+      const panel = document.getElementById('passwordSecurityPanel');
+      if (!toggle || !panel) return;
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      panel.hidden = !expanded;
+      if (!expanded) {
+        document.getElementById('changePasswordForm')?.reset();
+        setPasswordSecurityStatus('');
+        resetProfilePasswordVisibility();
+      }
+    }
+
+    function renderPasswordSecurity(user) {
+      const section = document.getElementById('passwordSecuritySection');
+      if (!section) return;
+      section.hidden = !isEmailPasswordUser(user);
+      if (section.hidden) setPasswordSecurityExpanded(false);
+    }
+
+    function toggleProfilePassword(button) {
+      const input = document.getElementById(button.dataset.profilePasswordTarget || '');
+      if (!input) return;
+      const reveal = input.type === 'password';
+      input.type = reveal ? 'text' : 'password';
+      button.classList.toggle('is-visible', reveal);
+      button.setAttribute('aria-pressed', reveal ? 'true' : 'false');
+      button.setAttribute('aria-label', reveal ? PASSWORD_SECURITY_COPY.hide : PASSWORD_SECURITY_COPY.show);
+      button.setAttribute('title', reveal ? PASSWORD_SECURITY_COPY.hide : PASSWORD_SECURITY_COPY.show);
+      input.focus({ preventScroll: true });
+    }
+
+    function profilePasswordRecoveryReturnUrl() {
+      const url = new URL(PASSWORD_SECURITY_COPY.recoveryPath, window.location.origin);
+      url.searchParams.set('password_recovery', '1');
+      return url.href;
+    }
+
+    async function submitProfilePasswordChange(event) {
+      event.preventDefault();
+      const button = document.getElementById('changePasswordButton');
+      const currentInput = document.getElementById('currentPassword');
+      const newInput = document.getElementById('newPassword');
+      const repeatInput = document.getElementById('repeatNewPassword');
+      const currentPassword = String(currentInput?.value || '');
+      const newPassword = String(newInput?.value || '');
+      const repeatedPassword = String(repeatInput?.value || '');
+      setPasswordSecurityStatus('');
+      if (!currentPassword) { setPasswordSecurityStatus(PASSWORD_SECURITY_COPY.enterCurrent, 'error'); currentInput?.focus(); return; }
+      if (newPassword.length < 6) { setPasswordSecurityStatus(PASSWORD_SECURITY_COPY.tooShort, 'error'); newInput?.focus(); return; }
+      if (newPassword !== repeatedPassword) { setPasswordSecurityStatus(PASSWORD_SECURITY_COPY.mismatch, 'error'); repeatInput?.focus(); return; }
+      const user = await ensureAuth();
+      if (!user || !user.email || !isEmailPasswordUser(user)) {
+        renderPasswordSecurity(user);
+        setPasswordSecurityStatus(PASSWORD_SECURITY_COPY.unavailable, 'error');
+        return;
+      }
+      button.disabled = true;
+      button.textContent = PASSWORD_SECURITY_COPY.changing;
+      try {
+        const loginResult = await sb.auth.signInWithPassword({ email: user.email, password: currentPassword });
+        if (loginResult.error) throw new Error('CURRENT_PASSWORD_INVALID');
+        const updateResult = await sb.auth.updateUser({ password: newPassword });
+        if (updateResult.error) throw updateResult.error;
+        document.getElementById('changePasswordForm')?.reset();
+        resetProfilePasswordVisibility();
+        setPasswordSecurityStatus(PASSWORD_SECURITY_COPY.changed, 'success');
+      } catch (error) {
+        setPasswordSecurityStatus(error?.message === 'CURRENT_PASSWORD_INVALID' ? PASSWORD_SECURITY_COPY.incorrect : (error?.message || PASSWORD_SECURITY_COPY.changeFailed), 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = PASSWORD_SECURITY_COPY.changeButton;
+      }
+    }
+
+    async function sendProfileRecoveryEmail() {
+      const button = document.getElementById('sendProfileRecoveryEmail');
+      const user = await ensureAuth();
+      if (!user || !user.email || !isEmailPasswordUser(user)) { renderPasswordSecurity(user); return; }
+      button.disabled = true;
+      button.textContent = PASSWORD_SECURITY_COPY.sending;
+      setPasswordSecurityStatus('');
+      try {
+        try { localStorage.setItem('hansora.password_recovery.pending.v1', JSON.stringify({ email:user.email, requestedAt:Date.now(), requestedWhileAuthenticated:true })); } catch {}
+        const result = await sb.auth.resetPasswordForEmail(user.email, { redirectTo: profilePasswordRecoveryReturnUrl() });
+        if (result.error) throw result.error;
+        setPasswordSecurityStatus(PASSWORD_SECURITY_COPY.sent, 'success');
+      } catch (error) {
+        try { localStorage.removeItem('hansora.password_recovery.pending.v1'); } catch {}
+        console.warn('profile password recovery email failed', error);
+        setPasswordSecurityStatus(PASSWORD_SECURITY_COPY.sendFailed, 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = PASSWORD_SECURITY_COPY.recoveryButton;
+      }
+    }
+
+    function initPasswordSecurity() {
+      document.getElementById('passwordSecurityToggle')?.addEventListener('click', () => {
+        const toggle = document.getElementById('passwordSecurityToggle');
+        setPasswordSecurityExpanded(toggle?.getAttribute('aria-expanded') !== 'true');
+      });
+      document.getElementById('changePasswordForm')?.addEventListener('submit', submitProfilePasswordChange);
+      document.getElementById('sendProfileRecoveryEmail')?.addEventListener('click', sendProfileRecoveryEmail);
+      document.querySelectorAll('[data-profile-password-target]').forEach((button) => button.addEventListener('click', () => toggleProfilePassword(button)));
+    }
+
     async function loadProfileInfo() {
       const user = await ensureAuth();
+      renderPasswordSecurity(user);
       if (!user) return null;
       setText('userEmail', user.email || '—');
       setText('joinedDate', fmtDate(user.created_at));
@@ -997,6 +1209,7 @@
     }
 
     (async () => {
+      initPasswordSecurity();
       await waitForInitialSession();
       await loadProfileInfo();
       startCreditsParity();
