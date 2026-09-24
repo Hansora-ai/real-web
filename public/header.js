@@ -145,7 +145,8 @@
       reject: 'Reject', acceptAnalytics: 'Accept analytics', continue: 'Continue', telegramFailure: 'Telegram login was not completed', telegramCancelled: 'Telegram login was cancelled or not completed. Please try again.',
       creatorOffer: 'Creator discount offer', pricingOffer: 'Hansora pricing offer', closeOffer: 'Close offer', openingGoogle: 'Opening Google login…', googleFailed: 'Google login failed.',
       openingTelegram: 'Opening Telegram login…', tryAgain: 'Please try again.', enterCredentials: 'Enter email & password.', signingIn: 'Signing in…', loginFailed: 'Login failed.', notLoggedIn: 'Not logged in', notEnoughCredits: 'Not enough credits',
-      emailPassword: 'Email & password', orEmail: 'OR', backToOptions: 'Back to options', repeatPassword: 'Repeat password', haveAccount: 'Already have an account? Log in', needAccount: 'New here? Sign up', createAccountButton: 'Create account', creatingAccount: 'Creating account…', passwordsDoNotMatch: 'Passwords do not match.', passwordTooShort: 'Password must contain at least 6 characters.', invalidEmail: 'Enter a valid email address.', invalidCredentials: 'Email or password is incorrect.', emailMayExist: 'This email may already have an account. Try logging in or use a different email.', verifyTitle: 'Check your inbox', verificationSent: 'Enter the verification code sent to', verificationCode: '6-digit code', verifyCode: 'Verify and continue', verifyingCode: 'Verifying code…', resendCode: 'Resend code', codeResent: 'A new verification code was sent.', signupFailed: 'Could not create the account.', verificationFailed: 'The verification code is invalid or expired.', emailNotConfirmed: 'Verify your email before logging in.'
+      emailPassword: 'Email & password', orEmail: 'OR', backToOptions: 'Back to options', repeatPassword: 'Repeat password', haveAccount: 'Already have an account? Log in', needAccount: 'New here? Sign up', createAccountButton: 'Create account', creatingAccount: 'Creating account…', passwordsDoNotMatch: 'Passwords do not match.', passwordTooShort: 'Password must contain at least 6 characters.', invalidEmail: 'Enter a valid email address.', invalidCredentials: 'Email or password is incorrect.', emailMayExist: 'This email may already have an account. Try logging in or use a different email.', verifyTitle: 'Check your inbox', verificationSent: 'Enter the verification code sent to', verificationCode: '6-digit code', verifyCode: 'Verify and continue', verifyingCode: 'Verifying code…', resendCode: 'Resend code', codeResent: 'A new verification code was sent.', signupFailed: 'Could not create the account.', verificationFailed: 'The verification code is invalid or expired.', emailNotConfirmed: 'Verify your email before logging in.',
+      forgotPassword: 'Forgot password?', sendRecoveryEmail: 'Send recovery email', sendingRecoveryEmail: 'Sending recovery email…', recoveryEmailSent: 'If an account exists for this email, a recovery link has been sent.', recoveryFailed: 'Could not send the recovery email. Please try again.', resetPasswordTitle: 'Create a new password', recoveryInstructions: 'Enter and confirm your new password.', newPassword: 'New password', repeatNewPassword: 'Repeat new password', updatePassword: 'Update password', updatingPassword: 'Updating password…', passwordUpdated: 'Your password has been updated. You can continue using Hansora.', showPassword: 'Show password', hidePassword: 'Hide password'
     },
     hy: {
       home: 'HANSORA AI գլխավոր էջ', primaryNav: 'Հիմնական նավիգացիա', image: 'Պատկեր', imageMenu: 'Պատկերի գործիքներ և մոդելներ', imageSection: 'Պատկերի մոդելներ և գործիքներ',
@@ -159,7 +160,8 @@
       reject: 'Մերժել', acceptAnalytics: 'Թույլատրել', continue: 'Շարունակել', telegramFailure: 'Telegram-ով մուտքը չի ավարտվել', telegramCancelled: 'Telegram-ով մուտքը չեղարկվել կամ չի ավարտվել։ Փորձեք կրկին։',
       creatorOffer: 'Զեղչային առաջարկ ստեղծողների համար', pricingOffer: 'Hansora-ի գնային առաջարկ', closeOffer: 'Փակել առաջարկը', openingGoogle: 'Բացվում է Google-ով մուտքը…', googleFailed: 'Google-ով մուտքը ձախողվեց։',
       openingTelegram: 'Բացվում է Telegram-ով մուտքը…', tryAgain: 'Փորձեք կրկին։', enterCredentials: 'Մուտքագրեք էլփոստը և գաղտնաբառը։', signingIn: 'Մուտք է կատարվում…', loginFailed: 'Մուտքը ձախողվեց։', notLoggedIn: 'Մուտք չեք գործել', notEnoughCredits: 'Բավարար կրեդիտներ չկան',
-      emailPassword: 'Էլփոստ և գաղտնաբառ', orEmail: 'ԿԱՄ', backToOptions: 'Վերադառնալ տարբերակներին', repeatPassword: 'Կրկնել գաղտնաբառը', haveAccount: 'Արդեն ունե՞ք հաշիվ։ Մուտք գործել', needAccount: 'Նոր օգտատե՞ր եք։ Գրանցվել', createAccountButton: 'Ստեղծել հաշիվ', creatingAccount: 'Հաշիվը ստեղծվում է…', passwordsDoNotMatch: 'Գաղտնաբառերը չեն համընկնում։', passwordTooShort: 'Գաղտնաբառը պետք է պարունակի առնվազն 6 նիշ։', invalidEmail: 'Մուտքագրեք վավեր էլփոստի հասցե։', invalidCredentials: 'Էլփոստը կամ գաղտնաբառը սխալ է։', emailMayExist: 'Այս էլփոստով հնարավոր է արդեն հաշիվ կա։ Փորձեք մուտք գործել կամ օգտագործեք այլ էլփոստ։', verifyTitle: 'Ստուգեք ձեր փոստը', verificationSent: 'Մուտքագրեք այս հասցեին ուղարկված հաստատման կոդը՝', verificationCode: '6-նիշ կոդ', verifyCode: 'Հաստատել և շարունակել', verifyingCode: 'Կոդը ստուգվում է…', resendCode: 'Կրկին ուղարկել կոդը', codeResent: 'Նոր հաստատման կոդն ուղարկվեց։', signupFailed: 'Չհաջողվեց ստեղծել հաշիվը։', verificationFailed: 'Հաստատման կոդը սխալ է կամ ժամկետանց։', emailNotConfirmed: 'Մուտք գործելուց առաջ հաստատեք ձեր էլփոստը։'
+      emailPassword: 'Էլփոստ և գաղտնաբառ', orEmail: 'ԿԱՄ', backToOptions: 'Վերադառնալ տարբերակներին', repeatPassword: 'Կրկնել գաղտնաբառը', haveAccount: 'Արդեն ունե՞ք հաշիվ։ Մուտք գործել', needAccount: 'Նոր օգտատե՞ր եք։ Գրանցվել', createAccountButton: 'Ստեղծել հաշիվ', creatingAccount: 'Հաշիվը ստեղծվում է…', passwordsDoNotMatch: 'Գաղտնաբառերը չեն համընկնում։', passwordTooShort: 'Գաղտնաբառը պետք է պարունակի առնվազն 6 նիշ։', invalidEmail: 'Մուտքագրեք վավեր էլփոստի հասցե։', invalidCredentials: 'Էլփոստը կամ գաղտնաբառը սխալ է։', emailMayExist: 'Այս էլփոստով հնարավոր է արդեն հաշիվ կա։ Փորձեք մուտք գործել կամ օգտագործեք այլ էլփոստ։', verifyTitle: 'Ստուգեք ձեր փոստը', verificationSent: 'Մուտքագրեք այս հասցեին ուղարկված հաստատման կոդը՝', verificationCode: '6-նիշ կոդ', verifyCode: 'Հաստատել և շարունակել', verifyingCode: 'Կոդը ստուգվում է…', resendCode: 'Կրկին ուղարկել կոդը', codeResent: 'Նոր հաստատման կոդն ուղարկվեց։', signupFailed: 'Չհաջողվեց ստեղծել հաշիվը։', verificationFailed: 'Հաստատման կոդը սխալ է կամ ժամկետանց։', emailNotConfirmed: 'Մուտք գործելուց առաջ հաստատեք ձեր էլփոստը։',
+      forgotPassword: 'Մոռացե՞լ եք գաղտնաբառը', sendRecoveryEmail: 'Ուղարկել վերականգնման նամակ', sendingRecoveryEmail: 'Վերականգնման նամակն ուղարկվում է…', recoveryEmailSent: 'Եթե այս էլփոստով հաշիվ կա, վերականգնման հղումն ուղարկվել է։', recoveryFailed: 'Չհաջողվեց ուղարկել վերականգնման նամակը։ Փորձեք կրկին։', resetPasswordTitle: 'Ստեղծեք նոր գաղտնաբառ', recoveryInstructions: 'Մուտքագրեք և հաստատեք ձեր նոր գաղտնաբառը։', newPassword: 'Նոր գաղտնաբառ', repeatNewPassword: 'Կրկնել նոր գաղտնաբառը', updatePassword: 'Թարմացնել գաղտնաբառը', updatingPassword: 'Գաղտնաբառը թարմացվում է…', passwordUpdated: 'Ձեր գաղտնաբառը թարմացվել է։ Կարող եք շարունակել օգտվել Hansora-ից։', showPassword: 'Ցուցադրել գաղտնաբառը', hidePassword: 'Թաքցնել գաղտնաբառը'
     },
     ru: {
       home: 'Главная страница HANSORA AI', primaryNav: 'Основная навигация', image: 'Изображения', imageMenu: 'Инструменты и модели изображений', imageSection: 'Модели и инструменты изображений',
@@ -173,7 +175,8 @@
       reject: 'Отклонить', acceptAnalytics: 'Разрешить', continue: 'Продолжить', telegramFailure: 'Вход через Telegram не завершён', telegramCancelled: 'Вход через Telegram отменён или не завершён. Попробуйте ещё раз.',
       creatorOffer: 'Скидочное предложение для создателей', pricingOffer: 'Ценовое предложение Hansora', closeOffer: 'Закрыть предложение', openingGoogle: 'Открывается вход через Google…', googleFailed: 'Не удалось войти через Google.',
       openingTelegram: 'Открывается вход через Telegram…', tryAgain: 'Попробуйте ещё раз.', enterCredentials: 'Введите эл. почту и пароль.', signingIn: 'Выполняется вход…', loginFailed: 'Не удалось войти.', notLoggedIn: 'Вход не выполнен', notEnoughCredits: 'Недостаточно кредитов',
-      emailPassword: 'Эл. почта и пароль', orEmail: 'ИЛИ', backToOptions: 'Назад к вариантам', repeatPassword: 'Повторите пароль', haveAccount: 'Уже есть аккаунт? Войти', needAccount: 'Нет аккаунта? Зарегистрироваться', createAccountButton: 'Создать аккаунт', creatingAccount: 'Создаём аккаунт…', passwordsDoNotMatch: 'Пароли не совпадают.', passwordTooShort: 'Пароль должен содержать не менее 6 символов.', invalidEmail: 'Введите действительный адрес электронной почты.', invalidCredentials: 'Неверный адрес электронной почты или пароль.', emailMayExist: 'Возможно, для этой почты уже есть аккаунт. Попробуйте войти или используйте другую почту.', verifyTitle: 'Проверьте почту', verificationSent: 'Введите код подтверждения, отправленный на', verificationCode: '6-значный код', verifyCode: 'Подтвердить и продолжить', verifyingCode: 'Проверяем код…', resendCode: 'Отправить код ещё раз', codeResent: 'Новый код подтверждения отправлен.', signupFailed: 'Не удалось создать аккаунт.', verificationFailed: 'Код подтверждения неверен или истёк.', emailNotConfirmed: 'Подтвердите эл. почту перед входом.'
+      emailPassword: 'Эл. почта и пароль', orEmail: 'ИЛИ', backToOptions: 'Назад к вариантам', repeatPassword: 'Повторите пароль', haveAccount: 'Уже есть аккаунт? Войти', needAccount: 'Нет аккаунта? Зарегистрироваться', createAccountButton: 'Создать аккаунт', creatingAccount: 'Создаём аккаунт…', passwordsDoNotMatch: 'Пароли не совпадают.', passwordTooShort: 'Пароль должен содержать не менее 6 символов.', invalidEmail: 'Введите действительный адрес электронной почты.', invalidCredentials: 'Неверный адрес электронной почты или пароль.', emailMayExist: 'Возможно, для этой почты уже есть аккаунт. Попробуйте войти или используйте другую почту.', verifyTitle: 'Проверьте почту', verificationSent: 'Введите код подтверждения, отправленный на', verificationCode: '6-значный код', verifyCode: 'Подтвердить и продолжить', verifyingCode: 'Проверяем код…', resendCode: 'Отправить код ещё раз', codeResent: 'Новый код подтверждения отправлен.', signupFailed: 'Не удалось создать аккаунт.', verificationFailed: 'Код подтверждения неверен или истёк.', emailNotConfirmed: 'Подтвердите эл. почту перед входом.',
+      forgotPassword: 'Забыли пароль?', sendRecoveryEmail: 'Отправить письмо для восстановления', sendingRecoveryEmail: 'Отправляем письмо…', recoveryEmailSent: 'Если для этой почты есть аккаунт, ссылка для восстановления отправлена.', recoveryFailed: 'Не удалось отправить письмо для восстановления. Попробуйте ещё раз.', resetPasswordTitle: 'Создайте новый пароль', recoveryInstructions: 'Введите и подтвердите новый пароль.', newPassword: 'Новый пароль', repeatNewPassword: 'Повторите новый пароль', updatePassword: 'Обновить пароль', updatingPassword: 'Обновляем пароль…', passwordUpdated: 'Ваш пароль обновлён. Можно продолжать пользоваться Hansora.', showPassword: 'Показать пароль', hidePassword: 'Скрыть пароль'
     }
   };
 
@@ -2179,6 +2182,41 @@
       }
       .hansora-auth-form .hansora-auth-fields input:focus{ border-color:rgba(139,92,246,.78); box-shadow:0 0 0 3px rgba(139,92,246,.16); }
       .hansora-auth-form .hansora-auth-fields input::placeholder{ color:rgba(255,255,255,.46); }
+      .hansora-auth-form .hansora-password-field{ position:relative; }
+      .hansora-auth-form .hansora-password-field[hidden]{ display:none !important; }
+      .hansora-auth-form .hansora-password-field input{ padding-right:48px; }
+      .hansora-auth-form .hansora-password-toggle{
+        position:absolute;
+        top:50%;
+        right:8px;
+        width:34px !important;
+        min-width:34px !important;
+        height:34px !important;
+        min-height:34px !important;
+        display:grid !important;
+        place-items:center;
+        transform:translateY(-50%);
+        padding:0 !important;
+        border:0 !important;
+        border-radius:9px !important;
+        background:transparent !important;
+        color:rgba(255,255,255,.62) !important;
+        box-shadow:none !important;
+        cursor:pointer;
+      }
+      .hansora-auth-form .hansora-password-toggle:hover,
+      .hansora-auth-form .hansora-password-toggle:focus-visible{ background:rgba(255,255,255,.08) !important; color:#fff !important; }
+      .hansora-auth-form .hansora-password-toggle svg{ width:19px; height:19px; pointer-events:none; }
+      .hansora-auth-form .hansora-password-toggle.is-visible::after{
+        content:"";
+        position:absolute;
+        width:20px;
+        height:2px;
+        border-radius:2px;
+        background:currentColor;
+        transform:rotate(-45deg);
+      }
+      .hansora-auth-form .hansora-recovery-copy{ margin:0 0 14px; color:rgba(255,255,255,.68); font-size:14px; line-height:1.5; text-align:center; }
       .hansora-auth-form .hansora-auth-primary{ display:block !important; margin-top:14px !important; }
       .hansora-auth-form .hansora-auth-primary .btn{ width:100% !important; min-height:48px !important; }
       .hansora-auth-form .hansora-auth-secondary{
@@ -2966,13 +3004,20 @@
             <div class="hansora-auth-view" id="authEmailView" hidden>
               <div class="hansora-auth-fields">
                 <input id="authEmail" placeholder="${copy('email')}" type="email" autocomplete="email" required>
-                <input id="authPass" placeholder="${copy('password')}" type="password" autocomplete="current-password" required>
-                <input id="authPassRepeat" placeholder="${copy('repeatPassword')}" type="password" autocomplete="new-password" hidden>
+                <div class="hansora-password-field">
+                  <input id="authPass" placeholder="${copy('password')}" type="password" autocomplete="current-password" required>
+                  <button class="hansora-password-toggle" type="button" data-password-target="authPass" aria-label="${copy('showPassword')}" title="${copy('showPassword')}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.7"/></svg></button>
+                </div>
+                <div class="hansora-password-field" id="authPassRepeatWrap" hidden>
+                  <input id="authPassRepeat" placeholder="${copy('repeatPassword')}" type="password" autocomplete="new-password">
+                  <button class="hansora-password-toggle" type="button" data-password-target="authPassRepeat" aria-label="${copy('showPassword')}" title="${copy('showPassword')}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.7"/></svg></button>
+                </div>
               </div>
               <div class="hansora-auth-primary">
                 <button class="btn btn-brand" id="btnDoEmailAuth" type="submit">${copy('logIn')}</button>
               </div>
               <div class="hansora-auth-secondary">
+                <button class="hansora-auth-link" id="btnForgotPassword" type="button">${copy('forgotPassword')}</button>
                 <button class="hansora-auth-link" id="btnAuthSwitch" type="button">${copy('needAccount')}</button>
                 <button class="hansora-auth-link" id="btnAuthBack" type="button">← ${copy('backToOptions')}</button>
               </div>
@@ -2989,6 +3034,22 @@
               <div class="hansora-auth-secondary">
                 <button class="hansora-auth-link" id="btnResendCode" type="button">${copy('resendCode')}</button>
                 <button class="hansora-auth-link" id="btnVerifyBack" type="button">← ${copy('signUp')}</button>
+              </div>
+            </div>
+            <div class="hansora-auth-view" id="authRecoveryView" hidden>
+              <p class="hansora-recovery-copy">${copy('recoveryInstructions')}</p>
+              <div class="hansora-auth-fields">
+                <div class="hansora-password-field">
+                  <input id="authRecoveryPass" placeholder="${copy('newPassword')}" type="password" autocomplete="new-password">
+                  <button class="hansora-password-toggle" type="button" data-password-target="authRecoveryPass" aria-label="${copy('showPassword')}" title="${copy('showPassword')}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.7"/></svg></button>
+                </div>
+                <div class="hansora-password-field">
+                  <input id="authRecoveryPassRepeat" placeholder="${copy('repeatNewPassword')}" type="password" autocomplete="new-password">
+                  <button class="hansora-password-toggle" type="button" data-password-target="authRecoveryPassRepeat" aria-label="${copy('showPassword')}" title="${copy('showPassword')}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.7"/></svg></button>
+                </div>
+              </div>
+              <div class="hansora-auth-primary">
+                <button class="btn btn-brand" id="btnCompletePasswordRecovery" type="submit">${copy('updatePassword')}</button>
               </div>
             </div>
             <p class="hansora-auth-msg" id="authMsg"></p>
@@ -3175,51 +3236,130 @@
     setAuthMessage('', 'error');
   }
 
+  function passwordRecoveryReturnUrl() {
+    const url = new URL('/profile.html', location.origin);
+    url.searchParams.set('password_recovery', '1');
+    return url.href;
+  }
+
+  function isPasswordRecoveryReturn() {
+    const search = new URLSearchParams(location.search || '');
+    const hash = new URLSearchParams(String(location.hash || '').replace(/^#/, ''));
+    return search.get('password_recovery') === '1'
+      || search.get('type') === 'recovery'
+      || hash.get('type') === 'recovery';
+  }
+
+  function clearPasswordRecoveryReturn() {
+    try {
+      const url = new URL(location.href);
+      url.searchParams.delete('password_recovery');
+      url.searchParams.delete('type');
+      const hash = new URLSearchParams(String(url.hash || '').replace(/^#/, ''));
+      ['type', 'access_token', 'refresh_token', 'expires_at', 'expires_in', 'token_type'].forEach(function (key) {
+        hash.delete(key);
+      });
+      url.hash = hash.toString() ? `#${hash.toString()}` : '';
+      history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`);
+    } catch (_) {}
+  }
+
+  function resetPasswordVisibility(scope) {
+    const root = scope || document;
+    root.querySelectorAll('[data-password-target]').forEach(function (button) {
+      const input = el(button.getAttribute('data-password-target'));
+      if (input) input.type = 'password';
+      button.classList.remove('is-visible');
+      button.setAttribute('aria-pressed', 'false');
+      button.setAttribute('aria-label', copy('showPassword'));
+      button.setAttribute('title', copy('showPassword'));
+    });
+  }
+
+  function togglePasswordVisibility(button) {
+    const input = el(button && button.getAttribute('data-password-target'));
+    if (!input) return;
+    const reveal = input.type === 'password';
+    input.type = reveal ? 'text' : 'password';
+    button.classList.toggle('is-visible', reveal);
+    button.setAttribute('aria-pressed', reveal ? 'true' : 'false');
+    button.setAttribute('aria-label', copy(reveal ? 'hidePassword' : 'showPassword'));
+    button.setAttribute('title', copy(reveal ? 'hidePassword' : 'showPassword'));
+    input.focus({ preventScroll: true });
+  }
+
   function setAuthMode(mode) {
-    if (mode === 'signup' || mode === 'email-login' || mode === 'verify') authMode = mode;
+    if (mode === 'signup' || mode === 'email-login' || mode === 'verify' || mode === 'recovery') authMode = mode;
     else authMode = 'chooser';
     const title = el('authTitle');
     const chooserView = el('authChooserView');
     const emailView = el('authEmailView');
     const verifyView = el('authVerifyView');
+    const recoveryView = el('authRecoveryView');
     const emailIn = el('authEmail');
     const passIn = el('authPass');
     const repeatIn = el('authPassRepeat');
+    const repeatWrap = el('authPassRepeatWrap');
     const otpIn = el('authOtp');
+    const recoveryPass = el('authRecoveryPass');
+    const recoveryPassRepeat = el('authRecoveryPassRepeat');
     const submit = el('btnDoEmailAuth');
     const switchButton = el('btnAuthSwitch');
     const backButton = el('btnAuthBack');
+    const forgotButton = el('btnForgotPassword');
     const verifyEmail = el('authVerifyEmail');
     const isSignup = authMode === 'signup';
     if (title) {
       title.textContent = authMode === 'signup'
         ? copy('createAccount')
-        : authMode === 'verify' ? copy('verifyTitle') : copy('logIn');
+        : authMode === 'verify' ? copy('verifyTitle')
+          : authMode === 'recovery' ? copy('resetPasswordTitle') : copy('logIn');
     }
     if (chooserView) chooserView.hidden = authMode !== 'chooser';
     if (emailView) emailView.hidden = authMode !== 'email-login' && authMode !== 'signup';
     if (verifyView) verifyView.hidden = authMode !== 'verify';
+    if (recoveryView) recoveryView.hidden = authMode !== 'recovery';
     if (emailIn) emailIn.disabled = authMode !== 'email-login' && authMode !== 'signup';
     if (passIn) passIn.disabled = authMode !== 'email-login' && authMode !== 'signup';
     if (repeatIn) {
-      repeatIn.hidden = !isSignup;
       repeatIn.required = isSignup;
       repeatIn.disabled = !isSignup;
       if (!isSignup) repeatIn.value = '';
     }
+    if (repeatWrap) repeatWrap.hidden = !isSignup;
     if (otpIn) {
       otpIn.disabled = authMode !== 'verify';
       otpIn.required = authMode === 'verify';
     }
+    if (recoveryPass) {
+      recoveryPass.disabled = authMode !== 'recovery';
+      recoveryPass.required = authMode === 'recovery';
+    }
+    if (recoveryPassRepeat) {
+      recoveryPassRepeat.disabled = authMode !== 'recovery';
+      recoveryPassRepeat.required = authMode === 'recovery';
+    }
     if (passIn) passIn.autocomplete = isSignup ? 'new-password' : 'current-password';
     if (submit) submit.textContent = isSignup ? copy('createAccountButton') : copy('logIn');
     if (switchButton) switchButton.textContent = isSignup ? copy('haveAccount') : copy('needAccount');
+    if (forgotButton) forgotButton.hidden = authMode !== 'email-login';
     if (backButton) {
       const socialDirectForm = isSocialAuthWebView() && !emailAuthOpenedFromChooser;
       backButton.hidden = authMode === 'verify' || socialDirectForm;
     }
     if (verifyEmail) verifyEmail.textContent = pendingVerificationEmail;
     clearAuthMessage();
+  }
+
+  function openPasswordRecovery() {
+    pendingVerificationEmail = '';
+    setAuthMode('recovery');
+    const modal = el('authModal');
+    if (modal) {
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+    setTimeout(function () { focusAuthField('authRecoveryPass'); }, 0);
   }
 
   function openAuth(mode) {
@@ -3256,10 +3396,14 @@
     const modal = el('authModal');
     const passIn = el('authPass');
     const repeatIn = el('authPassRepeat');
+    const recoveryPass = el('authRecoveryPass');
+    const recoveryPassRepeat = el('authRecoveryPassRepeat');
     const otpIn = el('authOtp');
     clearAuthMessage();
     if (passIn) passIn.value = '';
     if (repeatIn) repeatIn.value = '';
+    if (recoveryPass) recoveryPass.value = '';
+    if (recoveryPassRepeat) recoveryPassRepeat.value = '';
     if (otpIn) otpIn.value = '';
     if (modal) {
       modal.classList.remove('is-open');
@@ -3267,6 +3411,7 @@
     }
     emailAuthOpenedFromChooser = false;
     authChooserIntent = 'login';
+    resetPasswordVisibility(modal || document);
     setAuthMode('chooser');
   }
 
@@ -3923,6 +4068,8 @@
     const doEmailAuth = el('btnDoEmailAuth');
     const btnAuthSwitch = el('btnAuthSwitch');
     const btnAuthBack = el('btnAuthBack');
+    const btnForgotPassword = el('btnForgotPassword');
+    const btnCompletePasswordRecovery = el('btnCompletePasswordRecovery');
     const btnVerifyEmail = el('btnVerifyEmail');
     const btnResendCode = el('btnResendCode');
     const btnVerifyBack = el('btnVerifyBack');
@@ -4102,8 +4249,20 @@
     }
     if (authClose) authClose.addEventListener('click', closeAuth);
     if (modal) {
+      let pointerStartedOnAuthBackdrop = false;
+      modal.addEventListener('pointerdown', function (event) {
+        pointerStartedOnAuthBackdrop = event.target === modal;
+      });
+      modal.addEventListener('pointercancel', function () {
+        pointerStartedOnAuthBackdrop = false;
+      });
       modal.addEventListener('click', function (event) {
-        if (event.target === modal) closeAuth();
+        const shouldClose = pointerStartedOnAuthBackdrop && event.target === modal;
+        pointerStartedOnAuthBackdrop = false;
+        if (shouldClose) closeAuth();
+      });
+      modal.querySelectorAll('[data-password-target]').forEach(function (button) {
+        button.addEventListener('click', function () { togglePasswordVisibility(button); });
       });
     }
     document.addEventListener('keydown', function (event) {
@@ -4158,6 +4317,78 @@
 
     let emailAuthSubmissionPending = false;
     let emailVerificationSubmissionPending = false;
+    let recoveryEmailSubmissionPending = false;
+    let passwordRecoverySubmissionPending = false;
+
+    if (btnForgotPassword) {
+      btnForgotPassword.addEventListener('click', async function () {
+        if (recoveryEmailSubmissionPending) return;
+        const emailIn = el('authEmail');
+        const email = String(emailIn && emailIn.value || '').trim().toLowerCase();
+        clearAuthMessage();
+        if (!validEmailAddress(email)) {
+          setAuthMessage(copy('invalidEmail'), 'error');
+          focusAuthField('authEmail');
+          return;
+        }
+        if (!sb || !sb.auth) {
+          setAuthMessage(copy('recoveryFailed'), 'error');
+          return;
+        }
+        recoveryEmailSubmissionPending = true;
+        btnForgotPassword.disabled = true;
+        btnForgotPassword.setAttribute('aria-busy', 'true');
+        btnForgotPassword.textContent = copy('sendingRecoveryEmail');
+        try {
+          const result = await sb.auth.resetPasswordForEmail(email, {
+            redirectTo: passwordRecoveryReturnUrl()
+          });
+          if (result.error) throw result.error;
+          setAuthMessage(copy('recoveryEmailSent'), 'success');
+        } catch (error) {
+          console.warn('Hansora password recovery email failed', error);
+          setAuthMessage(copy('recoveryFailed'), 'error');
+        } finally {
+          recoveryEmailSubmissionPending = false;
+          btnForgotPassword.disabled = false;
+          btnForgotPassword.removeAttribute('aria-busy');
+          btnForgotPassword.textContent = copy('forgotPassword');
+        }
+      });
+    }
+
+    async function submitPasswordRecovery() {
+      if (passwordRecoverySubmissionPending) return;
+      const passwordIn = el('authRecoveryPass');
+      const repeatIn = el('authRecoveryPassRepeat');
+      const password = String(passwordIn && passwordIn.value || '');
+      const repeatedPassword = String(repeatIn && repeatIn.value || '');
+      clearAuthMessage();
+      if (password.length < 6) { setAuthMessage(copy('passwordTooShort'), 'error'); return; }
+      if (password !== repeatedPassword) { setAuthMessage(copy('passwordsDoNotMatch'), 'error'); return; }
+      if (!sb || !sb.auth) { setAuthMessage(copy('recoveryFailed'), 'error'); return; }
+      passwordRecoverySubmissionPending = true;
+      btnCompletePasswordRecovery.disabled = true;
+      btnCompletePasswordRecovery.setAttribute('aria-busy', 'true');
+      btnCompletePasswordRecovery.textContent = copy('updatingPassword');
+      try {
+        const result = await sb.auth.updateUser({ password: password });
+        if (result.error) throw result.error;
+        if (passwordIn) passwordIn.value = '';
+        if (repeatIn) repeatIn.value = '';
+        resetPasswordVisibility(modal || document);
+        clearPasswordRecoveryReturn();
+        setAuthMessage(copy('passwordUpdated'), 'success');
+      } catch (error) {
+        console.warn('Hansora password recovery update failed', error);
+        setAuthMessage(error && error.message ? error.message : copy('recoveryFailed'), 'error');
+      } finally {
+        passwordRecoverySubmissionPending = false;
+        btnCompletePasswordRecovery.disabled = false;
+        btnCompletePasswordRecovery.removeAttribute('aria-busy');
+        btnCompletePasswordRecovery.textContent = copy('updatePassword');
+      }
+    }
 
     async function submitEmailCredentials() {
       if (emailAuthSubmissionPending) return;
@@ -4275,6 +4506,7 @@
       authForm.addEventListener('submit', function (event) {
         event.preventDefault();
         if (authMode === 'verify') submitVerificationCode();
+        else if (authMode === 'recovery') submitPasswordRecovery();
         else if (authMode === 'email-login' || authMode === 'signup') submitEmailCredentials();
       });
     }
@@ -4489,6 +4721,7 @@
         return;
       }
       setTimeout(function () {
+        if (event === 'PASSWORD_RECOVERY') openPasswordRecovery();
         handleAuthenticatedUser(user).catch(function (error) {
           console.warn('Hansora auth state handling failed', error);
         });
@@ -4577,6 +4810,10 @@
     });
     bindAuthStateChanges();
     restoreSession().then(function () {
+      if (isPasswordRecoveryReturn()) {
+        openPasswordRecovery();
+        return;
+      }
       if (getPendingMcpAuthReturn() && !currentUser) openAuth('login');
     }).finally(initializeRegionalAnalyticsConsent);
   });
