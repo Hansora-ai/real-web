@@ -126,7 +126,7 @@ const handler = createMcpHandler((ctx) => {
       category: z.enum(['image', 'video', 'audio']).optional().describe('Optional category filter.'),
       include_unavailable: z.boolean().default(true).describe('Include announced models whose generation runner is not deployed yet.')
     }),
-    annotations: { readOnlyHint: true, openWorldHint: false }
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async ({ category, include_unavailable }) => {
     const models = listModels({ category, includeUnavailable: include_unavailable });
     return jsonText({ models, count: models.length });
@@ -136,7 +136,7 @@ const handler = createMcpHandler((ctx) => {
     title: 'Get Hansora model',
     description: 'Get capabilities, media requirements, allowed settings, availability and recommendations for one Hansora model.',
     inputSchema: z.object({ model_id: z.string().min(1) }),
-    annotations: { readOnlyHint: true, openWorldHint: false }
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async ({ model_id }) => {
     const model = getModel(model_id);
     return model ? jsonText(model) : toolError(new Error('unsupported_model'));
@@ -155,7 +155,7 @@ const handler = createMcpHandler((ctx) => {
       sound: z.boolean().optional(),
       has_video_input: z.boolean().optional()
     }),
-    annotations: { readOnlyHint: true, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     _meta: { ui: { visibility: ['model', 'app'] }, 'openai/widgetAccessible': true }
   }, async ({ model_id, ...options }) => {
     try { return jsonText(quote(model_id, options)); } catch (error) { return toolError(error); }
@@ -165,7 +165,7 @@ const handler = createMcpHandler((ctx) => {
     title: 'Get Hansora balance',
     description: 'Read the connected Hansora account credit balance and active subscription.',
     inputSchema: z.object({}),
-    annotations: { readOnlyHint: true, openWorldHint: false }
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async () => {
     try { return jsonText(await getAccount(userId)); } catch (error) { return toolError(error); }
   });
@@ -446,7 +446,7 @@ const handler = createMcpHandler((ctx) => {
     title: 'List Hansora audio voices',
     description: 'List the current voices available for text to speech and voice changing.',
     inputSchema: z.object({}),
-    annotations: { readOnlyHint: true, openWorldHint: true }
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true }
   }, async () => {
     try {
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
@@ -623,7 +623,7 @@ const handler = createMcpHandler((ctx) => {
       limit: z.number().int().min(1).max(50).default(10),
       status: z.string().optional()
     }),
-    annotations: { readOnlyHint: true, openWorldHint: false }
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async ({ limit, status }) => {
     try { return jsonText({ generations: await listGenerations(userId, limit, status) }); } catch (error) { return toolError(error); }
   });
