@@ -860,6 +860,10 @@ img, video { max-width: 100%; height: auto; }
 .monthly-card.is-current-plan .monthly-pill{ color:#99f6e4 !important; border-color:rgba(45,212,191,.35) !important; background:rgba(20,184,166,.12) !important; }
 </style>
 
+<link rel="preconnect" href="https://checkout.dodopayments.com" crossorigin>
+<link rel="dns-prefetch" href="//checkout.dodopayments.com">
+<link rel="preconnect" href="https://yoomoney.ru" crossorigin>
+<link rel="dns-prefetch" href="//yoomoney.ru">
 </head>
 <body>
 <div id="sharedHeader"></div>
@@ -1489,6 +1493,7 @@ img, video { max-width: 100%; height: auto; }
     return window.__HANSORA_SB__ || (window.__HANSORA_SB__ = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
   }
   let cachedCheckoutUser = null;
+  let checkoutUserRequest = null;
   function isTelegramUser(user){
     const identities = Array.isArray(user?.identities) ? user.identities : [];
     const provider = String(user?.app_metadata?.provider || '').toLowerCase();
@@ -1505,7 +1510,7 @@ img, video { max-width: 100%; height: auto; }
   async function getDodoCheckoutDefaults(){
     return { forceLanguage: 'ru', country: 'AM', zipCode: '0010' };
   }
-  async function getUser(){
+  async function resolveCheckoutUser(){
     if (cachedCheckoutUser?.id) return cachedCheckoutUser;
     const sb = getSupabase();
     try {
@@ -1528,6 +1533,15 @@ img, video { max-width: 100%; height: auto; }
       }
     } catch(e) {}
     return null;
+  }
+  function getUser(){
+    if (cachedCheckoutUser?.id) return Promise.resolve(cachedCheckoutUser);
+    if (!checkoutUserRequest) {
+      checkoutUserRequest = resolveCheckoutUser().finally(function(){
+        if (!cachedCheckoutUser?.id) checkoutUserRequest = null;
+      });
+    }
+    return checkoutUserRequest;
   }
   function subscriptionIsActive(row){
     if (!row || row.status !== 'active') return false;
@@ -1673,6 +1687,10 @@ img, video { max-width: 100%; height: auto; }
       console.error('Unable to open checkout.', error);
     }
   }
+  const checkoutWarmup = getUser().then(function(user){
+    if (user?.id) getDodoCheckoutDefaults(user);
+    return user;
+  }).catch(function(){ return null; });
   ready(async function(){
     setPlanMode(new URLSearchParams(location.search).get('plan') === 'monthly' ? 'monthly' : 'payg');
     setPaymentMode(new URLSearchParams(location.search).get('method') === 'ru' ? 'ru' : 'international');
@@ -1712,7 +1730,7 @@ img, video { max-width: 100%; height: auto; }
       const payg = ev.target.closest('.buy-credits[data-credits]');
       if (payg) { ev.preventDefault(); openPaygCheckout(payg); }
     }, true);
-    const user = await getUser();
+    const user = await checkoutWarmup;
     if (user?.id) {
       const sub = await loadCurrentSubscription(user.id);
       if (sub?.plan_id) markCurrentPlan(sub.plan_id);
