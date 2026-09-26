@@ -56,6 +56,10 @@
     .lesson-btn:nth-child(2) .lesson-thumb{background-image:url('https://i.ytimg.com/vi/KqXOQ6Edw6g/hqdefault.jpg')!important}
     .lesson-btn:nth-child(3) .lesson-thumb{background-image:url('https://i.ytimg.com/vi/khAT8qCwOxI/hqdefault.jpg')!important}
     .pack-prices{flex-wrap:wrap}.approx-price{color:#d6c8ff;font-size:14px;font-weight:800;padding-bottom:3px}.pack-benefits{display:grid;gap:9px;min-height:105px;margin:14px 0 18px;padding:14px 0 0;list-style:none;border-top:1px solid rgba(255,255,255,.09)}.pack-benefits li{position:relative;padding-left:21px;color:#d8dbe5;font-size:11px;line-height:1.48}.pack-benefits li:before{content:"✓";position:absolute;left:0;top:0;color:#63e5aa;font-weight:900}.pack .buy{min-height:48px;white-space:normal;line-height:1.35}
+    @keyframes hansora-checkout-spin{to{transform:rotate(360deg)}}
+    .buy.is-opening-checkout{display:flex;align-items:center;justify-content:center;gap:9px;cursor:wait!important;pointer-events:none;opacity:.92}
+    .buy.is-opening-checkout::before{content:"";width:14px;height:14px;flex:0 0 14px;border:2px solid rgba(255,255,255,.38);border-top-color:#fff;border-radius:50%;animation:hansora-checkout-spin .7s linear infinite}
+    @media(prefers-reduced-motion:reduce){.buy.is-opening-checkout::before{animation-duration:1.5s}}
     @media(max-width:640px){.shell{width:min(100% - 20px,1180px)}.side{width:100%;margin-left:0;transform:none}.pack-benefits{min-height:0}.pack.featured{transform:none}}
     .lesson-list{grid-template-columns:repeat(3,minmax(0,1fr))}
     @media(max-width:900px){.lesson-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -972,21 +976,40 @@ Return only the final ready-to-use image-editing prompt.`,
       const markup=practice=>PACKS.map(p=>`<article class="pack ${p.featured?'featured':''}">${p.featured?'<span class="pack-badge">ԱՄԵՆԱՊԱՀԱՆՋՎԱԾԸ</span>':''}<div class="pack-top"><span class="pack-line">${esc(p.line)}</span><span class="pack-save">${esc(p.save)}</span></div><h3>${p.credits*10} կրեդիտ</h3><div class="pack-prices"><div class="price">${esc(p.price)}</div><div class="approx-price">${esc(p.approxPrice)}</div><div class="old-price">${esc(p.oldPrice)}</div></div><ul class="pack-benefits">${p.benefits.map(item=>`<li>${esc(item)}</li>`).join('')}</ul><button class="buy" type="button" ${practice?'data-practice-offer-buy':''} data-credits="${p.credits}" data-product="${esc(p.product)}">Սկսել պրակտիկան</button></article>`).join('');
       $('#creditPacks').innerHTML=markup(false);$('#practiceOfferPacks').innerHTML=markup(true);$('#welcomeOfferPacks').innerHTML=markup(true);
     }
+    const CHECKOUT_OPENING_TEXT='Բացվում է վճարման էջը…';
+    function beginCheckoutOpening(button){
+      if(!button||button.getAttribute('aria-busy')==='true')return false;
+      button.dataset.checkoutOriginalText=button.textContent;
+      button.classList.add('is-opening-checkout');
+      button.setAttribute('aria-busy','true');
+      button.textContent=CHECKOUT_OPENING_TEXT;
+      return true;
+    }
+    function endCheckoutOpening(button){
+      if(!button)return;
+      if(Object.prototype.hasOwnProperty.call(button.dataset,'checkoutOriginalText')){button.textContent=button.dataset.checkoutOriginalText;delete button.dataset.checkoutOriginalText}
+      button.classList.remove('is-opening-checkout');
+      button.removeAttribute('aria-busy');
+    }
+    window.addEventListener('pageshow',()=>document.querySelectorAll('.is-opening-checkout').forEach(endCheckoutOpening));
     function checkout(button){
       if(!session?.user){closeModals();openModal('#signupModal');return}
-      const email=getCheckoutEmail(session.user);
-      const url=new URL(button.dataset.product);
-      url.searchParams.set('quantity','1');
-      url.searchParams.set('forceLanguage','ru');
-      url.searchParams.set('country','AM');
-      url.searchParams.set('zipCode','0010');
-      url.searchParams.set('minimalAddress','true');
-      url.searchParams.set('redirect_url',location.origin+location.pathname+'?checkout=success');
-      url.searchParams.set('metadata_uid',session.user.id);
-      url.searchParams.set('metadata_credits',button.dataset.credits);
-      url.searchParams.set('metadata_course_id','hansora-ai-course');
-      if(email){url.searchParams.set('email',email);url.searchParams.set('metadata_email',email)}
-      location.href=url.toString();
+      if(!beginCheckoutOpening(button))return;
+      try{
+        const email=getCheckoutEmail(session.user);
+        const url=new URL(button.dataset.product);
+        url.searchParams.set('quantity','1');
+        url.searchParams.set('forceLanguage','ru');
+        url.searchParams.set('country','AM');
+        url.searchParams.set('zipCode','0010');
+        url.searchParams.set('minimalAddress','true');
+        url.searchParams.set('redirect_url',location.origin+location.pathname+'?checkout=success');
+        url.searchParams.set('metadata_uid',session.user.id);
+        url.searchParams.set('metadata_credits',button.dataset.credits);
+        url.searchParams.set('metadata_course_id','hansora-ai-course');
+        if(email){url.searchParams.set('email',email);url.searchParams.set('metadata_email',email)}
+        location.href=url.toString();
+      }catch(error){endCheckoutOpening(button);throw error}
     }
     async function submitFeedback(event){
       event.preventDefault();if(!requireUser())return;const form=event.currentTarget;const choice=form.querySelector('input[name="rating"]:checked');if(!choice){toast('Խնդրում ենք ընտրել պատասխաններից մեկը');return}const btn=$('#feedbackSubmit');btn.disabled=true;
