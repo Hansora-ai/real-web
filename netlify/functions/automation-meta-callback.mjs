@@ -30,7 +30,7 @@ export async function handler(event){
     if(!resource)throw Object.assign(new Error('provider_resource_not_saved'),{status:500});
     await serviceUpsert('automation_provider_credentials','provider_resource_id,credential_type',{business_id:state.business_id,provider_resource_id:resource.id,credential_type:'access_token',...encryptSecret(token.accessToken),expires_at:expiresAt});
     // Without this subscription Meta never sends this account's DMs and comments to Hansora.
-    const subscribed=await subscribeInstagramWebhooks(token.accessToken).catch(error=>{console.error('automation-meta-callback webhook subscription failed',{message:error?.message,providerStatus:error?.providerStatus});return false;});
+    const subscribed=await subscribeInstagramWebhooks(token.accessToken).then(fields=>{console.log('automation-meta-callback subscribed Instagram webhooks',{account:profile.username,fields});return true;}).catch(error=>{console.error('automation-meta-callback webhook subscription failed',{message:error?.message,providerStatus:error?.providerStatus,providerMessage:error?.providerMessage});return false;});
     const connectionUpdate={status:'connecting',provider:'meta',connected_account_label:profile.username?`@${profile.username}`:profile.id,connected_at:new Date().toISOString(),last_error_code:subscribed?null:'webhook_subscription_failed'};
     await serviceUpdate('automation_channel_connections',`business_id=eq.${encodeURIComponent(state.business_id)}&channel_type=in.(instagram_dm,instagram_comments)`,connectionUpdate);
     const query=new URLSearchParams({channel:'instagram',business:state.business_id,authorized:'1',account:connectionUpdate.connected_account_label});
