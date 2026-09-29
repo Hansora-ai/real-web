@@ -4,6 +4,7 @@ import { first, rows, serviceInsert, serviceUpsert, supabaseRequest } from '../.
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
 import { automationPrices, canAfford, chargeCredits, toDisplay } from '../../lib/automation/billing.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
+import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
 
 const HEADERS={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'POST, OPTIONS'};
 const json=(statusCode,body)=>({statusCode,headers:HEADERS,body:JSON.stringify(body)});
@@ -30,10 +31,10 @@ export async function handler(event){
     const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:businessId,contact_id:contact.id,channel_type:'test',external_thread_id:`test:${user.id}`,status:'open',ai_enabled:true,last_message_preview:text.slice(0,1000),last_message_at:new Date().toISOString()});
     const requestId=crypto.randomUUID();
     await serviceInsert('automation_messages',{business_id:businessId,conversation_id:conversation.id,idempotency_key:`test:in:${requestId}`,direction:'inbound',sender_type:'customer',content_type:'text',content:text,status:'received',billable:false,metadata:{source:'workspace_live_test'},occurred_at:new Date().toISOString()});
-    const recent=rows(await supabaseRequest(`/rest/v1/automation_messages?conversation_id=eq.${conversation.id}&select=sender_type,content,occurred_at&order=occurred_at.desc&limit=12`)).reverse();
     // Actions run in test mode: availability is real, but bookings, orders, leads and handoffs are not saved or notified.
     const actions=await prepareConversationActions({businessId,conversationId:conversation.id,contactId:contact.id,channel:'test',contact:{name:''},dryRun:true});
-    const context=['This is a private live test by the business owner. Answer exactly as the configured business assistant.','Continue this conversation. Do not greet again unless the customer greeted first.',actions.contextLine,'Recent test conversation:',...recent.slice(0,-1).map(item=>`${item.sender_type==='customer'?'Customer':'Assistant'}: ${item.content}`)].join('\n').slice(0,10000);
+    const memory=await loadConversationMemory({businessId,conversationId:conversation.id});
+    const context=buildConversationContext({intro:['This is a private live test by the business owner. Answer exactly as the configured business assistant.','Continue this conversation. Do not greet again unless the customer greeted first.',actions.contextLine],memory});
     const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text,context,channel:'test',onToolCall:actions.onToolCall});
     const outbound=await serviceInsert('automation_messages',{business_id:businessId,conversation_id:conversation.id,idempotency_key:`test:out:${requestId}`,direction:'outbound',sender_type:'ai',content_type:'text',content:generated.text,status:'generated',billable:true,provider:'elevenlabs',model:'eleven-agents',provider_message_id:generated.conversationId||null,metadata:{source:'workspace_live_test'},occurred_at:new Date().toISOString()});
     const charge=await chargeCredits({businessId,idempotencyKey:`usage:test:${requestId}`,kind:'test_reply',credits:price,conversationId:conversation.id,reference:{channel:'test',message_id:outbound.id}}).catch(()=>({ok:false,charged:0}));

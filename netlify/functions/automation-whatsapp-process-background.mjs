@@ -5,6 +5,7 @@ import { automationPrices, canAfford, chargeCredits, handleOutOfCredits } from '
 import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { markWhatsAppRead, sendWhatsAppText } from '../../lib/automation/whatsapp.mjs';
+import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
 
@@ -35,10 +36,10 @@ export async function handler(event){
     const price=automationPrices().aiReply;
     const affordable=await canAfford(account.business_id,price);
     if(!affordable.ok){await handleOutOfCredits({businessId:account.business_id,conversationId:conversation.id,channel:'WhatsApp',customer:message.displayName||message.senderId,notifyOwner});await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,out_of_credits:true});}
-    const recent=rows(await supabaseRequest(`/rest/v1/automation_messages?conversation_id=eq.${conversation.id}&select=sender_type,content,occurred_at&order=occurred_at.desc&limit=12`)).reverse();
     const mediaNote=message.contentType&&!['text','interactive'].includes(message.contentType)?'The latest customer message is a photo, video, voice note, file or location that you cannot open. Do not pretend to know its contents; use any caption, otherwise politely ask the customer to describe it in text, or offer a team member if it needs a human to review.':'';
     const actions=await prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'whatsapp',contact:{name:message.displayName||'',externalId:message.senderId,phone:message.senderId}});
-    const context=['Continue this WhatsApp conversation. Keep the reply concise and do not greet again unless the customer greeted first.',actions.contextLine,mediaNote,'Recent conversation:',...recent.slice(0,-1).map(item=>`${item.sender_type==='customer'?'Customer':item.sender_type==='ai'?'Assistant':'Team'}: ${item.content}`)].filter(Boolean).join('\n').slice(0,10000);
+    const memory=await loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id});
+    const context=buildConversationContext({intro:['Continue this WhatsApp conversation. Keep the reply concise and do not greet again unless the customer greeted first.',actions.contextLine,mediaNote].filter(Boolean),memory});
     const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'whatsapp',onToolCall:actions.onToolCall});
     const handedOff=generated.toolCalls?.some(call=>call.name==='handoff_to_human'&&call.ok);
     const replyDelay=Math.min(30,Math.max(0,Number(settings.reply_delay)||0));if(replyDelay)await new Promise(resolve=>setTimeout(resolve,replyDelay*1000));
