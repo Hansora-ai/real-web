@@ -205,6 +205,7 @@
 
   function setConnected(live) {
     document.querySelector('#channel-disconnect').hidden = false;
+    if (channel === 'instagram') document.querySelector('#channel-diagnose').hidden = false;
     const badge = document.querySelector('#connection-state');
     badge.textContent = live ? 'Live' : 'Authorized';
     badge.classList.toggle('green', live); badge.classList.toggle('live', live); badge.classList.toggle('amber', !live);
@@ -216,6 +217,15 @@
     document.querySelector('#provider-button-help').textContent = 'Continue to choose the account';
     if (!document.querySelector('#connection-state').classList.contains('green')) setConnected(false);
   }
+  // Shows what Meta itself reports for the connected account (webhook fields, latest DMs), for troubleshooting.
+  document.querySelector('#channel-diagnose').addEventListener('click', async () => {
+    const box = document.querySelector('#diagnose-result');
+    box.hidden = false; box.textContent = 'Asking Meta…';
+    try {
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-instagram-diagnose', {method:'POST', body:JSON.stringify({business_id:businessId})});
+      box.textContent = JSON.stringify(await response.json().catch(() => ({ error: 'no_response' })), null, 2);
+    } catch (_) { box.textContent = 'Could not reach Hansora. Please try again.'; }
+  });
   document.querySelector('#channel-disconnect').addEventListener('click', async () => {
     const name = config.title.replace('Connect ', '');
     if (!confirm(`Disconnect ${name}? Your AI employee stops replying there and Hansora’s access is removed right away.`)) return;

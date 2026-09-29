@@ -24,7 +24,7 @@
       <header class="ui-connect-head">
         <span class="ui-connect-logo" id="connect-logo" aria-hidden="true"></span>
         <div><h1 id="connect-title">Connect channel</h1><p id="connect-subtitle"></p></div>
-        <div class="ui-actions"><span class="ui-badge dot connection-state" id="connection-state">Not connected</span><button class="ui-btn ghost sm" id="channel-disconnect" type="button" hidden>Disconnect</button></div>
+        <div class="ui-actions"><span class="ui-badge dot connection-state" id="connection-state">Not connected</span><button class="ui-btn ghost sm" id="channel-diagnose" type="button" hidden>Check connection</button><button class="ui-btn ghost sm" id="channel-disconnect" type="button" hidden>Disconnect</button></div>
       </header>
       <ol class="ui-stepper" aria-label="Connection progress">
         <li class="active" data-connect-progress="0"><span>1</span>Connect</li>
@@ -54,6 +54,7 @@
           <div class="ui-step-head"><h2>Ready to go live</h2><p>Customers get AI replies as soon as you turn this on.</p></div>
           <div class="ui-review" id="connection-review"></div>
         </div>
+        <pre id="diagnose-result" hidden style="margin:0 20px 16px;padding:14px;max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);font-size:12px;white-space:pre-wrap;user-select:all"></pre>
         <footer class="ui-card-foot setup-actions">
           <button class="ui-btn ghost" id="connect-previous" type="button" hidden>Back</button>
           <span class="ui-save-state" id="connect-save-state">Not connected yet</span>
