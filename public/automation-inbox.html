@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Inbox — Hansora Automation</title>
+  <meta name="description" content="Every Instagram and WhatsApp conversation in one place.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#08090b">
+  <script src="automation-theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-inbox.js?v=20260928-ui"></script>
+</head>
+<body class="ui ui-app" data-automation-page="inbox">
+  <div data-automation-header></div>
+  <main class="ui-inbox-page">
+    <div id="inbox-loading" class="ui-inbox-skeleton" aria-label="Loading conversations"><div class="ui-skeleton"></div><div class="ui-skeleton"></div><div class="ui-skeleton"></div></div>
+    <div class="ui-alert" id="inbox-error" role="alert" hidden style="margin:16px"></div>
+    <div id="inbox-app" class="ui-inbox" hidden>
+      <aside class="ui-inbox-list">
+        <div class="ui-inbox-list-head">
+          <div class="ui-inbox-title"><a class="ui-btn ghost icon sm" id="inbox-back" href="automation-dashboard.html" aria-label="Back to AI employee" data-icon="chevron" style="transform:scaleX(-1)"></a><h1>Inbox</h1><span class="ui-badge" title="Open conversations"><span id="open-count">0</span>&nbsp;open</span><span class="ui-badge red" title="Needs attention"><span id="attention-count">0</span>&nbsp;need you</span></div>
+          <label class="ui-search"><span class="sr-only">Search conversations</span><span data-icon="search"></span><input id="inbox-search" type="search" placeholder="Search customers or messages"></label>
+          <div class="ui-filter-pills" id="inbox-filters"><button class="active" data-filter="all" type="button">All <span data-count="all">0</span></button><button data-filter="attention" type="button">Needs you <span data-count="attention">0</span></button><button data-filter="human" type="button">Your team <span data-count="human">0</span></button><button data-filter="unread" type="button">Unread <span data-count="unread">0</span></button></div>
+        </div>
+        <div class="ui-inbox-items" id="conversation-list" aria-label="Conversations"></div>
+      </aside>
+      <section class="ui-thread">
+        <header class="ui-thread-head">
+          <button class="ui-btn ghost icon sm ui-thread-back" id="thread-back" type="button" aria-label="Back to conversations" data-icon="chevron" style="transform:scaleX(-1)"></button>
+          <div class="ui-thread-who"><h2 id="conversation-name">Customer</h2><p><span id="conversation-channel">Instagram DM</span> · <span id="conversation-status">AI is replying</span></p></div>
+          <div class="conversation-controls ui-actions"><button class="ui-btn secondary sm" id="toggle-ai" type="button">Pause AI</button><button class="ui-btn secondary sm" id="resolve-conversation" type="button" data-icon="check">Resolve</button></div>
+        </header>
+        <div class="ui-thread-notice" id="conversation-notice"></div>
+        <div class="ui-timeline" id="message-timeline" aria-live="polite"></div>
+        <form class="ui-reply" id="human-composer">
+          <p class="wa-window" id="wa-window" hidden></p>
+          <div class="ui-reply-box">
+            <textarea id="human-message" rows="2" placeholder="Write a reply…" disabled></textarea>
+            <div class="template-picker" id="template-picker" hidden><div class="template-picker-head"><label for="template-select">Approved WhatsApp template</label><button class="ui-link" id="template-refresh" type="button">Reload</button></div><select class="ui-select" id="template-select"><option value="">Loading templates…</option></select><div class="template-variables" id="template-variables"></div><p class="template-preview" id="template-preview"></p></div>
+            <div class="ui-reply-foot"><span id="composer-help">Take over to reply yourself.</span><button class="ui-btn secondary sm" id="take-over" type="button">Take over</button><button class="ui-btn accent sm" type="submit" disabled>Send</button></div>
+          </div>
+        </form>
+      </section>
+      <aside class="ui-inbox-side customer-panel">
+        <section class="ui-side-block ui-side-identity"><span class="ui-side-avatar" id="customer-avatar">AM</span><h2 id="customer-name">Customer</h2><p id="customer-handle">@customer</p></section>
+        <section class="ui-side-block"><h3>Details</h3><div class="ui-kv" id="customer-fields"></div></section>
+        <section class="ui-side-block"><h3>AI summary</h3><p class="ui-side-summary" id="customer-summary"></p><div class="ui-kv" style="margin-top:10px"><div><span>Intent</span><strong id="detected-intent"></strong></div></div></section>
+        <section class="ui-side-block"><h3>Create</h3><div class="ui-side-actions"><button class="ui-btn secondary sm" id="create-lead" type="button" data-icon="spark">Lead</button><button class="ui-btn secondary sm" id="create-order" type="button" data-icon="bag">Order</button><button class="ui-btn secondary sm" id="create-booking" type="button" data-icon="calendar">Booking</button></div><p class="ui-hint" id="record-state" style="margin:10px 0 0"></p></section>
+        <section class="ui-side-block"><h3>Usage in this conversation</h3><div class="ui-kv"><div><span>Customer messages</span><strong id="customer-message-count">0</strong></div><div><span>AI replies</span><strong id="ai-message-count">0</strong></div><div><span>Team replies</span><strong id="human-message-count">0</strong></div><div><span>Billed AI replies</span><strong id="billable-message-count">0</strong></div></div><button class="ui-link" id="usage-explanation" type="button" style="margin-top:10px">What counts?</button></section>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

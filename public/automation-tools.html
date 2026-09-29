@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Business tools — Hansora Automation</title>
+  <meta name="description" content="Bookings, orders, leads, handoff and notifications for your AI employee.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#08090b">
+  <script src="automation-theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-tools.js?v=20260928-ui"></script>
+</head>
+<body class="ui" data-automation-page="tools">
+  <div data-automation-header></div>
+  <main class="ui-page wide">
+    <div id="tools-loading" class="ui-skeleton" style="height:560px;border-radius:16px" aria-label="Loading"></div>
+    <div class="ui-alert" id="tools-error" role="alert" hidden style="margin-bottom:16px"></div>
+    <div id="tools-app" class="ui-enter" hidden>
+      <nav class="ui-crumbs" aria-label="Breadcrumb"><a id="tools-back" href="automation-dashboard.html">← AI employee</a></nav>
+      <header class="ui-page-head"><div><h1>Business tools</h1><p>What your AI employee can do after it answers.</p></div><span class="ui-save-pill" id="tools-state">All changes saved</span></header>
+      <div class="ui-tools">
+        <nav class="ui-side-nav tools-nav" aria-label="Business tools">
+          <button class="active" data-tool="calendar" type="button"><span data-icon="calendar"></span><span><b>Bookings</b><small>Hours and calendar</small></span><i class="ui-badge sm" id="calendar-status">Off</i></button>
+          <button data-tool="orders" type="button"><span data-icon="bag"></span><span><b>Orders</b><small>Required details</small></span><i class="ui-badge sm" id="orders-status">Off</i></button>
+          <button data-tool="leads" type="button"><span data-icon="spark"></span><span><b>Leads</b><small>Interested customers</small></span><i class="ui-badge sm" id="leads-status">Off</i></button>
+          <button data-tool="handoff" type="button"><span data-icon="handoff"></span><span><b>Handoff</b><small>When the AI stops</small></span><i class="ui-badge sm green">On</i></button>
+          <button data-tool="notifications" type="button"><span data-icon="bell"></span><span><b>Notifications</b><small>Alerts to you</small></span><i class="ui-badge sm" id="notify-status">Email</i></button>
+        </nav>
+        <section class="ui-card tool-editor">
+          <div class="tool-pane" data-pane="calendar">
+            <div class="ui-pane-head"><div><h2>Bookings</h2><p>The AI offers only free times, repeats the details, and books after the customer says yes. Two customers can never get the same time.</p></div><input class="ui-switch lg" id="calendar-enabled" type="checkbox" aria-label="Let the AI book appointments"></div>
+            <div class="ui-pane-body">
+              <h3 class="ui-subhead">Working hours</h3>
+              <div class="week-hours" id="week-hours"></div>
+              <h3 class="ui-subhead">Booking rules</h3>
+              <div class="ui-form-grid three">
+                <div class="ui-field"><label class="ui-label" for="booking-duration">Appointment length</label><select class="ui-select" id="booking-duration"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option><option value="180">3 hours</option></select></div>
+                <div class="ui-field"><label class="ui-label" for="booking-step">Start times every</label><select class="ui-select" id="booking-step"><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option></select></div>
+                <div class="ui-field"><label class="ui-label" for="booking-buffer">Break between</label><select class="ui-select" id="booking-buffer"><option value="0">None</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option></select></div>
+                <div class="ui-field"><label class="ui-label" for="booking-notice">Earliest booking</label><select class="ui-select" id="booking-notice"><option value="0">Any time</option><option value="60">1 hour ahead</option><option value="120">2 hours ahead</option><option value="240">4 hours ahead</option><option value="1440">Next day</option></select></div>
+                <div class="ui-field"><label class="ui-label" for="booking-ahead">Book up to</label><select class="ui-select" id="booking-ahead"><option value="7">1 week ahead</option><option value="14">2 weeks ahead</option><option value="30">1 month ahead</option><option value="60">2 months ahead</option><option value="90">3 months ahead</option></select></div>
+                <div class="ui-field"><label class="ui-label" for="booking-timezone">Time zone</label><select class="ui-select" id="booking-timezone"></select></div>
+              </div>
+              <div class="ui-setting" style="margin-top:18px;border-top:1px solid var(--border);padding-top:16px"><span><strong>Confirm bookings automatically</strong><small>Off: the time is held and your team confirms it</small></span><input class="ui-switch" id="booking-auto-confirm" type="checkbox"></div>
+              <h3 class="ui-subhead">Services <span>Optional · each can have its own length</span></h3>
+              <div class="service-list" id="service-list"></div>
+              <button class="ui-btn ghost sm ui-add" id="add-service" type="button">+ Add service</button>
+              <h3 class="ui-subhead">Days off <span>Holidays and closed days</span></h3>
+              <div class="closed-days"><input class="ui-input" id="closed-date" type="date" aria-label="Closed date"><button class="ui-btn secondary" id="add-closed-date" type="button">Add day</button></div>
+              <div class="chip-list" id="closed-dates"></div>
+              <div class="ui-connect-card" id="google-card">
+                <span class="ui-google-mark" aria-hidden="true">G</span>
+                <div><strong id="google-title">Google Calendar</strong><small id="google-copy">Optional. Busy times in Google block slots, and bookings appear there.</small></div>
+                <button class="ui-btn secondary sm" id="google-connect" type="button">Connect</button>
+                <div class="google-connected" id="google-connected" hidden><select class="ui-select sm" id="google-calendar" aria-label="Calendar for bookings"></select><button class="ui-link" id="google-disconnect" type="button">Disconnect</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="tool-pane" data-pane="orders" hidden>
+            <div class="ui-pane-head"><div><h2>Orders</h2><p>The AI asks for each detail below, reads the order back, and creates it only after the customer confirms. It never invents a price.</p></div><input class="ui-switch lg" id="orders-enabled" type="checkbox" aria-label="Let the AI take orders"></div>
+            <div class="ui-pane-body">
+              <h3 class="ui-subhead">Details the AI must collect</h3>
+              <div class="required-field-list" id="order-fields"></div>
+              <button class="ui-btn ghost sm ui-add" id="add-order-field" type="button">+ Add detail</button>
+              <div class="ui-setting" style="margin-top:18px;border-top:1px solid var(--border);padding-top:16px"><span><strong>Mark new orders as confirmed</strong><small>Off: your team confirms price and stock first</small></span><input class="ui-switch" id="orders-auto-confirm" type="checkbox"></div>
+            </div>
+          </div>
+          <div class="tool-pane" data-pane="leads" hidden>
+            <div class="ui-pane-head"><div><h2>Leads</h2><p>When someone is interested but not ready to buy, the AI saves what it learned for your sales team.</p></div><input class="ui-switch lg" id="leads-enabled" type="checkbox" aria-label="Let the AI save leads"></div>
+            <div class="ui-pane-body"><div class="ui-field"><label class="ui-label" for="lead-signals">What makes someone a serious buyer?</label><textarea class="ui-textarea" id="lead-signals" rows="4" maxlength="800" placeholder="Asks for a quote, shares measurements, asks about delivery…"></textarea><span class="ui-hint">Optional. Helps the AI decide who to save.</span></div></div>
+          </div>
+          <div class="tool-pane" data-pane="handoff" hidden>
+            <div class="ui-pane-head"><div><h2>Handoff to your team</h2><p>The AI pauses in that conversation, tells the customer a person will reply, and alerts you.</p></div></div>
+            <div class="ui-pane-body"><div class="ui-check-list" id="handoff-rules">
+              <label class="ui-check-card"><input type="checkbox" data-rule="asks_person" checked disabled><span class="ui-check-box" aria-hidden="true"></span><span><strong>Customer asks for a person</strong><small>Always on</small></span></label>
+              <label class="ui-check-card"><input type="checkbox" data-rule="complaint" checked><span class="ui-check-box" aria-hidden="true"></span><span><strong>Complaint, refund or sensitive issue</strong><small>Acknowledges politely, then hands over</small></span></label>
+              <label class="ui-check-card"><input type="checkbox" data-rule="missing_info"><span class="ui-check-box" aria-hidden="true"></span><span><strong>A price or detail is missing</strong><small>Hands over instead of promising to find out</small></span></label>
+              <label class="ui-check-card"><input type="checkbox" data-rule="uncertain" checked><span class="ui-check-box" aria-hidden="true"></span><span><strong>It can’t answer after two tries</strong><small>No customer gets stuck in a loop</small></span></label>
+            </div></div>
+          </div>
+          <div class="tool-pane" data-pane="notifications" hidden>
+            <div class="ui-pane-head"><div><h2>Notifications</h2><p>Hansora messages you on WhatsApp the moment the AI takes an order, books a time, or needs a person. Email is the backup.</p></div></div>
+            <div class="ui-pane-body">
+              <div class="ui-connect-card">
+                <span class="ui-google-mark wa" aria-hidden="true" data-icon="whatsapp"></span>
+                <div><strong>WhatsApp alerts</strong><small id="wa-notify-copy">We send a 6-digit code to confirm the number is yours.</small></div>
+                <input class="ui-switch" id="wa-notify-enabled" type="checkbox" aria-label="WhatsApp alerts" disabled>
+                <form class="notify-verify" id="wa-phone-form"><input class="ui-input" id="wa-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+1 555 010 0000" aria-label="Your WhatsApp number"><button class="ui-btn secondary" type="submit">Send code</button></form>
+                <form class="notify-verify" id="wa-code-form" hidden><input class="ui-input" id="wa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code" aria-label="Verification code"><button class="ui-btn primary" type="submit">Verify</button><button class="ui-link" id="wa-change" type="button">Change number</button></form>
+                <div class="notify-verified" id="wa-verified" hidden><span data-icon="check"></span><span id="wa-verified-number"></span><button class="ui-link" id="wa-remove" type="button">Remove</button></div>
+              </div>
+              <div class="ui-connect-card">
+                <span class="ui-google-mark mail" aria-hidden="true">@</span>
+                <div><strong>Email alerts</strong><small>Leave empty to use your Hansora account email</small></div>
+                <input class="ui-switch" id="email-notify-enabled" type="checkbox" aria-label="Email alerts" checked>
+                <div class="notify-verify"><input class="ui-input" id="notify-email" type="email" autocomplete="email" placeholder="you@business.com" aria-label="Alert email"></div>
+              </div>
+              <h3 class="ui-subhead">Tell me about</h3>
+              <div class="ui-check-list two" id="notify-events">
+                <label class="ui-check-card"><input type="checkbox" value="order_created"><span class="ui-check-box" aria-hidden="true"></span><span><strong>New order</strong><small>With the details and customer</small></span></label>
+                <label class="ui-check-card"><input type="checkbox" value="booking_created"><span class="ui-check-box" aria-hidden="true"></span><span><strong>New booking</strong><small>With the time and service</small></span></label>
+                <label class="ui-check-card"><input type="checkbox" value="handoff_requested"><span class="ui-check-box" aria-hidden="true"></span><span><strong>Customer needs you</strong><small>The AI has paused</small></span></label>
+                <label class="ui-check-card"><input type="checkbox" value="booking_cancelled"><span class="ui-check-box" aria-hidden="true"></span><span><strong>Booking cancelled</strong><small>The time is free again</small></span></label>
+                <label class="ui-check-card"><input type="checkbox" value="lead_created"><span class="ui-check-box" aria-hidden="true"></span><span><strong>New lead</strong><small>Someone interested</small></span></label>
+              </div>
+              <div class="ui-inline-row"><div class="ui-field"><label class="ui-label" for="notify-language">Alert language</label><select class="ui-select" id="notify-language"><option value="en">English</option><option value="hy">Armenian</option><option value="ru">Russian</option></select></div><div class="ui-field"><span class="ui-label">&nbsp;</span><button class="ui-btn secondary" id="notify-test" type="button" data-icon="send">Send a test</button></div><span class="ui-hint" id="notify-test-state"></span></div>
+            </div>
+          </div>
+          <footer class="ui-card-foot ui-save-bar"><span id="tool-save-note">Applies to Instagram, WhatsApp and the test chat.</span><button class="ui-btn primary" id="save-tools" type="button">Save changes</button></footer>
+        </section>
+        <aside class="ui-card ui-tool-preview">
+          <div class="ui-card-head"><div><h2 class="ui-h2" id="tool-preview-title">Example</h2><p>What your customer sees</p></div></div>
+          <div class="ui-tool-preview-chat" id="tool-preview-chat"></div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

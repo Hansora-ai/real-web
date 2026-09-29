@@ -170,6 +170,23 @@
     const AFFILIATE_DONE_PREFIX = 'hansora_affiliate_registered.';
     const AFFILIATE_COMMISSION_RATE = 0.15;
 
+    function getSafeReturnTo() {
+      const fallback = '/index.html';
+      const requested = new URLSearchParams(window.location.search).get('returnTo');
+      if (!requested) return fallback;
+      try {
+        const target = new URL(requested, window.location.origin);
+        const isAutomationPage = /^\/automation(?:-[a-z]+)?(?:\.html)?$/.test(target.pathname);
+        if (target.origin !== window.location.origin || !isAutomationPage) return fallback;
+        return target.pathname + target.search + target.hash;
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    const authReturnTo = getSafeReturnTo();
+    const authReturnUrl = `${location.origin}${authReturnTo}`;
+
     function normalizeAffiliateRef(value) {
       return String(value || '')
         .trim()
@@ -373,7 +390,7 @@
       try {
         const { error } = await sb.auth.signInWithOAuth({
           provider: 'google',
-          options: { redirectTo: `${location.origin}/index.html` }
+          options: { redirectTo: authReturnUrl }
         });
         if (error) throw error;
       } catch (e) { err.textContent = e.message || 'Google sign-in failed.'; }
@@ -450,7 +467,9 @@
         try {
           // v2 signature with options
           const affiliateRef = getStoredAffiliateRef();
-          const signUpOptions = { emailRedirectTo: `${location.origin}/login.html` };
+          const signUpOptions = {
+            emailRedirectTo: `${location.origin}/login.html?returnTo=${encodeURIComponent(authReturnTo)}`
+          };
           if (affiliateRef) {
             signUpOptions.data = { affiliate_ref: affiliateRef, affiliate_commission_rate: AFFILIATE_COMMISSION_RATE };
           }
@@ -491,7 +510,7 @@
           // If session created immediately, go in; else prompt to confirm
           if (data && data.session && data.session.user) {
             registerAffiliateReferral(data.session.user, affiliateRef);
-            window.location.href = '/index.html';
+            window.location.href = authReturnTo;
           } else {
             if (typeof alreadyRegistered !== 'undefined' && alreadyRegistered) { return; }
             showEmailSent(
@@ -510,7 +529,7 @@
         const { data, error } = await sb.auth.signInWithPassword({ email, password });
         if (error) throw error;
         if (data && data.user) registerAffiliateReferral(data.user);
-        window.location.href = '/index.html';
+        window.location.href = authReturnTo;
       } catch (e) { err.textContent = 'Incorrect email or password.'; }
     });
   </script>

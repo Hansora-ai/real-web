@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Phone calls — Hansora Automation</title>
+  <meta name="description" content="Set up the Hansora AI phone assistant.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#08090b">
+  <script src="automation-theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="vendor/livekit-client.umd.js"></script><script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-phone.js?v=20260928-live"></script>
+</head>
+<body class="ui" data-automation-page="phone">
+  <div data-automation-header></div>
+  <main class="ui-page ui-narrow">
+    <div id="phone-loading" class="ui-skeleton" style="height:460px;border-radius:16px;margin-top:40px" aria-label="Loading"></div>
+    <div class="ui-alert" id="phone-error" role="alert" hidden></div>
+    <div id="phone-app" class="ui-enter" hidden>
+      <nav class="ui-crumbs" aria-label="Breadcrumb"><a id="phone-back" href="automation-dashboard.html">← Back to AI employee</a></nav>
+      <header class="ui-connect-head"><span class="ui-connect-logo phone" aria-hidden="true" data-icon="phone"></span><div><h1>Phone calls</h1><p>Your AI employee answers calls with a natural voice, using the same knowledge and actions.</p></div><span class="ui-badge dot" id="phone-state">Not set up</span></header>
+      <ol class="ui-stepper" aria-label="Phone setup">
+        <li class="active" data-step="1"><span>1</span>Number</li>
+        <li data-step="2"><span>2</span>Voice</li>
+        <li data-step="3"><span>3</span>Rules</li>
+        <li data-step="4"><span>4</span>Test</li>
+      </ol>
+      <section class="ui-card">
+        <div class="ui-step phone-step" data-phone-step="1">
+          <div class="ui-step-head"><h2>How customers reach you</h2><p>Pick one. You can change it later.</p></div>
+          <div class="ui-options">
+            <label class="ui-option"><input type="radio" name="number-mode" value="new" checked><span class="ui-option-mark" data-icon="sparkle"></span><span class="ui-option-text"><strong>Get a new phone number</strong><small>We assign it when you go live</small></span><span class="ui-option-radio"></span></label>
+            <label class="ui-option"><input type="radio" name="number-mode" value="forward"><span class="ui-option-mark" data-icon="phone"></span><span class="ui-option-text"><strong>Forward your existing number</strong><small>Customers keep calling the number they know</small></span><span class="ui-option-radio"></span></label>
+          </div>
+          <div class="ui-field" id="forward-field" hidden style="margin-top:16px"><label class="ui-label" for="phone-number">Your business number</label><input class="ui-input" id="phone-number" type="tel" placeholder="+1 555 010 0000"></div>
+        </div>
+        <div class="ui-step phone-step" data-phone-step="2" hidden>
+          <div class="ui-step-head"><h2>Voice</h2><p>A natural voice that speaks your customers’ language.</p></div>
+          <div class="ui-voice-card"><span class="ui-voice-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><div><strong>Laomedeia</strong><small>Gemini Live · natural native audio</small></div><span class="ui-badge blue">Selected</span></div>
+          <div class="ui-field" style="margin-top:18px"><label class="ui-label" for="phone-greeting">First sentence on every call</label><textarea class="ui-textarea" id="phone-greeting" rows="2" maxlength="300">Hello! Thanks for calling. How can I help?</textarea><span class="ui-hint">Keep it short. The AI answers in the caller’s language after this.</span></div>
+        </div>
+        <div class="ui-step phone-step" data-phone-step="3" hidden>
+          <div class="ui-step-head"><h2>When it answers</h2><p>Bookings, orders and handoff rules come from Business tools.</p></div>
+          <div class="ui-segmented" style="margin-bottom:18px"><label><input type="radio" name="answer-mode" value="always" checked><span>Every call</span></label><label><input type="radio" name="answer-mode" value="after_hours"><span>After hours</span></label><label><input type="radio" name="answer-mode" value="no_answer"><span>If nobody picks up</span></label></div>
+          <div class="ui-field"><label class="ui-label" for="transfer-number">Transfer to a person <span class="ui-faint">· optional</span></label><input class="ui-input" id="transfer-number" type="tel" placeholder="+1 555 010 0001"><span class="ui-hint">When a caller asks for a person. If nobody answers, the AI takes a callback request and notifies you.</span></div>
+          <div class="ui-setting" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px"><span><strong>Save call transcripts</strong><small>Shown in the inbox next to messages</small></span><input class="ui-switch" id="save-transcripts" type="checkbox" checked></div>
+        </div>
+        <div class="ui-step phone-step" data-phone-step="4" hidden>
+          <div class="ui-step-head"><h2>Try it</h2><p>Hear how your AI employee answers before customers call.</p></div>
+          <div class="ui-call">
+            <div class="ui-call-orb" id="call-orb" aria-hidden="true"><span data-icon="phone"></span></div>
+            <strong id="call-status">Ready for a live test call</strong><small id="call-timer">Uses your microphone · test calls are not billed</small>
+            <button class="ui-btn accent lg" id="test-call" type="button" data-icon="play">Start test call</button>
+          </div>
+          <div class="ui-transcript" id="phone-transcript"></div>
+          <div class="ui-review" id="phone-review" style="margin-top:16px"></div>
+        </div>
+        <footer class="ui-card-foot setup-actions"><button class="ui-btn ghost" id="phone-previous" type="button" hidden>Back</button><span class="ui-save-state" id="phone-save-state">Settings save now; the public line is connected during final setup</span><button class="ui-btn primary" id="phone-next" type="button">Continue</button></footer>
+      </section>
+      <p class="ui-hint" style="margin-top:14px;text-align:center"><a class="ui-link" id="phone-tools-link" href="automation-tools.html">Bookings, orders and handoff rules →</a> · Billed per connected minute, shown in Usage.</p>
+    </div>
+  </main>
+</body>
+</html>

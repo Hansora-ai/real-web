@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI employee workspace — Hansora Automation</title>
+  <meta name="description" content="Manage business knowledge, channels and actions for your Hansora AI employee.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#08090b">
+  <script src="automation-theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-agent.js?v=20260929-credits"></script>
+</head>
+<body class="ui" data-automation-page="agent">
+  <div data-automation-header></div>
+  <main class="ui-page">
+    <div id="agent-loading" aria-label="Loading your AI employee">
+      <div class="ui-skeleton" style="width:220px;height:14px;margin-bottom:22px"></div>
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:28px"><div class="ui-skeleton" style="width:52px;height:52px;border-radius:14px"></div><div style="display:grid;gap:8px"><div class="ui-skeleton" style="width:240px;height:22px"></div><div class="ui-skeleton" style="width:160px;height:14px"></div></div></div>
+      <div class="ui-grid cols-4">
+        <div class="ui-skeleton" style="height:112px;border-radius:16px"></div><div class="ui-skeleton" style="height:112px;border-radius:16px"></div><div class="ui-skeleton" style="height:112px;border-radius:16px"></div><div class="ui-skeleton" style="height:112px;border-radius:16px"></div>
+      </div>
+    </div>
+    <div class="ui-alert" id="agent-error" role="alert" hidden></div>
+
+    <div id="agent-workspace" class="ui-enter" hidden>
+      <nav class="ui-crumbs" aria-label="Breadcrumb"><a id="crumb-home" href="automation-dashboard.html">AI employees</a><span aria-hidden="true">/</span><span id="crumb-name">AI employee</span></nav>
+
+      <header class="ui-page-head">
+        <div style="display:flex;align-items:center;gap:16px;min-width:0">
+          <div class="ui-avatar" id="agent-avatar" aria-hidden="true"><b id="agent-initial">A</b><span class="ui-presence" id="agent-presence"></span></div>
+          <div style="min-width:0">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h1 id="agent-name"></h1><span class="ui-badge dot" id="agent-status"></span></div>
+            <p><span id="business-name"></span> · <span class="ui-faint" id="provider-state"></span></p>
+          </div>
+        </div>
+        <div class="ui-actions">
+          <button class="ui-btn secondary" id="open-live-test" type="button" data-icon="message">Test chat</button>
+          <a class="ui-btn primary" id="edit-agent" href="#" data-icon="edit">Edit profile</a>
+        </div>
+      </header>
+
+      <nav class="ui-tabs" aria-label="AI employee workspace">
+        <a class="active" href="#overview">Overview</a><a href="#channels">Channels</a><a href="#knowledge">Knowledge</a><a id="inbox-link" href="automation-inbox.html">Inbox</a><a id="operations-link" href="automation-operations.html">Orders &amp; bookings</a><a id="tools-link" href="automation-tools.html">Business tools</a><a id="usage-link" href="automation-usage.html">Usage</a>
+      </nav>
+
+      <section class="ui-grid cols-4 ui-enter" id="overview" aria-label="This month">
+        <article class="ui-card ui-metric"><div class="ui-metric-label">AI replies this month<span data-icon="message"></span></div><div class="ui-metric-value" id="metric-messages">0</div><div class="ui-metric-note">Every reply the AI sends is counted</div></article>
+        <article class="ui-card ui-metric"><div class="ui-metric-label">Resolved by AI<span data-icon="sparkle"></span></div><div class="ui-metric-value" id="metric-resolved">0%</div><div class="ui-metric-note">Conversations closed without staff</div></article>
+        <article class="ui-card ui-metric"><div class="ui-metric-label">Handed to your team<span data-icon="handoff"></span></div><div class="ui-metric-value" id="metric-handoffs">0</div><div class="ui-metric-note">Waiting for a person now</div></article>
+        <article class="ui-card ui-metric highlight"><div class="ui-metric-label">Credit balance<span data-icon="wallet"></span></div><div class="ui-metric-value" id="metric-cost">0⚡</div><div class="ui-metric-note" id="metric-cost-note">Shared with Hansora Creative</div></article>
+      </section>
+
+      <div class="ui-split" style="margin-top:16px">
+        <div class="ui-stack">
+          <section class="ui-card" id="channels">
+            <div class="ui-card-head"><div><h2 class="ui-h2">Channels</h2><p>Where your AI employee talks to customers</p></div><span class="ui-badge" id="channel-count">0 of 4 active</span></div>
+            <div class="ui-list" id="channel-stack"></div>
+          </section>
+
+          <section class="ui-card" id="actions-card">
+            <div class="ui-card-head"><div><h2 class="ui-h2">Business actions</h2><p>What the AI can do after answering</p></div><a class="ui-link" id="actions-link" href="automation-tools.html">Manage →</a></div>
+            <div class="ui-list" id="actions-list"></div>
+          </section>
+
+          <section class="ui-card" id="usage">
+            <div class="ui-card-head"><div><h2 class="ui-h2">Credits this month</h2><p>1 AI reply = 1⚡ · 1 phone minute = 8⚡</p></div><a class="ui-link" id="usage-log-link" href="automation-usage.html">View log →</a></div>
+            <div class="ui-card-body">
+              <div class="ui-kv"><div><span>AI replies · <span id="usage-messages">0</span></span><strong id="usage-line-messages">0⚡</strong></div><div><span>Phone calls · <span id="usage-line-minutes">0</span> min</span><strong id="usage-line-phone">0⚡</strong></div><div><span>Used this month</span><strong id="usage-line-total">0⚡</strong></div></div>
+              <a class="ui-btn secondary sm" href="/pricing.html" id="usage-buy" style="margin-top:14px" data-icon="spark">Buy credits</a>
+            </div>
+          </section>
+        </div>
+
+        <aside class="ui-stack ui-sticky">
+          <section class="ui-card" id="live-test">
+            <div class="ui-card-head"><div><h2 class="ui-h2">Live test</h2><p>Chat as a customer. Nothing is sent or saved.</p></div><button class="ui-btn ghost sm" id="clear-test" type="button" data-icon="refresh">Clear</button></div>
+            <div class="ui-chat" id="test-conversation" aria-live="polite"><div class="ui-bubble assistant">Hi! I’m your AI employee. Ask me anything a customer would.</div></div>
+            <form class="ui-composer" id="test-form"><label class="sr-only" for="test-message">Test message</label><textarea id="test-message" rows="1" placeholder="Ask a customer question…"></textarea><button class="ui-btn accent icon" type="submit" aria-label="Send" data-icon="send"></button></form>
+          </section>
+
+          <section class="ui-card" id="knowledge">
+            <div class="ui-card-head"><div><h2 class="ui-h2">Knowledge</h2><p>The only facts the AI may use</p></div><a class="ui-link" id="edit-knowledge" href="#">Edit →</a></div>
+            <div class="ui-card-body" style="padding-top:12px;padding-bottom:12px" id="knowledge-summary"></div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
