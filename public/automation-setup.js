@@ -65,6 +65,58 @@
     if (window.scrollY > 200) document.querySelector('.ui-stepper').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // Files and one long text are kept here and uploaded to the AI's knowledge base right after saving.
+  const KNOWLEDGE_TYPES = ['pdf','docx','txt','md','html','htm','epub'];
+  const pendingFiles = [];
+  function renderPendingFiles(existing = []) {
+    const list = document.querySelector('#setup-files-list');
+    list.innerHTML = [
+      ...existing.map(document => `<div class="ui-kfile"><span class="ui-kfile-type">Added</span><span class="ui-kfile-main"><strong>${escapeHtml(document.name)}</strong></span></div>`),
+      ...pendingFiles.map((file, index) => `<div class="ui-kfile"><span class="ui-kfile-type">New</span><span class="ui-kfile-main"><strong>${escapeHtml(file.name)}</strong><small>${Math.max(1, Math.round(file.size / 1024))} KB · uploads when you save</small></span><button class="ui-btn ghost sm" type="button" data-remove-pending="${index}">Remove</button></div>`)
+    ].join('');
+  }
+  document.querySelector('#setup-files').addEventListener('change', event => {
+    const rejected = [];
+    for (const file of event.target.files) {
+      const extension = file.name.toLowerCase().split('.').pop();
+      if (!KNOWLEDGE_TYPES.includes(extension)) rejected.push(`${file.name} (file type not supported)`);
+      else if (file.size > 4 * 1024 * 1024) rejected.push(`${file.name} (larger than 4 MB)`);
+      else if (pendingFiles.length < 20) pendingFiles.push(file);
+    }
+    event.target.value = '';
+    renderPendingFiles(existingKnowledge);
+    if (rejected.length) inlineError(`Not added: ${rejected.join(', ')}.`); else errorBox.hidden = true;
+  });
+  document.querySelector('#setup-files-list').addEventListener('click', event => {
+    const button = event.target.closest('[data-remove-pending]');
+    if (!button) return;
+    pendingFiles.splice(Number(button.dataset.removePending), 1);
+    renderPendingFiles(existingKnowledge);
+  });
+  let existingKnowledge = [];
+  if (businessId && !api.isLocalPreview) {
+    api.authenticatedFetch('/.netlify/functions/automation-knowledge', { method:'POST', body:JSON.stringify({ business_id:businessId, action:'list' }) })
+      .then(response => response.ok ? response.json() : { documents: [] })
+      .then(result => { existingKnowledge = result.documents || []; renderPendingFiles(existingKnowledge); })
+      .catch(() => {});
+  }
+  const readAsBase64 = file => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(',')[1] || ''); reader.onerror = () => reject(new Error('file_unreadable')); reader.readAsDataURL(file); });
+  // Returns the names that could not be added (the rest of the save is never blocked by a file).
+  async function uploadKnowledge(savedBusinessId) {
+    const generalText = document.querySelector('#general-info').value.trim();
+    const jobs = [...pendingFiles.map(file => ({ label:file.name, build:async () => ({ kind:'file', filename:file.name, content_base64:await readAsBase64(file) }) })),
+      ...(generalText ? [{ label:'Business information text', build:async () => ({ kind:'text', name:'General business information', text:generalText }) }] : [])];
+    const failed = [];
+    for (const [index, job] of jobs.entries()) {
+      saveState.textContent = `Adding knowledge ${index + 1} of ${jobs.length}…`;
+      try {
+        const response = await api.authenticatedFetch('/.netlify/functions/automation-knowledge', { method:'POST', body:JSON.stringify({ business_id:savedBusinessId, action:'add', ...(await job.build()) }) });
+        if (!response.ok) failed.push(job.label);
+      } catch (_) { failed.push(job.label); }
+    }
+    return failed;
+  }
+
   function validateStep(index) {
     const visible = steps[index];
     const required = [...visible.querySelectorAll('[required]')];
@@ -95,7 +147,7 @@
       ['Category', data.get('category') || 'Not added'],
       ['Languages', selectedLanguages().map(api.languageName).join(', ')],
       ['Tone', capitalize(data.get('tone'))],
-      ['Knowledge', `${knowledgeCount()} of 5 sections filled`]
+      ['Knowledge', [`${knowledgeCount()} of 5 sections filled`, pendingFiles.length ? `${pendingFiles.length} file${pendingFiles.length === 1 ? '' : 's'} to upload` : '', document.querySelector('#general-info').value.trim() ? 'business text added' : ''].filter(Boolean).join(' · ')]
     ];
     document.querySelector('#review-grid').innerHTML = items.map(item => `<div><span>${escapeHtml(item[0])}</span><strong>${escapeHtml(item[1])}</strong></div>`).join('');
   }
@@ -180,9 +232,11 @@
         method: 'POST', body: JSON.stringify({ business_id: result.data })
       });
       const syncResult = await syncResponse.json().catch(() => ({}));
-      sessionStorage.setItem('hansora_automation_sync_notice', syncResponse.ok
-        ? 'AI provider agent synchronized.'
-        : `Business saved, but the AI could not be prepared: ${syncResult.detail || syncResult.error || 'sync unavailable'}`);
+      const hasKnowledge = pendingFiles.length || document.querySelector('#general-info').value.trim();
+      const failed = syncResponse.ok && hasKnowledge ? await uploadKnowledge(result.data) : [];
+      sessionStorage.setItem('hansora_automation_sync_notice', !syncResponse.ok
+        ? `Business saved, but the AI could not be prepared: ${syncResult.detail || syncResult.error || 'sync unavailable'}${hasKnowledge ? ' Your files were not added yet.' : ''}`
+        : failed.length ? `AI employee saved. Not added: ${failed.join(', ')}. Add them again under Knowledge files.` : 'AI provider agent synchronized.');
     } catch (_) {
       sessionStorage.setItem('hansora_automation_sync_notice', 'Business saved. Provider setup is pending.');
     }
