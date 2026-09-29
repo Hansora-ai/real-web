@@ -8,21 +8,23 @@ const json=(statusCode,body)=>({statusCode,headers:HEADERS,body:JSON.stringify(b
 
 // Two calls are possible: the first carries the single-use Embedded Signup code; if the number already has a
 // two-step verification PIN, the owner retries with only phone_number_id + pin and the stored token is reused.
+// For testing (Meta's test number, or a System User token) the owner can instead paste a token directly:
+// it is only accepted after Meta confirms it can read that phone number.
 export async function handler(event){
   if(event.httpMethod==='OPTIONS')return json(204,{});if(event.httpMethod!=='POST')return json(405,{error:'method_not_allowed'});
   try{
     const user=await authenticateRequest(event);if(!user)return json(401,{error:'authentication_required'});
     let body;try{body=JSON.parse(event.body||'{}')}catch(_){return json(400,{error:'invalid_json'})}
-    const code=String(body.code||'').trim(),wabaId=String(body.waba_id||'').trim(),phoneNumberId=String(body.phone_number_id||'').trim(),ownerPin=String(body.pin||'').trim();
-    if(!isUuid(body.business_id)||!/^\d{5,40}$/.test(phoneNumberId)||code.length>4000)return json(400,{error:'invalid_whatsapp_connection'});
+    const code=String(body.code||'').trim(),manualToken=String(body.access_token||'').trim(),wabaId=String(body.waba_id||'').trim(),phoneNumberId=String(body.phone_number_id||'').trim(),ownerPin=String(body.pin||'').trim();
+    if(!isUuid(body.business_id)||!/^\d{5,40}$/.test(phoneNumberId)||code.length>4000||manualToken.length>4000||(manualToken&&!/^[A-Za-z0-9_-]{20,}$/.test(manualToken)))return json(400,{error:'invalid_whatsapp_connection'});
     if(ownerPin&&!/^\d{6}$/.test(ownerPin))return json(400,{error:'whatsapp_pin_invalid'});
-    if(!code&&!ownerPin)return json(400,{error:'invalid_whatsapp_connection'});
-    if(code&&!/^\d{5,40}$/.test(wabaId))return json(400,{error:'invalid_whatsapp_connection'});
+    if(!code&&!manualToken&&!ownerPin)return json(400,{error:'invalid_whatsapp_connection'});
+    if((code||manualToken)&&!/^\d{5,40}$/.test(wabaId))return json(400,{error:'invalid_whatsapp_connection'});
     const business=await first(`/rest/v1/automation_businesses?id=eq.${body.business_id}&owner_user_id=eq.${user.id}&select=id&limit=1`);if(!business)return json(404,{error:'business_not_found'});
 
     let resource,accessToken;
-    if(code){
-      const token=await exchangeWhatsAppCode(code);accessToken=token.accessToken;
+    if(code||manualToken){
+      const token=code?await exchangeWhatsAppCode(code):{accessToken:manualToken,expiresIn:0};accessToken=token.accessToken;
       const phone=await getWhatsAppPhone({phoneNumberId,accessToken});
       await subscribeWhatsAppApp({wabaId,accessToken});
       const oldResources=rows(await supabaseRequest(`/rest/v1/automation_provider_resources?business_id=eq.${business.id}&provider=eq.meta&resource_type=eq.whatsapp_account&status=in.(active,pending)&select=id,provider_resource_id`));
