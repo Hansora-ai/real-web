@@ -11,8 +11,10 @@ export async function handler(event){
   }
   if(event.httpMethod!=='POST')return text(405,'method not allowed');
   try{
-    if(!verifyMetaSignature(event.body||'',event.headers?.['x-hub-signature-256']||event.headers?.['X-Hub-Signature-256']))return text(401,'invalid signature');
+    if(!verifyMetaSignature(event.body||'',event.headers?.['x-hub-signature-256']||event.headers?.['X-Hub-Signature-256'])){console.warn('automation-meta-webhook rejected: signature does not match META_INSTAGRAM_APP_SECRET',{hasSignature:Boolean(event.headers?.['x-hub-signature-256']||event.headers?.['X-Hub-Signature-256'])});return text(401,'invalid signature');}
     let payload;try{payload=JSON.parse(event.body||'{}');}catch(_){return text(400,'invalid json');}
+    // One line per delivery (ids and event kinds only, never message text) so setup problems are visible in Netlify logs.
+    console.log('automation-meta-webhook received',{object:payload.object,entries:(payload.entry||[]).map(entry=>({id:entry.id,kinds:[...(entry.messaging||[]).map(item=>item.message?(item.message.is_echo?'echo':'message'):item.read?'read':item.postback?'postback':'other'),...(entry.changes||[]).map(change=>change.field)]}))});
     // "Seen" receipts: mark the message read and count it for automation stats. Never blocks the webhook.
     for(const read of extractInstagramReads(payload)){
       try{
