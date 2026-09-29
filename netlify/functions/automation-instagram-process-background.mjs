@@ -7,6 +7,7 @@ import { clickedActionId, nodeForAction, recordFlowEvent } from '../../lib/autom
 import { automationPrices, canAfford, chargeCredits, handleOutOfCredits } from '../../lib/automation/billing.mjs';
 import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
+import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
 
@@ -68,9 +69,9 @@ export async function handler(event){
     const affordable=await canAfford(account.business_id,price);
     if(!affordable.ok){await handleOutOfCredits({businessId:account.business_id,conversationId:conversation.id,channel:'Instagram DM',customer:contact.display_name,notifyOwner});await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,out_of_credits:true});}
 
-    const recent=rows(await supabaseRequest(`/rest/v1/automation_messages?conversation_id=eq.${conversation.id}&select=sender_type,content,occurred_at&order=occurred_at.desc&limit=12`)).reverse();
     const actions=await prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'instagram_dm',contact:{name:contact.display_name==='Instagram customer'?'':contact.display_name,externalId:message.senderId}});
-    const context=['Continue this Instagram conversation. Do not greet again unless the customer greeted first.',actions.contextLine,flowInstruction?`Flow instruction: ${flowInstruction}`:'','Recent conversation:',...recent.slice(0,-1).map(item=>`${item.sender_type==='customer'?'Customer':item.sender_type==='ai'?'Assistant':'Team'}: ${item.content}`)].filter(Boolean).join('\n').slice(0,10000);
+    const memory=await loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id});
+    const context=buildConversationContext({intro:['Continue this Instagram conversation. Do not greet again unless the customer greeted first.',actions.contextLine,flowInstruction?`Flow instruction: ${flowInstruction}`:''].filter(Boolean),memory});
     const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'instagram_dm',onToolCall:actions.onToolCall});
     const handedOff=generated.toolCalls?.some(call=>call.name==='handoff_to_human'&&call.ok);
     const replyDelay=Math.min(30,Math.max(0,Number(settings.reply_delay)||0));
