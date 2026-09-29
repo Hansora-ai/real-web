@@ -13,23 +13,23 @@
 # (kept) Function-specific settings
 [functions."kie-create"]
   timeout = 26
-  memory = 512
+  memory = 1024
 
 [functions."safe-run"]
   timeout = 60
-  memory = 512
+  memory = 1024
 
 [functions."run-gemini-omni-flash-1-1"]
   timeout = 45
-  memory = 512
+  memory = 1024
 
 [functions."sales-chat"]
   timeout = 60
-  memory = 512
+  memory = 1024
 
 [functions."hansora-mcp"]
   timeout = 60
-  memory = 512
+  memory = 1024
 
 # Unlimited generation queue dispatcher (runs once per minute)
 [functions."dispatch-unlimited-queue"]
