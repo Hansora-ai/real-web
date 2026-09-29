@@ -2,6 +2,7 @@ import { first, serviceInsert, serviceUpdate } from '../../lib/automation/db.mjs
 import { extractInstagramReads, recordFlowEvent } from '../../lib/automation/flow-stats.mjs';
 import { extractInstagramComments, extractInstagramMessages, metaConfig, verifyMetaSignature } from '../../lib/automation/meta.mjs';
 
+const kindOf=item=>item.message?(item.message.is_echo?'echo':item.message.text?'text':'message-without-text'):item.read?'read':item.postback?'postback':item.pass_thread_control?'handover-pass':item.take_thread_control?'handover-take':Object.keys(item).join('+');
 const text=(statusCode,body)=>({statusCode,headers:{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'},body:String(body)});
 
 export async function handler(event){
@@ -14,7 +15,7 @@ export async function handler(event){
     if(!verifyMetaSignature(event.body||'',event.headers?.['x-hub-signature-256']||event.headers?.['X-Hub-Signature-256'])){console.warn('automation-meta-webhook rejected: signature does not match META_INSTAGRAM_APP_SECRET',{hasSignature:Boolean(event.headers?.['x-hub-signature-256']||event.headers?.['X-Hub-Signature-256'])});return text(401,'invalid signature');}
     let payload;try{payload=JSON.parse(event.body||'{}');}catch(_){return text(400,'invalid json');}
     // One line per delivery (ids and event kinds only, never message text) so setup problems are visible in Netlify logs.
-    console.log('automation-meta-webhook received',JSON.stringify({object:payload.object,entries:(payload.entry||[]).map(entry=>({id:entry.id,messaging:(entry.messaging||[]).map(item=>item.message?(item.message.is_echo?'echo':item.message.text?'text':'message-without-text'):item.read?'read':item.postback?'postback':Object.keys(item).join('+')),changes:(entry.changes||[]).map(change=>change.field)}))}));
+    console.log('automation-meta-webhook received',JSON.stringify({object:payload.object,entries:(payload.entry||[]).map(entry=>({id:entry.id,messaging:(entry.messaging||[]).map(kindOf),standby:(entry.standby||[]).map(kindOf),changes:(entry.changes||[]).map(change=>change.field),other:Object.keys(entry).filter(key=>!['id','time','messaging','standby','changes'].includes(key))}))}));
     // "Seen" receipts: mark the message read and count it for automation stats. Never blocks the webhook.
     for(const read of extractInstagramReads(payload)){
       try{
