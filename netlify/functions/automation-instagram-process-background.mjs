@@ -1,7 +1,7 @@
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
 import { first, rows, serviceInsert, serviceUpdate, serviceUpsert, supabaseRequest } from '../../lib/automation/db.mjs';
 import { executeFlowAdvance } from '../../lib/automation/flow-executor.mjs';
-import { sendInstagramText } from '../../lib/automation/meta.mjs';
+import { getInstagramSenderProfile, sendInstagramText } from '../../lib/automation/meta.mjs';
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
 import { clickedActionId, nodeForAction, recordFlowEvent } from '../../lib/automation/flow-stats.mjs';
 import { automationPrices, canAfford, chargeCredits, handleOutOfCredits } from '../../lib/automation/billing.mjs';
@@ -31,7 +31,12 @@ export async function handler(event){
     if(!credential)throw new Error('instagram_token_not_found');
     if(credential.expires_at&&Date.parse(credential.expires_at)<=Date.now())throw new Error('instagram_token_expired');
     const occurredAt=new Date(Number(message.timestamp)||Date.now()).toISOString();
-    const contact=await serviceUpsert('automation_contacts','business_id,channel_type,external_contact_id',{business_id:account.business_id,display_name:'Instagram customer',channel_type:'instagram_dm',external_contact_id:message.senderId,last_seen_at:occurredAt,profile:{instagram_scoped_id:message.senderId}});
+    // Show the customer's real name and @username: looked up once per customer, kept on later messages.
+    const known=await first(`/rest/v1/automation_contacts?business_id=eq.${account.business_id}&channel_type=eq.instagram_dm&external_contact_id=eq.${encodeURIComponent(message.senderId)}&select=display_name,profile&limit=1`).catch(()=>null);
+    const senderProfile=known?.profile?.username?null:await getInstagramSenderProfile({senderId:message.senderId,accessToken:decryptSecret(credential)});
+    const profile={...(known?.profile||{}),instagram_scoped_id:message.senderId,...(senderProfile?{username:senderProfile.username,name:senderProfile.name,profile_pic:senderProfile.profilePic}:{})};
+    const displayName=(senderProfile?(senderProfile.name||`@${senderProfile.username}`):known?.display_name)||'Instagram customer';
+    const contact=await serviceUpsert('automation_contacts','business_id,channel_type,external_contact_id',{business_id:account.business_id,display_name:displayName,channel_type:'instagram_dm',external_contact_id:message.senderId,last_seen_at:occurredAt,profile});
     const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'instagram_dm',external_thread_id:message.senderId,status:'open',last_message_preview:String(message.text).slice(0,1000),last_message_at:occurredAt});
     const inbound=await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:instagram:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:'text',content:message.text,status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{sender_id:message.senderId,recipient_id:message.recipientId},occurred_at:occurredAt},{ignoreDuplicates:true});
     if(settings.automatic_replies===false||!conversation.ai_enabled||['human_handling','resolved','archived'].includes(conversation.status)){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
