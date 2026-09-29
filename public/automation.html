@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hansora Automation — One AI employee. Every conversation.</title>
+  <meta name="description" content="An AI employee that answers your Instagram, WhatsApp and phone customers, books appointments and takes orders — in your customers’ language.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#08090b">
+  <script src="automation-theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css"><link rel="stylesheet" href="automation.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation.js"></script>
+</head>
+<body class="ui lp" data-automation-page="landing">
+  <a class="lp-skip" href="#main">Skip to content</a>
+  <div data-automation-header></div>
+  <main id="main">
+    <section class="lp-hero">
+      <div class="lp-glow" aria-hidden="true"><i class="a"></i><i class="b"></i><i class="c"></i></div>
+      <div class="lp-grid-bg" aria-hidden="true"></div>
+      <div class="lp-hero-inner">
+        <a class="lp-pill" href="#actions" data-reveal><span>New</span>Books appointments and takes orders <b aria-hidden="true">→</b></a>
+        <h1 data-reveal>Every conversation.<br><em>One AI employee.</em></h1>
+        <p class="lp-lead" data-reveal>It answers your customers on Instagram, WhatsApp and the phone — in your customers’ language — using only what you teach it.</p>
+        <div class="lp-cta" data-reveal><a class="ui-btn primary lg" data-start href="automation-setup.html">Create your AI employee</a><a class="ui-btn ghost lg" href="#how-it-works">See how it works</a></div>
+        <p class="lp-note" data-reveal>Uses your Hansora account · No technical setup</p>
+      </div>
+      <div class="lp-demo" data-reveal aria-label="Example conversation">
+        <div class="lp-demo-window">
+          <div class="lp-demo-bar"><span class="lp-demo-channel" id="demo-channel-icon"></span><div><strong id="demo-channel">Instagram</strong><small>Luma Studio · AI employee</small></div><span class="ui-badge dot green live">Live</span></div>
+          <div class="lp-demo-thread" id="demo-thread"></div>
+        </div>
+        <div class="lp-toast" id="demo-toast" aria-hidden="true"><span data-icon="bell"></span><div><strong id="demo-toast-title">New booking #1042</strong><small id="demo-toast-text">Friday, 11:30 · Ani</small></div></div>
+      </div>
+    </section>
+
+    <section class="lp-strip" aria-label="Channels">
+      <span data-icon="instagram">Instagram DMs</span><span data-icon="comment">Instagram comments</span><span data-icon="whatsapp">WhatsApp</span><span data-icon="phone">Phone calls</span>
+    </section>
+
+    <section class="lp-section" id="channels">
+      <header class="lp-head" data-reveal><p class="lp-eyebrow">Channels</p><h2>One brain. Every place your customers are.</h2><p>Teach it once. The same knowledge, rules and actions work everywhere.</p></header>
+      <div class="lp-bento">
+        <article class="lp-card lp-wide" data-reveal>
+          <span class="lp-card-icon ig" data-icon="instagram"></span><h3>Instagram DMs</h3><p>Every private message answered in seconds — prices, delivery, availability — day and night.</p>
+          <div class="lp-mini-chat"><p class="c">Is delivery free?</p><p class="a">Delivery in the city is $5. Want me to place the order?</p></div>
+        </article>
+        <article class="lp-card" data-reveal><span class="lp-card-icon ig" data-icon="comment"></span><h3>Comments to DMs</h3><p>Someone comments “price” under your reel — they get a public reply and a private message, automatically.</p></article>
+        <article class="lp-card" data-reveal><span class="lp-card-icon wa" data-icon="whatsapp"></span><h3>WhatsApp</h3><p>The same assistant on your business number, with read receipts and a smooth handoff to your team.</p></article>
+        <article class="lp-card lp-wide lp-phone-card" data-reveal>
+          <span class="lp-card-icon ph" data-icon="phone"></span><h3>Phone calls</h3><p>A natural voice that speaks your customers’ language, answers every call and books while the customer is still on the line.</p>
+          <div class="lp-wave" aria-hidden="true"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="lp-section" id="actions">
+      <header class="lp-head" data-reveal><p class="lp-eyebrow">Actions</p><h2>It doesn’t just answer. It gets things done.</h2><p>You decide what it’s allowed to do. It always confirms with the customer first.</p></header>
+      <div class="lp-actions">
+        <article class="lp-action" data-reveal><span data-icon="calendar"></span><h3>Books appointments</h3><p>Only offers free times from your hours and calendar. Never double-books.</p></article>
+        <article class="lp-action" data-reveal><span data-icon="bag"></span><h3>Takes orders</h3><p>Collects every detail you require, reads the order back, and never invents a price.</p></article>
+        <article class="lp-action" data-reveal><span data-icon="bell"></span><h3>Tells you instantly</h3><p>A WhatsApp message from Hansora the moment an order or booking comes in.</p></article>
+        <article class="lp-action" data-reveal><span data-icon="handoff"></span><h3>Knows when to stop</h3><p>Complaints and tricky questions go straight to your team, with the AI paused.</p></article>
+      </div>
+    </section>
+
+    <section class="lp-section" id="how-it-works">
+      <header class="lp-head" data-reveal><p class="lp-eyebrow">How it works</p><h2>Ready in an afternoon.</h2></header>
+      <ol class="lp-steps">
+        <li data-reveal><b>1</b><h3>Teach it your business</h3><p>Products, prices, hours and rules — in plain words. No AI knowledge needed.</p></li>
+        <li data-reveal><b>2</b><h3>Test it privately</h3><p>Chat with it like a customer until every answer sounds like you.</p></li>
+        <li data-reveal><b>3</b><h3>Connect and go live</h3><p>Sign in with Instagram or WhatsApp. Your AI employee starts answering.</p></li>
+      </ol>
+    </section>
+
+    <section class="lp-section lp-split" data-reveal>
+      <div><p class="lp-eyebrow">Transparent pricing</p><h2>See every reply you pay for.</h2><p>Each AI reply is listed with the customer, channel and time. Customer messages and your team’s replies are always free.</p><a class="ui-link" data-start href="automation-setup.html">Start setup →</a></div>
+      <div class="lp-usage-card">
+        <div class="lp-usage-top"><span>AI replies this month</span><strong data-count="1284">0</strong></div>
+        <div class="ui-progress"><i class="lp-usage-bar"></i></div>
+        <div class="ui-kv"><div><span>Instagram</span><strong>982</strong></div><div><span>WhatsApp</span><strong>302</strong></div><div><span>Team replies</span><strong>Free</strong></div></div>
+      </div>
+    </section>
+
+    <section class="lp-section lp-faq" id="faq">
+      <header class="lp-head" data-reveal><p class="lp-eyebrow">Questions</p><h2>Good questions. Clear answers.</h2></header>
+      <div class="lp-faq-list" data-reveal>
+        <details><summary>What is an AI employee?</summary><p>An assistant that knows your business — your products, prices, hours and rules — and talks to your customers on Instagram, WhatsApp and the phone using only that information.</p></details>
+        <details><summary>Do I need to know anything about AI?</summary><p>No. You describe your business in plain words, test it in a private chat, then connect your accounts with the official Instagram and WhatsApp sign-in.</p></details>
+        <details><summary>Will it make up prices or promises?</summary><p>No. It only uses the facts you give it. When something is missing or the customer needs a person, it hands the conversation to your team and tells you.</p></details>
+        <details><summary>Can it book appointments and take orders?</summary><p>Yes. It checks your free times, books after the customer confirms, collects order details, and notifies you on WhatsApp and email.</p></details>
+        <details><summary>Which languages does it speak?</summary><p>Many — English, Spanish, French, German, Arabic, Russian, Turkish and more. You choose up to 10, and it replies in the customer’s language.</p></details>
+        <details><summary>Can I use my existing Hansora account?</summary><p>Yes. Sign in with your Hansora account. Your automation data is kept separate from your other Hansora work.</p></details>
+      </div>
+    </section>
+
+    <section class="lp-final" data-reveal>
+      <div class="lp-glow small" aria-hidden="true"><i class="a"></i><i class="b"></i></div>
+      <h2>More time for your business.</h2>
+      <p>One business. One AI employee. Every conversation answered.</p>
+      <a class="ui-btn primary lg" data-start href="automation-setup.html">Create your AI employee</a>
+    </section>
+  </main>
+  <footer class="lp-footer"><span>HANSORA / AUTOMATION</span><nav aria-label="Legal"><a href="automation-terms.html">Terms</a><a href="automation-privacy.html">Privacy</a><a href="automation-data-deletion.html">Data deletion</a><a href="/">Hansora Creative ↗</a></nav></footer>
+</body>
+</html>

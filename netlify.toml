@@ -35,6 +35,9 @@
 [functions."dispatch-unlimited-queue"]
   schedule = "* * * * *"
 
+[functions."automation-flow-jobs"]
+  schedule = "* * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]

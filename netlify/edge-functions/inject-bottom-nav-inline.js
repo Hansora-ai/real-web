@@ -6,7 +6,7 @@ export default async (request, context) => {
   const requestPath = new URL(request.url).pathname.toLowerCase();
 
   // Authentication and connector documentation use focused standalone layouts.
-  if (requestPath === '/oauth/consent' || requestPath === '/oauth/consent.html' || requestPath === '/mcp-setup.html') {
+  if (requestPath === '/oauth/consent' || requestPath === '/oauth/consent.html' || requestPath === '/mcp-setup.html' || /^\/automation(?:-[a-z]+)?(?:\.html)?(?:\/|$)/.test(requestPath)) {
     return res;
   }
 

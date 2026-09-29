@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Comment automation — Hansora Automation</title>
+  <meta name="description" content="Reply to Instagram comments and continue in DMs automatically.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#08090b">
+  <script src="automation-theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css"><link rel="stylesheet" href="automation-flow.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-comments.js?v=20260929-canvas"></script>
+</head>
+<body class="ui ui-app" data-automation-page="comments">
+  <div data-automation-header></div>
+  <main class="flow-shell">
+    <div id="comments-loading" class="ui-skeleton" style="height:calc(100vh - 61px);border-radius:0" aria-label="Loading"></div>
+    <div class="ui-alert flow-error" id="comments-error" role="alert" hidden></div>
+    <div id="comments-builder" hidden>
+      <header class="flow-topbar">
+        <div class="flow-title-row">
+          <a class="ui-btn ghost icon sm" id="builder-back" href="automation-dashboard.html" aria-label="Back to AI employee" data-icon="chevron" style="transform:scaleX(-1)"></a>
+          <span class="flow-channel-mark" data-icon="comment"></span>
+          <div><input id="flow-name" value="Comment to DM" aria-label="Flow name"><p><span id="flow-status-dot"></span><span id="flow-status">Draft</span> · Instagram comments · <span id="draft-state">All changes saved</span></p></div>
+        </div>
+        <div class="flow-actions">
+          <button class="ui-btn ghost sm" id="preview-flow" type="button" data-icon="eye">Preview</button>
+          <button class="ui-btn primary sm" id="edit-flow" type="button" data-icon="edit" hidden>Edit automation</button>
+          <button class="ui-btn ghost sm" id="cancel-edit" type="button" hidden>Discard changes</button>
+          <button class="ui-btn secondary sm" id="save-comment-draft" type="button">Save</button>
+          <button class="ui-btn accent sm" id="activate-comment-flow" type="button">Set live</button>
+        </div>
+      </header>
+      <div class="flow-layout">
+        <section class="flow-canvas" id="flow-canvas" aria-label="Automation flow">
+          <div class="flow-mode-banner" id="mode-banner" hidden><span>You are viewing the live version, with results.</span><button class="ui-link" id="banner-edit" type="button">Edit</button></div>
+          <div class="flow-viewport" id="flow-viewport"><div class="flow-map" id="flow-map"><svg class="flow-lines" id="flow-lines" aria-hidden="true"></svg><div id="flow-nodes"></div></div></div>
+          <button class="flow-add-fab" id="add-step-fab" type="button" aria-label="Add a step" aria-expanded="false">+</button>
+          <div class="flow-add-panel" id="add-panel" hidden>
+            <p class="flow-add-title">Trigger</p>
+            <button type="button" data-panel-trigger><span class="flow-lib-icon trigger" data-icon="instagram"></span><span><b>When someone comments</b><small>Posts, keywords and public reply</small></span></button>
+            <p class="flow-add-title">Content</p>
+            <button type="button" data-add-node="message"><span class="flow-lib-icon message" data-icon="send"></span><span><b>Instagram message</b><small>Text, buttons and quick replies</small></span></button>
+            <p class="flow-add-title">AI</p>
+            <button type="button" data-add-node="ai"><span class="flow-lib-icon ai" data-icon="sparkle"></span><span><b>AI step</b><small>Let AI handle the conversation</small></span><em class="flow-ai-tag">AI</em></button>
+            <p class="flow-add-title">Logic</p>
+            <div class="flow-add-grid">
+              <button type="button" data-add-node="condition"><span class="flow-lib-icon condition" data-icon="branch"></span><span><b>Condition</b><small>Yes / No paths</small></span></button>
+              <button type="button" data-add-node="delay"><span class="flow-lib-icon delay" data-icon="clock"></span><span><b>Smart delay</b><small>Wait, then continue</small></span></button>
+              <button type="button" data-add-node="handoff"><span class="flow-lib-icon handoff" data-icon="handoff"></span><span><b>Hand to team</b><small>Pause AI, alert you</small></span></button>
+            </div>
+            <p class="flow-add-hint">New steps connect to the selected step. You can also use the + under any step.</p>
+          </div>
+          <div class="flow-zoom" role="group" aria-label="Zoom">
+            <span class="flow-canvas-summary" id="canvas-summary">1 journey</span>
+            <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+            <button type="button" id="zoom-reset" aria-label="Reset zoom">100%</button>
+            <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+            <button type="button" id="fit-flow">Fit</button>
+          </div>
+          <div class="flow-node-menu" id="node-menu" hidden role="menu"><button type="button" data-menu="duplicate" role="menuitem">Duplicate</button><button type="button" data-menu="delete" class="danger" role="menuitem">Delete</button></div>
+        </section>
+        <aside class="flow-inspector" id="flow-inspector">
+          <div class="inspector-empty" id="inspector-empty"><span data-icon="chevron"></span><h2>Select a step</h2><p>Click any block to edit it.</p></div>
+          <div id="inspector-content" hidden></div>
+        </aside>
+      </div>
+    </div>
+  </main>
+  <dialog class="ui-dialog flow-preview-dialog" id="flow-preview-dialog">
+    <div class="ui-dialog-head flow-dialog-pad"><h2>Preview</h2><button class="ui-btn ghost icon sm" type="button" data-close-dialog aria-label="Close">✕</button></div>
+    <div class="flow-phone"><div class="flow-post"><span>LS</span><b>luma.studio</b><div>Post or reel</div></div><div class="flow-preview-thread" id="flow-preview-thread"></div></div>
+    <p class="ui-hint flow-dialog-pad" style="text-align:center">Preview only. Nothing is sent.</p>
+  </dialog>
+  <dialog class="ui-dialog post-picker-dialog" id="post-picker-dialog">
+    <div class="ui-dialog-head flow-dialog-pad"><h2>Choose posts or reels</h2><button class="ui-btn ghost icon sm" type="button" data-close-dialog aria-label="Close">✕</button></div>
+    <div class="post-picker-grid" id="post-picker-grid"></div>
+    <div class="ui-dialog-actions flow-dialog-pad"><button class="ui-btn ghost" type="button" data-close-dialog>Cancel</button><button class="ui-btn primary" id="confirm-posts" type="button">Use selected</button></div>
+  </dialog>
+  <dialog class="ui-dialog step-picker-dialog" id="step-picker-dialog">
+    <div class="ui-dialog-head flow-dialog-pad"><div><h2>Choose the next step</h2><p class="ui-hint">It will be connected automatically.</p></div><button class="ui-btn ghost icon sm" type="button" data-close-dialog aria-label="Close">✕</button></div>
+    <div class="step-picker-grid"><button type="button" data-dialog-add-node="message"><span class="flow-lib-icon message" data-icon="send"></span><span><b>Instagram message</b><small>Text, buttons and quick replies</small></span></button><button type="button" data-dialog-add-node="condition"><span class="flow-lib-icon condition" data-icon="branch"></span><span><b>Condition</b><small>Continue only if the reply matches</small></span></button><button type="button" data-dialog-add-node="delay"><span class="flow-lib-icon delay" data-icon="clock"></span><span><b>Wait</b><small>Pause before the next step</small></span></button><button type="button" data-dialog-add-node="ai"><span class="flow-lib-icon ai" data-icon="sparkle"></span><span><b>AI assistant</b><small>Answers with your business knowledge</small></span></button><button type="button" data-dialog-add-node="handoff"><span class="flow-lib-icon handoff" data-icon="handoff"></span><span><b>Hand to your team</b><small>Pause AI and alert you</small></span></button></div>
+  </dialog>
+</body>
+</html>

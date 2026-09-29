@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Create AI employee — Hansora Automation</title>
+  <meta name="description" content="Teach your Hansora AI employee about your business.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#08090b">
+  <script src="automation-theme.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-setup.js"></script>
+</head>
+<body class="ui" data-automation-page="setup">
+  <div data-automation-header></div>
+  <main class="ui-page ui-narrow ui-enter">
+    <header class="ui-center-head"><h1 id="setup-title">Create your AI employee</h1><p>Teach it about your business once. You can change everything later.</p></header>
+    <div id="setup-loading" class="ui-skeleton" style="height:420px;border-radius:16px" aria-label="Loading"></div>
+    <div class="ui-alert" id="setup-error" role="alert" hidden></div>
+    <form id="setup-form" hidden novalidate>
+      <ol class="ui-stepper" aria-label="Setup progress">
+        <li class="active" data-progress="0"><span>1</span>Business</li>
+        <li data-progress="1"><span>2</span>Knowledge</li>
+        <li data-progress="2"><span>3</span>Personality</li>
+        <li data-progress="3"><span>4</span>Review</li>
+      </ol>
+      <section class="ui-card setup-card">
+        <div class="ui-step" data-step="0">
+          <div class="ui-step-head"><h2>Your business</h2><p>Who your AI employee works for.</p></div>
+          <div class="ui-form-grid">
+            <div class="ui-field"><label class="ui-label" for="business-name">Business name</label><input class="ui-input" id="business-name" name="business_name" maxlength="120" autocomplete="organization" placeholder="Luma Studio" required></div>
+            <div class="ui-field"><label class="ui-label" for="agent-name">AI employee name</label><input class="ui-input" id="agent-name" name="display_name" maxlength="120" placeholder="Ararat Assistant" required></div>
+            <div class="ui-field full"><label class="ui-label" for="description">What does your business do?</label><textarea class="ui-textarea" id="description" name="description" rows="4" maxlength="4000" placeholder="We design and build custom kitchens and wardrobes…" required></textarea></div>
+            <div class="ui-field"><label class="ui-label" for="category">Category <span class="ui-faint">· optional</span></label><input class="ui-input" id="category" name="category" maxlength="120" placeholder="Restaurant, salon, retail…"></div>
+            <div class="ui-field"><label class="ui-label" for="phone">Business phone <span class="ui-faint">· optional</span></label><input class="ui-input" id="phone" name="contact_phone" maxlength="80" autocomplete="tel" placeholder="+1 555 010 0000"></div>
+            <div class="ui-field full"><label class="ui-label" for="email">Business email <span class="ui-faint">· optional</span></label><input class="ui-input" id="email" name="contact_email" maxlength="320" type="email" autocomplete="email" placeholder="hello@business.am"></div>
+          </div>
+        </div>
+        <div class="ui-step" data-step="1" hidden>
+          <div class="ui-step-head"><h2>What customers ask about</h2><p>The AI only uses these facts, so it never invents a price. One item per line.</p></div>
+          <div class="ui-form-grid">
+            <div class="ui-field full"><label class="ui-label" for="services">Products, services and prices</label><textarea class="ui-textarea" id="services" name="services" rows="4" maxlength="12000" placeholder="Kitchen measurement — $25&#10;Custom cabinet — price after measurement"></textarea></div>
+            <div class="ui-field"><label class="ui-label" for="hours">Opening hours</label><textarea class="ui-textarea" id="hours" name="hours" rows="3" maxlength="4000" placeholder="Monday–Saturday: 10:00–19:00"></textarea></div>
+            <div class="ui-field"><label class="ui-label" for="delivery">Delivery and service areas</label><textarea class="ui-textarea" id="delivery" name="delivery" rows="3" maxlength="4000" placeholder="City delivery: $10 · Free over $200"></textarea></div>
+            <div class="ui-field full"><label class="ui-label" for="faq">Questions and answers</label><textarea class="ui-textarea" id="faq" name="faq" rows="3" maxlength="8000" placeholder="Do you offer warranty? | Yes, for 12 months."></textarea><span class="ui-hint">Write question | answer on each line.</span></div>
+            <div class="ui-field full"><label class="ui-label" for="policies">Rules and policies</label><textarea class="ui-textarea" id="policies" name="policies" rows="3" maxlength="8000" placeholder="Orders can be changed within 24 hours."></textarea></div>
+          </div>
+        </div>
+        <div class="ui-step" data-step="2" hidden>
+          <div class="ui-step-head"><h2>How it talks</h2><p>Languages and tone for every conversation.</p></div>
+          <div class="ui-form-grid">
+            <div class="ui-field full"><span class="ui-label">Languages it answers in</span>
+              <div class="ui-chips" id="language-chips"></div><span class="ui-hint">It replies in the customer’s language. Choose up to 10.</span></div>
+            <div class="ui-field"><label class="ui-label" for="primary-language">Main language</label><select class="ui-select" id="primary-language" name="primary_language"></select></div>
+            <div class="ui-field"><span class="ui-label">Tone</span>
+              <div class="ui-segmented"><label><input type="radio" name="tone" value="friendly" checked><span>Friendly</span></label><label><input type="radio" name="tone" value="professional"><span>Professional</span></label><label><input type="radio" name="tone" value="casual"><span>Casual</span></label><label><input type="radio" name="tone" value="formal"><span>Formal</span></label></div></div>
+            <div class="ui-field full"><label class="ui-label" for="instructions">Extra instructions <span class="ui-faint">· optional</span></label><textarea class="ui-textarea" id="instructions" name="custom_instructions" rows="3" maxlength="12000" placeholder="Be warm and short. Ask one question at a time."></textarea></div>
+            <div class="ui-field full"><label class="ui-label" for="prohibited">Never do <span class="ui-faint">· optional</span></label><textarea class="ui-textarea" id="prohibited" name="prohibited_instructions" rows="3" maxlength="8000" placeholder="Never promise a delivery date. Never discuss competitors."></textarea></div>
+          </div>
+        </div>
+        <div class="ui-step" data-step="3" hidden>
+          <div class="ui-step-head"><h2>Ready to save</h2><p>Nothing goes live until you connect a channel.</p></div>
+          <div class="ui-review" id="review-grid"></div>
+          <p class="ui-hint" style="margin:16px 0 0">By saving, you agree to the <a class="ui-link" href="automation-terms.html" target="_blank">Automation Terms</a> and <a class="ui-link" href="automation-privacy.html" target="_blank">Privacy Policy</a>.</p>
+        </div>
+        <footer class="ui-card-foot setup-actions">
+          <button class="ui-btn ghost" id="back-button" type="button" hidden>Back</button>
+          <span class="ui-save-state" id="save-state" aria-live="polite">Draft not saved yet</span>
+          <button class="ui-btn primary" id="next-button" type="button">Continue</button>
+          <button class="ui-btn primary" id="save-button" type="submit" hidden>Save AI employee</button>
+        </footer>
+      </section>
+    </form>
+  </main>
+</body>
+</html>
