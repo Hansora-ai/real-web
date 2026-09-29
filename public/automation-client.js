@@ -53,15 +53,16 @@
 
   function displayError(error) {
     const message = String(error && error.message ? error.message : error || 'Something went wrong.');
-    if (message.includes('automation_save_agent') || message.includes('schema cache')) {
-      return 'Automation storage is not ready yet. Apply the included Supabase migration, then try again.';
+    const code = String(error && error.code ? error.code : '');
+    if (code === 'PGRST106' || message.includes('Invalid schema') || message.includes('automation_save_agent') || message.includes('schema cache')) {
+      return 'Automation storage is temporarily unavailable. Your information is still on this page. Please try again shortly.';
     }
     if (message.includes('JWT') || message.includes('authentication')) return 'Your session expired. Please log in again.';
     return message;
   }
 
   // Reply languages the AI employee supports (must match the database constraint and lib/automation/instructions.mjs).
-  const languages = [['en','English','English'],['es','Spanish','Español'],['fr','French','Français'],['de','German','Deutsch'],['it','Italian','Italiano'],['pt','Portuguese','Português'],['ru','Russian','Русский'],['uk','Ukrainian','Українська'],['pl','Polish','Polski'],['nl','Dutch','Nederlands'],['tr','Turkish','Türkçe'],['ar','Arabic','العربية'],['hy','Armenian','Հայերեն'],['ka','Georgian','ქართული'],['zh','Chinese','中文'],['ja','Japanese','日本語'],['ko','Korean','한국어'],['hi','Hindi','हिन्दी']];
+  const languages = [['en','English','English'],['hy','Armenian','Հայերեն'],['ru','Russian','Русский'],['es','Spanish','Español'],['fr','French','Français'],['de','German','Deutsch'],['it','Italian','Italiano'],['pt','Portuguese','Português'],['uk','Ukrainian','Українська'],['pl','Polish','Polski'],['nl','Dutch','Nederlands'],['tr','Turkish','Türkçe'],['ar','Arabic','العربية'],['ka','Georgian','ქართული'],['zh','Chinese','中文'],['ja','Japanese','日本語'],['ko','Korean','한국어'],['hi','Hindi','हिन्दी']];
   const languageName = code => (languages.find(item => item[0] === code) || [code, code])[1];
   const browserLanguage = () => { const code = String(navigator.language || 'en').slice(0, 2).toLowerCase(); return languages.some(item => item[0] === code) ? code : 'en'; };
   const browserTimezone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (_) { return 'UTC'; } };
