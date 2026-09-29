@@ -182,7 +182,7 @@
       const syncResult = await syncResponse.json().catch(() => ({}));
       sessionStorage.setItem('hansora_automation_sync_notice', syncResponse.ok
         ? 'AI provider agent synchronized.'
-        : `Business saved. Provider setup is pending (${syncResult.error || 'sync unavailable'}).`);
+        : `Business saved, but the AI could not be prepared: ${syncResult.detail || syncResult.error || 'sync unavailable'}`);
     } catch (_) {
       sessionStorage.setItem('hansora_automation_sync_notice', 'Business saved. Provider setup is pending.');
     }
