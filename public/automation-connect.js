@@ -272,6 +272,25 @@
     }catch(error){button.disabled=false;showError(api.displayError(error));}
   }
 
+  // Testing path: connect Meta's test number (or a System User token) without the Embedded Signup popup.
+  if (channel === 'whatsapp') {
+    document.querySelector('#whatsapp-token').hidden = false;
+    document.querySelector('#whatsapp-token-form').addEventListener('submit', async event => {
+      event.preventDefault(); errorBox.hidden = true;
+      const phoneNumberId = document.querySelector('#wa-token-phone').value.trim(), wabaId = document.querySelector('#wa-token-waba').value.trim(), accessToken = document.querySelector('#wa-token-value').value.trim();
+      const submit = event.target.querySelector('button'); submit.disabled = true; document.querySelector('#connect-save-state').textContent = 'Checking the number with Meta…';
+      try {
+        const response = await api.authenticatedFetch('/.netlify/functions/automation-whatsapp-connect', {method:'POST', body:JSON.stringify({business_id:businessId, phone_number_id:phoneNumberId, waba_id:wabaId, access_token:accessToken})});
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'whatsapp_connection_failed');
+        document.querySelector('#wa-token-value').value = '';
+        document.querySelector('#whatsapp-token').open = false;
+        whatsAppConnected(result, phoneNumberId);
+      } catch (error) { showError(api.displayError(error)); }
+      finally { submit.disabled = false; }
+    });
+  }
+
   function whatsAppConnected(result,phoneNumberId){
     const button=document.querySelector('#provider-connect');
     const label=result.account?.label||phoneNumberId;connectedAccount={name:result.account?.verified_name||'WhatsApp Business',detail:label,mark:'WA'};renderAccounts();selectedAccount=label;providerConnected=true;highestUnlocked=3;

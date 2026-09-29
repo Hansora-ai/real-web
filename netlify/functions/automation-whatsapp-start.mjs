@@ -13,6 +13,7 @@ export async function handler(event){
     if(!isUuid(body.business_id))return json(400,{error:'invalid_business_id'});
     const business=await first(`/rest/v1/automation_businesses?id=eq.${body.business_id}&owner_user_id=eq.${user.id}&select=id&limit=1`);if(!business)return json(404,{error:'business_not_found'});
     const config=whatsappConfig();
+    if(!config.configurationId)return json(503,{error:'missing_meta_whatsapp_configuration_id'});
     return json(200,{app_id:config.appId,configuration_id:config.configurationId,graph_version:config.graphVersion});
   }catch(error){console.error('automation-whatsapp-start error',{message:error?.message,status:error?.status});return json(Number(error?.status)||500,{error:'whatsapp_connection_unavailable'});}
 }
