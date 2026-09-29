@@ -23,9 +23,9 @@ export async function handler(event){
     await serviceUpdate('automation_webhook_events',`id=eq.${webhook.id}`,{status:'processing',attempt_count:Number(webhook.attempt_count||0)+1,last_error:null});
     const message=webhook.payload||{};
     const account=await first(`/rest/v1/automation_provider_resources?provider=eq.meta&resource_type=eq.instagram_account&provider_resource_id=eq.${encodeURIComponent(message.recipientId)}&status=eq.active&select=*&limit=1`);
-    if(!account)throw new Error('instagram_account_not_connected');
+    if(!account){console.warn('automation-instagram message for an account not connected in Hansora',{recipientId:message.recipientId});throw new Error('instagram_account_not_connected');}
     const connection=await first(`/rest/v1/automation_channel_connections?business_id=eq.${account.business_id}&channel_type=eq.instagram_dm&status=eq.connected&select=*&limit=1`);
-    if(!connection)throw new Error('instagram_dm_not_active');
+    if(!connection){console.warn('automation-instagram DMs are not active for this business (finish setup on the Instagram channel page)',{businessId:account.business_id});throw new Error('instagram_dm_not_active');}
     const settings=connection.settings||{};
     const credential=await first(`/rest/v1/automation_provider_credentials?provider_resource_id=eq.${account.id}&credential_type=eq.access_token&select=*&limit=1`);
     if(!credential)throw new Error('instagram_token_not_found');
