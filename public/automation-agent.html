@@ -85,6 +85,21 @@
             <div class="ui-card-head"><div><h2 class="ui-h2">Knowledge</h2><p>The only facts the AI may use</p></div><a class="ui-link" id="edit-knowledge" href="#">Edit →</a></div>
             <div class="ui-card-body" style="padding-top:12px;padding-bottom:12px" id="knowledge-summary"></div>
           </section>
+
+          <section class="ui-card" id="knowledge-files">
+            <div class="ui-card-head"><div><h2 class="ui-h2">Knowledge files</h2><p>Menus, price lists, documents and web pages. The AI looks up only what each question needs, so size does not slow it down.</p></div></div>
+            <div class="ui-card-body ui-kfiles">
+              <div id="kfiles-list" class="ui-kfiles-list"><p class="ui-faint">Loading…</p></div>
+              <div class="ui-kfiles-add">
+                <label class="ui-btn secondary sm ui-kfiles-upload"><input id="kfiles-file" type="file" accept=".pdf,.docx,.txt,.md,.html,.htm,.epub" hidden>Upload file</label>
+                <button class="ui-btn secondary sm" id="kfiles-link-toggle" type="button">Add web page</button>
+                <button class="ui-btn secondary sm" id="kfiles-text-toggle" type="button">Paste text</button>
+              </div>
+              <form id="kfiles-link-form" class="ui-kfiles-form" hidden><input class="ui-input" id="kfiles-url" type="url" placeholder="https://yourwebsite.com/prices" required><button class="ui-btn primary sm" type="submit">Add page</button></form>
+              <form id="kfiles-text-form" class="ui-kfiles-form" hidden><input class="ui-input" id="kfiles-text-name" maxlength="120" placeholder="Name, for example Full price list" required><textarea class="ui-textarea" id="kfiles-text" rows="6" placeholder="Paste your business information here" required></textarea><button class="ui-btn primary sm" type="submit">Add text</button></form>
+              <p class="ui-hint" id="kfiles-status">PDF, Word, TXT, Markdown, HTML or EPUB · up to 4 MB per file · up to 50 items.</p>
+            </div>
+          </section>
         </aside>
       </div>
     </div>

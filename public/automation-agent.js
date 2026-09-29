@@ -66,6 +66,7 @@
     $('#actions-link').href = `automation-tools.html${appQuery}`;
 
     renderKnowledge(business, agent, profile);
+    setupKnowledgeFiles(business.id);
     renderChannels(business);
     renderActions(appQuery, api.isLocalPreview ? {calendar:true, orders:true, leads:false, notifications:'WhatsApp + email'} : null);
     if (!api.isLocalPreview) loadActions(business.id, appQuery);
@@ -74,6 +75,76 @@
     renderUsage(usage);
     initializeLiveTest(business, profile);
     if (!api.isLocalPreview) loadUsageSummary(business.id);
+  }
+
+  // Knowledge files live in the ElevenLabs knowledge base (automation-knowledge); the AI searches them per question.
+  function setupKnowledgeFiles(businessId) {
+    const list = $('#kfiles-list'), status = $('#kfiles-status'), hint = status.textContent;
+    const controls = ['#kfiles-file', '#kfiles-link-toggle', '#kfiles-text-toggle', '#kfiles-link-form button', '#kfiles-text-form button'];
+    const typeLabel = { file:'File', url:'Web', text:'Text' };
+    let busy = false;
+    const setBusy = value => { busy = value; controls.forEach(selector => { const element = $(selector); if (element) element.disabled = value; }); $('.ui-kfiles-upload').classList.toggle('is-busy', value); };
+    const size = bytes => bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    const render = documents => {
+      list.innerHTML = documents.length ? documents.map(document => `<div class="ui-kfile"><span class="ui-kfile-type">${typeLabel[document.type] || 'Doc'}</span><span class="ui-kfile-main"><strong>${escapeHtml(document.name)}</strong><small>${escapeHtml(document.url || (document.size_bytes ? size(document.size_bytes) : document.characters ? `${Number(document.characters).toLocaleString()} characters` : ''))}</small></span><button class="ui-btn ghost sm" type="button" data-remove-knowledge="${escapeHtml(document.id)}">Remove</button></div>`).join('')
+        : '<p class="ui-faint">No files yet. Add your menu, price list or website pages.</p>';
+    };
+    const message = result => ({
+      knowledge_file_type_not_supported:'This file type is not supported. Use PDF, Word, TXT, Markdown, HTML or EPUB.',
+      knowledge_file_too_large:'This file is larger than 4 MB. Split it or remove large images, then try again.',
+      knowledge_file_empty:'This file is empty.',
+      knowledge_url_invalid:'Enter a full web address that starts with https://',
+      knowledge_text_empty:'Paste some text first.',
+      knowledge_text_too_long:'This text is too long. Split it into a few parts.',
+      knowledge_limit_reached:'You have reached 50 items. Remove one to add another.',
+      ai_employee_not_ready:'Save your AI employee first, then add knowledge files.',
+      elevenlabs_request_failed:`The AI provider could not add this${result.detail ? `: ${result.detail}` : '.'}`
+    }[result.error] || 'Knowledge could not be updated. Please try again.');
+    const call = async payload => {
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-knowledge', { method:'POST', body:JSON.stringify({ business_id:businessId, ...payload }) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(message(result));
+      return result.documents || [];
+    };
+    const run = async (label, payload, done) => {
+      if (busy) return;
+      setBusy(true); status.textContent = label;
+      try { render(await call(payload)); status.textContent = hint; if (done) done(); ui.toast('Knowledge updated. Your AI employee uses it right away.'); }
+      catch (error) { status.textContent = error.message; }
+      finally { setBusy(false); }
+    };
+
+    if (api.isLocalPreview) {
+      render([{ id:'p1', type:'file', name:'Price list 2026.pdf', size_bytes:482000 }, { id:'p2', type:'url', name:'Delivery page', url:'https://example.com/delivery' }]);
+      status.textContent = 'Preview mode: files are not uploaded.'; setBusy(true);
+      return;
+    }
+    call({ action:'list' }).then(render).catch(error => { list.innerHTML = ''; status.textContent = error.message; });
+
+    $('#kfiles-file').addEventListener('change', event => {
+      const file = event.target.files[0]; event.target.value = '';
+      if (!file) return;
+      if (file.size > 4 * 1024 * 1024) { status.textContent = 'This file is larger than 4 MB. Split it or remove large images, then try again.'; return; }
+      const reader = new FileReader();
+      reader.onload = () => run(`Uploading ${file.name}…`, { action:'add', kind:'file', filename:file.name, content_base64:String(reader.result).split(',')[1] || '' });
+      reader.onerror = () => { status.textContent = 'This file could not be read.'; };
+      reader.readAsDataURL(file);
+    });
+    $('#kfiles-link-toggle').addEventListener('click', () => { $('#kfiles-link-form').hidden = !$('#kfiles-link-form').hidden; $('#kfiles-text-form').hidden = true; });
+    $('#kfiles-text-toggle').addEventListener('click', () => { $('#kfiles-text-form').hidden = !$('#kfiles-text-form').hidden; $('#kfiles-link-form').hidden = true; });
+    $('#kfiles-link-form').addEventListener('submit', event => {
+      event.preventDefault();
+      run('Reading the web page…', { action:'add', kind:'url', url:$('#kfiles-url').value.trim() }, () => { $('#kfiles-url').value = ''; $('#kfiles-link-form').hidden = true; });
+    });
+    $('#kfiles-text-form').addEventListener('submit', event => {
+      event.preventDefault();
+      run('Adding text…', { action:'add', kind:'text', name:$('#kfiles-text-name').value.trim(), text:$('#kfiles-text').value }, () => { $('#kfiles-text-name').value = ''; $('#kfiles-text').value = ''; $('#kfiles-text-form').hidden = true; });
+    });
+    list.addEventListener('click', event => {
+      const button = event.target.closest('[data-remove-knowledge]');
+      if (!button || busy || !confirm('Remove this from your AI employee’s knowledge?')) return;
+      run('Removing…', { action:'remove', document_id:button.dataset.removeKnowledge });
+    });
   }
 
   function renderKnowledge(business, agent, profile) {
