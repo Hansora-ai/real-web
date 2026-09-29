@@ -50,7 +50,8 @@
   });
   document.querySelector('#thread-back').addEventListener('click', () => document.querySelector('#inbox-app').classList.remove('show-thread'));
   document.querySelector('#toggle-ai').addEventListener('click', toggleAi);
-  document.querySelector('#take-over').addEventListener('click', takeOver);
+  // One button next to the reply box: take over from the AI, or hand the conversation back to it.
+  document.querySelector('#take-over').addEventListener('click', () => (current()?.human ? toggleAi() : takeOver()));
   document.querySelector('#resolve-conversation').addEventListener('click', async () => {
     const conversation = current(); conversation.resolved = !conversation.resolved;
     if (!api.isLocalPreview) {
@@ -97,6 +98,12 @@
     document.querySelector('#record-state').classList.add('created');
   });
 
+  // Customer photo when Instagram provides one; initials otherwise (and if the photo link has expired).
+  function avatarHtml(conversation, fallback = initials(conversation.name)) {
+    const letters = escapeHtml(fallback);
+    if (!conversation.avatarUrl) return letters;
+    return `<img class="ui-avatar-photo" src="${escapeHtml(conversation.avatarUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode(this.dataset.fallback))" data-fallback="${letters}">`;
+  }
   function renderList() {
     const query = document.querySelector('#inbox-search').value.trim().toLowerCase();
     const visible = conversations.filter(conversation => {
@@ -106,7 +113,7 @@
     const icons = {'Instagram DM':'instagram','Instagram comment':'comment','WhatsApp':'whatsapp','Phone':'phone'};
     document.querySelector('#conversation-list').innerHTML = visible.length ? visible.map(conversation => {
       const state = conversation.resolved ? '' : conversation.attention ? '<span class="ui-badge red sm">Needs you</span>' : conversation.human ? '<span class="ui-badge amber sm">Your team</span>' : '';
-      return `<button class="ui-convo${conversation.id === selectedId ? ' active' : ''}${conversation.unread ? ' unread' : ''}${conversation.resolved ? ' resolved' : ''}" data-conversation-id="${escapeHtml(conversation.id)}" type="button"><span class="ui-convo-avatar">${escapeHtml(initials(conversation.name))}<i class="ui-convo-channel ${icons[conversation.channel] || ''}">${window.HansoraUI.icon(icons[conversation.channel] || 'message')}</i></span><span class="ui-convo-body"><span class="ui-convo-top"><strong>${escapeHtml(conversation.name)}</strong><time>${escapeHtml(conversation.time)}</time></span><span class="ui-convo-preview">${escapeHtml(conversation.preview)}</span>${state}</span></button>`;
+      return `<button class="ui-convo${conversation.id === selectedId ? ' active' : ''}${conversation.unread ? ' unread' : ''}${conversation.resolved ? ' resolved' : ''}" data-conversation-id="${escapeHtml(conversation.id)}" type="button"><span class="ui-convo-avatar">${avatarHtml(conversation)}<i class="ui-convo-channel ${icons[conversation.channel] || ''}">${window.HansoraUI.icon(icons[conversation.channel] || 'message')}</i></span><span class="ui-convo-body"><span class="ui-convo-top"><strong>${escapeHtml(conversation.name)}</strong><time>${escapeHtml(conversation.time)}</time></span><span class="ui-convo-preview">${escapeHtml(conversation.preview)}</span>${state}</span></button>`;
     }).join('') : `<div class="ui-empty">${conversations.length ? 'No conversations match.' : 'New Instagram and WhatsApp conversations appear here.'}</div>`;
     updateTopCounts();
   }
@@ -145,7 +152,7 @@
 
   function renderCustomer() {
     const conversation = current();
-    document.querySelector('#customer-avatar').textContent = conversation.name.split(' ').map(part => part[0]).join('').slice(0,2).toUpperCase();
+    document.querySelector('#customer-avatar').innerHTML = avatarHtml(conversation, conversation.name.split(' ').map(part => part[0]).join('').slice(0,2).toUpperCase());
     document.querySelector('#customer-name').textContent = conversation.name;
     document.querySelector('#customer-handle').textContent = conversation.handle;
     document.querySelector('#customer-fields').innerHTML = conversation.fields.map(([label,value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
@@ -186,9 +193,9 @@
     document.querySelector('#template-select').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').textContent = useTemplate ? 'Send template' : 'Send';
-    document.querySelector('#composer-help').textContent = !enabled ? 'The AI is replying. Take over to write yourself.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you resume it.';
-    document.querySelector('#take-over').hidden = current().human || current().resolved;
-    document.querySelector('#take-over').textContent = 'Take over';
+    document.querySelector('#composer-help').textContent = !enabled ? 'The AI is replying. Take over to write yourself.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
+    document.querySelector('#take-over').hidden = current().resolved;
+    document.querySelector('#take-over').textContent = current().human ? 'Give back to AI' : 'Take over';
   }
   // WhatsApp only allows free-form replies within 24 hours of the customer's last message; after that, approved templates.
   function windowRemaining(conversation) {
@@ -258,7 +265,8 @@
     return (result.data || []).map(row => {
       const contact = Array.isArray(row.automation_contacts) ? row.automation_contacts[0] : row.automation_contacts || {};
       const name = contact.display_name || contact.profile?.username || (row.channel_type === 'whatsapp' ? 'WhatsApp customer' : 'Instagram customer');
-      return {id:row.id,channelType:row.channel_type,lastCustomerAt:0,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,attention:row.status==='needs_attention',human:row.status==='human_handling',aiActive:Boolean(row.ai_enabled),resolved:row.status==='resolved',intent:row.intent||'Customer message',summary:row.summary||'Summary will appear as the conversation develops.',fields:[['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
+      const avatarUrl = /^https:\/\//.test(String(contact.profile?.profile_pic || '')) ? String(contact.profile.profile_pic) : '';
+      return {id:row.id,channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,attention:row.status==='needs_attention',human:row.status==='human_handling',aiActive:Boolean(row.ai_enabled),resolved:row.status==='resolved',intent:row.intent||'Customer message',summary:row.summary||'Summary will appear as the conversation develops.',fields:[['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
     });
   }
   async function loadMessages(conversation) {

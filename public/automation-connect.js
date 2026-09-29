@@ -45,6 +45,8 @@
   let providerConnected = false;
   let selectedAccount = '';
   let connectedAccount = null;
+  let isLive = false;
+  let editing = false;
   const steps = [...document.querySelectorAll('[data-connect-step]')];
   const progress = [...document.querySelectorAll('[data-connect-progress]')];
   const previousButton = document.querySelector('#connect-previous');
@@ -66,16 +68,22 @@
   }
   loading.hidden = true;
   workflow.hidden = false;
-  showStep(0);
+  if (isLive) { highestUnlocked = 3; renderReview(); showStep(3); } else showStep(0);
 
   nextButton.addEventListener('click', () => {
+    // Before anything is connected, this button starts the connection (same as the provider card).
+    if (currentStep === 0 && !providerConnected) return document.querySelector('#provider-connect').click();
     if (!validateStep(currentStep)) return;
     highestUnlocked = Math.max(highestUnlocked, currentStep + 1);
     if (currentStep === 2) renderReview();
     showStep(Math.min(3, currentStep + 1));
   });
   previousButton.addEventListener('click', () => showStep(Math.max(0, currentStep - 1)));
-  finishButton.addEventListener('click', saveDraft);
+  finishButton.addEventListener('click', () => {
+    // A live channel opens on its summary: "Edit" walks through the settings, the last page saves them.
+    if (isLive && !editing) { editing = true; return showStep(1); }
+    saveDraft();
+  });
   progress.forEach((button, index) => button.addEventListener('click', () => { if (index <= highestUnlocked) showStep(index); }));
   document.querySelector('#provider-connect').addEventListener('click', async () => {
     if (!api.isLocalPreview) {
@@ -139,6 +147,16 @@
     previousButton.hidden = index === 0;
     nextButton.hidden = index === 3;
     finishButton.hidden = index !== 3;
+    if (isLive && index < 3) editing = true;
+    updateFooter();
+  }
+
+  function updateFooter() {
+    nextButton.textContent = currentStep === 0 && !providerConnected ? 'Connect' : 'Continue';
+    finishButton.disabled = false;
+    finishButton.textContent = !isLive ? 'Go live' : editing ? 'Save changes' : 'Edit';
+    document.querySelector('#review-title').textContent = isLive && !editing ? 'Live now' : isLive ? 'Save your changes' : 'Ready to go live';
+    document.querySelector('#review-help').textContent = isLive && !editing ? 'Your AI employee is answering here. Choose Edit to change the settings.' : isLive ? 'Your AI employee keeps answering with the new settings.' : 'Customers get AI replies as soon as you turn this on.';
   }
 
   function validateStep(index) {
@@ -168,10 +186,11 @@
       if (activation.error) return showError(api.displayError(activation.error));
     }
     try { localStorage.setItem(`hansora_${channel}_connection_preview`, JSON.stringify(draft)); } catch (_) {}
+    const wasLive = isLive;
     document.querySelector('#connect-save-state').textContent = 'Live';
     setConnected(true);
-    finishButton.textContent = 'Live ✓'; finishButton.disabled = true;
-    ui.toast(`${config.title.replace('Connect ', '')} is live. Your AI employee is answering.`);
+    editing = false; renderReview(); updateFooter();
+    ui.toast(wasLive ? 'Changes saved.' : `${config.title.replace('Connect ', '')} is live. Your AI employee is answering.`);
   }
 
   async function loadDraft() {
@@ -185,6 +204,12 @@
         markAuthorized();
         if (result.data.status === 'connected') setConnected(true);
       }
+      // Show the saved choices, so re-saving never resets them to the defaults.
+      const saved = result.data?.settings || {};
+      const replies = document.querySelector('#automatic-replies');
+      if (replies && saved.automatic_replies !== undefined) replies.checked = saved.automatic_replies !== false;
+      const delay = document.querySelector('#reply-delay');
+      if (saved.reply_delay !== undefined && [...delay.options].some(option => option.value === String(saved.reply_delay))) delay.value = String(saved.reply_delay);
       return;
     }
     try {
@@ -206,6 +231,7 @@
   function setConnected(live) {
     document.querySelector('#channel-disconnect').hidden = false;
     if (channel === 'instagram') document.querySelector('#channel-diagnose').hidden = false;
+    isLive = live;
     const badge = document.querySelector('#connection-state');
     badge.textContent = live ? 'Live' : 'Authorized';
     badge.classList.toggle('green', live); badge.classList.toggle('live', live); badge.classList.toggle('amber', !live);
@@ -216,6 +242,7 @@
     document.querySelector('#provider-button-label').textContent = `${config.title.replace('Connect ', '')} connected`;
     document.querySelector('#provider-button-help').textContent = 'Continue to choose the account';
     if (!document.querySelector('#connection-state').classList.contains('green')) setConnected(false);
+    updateFooter();
   }
   // Shows what Meta itself reports for the connected account (webhook fields, latest DMs), for troubleshooting.
   document.querySelector('#channel-diagnose').addEventListener('click', async () => {
@@ -229,11 +256,17 @@
   document.querySelector('#channel-disconnect').addEventListener('click', async () => {
     const name = config.title.replace('Connect ', '');
     if (!confirm(`Disconnect ${name}? Your AI employee stops replying there and Hansora’s access is removed right away.`)) return;
+    const disconnectButton = document.querySelector('#channel-disconnect');
+    disconnectButton.disabled = true; disconnectButton.classList.add('is-busy'); disconnectButton.innerHTML = '<span class="ui-spinner" aria-hidden="true"></span>Disconnecting…';
+    document.querySelector('#connect-save-state').textContent = `Disconnecting ${name}…`;
     if (!api.isLocalPreview) {
       try {
         const response = await api.authenticatedFetch('/.netlify/functions/automation-channel-disconnect', {method:'POST', body:JSON.stringify({business_id:businessId, channel})});
         if (!response.ok) throw new Error('disconnect_failed');
-      } catch (_) { return showError(`${name} could not be disconnected. Please try again.`); }
+      } catch (_) {
+        disconnectButton.disabled = false; disconnectButton.classList.remove('is-busy'); disconnectButton.textContent = 'Disconnect';
+        return showError(`${name} could not be disconnected. Please try again.`);
+      }
     }
     try { localStorage.removeItem(`hansora_${channel}_connection_preview`); } catch (_) {}
     window.HansoraUI.toast(`${name} disconnected`);
