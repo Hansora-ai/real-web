@@ -48,7 +48,8 @@ export async function handler(event) {
     const synchronized = await synchronizeAutomationAgent({
       business, agent, knowledge, instructions, tools,
       firstMessage: firstMessageFor({ business, agent }),
-      providerResourceId: stored?.provider_resource_id || null
+      providerResourceId: stored?.provider_resource_id || null,
+      existingToolIds: stored?.safe_config?.tool_ids || {}
     });
     const saved = {
       business_id: business.id,
@@ -57,16 +58,17 @@ export async function handler(event) {
       resource_type: 'agent',
       provider_resource_id: synchronized.resourceId,
       status: 'active',
-      safe_config: { text_only: true, primary_language: agent.primary_language, configuration_version: agent.configuration_version, tools: tools.map(tool => tool.name) },
+      safe_config: { text_only: true, primary_language: agent.primary_language, configuration_version: agent.configuration_version, tools: tools.map(tool => tool.name), tool_ids: synchronized.toolIds || {} },
       last_synced_at: new Date().toISOString()
     };
     if (stored) await updateRows('automation_provider_resources', `id=eq.${stored.id}`, saved);
     else await insertRow('automation_provider_resources', saved);
     return json(200, { ok: true, provider: synchronized.provider, created: synchronized.created, status: 'active' });
   } catch (error) {
-    console.error('automation-agent-sync error', { message: error?.message, status: error?.status, providerStatus: error?.providerStatus });
+    console.error('automation-agent-sync error', { message: error?.message, status: error?.status, providerStatus: error?.providerStatus, providerMessage: error?.providerMessage });
     const status = Number(error?.status) || 500;
-    const allowed = new Set(['invalid_json','request_too_large','business_not_found','agent_configuration_incomplete','elevenlabs_not_configured','automation_provider_not_supported']);
-    return json(status, { error: allowed.has(error?.message) ? error.message : status >= 500 ? 'automation_sync_unavailable' : 'automation_sync_failed' });
+    const allowed = new Set(['invalid_json','request_too_large','business_not_found','agent_configuration_incomplete','elevenlabs_not_configured','automation_provider_not_supported','elevenlabs_request_failed']);
+    // The owner sees ElevenLabs' own reason (for example an invalid key or setting) instead of a generic failure.
+    return json(status, { error: allowed.has(error?.message) ? error.message : status >= 500 ? 'automation_sync_unavailable' : 'automation_sync_failed', ...(error?.providerMessage ? { detail: error.providerMessage, provider_status: error.providerStatus } : {}) });
   }
 }
