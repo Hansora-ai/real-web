@@ -1,6 +1,6 @@
 import { encryptSecret } from '../../lib/automation/crypto.mjs';
 import { first, serviceUpsert, serviceUpdate } from '../../lib/automation/db.mjs';
-import { exchangeInstagramCode, getInstagramProfile, oauthStateHash, verifyOAuthState } from '../../lib/automation/meta.mjs';
+import { exchangeInstagramCode, getInstagramProfile, oauthStateHash, subscribeInstagramWebhooks, verifyOAuthState } from '../../lib/automation/meta.mjs';
 
 function redirect(location){return{statusCode:302,headers:{Location:location,'Cache-Control':'no-store'},body:''};}
 function errorPage(statusCode,message){return{statusCode,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'},body:`<!doctype html><meta charset="utf-8"><title>Instagram connection failed</title><body style="background:#08090c;color:#eef2f8;font:16px Arial;padding:48px"><h1>Instagram connection failed</h1><p>${escapeHtml(message)}</p><a style="color:#8eb6ef" href="/automation-dashboard.html">Return to Automation</a></body>`};}
@@ -29,7 +29,9 @@ export async function handler(event){
     });
     if(!resource)throw Object.assign(new Error('provider_resource_not_saved'),{status:500});
     await serviceUpsert('automation_provider_credentials','provider_resource_id,credential_type',{business_id:state.business_id,provider_resource_id:resource.id,credential_type:'access_token',...encryptSecret(token.accessToken),expires_at:expiresAt});
-    const connectionUpdate={status:'connecting',provider:'meta',connected_account_label:profile.username?`@${profile.username}`:profile.id,connected_at:new Date().toISOString(),last_error_code:null};
+    // Without this subscription Meta never sends this account's DMs and comments to Hansora.
+    const subscribed=await subscribeInstagramWebhooks(token.accessToken).catch(error=>{console.error('automation-meta-callback webhook subscription failed',{message:error?.message,providerStatus:error?.providerStatus});return false;});
+    const connectionUpdate={status:'connecting',provider:'meta',connected_account_label:profile.username?`@${profile.username}`:profile.id,connected_at:new Date().toISOString(),last_error_code:subscribed?null:'webhook_subscription_failed'};
     await serviceUpdate('automation_channel_connections',`business_id=eq.${encodeURIComponent(state.business_id)}&channel_type=in.(instagram_dm,instagram_comments)`,connectionUpdate);
     const query=new URLSearchParams({channel:'instagram',business:state.business_id,authorized:'1',account:connectionUpdate.connected_account_label});
     return redirect(`/automation-connect.html?${query}`);
