@@ -34,12 +34,15 @@ export async function handler(event) {
     const me = await graph('/me', { fields: 'user_id,username,account_type', access_token: accessToken });
     const subscribed = await graph('/me/subscribed_apps', { access_token: accessToken });
     const conversations = await graph('/me/conversations', { platform: 'instagram', fields: 'updated_time,messages.limit(3){from,created_time,message}', limit: '3', access_token: accessToken });
-    const dm = await first(`/rest/v1/automation_channel_connections?business_id=eq.${business.id}&channel_type=eq.instagram_dm&select=status&limit=1`);
-    const lastEvent = await first(`/rest/v1/automation_webhook_events?provider=eq.meta&event_type=eq.instagram_message&select=status,last_error,created_at&order=created_at.desc&limit=1`);
+    // Each lookup is independent so one failure never hides the rest of the report.
+    const safe = promise => promise.catch(error => ({ lookup_failed: error?.message || 'error' }));
+    const dm = await safe(first(`/rest/v1/automation_channel_connections?business_id=eq.${business.id}&channel_type=eq.instagram_dm&select=status,connected_account_label&limit=1`));
+    const lastEvent = await safe(first(`/rest/v1/automation_webhook_events?provider=eq.meta&event_type=eq.instagram_message&select=status,last_error,received_at&order=received_at.desc&limit=1`));
     return json(200, {
       connected: true,
       hansora_account_id: account.provider_resource_id,
-      instagram_dm_channel_status: dm?.status || 'missing',
+      instagram_dm_channel: dm || 'missing',
+      hansora_account_username: account.safe_config?.username || null,
       meta_profile: me.ok ? me.data : me,
       webhook_subscription: subscribed.ok ? subscribed.data : subscribed,
       latest_conversations: conversations.ok ? (conversations.data?.data || []).map(conversation => ({
