@@ -97,12 +97,14 @@ a.ui-card:hover,button.ui-card:hover{border-color:var(--border-2);transform:tran
 /* Forms */
 .ui-field{display:grid;gap:6px}
 .ui-label{color:var(--text-2);font-size:13px;font-weight:500}
+.ui-required{margin-left:4px;color:var(--red);font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 .ui-hint{color:var(--text-3);font-size:12px}
 .ui-input,.ui-select,.ui-textarea{width:100%;min-height:38px;padding:9px 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-soft);color:var(--text);font-size:14px;transition:border-color .15s,box-shadow .15s,background .15s}
 .ui-textarea{resize:vertical;line-height:1.5}
 .ui-input::placeholder,.ui-textarea::placeholder{color:var(--text-3)}
 .ui-input:hover,.ui-select:hover,.ui-textarea:hover{border-color:var(--border-3)}
 .ui-input:focus,.ui-select:focus,.ui-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--surface)}
+.ui-input[aria-invalid=true],.ui-select[aria-invalid=true],.ui-textarea[aria-invalid=true]{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
 .ui-select{appearance:none;padding-right:34px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23a3a6ad' stroke-width='1.6' viewBox='0 0 12 12'%3E%3Cpath d='m3 4.5 3 3 3-3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
 
 /* Switch — works on any checkbox */

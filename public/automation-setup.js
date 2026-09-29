@@ -48,7 +48,11 @@
   backButton.addEventListener('click', () => showStep(Math.max(0, currentStep - 1)));
   progress.forEach((item, index) => item.addEventListener('click', () => { if (index < currentStep) showStep(index); }));
   form.addEventListener('submit', save);
-  form.addEventListener('input', () => { saveState.textContent = 'Unsaved changes'; saveState.classList.remove('error'); });
+  form.addEventListener('input', event => {
+    saveState.textContent = 'Unsaved changes';
+    saveState.classList.remove('error');
+    if (event.target.matches('input,textarea,select')) event.target.removeAttribute('aria-invalid');
+  });
 
   function showStep(index) {
     currentStep = index;
@@ -65,7 +69,8 @@
     const visible = steps[index];
     const required = [...visible.querySelectorAll('[required]')];
     for (const input of required) {
-      if (!input.checkValidity()) { input.reportValidity(); return false; }
+      if (!String(input.value || '').trim()) return fieldError(input, requiredMessage(input));
+      if (!input.checkValidity()) return fieldError(input, input.type === 'email' ? 'Enter a valid business email address.' : 'Check this field and try again.');
     }
     if (index === 2) {
       const selected = selectedLanguages();
@@ -101,7 +106,9 @@
 
   async function save(event) {
     event.preventDefault();
-    if (!validateStep(2)) { showStep(2); return; }
+    for (const stepIndex of [0, 2]) {
+      if (!validateStep(stepIndex)) { showStep(stepIndex); validateStep(stepIndex); return; }
+    }
     const data = new FormData(form);
     saveButton.disabled = true;
     saveState.textContent = 'Saving…';
@@ -160,8 +167,10 @@
     });
     if (result.error) {
       saveButton.disabled = false;
-      saveState.textContent = api.displayError(result.error);
+      const message = api.displayError(result.error);
+      saveState.textContent = 'Not saved';
       saveState.classList.add('error');
+      inlineError(message);
       return;
     }
     if (!businessId) await api.db.from('automation_businesses').update({ timezone: api.browserTimezone() }).eq('id', result.data);
@@ -211,6 +220,22 @@
       automation_agents: [{display_name:'Luma Assistant',primary_language:'en',supported_languages:['en','es','ru'],tone:'friendly',custom_instructions:'Be warm, concise and accurate.',prohibited_instructions:'Never invent a price.',status:'draft'}],
       automation_business_knowledge: [{services_and_prices:'Kitchen measurement — $25',opening_hours:'Monday–Saturday: 10:00–19:00',delivery_and_service_areas:'The city and nearby areas',frequently_asked_questions:'Do you offer warranty? | Yes, for 12 months.',policies:'Confirm availability before promising a date.'}]
     };
+  }
+
+  function requiredMessage(input) {
+    return ({
+      business_name: 'Enter your business name.',
+      display_name: 'Give your AI employee a name.',
+      description: 'Briefly describe what your business does.'
+    })[input.name] || 'Complete this required field.';
+  }
+
+  function fieldError(input, message) {
+    input.setAttribute('aria-invalid', 'true');
+    inlineError(message);
+    input.focus({preventScroll:true});
+    input.scrollIntoView({behavior:'smooth',block:'center'});
+    return false;
   }
 
   function inlineError(message) { errorBox.textContent = message; errorBox.hidden = false; errorBox.scrollIntoView({behavior:'smooth',block:'center'}); return false; }
