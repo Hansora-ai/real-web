@@ -39,14 +39,22 @@
           </div>
         </div>
         <div class="ui-step" data-step="1" hidden>
-          <div class="ui-step-head"><h2>What customers ask about</h2><p>The AI only uses these facts, so it never invents a price. One item per line.</p></div>
+          <div class="ui-step-head"><h2>What customers ask about</h2><p>The AI only uses what you give it, so it never invents a price. Upload files, paste one text, fill the sections below, or combine them. Everything here is optional.</p></div>
           <div class="ui-form-grid">
-            <div class="ui-field full"><label class="ui-label" for="services">Products, services and prices</label><textarea class="ui-textarea" id="services" name="services" rows="4" maxlength="12000" placeholder="Kitchen measurement — $25&#10;Custom cabinet — price after measurement"></textarea></div>
+            <div class="ui-field full ui-kupload">
+              <span class="ui-label">Files and full business information <span class="ui-faint">· optional</span></span>
+              <p class="ui-hint">Best for large information: the AI looks up only what each question needs, so it stays fast.</p>
+              <div class="ui-kfiles-add"><label class="ui-btn secondary sm ui-kfiles-upload"><input id="setup-files" type="file" accept=".pdf,.docx,.txt,.md,.html,.htm,.epub" multiple hidden>Upload files</label><span class="ui-faint" style="font-size:12px">PDF, Word, TXT, Markdown, HTML or EPUB · up to 4 MB each</span></div>
+              <div id="setup-files-list" class="ui-kfiles-list"></div>
+              <label class="ui-label" for="general-info" style="margin-top:6px">Paste all your business information <span class="ui-faint">· optional</span></label>
+              <textarea class="ui-textarea" id="general-info" rows="6" maxlength="300000" placeholder="Paste everything in one place: products, prices, hours, delivery, questions and answers, rules…"></textarea>
+            </div>
+            <div class="ui-field full"><label class="ui-label" for="services">Products, services and prices <span class="ui-faint">· optional</span></label><textarea class="ui-textarea" id="services" name="services" rows="4" maxlength="12000" placeholder="Kitchen measurement — $25&#10;Custom cabinet — price after measurement"></textarea></div>
             <div class="ui-field"><label class="ui-label" for="hours">Opening hours <span class="ui-faint">· optional</span></label><textarea class="ui-textarea" id="hours" name="hours" rows="3" maxlength="4000" placeholder="Monday–Saturday: 10:00–19:00"></textarea></div>
             <div class="ui-field"><label class="ui-label" for="delivery">Delivery or service areas <span class="ui-faint">· optional</span></label><textarea class="ui-textarea" id="delivery" name="delivery" rows="3" maxlength="4000" placeholder="City delivery: $10 · Free over $200"></textarea></div>
             <div class="ui-field full"><span class="ui-hint">Online businesses can leave opening hours and delivery/service areas empty.</span></div>
-            <div class="ui-field full"><label class="ui-label" for="faq">Questions and answers</label><textarea class="ui-textarea" id="faq" name="faq" rows="3" maxlength="8000" placeholder="Do you offer warranty? | Yes, for 12 months."></textarea><span class="ui-hint">Write question | answer on each line.</span></div>
-            <div class="ui-field full"><label class="ui-label" for="policies">Rules and policies</label><textarea class="ui-textarea" id="policies" name="policies" rows="3" maxlength="8000" placeholder="Orders can be changed within 24 hours."></textarea></div>
+            <div class="ui-field full"><label class="ui-label" for="faq">Questions and answers <span class="ui-faint">· optional</span></label><textarea class="ui-textarea" id="faq" name="faq" rows="3" maxlength="8000" placeholder="Do you offer warranty? | Yes, for 12 months."></textarea><span class="ui-hint">Write question | answer on each line.</span></div>
+            <div class="ui-field full"><label class="ui-label" for="policies">Rules and policies <span class="ui-faint">· optional</span></label><textarea class="ui-textarea" id="policies" name="policies" rows="3" maxlength="8000" placeholder="Orders can be changed within 24 hours."></textarea></div>
           </div>
         </div>
         <div class="ui-step" data-step="2" hidden>

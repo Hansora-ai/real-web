@@ -14,6 +14,7 @@ const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/
 export async function handler(event){
   if(event.httpMethod!=='POST')return json(405,{error:'method_not_allowed'});
   if(!internalAuthorized(event))return json(401,{error:'unauthorized'});
+  const startedAt=Date.now();
   let eventId='';
   try{
     const body=JSON.parse(event.body||'{}');eventId=String(body.event_id||'');
@@ -67,23 +68,31 @@ export async function handler(event){
       }
     }
 
-    const aiResource=await first(`/rest/v1/automation_provider_resources?business_id=eq.${account.business_id}&provider=eq.elevenlabs&resource_type=eq.agent&status=eq.active&select=*&limit=1`);
+    // These lookups are independent reads, so they run together to answer faster.
+    const price=automationPrices().aiReply;
+    const [aiResource,affordable,actions,memory]=await Promise.all([
+      first(`/rest/v1/automation_provider_resources?business_id=eq.${account.business_id}&provider=eq.elevenlabs&resource_type=eq.agent&status=eq.active&select=*&limit=1`),
+      canAfford(account.business_id,price),
+      prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'instagram_dm',contact:{name:contact.display_name==='Instagram customer'?'':contact.display_name,externalId:message.senderId}}),
+      loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id})
+    ]);
     if(!aiResource)throw new Error('ai_provider_agent_not_ready');
     // Pay as you go: no credits, no AI reply. The conversation goes to the owner instead.
-    const price=automationPrices().aiReply;
-    const affordable=await canAfford(account.business_id,price);
     if(!affordable.ok){await handleOutOfCredits({businessId:account.business_id,conversationId:conversation.id,channel:'Instagram DM',customer:contact.display_name,notifyOwner});await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,out_of_credits:true});}
 
-    const actions=await prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'instagram_dm',contact:{name:contact.display_name==='Instagram customer'?'':contact.display_name,externalId:message.senderId}});
-    const memory=await loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id});
     const context=buildConversationContext({intro:['Continue this Instagram conversation. Do not greet again unless the customer greeted first.',actions.contextLine,flowInstruction?`Flow instruction: ${flowInstruction}`:''].filter(Boolean),memory});
+    const aiStartedAt=Date.now();
     const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'instagram_dm',onToolCall:actions.onToolCall});
+    const aiMs=Date.now()-aiStartedAt;
     const handedOff=generated.toolCalls?.some(call=>call.name==='handoff_to_human'&&call.ok);
+    // The chosen reply speed counts from when the message arrived, so the AI's own thinking time is included.
     const replyDelay=Math.min(30,Math.max(0,Number(settings.reply_delay)||0));
-    if(replyDelay)await new Promise(resolve=>setTimeout(resolve,replyDelay*1000));
+    const waitMs=replyDelay*1000-(Date.now()-startedAt);
+    if(waitMs>0)await new Promise(resolve=>setTimeout(resolve,waitMs));
     const currentConversation=await first(`/rest/v1/automation_conversations?id=eq.${conversation.id}&select=ai_enabled,status&limit=1`);
     if(!handedOff&&(!currentConversation?.ai_enabled||['human_handling','resolved','archived'].includes(currentConversation.status))){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
     const sent=await sendInstagramText({instagramUserId:account.provider_resource_id,recipientId:message.senderId,text:generated.text,accessToken:decryptSecret(credential)});
+    console.log('automation reply timing',{channel:'instagram_dm',ai_ms:aiMs,to_send_ms:Date.now()-startedAt,chosen_delay_s:replyDelay});
     const outbound=await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:String(sent.message_id||''),idempotency_key:`meta:instagram:out:${message.externalEventId}`,direction:'outbound',sender_type:'ai',content_type:'text',content:generated.text,status:'sent',billable:true,provider:'meta',model:'eleven-agents',provider_message_id:String(sent.message_id||''),metadata:{recipient_id:message.senderId,elevenlabs_conversation_id:generated.conversationId||null},occurred_at:new Date().toISOString()},{ignoreDuplicates:true});
     // Charge only now that the reply was actually sent; the usage key doubles as the charge key.
     const charge=outbound?await chargeCredits({businessId:account.business_id,idempotencyKey:`usage:instagram:${message.externalEventId}`,kind:'ai_reply',credits:price,conversationId:conversation.id,reference:{channel:'instagram_dm',message_id:outbound.id}}).catch(error=>{console.error('automation credit charge failed',{message:error?.message});return{ok:false,charged:0}}):null;
