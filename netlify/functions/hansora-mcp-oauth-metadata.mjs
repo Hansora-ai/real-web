@@ -16,4 +16,6 @@ export default async function oauthMetadata(request) {
   }, { headers: { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'public, max-age=3600' } });
 }
 
-export const config = { path: '/.well-known/oauth-protected-resource/mcp' };
+export const config = {
+  path: ['/.well-known/oauth-protected-resource/mcp', '/.well-known/oauth-protected-resource']
+};

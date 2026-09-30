@@ -655,11 +655,12 @@ export default async function hansoraMcp(request) {
       requestId,
       method: request.method,
       protocolVersion,
+      tokenProvided: Boolean(token),
       authenticated: false,
       status: 401,
       durationMs: Date.now() - startedAt
     }));
-    return authenticationRequired();
+    return withCors(authenticationRequired());
   }
   const authInfo = { token, clientId: user.clientId, scopes: user.scopes, extra: { userId: user.id, email: user.email } };
   const response = withCors(await handler.fetch(request, { authInfo }));
