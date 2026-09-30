@@ -189,7 +189,7 @@
   }
   async function takeOver() { const conversation = current(); conversation.aiActive = false; conversation.human = true; if (!api.isLocalPreview) { const result=await api.db.from('automation_conversations').update({ai_enabled:false,status:'human_handling'}).eq('id',conversation.id).eq('business_id',businessId); if(result.error)return showError(api.displayError(result.error)); } renderConversation(); renderList(); document.querySelector('#human-message').focus(); }
   function setComposerState() {
-    const enabled = current().human && !current().resolved;
+    const enabled = current().human && !current().resolved && !instagramClosed();
     const useTemplate = templateMode();
     renderWindow();
     document.querySelector('#human-message').hidden = useTemplate;
@@ -199,23 +199,25 @@
     document.querySelector('#template-select').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').textContent = useTemplate ? 'Send template' : 'Send';
-    document.querySelector('#composer-help').textContent = !enabled ? 'The AI is replying. Take over to write yourself.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
+    document.querySelector('#composer-help').textContent = instagramClosed() ? 'Instagram’s 24-hour window has closed. You can reply after the customer writes again.' : !enabled ? 'The AI is replying. Take over to write yourself.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
     document.querySelector('#take-over').hidden = current().resolved;
     document.querySelector('#take-over').textContent = current().human ? 'Give back to AI' : 'Take over';
   }
   // WhatsApp only allows free-form replies within 24 hours of the customer's last message; after that, approved templates.
   function windowRemaining(conversation) {
-    if (!conversation || conversation.channelType !== 'whatsapp' || api.isLocalPreview) return null;
+    // WhatsApp and Instagram both allow replies only within 24 hours of the customer's last message.
+    if (!conversation || !['whatsapp','instagram_dm'].includes(conversation.channelType) || api.isLocalPreview) return null;
     return conversation.lastCustomerAt ? 24 * 60 * 60 * 1000 - (Date.now() - conversation.lastCustomerAt) : 0;
   }
-  function templateMode() { const remaining = windowRemaining(current()); return remaining !== null && remaining <= 0; }
+  function templateMode() { const remaining = windowRemaining(current()); return current()?.channelType === 'whatsapp' && remaining !== null && remaining <= 0; }
+  function instagramClosed() { const remaining = windowRemaining(current()); return current()?.channelType === 'instagram_dm' && remaining !== null && remaining <= 0; }
   function renderWindow() {
     const box = document.querySelector('#wa-window'); const remaining = windowRemaining(current());
     box.hidden = remaining === null; if (remaining === null) return;
-    if (remaining <= 0) { box.className = 'wa-window closed'; box.textContent = '24-hour window closed · only approved templates can be sent'; return; }
+    if (remaining <= 0) { box.className = 'wa-window closed'; box.textContent = current().channelType === 'instagram_dm' ? '24-hour window closed · Instagram allows a reply again after the customer writes' : '24-hour window closed · only approved templates can be sent'; return; }
     const hours = Math.floor(remaining / 3600000); const minutes = Math.max(1, Math.floor(remaining % 3600000 / 60000));
     box.className = `wa-window${remaining < 3 * 3600000 ? ' closing' : ''}`;
-    box.textContent = `Free-form replies allowed for ${hours ? `${hours}h ` : ''}${minutes}m more`;
+    box.textContent = `${current().channelType === 'instagram_dm' ? 'Replies allowed' : 'Free-form replies allowed'} for ${hours ? `${hours}h ` : ''}${minutes}m more`;
   }
   let templates = null; let templatesLoading = false;
   async function loadTemplates(force = false) {
