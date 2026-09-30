@@ -89,7 +89,16 @@
     let record;
     if (preview) record = {id:`local-${Date.now()}`,kind,customer,title,channel:'Manual',owner:'Unassigned',status:'new',value,currency,when:start ? formatWhen(start.toISOString()) : 'Just now',summary:`Manually created ${kind} for ${customer}.`,fields:[['Created by','Your team'],['Phone',phone || '—']],conversationId:null};
     else {
-      const result = await api.db.from('automation_outcomes').insert({business_id:businessId,outcome_type:kind,title,customer_name:customer,customer_phone:phone,estimated_value_minor:Math.round(value * 100),currency,scheduled_start:start?.toISOString() || null,scheduled_end:end?.toISOString() || null,conversation_id:/^[0-9a-f-]{36}$/i.test(params.get('conversation') || '') ? params.get('conversation') : null,created_by:'human',status:kind === 'booking' ? 'confirmed' : 'new',summary:`Created manually for ${customer}.`,collected_fields:{Customer:customer,Phone:phone || '—'}}).select('*, automation_conversations(channel_type)').single();
+      // Bookings take the first free place (table, staff member…); the database refuses a taken place.
+      const row = {business_id:businessId,outcome_type:kind,title,customer_name:customer,customer_phone:phone,estimated_value_minor:Math.round(value * 100),currency,scheduled_start:start?.toISOString() || null,scheduled_end:end?.toISOString() || null,conversation_id:/^[0-9a-f-]{36}$/i.test(params.get('conversation') || '') ? params.get('conversation') : null,created_by:'human',status:kind === 'booking' ? 'confirmed' : 'new',summary:`Created manually for ${customer}.`,collected_fields:{Customer:customer,Phone:phone || '—'}};
+      const places = kind === 'booking' ? await bookingPlaces() : 1;
+      let result;
+      for (let place = 0; place < places; place++) {
+        result = await api.db.from('automation_outcomes').insert(places > 1 ? {...row, slot_index:place} : row).select('*, automation_conversations(channel_type), automation_contacts(display_name,primary_phone,profile,channel_type)').single();
+        // Database not updated for places yet (SQL file 8): save as before.
+        if (places > 1 && /slot_index/.test(String(result.error?.message || ''))) { result = await api.db.from('automation_outcomes').insert(row).select('*, automation_conversations(channel_type), automation_contacts(display_name,primary_phone,profile,channel_type)').single(); break; }
+        if (result.error?.code !== '23P01') break;
+      }
       if (result.error) return alert(result.error.code === '23P01' ? 'That time overlaps another booking.' : api.displayError(result.error));
       record = mapRecord(result.data);
     }
@@ -100,6 +109,10 @@
     const result = await api.db.from('automation_outcomes').select('*, automation_conversations(channel_type), automation_contacts(display_name,primary_phone,profile,channel_type)').eq('business_id', businessId).order('created_at', {ascending:false}).limit(300);
     if (result.error) throw result.error;
     return (result.data || []).map(mapRecord);
+  }
+  async function bookingPlaces() {
+    const result = await api.db.from('automation_tool_configs').select('config').eq('business_id', businessId).eq('tool_type', 'calendar').maybeSingle();
+    return Math.min(500, Math.max(1, Number(result.data?.config?.capacity) || 1));
   }
   function mapRecord(row) {
     const conversation = Array.isArray(row.automation_conversations) ? row.automation_conversations[0] : row.automation_conversations;

@@ -107,6 +107,7 @@
   // Names follow the business type: "Table reservations" for a restaurant, "Appointments" for a clinic…
   function applyTypeNames(type) {
     if (!type || type.code === 'other') return;
+    $('#capacity-label').textContent = `${type.places} at the same time`;
     const nav = tool => document.querySelector(`[data-tool="${tool}"] b`);
     const head = tool => document.querySelector(`[data-pane="${tool}"] .ui-pane-head h2`);
     if (nav('calendar')) nav('calendar').textContent = type.booking;
@@ -156,6 +157,7 @@
     const zones = TIMEZONES.includes(c.timezone) ? TIMEZONES : [c.timezone, ...TIMEZONES];
     $('#booking-timezone').innerHTML = zones.map(zone => `<option value="${escapeHtml(zone)}">${escapeHtml(zone.replace(/_/g,' '))}</option>`).join('');
     $('#booking-timezone').value = c.timezone;
+    $('#booking-capacity').value = String(Math.min(500, Math.max(1, Number(c.capacity) || 1)));
     $('#booking-auto-confirm').checked = Boolean(c.auto_confirm);
     $('#orders-auto-confirm').checked = Boolean(state.orders.config.auto_confirm);
     $('#order-confirmation').value = state.orders.config.confirmation_message || '';
@@ -251,6 +253,7 @@
     state.orders.enabled = $('#orders-enabled').checked;
     state.orders.config = { required_fields: state.orders.config.required_fields.filter(Boolean), auto_confirm:$('#orders-auto-confirm').checked, confirmation_message:$('#order-confirmation').value.trim().slice(0, 1000), instructions:$('#order-instructions').value.trim().slice(0, 3000) };
     c.instructions = $('#booking-instructions').value.trim().slice(0, 3000);
+    c.capacity = Math.min(500, Math.max(1, Math.round(Number($('#booking-capacity').value)) || 1));
     state.leads.enabled = $('#leads-enabled').checked;
     state.leads.config = { signals: $('#lead-signals').value.trim().slice(0, 800) };
     state.handoff.config = { rules: Object.fromEntries([...document.querySelectorAll('#handoff-rules input[data-rule]')].map(input => [input.dataset.rule, input.checked])) };
