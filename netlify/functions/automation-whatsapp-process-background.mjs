@@ -64,7 +64,7 @@ export async function handler(event){
     const mediaNote=message.contentType&&!['text','interactive'].includes(message.contentType)?'The latest customer message is a photo, video, voice note, file or location that you cannot open. Do not pretend to know its contents; use any caption, otherwise politely ask the customer to describe it in text, or offer a team member if it needs a human to review.':'';
     const context=buildConversationContext({intro:['Continue this WhatsApp conversation. Keep the reply concise.',actions.contextLine,mediaNote].filter(Boolean),memory,after:[actions.liveBrief]});
     const aiStartedAt=Date.now();const preparedMs=aiStartedAt-startedAt;
-    const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'whatsapp',onToolCall:actions.onToolCall});
+    const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'whatsapp',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes});
     const aiMs=Date.now()-aiStartedAt;
     if(generated.toolCalls?.length)console.log('automation tool calls',{channel:'whatsapp',calls:generated.toolCalls});
     const handedOff=generated.toolCalls?.some(call=>call.name==='handoff_to_human'&&call.ok);
