@@ -30,10 +30,14 @@
       <div class="ui-records" style="margin-top:16px">
         <section class="ui-card ui-records-list">
           <div class="ui-records-toolbar">
-            <div class="ui-filter-pills" id="operations-tabs"><button class="active" data-kind="all" type="button">All</button><button data-kind="order" type="button">Orders</button><button data-kind="booking" type="button">Bookings</button><button data-kind="lead" type="button">Leads</button></div>
+            <div class="ui-filter-pills" id="operations-tabs"><button class="active" data-kind="all" type="button">All</button><button data-kind="order" type="button">Orders</button><button data-kind="booking" type="button">Bookings</button><button data-kind="lead" type="button">Leads</button><button data-kind="day" type="button">Day view</button></div>
             <div class="ui-records-tools"><select class="ui-select sm" id="status-filter" aria-label="Status"><option value="all">Any status</option><option value="new">New</option><option value="in_progress">In progress</option><option value="waiting">Waiting</option><option value="confirmed">Confirmed</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select><label class="ui-search"><span class="sr-only">Search</span><span data-icon="search"></span><input id="operations-search" type="search" placeholder="Search"></label></div>
           </div>
           <div id="records-list" class="ui-records-rows"></div>
+          <div id="day-view" class="day-view" hidden>
+            <div class="day-view-bar"><button class="ui-btn ghost sm" id="day-prev" type="button" aria-label="Previous day">◀</button><input class="ui-input" id="day-date" type="date" aria-label="Day"><button class="ui-btn ghost sm" id="day-next" type="button" aria-label="Next day">▶</button><span class="ui-faint" id="day-summary"></span></div>
+            <div id="day-slots" class="day-slots"></div>
+          </div>
         </section>
         <aside class="ui-card ui-record-detail" id="record-detail">
           <div class="ui-empty" id="detail-empty"><span data-icon="bag" style="width:28px;height:28px;display:grid"></span>Select a record to see the details.</div>

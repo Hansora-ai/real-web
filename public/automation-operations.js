@@ -39,10 +39,54 @@
     $('#record-dialog').showModal();
   }
 
+  // Day view: every time of one day with taken and free places (tables, staff…), from the same calculation the AI uses.
+  const pad = number => String(number).padStart(2, '0');
+  const isoDay = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  $('#day-date').value = isoDay(new Date());
+  const shiftDay = days => { const date = new Date(`${$('#day-date').value || isoDay(new Date())}T12:00:00`); date.setDate(date.getDate() + days); $('#day-date').value = isoDay(date); loadDay(); };
+  $('#day-prev').addEventListener('click', () => shiftDay(-1));
+  $('#day-next').addEventListener('click', () => shiftDay(1));
+  $('#day-date').addEventListener('change', loadDay);
+  $('#day-slots').addEventListener('click', event => {
+    const link = event.target.closest('[data-open-record]'); if (!link) return;
+    showDayView(false); selectedId = link.dataset.openRecord; render();
+  });
+  function showDayView(on) {
+    $('#day-view').hidden = !on; $('#records-list').hidden = on; $('.ui-records-tools').hidden = on;
+    document.querySelectorAll('#operations-tabs button').forEach(item => item.classList.toggle('active', on ? item.dataset.kind === 'day' : item.dataset.kind === activeKind));
+    if (on) loadDay();
+  }
+  async function loadDay() {
+    const date = $('#day-date').value; if (!date) return;
+    $('#day-slots').innerHTML = '<div class="ui-empty">Loading…</div>';
+    try {
+      const data = preview ? previewDay(date) : await api.authenticatedFetch('/.netlify/functions/automation-day-view', {method:'POST', body:JSON.stringify({business_id:businessId, date})}).then(async response => { const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(result.error || 'day_view_unavailable'); return result; });
+      renderDay(data);
+    } catch (error) { $('#day-slots').innerHTML = `<div class="ui-empty">${escapeHtml(api.displayError(error))}</div>`; }
+  }
+  function renderDay(data) {
+    const booked = data.slots.reduce((sum, slot) => sum + slot.bookings.length, 0);
+    const unique = new Set(data.slots.flatMap(slot => slot.bookings.map(item => item.id)));
+    $('#day-summary').textContent = data.slots.length ? `${unique.size} booking${unique.size === 1 ? '' : 's'} · ${data.capacity} place${data.capacity === 1 ? '' : 's'} at the same time${data.enabled ? '' : ' · bookings are off'}` : '';
+    if (!data.slots.length) { $('#day-slots').innerHTML = '<div class="ui-empty">Closed on this day, or no working hours are set.</div>'; return; }
+    $('#day-slots').innerHTML = data.slots.map(slot => {
+      const free = Math.max(0, slot.capacity - slot.booked);
+      const dots = slot.capacity <= 12 ? `<span class="day-dots">${Array.from({length: slot.capacity}, (_, index) => `<i class="${index < slot.booked ? 'taken' : ''}"></i>`).join('')}</span>` : `<span class="day-bar"><i style="width:${Math.round(slot.booked / slot.capacity * 100)}%"></i></span>`;
+      const state = slot.blocked ? 'Closed in your calendar' : free === 0 ? 'Full' : slot.capacity === 1 ? 'Free' : `${slot.booked} of ${slot.capacity} booked · ${free} free`;
+      const names = slot.bookings.map(item => `<button type="button" class="day-booking" data-open-record="${escapeHtml(item.id)}">${escapeHtml(item.customer)}${item.reference ? ` #${escapeHtml(item.reference)}` : ''}</button>`).join('');
+      return `<div class="day-slot${free === 0 ? ' full' : ''}"><strong>${escapeHtml(slot.time)}</strong>${dots}<span class="day-state">${escapeHtml(state)}</span><span class="day-names">${names}</span></div>`;
+    }).join('');
+  }
+  function previewDay(date) {
+    const times = ['18:00','18:30','19:00','19:30','20:00'];
+    return { enabled:true, capacity:5, date, slots: times.map((time, index) => ({ time, capacity:5, booked:[5,4,2,1,0][index], blocked:false, bookings: Array.from({length:[5,4,2,1,0][index]}, (_, n) => ({ id:`p${index}${n}`, customer:['Anna','Carlos','Maria','Noah','Sam'][n], reference:1040 + index * 5 + n })) })) };
+  }
+
   $('#operations-tabs').addEventListener('click', event => {
     const button = event.target.closest('button[data-kind]'); if (!button) return;
+    if (button.dataset.kind === 'day') return showDayView(true);
     activeKind = button.dataset.kind;
-    document.querySelectorAll('#operations-tabs button').forEach(item => item.classList.toggle('active', item === button));
+    showDayView(false);
     renderList();
   });
   $('#status-filter').addEventListener('change', renderList);
