@@ -25,6 +25,8 @@
   };
   let pendingPhone = '';
   let dirty = false;
+  // Declared before loadSaved(): it runs first for a real account and already uses the type names.
+  let typeNames = { place:'Place', places:'Places', people:'People' };
 
   try { if (!preview) await loadSaved(); }
   catch (error) { return fail(api.displayError(error)); }
@@ -52,7 +54,6 @@
     if (shown) setSelect(RULES[name].select, value);
     renderRulesSummary();
   }
-  let typeNames = { place:'Place', places:'Places', people:'People' }; // set from the business type
   function ruleValue(name) { return ruleField(name).hidden ? RULES[name].off : Number($(RULES[name].select).value); }
   function renderRulesSummary() {
     const minutes = value => value >= 1440 && value % 1440 === 0 ? `${value / 1440} day${value === 1440 ? '' : 's'}` : value >= 60 && value % 60 === 0 ? `${value / 60} hour${value === 60 ? '' : 's'}` : `${value} minutes`;
