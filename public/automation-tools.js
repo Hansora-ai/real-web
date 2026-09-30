@@ -45,7 +45,8 @@
     step:{ select:'#booking-step', key:'step_minutes', off:30, suggest:30 },
     buffer:{ select:'#booking-buffer', key:'buffer_minutes', off:0, suggest:15 },
     notice:{ select:'#booking-notice', key:'min_notice_minutes', off:0, suggest:60 },
-    ahead:{ select:'#booking-ahead', key:'max_days_ahead', off:365, suggest:30 }
+    ahead:{ select:'#booking-ahead', key:'max_days_ahead', off:365, suggest:30 },
+    last:{ select:'#booking-last', key:'last_start_minutes', off:-1, suggest:30 } // off: a booking must end by closing
   };
   function ruleField(name) { return document.querySelector(`[data-booking-rule="${name}"]`); }
   function showRule(name, shown, value) {
@@ -54,11 +55,12 @@
     if (shown) setSelect(RULES[name].select, value);
     renderRulesSummary();
   }
-  function ruleValue(name) { return ruleField(name).hidden ? RULES[name].off : Number($(RULES[name].select).value); }
+  // Without the "Start times" rule, start times follow the booking length (1-hour bookings: 10:00, 11:00…).
+  function ruleValue(name) { return ruleField(name).hidden ? (name === 'step' ? ruleValue('duration') : RULES[name].off) : Number($(RULES[name].select).value); }
   function renderRulesSummary() {
     const minutes = value => value >= 1440 && value % 1440 === 0 ? `${value / 1440} day${value === 1440 ? '' : 's'}` : value >= 60 && value % 60 === 0 ? `${value / 60} hour${value === 60 ? '' : 's'}` : `${value} minutes`;
-    const notice = ruleValue('notice'), ahead = ruleValue('ahead'), buffer = ruleValue('buffer');
-    $('#rules-summary').textContent = `Bookings are ${minutes(ruleValue('duration'))} long and can start every ${minutes(ruleValue('step'))}, ${notice ? `at least ${minutes(notice)} ahead` : 'right up to the start time'}${buffer ? `, with a ${minutes(buffer)} break between` : ''}, up to ${ahead >= 365 ? 'a year' : minutes(ahead * 1440)} ahead. Services below can have their own length.`;
+    const notice = ruleValue('notice'), ahead = ruleValue('ahead'), buffer = ruleValue('buffer'), last = ruleValue('last');
+    $('#rules-summary').textContent = `Bookings are ${minutes(ruleValue('duration'))} long and can start every ${minutes(ruleValue('step'))}, ${notice ? `at least ${minutes(notice)} ahead` : 'right up to the start time'}${buffer ? `, with a ${minutes(buffer)} break between` : ''}, up to ${ahead >= 365 ? 'a year' : minutes(ahead * 1440)} ahead. ${last < 0 ? 'The last booking must end by closing time.' : `The last booking can start ${last ? `${minutes(last)} before closing` : 'right up to closing time'}.`} Services below can have their own length.`;
   }
   document.querySelectorAll('[data-add-rule]').forEach(button => button.addEventListener('click', () => { const name = button.dataset.addRule; showRule(name, true, RULES[name].suggest); markDirty(); $(RULES[name].select).focus(); }));
   document.querySelectorAll('[data-remove-rule]').forEach(button => button.addEventListener('click', () => { showRule(button.dataset.removeRule, false); markDirty(); }));
@@ -67,7 +69,6 @@
   updateSaveButton();
   showPreview('calendar');
   $('#tools-loading').hidden = true; $('#tools-app').hidden = false;
-  if (params.get('google') === 'connected') { showPane('calendar'); setState('Google Calendar connected'); }
   if (params.get('tab')) showPane(params.get('tab'));
 
   document.querySelector('.tools-nav').addEventListener('click', event => { const button = event.target.closest('button[data-tool]'); if (button) showPane(button.dataset.tool); });
@@ -149,9 +150,6 @@
   });
   $('#place-list').addEventListener('click', event => { const button = event.target.closest('[data-remove-place]'); if (!button) return; readPlaces(); state.calendar.config.places.splice(Number(button.dataset.removePlace), 1); renderPlaces(); markDirty(); });
   $('#save-tools').addEventListener('click', save);
-  $('#google-connect').addEventListener('click', connectGoogle);
-  $('#google-disconnect').addEventListener('click', disconnectGoogle);
-  $('#google-calendar').addEventListener('change', selectGoogleCalendar);
   $('#wa-phone-form').addEventListener('submit', sendCode);
   $('#wa-code-form').addEventListener('submit', verifyCode);
   $('#wa-change').addEventListener('click', () => { pendingPhone = ''; renderNotifications(); $('#wa-phone').focus(); });
@@ -197,15 +195,8 @@
     if (!(tools.data || []).some(row => row.tool_type === 'calendar' && row.config?.timezone) && business.data.timezone) state.calendar.config.timezone = business.data.timezone;
     const n = notifications.data;
     if (n) Object.assign(state.notifications, { whatsapp_enabled:n.whatsapp_enabled, whatsapp_phone:n.whatsapp_phone, whatsapp_verified:Boolean(n.whatsapp_verified_at), email_enabled:n.email_enabled, email:n.email || '', events:n.events || [], language:n.language || 'en' });
-    await loadGoogle().catch(() => {});
   }
 
-  async function loadGoogle(action = 'list', extra = {}) {
-    const response = await api.authenticatedFetch('/.netlify/functions/automation-google-calendars', {method:'POST', body:JSON.stringify({business_id:businessId, action, ...extra})});
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error === 'google_reconnect_required' ? 'Google Calendar access expired. Connect Google again.' : result.error || 'google_calendars_unavailable');
-    state.google = { connected:Boolean(result.connected), calendars:result.calendars || [], selected:result.selected || 'primary' };
-  }
 
   function render() {
     const c = state.calendar.config;
@@ -213,7 +204,12 @@
     $('#orders-enabled').checked = state.orders.enabled;
     $('#leads-enabled').checked = state.leads.enabled;
     // A saved value that differs from the neutral default shows as an added rule.
-    Object.entries(RULES).forEach(([name, rule]) => { const value = Number(c[rule.key] ?? rule.off); showRule(name, value !== rule.off, value); });
+    Object.entries(RULES).forEach(([name, rule]) => {
+      const value = Number(c[rule.key] ?? rule.off);
+      // Start times: shown when the owner added the rule (older saves: when it differs from the old 30-minute default).
+      const shown = name === 'step' ? (c.step_set === true || (c.step_set == null && c.step_minutes != null && value !== 30 && value !== Number(c.duration_minutes ?? 60))) : value !== rule.off;
+      showRule(name, shown, value);
+    });
     const zones = TIMEZONES.includes(c.timezone) ? TIMEZONES : [c.timezone, ...TIMEZONES];
     $('#booking-timezone').innerHTML = zones.map(zone => `<option value="${escapeHtml(zone)}">${escapeHtml(zone.replace(/_/g,' '))}</option>`).join('');
     $('#booking-timezone').value = c.timezone;
@@ -235,7 +231,7 @@
     $('#lead-signals').value = state.leads.config.signals || '';
     renderLeadQuestions();
     document.querySelectorAll('#handoff-rules input[data-rule]').forEach(input => { if (!input.disabled) input.checked = Boolean(state.handoff.config.rules?.[input.dataset.rule]); });
-    renderWeek(); renderServices(); renderClosedDates(); renderOrderFields(); renderGoogle(); renderNotifications(); renderStatuses();
+    renderWeek(); renderServices(); renderClosedDates(); renderOrderFields(); renderNotifications(); renderStatuses();
   }
 
   function setSelect(selector, value) {
@@ -282,14 +278,6 @@
   }
   function readOrderFields() { state.orders.config.required_fields = [...document.querySelectorAll('#order-fields input')].map(input => input.value.trim()); }
 
-  function renderGoogle() {
-    const g = state.google;
-    $('#google-connected').hidden = !g.connected;
-    $('#google-connect').hidden = g.connected;
-    $('#google-title').textContent = g.connected ? 'Google Calendar connected' : 'Google Calendar sync';
-    $('#google-copy').textContent = g.connected ? 'Busy times in this calendar block booking slots, and new bookings are added to it.' : 'Optional. Busy times in Google are respected and new bookings are added there.';
-    $('#google-calendar').innerHTML = g.calendars.map(calendar => `<option value="${escapeHtml(calendar.id)}"${(calendar.primary && g.selected === 'primary') || calendar.id === g.selected ? ' selected' : ''}>${escapeHtml(calendar.name)}${calendar.primary ? ' (main)' : ''}</option>`).join('');
-  }
 
   function renderNotifications() {
     const n = state.notifications;
@@ -317,7 +305,7 @@
   function collect() {
     readWeek(); readServices(); readOrderFields();
     const c = state.calendar.config;
-    Object.assign(c, { timezone:$('#booking-timezone').value, duration_minutes:ruleValue('duration'), step_minutes:ruleValue('step'), buffer_minutes:ruleValue('buffer'), min_notice_minutes:ruleValue('notice'), max_days_ahead:ruleValue('ahead'), auto_confirm:$('#booking-auto-confirm').checked });
+    Object.assign(c, { timezone:$('#booking-timezone').value, duration_minutes:ruleValue('duration'), step_minutes:ruleValue('step'), buffer_minutes:ruleValue('buffer'), min_notice_minutes:ruleValue('notice'), max_days_ahead:ruleValue('ahead'), last_start_minutes:ruleValue('last'), step_set:!ruleField('step').hidden, auto_confirm:$('#booking-auto-confirm').checked });
     c.services = c.services.filter(service => service.name);
     state.calendar.enabled = $('#calendar-enabled').checked;
     state.orders.enabled = $('#orders-enabled').checked;
@@ -373,26 +361,6 @@
     finally { window.HansoraUI.busy(false); button.disabled = false; button.textContent = 'Save changes'; button.classList.remove('is-busy'); updateSaveButton(); }
   }
 
-  async function connectGoogle() {
-    if (preview) return showError('Google Calendar can be connected after signing in.');
-    if (dirty) { await save(); if (dirty) return; }
-    const button = $('#google-connect'); button.disabled = true;
-    try {
-      const response = await api.authenticatedFetch('/.netlify/functions/automation-google-start', {method:'POST', body:JSON.stringify({business_id:businessId})});
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result.authorization_url) throw new Error(result.error || 'google_connection_unavailable');
-      location.href = result.authorization_url;
-    } catch (error) { button.disabled = false; showError(api.displayError(error)); }
-  }
-  async function selectGoogleCalendar(event) {
-    try { await loadGoogle('select', {calendar_id:event.target.value}); renderGoogle(); window.HansoraUI.toast('Calendar updated'); }
-    catch (error) { showError(api.displayError(error)); }
-  }
-  async function disconnectGoogle() {
-    if (!confirm('Disconnect Google Calendar? Existing bookings stay in Hansora.')) return;
-    try { await loadGoogle('disconnect'); renderGoogle(); setState('Google Calendar disconnected'); }
-    catch (error) { showError(api.displayError(error)); }
-  }
 
   async function notificationsCall(payload) {
     const response = await api.authenticatedFetch('/.netlify/functions/automation-notifications', {method:'POST', body:JSON.stringify({business_id:businessId, ...payload})});

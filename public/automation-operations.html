@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-operations.js?v=20260930-places"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-operations.js?v=20260930-edit"></script>
 </head>
 <body class="ui" data-automation-page="operations">
   <div data-automation-header></div>
@@ -20,7 +20,7 @@
     <div class="ui-alert" id="operations-error" role="alert" hidden style="margin-bottom:16px"></div>
     <div id="operations-app" class="ui-enter" hidden>
       <nav class="ui-crumbs" aria-label="Breadcrumb"><a id="operations-back" href="automation-dashboard.html">← AI employee</a></nav>
-      <header class="ui-page-head"><div><h1>Orders &amp; bookings</h1><p>Everything your AI employee collected, ready for your team.</p></div><button class="ui-btn primary" id="new-record" type="button" data-icon="sparkle">Add manually</button></header>
+      <header class="ui-page-head"><div><h1>Orders &amp; bookings</h1><p>Everything your AI employee collected, ready for your team.</p></div><div class="ops-head-actions"><button class="ui-btn secondary" id="open-day" type="button" data-icon="calendar" hidden>Day view</button><button class="ui-btn primary" id="new-record" type="button" data-icon="sparkle">Add manually</button></div></header>
       <section class="ui-grid cols-4 ui-enter" aria-label="Summary">
         <article class="ui-card ui-metric"><div class="ui-metric-label">Orders this month<span data-icon="bag"></span></div><div class="ui-metric-value" id="metric-orders">0</div></article>
         <article class="ui-card ui-metric"><div class="ui-metric-label">Upcoming bookings<span data-icon="calendar"></span></div><div class="ui-metric-value" id="metric-bookings">0</div></article>
@@ -35,7 +35,8 @@
           </div>
           <div id="records-list" class="ui-records-rows"></div>
           <div id="day-view" class="day-view" hidden>
-            <div class="day-view-bar"><button class="ui-btn ghost sm" id="day-prev" type="button" aria-label="Previous day">◀</button><input class="ui-input" id="day-date" type="date" aria-label="Day"><button class="ui-btn ghost sm" id="day-next" type="button" aria-label="Next day">▶</button><span class="ui-faint" id="day-summary"></span></div>
+            <div class="day-view-bar"><button class="ui-btn ghost sm" id="day-prev" type="button" aria-label="Previous day">◀</button><input class="ui-input" id="day-date" type="date" aria-label="Day"><button class="ui-btn ghost sm" id="day-next" type="button" aria-label="Next day">▶</button><span class="ui-faint" id="day-summary"></span><div class="ui-filter-pills day-kind" id="day-kind" hidden><button type="button" data-day-kind="booking">Bookings</button><button type="button" data-day-kind="delivery">Deliveries</button></div></div>
+            <p class="ui-hint day-help" id="day-help">Click a free square to reserve it (for example a phone or walk-in booking), or a taken one to free it, then press Save. The AI sees the change right away.</p>
             <div id="day-slots" class="day-slots"></div>
           </div>
         </section>
