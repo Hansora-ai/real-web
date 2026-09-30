@@ -97,16 +97,25 @@
   });
 
   async function loadRecords() {
-    const result = await api.db.from('automation_outcomes').select('*, automation_conversations(channel_type)').eq('business_id', businessId).order('created_at', {ascending:false}).limit(300);
+    const result = await api.db.from('automation_outcomes').select('*, automation_conversations(channel_type), automation_contacts(display_name,primary_phone,profile,channel_type)').eq('business_id', businessId).order('created_at', {ascending:false}).limit(300);
     if (result.error) throw result.error;
     return (result.data || []).map(mapRecord);
   }
   function mapRecord(row) {
     const conversation = Array.isArray(row.automation_conversations) ? row.automation_conversations[0] : row.automation_conversations;
+    const contact = Array.isArray(row.automation_contacts) ? row.automation_contacts[0] : row.automation_contacts;
+    const channel = row.created_by === 'human' ? 'Manual' : CHANNELS[conversation?.channel_type || contact?.channel_type] || 'AI employee';
+    // Who ordered: the Instagram @username, otherwise the phone number (WhatsApp, phone calls).
+    const handle = contact?.profile?.username ? `@${contact.profile.username}` : contact?.primary_phone || row.customer_phone || '';
     const fields = Object.entries(row.collected_fields || {}).map(([label, value]) => [label, String(value ?? '')]);
-    if (row.reference_number) fields.unshift(['Reference', `#${row.reference_number}`]);
+    const top = [];
+    if (row.reference_number) top.push(['Reference', `#${row.reference_number}`]);
+    top.push(['Channel', channel]);
+    if (handle) top.push([channel.startsWith('Instagram') ? 'Instagram' : 'Contact', handle]);
+    if (row.created_at) top.push([row.outcome_type === 'booking' ? 'Booked at' : row.outcome_type === 'order' ? 'Ordered at' : 'Created at', formatWhen(row.created_at)]);
+    fields.unshift(...top);
     if (row.customer_phone && !fields.some(([label]) => /phone/i.test(label))) fields.push(['Phone', row.customer_phone]);
-    return {id:row.id,reference:row.reference_number,kind:row.outcome_type,customer:row.customer_name || 'Customer',title:row.title,channel:row.created_by === 'human' ? 'Manual' : CHANNELS[conversation?.channel_type] || 'AI employee',owner:row.assignee || 'Unassigned',status:row.status,value:Number(row.estimated_value_minor || 0) / 100,currency:row.currency || 'USD',when:row.scheduled_start ? formatWhen(row.scheduled_start) : relative(row.created_at),start:row.scheduled_start,createdAt:row.created_at,summary:row.summary || '',fields,note:row.private_note || '',conversationId:row.conversation_id};
+    return {id:row.id,reference:row.reference_number,kind:row.outcome_type,customer:row.customer_name || contact?.display_name || 'Customer',handle,title:row.title,channel,owner:row.assignee || 'Unassigned',status:row.status,value:Number(row.estimated_value_minor || 0) / 100,currency:row.currency || 'USD',when:row.scheduled_start ? formatWhen(row.scheduled_start) : relative(row.created_at),start:row.scheduled_start,createdAt:row.created_at,summary:row.summary || '',fields,note:row.private_note || '',conversationId:row.conversation_id};
   }
   async function update(record, patch) {
     if (preview) return true;
@@ -134,9 +143,9 @@
   function renderList() {
     const status = $('#status-filter').value;
     const query = $('#operations-search').value.trim().toLowerCase();
-    const visible = records.filter(item => (activeKind === 'all' || item.kind === activeKind) && (status === 'all' || item.status === status) && (!query || `${item.customer} ${item.title} ${item.channel} ${item.reference || ''}`.toLowerCase().includes(query)));
+    const visible = records.filter(item => (activeKind === 'all' || item.kind === activeKind) && (status === 'all' || item.status === status) && (!query || `${item.customer} ${item.title} ${item.channel} ${item.handle || ''} ${item.reference || ''}`.toLowerCase().includes(query)));
     const icons = {order:'bag', booking:'calendar', lead:'spark'};
-    $('#records-list').innerHTML = visible.length ? visible.map(item => `<button class="ui-record-row${item.id === selectedId ? ' active' : ''}${item.status === 'cancelled' ? ' cancelled' : ''}" data-record-id="${escapeHtml(item.id)}" type="button"><span class="ui-record-icon ${item.kind}">${window.HansoraUI.icon(icons[item.kind])}</span><span class="ui-record-main"><strong>${escapeHtml(item.title)}${item.reference ? ` <em>#${item.reference}</em>` : ''}</strong><small>${escapeHtml(item.customer)} · ${escapeHtml(item.channel)}${item.owner && item.owner !== 'Unassigned' ? ` · ${escapeHtml(item.owner)}` : ''}</small></span><span class="ui-record-when">${item.value ? `<b>${money(item.value, item.currency)}</b>` : ''}<small>${escapeHtml(item.when)}</small></span><span class="ui-status ${item.status}">${statusLabel(item.status)}</span></button>`).join('') : `<div class="ui-empty">${records.length ? 'Nothing matches these filters.' : 'Orders, bookings and leads from your AI employee appear here.'}</div>`;
+    $('#records-list').innerHTML = visible.length ? visible.map(item => `<button class="ui-record-row${item.id === selectedId ? ' active' : ''}${item.status === 'cancelled' ? ' cancelled' : ''}" data-record-id="${escapeHtml(item.id)}" type="button"><span class="ui-record-icon ${item.kind}">${window.HansoraUI.icon(icons[item.kind])}</span><span class="ui-record-main"><strong>${escapeHtml(item.title)}${item.reference ? ` <em>#${item.reference}</em>` : ''}</strong><small>${escapeHtml(item.customer)} · ${escapeHtml(item.channel)}${item.handle ? ` · ${escapeHtml(item.handle)}` : ''}${item.owner && item.owner !== 'Unassigned' ? ` · ${escapeHtml(item.owner)}` : ''}</small></span><span class="ui-record-when">${item.value ? `<b>${money(item.value, item.currency)}</b>` : ''}<small>${escapeHtml(item.when)}</small></span><span class="ui-status ${item.status}">${statusLabel(item.status)}</span></button>`).join('') : `<div class="ui-empty">${records.length ? 'Nothing matches these filters.' : 'Orders, bookings and leads from your AI employee appear here.'}</div>`;
   }
   function statusLabel(status) { return ({new:'New',in_progress:'In progress',waiting:'Waiting',confirmed:'Confirmed',completed:'Done',cancelled:'Cancelled'})[status] || capitalize(status); }
   function renderDetail() {
@@ -147,7 +156,7 @@
     $('#detail-kind').textContent = capitalize(record.kind);
     $('#detail-kind').className = `ui-kind ${record.kind}`;
     $('#detail-title').textContent = record.title;
-    $('#detail-customer').textContent = `${record.customer} · ${record.channel}`;
+    $('#detail-customer').textContent = [record.customer, record.channel, record.handle].filter(Boolean).join(' · ');
     $('#detail-status').value = record.status;
     $('#detail-owner').value = record.owner === 'Unassigned' ? '' : record.owner;
     $('#detail-fields').innerHTML = record.fields.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('');

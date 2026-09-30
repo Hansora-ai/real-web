@@ -137,6 +137,9 @@
     $('#booking-timezone').value = c.timezone;
     $('#booking-auto-confirm').checked = Boolean(c.auto_confirm);
     $('#orders-auto-confirm').checked = Boolean(state.orders.config.auto_confirm);
+    $('#order-confirmation').value = state.orders.config.confirmation_message || '';
+    $('#order-instructions').value = state.orders.config.instructions || '';
+    $('#booking-instructions').value = c.instructions || '';
     $('#lead-signals').value = state.leads.config.signals || '';
     document.querySelectorAll('#handoff-rules input[data-rule]').forEach(input => { if (!input.disabled) input.checked = Boolean(state.handoff.config.rules?.[input.dataset.rule]); });
     renderWeek(); renderServices(); renderClosedDates(); renderOrderFields(); renderGoogle(); renderNotifications(); renderStatuses();
@@ -225,7 +228,8 @@
     c.services = c.services.filter(service => service.name);
     state.calendar.enabled = $('#calendar-enabled').checked;
     state.orders.enabled = $('#orders-enabled').checked;
-    state.orders.config = { required_fields: state.orders.config.required_fields.filter(Boolean), auto_confirm:$('#orders-auto-confirm').checked };
+    state.orders.config = { required_fields: state.orders.config.required_fields.filter(Boolean), auto_confirm:$('#orders-auto-confirm').checked, confirmation_message:$('#order-confirmation').value.trim().slice(0, 1000), instructions:$('#order-instructions').value.trim().slice(0, 3000) };
+    c.instructions = $('#booking-instructions').value.trim().slice(0, 3000);
     state.leads.enabled = $('#leads-enabled').checked;
     state.leads.config = { signals: $('#lead-signals').value.trim().slice(0, 800) };
     state.handoff.config = { rules: Object.fromEntries([...document.querySelectorAll('#handoff-rules input[data-rule]')].map(input => [input.dataset.rule, input.checked])) };
