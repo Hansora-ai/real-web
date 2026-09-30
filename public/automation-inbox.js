@@ -143,7 +143,13 @@
 
   function renderMessages() {
     const labels = { customer:current().name, ai:'AI employee', human:'Your team' };
+    const operations = `automation-operations.html?business=${encodeURIComponent(businessId)}${api.isLocalPreview && location.protocol !== 'file:' ? '&preview=1' : ''}`;
+    const eventNames = { order:['🛍','Order'], booking:['📅','Booking'], lead:['⭐','Lead'] };
     document.querySelector('#message-timeline').innerHTML = current().messages.map((message, index, all) => {
+      if (message.role === 'event') {
+        const [emoji, name] = eventNames[message.kind] || ['•', 'Record'];
+        return `<div class="ui-msg-event"><a href="${operations}&record=${encodeURIComponent(message.id)}">${emoji} ${name}${message.reference ? ` #${escapeHtml(message.reference)}` : ''} created · ${escapeHtml(message.text || '')} <span>${escapeHtml(message.time)} · Open →</span></a></div>`;
+      }
       const grouped = index > 0 && all[index - 1].role === message.role;
       return `<div class="ui-msg ${message.role}${grouped ? ' grouped' : ''}">${grouped ? '' : `<span class="ui-msg-meta">${escapeHtml(labels[message.role] || '')} · ${escapeHtml(message.time)}${message.role === 'ai' && message.counted ? ' · billed' : ''}</span>`}<p>${escapeHtml(message.text)}</p></div>`;
     }).join('') || '<div class="ui-empty">No messages yet.</div>';
@@ -183,7 +189,7 @@
   }
   async function takeOver() { const conversation = current(); conversation.aiActive = false; conversation.human = true; if (!api.isLocalPreview) { const result=await api.db.from('automation_conversations').update({ai_enabled:false,status:'human_handling'}).eq('id',conversation.id).eq('business_id',businessId); if(result.error)return showError(api.displayError(result.error)); } renderConversation(); renderList(); document.querySelector('#human-message').focus(); }
   function setComposerState() {
-    const enabled = current().human && !current().resolved;
+    const enabled = current().human && !current().resolved && !instagramClosed();
     const useTemplate = templateMode();
     renderWindow();
     document.querySelector('#human-message').hidden = useTemplate;
@@ -193,23 +199,25 @@
     document.querySelector('#template-select').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').textContent = useTemplate ? 'Send template' : 'Send';
-    document.querySelector('#composer-help').textContent = !enabled ? 'The AI is replying. Take over to write yourself.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
+    document.querySelector('#composer-help').textContent = instagramClosed() ? 'Instagram’s 24-hour window has closed. You can reply after the customer writes again.' : !enabled ? 'The AI is replying. Take over to write yourself.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
     document.querySelector('#take-over').hidden = current().resolved;
     document.querySelector('#take-over').textContent = current().human ? 'Give back to AI' : 'Take over';
   }
   // WhatsApp only allows free-form replies within 24 hours of the customer's last message; after that, approved templates.
   function windowRemaining(conversation) {
-    if (!conversation || conversation.channelType !== 'whatsapp' || api.isLocalPreview) return null;
+    // WhatsApp and Instagram both allow replies only within 24 hours of the customer's last message.
+    if (!conversation || !['whatsapp','instagram_dm'].includes(conversation.channelType) || api.isLocalPreview) return null;
     return conversation.lastCustomerAt ? 24 * 60 * 60 * 1000 - (Date.now() - conversation.lastCustomerAt) : 0;
   }
-  function templateMode() { const remaining = windowRemaining(current()); return remaining !== null && remaining <= 0; }
+  function templateMode() { const remaining = windowRemaining(current()); return current()?.channelType === 'whatsapp' && remaining !== null && remaining <= 0; }
+  function instagramClosed() { const remaining = windowRemaining(current()); return current()?.channelType === 'instagram_dm' && remaining !== null && remaining <= 0; }
   function renderWindow() {
     const box = document.querySelector('#wa-window'); const remaining = windowRemaining(current());
     box.hidden = remaining === null; if (remaining === null) return;
-    if (remaining <= 0) { box.className = 'wa-window closed'; box.textContent = '24-hour window closed · only approved templates can be sent'; return; }
+    if (remaining <= 0) { box.className = 'wa-window closed'; box.textContent = current().channelType === 'instagram_dm' ? '24-hour window closed · Instagram allows a reply again after the customer writes' : '24-hour window closed · only approved templates can be sent'; return; }
     const hours = Math.floor(remaining / 3600000); const minutes = Math.max(1, Math.floor(remaining % 3600000 / 60000));
     box.className = `wa-window${remaining < 3 * 3600000 ? ' closing' : ''}`;
-    box.textContent = `Free-form replies allowed for ${hours ? `${hours}h ` : ''}${minutes}m more`;
+    box.textContent = `${current().channelType === 'instagram_dm' ? 'Replies allowed' : 'Free-form replies allowed'} for ${hours ? `${hours}h ` : ''}${minutes}m more`;
   }
   let templates = null; let templatesLoading = false;
   async function loadTemplates(force = false) {
@@ -270,12 +278,19 @@
     });
   }
   async function loadMessages(conversation) {
-    const result = await api.db.from('automation_messages').select('sender_type,content,billable,occurred_at').eq('business_id',businessId).eq('conversation_id',conversation.id).order('occurred_at',{ascending:false}).limit(100);
+    // Orders, bookings and leads created in this chat are shown in the timeline where they happened.
+    const [result, outcomes] = await Promise.all([
+      api.db.from('automation_messages').select('sender_type,content,billable,occurred_at').eq('business_id',businessId).eq('conversation_id',conversation.id).order('occurred_at',{ascending:false}).limit(100),
+      api.db.from('automation_outcomes').select('id,outcome_type,reference_number,title,status,created_at').eq('business_id',businessId).eq('conversation_id',conversation.id).order('created_at',{ascending:true}).limit(50)
+    ]);
     result.data = (result.data || []).reverse();
     if (result.error) throw result.error;
     const lastCustomer = [...(result.data||[])].reverse().find(row => row.sender_type === 'customer');
     conversation.lastCustomerAt = lastCustomer ? Date.parse(lastCustomer.occurred_at) : 0;
-    conversation.messages = (result.data||[]).map(row => ({role:row.sender_type==='customer'?'customer':row.sender_type==='human'?'human':'ai',text:row.content,time:new Date(row.occurred_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),counted:Boolean(row.billable)}));
+    const clock = value => new Date(value).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const messages = (result.data||[]).map(row => ({role:row.sender_type==='customer'?'customer':row.sender_type==='human'?'human':'ai',text:row.content,time:clock(row.occurred_at),at:Date.parse(row.occurred_at),counted:Boolean(row.billable)}));
+    const events = (outcomes.error ? [] : outcomes.data || []).map(row => ({role:'event',kind:row.outcome_type,id:row.id,reference:row.reference_number,text:row.title,status:row.status,time:clock(row.created_at),at:Date.parse(row.created_at)}));
+    conversation.messages = [...messages, ...events].sort((a, b) => a.at - b.at);
   }
   function channelName(value) { return ({instagram_dm:'Instagram DM',instagram_comments:'Instagram comment',whatsapp:'WhatsApp',phone:'Phone'}[value]||value); }
   function relativeTime(value) { const delta=Math.max(0,Date.now()-Date.parse(value||new Date())); const minutes=Math.floor(delta/60000); if(minutes<1)return'Now'; if(minutes<60)return`${minutes}m`; const hours=Math.floor(minutes/60); if(hours<24)return`${hours}h`; return new Date(value).toLocaleDateString(); }

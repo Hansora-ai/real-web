@@ -282,7 +282,9 @@
     const button=document.querySelector('#provider-connect');button.disabled=true;document.querySelector('#connect-save-state').textContent='Preparing WhatsApp Embedded Signup…';errorBox.hidden=true;
     try{
       const response=await api.authenticatedFetch('/.netlify/functions/automation-whatsapp-start',{method:'POST',body:JSON.stringify({business_id:businessId})});
-      const settings=await response.json().catch(()=>({}));if(!response.ok)throw new Error(settings.error||'whatsapp_connection_unavailable');
+      const settings=await response.json().catch(()=>({}));
+      if(settings.error==='missing_meta_whatsapp_configuration_id'){button.disabled=false;document.querySelector('#connect-save-state').textContent='Not connected yet';document.querySelector('#whatsapp-token').hidden=false;return showError('WhatsApp sign-up through Meta is not switched on yet. For testing, use “Testing: connect with a token” below.');}
+      if(!response.ok)throw new Error(settings.error||'whatsapp_connection_unavailable');
       await loadFacebookSdk(settings.app_id,settings.graph_version);
       const session={code:'',wabaId:'',phoneNumberId:'',submitted:false};
       const complete=async()=>{
@@ -307,7 +309,13 @@
 
   // Testing path: connect Meta's test number (or a System User token) without the Embedded Signup popup.
   if (channel === 'whatsapp') {
-    document.querySelector('#whatsapp-token').hidden = false;
+    // The token option is only for testing: it is shown while Meta's WhatsApp sign-up (Embedded Signup) is not
+    // configured yet, and disappears for everyone once it is.
+    if (api.isLocalPreview) document.querySelector('#whatsapp-token').hidden = false;
+    else api.authenticatedFetch('/.netlify/functions/automation-whatsapp-start', {method:'POST', body:JSON.stringify({business_id:businessId})})
+      .then(response => response.json().then(result => ({ ok: response.ok, result })).catch(() => ({ ok: response.ok, result: {} })))
+      .then(({ ok, result }) => { document.querySelector('#whatsapp-token').hidden = ok || result.error !== 'missing_meta_whatsapp_configuration_id'; })
+      .catch(() => {});
     document.querySelector('#whatsapp-token-form').addEventListener('submit', async event => {
       event.preventDefault(); errorBox.hidden = true;
       const phoneNumberId = document.querySelector('#wa-token-phone').value.trim(), wabaId = document.querySelector('#wa-token-waba').value.trim(), accessToken = document.querySelector('#wa-token-value').value.trim();

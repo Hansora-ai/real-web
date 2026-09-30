@@ -61,6 +61,7 @@
   document.querySelectorAll('[data-remove-rule]').forEach(button => button.addEventListener('click', () => { showRule(button.dataset.removeRule, false); markDirty(); }));
   document.querySelector('#booking-rules').addEventListener('change', renderRulesSummary);
   render();
+  updateSaveButton();
   showPreview('calendar');
   $('#tools-loading').hidden = true; $('#tools-app').hidden = false;
   if (params.get('google') === 'connected') { showPane('calendar'); setState('Google Calendar connected'); }
@@ -90,6 +91,16 @@
   $('#add-order-field').addEventListener('click', () => { readOrderFields(); state.orders.config.required_fields.push(''); renderOrderFields(); document.querySelector('#order-fields > div:last-child input')?.focus(); markDirty(); });
   $('#order-fields').addEventListener('click', event => { const button = event.target.closest('button[data-remove]'); if (!button) return; readOrderFields(); state.orders.config.required_fields.splice(Number(button.dataset.remove), 1); renderOrderFields(); markDirty(); });
   ['calendar','orders','leads'].forEach(tool => $(`#${tool}-enabled`).addEventListener('change', event => { state[tool].enabled = event.target.checked; renderStatuses(); }));
+  // Delivery time slots (orders): "N deliveries per X minutes"; uses the working hours from Bookings.
+  function showDelivery(on) { $('#delivery-settings').hidden = !on; $('#delivery-add').hidden = on; renderDeliverySummary(); }
+  function renderDeliverySummary() {
+    const per = Math.max(1, Math.round(Number($('#delivery-per').value)) || 1), windowText = $('#delivery-window').selectedOptions[0]?.textContent || '';
+    $('#delivery-summary').textContent = `${per === 1 ? `One delivery every ${windowText}` : `Up to ${per} deliveries every ${windowText}`}. The AI offers only times with room left, within your working hours (Bookings → Working hours), and saves the time on the order.`;
+  }
+  $('#delivery-add').addEventListener('click', () => { showDelivery(true); markDirty(); $('#delivery-per').focus(); });
+  $('#delivery-remove').addEventListener('click', () => { showDelivery(false); markDirty(); });
+  ['#delivery-per','#delivery-window'].forEach(selector => $(selector).addEventListener('input', renderDeliverySummary));
+  $('#delivery-window').addEventListener('change', renderDeliverySummary);
   $('#save-tools').addEventListener('click', save);
   $('#google-connect').addEventListener('click', connectGoogle);
   $('#google-disconnect').addEventListener('click', disconnectGoogle);
@@ -103,14 +114,35 @@
   $('#notify-test').addEventListener('click', sendTest);
   window.addEventListener('beforeunload', event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } });
 
+  // Names follow the business type: "Table reservations" for a restaurant, "Appointments" for a clinic…
+  function applyTypeNames(type) {
+    if (!type || type.code === 'other') return;
+    $('#capacity-label').textContent = `${type.places} at the same time`;
+    const nav = tool => document.querySelector(`[data-tool="${tool}"] b`);
+    const head = tool => document.querySelector(`[data-pane="${tool}"] .ui-pane-head h2`);
+    if (nav('calendar')) nav('calendar').textContent = type.booking;
+    if (head('calendar')) head('calendar').textContent = type.booking;
+    if (nav('orders')) nav('orders').textContent = type.order;
+    if (head('orders')) head('orders').textContent = type.order;
+  }
+
   async function loadSaved() {
     const [tools, notifications, business] = await Promise.all([
       api.db.from('automation_tool_configs').select('tool_type,enabled,config').eq('business_id', businessId),
       api.db.from('automation_notification_settings').select('*').eq('business_id', businessId).maybeSingle(),
-      api.db.from('automation_businesses').select('timezone').eq('id', businessId).maybeSingle()
+      api.db.from('automation_businesses').select('timezone,category').eq('id', businessId).maybeSingle()
     ]);
     for (const result of [tools, notifications, business]) if (result.error) throw result.error;
     if (!business.data) throw new Error('This AI employee was not found.');
+    // The business type gives starting settings to tools the owner has never saved; saved settings always win.
+    const type = api.businessType(business.data.category);
+    const savedTypes = new Set((tools.data || []).map(row => row.tool_type));
+    for (const [tool, preset] of Object.entries(type?.presets || {})) {
+      if (!state[tool] || savedTypes.has(tool)) continue;
+      if (preset.enabled !== undefined) state[tool].enabled = preset.enabled;
+      if (preset.config) state[tool].config = { ...state[tool].config, ...preset.config };
+    }
+    applyTypeNames(type);
     for (const row of tools.data || []) if (state[row.tool_type]) { state[row.tool_type].enabled = row.enabled; state[row.tool_type].config = {...state[row.tool_type].config, ...(row.config || {})}; }
     if (!(tools.data || []).some(row => row.tool_type === 'calendar' && row.config?.timezone) && business.data.timezone) state.calendar.config.timezone = business.data.timezone;
     const n = notifications.data;
@@ -135,8 +167,17 @@
     const zones = TIMEZONES.includes(c.timezone) ? TIMEZONES : [c.timezone, ...TIMEZONES];
     $('#booking-timezone').innerHTML = zones.map(zone => `<option value="${escapeHtml(zone)}">${escapeHtml(zone.replace(/_/g,' '))}</option>`).join('');
     $('#booking-timezone').value = c.timezone;
+    $('#booking-capacity').value = String(Math.min(500, Math.max(1, Number(c.capacity) || 1)));
     $('#booking-auto-confirm').checked = Boolean(c.auto_confirm);
     $('#orders-auto-confirm').checked = Boolean(state.orders.config.auto_confirm);
+    const delivery = state.orders.config.delivery_slots || {};
+    $('#delivery-per').value = String(Math.max(1, Number(delivery.per_window) || 1));
+    setSelect('#delivery-window', Number(delivery.window_minutes) || 30);
+    setSelect('#delivery-lead', delivery.lead_minutes ?? 30);
+    showDelivery(Boolean(delivery.enabled));
+    $('#order-confirmation').value = state.orders.config.confirmation_message || '';
+    $('#order-instructions').value = state.orders.config.instructions || '';
+    $('#booking-instructions').value = c.instructions || '';
     $('#lead-signals').value = state.leads.config.signals || '';
     document.querySelectorAll('#handoff-rules input[data-rule]').forEach(input => { if (!input.disabled) input.checked = Boolean(state.handoff.config.rules?.[input.dataset.rule]); });
     renderWeek(); renderServices(); renderClosedDates(); renderOrderFields(); renderGoogle(); renderNotifications(); renderStatuses();
@@ -225,7 +266,9 @@
     c.services = c.services.filter(service => service.name);
     state.calendar.enabled = $('#calendar-enabled').checked;
     state.orders.enabled = $('#orders-enabled').checked;
-    state.orders.config = { required_fields: state.orders.config.required_fields.filter(Boolean), auto_confirm:$('#orders-auto-confirm').checked };
+    state.orders.config = { required_fields: state.orders.config.required_fields.filter(Boolean), auto_confirm:$('#orders-auto-confirm').checked, confirmation_message:$('#order-confirmation').value.trim().slice(0, 1000), instructions:$('#order-instructions').value.trim().slice(0, 3000), delivery_slots:{ enabled:!$('#delivery-settings').hidden, per_window:Math.min(500, Math.max(1, Math.round(Number($('#delivery-per').value)) || 1)), window_minutes:Number($('#delivery-window').value), lead_minutes:Number($('#delivery-lead').value) } };
+    c.instructions = $('#booking-instructions').value.trim().slice(0, 3000);
+    c.capacity = Math.min(500, Math.max(1, Math.round(Number($('#booking-capacity').value)) || 1));
     state.leads.enabled = $('#leads-enabled').checked;
     state.leads.config = { signals: $('#lead-signals').value.trim().slice(0, 800) };
     state.handoff.config = { rules: Object.fromEntries([...document.querySelectorAll('#handoff-rules input[data-rule]')].map(input => [input.dataset.rule, input.checked])) };
@@ -246,8 +289,10 @@
   async function save() {
     errorBox.hidden = true; collect();
     const invalid = validate(); if (invalid) { showPane(invalid[1]); return showError(invalid[0]); }
-    if (preview) { dirty = false; setState('All changes saved'); window.HansoraUI.toast('Preview: sign in to save for real'); return; }
+    if (preview) { dirty = false; setState('All changes saved'); updateSaveButton(); window.HansoraUI.toast('Preview: sign in to save for real'); return; }
     const button = $('#save-tools'); button.disabled = true; setState('Saving…');
+    // A spinner while saving, so it is clear the save is running.
+    button.innerHTML = '<span class="ui-spinner" aria-hidden="true"></span>Saving…'; button.classList.add('is-busy');
     try {
       const rows = ['calendar','orders','leads','handoff'].map(tool => ({ business_id:businessId, tool_type:tool, enabled:state[tool].enabled, config:state[tool].config, updated_at:new Date().toISOString() }));
       const saved = await api.db.from('automation_tool_configs').upsert(rows, { onConflict:'business_id,tool_type' });
@@ -260,7 +305,7 @@
       setState('All changes saved');
       window.HansoraUI.toast(sync.ok ? 'Saved. Your AI employee is updated.' : 'Saved. The AI updates on its next sync.');
     } catch (error) { setState('Not saved'); showError(api.displayError(error)); }
-    finally { button.disabled = false; }
+    finally { button.disabled = false; button.textContent = 'Save changes'; button.classList.remove('is-busy'); updateSaveButton(); }
   }
 
   async function connectGoogle() {
@@ -337,7 +382,9 @@
     showPreview(tool);
   }
   function showPreview(kind) { const data = previews[kind] || previews.calendar; $('#tool-preview-title').textContent = data[0]; $('#tool-preview-chat').innerHTML = data[1].map(([role, text]) => `<div class="${role}"><span>${role === 'customer' ? 'Customer' : role === 'ai' ? 'AI employee' : 'Hansora'}</span><p>${escapeHtml(text)}</p></div>`).join(''); }
-  function markDirty() { dirty = true; setState('Unsaved changes'); renderStatuses(); }
+  function markDirty() { dirty = true; setState('Unsaved changes'); renderStatuses(); updateSaveButton(); }
+  // The save button only appears when something was changed (added, removed or edited).
+  function updateSaveButton() { const button = $('#save-tools'); if (button && !button.classList.contains('is-busy')) button.hidden = !dirty; }
   function setState(text) { const pill = $('#tools-state'); pill.textContent = text; pill.classList.toggle('dirty', /unsaved|not saved/i.test(text)); pill.classList.toggle('busy', /saving/i.test(text)); }
   function showError(message) { errorBox.textContent = message; errorBox.hidden = false; errorBox.scrollIntoView({behavior:'smooth', block:'center'}); }
   function fail(message) { $('#tools-loading').hidden = true; showError(message); }
