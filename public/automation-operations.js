@@ -124,22 +124,36 @@
     if (!data.slots.length) { $('#day-slots').innerHTML = '<div class="ui-empty">Closed on this day, or no working hours are set.</div>'; return; }
     $('#day-slots').innerHTML = data.slots.map(slot => {
       const edit = dayEdits.get(slot.start);
-      const free = Math.max(0, slot.capacity - slot.booked);
+      // "free" comes from the same calculation the AI uses, so a place still in its break is not counted as free.
+      const free = Number.isFinite(slot.free) ? slot.free : Math.max(0, slot.capacity - slot.booked);
+      const inBreak = Number(slot.break_blocked) || 0;
+      const freeSet = Array.isArray(slot.free_places) ? new Set(slot.free_places) : null;
       const chip = item => `<button type="button" class="day-booking" data-open-record="${escapeHtml(item.id)}" title="Open">${escapeHtml(item.customer)}${people ? ` ×${escapeHtml(item.people)}` : ''}${item.reference ? ` #${escapeHtml(item.reference)}` : ''}</button><button type="button" class="day-x" data-free="${escapeHtml(item.id)}" title="Free this place" aria-label="Free">×</button>`;
       // Squares: one per place. Named places keep their own number; otherwise bookings fill the first squares.
-      const cells = slot.blocked || people ? [] : slot.places ? slot.places.map(place => ({ key:`p${place.index}`, name:place.name, booking:place.booking })) : slot.capacity <= 60 ? Array.from({length:slot.capacity}, (_, index) => ({ key:`c${index}`, name:`${index + 1}`, booking:slot.bookings[index] || null })) : [];
-      const cellClass = cell => cell.booking ? (edit?.free.has(cell.booking.id) ? 'to-free' : 'taken') : edit?.reserve.has(cell.key) ? 'to-reserve' : '';
-      const squares = cells.length ? `<span class="day-dots">${cells.map(cell => `<button type="button" class="day-cell ${cellClass(cell)}" ${cell.booking ? `data-free="${escapeHtml(cell.booking.id)}" title="${escapeHtml(cell.name)}: ${escapeHtml(cell.booking.customer)} (click to free)"` : `data-cell="${escapeHtml(cell.key)}" title="${escapeHtml(cell.name)}: free (click to reserve)"`}></button>`).join('')}</span>`
+      const cells = slot.blocked || people ? [] : slot.places ? slot.places.map(place => ({ key:`p${place.index}`, index:place.index, name:place.name, booking:place.booking })) : slot.capacity <= 60 ? unnamedCells(slot) : [];
+      const resting = cell => !cell.booking && freeSet && !freeSet.has(cell.index);
+      const cellClass = cell => cell.booking ? (edit?.free.has(cell.booking.id) ? 'to-free' : 'taken') : edit?.reserve.has(cell.key) ? 'to-reserve' : resting(cell) ? 'break' : '';
+      const squares = cells.length ? `<span class="day-dots">${cells.map(cell => `<button type="button" class="day-cell ${cellClass(cell)}" ${cell.booking ? `data-free="${escapeHtml(cell.booking.id)}" title="${escapeHtml(cell.name)}: ${escapeHtml(cell.booking.customer)} (click to free)"` : `data-cell="${escapeHtml(cell.key)}" title="${escapeHtml(cell.name)}: ${resting(cell) ? 'blocked by the break between bookings, the AI will not offer it (you can still reserve it)' : 'free'} (click to reserve)"`}></button>`).join('')}</span>`
         : `<span class="day-bar"><i style="width:${Math.round(slot.booked / Math.max(1, slot.capacity) * 100)}%"></i></span>`;
-      const state = slot.blocked ? 'Closed' : free === 0 ? 'Full' : people ? `${slot.booked} of ${slot.capacity} people · ${free} free` : slot.capacity === 1 ? 'Free' : `${slot.booked} of ${slot.capacity} taken · ${free} free`;
+      const breakNote = inBreak ? ` · ${inBreak} blocked by the break between bookings` : '';
+      const state = slot.blocked ? 'Closed' : people ? `${slot.booked} of ${slot.capacity} people · ${free} free${free < slot.capacity - slot.booked ? ' (break between bookings)' : ''}` : free === 0 ? `${slot.booked === slot.capacity ? 'Full' : `${slot.booked} of ${slot.capacity} taken · none free`}${breakNote}` : slot.capacity === 1 ? 'Free' : `${slot.booked} of ${slot.capacity} taken · ${free} free${breakNote}`;
       const names = slot.places
-        ? slot.places.map(place => place.booking ? `<span class="day-place taken${edit?.free.has(place.booking.id) ? ' to-free' : ''}"><b>${escapeHtml(place.name)}</b>${chip(place.booking)}</span>` : `<span class="day-place${edit?.reserve.has(`p${place.index}`) ? ' to-reserve' : ''}"><b>${escapeHtml(place.name)}</b><button type="button" class="day-free" data-cell="p${place.index}">${edit?.reserve.has(`p${place.index}`) ? 'reserve ✓' : 'free'}</button></span>`).join('')
+        ? slot.places.map(place => place.booking ? `<span class="day-place taken${edit?.free.has(place.booking.id) ? ' to-free' : ''}"><b>${escapeHtml(place.name)}</b>${chip(place.booking)}</span>` : `<span class="day-place${edit?.reserve.has(`p${place.index}`) ? ' to-reserve' : freeSet && !freeSet.has(place.index) ? ' break' : ''}"><b>${escapeHtml(place.name)}</b><button type="button" class="day-free" data-cell="p${place.index}">${edit?.reserve.has(`p${place.index}`) ? 'reserve ✓' : freeSet && !freeSet.has(place.index) ? 'break' : 'free'}</button></span>`).join('')
         : slot.bookings.map(item => `<span class="day-place taken${edit?.free.has(item.id) ? ' to-free' : ''}">${chip(item)}</span>`).join('');
       const peopleInput = people && !slot.blocked && free > 0 ? `<label class="day-people">Reserve <input class="ui-input" type="number" min="0" max="${free}" value="${edit?.people || ''}" placeholder="0" data-people-input> people</label>` : '';
       const count = editCount(edit);
       const parts = edit ? [edit.reserve.size && `reserve ${edit.reserve.size}`, edit.people > 0 && `reserve ${edit.people} people`, edit.free.size && `free ${edit.free.size}`].filter(Boolean).join(' · ') : '';
       return `<div class="day-slot${free === 0 ? ' full' : ''}" data-slot="${escapeHtml(slot.start)}"><strong>${escapeHtml(slot.time)}</strong>${squares}<span class="day-state">${escapeHtml(state)}</span><span class="day-names">${names}${peopleInput}</span><div class="day-edit"${count ? '' : ' hidden'}><span>${escapeHtml(parts ? `${capitalize(parts)} at ${slot.time}` : `Changes at ${slot.time}`)}</span><button class="ui-btn ghost sm" type="button" data-day-cancel>Cancel</button><button class="ui-btn primary sm" type="button" data-day-save>Save</button></div></div>`;
     }).join('');
+  }
+  // Squares for places without names: each booking sits on its own place number; older bookings without a
+  // number fill the remaining squares.
+  function unnamedCells(slot) {
+    const cells = Array.from({length:slot.capacity}, (_, index) => ({ key:`c${index}`, index, name:`${index + 1}`, booking:null }));
+    const left = [];
+    for (const booking of slot.bookings) { const cell = cells[booking.slot_index]; if (cell && !cell.booking) cell.booking = booking; else left.push(booking); }
+    for (const booking of left) { const cell = cells.find(item => !item.booking); if (cell) cell.booking = booking; }
+    return cells;
   }
   async function saveDayEdit(slot) {
     const edit = dayEdits.get(slot.start); if (!editCount(edit)) return;
@@ -161,7 +175,8 @@
       const base = {business_id:businessId, outcome_type:delivery ? 'order' : 'booking', title:`Reserved by your team · ${slot.time}`, customer_name:'Reserved', customer_phone:'', scheduled_start:slot.start, scheduled_end:slot.end, created_by:'human', status:'confirmed', summary:`Reserved from the day view for ${slot.time}.`, collected_fields:{Reserved:'By your team', Time:slot.time}};
       // Place numbers still taken at this time (freed ones become available again).
       const used = new Set(slot.bookings.filter(item => !edit.free.has(item.id)).map(item => item.slot_index));
-      const freeIndexes = () => Array.from({length:500}, (_, index) => index).filter(index => !used.has(index));
+      // Places that are really free (not in a break) first, then any other free number.
+      const freeIndexes = () => [...new Set([...(slot.free_places || []), ...Array.from({length:500}, (_, index) => index)])].filter(index => !used.has(index));
       const wanted = people ? (reserveCount > 0 ? [{ people:reserveCount }] : []) : [...edit.reserve].map(key => key.startsWith('p') ? { index:Number(key.slice(1)), name:(slot.places || []).find(place => `p${place.index}` === key)?.name } : {});
       for (const want of wanted) {
         const row = {...base, collected_fields:{...base.collected_fields}};

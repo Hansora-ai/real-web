@@ -29,7 +29,7 @@ export async function handler(event) {
     const config = kind === 'delivery' ? normalizeCalendarConfig(deliveryWindowConfig(bookingConfig, delivery)) : bookingConfig;
     const from = zonedDateTimeToUtc(body.date, 0, config.timezone);
     const bookings = rows(await supabaseRequest(`/rest/v1/automation_outcomes?business_id=eq.${business.id}&outcome_type=eq.${kind === 'delivery' ? 'order' : 'booking'}&scheduled_start=not.is.null&status=in.(new,in_progress,waiting,confirmed)&scheduled_start=lt.${encodeURIComponent(new Date(from + DAY).toISOString())}&scheduled_end=gt.${encodeURIComponent(new Date(from).toISOString())}&select=*&order=scheduled_start.asc`)); // * also works before the place/people columns exist
-    const busy = bookings.map(row => ({ start: Date.parse(row.scheduled_start), end: Date.parse(row.scheduled_end), people: Number(row.party_size) || Number(row.collected_fields?.People) || 1, row }));
+    const busy = bookings.map(row => ({ start: Date.parse(row.scheduled_start), end: Date.parse(row.scheduled_end), people: Number(row.party_size) || Number(row.collected_fields?.People) || 1, place: Number.isInteger(row.slot_index) ? row.slot_index : 0, row }));
     const placeName = row => config.places.find(item => item.index === (Number.isInteger(row.slot_index) ? row.slot_index : 0))?.name || '';
     const slots = daySlots({ config, date: body.date, busy }).map(slot => {
       const start = Date.parse(slot.start), end = Date.parse(slot.end);
