@@ -21,14 +21,17 @@ export async function handler(event) {
     const calendar = await first(`/rest/v1/automation_tool_configs?business_id=eq.${business.id}&tool_type=eq.calendar&select=enabled,config&limit=1`);
     const config = normalizeCalendarConfig({ timezone: business.timezone, ...(calendar?.config || {}) });
     const from = zonedDateTimeToUtc(body.date, 0, config.timezone);
-    const bookings = rows(await supabaseRequest(`/rest/v1/automation_outcomes?business_id=eq.${business.id}&outcome_type=eq.booking&status=in.(new,in_progress,waiting,confirmed)&scheduled_start=lt.${encodeURIComponent(new Date(from + DAY).toISOString())}&scheduled_end=gt.${encodeURIComponent(new Date(from).toISOString())}&select=id,reference_number,customer_name,service_name,status,scheduled_start,scheduled_end&order=scheduled_start.asc`));
-    const busy = bookings.map(row => ({ start: Date.parse(row.scheduled_start), end: Date.parse(row.scheduled_end), row }));
+    const bookings = rows(await supabaseRequest(`/rest/v1/automation_outcomes?business_id=eq.${business.id}&outcome_type=eq.booking&status=in.(new,in_progress,waiting,confirmed)&scheduled_start=lt.${encodeURIComponent(new Date(from + DAY).toISOString())}&scheduled_end=gt.${encodeURIComponent(new Date(from).toISOString())}&select=*&order=scheduled_start.asc`)); // * also works before the place/people columns exist
+    const busy = bookings.map(row => ({ start: Date.parse(row.scheduled_start), end: Date.parse(row.scheduled_end), people: Number(row.party_size) || Number(row.collected_fields?.People) || 1, row }));
+    const placeName = row => config.places.find(item => item.index === (Number.isInteger(row.slot_index) ? row.slot_index : 0))?.name || '';
     const slots = daySlots({ config, date: body.date, busy }).map(slot => {
       const start = Date.parse(slot.start), end = Date.parse(slot.end);
-      const inSlot = busy.filter(item => start < item.end && end > item.start).map(({ row }) => ({ id: row.id, reference: row.reference_number, customer: row.customer_name || 'Customer', service: row.service_name || '', status: row.status, start: row.scheduled_start, end: row.scheduled_end }));
-      return { ...slot, bookings: inSlot };
+      const inSlot = busy.filter(item => start < item.end && end > item.start).map(({ row, people }) => ({ id: row.id, reference: row.reference_number, customer: row.customer_name || 'Customer', service: row.service_name || '', status: row.status, start: row.scheduled_start, end: row.scheduled_end, people, place: placeName(row) }));
+      // Named places: each one shows who has it at this time, or that it is free.
+      const places = config.places.map(item => ({ name: item.name, booking: inSlot.find(booking => booking.place === item.name) || null }));
+      return { ...slot, bookings: inSlot, ...(places.length ? { places } : {}) };
     });
-    return json(200, { enabled: Boolean(calendar?.enabled), date: body.date, timezone: config.timezone, capacity: config.capacity, duration_minutes: config.duration_minutes, slots });
+    return json(200, { enabled: Boolean(calendar?.enabled), date: body.date, timezone: config.timezone, capacity: config.capacity, count_by: config.count_by, place_label: String(calendar?.config?.place_label || 'Place'), duration_minutes: config.duration_minutes, slots });
   } catch (error) {
     console.error('automation-day-view error', { message: error?.message });
     return json(500, { error: 'day_view_unavailable' });

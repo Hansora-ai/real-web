@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-operations.js?v=20260928-ui"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-operations.js?v=20260930-places"></script>
 </head>
 <body class="ui" data-automation-page="operations">
   <div data-automation-header></div>
@@ -61,6 +61,8 @@
             <div class="ui-field"><label class="ui-label" for="record-value">Value</label><div class="ui-money"><input class="ui-input" id="record-value" type="number" min="0" step="0.01" placeholder="150"><select class="ui-select" id="record-currency" aria-label="Currency"><option>USD</option><option>EUR</option><option>GBP</option><option>AMD</option><option>RUB</option><option>AED</option><option>GEL</option><option>TRY</option><option>UAH</option><option>PLN</option><option>CAD</option><option>AUD</option><option>INR</option></select></div></div>
             <div class="ui-field booking-only" hidden><label class="ui-label" for="record-when">Date and time</label><input class="ui-input" id="record-when" type="datetime-local"></div>
             <div class="ui-field booking-only" hidden><label class="ui-label" for="record-duration">Length</label><select class="ui-select" id="record-duration"><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option></select></div>
+            <div class="ui-field booking-only" id="record-people-field" hidden><label class="ui-label" for="record-people">People</label><input class="ui-input" id="record-people" type="number" min="1" max="5000" step="1" value="1" inputmode="numeric"></div>
+            <div class="ui-field booking-only" id="record-place-field" hidden><label class="ui-label" for="record-place" id="record-place-label">Place</label><select class="ui-select" id="record-place"><option value="">Any free</option></select></div>
           </div>
           <div class="ui-dialog-actions"><button class="ui-btn ghost" data-close-record type="button">Cancel</button><button class="ui-btn primary" id="save-record" value="default" type="submit">Add</button></div>
         </form>

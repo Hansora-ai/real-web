@@ -108,10 +108,10 @@
     };
     const run = async (label, payload, done) => {
       if (busy) return;
-      setBusy(true); status.textContent = label;
+      setBusy(true); status.textContent = label; ui.busy(label);
       try { render(await call(payload)); status.textContent = hint; if (done) done(); ui.toast('Knowledge updated. Your AI employee uses it right away.'); }
       catch (error) { status.textContent = error.message; }
-      finally { setBusy(false); }
+      finally { setBusy(false); ui.busy(false); }
     };
 
     if (api.isLocalPreview) {

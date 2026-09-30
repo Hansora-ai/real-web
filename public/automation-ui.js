@@ -106,7 +106,21 @@
 
   function hydrateIcons(root = document) { root.querySelectorAll('[data-icon]').forEach(element => { if (!element.dataset.iconDone) { element.insertAdjacentHTML('afterbegin', icon(element.dataset.icon)); element.dataset.iconDone = '1'; } }); }
 
-  window.HansoraUI = { icon, stagger, countUp, tabs, toast, typing, hydrateIcons, reduceMotion };
+  // Full-screen "working on it" overlay for saves: busy('Saving…') shows or updates it, busy(false) hides it.
+  let busyLayer = null;
+  function busy(message) {
+    if (message === false) { if (busyLayer) { busyLayer.classList.remove('show'); setTimeout(() => { if (busyLayer && !busyLayer.classList.contains('show')) busyLayer.hidden = true; }, 200); } return; }
+    if (!busyLayer) {
+      busyLayer = document.createElement('div');
+      busyLayer.className = 'ui-busy'; busyLayer.setAttribute('role', 'status'); busyLayer.setAttribute('aria-live', 'polite');
+      busyLayer.innerHTML = '<div class="ui-busy-card"><span class="ui-busy-spinner" aria-hidden="true"></span><strong class="ui-busy-text"></strong><small>Please keep this page open.</small></div>';
+      document.body.appendChild(busyLayer);
+    }
+    busyLayer.querySelector('.ui-busy-text').textContent = String(message || 'Saving…');
+    busyLayer.hidden = false; requestAnimationFrame(() => busyLayer.classList.add('show'));
+  }
+
+  window.HansoraUI = { icon, stagger, countUp, tabs, toast, typing, hydrateIcons, reduceMotion, busy };
   const ready = () => { hydrateIcons(); stagger(); document.querySelectorAll('.ui-tabs').forEach(tabs); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready); else ready();
 })();

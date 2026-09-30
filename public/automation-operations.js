@@ -43,6 +43,7 @@
   const pad = number => String(number).padStart(2, '0');
   const isoDay = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   $('#day-date').value = isoDay(new Date());
+  if (params.get('view') === 'day') setTimeout(() => showDayView(true));
   const shiftDay = days => { const date = new Date(`${$('#day-date').value || isoDay(new Date())}T12:00:00`); date.setDate(date.getDate() + days); $('#day-date').value = isoDay(date); loadDay(); };
   $('#day-prev').addEventListener('click', () => shiftDay(-1));
   $('#day-next').addEventListener('click', () => shiftDay(1));
@@ -72,14 +73,23 @@
     $('#day-slots').innerHTML = data.slots.map(slot => {
       const free = Math.max(0, slot.capacity - slot.booked);
       const dots = slot.capacity <= 12 ? `<span class="day-dots">${Array.from({length: slot.capacity}, (_, index) => `<i class="${index < slot.booked ? 'taken' : ''}"></i>`).join('')}</span>` : `<span class="day-bar"><i style="width:${Math.round(slot.booked / slot.capacity * 100)}%"></i></span>`;
-      const state = slot.blocked ? 'Closed in your calendar' : free === 0 ? 'Full' : slot.capacity === 1 ? 'Free' : `${slot.booked} of ${slot.capacity} booked · ${free} free`;
-      const names = slot.bookings.map(item => `<button type="button" class="day-booking" data-open-record="${escapeHtml(item.id)}">${escapeHtml(item.customer)}${item.reference ? ` #${escapeHtml(item.reference)}` : ''}</button>`).join('');
+      const people = data.count_by === 'people';
+      const state = slot.blocked ? 'Closed in your calendar' : free === 0 ? 'Full' : people ? `${slot.booked} of ${slot.capacity} people · ${free} free` : slot.capacity === 1 ? 'Free' : `${slot.booked} of ${slot.capacity} booked · ${free} free`;
+      const chip = item => `<button type="button" class="day-booking" data-open-record="${escapeHtml(item.id)}">${escapeHtml(item.customer)}${people ? ` ×${escapeHtml(item.people)}` : ''}${item.reference ? ` #${escapeHtml(item.reference)}` : ''}</button>`;
+      // Named places (tables, staff…): every one is listed with who has it, or "free".
+      const names = slot.places
+        ? slot.places.map(place => place.booking ? `<span class="day-place taken"><b>${escapeHtml(place.name)}</b>${chip(place.booking)}</span>` : `<span class="day-place"><b>${escapeHtml(place.name)}</b><em>free</em></span>`).join('')
+        : slot.bookings.map(chip).join('');
       return `<div class="day-slot${free === 0 ? ' full' : ''}"><strong>${escapeHtml(slot.time)}</strong>${dots}<span class="day-state">${escapeHtml(state)}</span><span class="day-names">${names}</span></div>`;
     }).join('');
   }
   function previewDay(date) {
     const times = ['18:00','18:30','19:00','19:30','20:00'];
-    return { enabled:true, capacity:5, date, slots: times.map((time, index) => ({ time, capacity:5, booked:[5,4,2,1,0][index], blocked:false, bookings: Array.from({length:[5,4,2,1,0][index]}, (_, n) => ({ id:`p${index}${n}`, customer:['Anna','Carlos','Maria','Noah','Sam'][n], reference:1040 + index * 5 + n })) })) };
+    const names = ['Table 1','Table 2','Table 3','Window','Terrace'];
+    return { enabled:true, capacity:5, count_by:'bookings', place_label:'Table', date, slots: times.map((time, index) => {
+      const bookings = Array.from({length:[5,4,2,1,0][index]}, (_, n) => ({ id:`p${index}${n}`, customer:['Anna','Carlos','Maria','Noah','Sam'][n], reference:1040 + index * 5 + n, people:1 }));
+      return { time, capacity:5, booked:bookings.length, blocked:false, bookings, places: names.map((name, n) => ({ name, booking: bookings[n] || null })) };
+    }) };
   }
 
   $('#operations-tabs').addEventListener('click', event => {
@@ -116,7 +126,17 @@
   try { $('#record-currency').value = localStorage.getItem('hansora_automation_currency') || 'USD'; } catch (_) {}
   $('#new-record').addEventListener('click', () => dialog.showModal());
   document.querySelectorAll('[data-close-record]').forEach(button => button.addEventListener('click', () => { dialog.close(); $('#record-form').reset(); document.querySelectorAll('.booking-only').forEach(field => { field.hidden = true; }); }));
-  $('#record-type').addEventListener('change', event => document.querySelectorAll('.booking-only').forEach(field => { field.hidden = event.target.value !== 'booking'; }));
+  $('#record-type').addEventListener('change', async event => {
+    const booking = event.target.value === 'booking';
+    document.querySelectorAll('.booking-only').forEach(field => { field.hidden = !booking; });
+    // People / place fields appear only when Business tools count by people or name the places.
+    const config = booking && !preview ? await bookingConfig() : {};
+    $('#record-people-field').hidden = !booking || config.count_by !== 'people';
+    const places = config.count_by === 'people' ? [] : placeList(config);
+    $('#record-place-field').hidden = !booking || !places.some(place => place.name);
+    $('#record-place-label').textContent = config.place_label || 'Place';
+    $('#record-place').innerHTML = '<option value="">Any free</option>' + places.filter(place => place.name).map(place => `<option value="${place.index}">${escapeHtml(place.name)}</option>`).join('');
+  });
   $('#record-form').addEventListener('submit', async event => {
     if (event.submitter?.value !== 'default') return;
     event.preventDefault();
@@ -135,12 +155,22 @@
     else {
       // Bookings take the first free place (table, staff member…); the database refuses a taken place.
       const row = {business_id:businessId,outcome_type:kind,title,customer_name:customer,customer_phone:phone,estimated_value_minor:Math.round(value * 100),currency,scheduled_start:start?.toISOString() || null,scheduled_end:end?.toISOString() || null,conversation_id:/^[0-9a-f-]{36}$/i.test(params.get('conversation') || '') ? params.get('conversation') : null,created_by:'human',status:kind === 'booking' ? 'confirmed' : 'new',summary:`Created manually for ${customer}.`,collected_fields:{Customer:customer,Phone:phone || '—'}};
-      const places = kind === 'booking' ? await bookingPlaces() : 1;
+      const config = kind === 'booking' ? await bookingConfig() : {};
+      const people = config.count_by === 'people';
+      if (people) { const size = Math.min(5000, Math.max(1, Math.round(Number($('#record-people').value)) || 1)); row.party_size = size; row.collected_fields.People = String(size); }
+      // People mode: the team decides, any free place number is used. Named place chosen: only that one.
+      const chosen = !people && $('#record-place').value !== '' ? placeList(config).filter(place => String(place.index) === $('#record-place').value) : null;
+      const places = kind !== 'booking' ? [] : chosen || (people ? Array.from({length:500}, (_, index) => ({index})) : placeList(config));
+      if (chosen?.[0]?.name) row.collected_fields[config.place_label || 'Place'] = chosen[0].name;
+      const select = '*, automation_conversations(channel_type), automation_contacts(display_name,primary_phone,profile,channel_type)';
       let result;
-      for (let place = 0; place < places; place++) {
-        result = await api.db.from('automation_outcomes').insert(places > 1 ? {...row, slot_index:place} : row).select('*, automation_conversations(channel_type), automation_contacts(display_name,primary_phone,profile,channel_type)').single();
-        // Database not updated for places yet (SQL file 8): save as before.
-        if (places > 1 && /slot_index/.test(String(result.error?.message || ''))) { result = await api.db.from('automation_outcomes').insert(row).select('*, automation_conversations(channel_type), automation_contacts(display_name,primary_phone,profile,channel_type)').single(); break; }
+      if (!places.length) result = await api.db.from('automation_outcomes').insert(row).select(select).single();
+      for (const place of places) {
+        const insert = {...row, slot_index:place.index};
+        if (place.name && !chosen) insert.collected_fields = {...row.collected_fields, [config.place_label || 'Place']:place.name};
+        result = await api.db.from('automation_outcomes').insert(insert).select(select).single();
+        // Database not updated yet (SQL files 8/9): save as before.
+        if (/slot_index|party_size/.test(String(result.error?.message || ''))) { const plain = {...row}; delete plain.party_size; result = await api.db.from('automation_outcomes').insert(plain).select(select).single(); break; }
         if (result.error?.code !== '23P01') break;
       }
       if (result.error) return alert(result.error.code === '23P01' ? 'That time overlaps another booking.' : api.displayError(result.error));
@@ -154,9 +184,15 @@
     if (result.error) throw result.error;
     return (result.data || []).map(mapRecord);
   }
-  async function bookingPlaces() {
+  async function bookingConfig() {
     const result = await api.db.from('automation_tool_configs').select('config').eq('business_id', businessId).eq('tool_type', 'calendar').maybeSingle();
-    return Math.min(500, Math.max(1, Number(result.data?.config?.capacity) || 1));
+    return result.data?.config || {};
+  }
+  // Named places keep their own numbers; otherwise places are 0 … capacity-1.
+  function placeList(config) {
+    const named = (Array.isArray(config.places) ? config.places : []).filter(place => place?.name && Number.isInteger(Number(place.index))).map(place => ({index:Number(place.index), name:String(place.name)}));
+    if (named.length) return named;
+    return Array.from({length:Math.min(500, Math.max(1, Number(config.capacity) || 1))}, (_, index) => ({index}));
   }
   function mapRecord(row) {
     const conversation = Array.isArray(row.automation_conversations) ? row.automation_conversations[0] : row.automation_conversations;

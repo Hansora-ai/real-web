@@ -130,6 +130,7 @@
     const failed = [];
     for (const [index, job] of jobs.entries()) {
       saveState.textContent = `Adding knowledge ${index + 1} of ${jobs.length}…`;
+      window.HansoraUI.busy(`Adding knowledge ${index + 1} of ${jobs.length}…`);
       try {
         const response = await api.authenticatedFetch('/.netlify/functions/automation-knowledge', { method:'POST', body:JSON.stringify({ business_id:savedBusinessId, action:'add', ...(await job.build()) }) });
         if (!response.ok) failed.push(job.label);
@@ -189,6 +190,7 @@
     const data = new FormData(form);
     saveButton.disabled = true;
     saveState.textContent = 'Saving…';
+    window.HansoraUI.busy('Saving your AI employee…');
     saveState.classList.remove('error');
     if (api.isLocalPreview) {
       const previewBusiness = {
@@ -244,6 +246,7 @@
     });
     if (result.error) {
       saveButton.disabled = false;
+      window.HansoraUI.busy(false);
       const message = api.displayError(result.error);
       saveState.textContent = 'Not saved';
       saveState.classList.add('error');
@@ -252,6 +255,7 @@
     }
     if (!businessId) await api.db.from('automation_businesses').update({ timezone: api.browserTimezone() }).eq('id', result.data);
     saveState.textContent = 'Preparing your AI employee…';
+    window.HansoraUI.busy('Preparing your AI employee…');
     try {
       const syncResponse = await api.authenticatedFetch('/.netlify/functions/automation-agent-sync', {
         method: 'POST', body: JSON.stringify({ business_id: result.data })

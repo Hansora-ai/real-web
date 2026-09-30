@@ -9,6 +9,7 @@
   const errorBox = $('#tools-error');
   if (!preview && !/^[0-9a-f-]{36}$/i.test(businessId)) return fail('Open business tools from your AI employee workspace.');
   $('#tools-back').href = `automation-agent.html?id=${encodeURIComponent(businessId)}${preview && location.protocol !== 'file:' ? '&preview=1' : ''}`;
+  $('#day-view-link').href = `automation-operations.html?business=${encodeURIComponent(businessId)}&view=day${preview && location.protocol !== 'file:' ? '&preview=1' : ''}`;
 
   const DAYS = [['mon','Monday'],['tue','Tuesday'],['wed','Wednesday'],['thu','Thursday'],['fri','Friday'],['sat','Saturday'],['sun','Sunday']];
   // Every time zone the browser knows, with the owner's own zone as the default.
@@ -17,7 +18,7 @@
   const state = {
     calendar: { enabled:false, config:{ timezone:api.browserTimezone(), weekly_hours:{ mon:[{start:'10:00',end:'19:00'}], tue:[{start:'10:00',end:'19:00'}], wed:[{start:'10:00',end:'19:00'}], thu:[{start:'10:00',end:'19:00'}], fri:[{start:'10:00',end:'19:00'}], sat:[{start:'11:00',end:'17:00'}], sun:[] }, duration_minutes:60, step_minutes:30, buffer_minutes:0, min_notice_minutes:0, max_days_ahead:365, services:[], closed_dates:[], auto_confirm:false } },
     orders: { enabled:false, config:{ required_fields:[...DEFAULT_ORDER_FIELDS], auto_confirm:false } },
-    leads: { enabled:false, config:{ signals:'' } },
+    leads: { enabled:false, config:{ signals:'', questions:[] } },
     handoff: { enabled:true, config:{ rules:{ asks_person:true, complaint:true, missing_info:false, uncertain:true } } },
     notifications: { whatsapp_enabled:false, whatsapp_phone:null, whatsapp_verified:false, email_enabled:true, email:'', events:['order_created','booking_created','handoff_requested'], language:'en' },
     google: { connected:false, calendars:[], selected:'primary' }
@@ -51,6 +52,7 @@
     if (shown) setSelect(RULES[name].select, value);
     renderRulesSummary();
   }
+  let typeNames = { place:'Place', places:'Places', people:'People' }; // set from the business type
   function ruleValue(name) { return ruleField(name).hidden ? RULES[name].off : Number($(RULES[name].select).value); }
   function renderRulesSummary() {
     const minutes = value => value >= 1440 && value % 1440 === 0 ? `${value / 1440} day${value === 1440 ? '' : 's'}` : value >= 60 && value % 60 === 0 ? `${value / 60} hour${value === 60 ? '' : 's'}` : `${value} minutes`;
@@ -101,6 +103,50 @@
   $('#delivery-remove').addEventListener('click', () => { showDelivery(false); markDirty(); });
   ['#delivery-per','#delivery-window'].forEach(selector => $(selector).addEventListener('input', renderDeliverySummary));
   $('#delivery-window').addEventListener('change', renderDeliverySummary);
+  // Lead questions: same editing pattern as the order details.
+  function renderLeadQuestions() {
+    const questions = state.leads.config.questions || [];
+    $('#lead-questions').innerHTML = questions.map((question, index) => `<div><span>${index + 1}</span><input class="ui-input" value="${escapeHtml(question)}" maxlength="80" placeholder="For example: What is your budget?" data-lead-question="${index}"><button class="ui-btn ghost icon sm" type="button" data-remove-question="${index}" aria-label="Remove question">×</button></div>`).join('') || '<p class="ui-faint" style="margin:0">No questions yet. For example: company name, budget, area, how many people.</p>';
+  }
+  function readLeadQuestions() { state.leads.config.questions = [...document.querySelectorAll('[data-lead-question]')].map(input => input.value.trim().slice(0, 80)); }
+  $('#add-lead-question').addEventListener('click', () => { readLeadQuestions(); if ((state.leads.config.questions || []).length >= 15) return; state.leads.config.questions = [...(state.leads.config.questions || []), '']; renderLeadQuestions(); document.querySelector('#lead-questions > div:last-child input')?.focus(); markDirty(); });
+  $('#lead-questions').addEventListener('click', event => { const button = event.target.closest('[data-remove-question]'); if (!button) return; readLeadQuestions(); state.leads.config.questions.splice(Number(button.dataset.removeQuestion), 1); renderLeadQuestions(); markDirty(); });
+  // Named places (tables, staff, doctors…): each keeps its own number, so renaming or removing one never moves
+  // another place's bookings. When names exist, "at the same time" is the number of names.
+  function renderPlaces() {
+    const c = state.calendar.config, people = c.count_by === 'people', places = c.places || [];
+    $('#places-section').hidden = people;
+    $('#places-title').textContent = `${typeNames.place} names`;
+    $('#add-place').textContent = `+ Add ${typeNames.place.toLowerCase()}`;
+    $('#place-list').innerHTML = places.map((place, index) => `<div><span>${index + 1}</span><input class="ui-input" value="${escapeHtml(place.name)}" maxlength="60" placeholder="${escapeHtml(typeNames.place)} ${index + 1}" data-place="${index}"><button class="ui-btn ghost icon sm" type="button" data-remove-place="${index}" aria-label="Remove">×</button></div>`).join('') || `<p class="ui-faint" style="margin:0">No names. The AI books any free ${escapeHtml(typeNames.place.toLowerCase())}. Add names (Table 5, Anna, Dr. Petrosyan) if customers choose one.</p>`;
+    renderCapacity();
+  }
+  function readPlaces() {
+    const inputs = [...document.querySelectorAll('[data-place]')];
+    state.calendar.config.places = inputs.map(input => ({ ...state.calendar.config.places[Number(input.dataset.place)], name:input.value.trim().slice(0, 60) }));
+  }
+  function renderCapacity() {
+    const c = state.calendar.config, people = $('#booking-count-by').value === 'people';
+    const named = !people && (c.places || []).length;
+    $('#capacity-label').textContent = `${people ? typeNames.people : typeNames.places} at the same time`;
+    $('#booking-capacity').max = people ? '5000' : '500';
+    $('#booking-capacity').disabled = Boolean(named);
+    if (named) $('#booking-capacity').value = String(c.places.length);
+    $('#max-group-field').hidden = !people;
+    $('#capacity-hint-text').textContent = people ? `For example 40 ${typeNames.people.toLowerCase()} in total.` : named ? 'Set by the names below.' : `1 = one customer per time. 5 ${typeNames.places.toLowerCase()} = 5.`;
+    $('#count-by-hint').textContent = people ? `Each booking uses as many ${typeNames.people.toLowerCase()} as its group.` : `Each booking takes one ${typeNames.place.toLowerCase()}.`;
+  }
+  $('#booking-count-by').addEventListener('change', () => { readPlaces(); state.calendar.config.count_by = $('#booking-count-by').value; renderPlaces(); });
+  $('#add-place').addEventListener('click', () => {
+    readPlaces();
+    const places = state.calendar.config.places || [];
+    if (places.length >= 100) return;
+    const next = places.reduce((max, place) => Math.max(max, Number(place.index)), -1) + 1;
+    if (next > 499) return window.HansoraUI.toast('Too many places were removed and added. Remove one and save first.');
+    state.calendar.config.places = [...places, { index:next, name:'' }];
+    renderPlaces(); document.querySelector('#place-list > div:last-child input')?.focus(); markDirty();
+  });
+  $('#place-list').addEventListener('click', event => { const button = event.target.closest('[data-remove-place]'); if (!button) return; readPlaces(); state.calendar.config.places.splice(Number(button.dataset.removePlace), 1); renderPlaces(); markDirty(); });
   $('#save-tools').addEventListener('click', save);
   $('#google-connect').addEventListener('click', connectGoogle);
   $('#google-disconnect').addEventListener('click', disconnectGoogle);
@@ -116,8 +162,11 @@
 
   // Names follow the business type: "Table reservations" for a restaurant, "Appointments" for a clinic…
   function applyTypeNames(type) {
-    if (!type || type.code === 'other') return;
-    $('#capacity-label').textContent = `${type.places} at the same time`;
+    if (!type) return;
+    typeNames = { place:type.place || 'Place', places:type.places || 'Places', people:type.people || 'People' };
+    $('#count-people-option').textContent = typeNames.people;
+    renderPlaces();
+    if (type.code === 'other') return;
     const nav = tool => document.querySelector(`[data-tool="${tool}"] b`);
     const head = tool => document.querySelector(`[data-pane="${tool}"] .ui-pane-head h2`);
     if (nav('calendar')) nav('calendar').textContent = type.booking;
@@ -167,7 +216,11 @@
     const zones = TIMEZONES.includes(c.timezone) ? TIMEZONES : [c.timezone, ...TIMEZONES];
     $('#booking-timezone').innerHTML = zones.map(zone => `<option value="${escapeHtml(zone)}">${escapeHtml(zone.replace(/_/g,' '))}</option>`).join('');
     $('#booking-timezone').value = c.timezone;
-    $('#booking-capacity').value = String(Math.min(500, Math.max(1, Number(c.capacity) || 1)));
+    $('#booking-count-by').value = c.count_by === 'people' ? 'people' : 'bookings';
+    $('#booking-capacity').value = String(Math.min(c.count_by === 'people' ? 5000 : 500, Math.max(1, Number(c.capacity) || 1)));
+    $('#booking-max-group').value = String(Math.max(0, Number(c.max_group) || 0));
+    c.places = Array.isArray(c.places) ? c.places.filter(place => place && place.name) : [];
+    renderPlaces();
     $('#booking-auto-confirm').checked = Boolean(c.auto_confirm);
     $('#orders-auto-confirm').checked = Boolean(state.orders.config.auto_confirm);
     const delivery = state.orders.config.delivery_slots || {};
@@ -179,6 +232,7 @@
     $('#order-instructions').value = state.orders.config.instructions || '';
     $('#booking-instructions').value = c.instructions || '';
     $('#lead-signals').value = state.leads.config.signals || '';
+    renderLeadQuestions();
     document.querySelectorAll('#handoff-rules input[data-rule]').forEach(input => { if (!input.disabled) input.checked = Boolean(state.handoff.config.rules?.[input.dataset.rule]); });
     renderWeek(); renderServices(); renderClosedDates(); renderOrderFields(); renderGoogle(); renderNotifications(); renderStatuses();
   }
@@ -268,9 +322,16 @@
     state.orders.enabled = $('#orders-enabled').checked;
     state.orders.config = { required_fields: state.orders.config.required_fields.filter(Boolean), auto_confirm:$('#orders-auto-confirm').checked, confirmation_message:$('#order-confirmation').value.trim().slice(0, 1000), instructions:$('#order-instructions').value.trim().slice(0, 3000), delivery_slots:{ enabled:!$('#delivery-settings').hidden, per_window:Math.min(500, Math.max(1, Math.round(Number($('#delivery-per').value)) || 1)), window_minutes:Number($('#delivery-window').value), lead_minutes:Number($('#delivery-lead').value) } };
     c.instructions = $('#booking-instructions').value.trim().slice(0, 3000);
-    c.capacity = Math.min(500, Math.max(1, Math.round(Number($('#booking-capacity').value)) || 1));
+    readPlaces();
+    c.count_by = $('#booking-count-by').value === 'people' ? 'people' : 'bookings';
+    // Names are kept when switching to people (they are ignored there), so switching back restores them.
+    c.places = (c.places || []).filter(place => place.name);
+    c.place_label = typeNames.place;
+    c.capacity = (c.count_by === 'bookings' && c.places.length) || Math.min(c.count_by === 'people' ? 5000 : 500, Math.max(1, Math.round(Number($('#booking-capacity').value)) || 1));
+    c.max_group = c.count_by === 'people' ? Math.min(c.capacity, Math.max(0, Math.round(Number($('#booking-max-group').value)) || 0)) : 0;
     state.leads.enabled = $('#leads-enabled').checked;
-    state.leads.config = { signals: $('#lead-signals').value.trim().slice(0, 800) };
+    readLeadQuestions();
+    state.leads.config = { signals: $('#lead-signals').value.trim().slice(0, 800), questions: (state.leads.config.questions || []).filter(Boolean).slice(0, 15) };
     state.handoff.config = { rules: Object.fromEntries([...document.querySelectorAll('#handoff-rules input[data-rule]')].map(input => [input.dataset.rule, input.checked])) };
     Object.assign(state.notifications, { email_enabled:$('#email-notify-enabled').checked, email:$('#notify-email').value.trim(), language:$('#notify-language').value, whatsapp_enabled:$('#wa-notify-enabled').checked, events:[...document.querySelectorAll('#notify-events input:checked')].map(input => input.value) });
   }
@@ -280,6 +341,7 @@
     for (const [key, name] of DAYS) for (const range of c.weekly_hours[key]) if (!range.start || !range.end || range.end <= range.start) return [`${name}: closing time must be after opening time.`, 'calendar'];
     for (const [key, name] of DAYS) { const ranges = [...c.weekly_hours[key]].sort((a, b) => a.start.localeCompare(b.start)); for (let i = 1; i < ranges.length; i++) if (ranges[i].start < ranges[i - 1].end) return [`${name}: working hours overlap.`, 'calendar']; }
     if (state.calendar.enabled && !DAYS.some(([key]) => c.weekly_hours[key].length)) return ['Add working hours for at least one day, or turn bookings off.', 'calendar'];
+    if (c.count_by !== 'people' && new Set((c.places || []).map(place => place.name.toLowerCase())).size !== (c.places || []).length) return [`Each ${typeNames.place.toLowerCase()} name must be different.`, 'calendar'];
     if (state.orders.enabled && !state.orders.config.required_fields.length) return ['Add at least one required order detail.', 'orders'];
     if (new Set(state.orders.config.required_fields.map(field => field.toLowerCase())).size !== state.orders.config.required_fields.length) return ['Each required order detail must be different.', 'orders'];
     const email = state.notifications.email; if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return ['Enter a valid alert email or leave it empty.', 'notifications'];
@@ -293,6 +355,7 @@
     const button = $('#save-tools'); button.disabled = true; setState('Saving…');
     // A spinner while saving, so it is clear the save is running.
     button.innerHTML = '<span class="ui-spinner" aria-hidden="true"></span>Saving…'; button.classList.add('is-busy');
+    window.HansoraUI.busy('Saving your settings…');
     try {
       const rows = ['calendar','orders','leads','handoff'].map(tool => ({ business_id:businessId, tool_type:tool, enabled:state[tool].enabled, config:state[tool].config, updated_at:new Date().toISOString() }));
       const saved = await api.db.from('automation_tool_configs').upsert(rows, { onConflict:'business_id,tool_type' });
@@ -300,12 +363,13 @@
       const n = state.notifications;
       await notificationsCall({action:'save', email_enabled:n.email_enabled, email:n.email, events:n.events, language:n.language, whatsapp_enabled:n.whatsapp_verified && n.whatsapp_enabled});
       // The AI's available actions are part of its provider configuration, so resync after every change.
+      window.HansoraUI.busy('Updating your AI employee…');
       const sync = await api.authenticatedFetch('/.netlify/functions/automation-agent-sync', {method:'POST', body:JSON.stringify({business_id:businessId})});
       dirty = false;
       setState('All changes saved');
       window.HansoraUI.toast(sync.ok ? 'Saved. Your AI employee is updated.' : 'Saved. The AI updates on its next sync.');
     } catch (error) { setState('Not saved'); showError(api.displayError(error)); }
-    finally { button.disabled = false; button.textContent = 'Save changes'; button.classList.remove('is-busy'); updateSaveButton(); }
+    finally { window.HansoraUI.busy(false); button.disabled = false; button.textContent = 'Save changes'; button.classList.remove('is-busy'); updateSaveButton(); }
   }
 
   async function connectGoogle() {
