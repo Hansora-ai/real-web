@@ -91,6 +91,16 @@
   $('#add-order-field').addEventListener('click', () => { readOrderFields(); state.orders.config.required_fields.push(''); renderOrderFields(); document.querySelector('#order-fields > div:last-child input')?.focus(); markDirty(); });
   $('#order-fields').addEventListener('click', event => { const button = event.target.closest('button[data-remove]'); if (!button) return; readOrderFields(); state.orders.config.required_fields.splice(Number(button.dataset.remove), 1); renderOrderFields(); markDirty(); });
   ['calendar','orders','leads'].forEach(tool => $(`#${tool}-enabled`).addEventListener('change', event => { state[tool].enabled = event.target.checked; renderStatuses(); }));
+  // Delivery time slots (orders): "N deliveries per X minutes"; uses the working hours from Bookings.
+  function showDelivery(on) { $('#delivery-settings').hidden = !on; $('#delivery-add').hidden = on; renderDeliverySummary(); }
+  function renderDeliverySummary() {
+    const per = Math.max(1, Math.round(Number($('#delivery-per').value)) || 1), windowText = $('#delivery-window').selectedOptions[0]?.textContent || '';
+    $('#delivery-summary').textContent = `${per === 1 ? `One delivery every ${windowText}` : `Up to ${per} deliveries every ${windowText}`}. The AI offers only times with room left, within your working hours (Bookings → Working hours), and saves the time on the order.`;
+  }
+  $('#delivery-add').addEventListener('click', () => { showDelivery(true); markDirty(); $('#delivery-per').focus(); });
+  $('#delivery-remove').addEventListener('click', () => { showDelivery(false); markDirty(); });
+  ['#delivery-per','#delivery-window'].forEach(selector => $(selector).addEventListener('input', renderDeliverySummary));
+  $('#delivery-window').addEventListener('change', renderDeliverySummary);
   $('#save-tools').addEventListener('click', save);
   $('#google-connect').addEventListener('click', connectGoogle);
   $('#google-disconnect').addEventListener('click', disconnectGoogle);
@@ -160,6 +170,11 @@
     $('#booking-capacity').value = String(Math.min(500, Math.max(1, Number(c.capacity) || 1)));
     $('#booking-auto-confirm').checked = Boolean(c.auto_confirm);
     $('#orders-auto-confirm').checked = Boolean(state.orders.config.auto_confirm);
+    const delivery = state.orders.config.delivery_slots || {};
+    $('#delivery-per').value = String(Math.max(1, Number(delivery.per_window) || 1));
+    setSelect('#delivery-window', Number(delivery.window_minutes) || 30);
+    setSelect('#delivery-lead', delivery.lead_minutes ?? 30);
+    showDelivery(Boolean(delivery.enabled));
     $('#order-confirmation').value = state.orders.config.confirmation_message || '';
     $('#order-instructions').value = state.orders.config.instructions || '';
     $('#booking-instructions').value = c.instructions || '';
@@ -251,7 +266,7 @@
     c.services = c.services.filter(service => service.name);
     state.calendar.enabled = $('#calendar-enabled').checked;
     state.orders.enabled = $('#orders-enabled').checked;
-    state.orders.config = { required_fields: state.orders.config.required_fields.filter(Boolean), auto_confirm:$('#orders-auto-confirm').checked, confirmation_message:$('#order-confirmation').value.trim().slice(0, 1000), instructions:$('#order-instructions').value.trim().slice(0, 3000) };
+    state.orders.config = { required_fields: state.orders.config.required_fields.filter(Boolean), auto_confirm:$('#orders-auto-confirm').checked, confirmation_message:$('#order-confirmation').value.trim().slice(0, 1000), instructions:$('#order-instructions').value.trim().slice(0, 3000), delivery_slots:{ enabled:!$('#delivery-settings').hidden, per_window:Math.min(500, Math.max(1, Math.round(Number($('#delivery-per').value)) || 1)), window_minutes:Number($('#delivery-window').value), lead_minutes:Number($('#delivery-lead').value) } };
     c.instructions = $('#booking-instructions').value.trim().slice(0, 3000);
     c.capacity = Math.min(500, Math.max(1, Math.round(Number($('#booking-capacity').value)) || 1));
     state.leads.enabled = $('#leads-enabled').checked;
