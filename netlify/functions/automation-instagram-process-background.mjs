@@ -34,6 +34,12 @@ export async function handler(event){
       first(`/rest/v1/automation_contacts?business_id=eq.${account.business_id}&channel_type=eq.instagram_dm&external_contact_id=eq.${encodeURIComponent(message.senderId)}&select=display_name,profile&limit=1`).catch(()=>null)
     ]);
     const loadedMs=Date.now()-startedAt;
+    // Started now and awaited just before the AI: they only need the business, not the saved message.
+    const settle=promise=>promise.then(value=>({value}),error=>({error}));const take=result=>{if(result.error)throw result.error;return result.value;};
+    const price=automationPrices().aiReply;
+    const aiResourceP=settle(first(`/rest/v1/automation_provider_resources?business_id=eq.${account.business_id}&provider=eq.elevenlabs&resource_type=eq.agent&status=eq.active&select=*&limit=1`));
+    const affordableP=settle(canAfford(account.business_id,price));
+    const sessionP=settle(first(`/rest/v1/automation_flow_sessions?business_id=eq.${account.business_id}&external_contact_id=eq.${encodeURIComponent(message.senderId)}&status=in.(awaiting_reply,running,waiting,ai_active)&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=*&order=updated_at.desc&limit=1`));
     if(!connection){console.warn('automation-instagram DMs are not active for this business (finish setup on the Instagram channel page)',{businessId:account.business_id});throw new Error('instagram_dm_not_active');}
     const settings=connection.settings||{};
     if(!credential)throw new Error('instagram_token_not_found');
@@ -45,10 +51,15 @@ export async function handler(event){
     const displayName=(senderProfile?(senderProfile.name||`@${senderProfile.username}`):known?.display_name)||'Instagram customer';
     const contact=await serviceUpsert('automation_contacts','business_id,channel_type,external_contact_id',{business_id:account.business_id,display_name:displayName,channel_type:'instagram_dm',external_contact_id:message.senderId,last_seen_at:occurredAt,profile});
     const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'instagram_dm',external_thread_id:message.senderId,status:'open',last_message_preview:String(message.text).slice(0,1000),last_message_at:occurredAt});
-    const inbound=await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:instagram:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:'text',content:message.text,status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{sender_id:message.senderId,recipient_id:message.recipientId},occurred_at:occurredAt},{ignoreDuplicates:true});
+    // Saving the message, loading the chat memory and preparing actions run together.
+    const [inbound,memory,actions]=await Promise.all([
+      serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:instagram:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:'text',content:message.text,status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{sender_id:message.senderId,recipient_id:message.recipientId},occurred_at:occurredAt},{ignoreDuplicates:true}),
+      loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,excludeExternalId:message.externalEventId}),
+      prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'instagram_dm',contact:{name:contact.display_name==='Instagram customer'?'':contact.display_name,externalId:message.senderId}})
+    ]);
     if(settings.automatic_replies===false||!conversation.ai_enabled||['human_handling','resolved','archived'].includes(conversation.status)){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
 
-    const session=await first(`/rest/v1/automation_flow_sessions?business_id=eq.${account.business_id}&external_contact_id=eq.${encodeURIComponent(message.senderId)}&status=in.(awaiting_reply,running,waiting,ai_active)&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=*&order=updated_at.desc&limit=1`);
+    const session=take(await sessionP);
     let flowInstruction='';
     if(session){
       // Count button taps for the automation's per-step results.
@@ -74,14 +85,7 @@ export async function handler(event){
       }
     }
 
-    // These lookups are independent reads, so they run together to answer faster.
-    const price=automationPrices().aiReply;
-    const [aiResource,affordable,actions,memory]=await Promise.all([
-      first(`/rest/v1/automation_provider_resources?business_id=eq.${account.business_id}&provider=eq.elevenlabs&resource_type=eq.agent&status=eq.active&select=*&limit=1`),
-      canAfford(account.business_id,price),
-      prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'instagram_dm',contact:{name:contact.display_name==='Instagram customer'?'':contact.display_name,externalId:message.senderId}}),
-      loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id})
-    ]);
+    const aiResource=take(await aiResourceP);const affordable=take(await affordableP);
     if(!aiResource)throw new Error('ai_provider_agent_not_ready');
     // Pay as you go: no credits, no AI reply. The conversation goes to the owner instead.
     if(!affordable.ok){await handleOutOfCredits({businessId:account.business_id,conversationId:conversation.id,channel:'Instagram DM',customer:contact.display_name,notifyOwner});await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,out_of_credits:true});}
