@@ -171,8 +171,8 @@ export function createHansoraServer(ctx) {
     try { return jsonText(await getAccount(userId)); } catch (error) { return toolError(error); }
   });
 
-  server.registerTool('start_image_generation', {
-    title: 'Animate an uploaded image',
+  server.registerTool('open_image_to_video_upload_card', {
+    title: 'Open image-to-video upload card',
     description: 'Open Hansora’s in-chat upload card only when the host cannot pass the user’s attached image directly to create_generation. The card uploads the file, shows the credit quote, and starts the selected Hansora video model after the user confirms.',
     inputSchema: z.object({
       model_id: z.string().min(1).describe('Available Hansora video model that accepts an image input.'),
