@@ -11,14 +11,14 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css"><link rel="stylesheet" href="automation-workflows.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-workflows.js?v=20261001-manychat"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-workflows.js?v=20261001-full"></script>
 </head>
 <body class="ui" data-automation-page="workflows">
   <div data-automation-header></div>
   <main class="ui-page workflows-page ui-enter">
     <nav class="workflow-crumb"><a id="workflow-back" href="automation-agent.html">AI employee</a><span>›</span><b>Instagram automations</b></nav>
     <header class="ui-page-head workflows-head">
-      <div><div class="workflows-kicker"><span data-icon="instagram"></span>Instagram comments</div><h1>Automations</h1><p>Turn comments into conversations, customers, and orders.</p></div>
+      <div><div class="workflows-kicker"><span data-icon="instagram"></span>Instagram comments</div><h1>Automations</h1><p>Comments, DMs, story replies and mentions — turned into conversations, customers and orders.</p></div>
       <div class="workflows-head-actions"><button class="ui-btn ghost" type="button" data-open-templates>Templates</button><button class="ui-btn primary" id="new-workflow" type="button" data-icon="sparkle">New automation</button></div>
     </header>
     <div class="ui-alert" id="workflows-error" role="alert" hidden></div>
@@ -36,6 +36,7 @@
         <div><h2>Your automations</h2><span id="workflow-count"></span></div>
         <div class="workflow-controls"><label class="workflow-search"><span data-icon="search"></span><input id="workflow-search" type="search" placeholder="Search automations"></label><div class="workflow-filters" id="workflow-filters"><button class="active" data-status="all" type="button">All</button><button data-status="active" type="button">Live</button><button data-status="draft" type="button">Draft</button><button data-status="paused" type="button">Paused</button></div></div>
       </div>
+      <div class="workflow-folders" id="workflow-folders" hidden></div>
       <div class="workflow-loading" id="workflows-loading"><div class="ui-skeleton"></div><div class="ui-skeleton"></div><div class="ui-skeleton"></div></div>
       <div class="workflow-list" id="workflow-list" hidden></div>
       <div class="ui-card workflow-empty" id="workflow-empty" hidden><span data-icon="branch"></span><h2>No automations here</h2><p>Create one from a proven template or start with a blank journey.</p><button class="ui-btn primary" type="button" data-new-blank>New automation</button> <button class="ui-btn ghost" type="button" data-open-templates>Start from a template</button></div>

@@ -9,9 +9,9 @@
   <script src="automation-theme.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css"><link rel="stylesheet" href="automation-flow.css?v=20261001-manychat">
+  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css"><link rel="stylesheet" href="automation-flow.css?v=20261001-full">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-comments.js?v=20261001-manychat"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-comments.js?v=20261001-full"></script>
 </head>
 <body class="ui ui-app" data-automation-page="comments">
   <div data-automation-header></div>
@@ -23,7 +23,7 @@
         <div class="flow-title-row">
           <a class="ui-btn ghost icon sm" id="builder-back" href="automation-dashboard.html" aria-label="Back to AI employee" data-icon="chevron" style="transform:scaleX(-1)"></a>
           <span class="flow-channel-mark" data-icon="comment"></span>
-          <div><span class="flow-name-wrap"><input id="flow-name" value="Untitled automation" aria-label="Automation name" maxlength="200"><button type="button" id="rename-flow" aria-label="Rename automation" title="Rename" data-icon="edit"></button></span><p><span id="flow-status-dot"></span><span id="flow-status">Draft</span> · Instagram comments · <span id="draft-state">All changes saved</span></p></div>
+          <div><span class="flow-name-wrap"><input id="flow-name" value="Untitled automation" aria-label="Automation name" maxlength="200"><button type="button" id="rename-flow" aria-label="Rename automation" title="Rename" data-icon="edit"></button></span><p><span id="flow-status-dot"></span><span id="flow-status">Draft</span> · <span id="flow-trigger-label">Instagram comments</span> · <span id="draft-state">All changes saved</span></p></div>
         </div>
         <div class="flow-actions">
           <button class="ui-btn ghost sm" id="preview-flow" type="button" data-icon="eye">Preview</button>
@@ -55,6 +55,8 @@
             <p class="flow-add-hint">New steps connect to the selected step. You can also use the + under any step.</p>
           </div>
           <div class="flow-zoom" role="group" aria-label="Zoom">
+            <button type="button" id="undo-flow" aria-label="Undo" title="Undo (⌘Z)" disabled>↶</button>
+            <button type="button" id="redo-flow" aria-label="Redo" title="Redo (⇧⌘Z)" disabled>↷</button>
             <span class="flow-canvas-summary" id="canvas-summary">1 journey</span>
             <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
             <button type="button" id="zoom-reset" aria-label="Reset zoom">100%</button>

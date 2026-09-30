@@ -25,7 +25,9 @@ export async function handler(event){
     if(!credential)throw new Error('instagram_token_not_found');
     if(credential.expires_at&&Date.parse(credential.expires_at)<=Date.now())throw new Error('instagram_token_expired');
     const accessToken=decryptSecret(credential);
-    const workflows=rows(await supabaseRequest(`/rest/v1/automation_comment_workflows?business_id=eq.${account.business_id}&status=eq.active&select=*&order=updated_at.desc`));
+    // Comments on posts and reels start "comment" automations; comments during a Live start "Live comment" ones.
+    const wanted=comment.live?'live_comment':'comment';
+    const workflows=rows(await supabaseRequest(`/rest/v1/automation_comment_workflows?business_id=eq.${account.business_id}&status=eq.active&select=*&order=updated_at.desc`)).filter(workflow=>String(workflow.safety_config?.trigger_type||'comment')===wanted);
     let handled=0;
     for(const workflow of workflows){
       const outcome=await runWorkflow({workflow,comment,account,connection,accessToken});
@@ -82,7 +84,7 @@ async function runWorkflow({workflow,comment,account,connection,accessToken}){
 }
 
 async function matchesPost(workflow,comment,accessToken){
-  if(workflow.post_scope==='all')return true;
+  if(workflow.post_scope==='all'||comment.live)return true;
   const selected=Array.isArray(workflow.selected_post_ids)?workflow.selected_post_ids:[];
   if(workflow.post_scope==='selected')return selected.includes(comment.mediaId);
   if(selected.length)return selected.includes(comment.mediaId);

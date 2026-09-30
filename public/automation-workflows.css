@@ -6,3 +6,7 @@
 @media(max-width:980px){.workflow-card{grid-template-columns:1fr 200px repeat(2,70px) 38px}.workflow-result:nth-of-type(3){display:none}}
 @media(max-width:760px){.workflow-metrics{grid-template-columns:1fr 1fr}.workflows-toolbar{align-items:stretch;flex-direction:column}.workflow-controls{align-items:stretch;flex-direction:column}.workflow-search{width:100%}.workflow-filters{align-self:flex-start}.workflow-card{grid-template-columns:1fr 42px}.workflow-map-mini,.workflow-result{display:none}.workflow-channel{align-items:flex-start}.workflow-channel .ui-badge{display:none}.template-grid{grid-template-columns:1fr}}
 .workflows-head-actions{display:flex;gap:8px;flex-wrap:wrap}
+.workflow-folders{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.workflow-folders button{padding:6px 12px;border:1px solid var(--border-2);border-radius:99px;background:none;color:var(--text-2);font-size:12.5px;cursor:pointer}
+.workflow-folders button span{color:var(--text-3);margin-left:4px}
+.workflow-folders button.active{border-color:var(--accent);color:var(--text);background:var(--accent-soft)}

@@ -4,6 +4,11 @@ import { executeFlowAdvance } from '../../lib/automation/flow-executor.mjs';
 import { getInstagramSenderProfile, sendInstagramAction, sendInstagramText } from '../../lib/automation/meta.mjs';
 import { keepTyping } from '../../lib/automation/typing.mjs';
 import { flagFailedReply } from '../../lib/automation/failure.mjs';
+import { makeFlowStarter, maybeStartDmAutomation } from '../../lib/automation/dm-triggers.mjs';
+
+// Messages without text still show something readable in the Inbox.
+const KIND_LABELS={story_mention:'📣 Mentioned you in their story',share:'↪️ Shared a post or reel with you',media:'📷 Sent a photo or video',referral:'🔗 Opened your link',story_reply:'💬 Replied to your story'};
+const shownText=message=>String(message.text||KIND_LABELS[message.kind]||'').slice(0,24000);
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
 import { clickedActionId, nodeForAction, recordFlowEvent } from '../../lib/automation/flow-stats.mjs';
 import { automationPrices, canAfford, chargeCredits, handleOutOfCredits } from '../../lib/automation/billing.mjs';
@@ -64,13 +69,24 @@ export async function handler(event){
     const profile={...(known?.profile||{}),instagram_scoped_id:message.senderId,...(senderProfile?{username:senderProfile.username,name:senderProfile.name,profile_pic:senderProfile.profilePic}:{})};
     const displayName=(senderProfile?(senderProfile.name||`@${senderProfile.username}`):known?.display_name)||'Instagram customer';
     const contact=await serviceUpsert('automation_contacts','business_id,channel_type,external_contact_id',{business_id:account.business_id,display_name:displayName,channel_type:'instagram_dm',external_contact_id:message.senderId,last_seen_at:occurredAt,profile});
-    const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'instagram_dm',external_thread_id:message.senderId,status:'open',last_message_preview:String(message.text).slice(0,1000),last_message_at:occurredAt});
+    const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'instagram_dm',external_thread_id:message.senderId,status:'open',last_message_preview:shownText(message).slice(0,1000),last_message_at:occurredAt});
     // Saving the message, loading the chat memory and preparing actions run together.
     const [inbound,memory,actions]=await Promise.all([
-      serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:instagram:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:'text',content:message.text,status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{sender_id:message.senderId,recipient_id:message.recipientId},occurred_at:occurredAt},{ignoreDuplicates:true}),
+      serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:instagram:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:'text',content:shownText(message),status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{sender_id:message.senderId,recipient_id:message.recipientId},occurred_at:occurredAt},{ignoreDuplicates:true}),
       loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,excludeExternalId:message.externalEventId}),
       prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'instagram_dm',contact:{name:contact.display_name==='Instagram customer'?'':contact.display_name,externalId:message.senderId}})
     ]);
+    // DM automations (keyword, story reply or mention, shared post, ig.me link, conversation starter, default reply)
+    // start here, before the AI; they run even when AI replies are off, but not while your team handles the chat.
+    const accessTokenPlain=decryptSecret(credential);
+    const flowStarter=makeFlowStarter({account,accessToken:accessTokenPlain});
+    if(!['human_handling','resolved','archived'].includes(conversation.status)){
+      const activeSession=take(await sessionP);
+      const started=await maybeStartDmAutomation({account,accessToken:accessTokenPlain,conversation,message,hasActiveSession:Boolean(activeSession)}).catch(error=>{console.error('automation DM trigger failed',{message:error?.message});return null;});
+      if(started?.handled){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,automation_started:started.workflowId||true});}
+    }
+    // A story mention, shared post, photo or link opening without text gets no AI reply unless an automation handled it.
+    if(!String(message.text||'').trim()){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,no_text:true});}
     if(settings.automatic_replies===false||!conversation.ai_enabled||['human_handling','resolved','archived'].includes(conversation.status)){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
 
     pendingReply={businessId:account.business_id,conversationId:conversation.id,customer:contact.display_name,channel:'Instagram DM'};
@@ -91,7 +107,7 @@ export async function handler(event){
       if(session.status==='waiting'){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,flow_waiting:true});}
       const workflow=await first(`/rest/v1/automation_comment_workflows?id=eq.${session.workflow_id}&business_id=eq.${account.business_id}&select=*&limit=1`);
       if(workflow&&['awaiting_reply','running'].includes(session.status)){
-        const advanced=await executeFlowAdvance({session,workflow,inboundText:message.text,inboundPayload:message.quickReplyPayload,canUseInbound:true,account,accessToken:decryptSecret(credential),conversation,recipientId:message.senderId});
+        const advanced=await executeFlowAdvance({session,workflow,inboundText:message.text,inboundPayload:message.quickReplyPayload,canUseInbound:true,account,accessToken:accessTokenPlain,conversation,recipientId:message.senderId,deps:{startFlow:args=>flowStarter(args)}});
         if(advanced.handled){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,flow_advanced:true,status:advanced.plan.status});}
         flowInstruction=advanced.aiAction?.instruction||'';
       }else if(workflow&&session.status==='ai_active'){
