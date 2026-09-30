@@ -45,7 +45,7 @@ export async function handler(event){
     // Pay as you go: no credits, no AI reply. The conversation goes to the owner instead.
     if(!affordable.ok){await handleOutOfCredits({businessId:account.business_id,conversationId:conversation.id,channel:'WhatsApp',customer:message.displayName||message.senderId,notifyOwner});await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,out_of_credits:true});}
     const mediaNote=message.contentType&&!['text','interactive'].includes(message.contentType)?'The latest customer message is a photo, video, voice note, file or location that you cannot open. Do not pretend to know its contents; use any caption, otherwise politely ask the customer to describe it in text, or offer a team member if it needs a human to review.':'';
-    const context=buildConversationContext({intro:['Continue this WhatsApp conversation. Keep the reply concise and do not greet again unless the customer greeted first.',actions.contextLine,mediaNote].filter(Boolean),memory});
+    const context=buildConversationContext({intro:['Continue this WhatsApp conversation. Keep the reply concise.',actions.contextLine,mediaNote].filter(Boolean),memory});
     const aiStartedAt=Date.now();
     const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'whatsapp',onToolCall:actions.onToolCall});
     const aiMs=Date.now()-aiStartedAt;
