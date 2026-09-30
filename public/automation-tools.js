@@ -15,7 +15,7 @@
   const TIMEZONES = (() => { try { return Intl.supportedValuesOf('timeZone'); } catch (_) { return ['UTC','Europe/London','Europe/Berlin','Europe/Moscow','Asia/Dubai','Asia/the city','America/New_York','America/Los_Angeles']; } })();
   const DEFAULT_ORDER_FIELDS = ['Product or service','Quantity or dimensions','Customer name','Phone number','Delivery address'];
   const state = {
-    calendar: { enabled:false, config:{ timezone:api.browserTimezone(), weekly_hours:{ mon:[{start:'10:00',end:'19:00'}], tue:[{start:'10:00',end:'19:00'}], wed:[{start:'10:00',end:'19:00'}], thu:[{start:'10:00',end:'19:00'}], fri:[{start:'10:00',end:'19:00'}], sat:[{start:'11:00',end:'17:00'}], sun:[] }, duration_minutes:60, step_minutes:30, buffer_minutes:0, min_notice_minutes:120, max_days_ahead:30, services:[], closed_dates:[], auto_confirm:false } },
+    calendar: { enabled:false, config:{ timezone:api.browserTimezone(), weekly_hours:{ mon:[{start:'10:00',end:'19:00'}], tue:[{start:'10:00',end:'19:00'}], wed:[{start:'10:00',end:'19:00'}], thu:[{start:'10:00',end:'19:00'}], fri:[{start:'10:00',end:'19:00'}], sat:[{start:'11:00',end:'17:00'}], sun:[] }, duration_minutes:60, step_minutes:30, buffer_minutes:0, min_notice_minutes:0, max_days_ahead:365, services:[], closed_dates:[], auto_confirm:false } },
     orders: { enabled:false, config:{ required_fields:[...DEFAULT_ORDER_FIELDS], auto_confirm:false } },
     leads: { enabled:false, config:{ signals:'' } },
     handoff: { enabled:true, config:{ rules:{ asks_person:true, complaint:true, missing_info:false, uncertain:true } } },
@@ -36,6 +36,30 @@
     notifications:['What you receive',[['system','New order #1043 for Luma Studio. Customer: Ana · +1 555 010 0000. Details: White cabinet 120 × 200 cm · 12 Main St'],['system','New booking #1042 for Luma Studio. Customer: Ani. Time: Fri 2 Oct, 11:30'],['system','A customer needs a person at Luma Studio. Reason: refund request']]]
   };
 
+  // Booking rules are optional: a rule that is not added uses a neutral default (no limit where possible).
+  const RULES = {
+    duration:{ select:'#booking-duration', key:'duration_minutes', off:60, suggest:60 },
+    step:{ select:'#booking-step', key:'step_minutes', off:30, suggest:30 },
+    buffer:{ select:'#booking-buffer', key:'buffer_minutes', off:0, suggest:15 },
+    notice:{ select:'#booking-notice', key:'min_notice_minutes', off:0, suggest:60 },
+    ahead:{ select:'#booking-ahead', key:'max_days_ahead', off:365, suggest:30 }
+  };
+  function ruleField(name) { return document.querySelector(`[data-booking-rule="${name}"]`); }
+  function showRule(name, shown, value) {
+    ruleField(name).hidden = !shown;
+    document.querySelector(`[data-add-rule="${name}"]`).hidden = shown;
+    if (shown) setSelect(RULES[name].select, value);
+    renderRulesSummary();
+  }
+  function ruleValue(name) { return ruleField(name).hidden ? RULES[name].off : Number($(RULES[name].select).value); }
+  function renderRulesSummary() {
+    const minutes = value => value >= 1440 && value % 1440 === 0 ? `${value / 1440} day${value === 1440 ? '' : 's'}` : value >= 60 && value % 60 === 0 ? `${value / 60} hour${value === 60 ? '' : 's'}` : `${value} minutes`;
+    const notice = ruleValue('notice'), ahead = ruleValue('ahead'), buffer = ruleValue('buffer');
+    $('#rules-summary').textContent = `Bookings are ${minutes(ruleValue('duration'))} long and can start every ${minutes(ruleValue('step'))}, ${notice ? `at least ${minutes(notice)} ahead` : 'right up to the start time'}${buffer ? `, with a ${minutes(buffer)} break between` : ''}, up to ${ahead >= 365 ? 'a year' : minutes(ahead * 1440)} ahead. Services below can have their own length.`;
+  }
+  document.querySelectorAll('[data-add-rule]').forEach(button => button.addEventListener('click', () => { const name = button.dataset.addRule; showRule(name, true, RULES[name].suggest); markDirty(); $(RULES[name].select).focus(); }));
+  document.querySelectorAll('[data-remove-rule]').forEach(button => button.addEventListener('click', () => { showRule(button.dataset.removeRule, false); markDirty(); }));
+  document.querySelector('#booking-rules').addEventListener('change', renderRulesSummary);
   render();
   showPreview('calendar');
   $('#tools-loading').hidden = true; $('#tools-app').hidden = false;
@@ -59,7 +83,7 @@
     state.calendar.config.weekly_hours[toggle.dataset.dayOpen] = toggle.checked ? [{start:'10:00',end:'19:00'}] : [];
     renderWeek();
   });
-  $('#add-service').addEventListener('click', () => { readServices(); state.calendar.config.services.push({name:'',duration_minutes:Number($('#booking-duration').value)}); renderServices(); document.querySelector('#service-list .service-row:last-child input')?.focus(); markDirty(); });
+  $('#add-service').addEventListener('click', () => { readServices(); state.calendar.config.services.push({name:'',duration_minutes:ruleValue('duration')}); renderServices(); document.querySelector('#service-list .service-row:last-child input')?.focus(); markDirty(); });
   $('#service-list').addEventListener('click', event => { const button = event.target.closest('[data-remove-service]'); if (!button) return; readServices(); state.calendar.config.services.splice(Number(button.dataset.removeService), 1); renderServices(); markDirty(); });
   $('#add-closed-date').addEventListener('click', () => { const value = $('#closed-date').value; if (!value || state.calendar.config.closed_dates.includes(value)) return; state.calendar.config.closed_dates.push(value); state.calendar.config.closed_dates.sort(); $('#closed-date').value = ''; renderClosedDates(); markDirty(); });
   $('#closed-dates').addEventListener('click', event => { const button = event.target.closest('[data-remove-date]'); if (!button) return; state.calendar.config.closed_dates = state.calendar.config.closed_dates.filter(date => date !== button.dataset.removeDate); renderClosedDates(); markDirty(); });
@@ -106,7 +130,8 @@
     $('#calendar-enabled').checked = state.calendar.enabled;
     $('#orders-enabled').checked = state.orders.enabled;
     $('#leads-enabled').checked = state.leads.enabled;
-    setSelect('#booking-duration', c.duration_minutes); setSelect('#booking-step', c.step_minutes); setSelect('#booking-buffer', c.buffer_minutes); setSelect('#booking-notice', c.min_notice_minutes); setSelect('#booking-ahead', c.max_days_ahead);
+    // A saved value that differs from the neutral default shows as an added rule.
+    Object.entries(RULES).forEach(([name, rule]) => { const value = Number(c[rule.key] ?? rule.off); showRule(name, value !== rule.off, value); });
     const zones = TIMEZONES.includes(c.timezone) ? TIMEZONES : [c.timezone, ...TIMEZONES];
     $('#booking-timezone').innerHTML = zones.map(zone => `<option value="${escapeHtml(zone)}">${escapeHtml(zone.replace(/_/g,' '))}</option>`).join('');
     $('#booking-timezone').value = c.timezone;
@@ -196,7 +221,7 @@
   function collect() {
     readWeek(); readServices(); readOrderFields();
     const c = state.calendar.config;
-    Object.assign(c, { timezone:$('#booking-timezone').value, duration_minutes:Number($('#booking-duration').value), step_minutes:Number($('#booking-step').value), buffer_minutes:Number($('#booking-buffer').value), min_notice_minutes:Number($('#booking-notice').value), max_days_ahead:Number($('#booking-ahead').value), auto_confirm:$('#booking-auto-confirm').checked });
+    Object.assign(c, { timezone:$('#booking-timezone').value, duration_minutes:ruleValue('duration'), step_minutes:ruleValue('step'), buffer_minutes:ruleValue('buffer'), min_notice_minutes:ruleValue('notice'), max_days_ahead:ruleValue('ahead'), auto_confirm:$('#booking-auto-confirm').checked });
     c.services = c.services.filter(service => service.name);
     state.calendar.enabled = $('#calendar-enabled').checked;
     state.orders.enabled = $('#orders-enabled').checked;
