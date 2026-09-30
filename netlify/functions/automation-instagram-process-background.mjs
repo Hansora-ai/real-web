@@ -100,7 +100,7 @@ export async function handler(event){
 
     const context=buildConversationContext({intro:['Continue this Instagram conversation.',actions.contextLine,flowInstruction?`Flow instruction: ${flowInstruction}`:''].filter(Boolean),memory,after:[actions.liveBrief]});
     const aiStartedAt=Date.now();const preparedMs=aiStartedAt-startedAt;
-    const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'instagram_dm',onToolCall:actions.onToolCall});
+    const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'instagram_dm',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes});
     const aiMs=Date.now()-aiStartedAt;
     if(generated.toolCalls?.length)console.log('automation tool calls',{channel:'instagram_dm',calls:generated.toolCalls});
     const handedOff=generated.toolCalls?.some(call=>call.name==='handoff_to_human'&&call.ok);
