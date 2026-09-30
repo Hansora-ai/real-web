@@ -59,6 +59,7 @@
     const items = [
       ['agent', 'Overview', 'sparkle', q ? `automation-agent.html?id=${encodeURIComponent(businessId)}${preview}` : ''],
       ['inbox', 'Inbox', 'message', q ? `automation-inbox.html?${q}` : ''],
+      ['contacts', 'Contacts', 'user', q ? `automation-contacts.html?${q}` : ''],
       ['workflows', 'Automations', 'comment', q ? `automation-workflows.html?${q}` : '', ['comments']],
       ['operations', 'Orders & bookings', 'bag', q ? `automation-operations.html?${q}` : ''],
       ['tools', 'Business tools', 'spark', q ? `automation-tools.html?${q}` : ''],
