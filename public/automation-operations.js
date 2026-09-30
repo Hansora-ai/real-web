@@ -40,55 +40,160 @@
   }
 
   // Day view: every time of one day with taken and free places (tables, staff…), from the same calculation the AI uses.
+  // The owner can reserve or free places right here (phone and walk-in bookings); the AI counts them immediately.
   const pad = number => String(number).padStart(2, '0');
   const isoDay = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  const SELECT_ROW = '*, automation_conversations(channel_type), automation_contacts(display_name,primary_phone,profile,channel_type)';
+  let dayData = null, dayKind = params.get('kind') === 'delivery' ? 'delivery' : '';
+  const dayEdits = new Map(); // slot start → { reserve:Set(cell), free:Set(booking id), people:number }
   $('#day-date').value = isoDay(new Date());
   if (params.get('view') === 'day') setTimeout(() => showDayView(true));
   const shiftDay = days => { const date = new Date(`${$('#day-date').value || isoDay(new Date())}T12:00:00`); date.setDate(date.getDate() + days); $('#day-date').value = isoDay(date); loadDay(); };
   $('#day-prev').addEventListener('click', () => shiftDay(-1));
   $('#day-next').addEventListener('click', () => shiftDay(1));
   $('#day-date').addEventListener('change', loadDay);
+  $('#open-day').addEventListener('click', () => showDayView(true));
+  setupDayButton();
+  // The day view button is named after the business type ("Tables today", "Doctors today", "Deliveries today")
+  // and only shown when bookings or delivery times are on; online services without a calendar don't get it.
+  async function setupDayButton() {
+    const dayTab = document.querySelector('#operations-tabs [data-kind="day"]');
+    if (preview) { $('#open-day').hidden = false; $('#open-day').lastChild.textContent = 'Tables today'; return; }
+    try {
+      const [business, tools] = await Promise.all([
+        api.db.from('automation_businesses').select('category').eq('id', businessId).maybeSingle(),
+        api.db.from('automation_tool_configs').select('tool_type,enabled,config').eq('business_id', businessId).in('tool_type', ['calendar','orders'])
+      ]);
+      const type = api.businessType(business.data?.category);
+      const calendar = (tools.data || []).find(row => row.tool_type === 'calendar'), orders = (tools.data || []).find(row => row.tool_type === 'orders');
+      const bookings = Boolean(calendar?.enabled), deliveries = Boolean(orders?.enabled && orders?.config?.delivery_slots?.enabled);
+      if (!bookings && !deliveries) { if (dayTab) dayTab.hidden = true; return; }
+      const label = bookings ? `${type && type.code !== 'other' ? type.places : 'Bookings'} today` : 'Deliveries today';
+      $('#open-day').lastChild.textContent = label; $('#open-day').hidden = false;
+      if (dayTab) dayTab.textContent = label;
+    } catch (_) { /* the Day view tab still works */ }
+  }
+  $('#day-kind').addEventListener('click', event => { const button = event.target.closest('[data-day-kind]'); if (!button || button.dataset.dayKind === dayKind) return; dayKind = button.dataset.dayKind; loadDay(); });
   $('#day-slots').addEventListener('click', event => {
-    const link = event.target.closest('[data-open-record]'); if (!link) return;
-    showDayView(false); selectedId = link.dataset.openRecord; render();
+    const link = event.target.closest('[data-open-record]');
+    if (link) { showDayView(false); selectedId = link.dataset.openRecord; render(); return; }
+    const row = event.target.closest('[data-slot]'); if (!row) return;
+    const slot = dayData.slots.find(item => item.start === row.dataset.slot); if (!slot) return;
+    const edit = dayEdits.get(slot.start) || { reserve:new Set(), free:new Set(), people:0 };
+    const cell = event.target.closest('[data-cell]'), free = event.target.closest('[data-free]');
+    if (cell) { const key = cell.dataset.cell; edit.reserve.has(key) ? edit.reserve.delete(key) : edit.reserve.add(key); }
+    else if (free) { const id = free.dataset.free; edit.free.has(id) ? edit.free.delete(id) : edit.free.add(id); }
+    else if (event.target.closest('[data-day-cancel]')) { dayEdits.delete(slot.start); return renderDay(dayData); }
+    else if (event.target.closest('[data-day-save]')) return saveDayEdit(slot);
+    else return;
+    dayEdits.set(slot.start, edit); renderDay(dayData);
+  });
+  $('#day-slots').addEventListener('input', event => {
+    const input = event.target.closest('[data-people-input]'); if (!input) return;
+    const start = input.closest('[data-slot]').dataset.slot;
+    const edit = dayEdits.get(start) || { reserve:new Set(), free:new Set(), people:0 };
+    edit.people = Math.max(0, Math.round(Number(input.value)) || 0); dayEdits.set(start, edit);
+    const bar = input.closest('[data-slot]').querySelector('.day-edit'); if (bar) bar.hidden = !editCount(edit);
   });
   function showDayView(on) {
     $('#day-view').hidden = !on; $('#records-list').hidden = on; $('.ui-records-tools').hidden = on;
     document.querySelectorAll('#operations-tabs button').forEach(item => item.classList.toggle('active', on ? item.dataset.kind === 'day' : item.dataset.kind === activeKind));
-    if (on) loadDay();
+    if (on) { loadDay(); $('#day-view').scrollIntoView({block:'nearest'}); }
   }
   async function loadDay() {
     const date = $('#day-date').value; if (!date) return;
+    dayEdits.clear();
     $('#day-slots').innerHTML = '<div class="ui-empty">Loading…</div>';
     try {
-      const data = preview ? previewDay(date) : await api.authenticatedFetch('/.netlify/functions/automation-day-view', {method:'POST', body:JSON.stringify({business_id:businessId, date})}).then(async response => { const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(result.error || 'day_view_unavailable'); return result; });
+      const data = preview ? previewDay(date) : await api.authenticatedFetch('/.netlify/functions/automation-day-view', {method:'POST', body:JSON.stringify({business_id:businessId, date, ...(dayKind ? {kind:dayKind} : {})})}).then(async response => { const result = await response.json().catch(() => ({})); if (!response.ok) throw new Error(result.error || 'day_view_unavailable'); return result; });
+      dayKind = data.kind || 'booking';
       renderDay(data);
     } catch (error) { $('#day-slots').innerHTML = `<div class="ui-empty">${escapeHtml(api.displayError(error))}</div>`; }
   }
+  const editCount = edit => edit ? edit.reserve.size + edit.free.size + (edit.people > 0 ? 1 : 0) : 0;
   function renderDay(data) {
-    const booked = data.slots.reduce((sum, slot) => sum + slot.bookings.length, 0);
+    dayData = data;
+    const delivery = data.kind === 'delivery', people = data.count_by === 'people';
+    const both = data.kinds && data.kinds.booking && data.kinds.delivery;
+    $('#day-kind').hidden = !both;
+    document.querySelectorAll('[data-day-kind]').forEach(button => button.classList.toggle('active', button.dataset.dayKind === (data.kind || 'booking')));
     const unique = new Set(data.slots.flatMap(slot => slot.bookings.map(item => item.id)));
-    $('#day-summary').textContent = data.slots.length ? `${unique.size} booking${unique.size === 1 ? '' : 's'} · ${data.capacity} place${data.capacity === 1 ? '' : 's'} at the same time${data.enabled ? '' : ' · bookings are off'}` : '';
+    const noun = delivery ? ['delivery', 'deliveries'] : ['booking', 'bookings'];
+    $('#day-summary').textContent = data.slots.length ? `${unique.size} ${unique.size === 1 ? noun[0] : noun[1]} · ${data.capacity} ${people ? 'people' : delivery ? 'deliveries per window' : `place${data.capacity === 1 ? '' : 's'}`} at the same time${data.enabled ? '' : ` · ${noun[1]} are off`}` : '';
+    $('#day-help').textContent = people ? 'Type how many people to reserve for a time (phone or walk-in), or press × on a booking to free it, then Save. The AI sees the change right away.' : `Click a free square to reserve it (for example a phone or walk-in ${noun[0]}), or a taken one to free it, then press Save. The AI sees the change right away.`;
     if (!data.slots.length) { $('#day-slots').innerHTML = '<div class="ui-empty">Closed on this day, or no working hours are set.</div>'; return; }
     $('#day-slots').innerHTML = data.slots.map(slot => {
+      const edit = dayEdits.get(slot.start);
       const free = Math.max(0, slot.capacity - slot.booked);
-      const dots = slot.capacity <= 12 ? `<span class="day-dots">${Array.from({length: slot.capacity}, (_, index) => `<i class="${index < slot.booked ? 'taken' : ''}"></i>`).join('')}</span>` : `<span class="day-bar"><i style="width:${Math.round(slot.booked / slot.capacity * 100)}%"></i></span>`;
-      const people = data.count_by === 'people';
-      const state = slot.blocked ? 'Closed in your calendar' : free === 0 ? 'Full' : people ? `${slot.booked} of ${slot.capacity} people · ${free} free` : slot.capacity === 1 ? 'Free' : `${slot.booked} of ${slot.capacity} booked · ${free} free`;
-      const chip = item => `<button type="button" class="day-booking" data-open-record="${escapeHtml(item.id)}">${escapeHtml(item.customer)}${people ? ` ×${escapeHtml(item.people)}` : ''}${item.reference ? ` #${escapeHtml(item.reference)}` : ''}</button>`;
-      // Named places (tables, staff…): every one is listed with who has it, or "free".
+      const chip = item => `<button type="button" class="day-booking" data-open-record="${escapeHtml(item.id)}" title="Open">${escapeHtml(item.customer)}${people ? ` ×${escapeHtml(item.people)}` : ''}${item.reference ? ` #${escapeHtml(item.reference)}` : ''}</button><button type="button" class="day-x" data-free="${escapeHtml(item.id)}" title="Free this place" aria-label="Free">×</button>`;
+      // Squares: one per place. Named places keep their own number; otherwise bookings fill the first squares.
+      const cells = slot.blocked || people ? [] : slot.places ? slot.places.map(place => ({ key:`p${place.index}`, name:place.name, booking:place.booking })) : slot.capacity <= 60 ? Array.from({length:slot.capacity}, (_, index) => ({ key:`c${index}`, name:`${index + 1}`, booking:slot.bookings[index] || null })) : [];
+      const cellClass = cell => cell.booking ? (edit?.free.has(cell.booking.id) ? 'to-free' : 'taken') : edit?.reserve.has(cell.key) ? 'to-reserve' : '';
+      const squares = cells.length ? `<span class="day-dots">${cells.map(cell => `<button type="button" class="day-cell ${cellClass(cell)}" ${cell.booking ? `data-free="${escapeHtml(cell.booking.id)}" title="${escapeHtml(cell.name)}: ${escapeHtml(cell.booking.customer)} (click to free)"` : `data-cell="${escapeHtml(cell.key)}" title="${escapeHtml(cell.name)}: free (click to reserve)"`}></button>`).join('')}</span>`
+        : `<span class="day-bar"><i style="width:${Math.round(slot.booked / Math.max(1, slot.capacity) * 100)}%"></i></span>`;
+      const state = slot.blocked ? 'Closed' : free === 0 ? 'Full' : people ? `${slot.booked} of ${slot.capacity} people · ${free} free` : slot.capacity === 1 ? 'Free' : `${slot.booked} of ${slot.capacity} taken · ${free} free`;
       const names = slot.places
-        ? slot.places.map(place => place.booking ? `<span class="day-place taken"><b>${escapeHtml(place.name)}</b>${chip(place.booking)}</span>` : `<span class="day-place"><b>${escapeHtml(place.name)}</b><em>free</em></span>`).join('')
-        : slot.bookings.map(chip).join('');
-      return `<div class="day-slot${free === 0 ? ' full' : ''}"><strong>${escapeHtml(slot.time)}</strong>${dots}<span class="day-state">${escapeHtml(state)}</span><span class="day-names">${names}</span></div>`;
+        ? slot.places.map(place => place.booking ? `<span class="day-place taken${edit?.free.has(place.booking.id) ? ' to-free' : ''}"><b>${escapeHtml(place.name)}</b>${chip(place.booking)}</span>` : `<span class="day-place${edit?.reserve.has(`p${place.index}`) ? ' to-reserve' : ''}"><b>${escapeHtml(place.name)}</b><button type="button" class="day-free" data-cell="p${place.index}">${edit?.reserve.has(`p${place.index}`) ? 'reserve ✓' : 'free'}</button></span>`).join('')
+        : slot.bookings.map(item => `<span class="day-place taken${edit?.free.has(item.id) ? ' to-free' : ''}">${chip(item)}</span>`).join('');
+      const peopleInput = people && !slot.blocked && free > 0 ? `<label class="day-people">Reserve <input class="ui-input" type="number" min="0" max="${free}" value="${edit?.people || ''}" placeholder="0" data-people-input> people</label>` : '';
+      const count = editCount(edit);
+      const parts = edit ? [edit.reserve.size && `reserve ${edit.reserve.size}`, edit.people > 0 && `reserve ${edit.people} people`, edit.free.size && `free ${edit.free.size}`].filter(Boolean).join(' · ') : '';
+      return `<div class="day-slot${free === 0 ? ' full' : ''}" data-slot="${escapeHtml(slot.start)}"><strong>${escapeHtml(slot.time)}</strong>${squares}<span class="day-state">${escapeHtml(state)}</span><span class="day-names">${names}${peopleInput}</span><div class="day-edit"${count ? '' : ' hidden'}><span>${escapeHtml(parts ? `${capitalize(parts)} at ${slot.time}` : `Changes at ${slot.time}`)}</span><button class="ui-btn ghost sm" type="button" data-day-cancel>Cancel</button><button class="ui-btn primary sm" type="button" data-day-save>Save</button></div></div>`;
     }).join('');
   }
+  async function saveDayEdit(slot) {
+    const edit = dayEdits.get(slot.start); if (!editCount(edit)) return;
+    const delivery = dayData.kind === 'delivery', people = dayData.count_by === 'people';
+    const freeing = slot.bookings.filter(item => edit.free.has(item.id));
+    const customers = freeing.filter(item => !item.by_team);
+    if (customers.length && !confirm(`This cancels ${customers.map(item => `${item.customer}${item.reference ? ` #${item.reference}` : ''}`).join(', ')}. The customer is not told automatically, so message them if needed. Continue?`)) return;
+    const reserveCount = people ? edit.people : edit.reserve.size;
+    if (people && reserveCount > Math.max(0, slot.capacity - slot.booked)) return alert(`Only ${Math.max(0, slot.capacity - slot.booked)} people are free at ${slot.time}.`);
+    if (preview) { dayEdits.delete(slot.start); window.HansoraUI.toast('Saved (preview)'); return renderDay(dayData); }
+    window.HansoraUI.busy('Saving…');
+    try {
+      for (const item of freeing) {
+        const result = await api.db.from('automation_outcomes').update({status:'cancelled'}).eq('id', item.id).eq('business_id', businessId);
+        if (result.error) throw result.error;
+        const record = records.find(entry => entry.id === item.id); if (record) record.status = 'cancelled';
+      }
+      const label = dayData.place_label || 'Place';
+      const base = {business_id:businessId, outcome_type:delivery ? 'order' : 'booking', title:`Reserved by your team · ${slot.time}`, customer_name:'Reserved', customer_phone:'', scheduled_start:slot.start, scheduled_end:slot.end, created_by:'human', status:'confirmed', summary:`Reserved from the day view for ${slot.time}.`, collected_fields:{Reserved:'By your team', Time:slot.time}};
+      // Place numbers still taken at this time (freed ones become available again).
+      const used = new Set(slot.bookings.filter(item => !edit.free.has(item.id)).map(item => item.slot_index));
+      const freeIndexes = () => Array.from({length:500}, (_, index) => index).filter(index => !used.has(index));
+      const wanted = people ? (reserveCount > 0 ? [{ people:reserveCount }] : []) : [...edit.reserve].map(key => key.startsWith('p') ? { index:Number(key.slice(1)), name:(slot.places || []).find(place => `p${place.index}` === key)?.name } : {});
+      for (const want of wanted) {
+        const row = {...base, collected_fields:{...base.collected_fields}};
+        if (want.name) row.collected_fields[label] = want.name;
+        if (want.people) { row.party_size = want.people; row.collected_fields.People = String(want.people); row.title = `${row.title} · ${want.people} people`; }
+        let result;
+        if (delivery) result = await api.db.from('automation_outcomes').insert(row).select(SELECT_ROW).single();
+        else {
+          const tries = Number.isInteger(want.index) ? [want.index] : freeIndexes();
+          for (const index of tries) {
+            result = await api.db.from('automation_outcomes').insert({...row, slot_index:index}).select(SELECT_ROW).single();
+            // Database not updated yet (SQL files 8/9): save without the place number.
+            if (/slot_index|party_size/.test(String(result.error?.message || ''))) { const plain = {...row}; delete plain.party_size; result = await api.db.from('automation_outcomes').insert(plain).select(SELECT_ROW).single(); break; }
+            if (result.error?.code !== '23P01') break;
+          }
+        }
+        if (result.error) throw result.error.code === '23P01' ? new Error('That place was just taken. The day view is refreshed.') : result.error;
+        used.add(result.data.slot_index);
+        records.unshift(mapRecord(result.data));
+      }
+      window.HansoraUI.busy(false);
+      window.HansoraUI.toast('Saved. The AI sees it now.');
+      render(); loadDay();
+    } catch (error) { window.HansoraUI.busy(false); alert(api.displayError(error)); loadDay(); }
+  }
   function previewDay(date) {
-    const times = ['18:00','18:30','19:00','19:30','20:00'];
+    const times = ['18:00','19:00','20:00','21:00','22:00'];
     const names = ['Table 1','Table 2','Table 3','Window','Terrace'];
-    return { enabled:true, capacity:5, count_by:'bookings', place_label:'Table', date, slots: times.map((time, index) => {
-      const bookings = Array.from({length:[5,4,2,1,0][index]}, (_, n) => ({ id:`p${index}${n}`, customer:['Anna','Carlos','Maria','Noah','Sam'][n], reference:1040 + index * 5 + n, people:1 }));
-      return { time, capacity:5, booked:bookings.length, blocked:false, bookings, places: names.map((name, n) => ({ name, booking: bookings[n] || null })) };
+    return { kind:'booking', kinds:{booking:true, delivery:true}, enabled:true, capacity:5, count_by:'bookings', place_label:'Table', date, slots: times.map((time, index) => {
+      const start = `${date}T${time}:00.000Z`, end = `${date}T${pad(Number(time.slice(0, 2)) + 1)}:00:00.000Z`;
+      const bookings = Array.from({length:[5,4,2,1,0][index]}, (_, n) => ({ id:`p${index}${n}`, customer:['Anna','Carlos','Maria','Noah','Sam'][n], reference:1040 + index * 5 + n, people:1, slot_index:n, by_team:n === 1 }));
+      return { start, end, time, capacity:5, booked:bookings.length, blocked:false, bookings, places: names.map((name, n) => ({ index:n, name, booking: bookings[n] || null })) };
     }) };
   }
 
