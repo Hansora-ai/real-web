@@ -3,6 +3,7 @@ import { first, rows, serviceInsert, serviceUpdate, serviceUpsert, supabaseReque
 import { executeFlowAdvance } from '../../lib/automation/flow-executor.mjs';
 import { getInstagramSenderProfile, sendInstagramAction, sendInstagramText } from '../../lib/automation/meta.mjs';
 import { keepTyping } from '../../lib/automation/typing.mjs';
+import { flagFailedReply } from '../../lib/automation/failure.mjs';
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
 import { clickedActionId, nodeForAction, recordFlowEvent } from '../../lib/automation/flow-stats.mjs';
 import { automationPrices, canAfford, chargeCredits, handleOutOfCredits } from '../../lib/automation/billing.mjs';
@@ -17,7 +18,7 @@ export async function handler(event){
   if(event.httpMethod!=='POST')return json(405,{error:'method_not_allowed'});
   if(!internalAuthorized(event))return json(401,{error:'unauthorized'});
   const startedAt=Date.now();
-  let eventId='';let stopTyping=()=>{};
+  let eventId='';let stopTyping=()=>{};let pendingReply=null;
   try{
     const body=JSON.parse(event.body||'{}');eventId=String(body.event_id||'');
     if(!/^[0-9a-f-]{36}$/i.test(eventId))return json(400,{error:'invalid_event_id'});
@@ -47,6 +48,16 @@ export async function handler(event){
     const settings=connection.settings||{};
     if(!credential)throw new Error('instagram_token_not_found');
     if(credential.expires_at&&Date.parse(credential.expires_at)<=Date.now())throw new Error('instagram_token_expired');
+    // "typing…" right away, before the preparation, when automatic replies are on. If the AI then does not answer
+    // (team took over the chat), it is switched off again; a sent reply hides it by itself.
+    let replySent=false,stopRefresh=()=>{};
+    if(settings.automatic_replies!==false){
+      const typingTarget={instagramUserId:account.provider_resource_id,recipientId:message.senderId,accessToken:decryptSecret(credential)};
+      // Meta's answer to the first typing signal is logged, so a chat without the animation can be explained.
+      let typingLogged=false;const typingStartedMs=Date.now()-startedAt;
+      stopRefresh=keepTyping(()=>sendInstagramAction({...typingTarget,action:'typing_on'}).then(result=>{if(!typingLogged){typingLogged=true;console.log('instagram typing sent',{after_ms:typingStartedMs,result});}},error=>{if(!typingLogged){typingLogged=true;console.warn('instagram typing refused',{after_ms:typingStartedMs,message:error?.message,status:error?.status,providerStatus:error?.providerStatus,details:error?.details||error?.providerDetails||null});}throw error;}));
+      stopTyping=()=>{stopRefresh();if(!replySent)sendInstagramAction({...typingTarget,action:'typing_off'}).catch(()=>null);};
+    }
     const occurredAt=new Date(Number(message.timestamp)||Date.now()).toISOString();
     // Show the customer's real name and @username: looked up once per customer, kept on later messages.
     const senderProfile=known?.profile?.username?null:await getInstagramSenderProfile({senderId:message.senderId,accessToken:decryptSecret(credential)});
@@ -61,14 +72,8 @@ export async function handler(event){
       prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'instagram_dm',contact:{name:contact.display_name==='Instagram customer'?'':contact.display_name,externalId:message.senderId}})
     ]);
     if(settings.automatic_replies===false||!conversation.ai_enabled||['human_handling','resolved','archived'].includes(conversation.status)){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
-    // "typing…" in the customer's chat while the AI prepares the reply; the sent reply hides it.
-    const typingTarget={instagramUserId:account.provider_resource_id,recipientId:message.senderId,accessToken:decryptSecret(credential)};
-    let replySent=false;
-    // Meta's answer to the first typing signal is logged, so a chat without the animation can be explained.
-    let typingLogged=false;const typingStartedMs=Date.now()-startedAt;
-    const stopRefresh=keepTyping(()=>sendInstagramAction({...typingTarget,action:'typing_on'}).then(result=>{if(!typingLogged){typingLogged=true;console.log('instagram typing sent',{after_ms:typingStartedMs,result});}},error=>{if(!typingLogged){typingLogged=true;console.warn('instagram typing refused',{after_ms:typingStartedMs,message:error?.message,status:error?.status,providerStatus:error?.providerStatus,details:error?.details||error?.providerDetails||null});}throw error;}));
-    stopTyping=()=>{stopRefresh();if(!replySent)sendInstagramAction({...typingTarget,action:'typing_off'}).catch(()=>null);};
 
+    pendingReply={businessId:account.business_id,conversationId:conversation.id,customer:contact.display_name,channel:'Instagram DM'};
     const session=take(await sessionP);
     let flowInstruction='';
     if(session){
@@ -102,7 +107,7 @@ export async function handler(event){
 
     const context=buildConversationContext({intro:['Continue this Instagram conversation.',actions.contextLine,flowInstruction?`Flow instruction: ${flowInstruction}`:''].filter(Boolean),memory,after:[actions.liveBrief]});
     const aiStartedAt=Date.now();const preparedMs=aiStartedAt-startedAt;
-    const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'instagram_dm',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes});
+    const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'instagram_dm',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
     const aiMs=Date.now()-aiStartedAt;
     if(generated.toolCalls?.length)console.log('automation tool calls',{channel:'instagram_dm',calls:generated.toolCalls});
     const handedOff=generated.toolCalls?.some(call=>call.name==='handoff_to_human'&&call.ok);
@@ -114,6 +119,7 @@ export async function handler(event){
     if(!handedOff&&(!currentConversation?.ai_enabled||['human_handling','resolved','archived'].includes(currentConversation.status))){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
     stopRefresh();replySent=true;
     const sent=await sendInstagramText({instagramUserId:account.provider_resource_id,recipientId:message.senderId,text:generated.text,accessToken:decryptSecret(credential)});
+    pendingReply=null; // the customer has the answer: a later error (billing, logging) is not a missed reply
     console.log('automation reply timing',{channel:'instagram_dm',loaded_ms:loadedMs,ready_for_ai_ms:preparedMs,ai_ms:aiMs,to_send_ms:Date.now()-startedAt,chosen_delay_s:replyDelay});
     const outbound=await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:String(sent.message_id||''),idempotency_key:`meta:instagram:out:${message.externalEventId}`,direction:'outbound',sender_type:'ai',content_type:'text',content:generated.text,status:'sent',billable:true,provider:'meta',model:'eleven-agents',provider_message_id:String(sent.message_id||''),metadata:{recipient_id:message.senderId,elevenlabs_conversation_id:generated.conversationId||null},occurred_at:new Date().toISOString()},{ignoreDuplicates:true});
     // Charge only now that the reply was actually sent; the usage key doubles as the charge key.
@@ -123,6 +129,7 @@ export async function handler(event){
     await markProcessed(webhook.id,account.business_id);
     return json(200,{ok:true});
   }catch(error){
+    if(pendingReply&&eventId)await flagFailedReply({...pendingReply,eventId});
     console.error('automation-instagram-process error',{eventId,message:error?.message,status:error?.status,providerStatus:error?.providerStatus});
     if(eventId)await serviceUpdate('automation_webhook_events',`id=eq.${encodeURIComponent(eventId)}`,{status:'failed',last_error:String(error?.message||'processing_failed').slice(0,2000)}).catch(()=>null);
     return json(Number(error?.status)||500,{error:'instagram_message_processing_failed'});
