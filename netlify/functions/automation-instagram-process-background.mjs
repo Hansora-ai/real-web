@@ -64,7 +64,9 @@ export async function handler(event){
     // "typing…" in the customer's chat while the AI prepares the reply; the sent reply hides it.
     const typingTarget={instagramUserId:account.provider_resource_id,recipientId:message.senderId,accessToken:decryptSecret(credential)};
     let replySent=false;
-    const stopRefresh=keepTyping(()=>sendInstagramAction({...typingTarget,action:'typing_on'}));
+    // Meta's answer to the first typing signal is logged, so a chat without the animation can be explained.
+    let typingLogged=false;const typingStartedMs=Date.now()-startedAt;
+    const stopRefresh=keepTyping(()=>sendInstagramAction({...typingTarget,action:'typing_on'}).then(result=>{if(!typingLogged){typingLogged=true;console.log('instagram typing sent',{after_ms:typingStartedMs,result});}},error=>{if(!typingLogged){typingLogged=true;console.warn('instagram typing refused',{after_ms:typingStartedMs,message:error?.message,status:error?.status,providerStatus:error?.providerStatus,details:error?.details||error?.providerDetails||null});}throw error;}));
     stopTyping=()=>{stopRefresh();if(!replySent)sendInstagramAction({...typingTarget,action:'typing_off'}).catch(()=>null);};
 
     const session=take(await sessionP);

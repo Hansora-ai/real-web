@@ -152,6 +152,8 @@
   });
   $('#place-list').addEventListener('click', event => { const button = event.target.closest('[data-remove-place]'); if (!button) return; readPlaces(); state.calendar.config.places.splice(Number(button.dataset.removePlace), 1); renderPlaces(); markDirty(); });
   $('#save-tools').addEventListener('click', save);
+  // "Questions for bookings are under Table reservations →": jumps to the other section.
+  document.querySelectorAll('[data-show-pane]').forEach(button => button.addEventListener('click', () => { showPane(button.dataset.showPane); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
   $('#wa-phone-form').addEventListener('submit', sendCode);
   $('#wa-code-form').addEventListener('submit', verifyCode);
   $('#wa-change').addEventListener('click', () => { pendingPhone = ''; renderNotifications(); $('#wa-phone').focus(); });
@@ -171,6 +173,8 @@
     const nav = tool => document.querySelector(`[data-tool="${tool}"] b`);
     const head = tool => document.querySelector(`[data-pane="${tool}"] .ui-pane-head h2`);
     if (nav('calendar')) nav('calendar').textContent = type.booking;
+    document.querySelectorAll('.type-booking-name').forEach(element => { element.textContent = type.booking; });
+    document.querySelectorAll('.type-order-name').forEach(element => { element.textContent = type.order; });
     if (head('calendar')) head('calendar').textContent = type.booking;
     if (nav('orders')) nav('orders').textContent = type.order;
     if (head('orders')) head('orders').textContent = type.order;
