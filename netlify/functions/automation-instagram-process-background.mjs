@@ -8,6 +8,7 @@ import { automationPrices, canAfford, chargeCredits, handleOutOfCredits } from '
 import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
+import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
 
@@ -37,7 +38,8 @@ export async function handler(event){
     // Started now and awaited just before the AI: they only need the business, not the saved message.
     const settle=promise=>promise.then(value=>({value}),error=>({error}));const take=result=>{if(result.error)throw result.error;return result.value;};
     const price=automationPrices().aiReply;
-    const aiResourceP=settle(first(`/rest/v1/automation_provider_resources?business_id=eq.${account.business_id}&provider=eq.elevenlabs&resource_type=eq.agent&status=eq.active&select=*&limit=1`));
+    // The AI is brought up to date first if Hansora's rules or the owner's settings changed since its last update.
+    const aiResourceP=settle(ensureAgentUpToDate({businessId:account.business_id}).catch(error=>console.error('automation agent auto-update failed',{message:error?.message})).then(()=>first(`/rest/v1/automation_provider_resources?business_id=eq.${account.business_id}&provider=eq.elevenlabs&resource_type=eq.agent&status=eq.active&select=*&limit=1`)));
     const affordableP=settle(canAfford(account.business_id,price));
     const sessionP=settle(first(`/rest/v1/automation_flow_sessions?business_id=eq.${account.business_id}&external_contact_id=eq.${encodeURIComponent(message.senderId)}&status=in.(awaiting_reply,running,waiting,ai_active)&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=*&order=updated_at.desc&limit=1`));
     if(!connection){console.warn('automation-instagram DMs are not active for this business (finish setup on the Instagram channel page)',{businessId:account.business_id});throw new Error('instagram_dm_not_active');}
@@ -90,10 +92,11 @@ export async function handler(event){
     // Pay as you go: no credits, no AI reply. The conversation goes to the owner instead.
     if(!affordable.ok){await handleOutOfCredits({businessId:account.business_id,conversationId:conversation.id,channel:'Instagram DM',customer:contact.display_name,notifyOwner});await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,out_of_credits:true});}
 
-    const context=buildConversationContext({intro:['Continue this Instagram conversation.',actions.contextLine,flowInstruction?`Flow instruction: ${flowInstruction}`:''].filter(Boolean),memory});
+    const context=buildConversationContext({intro:['Continue this Instagram conversation.',actions.contextLine,flowInstruction?`Flow instruction: ${flowInstruction}`:''].filter(Boolean),memory,after:[actions.liveBrief]});
     const aiStartedAt=Date.now();const preparedMs=aiStartedAt-startedAt;
     const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'instagram_dm',onToolCall:actions.onToolCall});
     const aiMs=Date.now()-aiStartedAt;
+    if(generated.toolCalls?.length)console.log('automation tool calls',{channel:'instagram_dm',calls:generated.toolCalls});
     const handedOff=generated.toolCalls?.some(call=>call.name==='handoff_to_human'&&call.ok);
     // The chosen reply speed counts from when the message arrived, so the AI's own thinking time is included.
     const replyDelay=Math.min(30,Math.max(0,Number(settings.reply_delay)||0));
