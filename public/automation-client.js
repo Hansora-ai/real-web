@@ -67,25 +67,25 @@
   // Business types: the owner picks one; it sets starting settings and the names of the tools. Stored in
   // automation_businesses.category as the code (older free-text categories are recognised by keywords).
   const businessTypes = [
-    { code:'restaurant', places:'Tables', label:'Restaurant / café', emoji:'🍽️', booking:'Table reservations', order:'Delivery & takeaway', keywords:/restaurant|cafe|café|bar\b|pizz|sushi|burger|bistro|ресторан|кафе|ռեստորան|սրճարան/i,
+    { code:'restaurant', place:'Table', people:'Seats', places:'Tables', label:'Restaurant / café', emoji:'🍽️', booking:'Table reservations', order:'Delivery & takeaway', keywords:/restaurant|cafe|café|bar\b|pizz|sushi|burger|bistro|ресторан|кафе|ռեստորան|սրճարան/i,
       presets:{ calendar:{ enabled:true, config:{ duration_minutes:90, step_minutes:30, min_notice_minutes:30 } }, orders:{ enabled:true, config:{ required_fields:['What they order','Customer name','Phone number','Delivery address or pickup','Desired time'] } } } },
-    { code:'delivery', places:'Couriers', label:'Food delivery / takeaway', emoji:'🛵', booking:'Pickup times', order:'Deliveries', keywords:/deliver|takeaway|take-away|food|доставк|առաքում/i,
+    { code:'delivery', place:'Courier', people:'People', places:'Couriers', label:'Food delivery / takeaway', emoji:'🛵', booking:'Pickup times', order:'Deliveries', keywords:/deliver|takeaway|take-away|food|доставк|առաքում/i,
       presets:{ orders:{ enabled:true, config:{ required_fields:['What they order','Customer name','Phone number','Delivery address','Desired delivery time'] } } } },
-    { code:'salon', places:'Staff members', label:'Beauty / salon', emoji:'💇', booking:'Appointments', order:'Orders', keywords:/salon|beauty|hair|nail|barber|spa|lash|brow|салон|красот|գեղեցկ/i,
+    { code:'salon', place:'Staff member', people:'People', places:'Staff members', label:'Beauty / salon', emoji:'💇', booking:'Appointments', order:'Orders', keywords:/salon|beauty|hair|nail|barber|spa|lash|brow|салон|красот|գեղեցկ/i,
       presets:{ calendar:{ enabled:true, config:{ duration_minutes:60, step_minutes:15, min_notice_minutes:60 } } } },
-    { code:'clinic', places:'Doctors', label:'Doctor / clinic', emoji:'🩺', booking:'Appointments', order:'Orders', keywords:/clinic|doctor|dent|medical|health|therap|physio|клиник|врач|стомат|կլինիկ|բժիշկ|ատամ/i,
+    { code:'clinic', place:'Doctor', people:'People', places:'Doctors', label:'Doctor / clinic', emoji:'🩺', booking:'Appointments', order:'Orders', keywords:/clinic|doctor|dent|medical|health|therap|physio|клиник|врач|стомат|կլինիկ|բժիշկ|ատամ/i,
       presets:{ calendar:{ enabled:true, config:{ duration_minutes:30, step_minutes:15, min_notice_minutes:120 } }, handoff:{ enabled:true, config:{ rules:{ asks_person:true, complaint:true, missing_info:true, uncertain:true } } } } },
-    { code:'services', places:'Teams', label:'Home & local services', emoji:'🛠️', booking:'Visits', order:'Orders', keywords:/repair|clean|install|plumb|electric|renovat|furniture|interior|moving|ремонт|уборк|вերանորոգ|մաքր|կահույք/i,
+    { code:'services', place:'Team', people:'People', places:'Teams', label:'Home & local services', emoji:'🛠️', booking:'Visits', order:'Orders', keywords:/repair|clean|install|plumb|electric|renovat|furniture|interior|moving|ремонт|уборк|вերանորոգ|մաքր|կահույք/i,
       presets:{ calendar:{ enabled:true, config:{ duration_minutes:120, step_minutes:60, min_notice_minutes:1440 } }, leads:{ enabled:true } } },
-    { code:'shop', places:'Staff members', label:'Shop / e-commerce', emoji:'🛍️', booking:'Pickup times', order:'Orders', keywords:/shop|store|boutique|clothing|fashion|cosmetic|online store|магазин|խանութ/i,
+    { code:'shop', place:'Staff member', people:'People', places:'Staff members', label:'Shop / e-commerce', emoji:'🛍️', booking:'Pickup times', order:'Orders', keywords:/shop|store|boutique|clothing|fashion|cosmetic|online store|магазин|խանութ/i,
       presets:{ orders:{ enabled:true, config:{ required_fields:['Product','Quantity','Customer name','Phone number','Delivery address'] } } } },
-    { code:'saas', places:'Team members', label:'Online service / SaaS', emoji:'💻', booking:'Demo calls', order:'Orders', keywords:/saas|software|app\b|platform|subscription|startup|ai\b|online service|программ|ծրագր/i,
+    { code:'saas', place:'Team member', people:'People', places:'Team members', label:'Online service / SaaS', emoji:'💻', booking:'Demo calls', order:'Orders', keywords:/saas|software|app\b|platform|subscription|startup|ai\b|online service|программ|ծրագր/i,
       presets:{ leads:{ enabled:true } } },
-    { code:'realestate', places:'Agents', label:'Real estate', emoji:'🏠', booking:'Viewings', order:'Orders', keywords:/real estate|realty|apartment|property|rent|недвижим|квартир|անշարժ|բնակարան/i,
+    { code:'realestate', place:'Agent', people:'People', places:'Agents', label:'Real estate', emoji:'🏠', booking:'Viewings', order:'Orders', keywords:/real estate|realty|apartment|property|rent|недвижим|квартир|անշարժ|բնակարան/i,
       presets:{ calendar:{ enabled:true, config:{ duration_minutes:60, step_minutes:30, min_notice_minutes:120 } }, leads:{ enabled:true } } },
-    { code:'education', places:'Teachers', label:'Education / courses', emoji:'🎓', booking:'Lessons', order:'Enrollments', keywords:/school|course|lesson|tutor|academy|class|training|урок|курс|դասընթաց|դպրոց/i,
+    { code:'education', place:'Teacher', people:'Students', places:'Teachers', label:'Education / courses', emoji:'🎓', booking:'Lessons', order:'Enrollments', keywords:/school|course|lesson|tutor|academy|class|training|урок|курс|դասընթաց|դպրոց/i,
       presets:{ calendar:{ enabled:true, config:{ duration_minutes:60, step_minutes:30, min_notice_minutes:120 } }, leads:{ enabled:true } } },
-    { code:'other', places:'Places', label:'Other', emoji:'✳️', booking:'Bookings', order:'Orders', keywords:null, presets:{} }
+    { code:'other', place:'Place', people:'People', places:'Places', label:'Other', emoji:'✳️', booking:'Bookings', order:'Orders', keywords:null, presets:{} }
   ];
   const businessType = category => {
     const value = String(category || '').trim();
