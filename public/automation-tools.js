@@ -92,6 +92,8 @@
   $('#service-list').addEventListener('click', event => { const button = event.target.closest('[data-remove-service]'); if (!button) return; readServices(); state.calendar.config.services.splice(Number(button.dataset.removeService), 1); renderServices(); markDirty(); });
   $('#add-closed-date').addEventListener('click', () => { const value = $('#closed-date').value; if (!value || state.calendar.config.closed_dates.includes(value)) return; state.calendar.config.closed_dates.push(value); state.calendar.config.closed_dates.sort(); $('#closed-date').value = ''; renderClosedDates(); markDirty(); });
   $('#closed-dates').addEventListener('click', event => { const button = event.target.closest('[data-remove-date]'); if (!button) return; state.calendar.config.closed_dates = state.calendar.config.closed_dates.filter(date => date !== button.dataset.removeDate); renderClosedDates(); markDirty(); });
+  $('#add-booking-field').addEventListener('click', () => { readBookingFields(); if (state.calendar.config.required_fields.length >= 15) return; state.calendar.config.required_fields.push(''); renderBookingFields(); document.querySelector('#booking-fields > div:last-child input')?.focus(); markDirty(); });
+  $('#booking-fields').addEventListener('click', event => { const button = event.target.closest('[data-remove-booking-field]'); if (!button) return; readBookingFields(); state.calendar.config.required_fields.splice(Number(button.dataset.removeBookingField), 1); renderBookingFields(); markDirty(); });
   $('#add-order-field').addEventListener('click', () => { readOrderFields(); state.orders.config.required_fields.push(''); renderOrderFields(); document.querySelector('#order-fields > div:last-child input')?.focus(); markDirty(); });
   $('#order-fields').addEventListener('click', event => { const button = event.target.closest('button[data-remove]'); if (!button) return; readOrderFields(); state.orders.config.required_fields.splice(Number(button.dataset.remove), 1); renderOrderFields(); markDirty(); });
   ['calendar','orders','leads'].forEach(tool => $(`#${tool}-enabled`).addEventListener('change', event => { state[tool].enabled = event.target.checked; renderStatuses(); }));
@@ -231,7 +233,8 @@
     $('#lead-signals').value = state.leads.config.signals || '';
     renderLeadQuestions();
     document.querySelectorAll('#handoff-rules input[data-rule]').forEach(input => { if (!input.disabled) input.checked = Boolean(state.handoff.config.rules?.[input.dataset.rule]); });
-    renderWeek(); renderServices(); renderClosedDates(); renderOrderFields(); renderNotifications(); renderStatuses();
+    if (!Array.isArray(state.calendar.config.required_fields)) state.calendar.config.required_fields = ['Customer name', 'Phone number']; // same default as the AI
+    renderWeek(); renderServices(); renderClosedDates(); renderOrderFields(); renderBookingFields(); renderNotifications(); renderStatuses();
   }
 
   function setSelect(selector, value) {
@@ -276,6 +279,12 @@
   function renderOrderFields() {
     $('#order-fields').innerHTML = state.orders.config.required_fields.map((field, index) => `<div><span>${index + 1}</span><input class="ui-input" value="${escapeHtml(field)}" maxlength="80" placeholder="e.g. Colour" aria-label="Required detail ${index + 1}"><button data-remove="${index}" type="button" aria-label="Remove ${escapeHtml(field)}">×</button></div>`).join('');
   }
+  // Booking questions: same editor as the order details. Never saved before: name and phone.
+  function renderBookingFields() {
+    const fields = state.calendar.config.required_fields || [];
+    $('#booking-fields').innerHTML = fields.map((field, index) => `<div><span>${index + 1}</span><input class="ui-input" value="${escapeHtml(field)}" maxlength="80" placeholder="e.g. Number of guests" aria-label="Booking detail ${index + 1}"><button data-remove-booking-field="${index}" type="button" aria-label="Remove ${escapeHtml(field)}">×</button></div>`).join('') || '<p class="ui-faint" style="margin:0">Only the customer name. Add phone number, number of guests…</p>';
+  }
+  function readBookingFields() { state.calendar.config.required_fields = [...document.querySelectorAll('#booking-fields input')].map(input => input.value.trim()); }
   function readOrderFields() { state.orders.config.required_fields = [...document.querySelectorAll('#order-fields input')].map(input => input.value.trim()); }
 
 
@@ -303,10 +312,11 @@
   }
 
   function collect() {
-    readWeek(); readServices(); readOrderFields();
+    readWeek(); readServices(); readOrderFields(); readBookingFields();
     const c = state.calendar.config;
     Object.assign(c, { timezone:$('#booking-timezone').value, duration_minutes:ruleValue('duration'), step_minutes:ruleValue('step'), buffer_minutes:ruleValue('buffer'), min_notice_minutes:ruleValue('notice'), max_days_ahead:ruleValue('ahead'), last_start_minutes:ruleValue('last'), step_set:!ruleField('step').hidden, auto_confirm:$('#booking-auto-confirm').checked });
     c.services = c.services.filter(service => service.name);
+    c.required_fields = (c.required_fields || []).filter(Boolean).slice(0, 15);
     state.calendar.enabled = $('#calendar-enabled').checked;
     state.orders.enabled = $('#orders-enabled').checked;
     state.orders.config = { required_fields: state.orders.config.required_fields.filter(Boolean), auto_confirm:$('#orders-auto-confirm').checked, confirmation_message:$('#order-confirmation').value.trim().slice(0, 1000), instructions:$('#order-instructions').value.trim().slice(0, 3000), delivery_slots:{ enabled:!$('#delivery-settings').hidden, per_window:Math.min(500, Math.max(1, Math.round(Number($('#delivery-per').value)) || 1)), window_minutes:Number($('#delivery-window').value), lead_minutes:Number($('#delivery-lead').value) } };
@@ -331,6 +341,7 @@
     for (const [key, name] of DAYS) { const ranges = [...c.weekly_hours[key]].sort((a, b) => a.start.localeCompare(b.start)); for (let i = 1; i < ranges.length; i++) if (ranges[i].start < ranges[i - 1].end) return [`${name}: working hours overlap.`, 'calendar']; }
     if (state.calendar.enabled && !DAYS.some(([key]) => c.weekly_hours[key].length)) return ['Add working hours for at least one day, or turn bookings off.', 'calendar'];
     if (c.count_by !== 'people' && new Set((c.places || []).map(place => place.name.toLowerCase())).size !== (c.places || []).length) return [`Each ${typeNames.place.toLowerCase()} name must be different.`, 'calendar'];
+    if (new Set((c.required_fields || []).map(field => field.toLowerCase())).size !== (c.required_fields || []).length) return ['Each booking detail must be different.', 'calendar'];
     if (state.orders.enabled && !state.orders.config.required_fields.length) return ['Add at least one required order detail.', 'orders'];
     if (new Set(state.orders.config.required_fields.map(field => field.toLowerCase())).size !== state.orders.config.required_fields.length) return ['Each required order detail must be different.', 'orders'];
     const email = state.notifications.email; if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return ['Enter a valid alert email or leave it empty.', 'notifications'];

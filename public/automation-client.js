@@ -68,7 +68,7 @@
   // automation_businesses.category as the code (older free-text categories are recognised by keywords).
   const businessTypes = [
     { code:'restaurant', place:'Table', people:'Seats', places:'Tables', label:'Restaurant / café', emoji:'🍽️', booking:'Table reservations', order:'Delivery & takeaway', keywords:/restaurant|cafe|café|bar\b|pizz|sushi|burger|bistro|ресторан|кафе|ռեստորան|սրճարան/i,
-      presets:{ calendar:{ enabled:true, config:{ duration_minutes:90, step_minutes:30, step_set:true, min_notice_minutes:30 } }, orders:{ enabled:true, config:{ required_fields:['What they order','Customer name','Phone number','Delivery address or pickup','Desired time'] } } } },
+      presets:{ calendar:{ enabled:true, config:{ duration_minutes:90, step_minutes:30, step_set:true, min_notice_minutes:30, required_fields:['Customer name','Phone number','Number of guests'] } }, orders:{ enabled:true, config:{ required_fields:['What they order','Customer name','Phone number','Delivery address or pickup','Desired time'] } } } },
     { code:'delivery', place:'Courier', people:'People', places:'Couriers', label:'Food delivery / takeaway', emoji:'🛵', booking:'Pickup times', order:'Deliveries', keywords:/deliver|takeaway|take-away|food|доставк|առաքում/i,
       presets:{ orders:{ enabled:true, config:{ required_fields:['What they order','Customer name','Phone number','Delivery address','Desired delivery time'] } } } },
     { code:'salon', place:'Staff member', people:'People', places:'Staff members', label:'Beauty / salon', emoji:'💇', booking:'Appointments', order:'Orders', keywords:/salon|beauty|hair|nail|barber|spa|lash|brow|салон|красот|գեղեցկ/i,
