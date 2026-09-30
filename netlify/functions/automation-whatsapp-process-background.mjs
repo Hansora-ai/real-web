@@ -5,6 +5,7 @@ import { automationPrices, canAfford, chargeCredits, handleOutOfCredits } from '
 import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { markWhatsAppRead, sendWhatsAppText } from '../../lib/automation/whatsapp.mjs';
+import { keepTyping } from '../../lib/automation/typing.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
 import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
 
@@ -13,7 +14,7 @@ const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/
 export async function handler(event){
   if(event.httpMethod!=='POST')return json(405,{error:'method_not_allowed'});if(!internalAuthorized(event))return json(401,{error:'unauthorized'});
   const startedAt=Date.now();
-  let eventId='';
+  let eventId='';let stopTyping=()=>{};
   try{
     const body=JSON.parse(event.body||'{}');eventId=String(body.event_id||'');if(!/^[0-9a-f-]{36}$/i.test(eventId))return json(400,{error:'invalid_event_id'});
     const webhook=await first(`/rest/v1/automation_webhook_events?id=eq.${eventId}&event_type=eq.whatsapp_message&status=in.(received,failed)&select=*&limit=1`);if(!webhook)return json(200,{ok:true,replayed:true});
@@ -49,9 +50,13 @@ export async function handler(event){
     const accessToken=decryptSecret(credential);
     // Blue ticks tell the customer the business has seen the message, whether AI or a person answers.
     // Sent in parallel with preparing the reply; awaited before the function ends.
-    const readReceipt=markWhatsAppRead({phoneNumberId:account.provider_resource_id,messageId:message.externalEventId,accessToken}).catch(error=>console.warn('whatsapp read receipt failed',{message:error?.message}));
     const settings=connection.settings||{};
-    if(settings.automatic_replies===false||!conversation.ai_enabled||['human_handling','resolved','archived'].includes(conversation.status)){await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
+    const aiWillReply=!(settings.automatic_replies===false||!conversation.ai_enabled||['human_handling','resolved','archived'].includes(conversation.status));
+    // When the AI will answer, the blue ticks come with "typing…" until the reply arrives (kept on for long replies).
+    const readTarget={phoneNumberId:account.provider_resource_id,messageId:message.externalEventId,accessToken};
+    const readReceipt=markWhatsAppRead({...readTarget,typing:aiWillReply}).catch(()=>markWhatsAppRead(readTarget)).catch(error=>console.warn('whatsapp read receipt failed',{message:error?.message}));
+    if(aiWillReply)stopTyping=keepTyping(()=>markWhatsAppRead({...readTarget,typing:true}),{everyMs:20000,immediate:false});
+    if(!aiWillReply){await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
     const aiResource=take(await aiResourceP);const affordable=take(await affordableP);
     if(!aiResource)throw new Error('ai_provider_agent_not_ready');
     // Pay as you go: no credits, no AI reply. The conversation goes to the owner instead.
@@ -74,7 +79,7 @@ export async function handler(event){
     if(outbound)await serviceInsert('automation_usage_events',{business_id:account.business_id,conversation_id:conversation.id,message_id:outbound.id,channel_type:'whatsapp',unit_type:'ai_message',quantity:1,billable_quantity:1,estimated_cost_minor:0,currency:'AMD',provider:'elevenlabs',provider_usage_id:generated.conversationId||null,idempotency_key:`usage:whatsapp:${message.externalEventId}`,credits:charge?.charged||0,metadata:{whatsapp_message_id:sent.messageId||null}},{ignoreDuplicates:true});
     await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{last_message_preview:generated.text.slice(0,1000),last_message_at:new Date().toISOString()});
     await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true});
-  }catch(error){console.error('automation-whatsapp-process error',{eventId,message:error?.message,status:error?.status,providerStatus:error?.providerStatus});if(eventId)await serviceUpdate('automation_webhook_events',`id=eq.${eventId}`,{status:'failed',last_error:String(error?.message||'processing_failed').slice(0,2000)}).catch(()=>null);return json(Number(error?.status)||500,{error:'whatsapp_message_processing_failed'});}
+  }catch(error){console.error('automation-whatsapp-process error',{eventId,message:error?.message,status:error?.status,providerStatus:error?.providerStatus});if(eventId)await serviceUpdate('automation_webhook_events',`id=eq.${eventId}`,{status:'failed',last_error:String(error?.message||'processing_failed').slice(0,2000)}).catch(()=>null);return json(Number(error?.status)||500,{error:'whatsapp_message_processing_failed'});}finally{stopTyping();}
 }
 
 function internalAuthorized(event){const expected=String(process.env.HANSORA_AUTOMATION_INTERNAL_SECRET||'');const actual=String(event.headers?.['x-hansora-internal-secret']||event.headers?.['X-Hansora-Internal-Secret']||'');return expected.length>=32&&actual===expected;}
