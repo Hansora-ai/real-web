@@ -150,7 +150,7 @@
   function renderKnowledge(business, agent, profile) {
     const languages = (agent?.supported_languages || []).map(api.languageName).join(', ');
     const checks = [
-      ['Business description', Boolean(business.description), business.category || ''],
+      ['Business description', Boolean(business.description), api.businessType(business.category)?.label || business.category || ''],
       ['Products and prices', Boolean(profile.services_and_prices), ''],
       ['Opening hours', Boolean(profile.opening_hours), ''],
       ['Delivery and service areas', Boolean(profile.delivery_and_service_areas), ''],

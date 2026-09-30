@@ -64,12 +64,43 @@
   // Reply languages the AI employee supports (must match the database constraint and lib/automation/instructions.mjs).
   const languages = [['en','English','English'],['hy','Armenian','Հայերեն'],['ru','Russian','Русский'],['es','Spanish','Español'],['fr','French','Français'],['de','German','Deutsch'],['it','Italian','Italiano'],['pt','Portuguese','Português'],['uk','Ukrainian','Українська'],['pl','Polish','Polski'],['nl','Dutch','Nederlands'],['tr','Turkish','Türkçe'],['ar','Arabic','العربية'],['ka','Georgian','ქართული'],['zh','Chinese','中文'],['ja','Japanese','日本語'],['ko','Korean','한국어'],['hi','Hindi','हिन्दी']];
   const languageName = code => (languages.find(item => item[0] === code) || [code, code])[1];
+  // Business types: the owner picks one; it sets starting settings and the names of the tools. Stored in
+  // automation_businesses.category as the code (older free-text categories are recognised by keywords).
+  const businessTypes = [
+    { code:'restaurant', label:'Restaurant / café', emoji:'🍽️', booking:'Table reservations', order:'Delivery & takeaway', keywords:/restaurant|cafe|café|bar\b|pizz|sushi|burger|bistro|ресторан|кафе|ռեստորան|սրճարան/i,
+      presets:{ calendar:{ enabled:true, config:{ duration_minutes:90, step_minutes:30, min_notice_minutes:30 } }, orders:{ enabled:true, config:{ required_fields:['What they order','Customer name','Phone number','Delivery address or pickup','Desired time'] } } } },
+    { code:'delivery', label:'Food delivery / takeaway', emoji:'🛵', booking:'Pickup times', order:'Deliveries', keywords:/deliver|takeaway|take-away|food|доставк|առաքում/i,
+      presets:{ orders:{ enabled:true, config:{ required_fields:['What they order','Customer name','Phone number','Delivery address','Desired delivery time'] } } } },
+    { code:'salon', label:'Beauty / salon', emoji:'💇', booking:'Appointments', order:'Orders', keywords:/salon|beauty|hair|nail|barber|spa|lash|brow|салон|красот|գեղեցկ/i,
+      presets:{ calendar:{ enabled:true, config:{ duration_minutes:60, step_minutes:15, min_notice_minutes:60 } } } },
+    { code:'clinic', label:'Doctor / clinic', emoji:'🩺', booking:'Appointments', order:'Orders', keywords:/clinic|doctor|dent|medical|health|therap|physio|клиник|врач|стомат|կլինիկ|բժիշկ|ատամ/i,
+      presets:{ calendar:{ enabled:true, config:{ duration_minutes:30, step_minutes:15, min_notice_minutes:120 } }, handoff:{ enabled:true, config:{ rules:{ asks_person:true, complaint:true, missing_info:true, uncertain:true } } } } },
+    { code:'services', label:'Home & local services', emoji:'🛠️', booking:'Visits', order:'Orders', keywords:/repair|clean|install|plumb|electric|renovat|furniture|interior|moving|ремонт|уборк|вերանորոգ|մաքր|կահույք/i,
+      presets:{ calendar:{ enabled:true, config:{ duration_minutes:120, step_minutes:60, min_notice_minutes:1440 } }, leads:{ enabled:true } } },
+    { code:'shop', label:'Shop / e-commerce', emoji:'🛍️', booking:'Pickup times', order:'Orders', keywords:/shop|store|boutique|clothing|fashion|cosmetic|online store|магазин|խանութ/i,
+      presets:{ orders:{ enabled:true, config:{ required_fields:['Product','Quantity','Customer name','Phone number','Delivery address'] } } } },
+    { code:'saas', label:'Online service / SaaS', emoji:'💻', booking:'Demo calls', order:'Orders', keywords:/saas|software|app\b|platform|subscription|startup|ai\b|online service|программ|ծրագր/i,
+      presets:{ leads:{ enabled:true } } },
+    { code:'realestate', label:'Real estate', emoji:'🏠', booking:'Viewings', order:'Orders', keywords:/real estate|realty|apartment|property|rent|недвижим|квартир|անշարժ|բնակարան/i,
+      presets:{ calendar:{ enabled:true, config:{ duration_minutes:60, step_minutes:30, min_notice_minutes:120 } }, leads:{ enabled:true } } },
+    { code:'education', label:'Education / courses', emoji:'🎓', booking:'Lessons', order:'Enrollments', keywords:/school|course|lesson|tutor|academy|class|training|урок|курс|դասընթաց|դպրոց/i,
+      presets:{ calendar:{ enabled:true, config:{ duration_minutes:60, step_minutes:30, min_notice_minutes:120 } }, leads:{ enabled:true } } },
+    { code:'other', label:'Other', emoji:'✳️', booking:'Bookings', order:'Orders', keywords:null, presets:{} }
+  ];
+  const businessType = category => {
+    const value = String(category || '').trim();
+    return businessTypes.find(type => type.code === value) || (value ? businessTypes.find(type => type.keywords && type.keywords.test(value)) : null) || null;
+  };
+  const suggestBusinessType = text => { const value = String(text || ''); return value.trim() ? businessTypes.find(type => type.keywords && type.keywords.test(value)) || null : null; };
   const browserLanguage = () => { const code = String(navigator.language || 'en').slice(0, 2).toLowerCase(); return languages.some(item => item[0] === code) ? code : 'en'; };
   const browserTimezone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (_) { return 'UTC'; } };
 
   window.HansoraAutomation = {
     languages,
     languageName,
+    businessTypes,
+    businessType,
+    suggestBusinessType,
     browserLanguage,
     browserTimezone,
     client,

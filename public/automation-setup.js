@@ -20,6 +20,27 @@
   document.querySelector('#language-chips').innerHTML = api.languages.map(([code, name, native]) => `<label class="ui-chip"><input type="checkbox" name="languages" value="${code}"${code === api.browserLanguage() ? ' checked' : ''}><span>${native}${native !== name ? ` <small>${name}</small>` : ''}</span></label>`).join('');
   document.querySelector('#primary-language').innerHTML = api.languages.map(([code, name]) => `<option value="${code}">${name}</option>`).join('');
   document.querySelector('#primary-language').value = api.browserLanguage();
+  // Type of business: required card picker; suggested from the description until the owner picks one.
+  let typeChosenByOwner = false;
+  const typeGrid = document.querySelector('#type-grid');
+  typeGrid.innerHTML = api.businessTypes.map(type => `<button type="button" class="type-card" role="radio" aria-checked="false" data-type="${type.code}"><span aria-hidden="true">${type.emoji}</span><strong>${escapeHtml(type.label)}</strong></button>`).join('');
+  function selectType(code, byOwner) {
+    form.elements.category.value = code || '';
+    typeGrid.querySelectorAll('.type-card').forEach(card => card.setAttribute('aria-checked', String(card.dataset.type === code)));
+    if (byOwner) typeChosenByOwner = true;
+    if (code) typeGrid.removeAttribute('aria-invalid');
+  }
+  typeGrid.addEventListener('click', event => {
+    const card = event.target.closest('.type-card'); if (!card) return;
+    selectType(card.dataset.type, true); errorBox.hidden = true;
+    document.querySelector('#type-hint').textContent = 'This sets up the right tools and names for your business. You can change everything later.';
+    saveState.textContent = 'Unsaved changes';
+  });
+  form.elements.description.addEventListener('input', () => {
+    if (typeChosenByOwner) return;
+    const suggested = api.suggestBusinessType(`${form.elements.business_name.value} ${form.elements.description.value}`);
+    if (suggested && suggested.code !== form.elements.category.value) { selectType(suggested.code, false); document.querySelector('#type-hint').textContent = `Suggested from your description: ${suggested.label}. Change it if it is not right.`; }
+  });
   if (businessId && !api.isLocalPreview && !/^[0-9a-f-]{36}$/i.test(businessId)) return fail('This AI employee link is invalid.');
 
   if (businessId && api.isLocalPreview) {
@@ -119,6 +140,10 @@
 
   function validateStep(index) {
     const visible = steps[index];
+    if (index === 0 && !form.elements.category.value) {
+      typeGrid.setAttribute('aria-invalid', 'true'); inlineError('Choose the type of your business.');
+      typeGrid.scrollIntoView({behavior:'smooth', block:'center'}); return false;
+    }
     const required = [...visible.querySelectorAll('[required]')];
     for (const input of required) {
       if (!String(input.value || '').trim()) return fieldError(input, requiredMessage(input));
@@ -144,7 +169,7 @@
     const items = [
       ['Business', data.get('business_name')],
       ['AI employee', data.get('display_name')],
-      ['Category', data.get('category') || 'Not added'],
+      ['Type of business', api.businessType(data.get('category'))?.label || 'Not chosen'],
       ['Languages', selectedLanguages().map(api.languageName).join(', ')],
       ['Tone', capitalize(data.get('tone'))],
       ['Knowledge', [`${knowledgeCount()} of 5 sections filled`, pendingFiles.length ? `${pendingFiles.length} file${pendingFiles.length === 1 ? '' : 's'} to upload` : '', document.querySelector('#general-info').value.trim() ? 'business text added' : ''].filter(Boolean).join(' · ')]
@@ -258,6 +283,9 @@
       prohibited_instructions: agent?.prohibited_instructions
     };
     Object.entries(values).forEach(([name, value]) => { if (form.elements[name]) form.elements[name].value = value || ''; });
+    // Older free-text categories ("Home services") are matched to a type; unknown ones must be chosen again.
+    const type = api.businessType(business.category);
+    selectType(type ? type.code : '', Boolean(type));
     const supported = agent?.supported_languages || [api.browserLanguage()];
     form.querySelectorAll('input[name="languages"]').forEach(input => input.checked = supported.includes(input.value));
     saveState.textContent = 'Saved draft';

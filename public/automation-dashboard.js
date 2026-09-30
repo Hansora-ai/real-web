@@ -41,7 +41,7 @@
     const href = `automation-agent.html?id=${encodeURIComponent(business.id)}${preview ? '&preview=1' : ''}`;
     return `<a class="ui-card ui-employee" href="${href}">
       <div class="ui-employee-top"><div class="ui-avatar sm"><b>${escapeHtml(name.trim().charAt(0).toUpperCase() || 'A')}</b><span class="ui-presence${status === 'active' ? ' on' : ''}"></span></div><span class="ui-badge dot ${status === 'active' ? 'green live' : status === 'paused' ? 'amber' : 'blue'}">${escapeHtml(capitalize(status))}</span></div>
-      <h2>${escapeHtml(name)}</h2><p>${escapeHtml(business.name)}${business.category ? ` · ${escapeHtml(business.category)}` : ''}</p>
+      <h2>${escapeHtml(name)}</h2><p>${escapeHtml(business.name)}${business.category ? ` · ${escapeHtml(api.businessType(business.category)?.label || business.category)}` : ''}</p>
       <div class="ui-employee-channels">${icons}<span>${live} of 4 live</span></div>
       <div class="ui-employee-foot"><span>${escapeHtml(languages)}</span><span>Edited ${escapeHtml(updated)}</span></div>
     </a>`;
