@@ -642,14 +642,37 @@ export function createHansoraServer(ctx) {
 const handler = createMcpHandler(createHansoraServer, { legacy: 'stateless', responseMode: 'auto', onerror: (error) => console.error('hansora_mcp_error', error?.message || error) });
 
 export default async function hansoraMcp(request) {
+  const startedAt = Date.now();
+  const requestId = String(request.headers.get('x-nf-request-id') || 'unknown');
+  const protocolVersion = String(request.headers.get('mcp-protocol-version') || 'unspecified');
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type, MCP-Protocol-Version, Mcp-Session-Id' } });
   }
   const token = bearerToken(request);
   const user = await authenticateToken(token).catch(() => null);
-  if (!user) return authenticationRequired();
+  if (!user) {
+    console.warn('hansora_mcp_request', JSON.stringify({
+      requestId,
+      method: request.method,
+      protocolVersion,
+      authenticated: false,
+      status: 401,
+      durationMs: Date.now() - startedAt
+    }));
+    return authenticationRequired();
+  }
   const authInfo = { token, clientId: user.clientId, scopes: user.scopes, extra: { userId: user.id, email: user.email } };
-  return withCors(await handler.fetch(request, { authInfo }));
+  const response = withCors(await handler.fetch(request, { authInfo }));
+  console.info('hansora_mcp_request', JSON.stringify({
+    requestId,
+    method: request.method,
+    protocolVersion,
+    authenticated: true,
+    status: response.status,
+    contentType: response.headers.get('content-type') || 'unspecified',
+    durationMs: Date.now() - startedAt
+  }));
+  return response;
 }
 
 export const config = { path: '/mcp' };
