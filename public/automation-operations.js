@@ -43,6 +43,7 @@
   const pad = number => String(number).padStart(2, '0');
   const isoDay = date => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   $('#day-date').value = isoDay(new Date());
+  if (params.get('view') === 'day') setTimeout(() => showDayView(true));
   const shiftDay = days => { const date = new Date(`${$('#day-date').value || isoDay(new Date())}T12:00:00`); date.setDate(date.getDate() + days); $('#day-date').value = isoDay(date); loadDay(); };
   $('#day-prev').addEventListener('click', () => shiftDay(-1));
   $('#day-next').addEventListener('click', () => shiftDay(1));

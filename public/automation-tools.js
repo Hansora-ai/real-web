@@ -9,6 +9,7 @@
   const errorBox = $('#tools-error');
   if (!preview && !/^[0-9a-f-]{36}$/i.test(businessId)) return fail('Open business tools from your AI employee workspace.');
   $('#tools-back').href = `automation-agent.html?id=${encodeURIComponent(businessId)}${preview && location.protocol !== 'file:' ? '&preview=1' : ''}`;
+  $('#day-view-link').href = `automation-operations.html?business=${encodeURIComponent(businessId)}&view=day${preview && location.protocol !== 'file:' ? '&preview=1' : ''}`;
 
   const DAYS = [['mon','Monday'],['tue','Tuesday'],['wed','Wednesday'],['thu','Thursday'],['fri','Friday'],['sat','Saturday'],['sun','Sunday']];
   // Every time zone the browser knows, with the owner's own zone as the default.
@@ -293,6 +294,7 @@
     const button = $('#save-tools'); button.disabled = true; setState('Saving…');
     // A spinner while saving, so it is clear the save is running.
     button.innerHTML = '<span class="ui-spinner" aria-hidden="true"></span>Saving…'; button.classList.add('is-busy');
+    window.HansoraUI.busy('Saving your settings…');
     try {
       const rows = ['calendar','orders','leads','handoff'].map(tool => ({ business_id:businessId, tool_type:tool, enabled:state[tool].enabled, config:state[tool].config, updated_at:new Date().toISOString() }));
       const saved = await api.db.from('automation_tool_configs').upsert(rows, { onConflict:'business_id,tool_type' });
@@ -300,12 +302,13 @@
       const n = state.notifications;
       await notificationsCall({action:'save', email_enabled:n.email_enabled, email:n.email, events:n.events, language:n.language, whatsapp_enabled:n.whatsapp_verified && n.whatsapp_enabled});
       // The AI's available actions are part of its provider configuration, so resync after every change.
+      window.HansoraUI.busy('Updating your AI employee…');
       const sync = await api.authenticatedFetch('/.netlify/functions/automation-agent-sync', {method:'POST', body:JSON.stringify({business_id:businessId})});
       dirty = false;
       setState('All changes saved');
       window.HansoraUI.toast(sync.ok ? 'Saved. Your AI employee is updated.' : 'Saved. The AI updates on its next sync.');
     } catch (error) { setState('Not saved'); showError(api.displayError(error)); }
-    finally { button.disabled = false; button.textContent = 'Save changes'; button.classList.remove('is-busy'); updateSaveButton(); }
+    finally { window.HansoraUI.busy(false); button.disabled = false; button.textContent = 'Save changes'; button.classList.remove('is-busy'); updateSaveButton(); }
   }
 
   async function connectGoogle() {

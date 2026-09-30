@@ -176,6 +176,10 @@
   }
 
   async function saveDraft() {
+    ui.busy(isLive ? 'Saving your changes…' : 'Going live…');
+    try { await saveDraftNow(); } finally { ui.busy(false); }
+  }
+  async function saveDraftNow() {
     const draft = {channel,selected_account:selectedAccount,provider_connected:providerConnected,automatic_replies:checked('#automatic-replies'),reply_delay:Number(document.querySelector('#reply-delay').value),status:providerConnected?'connected':'draft'};
     if (!api.isLocalPreview) {
       const channelTypes = channel === 'instagram' ? ['instagram_dm','instagram_comments'] : ['whatsapp'];
