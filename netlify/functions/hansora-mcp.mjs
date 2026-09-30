@@ -8,6 +8,7 @@ import {
   GENERATION_TOOL_META,
   generationAppResource
 } from '../../lib/hansora-mcp/generation-app.mjs';
+import { OPENAI_FILE_PARAMS, normalizeGenerationFiles, openAIFileSchema } from '../../lib/hansora-mcp/file-inputs.mjs';
 import { buildAudioPayload, buildGenerationPayload, getModel, getRunner, listModels, quote } from '../../lib/hansora-mcp/registry.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
@@ -108,7 +109,7 @@ async function signUploadForApp(ctx, token, { filename, mime, size }) {
   });
 }
 
-const handler = createMcpHandler((ctx) => {
+export function createHansoraServer(ctx) {
   const userId = String(ctx.authInfo?.extra?.userId || '');
   const token = String(ctx.authInfo?.token || '');
   const server = new McpServer({ name: 'Hansora AI', version: '1.0.0' }, { capabilities: { tools: {} } });
@@ -172,7 +173,7 @@ const handler = createMcpHandler((ctx) => {
 
   server.registerTool('start_image_generation', {
     title: 'Animate an uploaded image',
-    description: 'Open Hansora’s in-chat upload card when the user wants to animate a local image and does not have a public image URL. Use this instead of asking the user to host the image. The card uploads the file, shows the credit quote, and starts the selected Hansora video model after the user confirms.',
+    description: 'Open Hansora’s in-chat upload card only when the host cannot pass the user’s attached image directly to create_generation. The card uploads the file, shows the credit quote, and starts the selected Hansora video model after the user confirms.',
     inputSchema: z.object({
       model_id: z.string().min(1).describe('Available Hansora video model that accepts an image input.'),
       prompt: z.string().min(1),
@@ -227,7 +228,7 @@ const handler = createMcpHandler((ctx) => {
 
   server.registerTool('start_video_generation', {
     title: 'Transform an uploaded video',
-    description: 'Open Hansora’s in-chat upload card when the user wants to transform, edit, or use a local video as a reference and does not have a public video URL. Use this instead of asking the user to host the video. The card accepts MP4, MOV, or WebM, shows the credit quote, and starts the selected compatible Hansora model after the user confirms.',
+    description: 'Open Hansora’s in-chat upload card only when the host cannot pass the user’s attached video directly to create_generation. The card accepts MP4, MOV, or WebM, shows the credit quote, and starts the selected compatible Hansora model after the user confirms.',
     inputSchema: z.object({
       model_id: z.string().min(1).describe('Available Hansora video model that accepts a source or reference video.'),
       prompt: z.string().min(1),
@@ -288,7 +289,7 @@ const handler = createMcpHandler((ctx) => {
 
   server.registerTool('start_multimedia_generation', {
     title: 'Create with uploaded reference media',
-    description: 'Open one Hansora upload card for local reference files. Use this when a generation needs one or more local images, videos, or audio files. Select only the input types the request needs; Hansora checks them against the chosen model and the card shows exactly those supported upload choices. Never ask the user to host these files elsewhere.',
+    description: 'Open one Hansora upload card only when the host cannot pass attached reference files directly to create_generation. Select only the input types the request needs; Hansora checks them against the chosen model and the card shows exactly those supported upload choices.',
     inputSchema: z.object({
       model_id: z.string().min(1).describe('Available Hansora image or video model.'),
       prompt: z.string().min(1),
@@ -464,7 +465,7 @@ const handler = createMcpHandler((ctx) => {
 
   server.registerTool('create_generation', {
     title: 'Create with Hansora',
-    description: 'Submit an image or video generation to any available Hansora model. Call get_model and quote_generation first. Media inputs must be public HTTPS URLs.',
+    description: 'Submit an image or video generation to any available Hansora model. When the user attaches media in chat, pass it through image_files, video_files, or audio_files and start generation directly without opening an upload card. URL fields remain available for existing public HTTPS media. Call get_model and quote_generation first.',
     inputSchema: z.object({
       model_id: z.string().min(1),
       prompt: z.string().min(1),
@@ -475,6 +476,9 @@ const handler = createMcpHandler((ctx) => {
       image_urls: z.array(z.string().url()).max(30).default([]),
       video_urls: z.array(z.string().url()).max(10).default([]),
       audio_urls: z.array(z.string().url()).max(5).default([]),
+      image_files: z.array(openAIFileSchema).max(30).optional().describe('Images attached by the user in ChatGPT.'),
+      video_files: z.array(openAIFileSchema).max(10).optional().describe('Videos attached by the user in ChatGPT.'),
+      audio_files: z.array(openAIFileSchema).max(5).optional().describe('Audio files attached by the user in ChatGPT.'),
       first_frame_url: z.string().url().optional(),
       last_frame_url: z.string().url().optional(),
       source_video_url: z.string().url().optional(),
@@ -489,7 +493,10 @@ const handler = createMcpHandler((ctx) => {
       usage_mode: z.enum(['credits', 'unlimited']).default('credits')
     }),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-    _meta: generationToolMeta('Starting Hansora generation…', 'Hansora generation started')
+    _meta: {
+      ...generationToolMeta('Starting Hansora generation…', 'Hansora generation started'),
+      'openai/fileParams': OPENAI_FILE_PARAMS
+    }
   }, async (input) => {
     try {
       const model = getModel(input.model_id);
@@ -497,8 +504,9 @@ const handler = createMcpHandler((ctx) => {
       if (!model) throw new Error('unsupported_model');
       if (!endpoint || model.availability !== 'available') throw new Error('model_not_available');
 
+      const normalizedInput = normalizeGenerationFiles(input);
       const runId = `${userId}-mcp-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-      const payload = buildGenerationPayload(input.model_id, input, userId, runId);
+      const payload = buildGenerationPayload(input.model_id, normalizedInput, userId, runId);
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
       const response = await fetch(`${origin}/.netlify/functions/safe-run`, {
         method: 'POST',
@@ -508,8 +516,8 @@ const handler = createMcpHandler((ctx) => {
           model_id: model.id,
           model_name: model.name,
           kind: model.category,
-          prompt: input.prompt,
-          usage_mode: input.usage_mode,
+          prompt: normalizedInput.prompt,
+          usage_mode: normalizedInput.usage_mode,
           payload
         }),
         signal: AbortSignal.timeout(58000)
@@ -525,10 +533,10 @@ const handler = createMcpHandler((ctx) => {
         model_name: model.name,
         media_type: model.category,
         status: response.status === 202 ? 'queued' : 'submitted',
-        prompt: input.prompt,
-        aspect_ratio: input.aspect_ratio || null,
-        duration: input.duration || null,
-        resolution: input.resolution || input.quality || null,
+        prompt: normalizedInput.prompt,
+        aspect_ratio: normalizedInput.aspect_ratio || null,
+        duration: normalizedInput.duration || null,
+        resolution: normalizedInput.resolution || normalizedInput.quality || null,
         provider: result
       });
     } catch (error) {
@@ -629,7 +637,9 @@ const handler = createMcpHandler((ctx) => {
   });
 
   return server;
-}, { legacy: 'stateless', responseMode: 'auto', onerror: (error) => console.error('hansora_mcp_error', error?.message || error) });
+}
+
+const handler = createMcpHandler(createHansoraServer, { legacy: 'stateless', responseMode: 'auto', onerror: (error) => console.error('hansora_mcp_error', error?.message || error) });
 
 export default async function hansoraMcp(request) {
   if (request.method === 'OPTIONS') {
