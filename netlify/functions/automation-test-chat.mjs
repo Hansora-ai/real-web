@@ -5,6 +5,7 @@ import { generateAutomationReply } from '../../lib/automation/provider.mjs';
 import { automationPrices, canAfford, chargeCredits, toDisplay } from '../../lib/automation/billing.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
+import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
 
 const HEADERS={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'POST, OPTIONS'};
 const json=(statusCode,body)=>({statusCode,headers:HEADERS,body:JSON.stringify(body)});
@@ -21,6 +22,7 @@ export async function handler(event){
     if(!text||text.length>4000)return json(400,{error:'invalid_message'});
     const business=await first(`/rest/v1/automation_businesses?id=eq.${encodeURIComponent(businessId)}&owner_user_id=eq.${encodeURIComponent(user.id)}&select=id,name&limit=1`);
     if(!business)return json(404,{error:'business_not_found'});
+    await ensureAgentUpToDate({businessId}).catch(error=>console.error('automation agent auto-update failed',{message:error?.message}));
     const aiResource=await first(`/rest/v1/automation_provider_resources?business_id=eq.${encodeURIComponent(businessId)}&provider=eq.elevenlabs&resource_type=eq.agent&status=eq.active&select=*&limit=1`);
     if(!aiResource)return json(409,{error:'ai_provider_agent_not_ready'});
     const price=automationPrices().testReply;
@@ -34,7 +36,7 @@ export async function handler(event){
     // Actions run in test mode: availability is real, but bookings, orders, leads and handoffs are not saved or notified.
     const actions=await prepareConversationActions({businessId,conversationId:conversation.id,contactId:contact.id,channel:'test',contact:{name:''},dryRun:true});
     const memory=await loadConversationMemory({businessId,conversationId:conversation.id});
-    const context=buildConversationContext({intro:['This is a private live test by the business owner. Answer exactly as the configured business assistant.','Continue this conversation.',actions.contextLine],memory});
+    const context=buildConversationContext({intro:['This is a private live test by the business owner. Answer exactly as the configured business assistant.','Continue this conversation.',actions.contextLine],memory,after:[actions.liveBrief]});
     const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text,context,channel:'test',onToolCall:actions.onToolCall});
     const outbound=await serviceInsert('automation_messages',{business_id:businessId,conversation_id:conversation.id,idempotency_key:`test:out:${requestId}`,direction:'outbound',sender_type:'ai',content_type:'text',content:generated.text,status:'generated',billable:true,provider:'elevenlabs',model:'eleven-agents',provider_message_id:generated.conversationId||null,metadata:{source:'workspace_live_test'},occurred_at:new Date().toISOString()});
     const charge=await chargeCredits({businessId,idempotencyKey:`usage:test:${requestId}`,kind:'test_reply',credits:price,conversationId:conversation.id,reference:{channel:'test',message_id:outbound.id}}).catch(()=>({ok:false,charged:0}));

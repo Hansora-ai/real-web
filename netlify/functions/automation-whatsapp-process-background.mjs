@@ -6,6 +6,7 @@ import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { markWhatsAppRead, sendWhatsAppText } from '../../lib/automation/whatsapp.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
+import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
 
@@ -31,7 +32,8 @@ export async function handler(event){
     // Started now and awaited just before the AI: they only need the business, not the saved message.
     const settle=promise=>promise.then(value=>({value}),error=>({error}));const take=result=>{if(result.error)throw result.error;return result.value;};
     const price=automationPrices().aiReply;
-    const aiResourceP=settle(first(`/rest/v1/automation_provider_resources?business_id=eq.${account.business_id}&provider=eq.elevenlabs&resource_type=eq.agent&status=eq.active&select=*&limit=1`));
+    // The AI is brought up to date first if Hansora's rules or the owner's settings changed since its last update.
+    const aiResourceP=settle(ensureAgentUpToDate({businessId:account.business_id}).catch(error=>console.error('automation agent auto-update failed',{message:error?.message})).then(()=>first(`/rest/v1/automation_provider_resources?business_id=eq.${account.business_id}&provider=eq.elevenlabs&resource_type=eq.agent&status=eq.active&select=*&limit=1`)));
     const affordableP=settle(canAfford(account.business_id,price));
     if(credential.expires_at&&Date.parse(credential.expires_at)<=Date.now())throw new Error('whatsapp_token_expired');
     const occurredAt=new Date(Number(message.timestamp)||Date.now()).toISOString();
@@ -55,10 +57,11 @@ export async function handler(event){
     // Pay as you go: no credits, no AI reply. The conversation goes to the owner instead.
     if(!affordable.ok){await handleOutOfCredits({businessId:account.business_id,conversationId:conversation.id,channel:'WhatsApp',customer:message.displayName||message.senderId,notifyOwner});await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,out_of_credits:true});}
     const mediaNote=message.contentType&&!['text','interactive'].includes(message.contentType)?'The latest customer message is a photo, video, voice note, file or location that you cannot open. Do not pretend to know its contents; use any caption, otherwise politely ask the customer to describe it in text, or offer a team member if it needs a human to review.':'';
-    const context=buildConversationContext({intro:['Continue this WhatsApp conversation. Keep the reply concise.',actions.contextLine,mediaNote].filter(Boolean),memory});
+    const context=buildConversationContext({intro:['Continue this WhatsApp conversation. Keep the reply concise.',actions.contextLine,mediaNote].filter(Boolean),memory,after:[actions.liveBrief]});
     const aiStartedAt=Date.now();const preparedMs=aiStartedAt-startedAt;
     const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'whatsapp',onToolCall:actions.onToolCall});
     const aiMs=Date.now()-aiStartedAt;
+    if(generated.toolCalls?.length)console.log('automation tool calls',{channel:'whatsapp',calls:generated.toolCalls});
     const handedOff=generated.toolCalls?.some(call=>call.name==='handoff_to_human'&&call.ok);
     // The chosen reply speed counts from when the message arrived, so the AI's own thinking time is included.
     const replyDelay=Math.min(30,Math.max(0,Number(settings.reply_delay)||0));const waitMs=replyDelay*1000-(Date.now()-startedAt);if(waitMs>0)await new Promise(resolve=>setTimeout(resolve,waitMs));
