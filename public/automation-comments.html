@@ -9,9 +9,9 @@
   <script src="automation-theme.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css"><link rel="stylesheet" href="automation-flow.css">
+  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css"><link rel="stylesheet" href="automation-flow.css?v=20261001-manychat">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-comments.js?v=20260929-canvas"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-comments.js?v=20261001-manychat"></script>
 </head>
 <body class="ui ui-app" data-automation-page="comments">
   <div data-automation-header></div>
@@ -23,7 +23,7 @@
         <div class="flow-title-row">
           <a class="ui-btn ghost icon sm" id="builder-back" href="automation-dashboard.html" aria-label="Back to AI employee" data-icon="chevron" style="transform:scaleX(-1)"></a>
           <span class="flow-channel-mark" data-icon="comment"></span>
-          <div><input id="flow-name" value="Comment to DM" aria-label="Flow name"><p><span id="flow-status-dot"></span><span id="flow-status">Draft</span> · Instagram comments · <span id="draft-state">All changes saved</span></p></div>
+          <div><span class="flow-name-wrap"><input id="flow-name" value="Untitled automation" aria-label="Automation name" maxlength="200"><button type="button" id="rename-flow" aria-label="Rename automation" title="Rename" data-icon="edit"></button></span><p><span id="flow-status-dot"></span><span id="flow-status">Draft</span> · Instagram comments · <span id="draft-state">All changes saved</span></p></div>
         </div>
         <div class="flow-actions">
           <button class="ui-btn ghost sm" id="preview-flow" type="button" data-icon="eye">Preview</button>
@@ -41,16 +41,17 @@
           <div class="flow-add-panel" id="add-panel" hidden>
             <p class="flow-add-title">Trigger</p>
             <button type="button" data-panel-trigger><span class="flow-lib-icon trigger" data-icon="instagram"></span><span><b>When someone comments</b><small>Posts, keywords and public reply</small></span></button>
-            <p class="flow-add-title">Content</p>
-            <button type="button" data-add-node="message"><span class="flow-lib-icon message" data-icon="send"></span><span><b>Instagram message</b><small>Text, buttons and quick replies</small></span></button>
+<p class="flow-add-title">Content</p>
+            <button type="button" data-add-node="message"><span class="flow-lib-icon message" data-icon="send"></span><span><b>Instagram message</b><small>Text, buttons and links</small></span></button>
+            <button type="button" data-add-node="input"><span class="flow-lib-icon input" data-icon="edit"></span><span><b>Collect info</b><small>Ask for email, phone or an answer</small></span></button>
             <p class="flow-add-title">AI</p>
-            <button type="button" data-add-node="ai"><span class="flow-lib-icon ai" data-icon="sparkle"></span><span><b>AI step</b><small>Let AI handle the conversation</small></span><em class="flow-ai-tag">AI</em></button>
+            <button type="button" data-add-node="ai"><span class="flow-lib-icon ai" data-icon="sparkle"></span><span><b>AI step</b><small>Your AI employee takes over</small></span><em class="flow-ai-tag">AI</em></button>
             <p class="flow-add-title">Logic</p>
-            <div class="flow-add-grid">
-              <button type="button" data-add-node="condition"><span class="flow-lib-icon condition" data-icon="branch"></span><span><b>Condition</b><small>Yes / No paths</small></span></button>
-              <button type="button" data-add-node="delay"><span class="flow-lib-icon delay" data-icon="clock"></span><span><b>Smart delay</b><small>Wait, then continue</small></span></button>
-              <button type="button" data-add-node="handoff"><span class="flow-lib-icon handoff" data-icon="handoff"></span><span><b>Hand to team</b><small>Pause AI, alert you</small></span></button>
-            </div>
+            <button type="button" data-add-node="condition"><span class="flow-lib-icon condition" data-icon="branch"></span><span><b>Condition</b><small>Follows you? Tag? Yes / No paths</small></span></button>
+            <button type="button" data-add-node="action"><span class="flow-lib-icon action" data-icon="spark"></span><span><b>Actions</b><small>Tag, save a field, notify your team</small></span></button>
+            <button type="button" data-add-node="randomizer"><span class="flow-lib-icon randomizer" data-icon="refresh"></span><span><b>Randomizer</b><small>A/B split by percentage</small></span></button>
+            <button type="button" data-add-node="delay"><span class="flow-lib-icon delay" data-icon="clock"></span><span><b>Smart delay</b><small>Wait, then continue</small></span></button>
+            <button type="button" data-add-node="handoff"><span class="flow-lib-icon handoff" data-icon="handoff"></span><span><b>Hand to team</b><small>Pause AI, alert you</small></span></button>
             <p class="flow-add-hint">New steps connect to the selected step. You can also use the + under any step.</p>
           </div>
           <div class="flow-zoom" role="group" aria-label="Zoom">
@@ -59,6 +60,19 @@
             <button type="button" id="zoom-reset" aria-label="Reset zoom">100%</button>
             <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
             <button type="button" id="fit-flow">Fit</button>
+          </div>
+          <div class="flow-step-popover" id="step-popover" hidden role="menu" aria-label="Choose the next step">
+            <p class="flow-add-title">Choose next step</p>
+            <button type="button" data-pop-add-node="message"><span class="flow-lib-icon message" data-icon="send"></span><span><b>Instagram message</b><small>Text, buttons and links</small></span></button>
+            <button type="button" data-pop-add-node="input"><span class="flow-lib-icon input" data-icon="edit"></span><span><b>Collect info</b><small>Ask for email, phone or an answer</small></span></button>
+            <p class="flow-add-title">AI</p>
+            <button type="button" data-pop-add-node="ai"><span class="flow-lib-icon ai" data-icon="sparkle"></span><span><b>AI step</b><small>Your AI employee takes over</small></span><em class="flow-ai-tag">AI</em></button>
+            <p class="flow-add-title">Logic</p>
+            <button type="button" data-pop-add-node="condition"><span class="flow-lib-icon condition" data-icon="branch"></span><span><b>Condition</b><small>Follows you? Tag? Yes / No paths</small></span></button>
+            <button type="button" data-pop-add-node="action"><span class="flow-lib-icon action" data-icon="spark"></span><span><b>Actions</b><small>Tag, save a field, notify your team</small></span></button>
+            <button type="button" data-pop-add-node="randomizer"><span class="flow-lib-icon randomizer" data-icon="refresh"></span><span><b>Randomizer</b><small>A/B split by percentage</small></span></button>
+            <button type="button" data-pop-add-node="delay"><span class="flow-lib-icon delay" data-icon="clock"></span><span><b>Smart delay</b><small>Wait, then continue</small></span></button>
+            <button type="button" data-pop-add-node="handoff"><span class="flow-lib-icon handoff" data-icon="handoff"></span><span><b>Hand to team</b><small>Pause AI, alert you</small></span></button>
           </div>
           <div class="flow-node-menu" id="node-menu" hidden role="menu"><button type="button" data-menu="duplicate" role="menuitem">Duplicate</button><button type="button" data-menu="delete" class="danger" role="menuitem">Delete</button></div>
         </section>
@@ -78,10 +92,6 @@
     <div class="ui-dialog-head flow-dialog-pad"><h2>Choose posts or reels</h2><button class="ui-btn ghost icon sm" type="button" data-close-dialog aria-label="Close">✕</button></div>
     <div class="post-picker-grid" id="post-picker-grid"></div>
     <div class="ui-dialog-actions flow-dialog-pad"><button class="ui-btn ghost" type="button" data-close-dialog>Cancel</button><button class="ui-btn primary" id="confirm-posts" type="button">Use selected</button></div>
-  </dialog>
-  <dialog class="ui-dialog step-picker-dialog" id="step-picker-dialog">
-    <div class="ui-dialog-head flow-dialog-pad"><div><h2>Choose the next step</h2><p class="ui-hint">It will be connected automatically.</p></div><button class="ui-btn ghost icon sm" type="button" data-close-dialog aria-label="Close">✕</button></div>
-    <div class="step-picker-grid"><button type="button" data-dialog-add-node="message"><span class="flow-lib-icon message" data-icon="send"></span><span><b>Instagram message</b><small>Text, buttons and quick replies</small></span></button><button type="button" data-dialog-add-node="condition"><span class="flow-lib-icon condition" data-icon="branch"></span><span><b>Condition</b><small>Continue only if the reply matches</small></span></button><button type="button" data-dialog-add-node="delay"><span class="flow-lib-icon delay" data-icon="clock"></span><span><b>Wait</b><small>Pause before the next step</small></span></button><button type="button" data-dialog-add-node="ai"><span class="flow-lib-icon ai" data-icon="sparkle"></span><span><b>AI assistant</b><small>Answers with your business knowledge</small></span></button><button type="button" data-dialog-add-node="handoff"><span class="flow-lib-icon handoff" data-icon="handoff"></span><span><b>Hand to your team</b><small>Pause AI and alert you</small></span></button></div>
   </dialog>
 </body>
 </html>

@@ -91,3 +91,62 @@ button.node-menu:hover{border-color:var(--border-2);background:var(--surface-3);
 .node-toolbar button.danger{color:var(--red)}
 .node-toolbar button.danger:hover{background:var(--red-soft)}
 .inspector-head button[data-close-inspector]:hover{border-color:var(--border-3);color:var(--text);background:var(--surface-3)}
+
+/* ---- ManyChat-style builder (2026-10) ---- */
+/* Full-width canvas; the settings panel floats over it only while a step is selected. */
+.flow-layout{display:block!important;position:relative;flex:1;min-height:0;height:calc(100% - 64px)}
+#comments-builder{display:flex;flex-direction:column;height:100%}
+.flow-layout>.flow-canvas{position:absolute;inset:0;height:auto;min-height:0}
+.flow-inspector{position:absolute;top:12px;right:12px;bottom:12px;z-index:20;width:min(380px,calc(100% - 24px));border:1px solid var(--border-2);border-radius:16px;background:var(--surface);box-shadow:0 30px 80px -30px rgba(0,0,0,.85);transition:transform .22s var(--ease),opacity .18s}
+.flow-inspector.closed{transform:translateX(calc(100% + 24px));opacity:0;pointer-events:none}
+@media(max-width:900px){.flow-layout{height:calc(100vh - 170px)}.flow-inspector{top:auto;left:8px;right:8px;bottom:8px;width:auto;max-height:70%}.flow-inspector.closed{transform:translateY(calc(100% + 24px))}}
+/* Name: click to rename */
+.flow-name-wrap{display:inline-flex;align-items:center;gap:2px}
+#rename-flow{display:grid;place-items:center;width:26px;height:26px;padding:0;border:0;border-radius:6px;background:none;color:var(--text-3);cursor:pointer}
+#rename-flow svg{width:14px;height:14px}
+#rename-flow:hover{background:var(--surface-2);color:var(--text)}
+.flow-viewing #rename-flow{display:none}
+/* Step menu next to the "+" */
+.flow-step-popover{position:absolute;z-index:25;display:grid;gap:4px;width:300px;max-height:min(520px,calc(100% - 16px));overflow-y:auto;padding:10px;border:1px solid var(--border-2);border-radius:14px;background:var(--surface);box-shadow:0 24px 60px -20px rgba(0,0,0,.85);animation:ui-pop .16s var(--ease);cursor:default}
+.flow-step-popover[hidden]{display:none}
+.flow-step-popover button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 9px;border:1px solid transparent;border-radius:10px;background:none;text-align:left;cursor:pointer}
+.flow-step-popover button[hidden]{display:none}
+.flow-step-popover button:hover{border-color:var(--accent-line,var(--border-2));background:var(--accent-soft)}
+.flow-step-popover b{display:block;font-size:13px;font-weight:500}
+.flow-step-popover small{display:block;color:var(--text-3);font-size:11.5px}
+.flow-step-popover .flow-add-title{margin:6px 4px 2px}
+.flow-lib-icon.action{background:rgba(255,184,77,.14);color:#ffb84d}
+.flow-lib-icon.input{background:rgba(92,200,255,.14);color:#5cc8ff}
+.flow-lib-icon.randomizer{background:rgba(183,121,255,.14);color:#b779ff}
+/* "Choose first step" card (empty automation) */
+.flow-first-step{position:absolute;width:300px;padding:14px;border:1.5px dashed var(--border-3,var(--border-2));border-radius:16px;background:var(--surface);display:grid;gap:8px}
+.flow-first-step>b{font-size:15px}
+.flow-first-step>p{margin:0;color:var(--text-3);font-size:12px}
+.flow-first-step button{display:flex;align-items:center;gap:10px;padding:9px;border:1px solid var(--border-2);border-radius:11px;background:none;text-align:left;cursor:pointer}
+.flow-first-step button:hover{border-color:var(--accent);background:var(--accent-soft)}
+.flow-first-step button b{display:block;font-size:13px;font-weight:500}
+.flow-first-step button small{display:block;color:var(--text-3);font-size:11.5px}
+.flow-lines .flow-first-edge{fill:none;stroke:var(--border-3,#555);stroke-width:1.5;stroke-dasharray:5 5}
+/* Chosen posts */
+.trigger-posts{display:flex;gap:6px;margin-bottom:8px}
+.trigger-posts img,.trigger-posts span{width:52px;height:52px;border-radius:8px;object-fit:cover;background:var(--surface-3);display:grid;place-items:center;color:var(--text-3);font-size:11px}
+.inspector-posts{margin:8px 0}
+.inspector-posts .trigger-posts img,.inspector-posts .trigger-posts span{width:64px;height:64px}
+/* Condition / actions / randomizer editors */
+.rule-editor{display:grid;gap:6px;margin-bottom:8px;padding:10px;border:1px solid var(--border);border-radius:11px;background:var(--bg-soft)}
+.rule-row{display:flex;align-items:center;gap:6px}
+.rule-row select,.rule-row input{flex:1}
+.rule-row button{flex:none;width:28px;height:28px;border:1px solid var(--border-2);border-radius:8px;background:none;color:var(--text-3)}
+.rule-row button:hover{color:var(--red);border-color:rgba(255,107,107,.4)}
+.rule-row input[type=number]{max-width:90px}
+.branch-letter{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--surface-3);font-size:12px}
+.section-heading em.bad,.inspector-note.bad{color:var(--red)}
+.node-lines{margin:0 0 8px;padding:0;list-style:none;display:grid;gap:4px;font-size:12px}
+.node-lines li{padding:6px 8px;border-radius:8px;background:var(--surface-2)}
+.node-lines li.muted{color:var(--text-3)}
+.condition-summary{font-size:12.5px}
+.branch-list{display:grid;gap:6px}
+.branch-list button{display:grid;grid-template-columns:24px 44px 1fr;align-items:center;gap:6px;padding:7px 9px;border:1px solid var(--border-2);border-radius:9px;background:none;color:var(--text);font-size:12px;text-align:left;cursor:pointer}
+.branch-list button b{display:grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--surface-3)}
+.branch-list button em{font-style:normal;color:var(--text-3);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.branch-list button:hover{border-color:var(--accent)}

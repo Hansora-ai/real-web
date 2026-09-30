@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css"><link rel="stylesheet" href="automation-workflows.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-workflows.js"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-workflows.js?v=20261001-manychat"></script>
 </head>
 <body class="ui" data-automation-page="workflows">
   <div data-automation-header></div>
@@ -19,7 +19,7 @@
     <nav class="workflow-crumb"><a id="workflow-back" href="automation-agent.html">AI employee</a><span>›</span><b>Instagram automations</b></nav>
     <header class="ui-page-head workflows-head">
       <div><div class="workflows-kicker"><span data-icon="instagram"></span>Instagram comments</div><h1>Automations</h1><p>Turn comments into conversations, customers, and orders.</p></div>
-      <button class="ui-btn primary" id="new-workflow" type="button" data-icon="sparkle">New automation</button>
+      <div class="workflows-head-actions"><button class="ui-btn ghost" type="button" data-open-templates>Templates</button><button class="ui-btn primary" id="new-workflow" type="button" data-icon="sparkle">New automation</button></div>
     </header>
     <div class="ui-alert" id="workflows-error" role="alert" hidden></div>
     <section class="workflow-overview" aria-label="Automation performance">
@@ -38,14 +38,14 @@
       </div>
       <div class="workflow-loading" id="workflows-loading"><div class="ui-skeleton"></div><div class="ui-skeleton"></div><div class="ui-skeleton"></div></div>
       <div class="workflow-list" id="workflow-list" hidden></div>
-      <div class="ui-card workflow-empty" id="workflow-empty" hidden><span data-icon="branch"></span><h2>No automations here</h2><p>Create one from a proven template or start with a blank journey.</p><button class="ui-btn primary" type="button" data-open-templates>New automation</button></div>
+      <div class="ui-card workflow-empty" id="workflow-empty" hidden><span data-icon="branch"></span><h2>No automations here</h2><p>Create one from a proven template or start with a blank journey.</p><button class="ui-btn primary" type="button" data-new-blank>New automation</button> <button class="ui-btn ghost" type="button" data-open-templates>Start from a template</button></div>
     </section>
   </main>
 
   <dialog class="ui-dialog template-dialog" id="template-dialog">
-    <div class="ui-dialog-head"><div><span class="dialog-kicker">New Instagram automation</span><h2>How do you want to start?</h2><p>Choose a ready journey or build your own.</p></div><button class="ui-btn ghost icon sm" type="button" data-close-dialog aria-label="Close">✕</button></div>
+    <div class="ui-dialog-head"><div><span class="dialog-kicker">New Instagram automation</span><h2>Templates</h2><p>A ready automation you can change. Or close this and start from an empty canvas.</p></div><button class="ui-btn ghost icon sm" type="button" data-close-dialog aria-label="Close">✕</button></div>
     <div class="template-grid">
-      <a class="template-card blank" data-template="blank" href="#"><span class="template-icon">+</span><div><b>Start from scratch</b><p>An opening DM and AI handoff, ready to customize.</p></div><em>Blank</em></a>
+      <a class="template-card" data-template="follow-link" href="#"><span class="template-icon link">✓</span><div><b>Follow to get the link</b><p>Comment → “Send me the link” → only followers get it; others are asked to follow first.</p></div><em>Most used</em></a>
       <a class="template-card" data-template="send-link" href="#"><span class="template-icon link">↗</span><div><b>Send a link</b><p>Reply to a keyword, confirm interest, then deliver your website link.</p></div><em>Popular</em></a>
       <a class="template-card" data-template="prices" href="#"><span class="template-icon price">$</span><div><b>Share prices</b><p>Answer “price” comments privately and continue with your AI assistant.</p></div><em>Sales</em></a>
       <a class="template-card" data-template="lead" href="#"><span class="template-icon lead" data-icon="user"></span><div><b>Collect a lead</b><p>Qualify interested people, save their details, or hand them to your team.</p></div><em>Lead capture</em></a>
