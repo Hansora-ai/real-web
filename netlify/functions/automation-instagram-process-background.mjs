@@ -104,7 +104,8 @@ export async function handler(event){
         await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,idempotency_key:`flow-handoff-request:${message.externalEventId}`,direction:'internal',sender_type:'system',content_type:'text',content:'Customer requested a person.',status:'received',billable:false,provider:'hansora',metadata:{flow_session_id:session.id},occurred_at:new Date().toISOString()},{ignoreDuplicates:true});
         await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,handoff:true});
       }
-      if(session.status==='waiting'){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,flow_waiting:true});}
+      // During a Smart delay the automation is paused, not the conversation: the AI answers what they wrote, and
+      // the automation continues by itself when the wait is over.
       const workflow=await first(`/rest/v1/automation_comment_workflows?id=eq.${session.workflow_id}&business_id=eq.${account.business_id}&select=*&limit=1`);
       if(workflow&&['awaiting_reply','running'].includes(session.status)){
         const advanced=await executeFlowAdvance({session,workflow,inboundText:message.text,inboundPayload:message.quickReplyPayload,canUseInbound:true,account,accessToken:accessTokenPlain,conversation,recipientId:message.senderId,deps:{startFlow:args=>flowStarter(args)}});

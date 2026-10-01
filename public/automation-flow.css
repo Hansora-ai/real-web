@@ -226,3 +226,35 @@ button.node-menu:hover{border-color:var(--border-2);background:var(--surface-3);
 .trigger-current>span:nth-child(2){flex:1;min-width:0}
 .trigger-current b{display:block;font-size:13.5px}
 .trigger-current small{display:block;color:var(--text-2);font-size:12px}
+/* Buttons as rows + "Edit button" window (ManyChat-style) */
+.button-row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-bottom:6px;padding:10px 12px;border:1px solid var(--border-2);border-radius:10px;background:var(--surface-2);color:var(--text);text-align:left;cursor:pointer}
+.button-row b{display:block;font-size:13px}
+.button-row small{display:block;color:var(--text-3);font-size:11.5px}
+.button-row em{font-style:normal;color:var(--accent-2);font-size:12px}
+.button-row.unset{border-color:rgba(255,184,77,.5)}
+.button-row.unset small{color:var(--amber)}
+.button-row:hover{border-color:var(--accent)}
+.button-dialog{width:min(560px,94vw)}
+#bd-body{display:grid;gap:12px;max-height:65vh;overflow-y:auto}
+.bd-field{display:grid;gap:6px;font-size:13px;font-weight:500}
+.bd-field input,.bd-field select{width:100%;min-height:40px;padding:8px 11px;border:1px solid var(--border-2);border-radius:9px;background:var(--surface);color:var(--text);font-size:13.5px}
+.bd-field small{color:var(--text-3);font-weight:400;font-size:11.5px}
+.bd-sub{margin:4px 0 -4px;color:var(--text-2);font-size:13px;font-weight:600}
+.bd-choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bd-choices button{display:flex;align-items:center;gap:10px;padding:10px;border:1.5px dashed var(--border-2);border-radius:12px;background:none;color:var(--text);text-align:left;cursor:pointer}
+.bd-choices button b{display:block;font-size:13px;font-weight:600}
+.bd-choices button small{display:block;color:var(--text-3);font-size:11px}
+.bd-choices button.active{border-style:solid;border-color:var(--accent);background:var(--accent-soft)}
+.bd-choices button:hover{border-color:var(--accent)}
+.bd-actions{justify-content:space-between}
+.bd-delete{color:var(--red)}
+.bd-delete[hidden]{display:none}
+@media(max-width:600px){.bd-choices{grid-template-columns:1fr}}
+/* "Add content" list */
+.content-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.content-grid button{display:grid;gap:2px;padding:9px 10px;border:1.5px dashed var(--border-2);border-radius:10px;background:none;color:var(--text);text-align:left;cursor:pointer}
+.content-grid button b{font-size:12.5px;font-weight:600}
+.content-grid button small{color:var(--text-3);font-size:11px}
+.content-grid button:hover{border-style:solid;border-color:var(--accent);background:var(--accent-soft)}
+.content-grid[hidden]{display:none}
+.flow-lib-icon.start_flow,.flow-lib-icon.existing,.flow-lib-icon.website{background:var(--surface-3);color:var(--text-2)}
