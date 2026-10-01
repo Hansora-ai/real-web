@@ -36,7 +36,7 @@
     const user = await getUser();
     if (user) return user;
     const target = safeReturnPath(returnPath || (window.location.pathname + window.location.search));
-    window.location.replace('/login.html?returnTo=' + encodeURIComponent(target));
+    window.location.replace('/automation.html?login=1&returnTo=' + encodeURIComponent(target));
     return null;
   }
 
