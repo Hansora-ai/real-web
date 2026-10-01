@@ -115,3 +115,14 @@ test('a specific-post automation wins over an all-posts one, a keyword over any 
   assert.equal(firstMatch('AI'), 'post-ai');
   assert.equal(firstMatch('hello'), 'post-any');
 });
+
+test('the AI employee card reads the connected Instagram name and photo', async () => {
+  for (const name of ['META_INSTAGRAM_APP_ID','META_INSTAGRAM_APP_SECRET','META_INSTAGRAM_REDIRECT_URI','META_WEBHOOK_VERIFY_TOKEN','HANSORA_AUTOMATION_OAUTH_SECRET']) process.env[name] ||= 'test';
+  const { getInstagramAccountCard } = await import('../../lib/automation/meta.mjs');
+  let asked = '';
+  const card = await getInstagramAccountCard('token', async url => { asked = String(url); return new Response(JSON.stringify({ username: 'luma.studio', name: 'Luma', profile_picture_url: 'https://cdn.example/p.jpg' }), { status: 200 }); });
+  assert.match(asked, /fields=username%2Cname%2Cprofile_picture_url/);
+  assert.deepEqual(card, { username: 'luma.studio', name: 'Luma', picture: 'https://cdn.example/p.jpg' });
+  const unsafe = await getInstagramAccountCard('token', async () => new Response(JSON.stringify({ username: 'x', profile_picture_url: 'javascript:alert(1)' }), { status: 200 }));
+  assert.equal(unsafe.picture, '');
+});

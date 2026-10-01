@@ -317,19 +317,37 @@
     document.querySelector('#bd-title').textContent=edit.index===null?'New button':'Edit button';
     document.querySelector('#bd-delete').hidden=edit.index===null;
     const keep=edit.index!==null&&node.actions[edit.index]?.type==='quick_reply'&&node.actions[edit.index]?.nextId;
-    document.querySelector('#bd-body').innerHTML=`<label class="bd-field">Button text<input id="bd-label" maxlength="20" value="${escapeAttribute(edit.label)}" placeholder="e.g. Send me the link"><small>${20-String(edit.label).length} characters left (Instagram allows 20)</small></label><p class="bd-sub">When this button is pressed</p><div class="bd-choices">${keep?`<button type="button" data-bd-choice="keep" class="${edit.choice==='keep'?'active':''}"><span class="flow-lib-icon message">${window.HansoraUI.icon('check')}</span><span><b>Keep: ${escapeHtml(targetName(node.actions[edit.index].nextId))}</b><small>Where it goes now</small></span></button>`:''}${BUTTON_CHOICES.map(([value,title,icon,hint])=>`<button type="button" data-bd-choice="${value}" class="${edit.choice===value?'active':''}"><span class="flow-lib-icon ${value}">${window.HansoraUI.icon(icon)}</span><span><b>${title}</b><small>${hint}</small></span></button>`).join('')}</div>${edit.choice==='website'?`<label class="bd-field">Website link<input id="bd-url" value="${escapeAttribute(edit.url)}" placeholder="https://your-site.com"><small>Website buttons don’t open Instagram’s 24-hour reply window.</small></label>`:''}${edit.choice==='start_flow'?`<label class="bd-field">Automation to start<select id="bd-flow"><option value="">Choose an automation</option>${otherFlows.filter(flow=>flow.id!==state.workflowId).map(flow=>`<option value="${escapeAttribute(flow.id)}" ${flow.id===edit.flowId?'selected':''}>${escapeHtml(flow.name)}${flow.status==='active'?'':' (not live)'}</option>`).join('')}</select></label>`:''}${edit.choice==='existing'?`<label class="bd-field">Step<select id="bd-existing">${targetOptions(edit.existingId,'Choose a step')}</select></label>`:''}`;
-    document.querySelector('#bd-label').addEventListener('input',event=>{edit.label=event.target.value.slice(0,20);event.target.nextElementSibling.textContent=`${20-edit.label.length} characters left (Instagram allows 20)`});
-    document.querySelectorAll('[data-bd-choice]').forEach(button=>button.addEventListener('click',()=>{edit.choice=button.dataset.bdChoice;renderButtonDialog()}));
+    const choices=[...(keep?[['keep',`Keep: ${targetName(node.actions[edit.index].nextId)}`,'check','Where it goes now']]:[]),...BUTTON_CHOICES];
+    const flows=otherFlows.filter(flow=>flow.id!==state.workflowId);
+    // Choices that need one more answer show it right under the clicked card, so it is never hidden below the fold.
+    const detail=edit.choice==='website'?`<div class="bd-detail"><label class="bd-field">Website link<input id="bd-url" type="url" inputmode="url" value="${escapeAttribute(edit.url)}" placeholder="https://your-site.com"><small>Opens in the browser. Website buttons don’t open Instagram’s 24-hour reply window.</small></label><button class="ui-btn primary sm" type="button" data-bd-save>Save button</button></div>`
+      :edit.choice==='start_flow'?`<div class="bd-detail">${flows.length?`<label class="bd-field">Automation to start<select id="bd-flow"><option value="">Choose an automation</option>${flows.map(flow=>`<option value="${escapeAttribute(flow.id)}" ${flow.id===edit.flowId?'selected':''}>${escapeHtml(flow.name)}${flow.status==='active'?'':' (not live)'}</option>`).join('')}</select><small>When pressed, this automation ends and the chosen one starts from its first step.</small></label><button class="ui-btn primary sm" type="button" data-bd-save>Save button</button>`:'<p class="bd-note">You don’t have another automation yet. Create one first, then come back to pick it here.</p>'}</div>`
+      :edit.choice==='existing'?`<div class="bd-detail"><label class="bd-field">Step<select id="bd-existing">${targetOptions(edit.existingId,'Choose a step')}</select><small>The button jumps to a step that is already in this automation.</small></label><button class="ui-btn primary sm" type="button" data-bd-save>Save button</button></div>`:'';
+    const activeIndex=choices.findIndex(([value])=>value===edit.choice);
+    const twoColumns=!window.matchMedia('(max-width:600px)').matches;
+    const insertAfter=activeIndex<0?-1:twoColumns?Math.min(activeIndex|1,choices.length-1):activeIndex;
+    const cards=choices.map(([value,title,icon,hint],index)=>`<button type="button" data-bd-choice="${value}" class="${edit.choice===value?'active':''}"><span class="flow-lib-icon ${value==='keep'?'message':value}">${window.HansoraUI.icon(icon)}</span><span><b>${escapeHtml(title)}</b><small>${hint}</small></span></button>${index===insertAfter?detail:''}`).join('');
+    document.querySelector('#bd-body').innerHTML=`<label class="bd-field">Button text<input id="bd-label" maxlength="20" value="${escapeAttribute(edit.label)}" placeholder="e.g. Send me the link"><small>${20-String(edit.label).length} characters left (Instagram allows 20)</small></label><p class="bd-sub">When this button is pressed</p><div class="bd-choices">${cards}</div>`;
+    document.querySelector('#bd-label').addEventListener('input',event=>{edit.label=event.target.value.slice(0,20);event.target.classList.remove('invalid');event.target.nextElementSibling.textContent=`${20-edit.label.length} characters left (Instagram allows 20)`});
+    document.querySelectorAll('[data-bd-choice]').forEach(button=>button.addEventListener('click',()=>{
+      edit.choice=button.dataset.bdChoice;
+      if(['website','start_flow','existing'].includes(edit.choice)){const scroll=document.querySelector('#bd-body').scrollTop;renderButtonDialog();const body=document.querySelector('#bd-body');body.scrollTop=scroll;const box=body.querySelector('.bd-detail');box?.scrollIntoView({block:'nearest',behavior:'smooth'});box?.querySelector('input,select')?.focus({preventScroll:true});return}
+      saveButtonDialog();
+    }));
+    document.querySelector('[data-bd-save]')?.addEventListener('click',saveButtonDialog);
     document.querySelector('#bd-url')?.addEventListener('input',event=>{edit.url=event.target.value.trim()});
+    document.querySelector('#bd-url')?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();saveButtonDialog()}});
     document.querySelector('#bd-flow')?.addEventListener('change',event=>{edit.flowId=event.target.value});
     document.querySelector('#bd-existing')?.addEventListener('change',event=>{edit.existingId=event.target.value});
   }
   function saveButtonDialog(){
     const edit=buttonEdit;const node=edit&&byId(edit.nodeId);if(!node)return;
-    const label=String(edit.label||'').trim()||'Button';
-    if(edit.choice==='website'&&!/^https:\/\//i.test(edit.url||''))return window.HansoraUI.toast('Add a website link that starts with https://');
-    if(edit.choice==='start_flow'&&!edit.flowId)return window.HansoraUI.toast('Choose which automation to start');
-    if(edit.choice==='existing'&&!edit.existingId)return window.HansoraUI.toast('Choose the step');
+    const label=String(edit.label||'').trim();
+    if(!label){const input=document.querySelector('#bd-label');input?.classList.add('invalid');input?.focus();document.querySelectorAll('[data-bd-choice]').forEach(button=>button.classList.toggle('active',button.dataset.bdChoice===edit.choice));return window.HansoraUI.toast('Type the button text first')}
+    if(edit.choice==='website'&&edit.url&&!/^https?:\/\//i.test(edit.url))edit.url=`https://${edit.url}`;
+    if(edit.choice==='website'&&!/^https:\/\/[^\s.]+\.[^\s]+$/i.test(edit.url||'')){document.querySelector('#bd-url')?.focus();return window.HansoraUI.toast('Add a website link, e.g. https://your-site.com')}
+    if(edit.choice==='start_flow'&&!edit.flowId){document.querySelector('#bd-flow')?.focus();return window.HansoraUI.toast('Choose which automation to start')}
+    if(edit.choice==='existing'&&!edit.existingId){document.querySelector('#bd-existing')?.focus();return window.HansoraUI.toast('Choose the step')}
     node.actions=node.actions||[];
     let index=edit.index;
     if(index===null){if(node.actions.length>=3)return window.HansoraUI.toast('Instagram allows up to 3 buttons');node.actions.push({id:uniqueId('action'),type:'quick_reply',label,nextId:null});index=node.actions.length-1}

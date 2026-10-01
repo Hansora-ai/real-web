@@ -218,6 +218,7 @@ a.ui-row:hover .ui-chevron{transform:translateX(3px);color:var(--text)}
 .ui-employee h2{margin:0;font-size:17px;font-weight:600;letter-spacing:-.01em}
 .ui-employee>p{margin:3px 0 0;color:var(--text-2);font-size:13px}
 .ui-employee-channels{display:flex;align-items:center;gap:6px;margin:18px 0 16px}
+.ui-employee>p.ui-employee-ig{display:flex;align-items:center;gap:6px;margin-top:8px;color:var(--text);font-size:13px;font-weight:500}.ui-employee-ig[hidden]{display:none!important}.ui-employee-ig svg{width:15px;height:15px;color:#e4405f}.ui-employee-ig span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ui-employee-channels>span:last-child{margin-left:6px;color:var(--text-3);font-size:12px}
 .ui-channel-dot{display:grid;place-items:center;width:28px;height:28px;border:1px solid var(--border-2);border-radius:8px;color:var(--text-3);background:var(--surface-2)}
 .ui-channel-dot svg{width:14px;height:14px}
