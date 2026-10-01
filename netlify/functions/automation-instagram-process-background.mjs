@@ -65,8 +65,11 @@ export async function handler(event){
     }
     const occurredAt=new Date(Number(message.timestamp)||Date.now()).toISOString();
     // Show the customer's real name and @username: looked up once per customer, kept on later messages.
-    const senderProfile=known?.profile?.username?null:await getInstagramSenderProfile({senderId:message.senderId,accessToken:decryptSecret(credential)});
-    const profile={...(known?.profile||{}),instagram_scoped_id:message.senderId,...(senderProfile?{username:senderProfile.username,name:senderProfile.name,profile_pic:senderProfile.profilePic}:{})};
+    // Name and photo: looked up when the photo is missing (at most once a day per person), e.g. someone who first
+    // commented (Instagram only shares the photo once they write to you or tap a button).
+    const checkedRecently=Date.parse(known?.profile?.profile_checked_at||'')>Date.now()-86_400_000&&known?.profile?.username;
+    const senderProfile=known?.profile?.profile_pic||checkedRecently?null:await getInstagramSenderProfile({senderId:message.senderId,accessToken:decryptSecret(credential)});
+    const profile={...(known?.profile||{}),instagram_scoped_id:message.senderId,...(senderProfile?{username:senderProfile.username,name:senderProfile.name,profile_pic:senderProfile.profilePic,profile_checked_at:new Date().toISOString()}:{})};
     const displayName=(senderProfile?(senderProfile.name||`@${senderProfile.username}`):known?.display_name)||'Instagram customer';
     const contact=await serviceUpsert('automation_contacts','business_id,channel_type,external_contact_id',{business_id:account.business_id,display_name:displayName,channel_type:'instagram_dm',external_contact_id:message.senderId,last_seen_at:occurredAt,profile});
     const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'instagram_dm',external_thread_id:message.senderId,status:'open',last_message_preview:shownText(message).slice(0,1000),last_message_at:occurredAt});
