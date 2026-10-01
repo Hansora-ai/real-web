@@ -263,3 +263,5 @@ button.node-menu:hover{border-color:var(--border-2);background:var(--surface-3);
 .bd-note{margin:0;color:var(--text-2);font-size:13px}
 #bd-label.invalid{border-color:var(--red)}
 @keyframes bd-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.flow-lines .moving{opacity:.18}
+.flow-lines path.edge-hit{cursor:grab}

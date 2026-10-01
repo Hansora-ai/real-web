@@ -70,6 +70,10 @@
   document.querySelector('#undo-flow')?.addEventListener('click',undo);document.querySelector('#redo-flow')?.addEventListener('click',redo);
   document.querySelector('#zoom-in').addEventListener('click',()=>zoomBy(1.2));document.querySelector('#zoom-out').addEventListener('click',()=>zoomBy(1/1.2));document.querySelector('#zoom-reset').addEventListener('click',()=>{camera.z=1;applyCamera()});
   document.addEventListener('keydown',onKeyDown);
+  // Grammarly and similar extensions can swallow letters in languages they don't support (Armenian, Russian…),
+  // so they are switched off in the builder's text boxes.
+  const quietFields=root=>root.querySelectorAll?.('textarea,input[type=text],input:not([type])').forEach(field=>{if(field.dataset.gramm)return;field.setAttribute('data-gramm','false');field.setAttribute('data-gramm_editor','false');field.setAttribute('data-enable-grammarly','false')});
+  quietFields(document);new MutationObserver(changes=>changes.forEach(change=>change.addedNodes.forEach(node=>{if(node.nodeType!==1)return;if(node.matches('textarea,input'))quietFields(node.parentNode);else quietFields(node)}))).observe(document.body,{childList:true,subtree:true});
   setupCanvasGestures();
   document.querySelectorAll('[data-pop-add-node]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();const connection=pendingConnection;closeStepPicker();addNode(button.dataset.popAddNode,connection)}));
   document.addEventListener('pointerdown',event=>{if(!event.target.closest('#step-popover,[data-connect-kind]'))closeStepPicker()});
@@ -574,6 +578,9 @@
     canvas.addEventListener('pointerdown',event=>{
       if(event.button!==0)return;
       // Controls that handle their own clicks never start a drag (toolbar, menus, lines, the first-step card…).
+      // Grabbing a line moves its end to another step (like ManyChat); a plain click still selects it for ✕.
+      const hit=event.target.closest('.edge-hit');
+      if(hit&&mode==='edit'){const [sourceId,portKind,index]=String(hit.dataset.edge).split('|');gesture={kind:'link',sourceId,portKind,index:index===''?null:Number(index),port:portEl(sourceId,portKind,index===''?null:Number(index)),fromEdge:hit.dataset.edge,startX:event.clientX,startY:event.clientY,moved:false,pointerId:event.pointerId};return}
       if(event.target.closest('.flow-zoom,.flow-add-panel,.flow-add-fab,.flow-node-menu,.flow-mode-banner,.node-toolbar,.flow-first-step,.flow-step-popover,.edge-hit,.edge-remove'))return;
       const port=event.target.closest('[data-port]');
       if(port){if(mode!=='edit'){gesture=null;return}event.preventDefault();gesture={kind:'link',sourceId:port.dataset.sourceId,portKind:port.dataset.kind,index:port.dataset.index===undefined?null:Number(port.dataset.index),port,startX:event.clientX,startY:event.clientY,moved:false,pointerId:event.pointerId};return}
@@ -584,7 +591,7 @@
     });
     canvas.addEventListener('pointermove',event=>{
       if(!gesture)return;const dx=event.clientX-gesture.startX,dy=event.clientY-gesture.startY;
-      if(!gesture.moved&&Math.hypot(dx,dy)<5)return;if(!gesture.moved){gesture.moved=true;try{canvas.setPointerCapture(gesture.pointerId)}catch(_){}document.querySelector('.node-toolbar')?.remove();}
+      if(!gesture.moved&&Math.hypot(dx,dy)<5)return;if(!gesture.moved){gesture.moved=true;try{canvas.setPointerCapture(gesture.pointerId)}catch(_){}document.querySelector('.node-toolbar')?.remove();if(gesture.fromEdge){document.querySelector('.edge-remove')?.remove();document.querySelectorAll('#flow-lines [data-edge]').forEach(path=>{if(path.dataset.edge===gesture.fromEdge){path.previousElementSibling?.classList.add('moving');path.nextElementSibling?.classList.add('moving')}})}}
       if(gesture.kind==='link'){
         // Drawing a new connection: a dashed line follows the pointer; the step under it lights up.
         const a=portCenter(gesture.sourceId,gesture.portKind,gesture.index),b=mapPoint(event.clientX,event.clientY);const svg=document.querySelector('#flow-lines');
@@ -601,12 +608,14 @@
     const finish=event=>{
       if(!gesture)return;const done=gesture;gesture=null;canvas.classList.remove('panning');
       if(done.kind==='link'){
+        if(done.fromEdge&&!done.moved)return; // a click on the line: the click handler selects it
         suppressClick=true;setTimeout(()=>{suppressClick=false},60);
         document.querySelector('#flow-lines .temp-link')?.remove();document.querySelectorAll('.flow-node.link-target').forEach(item=>item.classList.remove('link-target'));
         const connection={sourceId:done.sourceId,kind:done.portKind==='start'?'next':done.portKind,actionIndex:done.index};
         if(!done.moved){const target=connectionTarget(done.sourceId,done.portKind,done.index);if(target&&byId(target)){state.selected=target;selectedEdge=null;renderAll();keepVisible(target);return}return openStepPicker(done.sourceId,connection.kind,done.index,done.port)}
         const over=event&&document.elementFromPoint(event.clientX,event.clientY)?.closest('.flow-node');const targetId=over?.dataset.nodeId;
         if(targetId&&targetId!=='trigger'&&targetId!==done.sourceId){attachConnection(connection,targetId);selectedEdge=null;markDirty();renderAll();return}
+        if(done.fromEdge){drawEdges();return} // a moved line dropped on empty space keeps its old step
         // Dropped on empty space: choose a step, created right where the line was dropped.
         const point=event?mapPoint(event.clientX,event.clientY):null;
         return openStepPicker(done.sourceId,connection.kind,done.index,event?{getBoundingClientRect:()=>({right:event.clientX,top:event.clientY})}:done.port,point?{x:Math.round(point.x),y:Math.round(point.y-30)}:null);
