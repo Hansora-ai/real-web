@@ -3,7 +3,7 @@ import { first, serviceUpsert, serviceUpdate } from '../../lib/automation/db.mjs
 import { exchangeInstagramCode, getInstagramProfile, oauthStateHash, subscribeInstagramWebhooks, verifyOAuthState } from '../../lib/automation/meta.mjs';
 
 function redirect(location){return{statusCode:302,headers:{Location:location,'Cache-Control':'no-store'},body:''};}
-function errorPage(statusCode,message){return{statusCode,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'},body:`<!doctype html><meta charset="utf-8"><title>Instagram connection failed</title><body style="background:#08090c;color:#eef2f8;font:16px Arial;padding:48px"><h1>Instagram connection failed</h1><p>${escapeHtml(message)}</p><a style="color:#8eb6ef" href="/automation-dashboard.html">Return to Automation</a></body>`};}
+function errorPage(statusCode,message){return{statusCode,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'},body:`<!doctype html><meta charset="utf-8"><link rel="icon" href="/favicon.png" type="image/png"><title>Instagram connection failed</title><body style="background:#08090c;color:#eef2f8;font:16px Arial;padding:48px"><h1>Instagram connection failed</h1><p>${escapeHtml(message)}</p><a style="color:#8eb6ef" href="/automation-dashboard.html">Return to Automation</a></body>`};}
 
 export async function handler(event){
   if(event.httpMethod!=='GET')return errorPage(405,'Method not allowed.');
