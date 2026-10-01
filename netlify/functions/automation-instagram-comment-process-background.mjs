@@ -1,5 +1,7 @@
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
-import { matchesCommentText, pickReplyVariation, preparePrivateReply, openingMessageIndex } from '../../lib/automation/comment-flow.mjs';
+import { entryIndex, matchesCommentText, pickReplyVariation, preparePrivateReply } from '../../lib/automation/comment-flow.mjs';
+import { executeFlowAdvance } from '../../lib/automation/flow-executor.mjs';
+import { makeFlowStarter } from '../../lib/automation/dm-triggers.mjs';
 import { withTrackedLinks } from '../../lib/automation/flow-stats.mjs';
 import { first, rows, serviceInsert, serviceUpdate, serviceUpsert, supabaseRequest } from '../../lib/automation/db.mjs';
 import { getInstagramMedia, replyToInstagramComment, sendInstagramPrivateReply } from '../../lib/automation/meta.mjs';
@@ -65,7 +67,19 @@ async function runWorkflow({workflow,comment,account,connection,accessToken}){
     catch(error){errors.push(String(error?.message||'public_reply_failed'));}
   }
   const flowNodes=Array.isArray(workflow.dm_steps)?workflow.dm_steps:[];
-  const messageIndex=openingMessageIndex(flowNodes);
+  // The step connected to the trigger. A message there is sent right away as the private reply; any other first
+  // step (delay, condition, actions…) runs first, and its first message becomes the private reply.
+  const firstIndex=entryIndex(flowNodes);
+  const firstNode=firstIndex>=0?flowNodes[firstIndex]:null;
+  if(firstNode&&firstNode.type!=='message'){
+    try{
+      const session=await serviceInsert('automation_flow_sessions',{business_id:account.business_id,workflow_id:workflow.id,comment_execution_id:execution.id,conversation_id:conversation.id,external_contact_id:comment.senderId,current_node_index:firstIndex,status:'running',context:{comment_id:comment.commentId,media_id:comment.mediaId,private_reply_pending:true,trigger:'comment'}});
+      const starter=makeFlowStarter({account,accessToken});
+      const result=await executeFlowAdvance({session,workflow,canUseInbound:false,account,accessToken,conversation,recipientId:comment.senderId,deps:{startFlow:args=>starter(args)}});
+      if(result.plan?.actions?.some(action=>action.type==='message'))privateMessageId='sent';
+    }catch(error){errors.push(String(error?.message||'flow_start_failed'));}
+  }
+  const messageIndex=firstNode?.type==='message'?firstIndex:-1;
   const messageNode=messageIndex>=0?flowNodes[messageIndex]:null;
   if(messageNode){
     try{
