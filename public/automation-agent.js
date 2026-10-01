@@ -28,6 +28,35 @@
   if (!result.data) return fail('AI employee not found, or you do not have access to it.');
   workspace.hidden = false;
   render(result.data);
+  showInstagramIdentity(result.data);
+
+  // The connected Instagram photo and @name replace the letter, so each AI employee is easy to recognise.
+  async function showInstagramIdentity(business) {
+    const instagram = (business.automation_channel_connections || []).find(item => item.channel_type === 'instagram_dm' && item.status !== 'not_connected');
+    if (!instagram) return;
+    const showName = username => {
+      const label = String(username || '').replace(/^@/, '');
+      if (!label || document.querySelector('#agent-instagram')) return;
+      const tag = document.createElement('span');
+      tag.id = 'agent-instagram';
+      tag.className = 'ui-agent-ig';
+      tag.innerHTML = window.HansoraUI?.icon('instagram') || '';
+      tag.append(`@${label}`);
+      $('#business-name').after(' · ', tag);
+    };
+    showName(instagram.connected_account_label);
+    try {
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-instagram-profile', { method:'POST', body:JSON.stringify({ business_ids:[business.id] }) });
+      const card = (await response.json().catch(() => ({})))?.profiles?.[business.id];
+      if (!card) return;
+      showName(card.username);
+      if (card.picture) {
+        const image = new Image(); image.className = 'ui-avatar-photo'; image.alt = ''; image.referrerPolicy = 'no-referrer';
+        image.onload = () => $('#agent-avatar').prepend(image);
+        image.src = card.picture;
+      }
+    } catch (error) { console.warn('Instagram profile lookup failed', error); }
+  }
 
   function render(business) {
     const agent = Array.isArray(business.automation_agents) ? business.automation_agents[0] : business.automation_agents;
