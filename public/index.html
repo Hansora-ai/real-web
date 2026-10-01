@@ -4,6 +4,10 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<script>
+/* Back from a login that started on Hansora Automation: hide this page until header.js sends the visitor back to Automation. */
+(function(){try{var s=JSON.parse(localStorage.getItem('hansora.automation.auth_return.v1')||'null');if(!s||!/^\/automation/.test(String(s.path||''))||Date.now()-Number(s.createdAt||0)>9e5)return;if(!/access_token|[?&]code=|error/.test(location.hash+location.search))return;var st=document.createElement('style');st.id='hansora-automation-return-cover';st.textContent='html{background:#08090b!important}body{visibility:hidden!important}html::after{content:"Signing you in…";position:fixed;inset:0;display:grid;place-items:center;background:#08090b;color:#a3a6ad;font:15px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;z-index:2147483647}';document.head.appendChild(st);setTimeout(function(){var c=document.getElementById('hansora-automation-return-cover');if(c)c.remove()},8000)}catch(e){}})();
+</script>
 <title>HANSORA AI - AI image and video workspace</title>
 <meta content="Create AI images, videos, ads, and model-driven visuals in one workspace." name="description"/>
 <meta content="HANSORA AI" property="og:title"/>
