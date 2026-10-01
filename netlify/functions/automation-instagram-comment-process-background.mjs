@@ -1,10 +1,10 @@
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
-import { entryIndex, matchesCommentText, pickReplyVariation, preparePrivateReply } from '../../lib/automation/comment-flow.mjs';
+import { byPriority, entryIndex, matchesCommentText, pickReplyVariation, preparePrivateReply } from '../../lib/automation/comment-flow.mjs';
 import { executeFlowAdvance } from '../../lib/automation/flow-executor.mjs';
 import { makeFlowStarter } from '../../lib/automation/dm-triggers.mjs';
 import { withTrackedLinks } from '../../lib/automation/flow-stats.mjs';
 import { first, rows, serviceInsert, serviceUpdate, serviceUpsert, supabaseRequest } from '../../lib/automation/db.mjs';
-import { getInstagramMedia, replyToInstagramComment, sendInstagramPrivateReply } from '../../lib/automation/meta.mjs';
+import { getInstagramMedia, getInstagramSenderProfile, replyToInstagramComment, sendInstagramPrivateReply } from '../../lib/automation/meta.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
 
@@ -29,7 +29,9 @@ export async function handler(event){
     const accessToken=decryptSecret(credential);
     // Comments on posts and reels start "comment" automations; comments during a Live start "Live comment" ones.
     const wanted=comment.live?'live_comment':'comment';
-    const workflows=rows(await supabaseRequest(`/rest/v1/automation_comment_workflows?business_id=eq.${account.business_id}&status=eq.active&select=*&order=updated_at.desc`)).filter(workflow=>String(workflow.safety_config?.trigger_type||'comment')===wanted);
+    // Like ManyChat, the most specific automation wins: chosen posts before "next post" before all posts, and a
+    // keyword before "any comment". Same level: the most recently edited one.
+    const workflows=rows(await supabaseRequest(`/rest/v1/automation_comment_workflows?business_id=eq.${account.business_id}&status=eq.active&select=*&order=updated_at.desc`)).filter(workflow=>String(workflow.safety_config?.trigger_type||'comment')===wanted).sort(byPriority);
     let handled=0;
     for(const workflow of workflows){
       const outcome=await runWorkflow({workflow,comment,account,connection,accessToken});
@@ -56,9 +58,15 @@ async function runWorkflow({workflow,comment,account,connection,accessToken}){
   const execution=await serviceInsert('automation_comment_executions',{business_id:account.business_id,workflow_id:workflow.id,comment_id:comment.commentId,media_id:comment.mediaId,external_contact_id:comment.senderId,comment_text:comment.text,status:'processing'},{ignoreDuplicates:true});
   if(!execution)return false;
   const occurredAt=new Date(Number(comment.timestamp)||Date.now()).toISOString();
-  const contact=await serviceUpsert('automation_contacts','business_id,channel_type,external_contact_id',{business_id:account.business_id,display_name:comment.username||'Instagram customer',channel_type:'instagram_comments',external_contact_id:comment.senderId,last_seen_at:occurredAt,profile:{instagram_scoped_id:comment.senderId,username:comment.username||'',latest_media_id:comment.mediaId}});
-  const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'instagram_comments',external_thread_id:comment.senderId,status:'open',last_message_preview:String(comment.text||'').slice(0,1000),last_message_at:occurredAt});
-  await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:comment.commentId,idempotency_key:`meta:instagram:comment:${comment.commentId}`,direction:'inbound',sender_type:'customer',content_type:'text',content:comment.text,status:'received',billable:false,provider:'meta',provider_message_id:comment.commentId,metadata:{media_id:comment.mediaId,workflow_id:workflow.id,username:comment.username||''},occurred_at:occurredAt},{ignoreDuplicates:true});
+  // The commenter is the same person as in DMs: one contact and one Inbox chat, so the comment, the private reply
+  // and everything after appear together, with their name and photo. Saved tags and fields are kept.
+  const known=await first(`/rest/v1/automation_contacts?business_id=eq.${account.business_id}&channel_type=eq.instagram_dm&external_contact_id=eq.${encodeURIComponent(comment.senderId)}&select=display_name,profile&limit=1`).catch(()=>null);
+  const lookup=known?.profile?.profile_pic?null:await getInstagramSenderProfile({senderId:comment.senderId,accessToken}).catch(()=>null);
+  const profile={...(known?.profile||{}),instagram_scoped_id:comment.senderId,username:lookup?.username||known?.profile?.username||comment.username||'',latest_media_id:comment.mediaId,...(lookup?{name:lookup.name,profile_pic:lookup.profilePic,profile_checked_at:new Date().toISOString()}:{})};
+  const dmConnection=await first(`/rest/v1/automation_channel_connections?business_id=eq.${account.business_id}&channel_type=eq.instagram_dm&select=id&limit=1`).catch(()=>null);
+  const contact=await serviceUpsert('automation_contacts','business_id,channel_type,external_contact_id',{business_id:account.business_id,display_name:lookup?.name||known?.display_name||comment.username||'Instagram customer',channel_type:'instagram_dm',external_contact_id:comment.senderId,last_seen_at:occurredAt,profile});
+  const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:dmConnection?.id||connection.id,channel_type:'instagram_dm',external_thread_id:comment.senderId,status:'open',last_message_preview:`💬 ${String(comment.text||'').slice(0,990)}`,last_message_at:occurredAt});
+  await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:comment.commentId,idempotency_key:`meta:instagram:comment:${comment.commentId}`,direction:'inbound',sender_type:'customer',content_type:'text',content:`💬 Comment on your post: ${String(comment.text||'')}`.slice(0,24000),status:'received',billable:false,provider:'meta',provider_message_id:comment.commentId,metadata:{media_id:comment.mediaId,workflow_id:workflow.id,username:comment.username||''},occurred_at:occurredAt},{ignoreDuplicates:true});
 
   let publicReplyId=null;let privateMessageId=null;const errors=[];
   const variations=Array.isArray(workflow.public_reply_variations)?workflow.public_reply_variations.filter(Boolean):[];

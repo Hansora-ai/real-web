@@ -9,9 +9,9 @@
   <script src="automation-theme.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css"><link rel="stylesheet" href="automation-flow.css?v=20261001-canvas">
+  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css"><link rel="stylesheet" href="automation-flow.css?v=20261001-buttons">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-comments.js?v=20261001-canvas"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-comments.js?v=20261001-buttons"></script>
 </head>
 <body class="ui ui-app" data-automation-page="comments">
   <div data-automation-header></div>
@@ -92,6 +92,11 @@
     <div class="ui-dialog-head flow-dialog-pad"><h2>Choose posts or reels</h2><button class="ui-btn ghost icon sm" type="button" data-close-dialog aria-label="Close">✕</button></div>
     <div class="post-picker-grid" id="post-picker-grid"></div>
     <div class="ui-dialog-actions flow-dialog-pad"><button class="ui-btn ghost" type="button" data-close-dialog>Cancel</button><button class="ui-btn primary" id="confirm-posts" type="button">Use selected</button></div>
+  </dialog>
+  <dialog class="ui-dialog button-dialog" id="button-dialog" aria-labelledby="bd-title">
+    <div class="ui-dialog-head flow-dialog-pad"><h2 id="bd-title">Edit button</h2><button class="ui-btn ghost icon sm" type="button" data-close-dialog aria-label="Close">✕</button></div>
+    <div class="flow-dialog-pad" id="bd-body"></div>
+    <div class="ui-dialog-actions flow-dialog-pad bd-actions"><button class="ui-btn ghost bd-delete" id="bd-delete" type="button">🗑 Delete button</button><button class="ui-btn primary" id="bd-done" type="button">Done</button></div>
   </dialog>
 </body>
 </html>

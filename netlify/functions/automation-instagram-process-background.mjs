@@ -65,8 +65,11 @@ export async function handler(event){
     }
     const occurredAt=new Date(Number(message.timestamp)||Date.now()).toISOString();
     // Show the customer's real name and @username: looked up once per customer, kept on later messages.
-    const senderProfile=known?.profile?.username?null:await getInstagramSenderProfile({senderId:message.senderId,accessToken:decryptSecret(credential)});
-    const profile={...(known?.profile||{}),instagram_scoped_id:message.senderId,...(senderProfile?{username:senderProfile.username,name:senderProfile.name,profile_pic:senderProfile.profilePic}:{})};
+    // Name and photo: looked up when the photo is missing (at most once a day per person), e.g. someone who first
+    // commented (Instagram only shares the photo once they write to you or tap a button).
+    const checkedRecently=Date.parse(known?.profile?.profile_checked_at||'')>Date.now()-86_400_000&&known?.profile?.username;
+    const senderProfile=known?.profile?.profile_pic||checkedRecently?null:await getInstagramSenderProfile({senderId:message.senderId,accessToken:decryptSecret(credential)});
+    const profile={...(known?.profile||{}),instagram_scoped_id:message.senderId,...(senderProfile?{username:senderProfile.username,name:senderProfile.name,profile_pic:senderProfile.profilePic,profile_checked_at:new Date().toISOString()}:{})};
     const displayName=(senderProfile?(senderProfile.name||`@${senderProfile.username}`):known?.display_name)||'Instagram customer';
     const contact=await serviceUpsert('automation_contacts','business_id,channel_type,external_contact_id',{business_id:account.business_id,display_name:displayName,channel_type:'instagram_dm',external_contact_id:message.senderId,last_seen_at:occurredAt,profile});
     const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'instagram_dm',external_thread_id:message.senderId,status:'open',last_message_preview:shownText(message).slice(0,1000),last_message_at:occurredAt});
@@ -104,7 +107,8 @@ export async function handler(event){
         await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,idempotency_key:`flow-handoff-request:${message.externalEventId}`,direction:'internal',sender_type:'system',content_type:'text',content:'Customer requested a person.',status:'received',billable:false,provider:'hansora',metadata:{flow_session_id:session.id},occurred_at:new Date().toISOString()},{ignoreDuplicates:true});
         await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,handoff:true});
       }
-      if(session.status==='waiting'){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,flow_waiting:true});}
+      // During a Smart delay the automation is paused, not the conversation: the AI answers what they wrote, and
+      // the automation continues by itself when the wait is over.
       const workflow=await first(`/rest/v1/automation_comment_workflows?id=eq.${session.workflow_id}&business_id=eq.${account.business_id}&select=*&limit=1`);
       if(workflow&&['awaiting_reply','running'].includes(session.status)){
         const advanced=await executeFlowAdvance({session,workflow,inboundText:message.text,inboundPayload:message.quickReplyPayload,canUseInbound:true,account,accessToken:accessTokenPlain,conversation,recipientId:message.senderId,deps:{startFlow:args=>flowStarter(args)}});
