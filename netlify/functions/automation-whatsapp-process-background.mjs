@@ -4,7 +4,7 @@ import { generateAutomationReply } from '../../lib/automation/provider.mjs';
 import { automationPrices, canAfford, chargeCredits, handleOutOfCredits } from '../../lib/automation/billing.mjs';
 import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
-import { markWhatsAppRead, sendWhatsAppText } from '../../lib/automation/whatsapp.mjs';
+import { markWhatsAppRead, phonePauseExpired, sendWhatsAppText } from '../../lib/automation/whatsapp.mjs';
 import { keepTyping } from '../../lib/automation/typing.mjs';
 import { flagFailedReply } from '../../lib/automation/failure.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
@@ -48,6 +48,12 @@ export async function handler(event){
       prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'whatsapp',contact:{name:message.displayName||'',externalId:message.senderId,phone:message.senderId}})
     ]);
     if(!inbound){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,duplicate:true});}
+    // Paused because the owner wrote from the WhatsApp Business app on their phone: the AI comes back once they
+    // have been silent for a while (a pause made with "Take over" in the inbox stays until they give it back).
+    if(!conversation.ai_enabled){
+      const lastHuman=await first(`/rest/v1/automation_messages?conversation_id=eq.${conversation.id}&sender_type=eq.human&select=metadata,created_at&order=created_at.desc&limit=1`).catch(()=>null);
+      if(phonePauseExpired(lastHuman)){await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{ai_enabled:true,status:'open',updated_at:new Date().toISOString()});conversation.ai_enabled=true;conversation.status='open';}
+    }
     const accessToken=decryptSecret(credential);
     // Blue ticks tell the customer the business has seen the message, whether AI or a person answers.
     // Sent in parallel with preparing the reply; awaited before the function ends.

@@ -243,6 +243,7 @@
   function markAuthorized() {
     const button = document.querySelector('#provider-connect');
     button.classList.add('connected');
+    document.querySelector('.ui-wa-mode')?.setAttribute('hidden', '');
     document.querySelector('#provider-button-label').textContent = `${config.title.replace('Connect ', '')} connected`;
     document.querySelector('#provider-button-help').textContent = 'Continue to choose the account';
     if (!document.querySelector('#connection-state').classList.contains('green')) setConnected(false);
@@ -290,29 +291,35 @@
       if(settings.error==='missing_meta_whatsapp_configuration_id'){button.disabled=false;document.querySelector('#connect-save-state').textContent='Not connected yet';document.querySelector('#whatsapp-token').hidden=false;return showError('WhatsApp sign-up through Meta is not switched on yet. For testing, use “Testing: connect with a token” below.');}
       if(!response.ok)throw new Error(settings.error||'whatsapp_connection_unavailable');
       await loadFacebookSdk(settings.app_id,settings.graph_version);
-      const session={code:'',wabaId:'',phoneNumberId:'',submitted:false};
+      // Coexistence keeps the number working in the WhatsApp Business app on the owner's phone.
+      const coexistence=document.querySelector('input[name="wa-mode"]:checked')?.value!=='new';
+      const session={code:'',wabaId:'',phoneNumberId:'',finished:false,submitted:false};
       const complete=async()=>{
-        if(session.submitted||!session.code||!session.wabaId||!session.phoneNumberId)return;session.submitted=true;
+        if(session.submitted||!session.code||!session.wabaId||!(session.phoneNumberId||(coexistence&&session.finished)))return;session.submitted=true;
         document.querySelector('#connect-save-state').textContent='Securing the selected WhatsApp number…';
-        const connect=await api.authenticatedFetch('/.netlify/functions/automation-whatsapp-connect',{method:'POST',body:JSON.stringify({business_id:businessId,code:session.code,waba_id:session.wabaId,phone_number_id:session.phoneNumberId})});
+        const connect=await api.authenticatedFetch('/.netlify/functions/automation-whatsapp-connect',{method:'POST',body:JSON.stringify({business_id:businessId,code:session.code,waba_id:session.wabaId,phone_number_id:session.phoneNumberId||undefined,coexistence})});
         const result=await connect.json().catch(()=>({}));window.removeEventListener('message',listener);
         if(connect.status===409&&result.error==='whatsapp_pin_required')return askForPin(session.phoneNumberId);
         if(!connect.ok)throw new Error(result.error||'whatsapp_connection_failed');
-        whatsAppConnected(result,session.phoneNumberId);
+        whatsAppConnected(result,result.account?.phone_number_id||session.phoneNumberId);
       };
       const listener=event=>{
         let origin;try{origin=new URL(event.origin)}catch(_){return}if(!(origin.hostname==='facebook.com'||origin.hostname.endsWith('.facebook.com')))return;
         let data=event.data;try{if(typeof data==='string')data=JSON.parse(data)}catch(_){return}
-        if(data?.type!=='WA_EMBEDDED_SIGNUP')return;if(data.event==='FINISH'){session.wabaId=String(data.data?.waba_id||'');session.phoneNumberId=String(data.data?.phone_number_id||'');complete().catch(handleSignupError);}if(['CANCEL','ERROR'].includes(data.event)){window.removeEventListener('message',listener);button.disabled=false;showError(data.event==='CANCEL'?'WhatsApp authorization was cancelled.':'WhatsApp authorization could not be completed.');}
+        if(data?.type!=='WA_EMBEDDED_SIGNUP')return;if(['FINISH','FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING','FINISH_ONLY_WABA'].includes(data.event)){session.finished=true;session.wabaId=String(data.data?.waba_id||'');session.phoneNumberId=String(data.data?.phone_number_id||'');complete().catch(handleSignupError);}if(['CANCEL','ERROR'].includes(data.event)){window.removeEventListener('message',listener);button.disabled=false;showError(data.event==='CANCEL'?'WhatsApp authorization was cancelled.':'WhatsApp authorization could not be completed.');}
       };
       window.addEventListener('message',listener);
-      window.FB.login(login=>{if(login?.authResponse?.code){session.code=String(login.authResponse.code);complete().catch(handleSignupError)}else{window.removeEventListener('message',listener);button.disabled=false;showError('WhatsApp authorization was not completed.')}},{config_id:settings.configuration_id,response_type:'code',override_default_response_type:true,extras:{setup:{}}});
+      window.FB.login(login=>{if(login?.authResponse?.code){session.code=String(login.authResponse.code);complete().catch(handleSignupError)}else{window.removeEventListener('message',listener);button.disabled=false;showError('WhatsApp authorization was not completed.')}},{config_id:settings.configuration_id,response_type:'code',override_default_response_type:true,extras:coexistence?{setup:{},featureType:'whatsapp_business_app_onboarding',sessionInfoVersion:'3'}:{setup:{}}});
       function handleSignupError(error){window.removeEventListener('message',listener);button.disabled=false;session.submitted=false;showError(api.displayError(error));}
     }catch(error){button.disabled=false;showError(api.displayError(error));}
   }
 
   // Testing path: connect Meta's test number (or a System User token) without the Embedded Signup popup.
   if (channel === 'whatsapp') {
+    // Most businesses already answer customers in the WhatsApp Business app: by default the number stays there too.
+    document.querySelector('#provider-connect')?.insertAdjacentHTML('beforebegin', `<fieldset class="ui-wa-mode"><legend>Which number?</legend>
+      <label><input type="radio" name="wa-mode" value="app" checked><span><strong>My WhatsApp Business app number</strong><small>Recommended. Keep using WhatsApp Business on your phone – you can still text customers yourself any time. Your AI employee answers too, and steps back in a chat when you write from the phone.</small></span></label>
+      <label><input type="radio" name="wa-mode" value="new"><span><strong>A new number just for Hansora</strong><small>A number not used in any WhatsApp app. You reply to customers from the Hansora inbox.</small></span></label></fieldset>`);
     // The token option is only for testing: it is shown while Meta's WhatsApp sign-up (Embedded Signup) is not
     // configured yet, and disappears for everyone once it is.
     if (api.isLocalPreview) document.querySelector('#whatsapp-token').hidden = false;
