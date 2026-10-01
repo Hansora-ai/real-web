@@ -390,7 +390,21 @@
     return path;
   }
 
+  function peekAutomationAuthReturn() {
+    if (!document.body || !document.body.dataset.automationPage) return '';
+    try {
+      const saved = JSON.parse(localStorage.getItem(AUTOMATION_AUTH_RETURN_KEY) || 'null');
+      const path = String(saved && saved.path || '');
+      if (Date.now() - Number(saved && saved.createdAt || 0) >= 15 * 60 * 1000) return '';
+      return /^\/automation(?:-[a-z]+)?(?:\.html)?(?:[?#][^\s]*)?$/.test(path) ? path : '';
+    } catch (_) { return ''; }
+  }
+
   function oauthReturnUrl() {
+    // Logins started on an Automation page come straight back to Automation (index.html covers itself if Supabase
+    // sends the visitor to the home page instead).
+    const automationReturn = peekAutomationAuthReturn();
+    if (automationReturn) return new URL(automationReturn.split('#')[0], location.origin).href;
     const mcpReturn = getPendingMcpAuthReturn();
     if (mcpReturn) {
       const callback = new URL('/index.html', location.origin);
