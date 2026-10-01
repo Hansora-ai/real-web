@@ -94,6 +94,7 @@
     if (window.top !== window.self || new URLSearchParams(location.search).get('offer_popup') === '1') return;
     const path = String(location.pathname || '').toLowerCase();
     if (/\/(?:login|russian-payment-success)(?:\.html)?\/?$/.test(path)) return;
+    if (document.body && document.body.dataset.automationPage) return;
     if (!document.querySelector('link[data-hansora-sales-agent]')) {
       const style = document.createElement('link');
       style.rel = 'stylesheet';
@@ -368,6 +369,25 @@
 
   function clearPendingMcpAuthReturn() {
     try { sessionStorage.removeItem(MCP_AUTH_RETURN_KEY); } catch (_) {}
+  }
+
+  // Hansora Automation pages remember where the visitor was before logging in; Google/Telegram
+  // logins come back to /index.html, so we send them back to that Automation page from here.
+  const AUTOMATION_AUTH_RETURN_KEY = 'hansora.automation.auth_return.v1';
+  function takeAutomationAuthReturn() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(AUTOMATION_AUTH_RETURN_KEY) || 'null'); } catch (_) {}
+    if (!saved) return '';
+    const path = String(saved.path || '');
+    const fresh = Date.now() - Number(saved.createdAt || 0) < 15 * 60 * 1000;
+    const valid = /^\/automation(?:-[a-z]+)?(?:\.html)?(?:[?#][^\s]*)?$/.test(path);
+    const here = location.pathname + location.search + location.hash;
+    if (!fresh || !valid || path === here || path.split(/[?#]/)[0] === location.pathname) {
+      try { localStorage.removeItem(AUTOMATION_AUTH_RETURN_KEY); } catch (_) {}
+      return '';
+    }
+    try { localStorage.removeItem(AUTOMATION_AUTH_RETURN_KEY); } catch (_) {}
+    return path;
   }
 
   function oauthReturnUrl() {
@@ -4754,6 +4774,11 @@
       throw error;
     }
     showLoggedInUI(profile, user);
+    const automationReturn = takeAutomationAuthReturn();
+    if (automationReturn) {
+      window.location.replace(automationReturn);
+      return profile;
+    }
     const pendingMcpReturn = getPendingMcpAuthReturn();
     if (pendingMcpReturn) {
       clearPendingMcpAuthReturn();

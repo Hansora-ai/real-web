@@ -13,9 +13,15 @@
   const mainLinks = appPage
     ? `<a href="automation-dashboard.html${previewQuery}"${page === 'dashboard' ? ' aria-current="page"' : ''}>AI employees</a><a href="automation.html${previewQuery}">Product</a>`
     : page === 'landing' ? `<a href="#channels">Channels</a><a href="#how-it-works">How it works</a><a href="#faq">FAQ</a>` : `<a href="automation.html${previewQuery}#channels">Channels</a><a href="automation.html${previewQuery}#how-it-works">How it works</a><a href="automation.html${previewQuery}#faq">FAQ</a>`;
-  const authLabel = api?.isLocalPreview ? 'Dashboard' : 'Log in';
-  const authHref = api?.isLocalPreview ? `automation-dashboard.html${previewQuery}` : '/login.html?returnTo=%2Fautomation-dashboard.html';
-  root.innerHTML = `<header class="auto-header"><a class="auto-brand" href="automation.html${previewQuery}" aria-label="Hansora Automation home"><span>HANSORA</span><i>/</i><small>AUTOMATION</small></a><div class="auto-header-tools">${themeButton}<button class="auto-menu-toggle" type="button" aria-expanded="false" aria-controls="automation-nav" aria-label="Open navigation"><span></span><span></span></button></div><nav id="automation-nav" aria-label="Main navigation">${mainLinks}<span class="auto-divider" aria-hidden="true"></span><a class="auto-back" href="/">Hansora Creative ↗</a>${appPage ? '' : `<a class="auto-auth-link" href="${authHref}">${authLabel}</a>`}${themeButton}${['dashboard','setup'].includes(page) ? '' : `<a class="auto-cta" href="automation-setup.html${previewQuery}">${appPage ? 'New AI employee' : 'Get started'}</a>`}</nav></header>`;
+  // Account area: the same login window, credits and photo as the Hansora Creative header (header.js fills these ids).
+  const realSite = !api?.isLocalPreview;
+  let cachedLoggedIn = false;
+  try { cachedLoggedIn = localStorage.getItem('hansora.header.loggedIn') === '1'; } catch (_) {}
+  const accountArea = realSite
+    ? `<span class="auto-account"><button class="auto-auth-link" type="button" id="btnLoginSignup" style="display:${cachedLoggedIn ? 'none' : 'inline-flex'}">Log in</button><span class="auto-credits" id="navCredits" title="Your credits" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"></span><button class="auto-avatar" type="button" id="navAvatar" aria-label="Open account menu" style="display:${cachedLoggedIn ? 'inline-flex' : 'none'}"><img id="navAvatarImg" alt="" src="https://ui-avatars.com/api/?name=H&background=6366f1&color=fff"></button></span>`
+    : (appPage ? '' : `<a class="auto-auth-link" href="automation-dashboard.html${previewQuery}">Dashboard</a>`);
+  const accountMenu = realSite ? `<div class="auto-user-menu" id="navMenu"><a href="automation-dashboard.html">AI employees</a><a href="/profile.html">Profile</a><a href="/pricing.html">Buy credits</a><a href="/">Hansora Creative</a><button type="button" id="autoLogout">Log out</button></div>` : '';
+  root.innerHTML = `<header class="auto-header"><a class="auto-brand" href="automation.html${previewQuery}" aria-label="Hansora Automation home"><span>HANSORA</span><i>/</i><small>AUTOMATION</small></a><div class="auto-header-tools">${themeButton}<button class="auto-menu-toggle" type="button" aria-expanded="false" aria-controls="automation-nav" aria-label="Open navigation"><span></span><span></span></button></div><nav id="automation-nav" aria-label="Main navigation">${mainLinks}<span class="auto-divider" aria-hidden="true"></span><a class="auto-back" href="/">Hansora Creative ↗</a>${themeButton}${['dashboard','setup'].includes(page) ? '' : `<a class="auto-cta" href="automation-setup.html${previewQuery}">${appPage ? 'New AI employee' : 'Get started'}</a>`}${accountArea}</nav>${accountMenu}</header>`;
 
   const syncThemeLabels = () => {
     const light = document.documentElement.getAttribute('data-theme') === 'light';
@@ -90,12 +96,46 @@
     root.querySelector('nav')?.prepend(mobile);
   }
 
-  if (!appPage && api && typeof api.getUser === 'function') {
-    api.getUser().then(user => {
-      const authLink = root.querySelector('.auto-auth-link');
-      if (!authLink || !user) return;
-      authLink.textContent = 'Dashboard';
-      authLink.href = 'automation-dashboard.html';
-    }).catch(() => {});
+  if (realSite) connectHansoraAccount();
+  function connectHansoraAccount() {
+    const RETURN_KEY = 'hansora.automation.auth_return.v1';
+    const params = new URLSearchParams(location.search);
+    const safePath = value => /^\/automation(?:-[a-z]+)?(?:\.html)?(?:[?#][^\s]*)?$/.test(String(value || '')) ? String(value) : '';
+    // Where to go after logging in: the page that asked for it, or the dashboard from the landing page.
+    const remember = path => { try { localStorage.setItem(RETURN_KEY, JSON.stringify({ path, createdAt: Date.now() })); } catch (_) {} };
+    const destination = () => safePath(params.get('returnTo')) || (page === 'landing' || page === 'legal' ? '/automation-dashboard.html' : location.pathname + location.search);
+    root.querySelector('#btnLoginSignup')?.addEventListener('click', () => remember(destination()));
+    root.querySelector('#autoLogout')?.addEventListener('click', async () => {
+      try { await window.__HANSORA_SB__?.auth.signOut(); } catch (_) {}
+      try { localStorage.setItem('hansora.header.loggedIn', '0'); } catch (_) {}
+      location.href = 'automation.html';
+    });
+    const wanted = params.get('login');
+    if (wanted) remember(destination());
+    // header.js brings the Creative login window (Google, Telegram, email), sessions, new-profile setup and credits.
+    if (!document.querySelector('link[href="/header.css"]')) { const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '/header.css'; document.head.appendChild(css); }
+    const script = document.createElement('script');
+    script.src = '/header.js';
+    script.onload = () => {
+      if (!wanted) return;
+      let tries = 0;
+      const open = () => {
+        const header = window.HansoraHeader;
+        if (header?.getCurrentUser?.()) return;
+        if (header?.openAuth) return header.openAuth(wanted === 'signup' ? 'signup' : 'login');
+        if (++tries < 40) setTimeout(open, 100);
+      };
+      // Give the saved session a moment to load, so signed-in visitors are sent on instead of seeing the window.
+      setTimeout(open, 600);
+    };
+    document.body.appendChild(script);
+    if (page === 'landing' && api && typeof api.getUser === 'function') {
+      api.getUser().then(user => {
+        const cta = root.querySelector('.auto-cta');
+        if (!cta || !user) return;
+        cta.textContent = 'Dashboard';
+        cta.href = 'automation-dashboard.html';
+      }).catch(() => {});
+    }
   }
 })();
