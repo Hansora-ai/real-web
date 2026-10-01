@@ -9,9 +9,9 @@
   <script src="automation-theme.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css"><link rel="stylesheet" href="automation-flow.css?v=20261001-full">
+  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css"><link rel="stylesheet" href="automation-flow.css?v=20261001-canvas">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-comments.js?v=20261001-full"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-comments.js?v=20261001-canvas"></script>
 </head>
 <body class="ui ui-app" data-automation-page="comments">
   <div data-automation-header></div>
@@ -39,8 +39,6 @@
           <div class="flow-viewport" id="flow-viewport"><div class="flow-map" id="flow-map"><svg class="flow-lines" id="flow-lines" aria-hidden="true"></svg><div id="flow-nodes"></div></div></div>
           <button class="flow-add-fab" id="add-step-fab" type="button" aria-label="Add a step" aria-expanded="false">+</button>
           <div class="flow-add-panel" id="add-panel" hidden>
-            <p class="flow-add-title">Trigger</p>
-            <button type="button" data-panel-trigger><span class="flow-lib-icon trigger" data-icon="instagram"></span><span><b>When someone comments</b><small>Posts, keywords and public reply</small></span></button>
 <p class="flow-add-title">Content</p>
             <button type="button" data-add-node="message"><span class="flow-lib-icon message" data-icon="send"></span><span><b>Instagram message</b><small>Text, buttons and links</small></span></button>
             <button type="button" data-add-node="input"><span class="flow-lib-icon input" data-icon="edit"></span><span><b>Collect info</b><small>Ask for email, phone or an answer</small></span></button>
@@ -52,7 +50,7 @@
             <button type="button" data-add-node="randomizer"><span class="flow-lib-icon randomizer" data-icon="refresh"></span><span><b>Randomizer</b><small>A/B split by percentage</small></span></button>
             <button type="button" data-add-node="delay"><span class="flow-lib-icon delay" data-icon="clock"></span><span><b>Smart delay</b><small>Wait, then continue</small></span></button>
             <button type="button" data-add-node="handoff"><span class="flow-lib-icon handoff" data-icon="handoff"></span><span><b>Hand to team</b><small>Pause AI, alert you</small></span></button>
-            <p class="flow-add-hint">New steps connect to the selected step. You can also use the + under any step.</p>
+            <p class="flow-add-hint">The new step connects to the selected step. Or drag from any dot ● to connect steps.</p>
           </div>
           <div class="flow-zoom" role="group" aria-label="Zoom">
             <button type="button" id="undo-flow" aria-label="Undo" title="Undo (⌘Z)" disabled>↶</button>
