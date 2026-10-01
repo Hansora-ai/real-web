@@ -258,3 +258,8 @@ button.node-menu:hover{border-color:var(--border-2);background:var(--surface-3);
 .content-grid button:hover{border-style:solid;border-color:var(--accent);background:var(--accent-soft)}
 .content-grid[hidden]{display:none}
 .flow-lib-icon.start_flow,.flow-lib-icon.existing,.flow-lib-icon.website{background:var(--surface-3);color:var(--text-2)}
+.bd-detail{grid-column:1/-1;display:grid;gap:10px;padding:12px;border:1px solid var(--accent-line,var(--accent));border-radius:12px;background:var(--surface-2);animation:bd-in .18s ease}
+.bd-detail .ui-btn{justify-self:start}
+.bd-note{margin:0;color:var(--text-2);font-size:13px}
+#bd-label.invalid{border-color:var(--red)}
+@keyframes bd-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
