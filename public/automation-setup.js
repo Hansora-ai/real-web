@@ -123,6 +123,19 @@
   }
   const readAsBase64 = file => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(',')[1] || ''); reader.onerror = () => reject(new Error('file_unreadable')); reader.readAsDataURL(file); });
   // Returns the names that could not be added (the rest of the save is never blocked by a file).
+  // Why a knowledge file was not added, in words the owner can act on.
+  function knowledgeReason(result) {
+    return ({
+      knowledge_file_type_not_supported:'file type not supported – use PDF, Word, TXT, Markdown, HTML or EPUB',
+      knowledge_file_too_large:'larger than 4 MB',
+      knowledge_file_empty:'the file is empty',
+      knowledge_text_too_long:'text too long – split it into parts',
+      knowledge_limit_reached:'50 items limit reached',
+      ai_employee_not_ready:'AI employee not ready yet',
+      elevenlabs_request_failed:`the AI provider refused it${result?.detail ? `: ${String(result.detail).slice(0, 160)}` : ''}`
+    })[result?.error] || (result?.error ? String(result.error).replace(/_/g, ' ') : 'unknown error');
+  }
+
   async function uploadKnowledge(savedBusinessId) {
     const generalText = document.querySelector('#general-info').value.trim();
     const jobs = [...pendingFiles.map(file => ({ label:file.name, build:async () => ({ kind:'file', filename:file.name, content_base64:await readAsBase64(file) }) })),
@@ -133,8 +146,8 @@
       window.HansoraUI.busy(`Adding knowledge ${index + 1} of ${jobs.length}…`);
       try {
         const response = await api.authenticatedFetch('/.netlify/functions/automation-knowledge', { method:'POST', body:JSON.stringify({ business_id:savedBusinessId, action:'add', ...(await job.build()) }) });
-        if (!response.ok) failed.push(job.label);
-      } catch (_) { failed.push(job.label); }
+        if (!response.ok) { const result = await response.json().catch(() => ({})); failed.push(`${job.label} (${knowledgeReason(result)})`); }
+      } catch (_) { failed.push(`${job.label} (connection problem)`); }
     }
     return failed;
   }
