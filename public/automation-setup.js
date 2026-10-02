@@ -11,7 +11,7 @@
   const steps = [...document.querySelectorAll('[data-step]')];
   const progress = [...document.querySelectorAll('[data-progress]')];
   const params = new URLSearchParams(location.search);
-  const businessId = params.get('id');
+  let businessId = params.get('id');
   let currentStep = 0;
 
   const user = await api.requireUser(location.pathname + location.search);
@@ -138,7 +138,7 @@
 
   async function uploadKnowledge(savedBusinessId) {
     const generalText = document.querySelector('#general-info').value.trim();
-    const jobs = [...pendingFiles.map(file => ({ label:file.name, build:async () => ({ kind:'file', filename:file.name, content_base64:await readAsBase64(file) }) })),
+    const jobs = [...pendingFiles.map(file => ({ file, label:file.name, build:async () => ({ kind:'file', filename:file.name, content_base64:await readAsBase64(file) }) })),
       ...(generalText ? [{ label:'Business information text', build:async () => ({ kind:'text', name:'General business information', text:generalText }) }] : [])];
     const failed = [];
     for (const [index, job] of jobs.entries()) {
@@ -146,7 +146,12 @@
       window.HansoraUI.busy(`Adding knowledge ${index + 1} of ${jobs.length}…`);
       try {
         const response = await api.authenticatedFetch('/.netlify/functions/automation-knowledge', { method:'POST', body:JSON.stringify({ business_id:savedBusinessId, action:'add', ...(await job.build()) }) });
-        if (!response.ok) { const result = await response.json().catch(() => ({})); failed.push(`${job.label} (${knowledgeReason(result)})`); }
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) { failed.push(`${job.label} (${knowledgeReason(result)})`); continue; }
+        // Added: it is not sent again on the next save.
+        if (Array.isArray(result.documents)) existingKnowledge = result.documents;
+        if (job.file) { const at = pendingFiles.indexOf(job.file); if (at >= 0) pendingFiles.splice(at, 1); }
+        else document.querySelector('#general-info').value = '';
       } catch (_) { failed.push(`${job.label} (connection problem)`); }
     }
     return failed;
@@ -276,6 +281,16 @@
       const syncResult = await syncResponse.json().catch(() => ({}));
       const hasKnowledge = pendingFiles.length || document.querySelector('#general-info').value.trim();
       const failed = syncResponse.ok && hasKnowledge ? await uploadKnowledge(result.data) : [];
+      // A file that was not added stops here, on this page, so the owner sees why and can retry right away.
+      if (syncResponse.ok && failed.length) {
+        if (!businessId) { businessId = result.data; history.replaceState(null, '', `automation-setup.html?id=${encodeURIComponent(result.data)}${location.hash}`); }
+        renderPendingFiles(existingKnowledge);
+        window.HansoraUI.busy(false); saveButton.disabled = false;
+        saveState.textContent = 'Saved · some knowledge was not added';
+        errorBox.innerHTML = `<div><strong>Your AI employee is saved, but this was not added:</strong><ul>${failed.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul><p>Fix or remove it in the Knowledge step and press Save again – only what failed is sent again.</p><a class="ui-btn secondary sm" href="automation-agent.html?id=${encodeURIComponent(result.data)}">Continue without it</a></div>`;
+        errorBox.hidden = false; errorBox.scrollIntoView({ behavior:'smooth', block:'center' });
+        return;
+      }
       sessionStorage.setItem('hansora_automation_sync_notice', !syncResponse.ok
         ? `Business saved, but the AI could not be prepared: ${syncResult.detail || syncResult.error || 'sync unavailable'}${hasKnowledge ? ' Your files were not added yet.' : ''}`
         : failed.length ? `AI employee saved. Not added: ${failed.join(', ')}. Add them again under Knowledge files.` : 'AI provider agent synchronized.');
