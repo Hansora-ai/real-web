@@ -7,6 +7,8 @@
 const API_KEY = process.env.KIE_API_KEY || "";
 const ELEVENLABS_API_KEY = process.env.Elevan_labs_api1 || process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_LABS_API_KEY || process.env.Eleven_labs_api || process.env.eleven_labs_api || process.env.XI_API_KEY || "";
 const ELEVENLABS_BASE = (process.env.ELEVENLABS_BASE_URL || "https://api.elevenlabs.io").replace(/\/+$/,"");
+// Shared model for voice previews and background text-to-speech requests.
+const ELEVENLABS_TTS_MODEL = "eleven_v4";
 const MARKET_TASK_URL = "https://api.kie.ai/api/v1/jobs/createTask";
 const SUNO_GENERATE_URL = "https://api.kie.ai/api/v1/generate";
 const KIE_BASE64_UPLOAD_URL = "https://kieai.redpandaai.co/api/file-base64-upload";
@@ -57,7 +59,7 @@ exports.handler = async (event) => {
       const stability = clampNumber(body.stability, 0, 1, 0.5);
       const audio = await postElevenJsonAudio(`/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
         text: previewText,
-        model_id: "eleven_v3",
+        model_id: ELEVENLABS_TTS_MODEL,
         voice_settings: { stability, similarity_boost:0.85, style:0, use_speaker_boost:true }
       });
       return ok({
@@ -110,7 +112,7 @@ exports.handler = async (event) => {
         await markCharged(uid, run_id, cost, run_id);
         failureContext.charged = true;
       }
-      const workerBody = { dialogue, stability, language_code:languageCode, prompt:body.prompt || "" };
+      const workerBody = { dialogue, stability, language_code:languageCode, prompt:body.prompt || "", model_id:ELEVENLABS_TTS_MODEL };
       await invokeElevenBackground({ uid, run_id, kind, cost, body:workerBody }, elevenBackgroundUrl);
       await patchTaskMeta(uid, run_id, { status:"processing", task_id:run_id, kind, provider:providerTitle(kind), cost, background:true, request:stripLargeFields(workerBody) });
       return ok({ submitted:true, run_id, taskId:run_id, status:202, data:{ provider:"elevenlabs", kind, background:true } });
