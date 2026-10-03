@@ -9,7 +9,7 @@ import { first, rows, serviceInsert, serviceUpdate, serviceUpsert, supabaseReque
 import { notifyOwner } from '../../../lib/automation/notify.mjs';
 import { affordableVoiceSeconds, automationPrices, canAfford, chargeCredits, handleOutOfCredits, voiceCredits } from '../../../lib/automation/billing.mjs';
 import { PHONE_AGENT_NAME, PHONE_MODEL, PHONE_VOICE, billableVoiceSeconds, describePhoneCall, normalizePhoneNumber, renderCallTranscript, voiceInstructions } from '../../../lib/automation/phone.mjs';
-import { buildToolDefinitions, createToolRunner, loadToolConfigs, toolInstructions } from '../../../lib/automation/tools.mjs';
+import { businessClock, buildToolDefinitions, createToolRunner, loadToolConfigs, toolInstructions } from '../../../lib/automation/tools.mjs';
 
 function one(value) { return Array.isArray(value) ? value[0] : value; }
 function text(value, max = 500) { return String(value || '').trim().slice(0, max); }
@@ -149,9 +149,12 @@ export default defineAgent({
       }
     }));
 
+    // Same as the chats: the AI knows the business's current date and time and, when bookings or deliveries are
+    // on, the live free times and places at the start of the call (it still checks with the tools before confirming).
+    const liveBrief = await runTool.liveBrief?.().catch(error => { console.error('phone live brief failed', { message: error?.message }); return ''; }) || '';
     const instructions = voiceInstructions(
       buildAutomationInstructions({ business, agent, knowledge }),
-      toolInstructions(definitions, configs),
+      [toolInstructions(definitions, configs), `Current business date and time: ${businessClock(business.timezone)}.`, liveBrief].filter(Boolean).join('\n\n'),
       settings
     );
     const session = new voice.AgentSession({
