@@ -1,0 +1,1 @@
+window.HenshinConfig={url:'https://qmaealblegvcwodlmeht.supabase.co',key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c'.replace('eyJpc3MiOiJIUzI1NiIsInJlZiI6', 'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6')};
