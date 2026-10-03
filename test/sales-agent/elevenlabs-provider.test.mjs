@@ -12,6 +12,7 @@ test('all support tools conform to ElevenLabs object and array schemas, includin
       for (const key of Object.keys(schema)) assert(allowed.has(key), `Unsupported ${schema.type} field: ${key}`);
     }
     assert(schema.description);
+    if (schema.enum) assert(schema.enum.every(value => typeof value === 'string'), 'ElevenLabs enum values must be strings');
     for (const value of Object.values(schema.properties || {})) check(value);
     if (schema.items) check(schema.items);
   };
@@ -20,6 +21,11 @@ test('all support tools conform to ElevenLabs object and array schemas, includin
   assert.deepEqual(reply.properties.recommended_model.type, ['string', 'null']);
   assert(reply.properties.actions.items.properties.type.enum.includes('open_model'));
   assert(reply.properties.memory.required.includes('purchase_intent'));
+  const category = tools.find(tool => tool.name === 'get_available_models').parameters.properties.category;
+  assert.deepEqual(category.type, ['string', 'null']);
+  assert.deepEqual(category.enum, ['image', 'video']);
+  // The Kie/OpenAI definition keeps its original JSON Schema semantics.
+  assert(sharedSupportTools().find(tool => tool.name === 'get_available_models').parameters.properties.category.enum.includes(null));
 });
 
 test('provider rejection retains its actual status and reason and identifies the operation without secrets', async () => {
