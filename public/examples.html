@@ -784,16 +784,24 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)activeTrend
 function imageUrls(b){return [...new Set([...(Array.isArray(b.urls)?b.urls:[]),b.url].map(safeUrl).filter(Boolean))]}
 function media(b){const width=Math.max(25,Math.min(100,Number(b.width)||100));if(b.type==='video'){const u=safeUrl(b.url);return u?`<figure class="visual media" style="width:${width}%"><video src="${esc(u)}" controls playsinline preload="none"></video>${b.caption?`<figcaption class="muted">${esc(b.caption)}</figcaption>`:''}</figure>`:''}const urls=imageUrls(b);if(!urls.length)return '';return `<figure class="visual media image-set" style="width:${width}%"><div class="image-group ${urls.length>1?'is-multiple':''}">${urls.map((u,i)=>`<div class="image-item">${image(u,(b.caption||'Tutorial image')+(urls.length>1?' '+(i+1):''))}<button class="preview-btn" type="button" data-preview aria-label="Open image ${i+1}">↗</button></div>`).join('')}</div>${b.caption?`<figcaption class="muted">${esc(b.caption)}</figcaption>`:''}</figure>`}
 function blocksMarkup(blocks){return blocks.map((b,i)=>`<section class="block ${b.type==='image'&&blocks[i+1]?.type==='prompt'?'before-prompt':b.type==='headline'&&blocks[i+1]?.type==='image'?'before-image':''}">${b.type==='headline'?`<h2 class="section-title">${esc(b.text)}</h2>`:b.type==='image'||b.type==='video'?media(b):b.type==='prompt'?`<div class="prompt-box"><div class="prompt-bar"><strong><span class="prompt-icon">✦</span>${esc(modelFor(b)?.name||'Prompt')}</strong><div class="actions"><button data-copy="${esc(b.id)}">Copy</button><button class="purple" data-recreate="${esc(b.id)}">Recreate ↗</button></div></div><pre class="prompt-text">${esc(b.text)}</pre>${(b.refs||[]).length?`<div class="refs">${b.refs.map((u,i)=>`<div class="ref">${image(u,'Reference '+(i+1))}<span>Image ${i+1}</span></div>`).join('')}</div>`:''}</div>`:''}</section>`).join('')}
-// Like Search Models: place the next card in the shortest column.
+// Keep loaded cards in place; only rebuild columns when the breakpoint changes.
 function layoutGallery(){
  const host=$('#gallery');if(!host)return;
  const cards=Array.from(host.querySelectorAll('.card')).sort((a,b)=>Number(a.dataset.galleryOrder)-Number(b.dataset.galleryOrder));
  if(!cards.length)return;
  const count=window.innerWidth<=760?2:3;
- const columns=Array.from({length:count},()=>{const column=document.createElement('div');column.className='gallery-column';return column});
- host.replaceChildren(...columns);
- const heights=Array(count).fill(0);
- for(const card of cards){let target=0;for(let i=1;i<count;i++)if(heights[i]<heights[target])target=i;columns[target].appendChild(card);heights[target]+=card.getBoundingClientRect().height+28}
+ let columns=Array.from(host.children).filter(child=>child.classList.contains('gallery-column'));
+ const rebuild=columns.length!==count;
+ if(rebuild){
+  columns=Array.from({length:count},()=>{const column=document.createElement('div');column.className='gallery-column';return column});
+  // Move cards directly into their new columns without clearing the gallery first.
+  host.append(...columns);
+ }
+ const pending=rebuild?cards:cards.filter(card=>card.parentElement===host);
+ const gap=parseFloat(getComputedStyle(columns[0]).rowGap)||0;
+ const heights=columns.map(column=>Array.from(column.children).reduce((height,card)=>height+card.getBoundingClientRect().height+gap,0));
+ for(const card of pending){let target=0;for(let i=1;i<count;i++)if(heights[i]<heights[target])target=i;columns[target].appendChild(card);heights[target]+=card.getBoundingClientRect().height+gap}
+ if(rebuild)Array.from(host.children).filter(child=>!columns.includes(child)).forEach(child=>child.remove());
 }
 let galleryFrame=0;
 function scheduleGalleryLayout(){if(galleryFrame)cancelAnimationFrame(galleryFrame);galleryFrame=requestAnimationFrame(()=>{galleryFrame=0;layoutGallery()})}
