@@ -175,6 +175,9 @@ export async function handler(event) {
     console.error('sales-chat error', {
       message: error?.message,
       status: error?.status,
+      providerStatus: error?.providerStatus,
+      providerOperation: error?.providerOperation,
+      providerMessage: error?.providerMessage,
       requestId: event?.headers?.['x-nf-request-id'] || null
     });
     if (trackedSession) {

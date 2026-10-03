@@ -2,7 +2,47 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateElevenLabsSalesReply, websiteConversationContext } from '../../lib/sales-agent/elevenlabs-provider.mjs';
 import { HANSORA_SUPPORT_BUSINESS_ID, runChannelSupportTool, usesSharedSupportAgent, sharedSupportTools } from '../../lib/sales-agent/automation-bridge.mjs';
-import { askElevenLabsText } from '../../lib/automation/providers/elevenlabs.mjs';
+import { askElevenLabsText, syncElevenLabsTools, elevenLabsClientTools } from '../../lib/automation/providers/elevenlabs.mjs';
+
+test('all support tools conform to ElevenLabs object and array schemas, including nested reply actions', () => {
+  const tools = elevenLabsClientTools(sharedSupportTools());
+  const check = schema => {
+    if (schema.type === 'object' || schema.type === 'array') {
+      const allowed = new Set(schema.type === 'object' ? ['type', 'description', 'properties', 'required'] : ['type', 'description', 'items']);
+      for (const key of Object.keys(schema)) assert(allowed.has(key), `Unsupported ${schema.type} field: ${key}`);
+    }
+    assert(schema.description);
+    for (const value of Object.values(schema.properties || {})) check(value);
+    if (schema.items) check(schema.items);
+  };
+  tools.forEach(tool => check(tool.parameters));
+  const reply = tools.find(tool => tool.name === 'submit_sales_reply').parameters;
+  assert.deepEqual(reply.properties.recommended_model.type, ['string', 'null']);
+  assert(reply.properties.actions.items.properties.type.enum.includes('open_model'));
+  assert(reply.properties.memory.required.includes('purchase_intent'));
+});
+
+test('provider rejection retains its actual status and reason and identifies the operation without secrets', async () => {
+  const before = process.env.ELEVENLABS_API_KEY;
+  process.env.ELEVENLABS_API_KEY = 'secret-test-key';
+  try {
+    await assert.rejects(syncElevenLabsTools({
+      tools: [{ name: 'check', description: 'Check', parameters: { type: 'object', properties: {} } }],
+      existingToolIds: { check: 'private-tool-id' },
+      fetchImpl: async () => ({ ok: false, status: 403, json: async () => ({ detail: { status: 'missing_permissions', message: 'Tool write permission required' } }) })
+    }), error => {
+      assert.equal(error.providerStatus, 403);
+      assert.equal(error.providerOperation, 'PATCH /tools/:id');
+      assert.match(error.providerMessage, /missing_permissions/);
+      assert(!JSON.stringify(error).includes('secret-test-key'));
+      assert(!JSON.stringify(error).includes('private-tool-id'));
+      return true;
+    });
+  } finally {
+    if (before === undefined) delete process.env.ELEVENLABS_API_KEY;
+    else process.env.ELEVENLABS_API_KEY = before;
+  }
+});
 
 const options = () => ({ messages: [{role:'user',content:'Hello'},{role:'assistant',content:'How can I help?'},{role:'user',content:'My balance?'}], language:'hy', summary:'Budget video', salesMemory:{main_goal:'Reels'}, authenticated:true, executeTool:async()=>({ok:true}) });
 const resource = async path => {
