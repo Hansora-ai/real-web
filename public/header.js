@@ -205,7 +205,7 @@
       if (url.origin !== location.origin) return href;
       let pathname = url.pathname || '/';
       if (pathname === '/') pathname = '/index.html';
-      if (/\/(?:course_arm|course_ru)\/?$/i.test(pathname) || !/\.html$/i.test(pathname)) {
+      if (/\/henshin\.html$/i.test(pathname) || /\/(?:course_arm|course_ru)\/?$/i.test(pathname) || !/\.html$/i.test(pathname)) {
         return location.protocol === 'file:' ? url.href : `${pathname}${url.search}${url.hash}`;
       }
       pathname = pathname.replace(/_(?:arm|ru)(?=\.html$)/i, '');
@@ -470,6 +470,7 @@
     { label: 'Kling 3.0', id: 'kling-3', icon: 'K3', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/14.png', note: 'Advanced video generation' },
     { label: 'Seedance 2.0 Mini', id: 'seedance-2-mini', icon: 'SM', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Fast cinematic video model' },
     { label: 'Kling 3 Turbo', id: 'kling-3-turbo', icon: 'KT', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/14.png', note: 'Fast text or image video model' },
+    { label: 'Henshin', href: '/henshin.html', icon: '変', note: 'Transform video characters' },
     { label: 'Video Edit', href: '/video-edit.html', icon: 'VE', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/22.png', note: 'Edit uploaded video' },
     { label: 'Background Change', href: '/background-change.html', icon: 'BG', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/23.png', note: 'Change video background' },
     { label: 'Video Relight', href: '/video-relight.html', icon: 'VR', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/24.png', note: 'Change video lighting' },
@@ -495,6 +496,7 @@
 
   const FEATURE_MENU_ITEMS = [
     { label: 'Video upscale', href: '/upscale.html?mode=video', icon: 'VU', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/25.png', note: 'Increase video quality' },
+    { label: 'Henshin', href: '/henshin.html', icon: '変', note: 'Transform video characters' },
     { label: 'Video Edit', href: '/video-edit.html', icon: 'VE', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/22.png', note: 'Edit uploaded video' },
     { label: 'Background Change', href: '/background-change.html', icon: 'BG', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/23.png', note: 'Change video background' },
     { label: 'Video Relight', href: '/video-relight.html', icon: 'VR', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/24.png', note: 'Change video lighting' },

@@ -11,6 +11,14 @@
   node_bundler = "esbuild"
 
 # (kept) Function-specific settings
+[functions."run-henshin"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+
+[functions."henshin-templates"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+
 [functions."kie-create"]
   timeout = 26
 

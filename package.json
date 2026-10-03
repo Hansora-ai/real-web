@@ -5,7 +5,8 @@
   "scripts": {
     "test:automation": "node --test test/automation/*.test.mjs",
     "test:sales-agent": "node --test test/sales-agent/*.test.mjs",
-    "test:mcp": "node --test test/hansora-mcp/*.test.mjs"
+    "test:mcp": "node --test test/hansora-mcp/*.test.mjs",
+    "test:henshin": "node --test test/henshin/*.test.cjs"
   },
   "dependencies": {
     "@modelcontextprotocol/core": "^2.0.0",
