@@ -20,6 +20,14 @@ test('prices and packages expose only website credit units and retain package se
   assert.equal(result.packages[0].price, 9.99);
   assert.equal(result.smallestSufficientPackageId, 'credits_210');
   assert(result.packages.every(entry => !('internalCredits' in entry)));
+  assert.deepEqual(result.monthlyPlans.map(plan => [plan.name, plan.price, plan.monthlyDisplayedCredits]), [
+    ['Premium', 40, 2500], ['Pro', 64, 4500], ['Pro Max', 120, 10000]
+  ]);
+  assert(!result.monthlyPlans[0].unlimitedModels.some(model => model.includes('Veo')));
+  assert(result.monthlyPlans[1].unlimitedModels.includes('Veo 3.1 Lite: 720p, 8 seconds'));
+  assert(result.monthlyPlans[2].unlimitedModels.includes('Kling 2.5 Turbo: 1080p, 5 seconds'));
+  assert(result.monthlyPlans.every(plan => /separate queue/.test(plan.queuePolicy)));
+  assert(!/InternalCredits/.test(JSON.stringify(result)));
 });
 
 test('account balance, generation charges and refunds use the same website credit units', async () => {
