@@ -1,0 +1,19 @@
+Hansora Creative pay-as-you-go packages (USD; pricing screenshot supplied 2 October 2026):
+- $9.99: 1,000 credits; up to 200 images OR up to 55 videos OR up to 100 audio generations.
+- $19.99: 2,100 credits, including 100 bonus credits; up to 420 images OR up to 115 videos OR up to 210 audio generations.
+- $49.99: 5,350 credits, including 350 bonus credits; up to 1,070 images OR up to 290 videos OR up to 535 audio generations.
+- $99.99: 11,000 credits, including 1,000 bonus credits; up to 2,200 images OR up to 610 videos OR up to 1,100 audio generations.
+These are the pricing page's advertised maximum estimates, not guaranteed counts for every model. Images, videos and audio spend the same credit balance: the estimates are alternatives, not separate allowances that can all be used in full. Customers can mix generation types; actual output counts depend on each model's cost and selected settings, including video duration and resolution. For an exact model-specific count, divide available credits by the verified cost per output and round down. If a verified cost is unavailable, give the advertised estimate with its qualification rather than inventing a model-specific count.
+Prices and bonuses are a dated snapshot and may change. Check https://hansora.co/pricing.html for current offers. These packages are for Creative and must not be quoted as Automation plans.
+
+
+HANSORA CREATIVE MONTHLY SUBSCRIPTIONS
+Hansora Creative offers both pay-as-you-go packages and monthly subscriptions. Never say there are no monthly plans or monthly credits.
+Premium: $40 USD/month, includes 2500 monthly credits. Included unlimited models/configurations: Nano Banana 2 Lite; Z Image; Seedream 5.0 Lite; Grok Image; Qwen 2; Nano Banana 2 1K; GPT Image 2 1K; Grok Video: 6 seconds.
+Pro: $64 USD/month, includes 4500 monthly credits. Included unlimited models/configurations: Nano Banana 2 Lite; Z Image; Seedream 5.0 Lite; Grok Image; Qwen 2; Nano Banana 2 1K; GPT Image 2 1K; Grok Video: 6 seconds; Veo 3.1 Lite: 720p, 8 seconds.
+Pro Max: $120 USD/month, includes 10000 monthly credits. Included unlimited models/configurations: Nano Banana 2 Lite; Z Image; Seedream 5.0 Lite; Grok Image; Qwen 2; Nano Banana 2 1K–2K; GPT Image 2 1K–2K; Wan 2.7 Image; Grok Video: 6 seconds; Veo 3.1 Lite: up to 1080p, 8 seconds; Kling 2.5 Turbo: 1080p, 5 seconds.
+Monthly credits and included unlimited generations are separate benefits. Unlimited applies only to the listed models and configurations, not every model or every resolution/duration. Other models/settings use credits at the verified generation cost.
+Included no-extra-credit/unlimited generations use a separate queue and can take longer to start or finish. Do not promise an exact wait or completion time. This is a subscription benefit, not free unlimited access for every visitor.
+These are Creative subscriptions, not Automation plans. Use get_credit_packages for the current available pricing records; use the authenticated balance/subscription tool before confirming a customer's own plan. Do not invent renewal, rollover or cancellation terms when they are absent from the saved knowledge.
+
+All credit values in this document are the credits displayed on the website. Never describe backend/internal credit units.
