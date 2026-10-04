@@ -20,6 +20,18 @@ function appSecrets() {
   return [process.env.META_INSTAGRAM_APP_SECRET, process.env.META_WHATSAPP_APP_SECRET, process.env.META_APP_SECRET].map(value => String(value || '').trim()).filter(Boolean);
 }
 
+async function deleteStoredMedia(businessId, channels) {
+  const base = String(process.env.SUPABASE_URL || '').replace(/\/+$/, '');
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE || '';
+  for (const channel of channels) {
+    const found = rows(await supabaseRequest(`/rest/v1/automation_messages?business_id=eq.${businessId}&metadata->>media_path=like.${encodeURIComponent(`${businessId}/${channel}/*`)}&select=metadata&limit=1000`));
+    const paths = found.map(row => row.metadata?.media_path).filter(Boolean);
+    for (let index = 0; index < paths.length; index += 100) {
+      await fetch(`${base}/storage/v1/object/automation-media`, { method: 'DELETE', headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ prefixes: paths.slice(index, index + 100) }) });
+    }
+  }
+}
+
 async function deleteAccountData(platformUserId) {
   const resources = rows(await supabaseRequest(`/rest/v1/automation_provider_resources?provider=eq.meta&provider_resource_id=eq.${encodeURIComponent(platformUserId)}&select=id,business_id,resource_type`));
   const businessIds = [...new Set(resources.map(resource => resource.business_id))];
@@ -28,6 +40,8 @@ async function deleteAccountData(platformUserId) {
     await serviceUpdate('automation_provider_resources', `id=eq.${resource.id}`, { status: 'revoked', safe_config: {}, updated_at: new Date().toISOString() });
     const channels = resource.resource_type === 'whatsapp_account' ? ['whatsapp'] : ['instagram_dm', 'instagram_comments'];
     const list = `(${channels.join(',')})`;
+    // Photos and voice notes kept for the inbox are removed with the messages they belong to.
+    await deleteStoredMedia(resource.business_id, channels).catch(error => console.error('stored media not deleted', { message: error?.message }));
     // Contacts cascade to their conversations and messages.
     await supabaseRequest(`/rest/v1/automation_contacts?business_id=eq.${resource.business_id}&channel_type=in.${list}`, { method: 'DELETE' });
     if (resource.resource_type !== 'whatsapp_account') {

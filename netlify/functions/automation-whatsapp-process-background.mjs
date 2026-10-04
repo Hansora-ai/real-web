@@ -6,6 +6,7 @@ import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { getWhatsAppMediaUrl, markWhatsAppRead, phonePauseExpired, sendWhatsAppText } from '../../lib/automation/whatsapp.mjs';
 import { mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
+import { hasNewerCustomerMessage, mediaContext, waitForPendingMedia } from '../../lib/automation/turns.mjs';
 import { keepTyping } from '../../lib/automation/typing.mjs';
 import { flagFailedReply } from '../../lib/automation/failure.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
@@ -40,22 +41,16 @@ export async function handler(event){
     const affordableP=settle(canAfford(account.business_id,price));
     if(credential.expires_at&&Date.parse(credential.expires_at)<=Date.now())throw new Error('whatsapp_token_expired');
     const occurredAt=new Date(Number(message.timestamp)||Date.now()).toISOString();
-    // Voice notes are transcribed and photos, videos and stickers described, so the AI can answer them and the owner
-    // can read them in the inbox. On any failure the old "[Customer sent a photo]" text is kept.
+    // Voice notes are transcribed and photos, videos and stickers described (after the message is saved, see below),
+    // so the AI can answer them and the owner can read them in the inbox. On any failure the old text is kept.
     const rawType=String(message.raw?.type||'');const rawMedia=message.raw?.[rawType]||{};
-    let media=null;
-    if(['image','video','audio','sticker'].includes(rawType)&&rawMedia.id){
-      try{const token=decryptSecret(credential);const link=await getWhatsAppMediaUrl({mediaId:String(rawMedia.id),accessToken:token});media=await understandMedia({url:link.url,token,kind:rawType==='sticker'?'image':rawType,caption:rawMedia.caption||''});}
-      catch(error){console.warn('whatsapp media understanding failed',{message:error?.message});}
-    }
-    const understood=media?mediaMessage({source:media.kind,media,caption:rawMedia.caption||''}):null;
-    const savedContent=understood?.content||message.text;
-    const aiText=understood?.aiText||message.text;
+    const hasMedia=['image','video','audio','sticker'].includes(rawType)&&Boolean(rawMedia.id);
+    let media=null,understood=null,aiText=message.text;
     const contact=await serviceUpsert('automation_contacts','business_id,channel_type,external_contact_id',{business_id:account.business_id,display_name:message.displayName||'WhatsApp customer',primary_phone:message.senderId,channel_type:'whatsapp',external_contact_id:message.senderId,last_seen_at:occurredAt,profile:{whatsapp_id:message.senderId}});
-    const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'whatsapp',external_thread_id:message.senderId,status:'open',last_message_preview:String(savedContent).slice(0,1000),last_message_at:occurredAt});
+    const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'whatsapp',external_thread_id:message.senderId,status:'open',last_message_preview:String(message.text).slice(0,1000),last_message_at:occurredAt});
     // Saving the message, loading the chat memory and preparing actions run together.
     const [inbound,memory,actions]=await Promise.all([
-      serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:whatsapp:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:message.contentType||'text',content:savedContent,status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{phone_number_id:message.phoneNumberId,waba_id:message.wabaId,message_type:message.messageType,interactive_id:message.interactiveId||null},occurred_at:occurredAt},{ignoreDuplicates:true}),
+      serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:whatsapp:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:message.contentType||'text',content:message.text,status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{phone_number_id:message.phoneNumberId,waba_id:message.wabaId,message_type:message.messageType,interactive_id:message.interactiveId||null,...(hasMedia?{media_pending:true}:{})},occurred_at:occurredAt},{ignoreDuplicates:true}),
       loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,excludeExternalId:message.externalEventId}),
       prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'whatsapp',contact:{name:message.displayName||'',externalId:message.senderId,phone:message.senderId}})
     ]);
@@ -75,14 +70,29 @@ export async function handler(event){
     const readTarget={phoneNumberId:account.provider_resource_id,messageId:message.externalEventId,accessToken};
     const readReceipt=markWhatsAppRead({...readTarget,typing:aiWillReply}).catch(()=>markWhatsAppRead(readTarget)).catch(error=>console.warn('whatsapp read receipt failed',{message:error?.message}));
     if(aiWillReply)stopTyping=keepTyping(()=>markWhatsAppRead({...readTarget,typing:true}),{everyMs:20000,immediate:false});
+    if(hasMedia){
+      try{
+        const token=decryptSecret(credential);
+        const [link,context]=await Promise.all([getWhatsAppMediaUrl({mediaId:String(rawMedia.id),accessToken:token}),mediaContext({businessId:account.business_id,history:memory.history}).catch(()=>'')]);
+        media=await understandMedia({url:link.url,token,kind:rawType==='sticker'?'image':rawType,caption:rawMedia.caption||'',context,store:{businessId:account.business_id,channel:'whatsapp',conversationId:conversation.id,key:message.externalEventId}});
+      }catch(error){console.warn('whatsapp media understanding failed',{message:error?.message});}
+      understood=media?mediaMessage({source:media.kind,media,caption:rawMedia.caption||''}):null;
+      if(understood)aiText=understood.aiText;
+      await serviceUpdate('automation_messages',`id=eq.${inbound.id}`,{content:understood?.content||message.text,metadata:{phone_number_id:message.phoneNumberId,waba_id:message.wabaId,message_type:message.messageType,interactive_id:message.interactiveId||null,media_pending:false,...(media?.mediaPath?{media_path:media.mediaPath,media_mime:media.mimeType}:{})}}).catch(error=>console.warn('media message update failed',{message:error?.message}));
+      if(understood)await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{last_message_preview:understood.content.slice(0,1000)}).catch(()=>null);
+    }
     if(!aiWillReply){await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
+    // One answer per turn (see lib/automation/turns.mjs).
+    const turn={conversationId:conversation.id,occurredAt:inbound.occurred_at||occurredAt,createdAt:inbound.created_at,messageId:inbound.id};
+    if(await hasNewerCustomerMessage(turn)){await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,answered_by_newer_message:true});}
+    const liveMemory=await waitForPendingMedia(turn)?await loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,excludeExternalId:message.externalEventId}):memory;
     pendingReply={businessId:account.business_id,conversationId:conversation.id,customer:message.displayName||message.senderId,channel:'WhatsApp'};
     const aiResource=take(await aiResourceP);const affordable=take(await affordableP);
     if(!aiResource)throw new Error('ai_provider_agent_not_ready');
     // Pay as you go: no credits, no AI reply. The conversation goes to the owner instead.
     if(!affordable.ok){await handleOutOfCredits({businessId:account.business_id,conversationId:conversation.id,channel:'WhatsApp',customer:message.displayName||message.senderId,notifyOwner});await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,out_of_credits:true});}
     const mediaNote=understood?understood.note:message.contentType&&!['text','interactive'].includes(message.contentType)?'The latest customer message is a photo, video, voice note, file or location that you cannot open. Do not pretend to know its contents; use any caption, otherwise politely ask the customer to describe it in text, or offer a team member if it needs a human to review.':'';
-    const context=buildConversationContext({intro:['Continue this WhatsApp conversation. Keep the reply concise.',actions.contextLine,mediaNote].filter(Boolean),memory,after:[actions.liveBrief]});
+    const context=buildConversationContext({intro:['Continue this WhatsApp conversation. Keep the reply concise.',actions.contextLine,mediaNote].filter(Boolean),memory:liveMemory,after:[actions.liveBrief]});
     const aiStartedAt=Date.now();const preparedMs=aiStartedAt-startedAt;
     const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:aiText,context,channel:'whatsapp',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
     const aiMs=Date.now()-aiStartedAt;
@@ -91,6 +101,7 @@ export async function handler(event){
     // The chosen reply speed counts from when the message arrived, so the AI's own thinking time is included.
     const replyDelay=Math.min(30,Math.max(0,Number(settings.reply_delay)||0));const waitMs=replyDelay*1000-(Date.now()-startedAt);if(waitMs>0)await new Promise(resolve=>setTimeout(resolve,waitMs));
     const current=await first(`/rest/v1/automation_conversations?id=eq.${conversation.id}&select=ai_enabled,status&limit=1`);if(!handedOff&&(!current?.ai_enabled||['human_handling','resolved','archived'].includes(current.status))){await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
+    if(await hasNewerCustomerMessage(turn)){pendingReply=null;await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,answered_by_newer_message:true});}
     const sent=await sendWhatsAppText({phoneNumberId:account.provider_resource_id,to:message.senderId,text:generated.text,accessToken});
     pendingReply=null; // the customer has the answer: a later error (billing, logging) is not a missed reply
     console.log('automation reply timing',{channel:'whatsapp',loaded_ms:loadedMs,ready_for_ai_ms:preparedMs,ai_ms:aiMs,to_send_ms:Date.now()-startedAt,chosen_delay_s:replyDelay});

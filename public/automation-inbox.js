@@ -161,9 +161,34 @@
         return `<div class="ui-msg-event"><a href="${operations}&record=${encodeURIComponent(message.id)}">${emoji} ${name}${message.reference ? ` #${escapeHtml(message.reference)}` : ''} created · ${escapeHtml(message.text || '')} <span>${escapeHtml(message.time)} · Open →</span></a></div>`;
       }
       const grouped = index > 0 && all[index - 1].role === message.role;
-      return `<div class="ui-msg ${message.role}${grouped ? ' grouped' : ''}">${grouped ? '' : `<span class="ui-msg-meta">${escapeHtml(labels[message.role] || '')} · ${escapeHtml(message.time)}${message.role === 'ai' && message.counted ? ' · billed' : ''}</span>`}<p>${escapeHtml(message.text)}</p></div>`;
+      return `<div class="ui-msg ${message.role}${grouped ? ' grouped' : ''}">${grouped ? '' : `<span class="ui-msg-meta">${escapeHtml(labels[message.role] || '')} · ${escapeHtml(message.time)}${message.role === 'ai' && message.counted ? ' · billed' : ''}</span>`}${message.mediaPath ? `<div class="ui-msg-media" data-media-path="${escapeHtml(message.mediaPath)}" data-media-mime="${escapeHtml(message.mediaMime)}"></div>` : ''}<p>${escapeHtml(message.text)}</p></div>`;
     }).join('') || '<div class="ui-empty">No messages yet.</div>';
     const timeline = document.querySelector('#message-timeline'); timeline.scrollTop = timeline.scrollHeight;
+    loadMessageMedia(timeline);
+  }
+
+  // Photos, videos and voice notes customers sent: private copies, shown through short-lived links.
+  const mediaUrls = new Map();
+  async function loadMessageMedia(timeline) {
+    const holders = [...timeline.querySelectorAll('[data-media-path]')];
+    if (!holders.length || api.isLocalPreview) return;
+    const missing = [...new Set(holders.map(holder => holder.dataset.mediaPath).filter(path => !mediaUrls.has(path)))];
+    if (missing.length) {
+      try {
+        const response = await api.authenticatedFetch('/.netlify/functions/automation-media-url', { method:'POST', body:JSON.stringify({ business_id:businessId, paths:missing }) });
+        const result = await response.json().catch(() => ({}));
+        Object.entries(result.urls || {}).forEach(([path, url]) => mediaUrls.set(path, url));
+      } catch (_) { return; }
+    }
+    holders.forEach(holder => {
+      const url = mediaUrls.get(holder.dataset.mediaPath);
+      if (!url || holder.childElementCount) return;
+      const mime = holder.dataset.mediaMime || '';
+      if (mime.startsWith('audio/')) holder.innerHTML = `<audio controls preload="none" src="${escapeHtml(url)}"></audio>`;
+      else if (mime.startsWith('video/')) holder.innerHTML = `<video controls preload="metadata" src="${escapeHtml(url)}"></video>`;
+      else holder.innerHTML = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener"><img src="${escapeHtml(url)}" alt="Photo from the customer" loading="lazy"></a>`;
+      holder.querySelector('img,video')?.addEventListener('load', () => { timeline.scrollTop = timeline.scrollHeight; }, { once:true });
+    });
   }
 
   function renderCustomer() {
@@ -295,7 +320,7 @@
   async function loadMessages(conversation) {
     // Orders, bookings and leads created in this chat are shown in the timeline where they happened.
     const [result, outcomes] = await Promise.all([
-      api.db.from('automation_messages').select('sender_type,content,billable,occurred_at').eq('business_id',businessId).eq('conversation_id',conversation.id).order('occurred_at',{ascending:false}).limit(100),
+      api.db.from('automation_messages').select('sender_type,content,billable,occurred_at,metadata').eq('business_id',businessId).eq('conversation_id',conversation.id).order('occurred_at',{ascending:false}).limit(100),
       api.db.from('automation_outcomes').select('id,outcome_type,reference_number,title,status,created_at').eq('business_id',businessId).eq('conversation_id',conversation.id).order('created_at',{ascending:true}).limit(50)
     ]);
     result.data = (result.data || []).reverse();
@@ -303,7 +328,7 @@
     const lastCustomer = [...(result.data||[])].reverse().find(row => row.sender_type === 'customer');
     conversation.lastCustomerAt = lastCustomer ? Date.parse(lastCustomer.occurred_at) : 0;
     const clock = value => new Date(value).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    const messages = (result.data||[]).map(row => ({role:row.sender_type==='customer'?'customer':row.sender_type==='human'?'human':'ai',text:row.content,time:clock(row.occurred_at),at:Date.parse(row.occurred_at),counted:Boolean(row.billable)}));
+    const messages = (result.data||[]).map(row => ({role:row.sender_type==='customer'?'customer':row.sender_type==='human'?'human':'ai',text:row.content,time:clock(row.occurred_at),at:Date.parse(row.occurred_at),counted:Boolean(row.billable),mediaPath:row.metadata?.media_path||'',mediaMime:row.metadata?.media_mime||''}));
     const events = (outcomes.error ? [] : outcomes.data || []).map(row => ({role:'event',kind:row.outcome_type,id:row.id,reference:row.reference_number,text:row.title,status:row.status,time:clock(row.created_at),at:Date.parse(row.created_at)}));
     conversation.messages = [...messages, ...events].sort((a, b) => a.at - b.at);
   }
