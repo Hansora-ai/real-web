@@ -17,7 +17,7 @@ import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
 import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
 import { mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
-import { hasNewerCustomerMessage, mediaContext, waitForPendingMedia } from '../../lib/automation/turns.mjs';
+import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia } from '../../lib/automation/turns.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
 
@@ -146,13 +146,14 @@ export async function handler(event){
     const turn={conversationId:conversation.id,occurredAt:inbound?.occurred_at||occurredAt,createdAt:inbound?.created_at,messageId:inbound?.id};
     if(await hasNewerCustomerMessage(turn)){pendingReply=null;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,answered_by_newer_message:true});}
     const liveMemory=await waitForPendingMedia(turn)?await loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,excludeExternalId:message.externalEventId}):memory;
+    const pendingQuestions=burstNote(await unansweredCustomerMessages(turn));
 
     const aiResource=take(await aiResourceP);const affordable=take(await affordableP);
     if(!aiResource)throw new Error('ai_provider_agent_not_ready');
     // Pay as you go: no credits, no AI reply. The conversation goes to the owner instead.
     if(!affordable.ok){await handleOutOfCredits({businessId:account.business_id,conversationId:conversation.id,channel:'Instagram DM',customer:contact.display_name,notifyOwner});await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,out_of_credits:true});}
 
-    const context=buildConversationContext({intro:['Continue this Instagram conversation.',actions.contextLine,understood?.note||'',flowInstruction?`Flow instruction: ${flowInstruction}`:''].filter(Boolean),memory:liveMemory,after:[actions.liveBrief]});
+    const context=buildConversationContext({intro:['Continue this Instagram conversation.',actions.contextLine,understood?.note||'',flowInstruction?`Flow instruction: ${flowInstruction}`:''].filter(Boolean),memory:liveMemory,after:[actions.liveBrief,pendingQuestions]});
     const aiStartedAt=Date.now();const preparedMs=aiStartedAt-startedAt;
     const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:aiText,context,channel:'instagram_dm',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
     const aiMs=Date.now()-aiStartedAt;

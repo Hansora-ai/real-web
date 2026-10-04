@@ -33,6 +33,10 @@
 [functions."automation-flow-jobs"]
   schedule = "* * * * *"
 
+# Deletes customer photos, videos and voice notes after the retention period (once a day, 03:20 UTC)
+[functions."automation-media-cleanup"]
+  schedule = "20 3 * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]
