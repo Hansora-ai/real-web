@@ -6,6 +6,7 @@ import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { getWhatsAppMediaUrl, markWhatsAppRead, phonePauseExpired, sendWhatsAppText } from '../../lib/automation/whatsapp.mjs';
 import { mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
+import { matchProductPhoto } from '../../lib/automation/product-match.mjs';
 import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia } from '../../lib/automation/turns.mjs';
 import { keepTyping } from '../../lib/automation/typing.mjs';
 import { flagFailedReply } from '../../lib/automation/failure.mjs';
@@ -74,7 +75,7 @@ export async function handler(event){
       try{
         const token=decryptSecret(credential);
         const [link,context]=await Promise.all([getWhatsAppMediaUrl({mediaId:String(rawMedia.id),accessToken:token}),mediaContext({businessId:account.business_id,history:memory.history}).catch(()=>'')]);
-        media=await understandMedia({url:link.url,token,kind:rawType==='sticker'?'image':rawType,caption:rawMedia.caption||'',context,store:{businessId:account.business_id,channel:'whatsapp',conversationId:conversation.id,key:message.externalEventId}});
+        media=await understandMedia({url:link.url,token,kind:rawType==='sticker'?'image':rawType,caption:rawMedia.caption||'',context,store:{businessId:account.business_id,channel:'whatsapp',conversationId:conversation.id,key:message.externalEventId},afterVisual:file=>matchProductPhoto({businessId:account.business_id,...file,caption:rawMedia.caption||''})});
       }catch(error){console.warn('whatsapp media understanding failed',{message:error?.message});}
       understood=media?mediaMessage({source:media.kind,media,caption:rawMedia.caption||''}):null;
       if(understood)aiText=understood.aiText;

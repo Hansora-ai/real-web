@@ -2,6 +2,7 @@ import { authenticateRequest, isUuid } from '../../lib/sales-agent/auth.mjs';
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
 import { first, serviceUpdate } from '../../lib/automation/db.mjs';
 import { cancelGoogleEvent, refreshGoogleAccessToken } from '../../lib/automation/google-calendar.mjs';
+import { reduceStockForOrder } from '../../lib/automation/catalog.mjs';
 
 const HEADERS={'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'POST, OPTIONS'};
 const json=(statusCode,body)=>({statusCode,headers:HEADERS,body:JSON.stringify(body)});
@@ -23,6 +24,15 @@ export async function handler(event){
     let saved;
     try{saved=(await serviceUpdate('automation_outcomes',`id=eq.${outcome.id}&business_id=eq.${business.id}`,patch))[0];}
     catch(error){if(error?.status===409)return json(409,{error:'time_already_booked'});throw error;}
+    // Confirming an order with catalog products reduces their stock once, if the owner turned that on.
+    const items=Array.isArray(outcome.collected_fields?._catalog_items)?outcome.collected_fields._catalog_items:[];
+    if(outcome.outcome_type==='order'&&patch.status==='confirmed'&&outcome.status!=='confirmed'&&items.length&&!outcome.collected_fields?._stock_reduced){
+      const catalog=await first(`/rest/v1/automation_tool_configs?business_id=eq.${business.id}&tool_type=eq.catalog&select=enabled,config&limit=1`).catch(()=>null);
+      if(catalog?.config?.reduce_stock===true){
+        await reduceStockForOrder({businessId:business.id,items}).catch(error=>console.error('stock not reduced',{message:error?.message}));
+        await serviceUpdate('automation_outcomes',`id=eq.${outcome.id}`,{collected_fields:{...outcome.collected_fields,_stock_reduced:true}}).catch(()=>null);
+      }
+    }
     if(outcome.outcome_type==='booking'&&patch.status==='cancelled'&&outcome.status!=='cancelled'&&outcome.external_calendar_event_id){
       const resource=await first(`/rest/v1/automation_provider_resources?business_id=eq.${business.id}&provider=eq.google_calendar&status=eq.active&select=*&limit=1`);
       const credential=resource&&await first(`/rest/v1/automation_provider_credentials?provider_resource_id=eq.${resource.id}&credential_type=eq.refresh_token&select=*&limit=1`);

@@ -60,7 +60,7 @@
   function monthStart(offset){const date=new Date();return new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+offset,1))}
   function duration(value){const seconds=Math.max(0,Math.round(Number(value||0)));return`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`}
   function monthLabel(date){const end=new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,0));return`${date.toLocaleDateString([],{month:'short',day:'numeric'})} – ${end.toLocaleDateString([],{month:'short',day:'numeric'})}`}
-  function channelName(value){return({instagram_dm:'Instagram DM',instagram_comments:'Instagram comment',whatsapp:'WhatsApp',phone:'Phone',test:'Live test'}[value]||value||'Unknown')}
+  function channelName(value){return({instagram_dm:'Instagram DM',instagram_comments:'Instagram comment',whatsapp:'WhatsApp',telegram:'Telegram',messenger:'Messenger',phone:'Phone',test:'Live test'}[value]||value||'Unknown')}
   function fail(message){document.querySelector('#usage-loading').hidden=true;document.querySelector('#usage-app').hidden=true;const box=document.querySelector('#usage-error');box.textContent=message;box.hidden=false}
   function escapeHtml(value){return String(value||'').replace(/[&<>'"]/g,character=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]))}
 })();

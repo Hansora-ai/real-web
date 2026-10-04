@@ -68,6 +68,7 @@
       ['contacts', 'Contacts', 'user', q ? `automation-contacts.html?${q}` : ''],
       ['workflows', 'Automations', 'comment', q ? `automation-workflows.html?${q}` : '', ['comments']],
       ['operations', 'Orders & bookings', 'bag', q ? `automation-operations.html?${q}` : ''],
+      ['products', 'Products', 'box', q ? `automation-products.html?${q}` : ''],
       ['tools', 'Business tools', 'spark', q ? `automation-tools.html?${q}` : ''],
       ['connect', 'Channels', 'instagram', q ? `automation-agent.html?id=${encodeURIComponent(businessId)}${preview}#channels` : ''],
       ['phone', 'Phone calls', 'phone', q ? `automation-phone.html?${q}` : ''],
