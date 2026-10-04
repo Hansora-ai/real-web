@@ -16,6 +16,7 @@ import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
 import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
+import { mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
 
@@ -64,6 +65,11 @@ export async function handler(event){
       stopTyping=()=>{stopRefresh();if(!replySent)sendInstagramAction({...typingTarget,action:'typing_off'}).catch(()=>null);};
     }
     const occurredAt=new Date(Number(message.timestamp)||Date.now()).toISOString();
+    // Voice notes, photos, videos, shared posts/reels and stories become text: transcribed or described, shown in the
+    // inbox and answered by the AI. Runs alongside the steps below; on any failure the old label is kept.
+    const mediaType=String(message.attachmentTypes?.[0]||'');
+    const mediaUrl=message.kind==='story_reply'?message.storyUrl:['media','share','story_mention'].includes(message.kind)?message.attachmentUrl:'';
+    const mediaP=mediaUrl&&mediaType!=='file'?understandMedia({url:mediaUrl,kind:['audio','video','image'].includes(mediaType)?mediaType:'',caption:message.text}):Promise.resolve(null);
     // Show the customer's real name and @username: looked up once per customer, kept on later messages.
     // Name and photo: looked up when the photo is missing (at most once a day per person), e.g. someone who first
     // commented (Instagram only shares the photo once they write to you or tap a button).
@@ -71,11 +77,16 @@ export async function handler(event){
     const senderProfile=known?.profile?.profile_pic||checkedRecently?null:await getInstagramSenderProfile({senderId:message.senderId,accessToken:decryptSecret(credential)});
     const profile={...(known?.profile||{}),instagram_scoped_id:message.senderId,...(senderProfile?{username:senderProfile.username,name:senderProfile.name,profile_pic:senderProfile.profilePic,profile_checked_at:new Date().toISOString()}:{})};
     const displayName=(senderProfile?(senderProfile.name||`@${senderProfile.username}`):known?.display_name)||'Instagram customer';
+    const media=await mediaP;
+    const understood=media?mediaMessage({source:message.kind==='media'?media.kind:message.kind,media,caption:message.text}):null;
+    const savedContent=understood?.content||shownText(message);
+    // A voice note counts as what the customer typed (for automations and the AI).
+    if(understood&&media.kind==='audio')message.text=understood.aiText;
     const contact=await serviceUpsert('automation_contacts','business_id,channel_type,external_contact_id',{business_id:account.business_id,display_name:displayName,channel_type:'instagram_dm',external_contact_id:message.senderId,last_seen_at:occurredAt,profile});
-    const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'instagram_dm',external_thread_id:message.senderId,status:'open',last_message_preview:shownText(message).slice(0,1000),last_message_at:occurredAt});
+    const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'instagram_dm',external_thread_id:message.senderId,status:'open',last_message_preview:savedContent.slice(0,1000),last_message_at:occurredAt});
     // Saving the message, loading the chat memory and preparing actions run together.
     const [inbound,memory,actions]=await Promise.all([
-      serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:instagram:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:'text',content:shownText(message),status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{sender_id:message.senderId,recipient_id:message.recipientId},occurred_at:occurredAt},{ignoreDuplicates:true}),
+      serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:instagram:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:media?(media.kind==='audio'?'audio':media.kind==='video'?'video':'image'):'text',content:savedContent,status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{sender_id:message.senderId,recipient_id:message.recipientId},occurred_at:occurredAt},{ignoreDuplicates:true}),
       loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,excludeExternalId:message.externalEventId}),
       prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'instagram_dm',contact:{name:contact.display_name==='Instagram customer'?'':contact.display_name,externalId:message.senderId}})
     ]);
@@ -89,7 +100,9 @@ export async function handler(event){
       if(started?.handled){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,automation_started:started.workflowId||true});}
     }
     // A story mention, shared post, photo or link opening without text gets no AI reply unless an automation handled it.
-    if(!String(message.text||'').trim()){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,no_text:true});}
+    // A photo, video or shared post the AI could understand is answered too; a story mention is not.
+    const aiText=String(message.text||'').trim()||(message.kind!=='story_mention'?understood?.aiText||'':'');
+    if(!aiText){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,no_text:true});}
     if(settings.automatic_replies===false||!conversation.ai_enabled||['human_handling','resolved','archived'].includes(conversation.status)){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,ai_skipped:true});}
 
     pendingReply={businessId:account.business_id,conversationId:conversation.id,customer:contact.display_name,channel:'Instagram DM'};
@@ -125,9 +138,9 @@ export async function handler(event){
     // Pay as you go: no credits, no AI reply. The conversation goes to the owner instead.
     if(!affordable.ok){await handleOutOfCredits({businessId:account.business_id,conversationId:conversation.id,channel:'Instagram DM',customer:contact.display_name,notifyOwner});await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,out_of_credits:true});}
 
-    const context=buildConversationContext({intro:['Continue this Instagram conversation.',actions.contextLine,flowInstruction?`Flow instruction: ${flowInstruction}`:''].filter(Boolean),memory,after:[actions.liveBrief]});
+    const context=buildConversationContext({intro:['Continue this Instagram conversation.',actions.contextLine,understood?.note||'',flowInstruction?`Flow instruction: ${flowInstruction}`:''].filter(Boolean),memory,after:[actions.liveBrief]});
     const aiStartedAt=Date.now();const preparedMs=aiStartedAt-startedAt;
-    const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'instagram_dm',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
+    const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:aiText,context,channel:'instagram_dm',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
     const aiMs=Date.now()-aiStartedAt;
     if(generated.toolCalls?.length)console.log('automation tool calls',{channel:'instagram_dm',calls:generated.toolCalls});
     const handedOff=generated.toolCalls?.some(call=>call.name==='handoff_to_human'&&call.ok);
