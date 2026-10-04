@@ -4,7 +4,8 @@ import { generateAutomationReply } from '../../lib/automation/provider.mjs';
 import { automationPrices, canAfford, chargeCredits, handleOutOfCredits } from '../../lib/automation/billing.mjs';
 import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
-import { markWhatsAppRead, phonePauseExpired, sendWhatsAppText } from '../../lib/automation/whatsapp.mjs';
+import { getWhatsAppMediaUrl, markWhatsAppRead, phonePauseExpired, sendWhatsAppText } from '../../lib/automation/whatsapp.mjs';
+import { mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
 import { keepTyping } from '../../lib/automation/typing.mjs';
 import { flagFailedReply } from '../../lib/automation/failure.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
@@ -39,11 +40,22 @@ export async function handler(event){
     const affordableP=settle(canAfford(account.business_id,price));
     if(credential.expires_at&&Date.parse(credential.expires_at)<=Date.now())throw new Error('whatsapp_token_expired');
     const occurredAt=new Date(Number(message.timestamp)||Date.now()).toISOString();
+    // Voice notes are transcribed and photos, videos and stickers described, so the AI can answer them and the owner
+    // can read them in the inbox. On any failure the old "[Customer sent a photo]" text is kept.
+    const rawType=String(message.raw?.type||'');const rawMedia=message.raw?.[rawType]||{};
+    let media=null;
+    if(['image','video','audio','sticker'].includes(rawType)&&rawMedia.id){
+      try{const token=decryptSecret(credential);const link=await getWhatsAppMediaUrl({mediaId:String(rawMedia.id),accessToken:token});media=await understandMedia({url:link.url,token,kind:rawType==='sticker'?'image':rawType,caption:rawMedia.caption||''});}
+      catch(error){console.warn('whatsapp media understanding failed',{message:error?.message});}
+    }
+    const understood=media?mediaMessage({source:media.kind,media,caption:rawMedia.caption||''}):null;
+    const savedContent=understood?.content||message.text;
+    const aiText=understood?.aiText||message.text;
     const contact=await serviceUpsert('automation_contacts','business_id,channel_type,external_contact_id',{business_id:account.business_id,display_name:message.displayName||'WhatsApp customer',primary_phone:message.senderId,channel_type:'whatsapp',external_contact_id:message.senderId,last_seen_at:occurredAt,profile:{whatsapp_id:message.senderId}});
-    const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'whatsapp',external_thread_id:message.senderId,status:'open',last_message_preview:String(message.text).slice(0,1000),last_message_at:occurredAt});
+    const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'whatsapp',external_thread_id:message.senderId,status:'open',last_message_preview:String(savedContent).slice(0,1000),last_message_at:occurredAt});
     // Saving the message, loading the chat memory and preparing actions run together.
     const [inbound,memory,actions]=await Promise.all([
-      serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:whatsapp:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:message.contentType||'text',content:message.text,status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{phone_number_id:message.phoneNumberId,waba_id:message.wabaId,message_type:message.messageType,interactive_id:message.interactiveId||null},occurred_at:occurredAt},{ignoreDuplicates:true}),
+      serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:whatsapp:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:message.contentType||'text',content:savedContent,status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{phone_number_id:message.phoneNumberId,waba_id:message.wabaId,message_type:message.messageType,interactive_id:message.interactiveId||null},occurred_at:occurredAt},{ignoreDuplicates:true}),
       loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,excludeExternalId:message.externalEventId}),
       prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'whatsapp',contact:{name:message.displayName||'',externalId:message.senderId,phone:message.senderId}})
     ]);
@@ -69,10 +81,10 @@ export async function handler(event){
     if(!aiResource)throw new Error('ai_provider_agent_not_ready');
     // Pay as you go: no credits, no AI reply. The conversation goes to the owner instead.
     if(!affordable.ok){await handleOutOfCredits({businessId:account.business_id,conversationId:conversation.id,channel:'WhatsApp',customer:message.displayName||message.senderId,notifyOwner});await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,out_of_credits:true});}
-    const mediaNote=message.contentType&&!['text','interactive'].includes(message.contentType)?'The latest customer message is a photo, video, voice note, file or location that you cannot open. Do not pretend to know its contents; use any caption, otherwise politely ask the customer to describe it in text, or offer a team member if it needs a human to review.':'';
+    const mediaNote=understood?understood.note:message.contentType&&!['text','interactive'].includes(message.contentType)?'The latest customer message is a photo, video, voice note, file or location that you cannot open. Do not pretend to know its contents; use any caption, otherwise politely ask the customer to describe it in text, or offer a team member if it needs a human to review.':'';
     const context=buildConversationContext({intro:['Continue this WhatsApp conversation. Keep the reply concise.',actions.contextLine,mediaNote].filter(Boolean),memory,after:[actions.liveBrief]});
     const aiStartedAt=Date.now();const preparedMs=aiStartedAt-startedAt;
-    const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:message.text,context,channel:'whatsapp',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
+    const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:aiText,context,channel:'whatsapp',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
     const aiMs=Date.now()-aiStartedAt;
     if(generated.toolCalls?.length)console.log('automation tool calls',{channel:'whatsapp',calls:generated.toolCalls});
     const handedOff=generated.toolCalls?.some(call=>call.name==='handoff_to_human'&&call.ok);
