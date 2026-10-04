@@ -5,6 +5,7 @@ import { rows, supabaseRequest } from '../../lib/automation/db.mjs';
 import { storedKnowledgeDocuments, syncBusinessAgent } from '../../lib/automation/agent-sync.mjs';
 import { automationProviderName } from '../../lib/automation/provider.mjs';
 import { addElevenLabsKnowledge, deleteElevenLabsKnowledge } from '../../lib/automation/providers/elevenlabs.mjs';
+import { isInternalCall, isScheduledRun } from '../../lib/automation/schedule.mjs';
 
 const json = (statusCode, body) => ({ statusCode, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) });
 export const REFRESH_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
@@ -45,10 +46,7 @@ export async function refreshKnowledge(overrides = {}) {
 }
 
 export async function handler(event) {
-  const internal = String(process.env.HANSORA_AUTOMATION_INTERNAL_SECRET || '');
-  const provided = String(event.headers?.['x-hansora-internal-secret'] || event.headers?.['X-Hansora-Internal-Secret'] || '');
-  const scheduled = String(event.headers?.['x-nf-event'] || event.headers?.['X-Nf-Event'] || '') === 'schedule';
-  if (!scheduled && !(internal.length >= 32 && provided === internal)) return json(401, { error: 'unauthorized' });
+  if (!isScheduledRun(event) && !isInternalCall(event)) return json(401, { error: 'unauthorized' });
   try {
     const results = await refreshKnowledge();
     return json(200, { ok: true, refreshed: results.filter(item => item.ok).length, results });

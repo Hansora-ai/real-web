@@ -56,6 +56,8 @@ async function handleConnection(connection) {
 
 async function queueMessage(event, message) {
   if (!message.business_connection_id || message.chat?.type !== 'private') return;
+  // Sent by a bot on the owner's behalf (our own replies and photos): not a customer message and not the owner typing.
+  if (message.sender_business_bot) return;
   const externalEventId = `telegram:${message.business_connection_id}:${message.chat.id}:${message.message_id}`;
   const inserted = await serviceInsert('automation_webhook_events', { provider: 'telegram', external_event_id: externalEventId, event_type: 'telegram_business_message', payload: message, status: 'received' }, { ignoreDuplicates: true });
   const row = inserted || await first(`/rest/v1/automation_webhook_events?provider=eq.telegram&external_event_id=eq.${encodeURIComponent(externalEventId)}&select=id,status&limit=1`);

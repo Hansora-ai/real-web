@@ -4,7 +4,7 @@ import { generateAutomationReply } from '../../lib/automation/provider.mjs';
 import { automationPrices, canAfford, chargeCredits, handleOutOfCredits } from '../../lib/automation/billing.mjs';
 import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
-import { getWhatsAppMediaUrl, markWhatsAppRead, phonePauseExpired, sendWhatsAppText } from '../../lib/automation/whatsapp.mjs';
+import { getWhatsAppMediaUrl, markWhatsAppRead, phonePauseExpired, sendWhatsAppImage, sendWhatsAppText } from '../../lib/automation/whatsapp.mjs';
 import { mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
 import { matchProductPhoto } from '../../lib/automation/product-match.mjs';
 import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia } from '../../lib/automation/turns.mjs';
@@ -12,6 +12,7 @@ import { keepTyping } from '../../lib/automation/typing.mjs';
 import { flagFailedReply } from '../../lib/automation/failure.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
 import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
+import { makeProductPhotoSender } from '../../lib/automation/product-photos.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
 
@@ -53,7 +54,7 @@ export async function handler(event){
     const [inbound,memory,actions]=await Promise.all([
       serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:whatsapp:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:message.contentType||'text',content:message.text,status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{phone_number_id:message.phoneNumberId,waba_id:message.wabaId,message_type:message.messageType,interactive_id:message.interactiveId||null,...(hasMedia?{media_pending:true}:{})},occurred_at:occurredAt},{ignoreDuplicates:true}),
       loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,excludeExternalId:message.externalEventId}),
-      prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'whatsapp',contact:{name:message.displayName||'',externalId:message.senderId,phone:message.senderId}})
+      prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'whatsapp',contact:{name:message.displayName||'',externalId:message.senderId,phone:message.senderId},sendImage:makeProductPhotoSender({businessId:account.business_id,conversationId:conversation.id,provider:'meta',send:({url,caption})=>sendWhatsAppImage({phoneNumberId:account.provider_resource_id,to:message.senderId,url,caption,accessToken:decryptSecret(credential)})})})
     ]);
     if(!inbound){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,duplicate:true});}
     // Paused because the owner wrote from the WhatsApp Business app on their phone: the AI comes back once they
