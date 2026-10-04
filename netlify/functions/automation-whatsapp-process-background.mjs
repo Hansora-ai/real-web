@@ -87,6 +87,7 @@ export async function handler(event){
     if(await hasNewerCustomerMessage(turn)){await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,answered_by_newer_message:true});}
     const liveMemory=await waitForPendingMedia(turn)?await loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,excludeExternalId:message.externalEventId}):memory;
     const pendingQuestions=burstNote(await unansweredCustomerMessages(turn));
+    if(pendingQuestions)console.log('automation turn with several messages',{conversation:conversation.id});
     pendingReply={businessId:account.business_id,conversationId:conversation.id,customer:message.displayName||message.senderId,channel:'WhatsApp'};
     const aiResource=take(await aiResourceP);const affordable=take(await affordableP);
     if(!aiResource)throw new Error('ai_provider_agent_not_ready');
