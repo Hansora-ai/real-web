@@ -17,7 +17,7 @@
 
   async function load() {
     if (api.isLocalPreview) {
-      products = [{ id: 'p1', name: 'Oslo sofa', category: 'Sofas', price: 120000, currency: 'AMD', stock: 2, variants: [{ name: 'Grey', price: 120000, stock: 2, color: '#9ca3af' }, { name: 'Blue', price: 125000, stock: 0, color: '#3b82f6' }], photos: [], active: true, description: 'Two-seat sofa' }, { id: 'p2', name: 'Desk lamp', category: 'Lighting', price: 9000, currency: 'AMD', stock: null, variants: [], photos: [], active: true, description: '' }];
+      products = [{ id: 'p1', name: 'Oslo sofa', category: 'Sofas', price: 899, currency: 'USD', stock: 2, variants: [{ name: 'Grey', price: 899, stock: 2, color: '#9ca3af' }, { name: 'Blue', price: 949, stock: 0, color: '#3b82f6' }], photos: [], active: true, description: 'Two-seat sofa' }, { id: 'p2', name: 'Desk lamp', category: 'Lighting', price: 39, currency: 'USD', stock: null, variants: [], photos: [], active: true, description: '' }];
       catalog = { enabled: true, config: { reduce_stock: false } }; return;
     }
     const [list, tool, sheet] = await Promise.all([
@@ -37,7 +37,7 @@
     if (source?.url) {
       status.hidden = false;
       status.innerHTML = `<span data-icon="refresh"></span><span><strong>${source.kind === 'excel_online' ? 'Excel file connected' : 'Google Sheet connected'}</strong><small>${source.status === 'error' ? `Last sync failed: ${escapeHtml(friendlyError(source.last_error))}` : `Synced ${source.last_synced_at ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(source.last_synced_at)) : 'soon'} · ${source.last_count ?? 0} products · re-read every hour`}</small></span><button class="ui-btn ghost sm" id="sheet-sync-now" type="button">Sync now</button><button class="ui-btn ghost sm" id="sheet-disconnect" type="button">Disconnect</button>`;
-      $('#sheet-sync-now').addEventListener('click', () => runImport({ sheetUrl: source.url, map: source.column_map, quiet: true }));
+      $('#sheet-sync-now').addEventListener('click', () => runImport({ sheetUrl: source.url, map: source.column_map, currency: source.column_map?._currency || '', quiet: true }));
       $('#sheet-disconnect').addEventListener('click', async () => {
         if (!confirm('Stop syncing this sheet? Products already imported stay.')) return;
         const result = await api.db.from('automation_product_sources').delete().eq('id', source.id).eq('business_id', businessId);
@@ -91,13 +91,16 @@
   // ---------- editor ----------
   // Common colour names (English, Armenian, Russian) → a swatch, so "Grey" gets a grey dot without picking it.
   const COLOR_WORDS = [[/gr[ae]y|մոխրագույն|сер/i, '#9ca3af'], [/black|սև|черн/i, '#111827'], [/white|սպիտակ|бел/i, '#f9fafb'], [/beige|բեժ|беж/i, '#d6c3a5'], [/brown|walnut|շագանակագույն|корич|орех/i, '#7c4a2d'], [/navy|dark blue|մուգ կապույտ|темно-син/i, '#1e3a8a'], [/blue|կապույտ|син|голуб/i, '#3b82f6'], [/green|կանաչ|зел/i, '#16a34a'], [/red|կարմիր|красн/i, '#dc2626'], [/pink|վարդագույն|розов/i, '#ec4899'], [/yellow|դեղին|желт/i, '#facc15'], [/orange|նարնջագույն|оранж/i, '#f97316'], [/purple|violet|մանուշակագույն|фиолет/i, '#8b5cf6'], [/cream|կրեմ|кремов/i, '#f5ecd7'], [/gold|ոսկեգույն|золот/i, '#d4a017'], [/silver|արծաթագույն|серебр/i, '#c0c0c0']];
+  // Default currency: the one the owner already uses. Nothing is assumed for the first product (businesses are in
+  // many countries); the owner types it once.
+  const defaultCurrency = () => products.find(item => item.currency)?.currency || '';
   const guessColor = name => (COLOR_WORDS.find(([pattern]) => pattern.test(String(name || ''))) || [])[1] || '';
   $('#add-product').addEventListener('click', () => openEditor(null));
   function openEditor(product) {
-    editing = product ? JSON.parse(JSON.stringify(product)) : { id: api.isLocalPreview ? `p${Date.now()}` : crypto.randomUUID(), isNew: true, name: '', description: '', category: '', sku: '', payment_link: '', price: null, currency: products[0]?.currency || 'AMD', stock: null, variants: [], photos: [], active: true };
+    editing = product ? JSON.parse(JSON.stringify(product)) : { id: api.isLocalPreview ? `p${Date.now()}` : crypto.randomUUID(), isNew: true, name: '', description: '', category: '', sku: '', payment_link: '', price: null, currency: defaultCurrency(), stock: null, variants: [], photos: [], active: true };
     editing.variants = (editing.variants || []).map(variant => ({ ...variant }));
     $('#product-title').textContent = product ? 'Edit product' : 'Add product';
-    $('#p-name').value = editing.name; $('#p-price').value = editing.price ?? ''; $('#p-currency').value = editing.currency || 'AMD'; $('#p-stock').value = editing.stock ?? '';
+    $('#p-name').value = editing.name; $('#p-price').value = editing.price ?? ''; $('#p-currency').value = editing.currency || ''; $('#p-stock').value = editing.stock ?? '';
     $('#p-category').value = editing.category || ''; $('#p-sku').value = editing.sku || ''; $('#p-description').value = editing.description || ''; $('#p-payment-link').value = editing.payment_link || ''; $('#p-active').checked = editing.active !== false;
     $('#p-more').open = Boolean(editing.category || editing.description || editing.sku || editing.payment_link);
     $('#delete-product').hidden = Boolean(editing.isNew);
@@ -198,8 +201,8 @@
     event.preventDefault(); readVariants();
     const name = $('#p-name').value.trim();
     if (!name) { $('#p-name').focus(); return ui.toast('Give the product a name.', 'error'); }
-    const currency = ($('#p-currency').value.trim() || 'AMD').toUpperCase();
-    if (!/^[A-Z]{3}$/.test(currency)) { $('#p-currency').focus(); return ui.toast('Currency is a 3-letter code, e.g. AMD, USD, EUR.', 'error'); }
+    const currency = $('#p-currency').value.trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(currency)) { $('#p-currency').focus(); return ui.toast('Add the currency as a 3-letter code, e.g. USD, EUR, GBP.', 'error'); }
     let paymentLink = $('#p-payment-link').value.trim();
     if (paymentLink && !/^https?:\/\//i.test(paymentLink)) paymentLink = `https://${paymentLink}`;
     if (paymentLink && !/^https:\/\/[^\s.]+\.[^\s]+$/i.test(paymentLink)) { $('#p-more').open = true; $('#p-payment-link').focus(); return ui.toast('The payment link must be a full https:// link.', 'error'); }
@@ -299,6 +302,7 @@
     $('#import-summary').innerHTML = found
       ? `<div class="products-summary-head"><span class="products-summary-icon">✓</span><div><strong>${summary.count} product${summary.count === 1 ? '' : 's'} found in ${escapeHtml(label)}</strong><small>${result.total} row${result.total === 1 ? '' : 's'}${importState.sheetUrl ? ' · re-read every hour after importing' : ''}</small></div></div>
          <ul>${summary.names.map(item => `<li>${escapeHtml(item.name)}${item.variants ? ` <small>${item.variants} variants</small>` : ''}</li>`).join('')}${summary.count > summary.names.length ? `<li class="more">and ${summary.count - summary.names.length} more…</li>` : ''}</ul>
+         ${result.map.currency === undefined ? `<label class="products-import-currency"><span>Currency of these prices</span><input class="ui-input" id="import-currency" maxlength="3" placeholder="e.g. USD" value="${escapeHtml(defaultCurrency())}"></label>` : ''}
          <p class="products-hint">Columns: ${used} <button type="button" class="ui-link" id="change-columns">Change</button></p>`
       : `<div class="products-summary-head warn"><span class="products-summary-icon">!</span><div><strong>Which column has the product name?</strong><small>We could not tell from the headers. Choose it below.</small></div></div>`;
     $('#import-summary').hidden = false;
@@ -310,12 +314,15 @@
   $('#import-run').addEventListener('click', () => {
     const map = {}; $('#mapping-rows').querySelectorAll('[data-map]').forEach(select => { if (select.value !== '') map[select.dataset.map] = Number(select.value); });
     if (map.name === undefined) { $('#import-mapping').hidden = false; return importError('Choose which column has the product name.'); }
-    runImport({ rows: importState.rows, sheetUrl: importState.sheetUrl, map });
+    const currencyInput = $('#import-currency');
+    const currency = currencyInput ? currencyInput.value.trim().toUpperCase() : defaultCurrency();
+    if (map.currency === undefined && !/^[A-Z]{3}$/.test(currency)) { currencyInput?.focus(); return importError('Add the currency of these prices as a 3-letter code, e.g. USD, EUR, GBP.'); }
+    runImport({ rows: importState.rows, sheetUrl: importState.sheetUrl, map, currency });
   });
-  async function runImport({ rows = null, sheetUrl = '', map, quiet = false }) {
+  async function runImport({ rows = null, sheetUrl = '', map, currency = '', quiet = false }) {
     ui.busy(sheetUrl ? 'Syncing your sheet…' : 'Importing…'); $('#import-run').disabled = true;
     try {
-      const response = await api.authenticatedFetch('/.netlify/functions/automation-catalog-import', { method: 'POST', body: JSON.stringify({ business_id: businessId, action: 'import', map, currency: products[0]?.currency || 'AMD', ...(sheetUrl ? { sheet_url: sheetUrl } : { rows }) }) });
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-catalog-import', { method: 'POST', body: JSON.stringify({ business_id: businessId, action: 'import', map, currency: currency || defaultCurrency(), ...(sheetUrl ? { sheet_url: sheetUrl } : { rows }) }) });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.message || 'The import failed.');
       await load(); renderSettings(); render();

@@ -33,14 +33,17 @@ export async function handler(event) {
     if (body.action !== 'import') return json(400, { error: 'invalid_action' });
     const map = Object.fromEntries(Object.entries(body.map || {}).filter(([field, index]) => CATALOG_FIELDS.includes(field) && Number.isInteger(Number(index)) && index !== '' && Number(index) >= 0 && Number(index) < headers.length).map(([field, index]) => [field, Number(index)]));
     if (map.name === undefined) return json(400, { error: 'name_column_required', message: 'Choose which column has the product name.' });
-    const products = rowsToProducts(data, map, { defaultCurrency: /^[A-Z]{3}$/.test(String(body.currency || '')) ? body.currency : 'USD' });
+    // Prices without a currency column use the currency the owner chose; nothing is assumed (businesses are in many countries).
+    const currency = /^[A-Z]{3}$/.test(String(body.currency || '')) ? String(body.currency) : '';
+    if (map.currency === undefined && !currency) return json(400, { error: 'currency_required', message: 'Add the currency of these prices, e.g. USD, EUR or GBP.' });
+    const products = rowsToProducts(data, map, { defaultCurrency: currency || 'USD' });
     if (!products.length) return json(400, { error: 'no_products', message: 'No product names were found in that column.' });
     const source = sheetUrl ? sheetSourceKind(sheetUrl) : 'import';
     if (sheetUrl && !source) return json(400, { error: 'sheet_link_invalid', message: MESSAGES.sheet_link_invalid });
     const result = await importProducts({ businessId: business.id, products, source, replaceSource: Boolean(sheetUrl) });
     // One synced sheet per AI employee: connecting a new one (Google or Excel) replaces the previous one.
     if (sheetUrl) await supabaseRequest(`/rest/v1/automation_product_sources?business_id=eq.${business.id}&kind=neq.${source}`, { method: 'DELETE' }).catch(() => null);
-    if (sheetUrl) await serviceUpsert('automation_product_sources', 'business_id,kind', { business_id: business.id, kind: source, url: sheetUrl.slice(0, 2000), column_map: map, status: 'active', last_synced_at: new Date().toISOString(), last_error: null, last_count: products.length, updated_at: new Date().toISOString() });
+    if (sheetUrl) await serviceUpsert('automation_product_sources', 'business_id,kind', { business_id: business.id, kind: source, url: sheetUrl.slice(0, 2000), column_map: { ...map, ...(currency ? { _currency: currency } : {}) }, status: 'active', last_synced_at: new Date().toISOString(), last_error: null, last_count: products.length, updated_at: new Date().toISOString() });
     // The AI starts using the catalog as soon as there are products (the owner can switch it off on the page).
     const catalog = await first(`/rest/v1/automation_tool_configs?business_id=eq.${business.id}&tool_type=eq.catalog&select=id&limit=1`);
     if (!catalog) await serviceUpsert('automation_tool_configs', 'business_id,tool_type', { business_id: business.id, tool_type: 'catalog', enabled: true, config: { reduce_stock: false } });
