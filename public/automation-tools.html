@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-tools.js?v=20261001-labels"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-tools.js?v=20261005-payment"></script>
 </head>
 <body class="ui" data-automation-page="tools">
   <div data-automation-header></div>
@@ -68,6 +68,19 @@
               <p class="ui-hint" style="margin:-4px 0 10px">Used only for orders. Questions for bookings (for example number of guests) are under <button class="ui-link" type="button" data-show-pane="calendar"><span class="type-booking-name">Bookings</span> →</button></p>
               <div class="required-field-list" id="order-fields"></div>
               <button class="ui-btn ghost sm ui-add" id="add-order-field" type="button">+ Add detail</button>
+              <h3 class="ui-subhead">Payment <span>Optional · asked after the questions above</span></h3>
+              <p class="ui-hint" style="margin:-4px 0 10px">Tick how customers can pay. The AI asks "How would you like to pay?" and offers only these.</p>
+              <div class="ui-check-list" id="payment-methods">
+                <label class="ui-check-card"><input type="checkbox" data-pay="cash"><span class="ui-check-box" aria-hidden="true"></span><span><strong>Cash on delivery</strong></span></label>
+                <label class="ui-check-card"><input type="checkbox" data-pay="card"><span class="ui-check-box" aria-hidden="true"></span><span><strong>Card on delivery</strong></span></label>
+                <label class="ui-check-card"><input type="checkbox" data-pay="bank_transfer"><span class="ui-check-box" aria-hidden="true"></span><span><strong>Bank transfer</strong><small>The AI gives your bank details</small></span></label>
+                <label class="ui-check-card"><input type="checkbox" data-pay="online"><span class="ui-check-box" aria-hidden="true"></span><span><strong>Pay online with a link</strong><small>The product's own payment link, or the general one below</small></span></label>
+              </div>
+              <div class="ui-field" id="payment-bank" style="margin-top:12px" hidden><label class="ui-label" for="payment-details">Bank details</label><textarea class="ui-textarea" id="payment-details" rows="2" maxlength="1000" placeholder="e.g. Ameriabank 1570 0000 0000 0000, Casa LLC"></textarea></div>
+              <div id="payment-online" style="margin-top:12px" hidden>
+                <div class="ui-field"><label class="ui-label" for="payment-link">General payment link <span class="ui-faint">· for products without their own link</span></label><input class="ui-input" id="payment-link" inputmode="url" maxlength="1000" placeholder="https://…"></div>
+                <div class="ui-check-list" style="margin-top:10px"><label class="ui-check-card"><input type="radio" name="payment-link-when" value="ask" checked><span class="ui-check-box" aria-hidden="true"></span><span><strong>When the customer chooses to pay online</strong><small>Other options (cash, card…) get no link</small></span></label><label class="ui-check-card"><input type="radio" name="payment-link-when" value="always"><span class="ui-check-box" aria-hidden="true"></span><span><strong>After every order</strong><small>Customers always pay with the link</small></span></label></div>
+              </div>
               <div class="ui-setting" style="margin-top:18px;border-top:1px solid var(--border);padding-top:16px"><span><strong>Mark new orders as confirmed</strong><small>Off: your team confirms price and stock first</small></span><input class="ui-switch" id="orders-auto-confirm" type="checkbox"></div>
               <h3 class="ui-subhead">Delivery times <span>Optional · for delivery and pickup orders</span></h3>
               <button class="ui-btn ghost sm" id="delivery-add" type="button">+ Delivery time slots</button>
@@ -124,7 +137,7 @@
               <div class="ui-inline-row"><div class="ui-field"><label class="ui-label" for="notify-language">Alert language</label><select class="ui-select" id="notify-language"><option value="en">English</option><option value="hy">Armenian</option><option value="ru">Russian</option></select></div><div class="ui-field"><span class="ui-label">&nbsp;</span><button class="ui-btn secondary" id="notify-test" type="button" data-icon="send">Send a test</button></div><span class="ui-hint" id="notify-test-state"></span></div>
             </div>
           </div>
-          <footer class="ui-card-foot ui-save-bar"><span id="tool-save-note">Applies to Instagram, WhatsApp and the test chat.</span><button class="ui-btn primary" id="save-tools" type="button">Save changes</button></footer>
+          <footer class="ui-card-foot ui-save-bar"><span id="tool-save-note">Applies to Instagram, WhatsApp, Telegram, Messenger and the test chat.</span><button class="ui-btn primary" id="save-tools" type="button">Save changes</button></footer>
         </section>
         <aside class="ui-card ui-tool-preview">
           <div class="ui-card-head"><div><h2 class="ui-h2" id="tool-preview-title">Example</h2><p>What your customer sees</p></div></div>

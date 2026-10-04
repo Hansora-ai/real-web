@@ -1,7 +1,7 @@
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
 import { first, rows, serviceInsert, serviceUpdate, serviceUpsert, supabaseRequest } from '../../lib/automation/db.mjs';
 import { executeFlowAdvance } from '../../lib/automation/flow-executor.mjs';
-import { getInstagramSenderProfile, sendInstagramAction, sendInstagramText } from '../../lib/automation/meta.mjs';
+import { getInstagramSenderProfile, sendInstagramAction, sendInstagramRich, sendInstagramText } from '../../lib/automation/meta.mjs';
 import { keepTyping } from '../../lib/automation/typing.mjs';
 import { flagFailedReply } from '../../lib/automation/failure.mjs';
 import { makeFlowStarter, maybeStartDmAutomation } from '../../lib/automation/dm-triggers.mjs';
@@ -16,9 +16,10 @@ import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
 import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
-import { mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
+import { mediaFallback, mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
 import { matchProductPhoto } from '../../lib/automation/product-match.mjs';
 import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia } from '../../lib/automation/turns.mjs';
+import { makeProductPhotoSender } from '../../lib/automation/product-photos.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
 
@@ -72,6 +73,9 @@ export async function handler(event){
     const mediaType=String(message.attachmentTypes?.[0]||'');
     const mediaUrl=message.kind==='story_reply'?message.storyUrl:['media','share','story_mention'].includes(message.kind)?message.attachmentUrl:'';
     const hasMedia=Boolean(mediaUrl)&&mediaType!=='file';
+    // Never answered by the AI (a story mention or a link opening without text): it must not count as the customer's
+    // newest message, or the question they wrote just before would go unanswered.
+    const noReply=!String(message.text||'').trim()&&['story_mention','referral'].includes(message.kind);
     // Show the customer's real name and @username: looked up once per customer, kept on later messages.
     // Name and photo: looked up when the photo is missing (at most once a day per person), e.g. someone who first
     // commented (Instagram only shares the photo once they write to you or tap a button).
@@ -83,9 +87,9 @@ export async function handler(event){
     const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:account.business_id,contact_id:contact.id,channel_connection_id:connection.id,channel_type:'instagram_dm',external_thread_id:message.senderId,status:'open',last_message_preview:shownText(message).slice(0,1000),last_message_at:occurredAt});
     // Saving the message, loading the chat memory and preparing actions run together.
     const [inbound,memory,actions]=await Promise.all([
-      serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:instagram:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:hasMedia?(mediaType==='audio'?'audio':mediaType==='video'?'video':'image'):'text',content:shownText(message),status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{sender_id:message.senderId,recipient_id:message.recipientId,...(hasMedia?{media_pending:true}:{})},occurred_at:occurredAt},{ignoreDuplicates:true}),
+      serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:message.externalEventId,idempotency_key:`meta:instagram:in:${message.externalEventId}`,direction:'inbound',sender_type:'customer',content_type:hasMedia?(mediaType==='audio'?'audio':mediaType==='video'?'video':'image'):'text',content:shownText(message),status:'received',billable:false,provider:'meta',provider_message_id:message.externalEventId,metadata:{sender_id:message.senderId,recipient_id:message.recipientId,...(noReply?{no_reply:true}:{}),...(hasMedia?{media_pending:true}:{})},occurred_at:occurredAt},{ignoreDuplicates:true}),
       loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,excludeExternalId:message.externalEventId}),
-      prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'instagram_dm',contact:{name:contact.display_name==='Instagram customer'?'':contact.display_name,externalId:message.senderId}})
+      prepareConversationActions({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,channel:'instagram_dm',contact:{name:contact.display_name==='Instagram customer'?'':contact.display_name,externalId:message.senderId},sendImage:makeProductPhotoSender({businessId:account.business_id,conversationId:conversation.id,provider:'meta',send:({url})=>sendInstagramRich({instagramUserId:account.provider_resource_id,recipientId:message.senderId,block:{type:'image',url},accessToken:decryptSecret(credential)}).then(result=>({messageId:String(result?.message_id||'')}))})})
     ]);
     // The message is saved first (so a question sent right after it waits for it); then the photo / voice note is
     // understood with the business and the latest messages as context, and the saved message is updated.
@@ -94,7 +98,9 @@ export async function handler(event){
       const context=await mediaContext({businessId:account.business_id,history:memory.history}).catch(()=>'');
       media=await understandMedia({url:mediaUrl,kind:['audio','video','image'].includes(mediaType)?mediaType:'',caption:message.text,context,store:{businessId:account.business_id,channel:'instagram_dm',conversationId:conversation.id,key:message.externalEventId},afterVisual:file=>matchProductPhoto({businessId:account.business_id,...file,caption:message.text})});
       understood=media?mediaMessage({source:message.kind==='media'?media.kind:message.kind,media,caption:message.text}):null;
-      await serviceUpdate('automation_messages',`id=eq.${inbound.id}`,{content:understood?.content||shownText(message),metadata:{sender_id:message.senderId,recipient_id:message.recipientId,media_pending:false,...(media?.mediaPath?{media_path:media.mediaPath,media_mime:media.mimeType}:{})}}).catch(error=>console.warn('media message update failed',{message:error?.message}));
+      // Could not be opened (too large, expired link…): the AI is told so, with the caption, instead of staying silent.
+      if(!understood&&media?.kind!=='audio')understood=mediaFallback({source:message.kind==='media'?'':message.kind,kind:mediaType==='video'||mediaType==='ig_reel'||mediaType==='reel'?'video':mediaType==='audio'?'audio':'image',title:message.attachmentTitle,caption:message.text});
+      await serviceUpdate('automation_messages',`id=eq.${inbound.id}`,{content:understood?.content||shownText(message),metadata:{sender_id:message.senderId,recipient_id:message.recipientId,media_pending:false,...(noReply?{no_reply:true}:{}),...(media?.mediaPath?{media_path:media.mediaPath,media_mime:media.mimeType}:{})}}).catch(error=>console.warn('media message update failed',{message:error?.message}));
       if(understood)await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{last_message_preview:understood.content.slice(0,1000)}).catch(()=>null);
       // A voice note counts as what the customer typed (for automations and the AI).
       if(understood&&media.kind==='audio')message.text=understood.aiText;

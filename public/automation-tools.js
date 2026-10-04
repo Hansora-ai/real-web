@@ -98,6 +98,13 @@
   $('#order-fields').addEventListener('click', event => { const button = event.target.closest('button[data-remove]'); if (!button) return; readOrderFields(); state.orders.config.required_fields.splice(Number(button.dataset.remove), 1); renderOrderFields(); markDirty(); });
   ['calendar','orders','leads'].forEach(tool => $(`#${tool}-enabled`).addEventListener('change', event => { state[tool].enabled = event.target.checked; renderStatuses(); }));
   // Delivery time slots (orders): "N deliveries per X minutes"; uses the working hours from Bookings.
+  // Payment: the bank details / link fields only show for the options that use them.
+  function showPaymentDetails() { const on = method => document.querySelector(`#payment-methods [data-pay="${method}"]`).checked; $('#payment-bank').hidden = !on('bank_transfer'); $('#payment-online').hidden = !on('online'); }
+  $('#payment-methods').addEventListener('change', showPaymentDetails);
+  function readPayment() {
+    let link = $('#payment-link').value.trim(); if (link && !/^https?:\/\//i.test(link)) link = `https://${link}`;
+    return { methods: [...document.querySelectorAll('#payment-methods [data-pay]:checked')].map(input => input.dataset.pay), details: $('#payment-details').value.trim().slice(0, 1000), link: link.slice(0, 1000), link_when: document.querySelector('input[name="payment-link-when"]:checked')?.value === 'always' ? 'always' : 'ask' };
+  }
   function showDelivery(on) { $('#delivery-settings').hidden = !on; $('#delivery-add').hidden = on; renderDeliverySummary(); }
   function renderDeliverySummary() {
     const per = Math.max(1, Math.round(Number($('#delivery-per').value)) || 1), windowText = $('#delivery-window').selectedOptions[0]?.textContent || '';
@@ -233,6 +240,11 @@
     showDelivery(Boolean(delivery.enabled));
     $('#order-confirmation').value = state.orders.config.confirmation_message || '';
     $('#order-instructions').value = state.orders.config.instructions || '';
+    const payment = state.orders.config.payment || {};
+    document.querySelectorAll('#payment-methods [data-pay]').forEach(input => { input.checked = (payment.methods || []).includes(input.dataset.pay); });
+    $('#payment-details').value = payment.details || ''; $('#payment-link').value = payment.link || '';
+    document.querySelectorAll('input[name="payment-link-when"]').forEach(input => { input.checked = input.value === (payment.link_when === 'always' ? 'always' : 'ask'); });
+    showPaymentDetails();
     $('#booking-instructions').value = c.instructions || '';
     $('#lead-signals').value = state.leads.config.signals || '';
     renderLeadQuestions();
@@ -323,7 +335,7 @@
     c.required_fields = (c.required_fields || []).filter(Boolean).slice(0, 15);
     state.calendar.enabled = $('#calendar-enabled').checked;
     state.orders.enabled = $('#orders-enabled').checked;
-    state.orders.config = { required_fields: state.orders.config.required_fields.filter(Boolean), auto_confirm:$('#orders-auto-confirm').checked, confirmation_message:$('#order-confirmation').value.trim().slice(0, 1000), instructions:$('#order-instructions').value.trim().slice(0, 3000), delivery_slots:{ enabled:!$('#delivery-settings').hidden, per_window:Math.min(500, Math.max(1, Math.round(Number($('#delivery-per').value)) || 1)), window_minutes:Number($('#delivery-window').value), lead_minutes:Number($('#delivery-lead').value) } };
+    state.orders.config = { required_fields: state.orders.config.required_fields.filter(Boolean), auto_confirm:$('#orders-auto-confirm').checked, confirmation_message:$('#order-confirmation').value.trim().slice(0, 1000), instructions:$('#order-instructions').value.trim().slice(0, 3000), payment:readPayment(), delivery_slots:{ enabled:!$('#delivery-settings').hidden, per_window:Math.min(500, Math.max(1, Math.round(Number($('#delivery-per').value)) || 1)), window_minutes:Number($('#delivery-window').value), lead_minutes:Number($('#delivery-lead').value) } };
     c.instructions = $('#booking-instructions').value.trim().slice(0, 3000);
     readPlaces();
     c.count_by = $('#booking-count-by').value === 'people' ? 'people' : 'bookings';
@@ -347,6 +359,9 @@
     if (c.count_by !== 'people' && new Set((c.places || []).map(place => place.name.toLowerCase())).size !== (c.places || []).length) return [`Each ${typeNames.place.toLowerCase()} name must be different.`, 'calendar'];
     if (new Set((c.required_fields || []).map(field => field.toLowerCase())).size !== (c.required_fields || []).length) return ['Each booking detail must be different.', 'calendar'];
     if (state.orders.enabled && !state.orders.config.required_fields.length) return ['Add at least one required order detail.', 'orders'];
+    const payment = state.orders.config.payment || {};
+    if (state.orders.enabled && payment.link && !/^https:\/\/[^\s.]+\.[^\s]+$/i.test(payment.link)) return ['The payment link must be a full https:// link.', 'orders'];
+    if (state.orders.enabled && (payment.methods || []).includes('bank_transfer') && !payment.details) return ['Add your bank details, or untick Bank transfer.', 'orders'];
     if (new Set(state.orders.config.required_fields.map(field => field.toLowerCase())).size !== state.orders.config.required_fields.length) return ['Each required order detail must be different.', 'orders'];
     const email = state.notifications.email; if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return ['Enter a valid alert email or leave it empty.', 'notifications'];
     return null;

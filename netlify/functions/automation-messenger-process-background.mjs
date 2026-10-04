@@ -7,12 +7,13 @@ import { keepTyping } from '../../lib/automation/typing.mjs';
 import { flagFailedReply } from '../../lib/automation/failure.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
 import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
-import { mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
+import { mediaFallback, mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
 import { matchProductPhoto } from '../../lib/automation/product-match.mjs';
 import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia } from '../../lib/automation/turns.mjs';
 import { phonePauseExpired } from '../../lib/automation/whatsapp.mjs';
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
-import { getMessengerProfile, sendMessengerAction, sendMessengerText } from '../../lib/automation/messenger.mjs';
+import { getMessengerProfile, sendMessengerAction, sendMessengerImage, sendMessengerText } from '../../lib/automation/messenger.mjs';
+import { makeProductPhotoSender } from '../../lib/automation/product-photos.mjs';
 
 const json = (statusCode, body) => ({ statusCode, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) });
 
@@ -64,7 +65,7 @@ export async function handler(event) {
     const [inbound, memory, actions] = await Promise.all([
       serviceInsert('automation_messages', { business_id: account.business_id, conversation_id: conversation.id, external_message_id: message.externalEventId, idempotency_key: `messenger:in:${message.externalEventId}`, direction: 'inbound', sender_type: 'customer', content_type: hasMedia ? parts.kind : 'text', content: shown, status: 'received', billable: false, provider: 'meta', provider_message_id: message.externalEventId, metadata: { sender_id: chatId, page_id: message.pageId, ...(hasMedia ? { media_pending: true } : {}) }, occurred_at: occurredAt }, { ignoreDuplicates: true }),
       loadConversationMemory({ businessId: account.business_id, conversationId: conversation.id, contactId: contact.id, excludeExternalId: message.externalEventId }),
-      prepareConversationActions({ businessId: account.business_id, conversationId: conversation.id, contactId: contact.id, channel: 'messenger', contact: { name: customerName === 'Messenger customer' ? '' : customerName, externalId: chatId } })
+      prepareConversationActions({ businessId: account.business_id, conversationId: conversation.id, contactId: contact.id, channel: 'messenger', contact: { name: customerName === 'Messenger customer' ? '' : customerName, externalId: chatId }, sendImage: makeProductPhotoSender({ businessId: account.business_id, conversationId: conversation.id, provider: 'meta', send: ({ url }) => sendMessengerImage({ pageId: message.pageId, pageToken, recipientId: chatId, url }) }) })
     ]);
     if (!inbound) { await markProcessed(webhook.id, account.business_id); return json(200, { ok: true, duplicate: true }); }
     // A paused chat comes back to the AI once the owner has been quiet for a while (like WhatsApp on the phone).
@@ -83,7 +84,7 @@ export async function handler(event) {
         const context = await mediaContext({ businessId: account.business_id, history: memory.history }).catch(() => '');
         media = await understandMedia({ url: message.attachmentUrl, kind: mediaKind, caption: parts.text, context, store: { businessId: account.business_id, channel: 'messenger', conversationId: conversation.id, key: message.externalEventId }, afterVisual: file => matchProductPhoto({ businessId: account.business_id, ...file, caption: parts.text }) });
       } catch (error) { console.warn('messenger media understanding failed', { message: error?.message }); }
-      understood = media ? mediaMessage({ source: media.kind, media, caption: parts.text }) : null;
+      understood = media ? mediaMessage({ source: media.kind, media, caption: parts.text }) : mediaFallback({ kind: mediaKind, caption: parts.text });
       if (understood) aiText = understood.aiText;
       await serviceUpdate('automation_messages', `id=eq.${inbound.id}`, { content: understood?.content || shown, metadata: { sender_id: chatId, page_id: message.pageId, media_pending: false, ...(media?.mediaPath ? { media_path: media.mediaPath, media_mime: media.mimeType } : {}) } }).catch(() => null);
       if (understood) await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { last_message_preview: understood.content.slice(0, 1000) }).catch(() => null);

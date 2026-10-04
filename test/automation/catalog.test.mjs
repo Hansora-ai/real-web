@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { googleSheetCsvUrl, guessColumnMap, parseCsv, parsePrice, rowsToProducts, searchProducts, resolveOrderItems, reduceStockForOrder } from '../../lib/automation/catalog.mjs';
+import { googleSheetCsvUrl, guessColumnMap, parseCsv, parsePrice, rowsToProducts, searchProducts, resolveOrderItems, reduceStockForOrder, restoreStockForOrder } from '../../lib/automation/catalog.mjs';
 
 test('prices and CSV are read the way people write them', () => {
   assert.equal(parsePrice('12 900 ֏'), 12900);
@@ -55,12 +55,26 @@ test('a question in another language still shows the small catalog to pick from'
   assert.match(result.note, /another language/);
 });
 
-test('order items from refs, and stock reduced per variant', async () => {
-  const items = await resolveOrderItems({ businessId: 'b1', text: 'aaaaaaaa (Grey) x2, zzzz, bbbbbbbb' }, { first: async path => catalog.find(item => path.includes(item.id.slice(0, 8))) || null });
+test('order items are checked against the catalog, and stock goes out and back per variant', async () => {
+  const first = async path => catalog.find(item => path.includes(item.id.slice(0, 8))) || null;
+  const { items, problems } = await resolveOrderItems({ businessId: 'b1', text: 'aaaaaaaa (Grey) x2, bbbbbbbb' }, { first });
+  assert.deepEqual(problems, []);
   assert.deepEqual(items.map(item => [item.name, item.variant, item.quantity]), [['Oslo sofa', 'Grey', 2], ['Desk lamp', '', 1]]);
+  // A colour that does not exist, an out-of-stock variant, too many, no variant chosen, and a bad ref are refused.
+  const bad = await resolveOrderItems({ businessId: 'b1', text: 'aaaaaaaa (Green) x1, aaaaaaaa (Blue), aaaaaaaa (Grey) x3, aaaaaaaa, zzzz' }, { first });
+  assert.equal(bad.items.length, 0);
+  assert.match(bad.problems[0], /does not come in "Green"; it comes in: Grey, Blue/);
+  assert.match(bad.problems[1], /Blue\) is out of stock/);
+  assert.match(bad.problems[2], /only 2 of Oslo sofa \(Grey\) left/);
+  assert.match(bad.problems[3], /ask which one \(Grey, Blue\)/);
+  assert.match(bad.problems[4], /not in the "ref \(variant\) xQuantity" form/);
   const updates = [];
-  await reduceStockForOrder({ businessId: 'b1', items }, { first: async path => catalog.find(item => path.includes(item.id)) || null, serviceUpdate: async (table, query, value) => updates.push(value) });
+  const deps = { first: async path => catalog.find(item => path.includes(item.id)) || null, serviceUpdate: async (table, query, value) => updates.push(value) };
+  await reduceStockForOrder({ businessId: 'b1', items }, deps);
   assert.deepEqual(updates[0].variants.map(v => v.stock), [0, 0]);
   assert.equal(updates[0].stock, 0);
   assert.equal(updates[1].stock, null);
+  await restoreStockForOrder({ businessId: 'b1', items: items.slice(0, 1) }, deps);
+  assert.deepEqual(updates[2].variants.map(v => v.stock), [4, 0]);
+  assert.equal(updates[2].stock, 4);
 });

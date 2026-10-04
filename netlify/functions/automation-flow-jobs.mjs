@@ -5,15 +5,13 @@ import { followUpConfig, preparePrivateReply } from '../../lib/automation/commen
 import { sendInstagramMessage } from '../../lib/automation/meta.mjs';
 import { serviceInsert } from '../../lib/automation/db.mjs';
 import { first, rows, serviceUpdate, supabaseRequest } from '../../lib/automation/db.mjs';
+import { isInternalCall, isScheduledRun } from '../../lib/automation/schedule.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
 
 export async function handler(event){
   if(event.httpMethod!=='POST'&&event.httpMethod!=='GET')return json(405,{error:'method_not_allowed'});
-  const internal=String(process.env.HANSORA_AUTOMATION_INTERNAL_SECRET||'');
-  const provided=String(event.headers?.['x-hansora-internal-secret']||event.headers?.['X-Hansora-Internal-Secret']||'');
-  const scheduled=String(event.headers?.['x-nf-event']||event.headers?.['X-Nf-Event']||'')==='schedule';
-  if(!scheduled&&!(internal.length>=32&&provided===internal))return json(401,{error:'unauthorized'});
+  if (!isScheduledRun(event) && !isInternalCall(event)) return json(401, { error: 'unauthorized' });
   const jobs=rows(await supabaseRequest(`/rest/v1/automation_flow_jobs?status=eq.pending&run_at=lte.${encodeURIComponent(new Date().toISOString())}&select=*&order=run_at.asc&limit=25`));
   const results=[];
   for(const job of jobs){
