@@ -98,3 +98,17 @@ test('the photo is described with the business and the chat as context, and a pr
   assert.match(prompt, /is that it/);
   assert.match(prompt, /Relevance:/);
 });
+
+test('the description keeps exact numbers and is not cut short by thinking', async () => {
+  let sent = null;
+  const fetchImpl = async (url, options = {}) => {
+    if (String(url).includes('x.example/shot')) return new Response(new Uint8Array([1]), { headers: { 'content-type': 'image/png' } });
+    sent = JSON.parse(options.body);
+    return new Response(JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ thought: true, text: 'thinking…' }, { text: 'Pricing page: 5,350 credits for $49.99 (selected).' }] } }] }), { headers: { 'content-type': 'application/json' } });
+  };
+  const media = await understandMedia({ url: 'https://x.example/shot.png', fetchImpl });
+  assert.equal(media.description, 'Pricing page: 5,350 credits for $49.99 (selected).');
+  assert.equal(sent.generationConfig.maxOutputTokens, 2048);
+  assert.ok(sent.generationConfig.thinkingConfig);
+  assert.match(sent.contents[0].parts[1].text, /Copy every visible number, price/);
+});

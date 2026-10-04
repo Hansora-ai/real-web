@@ -34,6 +34,6 @@ test('several quick questions without a reply are all answered together', async 
   assert.deepEqual(burst, ['how can I get that', 'when do I see the issue?']);
   const note = burstNote(burst);
   assert.match(note, /1\. how can I get that\n2\. when do I see the issue\?/);
-  assert.match(note, /Answer all of them/);
+  assert.match(note, /answer every one of them explicitly/);
   assert.equal(burstNote(['only one']), '');
 });
