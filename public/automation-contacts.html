@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css"><link rel="stylesheet" href="automation-contacts.css?v=20261001">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-contacts.js?v=20261001"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-contacts.js?v=20261004-channels"></script>
 </head>
 <body class="ui" data-automation-page="contacts">
   <div data-automation-header></div>
@@ -24,7 +24,7 @@
       <section class="ui-card contacts-card">
         <div class="contacts-toolbar">
           <label class="contacts-search"><span data-icon="search"></span><input id="contacts-search" type="search" placeholder="Search name, @username, email, phone"></label>
-          <select class="ui-select" id="contacts-channel" aria-label="Channel"><option value="">All channels</option><option value="instagram_dm">Instagram</option><option value="whatsapp">WhatsApp</option><option value="phone">Phone</option></select>
+          <select class="ui-select" id="contacts-channel" aria-label="Channel"><option value="">All channels</option><option value="instagram_dm">Instagram</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="messenger">Messenger</option><option value="phone">Phone</option></select>
           <select class="ui-select" id="contacts-tag" aria-label="Tag"><option value="">All tags</option></select>
         </div>
         <div class="contacts-table" role="table" aria-label="Contacts">

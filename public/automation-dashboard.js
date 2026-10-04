@@ -12,7 +12,7 @@
   const preview = api.isLocalPreview && location.protocol !== 'file:';
   const setupHref = `automation-setup.html${preview ? '?preview=1' : ''}`;
   $('#create-link').href = setupHref; $('#empty-create').href = setupHref;
-  const CHANNEL_ICONS = { instagram_dm:['instagram','Instagram DMs'], instagram_comments:['comment','Instagram comments'], whatsapp:['whatsapp','WhatsApp'], phone:['phone','Phone calls'] };
+  const CHANNEL_ICONS = { instagram_dm:['instagram','Instagram DMs'], instagram_comments:['comment','Instagram comments'], whatsapp:['whatsapp','WhatsApp'], telegram:['telegram','Telegram'], messenger:['messenger','Messenger'], phone:['phone','Phone calls'] };
 
   let businesses;
   if (api.isLocalPreview) {
@@ -44,7 +44,7 @@
       <div class="ui-employee-top"><div class="ui-avatar sm" data-avatar><b>${escapeHtml(name.trim().charAt(0).toUpperCase() || 'A')}</b><span class="ui-presence${status === 'active' ? ' on' : ''}"></span></div><span class="ui-badge dot ${status === 'active' ? 'green live' : status === 'paused' ? 'amber' : 'blue'}">${escapeHtml(capitalize(status))}</span></div>
       <h2>${escapeHtml(name)}</h2><p>${escapeHtml(business.name)}${business.category ? ` · ${escapeHtml(api.businessType(business.category)?.label || business.category)}` : ''}</p>
       <p class="ui-employee-ig" data-ig ${igLabel ? '' : 'hidden'}>${ui.icon('instagram')}<span>${escapeHtml(igLabel)}</span></p>
-      <div class="ui-employee-channels">${icons}<span>${live} of 4 live</span></div>
+      <div class="ui-employee-channels">${icons}<span>${live} of ${Object.keys(CHANNEL_ICONS).length} live</span></div>
       <div class="ui-employee-foot"><span>${escapeHtml(languages)}</span><span>Edited ${escapeHtml(updated)}</span></div>
     </a>`;
   }).join('') + `<a class="ui-employee-new" href="${setupHref}"><span>${ui.icon('sparkle')}</span><strong>New AI employee</strong><small>For another business or brand</small></a>`;

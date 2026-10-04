@@ -195,14 +195,18 @@
       instagram_dm: ['Instagram DMs', 'Answer private messages with your business knowledge', 'instagram', 'instagram'],
       instagram_comments: ['Instagram comments', 'Reply to comments and follow up in DMs', 'comment', 'instagram'],
       whatsapp: ['WhatsApp', 'Handle customer chats on your business number', 'whatsapp', 'whatsapp'],
-      phone: ['Phone calls', 'Answer calls with a natural voice', 'phone', 'phone']
+      phone: ['Phone calls', 'Answer calls with a natural voice', 'phone', 'phone'],
+      telegram: ['Telegram', 'Answer chats on your Telegram account (Telegram Business)', 'telegram', 'telegram'],
+      messenger: ['Messenger', 'Answer Facebook Messenger chats of your Page', 'messenger', 'messenger']
     };
     const businessQuery = `business=${encodeURIComponent(business.id)}${previewLinks ? '&preview=1' : ''}`;
     const destinations = {
       instagram_dm: `automation-connect.html?channel=instagram&${businessQuery}`,
       instagram_comments: `automation-workflows.html?${businessQuery}`,
       whatsapp: `automation-connect.html?channel=whatsapp&${businessQuery}`,
-      phone: `automation-phone.html?${businessQuery}`
+      phone: `automation-phone.html?${businessQuery}`,
+      telegram: `automation-connect.html?channel=telegram&${businessQuery}`,
+      messenger: `automation-connect.html?channel=messenger&${businessQuery}`
     };
     const channels = (business.automation_channel_connections || []).sort((a, b) => a.setup_order - b.setup_order);
     $('#channel-stack').innerHTML = channels.map(channel => {
@@ -215,7 +219,7 @@
     }).join('');
     const connected = channels.filter(channel => channel.status === 'connected').length;
     const count = $('#channel-count');
-    count.textContent = `${connected} of ${channels.length || 4} live`;
+    count.textContent = `${connected} of ${channels.length || 6} live`;
     count.classList.toggle('green', connected > 0);
   }
 

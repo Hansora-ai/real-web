@@ -2,6 +2,8 @@ import { authenticateRequest, isUuid } from '../../lib/sales-agent/auth.mjs';
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
 import { first, serviceInsert, serviceUpdate } from '../../lib/automation/db.mjs';
 import { sendInstagramText } from '../../lib/automation/meta.mjs';
+import { sendTelegramText } from '../../lib/automation/telegram.mjs';
+import { sendMessengerText } from '../../lib/automation/messenger.mjs';
 import { listWhatsAppTemplates, renderWhatsAppTemplate, sendWhatsAppTemplate, sendWhatsAppText, WHATSAPP_SERVICE_WINDOW_MS } from '../../lib/automation/whatsapp.mjs';
 
 const HEADERS={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'POST, OPTIONS'};
@@ -20,11 +22,23 @@ export async function handler(event){
     const conversation=await first(`/rest/v1/automation_conversations?id=eq.${body.conversation_id}&business_id=eq.${business.id}&select=*&limit=1`);if(!conversation)return json(404,{error:'conversation_not_found'});
     if(conversation.ai_enabled||conversation.status!=='human_handling')return json(409,{error:'take_over_before_replying'});
     const contact=await first(`/rest/v1/automation_contacts?id=eq.${conversation.contact_id}&business_id=eq.${business.id}&select=*&limit=1`);if(!contact)return json(404,{error:'contact_not_found'});
-    if(!['instagram_dm','whatsapp'].includes(conversation.channel_type))return json(409,{error:'channel_reply_not_supported'});
+    if(!['instagram_dm','whatsapp','telegram','messenger'].includes(conversation.channel_type))return json(409,{error:'channel_reply_not_supported'});
+    let providerMessageId='',provider='meta';
+    if(['telegram','messenger'].includes(conversation.channel_type)){
+      if(template)return json(400,{error:'template_whatsapp_only'});
+      if(conversation.channel_type==='telegram'){
+        const account=await first(`/rest/v1/automation_provider_resources?business_id=eq.${business.id}&provider=eq.telegram&resource_type=eq.telegram_account&status=eq.active&select=*&limit=1`);if(!account)return json(409,{error:'telegram_not_connected'});
+        const sent=await sendTelegramText({businessConnectionId:account.provider_resource_id,chatId:contact.external_contact_id,text:message});providerMessageId=sent.messageId;provider='telegram';
+      }else{
+        const account=await first(`/rest/v1/automation_provider_resources?business_id=eq.${business.id}&provider=eq.meta&resource_type=eq.facebook_page&status=eq.active&select=*&limit=1`);if(!account)return json(409,{error:'messenger_not_connected'});
+        const credential=await first(`/rest/v1/automation_provider_credentials?provider_resource_id=eq.${account.id}&credential_type=eq.access_token&select=*&limit=1`);if(!credential)return json(409,{error:'channel_token_not_found'});
+        const sent=await sendMessengerText({pageId:account.provider_resource_id,pageToken:decryptSecret(credential),recipientId:contact.external_contact_id,text:message});providerMessageId=sent.messageId;
+      }
+      return await saveReply();
+    }
     const resourceType=conversation.channel_type==='whatsapp'?'whatsapp_account':'instagram_account';
     const account=await first(`/rest/v1/automation_provider_resources?business_id=eq.${business.id}&provider=eq.meta&resource_type=eq.${resourceType}&status=eq.active&select=*&limit=1`);if(!account)return json(409,{error:conversation.channel_type==='whatsapp'?'whatsapp_not_connected':'instagram_not_connected'});
     const credential=await first(`/rest/v1/automation_provider_credentials?provider_resource_id=eq.${account.id}&credential_type=eq.access_token&select=*&limit=1`);if(!credential)return json(409,{error:'channel_token_not_found'});
-    let providerMessageId='';
     if(conversation.channel_type==='whatsapp'){
       const lastInbound=await first(`/rest/v1/automation_messages?conversation_id=eq.${conversation.id}&direction=eq.inbound&select=occurred_at&order=occurred_at.desc&limit=1`);
       const windowOpen=Boolean(lastInbound)&&Date.now()-Date.parse(lastInbound.occurred_at)<=WHATSAPP_SERVICE_WINDOW_MS;
@@ -42,9 +56,12 @@ export async function handler(event){
       }
     }else if(template){return json(400,{error:'template_whatsapp_only'});
     }else{const sent=await sendInstagramText({instagramUserId:account.provider_resource_id,recipientId:contact.external_contact_id,text:message,accessToken:decryptSecret(credential)});providerMessageId=String(sent.message_id||'');}
-    const idempotency=`human:${user.id}:${body.conversation_id}:${providerMessageId||Date.now()}`;
-    const saved=await serviceInsert('automation_messages',{business_id:business.id,conversation_id:conversation.id,external_message_id:providerMessageId||null,idempotency_key:idempotency,direction:'outbound',sender_type:'human',content_type:'text',content:message,status:'sent',billable:false,provider:'meta',provider_message_id:providerMessageId||null,metadata:{sent_by_user_id:user.id,...(template?{whatsapp_template:{name:template.name,language:template.language}}:{})},occurred_at:new Date().toISOString()});
-    await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{last_message_preview:message.slice(0,1000),last_message_at:new Date().toISOString(),human_owner_user_id:user.id});
-    return json(200,{ok:true,message_id:saved?.id||null});
+    return await saveReply();
+    async function saveReply(){
+      const idempotency=`human:${user.id}:${body.conversation_id}:${providerMessageId||Date.now()}`;
+      const saved=await serviceInsert('automation_messages',{business_id:business.id,conversation_id:conversation.id,external_message_id:providerMessageId||null,idempotency_key:idempotency,direction:'outbound',sender_type:'human',content_type:'text',content:message,status:'sent',billable:false,provider,provider_message_id:providerMessageId||null,metadata:{sent_by_user_id:user.id,...(template?{whatsapp_template:{name:template.name,language:template.language}}:{})},occurred_at:new Date().toISOString()});
+      await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{last_message_preview:message.slice(0,1000),last_message_at:new Date().toISOString(),human_owner_user_id:user.id});
+      return json(200,{ok:true,message_id:saved?.id||null});
+    }
   }catch(error){console.error('automation-conversation-reply error',{message:error?.message,status:error?.status,providerStatus:error?.providerStatus});return json(Number(error?.status)||500,{error:Number(error?.status)>=500?'manual_reply_unavailable':String(error?.message||'manual_reply_failed')});}
 }
