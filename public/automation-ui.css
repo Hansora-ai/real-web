@@ -749,3 +749,4 @@ a.ui-row:hover .ui-chevron{transform:translateX(3px);color:var(--text)}
 .ui-history-main{display:grid;gap:2px;min-width:0}.ui-history-main b{font-size:13.5px;font-weight:600}.ui-history-main small{color:var(--text-3);font-size:12px}.ui-empty-text{color:var(--text-3);font-size:13.5px}
 .ui-password-form{display:grid;gap:10px;max-width:560px}.ui-password-status{margin:0;min-height:18px;font-size:13px}.ui-password-status[data-tone=error]{color:var(--red)}.ui-password-status[data-tone=success]{color:var(--green)}
 @media(max-width:760px){.ui-profile-grid{grid-template-columns:1fr}}
+.ui-msg-media{margin:2px 0 6px}.ui-msg-media img,.ui-msg-media video{display:block;max-width:min(260px,100%);max-height:320px;border-radius:12px;border:1px solid var(--border);object-fit:cover;background:var(--surface-2)}.ui-msg-media audio{width:min(260px,100%);height:36px}

@@ -23,7 +23,7 @@ test('a voice note is downloaded, transcribed and becomes what the customer said
     { match: 'api.elevenlabs.io/v1/speech-to-text', body: JSON.stringify({ text: 'Բարև, քանի՞ է պիցցան', language_code: 'hye' }) }
   ]);
   const media = await understandMedia({ url: 'https://cdn.example/voice.m4a', kind: 'audio', fetchImpl });
-  assert.deepEqual(media, { kind: 'audio', transcript: 'Բարև, քանի՞ է պիցցան' });
+  assert.equal(media.kind, 'audio'); assert.equal(media.transcript, 'Բարև, քանի՞ է պիցցան'); assert.equal(media.language, 'hye');
   const stt = fetchImpl.calls.find(call => call.url.includes('speech-to-text'));
   assert.equal(stt.options.headers['xi-api-key'], 'test-eleven');
   const shown = mediaMessage({ source: 'audio', media });
@@ -37,7 +37,7 @@ test('a photo is described by Gemini and answered with the caption or a default 
     { match: 'generativelanguage.googleapis.com', body: JSON.stringify({ candidates: [{ content: { parts: [{ text: 'A grey two-seat sofa.' }] } }] }) }
   ]);
   const media = await understandMedia({ url: 'https://lookaside.example/photo.jpg', fetchImpl });
-  assert.deepEqual(media, { kind: 'image', description: 'A grey two-seat sofa.' });
+  assert.equal(media.kind, 'image'); assert.equal(media.description, 'A grey two-seat sofa.'); assert.equal(media.mediaPath, '');
   const gemini = fetchImpl.calls.find(call => call.url.includes('generativelanguage'));
   assert.equal(gemini.options.headers['x-goog-api-key'], 'test-google');
   assert.match(gemini.options.body, /"mime_type":"image\/jpeg"/);
@@ -72,4 +72,29 @@ test('if a Gemini model name no longer exists, the next current one is used', as
   const media = await understandMedia({ url: 'https://x.example/pic.jpg', fetchImpl });
   assert.equal(media.description, 'A menu.');
   assert.ok(calls.some(url => url.includes('gemini-3.5-flash:')) && calls.some(url => url.includes('gemini-3-flash:')));
+});
+
+test('the voice language is passed on, so an English voice note is answered in English', () => {
+  const shown = mediaMessage({ source: 'audio', media: { kind: 'audio', transcript: 'How much is the pizza?', language: 'eng' } });
+  assert.match(shown.note, /They spoke English/);
+  assert.doesNotMatch(mediaMessage({ source: 'audio', media: { kind: 'audio', transcript: 'x', language: '' } }).note, /They spoke/);
+});
+
+test('the photo is described with the business and the chat as context, and a private copy is stored', async () => {
+  process.env.SUPABASE_URL = 'https://db.example';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'service';
+  const calls = [];
+  const fetchImpl = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    if (String(url).includes('cdn.example/pricing')) return new Response(new Uint8Array([1, 2]), { headers: { 'content-type': 'image/png' } });
+    if (String(url).includes('/storage/v1/object/automation-media/')) return new Response('{}', { status: 200 });
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'A pricing page. Relevance: matches your credit packs.' }] } }] }), { headers: { 'content-type': 'application/json' } });
+  };
+  const business = '11111111-1111-1111-1111-111111111111', conversation = '22222222-2222-2222-2222-222222222222';
+  const media = await understandMedia({ url: 'https://cdn.example/pricing.png', caption: 'is that it', context: 'Business: Hansora\nLatest messages:\nCustomer: how much?', store: { businessId: business, channel: 'instagram_dm', conversationId: conversation, key: 'mid.123' }, fetchImpl });
+  assert.equal(media.mediaPath, `${business}/instagram_dm/${conversation}/mid123.png`);
+  const prompt = JSON.parse(calls.find(call => call.url.includes('generativelanguage')).options.body).contents[0].parts[1].text;
+  assert.match(prompt, /Latest messages:\nCustomer: how much\?/);
+  assert.match(prompt, /is that it/);
+  assert.match(prompt, /Relevance:/);
 });
