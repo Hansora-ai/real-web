@@ -6,7 +6,7 @@ import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { getWhatsAppMediaUrl, markWhatsAppRead, phonePauseExpired, sendWhatsAppText } from '../../lib/automation/whatsapp.mjs';
 import { mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
-import { hasNewerCustomerMessage, mediaContext, waitForPendingMedia } from '../../lib/automation/turns.mjs';
+import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia } from '../../lib/automation/turns.mjs';
 import { keepTyping } from '../../lib/automation/typing.mjs';
 import { flagFailedReply } from '../../lib/automation/failure.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
@@ -86,13 +86,14 @@ export async function handler(event){
     const turn={conversationId:conversation.id,occurredAt:inbound.occurred_at||occurredAt,createdAt:inbound.created_at,messageId:inbound.id};
     if(await hasNewerCustomerMessage(turn)){await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,answered_by_newer_message:true});}
     const liveMemory=await waitForPendingMedia(turn)?await loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,excludeExternalId:message.externalEventId}):memory;
+    const pendingQuestions=burstNote(await unansweredCustomerMessages(turn));
     pendingReply={businessId:account.business_id,conversationId:conversation.id,customer:message.displayName||message.senderId,channel:'WhatsApp'};
     const aiResource=take(await aiResourceP);const affordable=take(await affordableP);
     if(!aiResource)throw new Error('ai_provider_agent_not_ready');
     // Pay as you go: no credits, no AI reply. The conversation goes to the owner instead.
     if(!affordable.ok){await handleOutOfCredits({businessId:account.business_id,conversationId:conversation.id,channel:'WhatsApp',customer:message.displayName||message.senderId,notifyOwner});await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,out_of_credits:true});}
     const mediaNote=understood?understood.note:message.contentType&&!['text','interactive'].includes(message.contentType)?'The latest customer message is a photo, video, voice note, file or location that you cannot open. Do not pretend to know its contents; use any caption, otherwise politely ask the customer to describe it in text, or offer a team member if it needs a human to review.':'';
-    const context=buildConversationContext({intro:['Continue this WhatsApp conversation. Keep the reply concise.',actions.contextLine,mediaNote].filter(Boolean),memory:liveMemory,after:[actions.liveBrief]});
+    const context=buildConversationContext({intro:['Continue this WhatsApp conversation. Keep the reply concise.',actions.contextLine,mediaNote].filter(Boolean),memory:liveMemory,after:[actions.liveBrief,pendingQuestions]});
     const aiStartedAt=Date.now();const preparedMs=aiStartedAt-startedAt;
     const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:aiText,context,channel:'whatsapp',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
     const aiMs=Date.now()-aiStartedAt;

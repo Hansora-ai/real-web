@@ -21,3 +21,19 @@ test('the newest message waits for an earlier photo still being read, then answe
   const gaveUp = await waitForPendingMedia({ conversationId: 'c1', occurredAt: '2026-10-04T12:00:05.000Z' }, { first: async () => ({ id: 'stuck' }), sleep: async () => { now += 5000; }, now: () => now, maxMs: 20000 });
   assert.equal(gaveUp, true);
 });
+
+test('several quick questions without a reply are all answered together', async () => {
+  const { unansweredCustomerMessages, burstNote } = await import('../../lib/automation/turns.mjs');
+  const rowsNewestFirst = [
+    { sender_type: 'customer', content: 'when do I see the issue?' },
+    { sender_type: 'customer', content: 'how can I get that' },
+    { sender_type: 'ai', content: 'Here is our pricing.' },
+    { sender_type: 'customer', content: 'hi' }
+  ];
+  const burst = await unansweredCustomerMessages({ conversationId: 'c1', occurredAt: '2026-10-04T12:00:00Z' }, { supabaseRequest: async () => rowsNewestFirst, rows: value => value });
+  assert.deepEqual(burst, ['how can I get that', 'when do I see the issue?']);
+  const note = burstNote(burst);
+  assert.match(note, /1\. how can I get that\n2\. when do I see the issue\?/);
+  assert.match(note, /Answer all of them/);
+  assert.equal(burstNote(['only one']), '');
+});
