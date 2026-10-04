@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-tools.js?v=20261005-payment"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-tools.js?v=20261005-generic"></script>
 </head>
 <body class="ui" data-automation-page="tools">
   <div data-automation-header></div>
@@ -76,7 +76,7 @@
                 <label class="ui-check-card"><input type="checkbox" data-pay="bank_transfer"><span class="ui-check-box" aria-hidden="true"></span><span><strong>Bank transfer</strong><small>The AI gives your bank details</small></span></label>
                 <label class="ui-check-card"><input type="checkbox" data-pay="online"><span class="ui-check-box" aria-hidden="true"></span><span><strong>Pay online with a link</strong><small>The product's own payment link, or the general one below</small></span></label>
               </div>
-              <div class="ui-field" id="payment-bank" style="margin-top:12px" hidden><label class="ui-label" for="payment-details">Bank details</label><textarea class="ui-textarea" id="payment-details" rows="2" maxlength="1000" placeholder="e.g. Ameriabank 1570 0000 0000 0000, Casa LLC"></textarea></div>
+              <div class="ui-field" id="payment-bank" style="margin-top:12px" hidden><label class="ui-label" for="payment-details">Bank details</label><textarea class="ui-textarea" id="payment-details" rows="2" maxlength="1000" placeholder="Bank name, account number (or IBAN), account holder"></textarea></div>
               <div id="payment-online" style="margin-top:12px" hidden>
                 <div class="ui-field"><label class="ui-label" for="payment-link">General payment link <span class="ui-faint">· for products without their own link</span></label><input class="ui-input" id="payment-link" inputmode="url" maxlength="1000" placeholder="https://…"></div>
                 <div class="ui-check-list" style="margin-top:10px"><label class="ui-check-card"><input type="radio" name="payment-link-when" value="ask" checked><span class="ui-check-box" aria-hidden="true"></span><span><strong>When the customer chooses to pay online</strong><small>Other options (cash, card…) get no link</small></span></label><label class="ui-check-card"><input type="radio" name="payment-link-when" value="always"><span class="ui-check-box" aria-hidden="true"></span><span><strong>After every order</strong><small>Customers always pay with the link</small></span></label></div>
@@ -90,7 +90,7 @@
                 <button class="ui-btn ghost sm" id="delivery-remove" type="button">Remove delivery time slots</button>
               </div>
               <div class="ui-field" style="margin-top:16px"><label class="ui-label" for="order-confirmation">Message after the order <span class="ui-faint">· optional</span></label><textarea class="ui-textarea" id="order-confirmation" rows="3" maxlength="1000" placeholder="Thank you for your order! Your order number is {number}. The courier will call you when the delivery starts."></textarea><span class="ui-hint">{number} becomes the order number. Leave empty and the AI writes a clear confirmation itself.</span></div>
-              <div class="ui-field" style="margin-top:16px"><label class="ui-label" for="order-instructions">Extra rules for the AI <span class="ui-faint">· optional</span></label><textarea class="ui-textarea" id="order-instructions" rows="3" maxlength="3000" placeholder="For example: we accept orders until 30 minutes before closing. Minimum order is 5,000 AMD. Delivery only inside the city."></textarea></div>
+              <div class="ui-field" style="margin-top:16px"><label class="ui-label" for="order-instructions">Extra rules for the AI <span class="ui-faint">· optional</span></label><textarea class="ui-textarea" id="order-instructions" rows="3" maxlength="3000" placeholder="For example: we accept orders until 30 minutes before closing. Minimum order is $50. Delivery only inside the city."></textarea></div>
             </div>
           </div>
           <div class="tool-pane" data-pane="leads" hidden>

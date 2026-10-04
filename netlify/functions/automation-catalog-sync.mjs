@@ -13,7 +13,7 @@ export async function handler(event) {
     try {
       const [headers, ...data] = await fetchSheetRows(source.url);
       if (!headers) throw new Error('sheet_empty');
-      const products = rowsToProducts(data.slice(0, 5000), source.column_map || {});
+      const products = rowsToProducts(data.slice(0, 5000), source.column_map || {}, { defaultCurrency: /^[A-Z]{3}$/.test(String(source.column_map?._currency || '')) ? source.column_map._currency : 'USD' });
       const result = await importProducts({ businessId: source.business_id, products, source: source.kind, replaceSource: true });
       await serviceUpdate('automation_product_sources', `id=eq.${source.id}`, { status: 'active', last_synced_at: new Date().toISOString(), last_error: null, last_count: products.length, updated_at: new Date().toISOString() });
       results.push({ id: source.id, ok: true, ...result });
