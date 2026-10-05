@@ -18,7 +18,7 @@ import { buildConversationContext, loadConversationMemory } from '../../lib/auto
 import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
 import { mediaFallback, mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
 import { matchProductPhoto } from '../../lib/automation/product-match.mjs';
-import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia } from '../../lib/automation/turns.mjs';
+import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia, waitForQuiet } from '../../lib/automation/turns.mjs';
 import { makeProductPhotoSender } from '../../lib/automation/product-photos.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
@@ -93,12 +93,12 @@ export async function handler(event){
     ]);
     // The message is saved first (so a question sent right after it waits for it); then the photo / voice note is
     // understood with the business and the latest messages as context, and the saved message is updated.
-    let media=null,understood=null;
+    let media=null,understood=null,otherReel=false;
     if(hasMedia&&inbound){
       const context=await mediaContext({businessId:account.business_id,history:memory.history}).catch(()=>'');
       // A shared reel's link is a web page, not a video. If it is the business's own reel, its video is read by id.
       let fileUrl=mediaUrl,mediaReason='';const report=reason=>{mediaReason=String(reason||'').slice(0,300);};
-      if(/^https:\/\/(www\.)?instagram\.com\//i.test(mediaUrl)){const own=await getInstagramMediaFile({mediaId:message.attachmentMediaId,pageUrl:mediaUrl,instagramUserId:account.provider_resource_id,accessToken:decryptSecret(credential),report});fileUrl=own?.url||'';}
+      if(/^https:\/\/(www\.)?instagram\.com\//i.test(mediaUrl)){const own=await getInstagramMediaFile({mediaId:message.attachmentMediaId,pageUrl:mediaUrl,instagramUserId:account.provider_resource_id,accessToken:decryptSecret(credential),report});fileUrl=own?.url||'';otherReel=!own;}
       media=fileUrl?await understandMedia({url:fileUrl,kind:['audio','video','image'].includes(mediaType)?mediaType:'',caption:message.text,context,store:{businessId:account.business_id,channel:'instagram_dm',conversationId:conversation.id,key:message.externalEventId},afterVisual:file=>matchProductPhoto({businessId:account.business_id,...file,caption:message.text}),report}):null;
       // Kept for the logs: what Instagram sent and whether it could be understood (videos and reels).
       console.log('instagram media',{kind:message.kind,type:mediaType,has_url:Boolean(mediaUrl),understood:Boolean(media),reason:mediaReason||null,media_kind:media?.kind||null,mime:media?.mimeType||null,ms:Date.now()-startedAt});
@@ -118,6 +118,22 @@ export async function handler(event){
       const activeSession=take(await sessionP);
       const started=await maybeStartDmAutomation({account,accessToken:accessTokenPlain,conversation,message,hasActiveSession:Boolean(activeSession)}).catch(error=>{console.error('automation DM trigger failed',{message:error?.message});return null;});
       if(started?.handled){await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,automation_started:started.workflowId||true});}
+    }
+    // A reel from another account cannot be watched (Instagram does not give apps that video), so the AI does not guess:
+    // the owner's message (Business tools → Handoff) is sent, the chat is marked "Needs you" and the AI pauses there.
+    if(otherReel&&settings.automatic_replies!==false&&conversation.ai_enabled!==false&&!['human_handling','resolved','archived'].includes(conversation.status)){
+      const [handoff,business]=await Promise.all([
+        first(`/rest/v1/automation_tool_configs?business_id=eq.${account.business_id}&tool_type=eq.handoff&select=config&limit=1`).catch(()=>null),
+        first(`/rest/v1/automation_businesses?id=eq.${account.business_id}&select=name&limit=1`).catch(()=>null)
+      ]);
+      const reply=String(handoff?.config?.unreadable_reel_message||'').trim().slice(0,1000);
+      if(reply){
+        const sent=await sendInstagramText({instagramUserId:account.provider_resource_id,recipientId:message.senderId,text:reply,accessToken:decryptSecret(credential)}).catch(error=>{console.error('reel handoff message not sent',{message:error?.message});return null;});
+        if(sent){replySent=true;await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:String(sent.message_id||'')||null,idempotency_key:`reel-handoff:${message.externalEventId}`,direction:'outbound',sender_type:'ai',content_type:'text',content:reply,status:'sent',billable:false,provider:'meta',provider_message_id:String(sent.message_id||'')||null,metadata:{auto_handoff:'other_account_reel'},occurred_at:new Date().toISOString()},{ignoreDuplicates:true}).catch(()=>null);}
+      }
+      await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{ai_enabled:false,status:'needs_attention',summary:'Shared a reel from another account. The AI cannot see that video, so a person should reply.'});
+      await notifyOwner({businessId:account.business_id,event:'handoff_requested',idempotencyKey:`reel-handoff:${message.externalEventId}`,data:{businessId:account.business_id,outcomeId:null,conversationId:conversation.id,business:business?.name||'',customer:contact.display_name,details:'Shared a reel from another account (the AI cannot see it)'}}).catch(error=>console.error('reel handoff alert failed',{message:error?.message}));
+      stopTyping();await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,handoff:'other_account_reel'});
     }
     // A story mention, shared post, photo or link opening without text gets no AI reply unless an automation handled it.
     // A photo, video or shared post the AI could understand is answered too; a story mention is not.
@@ -156,6 +172,8 @@ export async function handler(event){
     // One answer per turn: a newer message from the customer answers for both; an earlier photo still being read is
     // waited for, so this answer knows about it.
     const turn={conversationId:conversation.id,occurredAt:inbound?.occurred_at||occurredAt,createdAt:inbound?.created_at,messageId:inbound?.id};
+    // A text waits a few seconds: a video or photo the customer sent right after it is answered together with it.
+    if(!hasMedia)await waitForQuiet();
     if(await hasNewerCustomerMessage(turn)){pendingReply=null;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,answered_by_newer_message:true});}
     const liveMemory=await waitForPendingMedia(turn)?await loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,excludeExternalId:message.externalEventId}):memory;
     const pendingQuestions=burstNote(await unansweredCustomerMessages(turn));

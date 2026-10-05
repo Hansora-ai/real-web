@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-tools.js?v=20261005-nopay"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-tools.js?v=20261005-reel"></script>
 </head>
 <body class="ui" data-automation-page="tools">
   <div data-automation-header></div>
@@ -94,7 +94,11 @@
               <label class="ui-check-card"><input type="checkbox" data-rule="complaint" checked><span class="ui-check-box" aria-hidden="true"></span><span><strong>Complaint, refund or sensitive issue</strong><small>Acknowledges politely, then hands over</small></span></label>
               <label class="ui-check-card"><input type="checkbox" data-rule="missing_info"><span class="ui-check-box" aria-hidden="true"></span><span><strong>A price or detail is missing</strong><small>Hands over instead of promising to find out</small></span></label>
               <label class="ui-check-card"><input type="checkbox" data-rule="uncertain" checked><span class="ui-check-box" aria-hidden="true"></span><span><strong>It can’t answer after two tries</strong><small>No customer gets stuck in a loop</small></span></label>
-            </div></div>
+            </div>
+              <h3 class="ui-subhead" style="margin-top:22px">A reel from another account <span>Instagram does not let apps see those videos</span></h3>
+              <p class="ui-hint" style="margin:-4px 0 10px">The AI does not answer it: the chat is marked <b>Needs you</b>, you are notified, and this message is sent. Leave it empty to send nothing.</p>
+              <div class="ui-field"><textarea class="ui-textarea" id="handoff-reel-message" rows="2" maxlength="1000" placeholder="e.g. Thanks! One of our team will answer you here soon."></textarea><span class="ui-hint">Write it in your customers' language.</span></div>
+            </div>
           </div>
           <div class="tool-pane" data-pane="notifications" hidden>
             <div class="ui-pane-head"><div><h2>Notifications</h2><p>Hansora messages you on WhatsApp the moment the AI takes an order, books a time, or needs a person. Email is the backup.</p></div></div>
