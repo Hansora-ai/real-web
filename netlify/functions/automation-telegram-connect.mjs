@@ -23,7 +23,7 @@ export async function handler(event) {
         first(`/rest/v1/automation_channel_connections?business_id=eq.${business.id}&channel_type=eq.telegram&select=status,connected_account_label,last_error_code&limit=1`),
         first(`/rest/v1/automation_provider_resources?business_id=eq.${business.id}&provider=eq.telegram&resource_type=eq.telegram_account&status=in.(pending,active)&select=status,safe_config&order=updated_at.desc&limit=1`)
       ]);
-      return json(200, { status: channel?.status || 'not_connected', label: channel?.connected_account_label || '', error: channel?.last_error_code || null, linked: Boolean(resource?.safe_config?.telegram_user_id), step: resource?.status === 'active' ? 'connected' : resource?.safe_config?.telegram_user_id ? 'add_bot' : resource ? 'open_link' : 'start' });
+      return json(200, { status: channel?.status || 'not_connected', label: channel?.connected_account_label || '', error: channel?.last_error_code || null, linked: Boolean(resource?.safe_config?.telegram_user_id), premium_missing: resource?.safe_config?.premium === false && !resource?.safe_config?.telegram_user_id, step: resource?.status === 'active' ? 'connected' : resource?.safe_config?.telegram_user_id ? 'add_bot' : resource ? 'open_link' : 'start' });
     }
     if (body.action !== 'start') return json(400, { error: 'invalid_action' });
     let bot;

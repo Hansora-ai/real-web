@@ -30,7 +30,13 @@ async function handleStart(message) {
   if (!/^[A-Za-z0-9_-]{16,64}$/.test(code)) return reply('Hi! This is the Hansora assistant bot. To connect it, open Hansora → your AI employee → Channels → Telegram and press Connect.');
   const resource = await first(`/rest/v1/automation_provider_resources?provider=eq.telegram&resource_type=eq.telegram_account&status=eq.pending&safe_config->>link_code=eq.${encodeURIComponent(code)}&select=*&limit=1`);
   if (!resource || Date.parse(resource.safe_config?.link_expires_at || 0) < Date.now()) return reply('This link has expired. Open Hansora → Channels → Telegram and press Connect again.');
-  await serviceUpdate('automation_provider_resources', `id=eq.${resource.id}`, { safe_config: { ...resource.safe_config, telegram_user_id: String(message.from.id), telegram_username: String(message.from.username || ''), telegram_name: [message.from.first_name, message.from.last_name].filter(Boolean).join(' '), linked_at: new Date().toISOString() }, updated_at: new Date().toISOString() });
+  // Telegram Business (the AI answering as the owner) only works on accounts with Telegram Premium. Telegram tells
+  // bots who has Premium, so this is checked here instead of failing silently at the next step.
+  if (message.from?.is_premium !== true) {
+    await serviceUpdate('automation_provider_resources', `id=eq.${resource.id}`, { safe_config: { ...resource.safe_config, premium: false, checked_user_id: String(message.from?.id || '') }, updated_at: new Date().toISOString() });
+    return reply('⚠️ This Telegram account does not have Telegram Premium.\n\nTelegram only lets an assistant answer customers for you through Telegram Business, which is part of Premium. Get it in Telegram → Settings → Telegram Premium, then press Start in this chat again (or open the link from Hansora again).');
+  }
+  await serviceUpdate('automation_provider_resources', `id=eq.${resource.id}`, { safe_config: { ...resource.safe_config, premium: true, telegram_user_id: String(message.from.id), telegram_username: String(message.from.username || ''), telegram_name: [message.from.first_name, message.from.last_name].filter(Boolean).join(' '), linked_at: new Date().toISOString() }, updated_at: new Date().toISOString() });
   const bot = await telegramBot().catch(() => ({ username: '' }));
   return reply(`✅ Step 1 done. Now the last step:\n\nTelegram → Settings → Telegram Business → Chatbots → add @${bot.username}, choose which chats it may answer, and allow "Reply to messages".\n\nYour AI employee will then answer your customers here, as you. (Telegram Business needs Telegram Premium.)`);
 }
