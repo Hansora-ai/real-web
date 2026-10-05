@@ -132,3 +132,14 @@ test('a shared reel is only a page link: its id is kept, and the video is read o
   } });
   assert.deepEqual(byLink, { url: 'https://cdn/own.mp4', type: 'video' });
 });
+
+test('when a video or reel cannot be opened, the reason is reported (shown in the inbox)', async () => {
+  const { understandMedia } = await import('../../lib/automation/media.mjs');
+  const { getInstagramMediaFile } = await import('../../lib/automation/meta.mjs');
+  let reason = '';
+  await understandMedia({ url: 'https://cdn.example/gone.mp4', fetchImpl: async () => new Response('', { status: 404 }), report: value => { reason = value; } });
+  assert.match(reason, /could not be downloaded/);
+  reason = '';
+  await getInstagramMediaFile({ pageUrl: 'https://www.instagram.com/reel/ABCDE12345/', accessToken: 't', report: value => { reason = value; }, fetchImpl: async url => String(url).includes('/me/media') ? new Response(JSON.stringify({ data: [{ media_type: 'VIDEO', media_url: 'https://cdn/x.mp4', permalink: 'https://www.instagram.com/reel/OTHER/' }] }), { status: 200 }) : new Response('{}', { status: 400 }) });
+  assert.match(reason, /not found among this account's last 1 posts/);
+});
