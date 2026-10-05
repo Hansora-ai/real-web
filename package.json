@@ -5,15 +5,22 @@
   "scripts": {
     "test:automation": "node --test test/automation/*.test.mjs",
     "test:sales-agent": "node --test test/sales-agent/*.test.mjs",
-    "test:mcp": "node --test test/hansora-mcp/*.test.mjs"
+    "test:mcp": "node --test test/hansora-mcp/*.test.mjs",
+    "build:functions": "node scripts/build-netlify-functions.mjs",
+    "test:runtime": "node --test test/netlify/*.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/core": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
+    "@netlify/aws-lambda-compat": "2.0.2",
+    "acorn": "8.15.0",
     "busboy": "^1.6.0",
     "livekit-client": "^2.22.3",
     "livekit-server-sdk": "^2.19.1",
     "ws": "^8.22.0",
     "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@netlify/zip-it-and-ship-it": "16.2.3"
   }
 }
