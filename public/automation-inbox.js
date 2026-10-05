@@ -20,14 +20,19 @@
     {id:'c6',name:'David Kim',handle:'@david.p',channel:'Instagram DM',time:'2h',preview:'Do you have a warranty?',unread:false,attention:false,human:false,aiActive:true,intent:'Policy question',summary:'David asked about warranty. The AI answered from the saved business policy.',fields:[['Language','English'],['Customer type','New'],['Outcome','Answered']],messages:[['customer','Do you have a warranty?','11:04'],['ai','Yes, completed work includes a 12-month warranty. I can explain what it covers if you’d like.','11:04']]},
     {id:'c7',name:'Sofia M.',handle:'@sofia_home',channel:'Instagram comment',time:'3h',preview:'available?',unread:true,attention:false,human:false,aiActive:true,intent:'Availability',summary:'Sofia asked about availability under a product post. The AI moved the conversation to DMs.',fields:[['Language','Armenian'],['Source','Product post'],['Automation','Product questions']],messages:[['customer','available?','10:22'],['ai','Public reply: I sent you a message with the details.','10:22'],['ai','Private message: Hi! Which size are you interested in?','10:22']]},
     {id:'c8',name:'Noah Brooks',handle:'+49 151 0000 890',channel:'WhatsApp',time:'Yesterday',preview:'I will send the measurements.',unread:false,attention:false,human:false,aiActive:true,intent:'Sales inquiry',summary:'Noah is interested in a custom kitchen and will send measurements for a quote.',fields:[['Language','Armenian'],['Phone','+49 151 0000 890'],['Lead quality','High']],messages:[['customer','Can you make a kitchen to custom measurements?','Yesterday'],['ai','Yes. Custom kitchens are planned after measurements. You can send the room dimensions or arrange a measurement visit.','Yesterday'],['customer','I will send the measurements.','Yesterday']]}
-  ].map(conversation => ({...conversation,resolved:false,messages:conversation.messages.map(([role,text,time]) => ({role,text,time,counted:role === 'ai'}))}));
+  ].map(conversation => ({...conversation,...({c1:{stage:'done'},c3:{stage:'interested',interest:'Oak dining table, 6 seats',value:'899 USD'},c6:{stage:'ready',interest:'Corner sofa, grey',value:'1,240 USD'},c7:{stage:'interested',interest:'Bookshelf, white'},c8:{stage:'quiet',interest:'Custom wardrobe'}})[conversation.id]||{},resolved:false,messages:conversation.messages.map(([role,text,time]) => ({role,text,time,counted:role === 'ai'}))}));
 
   let conversations;
   try { conversations = api.isLocalPreview ? previewConversations : await loadConversations(); }
   catch (error) { return fail(api.displayError(error)); }
 
   let selectedId = conversations.some(item => item.id === params.get('conversation')) ? params.get('conversation') : conversations[0]?.id || null;
-  let activeFilter = 'all';
+  let activeFilter = 'all', activeStage = '';
+  // Where each chat stands (read by the AI after every reply). Interested/ready chats with no news for a day are "quiet".
+  const STAGES = { new: ['🆕', 'New'], interested: ['👀', 'Interested'], ready: ['🔥', 'Ready'], done: ['✅', 'Done'], lost: ['❌', 'Lost'], quiet: ['💤', 'Went quiet'] };
+  function stageOf(row) { const stage = row.sales_stage || ''; if (!stage) return ''; const updated = Date.parse(row.sales_updated_at || row.last_message_at || ''); return ['interested', 'ready'].includes(stage) && Number.isFinite(updated) && Date.now() - updated > 86400000 ? 'quiet' : stage; }
+  function formatValue(value, currency) { const number = Number(value); return Number.isFinite(number) && number > 0 ? `${number.toLocaleString(undefined, { maximumFractionDigits: 2 })}${currency ? ` ${currency}` : ''}` : ''; }
+  document.querySelector('#stage-filters').addEventListener('click', event => { const button = event.target.closest('button[data-stage]'); if (!button) return; activeStage = activeStage === button.dataset.stage ? '' : button.dataset.stage; document.querySelectorAll('#stage-filters button').forEach(item => item.classList.toggle('active', item.dataset.stage === activeStage)); renderList(); });
   if (selectedId && !api.isLocalPreview) await loadMessages(current());
   loading.hidden = true;
   app.hidden = false;
@@ -105,6 +110,12 @@
     return `<img class="ui-avatar-photo" src="${escapeHtml(conversation.avatarUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode(this.dataset.fallback))" data-fallback="${letters}">`;
   }
   // "📅 Booking #19", "🛍 2 orders"… per chat: newest reference when there is one, otherwise the count.
+  // The chat's stage and what the customer wants (an order badge already says "done").
+  function stageChip(conversation) {
+    const stage = conversation.stage; if (!stage || stage === 'new' || (stage === 'done' && (conversation.outcomes || []).length)) return '';
+    const [emoji, label] = STAGES[stage];
+    return `<span class="ui-convo-stage stage-${stage}">${emoji} ${escapeHtml(label)}${conversation.interest ? ` · ${escapeHtml(conversation.interest)}` : ''}${conversation.value ? ` · ${escapeHtml(conversation.value)}` : ''}</span>`;
+  }
   function outcomeBadges(conversation) {
     const kinds = [['booking','📅','Booking','bookings'],['order','🛍','Order','orders'],['lead','⚡','Lead','leads']];
     const items = conversation.outcomes || [];
@@ -118,12 +129,12 @@
     const query = document.querySelector('#inbox-search').value.trim().toLowerCase();
     const visible = conversations.filter(conversation => {
       const matchesFilter = activeFilter === 'all' || (activeFilter === 'unread' && conversation.unread) || (activeFilter === 'attention' && conversation.attention) || (activeFilter === 'human' && conversation.human);
-      return matchesFilter && (!query || `${conversation.name} ${conversation.handle} ${conversation.preview} ${conversation.channel}`.toLowerCase().includes(query));
+      return matchesFilter && (!activeStage || conversation.stage === activeStage) && (!query || `${conversation.name} ${conversation.handle} ${conversation.preview} ${conversation.channel} ${conversation.interest || ''}`.toLowerCase().includes(query));
     });
     const icons = {'Instagram DM':'instagram','Instagram comment':'comment','WhatsApp':'whatsapp','Phone':'phone','Telegram':'telegram','Messenger':'messenger'};
     document.querySelector('#conversation-list').innerHTML = visible.length ? visible.map(conversation => {
       const state = conversation.resolved ? '' : conversation.attention ? '<span class="ui-badge red sm">Needs you</span>' : conversation.human ? '<span class="ui-badge amber sm">Your team</span>' : '';
-      return `<button class="ui-convo${conversation.id === selectedId ? ' active' : ''}${conversation.unread ? ' unread' : ''}${conversation.resolved ? ' resolved' : ''}" data-conversation-id="${escapeHtml(conversation.id)}" type="button"><span class="ui-convo-avatar">${avatarHtml(conversation)}<i class="ui-convo-channel ${icons[conversation.channel] || ''}">${window.HansoraUI.icon(icons[conversation.channel] || 'message')}</i></span><span class="ui-convo-body"><span class="ui-convo-top"><strong>${escapeHtml(conversation.name)}</strong><time>${escapeHtml(conversation.time)}</time></span><span class="ui-convo-preview">${escapeHtml(conversation.preview)}</span>${outcomeBadges(conversation)}${state}</span></button>`;
+      return `<button class="ui-convo${conversation.id === selectedId ? ' active' : ''}${conversation.unread ? ' unread' : ''}${conversation.resolved ? ' resolved' : ''}" data-conversation-id="${escapeHtml(conversation.id)}" type="button"><span class="ui-convo-avatar">${avatarHtml(conversation)}<i class="ui-convo-channel ${icons[conversation.channel] || ''}">${window.HansoraUI.icon(icons[conversation.channel] || 'message')}</i></span><span class="ui-convo-body"><span class="ui-convo-top"><strong>${escapeHtml(conversation.name)}</strong><time>${escapeHtml(conversation.time)}</time></span><span class="ui-convo-preview">${escapeHtml(conversation.preview)}</span>${stageChip(conversation)}${outcomeBadges(conversation)}${state}</span></button>`;
     }).join('') : `<div class="ui-empty">${conversations.length ? 'No conversations match.' : 'New Instagram and WhatsApp conversations appear here.'}</div>`;
     updateTopCounts();
   }
@@ -298,12 +309,19 @@
     const open = conversations.filter(item => !item.resolved);
     const counts = { all:conversations.length, attention:open.filter(item => item.attention).length, human:open.filter(item => item.human).length, unread:conversations.filter(item => item.unread).length };
     document.querySelectorAll('#inbox-filters [data-count]').forEach(element => { element.textContent = counts[element.dataset.count]; });
+    const staged = conversations.some(item => item.stage);
+    document.querySelector('#stage-filters').hidden = !staged;
+    document.querySelectorAll('#stage-filters [data-stage-count]').forEach(element => { element.textContent = conversations.filter(item => item.stage === element.dataset.stageCount).length; });
     document.querySelector('#open-count').textContent = conversations.filter(item => !item.resolved).length;
     document.querySelector('#attention-count').textContent = conversations.filter(item => item.attention && !item.resolved).length;
   }
   function current() { return conversations.find(conversation => conversation.id === selectedId) || conversations[0] || null; }
   async function loadConversations() {
-    const result = await api.db.from('automation_conversations').select('id,channel_type,status,ai_enabled,intent,summary,last_message_preview,last_message_at,automation_contacts(display_name,primary_phone,primary_email,language,profile)').eq('business_id',businessId).order('last_message_at',{ascending:false}).limit(100);
+    const base = 'id,channel_type,status,ai_enabled,intent,summary,last_message_preview,last_message_at,automation_contacts(display_name,primary_phone,primary_email,language,profile)';
+    const query = select => api.db.from('automation_conversations').select(select).eq('business_id',businessId).order('last_message_at',{ascending:false}).limit(100);
+    // The stage columns come with SQL 13; until then the inbox works without them.
+    let result = await query(`${base},sales_stage,sales_interest,sales_value,sales_currency,sales_updated_at`);
+    if (result.error) result = await query(base);
     if (result.error) throw result.error;
     // What each chat led to (booking, order, lead), shown in the list so the owner doesn't open every chat.
     const ids = (result.data || []).map(row => row.id);
@@ -314,7 +332,7 @@
       const contact = Array.isArray(row.automation_contacts) ? row.automation_contacts[0] : row.automation_contacts || {};
       const name = contact.display_name || contact.profile?.username || ({whatsapp:'WhatsApp customer',telegram:'Telegram customer',messenger:'Messenger customer'}[row.channel_type] || 'Instagram customer');
       const avatarUrl = /^https:\/\//.test(String(contact.profile?.profile_pic || '')) ? String(contact.profile.profile_pic) : '';
-      return {id:row.id,channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,attention:row.status==='needs_attention',human:row.status==='human_handling',aiActive:Boolean(row.ai_enabled),outcomes:outcomesByConversation.get(row.id)||[],resolved:row.status==='resolved',intent:row.intent||'Customer message',summary:row.summary||'Summary will appear as the conversation develops.',fields:[['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
+      return {id:row.id,channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,attention:row.status==='needs_attention',human:row.status==='human_handling',aiActive:Boolean(row.ai_enabled),outcomes:outcomesByConversation.get(row.id)||[],resolved:row.status==='resolved',intent:row.intent||'Customer message',stage:stageOf(row),interest:row.sales_interest||'',value:formatValue(row.sales_value,row.sales_currency),summary:row.summary||'Summary will appear as the conversation develops.',fields:[...(stageOf(row)?[['Stage',`${STAGES[stageOf(row)][0]} ${STAGES[stageOf(row)][1]}`]]:[]),...(row.sales_interest?[['Interested in',row.sales_interest]]:[]),...(formatValue(row.sales_value,row.sales_currency)?[['Likely value',formatValue(row.sales_value,row.sales_currency)]]:[]),['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
     });
   }
   async function loadMessages(conversation) {
