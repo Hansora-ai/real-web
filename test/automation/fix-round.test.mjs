@@ -10,10 +10,10 @@ const BUSINESS = '11111111-1111-1111-1111-111111111111';
 const rug = { id: 'cccccccc-3333-3333-3333-333333333333', name: 'Soft wool rug', active: true, price: 75000, currency: 'AMD', stock: 5, variants: [{ name: 'Grey', stock: 5 }, { name: 'Beige', stock: 0 }], photos: [{ path: `${BUSINESS}/products/c/1.jpg`, variant: 'Grey' }, { url: 'https://cdn.example/rug-beige.jpg', variant: 'Beige' }], payment_link: 'https://pay.example/rug' };
 const orderFields = ['Customer name', 'Phone number', 'Delivery address'];
 
-function runner({ payment = null, reduceStock = true, sendImage } = {}) {
+function runner({ reduceStock = true, sendImage } = {}) {
   const inserted = [], updated = [];
   const tools = [
-    { tool_type: 'orders', enabled: true, config: { required_fields: orderFields, ...(payment ? { payment } : {}) } },
+    { tool_type: 'orders', enabled: true, config: { required_fields: orderFields } },
     { tool_type: 'catalog', enabled: true, config: { reduce_stock: reduceStock } }
   ];
   const run = createToolRunner({ businessId: BUSINESS, conversationId: '22222222-2222-2222-2222-222222222222', contactId: null, channel: 'instagram_dm', ...(sendImage ? { sendImage } : {}) }, {
@@ -51,24 +51,17 @@ test('stock goes down as soon as the AI places the order (not only when confirme
   assert.equal(none.some(item => item.table === 'automation_products'), false);
 });
 
-test('payment: asked after the questions, only allowed options, product payment link sent for online payment', async () => {
-  const payment = { methods: ['cash', 'online'], link: 'https://pay.example/general' };
-  const definition = buildToolDefinitions({ tools: { orders: { enabled: true, config: { required_fields: orderFields, payment } } } }).find(item => item.name === 'create_order');
-  assert.deepEqual(definition.parameters.properties.payment_method.enum, ['cash', 'online']);
-  assert.ok(definition.parameters.required.includes('payment_method'));
-  const instructions = toolInstructions([definition], { orders: { enabled: true, config: { required_fields: orderFields, payment } } });
-  assert.match(instructions, /in this order.*Customer name; Phone number; Delivery address\. Then ask how they want to pay\. The only payment options are: Cash on delivery; Pay online \(payment link\)/s);
-  const { run, inserted } = runner({ payment });
-  assert.equal((await run('create_order', { ...order, catalog_items: 'cccccccc (Grey) x1' })).error, 'payment_method_required');
-  const online = await run('create_order', { ...order, catalog_items: 'cccccccc (Grey) x1', payment_method: 'online' });
-  assert.deepEqual(online.payment_links, ['https://pay.example/rug']);
-  assert.equal(inserted.at(-1).row.collected_fields.Payment, 'Pay online (payment link)');
-  const cash = await run('create_order', { ...order, catalog_items: 'cccccccc (Grey) x1', payment_method: 'cash' });
-  assert.equal(cash.payment_links, undefined);
-  // Without a product link the general one is used; "always" sends it whatever the method.
-  const { run: always } = runner({ payment: { methods: ['cash'], link: 'https://pay.example/general', link_when: 'always' } });
+test('payment is an ordinary order question; a product payment link comes back with the order', async () => {
+  const fields = [...orderFields, 'Payment: cash or card'];
+  const definition = buildToolDefinitions({ tools: { orders: { enabled: true, config: { required_fields: fields } } } }).find(item => item.name === 'create_order');
+  assert.equal(definition.parameters.properties.payment_method, undefined);
+  const instructions = toolInstructions([definition], { orders: { enabled: true, config: { required_fields: fields } } });
+  assert.match(instructions, /in this order, and get an answer for each: Customer name; Phone number; Delivery address; Payment: cash or card\./);
+  const { run } = runner();
+  const result = await run('create_order', { ...order, catalog_items: 'cccccccc (Grey) x1' });
+  assert.deepEqual(result.payment_links, ['https://pay.example/rug']);
   rug.payment_link = '';
-  assert.deepEqual((await always('create_order', { ...order, catalog_items: 'cccccccc (Grey) x1', payment_method: 'cash' })).payment_links, ['https://pay.example/general']);
+  assert.equal((await run('create_order', { ...order, catalog_items: 'cccccccc (Grey) x2' })).payment_links, undefined);
   rug.payment_link = 'https://pay.example/rug';
 });
 
