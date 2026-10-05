@@ -38,3 +38,20 @@ test('the customer photo is sent together with the product photos, and the catal
   assert.equal(await matchProductPhoto({ businessId: 'b1', buffer: Buffer.from([1]) }, { ...deps, first: async () => ({ enabled: false }) }), '');
   assert.equal(await matchProductPhoto({ businessId: 'b1', buffer: Buffer.from([1]) }, { ...deps, supabaseRequest: async () => [lamp] }), '');
 });
+
+test('a shared reel or video story is matched too, and product photos stay within the request size', async () => {
+  let geminiBody = null;
+  const fetchImpl = async (url, options = {}) => {
+    if (String(url).startsWith('https://cdn.example/')) return new Response(new Uint8Array(3 * 1024 * 1024), { headers: { 'content-type': 'image/jpeg' } });
+    geminiBody = JSON.parse(options.body);
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"match_ref":"aaaaaaaa","variant":"Grey","confidence":"high","similar_refs":[]}' }] } }] }), { headers: { 'content-type': 'application/json' } });
+  };
+  const deps = { first: async () => ({ enabled: true }), supabaseRequest: async () => [sofa, sofa3], rows: v => v, fetchImpl };
+  const video = Buffer.alloc(14 * 1024 * 1024);
+  const line = await matchProductPhoto({ businessId: 'b1', buffer: video, mimeType: 'video/mp4' }, deps);
+  assert.match(line, /^Catalog match: Oslo sofa — Grey/);
+  const parts = geminiBody.contents[0].parts;
+  assert.equal(parts[0].text, 'CUSTOMER VIDEO (what the customer sent or shared):');
+  assert.equal(parts.filter(p => p.inline_data).length, 2); // the video + one 3 MB photo fit in 19 MB, a second does not
+  assert.equal(await matchProductPhoto({ businessId: 'b1', buffer: Buffer.alloc(19 * 1024 * 1024), mimeType: 'video/mp4' }, deps), '');
+});

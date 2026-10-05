@@ -97,6 +97,8 @@ export async function handler(event){
     if(hasMedia&&inbound){
       const context=await mediaContext({businessId:account.business_id,history:memory.history}).catch(()=>'');
       media=await understandMedia({url:mediaUrl,kind:['audio','video','image'].includes(mediaType)?mediaType:'',caption:message.text,context,store:{businessId:account.business_id,channel:'instagram_dm',conversationId:conversation.id,key:message.externalEventId},afterVisual:file=>matchProductPhoto({businessId:account.business_id,...file,caption:message.text})});
+      // Kept for the logs: what Instagram sent and whether it could be understood (videos and reels).
+      console.log('instagram media',{kind:message.kind,type:mediaType,has_url:Boolean(mediaUrl),understood:Boolean(media),media_kind:media?.kind||null,mime:media?.mimeType||null,ms:Date.now()-startedAt});
       understood=media?mediaMessage({source:message.kind==='media'?media.kind:message.kind,media,caption:message.text}):null;
       // Could not be opened (too large, expired link…): the AI is told so, with the caption, instead of staying silent.
       if(!understood&&media?.kind!=='audio')understood=mediaFallback({source:message.kind==='media'?'':message.kind,kind:mediaType==='video'||mediaType==='ig_reel'||mediaType==='reel'?'video':mediaType==='audio'?'audio':'image',title:message.attachmentTitle,caption:message.text});
