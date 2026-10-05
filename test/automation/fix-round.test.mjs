@@ -125,4 +125,10 @@ test('a shared reel is only a page link: its id is kept, and the video is read o
   const other = await getInstagramMediaFile({ mediaId: '18119571112663732', accessToken: 't', fetchImpl: async () => new Response(JSON.stringify({ error: { code: 10, message: 'not owned' } }), { status: 400 }) });
   assert.equal(other, null);
   assert.equal(await getInstagramMediaFile({ mediaId: 'https://evil', accessToken: 't' }), null);
+  // The id is not accepted, but the reel is one of the account's own posts: found by its link.
+  const byLink = await getInstagramMediaFile({ mediaId: '18119571112663732', pageUrl: 'https://www.instagram.com/reel/DY4BoYct6u5/', instagramUserId: '17841400000000000', accessToken: 't', fetchImpl: async url => {
+    if (String(url).includes('/17841400000000000/media')) return new Response(JSON.stringify({ data: [{ media_type: 'IMAGE', media_url: 'https://cdn/x.jpg', permalink: 'https://www.instagram.com/p/OTHER123/' }, { media_type: 'VIDEO', media_url: 'https://cdn/own.mp4', permalink: 'https://www.instagram.com/reel/DY4BoYct6u5/' }] }), { status: 200 });
+    return new Response(JSON.stringify({ error: { code: 100 } }), { status: 400 });
+  } });
+  assert.deepEqual(byLink, { url: 'https://cdn/own.mp4', type: 'video' });
 });
