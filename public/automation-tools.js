@@ -237,6 +237,7 @@
     $('#lead-signals').value = state.leads.config.signals || '';
     renderLeadQuestions();
     document.querySelectorAll('#handoff-rules input[data-rule]').forEach(input => { if (!input.disabled) input.checked = Boolean(state.handoff.config.rules?.[input.dataset.rule]); });
+    $('#handoff-reel-message').value = state.handoff.config.unreadable_reel_message || '';
     if (!Array.isArray(state.calendar.config.required_fields)) state.calendar.config.required_fields = ['Customer name', 'Phone number']; // same default as the AI
     renderWeek(); renderServices(); renderClosedDates(); renderOrderFields(); renderBookingFields(); renderNotifications(); renderStatuses();
   }
@@ -335,7 +336,7 @@
     state.leads.enabled = $('#leads-enabled').checked;
     readLeadQuestions();
     state.leads.config = { signals: $('#lead-signals').value.trim().slice(0, 800), questions: (state.leads.config.questions || []).filter(Boolean).slice(0, 15) };
-    state.handoff.config = { rules: Object.fromEntries([...document.querySelectorAll('#handoff-rules input[data-rule]')].map(input => [input.dataset.rule, input.checked])) };
+    state.handoff.config = { rules: Object.fromEntries([...document.querySelectorAll('#handoff-rules input[data-rule]')].map(input => [input.dataset.rule, input.checked])), unreadable_reel_message: $('#handoff-reel-message').value.trim().slice(0, 1000) };
     Object.assign(state.notifications, { email_enabled:$('#email-notify-enabled').checked, email:$('#notify-email').value.trim(), language:$('#notify-language').value, whatsapp_enabled:$('#wa-notify-enabled').checked, events:[...document.querySelectorAll('#notify-events input:checked')].map(input => input.value) });
   }
 
