@@ -9,7 +9,7 @@ import { buildConversationContext, loadConversationMemory } from '../../lib/auto
 import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
 import { mediaFallback, mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
 import { matchProductPhoto } from '../../lib/automation/product-match.mjs';
-import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia, waitForQuiet } from '../../lib/automation/turns.mjs';
+import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia } from '../../lib/automation/turns.mjs';
 import { phonePauseExpired } from '../../lib/automation/whatsapp.mjs';
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
 import { getMessengerProfile, sendMessengerAction, sendMessengerImage, sendMessengerText } from '../../lib/automation/messenger.mjs';
@@ -93,9 +93,7 @@ export async function handler(event) {
 
     const turn = { conversationId: conversation.id, occurredAt: inbound.occurred_at || occurredAt, createdAt: inbound.created_at, messageId: inbound.id };
 
-    // A text waits a few seconds: a video or photo sent right after it is answered together with it.
 
-    if (!hasMedia) await waitForQuiet();
     if (await hasNewerCustomerMessage(turn)) { await markProcessed(webhook.id, account.business_id); return json(200, { ok: true, answered_by_newer_message: true }); }
     const liveMemory = await waitForPendingMedia(turn) ? await loadConversationMemory({ businessId: account.business_id, conversationId: conversation.id, contactId: contact.id, excludeExternalId: message.externalEventId }) : memory;
     const pendingQuestions = burstNote(await unansweredCustomerMessages(turn));
