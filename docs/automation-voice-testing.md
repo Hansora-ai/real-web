@@ -31,7 +31,8 @@ The existing Netlify project visibly has `GOOGLE_API_KEY`, `SUPABASE_URL` and
 `SUPABASE_SERVICE_ROLE_KEY`. Only their presence was checked; no secret was revealed
 and Gemini Live access was not exercised.
 
-Add `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET` to Netlify when ready.
+The owner reports adding `LIVEKIT_URL`, `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET`
+to Netlify on 2026-10-05. A running worker is still required for actual calls.
 The worker is a separate Node.js process: Netlify variables do not automatically
 become worker variables. It needs the same three LiveKit values plus the existing
 Google and Supabase values, supplied as environment variables. Use Node >=22.22.0.
@@ -58,3 +59,8 @@ checkout so unrelated uncommitted work is preserved.
 After LiveKit is available, real calls must verify audio quality, microphone and
 playback permissions, interruptions, languages, actual model access, tool behavior,
 transcripts and billing. Those remain unverified until live testing.
+
+The voice SDK loads only after Call is clicked. Missing or failing voice setup
+does not stop workspace rendering or the existing text test. Regression tests
+exercise both failure cases on the real page path and submit a text question.
+Message/comment handlers, shared instructions/tools, text billing and SQL are unchanged.

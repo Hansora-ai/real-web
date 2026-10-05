@@ -82,11 +82,6 @@
     const previewSuffix = previewLinks ? '&preview=1' : '';
     const editUrl = `automation-setup.html?id=${encodeURIComponent(business.id)}${previewSuffix}`;
     $('#edit-agent').href = editUrl;
-    $('#voice-talk-name').textContent = name;
-    window.HansoraVoiceTest.mount({
-      api, businessId:business.id, preview:api.isLocalPreview,
-      elements:{ root:$('#voice-talk'), button:$('#voice-talk-call'), orb:$('#voice-talk-orb'), status:$('#voice-talk-status'), timer:$('#voice-talk-timer'), error:$('#voice-talk-error'), audio:$('#voice-talk-audio') }
-    });
     $('#edit-knowledge').href = editUrl;
     $('#crumb-home').href = `automation-dashboard.html${previewLinks ? '?preview=1' : ''}`;
     const sharedQuery = new URLSearchParams({business:business.id});
@@ -108,7 +103,26 @@
     const usage = api.isLocalPreview ? {messages:1284,resolved_rate:91,handoffs:3,credits:162.9,phone_credits:34.5,balance:84.2,phone_minutes:43} : {messages:0,resolved_rate:0,handoffs:0,credits:0,phone_credits:0,balance:null,phone_minutes:0};
     renderUsage(usage);
     initializeLiveTest(business, profile);
+    initializeVoiceTest(business, name);
     if (!api.isLocalPreview) loadUsageSummary(business.id);
+  }
+
+  function initializeVoiceTest(business, name) {
+    // Voice is optional: an unavailable voice script must not stop the workspace
+    // or the existing text test from loading.
+    try {
+      $('#voice-talk-name').textContent = name;
+      if (!window.HansoraVoiceTest?.mount) throw new Error('voice_client_unavailable');
+      window.HansoraVoiceTest.mount({
+        api, businessId:business.id, preview:api.isLocalPreview,
+        elements:{ root:$('#voice-talk'), button:$('#voice-talk-call'), orb:$('#voice-talk-orb'), status:$('#voice-talk-status'), timer:$('#voice-talk-timer'), error:$('#voice-talk-error'), audio:$('#voice-talk-audio') }
+      });
+    } catch (error) {
+      console.warn('Voice test unavailable', error);
+      const status = $('#voice-talk-status'), button = $('#voice-talk-call');
+      if (status) status.textContent = 'Voice testing is temporarily unavailable.';
+      if (button) button.disabled = true;
+    }
   }
 
   // Knowledge files live in the ElevenLabs knowledge base (automation-knowledge); the AI searches them per question.
