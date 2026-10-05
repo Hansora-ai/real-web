@@ -1,14 +1,13 @@
-import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { cli, defineAgent, llm, ServerOptions, tool, voice } from '@livekit/agents';
 import * as google from '@livekit/agents-plugin-google';
 import { ParticipantKind } from '@livekit/rtc-node';
 import { LiveKitAPI } from 'livekit-server-sdk';
 import { buildAutomationInstructions, firstMessageFor } from '../../../lib/automation/instructions.mjs';
-import { first, rows, serviceInsert, serviceUpdate, serviceUpsert, supabaseRequest } from '../../../lib/automation/db.mjs';
+import { first, serviceInsert, serviceUpdate, serviceUpsert } from '../../../lib/automation/db.mjs';
 import { notifyOwner } from '../../../lib/automation/notify.mjs';
 import { affordableVoiceSeconds, automationPrices, canAfford, chargeCredits, handleOutOfCredits, voiceCredits } from '../../../lib/automation/billing.mjs';
-import { PHONE_AGENT_NAME, PHONE_MODEL, PHONE_VOICE, billableVoiceSeconds, describePhoneCall, normalizePhoneNumber, renderCallTranscript, voiceInstructions } from '../../../lib/automation/phone.mjs';
+import { PHONE_AGENT_NAME, PHONE_MODEL, PHONE_VOICE, billableVoiceSeconds, createPhoneMetrics, describePhoneCall, normalizePhoneNumber, parsePhoneMetadata, phoneTestMaxSeconds, phoneTestSettings, renderCallTranscript, voiceInstructions } from '../../../lib/automation/phone.mjs';
 import { businessClock, buildToolDefinitions, createToolRunner, loadToolConfigs, toolInstructions } from '../../../lib/automation/tools.mjs';
 
 function one(value) { return Array.isArray(value) ? value[0] : value; }
@@ -59,8 +58,10 @@ async function createCallbackRequest({ business, conversation, contact, callerNu
 
 export default defineAgent({
   entry: async (ctx) => {
+    const job = parsePhoneMetadata(ctx.job.metadata);
+    if (job.direction === 'test' && !job.participant_identity) throw new Error('phone_test_identity_missing');
     await ctx.connect();
-    const participant = await ctx.waitForParticipant();
+    const participant = await ctx.waitForParticipant(job.direction === 'test' ? job.participant_identity : undefined);
     const descriptor = describePhoneCall({
       jobMetadata: ctx.job.metadata,
       participantMetadata: participant.metadata,
@@ -70,11 +71,12 @@ export default defineAgent({
     });
     const business = descriptor.businessId ? await loadBusinessById(descriptor.businessId) : await loadBusinessByNumber(descriptor.calledNumber);
     if (!business) throw new Error('phone_business_not_found');
+    const isTest = descriptor.direction === 'test';
+    if (isTest && (!descriptor.ownerUserId || descriptor.ownerUserId !== business.owner_user_id)) throw new Error('phone_test_owner_mismatch');
     const agent = one(business.automation_agents);
     const knowledge = one(business.automation_business_knowledge);
     if (!agent || !knowledge) throw new Error('phone_agent_configuration_incomplete');
-    const settings = phoneSettings(business);
-    const isTest = descriptor.direction === 'test';
+    const settings = isTest && job.test_settings ? { ...phoneSettings(business), ...phoneTestSettings(job.test_settings) } : phoneSettings(business);
     const externalContactId = isTest ? `phone-test:${descriptor.ownerUserId || participant.identity}` : (descriptor.callerNumber || participant.identity);
     const now = new Date().toISOString();
     const contact = await serviceUpsert('automation_contacts', 'business_id,channel_type,external_contact_id', {
@@ -108,9 +110,9 @@ export default defineAgent({
     }, { ignoreDuplicates: true }) || await first(`/rest/v1/automation_calls?business_id=eq.${business.id}&provider_call_id=eq.${encodeURIComponent(descriptor.providerCallId)}&select=*&limit=1`);
 
     // Pay as you go: the call only runs as long as the owner's credits cover it.
-    const perMinute = isTest ? automationPrices().testVoiceMinute : automationPrices().voiceMinute;
+    const perMinute = isTest ? 0 : automationPrices().voiceMinute;
     const funds = await canAfford(business.id, perMinute);
-    const maxSeconds = funds.balance === null ? Infinity : affordableVoiceSeconds(funds.balance, perMinute);
+    const maxSeconds = isTest ? phoneTestMaxSeconds() : (funds.balance === null ? Infinity : affordableVoiceSeconds(funds.balance, perMinute));
     const outOfCredits = !funds.ok;
     if (outOfCredits && !isTest) await handleOutOfCredits({ businessId: business.id, conversationId: conversation.id, businessName: business.name, channel: 'Phone', customer: descriptor.callerNumber || 'Caller', notifyOwner });
 
@@ -168,6 +170,10 @@ export default defineAgent({
       })
     });
     const turns = [];
+    const providerMetrics = createPhoneMetrics();
+    const timers = new Set();
+    const later = (task, ms) => { const timer = setTimeout(() => { timers.delete(timer); task(); }, ms); timers.add(timer); return timer; };
+    session.on(voice.AgentSessionEventTypes.MetricsCollected, event => providerMetrics.collect(event.metrics));
     let writeQueue = Promise.resolve();
     const enqueue = task => { writeQueue = writeQueue.then(task).catch(error => console.error('phone transcript write failed', { message: error?.message })); };
     session.on(voice.AgentSessionEventTypes.ConversationItemAdded, event => {
@@ -204,15 +210,18 @@ export default defineAgent({
     async function finalize() {
       if (finalized) return;
       finalized = true;
+      for (const timer of timers) clearTimeout(timer);
+      timers.clear();
       await writeQueue;
       const endedAt = new Date().toISOString();
       const seconds = billableVoiceSeconds(call.started_at, endedAt, call.connected_at);
       const transcript = settings.save_transcripts === false ? '' : renderCallTranscript(turns);
-      await serviceUpdate('automation_calls', `id=eq.${call.id}`, { status: callStatus, ended_at: endedAt, billable_seconds: seconds, transcript });
+      const metrics = providerMetrics.snapshot();
+      await serviceUpdate('automation_calls', `id=eq.${call.id}`, { status: callStatus, ended_at: endedAt, billable_seconds: isTest ? 0 : seconds, transcript, outcome: { ...call.outcome, duration_seconds: seconds, test: isTest, provider_usage: metrics } });
       await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { status: callStatus === 'transferred' ? 'human_handling' : 'resolved', resolved_at: callStatus === 'transferred' ? null : endedAt, summary: transcript.slice(0, 8000) });
       if (seconds > 0) {
         // Charge once, at the end; if the balance ran short take what is left (never below zero).
-        const charge = await chargeCredits({ businessId: business.id, idempotencyKey: `usage:phone:${descriptor.providerCallId}`, kind: isTest ? 'test_voice' : 'voice', credits: voiceCredits(seconds, perMinute), conversationId: conversation.id, reference: { call_id: call.id, seconds }, allowPartial: true }).catch(error => { console.error('phone credit charge failed', { message: error?.message }); return { ok: false, charged: 0 }; });
+        const charge = isTest ? { ok: true, charged: 0 } : await chargeCredits({ businessId: business.id, idempotencyKey: `usage:phone:${descriptor.providerCallId}`, kind: 'voice', credits: voiceCredits(seconds, perMinute), conversationId: conversation.id, reference: { call_id: call.id, seconds }, allowPartial: true }).catch(error => { console.error('phone credit charge failed', { message: error?.message }); return { ok: false, charged: 0 }; });
         const rate = Math.max(0, Number(process.env.AUTOMATION_PHONE_COST_MINOR_PER_MINUTE || 0));
         await serviceInsert('automation_usage_events', {
           business_id: business.id,
@@ -227,19 +236,20 @@ export default defineAgent({
           provider_usage_id: descriptor.providerCallId,
           idempotency_key: `usage:phone:${descriptor.providerCallId}`,
           credits: charge.charged || 0,
-          metadata: { call_id: call.id, model: process.env.GEMINI_PHONE_MODEL || PHONE_MODEL, voice: process.env.GEMINI_PHONE_VOICE || PHONE_VOICE, test: isTest }
+          metadata: { call_id: call.id, model: process.env.GEMINI_PHONE_MODEL || PHONE_MODEL, voice: process.env.GEMINI_PHONE_VOICE || PHONE_VOICE, test: isTest, provider_usage: metrics }
         }, { ignoreDuplicates: true });
       }
     }
     ctx.addShutdownCallback(finalize);
-    session.once(voice.AgentSessionEventTypes.Close, () => { finalize().catch(error => console.error('phone finalize failed', { message: error?.message })); });
+    session.once(voice.AgentSessionEventTypes.Close, () => { finalize().catch(error => console.error('phone finalize failed', { message: error?.message })).finally(() => ctx.shutdown?.('call_ended')); });
 
     await session.start({
       room: ctx.room,
       agent: voice.Agent.create({ instructions, tools: liveTools }),
-      record: settings.save_transcripts === false ? { audio: false, transcript: false, traces: true, logs: true } : true
+      inputOptions: { participantIdentity: participant.identity, closeOnDisconnect: true },
+      record: { audio: false, transcript: settings.save_transcripts !== false, traces: true, logs: true }
     });
-    const hangUp = async () => { try { await livekitApi.room.deleteRoom(ctx.room.name); } catch (_) { ctx.shutdown?.('out_of_credits'); } };
+    const hangUp = async () => { try { await livekitApi.room.deleteRoom(ctx.room.name); } finally { ctx.shutdown?.(isTest ? 'test_limit_reached' : 'out_of_credits'); } };
     if (outOfCredits) {
       callStatus = 'failed';
       const transferNumber = normalizePhoneNumber(settings.transfer_number);
@@ -247,13 +257,13 @@ export default defineAgent({
         try { await livekitApi.sip.transferSipParticipant(ctx.room.name, participant.identity, `tel:${transferNumber}`, { playDialtone: false }); callStatus = 'transferred'; return; } catch (error) { console.error('out of credits transfer failed', { message: error?.message }); }
       }
       session.generateReply({ instructions: 'Say briefly and politely, in the caller\'s language if you can tell it, that nobody can take the call right now and they can send a message or call back later. Then say goodbye.' });
-      setTimeout(hangUp, 12000);
+      later(() => hangUp().catch(error => console.error('phone hangup failed', { message: error?.message })), 12000);
       return;
     }
     if (Number.isFinite(maxSeconds)) {
       // Wrap up politely shortly before the credits run out, then end the call.
-      setTimeout(() => session.generateReply({ instructions: 'Politely tell the caller you need to end the call now, that the team will follow up, and say goodbye.' }), Math.max(0, maxSeconds - 20) * 1000);
-      setTimeout(hangUp, maxSeconds * 1000);
+      later(() => session.generateReply({ instructions: isTest ? 'Briefly tell the caller this test is ending, and say goodbye.' : 'Politely tell the caller you need to end the call now, that the team will follow up, and say goodbye.' }), Math.max(0, maxSeconds - 20) * 1000);
+      later(() => hangUp().catch(error => console.error('phone hangup failed', { message: error?.message })), maxSeconds * 1000);
     }
     const greeting = text(settings.greeting, 300) || firstMessageFor({ business, agent });
     session.generateReply({ instructions: `Say this opening sentence exactly, then wait for the caller: ${greeting}` });
