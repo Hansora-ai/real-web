@@ -1,6 +1,6 @@
 # Browser voice testing
 
-Prepared locally on 2026-10-05. Nothing deployed. No live call has been measured yet.
+Prepared locally on 2026-10-05. Gemini Live voice: **Leda**. Nothing deployed. No live call has been measured yet.
 
 Every authenticated account has a **Let’s talk** card in its AI employee workspace.
 Its circular animated AI and phone icon sit above a Call button. Click Call to use

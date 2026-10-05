@@ -42,7 +42,7 @@
   function mode() { return document.querySelector('input[name="number-mode"]:checked').value; }
   function syncForward() { $('#forward-field').hidden = mode() !== 'forward'; }
   function collect() {
-    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:'Laomedeia', voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:document.querySelector('input[name="answer-mode"]:checked').value, transfer_number:$('#transfer-number').value.trim(), save_transcripts:$('#save-transcripts').checked };
+    return { number_mode:mode(), forward_number:$('#phone-number').value.trim(), voice:'Leda', voice_model:'gemini-3.8-live', greeting:$('#phone-greeting').value.trim(), answer_mode:document.querySelector('input[name="answer-mode"]:checked').value, transfer_number:$('#transfer-number').value.trim(), save_transcripts:$('#save-transcripts').checked };
   }
   function applySaved(data) {
     if (data.number_mode) document.querySelector(`input[name="number-mode"][value="${data.number_mode}"]`)?.click();
@@ -65,7 +65,7 @@
   function renderReview() {
     const data = collect();
     const answer = { always:'Every call', after_hours:'After working hours', no_answer:'If nobody picks up' }[data.answer_mode];
-    $('#phone-review').innerHTML = [['Number', data.number_mode === 'new' ? 'New phone number' : `Forward ${data.forward_number}`], ['Voice', 'Laomedeia'], ['Answers', answer], ['Transfer to', data.transfer_number || 'Callback request']].map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+    $('#phone-review').innerHTML = [['Number', data.number_mode === 'new' ? 'New phone number' : `Forward ${data.forward_number}`], ['Voice', 'Leda'], ['Answers', answer], ['Transfer to', data.transfer_number || 'Callback request']].map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
   }
   async function save({ quiet = false } = {}) {
     const data = { ...collect(), saved_at:new Date().toISOString() };
