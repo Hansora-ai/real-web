@@ -13,6 +13,7 @@ import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMes
 import { phonePauseExpired } from '../../lib/automation/whatsapp.mjs';
 import { sendTelegramPhoto, sendTelegramText, sendTelegramTyping, telegramDisplayName, telegramFileUrl, telegramMessageParts } from '../../lib/automation/telegram.mjs';
 import { makeProductPhotoSender } from '../../lib/automation/product-photos.mjs';
+import { updateSalesStage } from '../../lib/automation/sales-stage.mjs';
 
 const json = (statusCode, body) => ({ statusCode, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) });
 
@@ -114,6 +115,7 @@ export async function handler(event) {
     const charge = outbound ? await chargeCredits({ businessId: account.business_id, idempotencyKey: `usage:telegram:${message.business_connection_id}:${chatId}:${message.message_id}`, kind: 'ai_reply', credits: price, conversationId: conversation.id, reference: { channel: 'telegram', message_id: outbound.id } }).catch(error => { console.error('automation credit charge failed', { message: error?.message }); return { ok: false, charged: 0 }; }) : null;
     if (outbound) await serviceInsert('automation_usage_events', { business_id: account.business_id, conversation_id: conversation.id, message_id: outbound.id, channel_type: 'telegram', unit_type: 'ai_message', quantity: 1, billable_quantity: 1, estimated_cost_minor: 0, currency: 'AMD', provider: 'elevenlabs', provider_usage_id: generated.conversationId || null, idempotency_key: `usage:telegram:${message.business_connection_id}:${chatId}:${message.message_id}`, credits: charge?.charged || 0, metadata: { telegram_message_id: sent.messageId || null } }, { ignoreDuplicates: true });
     await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { last_message_preview: generated.text.slice(0, 1000), last_message_at: new Date().toISOString() });
+    await updateSalesStage({ businessId: account.business_id, conversationId: conversation.id }).catch(() => null); // after the reply, never slows it
     await markProcessed(webhook.id, account.business_id);
     return json(200, { ok: true });
   } catch (error) {

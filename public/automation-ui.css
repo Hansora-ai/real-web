@@ -761,3 +761,10 @@ a.ui-row:hover .ui-chevron{transform:translateX(3px);color:var(--text)}
 /* While a window (dialog) is open, the page behind it does not scroll. */
 html:has(dialog[open]){overflow:hidden}
 .ui-msg-note{display:block;margin-top:6px;font-size:11.5px;color:var(--text-3)}
+/* Inbox: where each chat stands */
+.ui-stage-pills{margin-top:6px}
+.ui-convo-stage{display:inline-block;max-width:100%;margin-top:6px;padding:2px 8px;border-radius:999px;border:1px solid var(--border-2);font-size:11.5px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ui-convo-stage.stage-ready{border-color:rgba(249,115,22,.45);color:#fb923c}
+.ui-convo-stage.stage-interested{border-color:var(--accent-line);color:var(--accent-2)}
+.ui-convo-stage.stage-quiet{color:var(--text-3)}
+.ui-convo-stage.stage-lost{color:var(--text-3);opacity:.8}
