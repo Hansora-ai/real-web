@@ -18,7 +18,7 @@ import { buildConversationContext, loadConversationMemory } from '../../lib/auto
 import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
 import { mediaFallback, mediaMessage, understandMedia } from '../../lib/automation/media.mjs';
 import { matchProductPhoto } from '../../lib/automation/product-match.mjs';
-import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia, waitForQuiet } from '../../lib/automation/turns.mjs';
+import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia } from '../../lib/automation/turns.mjs';
 import { makeProductPhotoSender } from '../../lib/automation/product-photos.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
@@ -172,8 +172,6 @@ export async function handler(event){
     // One answer per turn: a newer message from the customer answers for both; an earlier photo still being read is
     // waited for, so this answer knows about it.
     const turn={conversationId:conversation.id,occurredAt:inbound?.occurred_at||occurredAt,createdAt:inbound?.created_at,messageId:inbound?.id};
-    // A text waits a few seconds: a video or photo the customer sent right after it is answered together with it.
-    if(!hasMedia)await waitForQuiet();
     if(await hasNewerCustomerMessage(turn)){pendingReply=null;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true,answered_by_newer_message:true});}
     const liveMemory=await waitForPendingMedia(turn)?await loadConversationMemory({businessId:account.business_id,conversationId:conversation.id,contactId:contact.id,excludeExternalId:message.externalEventId}):memory;
     const pendingQuestions=burstNote(await unansweredCustomerMessages(turn));

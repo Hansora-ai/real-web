@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { extractInstagramEchoes, extractInstagramMessages } from '../../lib/automation/meta.mjs';
 import { processInstagramEcho } from '../../netlify/functions/automation-instagram-echo-background.mjs';
-import { QUIET_MS } from '../../lib/automation/turns.mjs';
 
 const payload = { object: 'instagram', entry: [{ id: 'biz', messaging: [{ sender: { id: 'biz' }, recipient: { id: 'cust' }, timestamp: 1700000000000, message: { mid: 'm-owner', text: 'I will check and call you', is_echo: true } }] }] };
 
@@ -39,4 +38,3 @@ test("Hansora's own messages (AI, inbox, automations) do not pause anything", as
   assert.equal((await processInstagramEcho({ ...extractInstagramEchoes(payload)[0], appId: '123' }, { ...viaApp.deps, ownAppId: '123' })).ours, true);
 });
 
-test('a text waits a few seconds for a video that follows it', () => { assert.equal(QUIET_MS, 5000); });
