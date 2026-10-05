@@ -11,6 +11,10 @@
   if (!api.isLocalPreview && !/^[0-9a-f-]{36}$/i.test(businessId)) return fail('This inbox link is invalid.');
   document.querySelector('#inbox-back').href = `automation-agent.html?id=${encodeURIComponent(businessId)}${api.isLocalPreview && location.protocol !== 'file:' ? '&preview=1' : ''}`;
 
+  // Where each chat stands (read by the AI after every reply). Interested/ready chats with no news for a day are "quiet".
+  const STAGES = { new: ['🆕', 'New'], interested: ['👀', 'Interested'], ready: ['🔥', 'Ready'], done: ['✅', 'Done'], lost: ['❌', 'Lost'], quiet: ['💤', 'Went quiet'] };
+  function stageOf(row) { const stage = row.sales_stage || ''; if (!stage) return ''; const updated = Date.parse(row.sales_updated_at || row.last_message_at || ''); return ['interested', 'ready'].includes(stage) && Number.isFinite(updated) && Date.now() - updated > 86400000 ? 'quiet' : stage; }
+  function formatValue(value, currency) { const number = Number(value); return Number.isFinite(number) && number > 0 ? `${number.toLocaleString(undefined, { maximumFractionDigits: 2 })}${currency ? ` ${currency}` : ''}` : ''; }
   const previewConversations = [
     {id:'c1',outcomes:[{outcome_type:'order',reference_number:1043}],name:'Anna Miller',handle:'@anna.m',channel:'Instagram DM',time:'2m',preview:'Can you deliver this to Main Street?',unread:true,attention:false,human:false,aiActive:true,intent:'Delivery question',summary:'Anna wants to order a custom cabinet and asked about delivery to Main Street. The AI provided the saved delivery price and is waiting for dimensions.',fields:[['Language','Armenian'],['Location','Main Street, the city'],['First seen','Today']],messages:[['customer','Hello, how much is delivery to Main Street?','14:02'],['ai','Delivery within the city is $5. Would you like help choosing a delivery date?','14:02'],['customer','Yes, and I want to order the cabinet from your latest post.','14:04'],['ai','Happy to help. What width and height do you need? I’ll collect the details for the team.','14:04']]},
     {id:'c2',outcomes:[{outcome_type:'booking',reference_number:19},{outcome_type:'booking',reference_number:20}],name:'Carlos Ruiz',handle:'+1 555 010 0100',channel:'WhatsApp',time:'8m',preview:'I need to change my appointment.',unread:true,attention:true,human:false,aiActive:true,intent:'Change booking',summary:'Carlos wants to move tomorrow’s appointment. Calendar access is required before the AI can confirm another time.',fields:[['Language','Armenian'],['Phone','+1 555 010 0100'],['Existing customer','Yes']],messages:[['customer','I need to change my appointment tomorrow.','13:49'],['ai','I can help collect your preferred time, but I need a team member to confirm the calendar. Which day works for you?','13:49'],['customer','Friday after 3 PM.','13:52']]},
@@ -28,10 +32,6 @@
 
   let selectedId = conversations.some(item => item.id === params.get('conversation')) ? params.get('conversation') : conversations[0]?.id || null;
   let activeFilter = 'all', activeStage = '';
-  // Where each chat stands (read by the AI after every reply). Interested/ready chats with no news for a day are "quiet".
-  const STAGES = { new: ['🆕', 'New'], interested: ['👀', 'Interested'], ready: ['🔥', 'Ready'], done: ['✅', 'Done'], lost: ['❌', 'Lost'], quiet: ['💤', 'Went quiet'] };
-  function stageOf(row) { const stage = row.sales_stage || ''; if (!stage) return ''; const updated = Date.parse(row.sales_updated_at || row.last_message_at || ''); return ['interested', 'ready'].includes(stage) && Number.isFinite(updated) && Date.now() - updated > 86400000 ? 'quiet' : stage; }
-  function formatValue(value, currency) { const number = Number(value); return Number.isFinite(number) && number > 0 ? `${number.toLocaleString(undefined, { maximumFractionDigits: 2 })}${currency ? ` ${currency}` : ''}` : ''; }
   document.querySelector('#stage-filters').addEventListener('click', event => { const button = event.target.closest('button[data-stage]'); if (!button) return; activeStage = activeStage === button.dataset.stage ? '' : button.dataset.stage; document.querySelectorAll('#stage-filters button').forEach(item => item.classList.toggle('active', item.dataset.stage === activeStage)); renderList(); });
   if (selectedId && !api.isLocalPreview) await loadMessages(current());
   loading.hidden = true;
