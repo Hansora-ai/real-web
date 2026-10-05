@@ -113,3 +113,16 @@ test('a button added with "Decide later" ends the automation when tapped (it nev
   const go = planFlowAdvance({ nodes, startIndex: 0, inboundPayload: 'HANSORA_FLOW:a2', inboundText: 'Go' });
   assert.equal(go.actions[0].text, 'Connected step');
 });
+
+test('a shared reel is only a page link: its id is kept, and the video is read only for the business\'s own reels', async () => {
+  const payload = { object: 'instagram', entry: [{ id: 'ig', messaging: [{ sender: { id: 'cust' }, recipient: { id: 'ig' }, timestamp: 1, message: { mid: 'r1', attachments: [{ type: 'ig_reel', payload: { url: 'https://www.instagram.com/reel/DY4BoYct6u5/', title: 'may chair', reel_video_id: '18119571112663732' } }] } }] }] };
+  const [message] = extractInstagramMessages(payload);
+  assert.equal(message.attachmentMediaId, '18119571112663732');
+  const { getInstagramMediaFile } = await import('../../lib/automation/meta.mjs');
+  for (const name of ['META_INSTAGRAM_APP_ID', 'META_INSTAGRAM_APP_SECRET', 'META_INSTAGRAM_REDIRECT_URI', 'META_WEBHOOK_VERIFY_TOKEN', 'HANSORA_AUTOMATION_OAUTH_SECRET']) process.env[name] ||= 'test-value';
+  const own = await getInstagramMediaFile({ mediaId: '18119571112663732', accessToken: 't', fetchImpl: async url => { assert.match(String(url), /18119571112663732\?fields=media_type%2Cmedia_url/); return new Response(JSON.stringify({ media_type: 'VIDEO', media_url: 'https://scontent.cdninstagram.com/v/reel.mp4' }), { status: 200 }); } });
+  assert.deepEqual(own, { url: 'https://scontent.cdninstagram.com/v/reel.mp4', type: 'video' });
+  const other = await getInstagramMediaFile({ mediaId: '18119571112663732', accessToken: 't', fetchImpl: async () => new Response(JSON.stringify({ error: { code: 10, message: 'not owned' } }), { status: 400 }) });
+  assert.equal(other, null);
+  assert.equal(await getInstagramMediaFile({ mediaId: 'https://evil', accessToken: 't' }), null);
+});

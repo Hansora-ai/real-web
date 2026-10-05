@@ -1,7 +1,7 @@
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
 import { first, rows, serviceInsert, serviceUpdate, serviceUpsert, supabaseRequest } from '../../lib/automation/db.mjs';
 import { executeFlowAdvance } from '../../lib/automation/flow-executor.mjs';
-import { getInstagramSenderProfile, sendInstagramAction, sendInstagramRich, sendInstagramText } from '../../lib/automation/meta.mjs';
+import { getInstagramMediaFile, getInstagramSenderProfile, sendInstagramAction, sendInstagramRich, sendInstagramText } from '../../lib/automation/meta.mjs';
 import { keepTyping } from '../../lib/automation/typing.mjs';
 import { flagFailedReply } from '../../lib/automation/failure.mjs';
 import { makeFlowStarter, maybeStartDmAutomation } from '../../lib/automation/dm-triggers.mjs';
@@ -96,7 +96,10 @@ export async function handler(event){
     let media=null,understood=null;
     if(hasMedia&&inbound){
       const context=await mediaContext({businessId:account.business_id,history:memory.history}).catch(()=>'');
-      media=await understandMedia({url:mediaUrl,kind:['audio','video','image'].includes(mediaType)?mediaType:'',caption:message.text,context,store:{businessId:account.business_id,channel:'instagram_dm',conversationId:conversation.id,key:message.externalEventId},afterVisual:file=>matchProductPhoto({businessId:account.business_id,...file,caption:message.text})});
+      // A shared reel's link is a web page, not a video. If it is the business's own reel, its video is read by id.
+      let fileUrl=mediaUrl;
+      if(/^https:\/\/(www\.)?instagram\.com\//i.test(mediaUrl)){const own=await getInstagramMediaFile({mediaId:message.attachmentMediaId,accessToken:decryptSecret(credential)});fileUrl=own?.url||'';}
+      media=fileUrl?await understandMedia({url:fileUrl,kind:['audio','video','image'].includes(mediaType)?mediaType:'',caption:message.text,context,store:{businessId:account.business_id,channel:'instagram_dm',conversationId:conversation.id,key:message.externalEventId},afterVisual:file=>matchProductPhoto({businessId:account.business_id,...file,caption:message.text})}):null;
       // Kept for the logs: what Instagram sent and whether it could be understood (videos and reels).
       console.log('instagram media',{kind:message.kind,type:mediaType,has_url:Boolean(mediaUrl),understood:Boolean(media),media_kind:media?.kind||null,mime:media?.mimeType||null,ms:Date.now()-startedAt});
       understood=media?mediaMessage({source:message.kind==='media'?media.kind:message.kind,media,caption:message.text}):null;
