@@ -10,8 +10,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css">
+  <link rel="stylesheet" href="automation-voice-test.css?v=20261005">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-agent.js?v=20261004-channels"></script>
+  <script defer src="vendor/livekit-client.umd.js"></script><script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-voice-test.js?v=20261005"></script><script defer src="automation-agent.js?v=20261005-voice-test"></script>
 </head>
 <body class="ui" data-automation-page="agent">
   <div data-automation-header></div>
@@ -75,6 +76,17 @@
         </div>
 
         <aside class="ui-stack ui-sticky">
+          <section class="ui-card voice-talk" id="voice-talk" data-call-state="idle" aria-label="Talk to your AI employee">
+            <div class="voice-orb" id="voice-talk-orb" aria-hidden="true"><span class="voice-orb-cloud"></span><span class="voice-orb-ring"></span><span class="voice-orb-icon" data-icon="phone"></span></div>
+            <h2>Let’s talk</h2>
+            <p class="voice-talk-name" id="voice-talk-name">Your AI employee</p>
+            <p class="voice-talk-status" id="voice-talk-status" role="status" aria-live="polite">Ask anything you would ask as a customer.</p>
+            <small class="voice-talk-timer" id="voice-talk-timer">Microphone · Free test · No phone number needed</small>
+            <button class="ui-btn accent lg voice-talk-button" id="voice-talk-call" type="button">Call</button>
+            <button class="ui-btn secondary sm" id="voice-talk-audio" type="button" hidden>Enable audio</button>
+            <div class="ui-alert voice-talk-error" id="voice-talk-error" role="alert" hidden></div>
+            <p class="voice-talk-note">Uses your employee’s knowledge and rules. Test actions don’t create real orders or bookings.</p>
+          </section>
           <section class="ui-card" id="live-test">
             <div class="ui-card-head"><div><h2 class="ui-h2">Live test</h2><p>Chat as a customer. Nothing is sent or saved.</p></div><button class="ui-btn ghost sm" id="clear-test" type="button" data-icon="refresh">Clear</button></div>
             <div class="ui-chat" id="test-conversation" aria-live="polite"><div class="ui-bubble assistant">Hi! I’m your AI employee. Ask me anything a customer would.</div></div>

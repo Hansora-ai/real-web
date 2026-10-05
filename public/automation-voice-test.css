@@ -1,0 +1,22 @@
+.voice-talk{display:flex;flex-direction:column;align-items:center;padding:30px 22px 22px;text-align:center;overflow:hidden;background:radial-gradient(ellipse at 50% 0%,var(--accent-soft),transparent 70%),var(--bg-card)}
+.voice-talk h2{margin:21px 0 5px;font-size:24px;letter-spacing:-.035em;font-weight:600}
+.voice-talk-name{margin:0;color:var(--text-2);font-size:14px}
+.voice-talk-status{margin:16px 0 5px;min-height:20px;font-size:13px;color:var(--text-2)}
+.voice-talk-timer{font-size:11px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.voice-talk-button{min-width:144px;margin:20px 0 9px;border-radius:999px}
+.voice-talk-note{margin:12px 0 0;max-width:270px;font-size:11px;line-height:1.6;color:var(--text-3)}
+.voice-talk-error{width:100%;margin-top:12px;text-align:left;font-size:13px}
+.voice-orb{position:relative;display:grid;place-items:center;width:104px;height:104px;margin:7px;border-radius:50%;isolation:isolate;background:radial-gradient(circle at 28% 24%,#c5b8ff 0%,#8a7cff 25%,#5358e8 55%,#182d80 100%);box-shadow:inset 0 0 18px #ffffff30,0 14px 35px -12px #6663f0a0;animation:voice-breathe 4s ease-in-out infinite}
+.voice-orb-cloud{position:absolute;inset:5px;overflow:hidden;border-radius:50%;background:conic-gradient(from 80deg,#7ce4ff88,#b9a0ff30,#f7b1df88,#7266f020,#7ce4ff88);filter:blur(9px);animation:voice-swirl 9s linear infinite}
+.voice-orb-ring{position:absolute;inset:-7px;border:1px solid #8b80ef50;border-radius:50%}
+.voice-orb-ring::after{content:"";position:absolute;inset:-7px;border:1px solid #8b80ef20;border-radius:50%}
+.voice-orb-icon{position:relative;display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:#ffffff18;border:1px solid #ffffff24;color:#fff;backdrop-filter:blur(5px)}
+.voice-orb-icon svg{width:25px;height:25px}
+.voice-talk[data-call-state="connecting"] .voice-orb-ring,.voice-talk[data-call-state="thinking"] .voice-orb-ring{border-top-color:#b5afff;animation:voice-swirl 1.5s linear infinite}
+.voice-talk[data-call-state="speaking"] .voice-orb{animation:voice-breathe .65s ease-in-out infinite}
+.voice-talk[data-call-state="speaking"] .voice-orb-cloud{animation-duration:2s}
+.voice-talk[data-call-state="listening"] .voice-orb-ring{animation:voice-listen 2s ease-out infinite}
+@keyframes voice-swirl{to{transform:rotate(360deg)}}
+@keyframes voice-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+@keyframes voice-listen{0%{transform:scale(1);opacity:1}100%{transform:scale(1.15);opacity:0}}
+@media(prefers-reduced-motion:reduce){.voice-orb,.voice-orb-cloud,.voice-orb-ring{animation:none!important}}

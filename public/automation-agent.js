@@ -82,6 +82,11 @@
     const previewSuffix = previewLinks ? '&preview=1' : '';
     const editUrl = `automation-setup.html?id=${encodeURIComponent(business.id)}${previewSuffix}`;
     $('#edit-agent').href = editUrl;
+    $('#voice-talk-name').textContent = name;
+    window.HansoraVoiceTest.mount({
+      api, businessId:business.id, preview:api.isLocalPreview,
+      elements:{ root:$('#voice-talk'), button:$('#voice-talk-call'), orb:$('#voice-talk-orb'), status:$('#voice-talk-status'), timer:$('#voice-talk-timer'), error:$('#voice-talk-error'), audio:$('#voice-talk-audio') }
+    });
     $('#edit-knowledge').href = editUrl;
     $('#crumb-home').href = `automation-dashboard.html${previewLinks ? '?preview=1' : ''}`;
     const sharedQuery = new URLSearchParams({business:business.id});

@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="vendor/livekit-client.umd.js"></script><script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-phone.js?v=20260928-live"></script>
+  <script defer src="vendor/livekit-client.umd.js"></script><script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-voice-test.js?v=20261005"></script><script defer src="automation-phone.js?v=20261005-voice-test"></script>
 </head>
 <body class="ui" data-automation-page="phone">
   <div data-automation-header></div>
@@ -48,11 +48,12 @@
           <div class="ui-setting" style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px"><span><strong>Save call transcripts</strong><small>Shown in the inbox next to messages</small></span><input class="ui-switch" id="save-transcripts" type="checkbox" checked></div>
         </div>
         <div class="ui-step phone-step" data-phone-step="4" hidden>
-          <div class="ui-step-head"><h2>Try it</h2><p>Hear how your AI employee answers before customers call.</p></div>
+          <div class="ui-step-head"><h2>Try it</h2><p>Talk to your AI employee using your microphone. No phone number needed. Bookings, orders and handoffs are simulated.</p></div>
           <div class="ui-call">
             <div class="ui-call-orb" id="call-orb" aria-hidden="true"><span data-icon="phone"></span></div>
             <strong id="call-status">Ready for a live test call</strong><small id="call-timer">Uses your microphone · test calls are not billed</small>
             <button class="ui-btn accent lg" id="test-call" type="button" data-icon="play">Start test call</button>
+            <button class="ui-btn secondary" id="enable-call-audio" type="button" hidden>Enable audio</button>
           </div>
           <div class="ui-transcript" id="phone-transcript"></div>
           <div class="ui-review" id="phone-review" style="margin-top:16px"></div>

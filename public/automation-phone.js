@@ -10,11 +10,8 @@
   $('#phone-back').href = `automation-agent.html?id=${encodeURIComponent(businessId)}${previewSuffix}`;
   $('#phone-tools-link').href = `automation-tools.html?business=${encodeURIComponent(businessId)}${previewSuffix}`;
   const STORAGE = 'hansora_automation_phone_setup';
-  let step = 1;
-  let liveRoom = null;
-  let callTimer = null;
-  let callStartedAt = 0;
-  const transcriptSegments = new Map();
+  let step = params.get('test') === '1' ? 4 : 1;
+
 
   let saved = {};
   if (api.isLocalPreview) { try { saved = JSON.parse(localStorage.getItem(STORAGE) || '{}'); } catch (_) {} }
@@ -36,7 +33,11 @@
     if (step < 4) { step++; render(); return; }
     await save();
   });
-  $('#test-call').addEventListener('click', testCall);
+  if (api.isLocalPreview) $('#test-call').addEventListener('click', event => previewCall(event.currentTarget));
+  else window.HansoraVoiceTest.mount({
+    api, businessId, getSettings:collect,
+    elements:{ root:$('#phone-app'), button:$('#test-call'), orb:$('#call-orb'), status:$('#call-status'), timer:$('#call-timer'), error:$('#phone-error'), audio:$('#enable-call-audio'), transcript:$('#phone-transcript') }
+  });
 
   function mode() { return document.querySelector('input[name="number-mode"]:checked').value; }
   function syncForward() { $('#forward-field').hidden = mode() !== 'forward'; }
@@ -78,66 +79,6 @@
     return true;
   }
   function setState(saved) { const badge = $('#phone-state'); badge.textContent = saved ? 'Saved · waiting for line' : 'Not set up'; badge.classList.toggle('amber', saved); }
-  async function testCall(event) {
-    if (liveRoom) { await endLiveCall(); return; }
-    if (api.isLocalPreview) { await previewCall(event.currentTarget); return; }
-    const button = event.currentTarget; button.disabled = true;
-    $('#phone-error').hidden = true;
-    if (!window.LivekitClient) { showError('The secure call client could not load. Refresh and try again.'); button.disabled = false; return; }
-    if (!await save({ quiet:true })) { button.disabled = false; return; }
-    const orb = $('#call-orb'); orb.classList.add('ringing'); $('#call-status').textContent = 'Calling…';
-    const transcript = $('#phone-transcript'); transcript.innerHTML = '';
-    transcriptSegments.clear();
-    try {
-      const response = await api.authenticatedFetch('/.netlify/functions/automation-phone-token', { method:'POST', body:JSON.stringify({ business_id:businessId }) });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(phoneError(payload.error));
-      const lk = window.LivekitClient;
-      const room = new lk.Room({ adaptiveStream:true, dynacast:true });
-      liveRoom = room;
-      room.on(lk.RoomEvent.TrackSubscribed, track => { if (track.kind === lk.Track.Kind.Audio) { const element = track.attach(); element.autoplay = true; element.dataset.phoneAudio = '1'; document.body.appendChild(element); } });
-      room.on(lk.RoomEvent.TrackUnsubscribed, track => track.detach().forEach(element => element.remove()));
-      room.on(lk.RoomEvent.TranscriptionReceived, (segments, participant) => { segments.forEach(segment => { if (segment.final && segment.text.trim()) transcriptSegments.set(segment.id, { who:participant === room.localParticipant ? 'caller' : 'ai', text:segment.text.trim(), at:segment.startTime }); }); renderTranscript(); });
-      room.on(lk.RoomEvent.Disconnected, () => finishCallUi('Call ended'));
-      room.on(lk.RoomEvent.MediaDevicesError, error => showError(error?.message || 'Microphone access failed.'));
-      await room.connect(payload.url, payload.token, { autoSubscribe:true });
-      await room.localParticipant.setMicrophoneEnabled(true, { echoCancellation:true, noiseSuppression:true, autoGainControl:true });
-      orb.classList.remove('ringing'); orb.classList.add('live'); $('#call-status').textContent = 'Connected · speak naturally';
-      button.disabled = false; button.textContent = 'End test call'; button.classList.add('danger'); button.classList.remove('accent');
-      callStartedAt = Date.now();
-      callTimer = setInterval(updateTimer, 1000); updateTimer();
-    } catch (error) {
-      if (liveRoom) { await liveRoom.disconnect().catch(() => {}); liveRoom = null; }
-      orb.classList.remove('ringing', 'live');
-      $('#call-status').textContent = 'Test call unavailable';
-      $('#call-timer').textContent = 'Check the message above, then try again';
-      showError(error?.message || 'Could not start the live test call.');
-      button.disabled = false; button.textContent = 'Try again';
-    }
-  }
-  async function endLiveCall() {
-    const room = liveRoom; liveRoom = null;
-    if (room) { await room.localParticipant.setMicrophoneEnabled(false).catch(() => {}); await room.disconnect().catch(() => {}); }
-    finishCallUi('Call ended');
-  }
-  function finishCallUi(status) {
-    if (callTimer) clearInterval(callTimer); callTimer = null;
-    document.querySelectorAll('[data-phone-audio]').forEach(element => element.remove());
-    $('#call-orb').classList.remove('ringing', 'live'); $('#call-status').textContent = status;
-    const button = $('#test-call'); button.disabled = false; button.textContent = 'Call again'; button.classList.remove('danger'); button.classList.add('accent');
-    const seconds = callStartedAt ? Math.max(0, Math.floor((Date.now() - callStartedAt) / 1000)) : 0;
-    $('#call-timer').textContent = `${formatTimer(seconds)} · test call · not billed`;
-    liveRoom = null;
-  }
-  function updateTimer() { $('#call-timer').textContent = `${formatTimer(Math.floor((Date.now() - callStartedAt) / 1000))} · live · not billed`; }
-  function formatTimer(seconds) { return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`; }
-  function renderTranscript() {
-    $('#phone-transcript').innerHTML = [...transcriptSegments.values()].sort((a,b) => a.at - b.at).map(item => `<p class="${item.who}"><span>${item.who === 'ai' ? 'AI employee' : 'You'}</span>${escapeHtml(item.text)}</p>`).join('');
-    $('#phone-transcript').scrollTop = $('#phone-transcript').scrollHeight;
-  }
-  function phoneError(code) {
-    return ({ phone_service_not_configured:'Live phone testing will be available after the LiveKit keys are added.', phone_test_unavailable:'The phone service is temporarily unavailable.', business_not_found:'This AI employee could not be found.' })[code] || 'Could not start the live test call.';
-  }
   async function previewCall(button) {
     button.disabled = true;
     const orb = $('#call-orb'); orb.classList.add('ringing'); $('#call-status').textContent = 'Calling…';
@@ -148,6 +89,7 @@
     for (const [who, text] of lines) { await wait(1100); transcript.insertAdjacentHTML('beforeend', `<p class="${who}"><span>${who === 'ai' ? 'AI employee' : 'Caller'}</span>${escapeHtml(text)}</p>`); transcript.scrollTop = transcript.scrollHeight; }
     await wait(900); clearInterval(timer); orb.classList.remove('live'); $('#call-status').textContent = 'Call ended'; button.disabled = false; button.lastChild.textContent = 'Call again';
   }
+  function formatTimer(seconds) { return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`; }
   function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
   function showError(message) { const box = $('#phone-error'); box.textContent = message; box.hidden = false; }
   function fail(message) { $('#phone-loading').hidden = true; showError(message); }
