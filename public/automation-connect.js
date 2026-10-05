@@ -331,6 +331,10 @@
           const statusResponse = await api.authenticatedFetch('/.netlify/functions/automation-telegram-connect', { method: 'POST', body: JSON.stringify({ business_id: businessId, action: 'status' }) });
           const status = await statusResponse.json().catch(() => ({}));
           if (status.linked) box.querySelector('[data-step="open"]')?.classList.add('done');
+          const wait = document.querySelector('#telegram-wait');
+          wait.classList.toggle('ui-alert', Boolean(status.premium_missing));
+          if (status.premium_missing) wait.textContent = 'Your Telegram account does not have Telegram Premium. Telegram only lets an assistant answer for you with Telegram Business, which is part of Premium. Get it in Telegram → Settings → Telegram Premium, then press Start in the bot again.';
+          else if (!status.step || status.step !== 'connected') wait.textContent = status.linked ? 'Step 1 done ✓ Now add the bot in Telegram Business → Chatbots…' : 'Waiting for Telegram…';
           if (status.step !== 'connected') return;
           clearInterval(telegramPoll);
           box.querySelectorAll('li').forEach(item => item.classList.add('done'));
