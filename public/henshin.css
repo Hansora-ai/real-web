@@ -269,9 +269,9 @@ dialog::backdrop { background: #000c; }
 .result > .generation-stage { width: 100%; min-height: 260px; }
 .result-actions { justify-content: center; }
 .result-actions button:has(svg) { width: 36px; height: 36px; border-radius: 50%; padding: 8px; }
-.result-actions button[aria-label="Preview"] { background: linear-gradient(135deg,#22c55e,#84cc16); color: white; }
-.result-actions button[aria-label="Recreate"] { background: linear-gradient(135deg,#f59e0b,#f97316); color: white; }
-.result-actions button[aria-label="Download"] { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: white; }
+.result-actions button[data-action="preview"] { background: linear-gradient(135deg,#22c55e,#84cc16); color: white; }
+.result-actions button[data-action="recreate"] { background: linear-gradient(135deg,#f59e0b,#f97316); color: white; }
+.result-actions button[data-action="download"] { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: white; }
 .result-failed-state { display:flex; flex-direction:column; align-items:center; text-align:center; padding:22px; gap:12px; }
 .result-failed-icon { display:grid; place-items:center; width:48px; height:48px; border-radius:50%; background:#ef44441a; color:#fca5a5; font-size:28px; }
 .result-failed-state p { margin:0; color:#92949b; font-size:11px; }
@@ -363,9 +363,9 @@ dialog::backdrop { background: #000c; }
 .result-actions { justify-content:flex-end; gap:6px; }
 .result-actions button:has(svg) { display:grid; place-items:center; width:32px; height:32px; padding:0; }
 .result-actions svg { width:16px; height:16px; }
-.result-actions button[aria-label="Preview"] { box-shadow:0 4px 12px #22c55e35; }
-.result-actions button[aria-label="Recreate"] { box-shadow:0 4px 12px #f9731640; }
-.result-actions button[aria-label="Download"] { box-shadow:0 4px 12px #8b5cf635; }
+.result-actions button[data-action="preview"] { box-shadow:0 4px 12px #22c55e35; }
+.result-actions button[data-action="recreate"] { box-shadow:0 4px 12px #f9731640; }
+.result-actions button[data-action="download"] { box-shadow:0 4px 12px #8b5cf635; }
 .result-preview-open { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:#101116dd; border:1px solid #ffffff40; border-radius:20px; font-size:11px; opacity:0; pointer-events:none; transition:opacity .15s; }
 .result-media:hover .result-preview-open, .result-media:focus-within .result-preview-open { opacity:1; pointer-events:auto; }
 .template-delete { position:absolute; top:8px; left:8px; z-index:1; display:grid; place-items:center; width:28px; height:28px; padding:0; background:#101116d9; border:1px solid #ffffff25; border-radius:8px; }
@@ -398,3 +398,23 @@ dialog::backdrop { background: #000c; }
 .source-asset-play { position:absolute; inset:0; display:grid; place-items:center; background:#0002; }
 .source-asset-play svg { width:22px; height:22px; fill:white; stroke:white; filter:drop-shadow(0 1px 3px #000); }
 .library-more { display:block; margin:14px auto; padding:10px 24px; }
+
+/* Make the library easy to discover in every language. */
+#templatesOpen { color:#e4d6ff; border-color:#b69bff65; background:linear-gradient(120deg,#ad8bf82b,#72bafb16); box-shadow:0 0 18px #9c76f51c,inset 0 1px 0 #ffffff15; }
+#templatesOpen:hover, #templatesOpen:focus-visible { background:linear-gradient(120deg,#ad8bf847,#72bafb29); box-shadow:0 0 20px #9c76f538; border-color:#c6abff; }
+#templatesOpen.active { color:#f5eeff; background:linear-gradient(120deg,#ad8bf84d,#72bafb25); border-color:#b69bff90; }
+#historyView:not([hidden]) { display:flex; flex-direction:column; }
+#empty { flex:1; min-height:300px; }
+#empty .empty-icon { color:#cfb5ff; border-color:#b69bff4d; background:linear-gradient(135deg,#b78aff22,#70baff14); box-shadow:0 0 28px #a782f51a; }
+#empty h3 { font-size:20px; color:#f2ebff; }
+#empty p { max-width:340px; color:#a6a0b2; line-height:1.7; }
+#emptyLibrary { color:#f2ebff; border-color:#b69bff60; background:linear-gradient(120deg,#ad8bf835,#72bafb19); padding:11px 18px; }
+#emptyLibrary:hover, #emptyLibrary:focus-visible { border-color:#c6abff; box-shadow:0 0 20px #9c76f530; }
+.modes button { min-width:0; }
+@media(max-width:740px) { .workspace-tabs { padding-left:12px; padding-right:12px; gap:6px; } .workspace-tabs button { padding:9px 10px; } #empty { min-height:260px; padding:24px 16px; } #empty h3 { font-size:18px; } }
+
+/* Chronological rows prevent multicolumn balancing from moving unrelated cards. */
+.results-grid { display:grid; columns:auto; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; align-items:start; }
+.result { margin:0; }
+@media(max-width:1100px) { .results-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:740px) { .results-grid { gap:10px; } }
