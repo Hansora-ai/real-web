@@ -1,6 +1,8 @@
 const crypto=require('node:crypto');
 const {prepareSource}=require('../../lib/henshin/server-media.cjs');
 const {BASE,KEY,json,auth,db,validate,promptFor}=require('../../lib/henshin/common.cjs');
+const {extra}=require('../../lib/henshin/prompts.cjs');
+const MODE_LABELS={motion:'Henshin · Motion transfer',swap:'Henshin · Object swap',edit:'Henshin · Video edit'};
 const KIE_BASE=(process.env.KIE_BASE_URL||'https://api.kie.ai').replace(/\/$/,'');
 const KIE_KEY=process.env.KIE_API_KEY||'';
 async function changeBalance(uid, cost, refund=false) {
@@ -23,7 +25,6 @@ exports.handler=async event=>{
     user=await auth(event);
     const body=JSON.parse(event.body||'{}');
     validate(body);
-    if(body.mode!=='motion'&&!String(body.prompt||'').trim()) throw Error('Describe the requested change.');
     const hash=crypto.createHash('sha256').update(`henshin:${user.id}:${body.run_id}`).digest('hex');
     rowId=`${hash.slice(0,8)}-${hash.slice(8,12)}-${hash.slice(12,16)}-${hash.slice(16,20)}-${hash.slice(20,32)}`;
     const prior=await db(`user_generations?id=eq.${rowId}&user_id=eq.${user.id}&select=id,meta`);
@@ -36,9 +37,9 @@ exports.handler=async event=>{
     body.audio_url=inspected.timingAudioURL;
     ({cost}=validate(body));
     const prompt=promptFor(body);
-    meta={source:'kie',engine:'henshin',source_feature:'henshin',run_id:body.run_id,status:'pending',resolution:body.resolution,mode:body.mode,user_prompt:String(body.prompt||'').trim().slice(0,2000),keep_audio:keepAudio,checker:'henshin-check',callback_token:crypto.randomBytes(24).toString('hex'),video_url:body.video_url,reference_video_urls:[inspected.videoURL],reference_image_urls:body.image_urls,reference_audio_urls:body.audio_url?[body.audio_url]:[],source_audio_url:inspected.audioURL,source_video_duration:body.source_video_duration,refund_amount:cost,charged_duration:Math.ceil(body.source_video_duration)};
+    meta={source:'kie',engine:'henshin',source_feature:'henshin',run_id:body.run_id,status:'pending',resolution:body.resolution,mode:body.mode,user_prompt:extra(body.prompt),keep_audio:keepAudio,checker:'henshin-check',callback_token:crypto.randomBytes(24).toString('hex'),video_url:body.video_url,reference_video_urls:[inspected.videoURL],reference_image_urls:body.image_urls,reference_audio_urls:body.audio_url?[body.audio_url]:[],source_audio_url:inspected.audioURL,source_video_duration:body.source_video_duration,refund_amount:cost,charged_duration:Math.ceil(body.source_video_duration)};
     // Deterministic primary key reserves a run once, including concurrent requests.
-    await db('user_generations',{method:'POST',body:JSON.stringify({id:rowId,user_id:user.id,provider:'Hansora Henshin',kind:'video',prompt,result_url:null,meta})});
+    await db('user_generations',{method:'POST',body:JSON.stringify({id:rowId,user_id:user.id,provider:'Hansora Henshin',kind:'video',prompt:meta.user_prompt||MODE_LABELS[body.mode],result_url:null,meta})});
     reserved=true;
     const credits=await changeBalance(user.id,cost);
     charged=true;

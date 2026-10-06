@@ -32,6 +32,16 @@ test('Successful run charges verified duration, preserves audio references and s
  const original=global.fetch,services=mockServices();global.fetch=services.fetch;
  try{const {handler}=require('../../netlify/functions/run-henshin');let result=await handler(event({audio_url:url}));assert.equal(result.statusCode,201);assert.equal(JSON.parse(result.body).debited,10);assert.equal(services.state().credits,90);assert.equal(services.state().providerInput.duration,-1);assert.equal(services.state().providerInput.generate_audio,false);assert.match(services.state().providerInput.reference_audio_urls[0],/timing.mp3$/);assert.match(services.state().record.meta.source_audio_url,/source-audio.m4a$/);assert.match(services.state().providerInput.reference_video_urls[0],/silent-source.mp4$/);assert.equal(services.state().record.meta.refund_amount,10);result=await handler(event());assert.equal(result.statusCode,200);assert.equal(services.state().submits,1);assert.equal(services.state().credits,90);}finally{global.fetch=original;}
 });
+test('Built-in instructions go only to the provider; the saved row keeps just the user text',async()=>{
+ for(const [patch,saved] of [[{mode:'swap',prompt:''},'Henshin · Object swap'],[{mode:'edit',prompt:'Make the jacket red.'},'Make the jacket red.']]){
+  const original=global.fetch,services=mockServices();global.fetch=services.fetch;
+  try{const result=await require('../../netlify/functions/run-henshin').handler(event(patch));assert.equal(result.statusCode,201);
+   const {record,providerInput}=services.state();assert.match(providerInput.prompt,/Keep the exact same camera/);
+   assert.equal(record.prompt,saved);assert.equal(record.meta.user_prompt,patch.prompt);assert.doesNotMatch(JSON.stringify(record),/Keep the exact same camera/);
+  }finally{global.fetch=original;}
+ }
+ assert.ok(!fs.existsSync('public/henshin-prompts.js'));
+});
 test('Insufficient balance never launches a provider task',async()=>{const original=global.fetch,services=mockServices({credits:1});global.fetch=services.fetch;try{const result=await require('../../netlify/functions/run-henshin').handler(event());assert.equal(result.statusCode,402);assert.equal(services.state().submits,0);assert.equal(services.state().credits,1);}finally{global.fetch=original;}});
 test('Explicit provider rejection restores the debit and records a refund',async()=>{const original=global.fetch,services=mockServices({reject:true});global.fetch=services.fetch;try{await require('../../netlify/functions/run-henshin').handler(event());assert.equal(services.state().credits,100);assert.equal(services.state().record.meta.status,'failed');assert.equal(services.state().record.meta.refunded,true);}finally{global.fetch=original;}});
 test('Ambiguous provider timeout retains the reserved charge for callback reconciliation',async()=>{const original=global.fetch,services=mockServices();global.fetch=(url,options)=>String(url).includes('createTask')?Promise.reject(Error('Timed out')):services.fetch(url,options);try{const result=await require('../../netlify/functions/run-henshin').handler(event());assert.equal(result.statusCode,202);assert.equal(JSON.parse(result.body).submission_uncertain,true);assert.equal(services.state().credits,90);assert.equal(services.state().record.meta.status,'pending');assert.equal(services.state().record.meta.submission_uncertain,true);}finally{global.fetch=original;}});
@@ -87,7 +97,7 @@ test('Provider timeout does not overwrite a result already saved by the callback
 });
 
 test('Every mode keeps its detailed built-in instructions; the user text is only added as an extra request',()=>{
- const prompts=require('../../public/henshin-prompts.js'),{templateInput}=require('../../lib/henshin/templates.cjs');
+ const prompts=require('../../lib/henshin/prompts.cjs'),{templateInput}=require('../../lib/henshin/templates.cjs');
  const firsts={motion:/replace the main character of @Video 1/,swap:/replace the main object in @Video 1/,edit:/Change only the main subject or object of @Video 1/};
  for(const mode of ['motion','swap','edit'])for(const prompt of ['', '   ',...prompts.legacy]){
   const text=common.promptFor({...body,mode,prompt});assert.match(text,firsts[mode]);assert.match(text,/Keep the exact same camera/);assert.match(text,/No flicker, morphing or identity drift/);assert.doesNotMatch(text,/Also do this/);
