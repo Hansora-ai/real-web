@@ -402,7 +402,8 @@ dialog::backdrop { background: #000c; }
 /* Make the library easy to discover in every language. */
 #templatesOpen { color:#e4d6ff; border-color:#b69bff65; background:linear-gradient(120deg,#ad8bf82b,#72bafb16); box-shadow:0 0 18px #9c76f51c,inset 0 1px 0 #ffffff15; }
 #templatesOpen:hover, #templatesOpen:focus-visible { background:linear-gradient(120deg,#ad8bf847,#72bafb29); box-shadow:0 0 20px #9c76f538; border-color:#c6abff; }
-#templatesOpen.active { color:#f5eeff; background:linear-gradient(120deg,#ad8bf84d,#72bafb25); border-color:#b69bff90; }
+#templatesOpen.active { color:#171123; background:linear-gradient(120deg,#b99af5,#91bdf9); border-color:#cfb8ff; box-shadow:0 0 20px #9c76f538,inset 0 1px 0 #ffffff40; }
+#templatesOpen.active:hover, #templatesOpen.active:focus-visible { color:#171123; background:linear-gradient(120deg,#c8acf9,#a4cafb); border-color:#e2d3ff; }
 #historyView:not([hidden]) { display:flex; flex-direction:column; }
 #empty { flex:1; min-height:300px; }
 #empty .empty-icon { color:#cfb5ff; border-color:#b69bff4d; background:linear-gradient(135deg,#b78aff22,#70baff14); box-shadow:0 0 28px #a782f51a; }

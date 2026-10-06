@@ -71,7 +71,7 @@
    const latest=await session();if(!owner(latest))throw Error(t('Owner session expired. Sign in again.'));
    const response=await fetch('/.netlify/functions/henshin-templates',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+latest.access_token},body:JSON.stringify({video_url,source_video_url,poster_url,preview_url,image_urls,prompt,mode,resolution,keep_audio:keep})});
    const data=await response.json();if(!response.ok||!data.ok)throw Error(data.error||t('Could not publish template.'));
-   $('editorStatus').textContent=t('Template published. Open the Motion Library to view it.');
+   $('editorStatus').textContent=t('Template published. Open the Trendy examples to view it.');
   }catch(e){$('editorStatus').textContent=t(e.message);}finally{busy=false;elements.forEach(e=>e.disabled=false);}
  };
  renderReferences();

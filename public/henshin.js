@@ -13,7 +13,7 @@
  function cacheTemplates(templates,nextOffset=null){templateCache={templates,nextOffset,at:Date.now()};try{sessionStorage.setItem(CACHE_KEY,JSON.stringify(templateCache));}catch{}}
  async function templatePage(offset=0){
   const r=await fetch('/.netlify/functions/henshin-templates?offset='+offset,{signal:AbortSignal.timeout(12000)}),data=await r.json();
-  if(!r.ok||!data.ok||!Array.isArray(data.templates))throw Error(data.error||t('Could not load the motion library.'));return data;
+  if(!r.ok||!data.ok||!Array.isArray(data.templates))throw Error(data.error||t('Could not load the trendy examples.'));return data;
  }
  function fetchTemplates(){
   if(templatePromise)return templatePromise;const epoch=++libraryEpoch;
@@ -235,10 +235,10 @@
  }
  async function loadTemplates(){
   if(templateCache)renderTemplates(templateCache.templates);
-  else if(!$('templatesList').children.length)$('templatesList').innerHTML='<div class="library-loading" role="status"><span class="request-loading-spinner"></span>'+t('Loading motion library…')+'</div>';
+  else if(!$('templatesList').children.length)$('templatesList').innerHTML='<div class="library-loading" role="status"><span class="request-loading-spinner"></span>'+t('Loading trendy examples…')+'</div>';
   if(templateCache&&Date.now()-templateCache.at<30000)return;
   try{const templates=await fetchTemplates();renderTemplates(templates);$('templateStatus').textContent='';}
-  catch(e){if(templateCache)$('templateStatus').textContent=t('Showing saved templates. Could not refresh the library.');else libraryEmpty(t('Motion library unavailable'),t('Please try opening the library again.'));}
+  catch(e){if(templateCache)$('templateStatus').textContent=t('Showing saved templates. Could not refresh the library.');else libraryEmpty(t('Trendy examples unavailable'),t('Please try opening the library again.'));}
  }
  function renderTemplates(templates,append=false){
   if(!append){
