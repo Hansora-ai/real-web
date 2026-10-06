@@ -5,7 +5,6 @@
  const OWNER='hansora.ai.bot@gmail.com';
  let source=null,seconds=0,sourceURL='',images=[],resolution='720p',mode='motion',filter='all',busy=false,rows=[],refreshing=false,sessionUser='',uploadingTemplate=false;
  let sourceSelection=0,activePreview=null,submission=null;
- const restoring=new Set(),failedAudio=new Map();
  const rates={'480p':2,'720p':4.2,'1080p':9};
  function status(text,error=false){if(busy&&submission){submission=text;renderResults();}$('status').textContent=text;$('status').classList.toggle('error',error);}
  function cost(){return seconds?Math.round(Math.ceil(seconds)*rates[resolution]*10):rates[resolution]*10;}
@@ -81,33 +80,24 @@
   $('resultsList').replaceChildren();const visible=rows.filter(row=>filter==='all'||(filter==='henshin'?isHenshin(row):isSeedance(row)));$('empty').hidden=visible.length>0||!!submission;
   if(submission){const card=document.createElement('article');card.className='result';card.append(generationStage('requesting',submission));$('resultsList').append(card);}
   for(const row of visible){
-   const meta=row.meta||{},audioPending=isHenshin(row)&&meta.source_audio_url&&!meta.audio_restored,failed=/fail|error|reject|cancel/.test(meta.status||''),ready=!!row.result_url&&!audioPending&&!failed,card=document.createElement('article');card.className='result';
+   const meta=row.meta||{},audioPending=isHenshin(row)&&meta.source_audio_url&&!meta.audio_restored,audioFailed=meta.status==='audio_failed',failed=/fail|error|reject|cancel/.test(meta.status||''),ready=!!row.result_url&&!audioPending&&!failed,card=document.createElement('article');card.className='result';
    const badge=document.createElement('span');badge.className='badge';badge.textContent=isHenshin(row)?'HENSHIN · '+modeName(meta.mode).toUpperCase():'SEEDANCE 2.5';card.append(badge);
    const media=document.createElement('div');media.className='result-media';card.append(media);
    if(ready){const video=document.createElement('video');video.src=row.result_url;video.controls=true;video.playsInline=true;video.preload='metadata';media.append(video);}
-   else if(failed){const box=document.createElement('div');box.className='result-failed-state';const symbol=document.createElement('span');symbol.className='result-failed-icon';symbol.textContent='×';const label=document.createElement('strong');label.textContent='Failed';const copy=document.createElement('p');copy.textContent=meta.error||'Generation wasn’t completed';box.append(symbol,label,copy);media.append(box);}
-   else{const queued=/queued/.test(meta.status||''),requesting=/requesting|uploading|preparing/.test(meta.status||''),audio=audioPending&&row.result_url;media.append(generationStage(audio?'requesting':queued?'queued':requesting?'requesting':'generating',failedAudio.get(row.id)||(audio?'Restoring original audio…':queued?'In Queue':requesting?'Processing request…':'Generating')));}
+   else if(failed){const box=document.createElement('div');box.className='result-failed-state';const symbol=document.createElement('span');symbol.className='result-failed-icon';symbol.textContent='×';const label=document.createElement('strong');label.textContent='Failed';const copy=document.createElement('p');copy.textContent=meta.audio_error||meta.error||'Generation wasn’t completed';box.append(symbol,label,copy);media.append(box);}
+   else{const queued=/queued/.test(meta.status||''),requesting=/requesting|uploading|preparing/.test(meta.status||''),audio=audioPending&&(meta.generated_video_url||row.result_url);media.append(generationStage(audio?'requesting':queued?'queued':requesting?'requesting':'generating',audio?'Restoring original audio…':queued?'In Queue':requesting?'Processing request…':'Generating'));}
    const title=document.createElement('h3');title.textContent=new Date(row.created_at||Date.now()).toLocaleString();const actions=document.createElement('div');actions.className='result-actions';card.append(title,actions);
    if(ready){const details=rowDetails(row);actions.append(decorate(action('',()=>preview(details)),'preview','Preview'));if(details.source_video_url)actions.append(decorate(action('',async()=>{try{await recreate(details);}catch(e){status(e.message,true);}}),'recreate','Recreate'));actions.append(decorate(action('',()=>download(row.result_url)),'download','Download'));}
-   if(failedAudio.has(row.id))actions.append(action('Retry audio',()=>{failedAudio.delete(row.id);restore(row);}),action('Preview generated video',()=>preview(rowDetails(row))));
+   if(audioFailed)actions.append(action('Retry audio',async()=>{try{await request('henshin-result',{id:row.id});await refresh();}catch(e){status(e.message,true);}}),action('Preview generated video',()=>preview({...rowDetails(row),video_url:meta.generated_video_url||row.result_url})));
    $('resultsList').append(card);
-   if(audioPending&&row.result_url&&!restoring.has(row.id)&&!failedAudio.has(row.id))restore(row);
   }
- }
- async function restore(row){
-  if(restoring.has(row.id))return;restoring.add(row.id);
-  try{
-   const media=await window.HenshinMedia.restoreAudio(row.result_url,row.meta.source_audio_url,Number(row.meta.source_video_duration));
-   const url=await upload(media);const saved=await request('henshin-result',{id:row.id,result_url:url});
-   row.result_url=saved.result_url;row.meta.audio_restored=true;status('Henshin is ready with the original soundtrack.');
-  }catch(e){failedAudio.set(row.id,e.message);status(e.message,true);}finally{restoring.delete(row.id);renderResults();}
  }
  async function refresh(){
   if(refreshing)return;refreshing=true;
   try{
    const s=await session();
    if(!s){rows=[];sessionUser='';renderResults();return;}
-   if(sessionUser!==s.user.id){rows=[];failedAudio.clear();sessionUser=s.user.id;}
+   if(sessionUser!==s.user.id){rows=[];sessionUser=s.user.id;}
    const {data,error}=await sb.from('user_generations').select('id,provider,prompt,result_url,meta,created_at').eq('user_id',s.user.id).eq('kind','video').order('created_at',{ascending:false}).limit(100);
    if(error)throw error;rows=(data||[]).filter(row=>isHenshin(row)||isSeedance(row));
    // Resume shared KIE checking after navigation or a browser reload.
@@ -123,13 +113,12 @@
   busy=true;setView('history');submission='Processing request…';renderResults();update();
   const input=source,refs=images.map(i=>i.file),duration=seconds,quality=resolution,chosenMode=mode,prompt=$('prompt').value,preserve=$('keepAudio').checked;
   try{
-   let audio=null;if(preserve){status('Extracting the original soundtrack…');audio=await window.HenshinMedia.extractAudio(input);}
    status('Preparing a compatible MP4 source…');const prepared=await window.HenshinMedia.compress(input);
-   status('Uploading your source video and references…');const videoURL=await upload(prepared),imageURLs=[];for(const file of refs) imageURLs.push(await upload(file));const audioURL=audio?await upload(audio):null;
+   status('Uploading your source video and references…');const videoURL=await upload(prepared),imageURLs=[];for(const file of refs) imageURLs.push(await upload(file));
    setView('history');status('Starting your transformation…');
-   const data=await request('run-henshin',{run_id:crypto.randomUUID(),video_url:videoURL,image_urls:imageURLs,audio_url:audioURL,source_video_duration:duration,resolution:quality,mode:chosenMode,prompt});
+   const data=await request('run-henshin',{run_id:crypto.randomUUID(),video_url:videoURL,image_urls:imageURLs,keep_audio:preserve,source_video_duration:duration,resolution:quality,mode:chosenMode,prompt});
    if(data.credits!==undefined)window.HansoraHeader?.setCredits?.(data.credits);
-   window.HansoraHeader?.startCreditsPolling?.(90000,1500);status(data.submission_uncertain?data.message:audio?'Generating. Your original audio will be restored when the video is ready.':'Generating your Henshin video…');await refresh();
+   window.HansoraHeader?.startCreditsPolling?.(90000,1500);status(data.submission_uncertain?data.message:preserve?'Generating. Your finished video will include the original soundtrack.':'Generating your Henshin video…');await refresh();
   }catch(e){status(e.message,true);}finally{busy=false;submission=null;renderResults();update();}
  };
  async function recreate(item){

@@ -10,10 +10,11 @@ const response=data=>new Response(JSON.stringify(data),{headers:{'Content-Type':
 test('Template publication and final result writes require the authenticated owner',async()=>{const original=global.fetch;global.fetch=async()=>response({id:'user',email:'someone@example.com',email_confirmed_at:'today'});try{const templates=require('../../netlify/functions/henshin-templates');const res=await templates.handler({httpMethod:'POST',headers:{authorization:'Bearer test'},body:JSON.stringify({video_url:url,duration:5})});assert.equal(res.statusCode,403);const result=require('../../netlify/functions/henshin-result');global.fetch=async u=>String(u).includes('/auth/')?response({id:'user'}):response([]);assert.equal((await result.handler({httpMethod:'POST',headers:{authorization:'Bearer test'},body:JSON.stringify({id:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',result_url:url})})).statusCode,404);}finally{global.fetch=original;}});
 test('Server ffprobe uses actual video duration',async()=>{const original=global.fetch;global.fetch=async()=>new Response(fs.readFileSync('test/henshin/fixtures/source.mp4'));try{const result=await require('../../lib/henshin/inspect.cjs').inspect(url);assert.ok(Math.abs(result.seconds-5)<.1);assert.equal(result.hasAudio,true);}finally{global.fetch=original;}});
 function mockServices({credits=100,reject=false}={}){
- let record=null,submits=0,providerInput=null;
- return {state:()=>({record,credits,submits,providerInput}),fetch:async(raw,options={})=>{
-  const u=new URL(raw),b=options.body?JSON.parse(options.body):null;
-  if(u.pathname.includes('/storage/'))return new Response(fs.readFileSync('test/henshin/fixtures/source.mp4'));
+ let record=null,submits=0,providerInput=null;const media=new Map();
+ return {state:()=>({record,credits,submits,providerInput,media}),fetch:async(raw,options={})=>{
+  const u=new URL(raw);
+  if(u.pathname.includes('/storage/')){if(options.method==='POST'){media.set(String(raw).replace('/storage/v1/object/','/storage/v1/object/public/'),Buffer.from(options.body));return response({ok:true});}return new Response(media.get(String(raw))||fs.readFileSync('test/henshin/fixtures/source.mp4'));}
+  const b=options.body?JSON.parse(options.body):null;
   if(u.pathname.includes('/auth/'))return response({id:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'});
   if(u.pathname.endsWith('/profiles')){
    if(options.method==='PATCH'){if(Number(u.searchParams.get('credits').slice(3))!==credits)return response([]);credits=b.credits;}return response([{credits}]);
@@ -29,7 +30,7 @@ function mockServices({credits=100,reject=false}={}){
 const event=patch=>({httpMethod:'POST',headers:{authorization:'Bearer test'},body:JSON.stringify({...body,...patch})});
 test('Successful run charges verified duration, preserves audio references and submits once',async()=>{
  const original=global.fetch,services=mockServices();global.fetch=services.fetch;
- try{const {handler}=require('../../netlify/functions/run-henshin');let result=await handler(event({audio_url:url}));assert.equal(result.statusCode,201);assert.equal(JSON.parse(result.body).debited,10);assert.equal(services.state().credits,90);assert.equal(services.state().providerInput.duration,-1);assert.equal(services.state().providerInput.generate_audio,false);assert.deepEqual(services.state().providerInput.reference_audio_urls,[url]);assert.equal(services.state().record.meta.refund_amount,10);result=await handler(event());assert.equal(result.statusCode,200);assert.equal(services.state().submits,1);assert.equal(services.state().credits,90);}finally{global.fetch=original;}
+ try{const {handler}=require('../../netlify/functions/run-henshin');let result=await handler(event({audio_url:url}));assert.equal(result.statusCode,201);assert.equal(JSON.parse(result.body).debited,10);assert.equal(services.state().credits,90);assert.equal(services.state().providerInput.duration,-1);assert.equal(services.state().providerInput.generate_audio,false);assert.match(services.state().providerInput.reference_audio_urls[0],/timing.mp3$/);assert.match(services.state().record.meta.source_audio_url,/source-audio.m4a$/);assert.match(services.state().providerInput.reference_video_urls[0],/silent-source.mp4$/);assert.equal(services.state().record.meta.refund_amount,10);result=await handler(event());assert.equal(result.statusCode,200);assert.equal(services.state().submits,1);assert.equal(services.state().credits,90);}finally{global.fetch=original;}
 });
 test('Insufficient balance never launches a provider task',async()=>{const original=global.fetch,services=mockServices({credits:1});global.fetch=services.fetch;try{const result=await require('../../netlify/functions/run-henshin').handler(event());assert.equal(result.statusCode,402);assert.equal(services.state().submits,0);assert.equal(services.state().credits,1);}finally{global.fetch=original;}});
 test('Explicit provider rejection restores the debit and records a refund',async()=>{const original=global.fetch,services=mockServices({reject:true});global.fetch=services.fetch;try{await require('../../netlify/functions/run-henshin').handler(event());assert.equal(services.state().credits,100);assert.equal(services.state().record.meta.status,'failed');assert.equal(services.state().record.meta.refunded,true);}finally{global.fetch=original;}});
@@ -50,9 +51,9 @@ test('Dedicated checker rejects another account and forged callbacks before prov
  assert.equal((await handler({httpMethod:'POST',queryStringParameters:{...queryStringParameters,token:'forged'}})).statusCode,403);
  }finally{global.fetch=original;}
 });
-test('Dedicated checker returns a saved result without launching another task or losing audio state',async()=>{
+test('Dedicated checker keeps an intermediate video pending until server audio completion',async()=>{
  const original=global.fetch,uid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';global.fetch=async u=>String(u).includes('/auth/')?response({id:uid}):response([{id:uid,user_id:uid,result_url:url,meta:{source_feature:'henshin',run_id:'fixture-run',source_audio_url:url}}]);
- try{const result=await require('../../netlify/functions/henshin-check').handler({httpMethod:'GET',headers:{authorization:'Bearer test'},queryStringParameters:{uid,run_id:'fixture-run'}});assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).status,'restoring_audio');assert.equal(JSON.parse(result.body).result_url,url);}finally{global.fetch=original;}
+ try{const result=await require('../../netlify/functions/henshin-check').handler({httpMethod:'GET',headers:{authorization:'Bearer test'},queryStringParameters:{uid,run_id:'fixture-run'}});assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).status,'restoring_audio');assert.equal(JSON.parse(result.body).result_url,undefined);}finally{global.fetch=original;}
 });
 test('Signed callback recovers a timed-out task by polling the provider rather than trusting callback results',async()=>{
  const original=global.fetch,uid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',shared=require('../../netlify/functions/kie-check'),savedHandler=shared.handler;let row={id:uid,user_id:uid,meta:{source_feature:'henshin',run_id:'fixture-run',status:'pending',charged:true,callback_token:'a'.repeat(48)}},delegated;
@@ -83,4 +84,94 @@ test('A temporary Market HTTP error stays pending and never refunds or saves inp
 test('Provider timeout does not overwrite a result already saved by the callback',async()=>{
  const original=global.fetch,services=mockServices();global.fetch=(raw,options)=>{if(String(raw).includes('createTask')){const record=services.state().record;record.meta={...record.meta,task_id:'callback-task',status:'done'};record.result_url='https://results.example/generated.mp4';return Promise.reject(Error('Timed out'));}return services.fetch(raw,options);};
  try{const result=await require('../../netlify/functions/run-henshin').handler(event());assert.equal(result.statusCode,202);assert.equal(JSON.parse(result.body).taskId,'callback-task');assert.equal(services.state().record.meta.status,'done');assert.equal(services.state().credits,90);}finally{global.fetch=original;}
+});
+
+test('Blank and whitespace-only motion prompts use detailed camera, movement and identity defaults',()=>{
+ for(const prompt of ['', '   ']){const text=common.promptFor({...body,prompt});assert.match(text,/camera angles, camera path/);assert.match(text,/Preserve the exact original choreography/);assert.match(text,/Requested transformation: Replace the main character using the reference images\./);}
+});
+test('Source preparation uploads a silent video and saves the original soundtrack on the server',async()=>{
+ const original=global.fetch,services=mockServices();global.fetch=services.fetch;
+ try{
+  const media=require('../../lib/henshin/server-media.cjs');
+  const prepared=await media.prepareSource(url,{uid:'fixture',id:'fixture',keepAudio:true});
+  assert.equal(prepared.seconds,5);assert.ok(prepared.audioURL);assert.ok(prepared.timingAudioURL);
+  await media.withCore(async core=>{
+   core.FS.writeFile('silent.mp4',services.state().media.get(prepared.videoURL));
+   assert.deepEqual(media.probe(core,'silent.mp4').streams.map(s=>s.codec_type),['video']);
+   core.FS.writeFile('audio.m4a',services.state().media.get(prepared.audioURL));
+   assert.deepEqual(media.probe(core,'audio.m4a').streams.map(s=>s.codec_type),['audio']);
+  });
+ }finally{global.fetch=original;}
+});
+function finishServices({status='processing',duration=5,downloadFailure=false}={}){
+ const uid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+ const bytes=fs.readFileSync('test/henshin/fixtures/source.mp4'),objects=new Map([[url,bytes]]),jobs=[];
+ let row={id:uid,user_id:uid,provider:'Hansora Henshin',kind:'video',result_url:null,meta:{source_feature:'henshin',run_id:'fixture-run',task_id:'fixture-task',status,source_audio_url:url,source_video_duration:duration,charged:true,callback_token:'a'.repeat(48)}};
+ if(status==='restoring_audio'){row.meta.generated_video_url=url;}
+ return {get row(){return row;},set row(value){row=value;},objects,jobs,fetch:async(raw,options={})=>{
+  const u=new URL(raw);
+  if(u.pathname.includes('/auth/'))return response({id:uid});
+  if(u.pathname.includes('henshin-finish-background')){assert.equal(options.headers['x-henshin-internal'],require('../../lib/henshin/jobs.cjs').internalToken());jobs.push(JSON.parse(options.body));return new Response(null,{status:202});}
+  if(u.hostname==='api.kie.ai')return response({code:200,data:{taskId:'fixture-task',state:'success',resultJson:JSON.stringify({resultUrls:['https://results.example/generated.mp4']})}});
+  if(u.hostname==='results.example')return new Response(bytes,{headers:{'Content-Type':'video/mp4'}});
+  if(u.pathname.includes('/storage/')){
+   if(options.method==='POST'){objects.set(String(raw).replace('/storage/v1/object/','/storage/v1/object/public/'),Buffer.from(options.body));return response({ok:true});}
+   if(downloadFailure)throw Error('Temporary storage outage');
+   return new Response(objects.get(String(raw))||bytes);
+  }
+  if(u.pathname.endsWith('/user_generations')){
+   if(options.method==='PATCH'){
+    const lease=u.searchParams.get('meta->>audio_lease');
+    if(lease&&(lease==='is.null'?!!row.meta.audio_lease:lease!=='eq.'+row.meta.audio_lease))return response([]);
+    const expected=u.searchParams.get('meta->>status');
+    if(expected?.startsWith('eq.')&&expected.slice(3)!==row.meta.status)return response([]);
+    if(expected==='in.(processing,pending)'&&!['processing','pending'].includes(row.meta.status))return response([]);
+    if(u.searchParams.has('or')&&row.meta.audio_restored)return response([]);
+    row={...row,...JSON.parse(options.body)};
+   }
+   return response([row]);
+  }
+  if(u.pathname.endsWith('/nb_results'))return response([]);
+  throw Error('Unexpected finish mock request: '+u.pathname);
+ }};
+}
+const backgroundEvent=id=>({httpMethod:'POST',headers:{'x-henshin-internal':require('../../lib/henshin/jobs.cjs').internalToken()},body:JSON.stringify({id})});
+test('A signed callback and server worker finish a video with audio without any browser call',async()=>{
+ const original=global.fetch,services=finishServices();global.fetch=services.fetch;
+ try{
+  const check=require('../../netlify/functions/henshin-check');
+  const callback=await check.handler({httpMethod:'POST',queryStringParameters:{uid:services.row.user_id,run_id:'fixture-run',token:'a'.repeat(48)},body:'{}'});
+  assert.equal(JSON.parse(callback.body).status,'restoring_audio');assert.equal(JSON.parse(callback.body).result_url,undefined);assert.equal(services.row.result_url,null);assert.equal(services.jobs.length,1);
+  const worker=require('../../netlify/functions/henshin-finish-background');
+  const result=await worker.handler(backgroundEvent(services.row.id));assert.equal(JSON.parse(result.body).ok,true);
+  assert.equal(services.row.meta.audio_restored,true);assert.equal(services.row.meta.status,'done');assert.match(services.row.result_url,/henshin-final.mp4$/);assert.equal(services.row.meta.charged,true);
+  const media=require('../../lib/henshin/server-media.cjs');await media.withCore(async core=>{
+   core.FS.writeFile('finished',services.objects.get(services.row.result_url));const data=media.probe(core,'finished');assert.equal(Number(data.format.duration),5);assert.deepEqual(data.streams.map(s=>s.codec_type),['video','audio']);
+  });
+  const finalURL=services.row.result_url;await worker.handler(backgroundEvent(services.row.id));assert.equal(services.row.result_url,finalURL);assert.equal(services.row.meta.audio_attempts,1);
+ }finally{global.fetch=original;}
+});
+test('Concurrent server finishers claim the soundtrack only once',async()=>{
+ const original=global.fetch,services=finishServices({status:'restoring_audio'});global.fetch=services.fetch;
+ try{const worker=require('../../netlify/functions/henshin-finish-background');await Promise.all([worker.handler(backgroundEvent(services.row.id)),worker.handler(backgroundEvent(services.row.id))]);assert.equal(services.row.meta.audio_attempts,1);assert.equal(services.row.meta.audio_restored,true);}finally{global.fetch=original;}
+});
+test('Duration mismatch stays an explicit audio failure and never publishes a mismatched final video',async()=>{
+ const original=global.fetch,services=finishServices({status:'restoring_audio',duration:7});global.fetch=services.fetch;
+ try{await require('../../netlify/functions/henshin-finish-background').handler(backgroundEvent(services.row.id));assert.equal(services.row.meta.status,'audio_failed');assert.equal(services.row.result_url,null);assert.equal(services.row.meta.audio_restored,undefined);assert.match(services.row.meta.audio_error,/duration differs/);assert.equal(services.row.meta.refunded,undefined);}finally{global.fetch=original;}
+});
+test('Transient finishing errors persist a retry job rather than relying on the user page',async()=>{
+ const original=global.fetch,services=finishServices({status:'restoring_audio',downloadFailure:true});global.fetch=services.fetch;
+ try{await require('../../netlify/functions/henshin-finish-background').handler(backgroundEvent(services.row.id));assert.equal(services.row.meta.status,'audio_retry');assert.equal(services.row.meta.audio_lease_until,0);assert.ok(Date.parse(services.row.meta.audio_retry_at)>Date.now());assert.equal(services.row.result_url,null);}finally{global.fetch=original;}
+});
+test('Finishing endpoint rejects visitor tokens before reading generation rows',async()=>{
+ const original=global.fetch;let calls=0;global.fetch=async()=>{calls++;throw Error('Unexpected read');};
+ try{const res=await require('../../netlify/functions/henshin-finish-background').handler({...backgroundEvent('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),headers:{authorization:'Bearer visitor'}});assert.equal(res.statusCode,401);assert.equal(calls,0);}finally{global.fetch=original;}
+});
+test('Visitor retry requests cannot supply their own finished video URL',async()=>{
+ const original=global.fetch,services=finishServices({status:'restoring_audio'});global.fetch=services.fetch;
+ try{const res=await require('../../netlify/functions/henshin-result').handler({httpMethod:'POST',headers:{authorization:'Bearer test'},body:JSON.stringify({id:services.row.id,result_url:'https://attacker.test/fake.mp4'})});assert.equal(res.statusCode,202);assert.equal(services.row.result_url,null);assert.equal(services.row.meta.audio_restored,undefined);assert.equal(services.jobs.length,1);}finally{global.fetch=original;}
+});
+test('Scheduled recovery polls and finishes missed callbacks without browser polling',async()=>{
+ const original=global.fetch,services=finishServices();global.fetch=services.fetch;
+ try{const sweep=await import('../../netlify/functions/henshin-sweep.mjs');const res=await sweep.default(new Request('https://hansora.co/scheduled',{method:'POST',body:JSON.stringify({next_run:new Date().toISOString()})}));assert.equal((await res.json()).dispatched,1);assert.equal(services.jobs.length,1);await require('../../netlify/functions/henshin-finish-background').handler(backgroundEvent(services.jobs[0].id));assert.equal(services.row.meta.audio_restored,true);assert.match(services.row.result_url,/henshin-final.mp4$/);}finally{global.fetch=original;}
 });

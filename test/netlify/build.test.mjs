@@ -9,9 +9,9 @@ import { buildFunctions } from '../../scripts/build-netlify-functions.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
-test('Netlify bundles all 162 endpoints on API v2 with routes, background jobs and schedules preserved', async () => {
+test('Netlify bundles all 164 endpoints on API v2 with routes, background jobs and schedules preserved', async () => {
   const generated = await buildFunctions();
-  assert.equal(generated.length, 162);
+  assert.equal(generated.length, 164);
   const dir = await mkdtemp(join(tmpdir(), 'hansora-runtime-test-'));
   try {
     const functions = await zipFunctions(join(root, 'netlify/runtime-functions'), dir, {
@@ -19,6 +19,7 @@ test('Netlify bundles all 162 endpoints on API v2 with routes, background jobs a
       config: { '*': { nodeBundler: 'esbuild', nodeVersion: '22.x' },
         'run-henshin': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
         'henshin-templates': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
+        'henshin-finish-background': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
         'dispatch-unlimited-queue': { schedule: '* * * * *' },
         'automation-flow-jobs': { schedule: '* * * * *' },
         'automation-media-cleanup': { schedule: '20 3 * * *' },
@@ -32,6 +33,8 @@ test('Netlify bundles all 162 endpoints on API v2 with routes, background jobs a
     assert.equal(get('automation-instagram-comment-process-background').invocationMode, 'background');
     assert.equal(get('automation-instagram-process-background').invocationMode, 'background');
     assert.equal(get('audio-eleven-background').invocationMode, 'background');
+    assert.equal(get('henshin-finish-background').invocationMode, 'background');
+    assert.equal(get('henshin-sweep').schedule, '* * * * *');
     assert.equal(get('dispatch-unlimited-queue').schedule, '* * * * *');
     assert.equal(get('automation-flow-jobs').schedule, '* * * * *');
     assert.ok(JSON.stringify(get('hansora-mcp').routes).includes('/mcp'));

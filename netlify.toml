@@ -18,6 +18,9 @@
 [functions."henshin-check"]
   timeout = 60
 
+[functions."henshin-finish-background"]
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+
 [functions."henshin-templates"]
   timeout = 60
   included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
