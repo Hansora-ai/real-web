@@ -88,5 +88,13 @@
    const result=new File([blob],(input.name||'reference').replace(/\.[^.]+$/,'')+'.jpg',{type:'image/jpeg'});imageCache.set(input,result);imageCache.set(result,result);return result;
   }finally{bitmap.close();}
  }
- window.HenshinMedia={duration,compress,prepareVideo,prepareImage};
+ async function libraryPreview(file){
+  return process(async ff=>{
+   await ff.writeFile('source',new Uint8Array(await file.arrayBuffer()));
+   const code=await ff.exec(['-i','source','-map','0:v:0','-an','-t','4','-vf',"scale=w='if(gte(iw,ih),360,-2)':h='if(gte(iw,ih),-2,360)',fps=12",'-c:v','libx264','-pix_fmt','yuv420p','-preset','veryfast','-crf','30','-movflags','+faststart','preview.mp4'],60000);
+   if(code)throw Error('Could not create the library preview.');
+   return new File([await ff.readFile('preview.mp4')],'template-motion-preview.mp4',{type:'video/mp4'});
+  });
+ }
+ window.HenshinMedia={duration,compress,prepareVideo,prepareImage,libraryPreview};
 })();

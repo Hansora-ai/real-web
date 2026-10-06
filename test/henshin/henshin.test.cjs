@@ -228,3 +228,29 @@ test('The public library lists only published templates and allows brief shared 
  const original=global.fetch;global.fetch=async raw=>{const u=new URL(raw);assert.equal(u.searchParams.get('provider'),'eq.Henshin Template');assert.equal(u.searchParams.get('meta->>published'),'eq.true');return response([{id:'template',prompt:'Example',result_url:url,meta:{poster_url:body.image_urls[0],aspect_ratio:9/16,source_video_url:url,reference_image_urls:body.image_urls}}]);};
  try{const result=await require('../../netlify/functions/henshin-templates').handler({httpMethod:'GET',headers:{}});assert.equal(result.statusCode,200);assert.match(result.headers['Cache-Control'],/s-maxage=10/);const item=JSON.parse(result.body).templates[0];assert.equal(item.poster_url,body.image_urls[0]);assert.equal(item.aspect_ratio,9/16);}finally{global.fetch=original;}
 });
+
+
+test('Video edit accepts no images without inventing an image reference, including templates and provider submission',async()=>{
+ const original=global.fetch,services=mockServices();global.fetch=services.fetch;
+ try{
+  const input={...body,mode:'edit',image_urls:[],prompt:'Make the background blue.',keep_audio:true};
+  assert.equal(common.validate(input).cost,12);assert.doesNotMatch(common.promptFor(input),/@Image|@Audio/);assert.match(common.promptFor(input),/Make the background blue/);
+  for(const mode of ['motion','swap'])assert.throws(()=>common.validate({...input,mode}),/1–30/);
+  const {templateInput}=require('../../lib/henshin/templates.cjs');assert.deepEqual(templateInput(input).reference_image_urls,[]);
+  const response=await require('../../netlify/functions/run-henshin').handler(event(input));assert.equal(response.statusCode,201);
+  assert.deepEqual(services.state().providerInput.reference_image_urls,[]);assert.doesNotMatch(services.state().providerInput.prompt,/@Image|@Audio/);assert.ok(services.state().record.meta.source_audio_url);
+ }finally{global.fetch=original;}
+});
+test('Library pages return 24 recipes and an explicit next offset, with a separate playback preview',async()=>{
+ const original=global.fetch;let observed;
+ const rows=Array.from({length:25},(_,i)=>({id:String(i),prompt:'Example',result_url:url,meta:{preview_url:url,source_video_url:url,reference_image_urls:[]}}));
+ global.fetch=async raw=>{observed=new URL(raw);return response(rows);};
+ try{
+  const handler=require('../../netlify/functions/henshin-templates').handler;
+  const page=JSON.parse((await handler({httpMethod:'GET',queryStringParameters:{offset:'24'}})).body);
+  assert.equal(observed.searchParams.get('offset'),'24');assert.equal(observed.searchParams.get('limit'),'25');assert.equal(page.templates.length,24);assert.equal(page.next_offset,48);assert.equal(page.templates[0].preview_url,url);
+  global.fetch=async()=>response(rows.slice(0,2));assert.equal(JSON.parse((await handler({httpMethod:'GET'})).body).next_offset,null);
+  assert.equal((await handler({httpMethod:'GET',queryStringParameters:{offset:'-1'}})).statusCode,400);
+  assert.throws(()=>require('../../lib/henshin/templates.cjs').templateInput({...body,preview_url:'https://attacker.test/preview.mp4'}));
+ }finally{global.fetch=original;}
+});

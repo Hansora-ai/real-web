@@ -26,3 +26,19 @@ test('An overlong video is rejected instead of silently cutting off its ending',
  const c=await core();c.reset();assert.equal(c.exec('-f','lavfi','-i','color=c=black:s=32x32:r=1','-t','31','-c:v','libx264','long.mp4'),0);
  await assert.rejects(client().compress(new File([c.FS.readFile('long.mp4')],'long.mp4',{type:'video/mp4'})),/31.*4–30/);
 });
+
+
+test('Square, 4:3, 3:4 and ultrawide videos keep their proportions during preparation',async()=>{
+ const c=await core();c.FS.writeFile('source.mp4',fs.readFileSync('test/henshin/fixtures/source.mp4'));
+ for(const [width,height] of [[400,400],[640,480],[480,640],[840,360]]){
+  c.reset();assert.equal(c.exec('-i','source.mp4','-vf',`scale=${width}:${height},setsar=1`,'-c:v','libx264','-an','-y','shape.mp4'),0);
+  const file=await client().compress(new File([c.FS.readFile('shape.mp4')],'shape.mp4',{type:'video/mp4'}));c.FS.writeFile('prepared.mp4',new Uint8Array(await file.arrayBuffer()));
+  c.reset();c.ffprobe('-v','error','-show_entries','stream=width,height','-of','json','prepared.mp4','-o','shape.json');const v=JSON.parse(new TextDecoder().decode(c.FS.readFile('shape.json'))).streams[0];assert.ok(Math.abs(v.width/v.height-width/height)<.01);assert.ok(v.width*v.height>=409600&&v.width*v.height<=927408);
+ }
+});
+test('Library playback gets a small silent preview while the complete video remains available',async()=>{
+ const source=fs.readFileSync('test/henshin/fixtures/source.mp4'),original=new File([source],'original.mp4',{type:'video/mp4'}),result=await client().libraryPreview(original);
+ assert.deepEqual(Buffer.from(await original.arrayBuffer()),source);assert.ok(result.size<source.length);
+ const c=await core();c.FS.writeFile('preview.mp4',new Uint8Array(await result.arrayBuffer()));c.reset();c.ffprobe('-v','error','-show_entries','format=duration:stream=codec_type,width,height','-of','json','preview.mp4','-o','preview.json');
+ const data=JSON.parse(new TextDecoder().decode(c.FS.readFile('preview.json')));assert.ok(Number(data.format.duration)<=4.1);assert.deepEqual(data.streams.map(s=>s.codec_type),['video']);assert.equal(Math.max(data.streams[0].width,data.streams[0].height),360);
+});
