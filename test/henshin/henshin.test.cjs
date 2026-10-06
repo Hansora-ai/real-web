@@ -5,7 +5,7 @@ const url='https://example.supabase.co/storage/v1/object/public/generation-histo
 const body={run_id:'fixture-run',resolution:'480p',source_video_duration:5.1,video_url:url,image_urls:[url.replace('.mp4','.png')],mode:'motion'};
 test('All three resolutions round billing seconds upward and preserve decimal rates',()=>{for(const [resolution,expected]of [['480p',12],['720p',25.2],['1080p',54]])assert.equal(common.validate({...body,resolution}).cost,expected);});
 test('Invalid resolution, duration, references and storage hosts are rejected',()=>{for(const patch of [{resolution:'780p'},{source_video_duration:NaN},{source_video_duration:3},{source_video_duration:31},{video_url:'http://127.0.0.1/video.mp4'},{image_urls:[]},{image_urls:Array(31).fill(url)},{mode:'bad'},{audio_url:'https://attacker.test/a.mp3'}])assert.throws(()=>common.validate({...body,...patch}));});
-test('Prompt assigns images to identity and video to the camera and timing',()=>{const prompt=common.promptFor(body);assert.match(prompt,/@Video 1 as the sole master/);assert.match(prompt,/@Image 1/);assert.match(prompt,/never their camera angle/);assert.match(common.promptFor({...body,mode:'swap',audio_url:url}),/Use @Audio 1 only/);});
+test('Prompt assigns images to identity and video to the camera and timing',()=>{const prompt=common.promptFor(body);assert.match(prompt,/Recreate @Video 1 exactly, frame by frame/);assert.match(prompt,/@Image 1/);assert.match(prompt,/Ignore the pose, camera angle/);assert.match(common.promptFor({...body,mode:'swap',audio_url:url}),/Use @Audio 1 only/);});
 const response=data=>new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}});
 test('Template publication and final result writes require the authenticated owner',async()=>{const original=global.fetch;global.fetch=async()=>response({id:'user',email:'someone@example.com',email_confirmed_at:'today'});try{const templates=require('../../netlify/functions/henshin-templates');const res=await templates.handler({httpMethod:'POST',headers:{authorization:'Bearer test'},body:JSON.stringify({video_url:url,duration:5})});assert.equal(res.statusCode,403);const result=require('../../netlify/functions/henshin-result');global.fetch=async u=>String(u).includes('/auth/')?response({id:'user'}):response([]);assert.equal((await result.handler({httpMethod:'POST',headers:{authorization:'Bearer test'},body:JSON.stringify({id:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',result_url:url})})).statusCode,404);}finally{global.fetch=original;}});
 test('Server ffprobe uses actual video duration',async()=>{const original=global.fetch;global.fetch=async()=>new Response(fs.readFileSync('test/henshin/fixtures/source.mp4'));try{const result=await require('../../lib/henshin/inspect.cjs').inspect(url);assert.ok(Math.abs(result.seconds-5)<.1);assert.equal(result.hasAudio,true);}finally{global.fetch=original;}});
@@ -86,17 +86,15 @@ test('Provider timeout does not overwrite a result already saved by the callback
  try{const result=await require('../../netlify/functions/run-henshin').handler(event());assert.equal(result.statusCode,202);assert.equal(JSON.parse(result.body).taskId,'callback-task');assert.equal(services.state().record.meta.status,'done');assert.equal(services.state().credits,90);}finally{global.fetch=original;}
 });
 
-test('Blank and whitespace-only motion prompts use detailed camera, movement and identity defaults',()=>{
- for(const prompt of ['', '   ']){const text=common.promptFor({...body,prompt});assert.match(text,/camera angles, camera path/);assert.match(text,/Preserve the exact original choreography/);assert.match(text,/Requested transformation: Replace the main character using the reference images\./);}
-});
-test('Blank prompts have distinct object swap and video edit defaults; templates accept them',()=>{
- const {templateInput}=require('../../lib/henshin/templates.cjs');
- for(const mode of ['swap','edit'])for(const prompt of ['', '   ']){
+test('Every mode keeps its detailed built-in instructions; the user text is only added as an extra request',()=>{
+ const prompts=require('../../public/henshin-prompts.js'),{templateInput}=require('../../lib/henshin/templates.cjs');
+ const firsts={motion:/replace the main character of @Video 1/,swap:/replace the main object in @Video 1/,edit:/Change only the main subject or object of @Video 1/};
+ for(const mode of ['motion','swap','edit'])for(const prompt of ['', '   ',...prompts.legacy]){
+  const text=common.promptFor({...body,mode,prompt});assert.match(text,firsts[mode]);assert.match(text,/Keep the exact same camera/);assert.match(text,/No flicker, morphing or identity drift/);assert.doesNotMatch(text,/Also do this/);
   assert.equal(templateInput({video_url:url,image_urls:body.image_urls,mode,prompt}).transformation_prompt,'');
-  const text=common.promptFor({...body,mode,prompt});assert.match(text,/camera angles, camera path/);assert.match(text,/occlusions/);
-  assert.match(text,mode==='swap'?/Requested transformation: Replace the primary object/:/Requested transformation: Edit the main subject or object/);
  }
- const custom='Replace only the red car.';assert.ok(common.promptFor({...body,mode:'swap',prompt:custom}).endsWith('Requested transformation: '+custom));
+ const custom='Make the jacket red.',text=common.promptFor({...body,mode:'swap',prompt:custom});
+ assert.match(text,/replace the main object in @Video 1/);assert.match(text,/Also do this: Make the jacket red\.\nMake exactly this extra change as well/);
 });
 test('Source preparation uploads a silent video and saves the original soundtrack on the server',async()=>{
  const original=global.fetch,services=mockServices();global.fetch=services.fetch;

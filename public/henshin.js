@@ -65,7 +65,7 @@
  }
  drop('videoDrop','videoInput',files=>setSource(files[0]));drop('imagesDrop','imagesInput',addImages);$('clearVideo').onclick=clearSource;$('imagesAddEmpty').onclick=()=>{if(!busy)$('imagesInput').click();};
  for(const button of document.querySelectorAll('[data-resolution]'))button.onclick=()=>{if(busy)return;resolution=button.dataset.resolution;document.querySelectorAll('[data-resolution]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button));});update();};
- function modePrompt(){const value=$('prompt').value.trim();if(!value||Object.values(window.HenshinPrompts).includes(value))$('prompt').value=window.HenshinPrompts[mode];$('promptHint').textContent='Optional';$('prompt').placeholder='Leave blank to use the built-in instructions.';}
+ function modePrompt(){if(!window.HenshinPrompts.extra($('prompt').value))$('prompt').value='';}
  for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>{if(busy)return;mode=button.dataset.mode;document.querySelectorAll('[data-mode]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button));});modePrompt();};
  modePrompt();
  for(const button of document.querySelectorAll('[data-filter]'))button.onclick=()=>{filter=button.dataset.filter;document.querySelectorAll('[data-filter]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button));});renderResults();};
@@ -174,7 +174,7 @@
   if(busy||selection!==sourceSelection)throw Error('Source selection changed. Try Recreate again.');
   if(!await setSource(input))throw Error($('videoStatus').textContent||'Could not load the source video.');
   images.forEach(i=>URL.revokeObjectURL(i.url));images=refs.map(file=>({file,url:URL.createObjectURL(file)}));renderImages();
-  $('prompt').value=item.prompt||'';document.querySelector(`[data-mode="${['motion','swap','edit'].includes(item.mode)?item.mode:'motion'}"]`).click();document.querySelector(`[data-resolution="${Object.hasOwn(rates,item.resolution)?item.resolution:'720p'}"]`).click();$('keepAudio').checked=item.keep_audio!==false;
+  $('prompt').value=window.HenshinPrompts.extra(item.prompt);document.querySelector(`[data-mode="${['motion','swap','edit'].includes(item.mode)?item.mode:'motion'}"]`).click();document.querySelector(`[data-resolution="${Object.hasOwn(rates,item.resolution)?item.resolution:'720p'}"]`).click();$('keepAudio').checked=item.keep_audio!==false;
   setView('history');status(refs.length?'Loaded. Your video, references and prompt are ready.':'Motion loaded. Add your references to continue.');update();
   $('composerScroll').scrollTop=0;if(matchMedia('(max-width:740px)').matches)$('sourcePreview').scrollIntoView({behavior:'smooth',block:'center'});
  }
