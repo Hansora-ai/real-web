@@ -38,7 +38,8 @@
    $('editorImageStatus').textContent=errors.join(' ');
   }).catch(e=>{$('editorImageStatus').textContent=e.message;}).finally(()=>pendingUpdate(-1));
  };
- $('editorMode').onchange=()=>{$('editorPrompt').required=$('editorMode').value!=='motion';};
+ function modePrompt(){const value=$('editorPrompt').value.trim();if(!value||Object.values(window.HenshinPrompts).includes(value))$('editorPrompt').value=window.HenshinPrompts[$('editorMode').value];$('editorPrompt').required=false;$('editorPrompt').placeholder='Leave blank to use the built-in instructions.';}
+ $('editorMode').onchange=modePrompt;modePrompt();
  async function thumbnail(file){
   const video=document.createElement('video'),url=URL.createObjectURL(file);
   try{
@@ -58,7 +59,7 @@
   try{
    const s=await session();if(!owner(s))throw Error('Only the confirmed owner account can publish templates.');
    const result=videos.get('editorResult'),source=videos.get('editorSource'),refs=references.map(item=>item.file),prompt=$('editorPrompt').value.trim(),mode=$('editorMode').value,resolution=$('editorQuality').value,keep=$('editorAudio').checked;
-   if(!result||!source)throw Error('Add the example video and original source video.');if(!refs.length)throw Error('Add at least one reference image.');if(mode!=='motion'&&!prompt)throw Error('Describe the requested change.');
+   if(!result||!source)throw Error('Add the example video and original source video.');if(!refs.length)throw Error('Add at least one reference image.');
    const upload=async file=>{try{const r=await window.kieUploadBridge.upload(file,{bucket:'video',timeoutMs:300000});if(!r.publicUrl)throw Error('Upload returned no file URL.');return r.publicUrl;}catch(e){throw Error(`Could not upload “${file.name}”. ${/timeout|network|aborted|failed_0/.test(e.message)?'Check your connection and try again.':e.message||'Please try again.'}`);}};
    $('editorStatus').textContent='Compressing example video…';const preparedResult=await window.HenshinMedia.compress(result);
    const poster=await thumbnail(preparedResult);

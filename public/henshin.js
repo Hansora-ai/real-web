@@ -65,7 +65,9 @@
  }
  drop('videoDrop','videoInput',files=>setSource(files[0]));drop('imagesDrop','imagesInput',addImages);$('clearVideo').onclick=clearSource;$('imagesAddEmpty').onclick=()=>{if(!busy)$('imagesInput').click();};
  for(const button of document.querySelectorAll('[data-resolution]'))button.onclick=()=>{if(busy)return;resolution=button.dataset.resolution;document.querySelectorAll('[data-resolution]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button));});update();};
- for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>{if(busy)return;mode=button.dataset.mode;document.querySelectorAll('[data-mode]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button));});$('promptHint').textContent=mode!=='motion'?'Required':'Optional';$('prompt').placeholder=mode!=='motion'?'Describe exactly what to change in the video.':'Replace the main character with my references. Keep the scene and camera unchanged.';};
+ function modePrompt(){const value=$('prompt').value.trim();if(!value||Object.values(window.HenshinPrompts).includes(value))$('prompt').value=window.HenshinPrompts[mode];$('promptHint').textContent='Optional';$('prompt').placeholder='Leave blank to use the built-in instructions.';}
+ for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>{if(busy)return;mode=button.dataset.mode;document.querySelectorAll('[data-mode]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button));});modePrompt();};
+ modePrompt();
  for(const button of document.querySelectorAll('[data-filter]'))button.onclick=()=>{filter=button.dataset.filter;document.querySelectorAll('[data-filter]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button));});renderResults();};
  const modeName=value=>({motion:'Motion transfer',swap:'Object swap',edit:'Video edit'}[value]||'Motion transfer');
  const iconPaths={preview:'<rect x="3" y="6" width="12" height="12" rx="2"/><path d="m15 10 6-3v10l-6-3"/>',recreate:'<path d="M4 10a8 8 0 0 1 13.7-4.7L20 7.5M20 3v4.5h-4.5M20 14a8 8 0 0 1-13.7 4.7L4 16.5M4 21v-4.5h4.5"/>',download:'<path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/>'};
@@ -150,7 +152,6 @@
  $('generate').onclick=async()=>{
   if(busy||sourcePending||imagePending>0||!source||!images.length||!seconds)return;
   const s=await session();if(!s){status('Sign in to generate.',true);window.HansoraHeader?.openAuth?.();return;}
-  if(mode!=='motion'&&!$('prompt').value.trim()){status('Describe the element you want to swap.',true);return;}
   busy=true;setView('history');submission='Processing request…';renderResults();update();
   const input=source,refs=images.map(i=>i.file),duration=seconds,quality=resolution,chosenMode=mode,prompt=$('prompt').value,preserve=$('keepAudio').checked;
   try{
