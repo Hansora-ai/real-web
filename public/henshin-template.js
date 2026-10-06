@@ -38,8 +38,6 @@
    $('editorImageStatus').textContent=errors.join(' ');
   }).catch(e=>{$('editorImageStatus').textContent=e.message;}).finally(()=>pendingUpdate(-1));
  };
- function modePrompt(){const value=$('editorPrompt').value.trim();if(!value||Object.values(window.HenshinPrompts).includes(value))$('editorPrompt').value=window.HenshinPrompts[$('editorMode').value];$('editorPrompt').required=false;$('editorPrompt').placeholder='Leave blank to use the built-in instructions.';}
- $('editorMode').onchange=modePrompt;modePrompt();
  async function thumbnail(file){
   const video=document.createElement('video'),url=URL.createObjectURL(file);
   try{
