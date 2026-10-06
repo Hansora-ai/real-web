@@ -1910,6 +1910,16 @@
     }
 
   }
+
+  .home-feature-card.desktop-hidden-feature {
+    display: none !important;
+  }
+
+  @media (max-width: 540px) {
+    .home-feature-card.desktop-hidden-feature {
+      display: grid !important;
+    }
+  }
 </style>
 
 
@@ -2641,7 +2651,7 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(37).png" alt="Kid Cartoon" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/video-edit.html" style="--feature-desktop-order: 3; --feature-mobile-order: 8;">
+<a class="home-feature-card" href="/henshin.html?mode=edit" style="--feature-desktop-order: 3; --feature-mobile-order: 8;">
 <div class="home-feature-copy">
 <h3>Video <span>Edit</span></h3>
 <p>Edit uploaded videos with prompts.</p>
@@ -2659,7 +2669,16 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/4.png" alt="Full angles" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/background-change.html" style="--feature-desktop-order: 7; --feature-mobile-order: 5;">
+<a class="home-feature-card" href="/henshin.html" style="--feature-desktop-order: 7; --feature-mobile-order: 0;">
+<div class="home-feature-copy">
+<h3>Hen<span>shin</span></h3>
+<p>Swap anyone in any video.</p>
+</div>
+<div class="home-feature-media">
+<img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/Untitled%20design%20(4).png" alt="Henshin" loading="lazy" decoding="async">
+</div>
+</a>
+<a class="home-feature-card desktop-hidden-feature" href="/background-change.html" style="--feature-desktop-order: 7; --feature-mobile-order: 5;">
 <div class="home-feature-copy">
 <h3>Video Background <span>Change</span></h3>
 <p>Change video backgrounds.</p>
@@ -2668,7 +2687,7 @@
 <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(43).png" alt="Video Background Change" loading="lazy" decoding="async">
 </div>
 </a>
-<a class="home-feature-card" href="/prompt-builder.html" style="--feature-desktop-order: 8; --feature-mobile-order: 7;">
+<a class="home-feature-card phone-hidden-feature" href="/prompt-builder.html" style="--feature-desktop-order: 8; --feature-mobile-order: 7;">
 <div class="home-feature-copy">
 <h3>Cartoon <span>Prompt Builder</span></h3>
 <p>Turn short ideas into detailed cartoon prompts.</p>
