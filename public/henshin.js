@@ -156,11 +156,6 @@
    source_video_url:m.video_url||m.reference_video_urls?.[0]||input.reference_video_urls?.[0],image_urls:m.reference_image_urls||input.reference_image_urls||[],
    prompt:isHenshin(row)?m.user_prompt||'':m.user_prompt??row.prompt??'',mode:m.mode||'motion',resolution:m.resolution||input.resolution||'720p',keep_audio:m.keep_audio!==false};
  }
- function errorText(value){
-  if(typeof value==='string')return t(value);
-  if(value&&typeof value==='object')return errorText(value.message||value.msg||value.error||value.detail);
-  return t('Generation wasn’t completed');
- }
  function orient(card,ratio){
   const r=Number(ratio);card.classList.toggle('result-landscape',r>1.1);card.classList.toggle('result-square',r>=.9&&r<=1.1);card.classList.toggle('result-portrait',!r||r<.9);
  }
@@ -188,7 +183,7 @@
     video.onclick=event=>{if(event.clientY>=video.getBoundingClientRect().bottom-52)return;event.preventDefault();video.pause();preview(details);};
     media.append(video);const open=action(t('Open preview'),()=>{video.pause();preview(details);});open.className='result-preview-open';media.append(open);
    }
-   else if(failed){const box=document.createElement('div');box.className='result-failed-state';const symbol=document.createElement('span');symbol.className='result-failed-icon';symbol.innerHTML=closeIcon;const label=document.createElement('strong');label.textContent=audioFailed?t('Audio needs attention'):t('Failed');const copy=document.createElement('p');copy.textContent=errorText(meta.audio_error||meta.error);box.append(symbol,label,copy);media.append(box);}
+   else if(failed){const box=document.createElement('div');box.className='result-failed-state';const symbol=document.createElement('span');symbol.className='result-failed-icon';symbol.innerHTML=closeIcon;const label=document.createElement('strong');label.textContent=t('Generation failed');box.append(symbol,label);media.append(box);}
    else{const queued=/queued/.test(meta.status||''),requesting=/requesting|uploading|preparing/.test(meta.status||''),audio=audioPending&&(meta.generated_video_url||row.result_url);media.append(generationStage(audio?'requesting':queued?'queued':requesting?'requesting':'generating',audio?t('Restoring original audio…'):queued?t('In Queue'):requesting?t('Processing request…'):t('Generating')));}
    const body=document.createElement('div');body.className='result-body';const head=document.createElement('div');head.className='result-head';const title=document.createElement('strong');title.textContent=details.title;const kind=document.createElement('span');kind.textContent=t('VIDEO');head.append(title,kind);
    const prompt=document.createElement('p');prompt.className='result-prompt';prompt.textContent=details.prompt||t('Character transformation using your references');prompt.title=details.prompt||'';
