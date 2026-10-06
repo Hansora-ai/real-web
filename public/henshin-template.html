@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Add Henshin template | Hansora AI</title>
-<link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/header.css"><link rel="stylesheet" href="/henshin.css?v=20261006-ui">
+<link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/header.css"><link rel="stylesheet" href="/henshin.css?v=20261006-uploads">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer src="/header.js"></script><script defer src="/kie-upload-bridge.js"></script><script defer src="/henshin-config.js"></script><script defer src="/henshin-media.js"></script><script defer src="/henshin-template.js?v=20261006-ui"></script>
+<script defer src="/header.js"></script><script defer src="/kie-upload-bridge.js"></script><script defer src="/henshin-config.js"></script><script defer src="/henshin-media.js?v=20261006-uploads"></script><script defer src="/henshin-template.js?v=20261006-uploads"></script>
 </head>
 <body><div id="sharedHeader"></div>
 <main class="template-editor">
@@ -14,17 +14,19 @@
 <form id="editorForm" hidden>
 <div class="template-editor-grid">
 <div>
-<label class="editor-field"><span>Example result video</span><input id="editorResult" class="editor-file" type="file" accept="video/mp4,video/quicktime,video/webm" required></label>
+<label class="editor-field"><span>Example result video</span><input id="editorResult" class="editor-file" type="file" accept="video/*,.mp4,.mov,.webm,.mkv,.avi,.m4v" required></label>
 <div id="editorResultMedia" class="editor-media" hidden><button id="editorResultRemove" class="remove-media" type="button" aria-label="Remove example video"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><video id="editorResultPreview" class="editor-video" controls playsinline></video></div>
+<p id="editorResultStatus" class="upload-status" role="status" aria-live="polite"></p>
 <p class="library-status">This video appears in the library and detail view.</p>
-<label class="editor-field"><span>Original source video</span><input id="editorSource" class="editor-file" type="file" accept="video/mp4,video/quicktime,video/webm" required></label>
+<label class="editor-field"><span>Original source video</span><input id="editorSource" class="editor-file" type="file" accept="video/*,.mp4,.mov,.webm,.mkv,.avi,.m4v" required></label>
 <div id="editorSourceMedia" class="editor-media" hidden><button id="editorSourceRemove" class="remove-media" type="button" aria-label="Remove source video"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button><video id="editorSourcePreview" class="editor-video" controls playsinline></video></div>
+<p id="editorSourceStatus" class="upload-status" role="status" aria-live="polite"></p>
 <p class="library-status">Recreate loads this source into the generator. Both videos must be 4–30 seconds.</p>
 </div>
 <div>
-<label class="editor-field"><span>Title</span><input id="editorTitle" maxlength="100" required placeholder="Give your template a name"></label>
-<label class="editor-field"><span>Reference images</span><input id="editorReferences" type="file" accept="image/jpeg,image/png,image/webp" multiple required></label>
+<label class="editor-field"><span>Reference images</span><input id="editorReferences" type="file" accept="image/*,.heic,.heif,.tif,.tiff" multiple required></label>
 <div id="editorImages"></div>
+<p id="editorImageStatus" class="upload-status" role="status" aria-live="polite"></p>
 <label class="editor-field"><span>Transformation mode</span><select id="editorMode"><option value="motion">Motion transfer</option><option value="swap">Object swap</option><option value="edit">Video edit</option></select></label>
 <label class="editor-field"><span>Prompt</span><textarea id="editorPrompt" maxlength="2000" placeholder="Describe how to transform the original video"></textarea></label>
 <label class="editor-field"><span>Resolution</span><select id="editorQuality"><option value="480p">480p</option><option value="720p" selected>720p</option><option value="1080p">1080p</option></select></label>

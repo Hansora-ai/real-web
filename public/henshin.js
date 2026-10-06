@@ -4,7 +4,7 @@
  const sb=window.__HANSORA_SB__||window.supabase.createClient(config.url,config.key);window.__HANSORA_SB__=sb;
  const OWNER='hansora.ai.bot@gmail.com';
  let source=null,seconds=0,sourceURL='',images=[],resolution='720p',mode='motion',filter='all',busy=false,rows=[],refreshing=false,sessionUser='',uploadingTemplate=false;
- let sourceSelection=0,activePreview=null,submission=null,libraryOwner=false,libraryObserver=null,templatePromise=null,libraryEpoch=0;
+ let sourceSelection=0,sourcePending=false,imagePending=0,imageChain=Promise.resolve(),activePreview=null,submission=null,libraryOwner=false,libraryObserver=null,templatePromise=null,libraryEpoch=0;
  const CACHE_KEY='hansora:henshin-templates:v1';let templateCache=null;
  try{templateCache=JSON.parse(sessionStorage.getItem(CACHE_KEY)||'null');if(!Array.isArray(templateCache?.templates))templateCache=null;}catch{}
  function cacheTemplates(templates){templateCache={templates,at:Date.now()};try{sessionStorage.setItem(CACHE_KEY,JSON.stringify(templateCache));}catch{}}
@@ -20,32 +20,35 @@
  const rates={'480p':2,'720p':4.2,'1080p':9};
  function status(text,error=false){if(busy&&submission){submission=text;renderResults();}$('status').textContent=text;$('status').classList.toggle('error',error);}
  function cost(){return seconds?Math.round(Math.ceil(seconds)*rates[resolution]*10):rates[resolution]*10;}
- function update(){ $('cost').hidden=!seconds; $('cost').textContent=seconds?`${cost()} credits`:'';$('generate').disabled=busy||!source||!seconds||!images.length; }
+ function update(){ $('cost').hidden=!seconds; $('cost').textContent=seconds?`${cost()} credits`:'';$('generate').disabled=busy||sourcePending||imagePending>0||!source||!seconds||!images.length; }
  async function session(){return (await sb.auth.getSession()).data.session;}
  async function request(route,body,method='POST'){
   const s=await session();if(!s) throw Error('Sign in first.');
   const r=await fetch('/.netlify/functions/'+route,{method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+s.access_token},body:JSON.stringify(body)});
   const data=await r.json();if(!r.ok||!data.ok) throw Error(data.error||'Request failed.');return data;
  }
- async function upload(file){const result=await window.kieUploadBridge.upload(file,{bucket:'video'});if(!result.publicUrl) throw Error('Upload failed.');return result.publicUrl;}
+ async function upload(file){try{const result=await window.kieUploadBridge.upload(file,{bucket:'video',timeoutMs:300000});if(!result.publicUrl)throw Error('Upload returned no file URL.');return result.publicUrl;}catch(e){throw Error(`Could not upload “${file.name}”. ${/timeout|network|aborted|failed_0/.test(e.message)?'Check your connection and try again.':e.message||'Please try again.'}`);}}
  async function setSource(file){
   if(busy) return;
-  if(!file||!file.type.startsWith('video/')||file.size>100*1024*1024){status('Choose a video smaller than 100 MB.',true);return;}
-  const selection=++sourceSelection;
+  if(!file)return;
+  const selection=++sourceSelection;sourcePending=true;$('videoStatus').textContent='Reading video…';update();
   try {
-   const d=await window.HenshinMedia.duration(file);
+   const prepared=await window.HenshinMedia.prepareVideo(file),d=prepared.seconds;
    if(selection!==sourceSelection)return;
-   if(d<4||d>30) throw Error('Choose a source video between 4 and 30 seconds.');
    if(sourceURL) URL.revokeObjectURL(sourceURL);
-   source=file;seconds=d;sourceURL=URL.createObjectURL(file);$('sourceVideo').src=sourceURL;
-   $('sourceName').textContent=`${file.name} · ${d.toFixed(2)}s`;$('sourcePreview').hidden=false;$('videoDrop').hidden=true;status('');update();return true;
-  }catch(e){status(e.message,true);return false;}
+   source=prepared.file;seconds=d;sourceURL=URL.createObjectURL(source);$('sourceVideo').src=sourceURL;
+   $('sourceName').textContent=`${file.name} · ${d.toFixed(2)}s`;$('sourcePreview').hidden=false;$('videoDrop').hidden=true;$('videoStatus').textContent='';status('');return true;
+  }catch(e){if(selection===sourceSelection)$('videoStatus').textContent=e.message;return false;}finally{if(selection===sourceSelection)sourcePending=false;update();}
  }
- function clearSource(){if(busy)return;sourceSelection++;source=null;seconds=0;if(sourceURL)URL.revokeObjectURL(sourceURL);sourceURL='';$('sourceVideo').removeAttribute('src');$('sourceVideo').load();$('videoInput').value='';$('sourcePreview').hidden=true;$('videoDrop').hidden=false;update();}
- async function addImages(files){
+ function clearSource(){if(busy)return;sourceSelection++;sourcePending=false;source=null;seconds=0;if(sourceURL)URL.revokeObjectURL(sourceURL);sourceURL='';$('sourceVideo').removeAttribute('src');$('sourceVideo').load();$('videoInput').value='';$('sourcePreview').hidden=true;$('videoDrop').hidden=false;$('videoStatus').textContent='';update();}
+ function addImages(files){
   if(busy)return;
-  for(const file of files){if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>10*1024*1024){status('Use JPG, PNG or WebP images smaller than 10 MB.',true);continue;}try{const bitmap=await createImageBitmap(file);const ratio=bitmap.width/bitmap.height;const valid=bitmap.width>300&&bitmap.width<6000&&bitmap.height>300&&bitmap.height<6000&&ratio>.4&&ratio<2.5;bitmap.close();if(!valid)throw Error('Reference images must be 301–5999 px on each side, with an aspect ratio between 0.4 and 2.5.');if(busy)return;if(images.length<30)images.push({file,url:URL.createObjectURL(file)});}catch(e){status(e.message||'Could not read reference image.',true);}}
-  renderImages();update();
+  imagePending++;update();
+  imageChain=imageChain.then(async()=>{
+   const errors=[];$('imageStatus').textContent='Preparing reference images…';
+   for(const input of files){if(images.length>=30){errors.push('You can add up to 30 references. Remove one to add another.');break;}try{const file=await window.HenshinMedia.prepareImage(input);images.push({file,url:URL.createObjectURL(file)});renderImages();}catch(e){errors.push(`“${input.name}”: ${e.message||'Could not read this image.'}`);}}
+   $('imageStatus').textContent=errors.join(' ');
+  }).catch(e=>{$('imageStatus').textContent=e.message;}).finally(()=>{imagePending--;renderImages();update();});return imageChain;
  }
  function renderImages(){
   const grid=$('imageGrid');grid.replaceChildren();grid.hidden=!images.length;$('imagesAddEmpty').hidden=!!images.length;
@@ -145,7 +148,7 @@
   }catch(e){status('Could not load recent generations. '+e.message,true);}finally{refreshing=false;}
  }
  $('generate').onclick=async()=>{
-  if(busy||!source||!images.length||!seconds)return;
+  if(busy||sourcePending||imagePending>0||!source||!images.length||!seconds)return;
   const s=await session();if(!s){status('Sign in to generate.',true);window.HansoraHeader?.openAuth?.();return;}
   if(mode!=='motion'&&!$('prompt').value.trim()){status('Describe the element you want to swap.',true);return;}
   busy=true;setView('history');submission='Processing request…';renderResults();update();
@@ -160,17 +163,15 @@
   }catch(e){status(e.message,true);}finally{busy=false;submission=null;renderResults();update();}
  };
  async function recreate(item){
-  if(busy)throw Error('Wait for the current request to finish.');
+  if(busy||sourcePending||imagePending>0)throw Error('Wait for the current upload or request to finish.');
   if(!item?.source_video_url)throw Error('This video has no saved source.');
   const selection=++sourceSelection;
-  const fetchFile=async(url,name,type)=>{const r=await fetch(url);if(!r.ok)throw Error('Could not load a saved reference.');const blob=await r.blob();if(blob.size>(type==='video/mp4'?100:10)*1024*1024)throw Error('Saved reference exceeds the upload size limit.');return new File([blob],name,{type:blob.type||type});};
-  const input=await fetchFile(item.source_video_url,(item.title||'Template')+'.mp4','video/mp4'),d=await window.HenshinMedia.duration(input);
-  if(d<4||d>30)throw Error('Source video must be 4–30 seconds.');
-  const refs=await Promise.all((item.image_urls||[]).map((url,i)=>fetchFile(url,'reference-'+(i+1)+'.png','image/png')));
-  if(refs.length>30)throw Error('Too many reference images.');
-  for(const file of refs){if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Unsupported reference image.');const bitmap=await createImageBitmap(file),ratio=bitmap.width/bitmap.height,valid=bitmap.width>300&&bitmap.width<6000&&bitmap.height>300&&bitmap.height<6000&&ratio>.4&&ratio<2.5;bitmap.close();if(!valid)throw Error('A saved reference image has invalid dimensions.');}
+  const fetchFile=async(url,name,type)=>{const r=await fetch(url);if(!r.ok)throw Error('Could not load a saved reference.');const blob=await r.blob();return new File([blob],name,{type:blob.type||type});};
+  const input=await fetchFile(item.source_video_url,(item.title||'Template')+'.mp4','video/mp4');
+  if((item.image_urls||[]).length>30)throw Error('Too many reference images.');
+  const refs=[];for(const [i,url]of (item.image_urls||[]).entries())refs.push(await window.HenshinMedia.prepareImage(await fetchFile(url,'reference-'+(i+1)+'.png','image/png')));
   if(busy||selection!==sourceSelection)throw Error('Source selection changed. Try Recreate again.');
-  if(!await setSource(input))throw Error($('status').textContent);
+  if(!await setSource(input))throw Error($('videoStatus').textContent||'Could not load the source video.');
   images.forEach(i=>URL.revokeObjectURL(i.url));images=refs.map(file=>({file,url:URL.createObjectURL(file)}));renderImages();
   $('prompt').value=item.prompt||'';document.querySelector(`[data-mode="${['motion','swap','edit'].includes(item.mode)?item.mode:'motion'}"]`).click();document.querySelector(`[data-resolution="${Object.hasOwn(rates,item.resolution)?item.resolution:'720p'}"]`).click();$('keepAudio').checked=item.keep_audio!==false;
   setView('history');status(refs.length?'Loaded. Your video, references and prompt are ready.':'Motion loaded. Add your references to continue.');update();

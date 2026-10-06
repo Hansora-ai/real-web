@@ -7,13 +7,13 @@
   <meta name="description" content="Transform your video with character, product and wardrobe references.">
   <link rel="icon" href="/favicon.png">
   <link rel="stylesheet" href="/header.css">
-  <link rel="stylesheet" href="/henshin.css?v=20261006-ui">
+  <link rel="stylesheet" href="/henshin.css?v=20261006-uploads">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="/header.js"></script>
   <script defer src="/kie-upload-bridge.js"></script>
   <script defer src="/henshin-config.js"></script>
-  <script defer src="/henshin-media.js?v=20261006-ui"></script>
-  <script defer src="/henshin.js?v=20261006-ui"></script>
+  <script defer src="/henshin-media.js?v=20261006-uploads"></script>
+  <script defer src="/henshin.js?v=20261006-uploads"></script>
 </head>
 <body>
   <div id="sharedHeader"></div>
@@ -31,7 +31,7 @@
           <button data-mode="swap" aria-pressed="false">Object swap</button>
           <button data-mode="edit" aria-pressed="false">Video edit</button>
         </div>
-        <input id="videoInput" type="file" accept="video/mp4,video/quicktime,video/webm" hidden>
+        <input id="videoInput" type="file" accept="video/*,.mp4,.mov,.webm,.mkv,.avi,.m4v" hidden>
         <button class="drop" id="videoDrop">
           <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="12" height="12" rx="3"/><path d="m15 10 6-3v10l-6-3"/></svg></span>
           <strong>Add a reference video<br>to extract motion</strong>
@@ -42,7 +42,8 @@
           <video id="sourceVideo" controls playsinline></video>
           <div class="source-details"><span id="sourceName"></span></div>
         </div>
-        <input id="imagesInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+        <p id="videoStatus" class="upload-status" role="status" aria-live="polite"></p>
+        <input id="imagesInput" type="file" accept="image/*,.heic,.heif,.tif,.tiff" multiple hidden>
         <div class="drop image-drop" id="imagesDrop" role="group" aria-label="Reference images">
           <button class="image-upload-empty" id="imagesAddEmpty" type="button">
             <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="2"/><path d="m4 17 5-5 4 4 3-3 5 5"/></svg></span>
@@ -51,6 +52,7 @@
           </button>
           <div id="imageGrid" class="image-grid" hidden></div>
         </div>
+        <p id="imageStatus" class="upload-status" role="status" aria-live="polite"></p>
         <label class="field-label" for="prompt">Describe the change <span id="promptHint">Optional</span></label>
         <textarea id="prompt" maxlength="2000" placeholder="Replace the main character using my references…"></textarea>
         <div class="quality-head">Resolution</div>
@@ -94,11 +96,13 @@
     <div class="detail-layout">
       <div class="detail-stage"><video id="previewVideo" controls playsinline></video></div>
       <aside class="detail-sidebar">
+        <div class="detail-content">
         <span class="eyebrow">HANSORA</span><h2 id="previewTitle">Video details</h2>
         <section class="detail-inputs"><h3>Source &amp; references</h3><div id="previewAssets" class="detail-assets"></div></section>
         <section><div class="detail-section-head"><h3>Prompt</h3><button id="previewCopy" class="text-button">Copy prompt</button></div><p id="previewPrompt" class="detail-prompt"></p></section>
         <dl class="detail-facts"><div><dt>Model</dt><dd id="previewModel"></dd></div><div><dt>Resolution</dt><dd id="previewQuality"></dd></div></dl>
         <p id="previewStatus" role="status" class="library-status"></p>
+        </div>
         <div class="detail-actions"><button id="previewRecreate" class="primary">Recreate</button><button id="previewDownload" class="secondary">Download</button></div>
       </aside>
     </div>
