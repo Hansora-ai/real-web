@@ -41,7 +41,7 @@ test('Templates preserve the complete recreation recipe and reject invalid modes
  assert.equal(input.mode,'edit');assert.equal(input.keep_audio,false);
  const item=templatePublic({id:'template',prompt:'Wardrobe',result_url:url,meta:{...input,duration:5}});
  assert.equal(item.prompt,'Change the jacket');assert.deepEqual(item.image_urls,body.image_urls);assert.equal(item.source_video_url,url);
- for(const patch of [{mode:'unknown'},{source_video_url:'http://localhost/source.mp4'},{image_urls:[]},{poster_url:'https://attacker.test/image.jpg'},{mode:'swap',prompt:''}])assert.throws(()=>templateInput({video_url:url,image_urls:body.image_urls,...patch}));
+ for(const patch of [{mode:'unknown'},{source_video_url:'http://localhost/source.mp4'},{image_urls:[]},{poster_url:'https://attacker.test/image.jpg'}])assert.throws(()=>templateInput({video_url:url,image_urls:body.image_urls,...patch}));
 });
 test('Dedicated checker rejects another account and forged callbacks before provider reconciliation',async()=>{
  const original=global.fetch;const uid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';let dbReads=0;
@@ -88,6 +88,15 @@ test('Provider timeout does not overwrite a result already saved by the callback
 
 test('Blank and whitespace-only motion prompts use detailed camera, movement and identity defaults',()=>{
  for(const prompt of ['', '   ']){const text=common.promptFor({...body,prompt});assert.match(text,/camera angles, camera path/);assert.match(text,/Preserve the exact original choreography/);assert.match(text,/Requested transformation: Replace the main character using the reference images\./);}
+});
+test('Blank prompts have distinct object swap and video edit defaults; templates accept them',()=>{
+ const {templateInput}=require('../../lib/henshin/templates.cjs');
+ for(const mode of ['swap','edit'])for(const prompt of ['', '   ']){
+  assert.equal(templateInput({video_url:url,image_urls:body.image_urls,mode,prompt}).transformation_prompt,'');
+  const text=common.promptFor({...body,mode,prompt});assert.match(text,/camera angles, camera path/);assert.match(text,/occlusions/);
+  assert.match(text,mode==='swap'?/Requested transformation: Replace the primary object/:/Requested transformation: Edit the main subject or object/);
+ }
+ const custom='Replace only the red car.';assert.ok(common.promptFor({...body,mode:'swap',prompt:custom}).endsWith('Requested transformation: '+custom));
 });
 test('Source preparation uploads a silent video and saves the original soundtrack on the server',async()=>{
  const original=global.fetch,services=mockServices();global.fetch=services.fetch;
