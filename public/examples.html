@@ -800,11 +800,13 @@ const activeTrendVideos=new Set();
 const trendLoadQueue=[];
 const MAX_TREND_LOADS=2;
 let activeTrendLoads=0;
+const onScreen=video=>{const r=video.getBoundingClientRect();return r.bottom>0&&r.top<innerHeight&&r.right>0&&r.left<innerWidth};
 function playTrendVideo(video){
  if(video.dataset.near!=='1'||!video.isConnected)return;
  if(!video.src){queueTrendVideo(video);return}
  if(video.hasAttribute('controls'))return;
  if(document.hidden||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ if(!onScreen(video)){video.pause();activeTrendVideos.delete(video);return}
  video.play().then(()=>activeTrendVideos.add(video)).catch(()=>{});
 }
 function pumpTrendLoads(){
@@ -821,7 +823,7 @@ function pumpTrendLoads(){
 function queueTrendVideo(video){if(video.src){playTrendVideo(video);return}if(video.dataset.queued)return;video.dataset.queued='1';trendLoadQueue.push(video);pumpTrendLoads()}
 function updateTrendVisibility(video,visible){
  video.dataset.near=visible?'1':'0';
- if(visible)queueTrendVideo(video);
+ if(visible){if(video.src&&!onScreen(video)){video.pause();activeTrendVideos.delete(video)}queueTrendVideo(video)}
  else{video.pause();activeTrendVideos.delete(video);const r=video.getBoundingClientRect();if(video.src&&(r.bottom<-2*innerHeight||r.top>3*innerHeight)){video.removeAttribute('src');video.load();video.classList.remove('is-ready')}}
 }
 const trendObserver='IntersectionObserver'in window?new IntersectionObserver(entries=>{
