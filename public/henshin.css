@@ -282,10 +282,12 @@ dialog::backdrop { background: #000c; }
 .owner-upload { text-decoration: none; color: inherit; }
 .detail-dialog { width: min(1100px,94vw); padding:0; overflow: hidden; }
 .detail-close { position:absolute; top:12px; right:12px; z-index:2; width:30px; height:30px; padding:0; border-radius:50%; background:#292a2d; color:white; }
-.detail-layout { display:grid; grid-template-columns:minmax(0,1fr) 330px; min-height:480px; max-height:80svh; }
+.detail-layout { display:grid; grid-template-columns:minmax(0,1fr) 330px; height:min(680px,80svh); grid-template-rows:minmax(0,1fr); }
 .detail-stage { display:grid; place-items:center; background:radial-gradient(ellipse at center,#27232f,#0c0d0f); padding:24px; min-width:0; }
 #previewDialog .detail-stage video { width:100%; max-height:70svh; margin:0; object-fit:contain; }
-.detail-sidebar { padding:28px 20px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:20px; border-left:1px solid var(--line); }
+.detail-sidebar { padding:28px 20px 20px; min-height:0; overflow:hidden; display:flex; flex-direction:column; gap:12px; border-left:1px solid var(--line); }
+.detail-content { min-height:0; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:20px; }
+.detail-content > * { flex-shrink:0; }
 .detail-sidebar h2 { margin-top:0; padding-right:20px; }
 .detail-sidebar h3 { font-size:11px; font-weight:500; margin:0 0 9px; color:#a9aab3; }
 .detail-assets { display:flex; gap:8px; overflow-x:auto; padding-bottom:5px; }
@@ -298,7 +300,7 @@ dialog::backdrop { background: #000c; }
 .detail-facts div { display:flex; justify-content:space-between; gap:15px; padding:10px 0; border-bottom:1px solid var(--line); }
 .detail-facts dt { color:#92949b; }
 .detail-facts dd { margin:0; text-align:right; }
-.detail-actions { margin-top:auto; display:grid; gap:8px; }
+.detail-actions { margin-top:auto; flex-shrink:0; display:grid; gap:8px; }
 .detail-actions button { display:flex; justify-content:center; gap:8px; align-items:center; }
 .template-editor { max-width:1000px; margin:24px auto 60px; padding:24px; border:1px solid var(--line); background:var(--panel); border-radius:18px; }
 .template-editor-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
@@ -312,7 +314,7 @@ dialog::backdrop { background: #000c; }
 #editorImages { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 20px; }
 #editorImages img { width:64px; height:64px; object-fit:cover; border-radius:8px; }
 .editor-publish { max-width:240px; margin-top:24px; }
-@media(max-width:740px) { .detail-dialog { overflow:auto; max-height:92svh; } .detail-layout { grid-template-columns:1fr; max-height:none; } .detail-stage { padding:16px; } #previewDialog .detail-stage video { max-height:40svh; } .detail-sidebar { overflow:visible; border-left:0; } .template-editor { margin:12px; padding:18px; } .template-editor-grid { grid-template-columns:1fr; } }
+@media(max-width:740px) { .detail-dialog { overflow:auto; max-height:92svh; } .detail-layout { grid-template-columns:1fr; grid-template-rows:auto auto; height:auto; max-height:none; } .detail-stage { padding:16px; } #previewDialog .detail-stage video { max-height:40svh; } .detail-sidebar { height: min(520px,70svh); border-left:0; } .template-editor { margin:12px; padding:18px; } .template-editor-grid { grid-template-columns:1fr; } }
 @media(prefers-reduced-motion:reduce) { .generation-stage *, .generation-stage-icon::before, .generation-stage-icon::after { animation:none!important; } }
 
 /* References stay inside the image uploader, including Add and Remove controls. */
@@ -369,7 +371,7 @@ dialog::backdrop { background: #000c; }
 .template-delete { position:absolute; top:8px; left:8px; z-index:1; display:grid; place-items:center; width:28px; height:28px; padding:0; background:#101116d9; border:1px solid #ffffff25; border-radius:8px; }
 .template-delete svg { width:15px; height:15px; }
 .template-delete:hover:not(:disabled) { color:#ffbdc3; background:#772330; }
-.detail-sidebar > section:not(.detail-inputs), .detail-facts { padding:12px; border:1px solid #ffffff0e; border-radius:12px; background:#ffffff06; }
+.detail-content > section:not(.detail-inputs), .detail-facts { padding:12px; border:1px solid #ffffff0e; border-radius:12px; background:#ffffff06; }
 .detail-section-head .text-button { padding:5px 8px; border:1px solid #ffffff20; border-radius:7px; font-size:10px; color:#eceaf3; }
 .detail-actions { grid-template-columns:1fr; }
 .detail-actions .primary, .detail-actions .secondary { font-size:11px; padding:11px 8px; border-radius:9px; }
