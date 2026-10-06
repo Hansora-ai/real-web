@@ -15,6 +15,13 @@
   });chain=task.catch(()=>{});return task;
  }
  function size(file,limit,kind){if(!(file instanceof Blob)||!file.size)throw Error('Choose a '+kind+' file.');if(file.size>limit*MB)throw Error(`“${file.name||kind}” is larger than ${limit} MB. Choose a smaller file.`);}
+ // Chrome keeps a disk-backed File only as a reference; if the file is moved,
+ // re-saved or synced (iCloud/Downloads) before publishing, later reads fail
+ // with NotReadableError. Copy it into memory once, right after selection.
+ async function inMemory(file,kind){
+  try{return new File([await file.arrayBuffer()],file.name||kind,{type:file.type,lastModified:file.lastModified});}
+  catch{throw Error(`Could not read “${file.name||kind}”. Copy it to your Desktop, then choose it again.`);}
+ }
  function typed(file){
   const types={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp',tif:'image/tiff',tiff:'image/tiff',avif:'image/avif',heic:'image/heic',heif:'image/heif',mp4:'video/mp4',mov:'video/quicktime',webm:'video/webm',mkv:'video/x-matroska',avi:'video/x-msvideo',m4v:'video/mp4'};
   const declared=file.type.toLowerCase(),mime=({'image/jpg':'image/jpeg','image/pjpeg':'image/jpeg','image/x-png':'image/png'}[declared])||((!declared||declared==='application/octet-stream')?types[file.name?.split('.').pop().toLowerCase()]||declared:declared);
@@ -48,7 +55,7 @@
   });
  }
  async function prepareVideo(input){
-  size(input,200,'video');let file=typed(input),d;
+  size(input,200,'video');let file=typed(await inMemory(input,'video')),d;
   try{d=await duration(file);}catch{file=await compress(file);d=await duration(file);}
   return {file,seconds:validDuration(d)};
  }
@@ -59,7 +66,7 @@
  }
  async function prepareImage(input){
   if(imageCache.has(input))return imageCache.get(input);
-  size(input,30,'image');let file=typed(input),bitmap;
+  size(input,30,'image');let file=typed(await inMemory(input,'image')),bitmap;
   try{bitmap=await decode(file);}catch{
    if(/heic|heif/i.test(file.type+' '+file.name)){
     if(!window.heic2any)await script('/vendor/henshin/heic2any.min.js');
