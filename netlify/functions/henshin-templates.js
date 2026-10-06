@@ -5,8 +5,10 @@ exports.handler=async event=>{
  try {
   if(!BASE||!KEY) throw Error('Templates service unavailable.');
   if(event.httpMethod==='GET') {
-   const rows=await db('user_generations?provider=eq.Henshin%20Template&meta->>published=eq.true&order=created_at.desc&limit=100&select=id,prompt,result_url,meta');
-   const result=json(200,{ok:true,templates:(rows||[]).map(templatePublic)});
+   const offset=Number(event.queryStringParameters?.offset||0),limit=24;
+   if(!Number.isSafeInteger(offset)||offset<0)throw Error('Invalid library page.');
+   const rows=await db(`user_generations?provider=eq.Henshin%20Template&meta->>published=eq.true&order=created_at.desc,id.desc&offset=${offset}&limit=${limit+1}&select=id,prompt,result_url,meta`);
+   const result=json(200,{ok:true,templates:(rows||[]).slice(0,limit).map(templatePublic),next_offset:rows?.length>limit?offset+limit:null});
    result.headers['Cache-Control']='public, max-age=0, s-maxage=10, must-revalidate';
    return result;
   }
