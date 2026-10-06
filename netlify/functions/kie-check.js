@@ -59,7 +59,7 @@ exports.handler = async (event) => {
     }
 
     if (state.done && state.urls.length) {
-      const savedUrls = await markDone({ row, ids, urls: state.urls });
+      const savedUrls = await markDone({ row, ids, urls: state.urls, enqueueAudio: event.henshinFinishInline !== true });
       return json(200, {
         ok: true,
         status: "done",
@@ -247,8 +247,11 @@ async function fetchKieState(taskId, excludeUrls = [], market = false) {
   return { pending: true };
 }
 
-async function markDone({ row, ids, urls }) {
+async function markDone({ row, ids, urls, enqueueAudio = true }) {
   const archive = await archiveResultUrls({ row, urls });
+  if (row.meta?.source_feature === 'henshin' && row.meta.source_audio_url && !archive.paths.length) {
+    throw Error('Henshin result archival is pending.');
+  }
   const savedUrls = archive.urls.length ? archive.urls : urls;
   const meta = {
     ...(row.meta && typeof row.meta === "object" ? row.meta : {}),
@@ -268,6 +271,22 @@ async function markDone({ row, ids, urls }) {
       archive_errors: archive.errors.length ? archive.errors : ["archive_failed"]
     })
   };
+
+  if (row.meta?.source_feature === 'henshin' && row.meta.source_audio_url) {
+    const audioMeta = { ...meta, status: 'restoring_audio', generated_video_url: savedUrls[0] };
+    const saved = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}&result_url=is.null&meta->>status=in.(processing,pending)`, {
+      method: 'PATCH', headers: { ...sb(), 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify({ result_url: null, meta: audioMeta })
+    });
+    if (!saved.ok) throw Error('Could not save Henshin completion job.');
+    const records = await saved.json();
+    if (records?.length && enqueueAudio) {
+      // Save the durable job before dispatching. The scheduled sweep recovers
+      // queue failures without a visitor needing to keep their browser open.
+      await require('../../lib/henshin/jobs.cjs').enqueue(records[0]).catch(() => {});
+    }
+    return [];
+  }
 
   await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
     method: "PATCH",

@@ -1,5 +1,5 @@
 const crypto=require('node:crypto');
-const {inspect}=require('../../lib/henshin/inspect.cjs');
+const {prepareSource}=require('../../lib/henshin/server-media.cjs');
 const {BASE,KEY,json,auth,db,validate,promptFor}=require('../../lib/henshin/common.cjs');
 const KIE_BASE=(process.env.KIE_BASE_URL||'https://api.kie.ai').replace(/\/$/,'');
 const KIE_KEY=process.env.KIE_API_KEY||'';
@@ -28,11 +28,15 @@ exports.handler=async event=>{
     rowId=`${hash.slice(0,8)}-${hash.slice(8,12)}-${hash.slice(12,16)}-${hash.slice(16,20)}-${hash.slice(20,32)}`;
     const prior=await db(`user_generations?id=eq.${rowId}&user_id=eq.${user.id}&select=id,meta`);
     if(prior?.length) return json(prior[0].meta.task_id?200:409,{ok:!!prior[0].meta.task_id,already_submitted:true,taskId:prior[0].meta.task_id,run_id:body.run_id,error:'This run is already reserved. Check recent generations.'});
-    const inspected=await inspect(body.video_url);
+    const keepAudio=body.keep_audio!==undefined?body.keep_audio!==false:!!body.audio_url;
+    const inspected=await prepareSource(body.video_url,{uid:user.id,id:rowId+'-'+crypto.randomUUID(),keepAudio});
     body.source_video_duration=inspected.seconds;
+    // Client audio URLs are never used as the saved soundtrack. The server
+    // separates it from the same source video that it verifies for billing.
+    body.audio_url=inspected.timingAudioURL;
     ({cost}=validate(body));
     const prompt=promptFor(body);
-    meta={source:'kie',engine:'henshin',source_feature:'henshin',run_id:body.run_id,status:'pending',resolution:body.resolution,mode:body.mode,user_prompt:String(body.prompt||'').trim().slice(0,2000),keep_audio:!!body.audio_url,checker:'henshin-check',callback_token:crypto.randomBytes(24).toString('hex'),video_url:body.video_url,reference_image_urls:body.image_urls,source_audio_url:body.audio_url||null,source_video_duration:body.source_video_duration,refund_amount:cost,charged_duration:Math.ceil(body.source_video_duration)};
+    meta={source:'kie',engine:'henshin',source_feature:'henshin',run_id:body.run_id,status:'pending',resolution:body.resolution,mode:body.mode,user_prompt:String(body.prompt||'').trim().slice(0,2000),keep_audio:keepAudio,checker:'henshin-check',callback_token:crypto.randomBytes(24).toString('hex'),video_url:body.video_url,reference_video_urls:[inspected.videoURL],reference_image_urls:body.image_urls,reference_audio_urls:body.audio_url?[body.audio_url]:[],source_audio_url:inspected.audioURL,source_video_duration:body.source_video_duration,refund_amount:cost,charged_duration:Math.ceil(body.source_video_duration)};
     // Deterministic primary key reserves a run once, including concurrent requests.
     await db('user_generations',{method:'POST',body:JSON.stringify({id:rowId,user_id:user.id,provider:'Hansora Henshin',kind:'video',prompt,result_url:null,meta})});
     reserved=true;
@@ -40,9 +44,9 @@ exports.handler=async event=>{
     charged=true;
     meta={...meta,charged:true,charged_cost:cost,debited:cost,charged_at:new Date().toISOString()};
     await db(`user_generations?id=eq.${rowId}`,{method:'PATCH',body:JSON.stringify({meta})});
-    const callback=`${(process.env.SITE_BASE||'https://hansora.co').replace(/\/$/,'')}/.netlify/functions/henshin-check?token=${meta.callback_token}&uid=${encodeURIComponent(user.id)}&run_id=${encodeURIComponent(body.run_id)}`;
+    const callback=`${(process.env.DEPLOY_PRIME_URL||process.env.SITE_BASE||process.env.URL||'https://hansora.co').replace(/\/$/,'')}/.netlify/functions/henshin-check?token=${meta.callback_token}&uid=${encodeURIComponent(user.id)}&run_id=${encodeURIComponent(body.run_id)}`;
     submissionStarted=true;
-    const response=await fetch(`${KIE_BASE}/api/v1/jobs/createTask`,{method:'POST',signal:AbortSignal.timeout(25000),headers:{Authorization:`Bearer ${KIE_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:'bytedance/seedance-2-5',callBackUrl:callback,input:{prompt,resolution:body.resolution,duration:-1,aspect_ratio:'adaptive',generate_audio:!body.audio_url,output_format:'mp4',reference_video_urls:[body.video_url],reference_image_urls:body.image_urls,...(body.audio_url?{reference_audio_urls:[body.audio_url]}:{})}})});
+    const response=await fetch(`${KIE_BASE}/api/v1/jobs/createTask`,{method:'POST',signal:AbortSignal.timeout(25000),headers:{Authorization:`Bearer ${KIE_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:'bytedance/seedance-2-5',callBackUrl:callback,input:{prompt,resolution:body.resolution,duration:-1,aspect_ratio:'adaptive',generate_audio:!keepAudio,output_format:'mp4',reference_video_urls:[inspected.videoURL],reference_image_urls:body.image_urls,...(body.audio_url?{reference_audio_urls:[body.audio_url]}:{})}})});
     const data=await response.json();
     const taskId=data?.data?.taskId;
     if(!response.ok||Number(data.code)!==200||!taskId) {

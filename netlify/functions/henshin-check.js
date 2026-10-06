@@ -3,6 +3,7 @@
 const crypto=require('node:crypto');
 const {json,auth,db}=require('../../lib/henshin/common.cjs');
 const shared=require('./kie-check.js');
+const {audioPending,enqueue}=require('../../lib/henshin/jobs.cjs');
 function equalToken(a,b){const x=Buffer.from(String(a||'')),y=Buffer.from(String(b||''));return x.length>=32&&x.length===y.length&&crypto.timingSafeEqual(x,y);}
 exports.handler=async event=>{
  try{
@@ -14,7 +15,11 @@ exports.handler=async event=>{
   const row=(await db(path))?.[0];
   if(!row||row.meta?.source_feature!=='henshin')return json(404,{ok:false,error:'Henshin generation unavailable.'});
   if(event.httpMethod==='POST'&&!equalToken(q.token,row.meta.callback_token))return json(403,{ok:false,error:'Invalid callback token.'});
-  if(row.result_url)return json(200,{ok:true,status:row.meta.source_audio_url&&!row.meta.audio_restored?'restoring_audio':'ready',result_url:row.result_url,meta:row.meta});
+  if(audioPending(row)){
+   await enqueue(row).catch(()=>{});
+   return json(200,{ok:true,status:row.meta.status==='audio_failed'?'audio_failed':'restoring_audio',meta:row.meta});
+  }
+  if(row.result_url)return json(200,{ok:true,status:'ready',result_url:row.result_url,meta:row.meta});
   if(/fail|reject|cancel/.test(row.meta.status||''))return json(200,{ok:false,failed:true,status:'failed',error:row.meta.error||'Generation failed.',refunded:!!row.meta.refunded});
   if(!row.meta.task_id&&event.httpMethod==='POST'){
    const body=JSON.parse(event.body||'{}'),taskId=body.taskId||body.task_id||body.data?.taskId||body.data?.task_id;
@@ -29,6 +34,8 @@ exports.handler=async event=>{
   const response=await shared.handler({httpMethod:'GET',queryStringParameters:{uid:row.user_id,run_id:row.meta.run_id,taskId:row.meta.task_id}});
   const latest=(await db(path))?.[0];
   const result=JSON.parse(response.body||'{}');
+  if(audioPending(latest))return json(200,{ok:true,status:latest.meta.status==='audio_failed'?'audio_failed':'restoring_audio',meta:latest.meta});
+  if(latest?.meta?.audio_restored&&latest.result_url)return json(200,{ok:true,status:'ready',result_url:latest.result_url,meta:latest.meta});
   return json(200,{...result,meta:latest?.meta||row.meta});
  }catch(e){return json(e.status||400,{ok:false,error:e.message});}
 };
