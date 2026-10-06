@@ -7,13 +7,13 @@
   <meta name="description" content="Transform your video with character, product and wardrobe references.">
   <link rel="icon" href="/favicon.png">
   <link rel="stylesheet" href="/header.css">
-  <link rel="stylesheet" href="/henshin.css?v=20261006-server-audio">
+  <link rel="stylesheet" href="/henshin.css?v=20261006-ui">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="/header.js"></script>
   <script defer src="/kie-upload-bridge.js"></script>
   <script defer src="/henshin-config.js"></script>
-  <script defer src="/henshin-media.js?v=20261006-server-audio"></script>
-  <script defer src="/henshin.js?v=20261006-server-audio"></script>
+  <script defer src="/henshin-media.js?v=20261006-ui"></script>
+  <script defer src="/henshin.js?v=20261006-ui"></script>
 </head>
 <body>
   <div id="sharedHeader"></div>
@@ -21,7 +21,7 @@
     <section class="composer" aria-label="Henshin generator">
       <div id="composerScroll" class="composer-scroll">
         <div class="model-card">
-          <div class="model-art" aria-hidden="true"><span></span><span></span><span></span></div>
+          <video id="heroVideo" class="model-video" muted loop playsinline preload="metadata" aria-hidden="true"></video>
           <span class="eyebrow">HANSORA VIDEO</span>
           <h1>Henshin</h1>
           <p>Transform the scene. Keep the motion.</p>
@@ -38,8 +38,9 @@
           <small>4–30 seconds · MP4, MOV or WebM</small>
         </button>
         <div id="sourcePreview" class="source-preview" hidden>
+          <button id="clearVideo" class="remove-media" type="button" aria-label="Remove source video"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
           <video id="sourceVideo" controls playsinline></video>
-          <div class="source-details"><span id="sourceName"></span><button id="clearVideo" class="text-button">Remove</button></div>
+          <div class="source-details"><span id="sourceName"></span></div>
         </div>
         <input id="imagesInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
         <div class="drop image-drop" id="imagesDrop" role="group" aria-label="Reference images">
@@ -89,13 +90,13 @@
     </section>
   </main>
   <dialog id="previewDialog" class="detail-dialog" aria-label="Video details">
-    <button id="previewClose" class="detail-close" aria-label="Close preview">×</button>
+    <button id="previewClose" class="detail-close" aria-label="Close preview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
     <div class="detail-layout">
       <div class="detail-stage"><video id="previewVideo" controls playsinline></video></div>
       <aside class="detail-sidebar">
         <span class="eyebrow">HANSORA</span><h2 id="previewTitle">Video details</h2>
         <section class="detail-inputs"><h3>Source &amp; references</h3><div id="previewAssets" class="detail-assets"></div></section>
-        <section><div class="detail-section-head"><h3>Prompt</h3><button id="previewCopy" class="text-button">Copy</button></div><p id="previewPrompt" class="detail-prompt"></p></section>
+        <section><div class="detail-section-head"><h3>Prompt</h3><button id="previewCopy" class="text-button">Copy prompt</button></div><p id="previewPrompt" class="detail-prompt"></p></section>
         <dl class="detail-facts"><div><dt>Model</dt><dd id="previewModel"></dd></div><div><dt>Resolution</dt><dd id="previewQuality"></dd></div></dl>
         <p id="previewStatus" role="status" class="library-status"></p>
         <div class="detail-actions"><button id="previewRecreate" class="primary">Recreate</button><button id="previewDownload" class="secondary">Download</button></div>

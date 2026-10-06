@@ -41,7 +41,7 @@ test('Templates preserve the complete recreation recipe and reject invalid modes
  assert.equal(input.mode,'edit');assert.equal(input.keep_audio,false);
  const item=templatePublic({id:'template',prompt:'Wardrobe',result_url:url,meta:{...input,duration:5}});
  assert.equal(item.prompt,'Change the jacket');assert.deepEqual(item.image_urls,body.image_urls);assert.equal(item.source_video_url,url);
- for(const patch of [{mode:'unknown'},{source_video_url:'http://localhost/source.mp4'},{image_urls:[]},{mode:'swap',prompt:''}])assert.throws(()=>templateInput({video_url:url,image_urls:body.image_urls,...patch}));
+ for(const patch of [{mode:'unknown'},{source_video_url:'http://localhost/source.mp4'},{image_urls:[]},{poster_url:'https://attacker.test/image.jpg'},{mode:'swap',prompt:''}])assert.throws(()=>templateInput({video_url:url,image_urls:body.image_urls,...patch}));
 });
 test('Dedicated checker rejects another account and forged callbacks before provider reconciliation',async()=>{
  const original=global.fetch;const uid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';let dbReads=0;
@@ -174,4 +174,34 @@ test('Visitor retry requests cannot supply their own finished video URL',async()
 test('Scheduled recovery polls and finishes missed callbacks without browser polling',async()=>{
  const original=global.fetch,services=finishServices();global.fetch=services.fetch;
  try{const sweep=await import('../../netlify/functions/henshin-sweep.mjs');const res=await sweep.default(new Request('https://hansora.co/scheduled',{method:'POST',body:JSON.stringify({next_run:new Date().toISOString()})}));assert.equal((await res.json()).dispatched,1);assert.equal(services.jobs.length,1);await require('../../netlify/functions/henshin-finish-background').handler(backgroundEvent(services.jobs[0].id));assert.equal(services.row.meta.audio_restored,true);assert.match(services.row.result_url,/henshin-final.mp4$/);}finally{global.fetch=original;}
+});
+
+test('Library deletion rejects visitors, unconfirmed owners and non-template rows',async()=>{
+ const original=global.fetch,handler=require('../../netlify/functions/henshin-templates').handler,id='aaaaaaaa-1111-2222-3333-aaaaaaaaaaaa';let reads=0;
+ try{
+  for(const user of [{id:'owner',email:'visitor@example.com',email_confirmed_at:'today'},{id:'owner',email:common.OWNER}]){
+   global.fetch=async raw=>{if(String(raw).includes('/auth/'))return response(user);reads++;throw Error('Unauthorized database access');};
+   const result=await handler({httpMethod:'DELETE',headers:{authorization:'Bearer test'},body:JSON.stringify({id})});assert.equal(result.statusCode,403);
+  }
+  assert.equal(reads,0);
+  global.fetch=async raw=>String(raw).includes('/auth/')?response({id:'owner',email:common.OWNER,email_confirmed_at:'today'}):response([]);
+  assert.equal((await handler({httpMethod:'DELETE',headers:{authorization:'Bearer test'},body:JSON.stringify({id})})).statusCode,404);
+  assert.equal((await handler({httpMethod:'DELETE',headers:{authorization:'Bearer test'},body:'{"id":"malformed"}'})).statusCode,400);
+  assert.equal((await handler({httpMethod:'DELETE',headers:{},body:JSON.stringify({id})})).statusCode,401);
+ }finally{global.fetch=original;}
+});
+test('Confirmed owner deletion unpublishes only the requested template and preserves its recipe',async()=>{
+ const original=global.fetch,id='aaaaaaaa-1111-2222-3333-aaaaaaaaaaaa',meta={source_feature:'henshin-template',published:true,source_video_url:url,reference_image_urls:body.image_urls,transformation_prompt:'Change the jacket',mode:'swap',resolution:'1080p'};let saved;
+ global.fetch=async(raw,options={})=>{
+  const u=new URL(raw);if(u.pathname.includes('/auth/'))return response({id:'owner',email:common.OWNER,email_confirmed_at:'today'});
+  assert.equal(u.searchParams.get('id'),'eq.'+id);assert.equal(u.searchParams.get('user_id'),'eq.owner');assert.equal(u.searchParams.get('provider'),'eq.Henshin Template');assert.equal(u.searchParams.get('meta->>source_feature'),'eq.henshin-template');
+  if(options.method==='PATCH'){saved=JSON.parse(options.body);return response([{id,meta:saved.meta}]);}
+  return response([{id,meta}]);
+ };
+ try{const result=await require('../../netlify/functions/henshin-templates').handler({httpMethod:'DELETE',headers:{authorization:'Bearer test'},body:JSON.stringify({id})});assert.equal(result.statusCode,200);assert.equal(saved.meta.published,false);assert.ok(saved.meta.deleted_at);assert.deepEqual({...saved.meta,published:true,deleted_at:undefined},{...meta,deleted_at:undefined});assert.equal(saved.result_url,undefined);}finally{global.fetch=original;}
+});
+
+test('The public library lists only published templates and allows brief shared caching',async()=>{
+ const original=global.fetch;global.fetch=async raw=>{const u=new URL(raw);assert.equal(u.searchParams.get('provider'),'eq.Henshin Template');assert.equal(u.searchParams.get('meta->>published'),'eq.true');return response([{id:'template',prompt:'Example',result_url:url,meta:{poster_url:body.image_urls[0],aspect_ratio:9/16,source_video_url:url,reference_image_urls:body.image_urls}}]);};
+ try{const result=await require('../../netlify/functions/henshin-templates').handler({httpMethod:'GET',headers:{}});assert.equal(result.statusCode,200);assert.match(result.headers['Cache-Control'],/s-maxage=10/);const item=JSON.parse(result.body).templates[0];assert.equal(item.poster_url,body.image_urls[0]);assert.equal(item.aspect_ratio,9/16);}finally{global.fetch=original;}
 });
