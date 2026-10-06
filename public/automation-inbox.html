@@ -9,9 +9,9 @@
   <script src="automation-theme.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css">
+  <link rel="stylesheet" href="automation-header.css"><link rel="stylesheet" href="automation-ui.css?v=20261004-media">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-inbox.js?v=20260930-badges"></script>
+  <script defer src="automation-client.js"></script><script defer src="automation-ui.js"></script><script defer src="automation-header.js"></script><script defer src="automation-inbox.js?v=20261005-stages2"></script>
 </head>
 <body class="ui ui-app" data-automation-page="inbox">
   <div data-automation-header></div>
@@ -24,6 +24,7 @@
           <div class="ui-inbox-title"><a class="ui-btn ghost icon sm" id="inbox-back" href="automation-dashboard.html" aria-label="Back to AI employee" data-icon="chevron" style="transform:scaleX(-1)"></a><h1>Inbox</h1><span class="ui-badge" title="Open conversations"><span id="open-count">0</span>&nbsp;open</span><span class="ui-badge red" title="Needs attention"><span id="attention-count">0</span>&nbsp;need you</span></div>
           <label class="ui-search"><span class="sr-only">Search conversations</span><span data-icon="search"></span><input id="inbox-search" type="search" placeholder="Search customers or messages"></label>
           <div class="ui-filter-pills" id="inbox-filters"><button class="active" data-filter="all" type="button">All <span data-count="all">0</span></button><button data-filter="attention" type="button">Needs you <span data-count="attention">0</span></button><button data-filter="human" type="button">Your team <span data-count="human">0</span></button><button data-filter="unread" type="button">Unread <span data-count="unread">0</span></button></div>
+          <div class="ui-filter-pills ui-stage-pills" id="stage-filters" hidden><button data-stage="ready" type="button">🔥 Ready <span data-stage-count="ready">0</span></button><button data-stage="interested" type="button">👀 Interested <span data-stage-count="interested">0</span></button><button data-stage="quiet" type="button">💤 Went quiet <span data-stage-count="quiet">0</span></button><button data-stage="done" type="button">✅ Done <span data-stage-count="done">0</span></button><button data-stage="lost" type="button">❌ Lost <span data-stage-count="lost">0</span></button></div>
         </div>
         <div class="ui-inbox-items" id="conversation-list" aria-label="Conversations"></div>
       </aside>

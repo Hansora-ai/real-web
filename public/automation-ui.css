@@ -749,3 +749,22 @@ a.ui-row:hover .ui-chevron{transform:translateX(3px);color:var(--text)}
 .ui-history-main{display:grid;gap:2px;min-width:0}.ui-history-main b{font-size:13.5px;font-weight:600}.ui-history-main small{color:var(--text-3);font-size:12px}.ui-empty-text{color:var(--text-3);font-size:13.5px}
 .ui-password-form{display:grid;gap:10px;max-width:560px}.ui-password-status{margin:0;min-height:18px;font-size:13px}.ui-password-status[data-tone=error]{color:var(--red)}.ui-password-status[data-tone=success]{color:var(--green)}
 @media(max-width:760px){.ui-profile-grid{grid-template-columns:1fr}}
+.ui-msg-media{margin:2px 0 6px}.ui-msg-media img,.ui-msg-media video{display:block;max-width:min(260px,100%);max-height:320px;border-radius:12px;border:1px solid var(--border);object-fit:cover;background:var(--surface-2)}.ui-msg-media audio{width:min(260px,100%);height:36px}
+.ui-channel-steps{display:grid;gap:10px;margin:12px 0;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)}
+.ui-channel-steps ol{display:grid;gap:10px;margin:0;padding:0;list-style:none;counter-reset:step}
+.ui-channel-steps li{display:flex;align-items:center;gap:12px;counter-increment:step}.ui-channel-steps li::before{content:counter(step);display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:50%;border:1px solid var(--border-2);font-size:12px;font-weight:600;color:var(--text-2)}
+.ui-channel-steps li.done::before{content:'✓';background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.ui-channel-steps li>span{flex:1;display:grid;gap:2px}.ui-channel-steps strong{font-size:13.5px}.ui-channel-steps small{color:var(--text-3);font-size:12px;line-height:1.45}
+.ui-channel-steps p{margin:0}
+.ui-connect-logo.telegram,.ui-provider-mark.telegram{color:#2aabee}.ui-connect-logo.messenger,.ui-provider-mark.messenger{color:#0a7cff}
+
+/* While a window (dialog) is open, the page behind it does not scroll. */
+html:has(dialog[open]){overflow:hidden}
+.ui-msg-note{display:block;margin-top:6px;font-size:11.5px;color:var(--text-3)}
+/* Inbox: where each chat stands */
+.ui-stage-pills{margin-top:6px}
+.ui-convo-stage{display:inline-block;max-width:100%;margin-top:6px;padding:2px 8px;border-radius:999px;border:1px solid var(--border-2);font-size:11.5px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ui-convo-stage.stage-ready{border-color:rgba(249,115,22,.45);color:#fb923c}
+.ui-convo-stage.stage-interested{border-color:var(--accent-line);color:var(--accent-2)}
+.ui-convo-stage.stage-quiet{color:var(--text-3)}
+.ui-convo-stage.stage-lost{color:var(--text-3);opacity:.8}

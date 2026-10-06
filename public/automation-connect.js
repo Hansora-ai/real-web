@@ -35,10 +35,34 @@
       permissions:['Receive new WhatsApp messages','Send replies from the selected number','Read the business profile and number status'],
       accounts:[{name:'Luma Studio',detail:'+1 555 010 0000 · WhatsApp Business',mark:'WA'},{name:'Luma Support',detail:'+1 555 010 0001 · WhatsApp Business',mark:'WS'}],
       primaryLabel:'Answer WhatsApp messages', primaryHelp:'Use the shared AI employee for new customer chats'
+    },
+    telegram: {
+      kicker:'TELEGRAM CONNECTION', title:'Connect Telegram',
+      subtitle:'Your AI employee answers customers who write to your own Telegram account – as you, with your name and photo.',
+      requirementsTitle:'Prepare Telegram Business', requirementsDescription:'Telegram Business (part of Telegram Premium) lets a chatbot answer chats for you.',
+      requirements:['Telegram Premium on your account (Telegram Business)','The Telegram app on your phone or computer'],
+      authorizeTitle:'Connect your Telegram account', authorizeDescription:'Open Hansora\'s bot, press Start, then add it in Telegram Business → Chatbots. No password or token needed.',
+      providerMark:'telegram', providerLabel:'Continue with Telegram', providerHelp:'Opens Telegram', logo:'telegram',
+      permissions:['Read the chats you allow in Telegram Business','Reply in those chats as you','You choose which chats it can answer'],
+      accounts:[{name:'Luma Studio',detail:'@luma_studio · Telegram',mark:'TG'}],
+      primaryLabel:'Answer Telegram messages', primaryHelp:'Use the shared AI employee for chats you allowed'
+    },
+    messenger: {
+      kicker:'MESSENGER CONNECTION', title:'Connect Messenger',
+      subtitle:'Answer Facebook Messenger chats of your Facebook Page with the same AI employee.',
+      requirementsTitle:'Prepare your Facebook Page', requirementsDescription:'You need to manage the Page on Facebook.',
+      requirements:['A Facebook Page for your business','You are an admin of that Page'],
+      authorizeTitle:'Connect your Facebook Page', authorizeDescription:'Sign in with Facebook and choose the Page your AI employee should answer for.',
+      providerMark:'messenger', providerLabel:'Continue with Facebook', providerHelp:'Opens the official Meta window', logo:'messenger',
+      permissions:['Receive messages sent to your Page','Reply from your Page','Read the Page name and picture'],
+      accounts:[{name:'Luma Studio',detail:'Facebook Page',mark:'FB'}],
+      primaryLabel:'Answer Messenger chats', primaryHelp:'Use the shared AI employee for new Messenger chats'
     }
   };
   const config = configurations[channel];
-  if (!config) return fail('Choose Instagram or WhatsApp from the AI employee workspace.');
+  if (!config) return fail('Choose a channel from the AI employee workspace.');
+  const CHANNEL_TYPE = { instagram: 'instagram_dm', whatsapp: 'whatsapp', telegram: 'telegram', messenger: 'messenger' }[channel];
+  const ACCOUNT_MARK = { instagram: 'IG', whatsapp: 'WA', telegram: 'TG', messenger: 'FB' }[channel];
 
   let currentStep = 0;
   let highestUnlocked = 0;
@@ -88,6 +112,8 @@
   document.querySelector('#provider-connect').addEventListener('click', async () => {
     if (!api.isLocalPreview) {
       if (channel === 'whatsapp') return beginWhatsAppSignup();
+      if (channel === 'telegram') return beginTelegramConnect();
+      if (channel === 'messenger') return beginMessengerConnect();
       const button = document.querySelector('#provider-connect'); button.disabled = true;
       document.querySelector('#connect-save-state').textContent = 'Preparing secure Meta authorization…';
       try {
@@ -182,10 +208,10 @@
   async function saveDraftNow() {
     const draft = {channel,selected_account:selectedAccount,provider_connected:providerConnected,automatic_replies:checked('#automatic-replies'),reply_delay:Number(document.querySelector('#reply-delay').value),status:providerConnected?'connected':'draft'};
     if (!api.isLocalPreview) {
-      const channelTypes = channel === 'instagram' ? ['instagram_dm','instagram_comments'] : ['whatsapp'];
+      const channelTypes = channel === 'instagram' ? ['instagram_dm','instagram_comments'] : [CHANNEL_TYPE];
       const result = await api.db.from('automation_channel_connections').update({settings:draft}).eq('business_id',businessId).in('channel_type',channelTypes);
       if (result.error) return showError(api.displayError(result.error));
-      const activeType = channel === 'instagram' ? 'instagram_dm' : 'whatsapp';
+      const activeType = CHANNEL_TYPE;
       const activation = await api.db.from('automation_channel_connections').update({status:'connected',connected_at:new Date().toISOString()}).eq('business_id',businessId).eq('channel_type',activeType);
       if (activation.error) return showError(api.displayError(activation.error));
     }
@@ -199,12 +225,12 @@
 
   async function loadDraft() {
     if (!api.isLocalPreview) {
-      const type = channel === 'instagram' ? 'instagram_dm' : 'whatsapp';
+      const type = CHANNEL_TYPE;
       const result = await api.db.from('automation_channel_connections').select('status,connected_account_label,settings').eq('business_id',businessId).eq('channel_type',type).maybeSingle();
       if (result.error) return showError(api.displayError(result.error));
       if (['connecting','connected'].includes(result.data?.status)) {
         providerConnected = true; selectedAccount = result.data.connected_account_label || selectedAccount;
-        if(result.data.connected_account_label){connectedAccount={name:String(result.data.connected_account_label).split(' · ')[0]||config.title.replace('Connect ',''),detail:result.data.connected_account_label,mark:channel==='whatsapp'?'WA':'IG'};renderAccounts();selectedAccount=result.data.connected_account_label;}
+        if(result.data.connected_account_label){connectedAccount={name:String(result.data.connected_account_label).split(' · ')[0]||config.title.replace('Connect ',''),detail:result.data.connected_account_label,mark:ACCOUNT_MARK};renderAccounts();selectedAccount=result.data.connected_account_label;}
         markAuthorized();
         if (result.data.status === 'connected') setConnected(true);
       }
@@ -282,6 +308,83 @@
   function showError(message) { errorBox.textContent = message; errorBox.hidden = false; errorBox.scrollIntoView({behavior:'smooth',block:'center'}); return false; }
   function fail(message) { loading.hidden = true; workflow.hidden = true; showError(message); }
   function escapeHtml(value) { return String(value || '').replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character])); }
+
+  // Telegram: open Hansora's bot (Start links the account), add it in Telegram Business → Chatbots; this page
+  // checks every few seconds and continues by itself once Telegram reports the connection.
+  let telegramPoll = null;
+  async function beginTelegramConnect() {
+    const button = document.querySelector('#provider-connect'); button.disabled = true; errorBox.hidden = true;
+    document.querySelector('#connect-save-state').textContent = 'Preparing Telegram…';
+    try {
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-telegram-connect', { method: 'POST', body: JSON.stringify({ business_id: businessId, action: 'start' }) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || result.error || 'telegram_connection_unavailable');
+      let box = document.querySelector('#telegram-steps');
+      if (!box) { box = document.createElement('div'); box.id = 'telegram-steps'; box.className = 'ui-channel-steps'; button.insertAdjacentElement('afterend', box); }
+      box.innerHTML = `<ol><li data-step="open"><span><strong>Open the bot and press Start</strong><small>This links your Telegram account to this AI employee.</small></span><a class="ui-btn secondary sm" href="${escapeHtml(result.link)}" target="_blank" rel="noopener">Open @${escapeHtml(result.bot_username)}</a></li><li data-step="add"><span><strong>Add the bot in Telegram Business</strong><small>Telegram → Settings → Telegram Business → Chatbots → add @${escapeHtml(result.bot_username)}, choose which chats it may answer, and allow “Reply to messages”.</small></span></li><li data-step="done"><span><strong>Come back here</strong><small>This page notices it by itself.</small></span></li></ol><p class="ui-faint" id="telegram-wait">Waiting for Telegram…</p>`;
+      window.open(result.link, '_blank', 'noopener');
+      document.querySelector('#connect-save-state').textContent = 'Waiting for Telegram…';
+      clearInterval(telegramPoll); let tries = 0;
+      telegramPoll = setInterval(async () => {
+        if (++tries > 200) { clearInterval(telegramPoll); button.disabled = false; return; }
+        try {
+          const statusResponse = await api.authenticatedFetch('/.netlify/functions/automation-telegram-connect', { method: 'POST', body: JSON.stringify({ business_id: businessId, action: 'status' }) });
+          const status = await statusResponse.json().catch(() => ({}));
+          if (status.linked) box.querySelector('[data-step="open"]')?.classList.add('done');
+          const wait = document.querySelector('#telegram-wait');
+          wait.classList.toggle('ui-alert', Boolean(status.premium_missing));
+          if (status.premium_missing) wait.textContent = 'Your Telegram account does not have Telegram Premium. Telegram only lets an assistant answer for you with Telegram Business, which is part of Premium. Get it in Telegram → Settings → Telegram Premium, then press Start in the bot again.';
+          else if (!status.step || status.step !== 'connected') wait.textContent = status.linked ? 'Step 1 done ✓ Now add the bot in Telegram Business → Chatbots…' : 'Waiting for Telegram…';
+          if (status.step !== 'connected') return;
+          clearInterval(telegramPoll);
+          box.querySelectorAll('li').forEach(item => item.classList.add('done'));
+          document.querySelector('#telegram-wait').textContent = status.error === 'telegram_reply_not_allowed' ? 'Connected – but in Telegram Business allow the bot to “Reply to messages”.' : 'Connected ✓';
+          providerConnected = true; connectedAccount = { name: status.label || 'Telegram', detail: `${status.label || 'Telegram account'} · Telegram`, mark: 'TG' };
+          renderAccounts(); markAuthorized(); button.disabled = false;
+          document.querySelector('#connect-save-state').textContent = 'Telegram connected · review settings to go live';
+        } catch (_) {}
+      }, 3000);
+    } catch (error) { button.disabled = false; showError(api.displayError(error)); }
+  }
+
+  // Messenger: the Facebook window shares the owner's Pages; the owner picks one (automatic when there is only one).
+  async function beginMessengerConnect() {
+    const button = document.querySelector('#provider-connect'); button.disabled = true; errorBox.hidden = true;
+    document.querySelector('#connect-save-state').textContent = 'Preparing Facebook…';
+    try {
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-messenger-connect', { method: 'POST', body: JSON.stringify({ business_id: businessId, action: 'config' }) });
+      const settings = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(settings.message || settings.error || 'messenger_connection_unavailable');
+      await loadFacebookSdk(settings.app_id, settings.graph_version);
+      window.FB.login(login => {
+        if (login?.authResponse?.code) loadMessengerPages(String(login.authResponse.code)).catch(error => { button.disabled = false; showError(api.displayError(error)); });
+        else { button.disabled = false; showError('Facebook authorization was not completed.'); }
+      }, { config_id: settings.configuration_id, response_type: 'code', override_default_response_type: true });
+    } catch (error) { button.disabled = false; showError(api.displayError(error)); }
+  }
+  async function loadMessengerPages(code) {
+    document.querySelector('#connect-save-state').textContent = 'Reading your Pages…';
+    const response = await api.authenticatedFetch('/.netlify/functions/automation-messenger-connect', { method: 'POST', body: JSON.stringify({ business_id: businessId, action: 'pages', code }) });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.message || result.error || 'messenger_pages_failed');
+    const pages = result.pages || [];
+    if (pages.length === 1) return selectMessengerPage(pages[0].id);
+    let box = document.querySelector('#messenger-pages');
+    if (!box) { box = document.createElement('div'); box.id = 'messenger-pages'; box.className = 'ui-channel-steps'; document.querySelector('#provider-connect').insertAdjacentElement('afterend', box); }
+    box.innerHTML = `<p><strong>Which Page should your AI employee answer for?</strong></p>${pages.map((page, index) => `<label class="ui-option"><input type="radio" name="messenger_page" value="${escapeHtml(page.id)}"${index === 0 ? ' checked' : ''}><span class="ui-option-main"><strong>${escapeHtml(page.name)}</strong><small>${page.can_message ? 'Facebook Page' : 'You may not have messaging rights on this Page'}</small></span></label>`).join('')}<button class="ui-btn primary sm" type="button" id="messenger-use-page">Use this Page</button>`;
+    box.querySelector('#messenger-use-page').addEventListener('click', () => { const chosen = box.querySelector('input[name="messenger_page"]:checked'); if (chosen) selectMessengerPage(chosen.value).catch(error => showError(api.displayError(error))); });
+    document.querySelector('#connect-save-state').textContent = 'Choose your Page';
+  }
+  async function selectMessengerPage(pageId) {
+    document.querySelector('#connect-save-state').textContent = 'Connecting your Page…';
+    const response = await api.authenticatedFetch('/.netlify/functions/automation-messenger-connect', { method: 'POST', body: JSON.stringify({ business_id: businessId, action: 'select', page_id: pageId }) });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.message || result.error || 'messenger_connect_failed');
+    document.querySelector('#messenger-pages')?.remove();
+    providerConnected = true; connectedAccount = { name: result.account.label, detail: `${result.account.label} · Facebook Page`, mark: 'FB' };
+    renderAccounts(); markAuthorized(); document.querySelector('#provider-connect').disabled = false;
+    document.querySelector('#connect-save-state').textContent = 'Page connected · review settings to go live';
+  }
 
   async function beginWhatsAppSignup(){
     const button=document.querySelector('#provider-connect');button.disabled=true;document.querySelector('#connect-save-state').textContent='Preparing WhatsApp Embedded Signup…';errorBox.hidden=true;

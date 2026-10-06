@@ -237,6 +237,7 @@
     $('#lead-signals').value = state.leads.config.signals || '';
     renderLeadQuestions();
     document.querySelectorAll('#handoff-rules input[data-rule]').forEach(input => { if (!input.disabled) input.checked = Boolean(state.handoff.config.rules?.[input.dataset.rule]); });
+    $('#handoff-reel-message').value = state.handoff.config.unreadable_reel_message || '';
     if (!Array.isArray(state.calendar.config.required_fields)) state.calendar.config.required_fields = ['Customer name', 'Phone number']; // same default as the AI
     renderWeek(); renderServices(); renderClosedDates(); renderOrderFields(); renderBookingFields(); renderNotifications(); renderStatuses();
   }
@@ -281,7 +282,7 @@
     $('#closed-dates').innerHTML = state.calendar.config.closed_dates.map(date => `<span>${escapeHtml(new Date(`${date}T12:00:00`).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'}))}<button type="button" data-remove-date="${escapeHtml(date)}" aria-label="Remove ${escapeHtml(date)}">×</button></span>`).join('');
   }
   function renderOrderFields() {
-    $('#order-fields').innerHTML = state.orders.config.required_fields.map((field, index) => `<div><span>${index + 1}</span><input class="ui-input" value="${escapeHtml(field)}" maxlength="80" placeholder="e.g. Colour" aria-label="Required detail ${index + 1}"><button data-remove="${index}" type="button" aria-label="Remove ${escapeHtml(field)}">×</button></div>`).join('');
+    $('#order-fields').innerHTML = state.orders.config.required_fields.map((field, index) => `<div><span>${index + 1}</span><input class="ui-input" value="${escapeHtml(field)}" maxlength="80" placeholder="e.g. Payment: cash or card" aria-label="Required detail ${index + 1}"><button data-remove="${index}" type="button" aria-label="Remove ${escapeHtml(field)}">×</button></div>`).join('');
   }
   // Booking questions: same editor as the order details. Never saved before: name and phone.
   function renderBookingFields() {
@@ -335,7 +336,7 @@
     state.leads.enabled = $('#leads-enabled').checked;
     readLeadQuestions();
     state.leads.config = { signals: $('#lead-signals').value.trim().slice(0, 800), questions: (state.leads.config.questions || []).filter(Boolean).slice(0, 15) };
-    state.handoff.config = { rules: Object.fromEntries([...document.querySelectorAll('#handoff-rules input[data-rule]')].map(input => [input.dataset.rule, input.checked])) };
+    state.handoff.config = { rules: Object.fromEntries([...document.querySelectorAll('#handoff-rules input[data-rule]')].map(input => [input.dataset.rule, input.checked])), unreadable_reel_message: $('#handoff-reel-message').value.trim().slice(0, 1000) };
     Object.assign(state.notifications, { email_enabled:$('#email-notify-enabled').checked, email:$('#notify-email').value.trim(), language:$('#notify-language').value, whatsapp_enabled:$('#wa-notify-enabled').checked, events:[...document.querySelectorAll('#notify-events input:checked')].map(input => input.value) });
   }
 

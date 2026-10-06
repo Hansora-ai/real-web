@@ -320,7 +320,7 @@
     const channel = row.created_by === 'human' ? 'Manual' : CHANNELS[conversation?.channel_type || contact?.channel_type] || 'AI employee';
     // Who ordered: the Instagram @username, otherwise the phone number (WhatsApp, phone calls).
     const handle = contact?.profile?.username ? `@${contact.profile.username}` : contact?.primary_phone || row.customer_phone || '';
-    const fields = Object.entries(row.collected_fields || {}).map(([label, value]) => [label, String(value ?? '')]);
+    const fields = Object.entries(row.collected_fields || {}).filter(([label]) => !label.startsWith('_')).map(([label, value]) => [label, String(value ?? '')]);
     const top = [];
     if (row.reference_number) top.push(['Reference', `#${row.reference_number}`]);
     top.push(['Channel', channel]);

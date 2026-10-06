@@ -4,6 +4,8 @@
 
 const ELEVENLABS_API_KEY = process.env.Elevan_labs_api1 || process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_LABS_API_KEY || process.env.Eleven_labs_api || process.env.eleven_labs_api || process.env.XI_API_KEY || "";
 const ELEVENLABS_BASE = (process.env.ELEVENLABS_BASE_URL || "https://api.elevenlabs.io").replace(/\/+$/,"");
+// Use Eleven v4 for both single-speaker speech and multi-speaker dialogue.
+const ELEVENLABS_TTS_MODEL = "eleven_v4";
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/,"");
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const WORKER_SECRET = process.env.AUDIO_WORKER_SECRET || SERVICE_KEY;
@@ -40,11 +42,11 @@ export default async (req) => {
       const languageCode = normalizeLanguageCode(body.language_code || body.languageCode || "");
       const elevenPayload = dialogue.length === 1 ? {
         text: dialogue[0].text,
-        model_id:"eleven_v3",
+        model_id:ELEVENLABS_TTS_MODEL,
         voice_settings:{ stability, similarity_boost:0.85, style:0, use_speaker_boost:true }
       } : {
         inputs:dialogue.map((item)=>({ text:item.text, voice_id:item.voice })),
-        model_id:"eleven_v3",
+        model_id:ELEVENLABS_TTS_MODEL,
         settings:{ stability }
       };
       if (languageCode) elevenPayload.language_code = languageCode;

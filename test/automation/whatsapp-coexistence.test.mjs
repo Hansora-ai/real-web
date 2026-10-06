@@ -23,8 +23,10 @@ test('messages the owner sends from the WhatsApp Business app are read as the te
 test('the AI comes back 12 hours after the owner last wrote from the phone, not after an inbox take-over', () => {
   const now = Date.parse('2026-10-02T12:00:00Z');
   const phone = hoursAgo => ({ metadata: { source: 'whatsapp_business_app', sent_at: new Date(now - hoursAgo * 3600e3).toISOString() } });
-  assert.equal(phonePauseExpired(phone(2), now), false);
-  assert.equal(phonePauseExpired(phone(13), now), true);
+  // By default the AI stays paused until the owner turns it back on; with an hours setting it comes back by itself.
+  assert.equal(phonePauseExpired(phone(13), now), false);
+  assert.equal(phonePauseExpired(phone(2), now, 12), false);
+  assert.equal(phonePauseExpired(phone(13), now, 12), true);
   assert.equal(phonePauseExpired({ metadata: { sent_by_user_id: 'u1' }, created_at: '2026-09-01T00:00:00Z' }, now), false);
   assert.equal(phonePauseExpired(null, now), false);
 });

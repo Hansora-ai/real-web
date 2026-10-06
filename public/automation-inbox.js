@@ -11,6 +11,10 @@
   if (!api.isLocalPreview && !/^[0-9a-f-]{36}$/i.test(businessId)) return fail('This inbox link is invalid.');
   document.querySelector('#inbox-back').href = `automation-agent.html?id=${encodeURIComponent(businessId)}${api.isLocalPreview && location.protocol !== 'file:' ? '&preview=1' : ''}`;
 
+  // Where each chat stands (read by the AI after every reply). Interested/ready chats with no news for a day are "quiet".
+  const STAGES = { new: ['🆕', 'New'], interested: ['👀', 'Interested'], ready: ['🔥', 'Ready'], done: ['✅', 'Done'], lost: ['❌', 'Lost'], quiet: ['💤', 'Went quiet'] };
+  function stageOf(row) { const stage = row.sales_stage || ''; if (!stage) return ''; const updated = Date.parse(row.sales_updated_at || row.last_message_at || ''); return ['interested', 'ready'].includes(stage) && Number.isFinite(updated) && Date.now() - updated > 86400000 ? 'quiet' : stage; }
+  function formatValue(value, currency) { const number = Number(value); return Number.isFinite(number) && number > 0 ? `${number.toLocaleString(undefined, { maximumFractionDigits: 2 })}${currency ? ` ${currency}` : ''}` : ''; }
   const previewConversations = [
     {id:'c1',outcomes:[{outcome_type:'order',reference_number:1043}],name:'Anna Miller',handle:'@anna.m',channel:'Instagram DM',time:'2m',preview:'Can you deliver this to Main Street?',unread:true,attention:false,human:false,aiActive:true,intent:'Delivery question',summary:'Anna wants to order a custom cabinet and asked about delivery to Main Street. The AI provided the saved delivery price and is waiting for dimensions.',fields:[['Language','Armenian'],['Location','Main Street, the city'],['First seen','Today']],messages:[['customer','Hello, how much is delivery to Main Street?','14:02'],['ai','Delivery within the city is $5. Would you like help choosing a delivery date?','14:02'],['customer','Yes, and I want to order the cabinet from your latest post.','14:04'],['ai','Happy to help. What width and height do you need? I’ll collect the details for the team.','14:04']]},
     {id:'c2',outcomes:[{outcome_type:'booking',reference_number:19},{outcome_type:'booking',reference_number:20}],name:'Carlos Ruiz',handle:'+1 555 010 0100',channel:'WhatsApp',time:'8m',preview:'I need to change my appointment.',unread:true,attention:true,human:false,aiActive:true,intent:'Change booking',summary:'Carlos wants to move tomorrow’s appointment. Calendar access is required before the AI can confirm another time.',fields:[['Language','Armenian'],['Phone','+1 555 010 0100'],['Existing customer','Yes']],messages:[['customer','I need to change my appointment tomorrow.','13:49'],['ai','I can help collect your preferred time, but I need a team member to confirm the calendar. Which day works for you?','13:49'],['customer','Friday after 3 PM.','13:52']]},
@@ -20,14 +24,15 @@
     {id:'c6',name:'David Kim',handle:'@david.p',channel:'Instagram DM',time:'2h',preview:'Do you have a warranty?',unread:false,attention:false,human:false,aiActive:true,intent:'Policy question',summary:'David asked about warranty. The AI answered from the saved business policy.',fields:[['Language','English'],['Customer type','New'],['Outcome','Answered']],messages:[['customer','Do you have a warranty?','11:04'],['ai','Yes, completed work includes a 12-month warranty. I can explain what it covers if you’d like.','11:04']]},
     {id:'c7',name:'Sofia M.',handle:'@sofia_home',channel:'Instagram comment',time:'3h',preview:'available?',unread:true,attention:false,human:false,aiActive:true,intent:'Availability',summary:'Sofia asked about availability under a product post. The AI moved the conversation to DMs.',fields:[['Language','Armenian'],['Source','Product post'],['Automation','Product questions']],messages:[['customer','available?','10:22'],['ai','Public reply: I sent you a message with the details.','10:22'],['ai','Private message: Hi! Which size are you interested in?','10:22']]},
     {id:'c8',name:'Noah Brooks',handle:'+49 151 0000 890',channel:'WhatsApp',time:'Yesterday',preview:'I will send the measurements.',unread:false,attention:false,human:false,aiActive:true,intent:'Sales inquiry',summary:'Noah is interested in a custom kitchen and will send measurements for a quote.',fields:[['Language','Armenian'],['Phone','+49 151 0000 890'],['Lead quality','High']],messages:[['customer','Can you make a kitchen to custom measurements?','Yesterday'],['ai','Yes. Custom kitchens are planned after measurements. You can send the room dimensions or arrange a measurement visit.','Yesterday'],['customer','I will send the measurements.','Yesterday']]}
-  ].map(conversation => ({...conversation,resolved:false,messages:conversation.messages.map(([role,text,time]) => ({role,text,time,counted:role === 'ai'}))}));
+  ].map(conversation => ({...conversation,...({c1:{stage:'done'},c3:{stage:'interested',interest:'Oak dining table, 6 seats',value:'899 USD'},c6:{stage:'ready',interest:'Corner sofa, grey',value:'1,240 USD'},c7:{stage:'interested',interest:'Bookshelf, white'},c8:{stage:'quiet',interest:'Custom wardrobe'}})[conversation.id]||{},resolved:false,messages:conversation.messages.map(([role,text,time]) => ({role,text,time,counted:role === 'ai'}))}));
 
   let conversations;
   try { conversations = api.isLocalPreview ? previewConversations : await loadConversations(); }
   catch (error) { return fail(api.displayError(error)); }
 
   let selectedId = conversations.some(item => item.id === params.get('conversation')) ? params.get('conversation') : conversations[0]?.id || null;
-  let activeFilter = 'all';
+  let activeFilter = 'all', activeStage = '';
+  document.querySelector('#stage-filters').addEventListener('click', event => { const button = event.target.closest('button[data-stage]'); if (!button) return; activeStage = activeStage === button.dataset.stage ? '' : button.dataset.stage; document.querySelectorAll('#stage-filters button').forEach(item => item.classList.toggle('active', item.dataset.stage === activeStage)); renderList(); });
   if (selectedId && !api.isLocalPreview) await loadMessages(current());
   loading.hidden = true;
   app.hidden = false;
@@ -105,6 +110,12 @@
     return `<img class="ui-avatar-photo" src="${escapeHtml(conversation.avatarUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode(this.dataset.fallback))" data-fallback="${letters}">`;
   }
   // "📅 Booking #19", "🛍 2 orders"… per chat: newest reference when there is one, otherwise the count.
+  // The chat's stage and what the customer wants (an order badge already says "done").
+  function stageChip(conversation) {
+    const stage = conversation.stage; if (!stage || stage === 'new' || (stage === 'done' && (conversation.outcomes || []).length)) return '';
+    const [emoji, label] = STAGES[stage];
+    return `<span class="ui-convo-stage stage-${stage}">${emoji} ${escapeHtml(label)}${conversation.interest ? ` · ${escapeHtml(conversation.interest)}` : ''}${conversation.value ? ` · ${escapeHtml(conversation.value)}` : ''}</span>`;
+  }
   function outcomeBadges(conversation) {
     const kinds = [['booking','📅','Booking','bookings'],['order','🛍','Order','orders'],['lead','⚡','Lead','leads']];
     const items = conversation.outcomes || [];
@@ -118,12 +129,12 @@
     const query = document.querySelector('#inbox-search').value.trim().toLowerCase();
     const visible = conversations.filter(conversation => {
       const matchesFilter = activeFilter === 'all' || (activeFilter === 'unread' && conversation.unread) || (activeFilter === 'attention' && conversation.attention) || (activeFilter === 'human' && conversation.human);
-      return matchesFilter && (!query || `${conversation.name} ${conversation.handle} ${conversation.preview} ${conversation.channel}`.toLowerCase().includes(query));
+      return matchesFilter && (!activeStage || conversation.stage === activeStage) && (!query || `${conversation.name} ${conversation.handle} ${conversation.preview} ${conversation.channel} ${conversation.interest || ''}`.toLowerCase().includes(query));
     });
-    const icons = {'Instagram DM':'instagram','Instagram comment':'comment','WhatsApp':'whatsapp','Phone':'phone'};
+    const icons = {'Instagram DM':'instagram','Instagram comment':'comment','WhatsApp':'whatsapp','Phone':'phone','Telegram':'telegram','Messenger':'messenger'};
     document.querySelector('#conversation-list').innerHTML = visible.length ? visible.map(conversation => {
       const state = conversation.resolved ? '' : conversation.attention ? '<span class="ui-badge red sm">Needs you</span>' : conversation.human ? '<span class="ui-badge amber sm">Your team</span>' : '';
-      return `<button class="ui-convo${conversation.id === selectedId ? ' active' : ''}${conversation.unread ? ' unread' : ''}${conversation.resolved ? ' resolved' : ''}" data-conversation-id="${escapeHtml(conversation.id)}" type="button"><span class="ui-convo-avatar">${avatarHtml(conversation)}<i class="ui-convo-channel ${icons[conversation.channel] || ''}">${window.HansoraUI.icon(icons[conversation.channel] || 'message')}</i></span><span class="ui-convo-body"><span class="ui-convo-top"><strong>${escapeHtml(conversation.name)}</strong><time>${escapeHtml(conversation.time)}</time></span><span class="ui-convo-preview">${escapeHtml(conversation.preview)}</span>${outcomeBadges(conversation)}${state}</span></button>`;
+      return `<button class="ui-convo${conversation.id === selectedId ? ' active' : ''}${conversation.unread ? ' unread' : ''}${conversation.resolved ? ' resolved' : ''}" data-conversation-id="${escapeHtml(conversation.id)}" type="button"><span class="ui-convo-avatar">${avatarHtml(conversation)}<i class="ui-convo-channel ${icons[conversation.channel] || ''}">${window.HansoraUI.icon(icons[conversation.channel] || 'message')}</i></span><span class="ui-convo-body"><span class="ui-convo-top"><strong>${escapeHtml(conversation.name)}</strong><time>${escapeHtml(conversation.time)}</time></span><span class="ui-convo-preview">${escapeHtml(conversation.preview)}</span>${stageChip(conversation)}${outcomeBadges(conversation)}${state}</span></button>`;
     }).join('') : `<div class="ui-empty">${conversations.length ? 'No conversations match.' : 'New Instagram and WhatsApp conversations appear here.'}</div>`;
     updateTopCounts();
   }
@@ -161,9 +172,34 @@
         return `<div class="ui-msg-event"><a href="${operations}&record=${encodeURIComponent(message.id)}">${emoji} ${name}${message.reference ? ` #${escapeHtml(message.reference)}` : ''} created · ${escapeHtml(message.text || '')} <span>${escapeHtml(message.time)} · Open →</span></a></div>`;
       }
       const grouped = index > 0 && all[index - 1].role === message.role;
-      return `<div class="ui-msg ${message.role}${grouped ? ' grouped' : ''}">${grouped ? '' : `<span class="ui-msg-meta">${escapeHtml(labels[message.role] || '')} · ${escapeHtml(message.time)}${message.role === 'ai' && message.counted ? ' · billed' : ''}</span>`}<p>${escapeHtml(message.text)}</p></div>`;
+      return `<div class="ui-msg ${message.role}${grouped ? ' grouped' : ''}">${grouped ? '' : `<span class="ui-msg-meta">${escapeHtml(labels[message.role] || '')} · ${escapeHtml(message.time)}${message.role === 'ai' && message.counted ? ' · billed' : ''}</span>`}${message.mediaPath ? `<div class="ui-msg-media" data-media-path="${escapeHtml(message.mediaPath)}" data-media-mime="${escapeHtml(message.mediaMime)}"></div>` : message.mediaUrl ? `<div class="ui-msg-media"><a href="${escapeHtml(message.mediaUrl)}" target="_blank" rel="noopener"><img src="${escapeHtml(message.mediaUrl)}" alt="Product photo" loading="lazy" referrerpolicy="no-referrer"></a></div>` : ''}<p>${escapeHtml(message.text)}</p>${message.mediaError ? `<small class="ui-msg-note">⚠ Could not be opened: ${escapeHtml(message.mediaError)}</small>` : ''}</div>`;
     }).join('') || '<div class="ui-empty">No messages yet.</div>';
     const timeline = document.querySelector('#message-timeline'); timeline.scrollTop = timeline.scrollHeight;
+    loadMessageMedia(timeline);
+  }
+
+  // Photos, videos and voice notes customers sent: private copies, shown through short-lived links.
+  const mediaUrls = new Map();
+  async function loadMessageMedia(timeline) {
+    const holders = [...timeline.querySelectorAll('[data-media-path]')];
+    if (!holders.length || api.isLocalPreview) return;
+    const missing = [...new Set(holders.map(holder => holder.dataset.mediaPath).filter(path => !mediaUrls.has(path)))];
+    if (missing.length) {
+      try {
+        const response = await api.authenticatedFetch('/.netlify/functions/automation-media-url', { method:'POST', body:JSON.stringify({ business_id:businessId, paths:missing }) });
+        const result = await response.json().catch(() => ({}));
+        Object.entries(result.urls || {}).forEach(([path, url]) => mediaUrls.set(path, url));
+      } catch (_) { return; }
+    }
+    holders.forEach(holder => {
+      const url = mediaUrls.get(holder.dataset.mediaPath);
+      if (!url || holder.childElementCount) return;
+      const mime = holder.dataset.mediaMime || '';
+      if (mime.startsWith('audio/')) holder.innerHTML = `<audio controls preload="none" src="${escapeHtml(url)}"></audio>`;
+      else if (mime.startsWith('video/')) holder.innerHTML = `<video controls preload="metadata" src="${escapeHtml(url)}"></video>`;
+      else holder.innerHTML = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener"><img src="${escapeHtml(url)}" alt="Photo from the customer" loading="lazy"></a>`;
+      holder.querySelector('img,video')?.addEventListener('load', () => { timeline.scrollTop = timeline.scrollHeight; }, { once:true });
+    });
   }
 
   function renderCustomer() {
@@ -216,7 +252,7 @@
   // WhatsApp only allows free-form replies within 24 hours of the customer's last message; after that, approved templates.
   function windowRemaining(conversation) {
     // WhatsApp and Instagram both allow replies only within 24 hours of the customer's last message.
-    if (!conversation || !['whatsapp','instagram_dm'].includes(conversation.channelType) || api.isLocalPreview) return null;
+    if (!conversation || !['whatsapp','instagram_dm','messenger'].includes(conversation.channelType) || api.isLocalPreview) return null;
     return conversation.lastCustomerAt ? 24 * 60 * 60 * 1000 - (Date.now() - conversation.lastCustomerAt) : 0;
   }
   function templateMode() { const remaining = windowRemaining(current()); return current()?.channelType === 'whatsapp' && remaining !== null && remaining <= 0; }
@@ -273,12 +309,19 @@
     const open = conversations.filter(item => !item.resolved);
     const counts = { all:conversations.length, attention:open.filter(item => item.attention).length, human:open.filter(item => item.human).length, unread:conversations.filter(item => item.unread).length };
     document.querySelectorAll('#inbox-filters [data-count]').forEach(element => { element.textContent = counts[element.dataset.count]; });
+    const staged = conversations.some(item => item.stage);
+    document.querySelector('#stage-filters').hidden = !staged;
+    document.querySelectorAll('#stage-filters [data-stage-count]').forEach(element => { element.textContent = conversations.filter(item => item.stage === element.dataset.stageCount).length; });
     document.querySelector('#open-count').textContent = conversations.filter(item => !item.resolved).length;
     document.querySelector('#attention-count').textContent = conversations.filter(item => item.attention && !item.resolved).length;
   }
   function current() { return conversations.find(conversation => conversation.id === selectedId) || conversations[0] || null; }
   async function loadConversations() {
-    const result = await api.db.from('automation_conversations').select('id,channel_type,status,ai_enabled,intent,summary,last_message_preview,last_message_at,automation_contacts(display_name,primary_phone,primary_email,language,profile)').eq('business_id',businessId).order('last_message_at',{ascending:false}).limit(100);
+    const base = 'id,channel_type,status,ai_enabled,intent,summary,last_message_preview,last_message_at,automation_contacts(display_name,primary_phone,primary_email,language,profile)';
+    const query = select => api.db.from('automation_conversations').select(select).eq('business_id',businessId).order('last_message_at',{ascending:false}).limit(100);
+    // The stage columns come with SQL 13; until then the inbox works without them.
+    let result = await query(`${base},sales_stage,sales_interest,sales_value,sales_currency,sales_updated_at`);
+    if (result.error) result = await query(base);
     if (result.error) throw result.error;
     // What each chat led to (booking, order, lead), shown in the list so the owner doesn't open every chat.
     const ids = (result.data || []).map(row => row.id);
@@ -287,15 +330,15 @@
     for (const item of made.error ? [] : made.data || []) { if (!outcomesByConversation.has(item.conversation_id)) outcomesByConversation.set(item.conversation_id, []); outcomesByConversation.get(item.conversation_id).push(item); }
     return (result.data || []).map(row => {
       const contact = Array.isArray(row.automation_contacts) ? row.automation_contacts[0] : row.automation_contacts || {};
-      const name = contact.display_name || contact.profile?.username || (row.channel_type === 'whatsapp' ? 'WhatsApp customer' : 'Instagram customer');
+      const name = contact.display_name || contact.profile?.username || ({whatsapp:'WhatsApp customer',telegram:'Telegram customer',messenger:'Messenger customer'}[row.channel_type] || 'Instagram customer');
       const avatarUrl = /^https:\/\//.test(String(contact.profile?.profile_pic || '')) ? String(contact.profile.profile_pic) : '';
-      return {id:row.id,channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,attention:row.status==='needs_attention',human:row.status==='human_handling',aiActive:Boolean(row.ai_enabled),outcomes:outcomesByConversation.get(row.id)||[],resolved:row.status==='resolved',intent:row.intent||'Customer message',summary:row.summary||'Summary will appear as the conversation develops.',fields:[['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
+      return {id:row.id,channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,attention:row.status==='needs_attention',human:row.status==='human_handling',aiActive:Boolean(row.ai_enabled),outcomes:outcomesByConversation.get(row.id)||[],resolved:row.status==='resolved',intent:row.intent||'Customer message',stage:stageOf(row),interest:row.sales_interest||'',value:formatValue(row.sales_value,row.sales_currency),summary:row.summary||'Summary will appear as the conversation develops.',fields:[...(stageOf(row)?[['Stage',`${STAGES[stageOf(row)][0]} ${STAGES[stageOf(row)][1]}`]]:[]),...(row.sales_interest?[['Interested in',row.sales_interest]]:[]),...(formatValue(row.sales_value,row.sales_currency)?[['Likely value',formatValue(row.sales_value,row.sales_currency)]]:[]),['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
     });
   }
   async function loadMessages(conversation) {
     // Orders, bookings and leads created in this chat are shown in the timeline where they happened.
     const [result, outcomes] = await Promise.all([
-      api.db.from('automation_messages').select('sender_type,content,billable,occurred_at').eq('business_id',businessId).eq('conversation_id',conversation.id).order('occurred_at',{ascending:false}).limit(100),
+      api.db.from('automation_messages').select('sender_type,content,billable,occurred_at,metadata').eq('business_id',businessId).eq('conversation_id',conversation.id).order('occurred_at',{ascending:false}).limit(100),
       api.db.from('automation_outcomes').select('id,outcome_type,reference_number,title,status,created_at').eq('business_id',businessId).eq('conversation_id',conversation.id).order('created_at',{ascending:true}).limit(50)
     ]);
     result.data = (result.data || []).reverse();
@@ -303,11 +346,11 @@
     const lastCustomer = [...(result.data||[])].reverse().find(row => row.sender_type === 'customer');
     conversation.lastCustomerAt = lastCustomer ? Date.parse(lastCustomer.occurred_at) : 0;
     const clock = value => new Date(value).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    const messages = (result.data||[]).map(row => ({role:row.sender_type==='customer'?'customer':row.sender_type==='human'?'human':'ai',text:row.content,time:clock(row.occurred_at),at:Date.parse(row.occurred_at),counted:Boolean(row.billable)}));
+    const messages = (result.data||[]).map(row => ({role:row.sender_type==='customer'?'customer':row.sender_type==='human'?'human':'ai',text:row.content,time:clock(row.occurred_at),at:Date.parse(row.occurred_at),counted:Boolean(row.billable),mediaPath:row.metadata?.media_path||row.metadata?.product_photo_path||'',mediaUrl:row.metadata?.product_photo_url||'',mediaError:row.metadata?.media_error||'',mediaMime:row.metadata?.media_mime||''}));
     const events = (outcomes.error ? [] : outcomes.data || []).map(row => ({role:'event',kind:row.outcome_type,id:row.id,reference:row.reference_number,text:row.title,status:row.status,time:clock(row.created_at),at:Date.parse(row.created_at)}));
     conversation.messages = [...messages, ...events].sort((a, b) => a.at - b.at);
   }
-  function channelName(value) { return ({instagram_dm:'Instagram DM',instagram_comments:'Instagram comment',whatsapp:'WhatsApp',phone:'Phone'}[value]||value); }
+  function channelName(value) { return ({instagram_dm:'Instagram DM',instagram_comments:'Instagram comment',whatsapp:'WhatsApp',phone:'Phone',telegram:'Telegram',messenger:'Messenger'}[value]||value); }
   function relativeTime(value) { const delta=Math.max(0,Date.now()-Date.parse(value||new Date())); const minutes=Math.floor(delta/60000); if(minutes<1)return'Now'; if(minutes<60)return`${minutes}m`; const hours=Math.floor(minutes/60); if(hours<24)return`${hours}h`; return new Date(value).toLocaleDateString(); }
   function showError(message) { errorBox.textContent=message; errorBox.hidden=false; }
   function fail(message) { loading.hidden=true; app.hidden=true; showError(message); }

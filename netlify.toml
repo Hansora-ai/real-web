@@ -1,11 +1,11 @@
 [build]
   publish = "public"
-  functions = "netlify/functions"
-  node_version = "18"
+  functions = "netlify/runtime-functions"
+  command = "npm run build:functions"
 
-# ✅ ADD THIS so the lambda runs on Node 20 (safe even if the site build stays on 18)
+# The compatibility adapter and LiveKit SDK require Node 22.
 [build.environment]
-  AWS_LAMBDA_JS_RUNTIME = "nodejs20.x"
+  NODE_VERSION = "22.22.0"
 
 [functions]
   node_bundler = "esbuild"
@@ -43,6 +43,18 @@
 
 [functions."automation-flow-jobs"]
   schedule = "* * * * *"
+
+# Deletes customer photos, videos and voice notes after the retention period (once a day, 03:20 UTC)
+[functions."automation-media-cleanup"]
+  schedule = "20 3 * * *"
+
+# Re-reads connected Google Sheets (product catalogs) every hour
+[functions."automation-catalog-sync"]
+  schedule = "7 * * * *"
+
+# Re-reads website links in AI knowledge older than a week (once a day, 04:40 UTC)
+[functions."automation-knowledge-refresh"]
+  schedule = "40 4 * * *"
 
 [[headers]]
   for = "/*"

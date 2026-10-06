@@ -1,6 +1,6 @@
 import { first, serviceInsert, serviceUpdate } from '../../lib/automation/db.mjs';
 import { extractInstagramReads, recordFlowEvent } from '../../lib/automation/flow-stats.mjs';
-import { extractInstagramComments, extractInstagramMessages, metaConfig, verifyMetaSignature } from '../../lib/automation/meta.mjs';
+import { extractInstagramComments, extractInstagramEchoes, extractInstagramMessages, metaConfig, verifyMetaSignature } from '../../lib/automation/meta.mjs';
 
 const kindOf=item=>item.message?(item.message.is_echo?'echo':item.message.text?'text':'message-without-text'):item.read?'read':item.postback?'postback':item.pass_thread_control?'handover-pass':item.take_thread_control?'handover-take':Object.keys(item).join('+');
 const text=(statusCode,body)=>({statusCode,headers:{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'},body:String(body)});
@@ -31,6 +31,12 @@ export async function handler(event){
       const inserted=await serviceInsert('automation_webhook_events',{provider:'meta',external_event_id:message.externalEventId,event_type:'instagram_message',payload:message,status:'received'},{ignoreDuplicates:true});
       const row=inserted||await first(`/rest/v1/automation_webhook_events?provider=eq.meta&external_event_id=eq.${encodeURIComponent(message.externalEventId)}&select=id,status&limit=1`);
       if(row&&['received','failed'].includes(row.status))await dispatchBackground(event,row.id,'automation-instagram-process-background');
+    }
+    // Messages sent from the business account: the owner typing in the Instagram app pauses the AI in that chat.
+    for(const echo of extractInstagramEchoes(payload)){
+      const inserted=await serviceInsert('automation_webhook_events',{provider:'meta',external_event_id:echo.externalEventId,event_type:'instagram_echo',payload:echo,status:'received'},{ignoreDuplicates:true});
+      const row=inserted||await first(`/rest/v1/automation_webhook_events?provider=eq.meta&external_event_id=eq.${encodeURIComponent(echo.externalEventId)}&select=id,status&limit=1`);
+      if(row&&['received','failed'].includes(row.status))await dispatchBackground(event,row.id,'automation-instagram-echo-background').catch(error=>console.error('instagram echo dispatch failed',{message:error?.message}));
     }
     const comments=extractInstagramComments(payload);
     for(const comment of comments){

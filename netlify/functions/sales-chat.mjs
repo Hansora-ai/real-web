@@ -118,6 +118,7 @@ export async function handler(event) {
     const generated = await generateSalesReply({
       instructions: buildInstructions({ language, summary: session.summary, salesMemory: session.sales_memory }),
       messages: history,
+      language, summary: session.summary, salesMemory: session.sales_memory, authenticated: Boolean(user),
       executeTool: (name, args) => executeTool(name, args, { user }),
       safetyIdentifier: user?.id || anonymous.secretHash
     });
@@ -174,6 +175,9 @@ export async function handler(event) {
     console.error('sales-chat error', {
       message: error?.message,
       status: error?.status,
+      providerStatus: error?.providerStatus,
+      providerOperation: error?.providerOperation,
+      providerMessage: error?.providerMessage,
       requestId: event?.headers?.['x-nf-request-id'] || null
     });
     if (trackedSession) {
@@ -181,13 +185,13 @@ export async function handler(event) {
         session_id: trackedSession.id,
         request_id: trackedRequestId,
         provider: process.env.SALES_AGENT_PROVIDER || (process.env.KIE_API_KEY ? 'kie' : 'openai'),
-        model: process.env.SALES_AGENT_MODEL || (process.env.KIE_API_KEY ? 'gpt-5-6-luna' : 'gpt-5.6-luna'),
+        model: String(process.env.SALES_AGENT_PROVIDER || '').trim().toLowerCase() === 'elevenlabs' ? 'eleven-agents' : process.env.SALES_AGENT_MODEL || (process.env.KIE_API_KEY ? 'gpt-5-6-luna' : 'gpt-5.6-luna'),
         error_category: String(error?.message || 'request_failed').slice(0, 120)
       }).catch(() => null);
     }
     const status = Number(error?.status) || 500;
     const publicError = status === 401 ? 'authentication_failed'
-      : ['openai_not_configured', 'kie_not_configured'].includes(error?.message) ? 'sales_agent_not_configured'
+      : ['openai_not_configured', 'kie_not_configured', 'elevenlabs_not_configured', 'elevenlabs_support_agent_not_ready'].includes(error?.message) ? 'sales_agent_not_configured'
         : status >= 500 ? 'sales_agent_unavailable' : String(error?.message || 'request_failed');
     return response(status, { error: publicError }, anonymous.setCookie);
   }
