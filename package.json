@@ -6,6 +6,7 @@
     "test:automation": "node --test test/automation/*.test.mjs",
     "test:sales-agent": "node --test test/sales-agent/*.test.mjs",
     "test:mcp": "node --test test/hansora-mcp/*.test.mjs",
+    "test:henshin": "node --test test/henshin/*.test.cjs",
     "build:functions": "node scripts/build-netlify-functions.mjs",
     "test:runtime": "node --test test/netlify/*.test.mjs"
   },

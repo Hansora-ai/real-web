@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Add Henshin template | Hansora AI</title>
+<link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/header.css"><link rel="stylesheet" href="/henshin.css?v=20261005-templates">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="/header.js"></script><script defer src="/kie-upload-bridge.js"></script><script defer src="/henshin-config.js"></script><script defer src="/henshin-media.js"></script><script defer src="/henshin-template.js?v=20261005-templates"></script>
+</head>
+<body><div id="sharedHeader"></div>
+<main class="template-editor">
+<div class="template-editor-head"><div><span class="eyebrow">MOTION LIBRARY</span><h1>Add template</h1></div><a href="/henshin.html">Back to Henshin ↗</a></div>
+<p id="editorAccess" role="status">Checking access…</p>
+<form id="editorForm" hidden>
+<div class="template-editor-grid">
+<div>
+<label class="editor-field"><span>Example result video</span><input id="editorResult" class="editor-file" type="file" accept="video/mp4,video/quicktime,video/webm" required></label>
+<video id="editorResultPreview" class="editor-video" controls playsinline hidden></video>
+<p class="library-status">This video appears in the library and detail view.</p>
+<label class="editor-field"><span>Original source video</span><input id="editorSource" class="editor-file" type="file" accept="video/mp4,video/quicktime,video/webm" required></label>
+<video id="editorSourcePreview" class="editor-video" controls playsinline hidden></video>
+<p class="library-status">Recreate loads this source into the generator. Both videos must be 4–30 seconds.</p>
+</div>
+<div>
+<label class="editor-field"><span>Title</span><input id="editorTitle" maxlength="100" required placeholder="Give your template a name"></label>
+<label class="editor-field"><span>Reference images</span><input id="editorReferences" type="file" accept="image/jpeg,image/png,image/webp" multiple required></label>
+<div id="editorImages"></div>
+<label class="editor-field"><span>Transformation mode</span><select id="editorMode"><option value="motion">Motion transfer</option><option value="swap">Object swap</option><option value="edit">Video edit</option></select></label>
+<label class="editor-field"><span>Prompt</span><textarea id="editorPrompt" maxlength="2000" placeholder="Describe how to transform the original video"></textarea></label>
+<label class="editor-field"><span>Resolution</span><select id="editorQuality"><option value="480p">480p</option><option value="720p" selected>720p</option><option value="1080p">1080p</option></select></label>
+<label class="audio-option"><input id="editorAudio" type="checkbox" checked>Keep original audio</label>
+</div>
+</div>
+<p id="editorStatus" role="status" aria-live="polite" class="library-status"></p>
+<button id="editorPublish" class="primary editor-publish" type="submit">Publish template</button>
+</form>
+</main></body></html>
