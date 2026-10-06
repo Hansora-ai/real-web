@@ -1,0 +1,28 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+if(!globalThis.self)globalThis.self={location:{href:'file:///henshin/ffmpeg-core.js'}};
+const createCore=require('../../public/vendor/henshin/ffmpeg-core.js');
+const wasm=fs.readFileSync(path.resolve('public/vendor/henshin/ffmpeg-core.wasm'));
+const core=()=>createCore({wasmBinary:wasm});
+function client(){
+ class FFmpeg{
+  async load(){this.core=await core();}
+  async writeFile(p,b){this.core.FS.writeFile(p,b);}
+  async readFile(p){return this.core.FS.readFile(p);}
+  async ffprobe(args){this.core.reset();this.core.ffprobe(...args);}
+  async exec(args,timeout){this.core.reset();this.core.setTimeout(timeout);return this.core.exec(...args);}
+  terminate(){this.core=null;}
+ }
+ const window={FFmpegWASM:{FFmpeg}},context={window,Blob,File,Uint8Array,TextDecoder,URL,setTimeout,clearTimeout};
+ vm.runInNewContext(fs.readFileSync('public/henshin-media.js','utf8'),context);return window.HenshinMedia;
+}
+test('A wide AVI becomes a model-compatible H.264 MP4 without losing duration or audio',async()=>{
+ const c=await core();c.FS.writeFile('source.mp4',fs.readFileSync('test/henshin/fixtures/source.mp4'));c.reset();assert.equal(c.exec('-i','source.mp4','-vf','scale=1000:100,setsar=1','-c:v','mpeg4','-c:a','pcm_s16le','wide.avi'),0);
+ const media=client(),file=new File([c.FS.readFile('wide.avi')],'wide.avi',{type:''}),result=await media.compress(file);
+ c.FS.writeFile('result.mp4',new Uint8Array(await result.arrayBuffer()));c.reset();c.ffprobe('-v','error','-show_entries','format=duration:stream=codec_type,codec_name,width,height,r_frame_rate','-of','json','result.mp4','-o','probe.json');
+ const data=JSON.parse(new TextDecoder().decode(c.FS.readFile('probe.json'))),video=data.streams.find(s=>s.codec_type==='video');
+ assert.equal(result.type,'video/mp4');assert.equal(video.codec_name,'h264');assert.ok(video.width/video.height>.4&&video.width/video.height<2.5);assert.ok(video.width*video.height>=409600&&video.width*video.height<=927408);assert.equal(video.r_frame_rate,'30/1');assert.ok(data.streams.some(s=>s.codec_type==='audio'&&s.codec_name==='aac'));assert.ok(Math.abs(Number(data.format.duration)-5)<.1);assert.equal(await media.compress(result),result);
+});
+test('An overlong video is rejected instead of silently cutting off its ending',async()=>{
+ const c=await core();c.reset();assert.equal(c.exec('-f','lavfi','-i','color=c=black:s=32x32:r=1','-t','31','-c:v','libx264','long.mp4'),0);
+ await assert.rejects(client().compress(new File([c.FS.readFile('long.mp4')],'long.mp4',{type:'video/mp4'})),/31.*4–30/);
+});

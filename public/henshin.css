@@ -371,8 +371,12 @@ dialog::backdrop { background: #000c; }
 .template-delete:hover:not(:disabled) { color:#ffbdc3; background:#772330; }
 .detail-sidebar > section:not(.detail-inputs), .detail-facts { padding:12px; border:1px solid #ffffff0e; border-radius:12px; background:#ffffff06; }
 .detail-section-head .text-button { padding:5px 8px; border:1px solid #ffffff20; border-radius:7px; font-size:10px; color:#eceaf3; }
-.detail-actions { grid-template-columns:1fr 1fr; }
+.detail-actions { grid-template-columns:1fr; }
 .detail-actions .primary, .detail-actions .secondary { font-size:11px; padding:11px 8px; border-radius:9px; }
+#previewDownload { width:100%; background:#a792e0; border:1px solid #a792e0; color:#15121c; font-weight:700; }
+#previewDownload:hover { background:#b8a5eb; border-color:#b8a5eb; }
+.upload-status { color:#d6bbed; font-size:11px; line-height:1.5; overflow-wrap:anywhere; margin:8px 0 16px; }
+.upload-status:empty { display:none; }
 .editor-media { margin-bottom:12px; }
 .editor-media .editor-video { display:block; margin:0; }
 .editor-image-tile { position:relative; width:84px; height:84px; }
