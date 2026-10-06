@@ -1,15 +1,106 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Henshin | Hansora AI</title><meta name="description" content="Transform your character while preserving the motion, camera and timing of your video."><link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/header.css"><link rel="stylesheet" href="/henshin.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script defer src="/header.js"></script><script defer src="/kie-upload-bridge.js"></script><script defer src="/henshin-config.js"></script><script defer src="/henshin-media.js"></script><script defer src="/henshin.js"></script></head>
-<body><div id="sharedHeader"></div><main>
-<header class="hero"><div><span class="eyebrow">HANSORA / VIDEO TRANSFORMATION</span><h1>New character.<br><em>Same moment.</em></h1><p>Keep the performance. Transform the story.</p></div><button id="templatesOpen" class="secondary">▦ Templates</button></header>
-<div class="layout"><section class="composer"><div class="composer-heading"><span class="mark">変</span><div><h2>Hansora Henshin</h2><p>Powered by Seedance 2.5</p></div></div>
-<div class="modes" role="group" aria-label="Transformation mode"><button data-mode="motion" class="active">Motion Transfer</button><button data-mode="swap">Object Swap</button></div>
-<label class="field-label">01 <b>Source video</b><span>4–30 seconds</span></label><input id="videoInput" type="file" accept="video/mp4,video/quicktime,video/webm" hidden><button class="drop" id="videoDrop"><span class="plus">＋</span><strong>Drop your video here</strong><small>or click to upload · MP4, MOV, WebM · up to 100 MB</small></button><div id="sourcePreview" hidden><video id="sourceVideo" controls playsinline></video><div class="source-details"><span id="sourceName"></span><button id="clearVideo" class="text-button">Remove</button></div></div>
-<label class="field-label">02 <b>Reference images</b><span>1–30 images</span></label><input id="imagesInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden><button class="drop image-drop" id="imagesDrop"><span class="plus">＋</span><strong>Add your new character</strong><small>JPG, PNG, WebP · up to 10 MB each</small></button><div id="imageGrid" class="image-grid"></div>
-<label class="field-label" for="prompt">03 <b>What changes?</b><span>Optional in Motion Transfer</span></label><textarea id="prompt" maxlength="2000" placeholder="Replace the main character with my references. Keep the scene and camera unchanged."></textarea>
-<div class="quality-head"><b>Resolution</b><span>Credits / second</span></div><div class="qualities"><button data-resolution="480p"><b>480p</b><small>20 ⚡ / s</small></button><button data-resolution="720p" class="active"><b>720p</b><small>42 ⚡ / s</small></button><button data-resolution="1080p"><b>1080p</b><small>90 ⚡ / s</small></button></div>
-<label class="audio-option"><input id="keepAudio" type="checkbox" checked><span>Keep original audio<small>Restore the source soundtrack to your final video.</small></span></label><p class="note">Camera, framing and timing are guided by your source. Small variations can still occur.</p><p id="status" role="status" aria-live="polite"></p><button id="generate" class="primary">Generate Henshin <span id="cost">42 ⚡ / s</span></button><small id="billingNote" class="billing">Cost uses the source duration rounded up to the next second.</small></section>
-<section class="results"><div class="results-head"><div><span class="eyebrow">YOUR CREATIONS</span><h2>Every motion, reimagined.</h2></div><a href="/usage.html">View all ↗</a></div><div class="filters" role="group" aria-label="Results filter"><button data-filter="all" class="active">All</button><button data-filter="henshin">Henshin</button><button data-filter="seedance">Seedance 2.5</button></div><div id="resultsList" class="results-grid"></div><div id="empty" class="empty"><div class="empty-symbol">変</div><h3>Your next transformation starts here.</h3><p>Upload a video and character references, or choose a motion from Templates.</p><div class="steps"><span>01 Upload</span><span>02 Transform</span><span>03 Make it yours</span></div></div></section></div></main>
-<dialog id="templatesDialog"><div class="dialog-head"><div><span class="eyebrow">A LITTLE INSPIRATION</span><h2>Henshin Templates</h2></div><button id="templatesClose" aria-label="Close templates">✕</button></div><p>Pick a motion. Bring your own character.</p><div id="ownerControls" hidden><label class="owner-upload">＋ Add template video<input id="templateInput" type="file" accept="video/mp4,video/quicktime,video/webm" hidden></label><input id="templateTitle" maxlength="100" placeholder="Template title"><p id="templateStatus" role="status"></p></div><div id="templatesList" class="templates-grid"></div></dialog>
-<dialog id="previewDialog"><button id="previewClose" aria-label="Close preview">✕</button><video id="previewVideo" controls playsinline></video><a id="previewDownload" class="secondary" download>Download video ↓</a></dialog>
-</body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Henshin | Hansora AI</title>
+  <meta name="description" content="Transform your video with character, product and wardrobe references.">
+  <link rel="icon" href="/favicon.png">
+  <link rel="stylesheet" href="/header.css">
+  <link rel="stylesheet" href="/henshin.css?v=20261005-image-box">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="/header.js"></script>
+  <script defer src="/kie-upload-bridge.js"></script>
+  <script defer src="/henshin-config.js"></script>
+  <script defer src="/henshin-media.js"></script>
+  <script defer src="/henshin.js?v=20261005-image-box"></script>
+</head>
+<body>
+  <div id="sharedHeader"></div>
+  <main class="henshin-workspace">
+    <section class="composer" aria-label="Henshin generator">
+      <div id="composerScroll" class="composer-scroll">
+        <div class="model-card">
+          <div class="model-art" aria-hidden="true"><span></span><span></span><span></span></div>
+          <span class="eyebrow">HANSORA VIDEO</span>
+          <h1>Henshin</h1>
+          <p>Transform the scene. Keep the motion.</p>
+        </div>
+        <div class="modes" role="group" aria-label="Transformation mode">
+          <button data-mode="motion" class="active" aria-pressed="true">Motion transfer</button>
+          <button data-mode="swap" aria-pressed="false">Object swap</button>
+          <button data-mode="edit" aria-pressed="false">Video edit</button>
+        </div>
+        <input id="videoInput" type="file" accept="video/mp4,video/quicktime,video/webm" hidden>
+        <button class="drop" id="videoDrop">
+          <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="12" height="12" rx="3"/><path d="m15 10 6-3v10l-6-3"/></svg></span>
+          <strong>Add a reference video<br>to extract motion</strong>
+          <small>4–30 seconds · MP4, MOV or WebM</small>
+        </button>
+        <div id="sourcePreview" class="source-preview" hidden>
+          <video id="sourceVideo" controls playsinline></video>
+          <div class="source-details"><span id="sourceName"></span><button id="clearVideo" class="text-button">Remove</button></div>
+        </div>
+        <input id="imagesInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+        <div class="drop image-drop" id="imagesDrop" role="group" aria-label="Reference images">
+          <button class="image-upload-empty" id="imagesAddEmpty" type="button">
+            <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="2"/><path d="m4 17 5-5 4 4 3-3 5 5"/></svg></span>
+            <strong>Add your characters,<br>products or clothes</strong>
+            <small>Up to 30 reference images</small>
+          </button>
+          <div id="imageGrid" class="image-grid" hidden></div>
+        </div>
+        <label class="field-label" for="prompt">Describe the change <span id="promptHint">Optional</span></label>
+        <textarea id="prompt" maxlength="2000" placeholder="Replace the main character using my references…"></textarea>
+        <div class="quality-head">Resolution</div>
+        <div class="qualities" role="group" aria-label="Resolution">
+          <button data-resolution="480p" aria-pressed="false">480p</button>
+          <button data-resolution="720p" class="active" aria-pressed="true">720p</button>
+          <button data-resolution="1080p" aria-pressed="false">1080p</button>
+        </div>
+        <label class="audio-option"><input id="keepAudio" type="checkbox" checked><span>Keep original audio</span></label>
+        <p id="status" role="status" aria-live="polite"></p>
+      </div>
+      <div class="generate-bar"><button id="generate" class="primary"><span>Generate</span><span id="cost" hidden></span></button></div>
+    </section>
+
+    <section class="workspace-panel" aria-label="Video workspace">
+      <div class="workspace-tabs" role="tablist" aria-label="Workspace">
+        <button id="historyOpen" role="tab" aria-selected="true" aria-controls="historyView" class="active"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2 2h9v11H3zM3 7V4h7l2 3"/></svg>History</button>
+        <button id="templatesOpen" role="tab" tabindex="-1" aria-selected="false" aria-controls="libraryView"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Motion Library</button>
+      </div>
+      <div id="historyView" class="workspace-view" role="tabpanel" aria-labelledby="historyOpen">
+        <div class="view-heading"><div><h2>Your generations</h2><p>Your Henshin and Seedance 2.5 videos, in one place.</p></div><a href="/usage.html">View all <span aria-hidden="true">↗</span></a></div>
+        <div class="filters" role="group" aria-label="Results filter"><button data-filter="all" class="active" aria-pressed="true">All videos</button><button data-filter="henshin" aria-pressed="false">Henshin</button><button data-filter="seedance" aria-pressed="false">Seedance 2.5</button></div>
+        <div id="resultsList" class="results-grid"></div>
+        <div id="empty" class="empty">
+          <div class="empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="12" height="12" rx="3"/><path d="m15 10 6-3v10l-6-3"/></svg></div>
+          <h3>Your videos will appear here</h3><p>Add a source video and references to get started.<br>Or find your next idea in the Motion Library.</p><button id="emptyLibrary" class="secondary">Browse motion library <span aria-hidden="true">↗</span></button>
+        </div>
+      </div>
+      <div id="libraryView" class="workspace-view" role="tabpanel" aria-labelledby="templatesOpen" hidden>
+        <div class="view-heading"><div><h2>Motion Library</h2><p>Choose a video. Recreate the motion with your own references.</p></div><div class="library-label">Hansora templates</div></div>
+        <div id="ownerControls" class="owner-controls" hidden>
+          <a href="/henshin-template.html" class="owner-upload"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add template</a>
+        </div>
+        <p id="templateStatus" class="library-status" role="status" aria-live="polite"></p>
+        <div id="templatesList" class="templates-grid"></div>
+      </div>
+    </section>
+  </main>
+  <dialog id="previewDialog" class="detail-dialog" aria-label="Video details">
+    <button id="previewClose" class="detail-close" aria-label="Close preview">×</button>
+    <div class="detail-layout">
+      <div class="detail-stage"><video id="previewVideo" controls playsinline></video></div>
+      <aside class="detail-sidebar">
+        <span class="eyebrow">HANSORA</span><h2 id="previewTitle">Video details</h2>
+        <section class="detail-inputs"><h3>Source &amp; references</h3><div id="previewAssets" class="detail-assets"></div></section>
+        <section><div class="detail-section-head"><h3>Prompt</h3><button id="previewCopy" class="text-button">Copy</button></div><p id="previewPrompt" class="detail-prompt"></p></section>
+        <dl class="detail-facts"><div><dt>Model</dt><dd id="previewModel"></dd></div><div><dt>Resolution</dt><dd id="previewQuality"></dd></div></dl>
+        <p id="previewStatus" role="status" class="library-status"></p>
+        <div class="detail-actions"><button id="previewRecreate" class="primary">Recreate</button><button id="previewDownload" class="secondary">Download</button></div>
+      </aside>
+    </div>
+  </dialog>
+</body>
+</html>

@@ -36,7 +36,7 @@ exports.handler = async (event) => {
     if (!ids.taskId) return json(200, { ok: false, status: "pending", error: "missing_task_id" });
 
     const inputUrls = collectKnownInputUrls(row);
-    const state = await fetchKieState(ids.taskId, inputUrls);
+    const state = await fetchKieState(ids.taskId, inputUrls, row.meta?.source_feature === "henshin");
 
     if (state.failed) {
       const refund = await failAndRefundOnce({ row, ids, reason: state.error || "kie_failed" });
@@ -186,7 +186,25 @@ async function findProcessingGeneration(ids) {
   return null;
 }
 
-async function fetchKieState(taskId, excludeUrls = []) {
+async function fetchKieState(taskId, excludeUrls = [], market = false) {
+  if (market) {
+    // Henshin uses Market jobs. A missing/temporary response is not task failure.
+    try {
+      const res = await fetch(`${KIE_BASE}/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`, {
+        headers: { Accept: "application/json", Authorization: `Bearer ${KIE_KEY}` },
+        signal: AbortSignal.timeout(25000)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.data || (data.data.taskId && data.data.taskId !== taskId)) return { pending: true };
+      const state = String(data.data.state || "").toLowerCase();
+      if (state === "fail") return { failed: true, error: data.data.failMsg || "Generation failed." };
+      if (state === "success") {
+        const urls = collectResultUrls(data, excludeUrls);
+        return urls.length ? { done: true, urls } : { pending: true };
+      }
+      return { pending: true };
+    } catch { return { pending: true }; }
+  }
   if (!KIE_KEY) return { pending: true, error: "missing_kie_key" };
 
   const endpoints = [

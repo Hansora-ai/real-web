@@ -34,3 +34,53 @@ test('Successful run charges verified duration, preserves audio references and s
 test('Insufficient balance never launches a provider task',async()=>{const original=global.fetch,services=mockServices({credits:1});global.fetch=services.fetch;try{const result=await require('../../netlify/functions/run-henshin').handler(event());assert.equal(result.statusCode,402);assert.equal(services.state().submits,0);assert.equal(services.state().credits,1);}finally{global.fetch=original;}});
 test('Explicit provider rejection restores the debit and records a refund',async()=>{const original=global.fetch,services=mockServices({reject:true});global.fetch=services.fetch;try{await require('../../netlify/functions/run-henshin').handler(event());assert.equal(services.state().credits,100);assert.equal(services.state().record.meta.status,'failed');assert.equal(services.state().record.meta.refunded,true);}finally{global.fetch=original;}});
 test('Ambiguous provider timeout retains the reserved charge for callback reconciliation',async()=>{const original=global.fetch,services=mockServices();global.fetch=(url,options)=>String(url).includes('createTask')?Promise.reject(Error('Timed out')):services.fetch(url,options);try{const result=await require('../../netlify/functions/run-henshin').handler(event());assert.equal(result.statusCode,202);assert.equal(JSON.parse(result.body).submission_uncertain,true);assert.equal(services.state().credits,90);assert.equal(services.state().record.meta.status,'pending');assert.equal(services.state().record.meta.submission_uncertain,true);}finally{global.fetch=original;}});
+test('Templates preserve the complete recreation recipe and reject invalid modes/hosts',()=>{
+ const {templateInput,templatePublic}=require('../../lib/henshin/templates.cjs');
+ const input=templateInput({video_url:url,source_video_url:url,image_urls:body.image_urls,prompt:'Change the jacket',mode:'edit',resolution:'1080p',keep_audio:false});
+ assert.equal(input.mode,'edit');assert.equal(input.keep_audio,false);
+ const item=templatePublic({id:'template',prompt:'Wardrobe',result_url:url,meta:{...input,duration:5}});
+ assert.equal(item.prompt,'Change the jacket');assert.deepEqual(item.image_urls,body.image_urls);assert.equal(item.source_video_url,url);
+ for(const patch of [{mode:'unknown'},{source_video_url:'http://localhost/source.mp4'},{image_urls:[]},{mode:'swap',prompt:''}])assert.throws(()=>templateInput({video_url:url,image_urls:body.image_urls,...patch}));
+});
+test('Dedicated checker rejects another account and forged callbacks before provider reconciliation',async()=>{
+ const original=global.fetch;const uid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';let dbReads=0;
+ global.fetch=async u=>{if(String(u).includes('/auth/'))return response({id:'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'});dbReads++;return response([{id:uid,user_id:uid,meta:{source_feature:'henshin',run_id:'fixture-run',callback_token:'a'.repeat(48)}}]);};
+ try{const {handler}=require('../../netlify/functions/henshin-check');const queryStringParameters={uid,run_id:'fixture-run'};
+ assert.equal((await handler({httpMethod:'GET',headers:{authorization:'Bearer test'},queryStringParameters})).statusCode,403);assert.equal(dbReads,0);
+ assert.equal((await handler({httpMethod:'POST',queryStringParameters:{...queryStringParameters,token:'forged'}})).statusCode,403);
+ }finally{global.fetch=original;}
+});
+test('Dedicated checker returns a saved result without launching another task or losing audio state',async()=>{
+ const original=global.fetch,uid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';global.fetch=async u=>String(u).includes('/auth/')?response({id:uid}):response([{id:uid,user_id:uid,result_url:url,meta:{source_feature:'henshin',run_id:'fixture-run',source_audio_url:url}}]);
+ try{const result=await require('../../netlify/functions/henshin-check').handler({httpMethod:'GET',headers:{authorization:'Bearer test'},queryStringParameters:{uid,run_id:'fixture-run'}});assert.equal(result.statusCode,200);assert.equal(JSON.parse(result.body).status,'restoring_audio');assert.equal(JSON.parse(result.body).result_url,url);}finally{global.fetch=original;}
+});
+test('Signed callback recovers a timed-out task by polling the provider rather than trusting callback results',async()=>{
+ const original=global.fetch,uid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',shared=require('../../netlify/functions/kie-check'),savedHandler=shared.handler;let row={id:uid,user_id:uid,meta:{source_feature:'henshin',run_id:'fixture-run',status:'pending',charged:true,callback_token:'a'.repeat(48)}},delegated;
+ global.fetch=async(u,options={})=>{assert.ok(String(u).includes('/rest/'));if(options.method==='PATCH')row={...row,...JSON.parse(options.body)};return response([row]);};
+ shared.handler=async e=>{delegated=e;return {body:JSON.stringify({ok:false,status:'pending'})};};
+ try{const result=await require('../../netlify/functions/henshin-check').handler({httpMethod:'POST',queryStringParameters:{uid,run_id:'fixture-run',token:'a'.repeat(48)},body:JSON.stringify({data:{taskId:'callback-task'},result_url:'https://attacker.test/fake.mp4'})});assert.equal(result.statusCode,200);assert.equal(row.meta.task_id,'callback-task');assert.equal(row.meta.charged,true);assert.equal(delegated.httpMethod,'GET');assert.equal(delegated.queryStringParameters.taskId,'callback-task');assert.equal(JSON.parse(result.body).result_url,undefined);}finally{global.fetch=original;shared.handler=savedHandler;}
+});
+test('Henshin polls only the Market record endpoint and archives a successful result',async()=>{
+ const original=global.fetch,uid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',providerCalls=[];
+ let row={id:uid,user_id:uid,provider:'Hansora Henshin',kind:'video',result_url:null,meta:{source_feature:'henshin',run_id:'fixture-run',task_id:'fixture-task',status:'processing',video_url:url}};
+ global.fetch=async(raw,options={})=>{const u=new URL(raw);
+  if(u.pathname.includes('/auth/'))return response({id:uid});
+  if(u.hostname==='api.kie.ai'){providerCalls.push(u.pathname);return response({code:200,data:{taskId:'fixture-task',state:'success',resultJson:JSON.stringify({resultUrls:['https://results.example/generated.mp4']})}});}
+  if(u.hostname==='results.example')return new Response(fs.readFileSync('test/henshin/fixtures/source.mp4'),{headers:{'Content-Type':'video/mp4'}});
+  if(u.pathname.includes('/storage/'))return response({ok:true});
+  if(u.pathname.endsWith('/user_generations')){if(options.method==='PATCH')row={...row,...JSON.parse(options.body)};return response([row]);}
+  if(u.pathname.endsWith('/nb_results'))return response([]);
+  throw Error('Unexpected mock URL: '+u.pathname);
+ };
+ try{const res=await require('../../netlify/functions/henshin-check').handler({httpMethod:'GET',headers:{authorization:'Bearer test'},queryStringParameters:{uid,run_id:'fixture-run'}});assert.equal(JSON.parse(res.body).status,'done');assert.match(JSON.parse(res.body).result_url,/generation-history/);assert.deepEqual(providerCalls,['/api/v1/jobs/recordInfo']);assert.equal(row.meta.status,'done');}finally{global.fetch=original;}
+});
+test('A temporary Market HTTP error stays pending and never refunds or saves input URLs',async()=>{
+ const original=global.fetch,uid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';let writes=0;
+ const row={id:uid,user_id:uid,result_url:null,meta:{source_feature:'henshin',run_id:'fixture-run',task_id:'fixture-task',status:'processing',video_url:url,charged:true,refund_amount:10}};
+ global.fetch=async(raw,options={})=>{if(options.method)writes++;if(String(raw).includes('/auth/'))return response({id:uid});if(String(raw).includes('api.kie.ai'))return new Response(JSON.stringify({code:429,msg:'Rate limited'}),{status:429});return response([row]);};
+ try{const result=JSON.parse((await require('../../netlify/functions/henshin-check').handler({httpMethod:'GET',headers:{authorization:'Bearer test'},queryStringParameters:{uid,run_id:'fixture-run'}})).body);assert.equal(result.status,'pending');assert.equal(result.failed,undefined);assert.equal(writes,0);}finally{global.fetch=original;}
+});
+test('Provider timeout does not overwrite a result already saved by the callback',async()=>{
+ const original=global.fetch,services=mockServices();global.fetch=(raw,options)=>{if(String(raw).includes('createTask')){const record=services.state().record;record.meta={...record.meta,task_id:'callback-task',status:'done'};record.result_url='https://results.example/generated.mp4';return Promise.reject(Error('Timed out'));}return services.fetch(raw,options);};
+ try{const result=await require('../../netlify/functions/run-henshin').handler(event());assert.equal(result.statusCode,202);assert.equal(JSON.parse(result.body).taskId,'callback-task');assert.equal(services.state().record.meta.status,'done');assert.equal(services.state().credits,90);}finally{global.fetch=original;}
+});
