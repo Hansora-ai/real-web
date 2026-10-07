@@ -36,7 +36,7 @@ exports.handler = async (event) => {
     if (!ids.taskId) return json(200, { ok: false, status: "pending", error: "missing_task_id" });
 
     const inputUrls = collectKnownInputUrls(row);
-    const state = await fetchKieState(ids.taskId, inputUrls, row.meta?.source_feature === "henshin");
+    const state = await fetchKieState(ids.taskId, inputUrls, row.meta?.source_feature === "henshin" || row.meta?.provider_api === "market");
 
     if (state.failed) {
       const refund = await failAndRefundOnce({ row, ids, reason: state.error || "kie_failed" });
