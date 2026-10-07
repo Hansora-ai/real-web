@@ -9,9 +9,9 @@ import { buildFunctions } from '../../scripts/build-netlify-functions.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
-test('Netlify bundles all 164 endpoints on API v2 with routes, background jobs and schedules preserved', async () => {
+test('Netlify bundles all 166 endpoints on API v2 with routes, background jobs and schedules preserved', async () => {
   const generated = await buildFunctions();
-  assert.equal(generated.length, 164);
+  assert.equal(generated.length, 166);
   const dir = await mkdtemp(join(tmpdir(), 'hansora-runtime-test-'));
   try {
     const functions = await zipFunctions(join(root, 'netlify/runtime-functions'), dir, {
@@ -30,6 +30,8 @@ test('Netlify bundles all 164 endpoints on API v2 with routes, background jobs a
     assert.equal(functions.length, generated.length);
     for (const fn of functions) assert.equal(fn.runtimeAPIVersion, 2, `${fn.name} must use the modern runtime`);
     const get = name => functions.find(fn => fn.name === name);
+    assert.ok(get('run-nano-banana-2-1'));
+    assert.ok(get('run-seedream-5-flash'));
     assert.equal(get('automation-instagram-comment-process-background').invocationMode, 'background');
     assert.equal(get('automation-instagram-process-background').invocationMode, 'background');
     assert.equal(get('audio-eleven-background').invocationMode, 'background');

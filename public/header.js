@@ -431,12 +431,14 @@
   const registrationCompletionPromises = new Map();
 
   const IMAGE_MENU_MODELS = [
+    { label: 'Nano Banana 2.1', id: 'nano-banana-2-1', icon: 'N2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png', note: 'Fast image edits' },
     { label: 'GPT Image 2.5', id: 'gpt-image-2-5', icon: 'G2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/2.png', note: 'Latest image generation' },
     { label: 'GPT Image 2', id: 'gpt-image-2', icon: 'G2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/2.png', note: 'Latest image generation' },
     { label: 'Nano Banana 2', id: 'nano-banana-2', icon: 'N2', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png', note: 'Fast image edits' },
     { label: 'Nano Banana 2 Lite', id: 'nano-banana-2-lite', icon: 'NL', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png', note: 'Low-cost 1K image edits' },
     { label: 'Nano Banana Pro', id: 'nano-banana-pro', icon: 'NP', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/13.png', note: 'Pro image generation' },
     { label: 'Seedream 5.0 Pro', id: 'seedream-5-pro', icon: 'SP', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Pro controlled image edits' },
+    { label: 'Seedream 5 Flash', id: 'seedream-5-flash', icon: 'S', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Light creative images' },
     { label: 'Seedream 5.0 Lite', id: 'seedream-5-lite', icon: 'S', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Light creative images' },
     { label: 'Grok Image', id: 'grok-image', icon: 'X', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/4.png', note: 'Stylized image model' },
     { label: 'Seedream 4.5', id: 'seedream-4-5', icon: 'S4', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/5.png', note: 'Image generator' },
