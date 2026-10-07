@@ -395,7 +395,7 @@
       if(!response.ok)throw new Error(settings.error||'whatsapp_connection_unavailable');
       await loadFacebookSdk(settings.app_id,settings.graph_version);
       // Coexistence keeps the number working in the WhatsApp Business app on the owner's phone.
-      const coexistence=document.querySelector('input[name="wa-mode"]:checked')?.value!=='new';
+      const coexistence=true;
       const session={code:'',wabaId:'',phoneNumberId:'',finished:false,submitted:false};
       const complete=async()=>{
         if(session.submitted||!session.code||!session.wabaId||!(session.phoneNumberId||(coexistence&&session.finished)))return;session.submitted=true;
@@ -419,10 +419,8 @@
 
   // Testing path: connect Meta's test number (or a System User token) without the Embedded Signup popup.
   if (channel === 'whatsapp') {
-    // Most businesses already answer customers in the WhatsApp Business app: by default the number stays there too.
-    document.querySelector('#provider-connect')?.insertAdjacentHTML('beforebegin', `<fieldset class="ui-wa-mode"><legend>Which number?</legend>
-      <label><input type="radio" name="wa-mode" value="app" checked><span><strong>My WhatsApp Business app number</strong><small>Recommended. Keep using WhatsApp Business on your phone – you can still text customers yourself any time. Your AI employee answers too, and steps back in a chat when you write from the phone.</small></span></label>
-      <label><input type="radio" name="wa-mode" value="new"><span><strong>A new number just for Hansora</strong><small>A number not used in any WhatsApp app. You reply to customers from the Hansora inbox.</small></span></label></fieldset>`);
+    // The number stays in the owner's WhatsApp Business app (coexistence); no separate Hansora-only number.
+    document.querySelector('#provider-connect')?.insertAdjacentHTML('beforebegin', `<p class="ui-wa-mode ui-wa-note"><strong>Your WhatsApp Business app number</strong><small>Keep using WhatsApp Business on your phone – you can still text customers yourself any time. Your AI employee answers too, and steps back in a chat when you write from the phone.</small></p>`);
     // The token option is only for testing: it is shown while Meta's WhatsApp sign-up (Embedded Signup) is not
     // configured yet, and disappears for everyone once it is.
     if (api.isLocalPreview) document.querySelector('#whatsapp-token').hidden = false;
