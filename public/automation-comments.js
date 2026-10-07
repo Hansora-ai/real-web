@@ -309,11 +309,11 @@
   }
   // "Edit button" (like ManyChat): button text, then "When this button is pressed" — a new connected step of that
   // kind, a website, start another automation, talk to a person, or an existing step.
-  const BUTTON_CHOICES=[['later','Decide later','passive','Add the button now, connect it on the canvas later'],['message','Instagram message','send','Send another message'],['ai','AI Step','sparkle','Your AI employee takes over'],['website','Open website','arrow','A link opens in the browser'],['action','Perform Actions','spark','Tag, save a field, notify your team'],['condition','Condition','branch','Yes / No paths'],['randomizer','Randomizer','refresh','A/B split'],['delay','Smart Delay','clock','Wait, then continue'],['input','Collect info','edit','Ask for email or phone'],['start_flow','Start another automation','chevron','Hand over to another automation'],['handoff','Talk to a person','handoff','Pause the AI and alert your team'],['existing','Go to an existing step','branch','Connect to a step you already have']];
+  const BUTTON_CHOICES=[['message','Instagram message','send','Send another message'],['ai','AI Step','sparkle','Your AI employee takes over'],['website','Open website','arrow','A link opens in the browser'],['action','Perform Actions','spark','Tag, save a field, notify your team'],['condition','Condition','branch','Yes / No paths'],['randomizer','Randomizer','refresh','A/B split'],['delay','Smart Delay','clock','Wait, then continue'],['input','Collect info','edit','Ask for email or phone'],['start_flow','Start another automation','chevron','Hand over to another automation'],['handoff','Talk to a person','handoff','Pause the AI and alert your team'],['existing','Go to an existing step','branch','Connect to a step you already have']];
   let buttonEdit=null;
   function openButtonDialog(node,index){
     const action=index===null?null:node.actions[index];
-    buttonEdit={nodeId:node.id,index,label:action?.label||'',choice:action?(action.type==='website'?'website':action.type==='handoff'?'handoff':action.nextId?'keep':'later'):'later',url:action?.url||'',flowId:'',existingId:action?.nextId||''};
+    buttonEdit={nodeId:node.id,index,label:action?.label||'',choice:action?(action.type==='website'?'website':action.type==='handoff'?'handoff':action.nextId?'keep':null):null,url:action?.url||'',flowId:'',existingId:action?.nextId||''};
     renderButtonDialog();const dialog=document.querySelector('#button-dialog');if(!dialog.open)dialog.showModal();setTimeout(()=>document.querySelector('#bd-label')?.focus(),30);
   }
   function renderButtonDialog(){
@@ -360,8 +360,8 @@
     if(edit.choice==='website'){action.type='website';action.url=edit.url;action.nextId=null}
     else if(edit.choice==='handoff'){action.type='handoff';action.nextId=null;delete action.url}
     else if(edit.choice==='keep'){}
-    // Like ManyChat: the button exists without a next step; drag from its dot on the canvas when you know where it goes.
-    else if(edit.choice==='later'){action.type='quick_reply';action.nextId=null;delete action.url}
+    // Nothing chosen: like ManyChat, the button exists without a next step; drag from its dot on the canvas later.
+    else if(!edit.choice){action.type='quick_reply';action.nextId=null;delete action.url}
     else if(edit.choice==='existing'){action.type='quick_reply';action.nextId=edit.existingId;delete action.url}
     else{
       action.type='quick_reply';delete action.url;

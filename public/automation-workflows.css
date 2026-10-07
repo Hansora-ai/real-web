@@ -12,3 +12,5 @@
 .workflow-folders button.active{border-color:var(--accent);color:var(--text);background:var(--accent-soft)}
 .workflow-card.menu-open{z-index:30}
 .workflow-menu{z-index:31;background:var(--surface)}
+
+.workflow-card[data-href]{cursor:pointer}

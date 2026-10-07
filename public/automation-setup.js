@@ -92,8 +92,8 @@
   function renderPendingFiles(existing = []) {
     const list = document.querySelector('#setup-files-list');
     list.innerHTML = [
-      ...existing.map(document => `<div class="ui-kfile"><span class="ui-kfile-type">Added</span><span class="ui-kfile-main"><strong>${escapeHtml(document.name)}</strong></span></div>`),
-      ...pendingFiles.map((file, index) => `<div class="ui-kfile"><span class="ui-kfile-type">New</span><span class="ui-kfile-main"><strong>${escapeHtml(file.name)}</strong><small>${Math.max(1, Math.round(file.size / 1024))} KB · uploads when you save</small></span><button class="ui-btn ghost sm" type="button" data-remove-pending="${index}">Remove</button></div>`)
+      ...existing.map(document => `<div class="ui-kfile"><span class="ui-kfile-type">Added</span><span class="ui-kfile-main"><strong>${escapeHtml(document.name)}</strong></span><button class="ui-btn ghost sm ui-kfile-remove" type="button" data-remove-existing="${escapeHtml(document.id)}" aria-label="Remove ${escapeHtml(document.name)}" title="Remove">×</button></div>`),
+      ...pendingFiles.map((file, index) => `<div class="ui-kfile"><span class="ui-kfile-type">New</span><span class="ui-kfile-main"><strong>${escapeHtml(file.name)}</strong><small>${Math.max(1, Math.round(file.size / 1024))} KB · uploads when you save</small></span><button class="ui-btn ghost sm ui-kfile-remove" type="button" data-remove-pending="${index}" aria-label="Remove ${escapeHtml(file.name)}" title="Remove">×</button></div>`)
     ].join('');
   }
   document.querySelector('#setup-files').addEventListener('change', event => {
@@ -108,7 +108,22 @@
     renderPendingFiles(existingKnowledge);
     if (rejected.length) inlineError(`Not added: ${rejected.join(', ')}.`); else errorBox.hidden = true;
   });
-  document.querySelector('#setup-files-list').addEventListener('click', event => {
+  document.querySelector('#setup-files-list').addEventListener('click', async event => {
+    const saved = event.target.closest('[data-remove-existing]');
+    if (saved) {
+      // Saved knowledge is removed from the AI right away (same call as the AI employee page).
+      if (saved.disabled) return;
+      saved.disabled = true;
+      try {
+        const response = await api.authenticatedFetch('/.netlify/functions/automation-knowledge', { method:'POST', body:JSON.stringify({ business_id:businessId, action:'remove', document_id:saved.dataset.removeExisting }) });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(knowledgeReason(result));
+        existingKnowledge = result.documents || [];
+        renderPendingFiles(existingKnowledge);
+        window.HansoraUI.toast('Removed');
+      } catch (error) { saved.disabled = false; inlineError(`Could not remove it: ${error.message}`); }
+      return;
+    }
     const button = event.target.closest('[data-remove-pending]');
     if (!button) return;
     pendingFiles.splice(Number(button.dataset.removePending), 1);
