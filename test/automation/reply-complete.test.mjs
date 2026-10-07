@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { askElevenLabsText, enableResponseCompleteEvent, looksFinished } from '../../lib/automation/providers/elevenlabs.mjs';
+import { askElevenLabsText, enableResponseCompleteEvent, looksFinished, trimCutOffReply } from '../../lib/automation/providers/elevenlabs.mjs';
 
 process.env.ELEVENLABS_API_KEY ||= 'test-key';
 class FakeSocket {
@@ -49,4 +49,11 @@ test('finished-looking text in any script, and the complete event is only added 
   assert.deepEqual(calls[1], ['PATCH', { conversation_config: { conversation: { client_events: ['audio', 'agent_response', 'client_tool_call', 'agent_response_complete'] } } }]);
   const unknown = async () => ({ conversation_config: { conversation: {} } });
   assert.equal(await enableResponseCompleteEvent('agent2', unknown), false);
+});
+
+test('A reply cut off mid-word is sent up to its last full sentence', () => {
+  assert.equal(trimCutOffReply('Կներեք, իմ սխալն էր։ Վերջին տեսանյութը մեր հարթակի մասին է և ցույ'), 'Կներեք, իմ սխալն էր։');
+  assert.equal(trimCutOffReply('Sorry, my mistake. The last video is about our platform and sho'), 'Sorry, my mistake.');
+  assert.equal(trimCutOffReply('Done!'), 'Done!');
+  assert.equal(trimCutOffReply('An answer with no full sentence that was cut off in the mid'), 'An answer with no full sentence that was cut off in the mid');
 });

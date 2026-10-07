@@ -73,3 +73,14 @@
 [[edge_functions]]
 path = "/*"
 function = "inject-bottom-nav-inline"
+
+# Automation pages: CSS/JS are reused from the browser for 5 minutes, then shown instantly from cache while the
+# browser checks for a newer copy in the background (no waiting on every page switch). Files carry ?v= versions.
+[[headers]]
+  for = "/automation-*.js"
+  [headers.values]
+  Cache-Control = "public, max-age=300, stale-while-revalidate=604800"
+[[headers]]
+  for = "/automation-*.css"
+  [headers.values]
+  Cache-Control = "public, max-age=300, stale-while-revalidate=604800"

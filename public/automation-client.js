@@ -28,8 +28,17 @@
   async function getUser() {
     if (isLocalPreview) return { id: 'local-preview', email: 'preview@hansora.local' };
     if (!client) return null;
-    const result = await client.auth.getUser();
-    return result.data && result.data.user ? result.data.user : null;
+    // The saved login is read instantly (no network wait on every page switch); the server confirms it in the
+    // background and an expired or revoked login is sent to sign in again. Data is protected server-side either way.
+    const { data } = await client.auth.getSession();
+    const user = data && data.session && data.session.user;
+    if (!user) return null;
+    client.auth.getUser().then(result => {
+      if (result.error && [401, 403].includes(Number(result.error.status))) {
+        client.auth.signOut().catch(() => {}).finally(() => window.location.replace('/automation.html?login=1&returnTo=' + encodeURIComponent(safeReturnPath(window.location.pathname + window.location.search))));
+      }
+    }).catch(() => {});
+    return user;
   }
 
   async function requireUser(returnPath) {

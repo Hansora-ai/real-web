@@ -94,16 +94,16 @@ export async function handler(event){
     ]);
     // The message is saved first (so a question sent right after it waits for it); then the photo / voice note is
     // understood with the business and the latest messages as context, and the saved message is updated.
-    let media=null,understood=null,otherReel=false;
+    let media=null,understood=null,otherReel=false,ownPost=false;
     if(hasMedia&&inbound){
       const context=await mediaContext({businessId:account.business_id,history:memory.history}).catch(()=>'');
       // A shared reel's link is a web page, not a video. If it is the business's own reel, its video is read by id.
       let fileUrl=mediaUrl,mediaReason='';const report=reason=>{mediaReason=String(reason||'').slice(0,300);};
-      if(/^https:\/\/(www\.)?instagram\.com\//i.test(mediaUrl)){const own=await getInstagramMediaFile({mediaId:message.attachmentMediaId,pageUrl:mediaUrl,instagramUserId:account.provider_resource_id,accessToken:decryptSecret(credential),report});fileUrl=own?.url||'';otherReel=!own;}
+      if(/^https:\/\/(www\.)?instagram\.com\//i.test(mediaUrl)){const own=await getInstagramMediaFile({mediaId:message.attachmentMediaId,pageUrl:mediaUrl,instagramUserId:account.provider_resource_id,accessToken:decryptSecret(credential),report});fileUrl=own?.url||'';otherReel=!own;ownPost=Boolean(own);}
       media=fileUrl?await understandMedia({url:fileUrl,kind:['audio','video','image'].includes(mediaType)?mediaType:'',caption:message.text,context,store:{businessId:account.business_id,channel:'instagram_dm',conversationId:conversation.id,key:message.externalEventId},afterVisual:file=>matchProductPhoto({businessId:account.business_id,...file,caption:message.text}),report}):null;
       // Kept for the logs: what Instagram sent and whether it could be understood (videos and reels).
       console.log('instagram media',{kind:message.kind,type:mediaType,has_url:Boolean(mediaUrl),understood:Boolean(media),reason:mediaReason||null,media_kind:media?.kind||null,mime:media?.mimeType||null,ms:Date.now()-startedAt});
-      understood=media?mediaMessage({source:message.kind==='media'?media.kind:message.kind,media,caption:message.text}):null;
+      understood=media?mediaMessage({source:message.kind==='media'?media.kind:message.kind,media,caption:message.text,ownPost}):null;
       // Could not be opened (too large, expired link…): the AI is told so, with the caption, instead of staying silent.
       if(!understood&&media?.kind!=='audio')understood=mediaFallback({source:message.kind==='media'?'':message.kind,kind:mediaType==='video'||mediaType==='ig_reel'||mediaType==='reel'?'video':mediaType==='audio'?'audio':'image',title:message.attachmentTitle,caption:message.text});
       await serviceUpdate('automation_messages',`id=eq.${inbound.id}`,{content:understood?.content||shownText(message),metadata:{sender_id:message.senderId,recipient_id:message.recipientId,media_pending:false,...(!media&&mediaReason?{media_error:mediaReason}:{}),...(noReply?{no_reply:true}:{}),...(media?.mediaPath?{media_path:media.mediaPath,media_mime:media.mimeType}:{})}}).catch(error=>console.warn('media message update failed',{message:error?.message}));
