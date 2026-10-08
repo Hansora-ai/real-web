@@ -327,7 +327,11 @@
             append(`${label}${item?.ms ? ` · ${(item.ms / 1000).toFixed(1)} s` : ''}${item?.fallback ? ' · fell back to ElevenLabs' : ''}`, 'action');
             append(item?.text || `No answer (${item?.error || 'error'})`, 'assistant');
           }
-        } else append(result.reply, 'assistant');
+        } else {
+          append(result.reply, 'assistant');
+          // Which engine answered and how long it took (helps compare speed while testing).
+          if (result.engine) append(`${result.engine === 'gemini' ? 'Gemini direct' : 'ElevenLabs agent'}${result.ms ? ` · ${(result.ms / 1000).toFixed(1)} s` : ''}${result.fallback ? ' · fell back to ElevenLabs' : ''}`, 'action');
+        }
         await loadUsageSummary(business.id);
       } catch (error) { dots.remove(); append(`Unable to answer: ${api.displayError(error)}`, 'assistant'); }
       finally { button.disabled = false; input.focus(); }

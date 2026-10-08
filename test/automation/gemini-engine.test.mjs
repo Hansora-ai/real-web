@@ -18,6 +18,7 @@ test('Gemini engine runs tools in our code, returns thought signatures unchanged
   assert.deepEqual(ran, [['check_availability', { date: '2026-10-10' }]]);
   assert.equal(reply.toolCalls[0].name, 'check_availability');
   assert.equal(bodies[0].systemInstruction.parts[0].text, 'RULES');
+  assert.deepEqual(bodies[0].generationConfig.thinkingConfig, { thinkingLevel: 'low' });
   assert.equal(bodies[0].tools[0].functionDeclarations[0].name, 'check_availability');
   assert.equal(bodies[1].contents[1].parts[0].thoughtSignature, 'sig-1');
   assert.deepEqual(bodies[1].contents[2].parts[0].functionResponse.response.result, { ok: true, slots: ['18:00'] });
