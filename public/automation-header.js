@@ -95,7 +95,52 @@
     mobile.className = 'auto-mobile-sections';
     mobile.innerHTML = items.filter(item => item[3]).map(link).join('');
     root.querySelector('nav')?.prepend(mobile);
+    renderSwitcher(businessId, preview);
     renderBottomBar(items, businessId, preview);
+  }
+
+  // Which AI employee you are working on, and a quick way to change it: same page, other employee.
+  function renderSwitcher(businessId, preview) {
+    const icon = name => window.HansoraUI?.icon(name) || '';
+    const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+    const CACHE = 'hansora_automation_employees';
+    const make = () => { const box = document.createElement('div'); box.className = 'auto-switch'; return box; };
+    const boxes = [make(), make()];
+    document.querySelector('.auto-sidebar')?.prepend(boxes[0]);
+    document.querySelector('.auto-mobile-sections')?.prepend(boxes[1]);
+    const targetFor = id => {
+      const url = new URL(location.href);
+      const keep = preview ? '&preview=1' : '';
+      if (['agent', 'setup'].includes(page)) return `${url.pathname.replace(/^\//, '')}?id=${encodeURIComponent(id)}${keep}${url.hash}`;
+      if (page === 'comments') return `automation-workflows.html?business=${encodeURIComponent(id)}${keep}`;
+      if (!/automation-[a-z]+\.html/.test(url.pathname) || page === 'dashboard') return `automation-agent.html?id=${encodeURIComponent(id)}${keep}`;
+      return `${url.pathname.replace(/^\//, '')}?business=${encodeURIComponent(id)}${keep}`;
+    };
+    const render = list => {
+      const current = list.find(item => item.id === businessId);
+      const label = current ? (current.ig || current.name) : 'Choose an AI employee';
+      const sub = current ? (current.ig ? current.name : 'No Instagram connected') : `${list.length} AI employee${list.length === 1 ? '' : 's'}`;
+      boxes.forEach(box => {
+        const open = box.classList.contains('open');
+        box.innerHTML = `<button class="auto-switch-button" type="button" aria-haspopup="menu" aria-expanded="${open}" title="Change AI employee"><span class="auto-switch-ig">${icon('instagram')}</span><span class="auto-switch-text"><b>${escape(label)}</b><small>${escape(sub)}</small></span><span class="auto-switch-chev" aria-hidden="true">⌄</span></button><div class="auto-switch-menu" role="menu"${open ? '' : ' hidden'}>${list.map(item => `<a role="menuitem" href="${escape(targetFor(item.id))}" class="${item.id === businessId ? 'current' : ''}"><span class="auto-switch-ig sm">${icon('instagram')}</span><span><b>${escape(item.ig || item.name)}</b><small>${escape(item.ig ? item.name : 'No Instagram connected')}</small></span>${item.id === businessId ? '<i aria-hidden="true">✓</i>' : ''}</a>`).join('')}<a role="menuitem" class="auto-switch-new" href="automation-setup.html${preview ? '?preview=1' : ''}">+ New AI employee</a></div>`;
+        box.querySelector('.auto-switch-button').addEventListener('click', event => { event.stopPropagation(); const now = !box.classList.contains('open'); box.classList.toggle('open', now); box.querySelector('.auto-switch-menu').hidden = !now; event.currentTarget.setAttribute('aria-expanded', String(now)); });
+      });
+    };
+    document.addEventListener('click', event => { boxes.forEach(box => { if (!box.contains(event.target) && box.classList.contains('open')) { box.classList.remove('open'); box.querySelector('.auto-switch-menu').hidden = true; box.querySelector('.auto-switch-button').setAttribute('aria-expanded', 'false'); } }); });
+    let cached = [];
+    try { cached = JSON.parse(sessionStorage.getItem(CACHE) || '[]'); } catch (_) {}
+    render(cached);
+    if (api?.isLocalPreview) return render([{ id: 'preview', name: 'Luma Assistant', ig: '@luma.studio' }, { id: 'preview-2', name: 'Second shop', ig: '' }]);
+    api?.db?.from('automation_businesses').select('id,name,updated_at,automation_agents(display_name),automation_channel_connections(channel_type,status,connected_account_label)').order('updated_at', { ascending: false }).then(({ data }) => {
+      if (!Array.isArray(data)) return;
+      const list = data.map(row => {
+        const agent = Array.isArray(row.automation_agents) ? row.automation_agents[0] : row.automation_agents;
+        const label = (row.automation_channel_connections || []).find(item => item.channel_type === 'instagram_dm' && item.status !== 'not_connected' && item.connected_account_label)?.connected_account_label || '';
+        return { id: row.id, name: agent?.display_name || row.name || 'AI employee', ig: label ? (label.startsWith('@') ? label : `@${label}`) : '' };
+      });
+      try { sessionStorage.setItem(CACHE, JSON.stringify(list)); } catch (_) {}
+      render(list);
+    }).catch(() => {});
   }
 
   // Phones: a bottom bar like Hansora Creative's (Home, Employees, Inbox, Menu); the header keeps credits and the photo.

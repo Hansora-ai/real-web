@@ -18,7 +18,7 @@
   async function load() {
     if (api.isLocalPreview) {
       products = [{ id: 'p1', name: 'Oslo sofa', category: 'Sofas', price: 899, currency: 'USD', stock: 2, variants: [{ name: 'Grey', price: 899, stock: 2, color: '#9ca3af' }, { name: 'Blue', price: 949, stock: 0, color: '#3b82f6' }], photos: [], active: true, description: 'Two-seat sofa' }, { id: 'p2', name: 'Desk lamp', category: 'Lighting', price: 39, currency: 'USD', stock: null, variants: [], photos: [], active: true, description: '' }];
-      catalog = { enabled: true, config: { reduce_stock: false } }; return;
+      catalog = { enabled: true, config: { reduce_stock: true } }; return;
     }
     const [list, tool, sheet] = await Promise.all([
       api.db.from('automation_products').select('*').eq('business_id', businessId).order('name', { ascending: true }).limit(2000),
@@ -279,10 +279,14 @@
   function resetImport() { importState = null; $('#import-summary').hidden = true; $('#import-mapping').hidden = true; $('#import-error').hidden = true; $('#import-run').disabled = true; $('#import-run').textContent = 'Import'; }
   $('#open-import').addEventListener('click', () => { resetImport(); $('#import-file').value = ''; $('#sheet-url').value = source?.url || ''; $('#import-dialog').showModal(); });
   document.querySelectorAll('[data-import-tab]').forEach(tab => tab.addEventListener('click', () => {
+    // The short how-to video loads only when the sheet tab is opened (0.7 MB), then plays muted on a loop.
+    const howto = $('#sheet-howto');
+    if (howto) { if (tab.dataset.importTab === 'sheet') { if (!howto.src) howto.src = howto.dataset.src; howto.play().catch(() => {}); } else howto.pause(); }
     document.querySelectorAll('[data-import-tab]').forEach(item => item.classList.toggle('active', item === tab));
     document.querySelectorAll('[data-import-pane]').forEach(pane => { pane.hidden = pane.dataset.importPane !== tab.dataset.importTab; });
     resetImport();
   }));
+  $('#import-dialog')?.addEventListener('close', () => $('#sheet-howto')?.pause());
   const dropzone = $('#import-drop');
   dropzone.addEventListener('dragover', event => { event.preventDefault(); dropzone.classList.add('over'); });
   dropzone.addEventListener('dragleave', () => dropzone.classList.remove('over'));

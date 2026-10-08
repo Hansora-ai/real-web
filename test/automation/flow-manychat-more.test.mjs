@@ -126,3 +126,20 @@ test('the AI employee card reads the connected Instagram name and photo', async 
   const unsafe = await getInstagramAccountCard('token', async () => new Response(JSON.stringify({ username: 'x', profile_picture_url: 'javascript:alert(1)' }), { status: 200 }));
   assert.equal(unsafe.picture, '');
 });
+
+test('Comment keywords ignore capitals, punctuation, emojis and @mentions, and allow a one-letter typo', async () => {
+  const { matchesCommentText } = await import('../../lib/automation/comment-flow.mjs');
+  const exact = { match_type: 'exact', keywords: ['prompt'] };
+  for (const text of ['Prompt', 'prompt!', ' PROMPT 🔥', '@hansora_.ai prompt', 'Promt', 'promptt', '#prompt'])
+    assert.equal(matchesCommentText(exact, text), true, text);
+  for (const text of ['prompts please', 'pro', 'send prompt', 'promo'])
+    assert.equal(matchesCommentText(exact, text), false, text);
+  const shortWord = { match_type: 'exact', keywords: ['ai'] };
+  assert.equal(matchesCommentText(shortWord, 'Ai'), true); assert.equal(matchesCommentText(shortWord, 'a'), false);
+  const contains = { match_type: 'contains', keywords: ['price'] };
+  assert.equal(matchesCommentText(contains, 'What is the PRICE?'), true);
+  assert.equal(matchesCommentText(contains, 'what is the prise'), true);
+  assert.equal(matchesCommentText(contains, 'nice'), false);
+  assert.equal(matchesCommentText({ match_type: 'any' }, 'hello', ['spam']), true);
+  assert.equal(matchesCommentText({ match_type: 'any' }, 'buy SPAM now', ['spam']), false);
+});
