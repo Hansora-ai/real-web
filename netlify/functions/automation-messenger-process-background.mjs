@@ -14,7 +14,6 @@ import { phonePauseExpired } from '../../lib/automation/whatsapp.mjs';
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
 import { getMessengerProfile, sendMessengerAction, sendMessengerImage, sendMessengerText } from '../../lib/automation/messenger.mjs';
 import { makeProductPhotoSender } from '../../lib/automation/product-photos.mjs';
-import { updateSalesStage } from '../../lib/automation/sales-stage.mjs';
 
 const json = (statusCode, body) => ({ statusCode, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) });
 
@@ -104,7 +103,7 @@ export async function handler(event) {
     if (!affordable.ok) { pendingReply = null; await handleOutOfCredits({ businessId: account.business_id, conversationId: conversation.id, channel: 'Messenger', customer: customerName, notifyOwner }); await markProcessed(webhook.id, account.business_id); return json(200, { ok: true, out_of_credits: true }); }
     const mediaNote = understood ? understood.note : (parts.kind !== 'text' && !parts.text ? 'The latest customer message is a file, sticker, location or contact you cannot open. Do not pretend to know its contents; ask the customer to describe it in text if needed.' : '');
     const context = buildConversationContext({ intro: ['Continue this Facebook Messenger conversation. Keep the reply concise.', actions.contextLine, mediaNote].filter(Boolean), memory: liveMemory, after: [actions.liveBrief, pendingQuestions] });
-    const generated = await generateAutomationReply({ providerResourceId: aiResource.provider_resource_id, text: aiText, context, channel: 'messenger', onToolCall: actions.onToolCall, checkTimes: actions.checkTimes, knownTimes: actions.knownTimes });
+    const generated = await generateAutomationReply({ businessId: account.business_id, providerResourceId: aiResource.provider_resource_id, text: aiText, context, channel: 'messenger', onToolCall: actions.onToolCall, checkTimes: actions.checkTimes, knownTimes: actions.knownTimes });
     const handedOff = generated.toolCalls?.some(call => call.name === 'handoff_to_human' && call.ok);
     const replyDelay = Math.min(30, Math.max(0, Number(settings.reply_delay) || 0)); const waitMs = replyDelay * 1000 - (Date.now() - startedAt); if (waitMs > 0) await new Promise(resolve => setTimeout(resolve, waitMs));
     const current = await first(`/rest/v1/automation_conversations?id=eq.${conversation.id}&select=ai_enabled,status&limit=1`);
@@ -114,11 +113,10 @@ export async function handler(event) {
     stopTyping(); stopTyping = () => {};
     const sent = await sendMessengerText({ ...typingTarget, text: generated.text });
     pendingReply = null;
-    const outbound = await serviceInsert('automation_messages', { business_id: account.business_id, conversation_id: conversation.id, external_message_id: sent.messageId || null, idempotency_key: `messenger:out:${message.externalEventId}`, direction: 'outbound', sender_type: 'ai', content_type: 'text', content: generated.text, status: 'sent', billable: true, provider: 'meta', model: 'eleven-agents', provider_message_id: sent.messageId || null, metadata: { recipient_id: chatId, page_id: message.pageId, elevenlabs_conversation_id: generated.conversationId || null }, occurred_at: new Date().toISOString() }, { ignoreDuplicates: true });
+    const outbound = await serviceInsert('automation_messages', { business_id: account.business_id, conversation_id: conversation.id, external_message_id: sent.messageId || null, idempotency_key: `messenger:out:${message.externalEventId}`, direction: 'outbound', sender_type: 'ai', content_type: 'text', content: generated.text, status: 'sent', billable: true, provider: 'meta', model:generated.model||'eleven-agents', provider_message_id: sent.messageId || null, metadata: { recipient_id: chatId, page_id: message.pageId, elevenlabs_conversation_id: generated.conversationId || null }, occurred_at: new Date().toISOString() }, { ignoreDuplicates: true });
     const charge = outbound ? await chargeCredits({ businessId: account.business_id, idempotencyKey: `usage:messenger:${message.externalEventId}`, kind: 'ai_reply', credits: price, conversationId: conversation.id, reference: { channel: 'messenger', message_id: outbound.id } }).catch(error => { console.error('automation credit charge failed', { message: error?.message }); return { ok: false, charged: 0 }; }) : null;
-    if (outbound) await serviceInsert('automation_usage_events', { business_id: account.business_id, conversation_id: conversation.id, message_id: outbound.id, channel_type: 'messenger', unit_type: 'ai_message', quantity: 1, billable_quantity: 1, estimated_cost_minor: 0, currency: 'AMD', provider: 'elevenlabs', provider_usage_id: generated.conversationId || null, idempotency_key: `usage:messenger:${message.externalEventId}`, credits: charge?.charged || 0, metadata: { messenger_message_id: sent.messageId || null } }, { ignoreDuplicates: true });
-    await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { last_message_preview: generated.text.slice(0, 1000), last_message_at: new Date().toISOString() });
-    await updateSalesStage({ businessId: account.business_id, conversationId: conversation.id }).catch(() => null); // after the reply, never slows it
+    if (outbound) await serviceInsert('automation_usage_events', { business_id: account.business_id, conversation_id: conversation.id, message_id: outbound.id, channel_type: 'messenger', unit_type: 'ai_message', quantity: 1, billable_quantity: 1, estimated_cost_minor: 0, currency: 'AMD', provider:generated.engine==='gemini'?'google':'elevenlabs', provider_usage_id: generated.conversationId || null, idempotency_key: `usage:messenger:${message.externalEventId}`, credits: charge?.charged || 0, metadata: { messenger_message_id: sent.messageId || null } }, { ignoreDuplicates: true });
+    await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { last_message_preview: generated.text.slice(0, 1000), last_message_at: new Date().toISOString() }); // after the reply, never slows it
     await markProcessed(webhook.id, account.business_id);
     return json(200, { ok: true });
   } catch (error) {

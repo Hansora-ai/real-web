@@ -67,7 +67,7 @@
   document.querySelector('#booking-rules').addEventListener('change', renderRulesSummary);
   render();
   updateSaveButton();
-  showPreview('calendar');
+  showPreview('orders');
   $('#tools-loading').hidden = true; $('#tools-app').hidden = false;
   if (params.get('tab')) showPane(params.get('tab'));
 
@@ -174,10 +174,7 @@
     const head = tool => document.querySelector(`[data-pane="${tool}"] .ui-pane-head h2`);
     if (nav('calendar')) nav('calendar').textContent = type.booking;
     document.querySelectorAll('.type-booking-name').forEach(element => { element.textContent = type.booking; });
-    document.querySelectorAll('.type-order-name').forEach(element => { element.textContent = type.order; });
     if (head('calendar')) head('calendar').textContent = type.booking;
-    if (nav('orders')) nav('orders').textContent = type.order;
-    if (head('orders')) head('orders').textContent = type.order;
   }
 
   async function loadSaved() {

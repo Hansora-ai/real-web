@@ -123,6 +123,23 @@
     busyLayer.hidden = false; requestAnimationFrame(() => busyLayer.classList.add('show'));
   }
 
+  // A button that starts a server request shows a spinner until the request is done (only if it takes >250 ms, so
+  // quick actions do not flicker). Links, the menus, and buttons that already show their own "Saving…" are left alone.
+  let lastPress = null;
+  document.addEventListener('click', event => {
+    const button = event.target.closest?.('button,.ui-btn');
+    if (!button || button.tagName === 'A' || button.closest('.auto-sidebar,.auto-bottom-nav,[data-automation-header]')) return;
+    lastPress = { button, at: Date.now() };
+  }, true);
+  window.addEventListener('hansora:request', event => {
+    if (!lastPress || Date.now() - lastPress.at > 400 || !lastPress.button.isConnected) return;
+    const button = lastPress.button;
+    const pending = (button.__hansoraPending = (button.__hansoraPending || 0) + 1);
+    if (pending === 1) button.__hansoraSpin = setTimeout(() => { if (button.__hansoraPending && !button.disabled && !button.classList.contains('is-busy') && !/…$/.test(button.textContent.trim())) { button.classList.add('is-auto-busy'); button.setAttribute('aria-busy', 'true'); } }, 250);
+    const settle = () => { button.__hansoraPending = Math.max(0, (button.__hansoraPending || 1) - 1); if (!button.__hansoraPending) { clearTimeout(button.__hansoraSpin); button.classList.remove('is-auto-busy'); button.removeAttribute('aria-busy'); } };
+    Promise.resolve(event.detail?.request).then(settle, settle);
+  });
+
   window.HansoraUI = { icon, stagger, countUp, tabs, toast, typing, hydrateIcons, reduceMotion, busy };
   const ready = () => { hydrateIcons(); stagger(); document.querySelectorAll('.ui-tabs').forEach(tabs); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready); else ready();

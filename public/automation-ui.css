@@ -770,3 +770,26 @@ html:has(dialog[open]){overflow:hidden}
 .ui-convo-stage.stage-lost{color:var(--text-3);opacity:.8}
 
 .ui-wa-note{display:grid;gap:4px;margin:0 0 14px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)}.ui-wa-note small{color:var(--text-2);line-height:1.45}
+
+/* Every button reacts: a press animation, and a spinner while it waits for the server (automation-ui.js). */
+body.ui button:not(:disabled),body.ui .ui-btn{transition:transform .12s cubic-bezier(.2,.7,.2,1),background-color .15s,border-color .15s,color .15s,box-shadow .15s,opacity .15s}
+body.ui button:not(:disabled):active,body.ui .ui-btn:not([aria-disabled="true"]):active{transform:scale(.96)}
+body.ui .is-auto-busy{position:relative;pointer-events:none;color:transparent !important}
+body.ui .is-auto-busy>*{visibility:hidden}
+body.ui .is-auto-busy::after{content:"";position:absolute;inset:0;width:16px;height:16px;margin:auto;border-radius:50%;border:2px solid var(--text-2,#a1a1aa);border-top-color:transparent;animation:ui-spin .7s linear infinite;visibility:visible}
+body.ui .ui-btn.primary.is-auto-busy::after{border-color:var(--on-primary,#08090b);border-top-color:transparent}
+@media (prefers-reduced-motion:reduce){body.ui button:active,body.ui .ui-btn:active{transform:none}body.ui .is-auto-busy::after{animation-duration:1.6s}}
+
+/* Knowledge files: removing is a pending change with Undo (applied on Save) and animates. */
+.ui-kfile{transition:opacity .18s,transform .18s,border-color .18s;animation:ui-kfile-in .22s cubic-bezier(.2,.7,.2,1)}
+@keyframes ui-kfile-in{from{opacity:0;transform:translateY(4px)}}
+.ui-kfile.is-changing{opacity:0;transform:translateX(10px)}
+.ui-kfile.is-removing{border-style:dashed;background:transparent}
+.ui-kfile.is-removing strong{text-decoration:line-through;opacity:.55}
+.ui-kfile.is-removing .ui-kfile-type{background:rgba(248,113,113,.14);color:#f87171}
+.ui-btn.is-saved{color:var(--green,#34d399);border-color:rgba(52,211,153,.45);animation:ui-saved-pop .45s cubic-bezier(.2,.7,.2,1.4)}
+@keyframes ui-saved-pop{0%{transform:scale(.92)}60%{transform:scale(1.05)}100%{transform:none}}
+
+/* Live test: choose or compare the AI engine */
+.test-engine{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:0 0 8px;color:var(--text-3);font-size:12px}
+.test-engine select{height:30px;padding:0 8px;border:1px solid var(--border-2);border-radius:8px;background:var(--surface-2);color:var(--text);font:inherit;font-size:12px}

@@ -13,7 +13,6 @@ import { flagFailedReply } from '../../lib/automation/failure.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
 import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
 import { makeProductPhotoSender } from '../../lib/automation/product-photos.mjs';
-import { updateSalesStage } from '../../lib/automation/sales-stage.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
 
@@ -99,7 +98,7 @@ export async function handler(event){
     const mediaNote=understood?understood.note:message.contentType&&!['text','interactive'].includes(message.contentType)?'The latest customer message is a photo, video, voice note, file or location that you cannot open. Do not pretend to know its contents; use any caption, otherwise politely ask the customer to describe it in text, or offer a team member if it needs a human to review.':'';
     const context=buildConversationContext({intro:['Continue this WhatsApp conversation. Keep the reply concise.',actions.contextLine,mediaNote].filter(Boolean),memory:liveMemory,after:[actions.liveBrief,pendingQuestions]});
     const aiStartedAt=Date.now();const preparedMs=aiStartedAt-startedAt;
-    const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:aiText,context,channel:'whatsapp',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
+    const generated=await generateAutomationReply({businessId:account.business_id,providerResourceId:aiResource.provider_resource_id,text:aiText,context,channel:'whatsapp',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
     const aiMs=Date.now()-aiStartedAt;
     if(generated.toolCalls?.length)console.log('automation tool calls',{channel:'whatsapp',calls:generated.toolCalls});
     const handedOff=generated.toolCalls?.some(call=>call.name==='handoff_to_human'&&call.ok);
@@ -110,12 +109,11 @@ export async function handler(event){
     const sent=await sendWhatsAppText({phoneNumberId:account.provider_resource_id,to:message.senderId,text:generated.text,accessToken});
     pendingReply=null; // the customer has the answer: a later error (billing, logging) is not a missed reply
     console.log('automation reply timing',{channel:'whatsapp',loaded_ms:loadedMs,ready_for_ai_ms:preparedMs,ai_ms:aiMs,to_send_ms:Date.now()-startedAt,chosen_delay_s:replyDelay});
-    const outbound=await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:sent.messageId||null,idempotency_key:`meta:whatsapp:out:${message.externalEventId}`,direction:'outbound',sender_type:'ai',content_type:'text',content:generated.text,status:'sent',billable:true,provider:'meta',model:'eleven-agents',provider_message_id:sent.messageId||null,metadata:{recipient_id:message.senderId,phone_number_id:account.provider_resource_id,elevenlabs_conversation_id:generated.conversationId||null},occurred_at:new Date().toISOString()},{ignoreDuplicates:true});
+    const outbound=await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:sent.messageId||null,idempotency_key:`meta:whatsapp:out:${message.externalEventId}`,direction:'outbound',sender_type:'ai',content_type:'text',content:generated.text,status:'sent',billable:true,provider:'meta',model:generated.model||'eleven-agents',provider_message_id:sent.messageId||null,metadata:{recipient_id:message.senderId,phone_number_id:account.provider_resource_id,elevenlabs_conversation_id:generated.conversationId||null},occurred_at:new Date().toISOString()},{ignoreDuplicates:true});
     // Charge only now that the reply was actually sent; the usage key doubles as the charge key.
     const charge=outbound?await chargeCredits({businessId:account.business_id,idempotencyKey:`usage:whatsapp:${message.externalEventId}`,kind:'ai_reply',credits:price,conversationId:conversation.id,reference:{channel:'whatsapp',message_id:outbound.id}}).catch(error=>{console.error('automation credit charge failed',{message:error?.message});return{ok:false,charged:0}}):null;
-    if(outbound)await serviceInsert('automation_usage_events',{business_id:account.business_id,conversation_id:conversation.id,message_id:outbound.id,channel_type:'whatsapp',unit_type:'ai_message',quantity:1,billable_quantity:1,estimated_cost_minor:0,currency:'AMD',provider:'elevenlabs',provider_usage_id:generated.conversationId||null,idempotency_key:`usage:whatsapp:${message.externalEventId}`,credits:charge?.charged||0,metadata:{whatsapp_message_id:sent.messageId||null}},{ignoreDuplicates:true});
-    await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{last_message_preview:generated.text.slice(0,1000),last_message_at:new Date().toISOString()});
-    await updateSalesStage({businessId:account.business_id,conversationId:conversation.id}).catch(()=>null); // after the reply, never slows it
+    if(outbound)await serviceInsert('automation_usage_events',{business_id:account.business_id,conversation_id:conversation.id,message_id:outbound.id,channel_type:'whatsapp',unit_type:'ai_message',quantity:1,billable_quantity:1,estimated_cost_minor:0,currency:'AMD',provider:generated.engine==='gemini'?'google':'elevenlabs',provider_usage_id:generated.conversationId||null,idempotency_key:`usage:whatsapp:${message.externalEventId}`,credits:charge?.charged||0,metadata:{whatsapp_message_id:sent.messageId||null}},{ignoreDuplicates:true});
+    await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{last_message_preview:generated.text.slice(0,1000),last_message_at:new Date().toISOString()}); // after the reply, never slows it
     await readReceipt;await markProcessed(webhook.id,account.business_id);return json(200,{ok:true});
   }catch(error){if(pendingReply&&eventId)await flagFailedReply({...pendingReply,eventId});console.error('automation-whatsapp-process error',{eventId,message:error?.message,status:error?.status,providerStatus:error?.providerStatus});if(eventId)await serviceUpdate('automation_webhook_events',`id=eq.${eventId}`,{status:'failed',last_error:String(error?.message||'processing_failed').slice(0,2000)}).catch(()=>null);return json(Number(error?.status)||500,{error:'whatsapp_message_processing_failed'});}finally{stopTyping();}
 }

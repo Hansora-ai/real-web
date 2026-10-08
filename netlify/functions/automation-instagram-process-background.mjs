@@ -20,7 +20,6 @@ import { mediaFallback, mediaMessage, understandMedia } from '../../lib/automati
 import { matchProductPhoto } from '../../lib/automation/product-match.mjs';
 import { burstNote, hasNewerCustomerMessage, mediaContext, unansweredCustomerMessages, waitForPendingMedia } from '../../lib/automation/turns.mjs';
 import { makeProductPhotoSender } from '../../lib/automation/product-photos.mjs';
-import { updateSalesStage } from '../../lib/automation/sales-stage.mjs';
 
 const json=(statusCode,body)=>({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'},body:JSON.stringify(body)});
 
@@ -94,16 +93,16 @@ export async function handler(event){
     ]);
     // The message is saved first (so a question sent right after it waits for it); then the photo / voice note is
     // understood with the business and the latest messages as context, and the saved message is updated.
-    let media=null,understood=null,otherReel=false;
+    let media=null,understood=null,otherReel=false,ownPost=false;
     if(hasMedia&&inbound){
       const context=await mediaContext({businessId:account.business_id,history:memory.history}).catch(()=>'');
       // A shared reel's link is a web page, not a video. If it is the business's own reel, its video is read by id.
       let fileUrl=mediaUrl,mediaReason='';const report=reason=>{mediaReason=String(reason||'').slice(0,300);};
-      if(/^https:\/\/(www\.)?instagram\.com\//i.test(mediaUrl)){const own=await getInstagramMediaFile({mediaId:message.attachmentMediaId,pageUrl:mediaUrl,instagramUserId:account.provider_resource_id,accessToken:decryptSecret(credential),report});fileUrl=own?.url||'';otherReel=!own;}
+      if(/^https:\/\/(www\.)?instagram\.com\//i.test(mediaUrl)){const own=await getInstagramMediaFile({mediaId:message.attachmentMediaId,pageUrl:mediaUrl,instagramUserId:account.provider_resource_id,accessToken:decryptSecret(credential),report});fileUrl=own?.url||'';otherReel=!own;ownPost=Boolean(own);}
       media=fileUrl?await understandMedia({url:fileUrl,kind:['audio','video','image'].includes(mediaType)?mediaType:'',caption:message.text,context,store:{businessId:account.business_id,channel:'instagram_dm',conversationId:conversation.id,key:message.externalEventId},afterVisual:file=>matchProductPhoto({businessId:account.business_id,...file,caption:message.text}),report}):null;
       // Kept for the logs: what Instagram sent and whether it could be understood (videos and reels).
       console.log('instagram media',{kind:message.kind,type:mediaType,has_url:Boolean(mediaUrl),understood:Boolean(media),reason:mediaReason||null,media_kind:media?.kind||null,mime:media?.mimeType||null,ms:Date.now()-startedAt});
-      understood=media?mediaMessage({source:message.kind==='media'?media.kind:message.kind,media,caption:message.text}):null;
+      understood=media?mediaMessage({source:message.kind==='media'?media.kind:message.kind,media,caption:message.text,ownPost}):null;
       // Could not be opened (too large, expired link…): the AI is told so, with the caption, instead of staying silent.
       if(!understood&&media?.kind!=='audio')understood=mediaFallback({source:message.kind==='media'?'':message.kind,kind:mediaType==='video'||mediaType==='ig_reel'||mediaType==='reel'?'video':mediaType==='audio'?'audio':'image',title:message.attachmentTitle,caption:message.text});
       await serviceUpdate('automation_messages',`id=eq.${inbound.id}`,{content:understood?.content||shownText(message),metadata:{sender_id:message.senderId,recipient_id:message.recipientId,media_pending:false,...(!media&&mediaReason?{media_error:mediaReason}:{}),...(noReply?{no_reply:true}:{}),...(media?.mediaPath?{media_path:media.mediaPath,media_mime:media.mimeType}:{})}}).catch(error=>console.warn('media message update failed',{message:error?.message}));
@@ -185,7 +184,7 @@ export async function handler(event){
 
     const context=buildConversationContext({intro:['Continue this Instagram conversation.',actions.contextLine,understood?.note||'',flowInstruction?`Flow instruction: ${flowInstruction}`:''].filter(Boolean),memory:liveMemory,after:[actions.liveBrief,pendingQuestions]});
     const aiStartedAt=Date.now();const preparedMs=aiStartedAt-startedAt;
-    const generated=await generateAutomationReply({providerResourceId:aiResource.provider_resource_id,text:aiText,context,channel:'instagram_dm',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
+    const generated=await generateAutomationReply({businessId:account.business_id,providerResourceId:aiResource.provider_resource_id,text:aiText,context,channel:'instagram_dm',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
     const aiMs=Date.now()-aiStartedAt;
     if(generated.toolCalls?.length)console.log('automation tool calls',{channel:'instagram_dm',calls:generated.toolCalls});
     const handedOff=generated.toolCalls?.some(call=>call.name==='handoff_to_human'&&call.ok);
@@ -200,13 +199,12 @@ export async function handler(event){
     const sent=await sendInstagramText({instagramUserId:account.provider_resource_id,recipientId:message.senderId,text:generated.text,accessToken:decryptSecret(credential)});
     pendingReply=null; // the customer has the answer: a later error (billing, logging) is not a missed reply
     console.log('automation reply timing',{channel:'instagram_dm',loaded_ms:loadedMs,ready_for_ai_ms:preparedMs,ai_ms:aiMs,to_send_ms:Date.now()-startedAt,chosen_delay_s:replyDelay});
-    const outbound=await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:String(sent.message_id||''),idempotency_key:`meta:instagram:out:${message.externalEventId}`,direction:'outbound',sender_type:'ai',content_type:'text',content:generated.text,status:'sent',billable:true,provider:'meta',model:'eleven-agents',provider_message_id:String(sent.message_id||''),metadata:{recipient_id:message.senderId,elevenlabs_conversation_id:generated.conversationId||null},occurred_at:new Date().toISOString()},{ignoreDuplicates:true});
+    const outbound=await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:String(sent.message_id||''),idempotency_key:`meta:instagram:out:${message.externalEventId}`,direction:'outbound',sender_type:'ai',content_type:'text',content:generated.text,status:'sent',billable:true,provider:'meta',model:generated.model||'eleven-agents',provider_message_id:String(sent.message_id||''),metadata:{recipient_id:message.senderId,elevenlabs_conversation_id:generated.conversationId||null},occurred_at:new Date().toISOString()},{ignoreDuplicates:true});
     // Charge only now that the reply was actually sent; the usage key doubles as the charge key.
     const charge=outbound?await chargeCredits({businessId:account.business_id,idempotencyKey:`usage:instagram:${message.externalEventId}`,kind:'ai_reply',credits:price,conversationId:conversation.id,reference:{channel:'instagram_dm',message_id:outbound.id}}).catch(error=>{console.error('automation credit charge failed',{message:error?.message});return{ok:false,charged:0}}):null;
-    if(outbound)await serviceInsert('automation_usage_events',{business_id:account.business_id,conversation_id:conversation.id,message_id:outbound.id,channel_type:'instagram_dm',unit_type:'ai_message',quantity:1,billable_quantity:1,estimated_cost_minor:0,currency:'AMD',provider:'elevenlabs',provider_usage_id:generated.conversationId||null,idempotency_key:`usage:instagram:${message.externalEventId}`,credits:charge?.charged||0,metadata:{meta_message_id:sent.message_id||null}},{ignoreDuplicates:true});
+    if(outbound)await serviceInsert('automation_usage_events',{business_id:account.business_id,conversation_id:conversation.id,message_id:outbound.id,channel_type:'instagram_dm',unit_type:'ai_message',quantity:1,billable_quantity:1,estimated_cost_minor:0,currency:'AMD',provider:generated.engine==='gemini'?'google':'elevenlabs',provider_usage_id:generated.conversationId||null,idempotency_key:`usage:instagram:${message.externalEventId}`,credits:charge?.charged||0,metadata:{meta_message_id:sent.message_id||null}},{ignoreDuplicates:true});
     await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{last_message_preview:generated.text.slice(0,1000),last_message_at:new Date().toISOString()});
     // Where this customer stands (interested, ready, done…), read after the reply so it never slows it down.
-    await updateSalesStage({businessId:account.business_id,conversationId:conversation.id}).catch(()=>null);
     await markProcessed(webhook.id,account.business_id);
     return json(200,{ok:true});
   }catch(error){

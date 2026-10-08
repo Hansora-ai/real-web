@@ -7,6 +7,7 @@
   const nextButton = document.querySelector('#next-button');
   const backButton = document.querySelector('#back-button');
   const saveButton = document.querySelector('#save-button');
+  const saveStepButton = document.querySelector('#save-step-button');
   const saveState = document.querySelector('#save-state');
   const steps = [...document.querySelectorAll('[data-step]')];
   const progress = [...document.querySelectorAll('[data-progress]')];
@@ -69,9 +70,13 @@
   backButton.addEventListener('click', () => showStep(Math.max(0, currentStep - 1)));
   progress.forEach((item, index) => item.addEventListener('click', () => { if (index < currentStep) showStep(index); }));
   form.addEventListener('submit', save);
+  // Editing an existing AI employee: every step can be saved on its own (the page stays open).
+  saveStepButton.addEventListener('click', event => save(event, { stay: true }));
+  let unsaved = false;
+  const markUnsaved = () => { unsaved = true; saveState.textContent = 'Unsaved changes'; saveState.classList.remove('error'); };
+  window.addEventListener('beforeunload', event => { if (unsaved) { event.preventDefault(); event.returnValue = ''; } });
   form.addEventListener('input', event => {
-    saveState.textContent = 'Unsaved changes';
-    saveState.classList.remove('error');
+    markUnsaved();
     if (event.target.matches('input,textarea,select')) event.target.removeAttribute('aria-invalid');
   });
 
@@ -83,16 +88,21 @@
     backButton.hidden = index === 0;
     nextButton.hidden = index === steps.length - 1;
     saveButton.hidden = index !== steps.length - 1;
+    saveStepButton.hidden = !businessId || index === steps.length - 1;
     if (window.scrollY > 200) document.querySelector('.ui-stepper').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // Files and one long text are kept here and uploaded to the AI's knowledge base right after saving.
   const KNOWLEDGE_TYPES = ['pdf','docx','txt','md','html','htm','epub'];
   const pendingFiles = [];
+  // Saved knowledge marked for removal: nothing is deleted until the owner saves (leaving the page keeps it).
+  const pendingRemovals = new Set();
   function renderPendingFiles(existing = []) {
     const list = document.querySelector('#setup-files-list');
     list.innerHTML = [
-      ...existing.map(document => `<div class="ui-kfile"><span class="ui-kfile-type">Added</span><span class="ui-kfile-main"><strong>${escapeHtml(document.name)}</strong></span><button class="ui-btn ghost sm ui-kfile-remove" type="button" data-remove-existing="${escapeHtml(document.id)}" aria-label="Remove ${escapeHtml(document.name)}" title="Remove">×</button></div>`),
+      ...existing.map(document => pendingRemovals.has(document.id)
+        ? `<div class="ui-kfile is-removing"><span class="ui-kfile-type">Remove</span><span class="ui-kfile-main"><strong>${escapeHtml(document.name)}</strong><small>Removed when you save</small></span><button class="ui-btn ghost sm" type="button" data-undo-remove="${escapeHtml(document.id)}">Undo</button></div>`
+        : `<div class="ui-kfile"><span class="ui-kfile-type">Added</span><span class="ui-kfile-main"><strong>${escapeHtml(document.name)}</strong></span><button class="ui-btn ghost sm ui-kfile-remove" type="button" data-remove-existing="${escapeHtml(document.id)}" aria-label="Remove ${escapeHtml(document.name)}" title="Remove">×</button></div>`),
       ...pendingFiles.map((file, index) => `<div class="ui-kfile"><span class="ui-kfile-type">New</span><span class="ui-kfile-main"><strong>${escapeHtml(file.name)}</strong><small>${Math.max(1, Math.round(file.size / 1024))} KB · uploads when you save</small></span><button class="ui-btn ghost sm ui-kfile-remove" type="button" data-remove-pending="${index}" aria-label="Remove ${escapeHtml(file.name)}" title="Remove">×</button></div>`)
     ].join('');
   }
@@ -109,19 +119,13 @@
     if (rejected.length) inlineError(`Not added: ${rejected.join(', ')}.`); else errorBox.hidden = true;
   });
   document.querySelector('#setup-files-list').addEventListener('click', async event => {
-    const saved = event.target.closest('[data-remove-existing]');
-    if (saved) {
-      // Saved knowledge is removed from the AI right away (same call as the AI employee page).
-      if (saved.disabled) return;
-      saved.disabled = true;
-      try {
-        const response = await api.authenticatedFetch('/.netlify/functions/automation-knowledge', { method:'POST', body:JSON.stringify({ business_id:businessId, action:'remove', document_id:saved.dataset.removeExisting }) });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(knowledgeReason(result));
-        existingKnowledge = result.documents || [];
-        renderPendingFiles(existingKnowledge);
-        window.HansoraUI.toast('Removed');
-      } catch (error) { saved.disabled = false; inlineError(`Could not remove it: ${error.message}`); }
+    const marked = event.target.closest('[data-remove-existing]');
+    const undo = event.target.closest('[data-undo-remove]');
+    if (marked || undo) {
+      const row = (marked || undo).closest('.ui-kfile');
+      if (marked) pendingRemovals.add(marked.dataset.removeExisting); else pendingRemovals.delete(undo.dataset.undoRemove);
+      row?.classList.add('is-changing');
+      setTimeout(() => { renderPendingFiles(existingKnowledge); markUnsaved(); }, 180);
       return;
     }
     const button = event.target.closest('[data-remove-pending]');
@@ -149,6 +153,22 @@
       ai_employee_not_ready:'AI employee not ready yet',
       elevenlabs_request_failed:`the AI provider refused it${result?.detail ? `: ${String(result.detail).slice(0, 160)}` : ''}`
     })[result?.error] || (result?.error ? String(result.error).replace(/_/g, ' ') : 'unknown error');
+  }
+
+  // Removes the knowledge the owner marked, now that they saved. Returns what could not be removed.
+  async function applyRemovals(savedBusinessId) {
+    const failed = [];
+    for (const id of [...pendingRemovals]) {
+      const name = existingKnowledge.find(document => document.id === id)?.name || 'A file';
+      try {
+        const response = await api.authenticatedFetch('/.netlify/functions/automation-knowledge', { method:'POST', body:JSON.stringify({ business_id:savedBusinessId, action:'remove', document_id:id }) });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok && result.error !== 'knowledge_document_not_found') { failed.push(`${name} (${knowledgeReason(result)})`); continue; }
+        if (Array.isArray(result.documents)) existingKnowledge = result.documents; else existingKnowledge = existingKnowledge.filter(document => document.id !== id);
+        pendingRemovals.delete(id);
+      } catch (_) { failed.push(`${name} (connection problem)`); }
+    }
+    return failed;
   }
 
   async function uploadKnowledge(savedBusinessId) {
@@ -215,15 +235,27 @@
     return ['services','hours','delivery','faq','policies'].filter(name => String(form.elements[name].value || '').trim()).length;
   }
 
-  async function save(event) {
+  // Button feedback for saving: a spinner, then "✓ Saved" (the per-step button) – never a frozen button.
+  function setSaving(on, stay, done = false) {
+    const button = stay ? saveStepButton : saveButton;
+    button.disabled = on;
+    button.classList.toggle('is-busy', on);
+    if (!stay) return;
+    if (on) { button.innerHTML = '<span class="ui-spinner" aria-hidden="true"></span>Saving…'; return; }
+    if (done) { button.textContent = '✓ Saved'; button.classList.add('is-saved'); setTimeout(() => { button.classList.remove('is-saved'); button.textContent = 'Save changes'; }, 1800); return; }
+    button.textContent = 'Save changes';
+  }
+
+  async function save(event, options = {}) {
     event.preventDefault();
+    const stay = Boolean(options.stay && businessId);
     for (const stepIndex of [0, 2]) {
       if (!validateStep(stepIndex)) { showStep(stepIndex); validateStep(stepIndex); return; }
     }
     const data = new FormData(form);
-    saveButton.disabled = true;
+    setSaving(true, stay);
     saveState.textContent = 'Saving…';
-    window.HansoraUI.busy('Saving your AI employee…');
+    if (!stay) window.HansoraUI.busy('Saving your AI employee…');
     saveState.classList.remove('error');
     if (api.isLocalPreview) {
       const previewBusiness = {
@@ -251,6 +283,8 @@
         }]
       };
       try { localStorage.setItem('hansora_automation_preview_business', JSON.stringify(previewBusiness)); } catch (_) {}
+      unsaved = false;
+      if (stay) { await new Promise(resolve => setTimeout(resolve, 500)); pendingRemovals.clear(); renderPendingFiles(existingKnowledge); setSaving(false, true, true); saveState.textContent = 'All changes saved'; return; }
       window.location.href = window.location.protocol === 'file:'
         ? 'automation-agent.html?id=preview'
         : 'automation-agent.html?id=preview&preview=1';
@@ -278,7 +312,7 @@
       p_prohibited_instructions: data.get('prohibited_instructions') || ''
     });
     if (result.error) {
-      saveButton.disabled = false;
+      setSaving(false, stay);
       window.HansoraUI.busy(false);
       const message = api.displayError(result.error);
       saveState.textContent = 'Not saved';
@@ -287,31 +321,38 @@
       return;
     }
     if (!businessId) await api.db.from('automation_businesses').update({ timezone: api.browserTimezone() }).eq('id', result.data);
-    saveState.textContent = 'Preparing your AI employee…';
-    window.HansoraUI.busy('Preparing your AI employee…');
+    saveState.textContent = stay ? 'Saving…' : 'Preparing your AI employee…';
+    if (!stay) window.HansoraUI.busy('Preparing your AI employee…');
     try {
       const syncResponse = await api.authenticatedFetch('/.netlify/functions/automation-agent-sync', {
         method: 'POST', body: JSON.stringify({ business_id: result.data })
       });
       const syncResult = await syncResponse.json().catch(() => ({}));
       const hasKnowledge = pendingFiles.length || document.querySelector('#general-info').value.trim();
-      const failed = syncResponse.ok && hasKnowledge ? await uploadKnowledge(result.data) : [];
+      const failed = [...(syncResponse.ok && pendingRemovals.size ? await applyRemovals(result.data) : []), ...(syncResponse.ok && hasKnowledge ? await uploadKnowledge(result.data) : [])];
       // A file that was not added stops here, on this page, so the owner sees why and can retry right away.
       if (syncResponse.ok && failed.length) {
         if (!businessId) { businessId = result.data; history.replaceState(null, '', `automation-setup.html?id=${encodeURIComponent(result.data)}${location.hash}`); }
         renderPendingFiles(existingKnowledge);
-        window.HansoraUI.busy(false); saveButton.disabled = false;
+        window.HansoraUI.busy(false); setSaving(false, stay);
         saveState.textContent = 'Saved · some knowledge was not added';
         errorBox.innerHTML = `<div><strong>Your AI employee is saved, but this was not added:</strong><ul>${failed.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul><p>Fix or remove it in the Knowledge step and press Save again – only what failed is sent again.</p><a class="ui-btn secondary sm" href="automation-agent.html?id=${encodeURIComponent(result.data)}">Continue without it</a></div>`;
         errorBox.hidden = false; errorBox.scrollIntoView({ behavior:'smooth', block:'center' });
+        return;
+      }
+      if (stay) {
+        unsaved = false; renderPendingFiles(existingKnowledge); setSaving(false, true, true);
+        saveState.textContent = syncResponse.ok ? 'All changes saved' : 'Saved · the AI will update on the next message';
         return;
       }
       sessionStorage.setItem('hansora_automation_sync_notice', !syncResponse.ok
         ? `Business saved, but the AI could not be prepared: ${syncResult.detail || syncResult.error || 'sync unavailable'}${hasKnowledge ? ' Your files were not added yet.' : ''}`
         : failed.length ? `AI employee saved. Not added: ${failed.join(', ')}. Add them again under Knowledge files.` : 'AI provider agent synchronized.');
     } catch (_) {
+      if (stay) { unsaved = false; setSaving(false, true, true); saveState.textContent = 'Saved · the AI will update on the next message'; return; }
       sessionStorage.setItem('hansora_automation_sync_notice', 'Business saved. Provider setup is pending.');
     }
+    unsaved = false;
     window.location.href = 'automation-agent.html?id=' + encodeURIComponent(result.data);
   }
 

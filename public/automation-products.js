@@ -18,7 +18,7 @@
   async function load() {
     if (api.isLocalPreview) {
       products = [{ id: 'p1', name: 'Oslo sofa', category: 'Sofas', price: 899, currency: 'USD', stock: 2, variants: [{ name: 'Grey', price: 899, stock: 2, color: '#9ca3af' }, { name: 'Blue', price: 949, stock: 0, color: '#3b82f6' }], photos: [], active: true, description: 'Two-seat sofa' }, { id: 'p2', name: 'Desk lamp', category: 'Lighting', price: 39, currency: 'USD', stock: null, variants: [], photos: [], active: true, description: '' }];
-      catalog = { enabled: true, config: { reduce_stock: false } }; return;
+      catalog = { enabled: true, config: { reduce_stock: true } }; return;
     }
     const [list, tool, sheet] = await Promise.all([
       api.db.from('automation_products').select('*').eq('business_id', businessId).order('name', { ascending: true }).limit(2000),
@@ -31,8 +31,9 @@
 
   // ---------- settings ----------
   function renderSettings() {
-    $('#catalog-enabled').checked = Boolean(catalog?.enabled);
-    $('#catalog-reduce-stock').checked = catalog?.config?.reduce_stock === true;
+    // Both are on by default; the setting is stored when the first product is added.
+    $('#catalog-enabled').checked = catalog ? Boolean(catalog.enabled) : true;
+    $('#catalog-reduce-stock').checked = catalog ? catalog.config?.reduce_stock !== false : true;
     const status = $('#sheet-status');
     if (source?.url) {
       status.hidden = false;
@@ -46,12 +47,12 @@
       });
     } else status.hidden = true;
   }
-  async function saveCatalogSettings() {
+  async function saveCatalogSettings({ quiet = false } = {}) {
     const row = { business_id: businessId, tool_type: 'catalog', enabled: $('#catalog-enabled').checked, config: { ...(catalog?.config || {}), reduce_stock: $('#catalog-reduce-stock').checked } };
     if (api.isLocalPreview) { catalog = row; return ui.toast('Saved.'); }
     const result = await api.db.from('automation_tool_configs').upsert(row, { onConflict: 'business_id,tool_type' }).select('id,enabled,config').single();
     if (result.error) { ui.toast(api.displayError(result.error), 'error'); return renderSettings(); }
-    catalog = result.data; ui.toast(row.enabled ? 'Saved. Your AI employee uses the catalog from the next message.' : 'Saved. Your AI employee no longer uses the catalog.');
+    catalog = result.data; if (quiet) return; ui.toast(row.enabled ? 'Saved. Your AI employee uses the catalog from the next message.' : 'Saved. Your AI employee no longer uses the catalog.');
   }
   $('#catalog-enabled').addEventListener('change', saveCatalogSettings);
   $('#catalog-reduce-stock').addEventListener('change', saveCatalogSettings);
@@ -247,6 +248,7 @@
         // Before SQL 12 there is no payment_link column: save everything else and say so.
         if (result.error && 'payment_link' in row && /payment_link/.test(String(result.error.message || ''))) { const { payment_link, ...rest } = row; result = await write(rest); }
         if (result.error) throw result.error;
+        if (!catalog) await saveCatalogSettings({ quiet: true });
         const removed = (editing.removedPhotos || []).map(photo => photo.path).filter(Boolean);
         if (removed.length) api.authenticatedFetch('/.netlify/functions/automation-product-photo', { method: 'POST', body: JSON.stringify({ business_id: businessId, action: 'delete', paths: removed }) }).catch(() => {});
         Object.assign(row, result.data);
@@ -277,10 +279,14 @@
   function resetImport() { importState = null; $('#import-summary').hidden = true; $('#import-mapping').hidden = true; $('#import-error').hidden = true; $('#import-run').disabled = true; $('#import-run').textContent = 'Import'; }
   $('#open-import').addEventListener('click', () => { resetImport(); $('#import-file').value = ''; $('#sheet-url').value = source?.url || ''; $('#import-dialog').showModal(); });
   document.querySelectorAll('[data-import-tab]').forEach(tab => tab.addEventListener('click', () => {
+    // The short how-to video loads only when the sheet tab is opened (0.7 MB), then plays muted on a loop.
+    const howto = $('#sheet-howto');
+    if (howto) { if (tab.dataset.importTab === 'sheet') { if (!howto.src) howto.src = howto.dataset.src; howto.play().catch(() => {}); } else howto.pause(); }
     document.querySelectorAll('[data-import-tab]').forEach(item => item.classList.toggle('active', item === tab));
     document.querySelectorAll('[data-import-pane]').forEach(pane => { pane.hidden = pane.dataset.importPane !== tab.dataset.importTab; });
     resetImport();
   }));
+  $('#import-dialog')?.addEventListener('close', () => $('#sheet-howto')?.pause());
   const dropzone = $('#import-drop');
   dropzone.addEventListener('dragover', event => { event.preventDefault(); dropzone.classList.add('over'); });
   dropzone.addEventListener('dragleave', () => dropzone.classList.remove('over'));

@@ -46,7 +46,7 @@ export async function handler(event) {
     if (sheetUrl) await serviceUpsert('automation_product_sources', 'business_id,kind', { business_id: business.id, kind: source, url: sheetUrl.slice(0, 2000), column_map: { ...map, ...(currency ? { _currency: currency } : {}) }, status: 'active', last_synced_at: new Date().toISOString(), last_error: null, last_count: products.length, updated_at: new Date().toISOString() });
     // The AI starts using the catalog as soon as there are products (the owner can switch it off on the page).
     const catalog = await first(`/rest/v1/automation_tool_configs?business_id=eq.${business.id}&tool_type=eq.catalog&select=id&limit=1`);
-    if (!catalog) await serviceUpsert('automation_tool_configs', 'business_id,tool_type', { business_id: business.id, tool_type: 'catalog', enabled: true, config: { reduce_stock: false } });
+    if (!catalog) await serviceUpsert('automation_tool_configs', 'business_id,tool_type', { business_id: business.id, tool_type: 'catalog', enabled: true, config: { reduce_stock: true } });
     return json(200, { ok: true, products: products.length, ...result });
   } catch (error) {
     console.error('automation-catalog-import error', { message: error?.message, status: error?.status, details: error?.details });
