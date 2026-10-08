@@ -325,7 +325,9 @@
           for (const [key, label] of [['elevenlabs', 'ElevenLabs agent'], ['gemini', 'Gemini direct']]) {
             const item = result.compare[key];
             const t = item?.timings, sec = ms => (Number(ms || 0) / 1000).toFixed(1);
-            append(`${label}${item?.ms ? ` · ${sec(item.ms)} s` : ''}${t ? ` (rules ${sec(t.rules_ms)} · knowledge ${sec(t.knowledge_ms)} · AI ${sec(t.ai_ms)})` : ''}${item?.fallback ? ' · fell back to ElevenLabs' : ''}`, 'action');
+            // The label says which engine really answered (if Gemini could not answer, ElevenLabs did and it says so).
+            const real = item?.engine === 'gemini' ? 'Gemini direct' : item?.engine === 'elevenlabs' ? 'ElevenLabs agent' : label;
+            append(`${real}${item?.ms ? ` · ${sec(item.ms)} s` : ''}${t ? ` (rules ${sec(t.rules_ms)} · knowledge ${sec(t.knowledge_ms)} · AI ${sec(t.ai_ms)})` : ''}${item?.fallback ? ' · fell back to ElevenLabs' : ''}`, 'action');
             append(item?.text || `No answer (${item?.error || 'error'})`, 'assistant');
           }
         } else {

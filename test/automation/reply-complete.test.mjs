@@ -57,3 +57,8 @@ test('A reply cut off mid-word is sent up to its last full sentence', () => {
   assert.equal(trimCutOffReply('Done!'), 'Done!');
   assert.equal(trimCutOffReply('An answer with no full sentence that was cut off in the mid'), 'An answer with no full sentence that was cut off in the mid');
 });
+
+test('A short reply cut off after its first sentence is trimmed too', () => {
+  assert.equal(trimCutOffReply('Ուրախ եմ լսել։ Քանի'), 'Ուրախ եմ լսել։');
+  assert.equal(trimCutOffReply('Hi Anna'), 'Hi Anna');
+});
