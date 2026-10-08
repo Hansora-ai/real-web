@@ -51,7 +51,7 @@
    const filter=example?"scale=w='trunc(iw*sar/2)*2':h='trunc(ih/2)*2',setsar=1": "scale=w='trunc(iw*sar/2)*2':h='trunc(ih/2)*2',setsar=1,pad=w='max(iw,ceil(ih*0.405/2)*2)':h='max(ih,ceil(iw/2.45/2)*2)':x='(ow-iw)/2':y='(oh-ih)/2',scale=w='trunc(sqrt(921600*iw/ih)/2)*2':h='trunc(sqrt(921600*ih/iw)/2)*2',fps=30";
    // The displayed example is not model input: retain compatible H.264 frames
    // exactly instead of resizing and re-encoding an already compressed video.
-   const copy=example&&stream.codec_name==='h264'&&stream.pix_fmt==='yuv420p';
+   const copy=example&&file.size<=95*MB&&stream.codec_name==='h264'&&stream.pix_fmt==='yuv420p';
    const videoArgs=copy?['-c:v','copy']:['-vf',filter,'-c:v','libx264','-pix_fmt','yuv420p','-preset','veryfast','-crf',example?'18':'21'];
    const code=await ff.exec(['-i','source','-map','0:v:0','-map','0:a:0?','-t',String(seconds),...videoArgs,'-c:a','aac','-b:a','128k','-movflags','+faststart','prepared.mp4'],180000);
    if(code)throw Error(t('Could not convert this video codec. Export it as MP4 (H.264) and try again.'));
