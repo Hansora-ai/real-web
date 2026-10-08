@@ -324,13 +324,15 @@
           // Same question, both engines: compare quality side by side (actions ran in test mode, nothing saved).
           for (const [key, label] of [['elevenlabs', 'ElevenLabs agent'], ['gemini', 'Gemini direct']]) {
             const item = result.compare[key];
-            append(`${label}${item?.ms ? ` · ${(item.ms / 1000).toFixed(1)} s` : ''}${item?.fallback ? ' · fell back to ElevenLabs' : ''}`, 'action');
+            const t = item?.timings, sec = ms => (Number(ms || 0) / 1000).toFixed(1);
+            append(`${label}${item?.ms ? ` · ${sec(item.ms)} s` : ''}${t ? ` (rules ${sec(t.rules_ms)} · knowledge ${sec(t.knowledge_ms)} · AI ${sec(t.ai_ms)})` : ''}${item?.fallback ? ' · fell back to ElevenLabs' : ''}`, 'action');
             append(item?.text || `No answer (${item?.error || 'error'})`, 'assistant');
           }
         } else {
           append(result.reply, 'assistant');
           // Which engine answered and how long it took (helps compare speed while testing).
-          if (result.engine) append(`${result.engine === 'gemini' ? 'Gemini direct' : 'ElevenLabs agent'}${result.ms ? ` · ${(result.ms / 1000).toFixed(1)} s` : ''}${result.fallback ? ' · fell back to ElevenLabs' : ''}`, 'action');
+          const t = result.timings, sec = ms => (Number(ms || 0) / 1000).toFixed(1);
+          if (result.engine) append(`${result.engine === 'gemini' ? 'Gemini direct' : 'ElevenLabs agent'}${result.ms ? ` · ${sec(result.ms)} s` : ''}${t ? ` (rules ${sec(t.rules_ms)} · knowledge ${sec(t.knowledge_ms)} · AI ${sec(t.ai_ms)})` : ''}${result.fallback ? ' · fell back to ElevenLabs' : ''}`, 'action');
         }
         await loadUsageSummary(business.id);
       } catch (error) { dots.remove(); append(`Unable to answer: ${api.displayError(error)}`, 'assistant'); }

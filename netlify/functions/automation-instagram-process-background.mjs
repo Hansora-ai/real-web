@@ -184,7 +184,7 @@ export async function handler(event){
 
     const context=buildConversationContext({intro:['Continue this Instagram conversation.',actions.contextLine,understood?.note||'',flowInstruction?`Flow instruction: ${flowInstruction}`:''].filter(Boolean),memory:liveMemory,after:[actions.liveBrief,pendingQuestions]});
     const aiStartedAt=Date.now();const preparedMs=aiStartedAt-startedAt;
-    const generated=await generateAutomationReply({businessId:account.business_id,providerResourceId:aiResource.provider_resource_id,text:aiText,context,channel:'instagram_dm',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
+    const generated=await generateAutomationReply({businessId:account.business_id,rulesHash:aiResource.safe_config?.rules_hash||null,providerResourceId:aiResource.provider_resource_id,text:aiText,context,channel:'instagram_dm',onToolCall:actions.onToolCall,checkTimes:actions.checkTimes,knownTimes:actions.knownTimes});
     const aiMs=Date.now()-aiStartedAt;
     if(generated.toolCalls?.length)console.log('automation tool calls',{channel:'instagram_dm',calls:generated.toolCalls});
     const handedOff=generated.toolCalls?.some(call=>call.name==='handoff_to_human'&&call.ok);
