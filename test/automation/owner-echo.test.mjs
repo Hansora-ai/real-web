@@ -38,3 +38,20 @@ test("Hansora's own messages (AI, inbox, automations) do not pause anything", as
   assert.equal((await processInstagramEcho({ ...extractInstagramEchoes(payload)[0], appId: '123' }, { ...viaApp.deps, ownAppId: '123' })).ours, true);
 });
 
+
+test('an AI reply saved slowly is still recognised by its text, so the AI never pauses itself', async () => {
+  const writes = [];
+  const deps = {
+    sleep: async () => {},
+    first: async path => path.includes('automation_provider_resources') ? { id: 'acc', business_id: 'b1' }
+      : path.includes('content=eq.') ? { id: 'ai-reply', sender_type: 'ai', metadata: {} }
+      : path.includes('automation_messages') ? null
+      : path.includes('automation_conversations') ? { id: 'conv1', ai_enabled: true, status: 'open' } : null,
+    serviceInsert: async (table, row) => { writes.push(row); return row; },
+    serviceUpdate: async (table, query, value) => { writes.push(value); return [value]; }
+  };
+  const result = await processInstagramEcho(extractInstagramEchoes(payload)[0], deps);
+  assert.equal(result.ours, true);
+  assert.equal(result.matchedBy, 'text');
+  assert.equal(writes.length, 0);
+});

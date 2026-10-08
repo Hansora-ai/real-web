@@ -13,13 +13,20 @@ export async function processInstagramEcho(echo, overrides = {}) {
   if (echo.appId && d.ownAppId && echo.appId === d.ownAppId) return { ours: true };
   const account = await d.first(`/rest/v1/automation_provider_resources?provider=eq.meta&resource_type=eq.instagram_account&provider_resource_id=eq.${enc(echo.businessId)}&status=eq.active&select=id,business_id&limit=1`);
   if (!account) return { ignored: 'account_not_connected' };
-  // A reply Hansora just sent may be saved a moment after Instagram reports it: look again before deciding.
-  for (const wait of [0, 3000, 5000]) {
+  const conversation = await d.first(`/rest/v1/automation_conversations?business_id=eq.${account.business_id}&channel_type=eq.instagram_dm&external_thread_id=eq.${enc(echo.customerId)}&select=id,ai_enabled,status&limit=1`);
+  // A reply Hansora just sent may be saved a moment after Instagram reports it: look again before deciding. Besides the
+  // message id, the same text sent by Hansora (AI, automation, inbox) in this chat in the last 2 minutes counts as ours,
+  // so the AI never pauses itself because one save was slow.
+  const since = new Date(Date.now() - 120000).toISOString();
+  for (const wait of [0, 3000, 5000, 12000]) {
     if (wait) await d.sleep(wait);
     const own = await d.first(`/rest/v1/automation_messages?business_id=eq.${account.business_id}&or=(external_message_id.eq.${enc(echo.mid)},provider_message_id.eq.${enc(echo.mid)})&select=id&limit=1`).catch(() => null);
     if (own) return { ours: true, businessId: account.business_id };
+    if (conversation && echo.text && !/^📎/.test(echo.text)) {
+      const same = await d.first(`/rest/v1/automation_messages?conversation_id=eq.${conversation.id}&direction=eq.outbound&sender_type=in.(ai,system,automation,human)&occurred_at=gte.${enc(since)}&content=eq.${enc(echo.text)}&select=id,sender_type,metadata&limit=1`).catch(() => null);
+      if (same && same.metadata?.source !== 'instagram_app') return { ours: true, businessId: account.business_id, matchedBy: 'text' };
+    }
   }
-  const conversation = await d.first(`/rest/v1/automation_conversations?business_id=eq.${account.business_id}&channel_type=eq.instagram_dm&external_thread_id=eq.${enc(echo.customerId)}&select=id,ai_enabled,status&limit=1`);
   if (!conversation) return { ignored: 'no_conversation', businessId: account.business_id };
   const at = new Date(Number(echo.timestamp) || Date.now()).toISOString();
   await d.serviceInsert('automation_messages', { business_id: account.business_id, conversation_id: conversation.id, external_message_id: echo.mid, provider_message_id: echo.mid, idempotency_key: `meta:instagram:echo:${echo.mid}`, direction: 'outbound', sender_type: 'human', content_type: 'text', content: echo.text || 'Message', status: 'sent', billable: false, provider: 'meta', metadata: { source: 'instagram_app' }, occurred_at: at }, { ignoreDuplicates: true });
