@@ -18,6 +18,8 @@ export async function handler(event){
     let body;try{body=JSON.parse(event.body||'{}')}catch(_){return json(400,{error:'invalid_json'})}
     const businessId=String(body.business_id||'');
     const text=String(body.message||'').trim();
+    // Each Live test session (page load or Clear) is its own conversation, so the AI starts without memory.
+    const session=/^[A-Za-z0-9-]{8,64}$/.test(String(body.session||''))?String(body.session):'default';
     if(!isUuid(businessId))return json(400,{error:'invalid_business_id'});
     if(!text||text.length>4000)return json(400,{error:'invalid_message'});
     const business=await first(`/rest/v1/automation_businesses?id=eq.${encodeURIComponent(businessId)}&owner_user_id=eq.${encodeURIComponent(user.id)}&select=id,name&limit=1`);
@@ -30,7 +32,7 @@ export async function handler(event){
     if(!affordable.ok)return json(402,{error:'not_enough_credits',balance:toDisplay(affordable.balance)});
 
     const contact=await serviceUpsert('automation_contacts','business_id,channel_type,external_contact_id',{business_id:businessId,display_name:'Live test',channel_type:'manual',external_contact_id:`test:${user.id}`,last_seen_at:new Date().toISOString(),profile:{source:'workspace_live_test'}});
-    const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:businessId,contact_id:contact.id,channel_type:'test',external_thread_id:`test:${user.id}`,status:'open',ai_enabled:true,last_message_preview:text.slice(0,1000),last_message_at:new Date().toISOString()});
+    const conversation=await serviceUpsert('automation_conversations','business_id,channel_type,external_thread_id',{business_id:businessId,contact_id:contact.id,channel_type:'test',external_thread_id:`test:${user.id}:${session}`,status:'open',ai_enabled:true,last_message_preview:text.slice(0,1000),last_message_at:new Date().toISOString()});
     const requestId=crypto.randomUUID();
     await serviceInsert('automation_messages',{business_id:businessId,conversation_id:conversation.id,idempotency_key:`test:in:${requestId}`,direction:'inbound',sender_type:'customer',content_type:'text',content:text,status:'received',billable:false,metadata:{source:'workspace_live_test'},occurred_at:new Date().toISOString()});
     // Actions run in test mode: availability is real, but bookings, orders, leads and handoffs are not saved or notified.

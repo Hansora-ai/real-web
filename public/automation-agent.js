@@ -283,6 +283,8 @@
   }
 
   function initializeLiveTest(business, profile) {
+    const newSession = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    let session = newSession();
     const engineChoice = () => $('#test-engine')?.value || '';
     const form = $('#test-form');
     const input = $('#test-message');
@@ -290,7 +292,7 @@
     const button = form.querySelector('button[type="submit"]');
     const initial = conversation.innerHTML;
     $('#open-live-test').addEventListener('click', () => { $('#live-test').scrollIntoView({behavior:'smooth', block:'center'}); setTimeout(() => input.focus({preventScroll:true}), 350); });
-    $('#clear-test').addEventListener('click', () => { conversation.innerHTML = initial; input.focus(); });
+    $('#clear-test').addEventListener('click', () => { conversation.innerHTML = initial; session = newSession(); input.focus(); });
     input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = `${Math.min(input.scrollHeight, 120)}px`; });
     input.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); } });
     form.addEventListener('submit', async event => {
@@ -312,7 +314,7 @@
           dots.remove(); append(answer, 'assistant');
           return;
         }
-        const response = await api.authenticatedFetch('/.netlify/functions/automation-test-chat', {method:'POST', body:JSON.stringify({business_id:business.id, message:question, ...(engineChoice() === 'compare' ? { compare:true } : engineChoice() ? { engine:engineChoice() } : {})})});
+        const response = await api.authenticatedFetch('/.netlify/functions/automation-test-chat', {method:'POST', body:JSON.stringify({business_id:business.id, message:question, session, ...(engineChoice() === 'compare' ? { compare:true } : engineChoice() ? { engine:engineChoice() } : {})})});
         const result = await response.json().catch(() => ({}));
         if (response.status === 402) { dots.remove(); append('You’re out of credits. Buy credits to keep testing — your AI employee also stops answering customers at 0⚡.', 'action'); return; }
         if (!response.ok || !result.reply) throw new Error(result.error || 'test_chat_failed');
