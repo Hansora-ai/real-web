@@ -2,7 +2,7 @@
  'use strict';
  const i18n=window.HenshinI18n,t=i18n?.t||((key,values={})=>key.replace(/\{([a-z]+)\}/g,(m,k)=>Object.hasOwn(values,k)?String(values[k]):m));
  const $=id=>document.getElementById(id),config=window.HenshinConfig,sb=window.__HANSORA_SB__||window.supabase.createClient(config.url,config.key);
- const OWNER='hansora.ai.bot@gmail.com',editID=new URLSearchParams(location.search).get('id');let busy=false,pending=0,references=[],referenceChain=Promise.resolve(),loadingEdit=null;const videos=new Map();
+ const OWNER='hansora.ai.bot@gmail.com';let editID=new URLSearchParams(location.search).get('id'),busy=false,pending=0,references=[],referenceChain=Promise.resolve(),loadingEdit=null;const videos=new Map();
  function pendingUpdate(change){pending+=change;$('editorPublish').disabled=busy||pending>0;}
  const owner=s=>!!(s?.user.email_confirmed_at&&s.user.email?.toLowerCase()===OWNER);
  function access(s){$('editorForm').hidden=!owner(s);$('editorAccess').textContent=owner(s)?t('Save the source, references and prompt people will use to recreate this example.'):t('Only the Hansora template owner can publish to this library. Sign in with the owner account to continue.');}
@@ -87,10 +87,13 @@
    $('editorStatus').textContent=t('Uploading template videos and references…');const video_url=typeof result==='string'?result:await upload(preparedResult),source_video_url=typeof source==='string'?source:await upload(preparedSource),poster_url=await upload(poster),image_urls=[];for(const ref of references)image_urls.push(ref.file?await upload(ref.file):ref.url);
    const preview_url=await upload(previewFile);
    const latest=await session();if(!owner(latest))throw Error(t('Owner session expired. Sign in again.'));
-   const response=await fetch('/.netlify/functions/henshin-templates',{method:editID?'PATCH':'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+latest.access_token},body:JSON.stringify({...(editID?{id:editID}:{}),video_url,source_video_url,poster_url,preview_url,image_urls,prompt,mode,resolution,keep_audio:keep})});
+   const wasEdit=!!editID,response=await fetch('/.netlify/functions/henshin-templates',{method:editID?'PATCH':'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+latest.access_token},body:JSON.stringify({...(editID?{id:editID}:{}),video_url,source_video_url,poster_url,preview_url,image_urls,prompt,mode,resolution,keep_audio:keep})});
    const data=await response.json();if(!response.ok||!data.ok)throw Error(data.error||t('Could not publish template.'));
+   videos.set('editorResult',video_url);videos.set('editorSource',source_video_url);
+   const oldReferences=references;references=image_urls.map(url=>({file:null,url}));renderReferences();for(const ref of oldReferences)if(ref.file)URL.revokeObjectURL(ref.url);
+   if(!editID&&data.id){editID=data.id;loadingEdit=Promise.resolve();history.replaceState(null,'',location.pathname+'?id='+encodeURIComponent(editID));document.querySelector('.template-editor-head h1').textContent=t('Edit template');$('editorPublish').textContent=t('Save changes');}
    try{sessionStorage.removeItem('hansora:henshin-templates:v2');localStorage.setItem('hansora:henshin-templates-changed',String(Date.now()));}catch{}
-   $('editorStatus').textContent=data.cleanup_pending?t('Template saved. Old file cleanup is pending; save again to retry.'):t(editID?'Template updated. Open the Trendy examples to view it.':'Template published. Open the Trendy examples to view it.');
+   $('editorStatus').textContent=data.cleanup_pending?t('Template saved. Old file cleanup is pending; save again to retry.'):t(wasEdit?'Template updated. Open the Trendy examples to view it.':'Template published. Open the Trendy examples to view it.');
   }catch(e){$('editorStatus').textContent=t(e.message);}finally{busy=false;elements.forEach(e=>e.disabled=false);}
  };
  renderReferences();
