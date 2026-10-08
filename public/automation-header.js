@@ -95,6 +95,28 @@
     mobile.className = 'auto-mobile-sections';
     mobile.innerHTML = items.filter(item => item[3]).map(link).join('');
     root.querySelector('nav')?.prepend(mobile);
+    renderBottomBar(items, businessId, preview);
+  }
+
+  // Phones: a bottom bar like Hansora Creative's (Home, Employees, Inbox, Menu); the header keeps credits and the photo.
+  function renderBottomBar(items, businessId, preview) {
+    const icon = name => window.HansoraUI?.icon(name) || '';
+    const hrefOf = key => items.find(item => item[0] === key)?.[3] || '';
+    const employees = `automation-dashboard.html${api?.isLocalPreview && location.protocol !== 'file:' ? '?preview=1' : ''}`;
+    const tab = (key, label, iconName, href, active) => `<a class="auto-tab${active ? ' active' : ''}" href="${href || employees}"${active ? ' aria-current="page"' : ''}>${icon(iconName)}<span>${label}</span></a>`;
+    const bar = document.createElement('nav');
+    bar.className = 'auto-bottom-nav';
+    bar.setAttribute('aria-label', 'Automation navigation');
+    bar.innerHTML = `${tab('agent', 'Home', 'sparkle', hrefOf('agent'), page === 'agent')}${tab('dashboard', 'Employees', 'user', employees, page === 'dashboard')}${tab('inbox', 'Inbox', 'message', hrefOf('inbox'), page === 'inbox')}<button class="auto-tab" type="button" data-bottom-menu aria-expanded="false"><span class="auto-tab-burger" aria-hidden="true"><i></i><i></i><i></i></span><span>Menu</span></button>`;
+    document.body.appendChild(bar);
+    document.body.classList.add('has-auto-bottom-nav');
+    const menuButton = bar.querySelector('[data-bottom-menu]');
+    menuButton.addEventListener('click', () => { root.querySelector('.auto-menu-toggle')?.click(); menuButton.setAttribute('aria-expanded', String(root.classList.contains('menu-open'))); });
+    // Credits and the photo stay visible in the phone header (header.js fills the same elements).
+    const account = root.querySelector('.auto-account'); const tools = root.querySelector('.auto-header-tools'); const nav = root.querySelector('nav');
+    const phone = window.matchMedia('(max-width:760px)');
+    const place = () => { if (!account || !tools || !nav) return; if (phone.matches) tools.insertBefore(account, tools.querySelector('.auto-menu-toggle')); else nav.appendChild(account); };
+    place(); phone.addEventListener?.('change', place);
   }
 
   if (realSite) connectHansoraAccount();

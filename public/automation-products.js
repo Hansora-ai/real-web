@@ -31,8 +31,9 @@
 
   // ---------- settings ----------
   function renderSettings() {
-    $('#catalog-enabled').checked = Boolean(catalog?.enabled);
-    $('#catalog-reduce-stock').checked = catalog?.config?.reduce_stock === true;
+    // Both are on by default; the setting is stored when the first product is added.
+    $('#catalog-enabled').checked = catalog ? Boolean(catalog.enabled) : true;
+    $('#catalog-reduce-stock').checked = catalog ? catalog.config?.reduce_stock !== false : true;
     const status = $('#sheet-status');
     if (source?.url) {
       status.hidden = false;
@@ -46,12 +47,12 @@
       });
     } else status.hidden = true;
   }
-  async function saveCatalogSettings() {
+  async function saveCatalogSettings({ quiet = false } = {}) {
     const row = { business_id: businessId, tool_type: 'catalog', enabled: $('#catalog-enabled').checked, config: { ...(catalog?.config || {}), reduce_stock: $('#catalog-reduce-stock').checked } };
     if (api.isLocalPreview) { catalog = row; return ui.toast('Saved.'); }
     const result = await api.db.from('automation_tool_configs').upsert(row, { onConflict: 'business_id,tool_type' }).select('id,enabled,config').single();
     if (result.error) { ui.toast(api.displayError(result.error), 'error'); return renderSettings(); }
-    catalog = result.data; ui.toast(row.enabled ? 'Saved. Your AI employee uses the catalog from the next message.' : 'Saved. Your AI employee no longer uses the catalog.');
+    catalog = result.data; if (quiet) return; ui.toast(row.enabled ? 'Saved. Your AI employee uses the catalog from the next message.' : 'Saved. Your AI employee no longer uses the catalog.');
   }
   $('#catalog-enabled').addEventListener('change', saveCatalogSettings);
   $('#catalog-reduce-stock').addEventListener('change', saveCatalogSettings);
@@ -247,6 +248,7 @@
         // Before SQL 12 there is no payment_link column: save everything else and say so.
         if (result.error && 'payment_link' in row && /payment_link/.test(String(result.error.message || ''))) { const { payment_link, ...rest } = row; result = await write(rest); }
         if (result.error) throw result.error;
+        if (!catalog) await saveCatalogSettings({ quiet: true });
         const removed = (editing.removedPhotos || []).map(photo => photo.path).filter(Boolean);
         if (removed.length) api.authenticatedFetch('/.netlify/functions/automation-product-photo', { method: 'POST', body: JSON.stringify({ business_id: businessId, action: 'delete', paths: removed }) }).catch(() => {});
         Object.assign(row, result.data);

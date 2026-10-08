@@ -76,3 +76,32 @@ body[data-automation-page]{padding-top:0!important}
 .auto-user-menu a,.auto-user-menu button{display:block;padding:9px 11px;border:0;border-radius:8px;background:none;color:var(--text,#f5f5f6);font:inherit;font-size:13.5px;text-align:left;text-decoration:none;cursor:pointer}
 .auto-user-menu a:hover,.auto-user-menu button:hover{background:var(--surface-2,rgba(255,255,255,.06))}
 @media(max-width:860px){.auto-account{margin:8px 0 0}.auto-user-menu{top:64px;right:12px}}
+
+/* "Hansora Creative" stands out so people can always find their way back. */
+.auto-header .auto-back{display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:999px;border:1px solid transparent;background:linear-gradient(var(--bg,#08090b),var(--bg,#08090b)) padding-box,linear-gradient(120deg,#8b5cf6,#4f9cff 55%,#22d3ee) border-box;color:var(--text,#f5f5f6);font-weight:600}
+.auto-header .auto-back:hover{background:linear-gradient(120deg,rgba(139,92,246,.18),rgba(79,156,255,.18)) padding-box,linear-gradient(120deg,#8b5cf6,#4f9cff 55%,#22d3ee) border-box}
+.auto-header .auto-back::before{content:"";width:7px;height:7px;margin-right:8px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#22d3ee);box-shadow:0 0 10px rgba(79,156,255,.8)}
+
+/* Phone bottom bar (signed-in pages) */
+.auto-bottom-nav{display:none}
+@media(max-width:760px){
+  body.has-auto-bottom-nav{padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+  body.has-auto-bottom-nav .auto-menu-toggle{display:none}
+  /* Phone header keeps only what fits: brand, credits, photo. The light/dark switch moves into the Menu. */
+  body.has-auto-bottom-nav .auto-header-tools .auto-theme{display:none}
+  body.has-auto-bottom-nav .auto-header nav .auto-theme{display:inline-flex;justify-self:start;margin:6px 0 0}
+  body.has-auto-bottom-nav .auto-brand{min-width:0;flex-shrink:1;overflow:hidden}
+  body.has-auto-bottom-nav .auto-header{gap:10px}
+  body.has-auto-bottom-nav .auto-header-tools{min-width:0;flex-shrink:0}
+  @media(max-width:360px){body.has-auto-bottom-nav .auto-brand small{display:none}}
+  body.has-auto-bottom-nav .auto-header-tools .auto-account{display:inline-flex;margin:0 0 0 6px}
+  body.has-auto-bottom-nav .auto-header nav{max-height:calc(100vh - 60px - 72px - env(safe-area-inset-bottom,0px));overflow:auto;background:var(--bg,#08090b);box-shadow:0 24px 48px -12px rgba(0,0,0,.6)}
+  .auto-bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:60;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--border,rgba(255,255,255,.08));background:var(--glass-strong,rgba(8,9,11,.96));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+  .auto-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;height:56px;border:0;border-radius:14px;background:transparent;color:var(--text-3,#8b8d96);font:600 11.5px/1 inherit;text-decoration:none;cursor:pointer;transition:background .15s,color .15s,transform .12s}
+  .auto-tab svg{width:22px;height:22px}
+  .auto-tab:active{transform:scale(.94);background:var(--surface-2,rgba(255,255,255,.06))}
+  .auto-tab.active,.auto-tab[aria-expanded="true"]{color:var(--text,#f5f5f6)}
+  .auto-tab.active svg{color:var(--accent,#4c8dff)}
+  .auto-tab-burger{display:grid;gap:4px;width:20px}
+  .auto-tab-burger i{display:block;height:2px;border-radius:2px;background:currentColor}
+}

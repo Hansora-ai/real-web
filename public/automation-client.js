@@ -1,6 +1,18 @@
 (function () {
   'use strict';
 
+  // Every server request is announced (before the database client is created, so it sees those too): the UI uses it
+  // to show a spinner on the button that started the request, so no button ever looks frozen.
+  if (!window.__hansoraFetchTracked && typeof window.fetch === 'function') {
+    window.__hansoraFetchTracked = true;
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = function (...args) {
+      const request = nativeFetch(...args);
+      try { window.dispatchEvent(new CustomEvent('hansora:request', { detail: { request } })); } catch (_) {}
+      return request;
+    };
+  }
+
   const SUPABASE_URL = 'https://qmaealblegvcwodlmeht.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFtYWVhbGJsZWd2Y3dvZGxtZWh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzNzMsImV4cCI6MjA3NDIwNTM3M30.bUV6W0zBtkd_6gtfPGBSpskybUmpLC-1znljoDpYy4c';
   const isLocalPreview = window.location.protocol === 'file:' || new URLSearchParams(window.location.search).get('preview') === '1';
