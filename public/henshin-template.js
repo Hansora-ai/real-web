@@ -49,8 +49,8 @@
     video.onerror=()=>{clearTimeout(timer);reject(Error(t('Could not read the example thumbnail.')));};
     video.onloadeddata=()=>{clearTimeout(timer);resolve();};video.src=url;
    });
-   const canvas=document.createElement('canvas'),scale=Math.min(1,420/Math.max(video.videoWidth,video.videoHeight));canvas.width=Math.max(1,Math.round(video.videoWidth*scale));canvas.height=Math.max(1,Math.round(video.videoHeight*scale));canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
-   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.78));if(!blob)throw Error(t('Could not create the example thumbnail.'));return new File([blob],'template-preview.jpg',{type:'image/jpeg'});
+   const canvas=document.createElement('canvas'),scale=Math.min(1,960/Math.max(video.videoWidth,video.videoHeight));canvas.width=Math.max(1,Math.round(video.videoWidth*scale));canvas.height=Math.max(1,Math.round(video.videoHeight*scale));canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
+   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.9));if(!blob)throw Error(t('Could not create the example thumbnail.'));return new File([blob],'template-preview.jpg',{type:'image/jpeg'});
   }finally{video.pause();video.removeAttribute('src');video.load();URL.revokeObjectURL(url);}
  }
  $('editorForm').onsubmit=async event=>{

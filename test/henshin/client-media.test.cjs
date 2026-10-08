@@ -52,6 +52,6 @@ test('Square, 4:3, 3:4 and ultrawide videos keep their proportions during prepar
 test('Library playback gets a small silent preview while the complete video remains available',async()=>{
  const source=fs.readFileSync('test/henshin/fixtures/source.mp4'),original=new File([source],'original.mp4',{type:'video/mp4'}),result=await client().libraryPreview(original);
  assert.deepEqual(Buffer.from(await original.arrayBuffer()),source);assert.ok(result.size<source.length);
- const c=await core();c.FS.writeFile('preview.mp4',new Uint8Array(await result.arrayBuffer()));c.reset();c.ffprobe('-v','error','-show_entries','format=duration:stream=codec_type,width,height','-of','json','preview.mp4','-o','preview.json');
- const data=JSON.parse(new TextDecoder().decode(c.FS.readFile('preview.json')));assert.ok(Number(data.format.duration)<=4.1);assert.deepEqual(data.streams.map(s=>s.codec_type),['video']);assert.equal(Math.max(data.streams[0].width,data.streams[0].height),360);
+ const c=await core();c.FS.writeFile('preview.mp4',new Uint8Array(await result.arrayBuffer()));c.reset();c.ffprobe('-v','error','-show_entries','format=duration:stream=codec_type,width,height,r_frame_rate','-of','json','preview.mp4','-o','preview.json');
+ const data=JSON.parse(new TextDecoder().decode(c.FS.readFile('preview.json')));assert.ok(Number(data.format.duration)<=4.1);assert.deepEqual(data.streams.map(s=>s.codec_type),['video']);assert.equal(Math.max(data.streams[0].width,data.streams[0].height),320);assert.equal(data.streams[0].r_frame_rate,'24/1');
 });
