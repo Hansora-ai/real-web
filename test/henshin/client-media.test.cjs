@@ -55,3 +55,12 @@ test('Library playback gets a small silent preview while the complete video rema
  const c=await core();c.FS.writeFile('preview.mp4',new Uint8Array(await result.arrayBuffer()));c.reset();c.ffprobe('-v','error','-show_entries','format=duration:stream=codec_type,width,height,r_frame_rate','-of','json','preview.mp4','-o','preview.json');
  const data=JSON.parse(new TextDecoder().decode(c.FS.readFile('preview.json')));assert.ok(Number(data.format.duration)<=4.1);assert.deepEqual(data.streams.map(s=>s.codec_type),['video']);assert.equal(Math.max(data.streams[0].width,data.streams[0].height),320);assert.equal(data.streams[0].r_frame_rate,'24/1');
 });
+
+test('Example videos preserve their original encoded H.264 frames, dimensions and frame rate',async()=>{
+ const c=await core(),bytes=fs.readFileSync('test/henshin/fixtures/source.mp4');c.FS.writeFile('original.mp4',bytes);
+ const result=await client().compress(new File([bytes],'original.mp4',{type:'video/mp4'}),{example:true});c.FS.writeFile('example.mp4',new Uint8Array(await result.arrayBuffer()));
+ for(const file of ['original.mp4','example.mp4']){c.reset();assert.equal(c.exec('-i',file,'-map','0:v:0','-c:v','copy','-f','h264',file+'.h264'),0);}
+ assert.deepEqual(Buffer.from(c.FS.readFile('original.mp4.h264')),Buffer.from(c.FS.readFile('example.mp4.h264')));
+ c.reset();c.ffprobe('-v','error','-show_entries','stream=codec_type,width,height,r_frame_rate','-of','json','example.mp4','-o','example.json');
+ const v=JSON.parse(new TextDecoder().decode(c.FS.readFile('example.json'))).streams.find(s=>s.codec_type==='video');assert.equal(v.width,320);assert.equal(v.height,180);assert.equal(v.r_frame_rate,'24/1');
+});

@@ -37,29 +37,33 @@
   });
  }
  function validDuration(d){if(!Number.isFinite(d)||d<=0)throw Error(t('Could not read this video. Try exporting it as MP4 (H.264).'));if(d<4||d>30)throw Error(t('This video is {seconds} seconds. Henshin needs a 4–30 second clip; trim it before uploading.',{seconds:d.toFixed(1)}));return d;}
- async function compress(file){
+ async function compress(file,{example=false}={}){
   if(converted.has(file))return file;
   size(file,200,'video');
   return process(async ff=>{
    await ff.writeFile('source',new Uint8Array(await file.arrayBuffer()));
-   await ff.ffprobe(['-v','error','-show_entries','format=duration:stream=codec_type,duration','-of','json','source','-o','probe.json']);
+   await ff.ffprobe(['-v','error','-show_entries','format=duration:stream=codec_type,codec_name,pix_fmt,duration','-of','json','source','-o','probe.json']);
    let data;try{data=JSON.parse(new TextDecoder().decode(await ff.readFile('probe.json')));}catch{throw Error(t('Could not read this video. Try exporting it as MP4 (H.264).'));}
    const stream=data.streams?.find(s=>s.codec_type==='video');if(!stream)throw Error(t('This file has no readable video track.'));
    const seconds=validDuration(Number.isFinite(Number(stream.duration))?Number(stream.duration):Number(data.format?.duration));
    // Autorotation precedes the filter. Letterbox unusual shapes without cropping
    // or stretching; normalize pixel aspect, resolution, frame rate and codecs.
-   const filter="scale=w='trunc(iw*sar/2)*2':h='trunc(ih/2)*2',setsar=1,pad=w='max(iw,ceil(ih*0.405/2)*2)':h='max(ih,ceil(iw/2.45/2)*2)':x='(ow-iw)/2':y='(oh-ih)/2',scale=w='trunc(sqrt(921600*iw/ih)/2)*2':h='trunc(sqrt(921600*ih/iw)/2)*2',fps=30";
-   const code=await ff.exec(['-i','source','-map','0:v:0','-map','0:a:0?','-t',String(seconds),'-vf',filter,'-c:v','libx264','-pix_fmt','yuv420p','-preset','veryfast','-crf','21','-c:a','aac','-b:a','128k','-movflags','+faststart','prepared.mp4'],180000);
+   const filter=example?"scale=w='trunc(iw*sar/2)*2':h='trunc(ih/2)*2',setsar=1": "scale=w='trunc(iw*sar/2)*2':h='trunc(ih/2)*2',setsar=1,pad=w='max(iw,ceil(ih*0.405/2)*2)':h='max(ih,ceil(iw/2.45/2)*2)':x='(ow-iw)/2':y='(oh-ih)/2',scale=w='trunc(sqrt(921600*iw/ih)/2)*2':h='trunc(sqrt(921600*ih/iw)/2)*2',fps=30";
+   // The displayed example is not model input: retain compatible H.264 frames
+   // exactly instead of resizing and re-encoding an already compressed video.
+   const copy=example&&stream.codec_name==='h264'&&stream.pix_fmt==='yuv420p';
+   const videoArgs=copy?['-c:v','copy']:['-vf',filter,'-c:v','libx264','-pix_fmt','yuv420p','-preset','veryfast','-crf',example?'18':'21'];
+   const code=await ff.exec(['-i','source','-map','0:v:0','-map','0:a:0?','-t',String(seconds),...videoArgs,'-c:a','aac','-b:a','128k','-movflags','+faststart','prepared.mp4'],180000);
    if(code)throw Error(t('Could not convert this video codec. Export it as MP4 (H.264) and try again.'));
    const result=new File([await ff.readFile('prepared.mp4')],(file.name||'source').replace(/\.[^.]+$/,'')+'.mp4',{type:'video/mp4'});
    size(result,100,'processed video');converted.add(result);return result;
   });
  }
- async function prepareVideo(input){
+ async function prepareVideo(input,options={}){
   size(input,200,'video');let file=typed(await inMemory(input,'video')),d;
   // Browser metadata includes the audio tail. Probe and normalize before rejecting
   // a playable clip whose video track itself is still within the duration limit.
-  try{d=validDuration(await duration(file));}catch{file=await compress(file);d=await duration(file);}
+  try{d=validDuration(await duration(file));}catch{file=await compress(file,options);d=await duration(file);}
   return {file,seconds:validDuration(d)};
  }
  async function decode(blob){
