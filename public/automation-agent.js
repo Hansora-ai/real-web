@@ -283,7 +283,7 @@
   }
 
   function initializeLiveTest(business, profile) {
-    const newSession = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    const newSession = () => (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`);
     let session = newSession();
     const engineChoice = () => $('#test-engine')?.value || '';
     const form = $('#test-form');

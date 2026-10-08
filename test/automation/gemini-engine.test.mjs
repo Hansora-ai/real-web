@@ -30,7 +30,8 @@ test('A failing Gemini reply falls back to the ElevenLabs agent, so the customer
   const old = { ...process.env };
   process.env.AUTOMATION_GEMINI_BUSINESSES = 'biz-g'; process.env.GOOGLE_API_KEY = 'k';
   try {
-    assert.equal(aiEngineFor('biz-g'), 'gemini'); assert.equal(aiEngineFor('other'), 'elevenlabs');
+    assert.equal(aiEngineFor('biz-g'), 'gemini'); assert.equal(aiEngineFor('other'), 'gemini');
+    process.env.AUTOMATION_AI_ENGINE = 'elevenlabs'; assert.equal(aiEngineFor('other'), 'elevenlabs'); assert.equal(aiEngineFor('biz-g'), 'gemini'); delete process.env.AUTOMATION_AI_ENGINE;
     process.env.AUTOMATION_ELEVENLABS_BUSINESSES = 'biz-g'; assert.equal(aiEngineFor('biz-g'), 'elevenlabs'); delete process.env.AUTOMATION_ELEVENLABS_BUSINESSES;
     // The direct engine cannot load this business (no database here): it must use the agent instead of failing.
     let agentAsked = false;
@@ -66,4 +67,17 @@ test('Buying stage runs only for chats quiet for 30 minutes that changed since t
     { id: 'test-chat', channel_type: 'test', last_message_at: at(50), sales_updated_at: null }
   ];
   assert.deepEqual((await pickQuietChats(chats, now)).map(chat => chat.id), ['quiet-new', 'quiet-changed']);
+});
+
+test('A voice note reaches the AI as text with its language hint, whichever engine answers', async () => {
+  const { mediaMessage } = await import('../../lib/automation/media.mjs');
+  const voice = mediaMessage({ source: 'audio', media: { kind: 'audio', transcript: 'Բարև, ունե՞ք կանաչ բազկաթոռ', language: 'hye' } });
+  assert.equal(voice.aiText, 'Բարև, ունե՞ք կանաչ բազկաթոռ');
+  assert.match(voice.content, /^🎤 Voice message: /);
+  assert.match(voice.note, /They spoke Armenian/);
+  const bodies = [];
+  const fetchImpl = async (url, options) => { bodies.push(JSON.parse(options.body)); return ok({ candidates: [{ content: { role: 'model', parts: [{ text: 'Այո, ունենք։' }] } }] }); };
+  await askGeminiText({ systemInstruction: 'RULES', text: voice.aiText, context: `Earlier chat\n${voice.note}`, key: 'k', fetchImpl });
+  assert.match(bodies[0].contents[0].parts[0].text, /They spoke Armenian/);
+  assert.match(bodies[0].contents[0].parts[1].text, /կանաչ բազկաթոռ/);
 });
