@@ -49,7 +49,7 @@
    // Autorotation precedes the filter. Letterbox unusual shapes without cropping
    // or stretching; normalize pixel aspect, resolution, frame rate and codecs.
    const filter="scale=w='trunc(iw*sar/2)*2':h='trunc(ih/2)*2',setsar=1,pad=w='max(iw,ceil(ih*0.405/2)*2)':h='max(ih,ceil(iw/2.45/2)*2)':x='(ow-iw)/2':y='(oh-ih)/2',scale=w='trunc(sqrt(921600*iw/ih)/2)*2':h='trunc(sqrt(921600*ih/iw)/2)*2',fps=30";
-   const code=await ff.exec(['-i','source','-map','0:v:0','-map','0:a:0?','-t',String(seconds),'-vf',filter,'-c:v','libx264','-pix_fmt','yuv420p','-preset','veryfast','-crf','25','-c:a','aac','-b:a','128k','-movflags','+faststart','prepared.mp4'],180000);
+   const code=await ff.exec(['-i','source','-map','0:v:0','-map','0:a:0?','-t',String(seconds),'-vf',filter,'-c:v','libx264','-pix_fmt','yuv420p','-preset','veryfast','-crf','21','-c:a','aac','-b:a','128k','-movflags','+faststart','prepared.mp4'],180000);
    if(code)throw Error(t('Could not convert this video codec. Export it as MP4 (H.264) and try again.'));
    const result=new File([await ff.readFile('prepared.mp4')],(file.name||'source').replace(/\.[^.]+$/,'')+'.mp4',{type:'video/mp4'});
    size(result,100,'processed video');converted.add(result);return result;
@@ -57,7 +57,9 @@
  }
  async function prepareVideo(input){
   size(input,200,'video');let file=typed(await inMemory(input,'video')),d;
-  try{d=await duration(file);}catch{file=await compress(file);d=await duration(file);}
+  // Browser metadata includes the audio tail. Probe and normalize before rejecting
+  // a playable clip whose video track itself is still within the duration limit.
+  try{d=validDuration(await duration(file));}catch{file=await compress(file);d=await duration(file);}
   return {file,seconds:validDuration(d)};
  }
  async function decode(blob){
@@ -92,7 +94,8 @@
  async function libraryPreview(file){
   return process(async ff=>{
    await ff.writeFile('source',new Uint8Array(await file.arrayBuffer()));
-   const code=await ff.exec(['-i','source','-map','0:v:0','-an','-t','4','-vf',"scale=w='if(gte(iw,ih),360,-2)':h='if(gte(iw,ih),-2,360)',fps=12",'-c:v','libx264','-pix_fmt','yuv420p','-preset','veryfast','-crf','30','-movflags','+faststart','preview.mp4'],60000);
+   // Clear enough for large cards, without enlarging low-resolution originals.
+   const code=await ff.exec(['-i','source','-map','0:v:0','-an','-t','4','-vf',"scale=w='if(gte(iw,ih),min(960,trunc(iw/2)*2),-2)':h='if(gte(iw,ih),-2,min(960,trunc(ih/2)*2))',fps=24",'-c:v','libx264','-pix_fmt','yuv420p','-preset','veryfast','-crf','23','-movflags','+faststart','preview.mp4'],60000);
    if(code)throw Error(t('Could not create the library preview.'));
    return new File([await ff.readFile('preview.mp4')],'template-motion-preview.mp4',{type:'video/mp4'});
   });
