@@ -57,7 +57,9 @@
  }
  async function prepareVideo(input){
   size(input,200,'video');let file=typed(await inMemory(input,'video')),d;
-  try{d=await duration(file);}catch{file=await compress(file);d=await duration(file);}
+  // Browser metadata includes the audio tail. Probe and normalize before rejecting
+  // a playable clip whose video track itself is still within the duration limit.
+  try{d=validDuration(await duration(file));}catch{file=await compress(file);d=await duration(file);}
   return {file,seconds:validDuration(d)};
  }
  async function decode(blob){

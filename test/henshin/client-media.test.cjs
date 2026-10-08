@@ -3,7 +3,7 @@ if(!globalThis.self)globalThis.self={location:{href:'file:///henshin/ffmpeg-core
 const createCore=require('../../public/vendor/henshin/ffmpeg-core.js');
 const wasm=fs.readFileSync(path.resolve('public/vendor/henshin/ffmpeg-core.wasm'));
 const core=()=>createCore({wasmBinary:wasm});
-function client(){
+function client(durations=[]){
  class FFmpeg{
   async load(){this.core=await core();}
   async writeFile(p,b){this.core.FS.writeFile(p,b);}
@@ -12,7 +12,8 @@ function client(){
   async exec(args,timeout){this.core.reset();this.core.setTimeout(timeout);return this.core.exec(...args);}
   terminate(){this.core=null;}
  }
- const window={FFmpegWASM:{FFmpeg}},context={window,Blob,File,Uint8Array,TextDecoder,URL,setTimeout,clearTimeout};
+ const document={createElement:()=>({load(){},removeAttribute(){},set src(value){this.duration=durations.shift();queueMicrotask(()=>this.onloadedmetadata());}})};
+ const window={FFmpegWASM:{FFmpeg}},context={window,document,Blob,File,Uint8Array,TextDecoder,URL,setTimeout,clearTimeout};
  vm.runInNewContext(fs.readFileSync('public/henshin-media.js','utf8'),context);return window.HenshinMedia;
 }
 test('A wide AVI becomes a model-compatible H.264 MP4 without losing duration or audio',async()=>{
@@ -25,6 +26,18 @@ test('A wide AVI becomes a model-compatible H.264 MP4 without losing duration or
 test('An overlong video is rejected instead of silently cutting off its ending',async()=>{
  const c=await core();c.reset();assert.equal(c.exec('-f','lavfi','-i','color=c=black:s=32x32:r=1','-t','31','-c:v','libx264','long.mp4'),0);
  await assert.rejects(client().compress(new File([c.FS.readFile('long.mp4')],'long.mp4',{type:'video/mp4'})),/31.*4–30/);
+});
+
+test('A video below 30 seconds is accepted when its Opus audio tail extends past 30 seconds',async()=>{
+ const c=await core(),bytes=fs.readFileSync('test/henshin/fixtures/audio-tail.mp4');
+ c.FS.writeFile('original.mp4',bytes);c.reset();c.ffprobe('-v','error','-show_entries','format=duration:stream=codec_type,duration','-of','json','original.mp4','-o','original.json');
+ const original=JSON.parse(new TextDecoder().decode(c.FS.readFile('original.json')));
+ assert.ok(Number(original.format.duration)>30);assert.ok(Number(original.streams.find(s=>s.codec_type==='video').duration)<30);
+ const result=await client([Number(original.format.duration),29.934]).prepareVideo(new File([bytes],'audio-tail.mp4',{type:'video/mp4'}));
+ c.FS.writeFile('prepared.mp4',new Uint8Array(await result.file.arrayBuffer()));c.reset();c.ffprobe('-v','error','-show_entries','format=duration:stream=codec_type,codec_name','-of','json','prepared.mp4','-o','prepared.json');
+ const prepared=JSON.parse(new TextDecoder().decode(c.FS.readFile('prepared.json')));
+ assert.ok(Number(prepared.format.duration)<=30);assert.ok(Number(prepared.format.duration)>29.9);
+ assert.deepEqual(prepared.streams.map(s=>s.codec_name),['h264','aac']);assert.ok(result.seconds<=30);
 });
 
 
