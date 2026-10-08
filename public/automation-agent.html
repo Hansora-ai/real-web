@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="automation-header.css?v=20261008c"><link rel="stylesheet" href="automation-ui.css?v=20261008b">
   <link rel="stylesheet" href="automation-voice-test.css?v=20261005">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261008b"></script><script defer src="automation-header.js?v=20261008c"></script><script defer src="automation-voice-test.js?v=20261005-isolation"></script><script defer src="automation-agent.js?v=20261005-voice-isolation"></script>
+  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261008b"></script><script defer src="automation-header.js?v=20261008c"></script><script defer src="automation-voice-test.js?v=20261005-isolation"></script><script defer src="automation-agent.js?v=20261008-engine"></script>
 </head>
 <body class="ui" data-automation-page="agent">
   <div data-automation-header></div>
@@ -90,6 +90,7 @@
           <section class="ui-card" id="live-test">
             <div class="ui-card-head"><div><h2 class="ui-h2">Live test</h2><p>Chat as a customer. Nothing is sent or saved.</p></div><button class="ui-btn ghost sm" id="clear-test" type="button" data-icon="refresh">Clear</button></div>
             <div class="ui-chat" id="test-conversation" aria-live="polite"><div class="ui-bubble assistant">Hi! I’m your AI employee. Ask me anything a customer would.</div></div>
+            <label class="test-engine"><span>AI engine</span><select id="test-engine"><option value="">Current</option><option value="compare">Compare: ElevenLabs vs Gemini direct</option><option value="gemini">Gemini direct</option><option value="elevenlabs">ElevenLabs agent</option></select></label>
             <form class="ui-composer" id="test-form"><label class="sr-only" for="test-message">Test message</label><textarea id="test-message" rows="1" placeholder="Ask a customer question…"></textarea><button class="ui-btn accent icon" type="submit" aria-label="Send" data-icon="send"></button></form>
           </section>
 

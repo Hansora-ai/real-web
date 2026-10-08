@@ -84,3 +84,10 @@ function = "inject-bottom-nav-inline"
   for = "/automation-*.css"
   [headers.values]
   Cache-Control = "public, max-age=300, stale-while-revalidate=604800"
+
+[functions."automation-test-chat"]
+  timeout = 26
+
+# Buying stage of quiet chats (30 min without messages), once per conversation change
+[functions."automation-sales-stage"]
+  schedule = "*/10 * * * *"

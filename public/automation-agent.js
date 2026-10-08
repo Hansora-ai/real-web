@@ -283,6 +283,7 @@
   }
 
   function initializeLiveTest(business, profile) {
+    const engineChoice = () => $('#test-engine')?.value || '';
     const form = $('#test-form');
     const input = $('#test-message');
     const conversation = $('#test-conversation');
@@ -311,7 +312,7 @@
           dots.remove(); append(answer, 'assistant');
           return;
         }
-        const response = await api.authenticatedFetch('/.netlify/functions/automation-test-chat', {method:'POST', body:JSON.stringify({business_id:business.id, message:question})});
+        const response = await api.authenticatedFetch('/.netlify/functions/automation-test-chat', {method:'POST', body:JSON.stringify({business_id:business.id, message:question, ...(engineChoice() === 'compare' ? { compare:true } : engineChoice() ? { engine:engineChoice() } : {})})});
         const result = await response.json().catch(() => ({}));
         if (response.status === 402) { dots.remove(); append('You’re out of credits. Buy credits to keep testing — your AI employee also stops answering customers at 0⚡.', 'action'); return; }
         if (!response.ok || !result.reply) throw new Error(result.error || 'test_chat_failed');
@@ -319,7 +320,14 @@
         // Test chat runs actions in test mode; show which ones the AI used so owners can check the behaviour.
         const labels = {check_availability:'Checked availability',create_booking:'Booking (test, not saved)',cancel_booking:'Cancellation (test)',create_order:'Order (test, not saved)',create_lead:'Lead (test, not saved)',handoff_to_human:'Handoff to a person (test)'};
         if (Array.isArray(result.actions)) result.actions.forEach(action => append(`${labels[action.name] || action.name}${action.ok ? '' : ' — not completed'}`, 'action'));
-        append(result.reply, 'assistant');
+        if (result.compare) {
+          // Same question, both engines: compare quality side by side (actions ran in test mode, nothing saved).
+          for (const [key, label] of [['elevenlabs', 'ElevenLabs agent'], ['gemini', 'Gemini direct']]) {
+            const item = result.compare[key];
+            append(`${label}${item?.ms ? ` · ${(item.ms / 1000).toFixed(1)} s` : ''}${item?.fallback ? ' · fell back to ElevenLabs' : ''}`, 'action');
+            append(item?.text || `No answer (${item?.error || 'error'})`, 'assistant');
+          }
+        } else append(result.reply, 'assistant');
         await loadUsageSummary(business.id);
       } catch (error) { dots.remove(); append(`Unable to answer: ${api.displayError(error)}`, 'assistant'); }
       finally { button.disabled = false; input.focus(); }
