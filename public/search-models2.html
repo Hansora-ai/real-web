@@ -5578,7 +5578,7 @@ function createResultCard(data) {
             created_at: row.created_at || ''
           }, { prepend: false });
           const statusLower = String(status || '').toLowerCase();
-          if (controller && runId && taskId && !row.result_url && (statusLower === 'processing' || statusLower === 'pending' || !statusLower)) {
+          if (controller && runId && !row.result_url && (statusLower === 'processing' || statusLower === 'pending' || !statusLower)) {
             resumePairs.push({ row, controller, runId, taskId });
           }
         }
@@ -5934,7 +5934,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     if (token && token.cancelled) return;
     if (document.visibilityState === 'hidden') continue;
     try {
-      if (taskId) {
+      if (taskId || (checker || 'kie-check') === 'kie-check') {
         const nb = await __mjFetchNbCheck({ taskId, uid: currentUser.id, runId, checker: checker || 'kie-check' });
         const nbStatus = String(nb?.js?.status || '').toLowerCase();
         const nbFailed = !!nb?.js?.failed || nbStatus.includes('fail') || nbStatus.includes('cancel');

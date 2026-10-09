@@ -12,7 +12,7 @@ process.env.SITE_BASE='https://hansora.test';
 process.env.DEPLOY_PRIME_URL='https://preview.test';
 const nano=require('../../netlify/functions/run-nano-banana-2-1.js').handler;
 const flash=require('../../netlify/functions/run-seedream-5-flash.js').handler;
-function mock({balance=10,providerCode=200,interfere=false,earlyCallback=false}={}){
+function mock({balance=10,providerCode=200,missingTask=false,interfere=false,earlyCallback=false}={}){
  const rows=new Map(),payloads=[];let credit=balance,collided=false;
  return {rows,payloads,get balance(){return credit;},async fetch(url,options={}){
   const u=new URL(url),body=options.body?JSON.parse(options.body):null;
@@ -20,7 +20,7 @@ function mock({balance=10,providerCode=200,interfere=false,earlyCallback=false}=
   if(u.hostname==='api.kie.ai'){
    payloads.push(body);
    if(earlyCallback){const row=[...rows.values()][0];row.meta={...row.meta,status:'done',task_id:'task-1'};row.result_url='https://result.test/image.png';}
-   return Response.json({code:providerCode,msg:providerCode===200?'success':'rejected',data:providerCode===200?{taskId:'task-1'}:null});
+   return Response.json({code:providerCode,msg:providerCode===200?'success':'rejected',data:providerCode===200?(missingTask?{}:{taskId:'task-1'}):null});
   }
   if(u.pathname==='/rest/v1/profiles'){
    if(options.method==='PATCH'){
@@ -64,6 +64,12 @@ test('not enough credits rejects before provider submission; invalid sessions ca
 });
 test('provider rejection refunds reserved real credit amount',async()=>{
  await withMock({providerCode:422},async m=>{const r=await nano(event({resolution:'4K'}));assert.equal(r.statusCode,502);assert.equal(m.balance,10);assert.equal([...m.rows.values()][0].meta.refunded,true);});
+});
+test('HTTP 200 without a task ID fails and refunds reserved credits for new image models',async()=>{
+ for(const handler of [nano,flash])await withMock({missingTask:true},async m=>{
+  const r=await handler(event({}));assert.equal(r.statusCode,502);assert.equal(m.balance,10);
+  const row=[...m.rows.values()][0];assert.equal(row.meta.status,'failed');assert.equal(row.meta.refunded,true);
+ });
 });
 test('retry/concurrent identical run submits and charges only once',async()=>{
  await withMock({},async m=>{

@@ -274,20 +274,20 @@ exports.handler = async (event) => {
 
     const text = await create.text();
     let js = {}; try { js = JSON.parse(text); } catch(_e) { js = { raw: text }; }
-    const taskId = js.taskId || js.id || (js.data && js.data.taskId) || (js.data && js.data.id) || null;
+    const taskId = require('../../lib/kie/submission.cjs').acceptedTaskId(js);
 
-    if (!create.ok){
+    if (!create.ok || !taskId){
       // update meta status = failed_create (best effort)
       try{
         if (SUPABASE_URL && SERVICE_KEY && row_id){
           await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(row_id)}`, {
             method:'PATCH',
             headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
-            body: JSON.stringify({ meta: { source:'nano-banana', run_id, model:'nano-banana', status:'create_failed', task_id: taskId, raw: js, refund_amount: cost } }),
+            body: JSON.stringify({ meta: { source:'nano-banana', run_id, model:'nano-banana', status:'failed', failed:true, error:'kie_create_rejected_or_missing_task_id', task_id: taskId, raw: js, refund_amount: cost } }),
           });
         }
       }catch{}
-      return json(create.status || 500, { ok:false, submitted:false, error:'create_failed', status:create.status, response: js, version: VERSION_TAG });
+      return json(create.ok ? 502 : (create.status || 502), { ok:false, submitted:false, error:'create_failed', status:create.status, response: js, version: VERSION_TAG });
     }
 
     // Update meta status=processing + task_id (best effort)

@@ -33,7 +33,10 @@ exports.handler = async (event) => {
     ids.run_id = ids.run_id || row.meta?.run_id || "";
     ids.taskId = ids.taskId || row.meta?.task_id || row.meta?.taskId || "";
 
-    if (!ids.taskId) return json(200, { ok: false, status: "pending", error: "missing_task_id" });
+    if (!ids.taskId) {
+      const recovery = await require('../../lib/kie/submission.cjs').resolveMissingTask(row.id);
+      return json(200, { ok: false, ...recovery });
+    }
 
     const inputUrls = collectKnownInputUrls(row);
     const state = await fetchKieState(ids.taskId, inputUrls, row.meta?.source_feature === "henshin" || row.meta?.provider_api === "market");

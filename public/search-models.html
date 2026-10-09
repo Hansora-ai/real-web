@@ -6570,7 +6570,7 @@ function createResultCard(data) {
             const taskId = String(meta.task_id || meta.taskId || '').trim();
             const engine = String(meta.engine || '').toLowerCase();
             if (row && row.result_url) return true;
-            if (!taskId && /^(pending|requesting|uploading|submitting)$/.test(status)) return false;
+            if (!taskId && /^(pending|requesting|uploading|submitting)$/.test(status) && !meta.run_id) return false;
             if (!taskId && engine === 'sora2' && status === 'processing') return false;
             return true;
           })
@@ -6599,7 +6599,7 @@ function createResultCard(data) {
             created_at: row.created_at || ''
           }, { prepend: false, deferDesktopLayout: true });
           const statusLower = String(status || '').toLowerCase();
-          if (controller && runId && taskId && !row.result_url && (statusLower === 'processing' || statusLower === 'pending' || !statusLower)) {
+          if (controller && runId && !row.result_url && (statusLower === 'processing' || statusLower === 'pending' || !statusLower)) {
             resumePairs.push({ row, controller, runId, taskId });
           }
         }
@@ -6972,7 +6972,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     if (token && token.cancelled) return;
     if (document.visibilityState === 'hidden') continue;
     try {
-      if (taskId) {
+      if (taskId || (checker || 'kie-check') === 'kie-check') {
         const nb = await __mjFetchNbCheck({ taskId, uid: currentUser.id, runId, checker: checker || 'kie-check' });
         const nbStatus = String(nb?.js?.status || '').toLowerCase();
         const nbFailed = !!nb?.js?.failed || nbStatus.includes('fail') || nbStatus.includes('cancel');
