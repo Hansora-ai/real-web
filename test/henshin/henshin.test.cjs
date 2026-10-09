@@ -213,20 +213,22 @@ test('Library deletion rejects visitors, unconfirmed owners and non-template row
   assert.equal((await handler({httpMethod:'DELETE',headers:{},body:JSON.stringify({id})})).statusCode,401);
  }finally{global.fetch=original;}
 });
-test('Confirmed owner deletion unpublishes only the requested template and preserves its recipe',async()=>{
- const original=global.fetch,id='aaaaaaaa-1111-2222-3333-aaaaaaaaaaaa',meta={source_feature:'henshin-template',published:true,source_video_url:url,reference_image_urls:body.image_urls,transformation_prompt:'Change the jacket',mode:'swap',resolution:'1080p'};let saved;
+test('Confirmed owner deletion removes the requested template files and database row',async()=>{
+ const original=global.fetch,id='aaaaaaaa-1111-2222-3333-aaaaaaaaaaaa',meta={source_feature:'henshin-template',published:true,source_video_url:url,reference_image_urls:body.image_urls,transformation_prompt:'Change the jacket',mode:'swap',resolution:'1080p'};let saved,deleted=false,files;
  global.fetch=async(raw,options={})=>{
   const u=new URL(raw);if(u.pathname.includes('/auth/'))return response({id:'owner',email:common.OWNER,email_confirmed_at:'today'});
+  if(u.pathname.includes('/storage/')){assert.equal(options.method,'DELETE');files=JSON.parse(options.body).prefixes;return response([]);}
   assert.equal(u.searchParams.get('id'),'eq.'+id);assert.equal(u.searchParams.get('user_id'),'eq.owner');assert.equal(u.searchParams.get('provider'),'eq.Henshin Template');assert.equal(u.searchParams.get('meta->>source_feature'),'eq.henshin-template');
   if(options.method==='PATCH'){saved=JSON.parse(options.body);return response([{id,meta:saved.meta}]);}
+  if(options.method==='DELETE'){deleted=true;return response([{id}]);}
   return response([{id,meta}]);
  };
- try{const result=await require('../../netlify/functions/henshin-templates').handler({httpMethod:'DELETE',headers:{authorization:'Bearer test'},body:JSON.stringify({id})});assert.equal(result.statusCode,200);assert.equal(saved.meta.published,false);assert.ok(saved.meta.deleted_at);assert.deepEqual({...saved.meta,published:true,deleted_at:undefined},{...meta,deleted_at:undefined});assert.equal(saved.result_url,undefined);}finally{global.fetch=original;}
+ try{const result=await require('../../netlify/functions/henshin-templates').handler({httpMethod:'DELETE',headers:{authorization:'Bearer test'},body:JSON.stringify({id})});assert.equal(result.statusCode,200);assert.equal(saved.meta.published,false);assert.equal(saved.meta.deleting,true);assert.deepEqual(files,['source.mp4','source.png']);assert.equal(deleted,true);}finally{global.fetch=original;}
 });
 
-test('The public library lists only published templates and allows brief shared caching',async()=>{
+test('The public library lists only published templates and does not retain deleted entries in shared caches',async()=>{
  const original=global.fetch;global.fetch=async raw=>{const u=new URL(raw);assert.equal(u.searchParams.get('provider'),'eq.Henshin Template');assert.equal(u.searchParams.get('meta->>published'),'eq.true');return response([{id:'template',prompt:'Example',result_url:url,meta:{poster_url:body.image_urls[0],aspect_ratio:9/16,source_video_url:url,reference_image_urls:body.image_urls}}]);};
- try{const result=await require('../../netlify/functions/henshin-templates').handler({httpMethod:'GET',headers:{}});assert.equal(result.statusCode,200);assert.match(result.headers['Cache-Control'],/s-maxage=10/);const item=JSON.parse(result.body).templates[0];assert.equal(item.poster_url,body.image_urls[0]);assert.equal(item.aspect_ratio,9/16);}finally{global.fetch=original;}
+ try{const result=await require('../../netlify/functions/henshin-templates').handler({httpMethod:'GET',headers:{}});assert.equal(result.statusCode,200);assert.equal(result.headers['Cache-Control'],'no-store');const item=JSON.parse(result.body).templates[0];assert.equal(item.poster_url,body.image_urls[0]);assert.equal(item.aspect_ratio,9/16);}finally{global.fetch=original;}
 });
 
 

@@ -11,8 +11,12 @@
  const CACHE_KEY='hansora:henshin-templates:v2';let templateCache=null,libraryMoreBusy=false;
  try{templateCache=JSON.parse(sessionStorage.getItem(CACHE_KEY)||'null');if(!Array.isArray(templateCache?.templates))templateCache=null;}catch{}
  function cacheTemplates(templates,nextOffset=null){templateCache={templates,nextOffset,at:Date.now()};try{sessionStorage.setItem(CACHE_KEY,JSON.stringify(templateCache));}catch{}}
+ function libraryChanged(){libraryEpoch++;templateCache=null;try{sessionStorage.removeItem(CACHE_KEY);}catch{}Promise.resolve(templatePromise).catch(()=>{}).then(()=>{if(!$('libraryView').hidden)loadTemplates();});}
+ window.addEventListener('storage',e=>{if(e.key==='hansora:henshin-templates-changed')libraryChanged();});
+ window.addEventListener('pageshow',e=>{if(e.persisted)libraryChanged();});
  async function templatePage(offset=0){
-  const r=await fetch('/.netlify/functions/henshin-templates?offset='+offset,{signal:AbortSignal.timeout(12000)}),data=await r.json();
+  const s=await session(),isOwner=owner(s);
+  const r=await fetch('/.netlify/functions/henshin-templates?offset='+offset+(isOwner?'&pending=1':''),{cache:'no-store',signal:AbortSignal.timeout(12000),headers:isOwner?{Authorization:'Bearer '+s.access_token}:{}}),data=await r.json();
   if(!r.ok||!data.ok||!Array.isArray(data.templates))throw Error(data.error||t('Could not load the trendy examples.'));return data;
  }
  function fetchTemplates(){
@@ -270,10 +274,12 @@
   $('libraryMore').hidden=templateCache?.nextOffset==null;
   if(!templates.length&&!append){libraryEmpty(t('No templates yet'),t('Videos added by Hansora will appear here. Choose one to recreate its motion with your own references.'));return;}
    for(const template of templates){
+    if(template.deleting&&!libraryOwner)continue;
     const card=document.createElement('article');card.className='template';
     const v=document.createElement('video');v.dataset.src=template.preview_url||template.video_url;v.muted=true;v.loop=true;v.playsInline=true;v.preload='none';
-    if(template.poster_url)v.poster=template.poster_url;v.style.aspectRatio=Number(template.aspect_ratio)||9/16;v.setAttribute('aria-label',t('{title} motion preview',{title:t(template.title)}));
+    if(template.poster_url&&!template.deleting)v.poster=template.poster_url;v.style.aspectRatio=Number(template.aspect_ratio)||9/16;v.setAttribute('aria-label',t('{title} motion preview',{title:t(template.title)}));
     v.addEventListener('loadedmetadata',()=>{if(v.videoWidth&&v.videoHeight)v.style.aspectRatio=v.videoWidth/v.videoHeight;});
+    if(template.deleting)v.dataset.src='';
     const duration=document.createElement('span');duration.className='template-duration';duration.textContent=(i18n?.seconds(Math.round(Number(template.duration)))||Number(template.duration).toFixed(0)+'s');
     const meta=document.createElement('div');meta.className='template-meta';
     const title=document.createElement('h3');title.textContent=t(template.title);
@@ -284,16 +290,18 @@
      finally{button.disabled=false;}
     });
     button.className='template-recreate';
-    const open=action('',()=>preview(template));open.className='template-open';open.setAttribute('aria-label',t('View {title}',{title:t(template.title)}));card.append(open);meta.append(title,button);card.append(v,duration,meta);
+    if(template.deleting){button.disabled=true;title.textContent=t('Deletion pending. Retry using the delete button.');}
+    const open=action('',()=>preview(template));open.disabled=!!template.deleting;open.className='template-open';open.setAttribute('aria-label',t('View {title}',{title:t(template.title)}));card.append(open);meta.append(title,button);card.append(v,duration,meta);
     if(libraryOwner){
+     const edit=document.createElement('a');edit.className='template-edit';edit.href=(i18n?.href('/henshin-template.html')||'/henshin-template.html')+'?id='+encodeURIComponent(template.id);edit.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z"/></svg>';edit.setAttribute('aria-label',t('Edit template'));edit.title=t('Edit template');if(!template.deleting)card.append(edit);
      const remove=action('',async()=>{
       remove.disabled=true;
-      try{await request('henshin-templates',{id:template.id},'DELETE');libraryEpoch++;cacheTemplates((templateCache?.templates||templates).filter(t=>t.id!==template.id),templateCache?.nextOffset==null?null:Math.max(0,templateCache.nextOffset-1));libraryObserver.unobserve(v);v.pause();v.removeAttribute('src');v.load();card.remove();syncLibraryPlayback();$('templateStatus').textContent=t('Template deleted from the library.');if(!$('templatesList').children.length)libraryEmpty(t('No templates yet'),t('Videos added by Hansora will appear here.'));}
+      try{await request('henshin-templates',{id:template.id},'DELETE');libraryEpoch++;cacheTemplates((templateCache?.templates||templates).filter(t=>t.id!==template.id),templateCache?.nextOffset==null?null:Math.max(0,templateCache.nextOffset-1));try{localStorage.setItem('hansora:henshin-templates-changed',String(Date.now()));}catch{}libraryObserver.unobserve(v);v.pause();v.removeAttribute('src');v.load();card.remove();syncLibraryPlayback();$('templateStatus').textContent=t('Template and its files deleted.');if(!$('templatesList').children.length)libraryEmpty(t('No templates yet'),t('Videos added by Hansora will appear here.'));}
       catch(e){$('templateStatus').textContent=t(e.message);remove.disabled=false;}
      });
      remove.className='template-delete';remove.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>';remove.setAttribute('aria-label',t('Delete {title}',{title:t(template.title)}));remove.title=t('Delete template');card.append(remove);
     }
-    $('templatesList').append(card);libraryObserver.observe(v);
+    $('templatesList').append(card);if(!template.deleting)libraryObserver.observe(v);
    }
  }
  $('libraryMore').onclick=loadMoreTemplates;

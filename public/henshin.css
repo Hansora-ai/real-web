@@ -371,6 +371,9 @@ dialog::backdrop { background: #000c; }
 .template-delete { position:absolute; top:8px; left:8px; z-index:1; display:grid; place-items:center; width:28px; height:28px; padding:0; background:#101116d9; border:1px solid #ffffff25; border-radius:8px; }
 .template-delete svg { width:15px; height:15px; }
 .template-delete:hover:not(:disabled) { color:#ffbdc3; background:#772330; }
+.template-edit { position:absolute; top:8px; left:42px; z-index:1; display:grid; place-items:center; width:28px; height:28px; padding:0; color:#eee; background:#101116d9; border:1px solid #ffffff25; border-radius:8px; }
+.template-edit svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.7; }
+.template-edit:hover { background:#554284; color:white; }
 .detail-content > section:not(.detail-inputs), .detail-facts { padding:12px; border:1px solid #ffffff0e; border-radius:12px; background:#ffffff06; }
 .detail-section-head .text-button { padding:5px 8px; border:1px solid #ffffff20; border-radius:7px; font-size:10px; color:#eceaf3; }
 .detail-actions { grid-template-columns:1fr; }
