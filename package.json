@@ -8,7 +8,8 @@
     "test:mcp": "node --test test/hansora-mcp/*.test.mjs",
     "test:henshin": "node --test test/henshin/*.test.cjs",
     "build:functions": "node scripts/build-netlify-functions.mjs",
-    "test:runtime": "node --test test/netlify/*.test.mjs"
+    "test:runtime": "node --test test/netlify/*.test.mjs",
+    "test:kie": "node --test test/kie/*.test.*"
   },
   "dependencies": {
     "@modelcontextprotocol/core": "^2.0.0",
@@ -22,6 +23,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@netlify/zip-it-and-ship-it": "16.2.3"
   }
 }

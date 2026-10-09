@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,9 +9,11 @@ import { buildFunctions } from '../../scripts/build-netlify-functions.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
-test('Netlify bundles all 166 endpoints on API v2 with routes, background jobs and schedules preserved', async () => {
+test('Netlify bundles all endpoints on API v2 with routes, background jobs and schedules preserved', async () => {
   const generated = await buildFunctions();
-  assert.equal(generated.length, 166);
+  const sources = (await readdir(join(root, 'netlify/functions'), { withFileTypes: true }))
+    .filter(entry => entry.isFile() && /\.(?:mjs|cjs|js)$/.test(entry.name));
+  assert.equal(generated.length, sources.length);
   const dir = await mkdtemp(join(tmpdir(), 'hansora-runtime-test-'));
   try {
     const functions = await zipFunctions(join(root, 'netlify/runtime-functions'), dir, {
@@ -37,6 +39,7 @@ test('Netlify bundles all 166 endpoints on API v2 with routes, background jobs a
     assert.equal(get('audio-eleven-background').invocationMode, 'background');
     assert.equal(get('henshin-finish-background').invocationMode, 'background');
     assert.equal(get('henshin-sweep').schedule, '* * * * *');
+    assert.equal(get('kie-missing-task-sweep').schedule, '* * * * *');
     assert.equal(get('dispatch-unlimited-queue').schedule, '* * * * *');
     assert.equal(get('automation-flow-jobs').schedule, '* * * * *');
     assert.ok(JSON.stringify(get('hansora-mcp').routes).includes('/mcp'));
