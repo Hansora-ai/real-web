@@ -385,11 +385,13 @@
     let whatsapp = null; let phoneReady = false;
     try { whatsapp = JSON.parse(localStorage.getItem('hansora_whatsapp_connection_preview') || 'null'); } catch (_) {}
     try { phoneReady = localStorage.getItem('hansora_automation_phone_ready') === '1'; } catch (_) {}
+    let tiktokReady = false; try { tiktokReady = Boolean(localStorage.getItem('hansora_tiktok_connection_preview')); } catch (_) {}
     business.automation_channel_connections = [
       {channel_type:'instagram_dm',setup_order:1,status:'connected'},
       {channel_type:'instagram_comments',setup_order:2,status:'connecting'},
       {channel_type:'whatsapp',setup_order:3,status:whatsapp?.status === 'connected' ? 'connected' : 'not_connected'},
-      {channel_type:'phone',setup_order:4,status:phoneReady ? 'connecting' : 'not_connected'}
+      {channel_type:'phone',setup_order:4,status:phoneReady ? 'connecting' : 'not_connected'},
+      {channel_type:'tiktok',setup_order:7,status:tiktokReady ? 'connected' : 'not_connected'}
     ];
     return business;
   }
