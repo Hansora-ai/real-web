@@ -265,3 +265,9 @@ button.node-menu:hover{border-color:var(--border-2);background:var(--surface-3);
 @keyframes bd-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 .flow-lines .moving{opacity:.18}
 .flow-lines path.edge-hit{cursor:grab}
+.flow-platform{flex:none;padding:3px;border:1px solid var(--border);border-radius:999px}
+.flow-platform button:disabled{opacity:.55;cursor:default}
+.flow-platform em{font-style:normal;font-size:10px;padding:1px 6px;border-radius:999px;background:var(--surface-3);color:var(--text-3)}
+body[data-comment-platform="tiktok"] .flow-channel-mark{background:#111;color:#ff2d55;filter:drop-shadow(-1px -1px 0 #25f4ee)}
+@media(max-width:640px){.flow-platform{order:3}}
+.flow-platform .ui-platform-icon{display:inline-flex;width:14px;height:14px}.flow-platform .ui-platform-icon svg{width:14px;height:14px}
