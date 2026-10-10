@@ -9,9 +9,9 @@
   <script src="automation-theme.js?v=20261008"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="automation-header.css?v=20261008c"><link rel="stylesheet" href="automation-ui.css?v=20261010"><link rel="stylesheet" href="automation-flow.css?v=20261010">
+  <link rel="stylesheet" href="automation-header.css?v=20261008c"><link rel="stylesheet" href="automation-ui.css?v=20261010c"><link rel="stylesheet" href="automation-flow.css?v=20261010">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010"></script><script defer src="automation-header.js?v=20261008c"></script><script defer src="automation-comments.js?v=20261007-polish"></script><script defer src="automation-comments-platform.js?v=20261010"></script>
+  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010"></script><script defer src="automation-header.js?v=20261008c"></script><script defer src="automation-comments.js?v=20261007-polish"></script><script defer src="automation-platform-switch.js?v=20261010c"></script>
 </head>
 <body class="ui ui-app" data-automation-page="comments">
   <div data-automation-header></div>
@@ -25,7 +25,7 @@
           <span class="flow-channel-mark" data-icon="comment"></span>
           <div><span class="flow-name-wrap"><input id="flow-name" value="Untitled automation" aria-label="Automation name" maxlength="200"><button type="button" id="rename-flow" aria-label="Rename automation" title="Rename" data-icon="edit"></button></span><p><span id="flow-status-dot"></span><span id="flow-status">Draft</span> · <span id="flow-trigger-label">Instagram comments</span> · <span id="draft-state">All changes saved</span></p></div>
         </div>
-        <div class="ui-filter-pills flow-platform" id="flow-platform" role="group" aria-label="Platform"></div>
+        <div class="ui-filter-pills ui-platform-switch" id="flow-platform" data-platform-switch=".flow-shell" role="group" aria-label="Platform"></div>
         <div class="flow-actions">
           <button class="ui-btn ghost sm" id="preview-flow" type="button" data-icon="eye">Preview</button>
           <button class="ui-btn primary sm" id="edit-flow" type="button" data-icon="edit" hidden>Edit automation</button>

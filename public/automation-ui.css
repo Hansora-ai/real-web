@@ -798,3 +798,13 @@ body.ui .ui-btn.primary.is-auto-busy::after{border-color:var(--on-primary,#08090
 .ui-platform-pills .ui-platform-icon svg{width:14px;height:14px}
 .ui-platform-icon.tiktok{color:#ff2d55}.ui-platform-icon.instagram{color:#e1306c}.ui-platform-icon.whatsapp{color:#25d366}.ui-platform-icon.messenger{color:#0084ff}.ui-platform-icon.telegram{color:#27a7e7}
 .ui-convo-channel.tiktok{color:#ff2d55}
+.ui-platform-switch{flex:none;width:max-content;padding:3px;border:1px solid var(--border);border-radius:999px}
+.ui-platform-switch .ui-platform-icon{display:inline-flex;width:14px;height:14px}.ui-platform-switch .ui-platform-icon svg{width:14px;height:14px}
+.ui-platform-switch button:disabled{opacity:.55;cursor:default}
+.ui-platform-switch em{font-style:normal;font-size:10px;padding:1px 6px;border-radius:999px;background:var(--surface-3);color:var(--text-3)}
+.workflows-platform{margin-bottom:18px}
+body[data-comment-platform="tiktok"] .flow-channel-mark,body[data-comment-platform="tiktok"] .workflow-channel-icon{background:#111;color:#ff2d55;filter:drop-shadow(-1px -1px 0 #25f4ee)}
+body[data-comment-platform="tiktok"] .workflows-kicker{color:#ff2d55}
+body[data-comment-platform="tiktok"] .workflow-channel{background:radial-gradient(70% 200% at 0 50%,rgba(255,45,85,.1),transparent 70%),var(--surface)}
+@media(max-width:640px){.flow-topbar .ui-platform-switch{order:3}}
+body[data-comment-platform="tiktok"] .flow-node-icon:has(.is-tiktok){background:#111;color:#ff2d55}
