@@ -3,7 +3,7 @@ import { first, rows, serviceUpdate, supabaseRequest } from '../../lib/automatio
 
 const HEADERS={'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'POST, OPTIONS'};
 const json=(statusCode,body)=>({statusCode,headers:HEADERS,body:JSON.stringify(body)});
-const CHANNELS={instagram:{provider:'meta',resource:'instagram_account',types:['instagram_dm','instagram_comments']},whatsapp:{provider:'meta',resource:'whatsapp_account',types:['whatsapp']},telegram:{provider:'telegram',resource:'telegram_account',types:['telegram']},messenger:{provider:'meta',resource:'facebook_page',types:['messenger']}};
+const CHANNELS={instagram:{provider:'meta',resource:'instagram_account',types:['instagram_dm','instagram_comments']},whatsapp:{provider:'meta',resource:'whatsapp_account',types:['whatsapp']},telegram:{provider:'telegram',resource:'telegram_account',types:['telegram']},messenger:{provider:'meta',resource:'facebook_page',types:['messenger']},tiktok:{provider:'tiktok',resource:'tiktok_account',types:['tiktok']}};
 
 // Owner disconnects Instagram or WhatsApp: tokens are deleted immediately and the AI stops replying there.
 // Conversations stay in the inbox unless the owner asks for deletion (see automation-data-deletion.html).
