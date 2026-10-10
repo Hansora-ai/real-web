@@ -809,3 +809,5 @@ body[data-comment-platform="tiktok"] .workflow-channel{background:radial-gradien
 @media(max-width:640px){.flow-topbar .ui-platform-switch{order:3}}
 body[data-comment-platform="tiktok"] .flow-node-icon:has(.is-tiktok){background:#111;color:#ff2d55}
 .ui-icon-tile.tiktok{background:rgba(255,45,85,.1);border-color:rgba(255,45,85,.22);color:#ff2d55}
+body[data-comment-platform="tiktok"] .post-picker-grid{grid-template-columns:repeat(3,minmax(0,150px));justify-content:center}
+body[data-comment-platform="tiktok"] .post-picker-grid img{width:100%;aspect-ratio:9/16;height:auto;object-fit:cover;border-radius:8px}
