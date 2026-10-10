@@ -23,7 +23,12 @@ begin
       where n.nspname = 'automation' and t.relname = item.tbl and c.contype = 'c'
         and pg_get_constraintdef(c.oid) ~ ('\m' || item.col || ' = ANY')
     loop
-      v_existing := v_existing || array(select m[1] from regexp_matches(r.def, '''([^'']+)''::text', 'g') as m);
+      -- Handles both saved forms: ARRAY['a'::text, 'b'::text] and '{a,b}'::text[].
+      v_existing := v_existing || array(
+        select trim(both '"' from v)
+        from regexp_matches(r.def, '''([^'']+)''::text', 'g') as m,
+             unnest(case when m[1] like '{%}' then string_to_array(trim(both '{}' from m[1]), ',') else array[m[1]] end) as v
+      );
       execute format('alter table automation.%I drop constraint %I', item.tbl, r.conname);
     end loop;
     if cardinality(v_existing) = 0 then
