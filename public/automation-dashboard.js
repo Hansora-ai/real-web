@@ -12,7 +12,7 @@
   const preview = api.isLocalPreview && location.protocol !== 'file:';
   const setupHref = `automation-setup.html${preview ? '?preview=1' : ''}`;
   $('#create-link').href = setupHref; $('#empty-create').href = setupHref;
-  const CHANNEL_ICONS = { instagram_dm:['instagram','Instagram DMs'], instagram_comments:['comment','Instagram comments'], whatsapp:['whatsapp','WhatsApp'], telegram:['telegram','Telegram'], messenger:['messenger','Messenger'], phone:['phone','Phone calls'] };
+  const CHANNEL_ICONS = { instagram_dm:['instagram','Instagram DMs'], instagram_comments:['comment','Instagram comments'], whatsapp:['whatsapp','WhatsApp'], telegram:['telegram','Telegram'], messenger:['messenger','Messenger'], tiktok:['tiktok','TikTok'], phone:['phone','Phone calls'] };
 
   let businesses;
   if (api.isLocalPreview) {

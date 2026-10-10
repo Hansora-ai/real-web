@@ -57,12 +57,23 @@
       permissions:['Receive messages sent to your Page','Reply from your Page','Read the Page name and picture'],
       accounts:[{name:'Luma Studio',detail:'Facebook Page',mark:'FB'}],
       primaryLabel:'Answer Messenger chats', primaryHelp:'Use the shared AI employee for new Messenger chats'
+    },
+    tiktok: {
+      kicker:'TIKTOK CONNECTION', title:'Connect TikTok',
+      subtitle:'Your AI employee answers direct messages customers send to your TikTok Business account.',
+      requirementsTitle:'Prepare your TikTok Business account', requirementsDescription:'TikTok messaging works with Business accounts. It is not available for accounts registered in the EU, UK or Switzerland.',
+      requirements:['A TikTok Business account (TikTok app → Settings → Account → Switch to Business account)','Direct messages turned on for everyone'],
+      authorizeTitle:'Connect your TikTok account', authorizeDescription:'Sign in with TikTok and allow Hansora to read and answer your direct messages.',
+      providerMark:'tiktok', providerLabel:'Continue with TikTok', providerHelp:'Opens the official TikTok window', logo:'tiktok',
+      permissions:['Read direct messages sent to your account','Reply to customers who wrote to you (within 48 hours)','Read your account name and photo'],
+      accounts:[{name:'Luma Studio',detail:'@luma.studio · TikTok Business',mark:'TT'}],
+      primaryLabel:'Answer TikTok messages', primaryHelp:'Use the shared AI employee for new TikTok direct messages'
     }
   };
   const config = configurations[channel];
   if (!config) return fail('Choose a channel from the AI employee workspace.');
-  const CHANNEL_TYPE = { instagram: 'instagram_dm', whatsapp: 'whatsapp', telegram: 'telegram', messenger: 'messenger' }[channel];
-  const ACCOUNT_MARK = { instagram: 'IG', whatsapp: 'WA', telegram: 'TG', messenger: 'FB' }[channel];
+  const CHANNEL_TYPE = { instagram: 'instagram_dm', whatsapp: 'whatsapp', telegram: 'telegram', messenger: 'messenger', tiktok: 'tiktok' }[channel];
+  const ACCOUNT_MARK = { instagram: 'IG', whatsapp: 'WA', telegram: 'TG', messenger: 'FB', tiktok: 'TT' }[channel];
 
   let currentStep = 0;
   let highestUnlocked = 0;
@@ -90,6 +101,13 @@
     highestUnlocked = 3;
     document.querySelector('#connect-save-state').textContent = 'Meta account authorized · review settings to activate';
   }
+  // Back from TikTok's window: connected (continue with the settings) or an error to show.
+  if (channel === 'tiktok' && params.get('tiktok') === 'connected') {
+    providerConnected = true; markAuthorized(); highestUnlocked = Math.max(highestUnlocked, 3);
+    document.querySelector('#connect-save-state').textContent = 'TikTok connected · review settings to activate';
+  } else if (channel === 'tiktok' && params.get('tiktok') === 'error') {
+    showError(params.get('reason') === 'expired' ? 'The TikTok window took too long. Press Continue with TikTok again.' : `TikTok could not be connected${params.get('reason') ? `: ${params.get('reason')}` : ''}. Please try again.`);
+  }
   loading.hidden = true;
   workflow.hidden = false;
   if (isLive) { highestUnlocked = 3; renderReview(); showStep(3); } else showStep(0);
@@ -114,6 +132,7 @@
       if (channel === 'whatsapp') return beginWhatsAppSignup();
       if (channel === 'telegram') return beginTelegramConnect();
       if (channel === 'messenger') return beginMessengerConnect();
+      if (channel === 'tiktok') return beginTikTokConnect();
       const button = document.querySelector('#provider-connect'); button.disabled = true;
       document.querySelector('#connect-save-state').textContent = 'Preparing secure Meta authorization…';
       try {
@@ -348,6 +367,18 @@
   }
 
   // Messenger: the Facebook window shares the owner's Pages; the owner picks one (automatic when there is only one).
+  // TikTok: Hansora's server prepares TikTok's sign-in page; TikTok sends the owner back to this page afterwards.
+  async function beginTikTokConnect() {
+    const button = document.querySelector('#provider-connect'); button.disabled = true;
+    document.querySelector('#connect-save-state').textContent = 'Opening TikTok…';
+    try {
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-tiktok-connect', { method: 'POST', body: JSON.stringify({ business_id: businessId }) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.url) throw new Error(result.message || result.error || 'tiktok_connection_unavailable');
+      location.assign(result.url);
+    } catch (error) { button.disabled = false; document.querySelector('#connect-save-state').textContent = 'Not connected yet'; showError(api.displayError(error)); }
+  }
+
   async function beginMessengerConnect() {
     const button = document.querySelector('#provider-connect'); button.disabled = true; errorBox.hidden = true;
     document.querySelector('#connect-save-state').textContent = 'Preparing Facebook…';

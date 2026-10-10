@@ -4,6 +4,8 @@ import { first, serviceInsert, serviceUpdate } from '../../lib/automation/db.mjs
 import { sendInstagramText } from '../../lib/automation/meta.mjs';
 import { sendTelegramText } from '../../lib/automation/telegram.mjs';
 import { sendMessengerText } from '../../lib/automation/messenger.mjs';
+import { sendTikTokText } from '../../lib/automation/tiktok.mjs';
+import { tiktokAccountFor, tiktokTokenFor } from '../../lib/automation/tiktok-account.mjs';
 import { listWhatsAppTemplates, renderWhatsAppTemplate, sendWhatsAppTemplate, sendWhatsAppText, WHATSAPP_SERVICE_WINDOW_MS } from '../../lib/automation/whatsapp.mjs';
 
 const HEADERS={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'POST, OPTIONS'};
@@ -22,8 +24,17 @@ export async function handler(event){
     const conversation=await first(`/rest/v1/automation_conversations?id=eq.${body.conversation_id}&business_id=eq.${business.id}&select=*&limit=1`);if(!conversation)return json(404,{error:'conversation_not_found'});
     if(conversation.ai_enabled||conversation.status!=='human_handling')return json(409,{error:'take_over_before_replying'});
     const contact=await first(`/rest/v1/automation_contacts?id=eq.${conversation.contact_id}&business_id=eq.${business.id}&select=*&limit=1`);if(!contact)return json(404,{error:'contact_not_found'});
-    if(!['instagram_dm','whatsapp','telegram','messenger'].includes(conversation.channel_type))return json(409,{error:'channel_reply_not_supported'});
+    if(!['instagram_dm','whatsapp','telegram','messenger','tiktok'].includes(conversation.channel_type))return json(409,{error:'channel_reply_not_supported'});
     let providerMessageId='',provider='meta';
+    // TikTok: replies are possible for 48 hours after the customer's last message.
+    if(conversation.channel_type==='tiktok'){
+      if(template)return json(400,{error:'template_whatsapp_only'});
+      const lastInbound=await first(`/rest/v1/automation_messages?conversation_id=eq.${conversation.id}&direction=eq.inbound&select=occurred_at&order=occurred_at.desc&limit=1`);
+      if(!lastInbound||Date.now()-Date.parse(lastInbound.occurred_at)>48*3600000)return json(409,{error:'tiktok_window_closed',message:'TikTok allows replies for 48 hours after the customer’s last message.'});
+      const account=await tiktokAccountFor({businessId:business.id});if(!account)return json(409,{error:'tiktok_not_connected'});
+      const sent=await sendTikTokText({businessId:account.provider_resource_id,conversationId:conversation.external_thread_id,text:message,token:await tiktokTokenFor(account)});providerMessageId=sent.messageId;provider='tiktok';
+      return await saveReply();
+    }
     if(['telegram','messenger'].includes(conversation.channel_type)){
       if(template)return json(400,{error:'template_whatsapp_only'});
       if(conversation.channel_type==='telegram'){

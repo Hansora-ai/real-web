@@ -216,7 +216,8 @@
       whatsapp: ['WhatsApp', 'Handle customer chats on your business number', 'whatsapp', 'whatsapp'],
       phone: ['Phone calls', 'Answer calls with a natural voice', 'phone', 'phone'],
       telegram: ['Telegram', 'Answer chats on your Telegram account (Telegram Business)', 'telegram', 'telegram'],
-      messenger: ['Messenger', 'Answer Facebook Messenger chats of your Page', 'messenger', 'messenger']
+      messenger: ['Messenger', 'Answer Facebook Messenger chats of your Page', 'messenger', 'messenger'],
+      tiktok: ['TikTok', 'Answer direct messages on your TikTok Business account', 'tiktok', 'tiktok']
     };
     const businessQuery = `business=${encodeURIComponent(business.id)}${previewLinks ? '&preview=1' : ''}`;
     const destinations = {
@@ -225,7 +226,8 @@
       whatsapp: `automation-connect.html?channel=whatsapp&${businessQuery}`,
       phone: `automation-phone.html?${businessQuery}`,
       telegram: `automation-connect.html?channel=telegram&${businessQuery}`,
-      messenger: `automation-connect.html?channel=messenger&${businessQuery}`
+      messenger: `automation-connect.html?channel=messenger&${businessQuery}`,
+      tiktok: `automation-connect.html?channel=tiktok&${businessQuery}`
     };
     const channels = (business.automation_channel_connections || []).sort((a, b) => a.setup_order - b.setup_order);
     $('#channel-stack').innerHTML = channels.map(channel => {

@@ -31,7 +31,17 @@
   catch (error) { return fail(api.displayError(error)); }
 
   let selectedId = conversations.some(item => item.id === params.get('conversation')) ? params.get('conversation') : conversations[0]?.id || null;
-  let activeFilter = 'all', activeStage = '';
+  let activeFilter = 'all', activeStage = '', activePlatform = '';
+  // Platform chips: only the apps this AI employee is connected to (plus any app that already has chats here).
+  const PLATFORMS = [['instagram','Instagram'],['tiktok','TikTok'],['whatsapp','WhatsApp'],['messenger','Messenger'],['telegram','Telegram'],['phone','Phone']];
+  let connectedPlatforms = new Set();
+  try {
+    if (!api.isLocalPreview) {
+      const result = await api.db.from('automation_channel_connections').select('channel_type,status').eq('business_id',businessId).eq('status','connected');
+      connectedPlatforms = new Set((result.data || []).map(row => platformOf(row.channel_type)));
+    }
+  } catch (_) {}
+  document.querySelector('#platform-filters').addEventListener('click', event => { const button = event.target.closest('button[data-platform]'); if (!button) return; activePlatform = activePlatform === button.dataset.platform ? '' : button.dataset.platform; renderList(); });
   document.querySelector('#stage-filters').addEventListener('click', event => { const button = event.target.closest('button[data-stage]'); if (!button) return; activeStage = activeStage === button.dataset.stage ? '' : button.dataset.stage; document.querySelectorAll('#stage-filters button').forEach(item => item.classList.toggle('active', item.dataset.stage === activeStage)); renderList(); });
   if (selectedId && !api.isLocalPreview) await loadMessages(current());
   loading.hidden = true;
@@ -129,13 +139,13 @@
     const query = document.querySelector('#inbox-search').value.trim().toLowerCase();
     const visible = conversations.filter(conversation => {
       const matchesFilter = activeFilter === 'all' || (activeFilter === 'unread' && conversation.unread) || (activeFilter === 'attention' && conversation.attention) || (activeFilter === 'human' && conversation.human);
-      return matchesFilter && (!activeStage || conversation.stage === activeStage) && (!query || `${conversation.name} ${conversation.handle} ${conversation.preview} ${conversation.channel} ${conversation.interest || ''}`.toLowerCase().includes(query));
+      return matchesFilter && (!activePlatform || platformOf(conversation.channelType || conversation.channel) === activePlatform) && (!activeStage || conversation.stage === activeStage) && (!query || `${conversation.name} ${conversation.handle} ${conversation.preview} ${conversation.channel} ${conversation.interest || ''}`.toLowerCase().includes(query));
     });
-    const icons = {'Instagram DM':'instagram','Instagram comment':'comment','WhatsApp':'whatsapp','Phone':'phone','Telegram':'telegram','Messenger':'messenger'};
+    const icons = {'Instagram DM':'instagram','Instagram comment':'comment','WhatsApp':'whatsapp','Phone':'phone','Telegram':'telegram','Messenger':'messenger','TikTok':'tiktok'};
     document.querySelector('#conversation-list').innerHTML = visible.length ? visible.map(conversation => {
       const state = conversation.resolved ? '' : conversation.attention ? '<span class="ui-badge red sm">Needs you</span>' : conversation.human ? '<span class="ui-badge amber sm">Your team</span>' : '';
       return `<button class="ui-convo${conversation.id === selectedId ? ' active' : ''}${conversation.unread ? ' unread' : ''}${conversation.resolved ? ' resolved' : ''}" data-conversation-id="${escapeHtml(conversation.id)}" type="button"><span class="ui-convo-avatar">${avatarHtml(conversation)}<i class="ui-convo-channel ${icons[conversation.channel] || ''}">${window.HansoraUI.icon(icons[conversation.channel] || 'message')}</i></span><span class="ui-convo-body"><span class="ui-convo-top"><strong>${escapeHtml(conversation.name)}</strong><time>${escapeHtml(conversation.time)}</time></span><span class="ui-convo-preview">${escapeHtml(conversation.preview)}</span>${stageChip(conversation)}${outcomeBadges(conversation)}${state}</span></button>`;
-    }).join('') : `<div class="ui-empty">${conversations.length ? 'No conversations match.' : 'New Instagram and WhatsApp conversations appear here.'}</div>`;
+    }).join('') : `<div class="ui-empty">${conversations.length ? 'No conversations match.' : 'New conversations from your connected apps appear here.'}</div>`;
     updateTopCounts();
   }
 
@@ -245,25 +255,28 @@
     document.querySelector('#template-select').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').disabled = !enabled;
     document.querySelector('#human-composer button[type="submit"]').textContent = useTemplate ? 'Send template' : 'Send';
-    document.querySelector('#composer-help').textContent = instagramClosed() ? 'Instagram’s 24-hour window has closed. You can reply after the customer writes again.' : !enabled ? 'The AI is replying. Take over to write yourself.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
+    document.querySelector('#composer-help').textContent = instagramClosed() ? `${appName(current().channelType)}’s ${windowHours(current().channelType)}-hour window has closed. You can reply after the customer writes again.` : !enabled ? 'The AI is replying. Take over to write yourself.' : useTemplate ? 'Meta may charge for template messages.' : 'The AI stays paused until you give the chat back to it.';
     document.querySelector('#take-over').hidden = current().resolved;
     document.querySelector('#take-over').textContent = current().human ? 'Give back to AI' : 'Take over';
   }
   // WhatsApp only allows free-form replies within 24 hours of the customer's last message; after that, approved templates.
   function windowRemaining(conversation) {
-    // WhatsApp and Instagram both allow replies only within 24 hours of the customer's last message.
-    if (!conversation || !['whatsapp','instagram_dm','messenger'].includes(conversation.channelType) || api.isLocalPreview) return null;
-    return conversation.lastCustomerAt ? 24 * 60 * 60 * 1000 - (Date.now() - conversation.lastCustomerAt) : 0;
+    // WhatsApp, Instagram and Messenger allow replies within 24 hours of the customer's last message; TikTok within 48.
+    if (!conversation || !['whatsapp','instagram_dm','messenger','tiktok'].includes(conversation.channelType) || api.isLocalPreview) return null;
+    const hours = conversation.channelType === 'tiktok' ? 48 : 24;
+    return conversation.lastCustomerAt ? hours * 60 * 60 * 1000 - (Date.now() - conversation.lastCustomerAt) : 0;
   }
   function templateMode() { const remaining = windowRemaining(current()); return current()?.channelType === 'whatsapp' && remaining !== null && remaining <= 0; }
-  function instagramClosed() { const remaining = windowRemaining(current()); return current()?.channelType === 'instagram_dm' && remaining !== null && remaining <= 0; }
+  function instagramClosed() { const remaining = windowRemaining(current()); return current()?.channelType !== 'whatsapp' && remaining !== null && remaining <= 0; }
+  function appName(type) { return ({instagram_dm:'Instagram',messenger:'Messenger',tiktok:'TikTok'})[type] || 'The app'; }
+  function windowHours(type) { return type === 'tiktok' ? 48 : 24; }
   function renderWindow() {
     const box = document.querySelector('#wa-window'); const remaining = windowRemaining(current());
     box.hidden = remaining === null; if (remaining === null) return;
-    if (remaining <= 0) { box.className = 'wa-window closed'; box.textContent = current().channelType === 'instagram_dm' ? '24-hour window closed · Instagram allows a reply again after the customer writes' : '24-hour window closed · only approved templates can be sent'; return; }
+    if (remaining <= 0) { box.className = 'wa-window closed'; box.textContent = current().channelType !== 'whatsapp' ? `${windowHours(current().channelType)}-hour window closed · ${appName(current().channelType)} allows a reply again after the customer writes` : '24-hour window closed · only approved templates can be sent'; return; }
     const hours = Math.floor(remaining / 3600000); const minutes = Math.max(1, Math.floor(remaining % 3600000 / 60000));
     box.className = `wa-window${remaining < 3 * 3600000 ? ' closing' : ''}`;
-    box.textContent = `${current().channelType === 'instagram_dm' ? 'Replies allowed' : 'Free-form replies allowed'} for ${hours ? `${hours}h ` : ''}${minutes}m more`;
+    box.textContent = `${current().channelType !== 'whatsapp' ? 'Replies allowed' : 'Free-form replies allowed'} for ${hours ? `${hours}h ` : ''}${minutes}m more`;
   }
   let templates = null; let templatesLoading = false;
   async function loadTemplates(force = false) {
@@ -309,11 +322,21 @@
     const open = conversations.filter(item => !item.resolved);
     const counts = { all:conversations.length, attention:open.filter(item => item.attention).length, human:open.filter(item => item.human).length, unread:conversations.filter(item => item.unread).length };
     document.querySelectorAll('#inbox-filters [data-count]').forEach(element => { element.textContent = counts[element.dataset.count]; });
+    renderPlatforms();
     const staged = conversations.some(item => item.stage);
     document.querySelector('#stage-filters').hidden = !staged;
     document.querySelectorAll('#stage-filters [data-stage-count]').forEach(element => { element.textContent = conversations.filter(item => item.stage === element.dataset.stageCount).length; });
     document.querySelector('#open-count').textContent = conversations.filter(item => !item.resolved).length;
     document.querySelector('#attention-count').textContent = conversations.filter(item => item.attention && !item.resolved).length;
+  }
+  function platformOf(value) { const key = String(value || '').toLowerCase(); return key.startsWith('instagram') ? 'instagram' : key; }
+  function renderPlatforms() {
+    const box = document.querySelector('#platform-filters');
+    const counts = {}; conversations.forEach(item => { const key = platformOf(item.channelType || item.channel); counts[key] = (counts[key] || 0) + 1; });
+    const shown = PLATFORMS.filter(([key]) => connectedPlatforms.has(key) || counts[key]);
+    if (activePlatform && !shown.some(([key]) => key === activePlatform)) activePlatform = '';
+    box.hidden = shown.length < 2;
+    box.innerHTML = shown.map(([key, label]) => `<button class="${key === activePlatform ? 'active' : ''}" data-platform="${key}" type="button"><i class="ui-platform-icon ${key}">${window.HansoraUI.icon(key)}</i>${label} <span>${counts[key] || 0}</span></button>`).join('');
   }
   function current() { return conversations.find(conversation => conversation.id === selectedId) || conversations[0] || null; }
   async function loadConversations() {
@@ -330,7 +353,7 @@
     for (const item of made.error ? [] : made.data || []) { if (!outcomesByConversation.has(item.conversation_id)) outcomesByConversation.set(item.conversation_id, []); outcomesByConversation.get(item.conversation_id).push(item); }
     return (result.data || []).map(row => {
       const contact = Array.isArray(row.automation_contacts) ? row.automation_contacts[0] : row.automation_contacts || {};
-      const name = contact.display_name || contact.profile?.username || ({whatsapp:'WhatsApp customer',telegram:'Telegram customer',messenger:'Messenger customer'}[row.channel_type] || 'Instagram customer');
+      const name = contact.display_name || contact.profile?.username || ({whatsapp:'WhatsApp customer',telegram:'Telegram customer',messenger:'Messenger customer',tiktok:'TikTok customer'}[row.channel_type] || 'Instagram customer');
       const avatarUrl = /^https:\/\//.test(String(contact.profile?.profile_pic || '')) ? String(contact.profile.profile_pic) : '';
       return {id:row.id,channelType:row.channel_type,lastCustomerAt:0,avatarUrl,name,handle:contact.primary_phone||contact.primary_email||(contact.profile?.username?`@${contact.profile.username}`:'')||contact.profile?.instagram_scoped_id||'',channel:channelName(row.channel_type),time:relativeTime(row.last_message_at),preview:row.last_message_preview||'',unread:false,attention:row.status==='needs_attention',human:row.status==='human_handling',aiActive:Boolean(row.ai_enabled),outcomes:outcomesByConversation.get(row.id)||[],resolved:row.status==='resolved',intent:row.intent||'Customer message',stage:stageOf(row),interest:row.sales_interest||'',value:formatValue(row.sales_value,row.sales_currency),summary:row.summary||'Summary will appear as the conversation develops.',fields:[...(stageOf(row)?[['Stage',`${STAGES[stageOf(row)][0]} ${STAGES[stageOf(row)][1]}`]]:[]),...(row.sales_interest?[['Interested in',row.sales_interest]]:[]),...(formatValue(row.sales_value,row.sales_currency)?[['Likely value',formatValue(row.sales_value,row.sales_currency)]]:[]),['Language',contact.language||'Detected automatically'],['Channel',channelName(row.channel_type)],['Last activity',relativeTime(row.last_message_at)]],messages:[]};
     });
@@ -350,7 +373,7 @@
     const events = (outcomes.error ? [] : outcomes.data || []).map(row => ({role:'event',kind:row.outcome_type,id:row.id,reference:row.reference_number,text:row.title,status:row.status,time:clock(row.created_at),at:Date.parse(row.created_at)}));
     conversation.messages = [...messages, ...events].sort((a, b) => a.at - b.at);
   }
-  function channelName(value) { return ({instagram_dm:'Instagram DM',instagram_comments:'Instagram comment',whatsapp:'WhatsApp',phone:'Phone',telegram:'Telegram',messenger:'Messenger'}[value]||value); }
+  function channelName(value) { return ({instagram_dm:'Instagram DM',instagram_comments:'Instagram comment',whatsapp:'WhatsApp',phone:'Phone',telegram:'Telegram',messenger:'Messenger',tiktok:'TikTok'}[value]||value); }
   function relativeTime(value) { const delta=Math.max(0,Date.now()-Date.parse(value||new Date())); const minutes=Math.floor(delta/60000); if(minutes<1)return'Now'; if(minutes<60)return`${minutes}m`; const hours=Math.floor(minutes/60); if(hours<24)return`${hours}h`; return new Date(value).toLocaleDateString(); }
   function showError(message) { errorBox.textContent=message; errorBox.hidden=false; }
   function fail(message) { loading.hidden=true; app.hidden=true; showError(message); }
