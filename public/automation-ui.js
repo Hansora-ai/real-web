@@ -111,9 +111,9 @@
   function hydrateIcons(root = document) { root.querySelectorAll('[data-icon]').forEach(element => { if (!element.dataset.iconDone) { element.insertAdjacentHTML('afterbegin', icon(element.dataset.icon)); element.dataset.iconDone = '1'; } }); }
 
   // Full-screen "working on it" overlay for saves: busy('Saving…') shows or updates it, busy(false) hides it.
-  let busyLayer = null;
+  let busyLayer = null; let busyWanted = false;
   function busy(message) {
-    if (message === false) { if (busyLayer) { busyLayer.classList.remove('show'); setTimeout(() => { if (busyLayer && !busyLayer.classList.contains('show')) busyLayer.hidden = true; }, 200); } return; }
+    if (message === false) { busyWanted = false; if (busyLayer) { busyLayer.classList.remove('show'); setTimeout(() => { if (busyLayer && !busyLayer.classList.contains('show')) busyLayer.hidden = true; }, 200); } return; }
     if (!busyLayer) {
       busyLayer = document.createElement('div');
       busyLayer.className = 'ui-busy'; busyLayer.setAttribute('role', 'status'); busyLayer.setAttribute('aria-live', 'polite');
@@ -121,7 +121,8 @@
       document.body.appendChild(busyLayer);
     }
     busyLayer.querySelector('.ui-busy-text').textContent = String(message || 'Saving…');
-    busyLayer.hidden = false; requestAnimationFrame(() => busyLayer.classList.add('show'));
+    // A save that finishes before the next frame must not leave the overlay showing.
+    busyWanted = true; busyLayer.hidden = false; requestAnimationFrame(() => { if (busyWanted) busyLayer.classList.add('show'); else busyLayer.hidden = true; });
   }
 
   // A button that starts a server request shows a spinner until the request is done (only if it takes >250 ms, so
