@@ -16,6 +16,7 @@ const AUTH_USER_URL = SUPABASE_URL ? `${SUPABASE_URL}/auth/v1/user` : "";
 
 const SITE_BASE = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/, "");
 const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/heygen-check`;
+const { createHash, randomUUID } = require("node:crypto");
 
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return ok({});
@@ -38,27 +39,32 @@ exports.handler = async (event) => {
     const authedUid = await verifyUser(token);
     if (!authedUid || authedUid !== uid) return ok({ submitted: false, error: "auth_mismatch" });
 
-    const model = normalizeModel(body.model || body.engine || "avatar_v");
-    const imageUrl = normalizeUrl(body.imageUrl || body.image_url || "");
-    const audioUrl = normalizeUrl(body.audioUrl || body.audio_url || "");
-    const aspectRatio = normalizeAspect(body.aspect_ratio || body.aspectRatio || "9:16");
-    const durationSeconds = normalizeDuration(body.duration_seconds || body.duration || 0);
+    const clientRunId = String(body.run_id || body.runId || "").trim();
+    const run_id = clientRunId || `${uid}-${Date.now()}`;
+    const existing = await getExistingTask(uid, run_id);
+    if (existing?.meta?.status === "failed" || existing?.meta?.refunded) {
+      return ok({ submitted: false, error: existing.meta.error || "generation_failed", run_id });
+    }
+    if (existing?.taskId) {
+      return ok({ submitted: true, run_id, taskId: existing.taskId, video_id: existing.taskId, already: true });
+    }
+
+    // Resuming an async photo avatar must use the originally authorized inputs.
+    const saved = existing?.meta || {};
+    const model = normalizeModel(saved.model || body.model || body.engine || "avatar_v");
+    const imageUrl = normalizeUrl(saved.image_url || body.imageUrl || body.image_url || "");
+    const audioUrl = normalizeUrl(saved.audio_url || body.audioUrl || body.audio_url || "");
+    const aspectRatio = normalizeAspect(saved.aspect_ratio || body.aspect_ratio || body.aspectRatio || "9:16");
+    const durationSeconds = normalizeDuration(saved.duration_seconds || body.duration_seconds || body.duration || 0);
     const billableSeconds = Math.ceil(durationSeconds);
     const rate = model === "avatar_v" ? 0.7 : 0.3;
     const cost = roundCredits(billableSeconds * rate);
-    const clientRunId = String(body.run_id || body.runId || "").trim();
-    const run_id = clientRunId || `${uid}-${Date.now()}`;
 
     if (!imageUrl) return ok({ submitted: false, error: "missing_image_url", run_id });
     if (!audioUrl) return ok({ submitted: false, error: "missing_audio_url", run_id });
     if (!durationSeconds) return ok({ submitted: false, error: "missing_audio_duration", run_id });
     if (durationSeconds < 5) return ok({ submitted: false, error: "audio_too_short_min_5_seconds", run_id });
     if (durationSeconds > 90.25) return ok({ submitted: false, error: "audio_too_long_max_90_seconds", run_id });
-
-    const existing = await getExistingTask(uid, run_id);
-    if (existing && existing.taskId) {
-      return ok({ submitted: true, run_id, taskId: existing.taskId, video_id: existing.taskId, already: true });
-    }
 
     const currentCredits = await getCredits(uid);
     if (currentCredits < cost) {
@@ -75,247 +81,226 @@ exports.handler = async (event) => {
       cost
     });
 
-    const callbackUrl = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
-    const heygenResult = await submitHeyGen({
-      model,
-      imageUrl,
-      audioUrl,
-      aspectRatio,
-      billableSeconds,
-      run_id,
-      callbackUrl
-    });
-
-    if (!heygenResult.ok) {
-      await patchMeta(uid, run_id, {
-        status: "failed",
-        error: heygenResult.error || "heygen_submit_failed",
-        heygen_response: heygenResult.data || null
-      });
-      return ok({
-        submitted: false,
-        error: heygenResult.error || "heygen_submit_failed",
-        data: heygenResult.data,
-        provider_message: extractProviderMessage(heygenResult.data),
-        failed_stage: heygenResult.failedStage || "",
-        avatar_id: heygenResult.avatarId || "",
+    const claim = await claimSubmission(uid, run_id);
+    if (!claim) return ok({ submitted: true, pending: true, run_id });
+    try {
+      const callbackUrl = `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
+      const heygenResult = await submitHeyGen({
+        model,
+        imageUrl,
+        audioUrl,
+        aspectRatio,
+        billableSeconds,
         run_id,
-        heygen_auth_debug: safeHeyGenAuthDebug()
+        callbackUrl,
+        uid,
+        avatarId: claim.meta.avatar_id || ""
       });
-    }
 
-    const taskId = String(heygenResult.videoId || "").trim();
-    if (!taskId) {
-      await patchMeta(uid, run_id, { status: "failed", error: "missing_video_id", heygen_response: heygenResult.data || null });
-      return ok({ submitted: false, error: "missing_video_id", data: heygenResult.data, run_id });
-    }
-
-    const finalCost = Number.isFinite(Number(heygenResult.finalCost)) ? Number(heygenResult.finalCost) : cost;
-    const charged = await isCharged(uid, run_id);
-    if (!charged) {
-      const debited = await debitCredits(uid, finalCost);
-      if (!debited) {
-        await patchMeta(uid, run_id, { status: "failed", error: "debit_failed", task_id: taskId, video_id: taskId });
-        return ok({ submitted: false, error: "debit_failed", run_id, taskId, video_id: taskId });
+      if (heygenResult.pending) {
+        return ok({ submitted: true, pending: true, run_id, status: "processing" });
       }
+
+      if (!heygenResult.ok) {
+        await patchMeta(uid, run_id, {
+          status: "failed",
+          error: heygenResult.error || "heygen_submit_failed",
+          heygen_response: heygenResult.data || null
+        });
+        return ok({
+          submitted: false,
+          error: heygenResult.error || "heygen_submit_failed",
+          data: heygenResult.data,
+          provider_message: extractProviderMessage(heygenResult.data),
+          failed_stage: heygenResult.failedStage || "",
+          avatar_id: heygenResult.avatarId || "",
+          run_id,
+          heygen_auth_debug: safeHeyGenAuthDebug()
+        });
+      }
+
+      const taskId = String(heygenResult.videoId || "").trim();
+      if (!taskId) {
+        await patchMeta(uid, run_id, { status: "failed", error: "missing_video_id", heygen_response: heygenResult.data || null });
+        return ok({ submitted: false, error: "missing_video_id", data: heygenResult.data, run_id });
+      }
+
+      const finalCost = Number.isFinite(Number(heygenResult.finalCost)) ? Number(heygenResult.finalCost) : cost;
+      const charged = await isCharged(uid, run_id);
+      if (!charged) {
+        const debited = await debitCredits(uid, finalCost);
+        if (!debited) {
+          await patchMeta(uid, run_id, { status: "failed", error: "debit_failed", task_id: taskId, video_id: taskId });
+          return ok({ submitted: false, error: "debit_failed", run_id, taskId, video_id: taskId });
+        }
+      }
+
+      await markCharged(uid, run_id, finalCost, taskId, {
+        model,
+        provider_api: heygenResult.apiVersion,
+        requested_model: heygenResult.requestedModel || model,
+        heygen_engine: heygenResult.heygenEngine || "",
+        fallback_reason: heygenResult.fallbackReason || "",
+        avatar_id: heygenResult.avatarId || "",
+        submit_response: heygenResult.data || null
+      });
+
+      return ok({
+        submitted: true,
+        run_id,
+        taskId,
+        video_id: taskId,
+        cost: finalCost,
+        billable_seconds: billableSeconds,
+        requested_model: heygenResult.requestedModel || model,
+        heygen_engine: heygenResult.heygenEngine || "",
+        fallback_reason: heygenResult.fallbackReason || "",
+        data: heygenResult.data
+      });
+    } finally {
+      await releaseSubmission(uid, run_id, claim.token);
     }
-
-    await markCharged(uid, run_id, finalCost, taskId, {
-      model,
-      provider_api: heygenResult.apiVersion,
-      requested_model: heygenResult.requestedModel || model,
-      heygen_engine: heygenResult.heygenEngine || "",
-      fallback_reason: heygenResult.fallbackReason || "",
-      avatar_id: heygenResult.avatarId || "",
-      avatar_create_response: heygenResult.avatarCreateData || null,
-      submit_response: heygenResult.data || null
-    });
-
-    return ok({
-      submitted: true,
-      run_id,
-      taskId,
-      video_id: taskId,
-      cost: finalCost,
-      billable_seconds: billableSeconds,
-      requested_model: heygenResult.requestedModel || model,
-      heygen_engine: heygenResult.heygenEngine || "",
-      fallback_reason: heygenResult.fallbackReason || "",
-      data: heygenResult.data
-    });
   } catch (error) {
     return ok({ submitted: false, error: messageOf(error) });
   }
 };
 
-async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, billableSeconds, run_id, callbackUrl }) {
-  if (model === "avatar_v") {
-    const videoPayload = {
+// API contract: https://developers.heygen.com/reference/create-video
+async function submitHeyGen({ model, imageUrl, audioUrl, aspectRatio, billableSeconds, run_id, callbackUrl, uid, avatarId }) {
+  if (model === "avatar_iii") {
+    return submitAvatarIII({ uid, imageUrl, audioUrl, aspectRatio, billableSeconds, run_id, callbackUrl, avatarId });
+  }
+  const videoResp = await heygenFetch("/v3/videos", {
+    method: "POST",
+    headers: { "Idempotency-Key": providerKey(uid, run_id, "video") },
+    body: JSON.stringify({
       type: "image",
-      image: {
-        type: "url",
-        url: imageUrl
-      },
+      image: { type: "url", url: imageUrl },
       audio_url: audioUrl,
-      title: `Hansora Avatar IV ${new Date().toISOString()}`,
+      title: `Hansora Avatar IV ${run_id}`,
       resolution: "1080p",
       aspect_ratio: aspectRatio,
       callback_url: callbackUrl,
       callback_id: run_id
-    };
-    const videoResp = await heygenFetch("/v3/videos", {
-      method: "POST",
-      body: JSON.stringify(videoPayload)
-    });
-    return {
-      ok: videoResp.ok,
-      error: videoResp.ok ? "" : `heygen_video_${videoResp.status}`,
-      videoId: extractVideoId(videoResp.data),
-      data: videoResp.data,
-      apiVersion: "v3",
-      requestedModel: model,
-      heygenEngine: "AvatarIV",
-      failedStage: videoResp.ok ? "" : "video_create",
-      avatarId: "",
-      avatarCreateData: null
-    };
-  }
-
-  return submitAvatarIII({ imageUrl, audioUrl, aspectRatio, billableSeconds, run_id, callbackUrl });
+    })
+  });
+  return {
+    ok: videoResp.ok,
+    error: videoResp.ok ? "" : `heygen_video_${videoResp.status}`,
+    videoId: extractVideoId(videoResp.data),
+    data: videoResp.data,
+    apiVersion: "v3",
+    requestedModel: model,
+    heygenEngine: "AvatarIV",
+    failedStage: videoResp.ok ? "" : "video_create"
+  };
 }
 
-async function submitAvatarIII({ imageUrl, audioUrl, aspectRatio, billableSeconds, run_id, callbackUrl }) {
-  const talkingPhoto = await uploadTalkingPhoto(imageUrl);
-  if (!talkingPhoto.ok) {
-    return { ok: false, error: `heygen_talking_photo_${talkingPhoto.status || "failed"}`, data: talkingPhoto.data, apiVersion: "v2" };
+// Avatar III cannot render type:image. Create a photo look, then wait for it
+// across authenticated browser polls instead of blocking a Netlify invocation.
+// https://developers.heygen.com/docs/avatar-from-photo
+// https://developers.heygen.com/avatar-iii
+async function submitAvatarIII({ uid, imageUrl, audioUrl, aspectRatio, billableSeconds, run_id, callbackUrl, avatarId }) {
+  if (!avatarId) {
+    const created = await heygenFetch("/v3/avatars", {
+      method: "POST",
+      headers: { "Idempotency-Key": providerKey(uid, run_id, "photo") },
+      body: JSON.stringify({ type: "photo", name: `Hansora ${run_id}`, file: { type: "url", url: imageUrl } })
+    });
+    if (!created.ok) return { ok: false, error: `heygen_avatar_create_${created.status}`, data: created.data, failedStage: "avatar_create" };
+    avatarId = extractAvatarId(created.data);
+    if (!avatarId) return { ok: false, error: "missing_avatar_id", data: created.data, failedStage: "avatar_create" };
+    await patchMeta(uid, run_id, {
+      avatar_id: avatarId,
+      avatar_create_response: created.data,
+      provider_api: "v3",
+      heygen_stage: "avatar_processing"
+    });
   }
-  const talkingPhotoId = extractTalkingPhotoId(talkingPhoto.data);
-  if (!talkingPhotoId) return { ok: false, error: "missing_talking_photo_id", data: talkingPhoto.data, apiVersion: "v2" };
 
-  const dimension = aspectRatio === "16:9" ? { width: 1920, height: 1080 } : { width: 1080, height: 1920 };
-  const heygenEngine = "AvatarIII";
-  const publicLabel = "Avatar III";
-  const payload = {
-    title: `Hansora ${publicLabel} ${new Date().toISOString()}`,
-    callback_url: callbackUrl,
-    callback_id: run_id,
-    caption: false,
-    test: false,
-    avatar_engine: heygenEngine,
-    dimension,
-    video_inputs: [
-      {
-        character: {
-          type: "talking_photo",
-          talking_photo_id: talkingPhotoId,
-          scale: 1,
-          offset: { x: 0, y: 0 },
-          talking_style: "stable",
-          expression: "default",
-          matting: false
-        },
-        voice: {
-          type: "audio",
-          audio_url: audioUrl
-        },
-        background: {
-          type: "color",
-          value: "#f6f6fc"
-        }
-      }
-    ]
-  };
+  const lookResp = await heygenFetch(`/v3/avatars/looks/${encodeURIComponent(avatarId)}`);
+  if (!lookResp.ok) {
+    if (lookResp.status === 429 || lookResp.status >= 500 || lookResp.status === 404) return { pending: true };
+    return { ok: false, error: `heygen_avatar_status_${lookResp.status}`, data: lookResp.data, failedStage: "avatar_processing" };
+  }
+  const look = lookResp.data?.data || lookResp.data;
+  if (look?.status === "failed") return { ok: false, error: look.error?.message || "heygen_avatar_failed", data: lookResp.data, failedStage: "avatar_processing" };
+  if (look?.status !== "completed") return { pending: true };
+  if (!Array.isArray(look.supported_api_engines) || !look.supported_api_engines.includes("avatar_iii")) {
+    return { ok: false, error: "avatar_iii_not_supported", data: lookResp.data, failedStage: "avatar_processing" };
+  }
 
-  const resp = await heygenFetch("/v2/video/generate", {
+  const resp = await heygenFetch("/v3/videos", {
     method: "POST",
-    body: JSON.stringify(payload)
+    headers: { "Idempotency-Key": providerKey(uid, run_id, "video") },
+    body: JSON.stringify({
+      type: "avatar",
+      avatar_id: avatarId,
+      engine: { type: "avatar_iii" },
+      audio_url: audioUrl,
+      title: `Hansora Avatar III ${run_id}`,
+      resolution: "1080p",
+      aspect_ratio: aspectRatio,
+      background: { type: "color", value: "#f6f6fc" },
+      callback_url: callbackUrl,
+      callback_id: run_id
+    })
   });
-  const data = resp.data;
+  // An identical concurrent request may still be processing at HeyGen.
+  if (resp.status === 409 && resp.data?.error?.code === "request_in_progress") return { pending: true };
   return {
     ok: resp.ok,
     error: resp.ok ? "" : `heygen_video_${resp.status}`,
-    videoId: extractVideoId(data),
-    data,
-    apiVersion: "v2",
+    videoId: extractVideoId(resp.data),
+    data: resp.data,
+    apiVersion: "v3",
     requestedModel: "avatar_iii",
-    heygenEngine,
+    heygenEngine: "AvatarIII",
     finalCost: roundCredits(Number(billableSeconds || 0) * 0.3),
-    avatarId: talkingPhotoId,
-    avatarCreateData: talkingPhoto.data
+    avatarId,
+    failedStage: resp.ok ? "" : "video_create"
   };
 }
 
-async function uploadHeyGenAsset(imageUrl, run_id) {
-  try {
-    const imageResp = await fetch(imageUrl);
-    const imageBytes = await imageResp.arrayBuffer();
-    const contentType = normalizeImageContentType(imageResp.headers.get("content-type"));
-    if (!imageResp.ok || !imageBytes.byteLength) {
-      return { ok: false, status: imageResp.status || 400, data: { error: "image_fetch_failed" } };
-    }
-    if (imageBytes.byteLength > 32 * 1024 * 1024) {
-      return { ok: false, status: 400, data: { error: "image_too_large_max_32_mb" } };
-    }
-
-    const extension = contentType === "image/png" ? "png" : "jpg";
-    const form = new FormData();
-    form.append("file", new Blob([imageBytes], { type: contentType }), `hansora-${run_id}.${extension}`);
-    const resp = await fetch(`${HEYGEN_BASE}/v3/assets`, {
-      method: "POST",
-      headers: {
-        "x-api-key": HEYGEN_API_KEY,
-        Accept: "application/json"
-      },
-      body: form
-    });
-    const text = await resp.text();
-    let data;
-    try { data = JSON.parse(text || "{}"); } catch { data = { raw: text }; }
-    return { ok: resp.ok, status: resp.status, data };
-  } catch (error) {
-    return { ok: false, status: 0, data: { error: messageOf(error) } };
-  }
+function providerKey(uid, run_id, stage) {
+  return `hansora-${stage}-${createHash("sha256").update(JSON.stringify([uid, run_id])).digest("hex")}`;
 }
 
-async function uploadTalkingPhoto(imageUrl) {
-  try {
-    const imageResp = await fetch(imageUrl);
-    const imageBytes = await imageResp.arrayBuffer();
-    const contentType = normalizeImageContentType(imageResp.headers.get("content-type"));
-    if (!imageResp.ok || !imageBytes.byteLength) {
-      return { ok: false, status: imageResp.status || 400, data: { error: "image_fetch_failed" } };
-    }
-    const resp = await fetch("https://upload.heygen.com/v1/talking_photo", {
-      method: "POST",
-      headers: {
-        "x-api-key": HEYGEN_API_KEY,
-        "Content-Type": contentType,
-        Accept: "application/json"
-      },
-      body: Buffer.from(imageBytes)
-    });
-    const text = await resp.text();
-    let data;
-    try { data = JSON.parse(text || "{}"); } catch { data = { raw: text }; }
-    return { ok: resp.ok, status: resp.status, data };
-  } catch (error) {
-    return { ok: false, status: 0, data: { error: messageOf(error) } };
-  }
+// A compare-and-set lease serializes repeated polls before submitting or
+// debiting. The lease outlasts the 60-second Netlify invocation limit.
+async function claimSubmission(uid, run_id) {
+  const row = await getGeneration(uid, run_id);
+  if (!row) throw new Error("missing_generation_row");
+  const meta = row.meta || {};
+  if (meta.task_id || meta.video_id || meta.status === "failed") return null;
+  if (meta.heygen_submit_claim && Date.now() - Number(meta.heygen_submit_claim_at || 0) < 120000) return null;
+  const token = randomUUID();
+  const previous = meta.heygen_submit_claim;
+  const condition = previous ? `eq.${encodeURIComponent(previous)}` : "is.null";
+  const res = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}&meta->>heygen_submit_claim=${condition}`, {
+    method: "PATCH",
+    headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=representation" },
+    body: JSON.stringify({ meta: { ...meta, heygen_submit_claim: token, heygen_submit_claim_at: Date.now() } })
+  });
+  const rows = await res.json().catch(() => []);
+  if (!res.ok) throw new Error("submission_claim_failed");
+  return Array.isArray(rows) && rows.length ? { token, meta: rows[0].meta } : null;
 }
 
-function normalizeImageContentType(value) {
-  const text = String(value || "").split(";")[0].trim().toLowerCase();
-  if (text === "image/png" || text === "image/webp" || text === "image/jpeg") return text;
-  return "image/jpeg";
-}
-
-function extractAssetId(data) {
-  const direct = data?.data?.asset_id || data?.asset_id || data?.data?.id || data?.id;
-  return direct ? String(direct) : "";
+async function releaseSubmission(uid, run_id, token) {
+  const row = await getGeneration(uid, run_id);
+  if (!row || row.meta?.heygen_submit_claim !== token) return;
+  const res = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}&meta->>heygen_submit_claim=eq.${encodeURIComponent(token)}`, {
+    method: "PATCH",
+    headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify({ meta: { ...row.meta, heygen_submit_claim: null, heygen_submit_claim_at: null } })
+  });
+  if (!res.ok) throw new Error("submission_release_failed");
 }
 
 async function heygenFetch(path, options = {}) {
   const resp = await fetch(`${HEYGEN_BASE}${path}`, {
+    signal: AbortSignal.timeout(10000),
     ...options,
     headers: {
       "x-api-key": HEYGEN_API_KEY,
@@ -458,17 +443,15 @@ async function getExistingTask(uid, run_id) {
 }
 
 async function patchMeta(uid, run_id, extraMeta) {
-  try {
-    const row = await getGeneration(uid, run_id);
-    if (!row) return;
-    const meta = row.meta && typeof row.meta === "object" ? row.meta : {};
-    const nextMeta = { ...meta, run_id, ...extraMeta };
-    await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
-      method: "PATCH",
-      headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({ meta: nextMeta })
-    });
-  } catch {}
+  const row = await getGeneration(uid, run_id);
+  if (!row) throw new Error("missing_generation_row");
+  const meta = row.meta && typeof row.meta === "object" ? row.meta : {};
+  const res = await fetch(`${UG_URL}?id=eq.${encodeURIComponent(row.id)}`, {
+    method: "PATCH",
+    headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify({ meta: { ...meta, run_id, ...extraMeta } })
+  });
+  if (!res.ok) throw new Error("generation_metadata_update_failed");
 }
 
 async function getCredits(uid) {
@@ -524,37 +507,10 @@ async function markCharged(uid, run_id, cost, taskId, extraMeta) {
 }
 
 function extractVideoId(data) {
-  if (!data || typeof data !== "object") return "";
-  const direct = data.video_id || data.id || data.task_id || data.taskId || data?.data?.video_id || data?.data?.id || data?.data?.task_id || data?.data?.taskId || data?.result?.video_id || data?.result?.id;
-  if (direct) return String(direct);
-  return scanForKey(data, /^(video[_-]?id|task[_-]?id|id)$/i);
+  const id = data?.data?.video_id || data?.video_id;
+  return typeof id === "string" && id.trim() ? id.trim() : "";
 }
 function extractAvatarId(data) {
-  if (!data || typeof data !== "object") return "";
-  const direct = data?.data?.avatar_item?.id || data?.avatar_item?.id || data?.data?.id || data?.id || data?.data?.avatar_id || data?.avatar_id;
-  if (direct) return String(direct);
-  return scanForKey(data, /^(avatar[_-]?id|id)$/i);
-}
-function extractTalkingPhotoId(data) {
-  if (!data || typeof data !== "object") return "";
-  const direct = data?.data?.talking_photo_id || data?.talking_photo_id || data?.data?.id || data?.id || data?.data?.asset_id || data?.asset_id;
-  if (direct) return String(direct);
-  return scanForKey(data, /^(talking[_-]?photo[_-]?id|asset[_-]?id|id)$/i);
-}
-function scanForKey(obj, regex) {
-  const seen = new Set();
-  function walk(value) {
-    if (!value || typeof value !== "object" || seen.has(value)) return "";
-    seen.add(value);
-    for (const [key, child] of Object.entries(value)) {
-      if (regex.test(key) && (typeof child === "string" || typeof child === "number")) {
-        const s = String(child);
-        if (s.length > 3) return s;
-      }
-      const inner = walk(child);
-      if (inner) return inner;
-    }
-    return "";
-  }
-  return walk(obj);
+  const id = data?.data?.avatar_item?.id || data?.avatar_item?.id;
+  return typeof id === "string" && id.trim() ? id.trim() : "";
 }

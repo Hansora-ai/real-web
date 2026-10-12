@@ -11,6 +11,12 @@
   node_bundler = "esbuild"
 
 # (kept) Function-specific settings
+[functions."run-heygen-avatar"]
+  timeout = 60
+
+[functions."heygen-check"]
+  timeout = 60
+
 [functions."run-henshin"]
   timeout = 60
   included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
