@@ -60,7 +60,13 @@ const server = createServer(async (req, res) => {
       if (Date.now() - lastToken < 1500)
         return send(429, { error: "Wait a moment and try again." });
       lastToken = Date.now();
-      return send(200, await createCaptionToken({ apiKey }));
+      let body = "";
+      for await (const chunk of req) { body += chunk; if (body.length > 4096) return send(413, { error: "Request too large." }); }
+      const seconds = (() => { try { return JSON.parse(body || "{}").seconds; } catch { return null; } })();
+      const count = Math.min(20, Math.max(1, Array.isArray(seconds) ? seconds.length : 1));
+      const tokens = [];
+      for (let i = 0; i < count; i++) tokens.push((await createCaptionToken({ apiKey })).token);
+      return send(200, { token: tokens[0], tokens });
     }
     if (await localRender(req, res, url, send)) return;
     if (req.method !== "GET" && req.method !== "HEAD")
