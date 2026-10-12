@@ -3,6 +3,7 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
+    "test:heygen": "node --test test/heygen/*.test.cjs",
     "test:automation": "node --test test/automation/*.test.mjs",
     "test:sales-agent": "node --test test/sales-agent/*.test.mjs",
     "test:mcp": "node --test test/hansora-mcp/*.test.mjs",

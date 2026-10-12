@@ -902,7 +902,12 @@
         if (token && token.cancelled) return;
         try {
           const params = new URLSearchParams({ uid: currentUser.id, run_id: runId || '', taskId: taskId || '' });
-          const res = await fetch('/.netlify/functions/heygen-check?' + params.toString(), { cache: 'no-store' });
+          const { data: pollSession } = await supabaseClient.auth.getSession();
+          const accessToken = pollSession?.session?.access_token || '';
+          const res = await fetch('/.netlify/functions/heygen-check?' + params.toString(), {
+            cache: 'no-store',
+            headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
+          });
           const data = await res.json().catch(() => ({}));
           const resultUrl = data.result_url || data.video_url || firstVideoUrl(data);
           if (data.status === 'done' || resultUrl) {
