@@ -497,8 +497,20 @@
     { label: 'Song Creation', href: '/audio.html?tool=song-creation', icon: 'SC', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/20.png', note: 'Create music tracks' },
   ];
 
+  const CAPTION_STUDIO_COPY = {
+    en: { label: 'Caption & Montage', note: 'Add captions and edit videos' },
+    ru: { label: 'Субтитры и монтаж', note: 'Добавляйте субтитры и монтируйте видео' },
+    hy: { label: 'Ենթագրեր և մոնտաժ', note: 'Ավելացրեք ենթագրեր և մոնտաժեք տեսանյութեր' }
+  };
+  const CAPTION_STUDIO_TOOL = {
+    ...CAPTION_STUDIO_COPY[CURRENT_LANGUAGE],
+    href: '/caption-studio.html',
+    logoUrl: '/icons/caption-studio.svg'
+  };
+
   const FEATURE_MENU_ITEMS = [
     { label: 'Henshin', href: '/henshin.html', logoUrl: '/icons/henshin.svg', note: 'Transform video characters' },
+    CAPTION_STUDIO_TOOL,
     { label: 'Video upscale', href: '/upscale.html?mode=video', icon: 'VU', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/25.png', note: 'Increase video quality' },
     { label: 'Video Edit', href: '/video-edit.html', icon: 'VE', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/22.png', note: 'Edit uploaded video' },
     { label: 'Background Change', href: '/background-change.html', icon: 'BG', logoUrl: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/LOGOS/23.png', note: 'Change video background' },
