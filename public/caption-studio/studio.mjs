@@ -1343,6 +1343,7 @@ click("export-video", async () => {
     $("export-result").hidden = false;
     exported = true;
     toast("Your MP4 is ready to download.");
+    saveToGenerations(blob, duration(project));
   } catch (error) {
     if (!/terminate|cancel/i.test(error.message || ""))
       toast(error.message || "Export cancelled.", true);
@@ -1352,6 +1353,35 @@ click("export-video", async () => {
     setBusy(false);
   }
 });
+// Signed-in exports also land in My generations, next to the user's other videos.
+async function saveToGenerations(blob, seconds) {
+  const status = $("generations-save");
+  status.hidden = true;
+  if (connection.local) return;
+  const token = (await window.__HANSORA_SB__?.auth.getSession())?.data?.session?.access_token;
+  if (!token) return;
+  const say = (text) => { status.textContent = text; status.hidden = false; };
+  const call = async (body) => {
+    const r = await fetch("/.netlify/functions/caption-studio-save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw Error(data.error || "Could not save to your generations.");
+    return data;
+  };
+  try {
+    say("Saving to My generations…");
+    const { id, uploadUrl } = await call({ action: "start", size: blob.size });
+    const up = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": "video/mp4", "x-upsert": "false" }, body: blob });
+    if (!up.ok) throw Error("Could not upload the video to your generations.");
+    await call({ action: "finish", id, name: p.name, seconds });
+    say("Saved to My generations ✓");
+  } catch (error) {
+    say(`${error.message} You can still download it.`);
+  }
+}
 click("cancel-export", () => {
   cancelFastExport();
   toast("Export cancelled. Your project is safe.");
