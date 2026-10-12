@@ -75,7 +75,17 @@ export default async function handler(request) {
     const charged = await debit(user.id, cost);
     if (!charged.ok)
       return json(402, { error: `Not enough credits. Auto captions for this video cost ${cost * 10}⚡.`, cost });
-    return json(200, { token: tokens[0], tokens, cost, credits: charged.credits });
+    // Record the charge so a failed job can be refunded once (supabase/16_caption_jobs.sql).
+    let jobId = null;
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/caption_jobs`, {
+        method: "POST",
+        headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify({ user_id: user.id, cost, seconds, videos: lengths.length }),
+      });
+      if (r.ok) jobId = (await r.json())?.[0]?.id || null;
+    } catch {}
+    return json(200, { token: tokens[0], tokens, cost, credits: charged.credits, jobId });
   } catch (error) {
     return json(error.status || 500, {
       error: error.status === 401 ? "Sign in to generate captions." : error.message || "Could not start transcription.",
