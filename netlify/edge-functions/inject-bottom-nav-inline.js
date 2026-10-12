@@ -5,8 +5,8 @@ export default async (request, context) => {
   const res = await context.next();
   const requestPath = new URL(request.url).pathname.toLowerCase();
 
-  // Authentication and connector documentation use focused standalone layouts.
-  if (requestPath === '/oauth/consent' || requestPath === '/oauth/consent.html' || requestPath === '/mcp-setup.html' || /^\/automation(?:-[a-z]+)?(?:\.html)?(?:\/|$)/.test(requestPath)) {
+  // Authentication, connector documentation and the full-screen video editor use focused standalone layouts.
+  if (requestPath === '/oauth/consent' || requestPath === '/oauth/consent.html' || requestPath === '/mcp-setup.html' || /^\/caption-studio(?:\.html)?\/?$/.test(requestPath) || /^\/automation(?:-[a-z]+)?(?:\.html)?(?:\/|$)/.test(requestPath)) {
     return res;
   }
 

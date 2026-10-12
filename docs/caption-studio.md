@@ -96,3 +96,11 @@ Preview sound now passes through independent Web Audio gain nodes. **Audio** sho
 Verification for this revision includes actual preview output levels at 100%, 25%, and 0%; a decoded export check that 25% is about 12 dB quieter and 0% is silent; and a two-tone source trim proving the correct later tone is selected without stretching its pitch. All 24 tests pass. The preview mixer and owner-scoped generation query also have targeted regression tests.
 
 The final UI export check produced an 8-second 480×854 H.264/AAC portrait MP4 with imported multilingual captions and a trimmed 25% audio track. The phone preview and its Caption drawer were also checked in the larger focused mode.
+
+## CapCut-style redesign
+
+The editor layout was rebuilt; the editing engine, export, transcription and project format are unchanged.
+
+- **Phone (≤700px):** full-screen editor without the site header or the injected site bottom navigation (`netlify/edge-functions/inject-bottom-nav-inline.js` skips `/caption-studio`). Top bar: close, project name, project menu, Export. Below the preview: Focus, timecode, play, undo/redo. The timeline keeps the playhead fixed in the centre; scrolling the tracks seeks, and pinching zooms. All tracks (Text, Video, Captions, Audio) are always visible, with “Add …” placeholders and a ＋ after the last clip. The bottom toolbar (Edit · Audio · Text · Captions · Media · Ratio · Style) opens slide-up sheets with a ✓. Tapping a clip, caption or layer switches to an edit bar (Split · Adjust · Duplicate · Reverse · Earlier · Later · Delete).
+- **Desktop:** icon tabs, preview with centred transport, inspector opened with **Adjust**, labelled multitrack timeline. Uploading a portrait clip no longer hides the timeline; **Focus** is opt-in.
+- Checked in Chromium at 393×852 and 1440×900: sample load, sheet open/close, clip selection and edit bar, Adjust, Ratio, add text, scroll-to-seek, playback, and MP4 export (480×854 H.264/AAC with burned-in captions) on both layouts. All 24 Caption Studio tests pass.

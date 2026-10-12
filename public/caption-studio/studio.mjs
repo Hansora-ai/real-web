@@ -172,22 +172,38 @@ function styleTarget() {
 }
 const styleHome = $("text-options").parentElement;
 function closeSheets() { document.body.classList.remove("tool-sheet-open", "properties-open"); }
+// Phones use a CapCut-style timeline: the playhead stays in the centre and the tracks scroll under it.
+const phone=matchMedia("(max-width: 700px)");
+const centered=()=>phone.matches;
+function lead() { return centered() ? Math.round($("timeline-scroll").clientWidth/2) : 70; }
+let scrollSync=0, userScrolling=false, userScrollTimer=null;
+function followPlayhead() {
+  if(!centered() || userScrolling) return;
+  const target=Math.round(time*timelineScale), scroller=$("timeline-scroll");
+  if(Math.abs(scroller.scrollLeft-target)>=1) {scrollSync=performance.now();scroller.scrollLeft=target;}
+}
+function editMode(on) {
+  document.body.classList.toggle("edit-mode",on);
+  if(on) document.body.classList.remove("tool-sheet-open");
+}
+function closeRatio() { $("ratio-sheet").hidden=true; document.body.classList.remove("ratio-open"); }
 function sizePreview() {
   const wrap=$("preview-wrap"), scale=Math.min((wrap.clientWidth-24)/canvas.width,(wrap.clientHeight-16)/canvas.height);
   if(scale>0) {canvas.style.width=`${Math.floor(canvas.width*scale)}px`;canvas.style.height=`${Math.floor(canvas.height*scale)}px`;}
 }
 function focusPreview(focus) {
   document.body.classList.toggle("preview-focus",focus);
-  $("preview-expand").textContent=focus?"↔ Timeline":"⛶ Preview";
+  $("preview-expand").querySelector("span").textContent=focus?"Timeline":"Focus";
   $("preview-expand").title=focus?"Show timeline and editing controls":"Enlarge preview";
   $("preview-expand").setAttribute("aria-pressed",String(focus));
 }
-function focusPortrait() {
-  const size=frameSize(p,assets);
-  if(size.height>size.width) {closeSheets();focusPreview(true);}
-}
+// The timeline stays visible after an upload (CapCut-style); Focus is opt-in.
+function focusPortrait() { closeSheets(); }
+const SHEET_TITLES={media:"Media",captions:"Captions",layers:"Text",audio:"Audio"};
 function tab(name) {
   activeTab = name;
+  $("sheet-title").textContent=SHEET_TITLES[name];
+  closeRatio();
   document.body.classList.add("tool-sheet-open");
   document.body.classList.remove("properties-open");
   if (name === "captions" && !selectedSource()) $("style-scope").value = "all";
@@ -309,6 +325,7 @@ function renderUI() {
     canvas.width = size.width;
     canvas.height = size.height;
   }
+  syncProxies();
   sizePreview();draw();
 }
 function renderInspector() {
@@ -412,7 +429,8 @@ function draw() {
 }
 function updatePlayhead() {
   const head = $("timeline-playhead");
-  head.style.left = `${70 + time * timelineScale}px`;
+  head.style.left = `${lead() + time * timelineScale}px`;
+  followPlayhead();
   head.setAttribute("aria-valuemax", duration(p));
   head.setAttribute("aria-valuenow", time.toFixed(2));
   head.setAttribute("aria-valuetext", clock(time));
@@ -457,15 +475,18 @@ async function seek(at, { play = false } = {}) {
       if(play) await video.play();
     }
     if(revision!==seekRevision) return;
-    if(play) {playing=true;playbackAnchor={time,at:performance.now()};$("play").textContent="Ⅱ";$("play").setAttribute("aria-label","Pause");}
+    if(play) {playing=true;playbackAnchor={time,at:performance.now()};playIcon(true);}
     syncMusic(play);draw();
   } catch(error) {if(revision===seekRevision) {pause();toast(error.message,true);}}
   finally {if(revision===seekRevision) loading=false;}
 }
+function playIcon(on) {
+  $("play").classList.toggle("is-playing",on);$("play").setAttribute("aria-label",on?"Pause":"Play");
+}
 function pause() {
   playing=false;playbackAnchor=null;video.pause();music.pause();
   for(const player of audioPlayers.values()) player.pause();
-  $("play").textContent="▶";$("play").setAttribute("aria-label","Play");
+  playIcon(false);
 }
 function syncMusic(play=false, seekAudio=true) {
   const active=new Set(p.audio.map(a=>a.id));
@@ -1404,12 +1425,13 @@ async function thumbnailFrames(el, d) {
   return frames;
 }
 function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
-  const viewport = Math.max(260, $("timeline-scroll").clientWidth - 70);
+  const pad = lead(), viewport = Math.max(260, $("timeline-scroll").clientWidth - (centered() ? 0 : pad)) * (centered() ? 0.85 : 1);
   // Keep seconds at the same scale after edits; only zoom/resize changes it.
-  if (timelineSpan === null && d > 0) timelineSpan = Math.max(d, 6);
+  if (timelineSpan === null && d > 0) timelineSpan = centered() ? 4 : Math.max(d, 6);
   timelineScale = (viewport / (timelineSpan || 6)) * Number($("timeline-zoom").value);
   const width = Math.max(viewport, d * timelineScale);
-  $("timeline-content").style.width = `${width + 70}px`;
+  $("timeline-content").style.setProperty("--lead", `${pad}px`);
+  $("timeline-content").style.width = `${width + pad + (centered() ? pad : 40)}px`;
   $("clip-track").replaceChildren();
   $("caption-track").replaceChildren();
   $("timeline-ruler").replaceChildren();
@@ -1424,7 +1446,11 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
   if (!p.clips.length) {
     const e = document.createElement("div");
     e.className = "timeline-empty";
-    e.textContent = "Drag media here or click ＋ on a thumbnail";
+    const add = button("", () => $("video-input").click(), "empty-add");
+    add.innerHTML = '<svg class="i"><use href="#i-plus"/></svg><span>Add media</span>';
+    const tip = document.createElement("span");
+    tip.textContent = "or drag a file here";
+    e.append(add, tip);
     $("clip-track").append(e);
   }
   let offset = 0;
@@ -1451,8 +1477,8 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
       selectedClip = c.id;
       selectedAudio=null;
       selectedOverlay = a.kind === "image" ? `scene:${c.id}` : null;
-      tab("media");
-      seek(start);
+      if (centered()) { editMode(true); seek(Math.max(start, Math.min(time, start + c.end - c.start - 0.01))); }
+      else { tab("media"); seek(start); }
       renderUI();
     };
     b.addEventListener("click", select);
@@ -1529,11 +1555,23 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
     $("clip-track").append(b);
     offset += c.end - c.start;
   }
+  if (p.clips.length) {
+    const add = button("", () => $("video-input").click(), "clip-add");
+    add.innerHTML = '<svg class="i"><use href="#i-plus"/></svg>';
+    add.setAttribute("aria-label", "Add media to the end");
+    add.title = "Add media";
+    $("clip-track").append(add);
+  }
+  if (p.clips.length && !captions.length) {
+    const add = button("", () => tab("captions"), "track-placeholder");
+    add.innerHTML = '<svg class="i"><use href="#i-captions"/></svg><span>Add captions</span>';
+    $("caption-track").append(add);
+  }
   for (const q of captions) {
     const b = button(
       q.text,
-      () => selectOverlay(q.key, q.start),
-      "caption-segment",
+      () => {selectOverlay(q.key, q.start);editMode(true);},
+      `caption-segment${selectedOverlay === q.key ? " selected" : ""}`,
     );
     b.style.left = `${q.start * timelineScale}px`;
     b.style.width = `${(q.end - q.start) * timelineScale}px`;
@@ -1591,9 +1629,19 @@ function renderExtraTracks() {
   };
   [...p.layers].reverse().forEach(item=>add(item,item.kind,"layer-tracks"));
   groups.clear();p.audio.forEach(item=>add(item,"audio","audio-tracks"));
+  if(!p.clips.length) return;
+  const placeholder=(container,label,icon,fn)=>{
+    const row=document.createElement("div");row.className="track-row extra-track empty-track";
+    const name=document.createElement("span");name.className="track-label";name.textContent=label;
+    const b=button("",fn,"track-placeholder");b.innerHTML=`<svg class="i"><use href="#${icon}"/></svg><span>Add ${label.toLowerCase()}</span>`;
+    const track=document.createElement("div");track.className="layer-track";track.append(b);row.append(name,track);$(container).append(row);
+  };
+  if(!p.layers.length) placeholder("layer-tracks","Text","i-text",()=>$("add-text").click());
+  if(!p.audio.length) placeholder("audio-tracks","Audio","i-audio",()=>{tab("audio");$("video-input").click();});
 }
 function selectTimed(item,audio) {
   if(busy) return;
+  editMode(true);
   pause();selectedAudio=audio?item.id:null;selectedOverlay=audio?null:item.id;
   $("style-scope").value="selected";seek(item.start+.001);renderInspector();draw();
 }
@@ -1671,7 +1719,7 @@ $("timeline-resize").addEventListener("keydown",e=>{
 });
 $("timeline-zoom").addEventListener("input", () => renderTimeline());
 function scrubPointer(e) {
-  if (busy || e.button !== 0) return;
+  if (busy || e.button !== 0 || (centered() && e.pointerType !== "mouse")) return;
   e.preventDefault();
   e.stopPropagation();
   pause();
@@ -1714,7 +1762,23 @@ $("clip-track").addEventListener(
 );
 $("timeline-scroll").addEventListener("scroll",()=>{
   for(const label of document.querySelectorAll(".track-label")) label.style.transform=`translateX(${$("timeline-scroll").scrollLeft}px)`;
-});
+  if(!centered() || busy || trimming || performance.now()-scrollSync<120) return;
+  userScrolling=true;clearTimeout(userScrollTimer);
+  userScrollTimer=setTimeout(()=>{userScrolling=false;},180);
+  if(playing) pause();
+  seek($("timeline-scroll").scrollLeft/timelineScale);
+},{passive:true});
+// Pinch the phone timeline to zoom, like CapCut.
+{
+  let pinch=null;
+  const gap=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+  $("timeline-scroll").addEventListener("touchstart",e=>{if(e.touches.length===2) pinch={gap:gap(e.touches),zoom:Number($("timeline-zoom").value)};},{passive:true});
+  $("timeline-scroll").addEventListener("touchmove",e=>{
+    if(!pinch || e.touches.length!==2) return;e.preventDefault();
+    $("timeline-zoom").value=clamp(pinch.zoom*gap(e.touches)/pinch.gap,1,8);renderTimeline();
+  },{passive:false});
+  $("timeline-scroll").addEventListener("touchend",()=>{pinch=null;});
+}
 new ResizeObserver(() => renderTimeline()).observe($("timeline-scroll"));
 new ResizeObserver(sizePreview).observe($("preview-wrap"));
 click("reverse", async () => {
@@ -1767,12 +1831,33 @@ function renderSound() {
     slider.addEventListener("change",commit);label.append(output,slider);card.append(label);list.append(card);
   }
 }
-for(const b of document.querySelectorAll("[data-tool]")) b.addEventListener("click",()=>tab(b.dataset.tool));
+for(const b of document.querySelectorAll("[data-tool]")) b.addEventListener("click",()=>{editMode(false);tab(b.dataset.tool);});
+for(const b of document.querySelectorAll("[data-proxy]")) b.addEventListener("click",()=>$(b.dataset.proxy).click());
+function syncProxies() {
+  for(const b of document.querySelectorAll("[data-proxy]")) {const target=$(b.dataset.proxy);b.disabled=target.disabled;b.hidden=target.hidden;}
+  for(const b of document.querySelectorAll("[data-aspect]")) b.classList.toggle("active",b.dataset.aspect===p.aspect);
+}
+const mobileActions={
+  edit:()=>{
+    if(!p.clips.length) return tab("media");
+    closeSheets();closeRatio();
+    if(!selectedTimedItem() && !selectedOverlay) selectedClip=locate(p,time)?.clip.id||selectedClip;
+    editMode(true);renderUI();
+  },
+  back:()=>{editMode(false);selectedOverlay=null;selectedAudio=null;renderUI();},
+  ratio:()=>{editMode(false);closeSheets();$("ratio-sheet").hidden=false;document.body.classList.add("ratio-open");},
+  "ratio-done":closeRatio,
+  style:()=>{editMode(false);closeRatio();tab("captions");$("caption-style-host").closest("details").open=true;},
+};
+for(const b of document.querySelectorAll("[data-mobile]")) b.addEventListener("click",run(()=>mobileActions[b.dataset.mobile]()));
+for(const b of document.querySelectorAll("[data-aspect]")) b.addEventListener("click",()=>{$("aspect").value=b.dataset.aspect;$("aspect").dispatchEvent(new Event("change"));syncProxies();});
+document.querySelector(".sheet-scrim").addEventListener("click",()=>{closeSheets();closeRatio();});
+phone.addEventListener("change",()=>{timelineSpan=null;renderUI();});
 click("close-tools",closeSheets);click("close-properties",closeSheets);
 click("toggle-tracks",()=>{const expanded=document.body.classList.toggle("tracks-expanded");$("toggle-tracks").setAttribute("aria-expanded",String(expanded));});
-click("edit-selection",()=>{document.body.classList.remove("tool-sheet-open");document.body.classList.add("properties-open");renderInspector();});
+click("edit-selection",()=>{if(centered())activeTab="media";document.body.classList.remove("tool-sheet-open");document.body.classList.add("properties-open");renderInspector();});
 click("preview-expand",()=>{closeSheets();focusPreview(!document.body.classList.contains("preview-focus"));});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeSheets();focusPreview(false);}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeSheets();closeRatio();focusPreview(false);}});
 click("audio-upload",()=>$("video-input").click());
 async function showGenerations() {
   tab("media");$("uploaded-media").hidden=true;$("generation-results").hidden=false;$("generation-list").replaceChildren();$("generation-sign-in").hidden=true;
