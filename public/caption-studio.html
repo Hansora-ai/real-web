@@ -86,10 +86,9 @@
           </div>
           <section id="tab-media" class="tab-content">
             <div class="media-source-actions">
-              <button class="primary" id="add-video"><svg class="i"><use href="#i-upload"/></svg>Upload media</button>
-              <button id="my-generations"><svg class="i"><use href="#i-sparkle"/></svg>My generations</button>
+              <button id="my-generations" class="source-card gen"><span class="source-icon"><svg class="i"><use href="#i-sparkle"/></svg></span><strong>My generations</strong><small>Your Hansora images &amp; videos</small></button>
+              <button id="add-video" class="source-card"><span class="source-icon"><svg class="i"><use href="#i-upload"/></svg></span><strong>Upload</strong><small>From this device</small></button>
             </div>
-            <p class="hint">Videos, images and audio. Tap ＋ on a file to add it to your video.</p>
             <div id="generation-results" hidden>
               <p id="generation-status" class="hint" role="status"></p>
               <div id="generation-list" class="media-list"></div>
@@ -147,7 +146,6 @@
         </aside>
         <section class="center-panel">
           <div class="preview-header">
-            <div class="preview-label">Preview</div>
             <div class="preview-options">
               <label class="sr-only" for="aspect">Aspect ratio</label>
               <select id="aspect">
@@ -166,13 +164,19 @@
             <textarea id="preview-text-editor" aria-label="Edit text on video" spellcheck="false" hidden></textarea>
             <div id="empty-preview" class="empty-preview">
               <h1>Make your next video</h1>
-              <p>Upload a clip or pick a Hansora generation,<br />then add captions, text and music.</p>
-              <button class="empty-drop" id="empty-upload">
-                <span class="empty-plus"><svg class="i"><use href="#i-plus"/></svg></span>
-                <strong>Upload media</strong>
-                <small>Video, image or audio</small>
-              </button>
-              <button id="empty-generations" class="ghost"><svg class="i"><use href="#i-sparkle"/></svg>Choose from my generations</button>
+              <p>Pick a generation, add captions and text, export and post.</p>
+              <div class="empty-cards">
+                <button class="empty-drop gen" id="empty-generations">
+                  <span class="empty-plus"><svg class="i"><use href="#i-sparkle"/></svg></span>
+                  <strong>My generations</strong>
+                  <small>Use what you made on Hansora</small>
+                </button>
+                <button class="empty-drop" id="empty-upload">
+                  <span class="empty-plus"><svg class="i"><use href="#i-plus"/></svg></span>
+                  <strong>Upload</strong>
+                  <small>Video, image or audio</small>
+                </button>
+              </div>
             </div>
             <div id="safe-guide" class="safe-guide" hidden><span>Keep text inside this area</span></div>
           </div>
@@ -314,25 +318,26 @@
             <strong>Timeline</strong>
             <span id="timeline-duration">0 clips</span>
             <div class="timeline-tools">
-              <button id="add-music-quick"><svg class="i"><use href="#i-plus"/></svg>Media</button>
+              <button id="add-music-quick" title="Add media"><svg class="i"><use href="#i-plus"/></svg>Media</button>
               <button id="toggle-tracks" aria-expanded="true" hidden>Layers</button>
-              <button id="edit-selection"><svg class="i"><use href="#i-sliders"/></svg>Adjust</button>
+              <button id="edit-selection" title="Adjust selection"><svg class="i"><use href="#i-sliders"/></svg>Adjust</button>
               <span class="tool-sep" aria-hidden="true"></span>
-              <button id="split"><svg class="i"><use href="#i-split"/></svg>Split</button>
-              <button id="duplicate"><svg class="i"><use href="#i-copy"/></svg>Duplicate</button>
-              <button id="delete-clip"><svg class="i"><use href="#i-trash"/></svg>Delete</button>
-              <button id="reverse"><svg class="i"><use href="#i-reverse"/></svg>Reverse</button>
+              <button id="split" title="Split at playhead"><svg class="i"><use href="#i-split"/></svg>Split</button>
+              <button id="duplicate" title="Duplicate"><svg class="i"><use href="#i-copy"/></svg>Duplicate</button>
+              <button id="delete-clip" title="Delete"><svg class="i"><use href="#i-trash"/></svg>Delete</button>
+              <button id="reverse" title="Reverse clip"><svg class="i"><use href="#i-reverse"/></svg>Reverse</button>
               <button id="move-left" class="icon" title="Move clip earlier">←</button>
               <button id="move-right" class="icon" title="Move clip later">→</button>
             </div>
             <label class="timeline-zoom"><span>Zoom</span><input id="timeline-zoom" type="range" min="1" max="8" value="1" step=".25" /></label>
           </div>
+          <div id="timecode-m" class="m-timecode" aria-hidden="true"></div>
           <div id="timeline-scroll" class="timeline-scroll">
             <div id="timeline-content" class="timeline-content">
               <div id="timeline-ruler" class="timeline-ruler" aria-label="Seek on timeline"></div>
               <div id="layer-tracks"></div>
               <div class="track-row main-row">
-                <span class="track-label">Video</span>
+                <span class="track-label"><span class="lbl">Video</span><button id="mute-main" class="mute-main" aria-pressed="false"><svg class="i"><use href="#i-volume"/></svg><span>Mute clip audio</span></button></span>
                 <div id="clip-track" class="clip-track">
                   <div class="timeline-empty">Drag media here to begin</div>
                 </div>
@@ -348,6 +353,7 @@
           <p class="timeline-hint">Drag clip edges to trim · Double-click text in the preview to edit</p>
         </div>
       </div>
+      <button class="fab" data-mobile="generations" aria-label="My generations"><svg class="i"><use href="#i-sparkle"/></svg></button>
       <nav class="mobile-tools" aria-label="Editor tools">
         <button data-mobile="edit"><svg class="i"><use href="#i-edit"/></svg><span>Edit</span></button>
         <button data-tool="audio"><svg class="i"><use href="#i-audio"/></svg><span>Audio</span></button>

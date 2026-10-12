@@ -186,6 +186,14 @@ function editMode(on) {
   document.body.classList.toggle("edit-mode",on);
   if(on) document.body.classList.remove("tool-sheet-open");
 }
+// Desktop: selecting something swaps the tool panel for its settings, keeping the preview large.
+let toolTab="media";
+function openProps() {
+  if(centered()) return;
+  if(!document.body.classList.contains("properties-open")) toolTab=activeTab;
+  activeTab="media";
+  document.body.classList.remove("tool-sheet-open");document.body.classList.add("properties-open");renderInspector();
+}
 function closeRatio() { $("ratio-sheet").hidden=true; document.body.classList.remove("ratio-open"); }
 function sizePreview() {
   const wrap=$("preview-wrap"), scale=Math.min((wrap.clientWidth-24)/canvas.width,(wrap.clientHeight-16)/canvas.height);
@@ -425,6 +433,8 @@ function draw() {
   const total = document.createElement("span");
   total.textContent = "/ " + clock(duration(p));
   $("timecode").append(total);
+  const short=t=>{const n=Math.max(0,t);return `${String(Math.floor(n/60)).padStart(2,"0")}:${String(Math.floor(n%60)).padStart(2,"0")}`;};
+  $("timecode-m").innerHTML=`${short(time)} <span>/ ${short(duration(p))}</span>`;
   updatePlayhead();
 }
 function updatePlayhead() {
@@ -1103,7 +1113,7 @@ canvas.addEventListener("pointerdown",e=>{
   const q=findOverlay();if(q?.clip) selectedClip=q.clip.id;
   const style=styleFor(p,selectedSource());checkpoint();
   drag={start:pos,x:style.x,y:style.y,size:style.size,width:style.width,box,handle};
-  canvas.setPointerCapture(e.pointerId);renderInspector();draw();
+  canvas.setPointerCapture(e.pointerId);openProps();renderInspector();draw();
 });
 canvas.addEventListener("pointermove",e=>{
   const pos=point(e);
@@ -1478,7 +1488,7 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
       selectedAudio=null;
       selectedOverlay = a.kind === "image" ? `scene:${c.id}` : null;
       if (centered()) { editMode(true); seek(Math.max(start, Math.min(time, start + c.end - c.start - 0.01))); }
-      else { tab("media"); seek(start); }
+      else { seek(start); openProps(); }
       renderUI();
     };
     b.addEventListener("click", select);
@@ -1570,7 +1580,7 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
   for (const q of captions) {
     const b = button(
       q.text,
-      () => {selectOverlay(q.key, q.start);editMode(true);},
+      () => {selectOverlay(q.key, q.start);editMode(true);openProps();},
       `caption-segment${selectedOverlay === q.key ? " selected" : ""}`,
     );
     b.style.left = `${q.start * timelineScale}px`;
@@ -1641,7 +1651,7 @@ function renderExtraTracks() {
 }
 function selectTimed(item,audio) {
   if(busy) return;
-  editMode(true);
+  editMode(true);openProps();
   pause();selectedAudio=audio?item.id:null;selectedOverlay=audio?null:item.id;
   $("style-scope").value="selected";seek(item.start+.001);renderInspector();draw();
 }
@@ -1833,7 +1843,16 @@ function renderSound() {
 }
 for(const b of document.querySelectorAll("[data-tool]")) b.addEventListener("click",()=>{editMode(false);tab(b.dataset.tool);});
 for(const b of document.querySelectorAll("[data-proxy]")) b.addEventListener("click",()=>$(b.dataset.proxy).click());
+click("mute-main",()=>{
+  const videos=p.clips.filter(c=>assets.get(c.assetId)?.kind==="video");if(!videos.length) return;
+  const muted=videos.every(c=>(c.volume??1)===0);
+  change(()=>videos.forEach(c=>c.volume=muted?1:0));
+  toast(muted?"Clip audio on.":"Clip audio muted.");
+});
 function syncProxies() {
+  const videos=p.clips.filter(c=>assets.get(c.assetId)?.kind==="video"),muted=videos.length>0&&videos.every(c=>(c.volume??1)===0);
+  $("mute-main").setAttribute("aria-pressed",String(muted));$("mute-main").querySelector("span").textContent=muted?"Clip audio off":"Mute clip audio";
+  $("mute-main").disabled=!videos.length||busy;
   for(const b of document.querySelectorAll("[data-proxy]")) {const target=$(b.dataset.proxy);b.disabled=target.disabled;b.hidden=target.hidden;}
   for(const b of document.querySelectorAll("[data-aspect]")) b.classList.toggle("active",b.dataset.aspect===p.aspect);
 }
@@ -1847,13 +1866,15 @@ const mobileActions={
   back:()=>{editMode(false);selectedOverlay=null;selectedAudio=null;renderUI();},
   ratio:()=>{editMode(false);closeSheets();$("ratio-sheet").hidden=false;document.body.classList.add("ratio-open");},
   "ratio-done":closeRatio,
+  generations:()=>{editMode(false);closeRatio();return showGenerations();},
   style:()=>{editMode(false);closeRatio();tab("captions");$("caption-style-host").closest("details").open=true;},
 };
 for(const b of document.querySelectorAll("[data-mobile]")) b.addEventListener("click",run(()=>mobileActions[b.dataset.mobile]()));
 for(const b of document.querySelectorAll("[data-aspect]")) b.addEventListener("click",()=>{$("aspect").value=b.dataset.aspect;$("aspect").dispatchEvent(new Event("change"));syncProxies();});
 document.querySelector(".sheet-scrim").addEventListener("click",()=>{closeSheets();closeRatio();});
 phone.addEventListener("change",()=>{timelineSpan=null;renderUI();});
-click("close-tools",closeSheets);click("close-properties",closeSheets);
+click("close-tools",closeSheets);
+click("close-properties",()=>{const wasOpen=document.body.classList.contains("properties-open");closeSheets();if(!centered()&&wasOpen){tab(toolTab);document.body.classList.remove("tool-sheet-open");}});
 click("toggle-tracks",()=>{const expanded=document.body.classList.toggle("tracks-expanded");$("toggle-tracks").setAttribute("aria-expanded",String(expanded));});
 click("edit-selection",()=>{if(centered())activeTab="media";document.body.classList.remove("tool-sheet-open");document.body.classList.add("properties-open");renderInspector();});
 click("preview-expand",()=>{closeSheets();focusPreview(!document.body.classList.contains("preview-focus"));});
