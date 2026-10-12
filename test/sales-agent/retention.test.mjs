@@ -24,7 +24,8 @@ test('new activity cannot prolong memory or derived copies of older messages', (
   const history = [{ created_at: new Date(now - CHAT_RETENTION_MS + 1000).toISOString() }];
   assert.equal(memoryExpiry(prior, history, now), new Date(now + 1000).toISOString());
   assert.equal(memoryExpiry(prior, [], now), prior.memory_expires_at);
-  assert.equal(memoryExpiry({ memory_expires_at: new Date(now - 1).toISOString() }, [], now), new Date(now + CHAT_RETENTION_MS).toISOString());
+  assert.equal(memoryExpiry({ memory_expires_at: new Date(now - 1).toISOString() }, [], now), new Date(now - 1).toISOString());
+  assert.equal(memoryExpiry(retainedSession({ memory_expires_at: new Date(now - 1).toISOString() }, now), [], now), new Date(now + CHAT_RETENTION_MS).toISOString());
   assert.equal(chatCutoff(now), '2026-09-28T20:00:00.000Z');
 });
 
