@@ -9,6 +9,7 @@ const SUPABASE_URL = String(process.env.SUPABASE_URL || "").replace(/\/+$/, "");
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE || "";
 const PROFILES_URL = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/profiles` : "";
 const MAX_SECONDS = 4 * 3600;
+const MAX_VIDEOS = 20;
 const buckets = new Map();
 const sb = () => ({ apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` });
 
@@ -51,10 +52,13 @@ export default async function handler(request) {
   try {
     const user = await authenticateRequest({ headers: Object.fromEntries(request.headers) });
     if (!user) return json(401, { error: "Sign in to generate captions." });
+    // One request covers every video in the project: one price for the total length.
     const body = await request.json().catch(() => ({}));
-    const seconds = Number(body.seconds);
-    if (!Number.isFinite(seconds) || seconds <= 0 || seconds > MAX_SECONDS)
-      return json(400, { error: "Videos up to 4 hours can be captioned." });
+    const lengths = (Array.isArray(body.seconds) ? body.seconds : [body.seconds]).map(Number);
+    if (!lengths.length || lengths.length > MAX_VIDEOS || lengths.some((n) => !Number.isFinite(n) || n <= 0))
+      return json(400, { error: `Up to ${MAX_VIDEOS} videos can be captioned at once.` });
+    const seconds = lengths.reduce((a, b) => a + b, 0);
+    if (seconds > MAX_SECONDS) return json(400, { error: "Videos up to 4 hours can be captioned." });
     const now = Date.now();
     for (const [id, b] of buckets) if (now - b.start > 60000) buckets.delete(id);
     const bucket = buckets.get(user.id) || { start: now, count: 0 };
@@ -66,11 +70,22 @@ export default async function handler(request) {
     const cost = captionCost(seconds);
     if ((await readCredits(user.id)) < cost)
       return json(402, { error: `Not enough credits. Auto captions for this video cost ${cost * 10}⚡.`, cost });
-    const token = await createCaptionToken({ apiKey: elevenLabsKey() });
+    const tokens = [];
+    for (let i = 0; i < lengths.length; i++) tokens.push((await createCaptionToken({ apiKey: elevenLabsKey() })).token);
     const charged = await debit(user.id, cost);
     if (!charged.ok)
       return json(402, { error: `Not enough credits. Auto captions for this video cost ${cost * 10}⚡.`, cost });
-    return json(200, { ...token, cost, credits: charged.credits });
+    // Record the charge so a failed job can be refunded once (supabase/16_caption_jobs.sql).
+    let jobId = null;
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/caption_jobs`, {
+        method: "POST",
+        headers: { ...sb(), "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify({ user_id: user.id, cost, seconds, videos: lengths.length }),
+      });
+      if (r.ok) jobId = (await r.json())?.[0]?.id || null;
+    } catch {}
+    return json(200, { token: tokens[0], tokens, cost, credits: charged.credits, jobId });
   } catch (error) {
     return json(error.status || 500, {
       error: error.status === 401 ? "Sign in to generate captions." : error.message || "Could not start transcription.",

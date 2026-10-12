@@ -62,3 +62,10 @@ test("caption transcription accepts the existing Netlify key names", async () =>
   );
   assert.equal(elevenLabsKey({}), "");
 });
+
+test("caption refunds need POST and a signed-in user", async () => {
+  const { default: refund } = await import("../../netlify/functions/caption-studio-refund.mjs");
+  assert.equal((await refund(new Request("https://example.com/refund"))).status, 405);
+  const response = await refund(new Request("https://example.com/refund", { method: "POST", body: JSON.stringify({ jobId: "00000000-0000-0000-0000-000000000000" }) }));
+  assert.equal(response.status, 401);
+});

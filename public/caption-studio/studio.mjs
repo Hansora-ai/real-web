@@ -342,7 +342,7 @@ function renderUI() {
     $(id).disabled = (id === "export-open" ? !duration(p) : ["split","duplicate","delete-clip","move-left","move-right"].includes(id) ? (!p.clips.length && !selectedTimedItem()) : !p.clips.length) || busy;
   const targets = captionTargets();
   $("generate").disabled = busy || !targets.length;
-  const total = targets.reduce((sum, id) => sum + captionCost(assets.get(id).duration), 0);
+  const total = captionCost(targets.reduce((sum, id) => sum + assets.get(id).duration, 0));
   // Balances are shown ×10 across the site (see header.js), so the price is too.
   const shown = Number((total * (window.HansoraHeader?.creditDisplayMultiplier || 10)).toFixed(2));
   $("generate-label").textContent = targets.length ? `Auto captions · ${shown}⚡` : "Auto captions";
@@ -770,6 +770,16 @@ function captionTargets() {
   const missing = ids.filter((id) => !p.transcripts[id]?.length);
   return missing.length ? missing : ids;
 }
+// Returns credits for the videos that could not be captioned.
+async function refundCaptions(jobId, keptSeconds, headers) {
+  if (!jobId) return 0;
+  try {
+    const r = await fetch("/.netlify/functions/caption-studio-refund", { method: "POST", headers, body: JSON.stringify({ jobId, keptSeconds }) });
+    const data = await r.json().catch(() => ({}));
+    window.HansoraHeader?.refreshCredits?.()?.catch?.(() => {});
+    return data.status === "refunded" ? Number(data.amount) || 0 : 0;
+  } catch { return 0; }
+}
 async function generate() {
   const targets = captionTargets();
   if (!targets.length) throw Error("Add a video to make captions.");
@@ -786,26 +796,30 @@ async function generate() {
   }
   pause();
   setBusy(true);
-  const made = new Map();
-  let failure = null;
+  const made = new Map(), done = new Set();
+  let failure = null, jobId = null;
   try {
+    captionStatus("Making captions…"); toast("Making captions…");
+    // One charge for the whole project; one single-use token per video.
+    const r = await fetch("/.netlify/functions/caption-studio-token", { method: "POST", headers, body: JSON.stringify({ seconds: targets.map((id) => assets.get(id).duration) }) });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw Error(data.error || "Could not start auto captions.");
+    window.HansoraHeader?.refreshCredits?.()?.catch?.(() => {});
+    const tokens = data.tokens || [data.token];
+    jobId = data.jobId || null;
     for (let i = 0; i < targets.length; i++) {
       const asset = assets.get(targets[i]);
-      const label = targets.length > 1 ? `Making captions… video ${i + 1} of ${targets.length}` : "Making captions…";
-      captionStatus(label); toast(label);
+      if (targets.length > 1) { const label = `Making captions… video ${i + 1} of ${targets.length}`; captionStatus(label); toast(label); }
       try {
-        const r = await fetch("/.netlify/functions/caption-studio-token", { method: "POST", headers, body: JSON.stringify({ seconds: asset.duration }) });
-        const data = await r.json().catch(() => ({}));
-        if (!r.ok) throw Error(data.error || "Could not start auto captions.");
-        window.HansoraHeader?.refreshCredits?.()?.catch?.(() => {});
         const form = new FormData();
         form.append("file", asset.file, asset.file.name);
         form.append("model_id", "scribe_v2");
         form.append("timestamps_granularity", "word");
         if ($("language").value !== "auto") form.append("language_code", $("language").value);
-        const response = await fetch(`https://api.elevenlabs.io/v1/speech-to-text?token=${encodeURIComponent(data.token)}`, { method: "POST", body: form, signal: AbortSignal.timeout(600000) });
+        const response = await fetch(`https://api.elevenlabs.io/v1/speech-to-text?token=${encodeURIComponent(tokens[i])}`, { method: "POST", body: form, signal: AbortSignal.timeout(600000) });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw Error(response.status === 429 ? "Auto captions are busy right now. Try again in a minute." : "Could not make captions for this video. Try again.");
+        done.add(asset.id);
         const cues = groupWords(result, p.captionWords);
         if (cues.length) made.set(asset.id, cues);
       } catch (error) { failure = error; break; }
@@ -823,7 +837,11 @@ async function generate() {
     } else if (!failure) {
       throw Error("No speech was found in your video.");
     }
-    if (failure) throw Error(made.size ? `${failure.message} Captions for the other videos were added.` : failure.message);
+    if (failure) {
+      const refund = await refundCaptions(jobId, [...done].reduce((sum, id) => sum + assets.get(id).duration, 0), headers);
+      const note = refund > 0 ? ` ${Number((refund * (window.HansoraHeader?.creditDisplayMultiplier || 10)).toFixed(2))}⚡ were returned.` : "";
+      throw Error((made.size ? `${failure.message} Captions for the other videos were added.` : failure.message) + note);
+    }
   } catch (error) {
     captionStatus(error.message || "Could not make captions. Try again.", true);
     throw error;
