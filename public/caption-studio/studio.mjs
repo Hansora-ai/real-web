@@ -23,15 +23,20 @@ import {
   styleFor,
   PRESETS,
   validateProject,
+  captionCost,
 } from "./core.mjs";
 import { fit, drawOverlays, resizeHandles, drawSelection } from "./render.mjs";
 import { exportVideo, cancelExport, reverseVideo } from "./export.mjs";
 import {
-  saveDraft,
-  readDraft,
   projectFile,
   unpackProject,
+  saveProject,
+  listProjects,
+  loadProject,
+  deleteProject,
+  migrateDraft,
 } from "./storage.mjs";
+import { fastExport, cancelExport as cancelFastExport } from "./fast-export.mjs";
 import { PreviewAudio } from "./preview-audio.mjs";
 import { readGenerations } from "./generations.mjs";
 const mixer = new PreviewAudio();
@@ -40,6 +45,7 @@ const $ = (id) => document.getElementById(id),
   music = $("music-audio"),
   canvas = $("preview"),
   ctx = canvas.getContext("2d");
+let zoomFactor = 1, maxZoom = 8;
 let activeTab = "media",
   mediaPreviewId = null,
   timelineScale = 70,
@@ -132,7 +138,7 @@ function scheduleSave() {
       list = new Map(assets);
     saveChain = saveChain
       .catch(() => {})
-      .then(() => saveDraft(project, list))
+      .then(() => (project.clips.length || list.size) ? saveProject(project, list, thumbnail()) : null)
       .then(() => {
         if (revision === saveRevision)
           $("save-status").textContent = "Saved on this device";
@@ -143,6 +149,15 @@ function scheduleSave() {
             "Save unavailable · download a project";
       });
   }, 700);
+}
+function thumbnail() {
+  if (!duration(p)) return "";
+  try {
+    const c = document.createElement("canvas"), w = 160, h = Math.round(160 * canvas.height / canvas.width);
+    c.width = w; c.height = Math.min(h, 240);
+    c.getContext("2d").drawImage(canvas, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.7);
+  } catch { return ""; }
 }
 function currentClip() {
   return p.clips.find((c) => c.id === selectedClip) || p.clips[0];
@@ -162,13 +177,14 @@ function selectedSource() {
   return q?.source || q;
 }
 function styleTarget() {
-  if ($("style-scope").value === "selected") {
-    const q = selectedSource();
-    if (!q) throw Error("Select a caption or layer first.");
-    q.style ??= { ...p.style };
-    return q.style;
-  }
+  const q = selectedSource();
+  if (q?.kind) return (q.style ??= { ...p.style });
+  clearCaptionOverrides();
   return p.style;
+}
+// Every caption follows the shared caption style (position, size, colours).
+function clearCaptionOverrides() {
+  for (const cues of Object.values(p.transcripts)) for (const q of cues) delete q.style;
 }
 const styleHome = $("text-options").parentElement;
 function closeSheets() { document.body.classList.remove("tool-sheet-open", "properties-open"); }
@@ -236,6 +252,7 @@ function renderUI() {
   $("aspect").value = p.aspect;
   $("resolution").value = p.resolution;
   $("empty-preview").hidden = duration(p) > 0;
+  if (duration(p)) $("recent-projects").hidden = true;
   $("media-count").textContent =
     `${[...assets.values()].filter((a) => a.kind !== "font").length} files`;
   $("media-list").replaceChildren();
@@ -305,6 +322,7 @@ function renderUI() {
   $("toggle-tracks").textContent=`Layers${p.layers.length+p.audio.length ? " · "+(p.layers.length+p.audio.length) : ""}`;
   $("words-label").textContent = `${Math.round(p.captionLength)}%`;
   $("caption-words").value = p.captionLength;
+  for (const b of document.querySelectorAll("[data-length]")) b.classList.toggle("active", Math.abs(Number(b.dataset.length) - p.captionLength) < 1);
   renderInspector();
   renderSound();
   $("undo").disabled = !history.length || busy;
@@ -322,7 +340,12 @@ function renderUI() {
     "export-open",
   ])
     $(id).disabled = (id === "export-open" ? !duration(p) : ["split","duplicate","delete-clip","move-left","move-right"].includes(id) ? (!p.clips.length && !selectedTimedItem()) : !p.clips.length) || busy;
-  $("generate").disabled = busy || assets.get(currentClip()?.assetId)?.kind !== "video";
+  const targets = captionTargets();
+  $("generate").disabled = busy || !targets.length;
+  const total = targets.reduce((sum, id) => sum + captionCost(assets.get(id).duration), 0);
+  // Balances are shown ×10 across the site (see header.js), so the price is too.
+  const shown = Number((total * (window.HansoraHeader?.creditDisplayMultiplier || 10)).toFixed(2));
+  $("generate-label").textContent = targets.length ? `Auto captions · ${shown}⚡` : "Auto captions";
   $("reverse").disabled = busy || assets.get(currentClip()?.assetId)?.kind !== "video";
   const layerSelected=p.layers.some(l=>l.id===selectedOverlay);
   $("move-left").textContent=layerSelected?"↓":"←";$("move-right").textContent=layerSelected?"↑":"→";
@@ -390,8 +413,8 @@ function renderInspector() {
     $("split-caption").title = $("split-caption").disabled ? "A single word cannot be split" : "Split into two captions";
     $("merge-caption").hidden = !!q.kind;
   }
-  const s =
-    $("style-scope").value === "selected" && q ? styleFor(p, q) : p.style;
+  const s = q?.kind ? styleFor(p, q) : p.style;
+  $("bg-none").checked = Number(s.backgroundOpacity) === 0;
   for (const el of document.querySelectorAll("[data-style]")) {
     const v = s[el.dataset.style];
     if (el.type === "checkbox") el.checked = !!v;
@@ -642,7 +665,6 @@ async function addVideos(files) {
     throw error;
   }
   for (const a of added) assets.set(a.id, a);
-  $("generation-results").hidden=true;$("uploaded-media").hidden=false;
   renderUI();
   scheduleSave();
   tab("media");
@@ -729,12 +751,11 @@ async function checkConnection() {
     const r = await fetch("/api/caption-studio/status");
     if (r.ok) connection = await r.json();
   } catch {}
-  $("hosted-auth").hidden = connection.local;
-  $("connection-status").textContent = connection.local
-    ? connection.configured
-      ? "Automatic captions are connected."
-      : "The local transcription server is not connected yet. Your Netlify settings are unchanged."
-    : "Automatic captions use your existing Netlify connection. Sign in to generate them.";
+
+}
+function openLogin() {
+  if (window.HansoraHeader?.openAuth) window.HansoraHeader.openAuth("login");
+  else toast("Sign-in is loading. Try again in a moment.");
 }
 function captionStatus(message, error = false) {
   const status = $("caption-status");
@@ -742,64 +763,69 @@ function captionStatus(message, error = false) {
   status.hidden = !message;
   status.classList.toggle("error", error);
 }
+// Auto captions cover every video in the timeline. Videos that already have
+// captions are skipped; when all have them, all are made again.
+function captionTargets() {
+  const ids = [...new Set(p.clips.map((c) => c.assetId))].filter((id) => assets.get(id)?.kind === "video");
+  const missing = ids.filter((id) => !p.transcripts[id]?.length);
+  return missing.length ? missing : ids;
+}
 async function generate() {
-  const c = currentClip();
-  if (!c || assets.get(c.assetId)?.kind!=="video") throw Error("Select a video clip to generate captions.");
-  if (connection.local && !connection.configured) {
-    throw Error("The local transcription server is not connected yet.");
-  }
-  const asset = assets.get(c.assetId);
-  let headers = { "Content-Type": "application/json" };
+  const targets = captionTargets();
+  if (!targets.length) throw Error("Add a video to make captions.");
+  if (connection.local && !connection.configured) throw Error("Auto captions are not available on this computer.");
+  const headers = { "Content-Type": "application/json" };
   if (!connection.local) {
-    let token = (await window.__HANSORA_SB__?.auth.getSession())?.data?.session
-      ?.access_token;
+    const token = (await window.__HANSORA_SB__?.auth.getSession())?.data?.session?.access_token;
     if (!token) {
-      $("settings-dialog").showModal();
+      toast("Sign in to make auto captions.");
+      openLogin();
       return;
     }
     headers.Authorization = `Bearer ${token}`;
   }
   pause();
   setBusy(true);
-  captionStatus("Transcribing with ElevenLabs…");
-  toast("Transcribing with ElevenLabs…");
+  const made = new Map();
+  let failure = null;
   try {
-    const r = await fetch("/.netlify/functions/caption-studio-token", {
-        method: "POST",
-        headers,
-        body: "{}",
-      }),
-      data = await r.json();
-    if (!r.ok) throw Error(data.error || "Could not start transcription.");
-    const form = new FormData();
-    form.append("file", asset.file, asset.file.name);
-    form.append("model_id", "scribe_v2");
-    form.append("timestamps_granularity", "word");
-    if ($("language").value !== "auto")
-      form.append("language_code", $("language").value);
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/speech-to-text?token=${encodeURIComponent(data.token)}`,
-      { method: "POST", body: form, signal: AbortSignal.timeout(600000) },
-    );
-    const result = await response.json();
-    if (!response.ok)
-      throw Error(
-        response.status === 429
-          ? "ElevenLabs account limit reached. Check your plan."
-          : "Transcription failed. Check the ElevenLabs key permissions and try again.",
-      );
-    const cues = groupWords(result, p.captionWords);
-    const visible = generatedCaptionsForClip(p, c, cues);
-    checkpoint();
-    p.transcripts[asset.id] = cues;
-    selectedOverlay = visible[0].key;
-    commit();
-    tab("captions");
-    await seek((visible[0].start + visible[0].end) / 2);
-    captionStatus(`${visible.length} captions added to this clip. Select one to edit its text and style.`);
-    toast(`${visible.length} captions generated.`);
+    for (let i = 0; i < targets.length; i++) {
+      const asset = assets.get(targets[i]);
+      const label = targets.length > 1 ? `Making captions… video ${i + 1} of ${targets.length}` : "Making captions…";
+      captionStatus(label); toast(label);
+      try {
+        const r = await fetch("/.netlify/functions/caption-studio-token", { method: "POST", headers, body: JSON.stringify({ seconds: asset.duration }) });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw Error(data.error || "Could not start auto captions.");
+        window.HansoraHeader?.refreshCredits?.()?.catch?.(() => {});
+        const form = new FormData();
+        form.append("file", asset.file, asset.file.name);
+        form.append("model_id", "scribe_v2");
+        form.append("timestamps_granularity", "word");
+        if ($("language").value !== "auto") form.append("language_code", $("language").value);
+        const response = await fetch(`https://api.elevenlabs.io/v1/speech-to-text?token=${encodeURIComponent(data.token)}`, { method: "POST", body: form, signal: AbortSignal.timeout(600000) });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw Error(response.status === 429 ? "Auto captions are busy right now. Try again in a minute." : "Could not make captions for this video. Try again.");
+        const cues = groupWords(result, p.captionWords);
+        if (cues.length) made.set(asset.id, cues);
+      } catch (error) { failure = error; break; }
+    }
+    if (made.size) {
+      checkpoint();
+      for (const [id, cues] of made) p.transcripts[id] = cues;
+      const visible = timelineCaptions(p).filter((q) => made.has(q.clip.assetId));
+      selectedOverlay = visible[0]?.key || null;
+      commit();
+      tab("captions");
+      if (visible[0]) await seek((visible[0].start + visible[0].end) / 2);
+      captionStatus(visible.length ? `${visible.length} captions added. Tap one to edit it.` : "Captions were made, but none fall inside your trimmed clips.", !visible.length);
+      toast(`${visible.length} captions added.`);
+    } else if (!failure) {
+      throw Error("No speech was found in your video.");
+    }
+    if (failure) throw Error(made.size ? `${failure.message} Captions for the other videos were added.` : failure.message);
   } catch (error) {
-    captionStatus(error.message || "Could not generate captions. Try again.", true);
+    captionStatus(error.message || "Could not make captions. Try again.", true);
     throw error;
   } finally {
     setBusy(false);
@@ -1012,6 +1038,10 @@ function saveCaptionEdit(event) {
 }
 for (const id of ["caption-text", "cue-start", "cue-end"])
   $(id).addEventListener("input", saveCaptionEdit);
+for (const b of document.querySelectorAll("[data-length]")) b.addEventListener("click", () => {
+  $("caption-words").value = b.dataset.length;
+  $("caption-words").dispatchEvent(new Event("change"));
+});
 $("caption-words").addEventListener("input", () => {
   $("words-label").textContent = `${$("caption-words").value}%`;
 });
@@ -1059,12 +1089,15 @@ click("merge-caption", () => {
   });
 });
 $("style-scope").addEventListener("change", renderInspector);
+$("bg-none").addEventListener("change", run(() => change(() => {
+  styleTarget().backgroundOpacity = $("bg-none").checked ? 0 : 0.72;
+})));
 for (const el of document.querySelectorAll("[data-style]")) {
   el.addEventListener(
     "input",
     run(() => {
       checkpoint();
-      const target = el.dataset.style === "size" && !selectedSource()?.kind ? p.style : styleTarget();
+      const target = styleTarget();
       target[el.dataset.style] =
         el.type === "checkbox"
           ? el.checked
@@ -1111,29 +1144,27 @@ canvas.addEventListener("pointerdown",e=>{
   if(!box) {selectedOverlay=null;selectedAudio=null;renderInspector();draw();return;}
   pause();selectedOverlay=box.key;selectedAudio=null;$("style-scope").value="selected";
   const q=findOverlay();if(q?.clip) selectedClip=q.clip.id;
-  const style=styleFor(p,selectedSource());checkpoint();
+  const style=q?.kind?styleFor(p,q):p.style;checkpoint();if(!q?.kind) clearCaptionOverrides();
+  if(centered()) editMode(true);
   drag={start:pos,x:style.x,y:style.y,size:style.size,width:style.width,box,handle};
   canvas.setPointerCapture(e.pointerId);openProps();renderInspector();draw();
 });
 canvas.addEventListener("pointermove",e=>{
   const pos=point(e);
   if(!drag) {canvas.style.cursor=handleAt(pos)?.cursor || "grab";return;}
-  const q=selectedSource();if(!q) return;q.style??={...p.style};
+  const q=selectedSource();if(!q) return;const target=q.kind?(q.style??={...p.style}):p.style;
   if(drag.handle) {
     const h=drag.handle,b=drag.box;
     const anchor={x:b.x+(1-h.fx)*b.w,y:b.y+(1-h.fy)*b.h};
     const initial={x:h.x-anchor.x,y:h.y-anchor.y}, next={x:pos.x-anchor.x,y:pos.y-anchor.y};
     const factor=clamp((initial.x*next.x+initial.y*next.y)/Math.max(1,initial.x**2+initial.y**2),.05,10);
-    q.style.width=clamp(drag.width*factor,1,100);
-    if(q.kind!=="image") {
-      const size=clamp(drag.size*factor,1,14);
-      if(q.kind==="text") q.style.size=size;else p.style.size=size;
-    }
+    target.width=clamp(drag.width*factor,1,100);
+    if(q.kind!=="image") target.size=clamp(drag.size*factor,1,14);
     const center={x:anchor.x+(b.x+b.w/2-anchor.x)*factor,y:anchor.y+(b.y+b.h/2-anchor.y)*factor};
-    q.style.x=clamp(center.x/canvas.width*100,0,100);q.style.y=clamp(center.y/canvas.height*100,0,100);
+    target.x=clamp(center.x/canvas.width*100,0,100);target.y=clamp(center.y/canvas.height*100,0,100);
   } else {
-    q.style.x=clamp(drag.x+(pos.x-drag.start.x)/canvas.width*100,0,100);
-    q.style.y=clamp(drag.y+(pos.y-drag.start.y)/canvas.height*100,0,100);
+    target.x=clamp(drag.x+(pos.x-drag.start.x)/canvas.width*100,0,100);
+    target.y=clamp(drag.y+(pos.y-drag.start.y)/canvas.height*100,0,100);
   }
   draw();
 });
@@ -1224,6 +1255,14 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     e.shiftKey ? redo() : undo();
   }
+  if ((e.key === "Delete" || e.key === "Backspace") && !busy && !document.querySelector("dialog[open]")) {
+    const q = findOverlay();
+    if (!q && !selectedAudio && !p.clips.length) return;
+    e.preventDefault();
+    if (q && !q.kind && !q.scene) $("delete-caption").click();
+    else $("delete-clip").click();
+    return;
+  }
   if (e.code === "Space" && !busy && !document.querySelector("dialog[open]")) {
     e.preventDefault();
     $("play").click();
@@ -1245,21 +1284,11 @@ $("project-input").addEventListener(
     e.target.value = "";
   }),
 );
-click("resume", async () => {
-  const draft = await readDraft();
-  if (draft) await restore(draft);
-});
-click("settings", async () => {
-  await checkConnection();
-  $("settings-dialog").showModal();
-});
-click("sign-in", () => {
-  $("settings-dialog").close();
-  if (window.HansoraHeader?.openAuth) window.HansoraHeader.openAuth("login");
-  else toast("The Hansora sign-in tools are loading. Try again in a moment.");
-});
+
 click("export-open", () => {
   pause();
+  $("export-result").hidden = true;
+  $("export-video").hidden = false;
   $("export-details").textContent =
     `${clock(duration(p))} · ${p.clips.length} clips`;
   $("export-dialog").showModal();
@@ -1274,11 +1303,12 @@ click("export-video", async () => {
   scheduleSave();
   const project = structuredClone(p);
   setBusy(true);
+  let exported = false;
   $("export-progress").hidden = false;
   $("export-result").hidden = true;
   $("export-video").hidden = true;
   try {
-    const blob = await exportVideo(project, assets, (progress, label) => {
+    const blob = await fastExport(project, assets, (progress, label) => {
       $("progress").value = progress;
       $("progress-label").textContent = label;
     });
@@ -1288,18 +1318,19 @@ click("export-video", async () => {
     $("download-video").download = fileName() + ".mp4";
     $("export-preview").src = resultURL;
     $("export-result").hidden = false;
+    exported = true;
     toast("Your MP4 is ready to download.");
   } catch (error) {
-    if (error.message !== "called FFmpeg.terminate()")
+    if (!/terminate|cancel/i.test(error.message || ""))
       toast(error.message || "Export cancelled.", true);
   } finally {
     $("export-progress").hidden = true;
-    $("export-video").hidden = false;
+    $("export-video").hidden = exported;
     setBusy(false);
   }
 });
 click("cancel-export", () => {
-  cancelExport();
+  cancelFastExport();
   toast("Export cancelled. Your project is safe.");
 });
 click("download-srt", () =>
@@ -1356,7 +1387,7 @@ click("demo", async () => {
   await seek(duration(p) - a.duration + 0.3);
   tab("captions");
   toast(
-    "Sample loaded with example captions. Upload speech to test ElevenLabs.",
+    "Sample loaded with example captions. Upload your own video to make real captions.",
   );
 });
 function addToTimeline(id, index=p.clips.length) {
@@ -1438,14 +1469,18 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
   const pad = lead(), viewport = Math.max(260, $("timeline-scroll").clientWidth - (centered() ? 0 : pad)) * (centered() ? 0.85 : 1);
   // Keep seconds at the same scale after edits; only zoom/resize changes it.
   if (timelineSpan === null && d > 0) timelineSpan = centered() ? 4 : Math.max(d, 6);
-  timelineScale = (viewport / (timelineSpan || 6)) * Number($("timeline-zoom").value);
+  // Zoom goes from the whole video on screen to ~400px per second, however long the video is.
+  maxZoom = Math.max(1.5, 600 * (timelineSpan || 6) / viewport);
+  zoomFactor = clamp(zoomFactor, 1, maxZoom);
+  $("timeline-zoom").value = Math.log(zoomFactor) / Math.log(maxZoom);
+  timelineScale = (viewport / (timelineSpan || 6)) * zoomFactor;
   const width = Math.max(viewport, d * timelineScale);
   $("timeline-content").style.setProperty("--lead", `${pad}px`);
   $("timeline-content").style.width = `${width + pad + (centered() ? pad : 40)}px`;
   $("clip-track").replaceChildren();
   $("caption-track").replaceChildren();
   $("timeline-ruler").replaceChildren();
-  const interval = Math.max(0.5, Math.ceil(70 / timelineScale));
+  const interval = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600].find((step) => step * timelineScale >= 90) || 900;
   for (let at = 0; at <= width / timelineScale; at += interval) {
     const mark = document.createElement("span");
     mark.className = "ruler-mark";
@@ -1580,7 +1615,7 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
   for (const q of captions) {
     const b = button(
       q.text,
-      () => {selectOverlay(q.key, q.start);editMode(true);openProps();},
+      () => {if(trimming) return;selectOverlay(q.key, q.start);editMode(true);openProps();},
       `caption-segment${selectedOverlay === q.key ? " selected" : ""}`,
     );
     b.style.left = `${q.start * timelineScale}px`;
@@ -1588,6 +1623,13 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
     b.title = q.text;
     b.disabled = busy;
     b.setAttribute("aria-label", q.text);
+    for (const edge of ["start", "end"]) {
+      const handle = document.createElement("span");
+      handle.className = `trim-handle ${edge}`;
+      handle.setAttribute("aria-label", edge === "start" ? "Make caption start earlier or later" : "Make caption longer or shorter");
+      handle.addEventListener("pointerdown", (e) => captionTrim(e, q, edge));
+      b.append(handle);
+    }
     $("caption-track").append(b);
   }
   renderExtraTracks();
@@ -1648,6 +1690,44 @@ function renderExtraTracks() {
   };
   if(!p.layers.length) placeholder("layer-tracks","Text","i-text",()=>$("add-text").click());
   if(!p.audio.length) placeholder("audio-tracks","Audio","i-audio",()=>{tab("audio");$("video-input").click();});
+}
+// Stretch a caption by dragging its edge; word timings scale with it.
+function retimeCue(cue, start, end, from = { start: cue.start, end: cue.end, words: cue.words }) {
+  const span = Math.max(0.001, from.end - from.start), k = (end - start) / span;
+  cue.words = (from.words?.length ? from.words : timedWords(cue.text, from.start, from.end)).map((w) => ({
+    ...w, start: start + (w.start - from.start) * k, end: start + (w.end - from.start) * k,
+  }));
+  cue.start = start; cue.end = end;
+}
+function cueBounds(q) {
+  const list = p.transcripts[q.clip.assetId] || [], i = list.indexOf(q.source);
+  return { min: Math.max(q.clip.start, list[i - 1]?.end ?? 0), max: Math.min(q.clip.end, list[i + 1]?.start ?? Infinity, assets.get(q.clip.assetId)?.duration ?? Infinity) };
+}
+function resizeCaption(q, delta) {
+  const cue = q.source, { max } = cueBounds(q);
+  const end = clamp(cue.end + delta, cue.start + 0.3, max);
+  if (end === cue.end) throw Error(delta > 0 ? "The next caption starts here. Shorten it first." : "This caption is already very short.");
+  change(() => retimeCue(cue, cue.start, end));
+}
+function captionTrim(e, q, edge) {
+  if (busy) return;
+  e.preventDefault(); e.stopPropagation(); pause();
+  selectedOverlay = q.key; selectedAudio = null; selectedClip = q.clip.id;
+  checkpoint(); trimming = true;
+  const cue = q.source, from = { start: cue.start, end: cue.end, words: structuredClone(cue.words || []) };
+  const { min, max } = cueBounds(q), x = e.clientX, scale = timelineScale;
+  const move = (ev) => {
+    const delta = (ev.clientX - x) / scale;
+    const start = edge === "start" ? clamp(from.start + delta, min, from.end - 0.3) : from.start;
+    const end = edge === "end" ? clamp(from.end + delta, from.start + 0.3, max) : from.end;
+    retimeCue(cue, start, end, from);
+    renderTimeline(); renderInspector(); draw();
+  };
+  const up = () => {
+    window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up);
+    commit(); editMode(true); setTimeout(() => (trimming = false), 0);
+  };
+  window.addEventListener("pointermove", move); window.addEventListener("pointerup", up, { once: true }); window.addEventListener("pointercancel", up, { once: true });
 }
 function selectTimed(item,audio) {
   if(busy) return;
@@ -1727,7 +1807,19 @@ $("timeline-resize").addEventListener("keydown",e=>{
   const workspace=document.querySelector(".workspace"),percent=parseFloat(workspace.style.getPropertyValue("--preview-share"))||48;
   workspace.style.setProperty("--preview-share",`${clamp(percent+delta,25,65)}%`);
 });
-$("timeline-zoom").addEventListener("input", () => renderTimeline());
+function setZoom(next) {
+  const scroller = $("timeline-scroll"), before = lead() + time * timelineScale - scroller.scrollLeft;
+  zoomFactor = clamp(next, 1, maxZoom);
+  renderTimeline();
+  if (!centered()) scroller.scrollLeft = lead() + time * timelineScale - before;
+}
+$("timeline-zoom").addEventListener("input", () => setZoom(Math.exp(Number($("timeline-zoom").value) * Math.log(maxZoom))));
+// Trackpad pinch (and ⌘/Ctrl + scroll) zooms the timeline.
+$("timeline-scroll").addEventListener("wheel", (e) => {
+  if (!e.ctrlKey && !e.metaKey) return;
+  e.preventDefault();
+  setZoom(zoomFactor * Math.exp(-e.deltaY * 0.01));
+}, { passive: false });
 function scrubPointer(e) {
   if (busy || e.button !== 0 || (centered() && e.pointerType !== "mouse")) return;
   e.preventDefault();
@@ -1782,10 +1874,10 @@ $("timeline-scroll").addEventListener("scroll",()=>{
 {
   let pinch=null;
   const gap=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
-  $("timeline-scroll").addEventListener("touchstart",e=>{if(e.touches.length===2) pinch={gap:gap(e.touches),zoom:Number($("timeline-zoom").value)};},{passive:true});
+  $("timeline-scroll").addEventListener("touchstart",e=>{if(e.touches.length===2) pinch={gap:gap(e.touches),zoom:zoomFactor};},{passive:true});
   $("timeline-scroll").addEventListener("touchmove",e=>{
     if(!pinch || e.touches.length!==2) return;e.preventDefault();
-    $("timeline-zoom").value=clamp(pinch.zoom*gap(e.touches)/pinch.gap,1,8);renderTimeline();
+    setZoom(pinch.zoom*gap(e.touches)/pinch.gap);
   },{passive:false});
   $("timeline-scroll").addEventListener("touchend",()=>{pinch=null;});
 }
@@ -1850,11 +1942,18 @@ click("mute-main",()=>{
   toast(muted?"Clip audio on.":"Clip audio muted.");
 });
 function syncProxies() {
+  const sel=findOverlay();
+  document.body.dataset.sel=sel && !sel.scene && sel.kind!=="image" ? "text" : "clip";
   const videos=p.clips.filter(c=>assets.get(c.assetId)?.kind==="video"),muted=videos.length>0&&videos.every(c=>(c.volume??1)===0);
   $("mute-main").setAttribute("aria-pressed",String(muted));$("mute-main").querySelector("span").textContent=muted?"Clip audio off":"Mute clip audio";
   $("mute-main").disabled=!videos.length||busy;
   for(const b of document.querySelectorAll("[data-proxy]")) {const target=$(b.dataset.proxy);b.disabled=target.disabled;b.hidden=target.hidden;}
   for(const b of document.querySelectorAll("[data-aspect]")) b.classList.toggle("active",b.dataset.aspect===p.aspect);
+}
+function textLength(delta) {
+  const q=findOverlay();if(!q) return;
+  if(q.kind) { const l=p.layers.find(x=>x.id===q.id); change(()=>trimTimedItem(l,"end",l.end+delta)); }
+  else resizeCaption(q,delta);
 }
 const mobileActions={
   edit:()=>{
@@ -1866,13 +1965,25 @@ const mobileActions={
   back:()=>{editMode(false);selectedOverlay=null;selectedAudio=null;renderUI();},
   ratio:()=>{editMode(false);closeSheets();$("ratio-sheet").hidden=false;document.body.classList.add("ratio-open");},
   "ratio-done":closeRatio,
+  "edit-text":()=>{const q=findOverlay();if(!q) return;document.body.classList.add("properties-open");activeTab="media";renderInspector();setTimeout(()=>{$("caption-text").focus();$("caption-text").select();},320);},
+  longer:()=>textLength(0.5),
+  shorter:()=>textLength(-0.5),
+  "split-text":()=>{const q=findOverlay();if(!q) return;if(q.kind)$("split").click();else $("split-caption").click();},
+  "delete-text":()=>{const q=findOverlay();if(!q) return;if(q.kind)$("delete-clip").click();else $("delete-caption").click();editMode(false);},
   generations:()=>{editMode(false);closeRatio();return showGenerations();},
   style:()=>{editMode(false);closeRatio();tab("captions");$("caption-style-host").closest("details").open=true;},
 };
 for(const b of document.querySelectorAll("[data-mobile]")) b.addEventListener("click",run(()=>mobileActions[b.dataset.mobile]()));
 for(const b of document.querySelectorAll("[data-aspect]")) b.addEventListener("click",()=>{$("aspect").value=b.dataset.aspect;$("aspect").dispatchEvent(new Event("change"));syncProxies();});
 document.querySelector(".sheet-scrim").addEventListener("click",()=>{closeSheets();closeRatio();});
-phone.addEventListener("change",()=>{timelineSpan=null;renderUI();});
+// Desktop: selection settings sit under the tool tabs, so the tabs stay one click away.
+function placeInspector() {
+  const left=document.querySelector(".left-panel"),right=document.querySelector(".right-panel");
+  if(centered()) {if(right.parentElement!==left.parentElement) left.parentElement.insertBefore(right,document.querySelector(".timeline"));}
+  else if(right.parentElement!==left) left.insertBefore(right,left.querySelector(".tab-content"));
+}
+placeInspector();
+phone.addEventListener("change",()=>{timelineSpan=null;placeInspector();renderUI();});
 click("close-tools",closeSheets);
 click("close-properties",()=>{const wasOpen=document.body.classList.contains("properties-open");closeSheets();if(!centered()&&wasOpen){tab(toolTab);document.body.classList.remove("tool-sheet-open");}});
 click("toggle-tracks",()=>{const expanded=document.body.classList.toggle("tracks-expanded");$("toggle-tracks").setAttribute("aria-expanded",String(expanded));});
@@ -1880,33 +1991,112 @@ click("edit-selection",()=>{if(centered())activeTab="media";document.body.classL
 click("preview-expand",()=>{closeSheets();focusPreview(!document.body.classList.contains("preview-focus"));});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeSheets();closeRatio();focusPreview(false);}});
 click("audio-upload",()=>$("video-input").click());
-async function showGenerations() {
-  tab("media");$("uploaded-media").hidden=true;$("generation-results").hidden=false;$("generation-list").replaceChildren();$("generation-sign-in").hidden=true;
-  $("generation-status").textContent="Loading your generations…";
-  try {
-    const items=await readGenerations(window.__HANSORA_SB__);
-    $("generation-status").textContent=items.length?"Choose media to add to your project.":"No completed generations yet.";
-    for(const item of items){
-      const card=document.createElement("div");card.className="media-card";
-      const preview=document.createElement(item.kind==="image"?"img":item.kind==="video"?"video":"span");
-      if(item.kind!=="audio"){preview.src=item.url;preview.loading="lazy";if(item.kind==="video"){preview.muted=true;preview.preload="metadata";preview.playsInline=true;}}else preview.textContent="♫";
-      preview.className="generation-thumb";
-      const name=document.createElement("strong");name.textContent=item.title;
-      const add=button("＋ Add",async()=>{add.disabled=true;try{
-        let response;try{response=await fetch(item.url);}catch{throw Error("This media host blocked importing. Download it from your library and use Upload media.");}
-        if(!response.ok || /text\/html/.test(response.headers.get("content-type")||""))throw Error("Could not import this generation. Download it from your library and use Upload media.");
+// 6: generations open as a gallery; tap one to add it.
+let generations=[], genFilter="all";
+function renderGenerations() {
+  const list=$("generation-list");list.replaceChildren();
+  const items=generations.filter(g=>genFilter==="all"||g.kind===genFilter);
+  if(generations.length) $("generation-status").textContent=items.length?"Tap to add to your video.":"Nothing here yet.";
+  for(const item of items){
+    const card=document.createElement("button");card.className="gen-card";card.type="button";
+    const preview=document.createElement(item.kind==="image"?"img":item.kind==="video"?"video":"span");
+    if(item.kind!=="audio"){preview.src=item.url;preview.loading="lazy";if(item.kind==="video"){preview.muted=true;preview.preload="metadata";preview.playsInline=true;preview.src=item.url+"#t=0.5";}}
+    else preview.innerHTML='<svg class="i"><use href="#i-audio"/></svg>';
+    preview.className="gen-thumb";
+    const badge=document.createElement("span");badge.className="gen-kind";badge.textContent=item.kind==="video"?"Video":item.kind==="image"?"Image":"Audio";
+    const add=document.createElement("span");add.className="gen-add";add.innerHTML='<svg class="i"><use href="#i-plus"/></svg>';
+    card.append(preview,badge,add);card.title=item.title||"";
+    card.addEventListener("click",run(async()=>{
+      if(card.classList.contains("loading")) return;card.classList.add("loading");
+      try{
+        let response;try{response=await fetch(item.url);}catch{throw Error("This file could not be imported. Download it from your library and use Upload.");}
+        if(!response.ok || /text\/html/.test(response.headers.get("content-type")||""))throw Error("This file could not be imported. Download it from your library and use Upload.");
         const blob=await response.blob(),ext=item.kind==="image"?"png":item.kind==="audio"?"mp3":"mp4";
-        const asset=await loadAsset(new File([blob],`Hansora ${item.id.replace(':','-')}.${ext}`,{type:blob.type}),item.kind);
+        const asset=await loadAsset(new File([blob],`Hansora ${String(item.id).replace(':','-')}.${ext}`,{type:blob.type}),item.kind);
         const total=[...assets.values()].reduce((n,a)=>n+a.file.size,asset.file.size);if(total>200*1048576){URL.revokeObjectURL(asset.url);throw Error("This project supports up to 200 MB of media.");}
-        assets.set(asset.id,asset);$("generation-results").hidden=true;$("uploaded-media").hidden=false;addToTimeline(asset.id);focusPortrait();
-      }finally{add.disabled=false;}});
-      card.append(preview,name,add);$("generation-list").append(card);
-    }
-  }catch(error){$("generation-status").textContent=error.message;$("generation-sign-in").hidden=!/Sign in/.test(error.message);}
+        assets.set(asset.id,asset);$("generations-dialog").close();addToTimeline(asset.id);
+        toast(item.kind==="audio"?"Added to your audio track.":"Added to your video.");
+      }finally{card.classList.remove("loading");}
+    }));
+    list.append(card);
+  }
 }
+async function showGenerations() {
+  closeSheets();editMode(false);
+  $("generation-sign-in").hidden=true;$("generation-list").replaceChildren();
+  $("generation-status").textContent="Loading your generations…";
+  if(!$("generations-dialog").open) $("generations-dialog").showModal();
+  try {
+    generations=await readGenerations(window.__HANSORA_SB__);
+    $("generation-status").textContent=generations.length?"":"No finished generations yet. Create something on Hansora first.";
+    renderGenerations();
+  }catch(error){$("generation-status").textContent=error.message;$("generation-sign-in").hidden=!/Sign in/i.test(error.message);}
+}
+for(const b of document.querySelectorAll("[data-gen-filter]")) b.addEventListener("click",()=>{
+  genFilter=b.dataset.genFilter;document.querySelectorAll("[data-gen-filter]").forEach(x=>x.classList.toggle("active",x===b));renderGenerations();
+});
 click("my-generations",showGenerations);click("empty-generations",showGenerations);
-click("generation-back",()=>{$("generation-results").hidden=true;$("uploaded-media").hidden=false;});
-click("generation-sign-in",()=>{if(window.HansoraHeader?.openAuth)window.HansoraHeader.openAuth("login");else toast("Sign-in is loading. Try again in a moment.");});
+click("generation-sign-in",()=>{$("generations-dialog").close();openLogin();});
+
+// 9: the last five projects, saved on this device.
+const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"Just now":m<60?`${m} min ago`:m<1440?`${Math.round(m/60)} h ago`:`${Math.round(m/1440)} d ago`;};
+async function projectCards(container, compact=false) {
+  const items=await listProjects().catch(()=>[]);
+  container.replaceChildren();
+  for(const item of items){
+    const card=document.createElement("div");card.className="project-card"+(item.id===p.id?" current":"");
+    const open=document.createElement("button");open.type="button";open.className="project-open";
+    const img=document.createElement(item.thumb?"img":"span");if(item.thumb){img.src=item.thumb;img.alt="";}img.className="project-thumb";
+    const text=document.createElement("span");text.className="project-text";
+    const name=document.createElement("strong");name.textContent=item.name||"Untitled video";
+    const when=document.createElement("small");when.textContent=item.id===p.id?"Open now":ago(item.updatedAt);
+    text.append(name,when);open.append(img,text);
+    open.addEventListener("click",run(async()=>{
+      if(item.id===p.id){$("projects-dialog").close();return;}
+      const data=await loadProject(item.id);if(!data) throw Error("This project is no longer saved.");
+      $("projects-dialog").close();await restore(data);
+    }));
+    card.append(open);
+    if(!compact){
+      const del=button("",async()=>{await deleteProject(item.id);projectCards(container);if(item.id===p.id) p.id=newProject().id;},"project-delete");
+      del.innerHTML='<svg class="i"><use href="#i-trash"/></svg>';del.setAttribute("aria-label",`Delete ${item.name}`);card.append(del);
+    }
+    container.append(card);
+  }
+  return items.length;
+}
+async function showProjects() {
+  $("project-menu-details")?.removeAttribute("open");
+  const n=await projectCards($("projects-list"));
+  if(!n) $("projects-list").innerHTML='<p class="hint">No saved projects yet. Your work is saved automatically as you edit.</p>';
+  $("projects-dialog").showModal();
+}
+async function renderRecent() {
+  if(duration(p)) {$("recent-projects").hidden=true;return;}
+  const n=await projectCards($("recent-projects"),true);
+  if(n) $("recent-projects").prepend(Object.assign(document.createElement("h2"),{textContent:"Continue editing"}));
+  $("recent-projects").hidden=!n;
+}
+click("your-projects",showProjects);click("resume",showProjects);
+click("save-now",async()=>{
+  document.querySelector(".project-menu").removeAttribute("open");
+  if(!p.clips.length && !assets.size) return toast("Add media first.");
+  await saveProject(structuredClone(p),new Map(assets),thumbnail());$("save-status").textContent="Saved on this device";toast("Saved. Find it in Your projects.");
+});
+click("new-video",()=>{
+  document.querySelector(".project-menu").removeAttribute("open");
+  pause();for(const a of assets.values()){URL.revokeObjectURL(a.url);a.image?.close?.();}
+  assets=new Map();p=newProject();history=[];future=[];pendingBefore=null;selectedClip=null;selectedOverlay=null;selectedAudio=null;time=0;timelineSpan=null;
+  video.dataset.asset="";editMode(false);closeSheets();renderUI();renderRecent();toast("New video started. Your last project is saved.");
+});
+document.addEventListener("click",e=>{const menu=document.querySelector(".project-menu");if(menu.open&&!menu.contains(e.target))menu.removeAttribute("open");});
+
+// 15: the phone back arrow returns to the page the user came from.
+$("editor-back").addEventListener("click",e=>{
+  e.preventDefault();
+  let same=false;try{same=new URL(document.referrer).origin===location.origin;}catch{}
+  if(same && window.history.length>1) window.history.back(); else location.href="/";
+});
 
 renderUI();
 requestAnimationFrame(frame);
@@ -1916,8 +2106,4 @@ await Promise.all([
   document.fonts.load('800 32px "Noto Sans Armenian"'),
 ]);
 draw();
-readDraft()
-  .then((draft) => {
-    $("resume").hidden = !draft?.project || (!duration(draft.project) && !draft.assets?.length);
-  })
-  .catch(() => {});
+migrateDraft().catch(()=>{}).then(renderRecent);

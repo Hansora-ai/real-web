@@ -1858,3 +1858,153 @@ body:has(#caption-editor) .site-header {
   .empty-drop small { font-size: 11px; text-align: center; }
   .media-source-actions { margin-top: 2px; }
 }
+
+/* ───────────────── Round 3 ───────────────── */
+/* Selection settings sit under the tool tabs on desktop. */
+@media (min-width: 701px) {
+  .properties-open .left-panel { display: block; }
+  .properties-open .left-panel .tab-content { display: none !important; }
+  .left-panel .right-panel { display: none; background: transparent !important; border-radius: 0; overflow: visible; }
+  .properties-open .left-panel .right-panel { display: block; }
+  .left-panel .right-panel .sheet-head {
+    display: flex !important;
+    position: static !important;
+    min-height: 44px;
+    padding: 6px 12px 0 16px !important;
+    background: transparent !important;
+    border: 0 !important;
+  }
+  .properties-open .tabs .active { color: var(--muted); background: transparent; }
+}
+
+/* Caption length */
+.length-card {
+  margin: 14px 0;
+  padding: 14px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #22d3ee14, var(--surface-2) 60%);
+  border: 1px solid #22d3ee33;
+}
+.length-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.length-head strong { font-size: 13.5px; }
+.length-head output {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 750;
+}
+.length-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+#caption-editor .length-presets button { min-height: 36px; background: var(--bg); }
+#caption-editor .length-presets button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.length-card .hint { display: block; margin-top: 2px; }
+:where(#caption-editor) label.bg-none { margin: 10px 0 14px; color: var(--text); }
+
+/* Caption edges can be dragged to change their length. */
+#caption-editor .caption-segment { padding: 0 12px; }
+.caption-segment .trim-handle { width: 9px; }
+.caption-segment.selected .trim-handle { background: #fff; }
+.caption-segment.selected .trim-handle::after { opacity: 1; background: #3b2f80; height: 12px; }
+.caption-segment:hover .trim-handle::after { opacity: 1; }
+
+/* Generations gallery */
+.studio-dialog.wide-dialog { width: min(880px, 94vw); }
+.gen-filters { display: flex; gap: 6px; margin: 4px 0 12px; overflow-x: auto; }
+.studio-dialog .gen-filters button { min-height: 32px; border-radius: 999px; background: transparent; }
+.studio-dialog .gen-filters button.active { background: var(--text); color: #0b0d12; border-color: var(--text); }
+.gen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  max-height: 62dvh;
+  overflow-y: auto;
+  padding: 2px;
+}
+.studio-dialog .gen-card {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 4;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--line-2);
+  background: #000;
+}
+.studio-dialog .gen-card:hover { border-color: var(--accent); }
+.gen-thumb { display: grid; place-items: center; width: 100%; height: 100%; object-fit: cover; color: var(--audio); }
+.gen-thumb .i { width: 36px; height: 36px; }
+.gen-kind {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #000b;
+  font-size: 10.5px;
+  font-weight: 650;
+}
+.gen-add {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 3px 10px #0008;
+}
+.gen-add .i { width: 18px; height: 18px; stroke-width: 2.4; }
+.gen-card.loading::after {
+  content: "Adding…";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #000a;
+  font-weight: 650;
+}
+
+/* Projects */
+.projects-list { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 12px; }
+.project-card { display: flex; align-items: center; gap: 6px; }
+.studio-dialog .project-open,
+#caption-editor .project-open {
+  flex: 1;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 64px;
+  padding: 8px;
+  text-align: left;
+  background: var(--surface-3);
+  border-color: var(--line);
+  border-radius: 12px;
+}
+.project-card.current .project-open { border-color: var(--accent); }
+.project-thumb { width: 48px; height: 48px; flex: none; border-radius: 8px; object-fit: cover; background: #000; }
+.project-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.project-text strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.project-text small { font-size: 11px; color: var(--muted); font-weight: 450; }
+.project-card.current .project-text small { color: var(--accent); }
+.studio-dialog .project-delete { width: 40px; min-height: 40px; padding: 0; background: transparent; color: var(--muted); border-color: transparent; }
+.studio-dialog .project-delete:hover { color: var(--danger); }
+.recent-projects { width: 100%; margin-top: 14px; text-align: left; }
+.recent-projects h2 { margin: 0 0 8px; font-size: 12px !important; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.recent-projects { display: grid; gap: 6px; }
+#caption-editor .recent-projects .project-open { min-height: 56px; background: #ffffff08; }
+
+/* Phone: the caption bar replaces the clip bar when a caption or text is selected. */
+body:not([data-sel="text"]) .for-text,
+body[data-sel="text"] .for-clip { display: none !important; }
+@media (max-width: 700px) {
+  .tb-close .i { width: 26px; height: 26px; stroke-width: 2; }
+  .caption-segment .trim-handle { width: 14px; }
+  .studio-dialog.wide-dialog,
+  .studio-dialog { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 20px 20px 0 0; max-height: 88dvh; }
+  .gen-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 66dvh; }
+  .gen-add { width: 26px; height: 26px; }
+}

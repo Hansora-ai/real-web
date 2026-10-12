@@ -247,3 +247,21 @@ export async function reverseVideo(asset, start, end, report) {
     if (active === ff) active = null;
   }
 }
+
+// Used by the fast exporter when the browser cannot encode AAC itself:
+// the finished H.264 video is copied as-is and only the sound is encoded here.
+export async function muxAudio(videoBlob, wavBlob, report) {
+  await loadScript();
+  const ff = new window.FFmpegWASM.FFmpeg();
+  active = ff;
+  try {
+    report(92, "Adding sound…");
+    await ff.load({ coreURL: "/vendor/henshin/ffmpeg-core.js", wasmURL: "/vendor/henshin/ffmpeg-core.wasm" });
+    await ff.writeFile("video.mp4", new Uint8Array(await videoBlob.arrayBuffer()));
+    await ff.writeFile("audio.wav", new Uint8Array(await wavBlob.arrayBuffer()));
+    if (await ff.exec(["-y", "-i", "video.mp4", "-i", "audio.wav", "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy",
+      "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-ac", "2", "-shortest", "-movflags", "+faststart", "finished.mp4"]))
+      throw Error("Could not add sound to the video.");
+    return new Blob([await ff.readFile("finished.mp4")], { type: "video/mp4" });
+  } finally { ff.terminate(); if (active === ff) active = null; }
+}

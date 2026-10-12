@@ -10,6 +10,7 @@
       content="Edit videos and create styled Armenian, Russian and English subtitles with Hansora Caption Studio."
     />
     <link rel="icon" href="/favicon.png" />
+    <link rel="stylesheet" href="/search-models-tailwind.css" />
     <link rel="stylesheet" href="/header.css" />
     <link rel="stylesheet" href="/caption-studio/studio.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -57,16 +58,18 @@
     <div id="sharedHeader"></div>
     <main id="caption-editor">
       <div class="editor-toolbar">
-        <a class="tb-close" href="/video-edit.html" aria-label="Close editor"><svg class="i"><use href="#i-close"/></svg></a>
+        <a class="tb-close" id="editor-back" href="/" aria-label="Back"><svg class="i"><use href="#i-left"/></svg></a>
         <strong class="tb-title">Video editor</strong>
         <input id="project-name" value="Untitled video" aria-label="Project name" maxlength="80" />
         <span id="save-status">Saved on this device</span>
         <details class="project-menu">
           <summary aria-label="Project menu"><span class="label">Project</span><svg class="i"><use href="#i-more"/></svg></summary>
           <div>
-            <button id="open-project"><svg class="i"><use href="#i-folder"/></svg>Open project</button>
-            <button id="save-project"><svg class="i"><use href="#i-save"/></svg>Save project file</button>
-            <button id="settings"><svg class="i"><use href="#i-plug"/></svg>Caption connection</button>
+            <button id="your-projects"><svg class="i"><use href="#i-folder"/></svg>Your projects</button>
+            <button id="save-now"><svg class="i"><use href="#i-save"/></svg>Save now</button>
+            <button id="new-video"><svg class="i"><use href="#i-plus"/></svg>New video</button>
+            <button id="open-project" hidden>Open project file</button>
+            <button id="save-project" hidden>Save project file</button>
           </div>
         </details>
         <button class="export-button" id="export-open"><svg class="i"><use href="#i-export"/></svg><span>Export</span></button>
@@ -89,12 +92,6 @@
               <button id="my-generations" class="source-card gen"><span class="source-icon"><svg class="i"><use href="#i-sparkle"/></svg></span><strong>My generations</strong><small>Your Hansora images &amp; videos</small></button>
               <button id="add-video" class="source-card"><span class="source-icon"><svg class="i"><use href="#i-upload"/></svg></span><strong>Upload</strong><small>From this device</small></button>
             </div>
-            <div id="generation-results" hidden>
-              <p id="generation-status" class="hint" role="status"></p>
-              <div id="generation-list" class="media-list"></div>
-              <button id="generation-sign-in" class="wide" hidden>Sign in to Hansora</button>
-              <button id="generation-back" class="wide ghost"><svg class="i"><use href="#i-left"/></svg>Back to uploaded media</button>
-            </div>
             <div id="uploaded-media">
               <div class="section-line">
                 <h2>Your media</h2>
@@ -102,11 +99,11 @@
               </div>
               <div id="media-list" class="media-list"></div>
               <button id="demo" class="wide ghost">Try a sample video</button>
-              <button id="resume" class="wide" hidden>Resume saved project</button>
+              <button id="resume" class="wide" hidden>Your projects</button>
             </div>
           </section>
           <section id="tab-captions" class="tab-content" hidden>
-            <button id="generate" class="primary wide big"><svg class="i"><use href="#i-sparkle"/></svg>Auto captions</button>
+            <button id="generate" class="primary wide big"><svg class="i"><use href="#i-sparkle"/></svg><span id="generate-label">Auto captions</span></button>
             <label class="field">Speech language
               <select id="language">
                 <option value="auto">Auto · mixed languages</option>
@@ -117,14 +114,17 @@
             </label>
             <div class="two-buttons">
               <button id="add-caption"><svg class="i"><use href="#i-plus"/></svg>Add caption</button>
-              <button id="import-captions"><svg class="i"><use href="#i-upload"/></svg>Import SRT / VTT</button>
+              <button id="import-captions" hidden>Import SRT / VTT</button>
             </div>
             <p id="caption-status" class="caption-status" role="status" aria-live="polite" hidden></p>
-            <label class="field" for="caption-words">
-              <span class="field-row">Caption length <output id="words-label">50%</output></span>
-              <input id="caption-words" type="range" min="5" max="100" step="5" value="50" />
-              <span class="hint">Shorter phrases ← → longer phrases</span>
-            </label>
+            <div class="length-card">
+              <div class="length-head"><strong>Caption length</strong><output id="words-label">50%</output></div>
+              <div class="length-presets" role="group" aria-label="Caption length">
+                <button data-length="20">Short</button><button data-length="50">Medium</button><button data-length="100">Long</button>
+              </div>
+              <input id="caption-words" type="range" min="5" max="100" step="5" value="50" aria-label="Caption length" />
+              <span class="hint">How many words show at once. Applies to all captions.</span>
+            </div>
             <details class="appearance"><summary>Caption style</summary><div id="caption-style-host"></div></details>
             <div class="section-line">
               <h2>Subtitles</h2>
@@ -177,6 +177,7 @@
                   <small>Video, image or audio</small>
                 </button>
               </div>
+              <div id="recent-projects" class="recent-projects" hidden></div>
             </div>
             <div id="safe-guide" class="safe-guide" hidden><span>Keep text inside this area</span></div>
           </div>
@@ -243,7 +244,7 @@
               <p class="hint">Caption times follow the original video; layer times follow the edited timeline.</p>
             </div>
             <section id="text-options" hidden>
-              <div class="scope">
+              <div class="scope" hidden>
                 <label class="field">Apply changes to
                   <select id="style-scope">
                     <option value="all">All subtitles</option>
@@ -277,6 +278,7 @@
                   <label>Highlight<input id="accent" data-style="accent" type="color" value="#c4f36a" /></label>
                   <label>Background<input id="background" data-style="background" type="color" value="#101418" /></label>
                 </div>
+                <label class="check bg-none"><input id="bg-none" type="checkbox" /> Transparent background</label>
                 <details class="advanced">
                   <summary>More text options</summary>
                   <label class="field">Background opacity<input id="backgroundOpacity" data-style="backgroundOpacity" type="range" min="0" max="1" step=".01" value=".72" /></label>
@@ -329,7 +331,7 @@
               <button id="move-left" class="icon" title="Move clip earlier">←</button>
               <button id="move-right" class="icon" title="Move clip later">→</button>
             </div>
-            <label class="timeline-zoom"><span>Zoom</span><input id="timeline-zoom" type="range" min="1" max="8" value="1" step=".25" /></label>
+            <label class="timeline-zoom"><span>Zoom</span><input id="timeline-zoom" type="range" min="0" max="1" value="0" step=".001" /></label>
           </div>
           <div id="timecode-m" class="m-timecode" aria-hidden="true"></div>
           <div id="timeline-scroll" class="timeline-scroll">
@@ -365,7 +367,15 @@
       </nav>
       <nav class="mobile-edit-bar" aria-label="Edit selection">
         <button class="edit-back" data-mobile="back" aria-label="Back to tools"><svg class="i"><use href="#i-left"/></svg></button>
-        <div class="edit-scroll">
+        <div class="edit-scroll for-text">
+          <button data-mobile="edit-text"><svg class="i"><use href="#i-text"/></svg><span>Edit text</span></button>
+          <button data-mobile="style"><svg class="i"><use href="#i-sliders"/></svg><span>Style</span></button>
+          <button data-mobile="longer"><svg class="i"><use href="#i-fwd5"/></svg><span>Longer</span></button>
+          <button data-mobile="shorter"><svg class="i"><use href="#i-back5"/></svg><span>Shorter</span></button>
+          <button data-mobile="split-text"><svg class="i"><use href="#i-split"/></svg><span>Split</span></button>
+          <button data-mobile="delete-text" class="danger"><svg class="i"><use href="#i-trash"/></svg><span>Delete</span></button>
+        </div>
+        <div class="edit-scroll for-clip">
           <button data-proxy="split"><svg class="i"><use href="#i-split"/></svg><span>Split</span></button>
           <button data-proxy="edit-selection"><svg class="i"><use href="#i-sliders"/></svg><span>Adjust</span></button>
           <button data-proxy="duplicate"><svg class="i"><use href="#i-copy"/></svg><span>Duplicate</span></button>
@@ -427,16 +437,25 @@
       </div>
       <p class="hint">Keep this tab open during export. Larger projects need more memory and time.</p>
     </dialog>
-    <dialog class="studio-dialog" id="settings-dialog">
+    <dialog class="studio-dialog wide-dialog" id="generations-dialog">
       <div class="dialog-head">
-        <h2>Transcription connection</h2>
-        <button data-close="settings-dialog" aria-label="Close"><svg class="i"><use href="#i-close"/></svg></button>
+        <div><span class="eyebrow">Hansora</span><h2>My generations</h2></div>
+        <button data-close="generations-dialog" aria-label="Close"><svg class="i"><use href="#i-close"/></svg></button>
       </div>
-      <p id="connection-status" class="hint"></p>
-      <div id="hosted-auth" hidden>
-        <button id="sign-in" class="primary wide">Sign in to Hansora</button>
-        <p class="hint">Automatic captions need a Hansora account.</p>
+      <div class="gen-filters" role="group" aria-label="Filter generations">
+        <button data-gen-filter="all" class="active">All</button><button data-gen-filter="video">Videos</button><button data-gen-filter="image">Images</button><button data-gen-filter="audio">Audio</button>
       </div>
+      <p id="generation-status" class="hint" role="status"></p>
+      <div id="generation-list" class="gen-grid"></div>
+      <button id="generation-sign-in" class="primary wide big" hidden>Sign in to Hansora</button>
+    </dialog>
+    <dialog class="studio-dialog" id="projects-dialog">
+      <div class="dialog-head">
+        <div><span class="eyebrow">Saved on this device</span><h2>Your projects</h2></div>
+        <button data-close="projects-dialog" aria-label="Close"><svg class="i"><use href="#i-close"/></svg></button>
+      </div>
+      <div id="projects-list" class="projects-list"></div>
+      <p class="hint">Your last 5 projects are kept automatically. Older ones are removed.</p>
     </dialog>
     <dialog class="studio-dialog" id="media-preview-dialog">
       <div class="dialog-head">
