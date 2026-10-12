@@ -340,9 +340,10 @@ function renderUI() {
     "export-open",
   ])
     $(id).disabled = (id === "export-open" ? !duration(p) : ["split","duplicate","delete-clip","move-left","move-right"].includes(id) ? (!p.clips.length && !selectedTimedItem()) : !p.clips.length) || busy;
-  $("generate").disabled = busy || assets.get(currentClip()?.assetId)?.kind !== "video";
-  const captionAsset = assets.get(currentClip()?.assetId);
-  $("generate-label").textContent = captionAsset?.kind === "video" ? `Auto captions · ${captionCost(captionAsset.duration)}⚡` : "Auto captions";
+  const targets = captionTargets();
+  $("generate").disabled = busy || !targets.length;
+  const total = targets.reduce((sum, id) => sum + captionCost(assets.get(id).duration), 0);
+  $("generate-label").textContent = targets.length ? `Auto captions · ${total}⚡` : "Auto captions";
   $("reverse").disabled = busy || assets.get(currentClip()?.assetId)?.kind !== "video";
   const layerSelected=p.layers.some(l=>l.id===selectedOverlay);
   $("move-left").textContent=layerSelected?"↓":"←";$("move-right").textContent=layerSelected?"↑":"→";
@@ -760,17 +761,20 @@ function captionStatus(message, error = false) {
   status.hidden = !message;
   status.classList.toggle("error", error);
 }
+// Auto captions cover every video in the timeline. Videos that already have
+// captions are skipped; when all have them, all are made again.
+function captionTargets() {
+  const ids = [...new Set(p.clips.map((c) => c.assetId))].filter((id) => assets.get(id)?.kind === "video");
+  const missing = ids.filter((id) => !p.transcripts[id]?.length);
+  return missing.length ? missing : ids;
+}
 async function generate() {
-  const c = currentClip();
-  if (!c || assets.get(c.assetId)?.kind!=="video") throw Error("Select a video clip to generate captions.");
-  if (connection.local && !connection.configured) {
-    throw Error("The local transcription server is not connected yet.");
-  }
-  const asset = assets.get(c.assetId);
-  let headers = { "Content-Type": "application/json" };
+  const targets = captionTargets();
+  if (!targets.length) throw Error("Add a video to make captions.");
+  if (connection.local && !connection.configured) throw Error("Auto captions are not available on this computer.");
+  const headers = { "Content-Type": "application/json" };
   if (!connection.local) {
-    let token = (await window.__HANSORA_SB__?.auth.getSession())?.data?.session
-      ?.access_token;
+    const token = (await window.__HANSORA_SB__?.auth.getSession())?.data?.session?.access_token;
     if (!token) {
       toast("Sign in to make auto captions.");
       openLogin();
@@ -780,46 +784,46 @@ async function generate() {
   }
   pause();
   setBusy(true);
-  captionStatus("Transcribing with ElevenLabs…");
-  toast("Transcribing with ElevenLabs…");
+  const made = new Map();
+  let failure = null;
   try {
-    const r = await fetch("/.netlify/functions/caption-studio-token", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ seconds: asset.duration }),
-      }),
-      data = await r.json();
-    if (!r.ok) throw Error(data.error || "Could not start transcription.");
-    window.HansoraHeader?.refreshCredits?.().catch?.(() => {});
-    const form = new FormData();
-    form.append("file", asset.file, asset.file.name);
-    form.append("model_id", "scribe_v2");
-    form.append("timestamps_granularity", "word");
-    if ($("language").value !== "auto")
-      form.append("language_code", $("language").value);
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/speech-to-text?token=${encodeURIComponent(data.token)}`,
-      { method: "POST", body: form, signal: AbortSignal.timeout(600000) },
-    );
-    const result = await response.json();
-    if (!response.ok)
-      throw Error(
-        response.status === 429
-          ? "ElevenLabs account limit reached. Check your plan."
-          : "Transcription failed. Check the ElevenLabs key permissions and try again.",
-      );
-    const cues = groupWords(result, p.captionWords);
-    const visible = generatedCaptionsForClip(p, c, cues);
-    checkpoint();
-    p.transcripts[asset.id] = cues;
-    selectedOverlay = visible[0].key;
-    commit();
-    tab("captions");
-    await seek((visible[0].start + visible[0].end) / 2);
-    captionStatus(`${visible.length} captions added to this clip. Select one to edit its text and style.`);
-    toast(`${visible.length} captions generated.`);
+    for (let i = 0; i < targets.length; i++) {
+      const asset = assets.get(targets[i]);
+      const label = targets.length > 1 ? `Making captions… video ${i + 1} of ${targets.length}` : "Making captions…";
+      captionStatus(label); toast(label);
+      try {
+        const r = await fetch("/.netlify/functions/caption-studio-token", { method: "POST", headers, body: JSON.stringify({ seconds: asset.duration }) });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw Error(data.error || "Could not start auto captions.");
+        window.HansoraHeader?.refreshCredits?.()?.catch?.(() => {});
+        const form = new FormData();
+        form.append("file", asset.file, asset.file.name);
+        form.append("model_id", "scribe_v2");
+        form.append("timestamps_granularity", "word");
+        if ($("language").value !== "auto") form.append("language_code", $("language").value);
+        const response = await fetch(`https://api.elevenlabs.io/v1/speech-to-text?token=${encodeURIComponent(data.token)}`, { method: "POST", body: form, signal: AbortSignal.timeout(600000) });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw Error(response.status === 429 ? "Auto captions are busy right now. Try again in a minute." : "Could not make captions for this video. Try again.");
+        const cues = groupWords(result, p.captionWords);
+        if (cues.length) made.set(asset.id, cues);
+      } catch (error) { failure = error; break; }
+    }
+    if (made.size) {
+      checkpoint();
+      for (const [id, cues] of made) p.transcripts[id] = cues;
+      const visible = timelineCaptions(p).filter((q) => made.has(q.clip.assetId));
+      selectedOverlay = visible[0]?.key || null;
+      commit();
+      tab("captions");
+      if (visible[0]) await seek((visible[0].start + visible[0].end) / 2);
+      captionStatus(visible.length ? `${visible.length} captions added. Tap one to edit it.` : "Captions were made, but none fall inside your trimmed clips.", !visible.length);
+      toast(`${visible.length} captions added.`);
+    } else if (!failure) {
+      throw Error("No speech was found in your video.");
+    }
+    if (failure) throw Error(made.size ? `${failure.message} Captions for the other videos were added.` : failure.message);
   } catch (error) {
-    captionStatus(error.message || "Could not generate captions. Try again.", true);
+    captionStatus(error.message || "Could not make captions. Try again.", true);
     throw error;
   } finally {
     setBusy(false);
@@ -1381,7 +1385,7 @@ click("demo", async () => {
   await seek(duration(p) - a.duration + 0.3);
   tab("captions");
   toast(
-    "Sample loaded with example captions. Upload speech to test ElevenLabs.",
+    "Sample loaded with example captions. Upload your own video to make real captions.",
   );
 });
 function addToTimeline(id, index=p.clips.length) {

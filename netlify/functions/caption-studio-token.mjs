@@ -58,7 +58,7 @@ export default async function handler(request) {
     const now = Date.now();
     for (const [id, b] of buckets) if (now - b.start > 60000) buckets.delete(id);
     const bucket = buckets.get(user.id) || { start: now, count: 0 };
-    if (bucket.count >= 5)
+    if (bucket.count >= 10)
       return json(429, { error: "Please wait a minute before requesting more captions." });
     bucket.count++;
     buckets.set(user.id, bucket);
