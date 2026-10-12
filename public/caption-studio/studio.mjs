@@ -194,7 +194,8 @@ const centered=()=>phone.matches;
 function lead() { return centered() ? Math.round($("timeline-scroll").clientWidth/2) : 70; }
 let scrollSync=0, userScrolling=false, userScrollTimer=null;
 function followPlayhead() {
-  if(!centered() || userScrolling) return;
+  // While an edge is dragged the track stays put, so the handle stays under the pointer.
+  if(!centered() || userScrolling || trimming) return;
   const target=Math.round(time*timelineScale), scroller=$("timeline-scroll");
   if(Math.abs(scroller.scrollLeft-target)>=1) {scrollSync=performance.now();scroller.scrollLeft=target;}
 }
@@ -436,10 +437,14 @@ function selectOverlay(id, at) {
 function draw() {
   const w = canvas.width,
     h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
-  if (duration(p)) {
+  const located=duration(p) && locate(p,time), a=assets.get(located?.clip?.assetId);
+  // Keep the last frame on screen while the next one decodes, instead of flashing black.
+  const holding = a?.kind === "video" && video.dataset.asset === a.id && video.readyState < 2 && video.seeking;
+  if (holding) {
+    // nothing to paint yet; the seeked event redraws
+  } else if (duration(p)) {
+    ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = "#000"; ctx.fillRect(0,0,w,h);
-    const located=locate(p,time), a=assets.get(located?.clip.assetId);
     let sceneBox=null;
     if (a?.kind === "image" && a.image) {
       const c=located.clip, s=c.style || {width:100,x:50,y:50}, fitted=fit(a.width,a.height,w,h);
@@ -451,7 +456,7 @@ function draw() {
     }
     boxes=drawOverlays(ctx,p,time,w,h,assets,{selection:selectedOverlay,skipKey:inlineEditing});
     if(sceneBox) {boxes.unshift(sceneBox);if(selectedOverlay===sceneBox.key) drawSelection(ctx,sceneBox,w);}
-  } else boxes=[];
+  } else {ctx.clearRect(0, 0, w, h);boxes=[];}
   $("timecode").replaceChildren(document.createTextNode(clock(time) + " "));
   const total = document.createElement("span");
   total.textContent = "/ " + clock(duration(p));
@@ -1501,7 +1506,9 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
   timelineScale = (viewport / (timelineSpan || 50)) * zoomFactor;
   const width = Math.max(viewport, d * timelineScale);
   $("timeline-content").style.setProperty("--lead", `${pad}px`);
-  $("timeline-content").style.width = `${width + pad + (centered() ? pad : 40)}px`;
+  // Never shrink mid-drag: a shorter track would clamp the scroll and drag the clip under the pointer.
+  const full = width + pad + (centered() ? pad : 40), content = $("timeline-content");
+  content.style.width = `${trimming ? Math.max(full, parseFloat(content.style.width) || 0) : full}px`;
   $("clip-track").replaceChildren();
   $("caption-track").replaceChildren();
   $("timeline-ruler").replaceChildren();
@@ -1750,7 +1757,7 @@ function captionTrim(e, q, edge) {
   };
   const up = () => {
     window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up);
-    commit(); editMode(true); setTimeout(() => (trimming = false), 0);
+    commit(); editMode(true); setTimeout(() => { trimming = false; renderTimeline(); followPlayhead(); }, 0);
   };
   window.addEventListener("pointermove", move); window.addEventListener("pointerup", up, { once: true }); window.addEventListener("pointercancel", up, { once: true });
 }
@@ -1772,7 +1779,7 @@ function timedPointer(e,item,mode,block,audio) {
     if(audio){const d=assets.get(item.assetId)?.duration;for(const wave of block.querySelectorAll(".audio-waveform"))wave.style.transform=`translateX(${((Number(wave.dataset.cycle)||0)*d-item.in)*scale}px)`;block.querySelector(".audio-duration").textContent=clock(item.end-item.start);}
     draw();renderInspector();updatePlayhead();
   };
-  const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);window.removeEventListener("pointercancel",up);commit();syncMusic();setTimeout(()=>trimming=false,0);};
+  const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);window.removeEventListener("pointercancel",up);commit();syncMusic();setTimeout(()=>{trimming=false;renderTimeline();followPlayhead();},0);};
   window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true});window.addEventListener("pointercancel",up,{once:true});
 }
 const volumeLineTop=volume=>16+(1-volume)*22;
@@ -1815,7 +1822,7 @@ function trimPointer(e, c, edge, offset) {
     trimPreview = null;
     commit();
     seek(time);
-    setTimeout(() => (trimming = false), 0);
+    setTimeout(() => { trimming = false; renderTimeline(); followPlayhead(); }, 0);
   };
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", up, { once: true });
