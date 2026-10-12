@@ -13,12 +13,19 @@ export function generationMedia(rows) {
   }
   return output;
 }
-export async function readGenerations(client) {
+export const GENERATIONS_PAGE = 30;
+// One page of the signed-in user's generations, newest first, filtered on the server.
+export async function readGenerations(client, { page = 1, kind = 'all', pageSize = GENERATIONS_PAGE } = {}) {
   if(!client) throw Error('Sign in to Hansora to see your generations.');
   const {data:session}=await client.auth.getSession();
   if(!session?.session?.user?.id) throw Error('Sign in to Hansora to see your generations.');
-  const {data,error}=await client.from('user_generations').select('id,provider,kind,prompt,result_url,meta,created_at')
-    .eq('user_id',session.session.user.id).order('created_at',{ascending:false}).limit(100);
+  let query=client.from('user_generations').select('id,provider,kind,prompt,result_url,meta,created_at',{count:'exact'})
+    .eq('user_id',session.session.user.id);
+  if(kind==='video') query=query.ilike('kind','%video%');
+  else if(kind==='audio') query=query.or('kind.ilike.%audio%,kind.ilike.%speech%,kind.ilike.%music%');
+  else if(kind==='image') for(const word of ['video','audio','speech','music']) query=query.not('kind','ilike',`%${word}%`);
+  const from=(Math.max(1,page)-1)*pageSize;
+  const {data,error,count}=await query.order('created_at',{ascending:false}).range(from,from+pageSize-1);
   if(error) throw Error('Could not load your generations. Try again.');
-  return generationMedia(data||[]);
+  return {items:generationMedia(data||[]),pages:Math.max(1,Math.ceil((count||0)/pageSize)),page};
 }

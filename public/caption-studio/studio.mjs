@@ -1468,12 +1468,19 @@ async function thumbnailFrames(el, d) {
 function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
   const pad = lead(), viewport = Math.max(260, $("timeline-scroll").clientWidth - (centered() ? 0 : pad)) * (centered() ? 0.85 : 1);
   // Keep seconds at the same scale after edits; only zoom/resize changes it.
-  if (timelineSpan === null && d > 0) timelineSpan = centered() ? 4 : Math.max(d, 6);
-  // Zoom goes from the whole video on screen to ~400px per second, however long the video is.
-  maxZoom = Math.max(1.5, 600 * (timelineSpan || 6) / viewport);
+  // Fully zoomed out shows at least 50 seconds (or the whole video); fully zoomed in ~600px per second.
+  const outSpan = Math.max(50, d * 1.15);
+  if (timelineSpan === null && d > 0) {
+    timelineSpan = outSpan;
+    zoomFactor = outSpan / (centered() ? 5 : Math.max(d * 1.15, 8));
+  } else if (timelineSpan !== null && outSpan > timelineSpan) {
+    zoomFactor *= outSpan / timelineSpan;
+    timelineSpan = outSpan;
+  }
+  maxZoom = Math.max(1.5, 600 * (timelineSpan || 50) / viewport);
   zoomFactor = clamp(zoomFactor, 1, maxZoom);
   $("timeline-zoom").value = Math.log(zoomFactor) / Math.log(maxZoom);
-  timelineScale = (viewport / (timelineSpan || 6)) * zoomFactor;
+  timelineScale = (viewport / (timelineSpan || 50)) * zoomFactor;
   const width = Math.max(viewport, d * timelineScale);
   $("timeline-content").style.setProperty("--lead", `${pad}px`);
   $("timeline-content").style.width = `${width + pad + (centered() ? pad : 40)}px`;
@@ -1609,7 +1616,7 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
   }
   if (p.clips.length && !captions.length) {
     const add = button("", () => tab("captions"), "track-placeholder");
-    add.innerHTML = '<svg class="i"><use href="#i-captions"/></svg><span>Add captions</span>';
+    add.innerHTML = '<span class="ph"><svg class="i"><use href="#i-captions"/></svg><span>Add captions</span></span>';
     $("caption-track").append(add);
   }
   for (const q of captions) {
@@ -1685,7 +1692,7 @@ function renderExtraTracks() {
   const placeholder=(container,label,icon,fn)=>{
     const row=document.createElement("div");row.className="track-row extra-track empty-track";
     const name=document.createElement("span");name.className="track-label";name.textContent=label;
-    const b=button("",fn,"track-placeholder");b.innerHTML=`<svg class="i"><use href="#${icon}"/></svg><span>Add ${label.toLowerCase()}</span>`;
+    const b=button("",fn,"track-placeholder");b.innerHTML=`<span class="ph"><svg class="i"><use href="#${icon}"/></svg><span>Add ${label.toLowerCase()}</span></span>`;
     const track=document.createElement("div");track.className="layer-track";track.append(b);row.append(name,track);$(container).append(row);
   };
   if(!p.layers.length) placeholder("layer-tracks","Text","i-text",()=>$("add-text").click());
@@ -1991,49 +1998,87 @@ click("edit-selection",()=>{if(centered())activeTab="media";document.body.classL
 click("preview-expand",()=>{closeSheets();focusPreview(!document.body.classList.contains("preview-focus"));});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeSheets();closeRatio();focusPreview(false);}});
 click("audio-upload",()=>$("video-input").click());
-// 6: generations open as a gallery; tap one to add it.
-let generations=[], genFilter="all";
-function renderGenerations() {
-  const list=$("generation-list");list.replaceChildren();
-  const items=generations.filter(g=>genFilter==="all"||g.kind===genFilter);
-  if(generations.length) $("generation-status").textContent=items.length?"Tap to add to your video.":"Nothing here yet.";
-  for(const item of items){
-    const card=document.createElement("button");card.className="gen-card";card.type="button";
-    const preview=document.createElement(item.kind==="image"?"img":item.kind==="video"?"video":"span");
-    if(item.kind!=="audio"){preview.src=item.url;preview.loading="lazy";if(item.kind==="video"){preview.muted=true;preview.preload="metadata";preview.playsInline=true;preview.src=item.url+"#t=0.5";}}
-    else preview.innerHTML='<svg class="i"><use href="#i-audio"/></svg>';
-    preview.className="gen-thumb";
-    const badge=document.createElement("span");badge.className="gen-kind";badge.textContent=item.kind==="video"?"Video":item.kind==="image"?"Image":"Audio";
-    const add=document.createElement("span");add.className="gen-add";add.innerHTML='<svg class="i"><use href="#i-plus"/></svg>';
-    card.append(preview,badge,add);card.title=item.title||"";
-    card.addEventListener("click",run(async()=>{
-      if(card.classList.contains("loading")) return;card.classList.add("loading");
-      try{
-        let response;try{response=await fetch(item.url);}catch{throw Error("This file could not be imported. Download it from your library and use Upload.");}
-        if(!response.ok || /text\/html/.test(response.headers.get("content-type")||""))throw Error("This file could not be imported. Download it from your library and use Upload.");
-        const blob=await response.blob(),ext=item.kind==="image"?"png":item.kind==="audio"?"mp3":"mp4";
-        const asset=await loadAsset(new File([blob],`Hansora ${String(item.id).replace(':','-')}.${ext}`,{type:blob.type}),item.kind);
-        const total=[...assets.values()].reduce((n,a)=>n+a.file.size,asset.file.size);if(total>200*1048576){URL.revokeObjectURL(asset.url);throw Error("This project supports up to 200 MB of media.");}
-        assets.set(asset.id,asset);$("generations-dialog").close();addToTimeline(asset.id);
-        toast(item.kind==="audio"?"Added to your audio track.":"Added to your video.");
-      }finally{card.classList.remove("loading");}
-    }));
-    list.append(card);
+// 6: generations open as a gallery, 30 per page. Pick several, then add them in the order picked.
+let genPage=1, genFilter="all", genPages=1, genLoad=0;
+const picked=new Map();
+function syncPicked() {
+  const n=picked.size;
+  $("generation-add").disabled=!n;$("generation-clear").hidden=!n;
+  $("generation-add-label").textContent=n?`Add ${n} to video`:"Select media to add";
+  const order=[...picked.keys()];
+  for(const card of $("generation-list").children){
+    const i=order.indexOf(card.dataset.id);
+    card.classList.toggle("picked",i>=0);card.setAttribute("aria-pressed",String(i>=0));
+    card.querySelector(".gen-add").textContent=i>=0?String(i+1):"";
+    if(i<0) card.querySelector(".gen-add").innerHTML='<svg class="i"><use href="#i-plus"/></svg>';
   }
 }
+function renderPages() {
+  const nav=$("generation-pages");nav.replaceChildren();
+  if(genPages<2) return;
+  const go=(n,label=String(n))=>{const b=document.createElement("button");b.type="button";b.textContent=label;b.disabled=n<1||n>genPages;if(n===genPage)b.className="active";b.addEventListener("click",()=>loadGenerations(n));nav.append(b);};
+  go(genPage-1,"‹");
+  const shown=new Set([1,genPages,genPage-1,genPage,genPage+1].filter(n=>n>=1&&n<=genPages));
+  let last=0;
+  for(const n of [...shown].sort((x,y)=>x-y)){ if(n-last>1){const gap=document.createElement("span");gap.textContent="…";nav.append(gap);} go(n); last=n; }
+  go(genPage+1,"›");
+}
+async function loadGenerations(page=1) {
+  const ticket=++genLoad;genPage=page;
+  $("generation-sign-in").hidden=true;$("generation-list").replaceChildren();$("generation-pages").replaceChildren();
+  $("generation-status").textContent="Loading your generations…";
+  try {
+    const result=await readGenerations(window.__HANSORA_SB__,{page,kind:genFilter});
+    if(ticket!==genLoad) return;
+    genPages=result.pages;
+    $("generation-status").textContent=result.items.length?"Tap to select. You can pick several.":"Nothing here yet.";
+    for(const item of result.items){
+      const card=document.createElement("button");card.className="gen-card";card.type="button";card.dataset.id=item.id;
+      const preview=document.createElement(item.kind==="image"?"img":item.kind==="video"?"video":"span");
+      if(item.kind!=="audio"){preview.loading="lazy";if(item.kind==="video"){preview.muted=true;preview.preload="metadata";preview.playsInline=true;preview.src=item.url+"#t=0.5";}else preview.src=item.url;}
+      else preview.innerHTML='<svg class="i"><use href="#i-audio"/></svg>';
+      preview.className="gen-thumb";
+      const badge=document.createElement("span");badge.className="gen-kind";badge.textContent=item.kind==="video"?"Video":item.kind==="image"?"Image":"Audio";
+      const mark=document.createElement("span");mark.className="gen-add";
+      card.append(preview,badge,mark);card.title=item.title||"";
+      card.addEventListener("click",()=>{if(picked.has(item.id))picked.delete(item.id);else picked.set(item.id,item);syncPicked();});
+      $("generation-list").append(card);
+    }
+    $("generation-list").scrollTop=0;
+    syncPicked();renderPages();
+  }catch(error){if(ticket!==genLoad)return;$("generation-status").textContent=error.message;$("generation-sign-in").hidden=!/Sign in/i.test(error.message);}
+}
+async function importGeneration(item) {
+  let response;try{response=await fetch(item.url);}catch{throw Error("A file could not be imported. Download it from your library and use Upload.");}
+  if(!response.ok || /text\/html/.test(response.headers.get("content-type")||""))throw Error("A file could not be imported. Download it from your library and use Upload.");
+  const blob=await response.blob(),ext=item.kind==="image"?"png":item.kind==="audio"?"mp3":"mp4";
+  const asset=await loadAsset(new File([blob],`Hansora ${String(item.id).replace(':','-')}.${ext}`,{type:blob.type}),item.kind);
+  const total=[...assets.values()].reduce((n,a)=>n+a.file.size,asset.file.size);
+  if(total>200*1048576){URL.revokeObjectURL(asset.url);throw Error("This project supports up to 200 MB of media.");}
+  return asset;
+}
+click("generation-add",async()=>{
+  const items=[...picked.values()];if(!items.length) return;
+  $("generation-add").disabled=true;
+  let added=0;
+  try{
+    for(const item of items){
+      $("generation-add-label").textContent=`Adding ${added+1} of ${items.length}…`;
+      const asset=await importGeneration(item);
+      assets.set(asset.id,asset);addToTimeline(asset.id);added++;picked.delete(item.id);
+    }
+    $("generations-dialog").close();
+    toast(`${added} added to your video.`);
+  }finally{syncPicked();}
+});
+click("generation-clear",()=>{picked.clear();syncPicked();});
 async function showGenerations() {
   closeSheets();editMode(false);
-  $("generation-sign-in").hidden=true;$("generation-list").replaceChildren();
-  $("generation-status").textContent="Loading your generations…";
   if(!$("generations-dialog").open) $("generations-dialog").showModal();
-  try {
-    generations=await readGenerations(window.__HANSORA_SB__);
-    $("generation-status").textContent=generations.length?"":"No finished generations yet. Create something on Hansora first.";
-    renderGenerations();
-  }catch(error){$("generation-status").textContent=error.message;$("generation-sign-in").hidden=!/Sign in/i.test(error.message);}
+  await loadGenerations(1);
 }
 for(const b of document.querySelectorAll("[data-gen-filter]")) b.addEventListener("click",()=>{
-  genFilter=b.dataset.genFilter;document.querySelectorAll("[data-gen-filter]").forEach(x=>x.classList.toggle("active",x===b));renderGenerations();
+  genFilter=b.dataset.genFilter;document.querySelectorAll("[data-gen-filter]").forEach(x=>x.classList.toggle("active",x===b));loadGenerations(1);
 });
 click("my-generations",showGenerations);click("empty-generations",showGenerations);
 click("generation-sign-in",()=>{$("generations-dialog").close();openLogin();});

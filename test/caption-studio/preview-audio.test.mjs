@@ -23,8 +23,11 @@ test('preview routes separate sources through independent gains and a master mut
 test('generation picker keeps completed results and queries only the signed-in owner',async()=>{
   const rows=[{id:'a',kind:'video',result_url:'https://media.example/a.mp4',meta:{result_urls:['https://media.example/a.mp4','https://media.example/b.mp4']}},{id:'b',kind:'audio',result_url:'https://media.example/a.mp3'},{id:'c',kind:'image',result_url:'javascript:alert(1)'},{id:'d',kind:'video',result_url:'https://media.example/d.mp4',meta:{status:'processing'}}];
   assert.deepEqual(generationMedia(rows).map(r=>r.kind),['video','video','audio']);
-  const calls=[];const query={select(v){calls.push(['select',v]);return this;},eq(k,v){calls.push([k,v]);return this;},order(){return this;},async limit(){return {data:rows};}};
+  const calls=[];const query={select(v){calls.push(['select',v]);return this;},eq(k,v){calls.push([k,v]);return this;},ilike(k,v){calls.push(['ilike',v]);return this;},or(v){calls.push(['or',v]);return this;},not(k,op,v){calls.push(['not',v]);return this;},order(){return this;},async range(a,b){calls.push(['range',a,b]);return {data:rows,count:65};}};
   const client={auth:{async getSession(){return {data:{session:{user:{id:'owner'}}}};}},from(table){calls.push(['table',table]);return query;}};
-  assert.equal((await readGenerations(client)).length,3);assert.ok(calls.some(([k,v])=>k==='user_id'&&v==='owner'));
+  const first=await readGenerations(client);
+  assert.equal(first.items.length,3);assert.equal(first.pages,3);assert.ok(calls.some(([k,v])=>k==='user_id'&&v==='owner'));
+  await readGenerations(client,{page:2,kind:'video'});
+  assert.ok(calls.some(c=>c[0]==='range'&&c[1]===30&&c[2]===59));assert.ok(calls.some(c=>c[0]==='ilike'&&c[1]==='%video%'));
   await assert.rejects(()=>readGenerations({auth:{async getSession(){return {data:{session:null}};}}}),/Sign in/);
 });
