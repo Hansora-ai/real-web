@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Video editor · Hansora AI</title>
+    <meta
+      name="description"
+      content="Edit videos and create styled Armenian, Russian and English subtitles with Hansora Caption Studio."
+    />
+    <link rel="icon" href="/favicon.png" />
+    <link rel="stylesheet" href="/header.css" />
+    <link rel="stylesheet" href="/caption-studio/studio.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script defer src="/header.js"></script>
+    <script type="module" src="/caption-studio/studio.mjs"></script>
+  </head>
+  <body>
+    <div id="sharedHeader"></div>
+    <main id="caption-editor">
+      <div class="editor-toolbar">
+        <strong>Video editor</strong>
+        <input
+          id="project-name"
+          value="Untitled video"
+          aria-label="Project name"
+        />
+        <span id="save-status">Saved on this device</span>
+        <details class="project-menu">
+          <summary>Project ▾</summary>
+          <div>
+            <button id="open-project">Open project</button>
+            <button id="save-project">Save project</button>
+            <button id="settings">Caption connection</button>
+          </div>
+        </details>
+        <button class="primary" id="export-open">Export</button>
+      </div>
+      <div class="workspace">
+        <aside class="left-panel panel" aria-label="Editing tools">
+          <button id="close-tools" class="sheet-close" aria-label="Close tools">Done</button>
+          <div class="tabs" role="tablist">
+            <button
+              class="active"
+              data-tab="media"
+              role="tab"
+              aria-selected="true"
+            >
+              Media</button
+            ><button data-tab="captions" role="tab" aria-selected="false">
+              Captions</button
+            ><button data-tab="layers" role="tab" aria-selected="false">
+              Text
+            </button><button data-tab="audio" role="tab" aria-selected="false">Audio</button>
+          </div>
+          <section id="tab-media" class="tab-content">
+            <div class="media-source-actions"><button class="primary" id="add-video">Upload media</button><button id="my-generations">My generations</button></div>
+            <p class="small muted">Video, images, and audio. Pick a file, then add it to your video.</p>
+            <div id="generation-results" hidden><p id="generation-status" class="small muted" role="status"></p><div id="generation-list" class="media-list"></div><button id="generation-sign-in" hidden>Sign in to Hansora</button><button id="generation-back" class="wide">Back to uploaded media</button></div>
+            <div id="uploaded-media">
+            <div class="section-line">
+              <h2>Your media</h2>
+              <span id="media-count">0 files</span>
+            </div>
+            <div id="media-list" class="media-list"></div>
+            <button id="demo" class="wide subtle">Try sample</button
+            ><button id="resume" class="wide" hidden>
+              Resume saved project
+            </button>
+            </div>
+          </section>
+          <section id="tab-captions" class="tab-content" hidden>
+            <div class="section-line">
+              <h2>Subtitles</h2>
+              <span id="caption-count">0 captions</span>
+            </div>
+            <label for="caption-words">Caption length · all subtitles <output id="words-label">50%</output>
+              <input id="caption-words" type="range" min="5" max="100" step="5" value="50" />
+            </label><p class="small muted">25% = shorter captions · 50% = medium · 100% = longer</p>
+            <label
+              >Speech language<select id="language">
+                <option value="auto">Auto · mixed languages</option>
+                <option value="hye">Armenian</option>
+                <option value="rus">Russian</option>
+                <option value="eng">English</option>
+              </select></label
+            ><button id="generate" class="primary wide">
+              ✦ Generate captions
+            </button>
+            <div class="two-buttons">
+              <button id="import-captions">Import SRT / VTT</button
+              ><button id="add-caption">＋ Add caption</button>
+            </div>
+            <p class="small muted">
+              Generate for the selected video. Edit subtitles on the preview or timeline.
+            </p>
+            <p id="caption-status" class="caption-status small" role="status" aria-live="polite" hidden></p>
+            <details class="appearance"><summary>Caption appearance</summary><div id="caption-style-host"></div></details>
+            <div id="caption-list" class="caption-list"></div>
+          </section>
+          <section id="tab-layers" class="tab-content" hidden>
+            <div class="section-line"><h2>Text layers</h2></div>
+            <button id="add-text" class="wide">＋ Add text</button
+            ><p class="small muted">Double-click text in the preview to type. Drag it to move; drag its corners to resize.</p>
+            <div id="layer-list" class="layer-list"></div>
+          </section>
+          <section id="tab-audio" class="tab-content" hidden>
+            <h2>Sound</h2><p class="small muted">Control the video’s sound separately from music and voice tracks.</p>
+            <div id="sound-list"></div><button id="audio-upload" class="wide">＋ Upload audio</button>
+          </section>
+        </aside>
+        <section class="center-panel">
+          <div class="preview-header">
+            <div class="preview-label">Preview</div>
+            <div class="preview-options">
+              <label class="sr-only" for="aspect">Aspect ratio</label
+              ><select id="aspect">
+                <option value="source">Original ratio</option>
+                <option value="9:16">9:16 · Reels</option>
+                <option value="16:9">16:9 · YouTube</option>
+                <option value="1:1">1:1 · Square</option>
+                <option value="4:5">4:5 · Portrait</option></select
+              ><button id="preview-expand" title="Expand preview">⛶ Preview</button><button id="safe-area" title="Show safe area">Safe area</button>
+            </div>
+          </div>
+          <div id="preview-wrap" class="preview-wrap">
+            <canvas
+              id="preview"
+              width="1280"
+              height="720"
+              aria-label="Video preview. Drag subtitles to change their position."
+            ></canvas>
+            <textarea id="preview-text-editor" aria-label="Edit text on video" spellcheck="false" hidden></textarea>
+            <div id="empty-preview" class="empty-preview">
+              <span class="empty-symbol">＋</span><h1>Make your next video</h1>
+              <p>Upload media or choose a Hansora generation.<br />Add captions, edit, and export.</p>
+              <button class="primary" id="empty-upload">Upload media</button><button id="empty-generations">My generations</button>
+            </div>
+            <div id="safe-guide" class="safe-guide" hidden>
+              <span>Keep text inside this area</span>
+            </div>
+          </div>
+          <div class="playback">
+            <meter id="sound-meter" min="0" max="100" value="0" aria-label="Playback sound level"></meter><span id="timecode">00:00.0 <span>/ 00:00.0</span></span>
+            <div class="transport">
+              <button id="back" title="Back 5 seconds">↶ 5</button
+              ><button id="play" class="play-button" aria-label="Play">
+                ▶</button
+              ><button id="forward" title="Forward 5 seconds">5 ↷</button>
+            </div>
+            <label class="small muted"
+              ><input id="preview-mute" type="checkbox" /> Mute preview</label
+            >
+          </div>
+        </section>
+        <aside class="right-panel panel" aria-label="Selection controls"><button id="close-properties" class="sheet-close" aria-label="Close selection controls">Done</button>
+          <div class="inspector-heading">
+            <h2 id="inspector-title">Video</h2>
+          </div>
+          <p id="inspector-empty" class="muted">Select a clip to edit it.</p>
+          <div id="clip-inspector" class="detail-inspector" hidden>
+            <h3>Selected clip</h3>
+            <p id="selected-clip-name"></p>
+            <div class="two-buttons">
+              <label
+                >In (seconds)<input
+                  id="trim-start"
+                  type="number"
+                  min="0"
+                  step=".01" /></label
+              ><label
+                >Out (seconds)<input
+                  id="trim-end"
+                  type="number"
+                  min="0"
+                  step=".01"
+              /></label>
+            </div>
+            <button id="apply-trim" class="wide">Apply trim</button
+            ><label
+              >Video sound<input
+                id="clip-volume"
+                type="range"
+                min="0"
+                max="1"
+                step=".01"
+                value="1"
+            /></label>
+          </div>
+          <div id="audio-inspector" hidden>
+            <h3>Selected audio</h3><p id="audio-name" class="small muted"></p>
+            <label for="audio-volume">Volume <output id="audio-volume-label"></output><input id="audio-volume" type="range" min="0" max="1" step=".01" /></label>
+            <label><input id="audio-loop" type="checkbox" /> Loop audio</label>
+            <p class="small muted">Drag the clip to move it. Drag its edges to trim. Drag the horizontal line to change volume.</p>
+          </div>
+          <div id="caption-inspector" class="detail-inspector" hidden>
+            <h3 id="selected-heading">Selected caption</h3>
+            <label id="caption-text-label">Text<textarea id="caption-text" rows="3"></textarea></label>
+            <div class="two-buttons">
+              <label
+                >Start (seconds)<input
+                  id="cue-start"
+                  type="number"
+                  min="0"
+                  step=".01" /></label
+              ><label
+                >End (seconds)<input
+                  id="cue-end"
+                  type="number"
+                  min="0"
+                  step=".01"
+              /></label>
+            </div>
+            <p id="caption-edit-status" class="small muted" role="status">Changes save automatically.</p>
+            <div class="two-buttons">
+              <button id="split-caption">Split caption</button
+              ><button id="merge-caption">Merge next</button
+              ><button id="delete-caption">Delete</button>
+            </div>
+            <p class="small muted">
+              Caption times refer to the original video; layer times refer to
+              the edited timeline.
+            </p>
+          </div>
+          <section id="text-options" hidden>
+            <div class="scope">
+              <label
+                >Apply changes to<select id="style-scope">
+                  <option value="all">All subtitles</option>
+                  <option value="selected">Selected caption / layer</option>
+                </select></label
+              >
+            </div>
+            <div class="section-line">
+              <h3>Caption styles</h3>
+              <span>5 presets</span>
+            </div>
+            <div id="presets" class="presets">
+              <button data-preset="spotlight" class="preset active">
+                <span class="preview-spot">Your <b>words</b></span
+                ><small>Spotlight</small></button
+              ><button data-preset="clean" class="preset">
+                <span class="preview-clean">Your words</span
+                ><small>Clean</small></button
+              ><button data-preset="pill" class="preset">
+                <span class="preview-pill">Your words</span
+                ><small>Pill</small></button
+              ><button data-preset="punch" class="preset">
+                <span class="preview-punch">Your words!</span
+                ><small>Punch</small></button
+              ><button data-preset="cinema" class="preset">
+                <span class="preview-cinema">Your words</span
+                ><small>Cinema</small>
+              </button>
+            </div>
+            <div class="style-controls">
+              <label
+                >Font<select id="font" data-style="font">
+                  <option>Noto Sans</option>
+                  <option>Noto Sans Armenian</option>
+                  <option>Arial</option>
+                  <option>Georgia</option>
+                </select></label
+              ><button id="add-font" class="font-upload">
+                ＋ Upload your font</button
+              ><label
+                ><span id="size-title">Caption size · all subtitles</span> <span id="size-label"></span
+                ><input
+                  id="size"
+                  data-style="size"
+                  type="range"
+                  min="1"
+                  max="14"
+                  step=".1"
+                  value="5.2"
+              /></label>
+              <div class="color-row">
+                <label
+                  >Text<input
+                    id="color"
+                    data-style="color"
+                    type="color"
+                    value="#ffffff" /></label
+                ><label
+                  >Highlight<input
+                    id="accent"
+                    data-style="accent"
+                    type="color"
+                    value="#c4f36a" /></label
+                ><label
+                  >Background<input
+                    id="background"
+                    data-style="background"
+                    type="color"
+                    value="#101418"
+                /></label>
+              </div>
+              <details class="advanced">
+                <summary>More text options</summary>
+                <label
+                  >Background opacity<input
+                    id="backgroundOpacity"
+                    data-style="backgroundOpacity"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step=".01"
+                    value=".72" /></label
+                ><label
+                  >Outline<input
+                    id="outline"
+                    data-style="outline"
+                    type="range"
+                    min="0"
+                    max="8"
+                    step=".1"
+                    value="2"
+                /></label>
+                <div class="two-buttons checks">
+                  <label
+                    ><input
+                      id="bold"
+                      data-style="bold"
+                      type="checkbox"
+                      checked
+                    />
+                    Bold</label
+                  ><label
+                    ><input
+                      id="shadow"
+                      data-style="shadow"
+                      type="checkbox"
+                      checked
+                    />
+                    Shadow</label
+                  >
+                </div>
+                <label
+                  >Animation<select id="animation" data-style="animation">
+                    <option value="highlight">Highlight each word</option>
+                    <option value="pop">Pop in</option>
+                    <option value="none">None</option>
+                  </select></label
+                ><label
+                  >Alignment<select id="align" data-style="align">
+                    <option value="center">Center</option>
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
+                  </select></label
+                >
+                <div class="two-buttons">
+                  <label
+                    >X position<input
+                      id="x"
+                      data-style="x"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value="50" /></label
+                  ><label
+                    >Y position<input
+                      id="y"
+                      data-style="y"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value="78"
+                  /></label>
+                </div>
+                <label
+                  >Maximum width<input
+                    id="width"
+                    data-style="width"
+                    type="range"
+                    min="10"
+                    max="100"
+                    value="88"
+                /></label>
+                <p class="small muted">
+                  You can also drag text directly on the video.
+                </p>
+              </details>
+            </div>
+          </section>
+        </aside>
+        <div class="timeline panel" aria-label="Video timeline">
+          <div id="timeline-resize" role="separator" aria-label="Resize timeline" aria-orientation="horizontal" tabindex="0"></div>
+          <div class="timeline-toolbar">
+            <button id="undo" aria-label="Undo" title="Undo (⌘/Ctrl Z)">
+              ↶</button
+            ><button id="redo" aria-label="Redo" title="Redo (⌘/Ctrl Shift Z)">
+              ↷</button
+            ><strong>Timeline</strong
+            ><span id="timeline-duration" class="small muted">0 clips</span>
+            <div class="timeline-tools">
+              <button id="add-music-quick">＋ Media</button><button id="toggle-tracks" aria-expanded="false">Layers</button><button id="edit-selection">Edit</button><button id="split">✂ Split</button
+              ><button id="duplicate">Duplicate</button
+              ><button id="delete-clip">Delete</button><details class="clip-menu"><summary>More</summary><div>
+              <button id="reverse">Reverse</button><button id="move-left" title="Move clip earlier">←</button><button id="move-right" title="Move clip later">→</button>
+              </div></details>
+            </div>
+          </div>
+          <label class="timeline-zoom"
+            >Zoom<input
+              id="timeline-zoom"
+              type="range"
+              min="1"
+              max="8"
+              value="1"
+              step=".25"
+          /></label>
+          <div id="timeline-scroll" class="timeline-scroll">
+            <div id="timeline-content" class="timeline-content">
+              <div
+                id="timeline-ruler"
+                class="timeline-ruler"
+                aria-label="Seek on timeline"
+              ></div>
+              <div id="layer-tracks"></div>
+              <div class="track-row">
+                <span class="track-label">Main</span>
+                <div id="clip-track" class="clip-track">
+                  <div class="timeline-empty">Drag media here to begin</div>
+                </div>
+              </div>
+              <div class="track-row">
+                <span class="track-label">Captions</span>
+                <div id="caption-track" class="caption-track"></div>
+              </div>
+              <div id="audio-tracks"></div>
+              <div id="timeline-playhead" class="timeline-playhead" role="slider" tabindex="0" aria-label="Playhead" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"></div>
+            </div>
+          </div>
+          <p class="timeline-hint">
+            Drag clip edges to trim · Double-click text in the preview to edit
+          </p>
+        </div>
+      </div>
+      <nav class="mobile-tools" aria-label="Editor tools">
+        <button data-tool="media">＋ Media</button><button data-tool="captions">CC Captions</button><button data-tool="layers">T Text</button><button data-tool="audio">♫ Audio</button>
+      </nav>
+    </main>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <dialog class="studio-dialog" id="export-dialog">
+      <div class="dialog-head">
+        <div>
+          <span class="eyebrow">READY TO SHARE</span>
+          <h2>Export your video</h2>
+        </div>
+        <button data-close="export-dialog" aria-label="Close">×</button>
+      </div>
+      <p class="muted">Your edits, captions, and style in one finished MP4.</p>
+      <label
+        >Resolution<select id="resolution">
+          <option value="480">480p · Quick test</option>
+          <option value="720" selected>720p · Standard</option>
+          <option value="1080">1080p · Full HD</option>
+        </select></label
+      >
+      <div class="export-summary">
+        <span id="export-details"></span><span>MP4 · H.264 + AAC</span>
+      </div>
+      <button id="export-video" class="primary wide">Export MP4 ↗</button>
+      <div id="export-progress" hidden>
+        <progress id="progress" max="100" value="0"></progress>
+        <p id="progress-label"></p>
+        <button id="cancel-export" class="wide">Cancel export</button>
+      </div>
+      <div id="export-result" hidden>
+        <a
+          id="download-video"
+          class="button primary wide"
+          download="hansora-video.mp4"
+          >Download MP4 ↓</a
+        ><video id="export-preview" controls playsinline></video>
+      </div>
+      <div class="two-buttons">
+        <button id="download-srt">Download SRT</button
+        ><button id="download-vtt">Download VTT</button>
+      </div>
+      <p class="small muted">
+        Keep this tab open during export. Larger projects need more memory and
+        time.
+      </p>
+    </dialog>
+    <dialog class="studio-dialog" id="settings-dialog">
+      <div class="dialog-head">
+        <h2>Transcription connection</h2>
+        <button data-close="settings-dialog" aria-label="Close">×</button>
+      </div>
+      <p id="connection-status" class="muted"></p>
+      <div id="hosted-auth" hidden>
+        <button id="sign-in" class="wide">Sign in to Hansora</button>
+        <p class="small muted">
+          Uses your existing Netlify transcription connection.
+        </p>
+      </div>
+    </dialog>
+    <dialog class="studio-dialog" id="media-preview-dialog">
+      <div class="dialog-head">
+        <h2 id="media-preview-name">Media preview</h2>
+        <button data-close="media-preview-dialog" aria-label="Close">×</button>
+      </div>
+      <img id="media-preview-image" alt="Imported image preview" hidden /><video id="media-preview-video" controls playsinline></video>
+      <button id="media-preview-add" class="primary wide">
+        ＋ Add to timeline
+      </button>
+    </dialog>
+    <div id="preview-audio-host" hidden></div>
+    <video id="source-video" hidden playsinline preload="auto"></video
+    ><audio id="music-audio" hidden preload="auto"></audio>
+    <input
+      type="file"
+      id="video-input"
+      accept="video/*,image/png,image/jpeg,image/webp,audio/*,.mp4,.mov,.webm,.mp3,.m4a,.wav"
+      multiple
+      hidden
+    /><input type="file" id="subtitle-input" accept=".srt,.vtt" hidden /><input
+      type="file"
+      id="image-input"
+      accept="image/png,image/jpeg,image/webp"
+      hidden
+    /><input type="file" id="music-input" accept="audio/*,video/mp4,video/webm,.mp3,.mp4,.m4a,.wav" hidden /><input
+      type="file"
+      id="font-input"
+      accept=".ttf,.otf,.woff,.woff2"
+      hidden
+    /><input type="file" id="project-input" accept=".hansora,.json" hidden />
+  </body>
+</html>
