@@ -343,7 +343,9 @@ function renderUI() {
   const targets = captionTargets();
   $("generate").disabled = busy || !targets.length;
   const total = targets.reduce((sum, id) => sum + captionCost(assets.get(id).duration), 0);
-  $("generate-label").textContent = targets.length ? `Auto captions · ${total}⚡` : "Auto captions";
+  // Balances are shown ×10 across the site (see header.js), so the price is too.
+  const shown = Number((total * (window.HansoraHeader?.creditDisplayMultiplier || 10)).toFixed(2));
+  $("generate-label").textContent = targets.length ? `Auto captions · ${shown}⚡` : "Auto captions";
   $("reverse").disabled = busy || assets.get(currentClip()?.assetId)?.kind !== "video";
   const layerSelected=p.layers.some(l=>l.id===selectedOverlay);
   $("move-left").textContent=layerSelected?"↓":"←";$("move-right").textContent=layerSelected?"↑":"→";

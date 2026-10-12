@@ -53,7 +53,7 @@ export const PRESETS = {
     animation: "none",
   },
 };
-// Auto captions: 0.5 credits per started 2 minutes of audio (ElevenLabs Scribe
+// Auto captions: 0.5 credits (shown to users as 5⚡) per started 2 minutes of audio (ElevenLabs Scribe
 // costs at most $0.40/hour; one credit sells for at least ~$0.09, so the margin stays above 60%).
 export const captionCost = (seconds) =>
   Math.max(0.5, Math.ceil(Math.max(0, Number(seconds) || 0) / 120) * 0.5);

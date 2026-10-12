@@ -65,11 +65,11 @@ export default async function handler(request) {
     if (!PROFILES_URL || !SERVICE_KEY) return json(503, { error: "Auto captions are not available right now." });
     const cost = captionCost(seconds);
     if ((await readCredits(user.id)) < cost)
-      return json(402, { error: `Not enough credits. Auto captions for this video cost ${cost}⚡.`, cost });
+      return json(402, { error: `Not enough credits. Auto captions for this video cost ${cost * 10}⚡.`, cost });
     const token = await createCaptionToken({ apiKey: elevenLabsKey() });
     const charged = await debit(user.id, cost);
     if (!charged.ok)
-      return json(402, { error: `Not enough credits. Auto captions for this video cost ${cost}⚡.`, cost });
+      return json(402, { error: `Not enough credits. Auto captions for this video cost ${cost * 10}⚡.`, cost });
     return json(200, { ...token, cost, credits: charged.credits });
   } catch (error) {
     return json(error.status || 500, {
