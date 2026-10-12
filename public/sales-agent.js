@@ -10,7 +10,7 @@
     en: {
       launcher: 'Ask Hansora AI', title: 'Hansora AI Assistant', online: 'Ready to help', close: 'Close chat',
       welcome: 'Hello. I can help you choose the right image or video model, calculate credits, or check your Hansora account.',
-      placeholder: 'Describe what you want to create…', send: 'Send message', note: 'AI can make mistakes. Check important purchase details.',
+      placeholder: 'Describe what you want to create…', send: 'Send message', note: 'Chat history: 14 days. AI can make mistakes. Check important purchase details.',
       error: 'The assistant is temporarily unavailable. Please try again.', login: 'Please sign in to check account-specific information.',
       telegram: 'Telegram support',
       faqs: [
@@ -24,7 +24,7 @@
     hy: {
       launcher: 'Հարցնել Hansora AI-ին', title: 'Hansora AI օգնական', online: 'Պատրաստ է օգնել', close: 'Փակել զրույցը',
       welcome: 'Բարև Ձեզ։ Կարող եմ օգնել ընտրել պատկերի կամ տեսանյութի ճիշտ մոդելը, հաշվարկել կրեդիտները կամ ստուգել Ձեր Hansora հաշիվը։',
-      placeholder: 'Նկարագրեք՝ ինչ եք ցանկանում ստեղծել…', send: 'Ուղարկել հաղորդագրությունը', note: 'AI-ը կարող է սխալվել։ Ստուգեք գնման կարևոր տվյալները։',
+      placeholder: 'Նկարագրեք՝ ինչ եք ցանկանում ստեղծել…', send: 'Ուղարկել հաղորդագրությունը', note: 'Զրույցի պատմությունը՝ 14 օր։ AI-ը կարող է սխալվել։ Ստուգեք գնման կարևոր տվյալները։',
       error: 'Օգնականը ժամանակավորապես հասանելի չէ։ Խնդրում ենք կրկին փորձել։', login: 'Ձեր հաշվի տվյալները ստուգելու համար խնդրում ենք մուտք գործել։',
       telegram: 'Telegram աջակցություն',
       faqs: [
@@ -38,7 +38,7 @@
     ru: {
       launcher: 'Спросить Hansora AI', title: 'AI-ассистент Hansora', online: 'Готов помочь', close: 'Закрыть чат',
       welcome: 'Здравствуйте. Я помогу выбрать модель для изображения или видео, рассчитать кредиты или проверить Ваш аккаунт Hansora.',
-      placeholder: 'Опишите, что Вы хотите создать…', send: 'Отправить сообщение', note: 'ИИ может ошибаться. Проверяйте важные данные о покупке.',
+      placeholder: 'Опишите, что Вы хотите создать…', send: 'Отправить сообщение', note: 'История чата: 14 дней. ИИ может ошибаться. Проверяйте важные данные о покупке.',
       error: 'Ассистент временно недоступен. Пожалуйста, попробуйте ещё раз.', login: 'Войдите в аккаунт, чтобы проверить персональные данные.',
       telegram: 'Поддержка в Telegram',
       faqs: [

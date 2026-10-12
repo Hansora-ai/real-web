@@ -131,7 +131,7 @@ export async function handler(event) {
       cachedInputTokens: generated.usage.cached,
       outputTokens: generated.usage.output
     });
-    await updateSessionMemory(session, message, generated.reply, assistant?.sequence).catch(() => null);
+    await updateSessionMemory(session, message, generated.reply, assistant?.sequence, history).catch(() => null);
     await logUsage({
       session_id: session.id,
       message_id: assistant?.id || null,
