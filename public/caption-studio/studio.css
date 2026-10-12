@@ -2041,3 +2041,17 @@ body[data-sel="text"] .for-clip { display: none !important; }
 @media (max-width: 700px) {
   .track-placeholder .ph { left: calc(50vw + 10px); }
 }
+
+/* Start screen: scrolls when it is taller than the preview; compact project grid. */
+.center-panel:has(#empty-preview:not([hidden])) .preview-header { display: none; }
+.preview-wrap:has(#empty-preview:not([hidden])) { align-items: flex-start; overflow-y: auto; overscroll-behavior: contain; }
+.empty-preview { margin: auto; padding: 24px 0; }
+.recent-projects { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.recent-projects h2 { grid-column: 1 / -1; }
+#caption-editor .recent-projects .project-open { min-height: 52px; padding: 6px; gap: 10px; }
+.recent-projects .project-thumb { width: 40px; height: 40px; }
+@media (max-width: 700px) {
+  .recent-projects { grid-template-columns: 1fr; }
+  .empty-preview { padding: 16px 0; }
+}
+.preview-wrap:has(#empty-preview:not([hidden])) #preview { visibility: hidden; }
