@@ -53,8 +53,13 @@ export const PRESETS = {
     animation: "none",
   },
 };
+// Auto captions: 0.5 credits per started 2 minutes of audio (ElevenLabs Scribe
+// costs at most $0.40/hour; one credit sells for at least ~$0.09, so the margin stays above 60%).
+export const captionCost = (seconds) =>
+  Math.max(0.5, Math.ceil(Math.max(0, Number(seconds) || 0) / 120) * 0.5);
 export function newProject() {
   return {
+    id: uid(),
     version: 1,
     name: "Untitled video",
     aspect: "source",
@@ -387,6 +392,7 @@ export function validateProject(raw, assets) {
     throw Error("Unsupported project file.");
   const p = newProject();
   p.name = String(raw.name || p.name).slice(0, 150);
+  if (/^[\w-]{8,64}$/.test(String(raw.id || ""))) p.id = raw.id;
   p.style = safeStyle(raw.style);
   p.captionWords = Math.round(clamp(raw.captionWords ?? 6, 1, 12));
   p.captionLength = clamp(raw.captionLength ?? p.captionWords / 12 * 100, 5, 100);

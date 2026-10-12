@@ -193,3 +193,12 @@ test('old music projects migrate into editable tracks and multiple audio tracks 
   restored.audio.push({...restored.audio[0],id:'second',start:2,end:5,in:0,loop:false});
   assert.equal(validateProject(restored,assets).audio.length,2);
 });
+
+test("auto captions cost 0.5 credits per started 2 minutes", async () => {
+  const { captionCost } = await import("../../public/caption-studio/core.mjs");
+  assert.equal(captionCost(5), 0.5);
+  assert.equal(captionCost(120), 0.5);
+  assert.equal(captionCost(121), 1);
+  assert.equal(captionCost(38.3), 0.5);
+  assert.equal(captionCost(30 * 60), 7.5);
+});
