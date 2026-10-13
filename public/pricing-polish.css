@@ -1,123 +1,134 @@
-/* Hansora Creative pricing: visual polish only (colours, surfaces, borders, type).
-   Loaded last on pricing.html / pricing_arm.html / pricing_ru.html. No layout logic, prices, links or scripts change.
-   The page already uses many !important rules, so these do too, scoped to #pricing. */
+/* Hansora Creative pricing: visual design only (colours, surfaces, borders, type).
+   Loaded in <head> of pricing.html / pricing_arm.html / pricing_ru.html, so the page never flashes the old look.
+   No layout logic, prices, links or scripts change. The page already uses many !important rules, so these do too,
+   scoped to #pricing. */
 
+/* Page */
 html body #pricing {
   background:
-    radial-gradient(1100px 520px at 50% -160px, rgba(139, 92, 246, .30), transparent 70%),
-    radial-gradient(720px 420px at 88% 6%, rgba(56, 189, 248, .12), transparent 70%),
-    radial-gradient(640px 420px at 8% 18%, rgba(217, 70, 239, .08), transparent 70%),
-    #07070c !important;
+    radial-gradient(1100px 560px at 50% -180px, rgba(139, 92, 246, .34), transparent 70%),
+    radial-gradient(760px 460px at 92% 4%, rgba(56, 189, 248, .14), transparent 70%),
+    radial-gradient(700px 460px at 4% 22%, rgba(217, 70, 239, .10), transparent 70%),
+    radial-gradient(rgba(255, 255, 255, .055) 1px, transparent 1.2px) 0 0 / 26px 26px,
+    #06060b !important;
 }
-html body #pricing > .absolute.inset-x-0.top-0 { opacity: .35 !important; }
+html body #pricing > .absolute.inset-x-0.top-0 { display: none !important; }
 
 /* Hero */
 html body #pricing .text-center.mb-10 > .inline-flex {
-  border-color: rgba(167, 139, 250, .32) !important;
-  background: rgba(139, 92, 246, .12) !important;
-  color: #ece6ff !important;
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, .06), 0 10px 30px -12px rgba(139, 92, 246, .55) !important;
+  border-color: rgba(167, 139, 250, .38) !important;
+  background: linear-gradient(90deg, rgba(139, 92, 246, .2), rgba(56, 189, 248, .12)) !important;
+  color: #f3efff !important;
+  box-shadow: 0 0 0 5px rgba(139, 92, 246, .07), 0 12px 34px -12px rgba(139, 92, 246, .7) !important;
   backdrop-filter: blur(10px);
 }
 html body #pricing .text-center.mb-10 > h2 {
-  background-image: linear-gradient(100deg, #ffffff 0%, #ece4ff 38%, #c4b5fd 62%, #7dd3fc 100%) !important;
-  letter-spacing: -.035em !important;
-  text-shadow: none !important;
+  background-image: linear-gradient(100deg, #ffffff 0%, #f1ebff 30%, #c4b5fd 52%, #7dd3fc 72%, #ffffff 100%) !important;
+  background-size: 220% 100% !important;
+  letter-spacing: -.04em !important;
+  filter: drop-shadow(0 10px 40px rgba(139, 92, 246, .35));
+  animation: hp-shine 9s ease-in-out infinite;
 }
+@keyframes hp-shine { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
 html body #pricing .pricing-benefits span,
 html body #pricing .monthly-benefits span {
-  border-color: rgba(255, 255, 255, .09) !important;
-  background: rgba(255, 255, 255, .035) !important;
-  color: rgba(255, 255, 255, .84) !important;
+  border-color: rgba(255, 255, 255, .1) !important;
+  background: rgba(255, 255, 255, .04) !important;
+  color: rgba(255, 255, 255, .88) !important;
   backdrop-filter: blur(8px);
 }
 html body #pricing .pricing-benefits span::before,
-html body #pricing .monthly-benefits span::before {
-  content: "✓"; margin-right: 7px; color: #a78bfa; font-weight: 800;
-}
+html body #pricing .monthly-benefits span::before { content: "✓"; margin-right: 7px; color: #a78bfa; font-weight: 900; }
 
 /* Pay as you go / Monthly switch */
 html body #pricing .pricing-choice {
-  border: 1px solid rgba(255, 255, 255, .09) !important;
-  background: rgba(14, 13, 24, .72) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 18px 50px -24px rgba(0, 0, 0, .8) !important;
+  border: 1px solid rgba(255, 255, 255, .1) !important;
+  background: rgba(13, 12, 22, .78) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 20px 50px -24px rgba(0, 0, 0, .85) !important;
   backdrop-filter: blur(14px);
 }
-html body #pricing .pricing-choice-btn { color: rgba(255, 255, 255, .72) !important; transition: color .2s, background .25s, box-shadow .25s !important; }
+html body #pricing .pricing-choice-btn { color: rgba(255, 255, 255, .7) !important; transition: color .2s, background .25s, box-shadow .25s !important; }
 html body #pricing .pricing-choice-btn:hover { color: #fff !important; }
 html body #pricing .pricing-choice-btn.is-active {
-  background: linear-gradient(100deg, #7c3aed, #6366f1 48%, #0ea5e9) !important;
+  background: linear-gradient(100deg, #a855f7, #7c3aed 35%, #4f46e5 65%, #0ea5e9) !important;
   color: #fff !important;
-  box-shadow: 0 10px 28px -10px rgba(124, 58, 237, .75), inset 0 1px 0 rgba(255, 255, 255, .22) !important;
+  box-shadow: 0 12px 30px -10px rgba(124, 58, 237, .85), inset 0 1px 0 rgba(255, 255, 255, .25) !important;
 }
 html body #pricing .pricing-choice-sale,
-html body #pricing .monthly-unlimited-badge {
-  border: 1px solid rgba(255, 255, 255, .22) !important;
-  background: rgba(255, 255, 255, .14) !important;
-  color: #fff !important;
-  box-shadow: none !important;
-}
+html body #pricing .monthly-unlimited-badge { border: 1px solid rgba(255, 255, 255, .25) !important; background: rgba(255, 255, 255, .16) !important; color: #fff !important; box-shadow: none !important; }
 html body #pricing .pricing-choice-btn:not(.is-active) .pricing-choice-sale,
-html body #pricing .pricing-choice-btn:not(.is-active) .monthly-unlimited-badge {
-  border-color: rgba(52, 211, 153, .3) !important;
-  background: rgba(52, 211, 153, .12) !important;
-  color: #6ee7b7 !important;
-}
+html body #pricing .pricing-choice-btn:not(.is-active) .monthly-unlimited-badge { border-color: rgba(52, 211, 153, .32) !important; background: rgba(52, 211, 153, .12) !important; color: #6ee7b7 !important; }
 
 /* Payment method */
-html body #pricing .payment-method-toggle {
-  border: 1px solid rgba(255, 255, 255, .09) !important;
-  background: rgba(14, 13, 24, .72) !important;
-  backdrop-filter: blur(12px);
-}
+html body #pricing .payment-method-toggle { border: 1px solid rgba(255, 255, 255, .1) !important; background: rgba(13, 12, 22, .78) !important; backdrop-filter: blur(12px); }
 html body #pricing .payment-option { color: rgba(255, 255, 255, .7) !important; }
-html body #pricing .payment-option.is-active {
-  border-color: rgba(167, 139, 250, .55) !important;
-  background: rgba(139, 92, 246, .16) !important;
-  color: #fff !important;
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, .12) !important;
-}
+html body #pricing .payment-option.is-active { border-color: rgba(167, 139, 250, .6) !important; background: rgba(139, 92, 246, .18) !important; color: #fff !important; box-shadow: 0 0 0 3px rgba(139, 92, 246, .13) !important; }
 html body #pricing .payment-method-note { color: rgba(255, 255, 255, .55) !important; }
 
-/* Cards (pay as you go and monthly) */
+/* Cards: dark glass with a gradient border that follows the rounded corners */
 html body #pricing [data-payg-offers].grid > .rounded-2xl,
 html body #pricing .monthly-card {
-  border: 1px solid rgba(255, 255, 255, .08) !important;
-  border-radius: 24px !important;
+  border: 1px solid transparent !important;
+  border-radius: 26px !important;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .015) 42%),
-    #0d0c15 !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 34px 80px -46px rgba(0, 0, 0, .95) !important;
-  transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease !important;
+    radial-gradient(420px 170px at 50% 0, rgba(139, 92, 246, .14), transparent 72%) padding-box,
+    linear-gradient(180deg, #121020, #0b0a13 55%) padding-box,
+    linear-gradient(165deg, rgba(167, 139, 250, .5), rgba(255, 255, 255, .07) 32%, rgba(255, 255, 255, .04) 68%, rgba(56, 189, 248, .4)) border-box !important;
+  box-shadow: 0 40px 90px -50px rgba(0, 0, 0, 1), 0 0 0 1px rgba(0, 0, 0, .2) !important;
+  transition: transform .3s cubic-bezier(.2, .8, .2, 1), box-shadow .3s ease !important;
 }
 html body #pricing [data-payg-offers].grid > .rounded-2xl:hover,
 html body #pricing .monthly-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(167, 139, 250, .35) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 40px 90px -40px rgba(124, 58, 237, .45) !important;
+  transform: translateY(-6px);
+  box-shadow: 0 46px 100px -44px rgba(124, 58, 237, .6), 0 0 0 1px rgba(167, 139, 250, .18) !important;
 }
-/* Most popular / best value */
+/* The old coloured top lines stuck out of the new rounded corners: the gradient border replaces them. */
+html body #pricing [data-payg-offers].grid > .rounded-2xl > .absolute.inset-x-0.top-0.h-1,
+html body #pricing .monthly-card::before { display: none !important; }
+
+/* Most popular / best value: brighter border, glow, raised */
 html body #pricing [data-payg-offers].grid > .rounded-2xl.ring-1,
+html body #pricing [data-payg-offers].grid > .rounded-2xl:has([data-plan-badge]),
 html body #pricing .monthly-card.is-featured {
-  border-color: rgba(167, 139, 250, .55) !important;
   background:
-    radial-gradient(420px 200px at 50% -40px, rgba(139, 92, 246, .26), transparent 70%),
-    linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .015) 42%),
-    #100d1c !important;
-  box-shadow: 0 0 0 1px rgba(167, 139, 250, .28), inset 0 1px 0 rgba(255, 255, 255, .1), 0 40px 100px -36px rgba(124, 58, 237, .6) !important;
+    radial-gradient(460px 220px at 50% -20px, rgba(168, 85, 247, .32), transparent 72%) padding-box,
+    linear-gradient(180deg, #16112a, #0c0a16 58%) padding-box,
+    linear-gradient(150deg, #e879f9, #a78bfa 30%, rgba(255, 255, 255, .12) 55%, #38bdf8) border-box !important;
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, .25), 0 30px 90px -30px rgba(139, 92, 246, .75) !important;
 }
-html body #pricing [data-payg-offers].grid > .rounded-2xl > .absolute.top-0.h-1 { height: 2px !important; opacity: .9; }
-
-/* Save chips */
-html body #pricing [data-payg-offers] .bg-emerald-400\/10 {
-  background: rgba(52, 211, 153, .12) !important;
-  color: #6ee7b7 !important;
-  box-shadow: inset 0 0 0 1px rgba(52, 211, 153, .28) !important;
+@media (min-width: 1024px) {
+  html body #pricing [data-payg-offers].grid > .rounded-2xl.ring-1,
+  html body #pricing [data-payg-offers].grid > .rounded-2xl:has([data-plan-badge]),
+  html body #pricing .monthly-card.is-featured { transform: translateY(-10px); }
+  html body #pricing [data-payg-offers].grid > .rounded-2xl.ring-1:hover,
+  html body #pricing [data-payg-offers].grid > .rounded-2xl:has([data-plan-badge]):hover,
+  html body #pricing .monthly-card.is-featured:hover { transform: translateY(-14px); }
+}
+html body #pricing [data-plan-badge] {
+  padding: 6px 16px !important;
+  border: 1px solid rgba(255, 255, 255, .3) !important;
+  font-size: 12.5px !important;
+  letter-spacing: .02em;
+  box-shadow: 0 10px 28px -8px rgba(168, 85, 247, .85), 0 0 0 4px rgba(10, 8, 18, .9) !important;
 }
 
-/* Prices */
-html body #pricing [data-payg-offers] .line-through { color: rgba(255, 255, 255, .38) !important; text-decoration-thickness: 2px !important; }
+/* Inside the card */
+html body #pricing [data-payg-offers] .mt-3.text-5xl {
+  background: linear-gradient(180deg, #ffffff 30%, #c4b5fd) !important;
+  -webkit-background-clip: text !important; background-clip: text !important;
+  color: transparent !important;
+  letter-spacing: -.035em !important;
+}
+html body #pricing [data-payg-offers] .mt-3.text-5xl > span { -webkit-text-fill-color: #ece7ff; color: #ece7ff !important; }
+html body #pricing [data-payg-offers].grid > .rounded-2xl > .mt-4.flex {
+  padding: 12px 14px !important;
+  border: 1px solid rgba(255, 255, 255, .07) !important;
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, .035) !important;
+}
+html body #pricing [data-payg-offers] .line-through { color: rgba(255, 255, 255, .4) !important; text-decoration-thickness: 2px !important; }
 html body #pricing [data-payg-offers] .text-purple-200 { color: #c4b5fd !important; }
+html body #pricing [data-payg-offers] .bg-emerald-400\/10 { background: rgba(52, 211, 153, .13) !important; color: #6ee7b7 !important; box-shadow: inset 0 0 0 1px rgba(52, 211, 153, .3) !important; }
 
 /* Buy buttons: one look everywhere */
 html body #pricing .buy-credits,
@@ -125,28 +136,47 @@ html body #pricing .buy-subscription,
 html body #pricing .plan-buy {
   border: 0 !important;
   border-radius: 14px !important;
-  background: linear-gradient(100deg, #8b5cf6, #6366f1 50%, #38bdf8) !important;
+  background: linear-gradient(100deg, #a855f7, #7c3aed 30%, #4f46e5 62%, #0ea5e9) !important;
   color: #fff !important;
   font-weight: 800 !important;
-  letter-spacing: .01em;
+  letter-spacing: .015em;
   text-shadow: 0 1px 2px rgba(0, 0, 0, .25);
-  box-shadow: 0 14px 34px -14px rgba(124, 58, 237, .8), inset 0 1px 0 rgba(255, 255, 255, .25) !important;
+  box-shadow: 0 14px 34px -14px rgba(124, 58, 237, .9), inset 0 1px 0 rgba(255, 255, 255, .28) !important;
   transition: transform .18s ease, filter .18s ease, box-shadow .18s ease !important;
 }
 html body #pricing .buy-credits:hover,
 html body #pricing .buy-subscription:hover,
-html body #pricing .plan-buy:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.08);
-  box-shadow: 0 18px 40px -14px rgba(124, 58, 237, .95), inset 0 1px 0 rgba(255, 255, 255, .3) !important;
-}
+html body #pricing .plan-buy:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 20px 44px -14px rgba(124, 58, 237, 1), inset 0 1px 0 rgba(255, 255, 255, .32) !important; }
 
-/* Feature lists: check marks instead of dots, calmer text */
-html body #pricing [data-payg-offers] ul { color: rgba(255, 255, 255, .8) !important; }
+/* Feature lists: own section with check marks */
+html body #pricing [data-payg-offers] ul {
+  margin-top: 22px !important;
+  padding-top: 18px !important;
+  border-top: 1px solid rgba(255, 255, 255, .07) !important;
+  color: rgba(255, 255, 255, .82) !important;
+}
 html body #pricing [data-payg-offers] ul > li { padding: 3px 0; }
 html body #pricing [data-payg-offers] ul > li > span.rounded-full:first-child {
-  width: 16px !important; height: 16px !important; min-width: 16px; margin-top: 2px !important;
+  width: 17px !important; height: 17px !important; min-width: 17px; margin-top: 2px !important;
   border-radius: 6px !important;
-  background: rgba(139, 92, 246, .18) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4l2.4 2.3L12 5.3' fill='none' stroke='%23c4b5fd' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat !important;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4l2.4 2.3L12 5.3' fill='none' stroke='%23ffffff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat, linear-gradient(135deg, rgba(168, 85, 247, .55), rgba(56, 189, 248, .4)) !important;
 }
-html body #pricing .monthly-card li { color: rgba(255, 255, 255, .82) !important; }
+
+/* Monthly cards */
+html body #pricing .monthly-pill { border-color: rgba(167, 139, 250, .35) !important; background: rgba(139, 92, 246, .14) !important; color: #e9e2ff !important; }
+html body #pricing .monthly-card.is-featured .monthly-pill { border-color: rgba(255, 255, 255, .3) !important; background: linear-gradient(90deg, #a855f7, #6366f1) !important; color: #fff !important; }
+html body #pricing .monthly-price { padding: 12px 14px; border: 1px solid rgba(255, 255, 255, .07); border-radius: 16px; background: rgba(255, 255, 255, .035); }
+html body #pricing .monthly-credit-line { color: #c4b5fd !important; }
+html body #pricing .monthly-model-limit {
+  border: 1px solid rgba(167, 139, 250, .3) !important;
+  background: rgba(139, 92, 246, .14) !important;
+  color: #e9e2ff !important;
+  box-shadow: none !important;
+}
+html body #pricing .monthly-card li { color: rgba(255, 255, 255, .84) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  html body #pricing .text-center.mb-10 > h2 { animation: none; }
+  html body #pricing [data-payg-offers].grid > .rounded-2xl,
+  html body #pricing .monthly-card { transition: none !important; }
+}
