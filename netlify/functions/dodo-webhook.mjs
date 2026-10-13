@@ -7,7 +7,7 @@
 //   Only the request that wins the CAS adds user credits.
 // - Sends a server-side Meta Purchase event. Meta deduplicates retries by transaction ID.
 
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { attributePurchaseToChat } from "../../lib/sales-agent/attribution.mjs";
 
 import { AUTOMATION_PLANS } from "../../lib/automation/billing.mjs";
@@ -17,6 +17,54 @@ import { AUTOMATION_PLANS } from "../../lib/automation/billing.mjs";
 function automationPlanConfig(planId) {
   const plan = AUTOMATION_PLANS[planId];
   return plan ? { monthlyCredits: plan.credits, unlimitedModels: [], automation: true } : null;
+}
+
+// What each Dodo product grants, decided here on the server. Checkout links also carry metadata_credits /
+// metadata_plan_id, but anyone can edit a link before paying, so for these products the metadata is ignored.
+// Products not listed keep the old behaviour (metadata), so nothing that sells today stops working.
+const PACK_PRODUCT_CREDITS = {
+  pdt_Gi01FZTv21T44htKut7lG: 100,  // Creative Beginner $9.99 (also course pages)
+  pdt_YNeJAH4NMLe8gJF7ff0Fe: 210,  // Creative Medium $19.99 (also course pages)
+  pdt_oVJI6GNjziGZKrXtVczUY: 535,  // Creative Pro / Automation Business $49.99
+  pdt_e8UPGoRi6Sf36NoxV7fAF: 1100, // Creative Large / Automation Scale $99.99
+  pdt_0NpePPSth80ohulWU0r3D: 150,  // Automation Starter $14.99
+  pdt_0NpeQ0zMDMcghYvelVXBm: 265   // Automation Growth $24.99
+};
+const PLAN_PRODUCTS = {
+  pdt_0NitZowYuuy1bWlRxdOmz: "premium_monthly",
+  pdt_0NitaziroeWwifWOBXg9Y: "pro_monthly",
+  pdt_0Nitb8sjok9KdmXvWcSJh: "pro_max_monthly",
+  pdt_0NpeQYSDnUbMHvi9Gt6yy: "automation_starter_monthly",
+  pdt_0NpeQrUC5gB5c3Jk8zZE9: "automation_growth_monthly",
+  pdt_0NpeR55QAhlX4ViGBTCF4: "automation_business_monthly",
+  pdt_0NpeRJQYrPCPCIK9zbEb1: "automation_scale_monthly"
+};
+
+// Dodo signs every webhook (Standard Webhooks): HMAC-SHA256 of "<webhook-id>.<webhook-timestamp>.<body>" with the
+// signing secret (whsec_…, base64). Without DODO_WEBHOOK_SECRET the check is skipped (old behaviour) and logged.
+export function dodoSignatureState(rawBody, headers = {}, secret = process.env.DODO_WEBHOOK_SECRET || "", now = Date.now()) {
+  if (!secret) return "not_configured";
+  const header = name => {
+    const key = Object.keys(headers).find(item => item.toLowerCase() === name);
+    return key ? String(headers[key] || "") : "";
+  };
+  const id = header("webhook-id"), timestamp = header("webhook-timestamp"), signatures = header("webhook-signature");
+  if (!id || !timestamp || !signatures) return "invalid";
+  if (!/^\d+$/.test(timestamp) || Math.abs(now / 1000 - Number(timestamp)) > 5 * 60) return "invalid";
+  let key;
+  try { key = Buffer.from(secret.replace(/^whsec_/, ""), "base64"); } catch { return "invalid"; }
+  const expected = Buffer.from(createHmac("sha256", key).update(`${id}.${timestamp}.${rawBody}`).digest("base64"));
+  return signatures.split(" ").some(part => {
+    const value = Buffer.from(part.split(",")[1] || "");
+    return value.length === expected.length && timingSafeEqual(value, expected);
+  }) ? "valid" : "invalid";
+}
+
+export function productFromPayload(data = {}) {
+  const cart = Array.isArray(data.product_cart) ? data.product_cart : [];
+  const productId = cart[0]?.product_id || data.product_id || data.subscription?.product_id || null;
+  const quantity = Math.max(1, Number(cart[0]?.quantity || data.quantity || 1) || 1);
+  return { productId, quantity };
 }
 
 const SUBSCRIPTION_PLANS = {
@@ -65,8 +113,16 @@ export async function handler(event) {
       return json(405, { error: "Method Not Allowed" });
     }
 
+    const rawBody = event.isBase64Encoded ? Buffer.from(event.body || "", "base64").toString("utf8") : (event.body || "");
+    const signature = dodoSignatureState(rawBody, event.headers || {});
+    if (signature === "invalid") {
+      console.warn("Dodo webhook rejected: invalid signature");
+      return json(401, { error: "Invalid webhook signature" });
+    }
+    if (signature === "not_configured") console.warn("DODO_WEBHOOK_SECRET is not set: webhook signature not checked");
+
     let body;
-    try { body = JSON.parse(event.body || "{}"); }
+    try { body = JSON.parse(rawBody || "{}"); }
     catch { return json(400, { error: "Bad JSON" }); }
 
     // ---- Normalize Dodo payload ----
@@ -83,11 +139,16 @@ export async function handler(event) {
       root.transaction_id || data.transaction_id || data.payment_id || root.payment_id || null;
     const uid = meta.uid || null;
     const chat_session_id = meta.chat_session_id || null;
-    const plan_id = meta.plan_id || null;
+    const { productId: paidProductId, quantity: paidQuantity } = productFromPayload(data);
+    const knownPlan = PLAN_PRODUCTS[paidProductId] || null;
+    const knownPackCredits = PACK_PRODUCT_CREDITS[paidProductId] || 0;
+    const plan_id = knownPlan || meta.plan_id || null;
     const planConfig = plan_id ? (SUBSCRIPTION_PLANS[plan_id] || automationPlanConfig(plan_id)) : null;
-    const credits = Number(meta.credits || 0);
-    // Automation plans: the amount comes only from the server-side plan, never from checkout metadata.
-    const monthly_credits = planConfig?.automation ? planConfig.monthlyCredits : Number(meta.monthly_credits || planConfig?.monthlyCredits || 0);
+    const credits = knownPackCredits ? knownPackCredits * paidQuantity : Number(meta.credits || 0);
+    if (knownPackCredits && Number(meta.credits || 0) && Number(meta.credits) !== credits) console.warn("Dodo metadata credits ignored", { product: paidProductId, metadata: meta.credits, granted: credits });
+    if (knownPlan && meta.plan_id && meta.plan_id !== knownPlan) console.warn("Dodo metadata plan ignored", { product: paidProductId, metadata: meta.plan_id, plan: knownPlan });
+    // Plans: the monthly amount comes from the server-side plan when the product (or the plan) is known.
+    const monthly_credits = planConfig?.automation || knownPlan ? Number(planConfig?.monthlyCredits || 0) : Number(meta.monthly_credits || planConfig?.monthlyCredits || 0);
 
     const amount_cents = toInt(data.total_amount ?? data.settlement_amount ?? data.recurring_pre_tax_amount ?? null);
     const currency = data.currency || data.settlement_currency || null;
