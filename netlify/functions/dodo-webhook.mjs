@@ -10,6 +10,15 @@
 import { createHash } from "node:crypto";
 import { attributePurchaseToChat } from "../../lib/sales-agent/attribution.mjs";
 
+import { AUTOMATION_PLANS } from "../../lib/automation/billing.mjs";
+
+// Hansora Automation monthly plans live in their own table (automation.automation_subscriptions), so a user can have a
+// Creative plan and an Automation plan at the same time. Their credits go to the pay-as-you-go bucket.
+function automationPlanConfig(planId) {
+  const plan = AUTOMATION_PLANS[planId];
+  return plan ? { monthlyCredits: plan.credits, unlimitedModels: [], automation: true } : null;
+}
+
 const SUBSCRIPTION_PLANS = {
   premium_monthly: {
     monthlyCredits: 250,
@@ -75,9 +84,10 @@ export async function handler(event) {
     const uid = meta.uid || null;
     const chat_session_id = meta.chat_session_id || null;
     const plan_id = meta.plan_id || null;
-    const planConfig = plan_id ? SUBSCRIPTION_PLANS[plan_id] : null;
+    const planConfig = plan_id ? (SUBSCRIPTION_PLANS[plan_id] || automationPlanConfig(plan_id)) : null;
     const credits = Number(meta.credits || 0);
-    const monthly_credits = Number(meta.monthly_credits || planConfig?.monthlyCredits || 0);
+    // Automation plans: the amount comes only from the server-side plan, never from checkout metadata.
+    const monthly_credits = planConfig?.automation ? planConfig.monthlyCredits : Number(meta.monthly_credits || planConfig?.monthlyCredits || 0);
 
     const amount_cents = toInt(data.total_amount ?? data.settlement_amount ?? data.recurring_pre_tax_amount ?? null);
     const currency = data.currency || data.settlement_currency || null;
@@ -445,7 +455,7 @@ async function handleSubscriptionWebhook({
     user_id: uid,
     status: subscriptionStatus,
     plan_id,
-    unlimited_models: planConfig.unlimitedModels,
+    ...(planConfig.automation ? {} : { unlimited_models: planConfig.unlimitedModels }),
     provider,
     provider_customer_id,
     provider_subscription_id: subscription_id,
@@ -457,11 +467,13 @@ async function handleSubscriptionWebhook({
   };
 
   {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/user_subscriptions?on_conflict=user_id`, {
+    const table = planConfig.automation ? "automation_subscriptions" : "user_subscriptions";
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=user_id`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
+        ...(planConfig.automation ? { "Accept-Profile": "automation", "Content-Profile": "automation" } : {}),
         "Prefer": "resolution=merge-duplicates,return=representation",
         "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         "apikey": SUPABASE_SERVICE_ROLE_KEY
@@ -470,7 +482,7 @@ async function handleSubscriptionWebhook({
     });
     if (!res.ok) {
       const detail = await sjson(res) || await res.text();
-      return json(500, { error: "user_subscriptions upsert failed", detail });
+      return json(500, { error: `${table} upsert failed`, detail });
     }
   }
 
@@ -500,7 +512,7 @@ async function handleSubscriptionWebhook({
       return_url,
       payload: root,
       paid_at,
-      creditBucket: "monthly"
+      creditBucket: planConfig.automation ? "payg" : "monthly"
     });
     credited = creditResult.credited;
     creditReason = creditResult.reason;

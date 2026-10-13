@@ -6,7 +6,7 @@ import { LiveKitAPI } from 'livekit-server-sdk';
 import { buildAutomationInstructions, firstMessageFor } from '../../../lib/automation/instructions.mjs';
 import { first, serviceInsert, serviceUpdate, serviceUpsert } from '../../../lib/automation/db.mjs';
 import { notifyOwner } from '../../../lib/automation/notify.mjs';
-import { affordableVoiceSeconds, automationPrices, canAfford, chargeCredits, handleOutOfCredits, voiceCredits } from '../../../lib/automation/billing.mjs';
+import { affordableVoiceSeconds, automationPricesFor, canAfford, chargeCredits, handleOutOfCredits, voiceCredits } from '../../../lib/automation/billing.mjs';
 import { PHONE_AGENT_NAME, PHONE_MODEL, PHONE_VOICE, billableVoiceSeconds, createPhoneMetrics, describePhoneCall, normalizePhoneNumber, parsePhoneMetadata, phoneTestMaxSeconds, phoneTestSettings, renderCallTranscript, voiceInstructions } from '../../../lib/automation/phone.mjs';
 import { businessClock, buildToolDefinitions, createToolRunner, loadToolConfigs, toolInstructions } from '../../../lib/automation/tools.mjs';
 
@@ -110,7 +110,7 @@ export default defineAgent({
     }, { ignoreDuplicates: true }) || await first(`/rest/v1/automation_calls?business_id=eq.${business.id}&provider_call_id=eq.${encodeURIComponent(descriptor.providerCallId)}&select=*&limit=1`);
 
     // Pay as you go: the call only runs as long as the owner's credits cover it.
-    const perMinute = isTest ? 0 : automationPrices().voiceMinute;
+    const perMinute = isTest ? 0 : (await automationPricesFor(business.id)).voiceMinute;
     const funds = await canAfford(business.id, perMinute);
     const maxSeconds = isTest ? phoneTestMaxSeconds() : (funds.balance === null ? Infinity : affordableVoiceSeconds(funds.balance, perMinute));
     const outOfCredits = !funds.ok;

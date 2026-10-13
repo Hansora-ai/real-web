@@ -3,79 +3,235 @@
   const api = window.HansoraAutomation;
   const ui = window.HansoraUI;
   const DISPLAY = 10; // stored credits ×10 = ⚡ shown everywhere on Hansora
-  const PRICE_PER_AI_REPLY = 1; // ⚡
-  const PRICE_PER_PHONE_MINUTE = 8; // ⚡
-  // credits/bonus are stored credits (what the payment adds to profiles.credits). A pack is only buyable once its
-  // Dodo product exists: products for $49.99 and $99.99 are the same ones Hansora Creative sells.
+  const YOOMONEY_RECEIVER = '4100119285004528';
+  const RU_SUCCESS_URL = 'https://hansora.co/russian-payment-success.html';
+
+  // Prices per action in ⚡. Must match lib/automation/billing.mjs (automationPrices and AUTOMATION_PLANS).
+  const PAYG_RATES = { aiReply: 1.2, mediaReply: 2, commentRun: 1, voiceMinute: 8 };
+
+  // Pay as you go. credits/bonus are stored credits (what the payment adds to profiles.credits). rub must match
+  // PACKS in netlify/functions/yoomoney-webhook.mjs. A card pack is buyable once its Dodo product exists.
   const PACKS = [
-    { id: 'starter', name: 'Starter', price: 14.99, credits: 150, bonus: 0, product: '', note: 'Try it on one channel' },
-    { id: 'growth', name: 'Growth', price: 24.99, credits: 250, bonus: 15, product: '', note: 'For a busy Instagram', popular: true },
-    { id: 'business', name: 'Business', price: 49.99, credits: 500, bonus: 35, product: 'https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY', note: 'Instagram + WhatsApp + calls' },
-    { id: 'scale', name: 'Scale', price: 99.99, credits: 1000, bonus: 100, product: 'https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF', note: 'Several AI employees' }
+    { id: 'starter', name: 'Starter', price: 14.99, rub: 1100, credits: 150, bonus: 0, product: 'https://checkout.dodopayments.com/buy/pdt_0NpePPSth80ohulWU0r3D', note: 'Try it on one channel' },
+    { id: 'growth', name: 'Growth', price: 24.99, rub: 1850, credits: 250, bonus: 15, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQ0zMDMcghYvelVXBm', note: 'For a busy Instagram', popular: true },
+    { id: 'business', name: 'Business', price: 49.99, rub: 3700, credits: 500, bonus: 35, product: 'https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY', note: 'Several channels and calls' },
+    { id: 'scale', name: 'Scale', price: 99.99, rub: 7400, credits: 1000, bonus: 100, product: 'https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF', note: 'Several AI employees' }
   ];
+
+  // Monthly plans (Dodo subscriptions). credits = ⚡ added every paid month. product = the Dodo subscription link.
+  const PLANS = [
+    { id: 'automation_starter_monthly', name: 'Starter', price: 49, credits: 4900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQYSDnUbMHvi9Gt6yy', note: 'One busy shop', rates: { aiReply: 1, mediaReply: 2, commentRun: 1, voiceMinute: 8 } },
+    { id: 'automation_growth_monthly', name: 'Growth', price: 99, credits: 9900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQrUC5gB5c3Jk8zZE9', note: 'Instagram sellers with many comments', popular: true, rates: { aiReply: 1, mediaReply: 2, commentRun: 0.5, voiceMinute: 7 } },
+    { id: 'automation_business_monthly', name: 'Business', price: 149, credits: 14900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeR55QAhlX4ViGBTCF4', note: 'Every channel and phone calls', rates: { aiReply: 0.9, mediaReply: 2, commentRun: 0.5, voiceMinute: 7 } },
+    { id: 'automation_scale_monthly', name: 'Scale', price: 199, credits: 19900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeRJQYrPCPCIK9zbEb1', note: 'Agencies and high volume', rates: { aiReply: 0.8, mediaReply: 2, commentRun: 0.3, voiceMinute: 6 } }
+  ];
+
   const fmt = new Intl.NumberFormat('en-US');
-  const base = PACKS[0].price / ((PACKS[0].credits + PACKS[0].bonus) * DISPLAY);
+  const zap = value => `${fmt.format(value)}⚡`;
+  const main = document.querySelector('.ui-pricing');
+  const packsGrid = document.querySelector('#pricing-packs');
+  const plansGrid = document.querySelector('#pricing-plans');
+  let mode = 'payg'; let payment = 'international'; let subscription = null;
 
-  const grid = document.querySelector('#pricing-packs');
-  grid.innerHTML = PACKS.map(pack => {
-    const total = (pack.credits + pack.bonus) * DISPLAY;
-    const save = Math.round((1 - pack.price / total / base) * 100);
-    const minutes = Math.floor(total / PRICE_PER_PHONE_MINUTE);
-    return `<article class="ui-card ui-pack${pack.popular ? ' popular' : ''}">
-      ${pack.popular ? '<span class="ui-pack-flag">Most popular</span>' : ''}
-      <div class="ui-pack-head"><h2>${pack.name}</h2><p>${pack.note}</p></div>
-      <div class="ui-pack-price"><strong>$${pack.price.toFixed(2)}</strong>${save > 0 ? `<span class="ui-badge green">Save ${save}%</span>` : '<span class="ui-pack-once">one-time</span>'}</div>
-      <div class="ui-pack-credits"><b>${fmt.format(total)}⚡</b>${pack.bonus ? `<small>${fmt.format(pack.credits * DISPLAY)}⚡ + ${fmt.format(pack.bonus * DISPLAY)}⚡ bonus</small>` : '<small>credits</small>'}</div>
-      <ul class="ui-pack-list">
-        <li>${ui?.icon('message') || ''}<span><b>≈ ${fmt.format(Math.floor(total / PRICE_PER_AI_REPLY))}</b> AI replies on Instagram &amp; WhatsApp</span></li>
-        <li>${ui?.icon('phone') || ''}<span>or <b>≈ ${fmt.format(minutes)}</b> phone call minutes</span></li>
-        <li>${ui?.icon('comment') || ''}<span>Comment &amp; DM automations <b>included</b></span></li>
-        <li>${ui?.icon('check') || ''}<span>Inbox, contacts, orders &amp; bookings</span></li>
-      </ul>
-      <button class="ui-btn ${pack.popular ? 'primary' : 'secondary'} ui-pack-buy" type="button" data-pack="${pack.id}" ${pack.product ? '' : 'data-soon="1"'}>${pack.product ? `Buy ${fmt.format(total)}⚡` : 'Available soon'}</button>
-    </article>`;
-  }).join('');
-  ui?.stagger?.(document);
+  const icon = name => ui?.icon(name) || '';
+  const li = (name, html) => `<li>${icon(name)}<span>${html}</span></li>`;
+  const usd = value => `$${value.toFixed(value % 1 ? 2 : 0)}`;
 
-  grid.addEventListener('click', event => {
-    const button = event.target.closest('[data-pack]');
-    if (!button) return;
-    const pack = PACKS.find(item => item.id === button.dataset.pack);
-    if (pack) openCheckout(pack, button);
+  // What the ⚡ buy, one line per kind of work ("or": they share the same balance).
+  function capacity(zaps, rates) {
+    const count = rate => fmt.format(Math.floor(zaps / rate + 1e-9));
+    return `<div class="ui-pack-capacity"><p>Enough for about</p><ul>
+      <li>${icon('message')}<b>${count(rates.aiReply)}</b><span>AI replies</span></li>
+      <li>${icon('comment')}<b>${count(rates.commentRun)}</b><span>comment automations</span></li>
+      <li>${icon('phone')}<b>${count(rates.voiceMinute)}</b><span>call minutes</span></li>
+      <li>${icon('eye')}<b>${count(rates.mediaReply)}</b><span>photo or video replies</span></li>
+    </ul><small>Mix them as you like – one balance.</small></div>`;
+  }
+
+  function renderPacks() {
+    const base = PACKS[0].price / ((PACKS[0].credits + PACKS[0].bonus) * DISPLAY);
+    packsGrid.innerHTML = PACKS.map(pack => {
+      const total = (pack.credits + pack.bonus) * DISPLAY;
+      const save = Math.round((1 - pack.price / total / base) * 100);
+      const ru = payment === 'ru';
+      const soon = !ru && !pack.product;
+      return `<article class="ui-card ui-pack${pack.popular ? ' popular' : ''}">
+        ${pack.popular ? '<span class="ui-pack-flag">Most popular</span>' : ''}
+        <div class="ui-pack-head"><h2>${pack.name}</h2><p>${pack.note}</p></div>
+        <div class="ui-pack-price">${save > 0 ? `<s>${ru ? `${fmt.format(Math.round(pack.rub / (1 - save / 100) / 10) * 10)} ₽` : usd(total * base)}</s>` : ''}<strong>${ru ? `${fmt.format(pack.rub)} ₽` : `$${pack.price.toFixed(2)}`}</strong>${save > 0 ? `<span class="ui-badge green">Save ${save}%</span>` : '<span class="ui-pack-once">one-time</span>'}</div>
+        <div class="ui-pack-credits"><b>${zap(total)}</b>${pack.bonus ? `<small>${zap(pack.credits * DISPLAY)} + <em>${zap(pack.bonus * DISPLAY)} bonus</em></small>` : '<small>credits · no subscription</small>'}</div>
+        ${capacity(total, PAYG_RATES)}
+        <ul class="ui-pack-list">${li('check', 'Unlimited AI employees, every channel')}</ul>
+        <button class="ui-btn ${pack.popular ? 'primary' : 'secondary'} ui-pack-buy" type="button" data-pack="${pack.id}"${soon ? ' data-soon' : ''}>${soon ? 'Available soon' : `Buy ${zap(total)}`}</button>
+      </article>`;
+    }).join('');
+  }
+
+  function renderPlans() {
+    const current = activePlan();
+    plansGrid.innerHTML = PLANS.map(plan => {
+      const isCurrent = current?.plan_id === plan.id;
+      const soon = !plan.product;
+      const save = Math.round((1 - plan.rates.aiReply / PAYG_RATES.aiReply) * 100);
+      // Honest "was" price: what the same number of AI replies costs with pay-as-you-go ⚡ ($1 = 100⚡).
+      const worth = plan.credits / plan.rates.aiReply * PAYG_RATES.aiReply / 100;
+      const off = Math.round((1 - plan.price / worth) * 100);
+      return `<article class="ui-card ui-pack ui-plan${plan.popular ? ' popular' : ''}${isCurrent ? ' current' : ''}">
+        ${isCurrent ? '<span class="ui-pack-flag current">Your plan</span>' : plan.popular ? '<span class="ui-pack-flag">Most popular</span>' : ''}
+        <div class="ui-pack-head"><h2>${plan.name}</h2><p>${plan.note}</p></div>
+        <div class="ui-pack-price">${worth > plan.price ? `<s>${usd(Math.round(worth))}</s>` : ''}<strong>$${plan.price}</strong><span class="ui-pack-once">/ month</span>${off > 0 ? `<span class="ui-badge green">Save ${off}%</span>` : ''}</div>
+        <div class="ui-pack-credits"><b>${zap(plan.credits)}</b><small>every month · cancel any time</small></div>
+        ${capacity(plan.credits, plan.rates)}
+        <ul class="ui-pack-list">
+          ${li('message', `AI reply <b>${zap(plan.rates.aiReply)}</b>${save > 0 ? ` <span class="ui-plan-save">−${save}%</span>` : ''}`)}
+          ${li('comment', `Comment automation <b>${zap(plan.rates.commentRun)}</b>${plan.rates.commentRun < PAYG_RATES.commentRun ? ` <span class="ui-plan-save">−${Math.round((1 - plan.rates.commentRun / PAYG_RATES.commentRun) * 100)}%</span>` : ''}`)}
+          ${li('phone', `Phone call <b>${zap(plan.rates.voiceMinute)}</b> / min${plan.rates.voiceMinute < PAYG_RATES.voiceMinute ? ` <span class="ui-plan-save">−${Math.round((1 - plan.rates.voiceMinute / PAYG_RATES.voiceMinute) * 100)}%</span>` : ''}`)}
+          ${li('check', 'Unlimited AI employees, every channel')}
+        </ul>
+        <button class="ui-btn ${plan.popular ? 'primary' : 'secondary'} ui-pack-buy" type="button" data-plan="${plan.id}"${soon && !isCurrent ? ' data-soon' : ''}${isCurrent ? ' disabled' : ''}>${isCurrent ? 'Current plan' : soon ? 'Available soon' : current ? `Switch to ${plan.name}` : `Start ${plan.name}`}</button>
+      </article>`;
+    }).join('');
+  }
+
+  function renderRates() {
+    const rows = [
+      ['AI reply', 'An answer written by your AI employee in any chat', 'aiReply', ''],
+      ['Photo or video reply', 'The customer sent a photo or a video and the AI looked at it', 'mediaReply', ''],
+      ['Comment automation', 'One person going through one comment automation: public reply, DMs, buttons and links together', 'commentRun', ' / run'],
+      ['Phone call', 'Per minute of conversation', 'voiceMinute', ' / min']
+    ];
+    const head = `<thead><tr><th scope="col"></th><th scope="col">Pay as you go</th>${PLANS.map(plan => `<th scope="col">${plan.name}<small>$${plan.price}/mo</small></th>`).join('')}</tr></thead>`;
+    const body = rows.map(([label, hint, key, unit]) => `<tr><th scope="row"><strong>${label}</strong><small>${hint}</small></th><td>${zap(PAYG_RATES[key])}${unit}</td>${PLANS.map(plan => `<td class="${plan.rates[key] < PAYG_RATES[key] ? 'cheaper' : ''}">${zap(plan.rates[key])}${unit}</td>`).join('')}</tr>`).join('')
+      + `<tr><th scope="row"><strong>DM automations</strong><small>Keyword, story reply and other DM automations</small></th><td class="free" colspan="${PLANS.length + 1}">Free</td></tr>`
+      + `<tr><th scope="row"><strong>Replies you send yourself</strong><small>From the Hansora inbox or your phone</small></th><td class="free" colspan="${PLANS.length + 1}">Free</td></tr>`;
+    document.querySelector('#rate-table').innerHTML = head + `<tbody>${body}</tbody>`;
+  }
+
+  function renderCurrent() {
+    const box = document.querySelector('#current-plan');
+    const current = activePlan(); const plan = PLANS.find(item => item.id === current?.plan_id);
+    box.hidden = !plan; if (!plan) return;
+    const end = current.current_period_end ? new Date(current.current_period_end).toLocaleDateString([], { day: 'numeric', month: 'long' }) : '';
+    box.innerHTML = `<div><b>You are on ${plan.name}</b><p>${current.cancel_at_period_end ? `Cancelled · active until ${end}` : `${zap(plan.credits)} every month${end ? ` · renews ${end}` : ''}`}</p></div>${current.cancel_at_period_end ? '' : '<button class="ui-btn ghost sm" type="button" id="cancel-plan">Cancel plan</button>'}`;
+  }
+
+  function render() {
+    main.dataset.pricingMode = mode; main.dataset.payment = payment;
+    document.querySelector('#pricing-packs').hidden = mode !== 'payg';
+    document.querySelector('#pricing-plans').hidden = mode !== 'monthly';
+    document.querySelector('#ru-monthly-note').hidden = !(mode === 'monthly' && payment === 'ru');
+    document.querySelector('#pricing-badge').textContent = mode === 'payg' ? 'Pay as you go · no subscription' : 'Monthly · cancel any time';
+    document.querySelector('#pricing-shared').textContent = payment === 'ru' ? 'Credits are shared with Hansora Creative – one balance for your whole Hansora account. Prices in Russian rubles.' : 'Credits are shared with Hansora Creative – one balance for your whole Hansora account. Prices in USD.';
+    document.querySelectorAll('[data-mode]').forEach(button => { const on = button.dataset.mode === mode; button.classList.toggle('active', on); button.setAttribute('aria-pressed', String(on)); });
+    document.querySelectorAll('button[data-payment]').forEach(button => { const on = button.dataset.payment === payment; button.classList.toggle('active', on); button.setAttribute('aria-pressed', String(on)); });
+    renderPacks(); renderPlans(); renderCurrent();
+  }
+
+  function activePlan() {
+    if (!subscription || subscription.status !== 'active') return null;
+    if (subscription.current_period_end && Date.parse(subscription.current_period_end) < Date.now() - 86_400_000) return null;
+    return subscription;
+  }
+
+  document.querySelector('.ui-pricing-switches').addEventListener('click', event => {
+    const button = event.target.closest('button[data-mode],button[data-payment]'); if (!button) return;
+    if (button.dataset.mode) mode = button.dataset.mode; else payment = button.dataset.payment;
+    try { localStorage.setItem('hansora.automation.pricing.v1', JSON.stringify({ mode, payment })); } catch (_) {}
+    render();
   });
+  packsGrid.addEventListener('click', event => { const button = event.target.closest('[data-pack]'); const pack = PACKS.find(item => item.id === button?.dataset.pack); if (pack) openPackCheckout(pack, button); });
+  plansGrid.addEventListener('click', event => { const button = event.target.closest('[data-plan]'); const plan = PLANS.find(item => item.id === button?.dataset.plan); if (plan) openPlanCheckout(plan, button); });
+  document.querySelector('#current-plan').addEventListener('click', event => { if (event.target.closest('#cancel-plan')) document.querySelector('#cancel-dialog').showModal(); });
+  document.querySelector('#confirm-cancel').addEventListener('click', cancelPlan);
   window.addEventListener('pageshow', () => document.querySelectorAll('.ui-pack-buy[aria-busy="true"]').forEach(resetButton));
 
   function resetButton(button) { button.removeAttribute('aria-busy'); button.disabled = false; if (button.dataset.label) button.textContent = button.dataset.label; }
+  function busy(button) { button.dataset.label = button.textContent; button.setAttribute('aria-busy', 'true'); button.disabled = true; button.textContent = 'Opening checkout…'; }
 
-  async function openCheckout(pack, button) {
-    if (!pack.product) return ui?.toast('This pack opens very soon. Please choose another one for now.', 'info');
-    if (button.getAttribute('aria-busy') === 'true') return;
-    if (api?.isLocalPreview) return ui?.toast('Checkout is disabled in preview.', 'info');
+  // Log in first (Google, Telegram or email) and come back to this page.
+  async function signedInUser() {
     const user = await api.getUser().catch(() => null);
-    if (!user?.id) {
-      // Log in first (Google, Telegram or email) and come back to this page.
-      try { localStorage.setItem('hansora.automation.auth_return.v1', JSON.stringify({ path: '/automation-pricing.html', createdAt: Date.now() })); } catch (_) {}
-      if (window.HansoraHeader?.openAuth) return window.HansoraHeader.openAuth('signup');
-      return location.assign('/automation.html?login=signup&returnTo=%2Fautomation-pricing.html');
-    }
-    button.dataset.label = button.textContent; button.setAttribute('aria-busy', 'true'); button.disabled = true; button.textContent = 'Opening checkout…';
+    if (user?.id) return user;
+    try { localStorage.setItem('hansora.automation.auth_return.v1', JSON.stringify({ path: '/automation-pricing.html', createdAt: Date.now() })); } catch (_) {}
+    if (window.HansoraHeader?.openAuth) window.HansoraHeader.openAuth('signup');
+    else location.assign('/automation.html?login=signup&returnTo=%2Fautomation-pricing.html');
+    return null;
+  }
+
+  async function openPackCheckout(pack, button) {
+    if (button.getAttribute('aria-busy') === 'true') return;
+    if (payment === 'international' && !pack.product) return ui?.toast('This pack opens very soon. Please choose another one for now.', 'info');
+    if (api?.isLocalPreview) return ui?.toast(`Preview: would open ${payment === 'ru' ? 'YooMoney (Russian card)' : 'Dodo (international card)'} for ${pack.name}.`, 'info');
+    const user = await signedInUser(); if (!user) return;
+    busy(button);
     try {
-      const url = new URL(pack.product);
-      url.searchParams.set('quantity', '1');
-      url.searchParams.set('redirect_url', 'https://hansora.co/automation-profile.html?checkout=success');
-      Object.entries(await checkoutDefaults(user)).forEach(([key, value]) => url.searchParams.set(key, value));
-      url.searchParams.set('minimalAddress', 'true');
-      url.searchParams.set('metadata_uid', user.id);
-      const email = checkoutEmail(user);
-      if (email) { url.searchParams.set('email', email); url.searchParams.set('metadata_email', email); }
-      url.searchParams.set('metadata_credits', String(pack.credits + pack.bonus));
-      url.searchParams.set('metadata_source', 'automation');
-      location.href = url.toString();
+      const stored = pack.credits + pack.bonus;
+      if (payment === 'ru') return location.assign(yooMoneyUrl(pack, stored, user));
+      const url = await dodoUrl(pack.product, user);
+      url.searchParams.set('metadata_credits', String(stored));
+      location.assign(url.toString());
     } catch (error) {
-      console.error('Unable to open checkout.', error);
-      resetButton(button);
+      console.error('Unable to open checkout.', error); resetButton(button);
       ui?.toast('The checkout could not open. Please try again.', 'error');
     }
+  }
+
+  async function openPlanCheckout(plan, button) {
+    if (button.getAttribute('aria-busy') === 'true' || button.disabled) return;
+    if (payment === 'ru') { payment = 'international'; render(); return ui?.toast('Monthly plans are paid with an international card.', 'info'); }
+    if (!plan.product) return ui?.toast('Monthly plans open very soon. Pay as you go works today.', 'info');
+    if (api?.isLocalPreview) return ui?.toast(`Preview: would open the ${plan.name} subscription checkout.`, 'info');
+    const user = await signedInUser(); if (!user) return;
+    if (activePlan()) return ui?.toast('To change your plan, cancel the current one first. It stays active until the end of the month.', 'info');
+    busy(button);
+    try {
+      const url = await dodoUrl(plan.product, user);
+      url.searchParams.set('metadata_plan_id', plan.id);
+      location.assign(url.toString());
+    } catch (error) {
+      console.error('Unable to open checkout.', error); resetButton(button);
+      ui?.toast('The checkout could not open. Please try again.', 'error');
+    }
+  }
+
+  async function dodoUrl(product, user) {
+    const url = new URL(product);
+    url.searchParams.set('quantity', '1');
+    url.searchParams.set('redirect_url', 'https://hansora.co/automation-profile.html?checkout=success');
+    Object.entries(await checkoutDefaults(user)).forEach(([key, value]) => url.searchParams.set(key, value));
+    url.searchParams.set('minimalAddress', 'true');
+    url.searchParams.set('metadata_uid', user.id);
+    const email = checkoutEmail(user);
+    if (email) { url.searchParams.set('email', email); url.searchParams.set('metadata_email', email); }
+    url.searchParams.set('metadata_source', 'automation');
+    return url;
+  }
+
+  // YooMoney: the label tells the webhook who paid, how many credits, and that it came from Automation (max 64 chars).
+  function yooMoneyUrl(pack, stored, user) {
+    const url = new URL('https://yoomoney.ru/quickpay/confirm.xml');
+    url.searchParams.set('receiver', YOOMONEY_RECEIVER);
+    url.searchParams.set('quickpay-form', 'donate');
+    url.searchParams.set('paymentType', 'AC');
+    url.searchParams.set('sum', pack.rub.toFixed(2));
+    url.searchParams.set('targets', `HANSORA Automation ${fmt.format(stored * DISPLAY)}⚡`);
+    url.searchParams.set('successURL', RU_SUCCESS_URL);
+    url.searchParams.set('label', `hansora_auto|${stored}|${user.id}|${checkoutEmail(user).replace(/\|/g, '')}`.slice(0, 64));
+    return url.toString();
+  }
+
+  async function cancelPlan() {
+    const button = document.querySelector('#confirm-cancel'); button.disabled = true;
+    try {
+      const response = await api.authenticatedFetch('/.netlify/functions/automation-subscription-cancel', { method: 'POST', body: JSON.stringify({ reason: document.querySelector('#cancel-reason').value }) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'cancel_failed');
+      subscription = { ...subscription, ...result.subscription, cancel_at_period_end: true };
+      document.querySelector('#cancel-dialog').close(); render();
+      ui?.toast('Your plan is cancelled. It stays active until the end of this month.', 'success');
+    } catch (error) {
+      ui?.toast('The plan could not be cancelled. Please try again or contact us.', 'error');
+    } finally { button.disabled = false; }
   }
 
   // Same rules as the Hansora Creative pricing page.
@@ -100,4 +256,17 @@
     } catch (_) {}
     return country === 'AM' ? { forceLanguage: 'ru', country: 'AM', zipCode: '0012' } : { forceLanguage: 'en' };
   }
+
+  async function loadSubscription() {
+    if (api?.isLocalPreview) return;
+    try {
+      const user = await api.getUser().catch(() => null); if (!user?.id) return;
+      const result = await api.db.from('automation_subscriptions').select('plan_id,status,current_period_end,cancel_at_period_end').eq('user_id', user.id).maybeSingle();
+      if (!result.error && result.data) { subscription = result.data; if (activePlan()) mode = 'monthly'; render(); }
+    } catch (_) {}
+  }
+
+  try { const saved = JSON.parse(localStorage.getItem('hansora.automation.pricing.v1') || 'null'); if (saved?.mode === 'monthly') mode = 'monthly'; if (saved?.payment === 'ru') payment = 'ru'; } catch (_) {}
+  if (new URLSearchParams(location.search).get('plan') === 'monthly') mode = 'monthly';
+  renderRates(); render(); loadSubscription();
 })();

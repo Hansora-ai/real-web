@@ -811,3 +811,31 @@ body[data-comment-platform="tiktok"] .flow-node-icon:has(.is-tiktok){background:
 .ui-icon-tile.tiktok{background:rgba(255,45,85,.1);border-color:rgba(255,45,85,.22);color:#ff2d55}
 body[data-comment-platform="tiktok"] .post-picker-grid{grid-template-columns:repeat(3,minmax(0,150px));justify-content:center}
 body[data-comment-platform="tiktok"] .post-picker-grid img{width:100%;aspect-ratio:9/16;height:auto;object-fit:cover;border-radius:8px}
+/* Pricing: pay-as-you-go / monthly and payment method switches, monthly plans, rate comparison */
+.ui-pricing-switches{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:22px}
+.ui-pricing-switches .ui-platform-switch button{height:32px;padding:0 14px;font-size:13px}
+.ui-pricing-switches em{font-style:normal;font-size:10.5px;padding:1px 7px;border-radius:999px;background:var(--green-soft);color:var(--green)}
+.ui-plan-current{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:760px;margin:0 auto 18px;padding:14px 18px;border-color:var(--accent)}
+.ui-plan-current b{font-size:14px}.ui-plan-current p{margin:2px 0 0;color:var(--text-3);font-size:12.5px}
+.ui-pack.current{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}.ui-pack-flag.current{background:var(--green)}
+.ui-plan-save{display:inline-block;margin-left:4px;padding:0 6px;border-radius:999px;background:var(--green-soft);color:var(--green);font-size:11px;font-weight:600}
+.ui-pricing-ru-note{max-width:640px;margin:14px auto 0;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text-2);font-size:13px;text-align:center}
+.ui-rate-scroll{overflow-x:auto}
+.ui-rate-table{width:100%;border-collapse:collapse;font-size:13.5px}
+.ui-rate-table th,.ui-rate-table td{padding:13px 14px;border-top:1px solid var(--border);text-align:center;white-space:nowrap}
+.ui-rate-table thead th{border-top:0;color:var(--text-2);font-size:12.5px;font-weight:600}
+.ui-rate-table thead small{display:block;color:var(--text-3);font-weight:500;font-size:11px}
+.ui-rate-table tbody th{text-align:left;white-space:normal;min-width:220px;font-weight:400}
+.ui-rate-table tbody th strong{display:block;font-size:14px}.ui-rate-table tbody th small{display:block;margin-top:2px;color:var(--text-3);font-size:12px}
+.ui-rate-table td{font-weight:600}.ui-rate-table td.cheaper{color:var(--green)}.ui-rate-table td.free{color:var(--green)}
+@media(max-width:600px){.ui-plan-current{flex-direction:column;align-items:flex-start}.ui-rate-table th,.ui-rate-table td{padding:11px 10px}}
+.ui-pack-price s{color:var(--text-3);font-size:17px;font-weight:500;text-decoration-thickness:1.5px}
+.ui-pack-credits em{font-style:normal;color:var(--green)}
+.ui-pack-capacity{display:grid;gap:8px;padding:12px 12px 10px;border:1px dashed var(--border-2);border-radius:12px}
+.ui-pack-capacity p{margin:0;color:var(--text-3);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em}
+.ui-pack-capacity ul{display:grid;gap:7px;margin:0;padding:0;list-style:none}
+.ui-pack-capacity li{display:grid;grid-template-columns:16px auto 1fr;align-items:center;gap:8px;font-size:13px;color:var(--text-2)}
+.ui-pack-capacity li svg{width:15px;height:15px;color:var(--text-3)}
+.ui-pack-capacity li b{color:var(--text);font-variant-numeric:tabular-nums}
+.ui-pack-capacity small{color:var(--text-3);font-size:11.5px}
+.ui-pack.popular .ui-pack-capacity{border-color:color-mix(in srgb,var(--accent) 45%,var(--border-2))}

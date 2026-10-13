@@ -1,6 +1,6 @@
 import { first, rows, serviceInsert, serviceUpdate, serviceUpsert, supabaseRequest } from '../../lib/automation/db.mjs';
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
-import { automationPrices, canAfford, chargeCredits, handleOutOfCredits } from '../../lib/automation/billing.mjs';
+import { canAfford, chargeCredits, handleOutOfCredits, automationPricesFor, replyPrice } from '../../lib/automation/billing.mjs';
 import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { keepTyping } from '../../lib/automation/typing.mjs';
@@ -89,7 +89,7 @@ export async function handler(event) {
 
     const settle = promise => promise.then(value => ({ value }), error => ({ error }));
     const take = result => { if (result.error) throw result.error; return result.value; };
-    const price = automationPrices().aiReply;
+    const rates = await automationPricesFor(businessId); let price = rates.aiReply;
     const aiResourceP = settle(ensureAgentUpToDate({ businessId }).catch(error => console.error('automation agent auto-update failed', { message: error?.message })).then(() => first(`/rest/v1/automation_provider_resources?business_id=eq.${businessId}&provider=eq.elevenlabs&resource_type=eq.agent&status=eq.active&select=*&limit=1`)));
     const affordableP = settle(canAfford(businessId, price));
     const send = { businessId: tiktokBusinessId, conversationId, token };
@@ -143,7 +143,7 @@ export async function handler(event) {
     const sent = await sendTikTokText({ ...send, text: generated.text });
     pendingReply = null;
     const outbound = await serviceInsert('automation_messages', { business_id: businessId, conversation_id: conversation.id, external_message_id: sent.messageId || null, idempotency_key: `tiktok:out:${message.id}`, direction: 'outbound', sender_type: 'ai', content_type: 'text', content: generated.text, status: 'sent', billable: true, provider: 'tiktok', model: generated.model || 'eleven-agents', provider_message_id: sent.messageId || null, metadata: { recipient_id: customerId, conversation_id: conversationId }, occurred_at: new Date().toISOString() }, { ignoreDuplicates: true });
-    const charge = outbound ? await chargeCredits({ businessId, idempotencyKey: `usage:tiktok:${message.id}`, kind: 'ai_reply', credits: price, conversationId: conversation.id, reference: { channel: 'tiktok', message_id: outbound.id } }).catch(error => { console.error('automation credit charge failed', { message: error?.message }); return { ok: false, charged: 0 }; }) : null;
+    price = replyPrice(rates, media); const charge = outbound ? await chargeCredits({ businessId, idempotencyKey: `usage:tiktok:${message.id}`, kind: 'ai_reply', credits: price, conversationId: conversation.id, reference: { channel: 'tiktok', message_id: outbound.id } }).catch(error => { console.error('automation credit charge failed', { message: error?.message }); return { ok: false, charged: 0 }; }) : null;
     if (outbound) await serviceInsert('automation_usage_events', { business_id: businessId, conversation_id: conversation.id, message_id: outbound.id, channel_type: 'tiktok', unit_type: 'ai_message', quantity: 1, billable_quantity: 1, estimated_cost_minor: 0, currency: 'AMD', provider: generated.engine === 'gemini' ? 'google' : 'elevenlabs', provider_usage_id: generated.conversationId || null, idempotency_key: `usage:tiktok:${message.id}`, credits: charge?.charged || 0, metadata: { tiktok_message_id: sent.messageId || null } }, { ignoreDuplicates: true });
     await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { last_message_preview: generated.text.slice(0, 1000), last_message_at: new Date().toISOString() });
     await markProcessed(webhook.id, businessId);
