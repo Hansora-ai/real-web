@@ -47,8 +47,18 @@
   function onReveal(element) {
     element.querySelectorAll?.('[data-count-to]').forEach(counter => ui ? ui.countUp(counter, Number(counter.dataset.countTo), undefined, 1200) : (counter.textContent = counter.dataset.countTo));
     if (element.dataset.play === 'creative') playCreative(element);
+    else if (element.dataset.play === 'comments') loopScene(element, 10000);
     else if (element.dataset.play) setTimeout(() => element.classList.add('play'), 250);
     if (element.querySelector?.('[data-live-count]')) liveCount(element.querySelector('[data-live-count]'));
+  }
+
+  // Comment → DM keeps playing (the first comment stays put, so nothing appears twice).
+  async function loopScene(element, every) {
+    for (;;) {
+      element.classList.remove('play'); void element.offsetWidth; element.classList.add('play');
+      await wait(every);
+      if (reduce) return;
+    }
   }
 
   // Hansora Creative: a prompt is typed, the tiles "generate", then the next prompt.

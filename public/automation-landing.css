@@ -384,3 +384,64 @@ html:has(body.lx), body.lx { overflow-x: clip; }
 .lx-gen-tile.t1 { grid-row: 1 / span 2; grid-column: 1; }
 .lx-gen-tile.t4 { grid-column: 2 / span 2; }
 @media (max-width: 640px) { .lx-gen-grid { grid-template-rows: 96px 96px; } }
+
+/* Round 3: no empty, still areas */
+.lx .lp-section { padding-top: 84px; }
+.lx-brain { margin-bottom: -20px; }
+
+/* Glowing particles drifting across the whole page */
+.lx-stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.lx-stars i { position: absolute; left: calc(var(--x) * 1%); top: calc(var(--y) * 1%); width: var(--s); height: var(--s); border-radius: 50%; background: #c4b5fd; box-shadow: 0 0 10px 2px rgba(167, 139, 250, .7); opacity: .0; animation: lx-star var(--d) ease-in-out infinite; animation-delay: calc(var(--x) * -.17s); }
+.lx-stars i:nth-child(3n) { background: #7dd3fc; box-shadow: 0 0 10px 2px rgba(56, 189, 248, .6); }
+@keyframes lx-star { 0%, 100% { transform: translate(0, 0); opacity: 0; } 20% { opacity: .75; } 50% { transform: translate(40px, -70px); opacity: .45; } 80% { opacity: .7; } }
+:root[data-theme="light"] .lx-stars i { opacity: .0; box-shadow: none; background: #a78bfa; }
+.lx main, .lx .lp-footer { position: relative; z-index: 1; }
+
+/* One brain: slowly turning orbits */
+.lx-orbit { position: absolute; left: 50%; top: 50%; width: 76%; aspect-ratio: 1; border: 1px dashed rgba(167, 139, 250, .35); border-radius: 50%; transform: translate(-50%, -50%); animation: lx-spin 40s linear infinite; }
+.lx-orbit::after { content: ""; position: absolute; top: -5px; left: 50%; width: 10px; height: 10px; border-radius: 50%; background: #a78bfa; box-shadow: 0 0 16px 4px rgba(167, 139, 250, .8); }
+.lx-orbit.two { width: 48%; border-color: rgba(56, 189, 248, .3); animation-duration: 24s; animation-direction: reverse; }
+.lx-orbit.two::after { background: #38bdf8; box-shadow: 0 0 16px 4px rgba(56, 189, 248, .8); }
+@keyframes lx-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+/* Comment scene: live reactions float off the reel, a sale badge pops */
+.lx-reactions { position: absolute; right: 18px; top: 150px; width: 60px; height: 220px; pointer-events: none; }
+.lx-reactions i { position: absolute; bottom: 0; left: 50%; font-size: 22px; font-style: normal; opacity: 0; animation: lx-react 4.8s ease-in infinite; }
+.lx-reactions i:nth-child(1) { animation-delay: 0s; left: 30%; } .lx-reactions i:nth-child(2) { animation-delay: .6s; left: 65%; } .lx-reactions i:nth-child(3) { animation-delay: 1.2s; left: 15%; }
+.lx-reactions i:nth-child(4) { animation-delay: 1.8s; left: 55%; } .lx-reactions i:nth-child(5) { animation-delay: 2.4s; left: 40%; } .lx-reactions i:nth-child(6) { animation-delay: 3s; left: 75%; }
+.lx-reactions i:nth-child(7) { animation-delay: 3.6s; left: 20%; } .lx-reactions i:nth-child(8) { animation-delay: 4.2s; left: 60%; }
+@keyframes lx-react { 0% { transform: translateY(0) scale(.6); opacity: 0; } 15% { opacity: 1; transform: translateY(-30px) scale(1); } 100% { transform: translateY(-210px) translateX(-14px) scale(.9) rotate(-12deg); opacity: 0; } }
+.lx-sale { position: absolute; left: -26px; top: 120px; padding: 8px 14px; border-radius: 999px; background: linear-gradient(100deg, #22c55e, #10b981); color: #fff; font-size: 14px; font-weight: 800; box-shadow: 0 14px 30px -10px rgba(16, 185, 129, .8); opacity: 0; transform: scale(.6) rotate(-8deg); }
+.lx-post.play .lx-sale { animation: lx-sale 6s cubic-bezier(.2, 1.4, .3, 1) 4.2s forwards; }
+@keyframes lx-sale { 0% { opacity: 0; transform: scale(.6) rotate(-8deg); } 12% { opacity: 1; transform: scale(1.08) rotate(-6deg); } 20%, 85% { opacity: 1; transform: scale(1) rotate(-6deg); } 100% { opacity: 0; transform: scale(.9) rotate(-6deg); } }
+
+/* Creative: never grey. While generating, colourful clouds swirl like an image being painted. */
+.lx-gen { position: relative; }
+.lx-gen-tile { background: #0f0d18; }
+.lx-gen-tile .lx-gen-shine { inset: -40%; background: conic-gradient(from 0deg, #a855f7, #38bdf8, #f472b6, #facc15, #a855f7); filter: blur(28px); opacity: .55; animation: lx-paint 4s linear infinite; background-size: auto; }
+.lx-gen-tile.t2 .lx-gen-shine { animation-duration: 3.2s; animation-direction: reverse; } .lx-gen-tile.t3 .lx-gen-shine { animation-duration: 5s; } .lx-gen-tile.t4 .lx-gen-shine { animation-duration: 3.6s; animation-direction: reverse; }
+@keyframes lx-paint { to { transform: rotate(360deg); } }
+.lx-gen-tile::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255, 255, 255, .5) 1px, transparent 1.5px); background-size: 7px 7px; opacity: .18; mix-blend-mode: overlay; transition: opacity .6s; }
+.lx-creative.done .lx-gen-tile::after { opacity: 0; }
+.lx-creative.done .lx-gen-tile .lx-gen-shine { opacity: 0; transition: opacity .6s; }
+.lx-gen-chip { position: absolute; z-index: 2; padding: 8px 12px; border: 1px solid var(--border-2); border-radius: 12px; background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--text); font-size: 12.5px; font-weight: 700; box-shadow: 0 16px 34px -16px rgba(0, 0, 0, .8); backdrop-filter: blur(10px); animation: lx-float 6s ease-in-out infinite; white-space: nowrap; }
+.lx-gen-chip.c1 { left: -34px; top: 34%; } .lx-gen-chip.c2 { right: -26px; top: 22%; animation-delay: -2s; } .lx-gen-chip.c3 { right: 24px; bottom: -18px; animation-delay: -4s; }
+
+/* Price card: a light runs around the border */
+.lx-price-card.hot { position: relative; overflow: hidden; isolation: isolate; }
+.lx-price-card.hot::before { content: ""; position: absolute; inset: -60%; z-index: -2; background: conic-gradient(from 0deg, transparent 0 70%, #e879f9 78%, #8b5cf6 84%, #38bdf8 90%, transparent 96%); animation: lx-paint 5s linear infinite; }
+.lx-price-card.hot::after { content: ""; position: absolute; inset: 1px; z-index: -1; border-radius: 21px; background: var(--surface); }
+.lx-price-card.hot { background: var(--surface); border: 0; }
+
+@media (max-width: 1000px) {
+  .lx-gen-chip.c1 { left: -6px; } .lx-gen-chip.c2 { right: -6px; }
+  .lx-sale { left: 8px; }
+}
+@media (max-width: 640px) {
+  .lx-gen-chip { display: none; }
+  .lx-reactions { right: 6px; top: 110px; height: 160px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lx-stars, .lx-reactions { display: none; }
+  .lx-orbit, .lx-gen-tile .lx-gen-shine, .lx-price-card.hot::before, .lx-gen-chip { animation: none !important; }
+}
