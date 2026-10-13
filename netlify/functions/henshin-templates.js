@@ -6,12 +6,21 @@ const validID=id=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 exports.handler=async event=>{
  try {
   if(!BASE||!KEY) throw Error('Templates service unavailable.');
+  // Published recipes are already public in the library. Resolve a stable Trending link
+  // without exposing the authenticated editor route or unpublished/deleting templates.
+  if(event.httpMethod==='GET'&&event.queryStringParameters?.public_id) {
+   const id=event.queryStringParameters.public_id;
+   if(!validID(id))return json(400,{ok:false,error:'Invalid template identifier.'});
+   const row=(await db('user_generations?id=eq.'+encodeURIComponent(id)+'&provider=eq.Henshin%20Template&meta->>published=eq.true&select=id,prompt,result_url,meta,created_at'))?.[0];
+   if(!row||row.meta?.published!==true||row.meta?.deleting===true)return json(404,{ok:false,error:'Template not found.'});
+   return json(200,{ok:true,template:templatePublic(row)});
+  }
   if(event.httpMethod==='GET'&&!event.queryStringParameters?.id) {
    let pending=false;
    if(event.queryStringParameters?.pending==='1'){const user=await auth(event);if(!user.email_confirmed_at||String(user.email).toLowerCase()!==OWNER)return json(403,{ok:false,error:'Only the confirmed template owner can manage templates.'});pending=true;}
    const offset=Number(event.queryStringParameters?.offset||0),limit=24;
    if(!Number.isSafeInteger(offset)||offset<0)throw Error('Invalid library page.');
-   const rows=await db(`user_generations?provider=eq.Henshin%20Template&${pending?'or=(meta->>published.eq.true,meta->>deleting.eq.true)':'meta->>published=eq.true'}&order=created_at.desc,id.desc&offset=${offset}&limit=${limit+1}&select=id,prompt,result_url,meta`);
+   const rows=await db(`user_generations?provider=eq.Henshin%20Template&${pending?'or=(meta->>published.eq.true,meta->>deleting.eq.true)':'meta->>published=eq.true'}&order=created_at.desc,id.desc&offset=${offset}&limit=${limit+1}&select=id,prompt,result_url,meta,created_at`);
    const result=json(200,{ok:true,templates:(rows||[]).slice(0,limit).map(templatePublic),next_offset:rows?.length>limit?offset+limit:null});
    return result;
   }

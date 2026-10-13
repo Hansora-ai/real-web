@@ -780,7 +780,7 @@
     "uploadMaxMB": 20
   }
 ];
-</script><script>(() => {
+</script><script src="/trend-feed.js?v=20261013"></script><script>(() => {
 'use strict';
 const OWNER='45c5cfc7-090e-491f-a304-05f863bbdf85', BUCKET='tutorial-media', PAGE=12;
 const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -876,19 +876,46 @@ document.addEventListener('error',event=>{if((event.target.tagName==='IMG'||even
 window.addEventListener('resize',scheduleGalleryLayout);
 
 const GALLERY_BASE='id,title,cover_url,published,created_at';let galleryColumns=GALLERY_BASE+',cover_poster_url';
-async function deleteTrend(id){if(!owner||busy)return false;if(!confirm('Delete this trend video for everyone? This cannot be undone.'))return false;busy=true;try{const {error,count}=await sb.from('tutorials').delete({count:'exact'}).eq('id',id);if(error)throw error;if(!count)throw Error('Delete is not allowed yet. Run the tutorials delete SQL in Supabase, then try again.');toast('Trend deleted');return true}catch(e){status('Could not delete. '+e.message,true);return false}finally{busy=false}}
-document.addEventListener('click',async e=>{const btn=e.target.closest('[data-delete-trend]');if(!btn)return;e.preventDefault();e.stopPropagation();const card=btn.closest('.card');if(await deleteTrend(btn.dataset.deleteTrend)){card?.remove();layoutGallery()}},true);
+const trends=window.HansoraTrends,trendText=(key,values={})=>trends.text(key,activeSiteLanguage(),values);
+let trendFeed=null,galleryRefreshPending=false;
+function makeTrendFeed(){return trends.createFeed({
+ pageSize:PAGE,
+ tutorials:async start=>{
+  const read=async columns=>{let query=sb.from('tutorials').select(columns).order('created_at',{ascending:false}).order('id',{ascending:false}).range(start,start+PAGE);if(!owner)query=query.eq('published',true);return query;};
+  let result=await read(galleryColumns);
+  if(result.error&&galleryColumns!==GALLERY_BASE&&/cover_poster_url/.test(result.error.message)){galleryColumns=GALLERY_BASE;result=await read(galleryColumns);}
+  if(result.error)throw result.error;
+  const data=result.data||[];return {items:data.slice(0,PAGE),nextOffset:data.length>PAGE?start+PAGE:null};
+ },
+ templates:start=>trends.fetchTemplatesPage(start),
+});}
+async function deleteTrend(id){if(!owner||busy)return false;if(!confirm('Delete this trend video for everyone? This cannot be undone.'))return false;busy=true;try{const {error,count}=await sb.from('tutorials').delete({count:'exact'}).eq('id',id);if(error)throw error;if(!count)throw Error('Delete is not allowed yet. Run the tutorials delete SQL in Supabase, then try again.');toast('Trend deleted');return true}catch(e){status('Could not delete. '+e.message,true);return false}finally{busy=false;if(galleryRefreshPending){galleryRefreshPending=false;queueMicrotask(()=>gallery(true));}}}
+document.addEventListener('click',async e=>{
+ const manage=e.target.closest('[data-manage-template]');if(manage){e.preventDefault();e.stopPropagation();if(owner)location.href=trends.templateHref(manage.dataset.manageTemplate,activeSiteLanguage(),true);return;}
+ const btn=e.target.closest('[data-delete-trend]');if(!btn)return;e.preventDefault();e.stopPropagation();const card=btn.closest('.card');if(await deleteTrend(btn.dataset.deleteTrend)){card?.remove();layoutGallery();}
+},true);
 async function gallery(reset=false){
- if(busy||!hasMore)return;busy=true;
- try{if(reset){offset=0;hasMore=true;$('#gallery').innerHTML=''}status('Թրենդային տեսանյութերը բեռնվում են…');
- let q=sb.from('tutorials').select(galleryColumns).order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+PAGE);
- if(!owner)q=q.eq('published',true);
- const {data,error}=await q;if(error&&galleryColumns!==GALLERY_BASE&&/cover_poster_url/.test(error.message)){galleryColumns=GALLERY_BASE;busy=false;return gallery(reset)}if(error)throw error;
- $('#gallery').insertAdjacentHTML('beforeend',data.slice(0,PAGE).map((t,i)=>`<a class="card" data-gallery-order="${offset+i}" aria-label="Բացել ուղեցույցը՝ ${esc(t.title)}" href="tutorial.html?id=${encodeURIComponent(t.id)}">${trendCover(t.cover_url,t.title,'card-media',t.cover_poster_url)}${owner?`<button type="button" class="card-delete" data-delete-trend="${esc(t.id)}" aria-label="Delete trend" title="Delete">×</button>`:''}${!t.published?'<span class="badge">Սևագիր · Միայն ձեզ</span>':''}</a>`).join(''));
- layoutGallery();hydrateTrendVideos($('#gallery'));offset+=Math.min(data.length,PAGE);hasMore=data.length>PAGE;status('');
- if(!offset)$('#gallery').innerHTML='<div class="empty">Դեռ հրապարակված թրենդային տեսանյութեր չկան։</div>';
- }catch(e){status('Չհաջողվեց բեռնել օրինակները։ '+e.message,true)}finally{busy=false}
+ if(busy||(!hasMore&&!reset))return;busy=true;
+ try{
+  if(reset||!trendFeed){offset=0;hasMore=true;trendFeed=makeTrendFeed();$('#gallery').querySelectorAll('video').forEach(v=>{trendObserver?.unobserve(v);fallbackTrendVideos.delete(v);activeTrendVideos.delete(v);v.pause();v.removeAttribute('src');v.load();});$('#gallery').replaceChildren();}
+  status(trendText('Loading trend videos…'));
+  const page=await trendFeed.next();
+  $('#gallery').insertAdjacentHTML('beforeend',page.items.map((item,i)=>{
+   const template=item.source==='henshin',title=template&&item.title==='Motion template'?trendText('Motion template'):item.title;
+   const href=template?trends.templateHref(item.id,activeSiteLanguage()):'tutorial.html?id='+encodeURIComponent(item.id);
+   const label=trendText(template?'Open Henshin example: {title}':'Open tutorial: {title}',{title});
+   const control=owner?(template?`<button type="button" class="card-delete" data-manage-template="${esc(item.id)}" aria-label="${esc(trendText('Edit in Henshin'))}" title="${esc(trendText('Edit in Henshin'))}">✎</button>`:`<button type="button" class="card-delete" data-delete-trend="${esc(item.id)}" aria-label="Delete trend" title="Delete">×</button>`):'';
+   return `<a class="card" data-trend-source="${item.source}" data-trend-id="${esc(item.id)}" data-gallery-order="${offset+i}" aria-label="${esc(label)}" href="${esc(href)}">${trendCover(item.cover_url,title,'card-media',item.cover_poster_url)}${control}${template?'<span class="badge">Henshin</span>':!item.published?'<span class="badge">'+({'ru':'Черновик · Только вы','hy':'Սևագիր · Միայն ձեզ'}[activeSiteLanguage()]||'Draft · Only you')+'</span>':''}</a>`;
+  }).join(''));
+  layoutGallery();hydrateTrendVideos($('#gallery'));offset+=page.items.length;hasMore=page.hasMore;
+  status(page.errors.length?trendText('Some trend videos could not load. Refresh to try again.'):'',!!page.errors.length);
+  if(!offset&&!page.errors.length)$('#gallery').innerHTML='<div class="empty">'+esc(trendText('No trend videos published yet.'))+'</div>';
+ }catch(e){status(trendText('Could not load examples.')+' '+e.message,true);}finally{busy=false;if(galleryRefreshPending){galleryRefreshPending=false;queueMicrotask(()=>gallery(true));}}
 }
+function refreshTrendGallery(){if(!$('#gallery')||!sb)return;if(busy){galleryRefreshPending=true;return;}gallery(true);}
+window.addEventListener('storage',event=>{if(event.key==='hansora:henshin-templates-changed')refreshTrendGallery();});
+window.addEventListener('pageshow',event=>{if(event.persisted)refreshTrendGallery();});
+window.addEventListener('focus',refreshTrendGallery);
 function renderReader(){document.title=record.title+' · Hansora';$('#reader').innerHTML=`<div class="top"><h1>${esc(record.title)}</h1>${owner?'<button id="edit">Edit tutorial</button>':''}</div>${!record.published?'<p class="badge">Սևագիր · Միայն ձեզ</p>':''}${coverMarkup(record.cover_url,record.title)}${blocksMarkup(record.blocks)}`;$('#editor').hidden=true;$('#reader').hidden=false;hydrateTrendVideos($('#reader'));$('#edit')?.addEventListener('click',editor)}
 const options=(items,value)=>items.map(x=>`<option value="${esc(x)}" ${String(x)===String(value)?'selected':''}>${esc(x||'Model default')}</option>`).join('');
 function select(label,field,items,value){return `<label>${label}<select data-field="${field}">${options(items,value)}</select></label>`}

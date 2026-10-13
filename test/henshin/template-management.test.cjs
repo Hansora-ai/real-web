@@ -17,7 +17,7 @@ function services(){
    state.videoReads++;return new Response(fs.readFileSync('test/henshin/fixtures/source.mp4'));
   }
   assert.ok(u.pathname.endsWith('/user_generations'));
-  if(u.searchParams.has('id')){assert.equal(u.searchParams.get('id'),'eq.'+id);assert.equal(u.searchParams.get('user_id'),'eq.owner');assert.equal(u.searchParams.get('provider'),'eq.Henshin Template');assert.equal(u.searchParams.get('meta->>source_feature'),'eq.henshin-template');}
+  if(u.searchParams.has('id')){assert.equal(u.searchParams.get('id'),'eq.'+id);assert.equal(u.searchParams.get('provider'),'eq.Henshin Template');if(u.searchParams.get('meta->>published')==='eq.true')assert.equal(u.searchParams.get('user_id'),null);else{assert.equal(u.searchParams.get('user_id'),'eq.owner');assert.equal(u.searchParams.get('meta->>source_feature'),'eq.henshin-template');}}
   if(options.method==='DELETE'){assert.ok(state.deleted.length);state.row=null;return response([{id}]);}
   if(options.method==='PATCH'){
    if(state.conflict||!state.row||u.searchParams.get('meta')&&u.searchParams.get('meta')!=='eq.'+JSON.stringify(state.row.meta))return response([]);
@@ -63,4 +63,12 @@ test('Concurrent changes cannot be overwritten or have their files deleted',()=>
 }));
 test('Storage cleanup uses exact decoded object keys and rejects external media URLs',()=>using(async state=>{
  await removeFiles([base+'folder/a%20b.mp4',base+'folder/a%20b.mp4']);assert.deepEqual(state.deleted,['folder/a b.mp4']);await assert.rejects(removeFiles(['https://attacker.test/file.mp4']),/Invalid template media/);
+}));
+test('Trending reads the same edited template and hides it as soon as deletion starts',()=>using(async state=>{
+ const get=()=>handler({httpMethod:'GET',headers:{},queryStringParameters:{public_id:id}});
+ assert.equal((await handler(event('PATCH',{...recipe(state.row),prompt:'Use the new jacket',preview_url:base+'updated-preview.mp4'}))).statusCode,200);
+ const template=JSON.parse((await get()).body).template;
+ assert.equal(template.id,id);assert.equal(template.prompt,'Use the new jacket');assert.equal(template.preview_url,base+'updated-preview.mp4');assert.equal(state.videoReads,0);
+ state.failDelete=true;assert.equal((await handler(event('DELETE',{id}))).statusCode,502);assert.equal((await get()).statusCode,404);
+ state.failDelete=false;assert.equal((await handler(event('DELETE',{id}))).statusCode,200);assert.equal((await get()).statusCode,404);
 }));

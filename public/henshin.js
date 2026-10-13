@@ -309,7 +309,19 @@
  for(const tab of [$('historyOpen'),$('templatesOpen')])tab.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const target=event.key==='Home'?$('historyOpen'):event.key==='End'?$('templatesOpen'):tab===$('historyOpen')?$('templatesOpen'):$('historyOpen');target.click();target.focus();});
  fetchTemplates().catch(()=>{});
  update();refresh();setInterval(()=>{if(document.visibilityState==='visible'&&!busy&&$('libraryView').hidden&&!$('previewDialog').open)refresh();},12000);sb.auth.onAuthStateChange((_event,s)=>{ $('ownerControls').hidden=!(s?.user.email_confirmed_at&&s.user.email?.toLowerCase()===OWNER);const changed=libraryOwner!==owner(s);libraryOwner=owner(s);if(changed&&templateCache&&!$('libraryView').hidden)renderTemplates(templateCache.templates);setTimeout(refresh,0);});
- if(new URLSearchParams(location.search).get('preset')==='1'){
+ async function openTrendingTemplate(id){
+  setView('library');
+  try{
+   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))throw Error('Template not found.');
+   $('templateStatus').textContent=t('Loading template…');
+   const response=await fetch('/.netlify/functions/henshin-templates?public_id='+encodeURIComponent(id),{cache:'no-store',signal:AbortSignal.timeout(15000)}),data=await response.json();
+   if(!response.ok||!data.ok||!data.template||data.template.deleting)throw Error('Template not found.');
+   await openLibrary();$('templateStatus').textContent='';preview(data.template);
+  }catch(e){$('templateStatus').textContent=t(e.message);libraryEmpty(t('Trendy examples unavailable'),t('This template is no longer available.'));}
+ }
+ const trendingTemplate=new URLSearchParams(location.search).get('template');
+ if(trendingTemplate)openTrendingTemplate(trendingTemplate);
+ else if(new URLSearchParams(location.search).get('preset')==='1'){
   let preset=null;try{preset=JSON.parse(sessionStorage.getItem('hansora:henshin-preset')||'null');sessionStorage.removeItem('hansora:henshin-preset');}catch{}
   history.replaceState(null,'',location.pathname);
   if(preset)recreate(preset).catch(e=>status(t(e.message),true));
