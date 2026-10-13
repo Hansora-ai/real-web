@@ -7,7 +7,8 @@
   const RU_SUCCESS_URL = 'https://hansora.co/russian-payment-success.html';
 
   // Prices per action in ⚡. Must match lib/automation/billing.mjs (automationPrices and AUTOMATION_PLANS).
-  const PAYG_RATES = { aiReply: 1.2, mediaReply: 2, commentRun: 1, voiceMinute: 8 };
+  const PAYG_RATES = { aiReply: 1.2, mediaReply: 2, voiceReply: 1, commentRun: 1, voiceMinute: 8 };
+  const PAYG_DISCOUNT = 0.3; // shown as the pay-as-you-go sale, like the Hansora Creative pricing page
 
   // Pay as you go. credits/bonus are stored credits (what the payment adds to profiles.credits). rub must match
   // PACKS in netlify/functions/yoomoney-webhook.mjs. A card pack is buyable once its Dodo product exists.
@@ -20,10 +21,10 @@
 
   // Monthly plans (Dodo subscriptions). credits = ⚡ added every paid month. product = the Dodo subscription link.
   const PLANS = [
-    { id: 'automation_starter_monthly', name: 'Starter', price: 49, credits: 4900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQYSDnUbMHvi9Gt6yy', note: 'One busy shop', rates: { aiReply: 1, mediaReply: 2, commentRun: 1, voiceMinute: 8 } },
-    { id: 'automation_growth_monthly', name: 'Growth', price: 99, credits: 9900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQrUC5gB5c3Jk8zZE9', note: 'Instagram sellers with many comments', popular: true, rates: { aiReply: 1, mediaReply: 2, commentRun: 0.5, voiceMinute: 7 } },
-    { id: 'automation_business_monthly', name: 'Business', price: 149, credits: 14900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeR55QAhlX4ViGBTCF4', note: 'Every channel and phone calls', rates: { aiReply: 0.9, mediaReply: 2, commentRun: 0.5, voiceMinute: 7 } },
-    { id: 'automation_scale_monthly', name: 'Scale', price: 199, credits: 19900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeRJQYrPCPCIK9zbEb1', note: 'Agencies and high volume', rates: { aiReply: 0.8, mediaReply: 2, commentRun: 0.3, voiceMinute: 6 } }
+    { id: 'automation_starter_monthly', name: 'Starter', price: 49, credits: 4900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQYSDnUbMHvi9Gt6yy', note: 'One busy shop', rates: { aiReply: 1, mediaReply: 2, voiceReply: 1, commentRun: 1, voiceMinute: 8 } },
+    { id: 'automation_growth_monthly', name: 'Growth', price: 99, credits: 9900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQrUC5gB5c3Jk8zZE9', note: 'Lots of Instagram comments', popular: true, rates: { aiReply: 1, mediaReply: 2, voiceReply: 1, commentRun: 0.5, voiceMinute: 7 } },
+    { id: 'automation_business_monthly', name: 'Business', price: 149, credits: 14900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeR55QAhlX4ViGBTCF4', note: 'Every channel and phone calls', rates: { aiReply: 0.9, mediaReply: 2, voiceReply: 1, commentRun: 0.5, voiceMinute: 7 } },
+    { id: 'automation_scale_monthly', name: 'Scale', price: 199, credits: 19900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeRJQYrPCPCIK9zbEb1', note: 'Agencies and high volume', rates: { aiReply: 0.8, mediaReply: 2, voiceReply: 1, commentRun: 0.3, voiceMinute: 6 } }
   ];
 
   const fmt = new Intl.NumberFormat('en-US');
@@ -45,24 +46,26 @@
       <li>${icon('comment')}<b>${count(rates.commentRun)}</b><span>comment automations</span></li>
       <li>${icon('phone')}<b>${count(rates.voiceMinute)}</b><span>call minutes</span></li>
       <li>${icon('eye')}<b>${count(rates.mediaReply)}</b><span>photo or video replies</span></li>
+      <li>${icon('play')}<b>${count(rates.voiceReply)}</b><span>voice message replies</span></li>
     </ul><small>Mix them as you like – one balance.</small></div>`;
   }
 
   function renderPacks() {
-    const base = PACKS[0].price / ((PACKS[0].credits + PACKS[0].bonus) * DISPLAY);
+    const ru = payment === 'ru';
     packsGrid.innerHTML = PACKS.map(pack => {
       const total = (pack.credits + pack.bonus) * DISPLAY;
-      const save = Math.round((1 - pack.price / total / base) * 100);
-      const ru = payment === 'ru';
+      const price = ru ? `${fmt.format(pack.rub)} ₽` : `$${pack.price.toFixed(2)}`;
+      const was = ru ? `${fmt.format(Math.round(pack.rub / (1 - PAYG_DISCOUNT) / 10) * 10)} ₽` : usd(pack.price / (1 - PAYG_DISCOUNT));
       const soon = !ru && !pack.product;
       return `<article class="ui-card ui-pack${pack.popular ? ' popular' : ''}">
         ${pack.popular ? '<span class="ui-pack-flag">Most popular</span>' : ''}
         <div class="ui-pack-head"><h2>${pack.name}</h2><p>${pack.note}</p></div>
-        <div class="ui-pack-price">${save > 0 ? `<s>${ru ? `${fmt.format(Math.round(pack.rub / (1 - save / 100) / 10) * 10)} ₽` : usd(total * base)}</s>` : ''}<strong>${ru ? `${fmt.format(pack.rub)} ₽` : `$${pack.price.toFixed(2)}`}</strong>${save > 0 ? `<span class="ui-badge green">Save ${save}%</span>` : '<span class="ui-pack-once">one-time</span>'}</div>
-        <div class="ui-pack-credits"><b>${zap(total)}</b>${pack.bonus ? `<small>${zap(pack.credits * DISPLAY)} + <em>${zap(pack.bonus * DISPLAY)} bonus</em></small>` : '<small>credits · no subscription</small>'}</div>
+        <div class="ui-pack-pricing"><div class="ui-pack-was"><s>${was}</s><span class="ui-badge green">Save ${Math.round(PAYG_DISCOUNT * 100)}%</span></div>
+          <div class="ui-pack-price"><strong>${price}</strong><span class="ui-pack-once">one-time</span></div></div>
+        <button class="ui-btn ${pack.popular ? 'primary' : 'secondary'} ui-pack-buy" type="button" data-pack="${pack.id}"${soon ? ' data-soon' : ''}>${soon ? 'Available soon' : `Buy ${zap(total)}`}</button>
+        <div class="ui-pack-credits"><b>${zap(total)}</b>${pack.bonus ? `<small>${zap(pack.credits * DISPLAY)} + <em>${zap(pack.bonus * DISPLAY)} bonus</em> · never expire</small>` : '<small>credits that never expire</small>'}</div>
         ${capacity(total, PAYG_RATES)}
         <ul class="ui-pack-list">${li('check', 'Unlimited AI employees, every channel')}</ul>
-        <button class="ui-btn ${pack.popular ? 'primary' : 'secondary'} ui-pack-buy" type="button" data-pack="${pack.id}"${soon ? ' data-soon' : ''}>${soon ? 'Available soon' : `Buy ${zap(total)}`}</button>
       </article>`;
     }).join('');
   }
@@ -79,7 +82,9 @@
       return `<article class="ui-card ui-pack ui-plan${plan.popular ? ' popular' : ''}${isCurrent ? ' current' : ''}">
         ${isCurrent ? '<span class="ui-pack-flag current">Your plan</span>' : plan.popular ? '<span class="ui-pack-flag">Most popular</span>' : ''}
         <div class="ui-pack-head"><h2>${plan.name}</h2><p>${plan.note}</p></div>
-        <div class="ui-pack-price">${worth > plan.price ? `<s>${usd(Math.round(worth))}</s>` : ''}<strong>$${plan.price}</strong><span class="ui-pack-once">/ month</span>${off > 0 ? `<span class="ui-badge green">Save ${off}%</span>` : ''}</div>
+        <div class="ui-pack-pricing"><div class="ui-pack-was">${worth > plan.price ? `<s>${usd(Math.round(worth))}</s>` : ''}${off > 0 ? `<span class="ui-badge green">Save ${off}%</span>` : ''}</div>
+          <div class="ui-pack-price"><strong>$${plan.price}</strong><span class="ui-pack-once">/ month</span></div></div>
+        <button class="ui-btn ${plan.popular ? 'primary' : 'secondary'} ui-pack-buy" type="button" data-plan="${plan.id}"${soon && !isCurrent ? ' data-soon' : ''}${isCurrent ? ' disabled' : ''}>${isCurrent ? 'Current plan' : soon ? 'Available soon' : current ? `Switch to ${plan.name}` : `Start ${plan.name}`}</button>
         <div class="ui-pack-credits"><b>${zap(plan.credits)}</b><small>every month · cancel any time</small></div>
         ${capacity(plan.credits, plan.rates)}
         <ul class="ui-pack-list">
@@ -88,7 +93,6 @@
           ${li('phone', `Phone call <b>${zap(plan.rates.voiceMinute)}</b> / min${plan.rates.voiceMinute < PAYG_RATES.voiceMinute ? ` <span class="ui-plan-save">−${Math.round((1 - plan.rates.voiceMinute / PAYG_RATES.voiceMinute) * 100)}%</span>` : ''}`)}
           ${li('check', 'Unlimited AI employees, every channel')}
         </ul>
-        <button class="ui-btn ${plan.popular ? 'primary' : 'secondary'} ui-pack-buy" type="button" data-plan="${plan.id}"${soon && !isCurrent ? ' data-soon' : ''}${isCurrent ? ' disabled' : ''}>${isCurrent ? 'Current plan' : soon ? 'Available soon' : current ? `Switch to ${plan.name}` : `Start ${plan.name}`}</button>
       </article>`;
     }).join('');
   }
@@ -97,6 +101,7 @@
     const rows = [
       ['AI reply', 'An answer written by your AI employee in any chat', 'aiReply', ''],
       ['Photo or video reply', 'The customer sent a photo or a video and the AI looked at it', 'mediaReply', ''],
+      ['Voice message reply', 'The customer sent a voice message and the AI listened to it', 'voiceReply', ''],
       ['Comment automation', 'One person going through one comment automation: public reply, DMs, buttons and links together', 'commentRun', ' / run'],
       ['Phone call', 'Per minute of conversation', 'voiceMinute', ' / min']
     ];
@@ -119,8 +124,13 @@
     main.dataset.pricingMode = mode; main.dataset.payment = payment;
     document.querySelector('#pricing-packs').hidden = mode !== 'payg';
     document.querySelector('#pricing-plans').hidden = mode !== 'monthly';
-    document.querySelector('#ru-monthly-note').hidden = !(mode === 'monthly' && payment === 'ru');
+    document.querySelector('#ru-monthly-note').hidden = mode !== 'monthly';
     document.querySelector('#pricing-badge').textContent = mode === 'payg' ? 'Pay as you go · no subscription' : 'Monthly · cancel any time';
+    document.querySelector('#pricing-lead').textContent = mode === 'payg'
+      ? 'No monthly fees. Buy credits that never expire and use them whenever you want, on every channel.'
+      : 'Busy every month? Save on every AI reply, comment automation and phone call – up to 33% on replies and 70% on comments.';
+    const ruButton = document.querySelector('button[data-payment="ru"]');
+    ruButton.disabled = mode === 'monthly'; ruButton.title = mode === 'monthly' ? 'Monthly plans are paid with an international card' : '';
     document.querySelector('#pricing-shared').textContent = payment === 'ru' ? 'Credits are shared with Hansora Creative – one balance for your whole Hansora account. Prices in Russian rubles.' : 'Credits are shared with Hansora Creative – one balance for your whole Hansora account. Prices in USD.';
     document.querySelectorAll('[data-mode]').forEach(button => { const on = button.dataset.mode === mode; button.classList.toggle('active', on); button.setAttribute('aria-pressed', String(on)); });
     document.querySelectorAll('button[data-payment]').forEach(button => { const on = button.dataset.payment === payment; button.classList.toggle('active', on); button.setAttribute('aria-pressed', String(on)); });
@@ -135,7 +145,8 @@
 
   document.querySelector('.ui-pricing-switches').addEventListener('click', event => {
     const button = event.target.closest('button[data-mode],button[data-payment]'); if (!button) return;
-    if (button.dataset.mode) mode = button.dataset.mode; else payment = button.dataset.payment;
+    if (button.disabled) return;
+    if (button.dataset.mode) { mode = button.dataset.mode; if (mode === 'monthly') payment = 'international'; } else payment = button.dataset.payment;
     try { localStorage.setItem('hansora.automation.pricing.v1', JSON.stringify({ mode, payment })); } catch (_) {}
     render();
   });
@@ -262,11 +273,11 @@
     try {
       const user = await api.getUser().catch(() => null); if (!user?.id) return;
       const result = await api.db.from('automation_subscriptions').select('plan_id,status,current_period_end,cancel_at_period_end').eq('user_id', user.id).maybeSingle();
-      if (!result.error && result.data) { subscription = result.data; if (activePlan()) mode = 'monthly'; render(); }
+      if (!result.error && result.data) { subscription = result.data; if (activePlan()) { mode = 'monthly'; payment = 'international'; } render(); }
     } catch (_) {}
   }
 
-  try { const saved = JSON.parse(localStorage.getItem('hansora.automation.pricing.v1') || 'null'); if (saved?.mode === 'monthly') mode = 'monthly'; if (saved?.payment === 'ru') payment = 'ru'; } catch (_) {}
-  if (new URLSearchParams(location.search).get('plan') === 'monthly') mode = 'monthly';
+  try { const saved = JSON.parse(localStorage.getItem('hansora.automation.pricing.v1') || 'null'); if (saved?.mode === 'monthly') mode = 'monthly'; if (saved?.payment === 'ru' && mode !== 'monthly') payment = 'ru'; } catch (_) {}
+  if (new URLSearchParams(location.search).get('plan') === 'monthly') { mode = 'monthly'; payment = 'international'; }
   renderRates(); render(); loadSubscription();
 })();

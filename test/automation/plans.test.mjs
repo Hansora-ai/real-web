@@ -8,7 +8,8 @@ test('Pay as you go: 1.2⚡ per reply, 2⚡ for a photo or video, 1⚡ per comme
   assert.equal(replyPrice(rates, null), 0.12);
   assert.equal(replyPrice(rates, { kind: 'image' }), 0.2);
   assert.equal(replyPrice(rates, { kind: 'video' }), 0.2);
-  assert.equal(replyPrice(rates, { kind: 'audio' }), 0.12, 'voice notes cost a normal reply');
+  assert.equal(replyPrice(rates, { kind: 'audio' }), 0.1, 'voice messages cost 1⚡ on every option');
+  assert.equal(replyPrice(pricesForPlan('automation_scale_monthly'), { kind: 'audio' }), 0.1);
 });
 
 test('Monthly plans: $1 = 100⚡ and every action is cheaper on bigger plans', () => {
