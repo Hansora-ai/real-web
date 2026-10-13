@@ -119,6 +119,8 @@ After changing the English HTML shell, run `npm run build:caption-studio-locales
 The localized shells are checked into the repository so Netlify serves them
 without a separate localization build. Links from the translated video-edit
 pages and the shared header retain the selected language.
+The Netlify mobile-navigation injector bypasses all three editor routes, so the
+site-wide bottom banner does not cover the editor's own toolbar after deployment.
 
 Localized labels wrap where necessary. The phone toolbar reserves room for its
 labels and the device safe area, and remains horizontally scrollable to reach

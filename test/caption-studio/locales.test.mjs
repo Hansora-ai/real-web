@@ -54,6 +54,18 @@ test('localized editor entry links lead to the matching locale', async () => {
   for (const suffix of ['ru', 'arm']) assert.ok((await page(`video-edit_${suffix}`)).includes(`./caption-studio_${suffix}.html`));
 });
 
+test('Netlify never overlays its site navigation on any editor locale', async () => {
+  const source = await readFile(new URL('../../netlify/edge-functions/inject-bottom-nav-inline.js', import.meta.url), 'utf8');
+  const { default: inject } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+  for (const path of ['/caption-studio.html', '/caption-studio_ru.html', '/caption-studio_arm.html', '/caption-studio_ru/', '/caption-studio_arm', '/CAPTION-STUDIO_ARM.HTML']) {
+    const response = new Response('<html><body>Editor</body></html>', {headers: {'content-type': 'text/html'}});
+    assert.equal(await inject(new Request('https://example.com' + path), {next: async () => response}), response, path);
+  }
+  const response = new Response('<html><body>Page</body></html>', {headers: {'content-type': 'text/html'}});
+  const ordinaryPage = await inject(new Request('https://example.com/video-edit_arm.html'), {next: async () => response});
+  assert.match(await ordinaryPage.text(), /class="hs-bottom-nav"/, 'ordinary site pages still receive navigation');
+});
+
 test('multiline Armenian and Russian captions stay inside the frame at the bottom edge', async () => {
   const { drawCaption } = await import('../../public/caption-studio/render.mjs');
   const { newProject } = await import('../../public/caption-studio/core.mjs');
