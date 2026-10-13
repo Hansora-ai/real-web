@@ -6,13 +6,13 @@
   const api = window.HansoraAutomation;
   const previewQuery = api?.isLocalPreview && window.location.protocol !== 'file:' ? '?preview=1' : '';
   const page = document.body.dataset.automationPage || 'landing';
-  const appPage = !['landing', 'legal', 'pricing'].includes(page);
+  const appPage = !['landing', 'legal', 'pricing', 'contact'].includes(page);
   const moon = '<svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>';
   const sun = '<svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>';
   const themeButton = `<button class="auto-theme" type="button" data-theme-toggle aria-label="Switch to light mode">${moon}${sun}</button>`;
   const mainLinks = appPage
-    ? `<a href="automation-dashboard.html${previewQuery}"${page === 'dashboard' ? ' aria-current="page"' : ''}>AI employees</a><a href="automation.html${previewQuery}">Product</a>`
-    : page === 'landing' ? `<a href="#channels">Channels</a><a href="#how-it-works">How it works</a><a href="automation-pricing.html${previewQuery}">Pricing</a><a href="#faq">FAQ</a>` : `<a href="automation.html${previewQuery}#channels">Channels</a><a href="automation.html${previewQuery}#how-it-works">How it works</a><a href="automation-pricing.html${previewQuery}"${page === 'pricing' ? ' aria-current="page"' : ''}>Pricing</a><a href="automation.html${previewQuery}#faq">FAQ</a>`;
+    ? `<a href="automation-dashboard.html${previewQuery}"${page === 'dashboard' ? ' aria-current="page"' : ''}>AI employees</a><a href="automation.html${previewQuery}">Product</a><a href="automation-contact.html${previewQuery}">Contact</a>`
+    : page === 'landing' ? `<a href="#channels">Channels</a><a href="#how-it-works">How it works</a><a href="automation-pricing.html${previewQuery}">Pricing</a><a href="#faq">FAQ</a><a href="automation-contact.html${previewQuery}">Contact</a>` : `<a href="automation.html${previewQuery}#channels">Channels</a><a href="automation.html${previewQuery}#how-it-works">How it works</a><a href="automation-pricing.html${previewQuery}"${page === 'pricing' ? ' aria-current="page"' : ''}>Pricing</a><a href="automation.html${previewQuery}#faq">FAQ</a><a href="automation-contact.html${previewQuery}"${page === 'contact' ? ' aria-current="page"' : ''}>Contact</a>`;
   // Account area: the same login window, credits and photo as the Hansora Creative header (header.js fills these ids).
   const realSite = !api?.isLocalPreview;
   let cachedLoggedIn = false;
@@ -82,7 +82,7 @@
     const aside = document.createElement('aside');
     aside.className = 'auto-sidebar';
     aside.setAttribute('aria-label', 'Automation sections');
-    aside.innerHTML = `<nav>${items.map(link).join('')}</nav><div class="auto-side-foot">${link(['dashboard', 'AI employees', 'user', `automation-dashboard.html${api?.isLocalPreview && location.protocol !== 'file:' ? '?preview=1' : ''}`])}${businessId && businessId !== 'preview' || api?.isLocalPreview ? link(['setup', 'Edit AI employee', 'edit', `automation-setup.html?id=${encodeURIComponent(businessId)}${preview}`]) : ''}<button class="auto-side-link auto-side-collapse" type="button" aria-label="Collapse sidebar">${icon('chevron')}<span>Collapse</span></button></div>`;
+    aside.innerHTML = `<nav>${items.map(link).join('')}</nav><div class="auto-side-foot">${link(['dashboard', 'AI employees', 'user', `automation-dashboard.html${api?.isLocalPreview && location.protocol !== 'file:' ? '?preview=1' : ''}`])}${businessId && businessId !== 'preview' || api?.isLocalPreview ? link(['setup', 'Edit AI employee', 'edit', `automation-setup.html?id=${encodeURIComponent(businessId)}${preview}`]) : ''}${link(['contact', 'Contact us', 'send', `automation-contact.html${api?.isLocalPreview && location.protocol !== 'file:' ? '?preview=1' : ''}`])}<button class="auto-side-link auto-side-collapse" type="button" aria-label="Collapse sidebar">${icon('chevron')}<span>Collapse</span></button></div>`;
     document.body.appendChild(aside);
     document.body.classList.add('has-auto-sidebar');
     let collapsed = false;
