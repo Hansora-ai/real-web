@@ -453,3 +453,8 @@ html:has(body.lx), body.lx { overflow-x: clip; }
 .lx-gen-tile::before { display: none; }
 .lx-gen-tile em { z-index: 2; }
 .lx-gen-grid { grid-template-rows: 130px 130px; }
+.lx-post-media { background-size: cover !important; background-position: center !important; }
+.lx-post-media .lx-post-play { background: rgba(0, 0, 0, .45); }
+.lx-msg.card .lx-card-img { background-size: cover; background-position: center; }
+.lx-msg.card .lx-card-img[style]::after { display: none; }
+.lx-lead b { color: var(--text); font-weight: 700; }

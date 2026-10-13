@@ -69,13 +69,22 @@
     const media = [...section.querySelectorAll('[data-src]')];
     media.forEach(item => { item.src = item.dataset.src; });
     const videos = media.filter(item => item.tagName === 'VIDEO');
+    let onScreen = true;
+    const checkScreen = () => {
+      const box = section.getBoundingClientRect(); const visible = box.bottom > 0 && box.top < innerHeight;
+      if (visible === onScreen) return; onScreen = visible;
+      videos.forEach(video => { if (!visible) video.pause(); else if (section.classList.contains('done')) video.play?.().catch(() => {}); });
+    };
+    let queued = false;
+    addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; checkScreen(); }); } }, { passive: true });
+    setInterval(checkScreen, 1500);
     for (let round = 0; ; round++) {
       section.classList.remove('done'); section.classList.add('gen'); section.dataset.palette = String(round % 4);
       const prompt = prompts[round % prompts.length];
       for (let i = 1; i <= prompt.length; i++) { text.textContent = prompt.slice(0, i); await wait(28); }
       await wait(1800);
       section.classList.remove('gen'); section.classList.add('done');
-      videos.forEach(video => { try { video.currentTime = 0; } catch (_) {} video.play?.().catch(() => {}); });
+      if (onScreen) videos.forEach(video => { try { video.currentTime = 0; } catch (_) {} video.play?.().catch(() => {}); });
       await wait(5200);
       if (reduce) return;
     }
@@ -106,7 +115,7 @@
       steps: [
         ['c', 'Hi! Do you have the oak coffee table in stock?'],
         ['a', 'Yes! The oak coffee table is $320 and in stock. Delivery tomorrow 🌳'],
-        ['card', { title: 'Oak coffee table', price: '$320', tone: 'oak' }],
+        ['card', { title: 'Oak coffee table', price: '$320', tone: 'oak', photo: 'automation-media/oak-coffee-table.jpg' }],
         ['c', 'Perfect, deliver to 12 Main Street please'],
         ['a', 'Done! Order #1043 is confirmed ✅ We’ll message you before delivery.']
       ],
@@ -168,7 +177,7 @@
       if (kind === 'c') { if (!await typeIntoComposer(value, token)) return; add('c', escapeHtml(value)); await wait(500); }
       else if (kind === 'voice') { add('c voice', `<span class="lx-wave">${'<i></i>'.repeat(18)}</span><small>0:06</small>`); await wait(900); add('transcript', `🎤 “${escapeHtml(value)}”`); await wait(600); }
       else if (kind === 'note') { add('note', escapeHtml(value)); await wait(800); }
-      else if (kind === 'card') { add('a card', `<span class="lx-card-img ${value.tone}"></span><b>${escapeHtml(value.title)}</b><small>${escapeHtml(value.price)}</small><span class="lx-card-btn">View</span>`); await wait(900); }
+      else if (kind === 'card') { add('a card', `<span class="lx-card-img ${value.tone}"${value.photo ? ` style="background-image:url(${value.photo})"` : ''}></span><b>${escapeHtml(value.title)}</b><small>${escapeHtml(value.price)}</small><span class="lx-card-btn">View</span>`); await wait(900); }
       else { const dots = add('a dots', '<i></i><i></i><i></i>'); await wait(1000); if (token !== run) return; dots.remove(); add('a', escapeHtml(value)); await wait(700); }
     }
     if (token !== run) return;
