@@ -884,3 +884,42 @@ body[data-comment-platform="tiktok"] .post-picker-grid img{width:100%;aspect-rat
   .ui-pricing-switches .ui-platform-switch:last-child button{flex:1;justify-content:center}
 }
 .ui .ui-pack-buy{font-size:17px;font-weight:700;letter-spacing:.01em}
+/* Contact page */
+.ui-contact{max-width:1120px}
+.ui-contact-hero{max-width:640px;margin:8px auto 30px;text-align:center}
+.ui-contact-hero h1{margin:14px 0 8px;font-size:clamp(32px,5vw,48px);letter-spacing:-.035em}
+.ui-contact-hero p{margin:0;color:var(--text-2);font-size:16px;line-height:1.55}
+.ui-contact-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px;align-items:start}
+.ui-contact-form,.ui-contact-done{display:grid;gap:16px;padding:24px}
+.ui-contact-topics{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;border:0}
+.ui-contact-topics legend{margin-bottom:10px;font-size:13px;font-weight:600;color:var(--text-2)}
+.ui-contact-topics label{position:relative;cursor:pointer}
+.ui-contact-topics input{position:absolute;opacity:0;pointer-events:none}
+.ui-contact-topics span{display:inline-flex;align-items:center;height:36px;padding:0 14px;border:1px solid var(--border-2);border-radius:999px;background:var(--surface-2);color:var(--text-2);font-size:13.5px;font-weight:600;transition:all .15s}
+.ui-contact-topics input:checked+span{border-color:transparent;background:linear-gradient(100deg,#8b5cf6,#38bdf8);color:#fff;box-shadow:0 8px 22px -10px rgba(139,92,246,.8)}
+.ui-contact-topics input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.ui-contact-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ui-contact-form .ui-field>span b{color:var(--red)}
+.ui-contact-form textarea{min-height:140px;resize:vertical}
+.ui-contact-trap{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.ui .ui-contact-send{height:48px;border:0;border-radius:12px;background:linear-gradient(90deg,#8b5cf6,#38bdf8);color:#fff;font-size:16px;font-weight:700;box-shadow:0 10px 30px -14px rgba(139,92,246,.8)}
+.ui .ui-contact-send:hover:not(:disabled){filter:brightness(1.08)}
+.ui-contact-legal{margin:0;color:var(--text-3);font-size:12px}.ui-contact-legal a{color:var(--text-2)}
+.ui-contact-done{justify-items:center;text-align:center;padding:48px 24px}
+.ui-contact-done h2{margin:0;font-size:22px}.ui-contact-done p{margin:0;color:var(--text-2)}
+.ui-contact-check{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:var(--green-soft);color:var(--green);font-size:26px;font-weight:700}
+.ui-contact-side{display:grid;gap:12px}
+.ui-contact-channel{display:flex;align-items:center;gap:14px;padding:16px 18px;color:var(--text);text-decoration:none;transition:border-color .15s,transform .15s}
+.ui-contact-channel:hover{border-color:var(--accent);transform:translateY(-2px)}
+.ui-contact-channel>span{display:grid;place-items:center;width:42px;height:42px;flex:none;border-radius:12px;background:var(--surface-3);color:var(--text-2)}
+.ui-contact-channel>span svg{width:20px;height:20px}
+.ui-contact-channel.telegram>span{background:rgba(39,167,231,.14);color:#27a7e7}
+.ui-contact-channel.instagram>span{background:rgba(225,48,108,.14);color:#e1306c}
+.ui-contact-channel div{flex:1;min-width:0}.ui-contact-channel b{font-size:15px}.ui-contact-channel p{margin:2px 0 0;color:var(--text-3);font-size:13px}
+.ui-contact-channel em{font-style:normal;color:var(--text-3)}
+.ui-contact-note{padding:16px 18px}.ui-contact-note b{font-size:14px}.ui-contact-note p{margin:4px 0 0;color:var(--text-3);font-size:13px;line-height:1.5}
+.ui-contact-footer{margin-top:40px}
+@media(max-width:860px){.ui-contact-grid{grid-template-columns:1fr}.ui-contact-row{grid-template-columns:1fr}}
+.ui-contact-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;max-width:1120px;margin:48px auto 0;padding:22px 24px 40px;border-top:1px solid var(--border);color:var(--text-3);font-size:12px;letter-spacing:.08em}
+.ui-contact-footer nav{display:flex;flex-wrap:wrap;gap:18px;letter-spacing:0}
+.ui-contact-footer a{color:var(--text-3);text-decoration:none;font-size:13px}.ui-contact-footer a:hover{color:var(--text)}
