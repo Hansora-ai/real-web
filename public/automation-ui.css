@@ -846,3 +846,21 @@ body[data-comment-platform="tiktok"] .post-picker-grid img{width:100%;aspect-rat
 .ui-pack-pricing .ui-pack-price strong{font-size:clamp(26px,2.6vw,34px)}
 .ui-pack .ui-pack-pricing+.ui-pack-buy{margin-top:0}
 .ui-pricing-switches button:disabled{opacity:.4;cursor:not-allowed}
+/* One colour for every buy button (purple → blue, like Hansora Creative). */
+.ui-pack-buy{height:44px;border:0;border-radius:12px;background:linear-gradient(90deg,#8b5cf6,#38bdf8);color:#fff;font-size:14.5px;font-weight:600;box-shadow:0 10px 30px -14px rgba(139,92,246,.75);transition:filter .15s,transform .15s}
+.ui-pack-buy:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}
+.ui-pack-buy:disabled{opacity:.6;transform:none}
+.ui-pack-buy[data-soon]{background:var(--surface-3);color:var(--text-2);box-shadow:none}
+/* "Enough for about": readable at a glance. */
+.ui-pack-capacity{gap:10px;padding:14px 14px 12px}
+.ui-pack-capacity p{font-size:12.5px}
+.ui-pack-capacity ul{gap:10px}
+.ui-pack-capacity li{grid-template-columns:18px auto 1fr;gap:10px;font-size:15px}
+.ui-pack-capacity li svg{width:17px;height:17px}
+.ui-pack-capacity li b{font-size:16px}
+.ui-pack-capacity small{font-size:12.5px}
+.ui-pack-credits small{font-size:13px}
+.ui-pack-list{font-size:14px}
+.ui-page.ui-pricing{max-width:1320px}
+.ui-pack-capacity li span{white-space:nowrap}
+@media(max-width:1250px){.ui-pack-capacity li span{white-space:normal}}
