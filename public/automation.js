@@ -64,14 +64,19 @@
   // Hansora Creative: a prompt is typed, the tiles "generate", then the next prompt.
   async function playCreative(section) {
     const text = section.querySelector('#lx-gen-text');
-    const prompts = ['Oak coffee table in a sunny living room', 'Nail art close-up, soft pink light', 'Fresh pasta ad, 9:16 video', 'Summer sale banner for Instagram'];
+    const prompts = ['Girl with silver wings flying over the mountains', 'Robot warrior in a misty forest, cinematic', 'Chocolate bar ad, bright and playful', 'Sunset sky lettering, GPT Image'];
+    // Real Hansora Creative results, loaded only now that the section is on screen.
+    const media = [...section.querySelectorAll('[data-src]')];
+    media.forEach(item => { item.src = item.dataset.src; });
+    const videos = media.filter(item => item.tagName === 'VIDEO');
     for (let round = 0; ; round++) {
       section.classList.remove('done'); section.classList.add('gen'); section.dataset.palette = String(round % 4);
       const prompt = prompts[round % prompts.length];
       for (let i = 1; i <= prompt.length; i++) { text.textContent = prompt.slice(0, i); await wait(28); }
       await wait(1800);
       section.classList.remove('gen'); section.classList.add('done');
-      await wait(3200);
+      videos.forEach(video => { try { video.currentTime = 0; } catch (_) {} video.play?.().catch(() => {}); });
+      await wait(5200);
       if (reduce) return;
     }
   }
