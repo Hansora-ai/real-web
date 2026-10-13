@@ -2055,3 +2055,55 @@ body[data-sel="text"] .for-clip { display: none !important; }
   .empty-preview { padding: 16px 0; }
 }
 .preview-wrap:has(#empty-preview:not([hidden])) #preview { visibility: hidden; }
+
+/* Localized copy can need two lines. Keep labels readable without changing the editor layout. */
+html:is([lang="hy"], [lang="ru"]) :is(#caption-editor, .studio-dialog) {
+  font-family: "Noto Sans", "Noto Sans Armenian", system-ui, sans-serif;
+}
+html:is([lang="hy"], [lang="ru"]) :is(.source-card, .empty-drop, .two-buttons button, .preset, .gen-footer button) {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  min-width: 0;
+}
+html:is([lang="hy"], [lang="ru"]) #caption-editor .tabs button {
+  padding-inline: 4px;
+  font-size: 11.5px;
+  white-space: normal;
+}
+html:is([lang="hy"], [lang="ru"]) :is(.field-row, .length-head, .export-summary, .gen-footer) {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+html:is([lang="hy"], [lang="ru"]) :is(.dialog-head h2, .sheet-head h2, .hint, .toast) {
+  overflow-wrap: anywhere;
+}
+html[lang="ru"] .gen-card.loading::after { content: "Добавляем…"; }
+html[lang="hy"] .gen-card.loading::after { content: "Ավելացվում է…"; }
+@media (max-width: 700px) {
+  html:is([lang="hy"], [lang="ru"]) { --mtools: calc(80px + env(safe-area-inset-bottom)); }
+  html:is([lang="hy"], [lang="ru"]) :is(.mobile-tools, .mobile-edit-bar) { --mtools: calc(80px + env(safe-area-inset-bottom)); }
+  html:is([lang="hy"], [lang="ru"]) #caption-editor :is(.mobile-tools, .edit-scroll) button {
+    flex: 0 0 auto;
+    min-width: 76px;
+    max-width: 116px;
+    min-height: 68px;
+    padding: 4px 8px;
+    font-size: 11.5px;
+    line-height: 1.25;
+    white-space: normal;
+  }
+  html:is([lang="hy"], [lang="ru"]) #caption-editor :is(.mobile-tools, .edit-scroll) button span {
+    display: block;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  html:is([lang="hy"], [lang="ru"]) #caption-editor .edit-back { min-width: 46px; max-width: 46px; }
+  html:is([lang="hy"], [lang="ru"]) .studio-dialog {
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+  html:is([lang="hy"], [lang="ru"]) .empty-preview { overflow-y: auto; padding-block: 14px; }
+  html:is([lang="hy"], [lang="ru"]) .empty-preview h1 { font-size: 18px; }
+  html:is([lang="hy"], [lang="ru"]) #caption-editor .empty-cards .empty-drop { min-height: 110px; }
+}
