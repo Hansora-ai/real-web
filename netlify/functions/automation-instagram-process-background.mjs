@@ -11,7 +11,7 @@ const KIND_LABELS={story_mention:'📣 Mentioned you in their story',share:'↪�
 const shownText=message=>String(message.text||KIND_LABELS[message.kind]||'').slice(0,24000);
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
 import { clickedActionId, nodeForAction, recordFlowEvent } from '../../lib/automation/flow-stats.mjs';
-import { automationPrices, canAfford, chargeCredits, handleOutOfCredits } from '../../lib/automation/billing.mjs';
+import { canAfford, chargeCredits, handleOutOfCredits, automationPricesFor, replyPrice } from '../../lib/automation/billing.mjs';
 import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
@@ -48,7 +48,7 @@ export async function handler(event){
     const loadedMs=Date.now()-startedAt;
     // Started now and awaited just before the AI: they only need the business, not the saved message.
     const settle=promise=>promise.then(value=>({value}),error=>({error}));const take=result=>{if(result.error)throw result.error;return result.value;};
-    const price=automationPrices().aiReply;
+    const rates=await automationPricesFor(account.business_id);let price=rates.aiReply;
     // The AI is brought up to date first if Hansora's rules or the owner's settings changed since its last update.
     const aiResourceP=settle(ensureAgentUpToDate({businessId:account.business_id}).catch(error=>console.error('automation agent auto-update failed',{message:error?.message})).then(()=>first(`/rest/v1/automation_provider_resources?business_id=eq.${account.business_id}&provider=eq.elevenlabs&resource_type=eq.agent&status=eq.active&select=*&limit=1`)));
     const affordableP=settle(canAfford(account.business_id,price));
@@ -201,7 +201,7 @@ export async function handler(event){
     console.log('automation reply timing',{channel:'instagram_dm',loaded_ms:loadedMs,ready_for_ai_ms:preparedMs,ai_ms:aiMs,to_send_ms:Date.now()-startedAt,chosen_delay_s:replyDelay});
     const outbound=await serviceInsert('automation_messages',{business_id:account.business_id,conversation_id:conversation.id,external_message_id:String(sent.message_id||''),idempotency_key:`meta:instagram:out:${message.externalEventId}`,direction:'outbound',sender_type:'ai',content_type:'text',content:generated.text,status:'sent',billable:true,provider:'meta',model:generated.model||'eleven-agents',provider_message_id:String(sent.message_id||''),metadata:{recipient_id:message.senderId,elevenlabs_conversation_id:generated.conversationId||null},occurred_at:new Date().toISOString()},{ignoreDuplicates:true});
     // Charge only now that the reply was actually sent; the usage key doubles as the charge key.
-    const charge=outbound?await chargeCredits({businessId:account.business_id,idempotencyKey:`usage:instagram:${message.externalEventId}`,kind:'ai_reply',credits:price,conversationId:conversation.id,reference:{channel:'instagram_dm',message_id:outbound.id}}).catch(error=>{console.error('automation credit charge failed',{message:error?.message});return{ok:false,charged:0}}):null;
+    price=replyPrice(rates,media);const charge=outbound?await chargeCredits({businessId:account.business_id,idempotencyKey:`usage:instagram:${message.externalEventId}`,kind:'ai_reply',credits:price,conversationId:conversation.id,reference:{channel:'instagram_dm',message_id:outbound.id}}).catch(error=>{console.error('automation credit charge failed',{message:error?.message});return{ok:false,charged:0}}):null;
     if(outbound)await serviceInsert('automation_usage_events',{business_id:account.business_id,conversation_id:conversation.id,message_id:outbound.id,channel_type:'instagram_dm',unit_type:'ai_message',quantity:1,billable_quantity:1,estimated_cost_minor:0,currency:'AMD',provider:generated.engine==='gemini'?'google':'elevenlabs',provider_usage_id:generated.conversationId||null,idempotency_key:`usage:instagram:${message.externalEventId}`,credits:charge?.charged||0,metadata:{meta_message_id:sent.message_id||null}},{ignoreDuplicates:true});
     await serviceUpdate('automation_conversations',`id=eq.${conversation.id}`,{last_message_preview:generated.text.slice(0,1000),last_message_at:new Date().toISOString()});
     // Where this customer stands (interested, ready, done…), read after the reply so it never slows it down.

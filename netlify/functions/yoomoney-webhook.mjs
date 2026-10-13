@@ -5,8 +5,11 @@
 import { createHash, createHmac } from "node:crypto";
 import { attributePurchaseToChat } from "../../lib/sales-agent/attribution.mjs";
 
+// Credits → expected ruble amount. 150 and 265 are the Hansora Automation Starter and Growth packs.
 const PACKS = {
   100: { rub: 750 },
+  150: { rub: 1100 },
+  265: { rub: 1850 },
   210: { rub: 1500 },
   535: { rub: 3700 },
   1100: { rub: 7400 }
@@ -228,8 +231,10 @@ async function enrichFromOperationDetails(payload, accessToken) {
 
 function parseLabel(label) {
   const parts = String(label || "").split("|");
-  if (parts[0] !== "hansora_web") return {};
+  // hansora_web = Hansora Creative pricing page, hansora_auto = Hansora Automation pricing page.
+  if (parts[0] !== "hansora_web" && parts[0] !== "hansora_auto") return {};
   return {
+    source: parts[0] === "hansora_auto" ? "automation" : "creative",
     credits: Number(parts[1] || 0),
     uid: parts[2] || "",
     email: parts.slice(3).join("|") || ""

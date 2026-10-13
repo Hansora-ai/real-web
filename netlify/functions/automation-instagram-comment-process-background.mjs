@@ -1,5 +1,5 @@
 import { decryptSecret } from '../../lib/automation/crypto.mjs';
-import { automationPrices, canAfford, chargeCredits } from '../../lib/automation/billing.mjs';
+import { automationPricesFor, canAfford, chargeCredits } from '../../lib/automation/billing.mjs';
 import { byPriority, entryIndex, matchesCommentText, pickReplyVariation, preparePrivateReply } from '../../lib/automation/comment-flow.mjs';
 import { executeFlowAdvance } from '../../lib/automation/flow-executor.mjs';
 import { makeFlowStarter } from '../../lib/automation/dm-triggers.mjs';
@@ -58,7 +58,7 @@ async function runWorkflow({workflow,comment,account,connection,accessToken}){
   }
   // One comment automation run = 1⚡, however many messages, buttons and steps it has (AI Step replies are charged
   // as normal AI replies). Without credits the automation does not start.
-  const fee=automationPrices().commentRun;
+  const fee=(await automationPricesFor(account.business_id)).commentRun;
   if(fee>0){const afford=await canAfford(account.business_id,fee).catch(()=>({ok:true}));if(!afford.ok){console.warn('comment automation not started: out of credits',{businessId:account.business_id,workflowId:workflow.id});return false;}}
   const execution=await serviceInsert('automation_comment_executions',{business_id:account.business_id,workflow_id:workflow.id,comment_id:comment.commentId,media_id:comment.mediaId,external_contact_id:comment.senderId,comment_text:comment.text,status:'processing'},{ignoreDuplicates:true});
   if(!execution)return false;

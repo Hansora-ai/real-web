@@ -1,6 +1,6 @@
 import { first, serviceInsert, serviceUpdate, serviceUpsert } from '../../lib/automation/db.mjs';
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
-import { automationPrices, canAfford, chargeCredits, handleOutOfCredits } from '../../lib/automation/billing.mjs';
+import { canAfford, chargeCredits, handleOutOfCredits, automationPricesFor, replyPrice } from '../../lib/automation/billing.mjs';
 import { notifyOwner } from '../../lib/automation/notify.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { keepTyping } from '../../lib/automation/typing.mjs';
@@ -58,7 +58,7 @@ export async function handler(event) {
 
     const settle = promise => promise.then(value => ({ value }), error => ({ error }));
     const take = result => { if (result.error) throw result.error; return result.value; };
-    const price = automationPrices().aiReply;
+    const rates = await automationPricesFor(account.business_id); let price = rates.aiReply;
     const aiResourceP = settle(ensureAgentUpToDate({ businessId: account.business_id }).catch(error => console.error('automation agent auto-update failed', { message: error?.message })).then(() => first(`/rest/v1/automation_provider_resources?business_id=eq.${account.business_id}&provider=eq.elevenlabs&resource_type=eq.agent&status=eq.active&select=*&limit=1`)));
     const affordableP = settle(canAfford(account.business_id, price));
     const hasMedia = Boolean(mediaKind) && /^https:\/\//.test(message.attachmentUrl || '');
@@ -114,7 +114,7 @@ export async function handler(event) {
     const sent = await sendMessengerText({ ...typingTarget, text: generated.text });
     pendingReply = null;
     const outbound = await serviceInsert('automation_messages', { business_id: account.business_id, conversation_id: conversation.id, external_message_id: sent.messageId || null, idempotency_key: `messenger:out:${message.externalEventId}`, direction: 'outbound', sender_type: 'ai', content_type: 'text', content: generated.text, status: 'sent', billable: true, provider: 'meta', model:generated.model||'eleven-agents', provider_message_id: sent.messageId || null, metadata: { recipient_id: chatId, page_id: message.pageId, elevenlabs_conversation_id: generated.conversationId || null }, occurred_at: new Date().toISOString() }, { ignoreDuplicates: true });
-    const charge = outbound ? await chargeCredits({ businessId: account.business_id, idempotencyKey: `usage:messenger:${message.externalEventId}`, kind: 'ai_reply', credits: price, conversationId: conversation.id, reference: { channel: 'messenger', message_id: outbound.id } }).catch(error => { console.error('automation credit charge failed', { message: error?.message }); return { ok: false, charged: 0 }; }) : null;
+    price = replyPrice(rates, media); const charge = outbound ? await chargeCredits({ businessId: account.business_id, idempotencyKey: `usage:messenger:${message.externalEventId}`, kind: 'ai_reply', credits: price, conversationId: conversation.id, reference: { channel: 'messenger', message_id: outbound.id } }).catch(error => { console.error('automation credit charge failed', { message: error?.message }); return { ok: false, charged: 0 }; }) : null;
     if (outbound) await serviceInsert('automation_usage_events', { business_id: account.business_id, conversation_id: conversation.id, message_id: outbound.id, channel_type: 'messenger', unit_type: 'ai_message', quantity: 1, billable_quantity: 1, estimated_cost_minor: 0, currency: 'AMD', provider:generated.engine==='gemini'?'google':'elevenlabs', provider_usage_id: generated.conversationId || null, idempotency_key: `usage:messenger:${message.externalEventId}`, credits: charge?.charged || 0, metadata: { messenger_message_id: sent.messageId || null } }, { ignoreDuplicates: true });
     await serviceUpdate('automation_conversations', `id=eq.${conversation.id}`, { last_message_preview: generated.text.slice(0, 1000), last_message_at: new Date().toISOString() }); // after the reply, never slows it
     await markProcessed(webhook.id, account.business_id);

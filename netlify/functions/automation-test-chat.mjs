@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { authenticateRequest, isUuid } from '../../lib/sales-agent/auth.mjs';
 import { first, rows, serviceInsert, serviceUpsert, supabaseRequest } from '../../lib/automation/db.mjs';
 import { generateAutomationReply } from '../../lib/automation/provider.mjs';
-import { automationPrices, canAfford, chargeCredits, toDisplay } from '../../lib/automation/billing.mjs';
+import { automationPricesFor, canAfford, chargeCredits, toDisplay } from '../../lib/automation/billing.mjs';
 import { prepareConversationActions } from '../../lib/automation/tools.mjs';
 import { buildConversationContext, loadConversationMemory } from '../../lib/automation/history.mjs';
 import { ensureAgentUpToDate } from '../../lib/automation/agent-sync.mjs';
@@ -27,7 +27,7 @@ export async function handler(event){
     await ensureAgentUpToDate({businessId}).catch(error=>console.error('automation agent auto-update failed',{message:error?.message}));
     const aiResource=await first(`/rest/v1/automation_provider_resources?business_id=eq.${encodeURIComponent(businessId)}&provider=eq.elevenlabs&resource_type=eq.agent&status=eq.active&select=*&limit=1`);
     if(!aiResource)return json(409,{error:'ai_provider_agent_not_ready'});
-    const price=automationPrices().testReply;
+    const price=(await automationPricesFor(businessId)).testReply;
     const affordable=await canAfford(businessId,price);
     if(!affordable.ok)return json(402,{error:'not_enough_credits',balance:toDisplay(affordable.balance)});
 
