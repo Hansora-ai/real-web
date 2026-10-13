@@ -5,6 +5,7 @@ import { duration, locate, frameSize, audioClips, timelineCaptions } from "./cor
 import { fit, drawOverlays } from "./render.mjs";
 import { exportVideo, cancelExport as cancelFfmpeg, muxAudio } from "./export.mjs";
 import { Muxer, ArrayBufferTarget } from "/vendor/mp4-muxer/mp4-muxer.mjs";
+import { openVideo } from "./decoder.mjs";
 
 const FPS = 30, RATE = 48000;
 let cancelled = false;
@@ -88,33 +89,50 @@ async function encodeAudio(muxer, buffer) {
   if (failure) throw failure;
 }
 
-// One hidden <video> per source; frames are reached by seeking.
+// Frames are decoded front to back with WebCodecs (decoder.mjs). Sources it
+// cannot read fall back to one hidden <video> per source, reached by seeking.
 function seeker() {
-  const players = new Map();
+  const players = new Map(), decoders = new Map();
+  const seek = async (asset, at) => {
+    let v = players.get(asset.id);
+    if (!v) {
+      v = document.createElement("video");
+      v.muted = true; v.playsInline = true; v.preload = "auto"; v.src = asset.url;
+      players.set(asset.id, v);
+      await new Promise((resolve, reject) => {
+        if (v.readyState >= 1) return resolve();
+        v.onloadedmetadata = resolve; v.onerror = () => reject(Error("Could not read a video for export."));
+      });
+    }
+    const target = Math.min(Math.max(0, at), Math.max(0, asset.duration - 0.001));
+    if (Math.abs(v.currentTime - target) > 0.0005 || v.readyState < 2) {
+      await new Promise((resolve) => {
+        const done = () => { clearTimeout(timer); v.removeEventListener("seeked", done); resolve(); };
+        const timer = setTimeout(done, 4000);
+        v.addEventListener("seeked", done);
+        v.currentTime = target;
+      });
+    }
+    return { image: v, width: v.videoWidth, height: v.videoHeight };
+  };
   return {
     async frame(asset, at) {
-      let v = players.get(asset.id);
-      if (!v) {
-        v = document.createElement("video");
-        v.muted = true; v.playsInline = true; v.preload = "auto"; v.src = asset.url;
-        players.set(asset.id, v);
-        await new Promise((resolve, reject) => {
-          if (v.readyState >= 1) return resolve();
-          v.onloadedmetadata = resolve; v.onerror = () => reject(Error("Could not read a video for export."));
-        });
+      if (!decoders.has(asset.id)) decoders.set(asset.id, await openVideo(asset));
+      const decoder = decoders.get(asset.id);
+      if (decoder) {
+        try {
+          const f = await decoder.frame(Math.min(Math.max(0, at), Math.max(0, asset.duration - 0.001)));
+          return { image: f, width: f.displayWidth, height: f.displayHeight };
+        } catch {
+          decoder.close(); decoders.set(asset.id, null);
+        }
       }
-      const target = Math.min(Math.max(0, at), Math.max(0, asset.duration - 0.001));
-      if (Math.abs(v.currentTime - target) > 0.0005 || v.readyState < 2) {
-        await new Promise((resolve) => {
-          const done = () => { clearTimeout(timer); v.removeEventListener("seeked", done); resolve(); };
-          const timer = setTimeout(done, 4000);
-          v.addEventListener("seeked", done);
-          v.currentTime = target;
-        });
-      }
-      return v;
+      return seek(asset, at);
     },
-    close() { for (const v of players.values()) { v.removeAttribute("src"); v.load(); } },
+    close() {
+      for (const d of decoders.values()) d?.close();
+      for (const v of players.values()) { v.removeAttribute("src"); v.load(); }
+    },
   };
 }
 
@@ -153,8 +171,8 @@ export async function fastExport(p, assets, report) {
       ctx.fillStyle = "#000"; ctx.fillRect(0, 0, width, height);
       const at = locate(p, t), a = assets.get(at?.clip.assetId);
       if (a?.kind === "video") {
-        const v = await videos.frame(a, at.sourceTime), box = fit(v.videoWidth, v.videoHeight, width, height);
-        ctx.drawImage(v, box.x, box.y, box.w, box.h);
+        const v = await videos.frame(a, at.sourceTime), box = fit(v.width, v.height, width, height);
+        ctx.drawImage(v.image, box.x, box.y, box.w, box.h);
       } else if (a?.kind === "image" && a.image) {
         const s = at.clip.style || { width: 100, x: 50, y: 50 }, f = fit(a.width, a.height, width, height);
         const bw = f.w * s.width / 100, bh = f.h * s.width / 100;
@@ -164,7 +182,9 @@ export async function fastExport(p, assets, report) {
       const frame = new VideoFrame(canvas, { timestamp: Math.round(t * 1e6), duration: Math.round(1e6 / FPS) });
       encoder.encode(frame, { keyFrame: i % (FPS * 2) === 0 });
       frame.close();
-      while (encoder.encodeQueueSize > 6) await new Promise((r) => setTimeout(r, 4));
+      // Wait on the encoder itself: timers are slowed to 1 per second in background tabs.
+      while (encoder.encodeQueueSize > 6)
+        await new Promise((r) => ("ondequeue" in encoder ? encoder.addEventListener("dequeue", r, { once: true }) : setTimeout(r, 4)));
       if (i % 10 === 0) report(3 + 85 * i / frames, `Rendering ${Math.round(100 * i / frames)}%`);
     }
     await encoder.flush();
