@@ -141,6 +141,18 @@
         ['a', 'Reserved ✓ A table for 4 at 20:00. Can’t wait to see you!']
       ],
       result: ['🍽️', 'Table reserved', 'Tonight 20:00 · 4 people'], alert: 'Reservation sent to the owner'
+    },
+    {
+      business: 'Smile Dental Clinic', logo: 'S', tone: 'smile', channel: 'Phone call', icon: 'phone',
+      steps: [
+        ['call', 'Incoming call · +1 555 0142'],
+        ['say-a', 'Hello, Smile Dental Clinic! How can I help you today?'],
+        ['say-c', 'Hi, I’d like a teeth cleaning this week.'],
+        ['say-a', 'Of course. Thursday at 10:00 or Friday at 15:30?'],
+        ['say-c', 'Thursday at ten works.'],
+        ['say-a', 'You’re booked for Thursday at 10:00. We’ll text you a reminder!']
+      ],
+      result: ['📅', 'Appointment booked', 'Thu 10:00 · Teeth cleaning · $90'], alert: 'Call summary sent to the owner'
     }
   ];
   const thread = $('#lx-thread');
@@ -163,6 +175,15 @@
     return token === run;
   }
 
+  // Phone-call card: caller, live timer and a voice wave while the AI talks.
+  let callTimer = null;
+  function startCall(text, token) {
+    const card = add('call-card', `<span class="lx-call-ring">📞</span><div><b>${escapeHtml(text)}</b><small>AI employee answered · <i class="lx-call-time">0:00</i></small></div><span class="lx-wave">${'<i></i>'.repeat(14)}</span>`);
+    const clock = card.querySelector('.lx-call-time'); let seconds = 0;
+    clearInterval(callTimer);
+    callTimer = setInterval(() => { if (token !== run || !card.isConnected) return clearInterval(callTimer); seconds++; clock.textContent = `0:${String(seconds).padStart(2, '0')}`; }, 1000);
+  }
+
   async function play() {
     const token = ++run;
     const scene = scenes[current];
@@ -170,6 +191,7 @@
     $('#lx-biz-name').textContent = scene.business;
     const logo = $('#lx-biz-logo'); logo.textContent = scene.logo; logo.className = `lx-biz ${scene.tone}`;
     $('#lx-channel').textContent = scene.channel; $('#lx-channel-icon').innerHTML = ui.icon(scene.icon);
+    clearInterval(callTimer); composer.parentElement.classList.toggle('calling', scene.channel === 'Phone call');
     thread.innerHTML = ''; result.classList.remove('show'); alertCard.classList.remove('show'); composer.textContent = 'Message…';
     await wait(500);
     for (const [kind, value] of scene.steps) {
@@ -177,6 +199,14 @@
       if (kind === 'c') { if (!await typeIntoComposer(value, token)) return; add('c', escapeHtml(value)); await wait(500); }
       else if (kind === 'voice') { add('c voice', `<span class="lx-wave">${'<i></i>'.repeat(18)}</span><small>0:06</small>`); await wait(900); add('transcript', `🎤 “${escapeHtml(value)}”`); await wait(600); }
       else if (kind === 'note') { add('note', escapeHtml(value)); await wait(800); }
+      else if (kind === 'call') { startCall(value, token); await wait(1400); }
+      else if (kind === 'say-a' || kind === 'say-c') {
+        const who = kind === 'say-a' ? 'a' : 'c';
+        const line = add(`${who} spoken`, `<span class="lx-speaker">${who === 'a' ? '🤖 AI' : '👤 Caller'}</span><span class="lx-said"></span>`);
+        const target = line.querySelector('.lx-said');
+        for (let i = 1; i <= value.length; i++) { if (token !== run) return; target.textContent = value.slice(0, i); if (i % 3 === 0) scrollThread(); await wait(reduce ? 0 : 22); }
+        await wait(600);
+      }
       else if (kind === 'card') { add('a card', `<span class="lx-card-img ${value.tone}"${value.photo ? ` style="background-image:url(${value.photo})"` : ''}></span><b>${escapeHtml(value.title)}</b><small>${escapeHtml(value.price)}</small><span class="lx-card-btn">View</span>`); await wait(900); }
       else { const dots = add('a dots', '<i></i><i></i><i></i>'); await wait(1000); if (token !== run) return; dots.remove(); add('a', escapeHtml(value)); await wait(700); }
     }
