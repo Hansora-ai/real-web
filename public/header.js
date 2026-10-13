@@ -98,7 +98,7 @@
     if (!document.querySelector('link[data-hansora-sales-agent]')) {
       const style = document.createElement('link');
       style.rel = 'stylesheet';
-      style.href = '/sales-agent.css?v=20260915.4';
+      style.href = '/sales-agent.css?v=20261013';
       style.dataset.hansoraSalesAgent = '1';
       document.head.appendChild(style);
     }
