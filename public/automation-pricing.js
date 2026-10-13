@@ -12,18 +12,18 @@
   // Pay as you go. credits/bonus are stored credits (what the payment adds to profiles.credits). rub must match
   // PACKS in netlify/functions/yoomoney-webhook.mjs. A card pack is buyable once its Dodo product exists.
   const PACKS = [
-    { id: 'starter', name: 'Starter', price: 14.99, rub: 1100, credits: 150, bonus: 0, product: '', note: 'Try it on one channel' },
-    { id: 'growth', name: 'Growth', price: 24.99, rub: 1850, credits: 250, bonus: 15, product: '', note: 'For a busy Instagram', popular: true },
+    { id: 'starter', name: 'Starter', price: 14.99, rub: 1100, credits: 150, bonus: 0, product: 'https://checkout.dodopayments.com/buy/pdt_0NpePPSth80ohulWU0r3D', note: 'Try it on one channel' },
+    { id: 'growth', name: 'Growth', price: 24.99, rub: 1850, credits: 250, bonus: 15, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQ0zMDMcghYvelVXBm', note: 'For a busy Instagram', popular: true },
     { id: 'business', name: 'Business', price: 49.99, rub: 3700, credits: 500, bonus: 35, product: 'https://checkout.dodopayments.com/buy/pdt_oVJI6GNjziGZKrXtVczUY', note: 'Several channels and calls' },
     { id: 'scale', name: 'Scale', price: 99.99, rub: 7400, credits: 1000, bonus: 100, product: 'https://checkout.dodopayments.com/buy/pdt_e8UPGoRi6Sf36NoxV7fAF', note: 'Several AI employees' }
   ];
 
   // Monthly plans (Dodo subscriptions). credits = ⚡ added every paid month. product = the Dodo subscription link.
   const PLANS = [
-    { id: 'automation_starter_monthly', name: 'Starter', price: 49, credits: 4900, product: '', note: 'One busy shop', rates: { aiReply: 1, mediaReply: 2, commentRun: 1, voiceMinute: 8 } },
-    { id: 'automation_growth_monthly', name: 'Growth', price: 99, credits: 9900, product: '', note: 'Instagram sellers with many comments', popular: true, rates: { aiReply: 1, mediaReply: 2, commentRun: 0.5, voiceMinute: 7 } },
-    { id: 'automation_business_monthly', name: 'Business', price: 149, credits: 14900, product: '', note: 'Every channel and phone calls', rates: { aiReply: 0.9, mediaReply: 2, commentRun: 0.5, voiceMinute: 7 } },
-    { id: 'automation_scale_monthly', name: 'Scale', price: 199, credits: 19900, product: '', note: 'Agencies and high volume', rates: { aiReply: 0.8, mediaReply: 2, commentRun: 0.3, voiceMinute: 6 } }
+    { id: 'automation_starter_monthly', name: 'Starter', price: 49, credits: 4900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQYSDnUbMHvi9Gt6yy', note: 'One busy shop', rates: { aiReply: 1, mediaReply: 2, commentRun: 1, voiceMinute: 8 } },
+    { id: 'automation_growth_monthly', name: 'Growth', price: 99, credits: 9900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeQrUC5gB5c3Jk8zZE9', note: 'Instagram sellers with many comments', popular: true, rates: { aiReply: 1, mediaReply: 2, commentRun: 0.5, voiceMinute: 7 } },
+    { id: 'automation_business_monthly', name: 'Business', price: 149, credits: 14900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeR55QAhlX4ViGBTCF4', note: 'Every channel and phone calls', rates: { aiReply: 0.9, mediaReply: 2, commentRun: 0.5, voiceMinute: 7 } },
+    { id: 'automation_scale_monthly', name: 'Scale', price: 199, credits: 19900, product: 'https://checkout.dodopayments.com/buy/pdt_0NpeRJQYrPCPCIK9zbEb1', note: 'Agencies and high volume', rates: { aiReply: 0.8, mediaReply: 2, commentRun: 0.3, voiceMinute: 6 } }
   ];
 
   const fmt = new Intl.NumberFormat('en-US');
@@ -35,6 +35,18 @@
 
   const icon = name => ui?.icon(name) || '';
   const li = (name, html) => `<li>${icon(name)}<span>${html}</span></li>`;
+  const usd = value => `$${value.toFixed(value % 1 ? 2 : 0)}`;
+
+  // What the ⚡ buy, one line per kind of work ("or": they share the same balance).
+  function capacity(zaps, rates) {
+    const count = rate => fmt.format(Math.floor(zaps / rate + 1e-9));
+    return `<div class="ui-pack-capacity"><p>Enough for about</p><ul>
+      <li>${icon('message')}<b>${count(rates.aiReply)}</b><span>AI replies</span></li>
+      <li>${icon('comment')}<b>${count(rates.commentRun)}</b><span>comment automations</span></li>
+      <li>${icon('phone')}<b>${count(rates.voiceMinute)}</b><span>call minutes</span></li>
+      <li>${icon('eye')}<b>${count(rates.mediaReply)}</b><span>photo or video replies</span></li>
+    </ul><small>Mix them as you like – one balance.</small></div>`;
+  }
 
   function renderPacks() {
     const base = PACKS[0].price / ((PACKS[0].credits + PACKS[0].bonus) * DISPLAY);
@@ -46,14 +58,10 @@
       return `<article class="ui-card ui-pack${pack.popular ? ' popular' : ''}">
         ${pack.popular ? '<span class="ui-pack-flag">Most popular</span>' : ''}
         <div class="ui-pack-head"><h2>${pack.name}</h2><p>${pack.note}</p></div>
-        <div class="ui-pack-price"><strong>${ru ? `${fmt.format(pack.rub)} ₽` : `$${pack.price.toFixed(2)}`}</strong>${save > 0 ? `<span class="ui-badge green">Save ${save}%</span>` : '<span class="ui-pack-once">one-time</span>'}</div>
-        <div class="ui-pack-credits"><b>${zap(total)}</b>${pack.bonus ? `<small>${zap(pack.credits * DISPLAY)} + ${zap(pack.bonus * DISPLAY)} bonus</small>` : '<small>credits</small>'}</div>
-        <ul class="ui-pack-list">
-          ${li('message', `<b>≈ ${fmt.format(Math.floor(total / PAYG_RATES.aiReply))}</b> AI replies`)}
-          ${li('phone', `or <b>≈ ${fmt.format(Math.floor(total / PAYG_RATES.voiceMinute))}</b> phone call minutes`)}
-          ${li('comment', 'Comment &amp; DM automations')}
-          ${li('check', 'Unlimited AI employees, every channel')}
-        </ul>
+        <div class="ui-pack-price">${save > 0 ? `<s>${ru ? `${fmt.format(Math.round(pack.rub / (1 - save / 100) / 10) * 10)} ₽` : usd(total * base)}</s>` : ''}<strong>${ru ? `${fmt.format(pack.rub)} ₽` : `$${pack.price.toFixed(2)}`}</strong>${save > 0 ? `<span class="ui-badge green">Save ${save}%</span>` : '<span class="ui-pack-once">one-time</span>'}</div>
+        <div class="ui-pack-credits"><b>${zap(total)}</b>${pack.bonus ? `<small>${zap(pack.credits * DISPLAY)} + <em>${zap(pack.bonus * DISPLAY)} bonus</em></small>` : '<small>credits · no subscription</small>'}</div>
+        ${capacity(total, PAYG_RATES)}
+        <ul class="ui-pack-list">${li('check', 'Unlimited AI employees, every channel')}</ul>
         <button class="ui-btn ${pack.popular ? 'primary' : 'secondary'} ui-pack-buy" type="button" data-pack="${pack.id}"${soon ? ' data-soon' : ''}>${soon ? 'Available soon' : `Buy ${zap(total)}`}</button>
       </article>`;
     }).join('');
@@ -65,15 +73,19 @@
       const isCurrent = current?.plan_id === plan.id;
       const soon = !plan.product;
       const save = Math.round((1 - plan.rates.aiReply / PAYG_RATES.aiReply) * 100);
+      // Honest "was" price: what the same number of AI replies costs with pay-as-you-go ⚡ ($1 = 100⚡).
+      const worth = plan.credits / plan.rates.aiReply * PAYG_RATES.aiReply / 100;
+      const off = Math.round((1 - plan.price / worth) * 100);
       return `<article class="ui-card ui-pack ui-plan${plan.popular ? ' popular' : ''}${isCurrent ? ' current' : ''}">
         ${isCurrent ? '<span class="ui-pack-flag current">Your plan</span>' : plan.popular ? '<span class="ui-pack-flag">Most popular</span>' : ''}
         <div class="ui-pack-head"><h2>${plan.name}</h2><p>${plan.note}</p></div>
-        <div class="ui-pack-price"><strong>$${plan.price}</strong><span class="ui-pack-once">/ month</span></div>
-        <div class="ui-pack-credits"><b>${zap(plan.credits)}</b><small>every month · ≈ ${fmt.format(Math.floor(plan.credits / plan.rates.aiReply))} AI replies</small></div>
+        <div class="ui-pack-price">${worth > plan.price ? `<s>${usd(Math.round(worth))}</s>` : ''}<strong>$${plan.price}</strong><span class="ui-pack-once">/ month</span>${off > 0 ? `<span class="ui-badge green">Save ${off}%</span>` : ''}</div>
+        <div class="ui-pack-credits"><b>${zap(plan.credits)}</b><small>every month · cancel any time</small></div>
+        ${capacity(plan.credits, plan.rates)}
         <ul class="ui-pack-list">
           ${li('message', `AI reply <b>${zap(plan.rates.aiReply)}</b>${save > 0 ? ` <span class="ui-plan-save">−${save}%</span>` : ''}`)}
-          ${li('comment', `Comment automation <b>${zap(plan.rates.commentRun)}</b> / run`)}
-          ${li('phone', `Phone call <b>${zap(plan.rates.voiceMinute)}</b> / min`)}
+          ${li('comment', `Comment automation <b>${zap(plan.rates.commentRun)}</b>${plan.rates.commentRun < PAYG_RATES.commentRun ? ` <span class="ui-plan-save">−${Math.round((1 - plan.rates.commentRun / PAYG_RATES.commentRun) * 100)}%</span>` : ''}`)}
+          ${li('phone', `Phone call <b>${zap(plan.rates.voiceMinute)}</b> / min${plan.rates.voiceMinute < PAYG_RATES.voiceMinute ? ` <span class="ui-plan-save">−${Math.round((1 - plan.rates.voiceMinute / PAYG_RATES.voiceMinute) * 100)}%</span>` : ''}`)}
           ${li('check', 'Unlimited AI employees, every channel')}
         </ul>
         <button class="ui-btn ${plan.popular ? 'primary' : 'secondary'} ui-pack-buy" type="button" data-plan="${plan.id}"${soon && !isCurrent ? ' data-soon' : ''}${isCurrent ? ' disabled' : ''}>${isCurrent ? 'Current plan' : soon ? 'Available soon' : current ? `Switch to ${plan.name}` : `Start ${plan.name}`}</button>

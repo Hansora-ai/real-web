@@ -829,3 +829,13 @@ body[data-comment-platform="tiktok"] .post-picker-grid img{width:100%;aspect-rat
 .ui-rate-table tbody th strong{display:block;font-size:14px}.ui-rate-table tbody th small{display:block;margin-top:2px;color:var(--text-3);font-size:12px}
 .ui-rate-table td{font-weight:600}.ui-rate-table td.cheaper{color:var(--green)}.ui-rate-table td.free{color:var(--green)}
 @media(max-width:600px){.ui-plan-current{flex-direction:column;align-items:flex-start}.ui-rate-table th,.ui-rate-table td{padding:11px 10px}}
+.ui-pack-price s{color:var(--text-3);font-size:17px;font-weight:500;text-decoration-thickness:1.5px}
+.ui-pack-credits em{font-style:normal;color:var(--green)}
+.ui-pack-capacity{display:grid;gap:8px;padding:12px 12px 10px;border:1px dashed var(--border-2);border-radius:12px}
+.ui-pack-capacity p{margin:0;color:var(--text-3);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em}
+.ui-pack-capacity ul{display:grid;gap:7px;margin:0;padding:0;list-style:none}
+.ui-pack-capacity li{display:grid;grid-template-columns:16px auto 1fr;align-items:center;gap:8px;font-size:13px;color:var(--text-2)}
+.ui-pack-capacity li svg{width:15px;height:15px;color:var(--text-3)}
+.ui-pack-capacity li b{color:var(--text);font-variant-numeric:tabular-nums}
+.ui-pack-capacity small{color:var(--text-3);font-size:11.5px}
+.ui-pack.popular .ui-pack-capacity{border-color:color-mix(in srgb,var(--accent) 45%,var(--border-2))}
