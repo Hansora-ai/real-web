@@ -1,3 +1,4 @@
+import { tr, errorMessage, localizedHref } from "./locale.mjs";
 import {
   uid,
   clamp,
@@ -76,13 +77,14 @@ let p = newProject(),
   toastTimer = null,
   resultURL = null,
   connection = { local: false, configured: false };
+p.name = tr(p.name);
 const clock = (t) => {
   const n = Math.max(0, t);
   return `${String(Math.floor(n / 60)).padStart(2, "0")}:${(n % 60).toFixed(1).padStart(4, "0")}`;
 };
 function toast(message, error = false) {
   clearTimeout(toastTimer);
-  $("toast").textContent = message;
+  $("toast").textContent = error ? errorMessage(message) : tr(message);
   $("toast").classList.toggle("error", error);
   $("toast").hidden = false;
   toastTimer = setTimeout(
@@ -94,7 +96,7 @@ const run = (fn) => async (event) => {
   try {
     await fn(event);
   } catch (error) {
-    toast(error.message || "Something went wrong. Please try again.", true);
+    toast(error.message || tr("Something went wrong. Please try again."), true);
   }
 };
 function click(id, fn) {
@@ -131,7 +133,7 @@ function change(fn) {
 }
 function scheduleSave() {
   const revision = ++saveRevision;
-  $("save-status").textContent = "Saving…";
+  $("save-status").textContent = tr("Saving…");
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     const project = structuredClone(p),
@@ -141,12 +143,12 @@ function scheduleSave() {
       .then(() => (project.clips.length || list.size) ? saveProject(project, list, thumbnail()) : null)
       .then(() => {
         if (revision === saveRevision)
-          $("save-status").textContent = "Saved on this device";
+          $("save-status").textContent = tr("Saved on this device");
       })
       .catch(() => {
         if (revision === saveRevision)
           $("save-status").textContent =
-            "Save unavailable · download a project";
+            tr("Save unavailable · download a project");
       });
   }, 700);
 }
@@ -218,13 +220,13 @@ function sizePreview() {
 }
 function focusPreview(focus) {
   document.body.classList.toggle("preview-focus",focus);
-  $("preview-expand").querySelector("span").textContent=focus?"Timeline":"Focus";
-  $("preview-expand").title=focus?"Show timeline and editing controls":"Enlarge preview";
+  $("preview-expand").querySelector("span").textContent=focus?tr("Timeline"):tr("Focus");
+  $("preview-expand").title=focus?tr("Show timeline and editing controls"):tr("Enlarge preview");
   $("preview-expand").setAttribute("aria-pressed",String(focus));
 }
 // The timeline stays visible after an upload (CapCut-style); Focus is opt-in.
 function focusPortrait() { closeSheets(); }
-const SHEET_TITLES={media:"Media",captions:"Captions",layers:"Text",audio:"Audio"};
+const SHEET_TITLES={media:tr("Media"),captions:tr("Captions"),layers:tr("Text"),audio:tr("Audio")};
 function tab(name) {
   activeTab = name;
   $("sheet-title").textContent=SHEET_TITLES[name];
@@ -255,14 +257,14 @@ function renderUI() {
   $("empty-preview").hidden = duration(p) > 0;
   if (duration(p)) $("recent-projects").hidden = true;
   $("media-count").textContent =
-    `${[...assets.values()].filter((a) => a.kind !== "font").length} files`;
+    tr("{0} files", {0: [...assets.values()].filter((a) => a.kind !== "font").length});
   $("media-list").replaceChildren();
   for (const a of assets.values()) {
     if (a.kind === "font") continue;
     const card = document.createElement("div");
     card.className = "media-card";
     const thumb = button("", () => previewMedia(a.id), "media-thumb");
-    thumb.setAttribute("aria-label", `Preview ${a.file.name}`);
+    thumb.setAttribute("aria-label", tr("Preview {0}", {0: a.file.name}));
     if (a.frames?.length) {
       const image = document.createElement("img");
       image.src = a.frames[0].url;
@@ -273,16 +275,16 @@ function renderUI() {
     } else thumb.textContent = "♫";
     const length = document.createElement("span");
     length.className = "media-duration";
-    length.textContent = a.kind === "image" ? "Image · 3s" : clock(a.duration);
+    length.textContent = a.kind === "image" ? tr("Image · 3s") : clock(a.duration);
     thumb.append(length);
     const name = document.createElement("strong");
     name.textContent = a.file.name;
     name.title = a.file.name;
     const add = button("＋", () => addToTimeline(a.id), "media-add");
-    add.setAttribute("aria-label", `Add ${a.file.name} to timeline`);
+    add.setAttribute("aria-label", tr("Add {0} to timeline", {0: a.file.name}));
     card.append(thumb, name, add);
-    if (a.kind === "image") card.append(button("＋ Layer",()=>addImageLayer(a.id),"media-action"));
-    if (a.kind === "video") card.append(button("♫ Audio",()=>addAudio(a.id),"media-action"));
+    if (a.kind === "image") card.append(button(tr("＋ Layer"),()=>addImageLayer(a.id),"media-action"));
+    if (a.kind === "video") card.append(button(tr("♫ Audio"),()=>addAudio(a.id),"media-action"));
     card.draggable = true;
     card.addEventListener("dragstart", (e) =>
       e.dataTransfer.setData("application/x-hansora-media", a.id),
@@ -291,9 +293,9 @@ function renderUI() {
   }
   const d = duration(p),
     captions = timelineCaptions(p);
-  $("timeline-duration").textContent = `${p.clips.length} clips · ${clock(d)}`;
+  $("timeline-duration").textContent = tr("{0} clips · {1}", {0: p.clips.length, 1: clock(d)});
   renderTimeline(d, captions);
-  $("caption-count").textContent = `${captions.length} captions`;
+  $("caption-count").textContent = tr("{0} captions", {0: captions.length});
   $("caption-list").replaceChildren();
   for (const q of captions) {
     const b = button(
@@ -320,7 +322,7 @@ function renderUI() {
   }
   $("edit-selection").disabled=!duration(p)||busy;
   $("toggle-tracks").disabled=!duration(p)||busy;
-  $("toggle-tracks").textContent=`Layers${p.layers.length+p.audio.length ? " · "+(p.layers.length+p.audio.length) : ""}`;
+  $("toggle-tracks").textContent=tr("Layers{0}", {0: p.layers.length+p.audio.length ? " · "+(p.layers.length+p.audio.length) : ""});
   $("words-label").textContent = `${Math.round(p.captionLength)}%`;
   $("caption-words").value = p.captionLength;
   for (const b of document.querySelectorAll("[data-length]")) b.classList.toggle("active", Math.abs(Number(b.dataset.length) - p.captionLength) < 1);
@@ -346,12 +348,12 @@ function renderUI() {
   const total = captionCost(targets.reduce((sum, id) => sum + assets.get(id).duration, 0));
   // Balances are shown ×10 across the site (see header.js), so the price is too.
   const shown = Number((total * (window.HansoraHeader?.creditDisplayMultiplier || 10)).toFixed(2));
-  $("generate-label").textContent = targets.length ? `Auto captions · ${shown}⚡` : "Auto captions";
+  $("generate-label").textContent = targets.length ? tr("Auto captions · {0}⚡", {0: shown}) : tr("Auto captions");
   $("reverse").disabled = busy || assets.get(currentClip()?.assetId)?.kind !== "video";
   const layerSelected=p.layers.some(l=>l.id===selectedOverlay);
   $("move-left").textContent=layerSelected?"↓":"←";$("move-right").textContent=layerSelected?"↑":"→";
-  $("move-left").title=layerSelected?"Send layer backward":"Move earlier";
-  $("move-right").title=layerSelected?"Bring layer forward":"Move later";
+  $("move-left").title=layerSelected?tr("Send layer backward"):tr("Move earlier");
+  $("move-right").title=layerSelected?tr("Bring layer forward"):tr("Move later");
   const size = frameSize(p, assets);
   if (canvas.width !== size.width || canvas.height !== size.height) {
     canvas.width = size.width;
@@ -379,15 +381,15 @@ function renderInspector() {
   $("text-options").hidden = !showText || q?.kind === "image";
   $("clip-inspector").hidden = !c || Boolean(q) || Boolean(audio) || activeTab === "captions";
   $("inspector-empty").hidden = Boolean(c) || showText || Boolean(audio);
-  $("inspector-title").textContent = audio ? "Audio" : q
+  $("inspector-title").textContent = audio ? tr("Audio") : q
     ? q.kind === "image"
-      ? "Image"
+      ? tr("Image")
       : q.kind === "text"
-        ? "Text"
-        : "Caption"
+        ? tr("Text")
+        : tr("Caption")
     : showText
-      ? "Caption style"
-      : "Video";
+      ? tr("Caption style")
+      : tr("Video");
   if (c) {
     $("selected-clip-name").textContent = assets.get(c.assetId)?.file.name;
     $("trim-start").value = c.start.toFixed(2);
@@ -401,17 +403,17 @@ function renderInspector() {
   if (q) {
     $("selected-heading").textContent =
       q.kind === "image"
-        ? "Selected image"
+        ? tr("Selected image")
         : q.kind === "text"
-          ? "Selected text"
-          : "Selected caption";
+          ? tr("Selected text")
+          : tr("Selected caption");
     if (document.activeElement !== $("caption-text")) $("caption-text").value = q.text || "";
     $("caption-text").disabled = q.kind === "image";
     if (document.activeElement !== $("cue-start")) $("cue-start").value = q.start.toFixed(2);
     if (document.activeElement !== $("cue-end")) $("cue-end").value = q.end.toFixed(2);
     $("split-caption").hidden = !!q.kind;
     $("split-caption").disabled = !q.kind && timedWords(q.text,q.start,q.end).length<2;
-    $("split-caption").title = $("split-caption").disabled ? "A single word cannot be split" : "Split into two captions";
+    $("split-caption").title = $("split-caption").disabled ? tr("A single word cannot be split") : tr("Split into two captions");
     $("merge-caption").hidden = !!q.kind;
   }
   const s = q?.kind ? styleFor(p, q) : p.style;
@@ -422,7 +424,7 @@ function renderInspector() {
     else el.value = v;
   }
   $("size-label").textContent = `${s.size.toFixed(1)}%`;
-  $("size-title").textContent = q?.kind ? "Text size" : "Caption size · all subtitles";
+  $("size-title").textContent = q?.kind ? tr("Text size") : tr("Caption size · all subtitles");
 }
 function selectOverlay(id, at) {
   pause();
@@ -519,7 +521,7 @@ async function seek(at, { play = false } = {}) {
   finally {if(revision===seekRevision) loading=false;}
 }
 function playIcon(on) {
-  $("play").classList.toggle("is-playing",on);$("play").setAttribute("aria-label",on?"Pause":"Play");
+  $("play").classList.toggle("is-playing",on);$("play").setAttribute("aria-label",on?tr("Pause"):tr("Play"));
 }
 function pause() {
   playing=false;playbackAnchor=null;video.pause();music.pause();
@@ -540,7 +542,7 @@ function syncMusic(play=false, seekAudio=true) {
     const target=track.loop ? input%asset.duration : Math.min(asset.duration-.001,input);
     if(inside && Number.isFinite(player.duration) && (seekAudio || player.paused || Math.abs(player.currentTime-target)>.35)) player.currentTime=target;
     if(play && inside && (track.loop || input<asset.duration)) {
-      if(player.paused && !player.dataset.playPending) {player.dataset.playPending="1";player.play().catch(()=>{if(!player.dataset.playFailed){player.dataset.playFailed="1";toast("Audio could not start. Pause and press Play again.",true);}}).finally(()=>delete player.dataset.playPending);}
+      if(player.paused && !player.dataset.playPending) {player.dataset.playPending="1";player.play().catch(()=>{if(!player.dataset.playFailed){player.dataset.playFailed="1";toast(tr("Audio could not start. Pause and press Play again."),true);}}).finally(()=>delete player.dataset.playPending);}
     } else player.pause();
   }
 }
@@ -617,7 +619,7 @@ async function loadAsset(file, kind, stored = {}) {
       }
     }
     if (kind === "font") {
-      a.fontName = stored.fontName || `Custom ${assets.size + 1}`;
+      a.fontName = stored.fontName || tr("Custom {0}", {0: assets.size + 1});
       const font = new FontFace(a.fontName, await file.arrayBuffer());
       await font.load();
       document.fonts.add(font);
@@ -676,15 +678,15 @@ async function addVideos(files) {
   if(firstImport && added.length) {
     addToTimeline((added.find(a=>a.kind!=="audio")||added[0]).id);
     focusPortrait();
-    toast("First clip added. Add more media with ＋.");
-  } else toast(`${added.length} files ready. Press ＋ to add them to your timeline.`);
+    toast(tr("First clip added. Add more media with ＋."));
+  } else toast(tr("{0} files ready. Press ＋ to add them to your timeline.", {0: added.length}));
 }
 function usedAssets() {
   return new Map(assets);
 }
 async function restore(data) {
   setBusy(true);
-  toast("Opening project…");
+  toast(tr("Opening project…"));
   const next = new Map();
   try {
     for (const stored of data.assets) {
@@ -715,7 +717,7 @@ async function restore(data) {
     await seek(0);
     focusPortrait();
     scheduleSave();
-    toast("Project restored, including its media.");
+    toast(tr("Project restored, including its media."));
   } catch (error) {
     for (const a of next.values()) URL.revokeObjectURL(a.url);
     throw error;
@@ -760,11 +762,11 @@ async function checkConnection() {
 }
 function openLogin() {
   if (window.HansoraHeader?.openAuth) window.HansoraHeader.openAuth("login");
-  else toast("Sign-in is loading. Try again in a moment.");
+  else toast(tr("Sign-in is loading. Try again in a moment."));
 }
 function captionStatus(message, error = false) {
   const status = $("caption-status");
-  status.textContent = message;
+  status.textContent = error ? errorMessage(message) : tr(message);
   status.hidden = !message;
   status.classList.toggle("error", error);
 }
@@ -793,7 +795,7 @@ async function generate() {
   if (!connection.local) {
     const token = (await window.__HANSORA_SB__?.auth.getSession())?.data?.session?.access_token;
     if (!token) {
-      toast("Sign in to make auto captions.");
+      toast(tr("Sign in to make auto captions."));
       openLogin();
       return;
     }
@@ -804,7 +806,7 @@ async function generate() {
   const made = new Map(), done = new Set();
   let failure = null, jobId = null;
   try {
-    captionStatus("Making captions…"); toast("Making captions…");
+    captionStatus(tr("Making captions…")); toast(tr("Making captions…"));
     // One charge for the whole project; one single-use token per video.
     const r = await fetch("/.netlify/functions/caption-studio-token", { method: "POST", headers, body: JSON.stringify({ seconds: targets.map((id) => assets.get(id).duration) }) });
     const data = await r.json().catch(() => ({}));
@@ -814,7 +816,7 @@ async function generate() {
     jobId = data.jobId || null;
     for (let i = 0; i < targets.length; i++) {
       const asset = assets.get(targets[i]);
-      if (targets.length > 1) { const label = `Making captions… video ${i + 1} of ${targets.length}`; captionStatus(label); toast(label); }
+      if (targets.length > 1) { const label = tr("Making captions… video {0} of {1}", {0: i + 1, 1: targets.length}); captionStatus(label); toast(label); }
       try {
         const form = new FormData();
         form.append("file", asset.file, asset.file.name);
@@ -837,18 +839,18 @@ async function generate() {
       commit();
       tab("captions");
       if (visible[0]) await seek((visible[0].start + visible[0].end) / 2);
-      captionStatus(visible.length ? `${visible.length} captions added. Tap one to edit it.` : "Captions were made, but none fall inside your trimmed clips.", !visible.length);
-      toast(`${visible.length} captions added.`);
+      captionStatus(visible.length ? tr("{0} captions added. Tap one to edit it.", {0: visible.length}) : tr("Captions were made, but none fall inside your trimmed clips."), !visible.length);
+      toast(tr("{0} captions added.", {0: visible.length}));
     } else if (!failure) {
       throw Error("No speech was found in your video.");
     }
     if (failure) {
       const refund = await refundCaptions(jobId, [...done].reduce((sum, id) => sum + assets.get(id).duration, 0), headers);
-      const note = refund > 0 ? ` ${Number((refund * (window.HansoraHeader?.creditDisplayMultiplier || 10)).toFixed(2))}⚡ were returned.` : "";
+      const note = refund > 0 ? tr(" {0}⚡ were returned.", {0: Number((refund * (window.HansoraHeader?.creditDisplayMultiplier || 10)).toFixed(2))}) : "";
       throw Error((made.size ? `${failure.message} Captions for the other videos were added.` : failure.message) + note);
     }
   } catch (error) {
-    captionStatus(error.message || "Could not make captions. Try again.", true);
+    captionStatus(error.message || tr("Could not make captions. Try again."), true);
     throw error;
   } finally {
     setBusy(false);
@@ -971,7 +973,7 @@ $("clip-volume").addEventListener("input", () => {
 $("clip-volume").addEventListener("change", commit);
 $("project-name").addEventListener("input", () => {
   checkpoint();
-  p.name = $("project-name").value.trim() || "Untitled video";
+  p.name = $("project-name").value.trim() || tr("Untitled video");
   scheduleSave();
 });
 $("project-name").addEventListener("change", commit);
@@ -993,7 +995,7 @@ $("subtitle-input").addEventListener(
     const cues = parseSubtitles(await e.target.files[0].text());
     change(() => (p.transcripts[c.assetId] = cues));
     e.target.value = "";
-    toast("Subtitles imported. Word highlights use estimated timing.");
+    toast(tr("Subtitles imported. Word highlights use estimated timing."));
   }),
 );
 click("add-caption", () => {
@@ -1010,8 +1012,8 @@ click("add-caption", () => {
         id: uid(),
         start,
         end,
-        text: "Your caption",
-        words: timedWords("Your caption", start, end),
+        text: tr("Your caption"),
+        words: timedWords(tr("Your caption"), start, end),
       };
     p.transcripts[l.clip.assetId] ??= [];
     p.transcripts[l.clip.assetId].push(q);
@@ -1039,9 +1041,9 @@ function saveCaptionEdit(event) {
     end <= start ||
     end > limit + 0.001
   )
-    return $("caption-edit-status").textContent = "Choose start and end times within the video.";
+    return $("caption-edit-status").textContent = tr("Choose start and end times within the video.");
   if (q.kind !== "image" && !text)
-    return $("caption-edit-status").textContent = "Enter text, or use Delete to remove this caption.";
+    return $("caption-edit-status").textContent = tr("Enter text, or use Delete to remove this caption.");
   if (q.start === start && q.end === end && q.text === text) return;
   checkpoint();
   {
@@ -1057,7 +1059,7 @@ function saveCaptionEdit(event) {
   }
   commit();
   draw();
-  $("caption-edit-status").textContent = "Saved automatically.";
+  $("caption-edit-status").textContent = tr("Saved automatically.");
 }
 for (const id of ["caption-text", "cue-start", "cue-end"])
   $(id).addEventListener("input", saveCaptionEdit);
@@ -1226,7 +1228,7 @@ click("add-text", () => {
     const l = {
       id: uid(),
       kind: "text",
-      text: "Your title",
+      text: tr("Your title"),
       start: time,
       end: time + 3,
       style: { ...p.style, y: 20, animation: "none" },
@@ -1293,9 +1295,9 @@ document.addEventListener("keydown", (e) => {
 });
 click("save-project", async () => {
   pause();
-  toast("Preparing the editable project…");
+  toast(tr("Preparing the editable project…"));
   download(await projectFile(p, usedAssets()), fileName() + ".hansora");
-  toast("Project saved with its media, captions, and styles.");
+  toast(tr("Project saved with its media, captions, and styles."));
 });
 click("open-project", () => $("project-input").click());
 $("project-input").addEventListener(
@@ -1313,7 +1315,7 @@ click("export-open", () => {
   $("export-result").hidden = true;
   $("export-video").hidden = false;
   $("export-details").textContent =
-    `${clock(duration(p))} · ${p.clips.length} clips`;
+    tr("{0} · {1} clips", {0: clock(duration(p)), 1: p.clips.length});
   $("export-dialog").showModal();
 });
 $("export-dialog").addEventListener("cancel", (e) => {
@@ -1333,7 +1335,7 @@ click("export-video", async () => {
   try {
     const blob = await fastExport(project, assets, (progress, label) => {
       $("progress").value = progress;
-      $("progress-label").textContent = label;
+      $("progress-label").textContent = tr(label);
     });
     if (resultURL) URL.revokeObjectURL(resultURL);
     resultURL = URL.createObjectURL(blob);
@@ -1342,11 +1344,11 @@ click("export-video", async () => {
     $("export-preview").src = resultURL;
     $("export-result").hidden = false;
     exported = true;
-    toast("Your MP4 is ready to download.");
+    toast(tr("Your MP4 is ready to download."));
     saveToGenerations(blob, duration(project));
   } catch (error) {
     if (!/terminate|cancel/i.test(error.message || ""))
-      toast(error.message || "Export cancelled.", true);
+      toast(error.message || tr("Export cancelled."), true);
   } finally {
     $("export-progress").hidden = true;
     $("export-video").hidden = exported;
@@ -1360,7 +1362,7 @@ async function saveToGenerations(blob, seconds) {
   if (connection.local) return;
   const token = (await window.__HANSORA_SB__?.auth.getSession())?.data?.session?.access_token;
   if (!token) return;
-  const say = (text) => { status.textContent = text; status.hidden = false; };
+  const say = (text) => { status.textContent = tr(text); status.hidden = false; };
   const call = async (body) => {
     const r = await fetch("/.netlify/functions/caption-studio-save", {
       method: "POST",
@@ -1372,19 +1374,19 @@ async function saveToGenerations(blob, seconds) {
     return data;
   };
   try {
-    say("Saving to My generations…");
+    say(tr("Saving to My generations…"));
     const { id, uploadUrl } = await call({ action: "start", size: blob.size });
     const up = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": "video/mp4", "x-upsert": "false" }, body: blob });
     if (!up.ok) throw Error("Could not upload the video to your generations.");
     await call({ action: "finish", id, name: p.name, seconds });
-    say("Saved to My generations ✓");
+    say(tr("Saved to My generations ✓"));
   } catch (error) {
-    say(`${error.message} You can still download it.`);
+    say(tr("{0} You can still download it.", {0: error.message}));
   }
 }
 click("cancel-export", () => {
   cancelFastExport();
-  toast("Export cancelled. Your project is safe.");
+  toast(tr("Export cancelled. Your project is safe."));
 });
 click("download-srt", () =>
   download(
@@ -1402,7 +1404,7 @@ click("demo", async () => {
   const r = await fetch("/caption-studio/demo.mp4");
   if (!r.ok) throw Error("Could not load the sample.");
   const a = await loadAsset(
-    new File([await r.blob()], "Sample · mixed languages.mp4", {
+    new File([await r.blob()], tr("Sample · mixed languages.mp4"), {
       type: "video/mp4",
     }),
     "video",
@@ -1435,12 +1437,12 @@ click("demo", async () => {
     },
   ];
   selectedClip = c.id;
-  p.name = "My first caption project";
+  p.name = tr("My first caption project");
   commit();
   await seek(duration(p) - a.duration + 0.3);
   tab("captions");
   toast(
-    "Sample loaded with example captions. Upload your own video to make real captions.",
+    tr("Sample loaded with example captions. Upload your own video to make real captions."),
   );
 });
 function addToTimeline(id, index=p.clips.length) {
@@ -1554,9 +1556,9 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
     const e = document.createElement("div");
     e.className = "timeline-empty";
     const add = button("", () => $("video-input").click(), "empty-add");
-    add.innerHTML = '<svg class="i"><use href="#i-plus"/></svg><span>Add media</span>';
+    add.innerHTML = `<svg class="i"><use href="#i-plus"/></svg><span>${tr('Add media')}</span>`;
     const tip = document.createElement("span");
-    tip.textContent = "or drag a file here";
+    tip.textContent = tr("or drag a file here");
     e.append(add, tip);
     $("clip-track").append(e);
   }
@@ -1576,7 +1578,7 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
     b.dataset.clip = c.id;
     b.setAttribute(
       "aria-label",
-      `Clip ${a?.file.name}, ${clock(c.end - c.start)}`,
+      tr("Clip {0}, {1}", {0: a?.file.name, 1: clock(c.end - c.start)}),
     );
     const select = () => {
       if (trimming || busy) return;
@@ -1618,7 +1620,7 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
     }
     const name = document.createElement("span");
     name.className = "clip-name";
-    name.textContent = a?.file.name || "Video";
+    name.textContent = a?.file.name || tr("Video");
     const length = document.createElement("small");
     length.className = "clip-duration";
     length.textContent = clock(c.end - c.start);
@@ -1626,7 +1628,7 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
     for (const edge of ["start", "end"]) {
       const handle = document.createElement("span");
       handle.className = `trim-handle ${edge}`;
-      handle.setAttribute("aria-label", `Trim ${edge}`);
+      handle.setAttribute("aria-label", tr(edge === "start" ? "Trim start" : "Trim end"));
       handle.addEventListener("pointerdown", (e) =>
         trimPointer(e, c, edge, start),
       );
@@ -1665,13 +1667,13 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
   if (p.clips.length) {
     const add = button("", () => $("video-input").click(), "clip-add");
     add.innerHTML = '<svg class="i"><use href="#i-plus"/></svg>';
-    add.setAttribute("aria-label", "Add media to the end");
-    add.title = "Add media";
+    add.setAttribute("aria-label", tr("Add media to the end"));
+    add.title = tr("Add media");
     $("clip-track").append(add);
   }
   if (p.clips.length && !captions.length) {
     const add = button("", () => tab("captions"), "track-placeholder");
-    add.innerHTML = '<span class="ph"><svg class="i"><use href="#i-captions"/></svg><span>Add captions</span></span>';
+    add.innerHTML = `<span class="ph"><svg class="i"><use href="#i-captions"/></svg><span>${tr('Add captions')}</span></span>`;
     $("caption-track").append(add);
   }
   for (const q of captions) {
@@ -1688,7 +1690,7 @@ function renderTimeline(d = duration(p), captions = timelineCaptions(p)) {
     for (const edge of ["start", "end"]) {
       const handle = document.createElement("span");
       handle.className = `trim-handle ${edge}`;
-      handle.setAttribute("aria-label", edge === "start" ? "Make caption start earlier or later" : "Make caption longer or shorter");
+      handle.setAttribute("aria-label", edge === "start" ? tr("Make caption start earlier or later") : tr("Make caption longer or shorter"));
       handle.addEventListener("pointerdown", (e) => captionTrim(e, q, edge));
       b.append(handle);
     }
@@ -1703,13 +1705,13 @@ function renderExtraTracks() {
   const makeRow=(item,kind,index)=>{
     const audio=kind==="audio",row=document.createElement("div");row.className="track-row extra-track";
     const label=document.createElement("span");label.className="track-label";
-    label.textContent=`${audio?"Audio":kind==="image"?"Image":"Text"} ${index+1}`;
+    label.textContent=`${audio?tr("Audio"):kind==="image"?tr("Image"):tr("Text")} ${index+1}`;
     const track=document.createElement("div");track.className="layer-track";track.dataset.layer=item.id;
     const b=document.createElement("div");b.className=`layer-clip ${kind}${(audio?selectedAudio:selectedOverlay)===item.id?" selected":""}`;
     b.tabIndex=0;b.role="button";b.dataset.item=item.id;
     b.style.left=`${item.start*timelineScale}px`;b.style.width=`${(item.end-item.start)*timelineScale}px`;
-    const asset=assets.get(item.assetId),name=kind==="text"?item.text:asset?.file.name||"Audio";
-    b.setAttribute("aria-label",`${audio?"Audio":kind==="image"?"Image layer":"Text layer"} ${name}`);
+    const asset=assets.get(item.assetId),name=kind==="text"?item.text:asset?.file.name||tr("Audio");
+    b.setAttribute("aria-label",`${audio?tr("Audio"):kind==="image"?tr("Image layer"):tr("Text layer")} ${name}`);
     const title=document.createElement("span");title.className="layer-clip-name";title.textContent=name;b.append(title);
     if(kind==="image") {const image=document.createElement("img");image.src=asset.url;image.alt="";image.className="layer-thumb";b.append(image);}
     if(audio) {
@@ -1721,13 +1723,13 @@ function renderExtraTracks() {
       if(item.loop) for(let n=1;n<=Math.ceil((item.in+item.end-item.start)/asset.duration);n++){const copy=document.createElement("canvas");copy.className=wave.className;copy.width=512;copy.height=40;copy.getContext("2d").drawImage(wave,0,0);copy.style.width=wave.style.width;copy.dataset.cycle=n;copy.style.transform=`translateX(${(n*asset.duration-item.in)*timelineScale}px)`;b.append(copy);}
       const length=document.createElement("span");length.className="audio-duration";length.textContent=clock(item.end-item.start);b.append(length);
       const line=document.createElement("div");line.className="volume-line";line.tabIndex=0;line.role="slider";
-      line.setAttribute("aria-label",`Volume ${name}`);line.setAttribute("aria-valuemin","0");line.setAttribute("aria-valuemax","100");
+      line.setAttribute("aria-label",tr("Volume {0}", {0: name}));line.setAttribute("aria-valuemin","0");line.setAttribute("aria-valuemax","100");
       const display=()=>{line.style.top=`${volumeLineTop(item.volume)}px`;line.setAttribute("aria-valuenow",Math.round(item.volume*100));line.setAttribute("aria-valuetext",`${Math.round(item.volume*100)}%`);line.dataset.volume=Math.round(item.volume*100);};display();
       line.addEventListener("pointerdown",e=>volumePointer(e,item,line,display));
       line.addEventListener("keydown",e=>{const delta={ArrowUp:.05,ArrowRight:.05,ArrowDown:-.05,ArrowLeft:-.05}[e.key];if(delta===undefined)return;e.preventDefault();e.stopPropagation();change(()=>item.volume=clamp(item.volume+delta,0,1));syncMusic(playing,false);});
       b.append(line);
     }
-    for(const edge of ["start","end"]) {const handle=document.createElement("span");handle.className=`trim-handle ${edge}`;handle.setAttribute("aria-label",`Trim ${edge}`);handle.addEventListener("pointerdown",e=>timedPointer(e,item,edge,b,audio));b.append(handle);}
+    for(const edge of ["start","end"]) {const handle=document.createElement("span");handle.className=`trim-handle ${edge}`;handle.setAttribute("aria-label",tr(edge === "start" ? "Trim start" : "Trim end"));handle.addEventListener("pointerdown",e=>timedPointer(e,item,edge,b,audio));b.append(handle);}
     b.addEventListener("pointerdown",e=>{if(e.target.closest(".trim-handle,.volume-line")||e.button!==0)return;timedPointer(e,item,"move",b,audio);});
     b.addEventListener("keydown",e=>{if(busy || e.target!==b)return;if(e.key==="Enter"){selectTimed(item,audio);renderUI();}else if(["ArrowLeft","ArrowRight"].includes(e.key)){e.preventDefault();change(()=>moveTimedItem(item,item.start+(e.key==="ArrowRight"?1:-1)*(e.shiftKey?1:.1)));}});
     if(!audio) {
@@ -1747,11 +1749,11 @@ function renderExtraTracks() {
   const placeholder=(container,label,icon,fn)=>{
     const row=document.createElement("div");row.className="track-row extra-track empty-track";
     const name=document.createElement("span");name.className="track-label";name.textContent=label;
-    const b=button("",fn,"track-placeholder");b.innerHTML=`<span class="ph"><svg class="i"><use href="#${icon}"/></svg><span>Add ${label.toLowerCase()}</span></span>`;
+    const b=button("",fn,"track-placeholder");b.innerHTML=`<span class="ph"><svg class="i"><use href="#${icon}"/></svg><span>${tr(icon === "i-text" ? "Add text" : "Add audio")}</span></span>`;
     const track=document.createElement("div");track.className="layer-track";track.append(b);row.append(name,track);$(container).append(row);
   };
-  if(!p.layers.length) placeholder("layer-tracks","Text","i-text",()=>$("add-text").click());
-  if(!p.audio.length) placeholder("audio-tracks","Audio","i-audio",()=>{tab("audio");$("video-input").click();});
+  if(!p.layers.length) placeholder("layer-tracks",tr("Text"),"i-text",()=>$("add-text").click());
+  if(!p.audio.length) placeholder("audio-tracks",tr("Audio"),"i-audio",()=>{tab("audio");$("video-input").click();});
 }
 // Stretch a caption by dragging its edge; word timings scale with it.
 function retimeCue(cue, start, end, from = { start: cue.start, end: cue.end, words: cue.words }) {
@@ -1974,7 +1976,7 @@ click("reverse", async () => {
     selectedOverlay = null;
     commit();
     await seek(time);
-    toast("Clip reversed. Captions on this copy can be added again.");
+    toast(tr("Clip reversed. Captions on this copy can be added again."));
   } finally {
     setBusy(false);
   }
@@ -1982,13 +1984,13 @@ click("reverse", async () => {
 
 function renderSound() {
   const list=$("sound-list");list.replaceChildren();
-  const entries=[...p.clips.filter(c=>assets.get(c.assetId)?.kind==="video").map(c=>({item:c,kind:"Video sound"})),...p.audio.map(item=>({item,kind:"Audio track"}))];
-  if(!entries.length){const empty=document.createElement("p");empty.className="muted small";empty.textContent="Add a video, music, or voice file to control its sound.";list.append(empty);}
+  const entries=[...p.clips.filter(c=>assets.get(c.assetId)?.kind==="video").map(c=>({item:c,kind:tr("Video sound")})),...p.audio.map(item=>({item,kind:tr("Audio track")}))];
+  if(!entries.length){const empty=document.createElement("p");empty.className="muted small";empty.textContent=tr("Add a video, music, or voice file to control its sound.");list.append(empty);}
   for(const {item,kind} of entries){
     const card=document.createElement("div");card.className="sound-card";
     const label=document.createElement("label");label.textContent=`${kind} · ${assets.get(item.assetId)?.file.name}`;
     const output=document.createElement("output");output.textContent=`${Math.round(item.volume*100)}%`;
-    const slider=document.createElement("input");slider.type="range";slider.min=0;slider.max=1;slider.step=.01;slider.value=item.volume;slider.setAttribute("aria-label",`${kind} volume ${assets.get(item.assetId)?.file.name}`);
+    const slider=document.createElement("input");slider.type="range";slider.min=0;slider.max=1;slider.step=.01;slider.value=item.volume;slider.setAttribute("aria-label",tr("{0} volume {1}", {0: kind, 1: assets.get(item.assetId)?.file.name}));
     slider.addEventListener("input",()=>{checkpoint();item.volume=Number(slider.value);output.textContent=`${Math.round(item.volume*100)}%`;const c=locate(p,time)?.clip;if(c)mixer.set(video,c.volume??1);syncMusic(playing,false);applyPreviewMute();renderInspector();
       const line=document.querySelector(`[data-item="${item.id}"] .volume-line`);if(line){line.style.top=`${volumeLineTop(item.volume)}px`;line.setAttribute("aria-valuenow",Math.round(item.volume*100));line.dataset.volume=Math.round(item.volume*100);}
     });
@@ -2001,13 +2003,13 @@ click("mute-main",()=>{
   const videos=p.clips.filter(c=>assets.get(c.assetId)?.kind==="video");if(!videos.length) return;
   const muted=videos.every(c=>(c.volume??1)===0);
   change(()=>videos.forEach(c=>c.volume=muted?1:0));
-  toast(muted?"Clip audio on.":"Clip audio muted.");
+  toast(muted?tr("Clip audio on."):tr("Clip audio muted."));
 });
 function syncProxies() {
   const sel=findOverlay();
   document.body.dataset.sel=sel && !sel.scene && sel.kind!=="image" ? "text" : "clip";
   const videos=p.clips.filter(c=>assets.get(c.assetId)?.kind==="video"),muted=videos.length>0&&videos.every(c=>(c.volume??1)===0);
-  $("mute-main").setAttribute("aria-pressed",String(muted));$("mute-main").querySelector("span").textContent=muted?"Clip audio off":"Mute clip audio";
+  $("mute-main").setAttribute("aria-pressed",String(muted));$("mute-main").querySelector("span").textContent=muted?tr("Clip audio off"):tr("Mute clip audio");
   $("mute-main").disabled=!videos.length||busy;
   for(const b of document.querySelectorAll("[data-proxy]")) {const target=$(b.dataset.proxy);b.disabled=target.disabled;b.hidden=target.hidden;}
   for(const b of document.querySelectorAll("[data-aspect]")) b.classList.toggle("active",b.dataset.aspect===p.aspect);
@@ -2059,7 +2061,7 @@ const picked=new Map();
 function syncPicked() {
   const n=picked.size;
   $("generation-add").disabled=!n;$("generation-clear").hidden=!n;
-  $("generation-add-label").textContent=n?`Add ${n} to video`:"Select media to add";
+  $("generation-add-label").textContent=n?tr("Add {0} to video", {0: n}):tr("Select media to add");
   const order=[...picked.keys()];
   for(const card of $("generation-list").children){
     const i=order.indexOf(card.dataset.id);
@@ -2081,19 +2083,19 @@ function renderPages() {
 async function loadGenerations(page=1) {
   const ticket=++genLoad;genPage=page;
   $("generation-sign-in").hidden=true;$("generation-list").replaceChildren();$("generation-pages").replaceChildren();
-  $("generation-status").textContent="Loading your generations…";
+  $("generation-status").textContent=tr("Loading your generations…");
   try {
     const result=await readGenerations(window.__HANSORA_SB__,{page,kind:genFilter});
     if(ticket!==genLoad) return;
     genPages=result.pages;
-    $("generation-status").textContent=result.items.length?"Tap to select. You can pick several.":"Nothing here yet.";
+    $("generation-status").textContent=result.items.length?tr("Tap to select. You can pick several."):tr("Nothing here yet.");
     for(const item of result.items){
       const card=document.createElement("button");card.className="gen-card";card.type="button";card.dataset.id=item.id;
       const preview=document.createElement(item.kind==="image"?"img":item.kind==="video"?"video":"span");
       if(item.kind!=="audio"){preview.loading="lazy";if(item.kind==="video"){preview.muted=true;preview.preload="metadata";preview.playsInline=true;preview.src=item.url+"#t=0.5";}else preview.src=item.url;}
       else preview.innerHTML='<svg class="i"><use href="#i-audio"/></svg>';
       preview.className="gen-thumb";
-      const badge=document.createElement("span");badge.className="gen-kind";badge.textContent=item.kind==="video"?"Video":item.kind==="image"?"Image":"Audio";
+      const badge=document.createElement("span");badge.className="gen-kind";badge.textContent=item.kind==="video"?tr("Video"):item.kind==="image"?tr("Image"):tr("Audio");
       const mark=document.createElement("span");mark.className="gen-add";
       card.append(preview,badge,mark);card.title=item.title||"";
       card.addEventListener("click",()=>{if(picked.has(item.id))picked.delete(item.id);else picked.set(item.id,item);syncPicked();});
@@ -2101,7 +2103,7 @@ async function loadGenerations(page=1) {
     }
     $("generation-list").scrollTop=0;
     syncPicked();renderPages();
-  }catch(error){if(ticket!==genLoad)return;$("generation-status").textContent=error.message;$("generation-sign-in").hidden=!/Sign in/i.test(error.message);}
+  }catch(error){if(ticket!==genLoad)return;$("generation-status").textContent=tr(error.message);$("generation-sign-in").hidden=!/Sign in/i.test(error.message);}
 }
 async function importGeneration(item) {
   let response;try{response=await fetch(item.url);}catch{throw Error("A file could not be imported. Download it from your library and use Upload.");}
@@ -2118,12 +2120,12 @@ click("generation-add",async()=>{
   let added=0;
   try{
     for(const item of items){
-      $("generation-add-label").textContent=`Adding ${added+1} of ${items.length}…`;
+      $("generation-add-label").textContent=tr("Adding {0} of {1}…", {0: added+1, 1: items.length});
       const asset=await importGeneration(item);
       assets.set(asset.id,asset);addToTimeline(asset.id);added++;picked.delete(item.id);
     }
     $("generations-dialog").close();
-    toast(`${added} added to your video.`);
+    toast(tr("{0} added to your video.", {0: added}));
   }finally{syncPicked();}
 });
 click("generation-clear",()=>{picked.clear();syncPicked();});
@@ -2139,7 +2141,7 @@ click("my-generations",showGenerations);click("empty-generations",showGeneration
 click("generation-sign-in",()=>{$("generations-dialog").close();openLogin();});
 
 // 9: the last five projects, saved on this device.
-const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"Just now":m<60?`${m} min ago`:m<1440?`${Math.round(m/60)} h ago`:`${Math.round(m/1440)} d ago`;};
+const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?tr("Just now"):m<60?tr("{0} min ago", {0: m}):m<1440?tr("{0} h ago", {0: Math.round(m/60)}):tr("{0} d ago", {0: Math.round(m/1440)});};
 async function projectCards(container, compact=false) {
   const items=await listProjects().catch(()=>[]);
   container.replaceChildren();
@@ -2148,8 +2150,8 @@ async function projectCards(container, compact=false) {
     const open=document.createElement("button");open.type="button";open.className="project-open";
     const img=document.createElement(item.thumb?"img":"span");if(item.thumb){img.src=item.thumb;img.alt="";}img.className="project-thumb";
     const text=document.createElement("span");text.className="project-text";
-    const name=document.createElement("strong");name.textContent=item.name||"Untitled video";
-    const when=document.createElement("small");when.textContent=item.id===p.id?"Open now":ago(item.updatedAt);
+    const name=document.createElement("strong");name.textContent=item.name||tr("Untitled video");
+    const when=document.createElement("small");when.textContent=item.id===p.id?tr("Open now"):ago(item.updatedAt);
     text.append(name,when);open.append(img,text);
     open.addEventListener("click",run(async()=>{
       if(item.id===p.id){$("projects-dialog").close();return;}
@@ -2159,7 +2161,7 @@ async function projectCards(container, compact=false) {
     card.append(open);
     if(!compact){
       const del=button("",async()=>{await deleteProject(item.id);projectCards(container);if(item.id===p.id) p.id=newProject().id;},"project-delete");
-      del.innerHTML='<svg class="i"><use href="#i-trash"/></svg>';del.setAttribute("aria-label",`Delete ${item.name}`);card.append(del);
+      del.innerHTML='<svg class="i"><use href="#i-trash"/></svg>';del.setAttribute("aria-label",tr("Delete {0}", {0: item.name}));card.append(del);
     }
     container.append(card);
   }
@@ -2168,26 +2170,26 @@ async function projectCards(container, compact=false) {
 async function showProjects() {
   $("project-menu-details")?.removeAttribute("open");
   const n=await projectCards($("projects-list"));
-  if(!n) $("projects-list").innerHTML='<p class="hint">No saved projects yet. Your work is saved automatically as you edit.</p>';
+  if(!n) $("projects-list").innerHTML=`<p class="hint">${tr('No saved projects yet. Your work is saved automatically as you edit.')}</p>`;
   $("projects-dialog").showModal();
 }
 async function renderRecent() {
   if(duration(p)) {$("recent-projects").hidden=true;return;}
   const n=await projectCards($("recent-projects"),true);
-  if(n) $("recent-projects").prepend(Object.assign(document.createElement("h2"),{textContent:"Continue editing"}));
+  if(n) $("recent-projects").prepend(Object.assign(document.createElement("h2"),{textContent:tr("Continue editing")}));
   $("recent-projects").hidden=!n;
 }
 click("your-projects",showProjects);click("resume",showProjects);
 click("save-now",async()=>{
   document.querySelector(".project-menu").removeAttribute("open");
-  if(!p.clips.length && !assets.size) return toast("Add media first.");
-  await saveProject(structuredClone(p),new Map(assets),thumbnail());$("save-status").textContent="Saved on this device";toast("Saved. Find it in Your projects.");
+  if(!p.clips.length && !assets.size) return toast(tr("Add media first."));
+  await saveProject(structuredClone(p),new Map(assets),thumbnail());$("save-status").textContent=tr("Saved on this device");toast(tr("Saved. Find it in Your projects."));
 });
 click("new-video",()=>{
   document.querySelector(".project-menu").removeAttribute("open");
   pause();for(const a of assets.values()){URL.revokeObjectURL(a.url);a.image?.close?.();}
-  assets=new Map();p=newProject();history=[];future=[];pendingBefore=null;selectedClip=null;selectedOverlay=null;selectedAudio=null;time=0;timelineSpan=null;
-  video.dataset.asset="";editMode(false);closeSheets();renderUI();renderRecent();toast("New video started. Your last project is saved.");
+  assets=new Map();p=newProject();p.name=tr(p.name);history=[];future=[];pendingBefore=null;selectedClip=null;selectedOverlay=null;selectedAudio=null;time=0;timelineSpan=null;
+  video.dataset.asset="";editMode(false);closeSheets();renderUI();renderRecent();toast(tr("New video started. Your last project is saved."));
 });
 document.addEventListener("click",e=>{const menu=document.querySelector(".project-menu");if(menu.open&&!menu.contains(e.target))menu.removeAttribute("open");});
 
@@ -2195,7 +2197,7 @@ document.addEventListener("click",e=>{const menu=document.querySelector(".projec
 $("editor-back").addEventListener("click",e=>{
   e.preventDefault();
   let same=false;try{same=new URL(document.referrer).origin===location.origin;}catch{}
-  if(same && window.history.length>1) window.history.back(); else location.href="/";
+  if(same && window.history.length>1) window.history.back(); else location.href=localizedHref("/index.html");
 });
 
 renderUI();

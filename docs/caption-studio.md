@@ -104,3 +104,30 @@ The editor layout was rebuilt; the editing engine, export, transcription and pro
 - **Phone (≤700px):** full-screen editor without the site header or the injected site bottom navigation (`netlify/edge-functions/inject-bottom-nav-inline.js` skips `/caption-studio`). Top bar: close, project name, project menu, Export. Below the preview: Focus, timecode, play, undo/redo. The timeline keeps the playhead fixed in the centre; scrolling the tracks seeks, and pinching zooms. All tracks (Text, Video, Captions, Audio) are always visible, with “Add …” placeholders and a ＋ after the last clip. The bottom toolbar (Edit · Audio · Text · Captions · Media · Ratio · Style) opens slide-up sheets with a ✓. Tapping a clip, caption or layer switches to an edit bar (Split · Adjust · Duplicate · Reverse · Earlier · Later · Delete).
 - **Desktop:** icon tabs, preview with centred transport, inspector opened with **Adjust**, labelled multitrack timeline. Uploading a portrait clip no longer hides the timeline; **Focus** is opt-in.
 - Checked in Chromium at 393×852 and 1440×900: sample load, sheet open/close, clip selection and edit bar, Adjust, Ratio, add text, scroll-to-seek, playback, and MP4 export (480×854 H.264/AAC with burned-in captions) on both layouts. All 24 Caption Studio tests pass.
+
+## Russian and Armenian editor pages
+
+The localized editors are `caption-studio_ru.html` and `caption-studio_arm.html`.
+They share `studio.mjs` and preserve the merged editor's behavior. `locale.mjs`
+selects the language from the page route, and `messages.mjs` contains natural
+Russian and Eastern Armenian interface copy. Uploaded media names, project
+names, and subtitle text are preserved as written. Generated placeholder text
+uses the editor language. Speech recognition language is selected separately;
+opening the Armenian page does not force Armenian-only transcription.
+
+After changing the English HTML shell, run `npm run build:caption-studio-locales`.
+The localized shells are checked into the repository so Netlify serves them
+without a separate localization build. Links from the translated video-edit
+pages and the shared header retain the selected language.
+
+Localized labels wrap where necessary. The phone toolbar reserves room for its
+labels and the device safe area, and remains horizontally scrollable to reach
+all tools. Export dialogs and tool sheets scroll within the viewport. The
+preview and export use the existing shared caption renderer, which keeps
+ordinary multiline captions inside the frame, including at the bottom edge.
+
+Validation: the Caption Studio test suite covers translated message placeholders,
+language routes, localized shell/control parity, and Armenian/Russian caption
+bounds in landscape, portrait, and square frames. Browser checks include a
+360×640 phone, a 390×844 portrait video with a multiline caption at Y=100,
+desktop layout, and a completed sample MP4 export with localized progress.
