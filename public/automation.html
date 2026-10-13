@@ -3,104 +3,189 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Hansora Automation — One AI employee. Every conversation.</title><link rel="icon" href="/favicon.png" type="image/png"><link rel="apple-touch-icon" href="/favicon.png">
-  <meta name="description" content="An AI employee that answers your Instagram, WhatsApp and phone customers, books appointments and takes orders — in your customers’ language.">
+  <meta name="description" content="An AI employee that answers your customers on Instagram, WhatsApp, Messenger, Telegram, TikTok and the phone, books appointments and takes orders, in your customers’ language.">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#08090b">
   <script src="automation-theme.js?v=20261008"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="automation-header.css?v=20261008c"><link rel="stylesheet" href="automation-ui.css?v=20261014"><link rel="stylesheet" href="automation.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="automation-header.css?v=20261008c"><link rel="stylesheet" href="automation-ui.css?v=20261014b"><link rel="stylesheet" href="automation.css?v=20261014b"><link rel="stylesheet" href="automation-landing.css?v=20261014c">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261014"></script><script defer src="automation.js"></script>
+  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261014"></script><script defer src="automation.js?v=20261014"></script>
 </head>
-<body class="ui lp" data-automation-page="landing">
+<body class="ui lp lx" data-automation-page="landing">
   <a class="lp-skip" href="#main">Skip to content</a>
   <div data-automation-header></div>
   <main id="main">
-    <section class="lp-hero">
-      <div class="lp-glow" aria-hidden="true"><i class="a"></i><i class="b"></i><i class="c"></i></div>
-      <div class="lp-grid-bg" aria-hidden="true"></div>
-      <div class="lp-hero-inner">
-        <a class="lp-pill" href="#actions" data-reveal><span>New</span>Books appointments and takes orders <b aria-hidden="true">→</b></a>
-        <h1 data-reveal>Every conversation.<br><em>One AI employee.</em></h1>
-        <p class="lp-lead" data-reveal>It answers your customers on Instagram, WhatsApp and the phone — in your customers’ language — using only what you teach it.</p>
-        <div class="lp-cta" data-reveal><a class="ui-btn primary lg" data-start href="automation-setup.html">Create your AI employee</a><a class="ui-btn ghost lg" href="#how-it-works">See how it works</a></div>
-        <p class="lp-note" data-reveal>Uses your Hansora account · No technical setup</p>
+
+    <!-- 1. Hero: live phone demo -->
+    <section class="lx-hero" id="top">
+      <div class="lx-aurora" aria-hidden="true"><i class="a"></i><i class="b"></i><i class="c"></i></div>
+      <div class="lx-grid" aria-hidden="true"></div>
+      <div class="lx-spot" aria-hidden="true"></div>
+      <div class="lx-hero-copy">
+        <a class="lx-pill" href="#actions" data-reveal><span>New</span>TikTok, Messenger &amp; Telegram are here <b aria-hidden="true">→</b></a>
+        <h1 class="lx-title" data-words>Every conversation. <em>One AI employee.</em></h1>
+        <p class="lx-lead" data-reveal>It answers your customers on Instagram, WhatsApp, Messenger, Telegram, TikTok and the phone. It takes orders and books appointments in your customers’ language, using only what you teach it.</p>
+        <div class="lx-cta" data-reveal><a class="lx-btn primary" data-start data-magnetic href="automation-setup.html">Create your AI employee <b aria-hidden="true">→</b></a><a class="lx-btn ghost" href="#how-it-works">See how it works</a></div>
+        <p class="lx-note" data-reveal><span class="lx-live-dot"></span>Uses your Hansora account · No technical setup · Pay as you go</p>
       </div>
-      <div class="lp-demo" data-reveal aria-label="Example conversation">
-        <div class="lp-demo-window">
-          <div class="lp-demo-bar"><span class="lp-demo-channel" id="demo-channel-icon"></span><div><strong id="demo-channel">Instagram</strong><small>Luma Studio · AI employee</small></div><span class="ui-badge dot green live">Live</span></div>
-          <div class="lp-demo-thread" id="demo-thread"></div>
+
+      <div class="lx-stage" data-reveal aria-label="Example conversations">
+        <div class="lx-phone">
+          <div class="lx-phone-notch" aria-hidden="true"></div>
+          <div class="lx-app-bar">
+            <span class="lx-biz" id="lx-biz-logo">O</span>
+            <div><strong id="lx-biz-name">Oak &amp; Co. Furniture</strong><small><i id="lx-channel-icon"></i><span id="lx-channel">Instagram</span> · AI employee</small></div>
+            <span class="lx-online">online</span>
+          </div>
+          <div class="lx-thread" id="lx-thread" aria-live="off"></div>
+          <div class="lx-composer"><span id="lx-composer-text" class="lx-composer-text">Message…</span><i class="lx-send" aria-hidden="true"></i></div>
         </div>
-        <div class="lp-toast" id="demo-toast" aria-hidden="true"><span data-icon="bell"></span><div><strong id="demo-toast-title">New booking #1042</strong><small id="demo-toast-text">Friday, 11:30 · Ani</small></div></div>
+        <div class="lx-float lx-float-a" id="lx-result" aria-hidden="true"><span class="lx-float-icon" id="lx-result-icon">✓</span><div><strong id="lx-result-title">Order #1043 created</strong><small id="lx-result-text">Oak coffee table · $320</small></div></div>
+        <div class="lx-float lx-float-b" id="lx-alert" aria-hidden="true"><span class="lx-float-icon bell">🔔</span><div><strong>Sent to your phone</strong><small id="lx-alert-text">WhatsApp alert to the owner</small></div></div>
+        <div class="lx-float lx-float-c" aria-hidden="true"><span class="lx-float-icon speed">⚡</span><div><strong>Answered in seconds</strong><small>Day and night</small></div></div>
+        <div class="lx-scenes" role="tablist" aria-label="Example businesses">
+          <button type="button" role="tab" data-scene="0" class="active"><b>🛋️</b>Furniture shop</button>
+          <button type="button" role="tab" data-scene="1"><b>💅</b>Beauty salon</button>
+          <button type="button" role="tab" data-scene="2"><b>🍝</b>Restaurant</button>
+        </div>
       </div>
     </section>
 
-    <section class="lp-strip" aria-label="Channels">
-      <span data-icon="instagram">Instagram DMs</span><span data-icon="comment">Instagram comments</span><span data-icon="whatsapp">WhatsApp</span><span data-icon="phone">Phone calls</span>
-    </section>
-
-    <section class="lp-section" id="channels">
-      <header class="lp-head" data-reveal><p class="lp-eyebrow">Channels</p><h2>One brain. Every place your customers are.</h2><p>Teach it once. The same knowledge, rules and actions work everywhere.</p></header>
-      <div class="lp-bento">
-        <article class="lp-card lp-wide" data-reveal>
-          <span class="lp-card-icon ig" data-icon="instagram"></span><h3>Instagram DMs</h3><p>Every private message answered in seconds — prices, delivery, availability — day and night.</p>
-          <div class="lp-mini-chat"><p class="c">Is delivery free?</p><p class="a">Delivery in the city is $5. Want me to place the order?</p></div>
-        </article>
-        <article class="lp-card" data-reveal><span class="lp-card-icon ig" data-icon="comment"></span><h3>Comments to DMs</h3><p>Someone comments “price” under your reel — they get a public reply and a private message, automatically.</p></article>
-        <article class="lp-card" data-reveal><span class="lp-card-icon wa" data-icon="whatsapp"></span><h3>WhatsApp</h3><p>The same assistant on your business number, with read receipts and a smooth handoff to your team.</p></article>
-        <article class="lp-card lp-wide lp-phone-card" data-reveal>
-          <span class="lp-card-icon ph" data-icon="phone"></span><h3>Phone calls</h3><p>A natural voice that speaks your customers’ language, answers every call and books while the customer is still on the line.</p>
-          <div class="lp-wave" aria-hidden="true"></div>
-        </article>
+    <!-- Channel marquee -->
+    <section class="lx-marquee" aria-label="Channels">
+      <div class="lx-marquee-track">
+        <span data-icon="instagram">Instagram DMs</span><span data-icon="comment">Instagram comments</span><span data-icon="whatsapp">WhatsApp</span><span data-icon="messenger">Messenger</span><span data-icon="telegram">Telegram</span><span data-icon="tiktok">TikTok</span><span data-icon="phone">Phone calls</span>
+        <span data-icon="instagram" aria-hidden="true">Instagram DMs</span><span data-icon="comment" aria-hidden="true">Instagram comments</span><span data-icon="whatsapp" aria-hidden="true">WhatsApp</span><span data-icon="messenger" aria-hidden="true">Messenger</span><span data-icon="telegram" aria-hidden="true">Telegram</span><span data-icon="tiktok" aria-hidden="true">TikTok</span><span data-icon="phone" aria-hidden="true">Phone calls</span>
       </div>
     </section>
 
+    <!-- 2. One brain -->
+    <section class="lp-section lx-brain-section" id="channels">
+      <header class="lp-head" data-reveal><p class="lp-eyebrow">Channels</p><h2>One brain. Every place your customers are.</h2><p>Teach it once. The same knowledge, prices and rules answer everywhere, and every chat lands in one inbox.</p></header>
+      <div class="lx-brain" data-reveal>
+        <svg class="lx-brain-lines" viewBox="0 0 600 600" aria-hidden="true">
+          <defs><linearGradient id="lx-line" x1="0" x2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs>
+          <g fill="none" stroke="url(#lx-line)" stroke-width="1.5">
+            <path d="M300 300 L300 70"/><path d="M300 300 L499 185"/><path d="M300 300 L499 415"/><path d="M300 300 L300 530"/><path d="M300 300 L101 415"/><path d="M300 300 L101 185"/>
+          </g>
+          <g class="lx-pulses" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round">
+            <path d="M300 70 L300 300"/><path d="M499 185 L300 300"/><path d="M499 415 L300 300"/><path d="M300 530 L300 300"/><path d="M101 415 L300 300"/><path d="M101 185 L300 300"/>
+          </g>
+        </svg>
+        <div class="lx-core"><span class="lx-core-ring"></span><span class="lx-core-ring two"></span><b>AI</b><small>your employee</small></div>
+        <span class="lx-node n1 ig" data-icon="instagram" title="Instagram"></span>
+        <span class="lx-node n2 wa" data-icon="whatsapp" title="WhatsApp"></span>
+        <span class="lx-node n3 ms" data-icon="messenger" title="Messenger"></span>
+        <span class="lx-node n4 tg" data-icon="telegram" title="Telegram"></span>
+        <span class="lx-node n5 tt" data-icon="tiktok" title="TikTok"></span>
+        <span class="lx-node n6 ph" data-icon="phone" title="Phone calls"></span>
+      </div>
+    </section>
+
+    <!-- 3. Comment → DM -->
+    <section class="lp-section lx-split" id="comments">
+      <div class="lx-split-copy" data-reveal>
+        <p class="lp-eyebrow">Comment automation</p>
+        <h2>“Price?” under your reel becomes a sale.</h2>
+        <p>Someone comments a keyword. They get a friendly public reply and a private message with the price, photos and a button, in seconds, even at 3 am.</p>
+        <ul class="lx-checks"><li>Pick the posts, reels or videos</li><li>Typos and other languages still match</li><li>Buttons, links and follow-ups in the DM</li></ul>
+      </div>
+      <div class="lx-post" data-reveal data-play="comments">
+        <div class="lx-post-media"><span class="lx-post-tag">Reel</span><span class="lx-post-play">▶</span><b>New oak collection</b></div>
+        <div class="lx-comments">
+          <p class="lx-c c1"><i>@mila.home</i> love this 😍</p>
+          <p class="lx-c c2 hot"><i>@tom_r</i> price?</p>
+          <p class="lx-c c3 reply"><i>@oakandco</i> Sent you the details in DMs 👋</p>
+        </div>
+        <div class="lx-dm"><small>Direct message · @tom_r</small><p>Hi Tom! The oak coffee table is <b>$320</b> and in stock 🌳</p><span class="lx-dm-btn">See the collection</span></div>
+      </div>
+    </section>
+
+    <!-- 4. It gets things done -->
     <section class="lp-section" id="actions">
       <header class="lp-head" data-reveal><p class="lp-eyebrow">Actions</p><h2>It doesn’t just answer. It gets things done.</h2><p>You decide what it’s allowed to do. It always confirms with the customer first.</p></header>
-      <div class="lp-actions">
-        <article class="lp-action" data-reveal><span data-icon="calendar"></span><h3>Books appointments</h3><p>Only offers free times from your hours and calendar. Never double-books.</p></article>
-        <article class="lp-action" data-reveal><span data-icon="bag"></span><h3>Takes orders</h3><p>Collects every detail you require, reads the order back, and never invents a price.</p></article>
-        <article class="lp-action" data-reveal><span data-icon="bell"></span><h3>Tells you instantly</h3><p>A WhatsApp message from Hansora the moment an order or booking comes in.</p></article>
-        <article class="lp-action" data-reveal><span data-icon="handoff"></span><h3>Knows when to stop</h3><p>Complaints and tricky questions go straight to your team, with the AI paused.</p></article>
+      <div class="lx-build">
+        <article class="lx-build-card" data-reveal data-play="order">
+          <header><span>🛍️</span><b>Takes orders</b><em class="lx-status">Collecting…</em></header>
+          <ul class="lx-fields">
+            <li><span>Product</span><b>Oak coffee table</b></li>
+            <li><span>Quantity</span><b>1</b></li>
+            <li><span>Address</span><b>12 Main Street</b></li>
+            <li><span>Total</span><b>$320</b></li>
+          </ul>
+          <footer class="lx-done">✓ Order #1043 created</footer>
+        </article>
+        <article class="lx-build-card" data-reveal data-play="booking">
+          <header><span>📅</span><b>Books appointments</b><em class="lx-status">Checking free times…</em></header>
+          <div class="lx-cal">
+            <span>Sat</span><span>14:00</span><span class="busy">15:00</span><span class="pick">16:30</span>
+            <span>Sun</span><span class="busy">11:00</span><span>12:30</span><span class="busy">17:00</span>
+          </div>
+          <footer class="lx-done">✓ Booked · Sat 16:30 with Anna</footer>
+        </article>
+        <article class="lx-build-card" data-reveal data-play="lead">
+          <header><span>🔥</span><b>Finds your buyers</b><em class="lx-status">Reading the chat…</em></header>
+          <div class="lx-stages"><span>👀 Interested</span><span>🔥 Ready to buy</span><span>✅ Done</span></div>
+          <div class="lx-tags"><i>Oak table</i><i>Budget $300+</i><i>Delivery this week</i></div>
+          <footer class="lx-done">🔔 You get an alert: hot lead</footer>
+        </article>
+        <article class="lx-build-card" data-reveal data-play="handoff">
+          <header><span>🤝</span><b>Knows when to stop</b><em class="lx-status">Listening…</em></header>
+          <p class="lx-quote">“My delivery arrived damaged.”</p>
+          <div class="lx-handoff"><span>AI paused</span><b>→</b><span>Your team</span></div>
+          <footer class="lx-done">✓ Handed to you, with a summary</footer>
+        </article>
       </div>
     </section>
 
+    <!-- 5. Numbers -->
+    <section class="lx-numbers" data-reveal aria-label="Hansora Automation in numbers">
+      <div><strong data-count-to="6">0</strong><span>channels in one inbox</span></div>
+      <div><strong>24/7</strong><span>answers, day and night</span></div>
+      <div><strong data-count-to="10">0</strong><span>languages at once</span></div>
+      <div><strong>∞</strong><span>AI employees per account</span></div>
+    </section>
+
+    <!-- 6. How it works -->
     <section class="lp-section" id="how-it-works">
       <header class="lp-head" data-reveal><p class="lp-eyebrow">How it works</p><h2>Ready in an afternoon.</h2></header>
-      <ol class="lp-steps">
-        <li data-reveal><b>1</b><h3>Teach it your business</h3><p>Products, prices, hours and rules — in plain words. No AI knowledge needed.</p></li>
-        <li data-reveal><b>2</b><h3>Test it privately</h3><p>Chat with it like a customer until every answer sounds like you.</p></li>
-        <li data-reveal><b>3</b><h3>Connect and go live</h3><p>Sign in with Instagram or WhatsApp. Your AI employee starts answering.</p></li>
+      <ol class="lx-steps" data-reveal>
+        <li><b>1</b><h3>Teach it your business</h3><p>Products, prices, hours and rules, in plain words or from your website and files.</p></li>
+        <li><b>2</b><h3>Test it privately</h3><p>Chat with it like a customer until every answer sounds like you.</p></li>
+        <li><b>3</b><h3>Connect and go live</h3><p>Sign in with Instagram, WhatsApp or TikTok. Your AI employee starts answering.</p></li>
       </ol>
     </section>
 
-    <section class="lp-section lp-split" data-reveal>
-      <div><p class="lp-eyebrow">Transparent pricing</p><h2>See every reply you pay for.</h2><p>Each AI reply is listed with the customer, channel and time. Customer messages and your team’s replies are always free.</p><a class="ui-link" data-start href="automation-setup.html">Start setup →</a></div>
-      <div class="lp-usage-card">
-        <div class="lp-usage-top"><span>AI replies this month</span><strong data-count="1284">0</strong></div>
-        <div class="ui-progress"><i class="lp-usage-bar"></i></div>
-        <div class="ui-kv"><div><span>Instagram</span><strong>982</strong></div><div><span>WhatsApp</span><strong>302</strong></div><div><span>Team replies</span><strong>Free</strong></div></div>
+    <!-- 7. Pricing teaser -->
+    <section class="lp-section lx-price" data-reveal>
+      <div class="lx-price-copy"><p class="lp-eyebrow">Pricing</p><h2>Pay only for what it does.</h2><p>Every reply is listed with the customer, channel and time. Replies you send yourself and DM automations are free.</p></div>
+      <div class="lx-price-cards">
+        <a class="lx-price-card" href="automation-pricing.html"><span>Pay as you go</span><strong>from $14.99</strong><small>Credits that never expire</small><b>See packs →</b></a>
+        <a class="lx-price-card hot" href="automation-pricing.html?plan=monthly"><span>Monthly</span><strong>from $49<em>/mo</em></strong><small>Lowest price per reply</small><b>See plans →</b></a>
       </div>
     </section>
 
+    <!-- 8. FAQ -->
     <section class="lp-section lp-faq" id="faq">
       <header class="lp-head" data-reveal><p class="lp-eyebrow">Questions</p><h2>Good questions. Clear answers.</h2></header>
       <div class="lp-faq-list" data-reveal>
-        <details><summary>What is an AI employee?</summary><p>An assistant that knows your business — your products, prices, hours and rules — and talks to your customers on Instagram, WhatsApp and the phone using only that information.</p></details>
-        <details><summary>Do I need to know anything about AI?</summary><p>No. You describe your business in plain words, test it in a private chat, then connect your accounts with the official Instagram and WhatsApp sign-in.</p></details>
+        <details><summary>What is an AI employee?</summary><p>An assistant that knows your business (your products, prices, hours and rules) and talks to your customers on Instagram, WhatsApp, Messenger, Telegram, TikTok and the phone using only that information.</p></details>
+        <details><summary>Do I need to know anything about AI?</summary><p>No. You describe your business in plain words, test it in a private chat, then connect your accounts with the official sign-in of each app.</p></details>
         <details><summary>Will it make up prices or promises?</summary><p>No. It only uses the facts you give it. When something is missing or the customer needs a person, it hands the conversation to your team and tells you.</p></details>
         <details><summary>Can it book appointments and take orders?</summary><p>Yes. It checks your free times, books after the customer confirms, collects order details, and notifies you on WhatsApp and email.</p></details>
-        <details><summary>Which languages does it speak?</summary><p>Many — English, Spanish, French, German, Arabic, Russian, Turkish and more. You choose up to 10, and it replies in the customer’s language.</p></details>
+        <details><summary>Which languages does it speak?</summary><p>Many: English, Spanish, French, German, Arabic, Russian, Turkish and more. You choose up to 10, and it replies in the customer’s language.</p></details>
         <details><summary>Can I use my existing Hansora account?</summary><p>Yes. Sign in with your Hansora account. Your automation data is kept separate from your other Hansora work.</p></details>
       </div>
     </section>
 
-    <section class="lp-final" data-reveal>
-      <div class="lp-glow small" aria-hidden="true"><i class="a"></i><i class="b"></i></div>
-      <h2>More time for your business.</h2>
-      <p>One business. One AI employee. Every conversation answered.</p>
-      <a class="ui-btn primary lg" data-start href="automation-setup.html">Create your AI employee</a>
+    <!-- 9. Final call -->
+    <section class="lx-final" data-reveal>
+      <div class="lx-aurora small" aria-hidden="true"><i class="a"></i><i class="b"></i></div>
+      <h2>Your customers are writing right now.</h2>
+      <p>Let your AI employee answer them, while you run your business.</p>
+      <a class="lx-btn primary" data-start data-magnetic href="automation-setup.html">Create your AI employee <b aria-hidden="true">→</b></a>
     </section>
   </main>
   <footer class="lp-footer"><span>HANSORA / AUTOMATION</span><nav aria-label="Legal"><a href="automation-terms.html">Terms</a><a href="automation-privacy.html">Privacy</a><a href="automation-data-deletion.html">Data deletion</a><a href="automation-contact.html">Contact</a><a href="/">Hansora Creative ↗</a></nav></footer>
