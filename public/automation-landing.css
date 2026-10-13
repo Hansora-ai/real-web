@@ -276,3 +276,111 @@
   .lx-brain.in .lx-pulses path { animation: none; }
 }
 .lx-phone, .lx-float { text-align: left; }
+
+/* Round 2 */
+/* No sideways scrolling on phones: nothing may stick out of the page. */
+html:has(body.lx), body.lx { overflow-x: clip; }
+.lx main { overflow-x: clip; }
+/* The phone's single column may never grow with a long typed message. */
+.lx-phone { grid-template-columns: minmax(0, 1fr); }
+.lx-composer { min-width: 0; }
+
+.lx-title { font-size: clamp(48px, 7vw, 96px); }
+.lx-lead { font-size: clamp(17px, 1.6vw, 21px); max-width: 520px; }
+.lx-proof { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 20px 0 0; padding: 0; list-style: none; color: var(--text-2); font-size: 14px; font-weight: 600; }
+.lx-proof li { color: var(--text-2); }
+
+.lx-float-d { left: -8%; top: 62%; animation: lx-float 7s ease-in-out infinite; animation-delay: -4s; }
+.lx-float-icon.lang { background: rgba(56, 189, 248, .16); }
+
+/* Comment scene: the first comment is simply there; plays once */
+.lx-c.static { opacity: 1; transform: none; }
+.lx-post.play .lx-c.static { animation: none; }
+
+/* Pricing: one pay-as-you-go card */
+.lx-price { grid-template-columns: minmax(0, 1fr) minmax(0, 420px); }
+.lx-price-copy h2 { font-size: clamp(36px, 5vw, 60px); }
+.lx-price-card.hot { padding: 28px; }
+.lx-price-card strong { font-size: 44px; }
+.lx-price-card ul { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; color: var(--text-2); font-size: 14px; }
+.lx-price-card ul li::before { content: "✓ "; color: #a78bfa; font-weight: 800; }
+
+/* Hansora Creative */
+.lx-creative { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 56px; }
+.lx-creative-copy h2 { margin: 10px 0 14px; font-size: clamp(32px, 4.4vw, 52px); letter-spacing: -.035em; line-height: 1.06; }
+.lx-creative-copy p { margin: 0 0 26px; color: var(--text-2); font-size: 16.5px; line-height: 1.6; }
+.lx-gen { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--border-2); border-radius: 26px; background: var(--surface); box-shadow: 0 40px 90px -50px rgba(124, 58, 237, .6); }
+.lx-gen-prompt { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border: 1px solid var(--border-2); border-radius: 14px; background: var(--surface-2); }
+.lx-gen-prompt p { flex: 1; min-width: 0; margin: 0; overflow: hidden; color: var(--text); font-size: 14px; white-space: nowrap; text-overflow: ellipsis; }
+.lx-gen-go { padding: 8px 14px; border-radius: 10px; background: linear-gradient(100deg, #a855f7, #0ea5e9); color: #fff; font-size: 13px; font-style: normal; font-weight: 700; }
+.lx-creative.gen .lx-gen-go { animation: lx-press .6s ease 1.2s; }
+@keyframes lx-press { 50% { transform: scale(.92); filter: brightness(1.2); } }
+.lx-gen-grid { display: grid; grid-template-columns: 1.3fr 1fr; grid-template-rows: 130px 130px; gap: 10px; }
+.lx-gen-tile { position: relative; overflow: hidden; border-radius: 14px; background: var(--surface-3); }
+.lx-gen-tile.t1 { grid-row: span 2; }
+.lx-gen-tile em { position: absolute; left: 10px; bottom: 10px; padding: 3px 8px; border-radius: 999px; background: rgba(0, 0, 0, .45); color: #fff; font-size: 11px; font-style: normal; font-weight: 700; opacity: 0; transition: opacity .4s; }
+.lx-gen-play { position: absolute; left: 50%; top: 50%; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(0, 0, 0, .4); color: #fff; font-size: 14px; transform: translate(-50%, -50%) scale(.6); opacity: 0; transition: all .4s; }
+.lx-gen-shine { position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .14) 50%, transparent 70%); background-size: 220% 100%; animation: lx-shine 1.4s linear infinite; }
+@keyframes lx-shine { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.lx-gen-tile::before { content: ""; position: absolute; inset: 0; opacity: 0; transform: scale(1.08); filter: blur(14px); transition: opacity .7s ease, transform .9s cubic-bezier(.2, .8, .2, 1), filter .9s ease; }
+.lx-creative.done .lx-gen-tile::before { opacity: 1; transform: none; filter: none; }
+.lx-creative.done .lx-gen-tile:nth-child(2)::before { transition-delay: .12s; } .lx-creative.done .lx-gen-tile:nth-child(3)::before { transition-delay: .24s; } .lx-creative.done .lx-gen-tile:nth-child(4)::before { transition-delay: .36s; }
+.lx-creative.done .lx-gen-shine { opacity: 0; }
+.lx-creative.done .lx-gen-tile em, .lx-creative.done .lx-gen-play { opacity: 1; }
+.lx-creative.done .lx-gen-play { transform: translate(-50%, -50%) scale(1); }
+.lx-creative[data-palette="0"] .t1::before { background: radial-gradient(circle at 70% 25%, #fde68a, transparent 35%), linear-gradient(160deg, #d6a46b, #7c4a1e); }
+.lx-creative[data-palette="0"] .t2::before { background: radial-gradient(circle at 30% 30%, #fff7ed, transparent 40%), linear-gradient(140deg, #a16207, #422006); }
+.lx-creative[data-palette="0"] .t3::before { background: linear-gradient(135deg, #8b5cf6, #0ea5e9); }
+.lx-creative[data-palette="0"] .t4::before { background: radial-gradient(circle at 60% 40%, #fef3c7, transparent 40%), linear-gradient(160deg, #65a30d, #14532d); }
+.lx-creative[data-palette="1"] .t1::before { background: radial-gradient(circle at 40% 30%, #fff1f2, transparent 35%), linear-gradient(160deg, #f9a8d4, #be185d); }
+.lx-creative[data-palette="1"] .t2::before { background: linear-gradient(140deg, #fbcfe8, #9d174d); }
+.lx-creative[data-palette="1"] .t3::before { background: linear-gradient(135deg, #f472b6, #8b5cf6); }
+.lx-creative[data-palette="1"] .t4::before { background: radial-gradient(circle at 50% 50%, #ffe4e6, transparent 45%), linear-gradient(160deg, #fda4af, #881337); }
+.lx-creative[data-palette="2"] .t1::before { background: radial-gradient(circle at 60% 30%, #fef9c3, transparent 35%), linear-gradient(160deg, #f87171, #7f1d1d); }
+.lx-creative[data-palette="2"] .t2::before { background: linear-gradient(140deg, #fb923c, #7c2d12); }
+.lx-creative[data-palette="2"] .t3::before { background: linear-gradient(135deg, #facc15, #ef4444); }
+.lx-creative[data-palette="2"] .t4::before { background: radial-gradient(circle at 40% 60%, #fef3c7, transparent 40%), linear-gradient(160deg, #84cc16, #365314); }
+.lx-creative[data-palette="3"] .t1::before { background: radial-gradient(circle at 70% 20%, #ecfeff, transparent 35%), linear-gradient(160deg, #22d3ee, #1e3a8a); }
+.lx-creative[data-palette="3"] .t2::before { background: linear-gradient(140deg, #a78bfa, #312e81); }
+.lx-creative[data-palette="3"] .t3::before { background: linear-gradient(135deg, #34d399, #0ea5e9); }
+.lx-creative[data-palette="3"] .t4::before { background: radial-gradient(circle at 50% 40%, #fef9c3, transparent 40%), linear-gradient(160deg, #f59e0b, #b45309); }
+.lx-gen-bar { height: 4px; overflow: hidden; border-radius: 999px; background: var(--surface-3); }
+.lx-gen-bar i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #a855f7, #38bdf8); }
+.lx-creative.gen .lx-gen-bar i { animation: lx-progress 2.6s cubic-bezier(.4, 0, .2, 1) forwards; }
+.lx-creative.done .lx-gen-bar i { width: 100%; }
+@keyframes lx-progress { from { width: 0; } to { width: 100%; } }
+
+/* Final call: customer messages float up from every channel */
+.lx-final { min-height: 460px; align-content: center; }
+.lx-bubbles { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.lx-bubbles span { position: absolute; bottom: -60px; padding: 9px 14px; border-radius: 18px 18px 18px 6px; border: 1px solid var(--border-2); background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--text-2); font-size: 13.5px; white-space: nowrap; box-shadow: 0 14px 30px -18px rgba(0, 0, 0, .8); backdrop-filter: blur(8px); opacity: 0; animation: lx-rise 12s linear infinite; }
+.lx-bubbles span::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; vertical-align: 1px; }
+.lx-bubbles .ig::before { background: #e1306c; } .lx-bubbles .wa::before { background: #25d366; } .lx-bubbles .tt::before { background: #ff2d55; } .lx-bubbles .ms::before { background: #0084ff; } .lx-bubbles .tg::before { background: #27a7e7; }
+.lx-bubbles .b1 { left: 5%; animation-delay: 0s; } .lx-bubbles .b2 { left: 72%; animation-delay: -1.5s; } .lx-bubbles .b3 { left: 22%; animation-delay: -3s; } .lx-bubbles .b4 { left: 84%; animation-delay: -4.5s; }
+.lx-bubbles .b5 { left: 2%; animation-delay: -6s; } .lx-bubbles .b6 { left: 62%; animation-delay: -7.5s; } .lx-bubbles .b7 { left: 14%; animation-delay: -9s; } .lx-bubbles .b8 { left: 80%; animation-delay: -10.5s; }
+@keyframes lx-rise { 0% { transform: translateY(0) scale(.9); opacity: 0; } 10% { opacity: .9; } 70% { opacity: .75; } 100% { transform: translateY(-560px) scale(1); opacity: 0; } }
+.lx-final-live { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border: 1px solid rgba(52, 211, 153, .3); border-radius: 999px; background: rgba(52, 211, 153, .1); color: #6ee7b7; font-size: 13.5px; font-weight: 600; }
+.lx-final-live i { width: 8px; height: 8px; border-radius: 50%; background: #34d399; animation: lx-ping 2s infinite; }
+.lx-final-live b { font-variant-numeric: tabular-nums; }
+.lx-final h2 { position: relative; }
+.lx-final h2, .lx-final p { text-shadow: 0 2px 24px var(--bg); }
+
+@media (max-width: 1000px) {
+  .lx-creative, .lx-price { grid-template-columns: 1fr; }
+  .lx-float-d { left: 0; }
+  .lx-proof { justify-content: center; }
+}
+@media (max-width: 640px) {
+  .lx-float-d { display: none; }
+  .lx-gen-grid { grid-template-rows: 110px 110px; }
+  .lx-bubbles span { font-size: 12px; }
+  .lx-bubbles .b2, .lx-bubbles .b4, .lx-bubbles .b8 { left: auto; right: 4%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lx-bubbles span, .lx-gen-shine, .lx-float-d { animation: none !important; }
+  .lx-bubbles span { opacity: .5; bottom: auto; top: calc(var(--y, 20) * 1%); }
+}
+.lx-gen-grid { grid-template-columns: 1.25fr 1fr 1fr; grid-template-rows: 120px 120px; }
+.lx-gen-tile.t1 { grid-row: 1 / span 2; grid-column: 1; }
+.lx-gen-tile.t4 { grid-column: 2 / span 2; }
+@media (max-width: 640px) { .lx-gen-grid { grid-template-rows: 96px 96px; } }

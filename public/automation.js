@@ -46,18 +46,31 @@
 
   function onReveal(element) {
     element.querySelectorAll?.('[data-count-to]').forEach(counter => ui ? ui.countUp(counter, Number(counter.dataset.countTo), undefined, 1200) : (counter.textContent = counter.dataset.countTo));
-    if (element.dataset.play === 'comments') playComments(element);
+    if (element.dataset.play === 'creative') playCreative(element);
     else if (element.dataset.play) setTimeout(() => element.classList.add('play'), 250);
+    if (element.querySelector?.('[data-live-count]')) liveCount(element.querySelector('[data-live-count]'));
   }
 
-  // Comment → DM loops while the section is on screen.
-  async function playComments(post) {
-    for (;;) {
-      post.classList.remove('play'); void post.offsetWidth;
-      post.classList.add('play');
-      await wait(7000);
+  // Hansora Creative: a prompt is typed, the tiles "generate", then the next prompt.
+  async function playCreative(section) {
+    const text = section.querySelector('#lx-gen-text');
+    const prompts = ['Oak coffee table in a sunny living room', 'Nail art close-up, soft pink light', 'Fresh pasta ad, 9:16 video', 'Summer sale banner for Instagram'];
+    for (let round = 0; ; round++) {
+      section.classList.remove('done'); section.classList.add('gen'); section.dataset.palette = String(round % 4);
+      const prompt = prompts[round % prompts.length];
+      for (let i = 1; i <= prompt.length; i++) { text.textContent = prompt.slice(0, i); await wait(28); }
+      await wait(1800);
+      section.classList.remove('gen'); section.classList.add('done');
+      await wait(3200);
       if (reduce) return;
     }
+  }
+
+  // "Customers writing right now": a gently changing number.
+  function liveCount(element) {
+    if (reduce) return;
+    let value = 12;
+    setInterval(() => { value = Math.max(8, Math.min(24, value + (Math.random() < .55 ? 1 : -1))); element.textContent = value; }, 2600);
   }
 
   // Cursor spotlight on the hero and magnetic main buttons (pointer devices only).
