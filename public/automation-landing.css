@@ -476,3 +476,6 @@ html:has(body.lx), body.lx { overflow-x: clip; }
 .lx-composer.calling .lx-send::after { clip-path: none; inset: 13px 9px; border-radius: 2px; transform: rotate(135deg); }
 @media (max-width: 640px) { .lx-scenes button { padding: 0 8px; } }
 .lx-title { font-size: clamp(42px, 5.6vw, 78px); }
+/* Cleaner hero: one phone bezel (no outer ring line) and no background grid lines */
+.lx-phone { box-shadow: 0 0 0 1px rgba(255, 255, 255, .06), 0 50px 120px -30px rgba(76, 29, 149, .7), 0 30px 60px -30px rgba(0, 0, 0, .9); }
+.lx-grid { display: none; }
