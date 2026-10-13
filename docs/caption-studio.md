@@ -133,3 +133,15 @@ language routes, localized shell/control parity, and Armenian/Russian caption
 bounds in landscape, portrait, and square frames. Browser checks include a
 360×640 phone, a 390×844 portrait video with a multiline caption at Y=100,
 desktop layout, and a completed sample MP4 export with localized progress.
+
+### Production publication
+
+Netlify publishes the `public` directory from `main`. A normal release merge
+publishes the localized editors already included in that branch, together with
+the faster export implementation. After the production build completes, verify:
+
+- English: https://hansora.co/caption-studio.html
+- Russian: https://hansora.co/caption-studio_ru.html
+- Armenian: https://hansora.co/caption-studio_arm.html
+
+All three routes should return the editor instead of a page-not-found response.
