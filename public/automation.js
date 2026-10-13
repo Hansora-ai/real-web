@@ -101,7 +101,8 @@
   const fine = window.matchMedia('(pointer:fine)').matches;
   const hero = $('.lx-hero');
   if (fine && hero && !reduce) {
-    hero.addEventListener('pointermove', event => { const box = hero.getBoundingClientRect(); hero.style.setProperty('--mx', `${event.clientX - box.left}px`); hero.style.setProperty('--my', `${event.clientY - box.top}px`); });
+    const spot = hero.querySelector('.lx-spot');
+    hero.addEventListener('pointermove', event => { const box = (spot || hero).getBoundingClientRect(); hero.style.setProperty('--mx', `${event.clientX - box.left}px`); hero.style.setProperty('--my', `${event.clientY - box.top}px`); });
     document.querySelectorAll('[data-magnetic]').forEach(button => {
       button.addEventListener('pointermove', event => { const box = button.getBoundingClientRect(); button.style.transform = `translate(${(event.clientX - box.left - box.width / 2) * 0.18}px, ${(event.clientY - box.top - box.height / 2) * 0.28}px)`; });
       button.addEventListener('pointerleave', () => { button.style.transform = ''; });

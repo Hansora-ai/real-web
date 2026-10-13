@@ -479,3 +479,14 @@ html:has(body.lx), body.lx { overflow-x: clip; }
 /* Cleaner hero: one phone bezel (no outer ring line) and no background grid lines */
 .lx-phone { box-shadow: 0 0 0 1px rgba(255, 255, 255, .06), 0 50px 120px -30px rgba(76, 29, 149, .7), 0 30px 60px -30px rgba(0, 0, 0, .9); }
 .lx-grid { display: none; }
+/* Background glow without hard edges: no layer blur or blend modes (browsers cut those in rectangles);
+   the glow spans the full screen width and fades out softly on its own. */
+.lx-aurora { filter: none; left: 50%; right: auto; width: 100vw; transform: translateX(-50%); inset-block-start: -10%; }
+.lx-aurora i { mix-blend-mode: normal !important; }
+.lx-aurora .a { width: 820px; height: 820px; left: 2%; top: -6%; background: radial-gradient(circle closest-side, rgba(139, 92, 246, .42), rgba(139, 92, 246, .12) 55%, transparent); }
+.lx-aurora .b { width: 860px; height: 860px; right: 0; top: 8%; background: radial-gradient(circle closest-side, rgba(56, 189, 248, .3), rgba(56, 189, 248, .08) 55%, transparent); }
+.lx-aurora .c { width: 700px; height: 700px; left: 34%; top: 46%; background: radial-gradient(circle closest-side, rgba(232, 121, 249, .22), rgba(232, 121, 249, .06) 55%, transparent); }
+.lx-aurora.small { left: 0; width: 100%; transform: none; }
+.lx-aurora.small .a { left: -10%; top: -30%; } .lx-aurora.small .b { right: -10%; top: 0; }
+/* Mouse light spans the full screen width, so it never ends in a straight line at the content edge. */
+.lx-spot { left: 50%; right: auto; width: 100vw; transform: translateX(-50%); background: radial-gradient(520px circle at var(--mx, 70%) var(--my, 30%), rgba(139, 92, 246, .14), transparent 70%); }
