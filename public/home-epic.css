@@ -130,3 +130,15 @@ main .section-head h2, main .rail-title, main .pricing > .shell > h2, main .faq 
   .he-hero { padding-bottom: 170px; }
   .top-reel { margin-top: -150px !important; }
 }
+/* Narrow version: the hero is a rounded panel in the page width, in place of the old "HANSORA AI" intro,
+   right under Latest news. */
+.he-hero { width: min(100% - 28px, var(--max, 1400px)); margin: 28px auto 0 !important; min-height: 0; height: clamp(560px, 70vh, 700px); padding: 56px 24px; border-radius: 30px; border: 1px solid rgba(255, 255, 255, .08); box-shadow: 0 40px 100px -50px rgba(124, 58, 237, .6); }
+.he-wall { inset: 0; }
+.he-title { font-size: clamp(40px, 6vw, 92px); margin: 18px 0 14px; }
+.he-lead { margin-bottom: 22px; }
+.top-reel { margin-top: 0 !important; z-index: auto; }
+.top-reel .rail-title { text-shadow: none; }
+@media (max-width: 760px) {
+  .he-hero { height: auto; min-height: 600px; padding: 40px 14px 44px; border-radius: 24px; margin-top: 18px !important; }
+  .he-title { font-size: clamp(36px, 11vw, 54px); }
+}
