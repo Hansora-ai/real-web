@@ -142,3 +142,6 @@ main .section-head h2, main .rail-title, main .pricing > .shell > h2, main .faq 
   .he-hero { height: auto; min-height: 600px; padding: 40px 14px 44px; border-radius: 24px; margin-top: 18px !important; }
   .he-title { font-size: clamp(36px, 11vw, 54px); }
 }
+/* The hero panel grows with its content, so nothing is ever cut off */
+.he-hero { height: auto; min-height: 640px; padding: 64px 24px 60px; }
+@media (max-width: 760px) { .he-hero { min-height: 0; padding: 40px 14px 44px; } }
