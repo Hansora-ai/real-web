@@ -118,3 +118,5 @@ main .section-head h2, main .rail-title, main .pricing > .shell > h2, main .faq 
   .he-lead { font-size: 15.5px; }
   .he-points { flex-wrap: wrap; justify-content: center; }
 }
+/* Hero sits under the Latest news strip */
+.he-hero { min-height: min(860px, calc(100svh - 40px)); margin-top: 8px; }
