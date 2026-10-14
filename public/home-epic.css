@@ -120,3 +120,13 @@ main .section-head h2, main .rail-title, main .pricing > .shell > h2, main .faq 
 }
 /* Hero sits under the Latest news strip */
 .he-hero { min-height: min(860px, calc(100svh - 40px)); margin-top: 8px; }
+/* Hero first; Latest news slides up into the bottom of the hero as one design */
+.he-hero { min-height: calc(100svh - 64px); margin-top: 0; padding-bottom: 210px; }
+.top-reel { position: relative; z-index: 3; margin-top: -190px !important; }
+.top-reel .rail-head { margin-bottom: 12px; }
+.top-reel .rail-title { color: #fff !important; background: none !important; -webkit-text-fill-color: #fff; text-shadow: 0 2px 18px rgba(0, 0, 0, .8); }
+.top-reel .slot { box-shadow: 0 24px 60px -24px rgba(0, 0, 0, .95), 0 0 0 1px rgba(255, 255, 255, .1) !important; border-radius: 18px !important; }
+@media (max-width: 760px) {
+  .he-hero { padding-bottom: 170px; }
+  .top-reel { margin-top: -150px !important; }
+}
