@@ -232,3 +232,24 @@ main .faq details p { margin: 10px 0 0 !important; color: rgba(236, 233, 254, .7
   main .section-head h2, main .pricing > .shell > h2, main .faq > h2 { font-size: clamp(28px, 8vw, 38px) !important; }
 }
 @media (prefers-reduced-motion: reduce) { .ready-cta-section .ready-grad { animation: none; } }
+
+/* Big screens: the page grows wider instead of sitting small in the middle */
+@media (min-width: 1800px) { :root { --max: min(1720px, 88vw) !important; } }
+
+/* Creator choices: model cards float on a glass floor with a soft reflection and a glow in their own colour */
+.top-used-models-section .model-rail { padding: 18px 6px 70px !important; overflow-y: visible; }
+.top-used-models-section .model-card { position: relative; background: none !important; box-shadow: none !important; animation: he-card-float 5s ease-in-out infinite; }
+.top-used-models-section .model-card:nth-child(2) { animation-delay: -1s; } .top-used-models-section .model-card:nth-child(3) { animation-delay: -2s; }
+.top-used-models-section .model-card:nth-child(4) { animation-delay: -3s; } .top-used-models-section .model-card:nth-child(5) { animation-delay: -4s; }
+.top-used-models-section .model-card img { -webkit-box-reflect: below 10px linear-gradient(transparent 62%, rgba(0, 0, 0, .28)); }
+.top-used-models-section .model-card::after { content: ""; position: absolute; left: 12%; right: 12%; bottom: -46px; height: 34px; border-radius: 50%; background: var(--he-card-glow, rgba(139, 92, 246, .55)); filter: blur(22px); opacity: .55; pointer-events: none; transition: opacity .3s; }
+.top-used-models-section .model-card:hover::after { opacity: .9; }
+.top-used-models-section .model-card:nth-child(5n+1) { --he-card-glow: rgba(56, 132, 255, .7); }
+.top-used-models-section .model-card:nth-child(5n+2) { --he-card-glow: rgba(52, 211, 113, .7); }
+.top-used-models-section .model-card:nth-child(5n+3) { --he-card-glow: rgba(249, 115, 22, .7); }
+.top-used-models-section .model-card:nth-child(5n+4) { --he-card-glow: rgba(251, 146, 60, .7); }
+.top-used-models-section .model-card:nth-child(5n) { --he-card-glow: rgba(20, 184, 166, .7); }
+.top-used-models-section > .shell::after { content: ""; position: absolute; left: 8%; right: 8%; bottom: 64px; height: 1px; background: linear-gradient(90deg, transparent, rgba(167, 139, 250, .5), rgba(56, 189, 248, .5), transparent); pointer-events: none; }
+@keyframes he-card-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.top-used-models-section .model-card:hover { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .top-used-models-section .model-card { animation: none; } }
