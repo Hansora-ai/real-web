@@ -76,4 +76,56 @@
   window.addEventListener('resize', reveal);
   setInterval(() => { reveal(); checkHero(); }, 1200);
   setTimeout(() => pending.forEach(section => section.classList.add('he-in')), 12000);
+
+  // 4. "From a prompt to a finished ad": the demo screen walks through the 4 steps while it is on screen.
+  const studio = document.querySelector('.he-studio');
+  const screen = studio && studio.querySelector('.he-screen');
+  if (studio && screen) {
+    const steps = [...studio.querySelectorAll('.he-step')];
+    const body = screen.querySelector('.he-screen-body');
+    const typedEl = screen.querySelector('.he-scr-typed');
+    const chip = screen.querySelector('.he-scr-chip em');
+    const video = screen.querySelector('.he-scr-vid');
+    const fullText = typedEl ? typedEl.textContent : '';
+    const chips = ['', 'GPT Image 2.5 · 4K', 'Veo 3.1 · 1080p', 'Music + captions'];
+    const times = [3600, 3200, 3600, 4600];
+    let step = -1, timer = 0, typing = 0, running = false;
+    const loadVideo = () => {
+      if (!video || video.src) return;
+      video.src = video.dataset.heSrc;
+      video.addEventListener('playing', () => video.classList.add('he-ready'), { once: true });
+    };
+    function show(next) {
+      step = next;
+      clearTimeout(timer); clearInterval(typing);
+      screen.dataset.step = String(step);
+      if (body) screen.style.setProperty('--he-scr-w', body.offsetWidth + 'px');
+      steps.forEach((li, i) => {
+        li.classList.toggle('is-done', i < step);
+        li.classList.remove('is-on'); void li.offsetWidth; // restart the progress bar
+        if (i === step) { li.classList.add('is-on'); li.style.setProperty('--he-step-ms', times[i] + 'ms'); }
+      });
+      if (chip && chips[step]) chip.textContent = chips[step];
+      if (step === 0 && typedEl) {
+        let i = 0; typedEl.textContent = '';
+        typing = setInterval(() => { i++; typedEl.textContent = fullText.slice(0, i); if (i >= fullText.length) clearInterval(typing); }, 55);
+      } else if (typedEl) typedEl.textContent = fullText;
+      if (step === 1) loadVideo();
+      if (video && video.src) { if (step >= 2) video.play().catch(() => {}); else { video.pause(); video.currentTime = 0; } }
+      if (running) timer = setTimeout(() => show((step + 1) % steps.length), times[step]);
+    }
+    steps.forEach((li, i) => li.querySelector('button').addEventListener('click', () => { running = true; show(i); }));
+    if (reduce) { screen.dataset.step = '3'; steps.forEach(li => li.classList.add('is-done')); }
+    else {
+      const checkStudio = () => {
+        const box = studio.getBoundingClientRect();
+        const visible = box.top < window.innerHeight * 0.8 && box.bottom > window.innerHeight * 0.2;
+        if (visible && !running) { running = true; show(step < 0 ? 0 : step); }
+        else if (!visible && running) { running = false; clearTimeout(timer); if (video) video.pause(); }
+      };
+      window.addEventListener('scroll', checkStudio, { passive: true });
+      setInterval(checkStudio, 1000);
+      checkStudio();
+    }
+  }
 })();
