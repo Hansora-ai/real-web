@@ -120,22 +120,22 @@
 
     /* demo chat */
     .demo{display:grid;grid-template-columns:1fr 1.1fr;gap:56px;align-items:center}
-    .chat{position:relative;border:1px solid var(--line);border-radius:24px;background:linear-gradient(160deg,#10131c,#0a0c12);padding:20px;box-shadow:0 40px 100px rgba(0,0,0,.5);min-height:440px;overflow:hidden}
+    .chat{position:relative;border:1px solid var(--line);border-radius:24px;background:linear-gradient(160deg,#10131c,#0a0c12);padding:20px;box-shadow:0 40px 100px rgba(0,0,0,.5);height:600px;display:flex;flex-direction:column;overflow:hidden}
     .chat-top{display:flex;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--line);color:var(--muted);font-size:14px;font-weight:600}
     .chat-top .dot{width:9px;height:9px;border-radius:50%;background:#2b2f3b}
     .chat-top .who{display:inline-flex;align-items:center;gap:8px;margin-left:auto;color:#fff}
     .chat-top .who svg,.chat-top .who img{width:18px;height:18px}
-    .msgs{display:flex;flex-direction:column;gap:14px;padding-top:18px}
+    .msgs{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:14px;padding-top:18px;overflow:hidden;mask-image:linear-gradient(transparent,#000 70px)}
     .msg{max-width:88%;padding:12px 15px;border-radius:16px;font-size:15px;line-height:1.5;animation:pop .45s cubic-bezier(.2,.9,.25,1.2) both}
     .msg.user{align-self:flex-end;background:#2a2e3a;border-bottom-right-radius:5px}
     .msg.bot{align-self:flex-start;background:transparent;border:1px solid var(--line);border-bottom-left-radius:5px;color:#d7dbe6}
     .tool{display:inline-flex;align-items:center;gap:8px;margin-bottom:8px;padding:4px 10px 4px 5px;border-radius:999px;background:rgba(56,189,248,.1);color:#a5e4ff;font-size:12px;font-weight:700}
     .tool img{width:18px;height:18px;border-radius:5px;background:#0d0f1a}
-    .tool .spin{width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+    .tool .tspin{width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
     @keyframes spin{to{rotate:1turn}}
     @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.97)}}
     .result{position:relative;margin-top:10px;aspect-ratio:16/10;border-radius:12px;overflow:hidden;background:#151925}
-    .result .art{position:absolute;inset:0;opacity:0;transition:opacity 1s}
+    .result .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1s}
     .result.done .art{opacity:1}
     .result .bar{position:absolute;left:0;bottom:0;height:3px;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet));transition:width 2.2s ease}
     .result.loading .bar{width:100%}
@@ -146,6 +146,21 @@
     .result.done .tag{opacity:1}
     .typing{display:inline-flex;gap:4px}.typing i{width:6px;height:6px;border-radius:50%;background:#7b8296;animation:blink 1s infinite}.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
     @keyframes blink{50%{opacity:.25}}
+    .msg{flex:none}
+    .msg.bot:has(.result,.voice){width:88%}
+    .voice{display:flex;align-items:center;gap:12px;margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(145deg,rgba(167,139,250,.12),rgba(56,189,248,.06))}
+    .vplay{flex:none;position:relative;display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:50%;background:linear-gradient(135deg,#7c5cff,#38bdf8);color:#fff;cursor:pointer;box-shadow:0 8px 24px rgba(124,92,255,.45)}
+    .vplay::before{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px solid rgba(167,139,250,.6);animation:ping 1.6s ease-out infinite}
+    .voice.playing .vplay::before{display:none}
+    .vplay svg{width:18px;height:18px}
+    .vmeta{flex:1;min-width:0}
+    .vname{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:13px;font-weight:700;color:#e9ecf4}
+    .vname small{color:var(--muted);font-weight:600}
+    .wave{display:flex;align-items:center;gap:2px;height:34px}
+    .wave i{flex:1;min-width:2px;border-radius:2px;background:rgba(255,255,255,.22);transform-origin:center;transition:background .2s}
+    .wave i.past{background:linear-gradient(#a78bfa,#38bdf8)}
+    .voice.playing .wave i{animation:eq .9s ease-in-out infinite alternate}
+    @keyframes eq{from{transform:scaleY(.35)}to{transform:scaleY(1.15)}}
     .caps{display:grid;gap:12px;margin-top:30px}
     .cap{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
     .cap b{display:block;margin-bottom:3px;font-size:16px}
@@ -379,13 +394,14 @@
         ] }
     ];
 
+    // Example results shown in the chat demo. The voice is a real ElevenLabs voice from the Hansora audio page.
+    var VOICE_URL = 'https://storage.googleapis.com/eleven-public-prod/premade/voices/EXAVITQu4vr4xnSDxMaL/01a3e33c-6e99-4ee7-8543-ff2216a32186.mp3';
     var DEMOS = [
-      { ask: 'Make a 16:9 photo of a neon ramen shop on a rainy Tokyo street, with Nano Banana 2', tool: 'Hansora · quote + generate image', reply: 'Done! Want a vertical version for Reels too?', label: 'Nano Banana 2 · 16:9',
-        art: 'radial-gradient(circle at 30% 70%,#ff3d7f 0,transparent 35%),radial-gradient(circle at 75% 30%,#38bdf8 0,transparent 40%),linear-gradient(160deg,#120a2a,#2a0f3a 50%,#06131f)' },
-      { ask: 'Turn that into a 6-second video with slow camera push-in', tool: 'Hansora · image to video', reply: 'Your video is ready. I used Wan 3.0 with your image as the first frame.', label: 'Wan 3.0 · 6s',
-        art: 'radial-gradient(circle at 60% 40%,#fbbf24 0,transparent 30%),radial-gradient(circle at 20% 80%,#a78bfa 0,transparent 45%),linear-gradient(200deg,#0b1026,#311046)' },
-      { ask: 'Now add a calm female voice-over: "Open late, every night."', tool: 'Hansora · text to speech', reply: 'Voice-over generated. Should I make a background song too?', label: 'Text to speech · 0:04',
-        art: 'repeating-linear-gradient(90deg,rgba(56,189,248,.8) 0 3px,transparent 3px 9px),linear-gradient(180deg,#0a1222,#1c0f33)' }
+      { kind: 'image', ask: 'Make a product photo of a milk chocolate bar in a pink retro Korean wrapper, dreamy bokeh background', tool: 'Hansora · generate image', label: 'Nano Banana 2 · 16:9',
+        media: '<img class="art" src="/media/mcp/demo-image.jpg" alt="Chocolate bar in a pink retro wrapper">', reply: 'Here\'s your product shot. Want it animated into an ad?', hold: 3200 },
+      { kind: 'video', ask: 'Yes! Turn it into a 12-second ad: anime intro, the bar snapping, friends eating it in a photo booth', tool: 'Hansora · generate video', label: 'Video · 12s',
+        media: '<video class="art" src="/media/mcp/demo-video.mp4" poster="/media/mcp/demo-video-poster.jpg" muted loop playsinline preload="none"></video>', reply: 'Your ad is ready. Shall I add a voice-over?', hold: 9000 },
+      { kind: 'voice', ask: 'Add a confident female voice-over', tool: 'Hansora · text to speech', reply: 'Here it is with Sarah, a mature and confident voice. Tap play to listen.', hold: 9000 }
     ];
 
     var MODELS = ['Nano Banana 2', 'GPT Image 2', 'Seedream 5.0', 'Wan 3.0', 'Grok Video', 'Z Image', 'Qwen 2', 'Text to speech', 'Voice changer', 'Voice isolation', 'Song creation', 'Upscale', 'Background change', 'Image to video'];
@@ -535,27 +551,69 @@
     var msgs = $('msgs'), demoIdx = 0, demoRunning = false;
     function el(html, cls) { var d = document.createElement('div'); d.className = 'msg ' + cls; d.innerHTML = html; msgs.appendChild(d); return d; }
     function wait(ms) { return new Promise(function (r) { setTimeout(r, reduced ? 0 : ms); }); }
+    var playIcon = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>';
+    var pauseIcon = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
+    var voiceAudio = null, voiceBusy = false;
+    function voiceCard() {
+      var bars = '';
+      for (var k = 0; k < 42; k++) {
+        var h = 25 + Math.round(70 * Math.abs(Math.sin(k * 1.7) * Math.cos(k * 0.45)));
+        bars += '<i style="height:' + h + '%;animation-delay:' + (-(k % 7) * 0.13).toFixed(2) + 's"></i>';
+      }
+      return '<div class="voice"><button class="vplay" type="button" aria-label="Play voice sample">' + playIcon + '</button><div class="vmeta"><div class="vname">Sarah · Voice-over<small class="vtime">0:00</small></div><div class="wave">' + bars + '</div></div></div>';
+    }
+    function wireVoice(card) {
+      var btn = card.querySelector('.vplay'), bars = card.querySelectorAll('.wave i'), time = card.querySelector('.vtime');
+      btn.addEventListener('click', function () {
+        if (!voiceAudio) voiceAudio = new Audio(VOICE_URL);
+        var a = voiceAudio;
+        a.ontimeupdate = function () {
+          var f = a.duration ? a.currentTime / a.duration : 0, n = Math.round(f * bars.length);
+          bars.forEach(function (b, k) { b.classList.toggle('past', k < n); });
+          time.textContent = '0:' + String(Math.floor(a.currentTime)).padStart(2, '0');
+        };
+        a.onended = a.onpause = function () { card.classList.remove('playing'); btn.innerHTML = playIcon; voiceBusy = false; };
+        if (a.paused) {
+          a.play().then(function () { card.classList.add('playing'); btn.innerHTML = pauseIcon; voiceBusy = true; }, function () {});
+        } else a.pause();
+      });
+    }
     function runDemo() {
       if (demoRunning) return; demoRunning = true;
       (function loop() {
         var d = DEMOS[demoIdx % DEMOS.length];
         if (demoIdx % DEMOS.length === 0) msgs.innerHTML = '';
-        while (msgs.children.length > 4) msgs.removeChild(msgs.firstChild);
+        while (msgs.children.length > 6) msgs.removeChild(msgs.firstChild);
         var u = el('', 'user'), i = 0;
         var typeStep = function () {
           return new Promise(function (res) {
             if (reduced) { u.textContent = d.ask; return res(); }
-            var iv = setInterval(function () { u.textContent = d.ask.slice(0, ++i); if (i >= d.ask.length) { clearInterval(iv); res(); } }, 22);
+            var iv = setInterval(function () { u.textContent = d.ask.slice(0, ++i); if (i >= d.ask.length) { clearInterval(iv); res(); } }, 20);
           });
         };
+        var b;
         typeStep().then(function () { return wait(450); }).then(function () {
-          var b = el('<span class="tool"><img src="/media/compare/hansora.png" alt=""><span class="spin"></span>' + d.tool + '</span><div class="result loading"><div class="art" style="background:' + d.art + '"></div><div class="shimmer"></div><span class="tag">' + d.label + '</span><div class="bar"></div></div><div class="say"><span class="typing"><i></i><i></i><i></i></span></div>', 'bot');
-          return wait(2300).then(function () {
+          var body = d.kind === 'voice' ? '<div class="vslot"><div class="result loading" style="aspect-ratio:auto;height:70px"><div class="shimmer"></div><div class="bar"></div></div></div>'
+            : '<div class="result loading">' + d.media + '<div class="shimmer"></div><span class="tag">' + d.label + '</span><div class="bar"></div></div>';
+          b = el('<span class="tool"><img src="/media/compare/hansora.png" alt=""><span class="tspin"></span>' + d.tool + '</span>' + body + '<div class="say"><span class="typing"><i></i><i></i><i></i></span></div>', 'bot');
+          var v = b.querySelector('video');
+          if (v) { v.preload = 'auto'; v.load(); }
+          return wait(2300);
+        }).then(function () {
+          var sp = b.querySelector('.tspin'); if (sp) sp.outerHTML = '✓';
+          if (d.kind === 'voice') {
+            b.querySelector('.vslot').innerHTML = voiceCard();
+            wireVoice(b.querySelector('.voice'));
+          } else {
             b.querySelector('.result').classList.replace('loading', 'done');
-            var sp = b.querySelector('.spin'); if (sp) sp.outerHTML = '✓';
-            b.querySelector('.say').textContent = d.reply;
-          });
-        }).then(function () { return wait(2600); }).then(function () { demoIdx++; loop(); });
+            var v = b.querySelector('video'); if (v) v.play().catch(function () {});
+          }
+          b.querySelector('.say').textContent = d.reply;
+          return wait(d.hold);
+        }).then(function waitVoice() {
+          // Don't move on while someone is listening to the voice sample.
+          if (voiceBusy) return wait(1000).then(waitVoice);
+        }).then(function () { demoIdx++; loop(); });
       })();
     }
 
