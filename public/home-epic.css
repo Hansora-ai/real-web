@@ -510,3 +510,5 @@ html[lang="hy"] .he-title { font-size: clamp(32px, 4.6vw, 72px); }
 .he-hero.he-paused .he-copy, .he-hero.he-paused .he-copy * { animation-play-state: running !important; }
 /* Side-scrolling rows snap gently, so a slightly diagonal trackpad swipe keeps scrolling the page */
 main .x-scroll, .home-features-grid { scroll-snap-type: x proximity !important; overscroll-behavior-y: auto; }
+/* Room above the side-scrolling rows, so cards lifted on hover are not cut at the top */
+.top-reel .x-scroll { padding-top: 12px !important; margin-top: -12px !important; padding-bottom: 14px !important; margin-bottom: -14px !important; }
