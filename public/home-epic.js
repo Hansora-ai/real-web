@@ -78,6 +78,16 @@
   setInterval(() => { reveal(); checkHero(); }, 1200);
   setTimeout(() => pending.forEach(section => section.classList.add('he-in')), 12000);
 
+  // Sections that are off screen pause their animations, so scrolling stays smooth.
+  const animated = [...document.querySelectorAll('.he-hero, .studio-marquee-section, .seedance-showcase-section, .top-used-models-section, .he-studio, .latest-models-section, .ready-cta-section')];
+  function pauseOffscreen() {
+    const h = window.innerHeight;
+    animated.forEach(el => { const r = el.getBoundingClientRect(); el.classList.toggle('he-paused', r.bottom < -100 || r.top > h + 100); });
+  }
+  window.addEventListener('scroll', () => requestAnimationFrame(pauseOffscreen), { passive: true });
+  setInterval(pauseOffscreen, 1000);
+  pauseOffscreen();
+
   // 4. "From a prompt to a finished ad": the demo screen walks through the 4 steps while it is on screen.
   const studio = document.querySelector('.he-studio');
   const screen = studio && studio.querySelector('.he-screen');
@@ -88,6 +98,11 @@
     const chip = screen.querySelector('.he-scr-chip em');
     const video = screen.querySelector('.he-scr-vid');
     const fullText = typedEl ? typedEl.textContent : '';
+    // Caption words appear one by one, like modern video captions.
+    const caption = screen.querySelector('.he-scr-caption');
+    if (caption && !caption.children.length) {
+      caption.innerHTML = caption.textContent.trim().split(/\s+/).map(w => '<span>' + w.replace(/[&<>]/g, '') + '</span>').join(' ');
+    }
     const chips = ['', 'GPT Image 2.5 · 4K', 'Seedance 2.5 · 1080p', 'Music + captions'];
     const times = [3600, 3200, 3600, 4600];
     let step = -1, timer = 0, typing = 0, running = false;
@@ -111,7 +126,7 @@
         let i = 0; typedEl.textContent = '';
         typing = setInterval(() => { i++; typedEl.textContent = fullText.slice(0, i); if (i >= fullText.length) clearInterval(typing); }, 55);
       } else if (typedEl) typedEl.textContent = fullText;
-      if (step === 1) loadVideo();
+      if (step >= 1) loadVideo();
       if (video && video.src) { if (step >= 2) video.play().catch(() => {}); else { video.pause(); video.currentTime = 0; } }
       if (running) timer = setTimeout(() => show((step + 1) % steps.length), times[step]);
     }
