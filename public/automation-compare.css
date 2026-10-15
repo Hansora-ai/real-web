@@ -94,3 +94,10 @@
 .ui-vs-switch{margin-top:10px}
 .ui-compare-table td b{color:var(--text);font-size:15px}
 .ui-compare-table .us b{color:var(--green)}
+/* Company name inside each bar */
+.ui-vs-track i{justify-content:space-between}
+.ui-vs-brand{display:inline-flex;align-items:center;gap:7px;padding-left:14px;color:#fff;font-size:14px;font-weight:800;white-space:nowrap;opacity:0;transition:opacity .5s .7s}
+.ui-vs-brand img{width:20px;height:20px;border-radius:6px}
+.ui-vs-row.us .ui-vs-brand{color:#04150c}
+.ui-vs.is-on .ui-vs-brand{opacity:1}
+@media (max-width:760px){.ui-vs-brand{font-size:12px;padding-left:10px}.ui-vs-brand img{width:16px;height:16px}}
