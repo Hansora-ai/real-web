@@ -3364,7 +3364,8 @@
       };
 
       const eagerVideos = videos.filter((video) => video.hasAttribute('data-eager-video'));
-      eagerVideos.forEach((video) => loadVideoNow(video, 'auto'));
+      // Phones: no eager loading; each news video loads when it is actually on screen.
+      if (!isMobile.matches) eagerVideos.forEach((video) => loadVideoNow(video, 'auto'));
 
       const pauseVideo = (video) => {
         if (!video.paused) video.pause();
@@ -3517,7 +3518,8 @@
       const studioVideos = Array.from(section.querySelectorAll('video[data-studio-src]'));
       if (!studioVideos.length) return;
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const LOAD_AHEAD = 1400;   // start downloading this far before the section arrives
+      const isPhone = window.matchMedia('(max-width: 760px)').matches;
+      const LOAD_AHEAD = isPhone ? 250 : 1400;   // start downloading this far before the section arrives (phones: only when close)
       const NEAR_RANGE = 1800;   // treat the section as "in use" within this distance
       const PAUSE_DELAY = 2600;  // grace period so fast up/down scrolls never unload it
       let active = false;
@@ -3528,6 +3530,7 @@
       });
 
       const loadAll = () => {
+        if (isPhone) return; // phones load each card only when it is on screen (see syncPlayback)
         studioVideos.forEach((video) => {
           if (!video.src) { video.src = video.dataset.studioSrc; video.load(); }
         });
@@ -3548,6 +3551,7 @@
           const r = video.getBoundingClientRect();
           const onScreen = r.right > -80 && r.left < vw + 80 && r.bottom > 0 && r.top < vh;
           if (onScreen) {
+            if (!video.src) { video.src = video.dataset.studioSrc; video.load(); }
             if (video.paused) video.play().catch(() => {});
           } else if (!video.paused) {
             video.pause();
@@ -3580,6 +3584,7 @@
         const rect = section.getBoundingClientRect();
         const wantLoad = rect.bottom > -LOAD_AHEAD && rect.top < window.innerHeight + LOAD_AHEAD;
         if (wantLoad && !studioVideos[0].src) loadAll();
+        if (isPhone && !wantLoad) { setActive(false); return; }
         setActive(rect.bottom > -NEAR_RANGE && rect.top < window.innerHeight + NEAR_RANGE);
       };
 
@@ -3654,6 +3659,6 @@
   }, true);
 })();
 </script>
-<script defer src="/home-epic.js?v=20261030"></script>
+<script defer src="/home-epic.js?v=20261034"></script>
 </body>
 </html>
