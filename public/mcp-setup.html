@@ -123,7 +123,7 @@
     .step::before{content:counter(s);display:grid;place-items:center;width:38px;height:38px;margin-bottom:18px;border-radius:12px;background:linear-gradient(145deg,var(--accent),var(--accent2));color:#07080d;font-weight:900}
     .step h3{margin:0 0 8px;font-size:19px}
     .step p{margin:0;color:var(--muted);font-size:15px;line-height:1.6}
-    .step code{padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07);color:#e4e8f2;font-size:13px;overflow-wrap:anywhere}
+    .step a{color:#fff}.step code{padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07);color:#e4e8f2;font-size:13px;overflow-wrap:anywhere}
     .cmd{display:flex;align-items:center;gap:10px;margin-top:22px;padding:14px 14px 14px 18px;border:1px solid var(--line);border-radius:14px;background:#0b0d14;font:500 14px ui-monospace,SFMono-Regular,Menlo,monospace;overflow:hidden}
     .cmd code{flex:1;overflow-x:auto;white-space:nowrap;color:#d9deea;scrollbar-width:none}
     .cmd[hidden]{display:none}
@@ -169,7 +169,6 @@
     <symbol id="i-claude" viewBox="0 0 24 24"><g fill="#D97757"><path d="M12 1.5l1.15 7.3L17.6 2.9l-2.9 6.85 6.85-2.9-5.9 4.45 7.35 1.2-7.35 1.2 5.9 4.45-6.85-2.9 2.9 6.85-4.45-5.9L12 22.5l-1.15-7.3-4.45 5.9 2.9-6.85-6.85 2.9 5.9-4.45-7.35-1.2 7.35-1.2-5.9-4.45 6.85 2.9L6.4 2.9l4.45 5.9z"/></g></symbol>
     <symbol id="i-cursor" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2 20.66 7v10L12 22 3.34 17V7z"/><path d="M3.34 7 12 12l8.66-5M12 12v10"/></g><path fill="currentColor" d="M12 2 20.66 7 12 12z" opacity=".55"/></symbol>
     <symbol id="i-terminal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="3"/><path d="m7 9 3 3-3 3M12.5 15H17"/></g></symbol>
-    <symbol id="i-vscode" viewBox="0 0 24 24"><path fill="#3EA6F2" d="M17.6 2 8.4 10.4 4.3 7.3 2.6 8.2v7.6l1.7.9 4.1-3.1 9.2 8.4 3.8-1.8V3.8zM4.6 14.3V9.7L7 12zm12.9 1.5L12.4 12l5.1-3.8z"/></symbol>
     <symbol id="i-plug" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 2v5M15 2v5M6 7h12v4a6 6 0 0 1-12 0zM12 17v5"/></g></symbol>
     <symbol id="i-help" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></g></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></g></symbol>
@@ -259,7 +258,7 @@
         <div class="faq">
           <details><summary>Do I need a Hansora account?</summary><p>Yes. When you connect, you sign in to Hansora and approve access. Generations are paid from that account's balance, and results also appear in your Hansora history.</p></details>
           <details><summary>Does it cost extra?</summary><p>No. Connecting is free. You only pay normal Hansora credits for what you generate, the same as on the website.</p></details>
-          <details><summary>Which apps does it work with?</summary><p>ChatGPT, Claude (web, desktop and Claude Code), Cursor, VS Code and any other app that supports remote MCP servers. Use the URL <code>https://hansora.co/mcp</code>.</p></details>
+          <details><summary>Which apps does it work with?</summary><p>ChatGPT, Claude (web, desktop and Claude Code), Cursor (app and web) and any other app that supports remote MCP servers. Use the URL <code>https://hansora.co/mcp</code>.</p></details>
           <details><summary>Can I disconnect later?</summary><p>Yes. Remove the Hansora app or connector in your AI app's settings at any time. Access stops right away.</p></details>
         </div>
       </div>
@@ -288,7 +287,6 @@
 
     function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
     var CURSOR_URL = 'cursor://anysphere.cursor-deeplink/mcp/install?name=hansora&config=' + encodeURIComponent(b64(JSON.stringify({ url: MCP_URL })));
-    var VSCODE_URL = 'vscode:mcp/install?' + encodeURIComponent(JSON.stringify({ name: 'hansora', type: 'http', url: MCP_URL }));
     var CLAUDE_CODE_CMD = 'claude mcp add --transport http hansora ' + MCP_URL;
 
     var CLIENTS = [
@@ -309,28 +307,20 @@
           ['Ask for anything', 'In a new chat, turn Hansora on from the <b>+</b> menu and ask: "Make a cinematic video of…". Free Claude plans allow one custom connector.']
         ] },
       { id: 'cursor', name: 'Cursor', icon: 'i-cursor', accent: '#e5e7eb', accent2: '#38bdf8',
-        label: 'Add Hansora to Cursor', action: 'app', href: CURSOR_URL, download: 'https://cursor.com/download',
-        hint: 'Opens the Cursor desktop app with Hansora ready to install.',
+        label: 'Add Hansora to Cursor', action: 'app', href: CURSOR_URL, download: 'https://cursor.com/download', web: 'https://cursor.com/agents',
+        hint: 'Opens the Cursor app with Hansora ready to install. Using Cursor in the browser? See the steps below.',
         steps: [
-          ['Open in Cursor', 'Click <b>Add Hansora to Cursor</b>. Cursor opens and shows the Hansora MCP server.'],
-          ['Install and sign in', 'Click <b>Install</b>, then sign in to Hansora when Cursor asks.'],
-          ['Use it in Agent', 'Ask the Cursor agent to generate images, video or audio for your project.']
+          ['Cursor app', 'Click <b>Add Hansora to Cursor</b>. The Cursor app opens with Hansora ready. Click <b>Install</b> and sign in to Hansora.'],
+          ['Cursor on the web', 'Copy <code>' + MCP_URL + '</code>, open <a href="https://cursor.com/agents" target="_blank" rel="noopener"><b>cursor.com/agents</b></a>, open the <b>MCP</b> menu, add a custom server named <code>Hansora</code> with that URL, and sign in.'],
+          ['Ask for anything', 'Ask the Cursor agent to generate images, video or audio for your project.']
         ] },
       { id: 'claude-code', name: 'Claude Code', icon: 'i-terminal', accent: '#d97757', accent2: '#38bdf8',
         label: 'Copy install command', action: 'copy-cmd', cmd: CLAUDE_CODE_CMD,
         hint: 'Paste it into the Terminal app on your own computer, not into a chat.',
         steps: [
-          ['Copy the command', 'Click <b>Copy install command</b>. Open the <b>Terminal</b> app on your computer (where Claude Code is installed), paste it and press Enter. Don\'t paste it into a chat.'],
+          ['Copy the command', 'Click <b>Copy install command</b>. Open the <b>Terminal</b> app on your computer (where Claude Code is installed), paste it and press Enter. Using Claude Code on the web or in the Claude app? Add Hansora in the <b>Claude</b> tab instead, it works there too.'],
           ['Sign in', 'Start <code>claude</code>, run <code>/mcp</code>, choose <b>hansora</b> and sign in.'],
           ['Generate assets', 'Ask Claude Code to create images, video or voice-overs right in your project.']
-        ] },
-      { id: 'vscode', name: 'VS Code', icon: 'i-vscode', accent: '#3ea6f2', accent2: '#a78bfa',
-        label: 'Add Hansora to VS Code', action: 'app', href: VSCODE_URL, download: 'https://code.visualstudio.com/download',
-        hint: 'Opens the VS Code desktop app (Microsoft\'s free code editor) with Hansora ready to install.',
-        steps: [
-          ['Open in VS Code', 'Click <b>Add Hansora to VS Code</b>. VS Code opens the MCP install screen.'],
-          ['Install and sign in', 'Click <b>Install</b>, then sign in to Hansora when asked.'],
-          ['Use Copilot Chat', 'In Agent mode, ask Copilot to generate media with Hansora.']
         ] },
       { id: 'other', name: 'any AI app', short: 'Other', icon: 'i-plug', accent: '#a78bfa', accent2: '#38bdf8',
         label: 'Copy MCP URL', action: 'copy-url',
@@ -411,7 +401,7 @@
       $('chatWho').innerHTML = icon(c.icon) + (c.short || c.name);
 
       $('steps').innerHTML = c.steps.map(function (s) { return '<div class="step"><h3>' + s[0] + '</h3><p>' + s[1] + '</p></div>'; }).join('');
-      var cmdText = c.cmd || (c.id === 'other' || c.id === 'claude' ? MCP_URL : '');
+      var cmdText = c.cmd || (c.id === 'other' || c.id === 'claude' || c.id === 'cursor' ? MCP_URL : '');
       $('cmd').hidden = !cmdText;
       $('cmdText').textContent = cmdText;
     }
@@ -455,7 +445,12 @@
         window.removeEventListener('blur', onLeave);
         document.removeEventListener('visibilitychange', onLeave);
         if (left || current !== c) return;
-        $('hint').innerHTML = c.name + ' didn\'t open? It\'s a desktop app. <a href="' + c.download + '" target="_blank" rel="noopener">Download ' + c.name + '</a>, then click the button again.';
+        var msg = c.name + ' app didn\'t open. ';
+        if (c.web) {
+          copyText(MCP_URL, 'MCP URL copied for ' + c.name + ' on the web.');
+          msg += 'Using it in the browser? We copied the URL. <a href="' + c.web + '" target="_blank" rel="noopener">Open ' + c.name + ' on the web</a>, open the MCP menu and add it. Or ';
+        }
+        $('hint').innerHTML = msg + '<a href="' + c.download + '" target="_blank" rel="noopener">download the app</a>.';
       }, 1800);
     }
 
