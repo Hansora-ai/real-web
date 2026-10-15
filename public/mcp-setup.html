@@ -71,7 +71,7 @@
     .endpoint code{color:#d9deea;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .copy{flex:none;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.05);font:600 12px Inter,sans-serif;color:#fff;cursor:pointer}
     .copy:hover{background:rgba(255,255,255,.1)}
-    .hint{margin-top:12px;min-height:20px;color:var(--muted);font-size:13px;text-align:center}
+    .hint{margin-top:12px;min-height:20px;color:var(--muted);font-size:13px;text-align:center}.hint a{color:#fff;font-weight:700}
 
     /* ---------- sections ---------- */
     section.block{padding:96px 0}
@@ -283,7 +283,8 @@
     var MCP_URL = 'https://hansora.co/mcp';
     // Public ChatGPT app link. Replace with the exact "Copy plugin link" value from platform.openai.com if it differs.
     var CHATGPT_APP_URL = 'https://chatgpt.com/apps/hansora-ai/asdk_app_6ab42cbeb1f08191bf158f990f1c649e';
-    var CLAUDE_CONNECTORS_URL = 'https://claude.ai/settings/connectors';
+    // Opens Claude's "Add custom connector" dialog with the name and URL already filled in.
+    var CLAUDE_INSTALL_URL = 'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Hansora&connectorUrl=' + encodeURIComponent(MCP_URL);
 
     function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
     var CURSOR_URL = 'cursor://anysphere.cursor-deeplink/mcp/install?name=hansora&config=' + encodeURIComponent(b64(JSON.stringify({ url: MCP_URL })));
@@ -300,16 +301,16 @@
           ['Ask for anything', 'In any chat, type <code>@Hansora</code> or just ask: "Make a cinematic video of…"']
         ] },
       { id: 'claude', name: 'Claude', icon: 'i-claude', accent: '#d97757', accent2: '#a78bfa',
-        label: 'Add Hansora to Claude', action: 'claude', href: CLAUDE_CONNECTORS_URL,
-        hint: 'We copy the MCP URL for you and open Claude connector settings.',
+        label: 'Add Hansora to Claude', action: 'open', href: CLAUDE_INSTALL_URL,
+        hint: 'Opens Claude with Hansora already filled in. Just click Add.',
         steps: [
-          ['Open Claude connectors', 'Click <b>Add Hansora to Claude</b>. We copy the URL and open Settings → Connectors.'],
-          ['Add a custom connector', 'Click <b>Add custom connector</b>, name it <code>Hansora</code>, paste <code>' + MCP_URL + '</code> and click Add.'],
-          ['Connect and create', 'Click <b>Connect</b>, sign in to Hansora, then turn Hansora on in any chat and ask.']
+          ['Open Claude', 'Click <b>Add Hansora to Claude</b>. Claude opens the <b>Add custom connector</b> window with Hansora already filled in.'],
+          ['Click Add, then Connect', 'Click <b>Add</b>, then <b>Connect</b>, and sign in to your Hansora account.'],
+          ['Ask for anything', 'In a new chat, turn Hansora on from the <b>+</b> menu and ask: "Make a cinematic video of…". Free Claude plans allow one custom connector.']
         ] },
       { id: 'cursor', name: 'Cursor', icon: 'i-cursor', accent: '#e5e7eb', accent2: '#38bdf8',
-        label: 'Add Hansora to Cursor', action: 'open', href: CURSOR_URL, sameTab: true,
-        hint: 'Opens Cursor with Hansora ready to install. Cursor needs to be installed.',
+        label: 'Add Hansora to Cursor', action: 'app', href: CURSOR_URL, download: 'https://cursor.com/download',
+        hint: 'Opens the Cursor desktop app with Hansora ready to install.',
         steps: [
           ['Open in Cursor', 'Click <b>Add Hansora to Cursor</b>. Cursor opens and shows the Hansora MCP server.'],
           ['Install and sign in', 'Click <b>Install</b>, then sign in to Hansora when Cursor asks.'],
@@ -317,15 +318,15 @@
         ] },
       { id: 'claude-code', name: 'Claude Code', icon: 'i-terminal', accent: '#d97757', accent2: '#38bdf8',
         label: 'Copy install command', action: 'copy-cmd', cmd: CLAUDE_CODE_CMD,
-        hint: 'Run the command in your terminal.',
+        hint: 'Paste it into the Terminal app on your own computer, not into a chat.',
         steps: [
-          ['Copy the command', 'Click <b>Copy install command</b> and paste it into your terminal.'],
+          ['Copy the command', 'Click <b>Copy install command</b>. Open the <b>Terminal</b> app on your computer (where Claude Code is installed), paste it and press Enter. Don\'t paste it into a chat.'],
           ['Sign in', 'Start <code>claude</code>, run <code>/mcp</code>, choose <b>hansora</b> and sign in.'],
           ['Generate assets', 'Ask Claude Code to create images, video or voice-overs right in your project.']
         ] },
       { id: 'vscode', name: 'VS Code', icon: 'i-vscode', accent: '#3ea6f2', accent2: '#a78bfa',
-        label: 'Add Hansora to VS Code', action: 'open', href: VSCODE_URL, sameTab: true,
-        hint: 'Opens VS Code with Hansora ready to install.',
+        label: 'Add Hansora to VS Code', action: 'app', href: VSCODE_URL, download: 'https://code.visualstudio.com/download',
+        hint: 'Opens the VS Code desktop app (Microsoft\'s free code editor) with Hansora ready to install.',
         steps: [
           ['Open in VS Code', 'Click <b>Add Hansora to VS Code</b>. VS Code opens the MCP install screen.'],
           ['Install and sign in', 'Click <b>Install</b>, then sign in to Hansora when asked.'],
@@ -441,22 +442,31 @@
       try { if (window.gtag) window.gtag('event', 'mcp_connect_click', { client: c.id }); } catch (_) {}
     }
 
+    // Desktop apps open through a link like cursor://. If the browser never loses focus,
+    // the app is most likely not installed, so offer the download instead.
+    function openDesktopApp(c) {
+      var left = false;
+      var onLeave = function () { left = true; };
+      window.addEventListener('blur', onLeave, { once: true });
+      document.addEventListener('visibilitychange', onLeave, { once: true });
+      toast('Opening ' + c.name + '…');
+      location.href = c.href;
+      setTimeout(function () {
+        window.removeEventListener('blur', onLeave);
+        document.removeEventListener('visibilitychange', onLeave);
+        if (left || current !== c) return;
+        $('hint').innerHTML = c.name + ' didn\'t open? It\'s a desktop app. <a href="' + c.download + '" target="_blank" rel="noopener">Download ' + c.name + '</a>, then click the button again.';
+      }, 1800);
+    }
+
     function install() {
       var c = current;
       track(c);
       if (c.action === 'open') {
-        if (c.sameTab) {
-          location.href = c.href;
-          toast('Opening ' + c.name + '… If nothing happens, install ' + c.name + ' first.');
-        } else {
-          window.open(c.href, '_blank', 'noopener');
-        }
-      } else if (c.action === 'claude') {
-        // Open the window synchronously so popup blockers allow it, then copy.
         var w = window.open(c.href, '_blank');
-        if (w) w.opener = null;
-        copyText(MCP_URL, 'MCP URL copied. In Claude, click "Add custom connector" and paste it.');
-        if (!w) setTimeout(function () { location.href = c.href; }, 900);
+        if (w) w.opener = null; else location.href = c.href;
+      } else if (c.action === 'app') {
+        openDesktopApp(c);
       } else if (c.action === 'copy-cmd') {
         copyText(c.cmd, 'Command copied. Paste it into your terminal.');
       } else {
