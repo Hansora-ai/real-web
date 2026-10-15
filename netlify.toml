@@ -97,3 +97,9 @@ function = "inject-bottom-nav-inline"
 # Buying stage of quiet chats (30 min without messages), once per conversation change
 [functions."automation-sales-stage"]
   schedule = "*/10 * * * *"
+
+# Friendly address for the ChatGPT plugin / AI-app connect page.
+[[redirects]]
+  from = "/chatgpt-plugin"
+  to = "/mcp-setup.html"
+  status = 200
