@@ -400,7 +400,7 @@
     .cg .m-u{background:#303030}
     @media(max-width:860px){.g-body{grid-template-columns:1fr}.stage{order:-1}.g-head h3{font-size:16px}}
     @media(max-width:900px){.hero{padding:36px 0 64px}.hero-inner{grid-template-columns:1fr;gap:8px}.orbit{width:min(300px,78vw);order:-1}.demo{grid-template-columns:1fr;gap:36px}.steps,.grid3{grid-template-columns:1fr}section.block{padding:72px 0}}
-    @media(max-width:560px){.badge,.tabs,.endpoint,.btn-ghost{backdrop-filter:none}.sub{font-size:16px}.tabs{display:flex;mask-image:linear-gradient(90deg,#000 85%,transparent)}.tab{padding:9px 12px;font-size:14px}.btn{width:100%;min-height:54px;font-size:16px}.ctas{width:100%}.endpoint{display:flex}.chat{min-height:400px}}
+    @media(max-width:560px){.badge,.tabs,.endpoint,.btn-ghost{backdrop-filter:none}.sub{font-size:16px}.tabs{display:flex}.tabs.fade-r{mask-image:linear-gradient(90deg,#000 85%,transparent)}.tabs.fade-l{mask-image:linear-gradient(90deg,transparent,#000 15%)}.tabs.fade-l.fade-r{mask-image:linear-gradient(90deg,transparent,#000 15%,#000 85%,transparent)}.tab{padding:9px 12px;font-size:14px}.btn{width:100%;min-height:54px;font-size:16px}.ctas{width:100%}.endpoint{display:flex}.chat{min-height:400px}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
   </style>
 </head>
@@ -648,12 +648,22 @@
       tabs.appendChild(b);
     });
 
+    // Fade the tab row's edges only where more tabs are hidden, so the first and last tab never look cut off.
+    function fadeTabs() {
+      var max = tabs.scrollWidth - tabs.clientWidth;
+      tabs.classList.toggle('fade-l', tabs.scrollLeft > 4);
+      tabs.classList.toggle('fade-r', max > 4 && tabs.scrollLeft < max - 4);
+    }
+    tabs.addEventListener('scroll', fadeTabs, { passive: true });
+    window.addEventListener('resize', fadeTabs);
+
     function movePill() {
       var active = tabs.querySelector('[aria-selected="true"]');
       if (!active) return;
       var pill = $('tabPill');
       pill.style.width = active.offsetWidth + 'px';
       pill.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+      fadeTabs();
     }
 
     function select(id, user) {
@@ -664,7 +674,8 @@
       movePill();
       var active = tabs.querySelector('[aria-selected="true"]');
       // Scroll only the tab row; scrollIntoView would also shift the clipped hero sideways.
-      if (active && user) tabs.scrollTo({ left: active.offsetLeft - (tabs.clientWidth - active.offsetWidth) / 2, behavior: 'smooth' });
+      if (active) tabs.scrollTo({ left: active.offsetLeft - (tabs.clientWidth - active.offsetWidth) / 2, behavior: user ? 'smooth' : 'auto' });
+      setTimeout(fadeTabs, user ? 450 : 0);
       render(c, true);
       if (user) { try { history.replaceState(null, '', '?tab=' + c.id + location.hash); } catch (_) {} }
     }
@@ -675,7 +686,8 @@
       var swap = $('swap');
       var apply = function () {
         $('heroChip').innerHTML = icon(c.icon);
-        $('heroName').textContent = tr(c.name);
+        $('heroName').textContent = (DICT['in: ' + c.name] != null && LANG !== 'en') ? DICT['in: ' + c.name] : tr(c.name);
+        fitHeadline();
         if (animate && !reduced) { swap.classList.remove('out'); void swap.offsetWidth; swap.classList.add('in'); }
       };
       if (animate && !reduced) { swap.classList.remove('in'); swap.classList.add('out'); setTimeout(apply, 240); } else apply();
@@ -1102,8 +1114,25 @@
     current = null;
     select(wanted || 'chatgpt', false);
     // Fonts change tab widths; re-measure once they load.
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(movePill);
-    setTimeout(movePill, 300);
+    // Shrink the headline if a long app name would push it past the edge.
+    function fitHeadline() {
+      var h = document.querySelector('h1'), box = document.querySelector('.hero-copy');
+      if (!h || !box) return;
+      h.style.fontSize = '';
+      var widest = Math.max.apply(null, [].map.call(h.children, function (e) { return e.scrollWidth; }));
+      if (widest > box.clientWidth) h.style.fontSize = (parseFloat(getComputedStyle(h).fontSize) * box.clientWidth / widest * 0.98) + 'px';
+    }
+    window.addEventListener('resize', fitHeadline);
+
+    function settleTabs() {
+      movePill();
+      var active = tabs.querySelector('[aria-selected="true"]');
+      if (active) tabs.scrollLeft = active.offsetLeft - (tabs.clientWidth - active.offsetWidth) / 2;
+      fadeTabs();
+      fitHeadline();
+    }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(settleTabs);
+    setTimeout(settleTabs, 300);
   })();
   </script>
 </body>
