@@ -207,6 +207,90 @@
     .toast.show{translate:-50% 0}
     .toast i{font-style:normal;color:#4ade80}
 
+    /* ---------- connect guide (modal with animated walkthrough) ---------- */
+    .guide{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:20px;background:rgba(3,4,8,.72);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transition:opacity .3s}
+    .guide.open{opacity:1;pointer-events:auto}
+    .g-box{position:relative;width:min(1080px,100%);max-height:calc(100vh - 40px);overflow:auto;border:1px solid rgba(255,255,255,.1);border-radius:26px;background:linear-gradient(160deg,#121521,#0a0c13);box-shadow:0 40px 120px rgba(0,0,0,.6);transform:translateY(16px) scale(.98);transition:transform .4s cubic-bezier(.2,.9,.25,1.1)}
+    .guide.open .g-box{transform:none}
+    .g-head{display:flex;align-items:center;gap:12px;padding:20px 22px 0}
+    .g-head h3{margin:0;font-size:19px;font-weight:750}
+    .g-head .chip{width:30px;height:30px;font-size:30px}
+    .g-x{margin-left:auto;display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);border-radius:50%;background:rgba(255,255,255,.04);cursor:pointer;font-size:20px;line-height:1}
+    .g-body{display:grid;grid-template-columns:.9fr 1.1fr;gap:22px;padding:20px 22px 22px}
+    .g-steps{display:flex;flex-direction:column;gap:6px}
+    .g-step{position:relative;display:flex;gap:14px;padding:16px;border:1px solid transparent;border-radius:16px;cursor:pointer;transition:background .3s,border-color .3s,opacity .3s;opacity:.55}
+    .g-step.on{opacity:1;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08)}
+    .g-num{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.08);font-weight:800;font-size:14px;transition:background .3s,color .3s}
+    .g-step.on .g-num{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#07080d}
+    .g-step h4{margin:3px 0 5px;font-size:16px}
+    .g-step p{margin:0;color:var(--muted);font-size:14px;line-height:1.55}
+    .g-step code{padding:1px 5px;border-radius:5px;background:rgba(255,255,255,.07);font-size:12.5px;overflow-wrap:anywhere}
+    .g-step a{color:#fff}
+    .g-bar{position:absolute;left:16px;right:16px;bottom:0;height:2px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden;opacity:0}
+    .g-step.on .g-bar{opacity:1}
+    .g-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+    .g-cta{margin-top:10px}
+    .g-cta .btn{width:100%}
+
+    /* stage: a small fake app window driven by a scripted cursor */
+    .stage{position:relative;container-type:inline-size;align-self:start;aspect-ratio:4/3.1;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.1);background:#0d0f17;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+    .s-top{display:flex;align-items:center;gap:8px;height:11%;padding:0 3.5%;border-bottom:1px solid rgba(255,255,255,.07);background:#11141e;font-size:2.6cqw;color:#a3aabb}
+    .s-top i{width:1.6cqw;height:1.6cqw;border-radius:50%;background:#2b2f3c}
+    .s-url{flex:1;margin-left:2%;padding:1% 3%;border-radius:999px;background:rgba(255,255,255,.05);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+    .s-view{position:absolute;inset:11% 0 0;padding:5%;font-size:2.9cqw;transition:opacity .25s}
+    .s-view.fade{opacity:0}
+    .m-cursor{position:absolute;z-index:5;left:70%;top:80%;width:6cqw;height:6cqw;pointer-events:none;transition:left .7s cubic-bezier(.5,0,.2,1),top .7s cubic-bezier(.5,0,.2,1);filter:drop-shadow(0 3px 6px rgba(0,0,0,.6))}
+    .m-cursor::after{content:"";position:absolute;left:-2cqw;top:-2cqw;width:4cqw;height:4cqw;border-radius:50%;border:.5cqw solid rgba(255,255,255,.8);opacity:0}
+    .m-cursor.tap::after{animation:tap .45s ease-out}
+    @keyframes tap{from{opacity:1;transform:scale(.3)}to{opacity:0;transform:scale(1.6)}}
+    .m-toast{position:absolute;z-index:4;left:50%;bottom:6%;translate:-50% 0;padding:2% 4%;border-radius:999px;background:#1d2130;border:1px solid rgba(255,255,255,.12);font-size:2.7cqw;font-weight:700;white-space:nowrap;animation:pop .4s both}
+    .m-toast b{color:#4ade80}
+    .m-h{margin:0 0 3%;font-size:4cqw;font-weight:800}
+    .m-sub{color:#9aa2b5;margin:0 0 4%}
+    .m-btn{display:inline-flex;align-items:center;justify-content:center;gap:1.5cqw;padding:2.2% 5%;border-radius:2cqw;font-weight:700;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);transition:transform .15s,filter .15s}
+    .m-btn.pri{background:linear-gradient(135deg,#7c5cff,#38bdf8);border:0;color:#fff}
+    .m-btn.white{background:#fff;color:#0a0b10;border:0}
+    .m-btn.press{transform:scale(.94);filter:brightness(1.2)}
+    .m-btn svg{width:3.4cqw;height:3.4cqw}
+    .m-search{display:flex;align-items:center;gap:2cqw;padding:2.6% 4%;border-radius:2.4cqw;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;margin-bottom:5%}
+    .m-search::before{content:"⌕";color:#7b8296;font-size:3.6cqw}
+    .m-card{display:flex;align-items:center;gap:4%;padding:4%;border-radius:3cqw;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);opacity:0;transform:translateY(2cqw);transition:all .4s}
+    .m-card.show{opacity:1;transform:none}
+    .m-card .m-btn{margin-left:auto}
+    .m-logo{width:12cqw;height:12cqw;border-radius:3cqw;background:#0b0d18;padding:1.5cqw;box-shadow:0 0 0 1px rgba(56,189,248,.35),0 0 6cqw rgba(124,92,255,.35)}
+    .m-logo.big{width:18cqw;height:18cqw;border-radius:4.5cqw}
+    .m-name b{display:block;font-size:3.4cqw}
+    .m-name span{color:#9aa2b5;font-size:2.6cqw}
+    .m-center{display:flex;flex-direction:column;align-items:center;text-align:center;gap:3%;height:100%;justify-content:center}
+    .m-perm{width:80%;margin:2% 0 3%;padding:3% 5%;border-radius:2.4cqw;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);text-align:left;color:#cfd5e3}
+    .m-perm div{padding:1% 0}.m-perm div::before{content:"✓ ";color:#4ade80;font-weight:800}
+    .m-row{display:flex;gap:3cqw}
+    .m-modal{margin:2% auto 0;width:88%;padding:5%;border-radius:3cqw;background:#151927;border:1px solid rgba(255,255,255,.1)}
+    .m-note{margin-bottom:4%;padding:2% 3%;border-radius:1.6cqw;background:rgba(251,191,36,.1);color:#fcd34d;font-size:2.5cqw}
+    .m-field{margin-bottom:4%}
+    .m-field label{display:block;margin-bottom:1.4%;color:#9aa2b5;font-size:2.5cqw}
+    .m-field div{min-height:7cqw;padding:2% 3%;border-radius:1.6cqw;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);color:#fff;font-family:ui-monospace,Menlo,monospace;font-size:2.6cqw;white-space:nowrap;overflow:hidden}
+    .m-end{display:flex;justify-content:flex-end;gap:3cqw}
+    .m-list .m-card{opacity:1;transform:none;margin-bottom:3%}
+    .m-tag{padding:.6% 2%;border-radius:999px;background:rgba(255,255,255,.08);color:#9aa2b5;font-size:2.3cqw}
+    .m-chat{display:flex;flex-direction:column;height:100%}
+    .m-msgs{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:3%;overflow:hidden;padding-bottom:3%}
+    .m-u{align-self:flex-end;max-width:80%;padding:2.4% 4%;border-radius:3cqw;background:#2a2e3a;animation:pop .35s both}
+    .m-b{align-self:flex-start;width:78%;animation:pop .35s both}
+    .m-b img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:2.4cqw;margin-top:2%}
+    .m-chipt{display:inline-flex;align-items:center;gap:1.4cqw;padding:.8% 2.4% .8% .8%;border-radius:999px;background:rgba(56,189,248,.12);color:#a5e4ff;font-size:2.4cqw;font-weight:700}
+    .m-chipt img{width:4cqw;height:4cqw;margin:0;aspect-ratio:1;border-radius:1cqw}
+    .m-input{display:flex;align-items:center;gap:2cqw;padding:3% 3% 3% 4%;border-radius:4cqw;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);min-height:11cqw}
+    .m-input span:first-child{flex:1;color:#fff}
+    .m-input .ph{color:#6b7286}
+    .m-send{display:grid;place-items:center;width:7cqw;height:7cqw;border-radius:50%;background:#fff;color:#0a0b10;font-weight:900}
+    .m-caret::after{content:"";display:inline-block;width:.35cqw;height:3.2cqw;margin-left:.3cqw;vertical-align:middle;background:#fff;animation:blink 1s steps(1) infinite}
+    .m-term{height:100%;padding:3% 4%;border-radius:2cqw;background:#07080c;font:500 2.7cqw/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:#d4d8e2;overflow:hidden}
+    .m-term .g{color:#4ade80}.m-term .d{color:#7b8296}.m-term .o{color:#fb923c}.m-term .c{color:#7dd3fc}
+    .m-term img{display:block;width:46%;margin:2% 0;border-radius:1.4cqw}
+    .m-site{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5%;height:100%;text-align:center;background:radial-gradient(circle at 50% 30%,rgba(124,92,255,.25),transparent 60%)}
+    .m-site .m-h{background:linear-gradient(100deg,#fff,#a78bfa 60%,#38bdf8);-webkit-background-clip:text;background-clip:text;color:transparent}
+    @media(max-width:860px){.g-body{grid-template-columns:1fr}.stage{order:-1}.g-head h3{font-size:16px}}
     @media(max-width:900px){.hero{padding:36px 0 64px}.hero-inner{grid-template-columns:1fr;gap:8px}.orbit{width:min(300px,78vw);order:-1}.demo{grid-template-columns:1fr;gap:36px}.steps,.grid3{grid-template-columns:1fr}section.block{padding:72px 0}}
     @media(max-width:560px){h1{font-size:clamp(32px,9.6vw,44px)}.sub{font-size:16px}.tabs{display:flex;mask-image:linear-gradient(90deg,#000 85%,transparent)}.tab{padding:9px 12px;font-size:14px}.btn{width:100%;min-height:54px;font-size:16px}.ctas{width:100%}.endpoint{display:flex}.chat{min-height:400px}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
@@ -337,6 +421,23 @@
     </section>
   </main>
 
+  <div class="guide" id="guide" role="dialog" aria-modal="true" aria-labelledby="gTitle">
+    <div class="g-box">
+      <div class="g-head"><span class="chip client" id="gChip"></span><h3 id="gTitle">Connect Hansora to ChatGPT in under a minute</h3><button class="g-x" type="button" id="gClose" aria-label="Close">×</button></div>
+      <div class="g-body">
+        <div>
+          <div class="g-steps" id="gSteps"></div>
+          <div class="g-cta"><button class="btn btn-primary" type="button" id="installBtn4"><svg id="installIcon4"><use href="#i-chatgpt"/></svg><span id="installLabel4">Add Hansora to ChatGPT</span></button></div>
+        </div>
+        <div class="stage" id="stage" aria-hidden="true">
+          <div class="s-top"><i></i><i></i><i></i><span class="s-url" id="sUrl"></span></div>
+          <div class="s-view" id="sView"></div>
+          <svg class="m-cursor" id="mCursor" viewBox="0 0 24 24"><path fill="#fff" stroke="#000" stroke-width="1.2" d="M4 2l15 11-6.5 1 3.8 7.2-2.6 1.3-3.8-7.3L4 20z"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"><i>✓</i><span id="toastText"></span></div>
 
   <script>
@@ -455,7 +556,7 @@
       };
       if (animate && !reduced) { swap.classList.remove('in'); swap.classList.add('out'); setTimeout(apply, 240); } else apply();
 
-      [['installIcon', 'installLabel'], ['installIcon2', 'installLabel2'], ['installIcon3', 'installLabel3']].forEach(function (p) {
+      [['installIcon', 'installLabel'], ['installIcon2', 'installLabel2'], ['installIcon3', 'installLabel3'], ['installIcon4', 'installLabel4']].forEach(function (p) {
         $(p[0]).innerHTML = '<use href="#' + c.icon + '"/>';
         $(p[1]).textContent = c.label;
       });
@@ -546,6 +647,184 @@
       if (g && l) { g.setAttribute('x2', l.getAttribute('x2')); g.setAttribute('y2', l.getAttribute('y2')); }
     }
     window.addEventListener('resize', movePill);
+
+    /* ---------- connect guide: steps + scripted walkthrough ---------- */
+    var LOGO = '<img class="m-logo" src="/media/compare/hansora.png" alt="">';
+    var DEMO_IMG = '/media/mcp/demo-image.jpg';
+    var PROMPT = 'Make a product photo of a chocolate bar in a pink retro wrapper';
+
+    function consentScene(step, app) {
+      return { step: step, url: 'hansora.co/oauth/consent', html:
+        '<div class="m-center">' + LOGO.replace('m-logo', 'm-logo big') + '<p class="m-h" style="margin:2% 0 0">Connect ' + app + ' to Hansora</p>' +
+        '<p class="m-sub" style="margin:0">' + app + ' wants to use your Hansora account</p>' +
+        '<div class="m-perm"><div>See models and your balance</div><div>Create images, video and audio</div></div>' +
+        '<div class="m-row"><span class="m-btn">Deny</span><span class="m-btn pri" data-t="allow">Allow</span></div></div>',
+        acts: [['wait', 700], ['move', 'allow'], ['click', 'allow'], ['toast', '<b>✓</b> Hansora connected'], ['wait', 1300]] };
+    }
+    function chatScene(step, url, ask) {
+      return { step: step, url: url, html:
+        '<div class="m-chat"><div class="m-msgs" data-t="msgs"></div><div class="m-input"><span data-t="in"><span class="ph">Ask anything</span></span><span class="m-send" data-t="send">↑</span></div></div>',
+        acts: [['move', 'in'], ['click', 'in'], ['type', 'in', ask], ['move', 'send'], ['click', 'send'], ['clear', 'in'],
+          ['add', 'msgs', '<div class="m-u">' + ask + '</div>'], ['wait', 500],
+          ['add', 'msgs', '<div class="m-b"><span class="m-chipt"><img src="/media/compare/hansora.png" alt="">Hansora · generate image</span></div>'], ['wait', 1300],
+          ['add', 'msgs', '<div class="m-b"><img src="' + DEMO_IMG + '" alt=""></div>'], ['wait', 2600]] };
+    }
+    function copyScene(step, label, toastMsg) {
+      return { step: step, url: 'hansora.co/mcp-setup', html:
+        '<div class="m-site">' + LOGO + '<p class="m-h">Create with Hansora</p><span class="m-btn pri" data-t="copy">' + label + '</span><span class="m-sub" style="font-family:ui-monospace,Menlo,monospace">' + MCP_URL + '</span></div>',
+        acts: [['wait', 500], ['move', 'copy'], ['click', 'copy'], ['toast', '<b>✓</b> ' + toastMsg], ['wait', 1400]] };
+    }
+    function formScene(step, url, title, note, nameTyped, saveLabel) {
+      return { step: step, url: url, html:
+        '<div class="m-modal"><p class="m-h">' + title + '</p>' + (note ? '<div class="m-note">' + note + '</div>' : '') +
+        '<div class="m-field"><label>Name</label><div data-t="name">' + (nameTyped ? '' : 'Hansora') + '</div></div>' +
+        '<div class="m-field"><label>Remote MCP server URL</label><div data-t="url">' + (nameTyped ? '' : MCP_URL) + '</div></div>' +
+        '<div class="m-end"><span class="m-btn">Cancel</span><span class="m-btn white" data-t="save">' + saveLabel + '</span></div></div>',
+        acts: (nameTyped ? [['move', 'name'], ['click', 'name'], ['type', 'name', 'Hansora'], ['move', 'url'], ['click', 'url'], ['paste', 'url', MCP_URL]] : [['wait', 900]])
+          .concat([['move', 'save'], ['click', 'save'], ['wait', 600]]) };
+    }
+
+    var GUIDES = {
+      chatgpt: [
+        { step: 0, url: 'chatgpt.com/apps', html: '<p class="m-h">Apps</p><div class="m-search" data-t="search"></div><div class="m-card" data-t="card">' + LOGO + '<div class="m-name"><b>Hansora AI</b><span>Generate images, video &amp; audio</span></div><span class="m-btn white" data-t="open">View</span></div>',
+          acts: [['move', 'search'], ['click', 'search'], ['type', 'search', 'Hansora'], ['cls', 'card', 'show'], ['wait', 500], ['move', 'open'], ['click', 'open'], ['wait', 400]] },
+        { step: 1, url: 'chatgpt.com/apps/hansora-ai', html: '<div class="m-center">' + LOGO.replace('m-logo', 'm-logo big') + '<p class="m-h" style="margin:2% 0 0">Hansora AI</p><p class="m-sub">Create images, video and audio with every Hansora model.</p><span class="m-btn white" data-t="connect">Connect</span></div>',
+          acts: [['wait', 600], ['move', 'connect'], ['click', 'connect'], ['wait', 400]] },
+        consentScene(1, 'ChatGPT'),
+        chatScene(2, 'chatgpt.com', '@Hansora ' + PROMPT.charAt(0).toLowerCase() + PROMPT.slice(1))
+      ],
+      claude: [
+        formScene(0, 'claude.ai/customize/connectors', 'Add custom connector', 'Filled in from a link on hansora.co. Check it before adding.', false, 'Add'),
+        { step: 1, url: 'claude.ai/customize/connectors', html: '<p class="m-h">Connectors</p><div class="m-list"><div class="m-card">' + LOGO + '<div class="m-name"><b>Hansora</b><span class="m-tag">Custom</span></div><span class="m-btn white" data-t="connect">Connect</span></div></div>',
+          acts: [['wait', 600], ['move', 'connect'], ['click', 'connect'], ['wait', 400]] },
+        consentScene(1, 'Claude'),
+        chatScene(2, 'claude.ai/new', PROMPT + ' with Hansora')
+      ],
+      cursor: [
+        copyScene(0, 'Copy Hansora MCP link', 'Hansora MCP link copied'),
+        formScene(1, 'cursor.com/agents · MCP', 'Add MCP server', '', true, 'Save'),
+        consentScene(2, 'Cursor'),
+        chatScene(2, 'cursor.com/agents', PROMPT + ' with Hansora')
+      ],
+      'claude-code': [
+        copyScene(0, 'Copy install command', 'Command copied'),
+        { step: 0, url: 'Terminal', html: '<div class="m-term" data-t="t"><span class="g">~</span> $ <span data-t="cmd"></span></div>',
+          acts: [['type', 'cmd', CLAUDE_CODE_CMD], ['wait', 300], ['add', 't', '<div class="d">Added HTTP MCP server hansora with URL: ' + MCP_URL + '</div>'], ['wait', 1300]] },
+        { step: 1, url: 'Terminal · claude', html: '<div class="m-term" data-t="t"><span class="o">✻</span> Welcome to Claude Code<br><br>&gt; <span data-t="cmd"></span></div>',
+          acts: [['type', 'cmd', '/mcp'], ['wait', 300], ['add', 't', '<div>hansora · <span class="o">needs authentication</span></div><div class="c">❯ Authenticate</div>'], ['wait', 900], ['add', 't', '<div class="d">Opening your browser to sign in…</div>'], ['wait', 900]] },
+        consentScene(1, 'Claude Code'),
+        { step: 2, url: 'Terminal · claude', html: '<div class="m-term" data-t="t"><div class="g">✓ Authentication successful. Connected to hansora.</div><br>&gt; <span data-t="cmd"></span></div>',
+          acts: [['type', 'cmd', 'make a hero image of our chocolate bar for the landing page'], ['wait', 300], ['add', 't', '<div><span class="o">⏺</span> hansora - create_generation (MCP)</div>'], ['wait', 1200], ['add', 't', '<div class="g">⎿ Saved public/hero.jpg</div><img src="' + DEMO_IMG + '" alt="">'], ['wait', 2600]] }
+      ],
+      other: [
+        copyScene(0, 'Copy MCP URL', 'MCP URL copied'),
+        formScene(1, 'Your AI app · Settings', 'Add remote MCP server', '', true, 'Add'),
+        consentScene(2, 'Your AI app')
+      ]
+    };
+
+    var guide = $('guide'), gSteps = $('gSteps'), sView = $('sView'), sUrl = $('sUrl'), mCursor = $('mCursor'), stage = $('stage');
+    var runId = 0, gScenes = [], gSceneIdx = 0, lastFocus = null;
+    function q(t) { return sView.querySelector('[data-t="' + t + '"]'); }
+    function sleep(ms, id) { return new Promise(function (res, rej) { setTimeout(function () { id === runId ? res() : rej('stop'); }, ms); }); }
+    function moveTo(t) {
+      var e = q(t); if (!e) return;
+      var r = e.getBoundingClientRect(), s = stage.getBoundingClientRect();
+      mCursor.style.left = ((r.left + r.width * 0.55 - s.left) / s.width * 100) + '%';
+      mCursor.style.top = ((r.top + r.height * 0.55 - s.top) / s.height * 100) + '%';
+    }
+    function act(a, id) {
+      var k = a[0], e = a[1] && q(a[1]);
+      if (k === 'wait') return sleep(a[1], id);
+      if (k === 'move') { moveTo(a[1]); return sleep(750, id); }
+      if (k === 'click') {
+        mCursor.classList.remove('tap'); void mCursor.offsetWidth; mCursor.classList.add('tap');
+        if (e) { e.classList.add('press'); setTimeout(function () { e.classList.remove('press'); }, 180); }
+        return sleep(350, id);
+      }
+      if (k === 'type' || k === 'paste') {
+        var text = a[2], n = 0;
+        e.classList.add('m-caret'); e.textContent = '';
+        if (k === 'paste') { e.textContent = text; e.classList.remove('m-caret'); return sleep(500, id); }
+        return new Promise(function (res, rej) {
+          (function tick() {
+            if (id !== runId) return rej('stop');
+            e.textContent = text.slice(0, ++n);
+            if (n < text.length) setTimeout(tick, 34); else { e.classList.remove('m-caret'); setTimeout(res, 300); }
+          })();
+        });
+      }
+      if (k === 'clear') { e.innerHTML = '<span class="ph">Ask anything</span>'; return sleep(50, id); }
+      if (k === 'add') { e.insertAdjacentHTML('beforeend', a[2]); return sleep(150, id); }
+      if (k === 'cls') { e.classList.add(a[2]); return sleep(100, id); }
+      if (k === 'toast') { sView.insertAdjacentHTML('beforeend', '<div class="m-toast">' + a[1] + '</div>'); return sleep(200, id); }
+      return Promise.resolve();
+    }
+    function setStep(i, ms) {
+      gSteps.querySelectorAll('.g-step').forEach(function (el, k) {
+        el.classList.toggle('on', k === i);
+        var bar = el.querySelector('.g-bar i');
+        bar.style.transition = 'none'; bar.style.width = '0';
+        if (k === i && ms) { void bar.offsetWidth; bar.style.transition = 'width ' + ms + 'ms linear'; bar.style.width = '100%'; }
+      });
+    }
+    function sceneTime(sc) {
+      return sc.acts.reduce(function (t, a) {
+        return t + (a[0] === 'wait' ? a[1] : a[0] === 'move' ? 750 : a[0] === 'click' ? 350 : a[0] === 'type' ? a[2].length * 34 + 300 : a[0] === 'paste' ? 500 : 150);
+      }, 300);
+    }
+    function stepTime(step) { return gScenes.filter(function (s) { return s.step === step; }).reduce(function (t, s) { return t + sceneTime(s); }, 0); }
+    function playFrom(idx) {
+      var id = ++runId;
+      (function next(i) {
+        if (id !== runId) return;
+        if (i >= gScenes.length) { sleep(800, id).then(function () { next(0); }, function () {}); return; }
+        var sc = gScenes[i]; gSceneIdx = i;
+        if (i === 0 || gScenes[i - 1].step !== sc.step) setStep(sc.step, stepTime(sc.step));
+        sView.classList.add('fade');
+        sleep(250, id).then(function () {
+          sUrl.textContent = sc.url; sView.innerHTML = sc.html; sView.classList.remove('fade');
+          return sleep(300, id);
+        }).then(function () {
+          return sc.acts.reduce(function (p, a) { return p.then(function () { return act(a, id); }); }, Promise.resolve());
+        }).then(function () { next(i + 1); }, function () {});
+      })(idx);
+    }
+    function openGuide() {
+      var c = current;
+      lastFocus = document.activeElement;
+      $('gTitle').textContent = 'Connect Hansora to ' + (c.id === 'other' ? 'your AI app' : c.name) + ' in under a minute';
+      $('gChip').innerHTML = icon(c.icon);
+      gSteps.innerHTML = c.steps.map(function (s, k) {
+        return '<div class="g-step" data-k="' + k + '"><span class="g-num">' + (k + 1) + '</span><div><h4>' + s[0] + '</h4><p>' + s[1] + '</p></div><span class="g-bar"><i></i></span></div>';
+      }).join('');
+      gSteps.querySelectorAll('.g-step').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          if (ev.target.closest('a')) return;
+          var k = +el.dataset.k, at = gScenes.findIndex(function (s) { return s.step === k; });
+          if (at >= 0) playFrom(at);
+        });
+      });
+      gScenes = GUIDES[c.id] || GUIDES.other;
+      guide.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      $('gClose').focus();
+      if (reduced) { var last = gScenes[gScenes.length - 1]; sUrl.textContent = last.url; sView.innerHTML = last.html; setStep(0, 0); }
+      else playFrom(0);
+    }
+    function closeGuide() {
+      runId++;
+      guide.classList.remove('open');
+      document.body.style.overflow = '';
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+    document.querySelectorAll('a[href="#connect"]').forEach(function (a) {
+      a.addEventListener('click', function (ev) { ev.preventDefault(); openGuide(); });
+    });
+    $('gClose').addEventListener('click', closeGuide);
+    guide.addEventListener('click', function (ev) { if (ev.target === guide) closeGuide(); });
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && guide.classList.contains('open')) closeGuide(); });
+    $('installBtn4').addEventListener('click', install);
 
     /* ---------- chat demo ---------- */
     var msgs = $('msgs'), demoIdx = 0, demoRunning = false;
