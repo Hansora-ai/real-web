@@ -104,7 +104,7 @@
     const h = window.innerHeight;
     animated.forEach(el => { const r = el.getBoundingClientRect(); el.classList.toggle('he-paused', r.bottom < -100 || r.top > h + 100); });
   }
-  window.addEventListener('scroll', () => requestAnimationFrame(pauseOffscreen), { passive: true });
+  window.addEventListener('scroll', pauseOffscreen, { passive: true });
   setInterval(pauseOffscreen, 1000);
   pauseOffscreen();
 

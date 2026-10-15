@@ -491,3 +491,20 @@ a.he-go:hover { filter: brightness(1.15); transform: translateY(-1px); }
   .he-scr-prompt { font-size: clamp(14px, .95vw, 18px); }
 }
 @media (min-width: 1500px) { .he-studio-head { max-width: 1100px; } }
+
+/* Headline: second line ("…& more") a bit smaller so it always fits on one line */
+.he-title .he-grad { font-size: .8em; }
+/* Russian and Armenian words are longer: smaller headline so nothing is squeezed or cut */
+html[lang="ru"] .he-title, html[lang="hy"] .he-title { font-size: clamp(36px, 5.2vw, 80px); line-height: 1.08; }
+html[lang="hy"] .he-title { font-size: clamp(32px, 4.6vw, 72px); }
+@media (max-width: 760px) {
+  .he-title { font-size: clamp(32px, 9.4vw, 46px); line-height: 1.04; }
+  .he-title .he-grad { font-size: .78em; }
+  html[lang="ru"] .he-title { font-size: clamp(28px, 8.2vw, 38px); line-height: 1.1; }
+  html[lang="hy"] .he-title { font-size: clamp(25px, 7.2vw, 34px); line-height: 1.16; }
+  html[lang="ru"] .he-lead, html[lang="hy"] .he-lead { font-size: 14px; line-height: 1.5; }
+  html[lang="ru"] .he-studio-head h2, html[lang="hy"] .he-studio-head h2 { font-size: clamp(26px, 7.4vw, 34px); line-height: 1.1; }
+  html[lang="ru"] main .section-head h2, html[lang="hy"] main .section-head h2 { font-size: clamp(24px, 7vw, 32px) !important; }
+}
+/* The hero headline intro always plays, even if the page opens scrolled down */
+.he-hero.he-paused .he-copy, .he-hero.he-paused .he-copy * { animation-play-state: running !important; }
