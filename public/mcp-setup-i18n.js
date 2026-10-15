@@ -102,7 +102,11 @@ window.HANSORA_MCP_I18N = {
   "Your ad is ready. Shall I add a voice-over?": "Реклама готова. Добавить озвучку?",
   "Add a confident female voice-over": "Добавь уверенный женский голос за кадром",
   "Sarah · Voice-over": "Сара · Озвучка",
-  "Here it is with Sarah, a mature and confident voice. Tap play to listen.": "Вот озвучка голосом Сары, зрелым и уверенным. Нажмите play, чтобы послушать."
+  "Here it is with Sarah, a mature and confident voice. Tap play to listen.": "Вот озвучка голосом Сары, зрелым и уверенным. Нажмите play, чтобы послушать.",
+  "Add the connector": "Добавьте коннектор",
+  "Click <b>Add Hansora to Claude</b>. Claude opens <b>Add custom connector</b> with Hansora already filled in. Click <b>Add</b>.": "Нажмите <b>Добавить Hansora в Claude</b>. Claude откроет <b>Add custom connector</b> с уже заполненными данными Hansora. Нажмите <b>Add</b>.",
+  "Click <b>Connect</b>, sign in to Hansora and click <b>Connect Hansora</b>. Tip: set <b>Interactive tools</b> to <b>Always allow</b> so Claude doesn't ask every time.": "Нажмите <b>Connect</b>, войдите в Hansora и нажмите <b>Connect Hansora</b>. Совет: для <b>Interactive tools</b> выберите <b>Always allow</b>, чтобы Claude не спрашивал разрешения каждый раз.",
+  "Start a new chat and ask: \"Make a cinematic video of… with Hansora\". Free Claude plans allow one custom connector.": "Начните новый чат и попросите: «Создай кинематографичное видео… с Hansora». На бесплатном тарифе Claude можно добавить один свой коннектор."
  },
  "hy": {
   "Hansora ChatGPT Plugin — create in ChatGPT, Claude & Cursor": "Hansora պլագին ChatGPT-ի համար — ստեղծեք ChatGPT-ում, Claude-ում և Cursor-ում",
@@ -206,6 +210,10 @@ window.HANSORA_MCP_I18N = {
   "Your ad is ready. Shall I add a voice-over?": "Գովազդը պատրաստ է։ Ավելացնե՞մ ձայնավորում։",
   "Add a confident female voice-over": "Ավելացրու վստահ կանացի ձայնով ձայնավորում",
   "Sarah · Voice-over": "Սառա · Ձայնավորում",
-  "Here it is with Sarah, a mature and confident voice. Tap play to listen.": "Ահա Սառայի ձայնով՝ հասուն և վստահ։ Սեղմեք play՝ լսելու համար։"
+  "Here it is with Sarah, a mature and confident voice. Tap play to listen.": "Ահա Սառայի ձայնով՝ հասուն և վստահ։ Սեղմեք play՝ լսելու համար։",
+  "Add the connector": "Ավելացրեք connector-ը",
+  "Click <b>Add Hansora to Claude</b>. Claude opens <b>Add custom connector</b> with Hansora already filled in. Click <b>Add</b>.": "Սեղմեք <b>Ավելացնել Hansora-ն Claude-ում</b>։ Claude-ը կբացի <b>Add custom connector</b>՝ Hansora-ի տվյալներն արդեն լրացված։ Սեղմեք <b>Add</b>։",
+  "Click <b>Connect</b>, sign in to Hansora and click <b>Connect Hansora</b>. Tip: set <b>Interactive tools</b> to <b>Always allow</b> so Claude doesn't ask every time.": "Սեղմեք <b>Connect</b>, մուտք գործեք Hansora և սեղմեք <b>Connect Hansora</b>։ Խորհուրդ․ <b>Interactive tools</b>-ի համար ընտրեք <b>Always allow</b>, որպեսզի Claude-ը ամեն անգամ թույլտվություն չխնդրի։",
+  "Start a new chat and ask: \"Make a cinematic video of… with Hansora\". Free Claude plans allow one custom connector.": "Սկսեք նոր չատ և խնդրեք․ «Ստեղծիր կինեմատոգրաֆիկ տեսանյութ… Hansora-ով»։ Claude-ի անվճար պլանում կարելի է ավելացնել մեկ custom connector։"
  }
 };

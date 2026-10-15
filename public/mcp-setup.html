@@ -53,8 +53,12 @@
     .live::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid #4ade80;animation:ping 1.8s ease-out infinite}
     @keyframes ping{from{opacity:.8;transform:scale(.5)}to{opacity:0;transform:scale(1.6)}}
 
-    h1{margin:22px 0 0;font-weight:800;letter-spacing:-.045em;line-height:1.04;font-size:clamp(34px,4.3vw,64px)}
-    h1 .l2{display:flex;flex-wrap:wrap;align-items:center;gap:.2em;margin-top:.06em;color:#c9cfdd}
+    h1{margin:22px 0 0;font-weight:800;letter-spacing:-.045em;line-height:1.04;font-size:clamp(24px,9.8cqi,64px)}
+    .hero-copy{container-type:inline-size}
+    h1 .grad{display:block;white-space:nowrap;width:max-content}
+    html[lang=ru] h1{font-size:clamp(22px,8.8cqi,60px)}
+    html[lang=hy] h1{font-size:clamp(20px,7.7cqi,56px)}
+    h1 .l2{display:flex;flex-wrap:nowrap;width:max-content;white-space:nowrap;align-items:center;gap:.2em;margin-top:.06em;color:#c9cfdd}
     .chip{display:inline-grid;place-items:center;width:1em;height:1em;border-radius:.26em;flex:none}
     .chip svg,.chip img{width:62%;height:62%}
     .chip.client{background:linear-gradient(145deg,#2c3040,#12141c);box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 0 0 1px rgba(255,255,255,.06),0 12px 30px color-mix(in srgb,var(--accent) 30%,transparent);transition:box-shadow .6s}
@@ -310,6 +314,59 @@
     .hc-li::before{content:"✔ ";color:#34d399}
     .hc-row{display:flex;gap:2.4cqw;margin-top:4%}.hc-row .m-btn{flex:1;padding:2.6% 0}
     .hc-cancel{background:#1a1d29;border-color:transparent}
+    /* claude.ai replica */
+    .cl{position:absolute;inset:0;display:flex;background:#262624;color:#e8e6e1;font-size:2.3cqw}
+    .cl-side{width:24%;padding:3% 2%;background:#1f1e1d;flex:none}
+    .cl-logo{display:block;margin:0 0 8% 3%;font:500 3.4cqw Georgia,serif}
+    .cl-nav{display:flex;align-items:center;gap:1.6cqw;padding:3% 5%;border-radius:1.4cqw;white-space:nowrap}
+    .cl-nav i{width:2.6cqw;font-style:normal;color:#a8a6a0;text-align:center}
+    .cl-nav.on{background:#363532}
+    .cl-sec{margin:12% 0 0 5%;color:#8d8b85;font-size:2cqw}
+    .cl-main{position:relative;flex:1;padding:5% 6% 0;overflow:hidden}
+    .cl-h{margin:0 0 4%;font:400 4cqw Georgia,serif}
+    .cl-tabs{display:flex;align-items:center;gap:2.2cqw;color:#a8a6a0;margin-bottom:5%;white-space:nowrap}
+    .cl-tabs .on{color:#fff;background:#3a3936;padding:.6cqw 1.6cqw;border-radius:1cqw}
+    .cl-seg{display:inline-flex;gap:1cqw;padding:.4cqw;border-radius:1.2cqw;background:#2f2e2b}
+    .cl-add{margin-left:auto;padding:.8cqw 1.8cqw;border-radius:1.2cqw;background:#fff;color:#1f1e1d;font-weight:600}
+    .cl-dim{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+    .cl-modal{position:absolute;left:8%;right:8%;top:12%;padding:5%;border-radius:2.4cqw;background:#30302e;border:1px solid rgba(255,255,255,.08);box-shadow:0 3cqw 8cqw rgba(0,0,0,.5);animation:pop .4s both}
+    .cl-mh{margin:0 0 3%;font:400 3.4cqw Georgia,serif}
+    .cl-note{margin-bottom:4%;padding:2% 3%;border-radius:1.4cqw;background:rgba(217,119,87,.12);color:#f0b9a5;font-size:2.2cqw}
+    .cl-yours{margin-bottom:2.4%;font-weight:600}.cl-yours span{color:#8d8b85;font-weight:400}
+    .cl-item{display:flex;align-items:center;gap:2cqw;padding:2.6% 3%;border-radius:1.8cqw;background:#2f2e2b}
+    .cl-item small{display:block;color:#8d8b85;font-size:2cqw}
+    .cl-hi{display:inline-grid;place-items:center;width:5cqw;height:5cqw;border-radius:50%;background:#5b5ce2;color:#fff;font-weight:900;font-size:2.4cqw;flex:none}
+    .cl-hi.big{width:8cqw;height:8cqw;border-radius:2cqw;font-size:3.6cqw;background:#1f1e1d;color:#8b8cf0;border:1px solid rgba(255,255,255,.1)}
+    .cl-btn{margin-left:auto;padding:1cqw 2.2cqw;border-radius:1.2cqw;background:#3a3936;font-weight:600;transition:transform .15s}
+    .cl-btn.white{margin:0;background:#fff;color:#1f1e1d}
+    .cl-btn.press,.cl-sel.press{transform:scale(.93)}
+    .cl-back{color:#c9c7c1;margin-bottom:4%}
+    .cl-empty{display:flex;flex-direction:column;align-items:center;gap:2.2cqw;margin-top:10%;color:#a8a6a0}
+    .cl-empty p{margin:0;color:#c9c7c1}
+    .cl-row{display:flex;align-items:center;gap:1.8cqw;font-size:2.8cqw}
+    .cl-right{margin-left:auto;display:flex;align-items:center;gap:1.4cqw;font-size:2.3cqw}
+    .cl-url{margin:1% 0 4% 6.8cqw;color:#8d8b85;font-size:2cqw}
+    .cl-ph{margin:0;font-weight:600}.cl-ps{margin:.6% 0 3%;color:#8d8b85;font-size:2.1cqw}
+    .cl-group{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.6%}
+    .cl-group i{font-style:normal;color:#8d8b85}
+    .cl-sel{padding:.8cqw 1.8cqw;border-radius:1.2cqw;border:1px solid rgba(255,255,255,.14);transition:transform .15s}
+    .cl-menu{position:absolute;right:6%;z-index:3;display:none;flex-direction:column;padding:1cqw;border-radius:1.4cqw;background:#30302e;border:1px solid rgba(255,255,255,.1);box-shadow:0 2cqw 5cqw rgba(0,0,0,.5)}
+    .cl-menu.show:not(:empty){display:flex}
+    .cl-menu div{padding:1cqw 2cqw;border-radius:1cqw}.cl-menu div:first-child{background:#3a3936}
+    .cl-tool{display:flex;justify-content:space-between;padding:1.8% 0 1.8% 3%;border-top:1px solid rgba(255,255,255,.06);color:#d6d4ce}
+    .cl-tool span{color:#8d8b85;letter-spacing:.6cqw}
+    .cg-toast.bottom{top:auto;bottom:5%;left:auto;right:4%;translate:none}.cg-toast.cl-toast{background:#30302e;color:#e8e6e1}
+    .cl-info{color:#a8a6a0}
+    .cl-chat{display:flex;flex-direction:column;height:100%;padding-bottom:6%}
+    .cl-greet{margin:auto 0 6%;text-align:center;font:400 4.2cqw Georgia,serif}
+    .cl-greet span{color:#d97757}
+    .cl-box{padding:3% 3.4%;border-radius:2.6cqw;background:#30302e;border:1px solid rgba(255,255,255,.08)}
+    .cl-box .ph{color:#8d8b85}
+    .cl-bar{display:flex;align-items:center;gap:2cqw;margin-top:3%;color:#a8a6a0}
+    .cl-mode b{padding:.4cqw 1.2cqw;border-radius:1cqw;background:#3a3936;color:#fff;font-weight:500}
+    .cl-model{margin-left:auto}
+    .cl-send{display:grid;place-items:center;width:5cqw;height:5cqw;border-radius:1.4cqw;background:#c96442;color:#fff;font-weight:800}
+    .cl .m-u{background:#3a3936}
     /* chatgpt.com replica */
     .cg{position:absolute;inset:0;display:flex;background:#212121;font-size:2.3cqw;color:#ececec}
     .cg-side{width:25%;padding:3% 2.4%;background:#181818;flex:none}
@@ -343,7 +400,7 @@
     .cg .m-u{background:#303030}
     @media(max-width:860px){.g-body{grid-template-columns:1fr}.stage{order:-1}.g-head h3{font-size:16px}}
     @media(max-width:900px){.hero{padding:36px 0 64px}.hero-inner{grid-template-columns:1fr;gap:8px}.orbit{width:min(300px,78vw);order:-1}.demo{grid-template-columns:1fr;gap:36px}.steps,.grid3{grid-template-columns:1fr}section.block{padding:72px 0}}
-    @media(max-width:560px){.badge,.tabs,.endpoint,.btn-ghost{backdrop-filter:none}h1{font-size:clamp(32px,9.6vw,44px)}html[lang=hy] h1,html[lang=ru] h1{font-size:clamp(28px,8.4vw,40px)}.sub{font-size:16px}.tabs{display:flex;mask-image:linear-gradient(90deg,#000 85%,transparent)}.tab{padding:9px 12px;font-size:14px}.btn{width:100%;min-height:54px;font-size:16px}.ctas{width:100%}.endpoint{display:flex}.chat{min-height:400px}}
+    @media(max-width:560px){.badge,.tabs,.endpoint,.btn-ghost{backdrop-filter:none}.sub{font-size:16px}.tabs{display:flex;mask-image:linear-gradient(90deg,#000 85%,transparent)}.tab{padding:9px 12px;font-size:14px}.btn{width:100%;min-height:54px;font-size:16px}.ctas{width:100%}.endpoint{display:flex}.chat{min-height:400px}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
   </style>
 </head>
@@ -520,9 +577,9 @@
         label: 'Add Hansora to Claude', action: 'open', href: CLAUDE_INSTALL_URL,
         hint: 'Opens Claude with Hansora already filled in. Just click Add.',
         steps: [
-          ['Open Claude', 'Click <b>Add Hansora to Claude</b>. Claude opens the <b>Add custom connector</b> window with Hansora already filled in.'],
-          ['Click Add, then Connect', 'Click <b>Add</b>, then <b>Connect</b>, and sign in to your Hansora account.'],
-          ['Ask for anything', 'In a new chat, turn Hansora on from the <b>+</b> menu and ask: "Make a cinematic video of…". Free Claude plans allow one custom connector.']
+          ['Add the connector', 'Click <b>Add Hansora to Claude</b>. Claude opens <b>Add custom connector</b> with Hansora already filled in. Click <b>Add</b>.'],
+          ['Connect your account', 'Click <b>Connect</b>, sign in to Hansora and click <b>Connect Hansora</b>. Tip: set <b>Interactive tools</b> to <b>Always allow</b> so Claude doesn\'t ask every time.'],
+          ['Ask for anything', 'Start a new chat and ask: "Make a cinematic video of… with Hansora". Free Claude plans allow one custom connector.']
         ] },
       { id: 'cursor', name: 'Cursor', icon: 'i-cursor', accent: '#e5e7eb', accent2: '#38bdf8',
         label: 'Copy Hansora link', action: 'copy-url',
@@ -723,16 +780,29 @@
     var PROMPT = 'Make a product photo of a chocolate bar in a pink retro wrapper';
 
     // Same layout as hansora.co/oauth/consent.
-    function consentScene(step, app, noToast) {
+    function consentScene(step, app, noToast, requester) {
       return { step: step, url: 'hansora.co/oauth/consent', html:
         '<div class="hc"><div class="hc-card"><div class="hc-brand"><span class="hc-h">H</span>HANSORA AI</div>' +
-        '<p class="hc-t">Connect your Hansora account</p><p class="hc-s"><b>An AI assistant</b> is requesting access to Hansora.</p>' +
+        '<p class="hc-t">Connect your Hansora account</p><p class="hc-s"><b>' + (requester || app) + '</b> is requesting access to Hansora.</p>' +
         '<div class="hc-li">See Hansora\'s complete image, video, and audio catalog.</div>' +
         '<div class="hc-li">Create images, videos, speech, and music using your Hansora account and credit balance.</div>' +
         '<div class="hc-li">Check your balance and your own recent generations.</div>' +
         '<div class="hc-row"><span class="m-btn hc-cancel">Cancel</span><span class="m-btn pri" data-t="allow">Connect Hansora</span></div></div></div>',
         acts: [['wait', 900], ['move', 'allow'], ['click', 'allow']].concat(noToast ? [['wait', 500]] : [['toast', '<b>✓</b> Hansora connected to ' + app], ['wait', 1300]]) };
     }
+    // claude.ai frame: sidebar + main column, as in the recorded Claude flow.
+    function clFrame(main, active) {
+      return '<div class="cl"><div class="cl-side"><b class="cl-logo">Claude</b>' +
+        [['＋', 'New'], ['▢', 'Projects'], ['◇', 'Artifacts'], ['‹›', 'Code'], ['▣', 'Customize']].map(function (x) { return '<div class="cl-nav' + (x[1] === active ? ' on' : '') + '"><i>' + x[0] + '</i>' + x[1] + '</div>'; }).join('') +
+        '<div class="cl-sec">Chats and tasks</div></div><div class="cl-main">' + main + '</div></div>';
+    }
+    function clCustomize(body) {
+      return clFrame('<p class="cl-h">Customize</p><div class="cl-tabs"><span>Skills</span><span class="on">Connectors</span><span>Plugins</span><span class="cl-seg"><span>Yours</span><span class="on">Discover</span></span><span class="cl-add">＋ Add ⌄</span></div>' + body, 'Customize');
+    }
+    function clConnector(right, below) {
+      return clFrame('<div class="cl-back">← Your connectors</div><div class="cl-row"><span class="cl-hi">H</span><b>Hansora</b><span class="cl-right" data-t="right">' + right + '</span></div><div class="cl-url">' + MCP_URL + ' ⧉</div>' + (below || ''), 'Customize');
+    }
+    var CL_TOOLS = ['Create audio with Hansora', 'Create with Hansora', 'Get Hansora generation', 'Open image-to-video upload card', 'Process an uploaded audio file'];
     // ChatGPT plugin page frame: sidebar + main column, as on chatgpt.com/plugins.
     function cgFrame(main, active) {
       return '<div class="cg"><div class="cg-side"><b class="cg-logo">ChatGPT ⌄</b>' +
@@ -772,7 +842,7 @@
       chatgpt: [
         { step: 0, url: 'chatgpt.com/plugins/plugin_asdk_app_6ab42cbe…', html: cgPlugin('<span class="cg-dots">···</span><span class="cg-pill" data-t="install">+ Install plugin</span>'),
           acts: [['wait', 700], ['move', 'install'], ['click', 'install'], ['set', 'install', '<span class="cg-spin"></span>Loading'], ['wait', 900]] },
-        consentScene(1, 'ChatGPT', true),
+        consentScene(1, 'ChatGPT', true, 'An AI assistant'),
         { step: 1, url: 'chatgpt.com/plugins/plugin_asdk_app_6ab42cbe…', html: cgPlugin('<span class="cg-dots">···</span><span class="cg-pill" data-t="install"><span class="cg-spin"></span>Installing</span>'),
           acts: [['wait', 1000], ['set', 'acts', '<span class="cg-dots">···</span><span class="cg-pill ghost">⚙ Manage</span><span class="cg-pill" data-t="try">↗ Try in chat</span>'],
             ['banner', '<span class="cg-h">H</span>Hansora AI plugin installed <span class="cg-try">Try now</span> ×'], ['wait', 900], ['move', 'try'], ['click', 'try'], ['wait', 400]] },
@@ -784,11 +854,28 @@
             ['add', 'msgs', '<div class="m-b"><img src="' + DEMO_IMG + '" alt=""></div>'], ['wait', 2600]] }
       ],
       claude: [
-        formScene(0, 'claude.ai/customize/connectors', 'Add custom connector', 'Filled in from a link on hansora.co. Check it before adding.', false, 'Add'),
-        { step: 1, url: 'claude.ai/customize/connectors', html: '<p class="m-h">Connectors</p><div class="m-list"><div class="m-card">' + LOGO + '<div class="m-name"><b>Hansora</b><span class="m-tag">Custom</span></div><span class="m-btn white" data-t="connect">Connect</span></div></div>',
-          acts: [['wait', 600], ['move', 'connect'], ['click', 'connect'], ['wait', 400]] },
-        consentScene(1, 'Claude'),
-        chatScene(2, 'claude.ai/new', PROMPT + ' with Hansora')
+        { step: 0, url: 'claude.ai/customize/connectors?modal=add-custom-connector…', html: clCustomize('<div class="cl-dim"></div><div class="cl-modal"><p class="cl-mh">Add custom connector</p>' +
+            '<div class="cl-note">These values came from an external link. Check them before adding.</div>' +
+            '<div class="m-field"><label>Name</label><div>Hansora</div></div><div class="m-field"><label>Remote MCP server URL</label><div>' + MCP_URL + '</div></div>' +
+            '<div class="m-end"><span class="m-btn">Cancel</span><span class="m-btn white" data-t="add">Add</span></div></div>'),
+          acts: [['wait', 1100], ['move', 'add'], ['click', 'add'], ['wait', 400]] },
+        { step: 1, url: 'claude.ai/customize/connectors', html: clCustomize('<div class="cl-yours">Yours <span>1</span></div><div class="cl-item"><span class="cl-hi">H</span><div><b>Hansora</b><small>Custom · Connector</small></div><span class="cl-btn" data-t="connect">Connect</span></div>'),
+          acts: [['wait', 700], ['move', 'connect'], ['click', 'connect'], ['wait', 400]] },
+        { step: 1, url: 'claude.ai/customize/connectors/yours/…', html: clFrame('<div class="cl-back">← Search</div><div class="cl-empty"><span class="cl-hi big">H</span><small>' + MCP_URL + ' ⧉</small><p>You\'re not connected to Hansora yet.</p><span class="cl-btn white" data-t="connect">Connect</span></div>', 'Customize'),
+          acts: [['wait', 700], ['move', 'connect'], ['click', 'connect'], ['wait', 400]] },
+        consentScene(1, 'Claude', true),
+        { step: 1, url: 'claude.ai/customize/connectors/yours/…', html: clConnector('<span class="cl-btn">Disconnect</span> ⋮',
+            '<p class="cl-ph">Tool permissions</p><p class="cl-ps">Choose when Claude is allowed to use these tools.</p><div class="cl-group"><span>⌄ Interactive tools <i>7</i></span><span class="cl-sel" data-t="sel">✋ Needs approval ⌄</span></div><div class="cl-menu" data-t="menu"></div>' +
+            CL_TOOLS.map(function (x) { return '<div class="cl-tool">' + x + '<span>◯ ✋ ⊘</span></div>'; }).join('')),
+          acts: [['banner', '<span class="cl-info">ⓘ</span> Connected to Hansora. ×', 'bottom cl-toast'], ['wait', 900], ['move', 'sel'], ['click', 'sel'],
+            ['set', 'menu', '<div data-t="always">✓ Always allow</div><div>✋ Needs approval</div><div>⊘ Blocked</div>'], ['cls', 'menu', 'show'], ['wait', 500], ['move', 'always'], ['click', 'always'],
+            ['set', 'sel', '✓ Always allow ⌄'], ['set', 'menu', ''], ['wait', 1100]] },
+        { step: 2, url: 'claude.ai/new', html: clFrame('<div class="cl-chat"><div class="m-msgs" data-t="msgs"><p class="cl-greet" data-t="begin"><span>✺</span> Good evening</p></div>' +
+            '<div class="cl-box"><div data-t="in"><span class="ph">How can I help you today?</span></div><div class="cl-bar"><span>＋</span><span class="cl-mode"><b>Chat</b> Cowork</span><span class="cl-model">Sonnet ⌄</span><span class="cl-send" data-t="send">↑</span></div></div></div>', 'New'),
+          acts: [['move', 'in'], ['click', 'in'], ['type', 'in', PROMPT + ' with Hansora'], ['move', 'send'], ['click', 'send'], ['hide', 'begin'], ['set', 'in', '<span class="ph">Reply to Claude…</span>'],
+            ['add', 'msgs', '<div class="m-u">' + PROMPT + ' with Hansora</div>'], ['wait', 500],
+            ['add', 'msgs', '<div class="m-b"><span class="m-chipt"><img src="/media/compare/hansora.png" alt="">Create with Hansora</span></div>'], ['wait', 1300],
+            ['add', 'msgs', '<div class="m-b"><img src="' + DEMO_IMG + '" alt=""></div>'], ['wait', 2600]] }
       ],
       cursor: [
         copyScene(0, 'Copy Hansora link', 'Hansora link copied'),
@@ -849,7 +936,7 @@
       if (k === 'cls') { e.classList.add(a[2]); return sleep(100, id); }
       if (k === 'set') { e.innerHTML = a[2]; return sleep(100, id); }
       if (k === 'hide') { e.style.display = 'none'; return sleep(50, id); }
-      if (k === 'banner') { sView.insertAdjacentHTML('beforeend', '<div class="cg-toast">' + a[1] + '</div>'); return sleep(200, id); }
+      if (k === 'banner') { sView.insertAdjacentHTML('beforeend', '<div class="cg-toast ' + (a[2] || '') + '">' + a[1] + '</div>'); return sleep(200, id); }
       if (k === 'toast') { sView.insertAdjacentHTML('beforeend', '<div class="m-toast">' + a[1] + '</div>'); return sleep(200, id); }
       return Promise.resolve();
     }

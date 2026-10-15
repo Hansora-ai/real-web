@@ -2190,6 +2190,16 @@
       .site-header .shell.nav{ position:relative; }
       .site-header .nav-links{ position:absolute; left:48%; transform:translateX(-50%); }
       @media (max-width:1400px){ html[lang="ru"] .site-header .nav-links, html[lang="hy"] .site-header .nav-links{ left:40.5%; } }
+      /* Mid-size screens: keep the menu between the logo and the buttons instead of floating over them. */
+      @media (min-width:901px) and (max-width:1320px){
+        .site-header .nav-links{ position:static; transform:none; margin:0 auto; gap:2px; flex:0 1 auto; min-width:0; }
+        .site-header .nav-links a{ padding:8px 9px; font-size:.84rem; white-space:nowrap; }
+        .nav-links .hansora-nav-trigger{ gap:6px; }
+      }
+      @media (min-width:901px) and (max-width:1120px){
+        .site-header #btnGetStarted{ display:none; }
+        .site-header .nav-links a{ padding:8px 7px; font-size:.8rem; }
+      }
       .site-header.auth-checking #btnLoginSignup{ visibility:hidden !important; pointer-events:none !important; }
       .site-header .user-menu .hansora-ai-course-button{ width:100%; text-align:left; }
       .hansora-auth-form .hansora-auth-view[hidden]{ display:none !important; }
