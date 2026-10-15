@@ -9,6 +9,9 @@
   // Counts next to each section title
   sections.forEach(s => { const em = s.querySelector('[data-count]'); if (em) em.textContent = s.querySelectorAll('.mx-card').length; });
 
+  // Totals in the top
+  document.querySelectorAll('[data-total]').forEach(el => { const s = document.querySelector(`[data-category-section="${el.dataset.total}"]`); el.textContent = s ? s.querySelectorAll('.mx-card').length : 0; });
+
   // Sliding highlight behind the active category
   const tabs = document.querySelector('.mx-tabs');
   const pill = tabs && tabs.querySelector('.mx-pill');
@@ -102,7 +105,9 @@
   const startVideo = () => setTimeout(checkVideo, 600);
   if (document.readyState === 'complete') startVideo(); else window.addEventListener('load', startVideo, { once: true });
 
-  window.addEventListener('scroll', () => { reveal(); checkVideo(); }, { passive: true });
+  const orbitHero = document.querySelector('.mx-hero');
+  function pauseHero() { if (!orbitHero) return; const r = orbitHero.getBoundingClientRect(); orbitHero.classList.toggle('mx-paused', r.bottom < 0 || r.top > window.innerHeight); }
+  window.addEventListener('scroll', () => { reveal(); checkVideo(); pauseHero(); }, { passive: true });
   window.addEventListener('resize', reveal);
   setInterval(() => { reveal(); checkVideo(); }, 1000);
 })();
