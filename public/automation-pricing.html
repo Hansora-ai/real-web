@@ -10,9 +10,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="preconnect" href="https://checkout.dodopayments.com" crossorigin><link rel="preconnect" href="https://yoomoney.ru" crossorigin>
-  <link rel="stylesheet" href="automation-header.css?v=20261008c"><link rel="stylesheet" href="automation-ui.css?v=20261014">
+  <link rel="stylesheet" href="automation-header.css?v=20261008c"><link rel="stylesheet" href="automation-ui.css?v=20261014"><link rel="stylesheet" href="automation-compare.css?v=20261022">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261014"></script><script defer src="automation-pricing.js?v=20261013d"></script>
+  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261014"></script><script defer src="automation-pricing.js?v=20261018"></script>
 </head>
 <body class="ui" data-automation-page="pricing">
   <div data-automation-header></div>
@@ -33,6 +33,57 @@
     <section class="ui-pricing-grid ui-enter" id="pricing-plans" aria-label="Monthly plans" hidden></section>
     <p class="ui-pricing-ru-note" id="ru-monthly-note" hidden>Monthly plans renew automatically, so they are paid with an international card. With a Russian card, choose a pay-as-you-go pack.</p>
     <p class="ui-pricing-shared" id="pricing-shared">Credits are shared with Hansora Creative – one balance for your whole Hansora account. Prices in USD.</p>
+
+    <section class="ui-compare ui-enter" aria-labelledby="compare-title">
+      <div class="ui-compare-head">
+        <span class="ui-badge dot green">Hansora vs ManyChat vs Chatfuel</span>
+        <h2 id="compare-title">Same job. <span>Up to 62% cheaper.</span></h2>
+        <p id="vs-lead">What you pay to let AI answer <b>1,000 customer messages</b>.</p>
+        <div class="ui-filter-pills ui-platform-switch ui-vs-switch" role="group" aria-label="What to compare">
+          <button type="button" class="active" data-vs="chats" aria-pressed="true">Chat replies</button>
+          <button type="button" data-vs="comments" aria-pressed="false">Comment automation</button>
+        </div>
+      </div>
+
+      <div class="ui-vs">
+        <div class="ui-vs-row us" style="--w:38%">
+          <div class="ui-vs-name"><b><img class="ui-vs-logo" src="/media/compare/hansora.png" alt="">Hansora</b><small>pay once, no subscription</small></div>
+          <div class="ui-vs-track"><i><b class="ui-vs-brand"><img class="ui-vs-logo" src="/media/compare/hansora.png" alt="">Hansora</b><span>$14.99</span></i><em class="ui-vs-best">Best price</em></div>
+          <div class="ui-vs-price"><strong>$14.99</strong><small>one time</small><u data-vs-us>covers 1,250 replies</u></div>
+        </div>
+        <div class="ui-vs-row" style="--w:51%">
+          <div class="ui-vs-name"><b><img class="ui-vs-logo" src="/media/compare/chatfuel.png" alt="">Chatfuel</b><small data-vs-cf>Business plan</small></div>
+          <div class="ui-vs-track"><i><b class="ui-vs-brand"><img class="ui-vs-logo" src="/media/compare/chatfuel.png" alt="">Chatfuel</b><span>$20</span></i></div>
+          <div class="ui-vs-price"><strong>$20</strong><small>every month</small><em>Hansora is 25% cheaper</em></div>
+        </div>
+        <div class="ui-vs-row" style="--w:100%">
+          <div class="ui-vs-name"><b><img class="ui-vs-logo" src="/media/compare/manychat.png" alt="">ManyChat</b><small data-vs-mc>Pro plan, needed for AI</small></div>
+          <div class="ui-vs-track"><i><b class="ui-vs-brand"><img class="ui-vs-logo" src="/media/compare/manychat.png" alt="">ManyChat</b><span>$39</span></i></div>
+          <div class="ui-vs-price"><strong>$39</strong><small>every month</small><em>Hansora is 62% cheaper</em></div>
+        </div>
+        <div class="ui-vs-year">
+          <div class="ui-vs-year-text"><small data-vs-year>A full year (12,000 replies)</small><strong>Save up to <span data-vs-save>$318</span> a year</strong></div>
+          <div class="ui-vs-year-pills"><b class="us" data-vs-year-us>Hansora $149.98</b><b>Chatfuel $240</b><b>ManyChat $468</b></div>
+        </div>
+      </div>
+
+      <div class="ui-rate-scroll ui-vs-table-wrap">
+        <table class="ui-compare-table" aria-label="Hansora compared with ManyChat and Chatfuel">
+          <thead><tr><th></th><th class="us">Hansora</th><th>Chatfuel</th><th>ManyChat</th></tr></thead>
+          <tbody>
+            <tr><th>AI chat replies</th><td class="us"><span class="ok">✓</span><small>on every option</small></td><td><span class="ok">✓</span></td><td><span class="ok">✓</span><small>Pro plan and higher</small></td></tr>
+            <tr><th>Price for 1,000 AI chat replies</th><td class="us"><b>$14.99</b><small>one time · uses 1,200⚡ (≈ $12), 300⚡ left</small></td><td><b>$20</b><small>every month</small></td><td><b>$39</b><small>every month</small></td></tr>
+            <tr><th>Automatic comment replies</th><td class="us"><span class="ok">✓</span><small>reply, DM, buttons and links</small></td><td><span class="ok">✓</span></td><td><span class="ok">✓</span></td></tr>
+            <tr><th>Price when 1,000 people comment</th><td class="us"><b>$14.99</b><small>one time · uses 1,000⚡ (≈ $10), 500⚡ (≈ $5) left</small></td><td><b>$20</b><small>every month</small></td><td><b>$39</b><small>every month (or $17 + $0.10 per person over 250)</small></td></tr>
+            <tr><th>No subscription needed</th><td class="us"><span class="ok">✓</span></td><td><span class="nope">✕</span></td><td><span class="nope">✕</span></td></tr>
+            <tr><th>Unused balance never expires</th><td class="us"><span class="ok">✓</span></td><td><span class="nope">✕</span></td><td><span class="nope">✕</span></td></tr>
+            <tr><th>You pay only for what the AI does</th><td class="us"><span class="ok">✓</span><small>per reply</small></td><td><span class="nope">✕</span><small>fixed monthly fee</small></td><td><span class="nope">✕</span><small>fixed monthly fee</small></td></tr>
+            <tr><th>AI answers phone calls</th><td class="us"><span class="ok">✓</span></td><td><span class="nope">✕</span></td><td><span class="nope">✕</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="ui-pricing-note">Hansora: an AI reply costs 1.2⚡ with pay as you go. The $14.99 pack has 1,500⚡ (1,250 replies). A year of 12,000 replies needs 14,400⚡: the $99.99 pack (11,000⚡) plus the $49.99 pack (5,350⚡) = $149.98. A comment automation run (one person going through your comment automation) costs 1⚡, so the $14.99 pack covers 1,500 runs; a year of 12,000 runs needs 12,000⚡: the $99.99 pack plus the $14.99 pack = $114.98. ManyChat Essential ($17) includes 250 people a month and charges $0.10 for each extra person, so Pro ($39) is its cheapest plan for 1,000 people. Competitors: monthly-billing prices from <a href="https://manychat.com/pricing" target="_blank" rel="noopener">manychat.com/pricing</a> and <a href="https://chatfuel.com/pricing" target="_blank" rel="noopener">chatfuel.com/pricing</a>; Chatfuel limit rules from <a href="https://limits.chatfuel.com/en" target="_blank" rel="noopener">limits.chatfuel.com</a>. Checked 15 October 2026. Yearly billing is cheaper on both. Your cost depends on how many messages your customers send. Prices and plans on other platforms can change at any time, so check their websites for current prices. Hansora is not affiliated with ManyChat or Chatfuel; their names are trademarks of their owners and are used only to compare prices.</p>
+    </section>
 
     <section class="ui-card ui-pricing-costs ui-enter" aria-labelledby="costs-title">
       <div class="ui-card-head"><div><h2 id="costs-title">What uses credits</h2><p>You only pay for what your AI employee actually does. Monthly plans pay less for every action.</p></div></div>

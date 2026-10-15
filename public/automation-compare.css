@@ -1,0 +1,108 @@
+/* Automation pricing: honest comparison with ManyChat and Chatfuel */
+.ui-compare{margin-top:44px}
+.ui-compare-head{display:grid;justify-items:center;gap:10px;margin-bottom:24px;text-align:center}
+.ui-compare-head h2{margin:0;font-size:clamp(28px,4vw,44px);letter-spacing:-.035em;line-height:1.05}
+.ui-compare-head h2 span{color:var(--green)}
+.ui-compare-head p{margin:0;max-width:560px;color:var(--text-2);font-size:15.5px;line-height:1.55}
+.ui-compare-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:stretch}
+.ui-compare-card{position:relative;display:flex;flex-direction:column;gap:10px;padding:22px 20px 20px;border:1px solid var(--border-2);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow)}
+.ui-compare-card.us{border-color:var(--green);box-shadow:0 0 0 1px var(--green),0 24px 60px -30px var(--green);background:linear-gradient(180deg,var(--green-soft),var(--surface) 55%)}
+.ui-compare-flag{position:absolute;top:-11px;left:20px;padding:3px 10px;border-radius:999px;background:var(--green);color:#04150c;font-size:11.5px;font-weight:700}
+.ui-compare-card h3{margin:0;font-size:16px}
+.ui-compare-price{display:flex;align-items:baseline;gap:8px}
+.ui-compare-price strong{font-size:34px;letter-spacing:-.03em}
+.ui-compare-price span{color:var(--text-3);font-size:13px}
+.ui-compare-card.us .ui-compare-price strong{color:var(--green)}
+.ui-compare-sub{margin:0;color:var(--text-2);font-size:13px;line-height:1.5;min-height:39px}
+.ui-compare-card ul{display:grid;gap:8px;margin:6px 0 0;padding:12px 0 0;border-top:1px solid var(--border);list-style:none}
+.ui-compare-card li{position:relative;padding-left:24px;font-size:13.5px;line-height:1.4}
+.ui-compare-card li::before{position:absolute;left:0;top:0;display:grid;place-items:center;width:17px;height:17px;border-radius:50%;font-size:11px;font-weight:800}
+.ui-compare-card li.yes::before{content:"✓";background:var(--green-soft);color:var(--green)}
+.ui-compare-card li.no{color:var(--text-2)}
+.ui-compare-card li.no::before{content:"✕";background:var(--red-soft);color:var(--red)}
+.ui-compare .ui-rate-scroll{margin-top:18px;border:1px solid var(--border-2);border-radius:var(--radius-lg);background:var(--surface)}
+.ui-compare-table{width:100%;min-width:640px;border-collapse:collapse;font-size:14px}
+.ui-compare-table th,.ui-compare-table td{padding:13px 16px;border-top:1px solid var(--border);text-align:left;vertical-align:top}
+.ui-compare-table thead th{border-top:0;color:var(--text-3);font-size:12.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.ui-compare-table tbody th{width:22%;color:var(--text-2);font-weight:500}
+.ui-compare-table td{color:var(--text-2)}
+.ui-compare-table .us{background:var(--green-soft);color:var(--text)}
+.ui-compare-table thead .us{color:var(--green)}
+.ui-compare-table .ok{color:var(--green);font-weight:700}
+.ui-compare-table .nope{color:var(--red);font-weight:700}
+.ui-compare .ui-pricing-note a{color:var(--text-2);text-decoration:underline}
+@media (max-width:860px){.ui-compare-cards{grid-template-columns:minmax(0,1fr)}.ui-compare-sub{min-height:0}}
+
+/* Head-to-head bars */
+.ui-vs{display:grid;gap:14px;padding:26px 26px 20px;border:1px solid var(--border-2);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow)}
+.ui-vs-row{display:grid;grid-template-columns:180px minmax(0,1fr) 190px;align-items:center;gap:18px}
+.ui-vs-name{display:grid;gap:2px}
+.ui-vs-name b{font-size:17px}
+.ui-vs-name small{color:var(--text-3);font-size:12.5px}
+.ui-vs-track{height:44px;border-radius:12px;background:var(--surface-2);overflow:hidden}
+.ui-vs-track i{display:block;height:100%;width:0;border-radius:12px;background:linear-gradient(90deg,rgba(255,107,107,.35),rgba(255,107,107,.7));transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
+.ui-vs-row.us .ui-vs-track i{background:linear-gradient(90deg,#1fbf75,var(--green));box-shadow:0 0 30px -6px var(--green)}
+.ui-vs.is-on .ui-vs-track i{width:var(--w)}
+.ui-vs-price{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px}
+.ui-vs-price strong{font-size:30px;letter-spacing:-.03em}
+.ui-vs-price small{color:var(--text-3);font-size:13px}
+.ui-vs-price em{flex-basis:100%;color:var(--green);font-size:12.5px;font-style:normal;font-weight:700}
+.ui-vs-row.us .ui-vs-price strong{color:var(--green)}
+.ui-vs-row.us .ui-vs-name b{color:var(--green)}
+.ui-vs-year{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:6px;padding-top:16px;border-top:1px solid var(--border);color:var(--text-3);font-size:13.5px}
+.ui-vs-year b{padding:5px 12px;border-radius:999px;background:var(--surface-2);color:var(--text-2);font-weight:600}
+.ui-vs-year b.us{background:var(--green-soft);color:var(--green)}
+.ui-vs-table-wrap{margin-top:16px}
+.ui-compare-table td{text-align:center}
+.ui-compare-table thead th:not(:first-child){text-align:center}
+.ui-compare-table .ok,.ui-compare-table .nope{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:13px}
+.ui-compare-table .ok{background:var(--green-soft)}
+.ui-compare-table .nope{background:var(--red-soft)}
+.ui-compare-table td small{display:block;margin-top:4px;color:var(--text-3);font-size:12px}
+@media (max-width:760px){
+  .ui-vs{padding:18px 16px 14px}
+  .ui-vs-row{grid-template-columns:minmax(0,1fr) auto;gap:8px 12px}
+  .ui-vs-track{grid-column:1 / -1;grid-row:2;height:30px}
+  .ui-vs-price strong{font-size:24px}
+  .ui-vs-price{justify-content:flex-end}
+  .ui-vs-price em{text-align:right}
+}
+@media (prefers-reduced-motion:reduce){.ui-vs-track i{transition:none}}
+
+/* v2: prices inside bars, best-price badge, yearly savings */
+.ui-vs-track{position:relative;height:48px}
+.ui-vs-track i{position:relative;display:flex;align-items:center;justify-content:flex-end;min-width:0;overflow:hidden}
+.ui-vs-track i span{padding-right:14px;color:#fff;font-size:15px;font-weight:800;opacity:0;transition:opacity .5s .9s;white-space:nowrap}
+.ui-vs.is-on .ui-vs-track i span{opacity:1}
+.ui-vs-row.us .ui-vs-track i span{color:#04150c}
+.ui-vs-best{position:absolute;left:calc(var(--w) + 12px);top:50%;transform:translateY(-50%) scale(.8);padding:5px 11px;border-radius:999px;background:var(--green-soft);border:1px solid var(--green);color:var(--green);font-size:12px;font-style:normal;font-weight:800;white-space:nowrap;opacity:0;transition:opacity .5s 1.1s,transform .5s 1.1s cubic-bezier(.2,1.4,.4,1)}
+.ui-vs.is-on .ui-vs-best{opacity:1;transform:translateY(-50%) scale(1)}
+.ui-vs-price u{flex-basis:100%;color:var(--text-3);font-size:12.5px;text-decoration:none}
+.ui-vs-price em{color:var(--green)}
+.ui-vs-year{justify-content:space-between;gap:14px}
+.ui-vs-year-text{display:grid;gap:2px}
+.ui-vs-year-text small{color:var(--text-3);font-size:12.5px}
+.ui-vs-year-text strong{color:var(--text);font-size:20px;letter-spacing:-.02em}
+.ui-vs-year-text strong span{color:var(--green)}
+.ui-vs-year-pills{display:flex;flex-wrap:wrap;gap:8px}
+@media (max-width:760px){
+  .ui-vs-track{height:34px}
+  .ui-vs-track i span{font-size:13px;padding-right:10px}
+  .ui-vs-best{font-size:11px;padding:3px 8px}
+  .ui-vs-year{flex-direction:column;align-items:flex-start}
+}
+.ui-vs-switch{margin-top:10px}
+.ui-compare-table td b{color:var(--text);font-size:15px}
+.ui-compare-table .us b{color:var(--green)}
+/* Company name inside each bar */
+.ui-vs-track i{justify-content:space-between}
+.ui-vs-brand{display:inline-flex;align-items:center;gap:7px;padding-left:14px;color:#fff;font-size:14px;font-weight:800;white-space:nowrap;opacity:0;transition:opacity .5s .7s}
+.ui-vs-brand img{width:20px;height:20px;border-radius:6px}
+.ui-vs-row.us .ui-vs-brand{color:#04150c}
+.ui-vs.is-on .ui-vs-brand{opacity:1}
+@media (max-width:760px){.ui-vs-brand{font-size:12px;padding-left:10px}.ui-vs-brand img{width:16px;height:16px}}
+/* Company logos */
+.ui-vs-logo{flex:none;width:22px;height:22px;padding:2px;border-radius:7px;background:#fff;object-fit:contain;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.ui-vs-name b{display:inline-flex;align-items:center;gap:9px}
+.ui-vs-brand img{width:22px;height:22px}
+.ui-vs-logo[src*="hansora"]{background:#0d0f1a;box-shadow:0 0 0 1px rgba(56,189,248,.35),0 2px 8px rgba(0,0,0,.35)}
