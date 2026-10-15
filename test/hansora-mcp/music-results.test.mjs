@@ -83,7 +83,7 @@ function cardHarness() {
       setAttribute(name, value) { this.attributes[name] = value; } };
   }
   const document = { getElementById(id) { if (!nodes.has(id)) nodes.set(id, node()); return nodes.get(id); }, createElement(tag) { return { ...node(), tag }; }, addEventListener() {} };
-  const window = { addEventListener() {}, clearInterval() {}, setTimeout() {}, parent: { postMessage(message) { messages.push(message); } } };
+  const window = { addEventListener() {}, clearInterval() {}, clearTimeout() {}, setTimeout() {}, parent: { postMessage(message) { messages.push(message); } } };
   const script = GENERATION_APP_HTML.match(/<script>([\s\S]*?)<\/script>/)[1].replace('    initializeApp();', '    window.cardTest = { render, openResult };');
   vm.runInNewContext(script, { window, document, URL, Map, Set });
   return { ...window.cardTest, nodes, messages };
