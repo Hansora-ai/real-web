@@ -285,8 +285,6 @@
     // Opens Claude's "Add custom connector" dialog with the name and URL already filled in.
     var CLAUDE_INSTALL_URL = 'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Hansora&connectorUrl=' + encodeURIComponent(MCP_URL);
 
-    function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
-    var CURSOR_URL = 'cursor://anysphere.cursor-deeplink/mcp/install?name=hansora&config=' + encodeURIComponent(b64(JSON.stringify({ url: MCP_URL })));
     var CLAUDE_CODE_CMD = 'claude mcp add --transport http hansora ' + MCP_URL;
 
     var CLIENTS = [
@@ -307,12 +305,12 @@
           ['Ask for anything', 'In a new chat, turn Hansora on from the <b>+</b> menu and ask: "Make a cinematic video of…". Free Claude plans allow one custom connector.']
         ] },
       { id: 'cursor', name: 'Cursor', icon: 'i-cursor', accent: '#e5e7eb', accent2: '#38bdf8',
-        label: 'Add Hansora to Cursor', action: 'app', href: CURSOR_URL, download: 'https://cursor.com/download', web: 'https://cursor.com/agents',
-        hint: 'Opens the Cursor app with Hansora ready to install. Using Cursor in the browser? See the steps below.',
+        label: 'Copy Hansora MCP link', action: 'copy-url',
+        hint: 'Copy the link and add it in Cursor as an MCP server.',
         steps: [
-          ['Cursor app', 'Click <b>Add Hansora to Cursor</b>. The Cursor app opens with Hansora ready. Click <b>Install</b> and sign in to Hansora.'],
-          ['Cursor on the web', 'Copy <code>' + MCP_URL + '</code>, open <a href="https://cursor.com/agents" target="_blank" rel="noopener"><b>cursor.com/agents</b></a>, open the <b>MCP</b> menu, add a custom server named <code>Hansora</code> with that URL, and sign in.'],
-          ['Ask for anything', 'Ask the Cursor agent to generate images, video or audio for your project.']
+          ['Copy the link', 'Click <b>Copy Hansora MCP link</b> to copy <code>' + MCP_URL + '</code>.'],
+          ['Add it in Cursor', 'Cursor app: <b>Settings → MCP → Add custom MCP</b>. Cursor on the web: open <a href="https://cursor.com/agents" target="_blank" rel="noopener"><b>cursor.com/agents</b></a> and use the <b>MCP</b> menu. Name it <code>Hansora</code> and paste the link.'],
+          ['Sign in and create', 'Sign in to Hansora when asked, then ask the Cursor agent to generate images, video or audio.']
         ] },
       { id: 'claude-code', name: 'Claude Code', icon: 'i-terminal', accent: '#d97757', accent2: '#38bdf8',
         label: 'Copy install command', action: 'copy-cmd', cmd: CLAUDE_CODE_CMD,
@@ -432,40 +430,16 @@
       try { if (window.gtag) window.gtag('event', 'mcp_connect_click', { client: c.id }); } catch (_) {}
     }
 
-    // Desktop apps open through a link like cursor://. If the browser never loses focus,
-    // the app is most likely not installed, so offer the download instead.
-    function openDesktopApp(c) {
-      var left = false;
-      var onLeave = function () { left = true; };
-      window.addEventListener('blur', onLeave, { once: true });
-      document.addEventListener('visibilitychange', onLeave, { once: true });
-      toast('Opening ' + c.name + '…');
-      location.href = c.href;
-      setTimeout(function () {
-        window.removeEventListener('blur', onLeave);
-        document.removeEventListener('visibilitychange', onLeave);
-        if (left || current !== c) return;
-        var msg = c.name + ' app didn\'t open. ';
-        if (c.web) {
-          copyText(MCP_URL, 'MCP URL copied for ' + c.name + ' on the web.');
-          msg += 'Using it in the browser? We copied the URL. <a href="' + c.web + '" target="_blank" rel="noopener">Open ' + c.name + ' on the web</a>, open the MCP menu and add it. Or ';
-        }
-        $('hint').innerHTML = msg + '<a href="' + c.download + '" target="_blank" rel="noopener">download the app</a>.';
-      }, 1800);
-    }
-
     function install() {
       var c = current;
       track(c);
       if (c.action === 'open') {
         var w = window.open(c.href, '_blank');
         if (w) w.opener = null; else location.href = c.href;
-      } else if (c.action === 'app') {
-        openDesktopApp(c);
       } else if (c.action === 'copy-cmd') {
         copyText(c.cmd, 'Command copied. Paste it into your terminal.');
       } else {
-        copyText(MCP_URL, 'MCP URL copied. Paste it into your AI app.');
+        copyText(MCP_URL, 'Hansora MCP link copied. Paste it into ' + (c.id === 'other' ? 'your AI app' : c.name) + '.');
       }
     }
     ['installBtn', 'installBtn2', 'installBtn3'].forEach(function (id) { $(id).addEventListener('click', install); });
