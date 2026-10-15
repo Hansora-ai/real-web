@@ -9,14 +9,34 @@
   const typed = document.getElementById('he-typed');
   const model = document.getElementById('he-model');
   const prompt = typed && typed.closest('.he-prompt');
-  const prompts = [
-    ['Girl with silver wings flying over the mountains', 'Seedance 2.5'],
-    ['Chocolate bar ad, bright and playful, 9:16', 'Veo 3.1'],
-    ['Product photo of a perfume on wet black stone', 'GPT Image 2.5'],
-    ['Robot warrior in a misty forest, cinematic', 'Kling 3.0'],
-    ['Upbeat summer pop song about the beach', 'Suno Music'],
-    ['My kid as a cartoon hero flying over the hills', 'Nano Banana 2']
-  ];
+  const lang = (document.documentElement.lang || 'en').slice(0, 2);
+  const promptsByLang = {
+    en: [
+      ['Girl with silver wings flying over the mountains', 'Seedance 2.5'],
+      ['Chocolate bar ad, bright and playful, 9:16', 'Veo 3.1'],
+      ['Product photo of a perfume on wet black stone', 'GPT Image 2.5'],
+      ['Robot warrior in a misty forest, cinematic', 'Kling 3.0'],
+      ['Upbeat summer pop song about the beach', 'Suno Music'],
+      ['My kid as a cartoon hero flying over the hills', 'Nano Banana 2']
+    ],
+    ru: [
+      ['Девушка с серебряными крыльями летит над горами', 'Seedance 2.5'],
+      ['Реклама шоколадки, яркая и весёлая, 9:16', 'Veo 3.1'],
+      ['Фото духов на мокром чёрном камне', 'GPT Image 2.5'],
+      ['Робот-воин в туманном лесу, кинематографично', 'Kling 3.0'],
+      ['Весёлая летняя песня о пляже', 'Suno Music'],
+      ['Мой ребёнок — мультяшный герой над холмами', 'Nano Banana 2']
+    ],
+    hy: [
+      ['Արծաթե թևերով աղջիկ, որը թռչում է լեռների վրայով', 'Seedance 2.5'],
+      ['Շոկոլադե սալիկի գովազդ, վառ և ուրախ, 9:16', 'Veo 3.1'],
+      ['Օծանելիքի լուսանկար թաց սև քարի վրա', 'GPT Image 2.5'],
+      ['Ռոբոտ մարտիկ մառախլապատ անտառում, կինեմատոգրաֆիկ', 'Kling 3.0'],
+      ['Ուրախ ամառային երգ ծովափի մասին', 'Suno Music'],
+      ['Իմ երեխան՝ մուլտհերոս, թռչում է բլուրների վրայով', 'Nano Banana 2']
+    ]
+  };
+  const prompts = promptsByLang[lang] || promptsByLang.en;
   async function typeLoop() {
     if (!typed) return;
     for (let round = 0; ; round++) {
@@ -103,7 +123,8 @@
     if (caption && !caption.children.length) {
       caption.innerHTML = caption.textContent.trim().split(/\s+/).map(w => '<span>' + w.replace(/[&<>]/g, '') + '</span>').join(' ');
     }
-    const chips = ['', 'GPT Image 2.5 · 4K', 'Seedance 2.5 · 1080p', 'Music + captions'];
+    const musicChip = { ru: 'Музыка + субтитры', hy: 'Երաժշտություն + ենթագրեր' }[lang] || 'Music + captions';
+    const chips = ['', 'GPT Image 2.5 · 4K', 'Seedance 2.5 · 1080p', musicChip];
     const times = [3600, 3200, 3600, 4600];
     let step = -1, timer = 0, typing = 0, running = false;
     const loadVideo = () => {
