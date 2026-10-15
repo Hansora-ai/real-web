@@ -1,0 +1,34 @@
+/* Automation pricing: honest comparison with ManyChat and Chatfuel */
+.ui-compare{margin-top:44px}
+.ui-compare-head{display:grid;justify-items:center;gap:10px;margin-bottom:24px;text-align:center}
+.ui-compare-head h2{margin:0;font-size:clamp(28px,4vw,44px);letter-spacing:-.035em;line-height:1.05}
+.ui-compare-head h2 span{color:var(--green)}
+.ui-compare-head p{margin:0;max-width:560px;color:var(--text-2);font-size:15.5px;line-height:1.55}
+.ui-compare-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:stretch}
+.ui-compare-card{position:relative;display:flex;flex-direction:column;gap:10px;padding:22px 20px 20px;border:1px solid var(--border-2);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow)}
+.ui-compare-card.us{border-color:var(--green);box-shadow:0 0 0 1px var(--green),0 24px 60px -30px var(--green);background:linear-gradient(180deg,var(--green-soft),var(--surface) 55%)}
+.ui-compare-flag{position:absolute;top:-11px;left:20px;padding:3px 10px;border-radius:999px;background:var(--green);color:#04150c;font-size:11.5px;font-weight:700}
+.ui-compare-card h3{margin:0;font-size:16px}
+.ui-compare-price{display:flex;align-items:baseline;gap:8px}
+.ui-compare-price strong{font-size:34px;letter-spacing:-.03em}
+.ui-compare-price span{color:var(--text-3);font-size:13px}
+.ui-compare-card.us .ui-compare-price strong{color:var(--green)}
+.ui-compare-sub{margin:0;color:var(--text-2);font-size:13px;line-height:1.5;min-height:39px}
+.ui-compare-card ul{display:grid;gap:8px;margin:6px 0 0;padding:12px 0 0;border-top:1px solid var(--border);list-style:none}
+.ui-compare-card li{position:relative;padding-left:24px;font-size:13.5px;line-height:1.4}
+.ui-compare-card li::before{position:absolute;left:0;top:0;display:grid;place-items:center;width:17px;height:17px;border-radius:50%;font-size:11px;font-weight:800}
+.ui-compare-card li.yes::before{content:"✓";background:var(--green-soft);color:var(--green)}
+.ui-compare-card li.no{color:var(--text-2)}
+.ui-compare-card li.no::before{content:"✕";background:var(--red-soft);color:var(--red)}
+.ui-compare .ui-rate-scroll{margin-top:18px;border:1px solid var(--border-2);border-radius:var(--radius-lg);background:var(--surface)}
+.ui-compare-table{width:100%;min-width:640px;border-collapse:collapse;font-size:14px}
+.ui-compare-table th,.ui-compare-table td{padding:13px 16px;border-top:1px solid var(--border);text-align:left;vertical-align:top}
+.ui-compare-table thead th{border-top:0;color:var(--text-3);font-size:12.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.ui-compare-table tbody th{width:22%;color:var(--text-2);font-weight:500}
+.ui-compare-table td{color:var(--text-2)}
+.ui-compare-table .us{background:var(--green-soft);color:var(--text)}
+.ui-compare-table thead .us{color:var(--green)}
+.ui-compare-table .ok{color:var(--green);font-weight:700}
+.ui-compare-table .nope{color:var(--red);font-weight:700}
+.ui-compare .ui-pricing-note a{color:var(--text-2);text-decoration:underline}
+@media (max-width:860px){.ui-compare-cards{grid-template-columns:minmax(0,1fr)}.ui-compare-sub{min-height:0}}
