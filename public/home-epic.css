@@ -512,3 +512,13 @@ html[lang="hy"] .he-title { font-size: clamp(32px, 4.6vw, 72px); }
 main .x-scroll, .home-features-grid { scroll-snap-type: x proximity !important; overscroll-behavior-y: auto; }
 /* Room above the side-scrolling rows, so cards lifted on hover are not cut at the top */
 .top-reel .x-scroll { padding-top: 12px !important; margin-top: -12px !important; padding-bottom: 14px !important; margin-bottom: -14px !important; }
+
+/* Phones: side-scrolling rows never scroll up and down, so a vertical swipe always moves the page */
+main .x-scroll, .home-features-grid, .top-reel .x-scroll { overflow-y: hidden !important; overscroll-behavior-y: auto; touch-action: pan-x pan-y; }
+/* Touch screens keep a "hover" after a tap; no lifting cards there */
+@media (hover: none) {
+  .studio-card:hover, .latest-model-card:hover, .top-used-models-section .slot:hover, .top-reel .slot:hover, .studio-marquee-section .studio-card:hover { transform: none !important; }
+  .top-reel .x-scroll { padding-top: 0 !important; margin-top: 0 !important; padding-bottom: 0 !important; margin-bottom: 0 !important; }
+}
+/* The moving wall in the hero never takes touches */
+.he-wall, .he-shade, .he-models { pointer-events: none; touch-action: pan-y; }
