@@ -59,6 +59,7 @@
   function startWall() {
     if (reduce || !wallVideos.length) return;
     const phone = window.matchMedia('(max-width: 760px)').matches;
+    if (phone) return; // phones keep the still images: playing videos here made scrolling lag right after opening
     wallVideos.forEach((video, index) => {
       if (phone && index > 3) return; // fewer clips on phones
       setTimeout(() => {
