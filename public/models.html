@@ -89,6 +89,7 @@
   </script>
   <!-- End Meta Pixel Code -->
 
+<link rel="stylesheet" href="/models-epic.css?v=20261015">
 </head>
 <body class="min-h-screen">
   <!-- Meta Pixel (noscript) -->
@@ -99,68 +100,78 @@
 
 <div id="sharedHeader"></div>
 
-  <section class="relative">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 md:py-14">
-      <div class="grid md:grid-cols-2 gap-8 items-center">
-        <div>
-          <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight">
-            Explore <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-blue-400 to-sky-300">all models</span>
-          </h1>
-          <p class="mt-4 text-zinc-400 max-w-xl">
-            Video Generation and Image Generations — All best AI models at one place
-          </p>
-          <div class="mt-6 md:inline-block">
-          <div class="flex flex-col gap-3">
-            <div class="flex flex-wrap gap-2 md:w-max">
-	            <button data-filter="all" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">All</button>
-	            <button data-filter="image" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">Image</button>
-	            <button data-filter="video" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">Video</button>
-	            <button data-filter="features" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">Features</button>
-	            <button data-filter="audio" class="filter-btn btn px-4 py-2 rounded-xl text-sm font-medium ring-1 ring-white/10">Audio</button>
-	            </div>
-	            <a href="search-models.html" class="get-started-main w-full md:w-auto inline-flex items-center justify-center rounded-xl px-8 py-3 text-sm font-semibold text-white shadow-soft" style="background:linear-gradient(90deg,#2d0a57,#4c1d95); border:1px solid rgba(255,255,255,.10);">
-	              Get started
-	            </a>
-          </div>
-        </div>
-          <p class="mt-3 text-xs text-zinc-500">Note: <b>All</b>. All models are original and not fake.</p>
-        </div>
-        <div>
-          <div class="glass rounded-2xl p-3 shadow-soft border border-white/10">
-            <div class="aspect-video w-full overflow-hidden rounded-xl bg-base-bg/60 border border-white/10">
-              <img id="heroPreview" src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/HANSORA%20AI%20(3).png" alt="Preview" class="w-full h-full object-cover opacity-90" />
-            </div>
-          </div>
-        </div>
+  <section class="me-hero" aria-labelledby="me-title">
+    <div class="me-wall" aria-hidden="true"><div class="me-wall-inner" id="meWall"></div></div>
+    <div class="me-shade" aria-hidden="true"></div>
+    <div class="me-copy">
+      <span class="me-kicker"><i></i>HANSORA AI MODELS</span>
+      <h1 id="me-title" class="me-title"><span class="me-line">Every top AI model.</span><span class="me-line me-grad">One place.</span></h1>
+      <p class="me-lead">Image, video, audio and creative tools from the best AI labs. All original models, one account, one balance.</p>
+      <label class="me-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <input id="meSearch" type="search" placeholder="Search models, e.g. Kling, Veo, Nano Banana" autocomplete="off" aria-label="Search models">
+        <kbd>/</kbd>
+      </label>
+      <div class="me-stats">
+        <div><b data-count="image">0</b><span>Image models</span></div>
+        <div><b data-count="video">0</b><span>Video models</span></div>
+        <div><b data-count="features">0</b><span>Features</span></div>
+        <div><b data-count="audio">0</b><span>Audio tools</span></div>
       </div>
+      <p class="me-note">All models are original and not fake.</p>
     </div>
   </section>
 
+  <div class="me-tabs-wrap">
+    <div class="me-tabs" role="tablist" aria-label="Model categories">
+      <i class="me-tab-glow" aria-hidden="true"></i>
+      <button data-filter="all" class="filter-btn me-tab">All <em data-tab-count="all"></em></button>
+      <button data-filter="image" class="filter-btn me-tab">Image <em data-tab-count="image"></em></button>
+      <button data-filter="video" class="filter-btn me-tab">Video <em data-tab-count="video"></em></button>
+      <button data-filter="features" class="filter-btn me-tab">Features <em data-tab-count="features"></em></button>
+      <button data-filter="audio" class="filter-btn me-tab">Audio <em data-tab-count="audio"></em></button>
+    </div>
+    <a href="search-models.html" class="get-started-main me-start">Get started</a>
+  </div>
+  <p class="me-empty" id="meEmpty" hidden>No models match your search.</p>
+
   <section id="imageSection" data-category-section="image" class="pb-12">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <h2 class="text-2xl sm:text-3xl font-bold mb-6">Image Models</h2>
-      <div id="imageGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6"></div>
+      <div class="me-head"><span class="me-sec-kicker">Create pictures</span><h2>Image Models</h2></div>
+      <div id="imageGrid" class="me-grid"></div>
     </div>
   </section>
 
   <section id="videoSection" data-category-section="video" class="pb-12">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <h2 class="text-2xl sm:text-3xl font-bold mb-6">Video Models</h2>
-      <div id="videoGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6"></div>
+      <div class="me-head"><span class="me-sec-kicker">Bring ideas to life</span><h2>Video Models</h2></div>
+      <a class="me-spot" href="/search-models.html?model=seedance25" data-hansora-model="seedance25">
+        <div class="me-spot-copy">
+          <span class="me-badge me-badge-new">NEW</span>
+          <h3>Seedance 2.5</h3>
+          <p>Cinematic video with sound, smooth motion and real camera moves. Our most powerful video model.</p>
+          <span class="me-spot-btn">Try Seedance 2.5 <b aria-hidden="true">→</b></span>
+        </div>
+        <div class="me-spot-media">
+          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%286%29.jpg" alt="Seedance 2.5" loading="lazy" decoding="async">
+          <video muted loop playsinline preload="none" aria-label="Video made with Seedance 2.5" data-me-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/images/user-uploads/2026/09/18/8e5cdfb95e664d99-seedance-energy.mp4"></video>
+        </div>
+      </a>
+      <div id="videoGrid" class="me-grid"></div>
     </div>
   </section>
 
   <section id="featuresSection" data-category-section="features" class="pb-12">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <h2 class="text-2xl sm:text-3xl font-bold mb-6">Features</h2>
-      <div id="featuresGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6"></div>
+      <div class="me-head"><span class="me-sec-kicker">Ready-made tools</span><h2>Features</h2></div>
+      <div id="featuresGrid" class="me-grid"></div>
     </div>
   </section>
 
   <section id="audioSection" data-category-section="audio" class="pb-20">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <h2 class="text-2xl sm:text-3xl font-bold mb-6">Audio</h2>
-      <div id="audioGrid" class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6"></div>
+      <div class="me-head"><span class="me-sec-kicker">Voice and music</span><h2>Audio</h2></div>
+      <div id="audioGrid" class="me-grid"></div>
     </div>
   </section>
 
@@ -299,15 +310,23 @@
       { label: 'Song Creation', href: '/audio.html?tool=song-creation' }
     ], 'audio', 9);
 
+    const NEW_MODELS = ['seedance25', 'gpt-image-2-5', 'wan-3'];
+    const HOT_MODELS = ['kling-3', 'nano-banana-pro', 'veo31'];
+    const TYPE_LABEL = { image: 'Image', video: 'Video', features: 'Tool', audio: 'Audio' };
+
     function tile(m) {
       const dataModel = m.id ? ` data-hansora-model="${m.id}"` : '';
+      const badge = NEW_MODELS.includes(m.id) ? '<span class="me-badge me-badge-new">NEW</span>'
+        : HOT_MODELS.includes(m.id) ? '<span class="me-badge me-badge-hot">HOT</span>' : '';
       return `
-        <a href="${m.href}" data-model-link="1"${dataModel} class="model-name-card group glass rounded-2xl overflow-hidden border border-white/10 shadow-soft block focus:outline-none focus:ring-2 ring-muted">
-          <div class="model-thumb w-full overflow-hidden bg-base-bg/60">
-            <img src="${m.thumbnail}" alt="${m.name}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        <a href="${m.href}" data-model-link="1"${dataModel} data-name="${m.name.toLowerCase()}" class="model-name-card me-card me-card-${m.type}">
+          <div class="model-thumb me-thumb">
+            <img src="${m.thumbnail}" alt="${m.name}" loading="lazy" decoding="async" />
+            ${badge}
           </div>
-          <div class="p-3 sm:p-4">
-            <h3 class="text-sm sm:text-lg font-semibold">${m.name}</h3>
+          <div class="me-card-body">
+            <h3>${m.name}</h3>
+            <span class="me-type">${TYPE_LABEL[m.type] || ''}</span>
           </div>
         </a>`;
     }
@@ -655,5 +674,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 
+<script defer src="/models-epic.js?v=20261015"></script>
 </body>
 </html>
