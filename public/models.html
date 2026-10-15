@@ -89,7 +89,7 @@
   </script>
   <!-- End Meta Pixel Code -->
 
-<link rel="stylesheet" href="/models-epic.css?v=20261015">
+<link rel="stylesheet" href="/models-epic.css?v=20261017">
 </head>
 <body class="min-h-screen">
   <!-- Meta Pixel (noscript) -->
@@ -100,78 +100,74 @@
 
 <div id="sharedHeader"></div>
 
-  <section class="me-hero" aria-labelledby="me-title">
-    <div class="me-wall" aria-hidden="true"><div class="me-wall-inner" id="meWall"></div></div>
-    <div class="me-shade" aria-hidden="true"></div>
-    <div class="me-copy">
-      <span class="me-kicker"><i></i>HANSORA AI MODELS</span>
-      <h1 id="me-title" class="me-title"><span class="me-line">Every top AI model.</span><span class="me-line me-grad">One place.</span></h1>
-      <p class="me-lead">Image, video, audio and creative tools from the best AI labs. All original models, one account, one balance.</p>
-      <label class="me-search">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-        <input id="meSearch" type="search" placeholder="Search models, e.g. Kling, Veo, Nano Banana" autocomplete="off" aria-label="Search models">
-        <kbd>/</kbd>
-      </label>
-      <div class="me-stats">
-        <div><b data-count="image">0</b><span>Image models</span></div>
-        <div><b data-count="video">0</b><span>Video models</span></div>
-        <div><b data-count="features">0</b><span>Features</span></div>
-        <div><b data-count="audio">0</b><span>Audio tools</span></div>
+  <section class="mx-top">
+    <div class="mx-wrap">
+      <div class="mx-intro">
+        <div>
+          <span class="mx-kicker">Hansora AI</span>
+          <h1>Models and tools</h1>
+          <p>Every top AI model for images, video and audio, plus ready-made tools. One account, one balance.</p>
+        </div>
+        <label class="mx-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+          <input id="mxSearch" type="search" placeholder="Search Kling, Veo, Nano Banana…" autocomplete="off" aria-label="Search models">
+        </label>
       </div>
-      <p class="me-note">All models are original and not fake.</p>
+      <div class="mx-feat">
+        <a class="mx-big" href="/search-models.html?model=seedance25" data-hansora-model="seedance25">
+          <div class="mx-media"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%286%29.jpg" alt="Seedance 2.5" loading="eager" decoding="async"><video muted loop playsinline preload="none" aria-label="Video made with Seedance 2.5" data-mx-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/images/user-uploads/2026/09/18/8e5cdfb95e664d99-seedance-energy.mp4"></video><span class="mx-tag mx-tag-top">TOP</span></div>
+          <h3>Seedance 2.5</h3><p>Our most advanced video model. Cinematic shots with sound.</p>
+        </a>
+        <a class="mx-big" href="https://hansora.co/search-models?model=kling-motion-control" data-hansora-model="kling-motion-control">
+          <div class="mx-media"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(25).png" alt="Kling Motion Control" loading="eager" decoding="async"><span class="mx-tag">MOTION</span></div>
+          <h3>Kling Motion Control</h3><p>Copy any dance or move onto your own photo.</p>
+        </a>
+        <a class="mx-big" href="/henshin.html?mode=edit">
+          <div class="mx-media"><img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(42).png" alt="Video Edit" loading="eager" decoding="async"><span class="mx-tag mx-tag-new">NEW</span></div>
+          <h3>Video Edit</h3><p>Change clothes, objects or style in any video with one prompt.</p>
+        </a>
+      </div>
     </div>
   </section>
 
-  <div class="me-tabs-wrap">
-    <div class="me-tabs" role="tablist" aria-label="Model categories">
-      <i class="me-tab-glow" aria-hidden="true"></i>
-      <button data-filter="all" class="filter-btn me-tab">All <em data-tab-count="all"></em></button>
-      <button data-filter="image" class="filter-btn me-tab">Image <em data-tab-count="image"></em></button>
-      <button data-filter="video" class="filter-btn me-tab">Video <em data-tab-count="video"></em></button>
-      <button data-filter="features" class="filter-btn me-tab">Features <em data-tab-count="features"></em></button>
-      <button data-filter="audio" class="filter-btn me-tab">Audio <em data-tab-count="audio"></em></button>
+  <div class="mx-bar">
+    <div class="mx-tabs" role="tablist" aria-label="Model categories">
+      <i class="mx-pill" aria-hidden="true"></i>
+      <button data-filter="all" class="filter-btn mx-tab">All</button>
+      <button data-filter="image" class="filter-btn mx-tab">Image</button>
+      <button data-filter="video" class="filter-btn mx-tab">Video</button>
+      <button data-filter="features" class="filter-btn mx-tab">Features</button>
+      <button data-filter="audio" class="filter-btn mx-tab">Audio</button>
     </div>
-    <a href="search-models.html" class="get-started-main me-start">Get started</a>
+    <a href="search-models.html" class="get-started-main mx-go">Get started</a>
   </div>
-  <p class="me-empty" id="meEmpty" hidden>No models match your search.</p>
+  <p class="mx-empty" id="mxEmpty" hidden>No models match your search.</p>
 
   <section id="imageSection" data-category-section="image" class="pb-12">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <div class="me-head"><span class="me-sec-kicker">Create pictures</span><h2>Image Models</h2></div>
-      <div id="imageGrid" class="me-grid"></div>
+      <div class="mx-head"><h2>Image Models <em data-count></em></h2><p>Pictures, posters and product photos</p></div>
+      <div id="imageGrid" class="mx-list"></div>
     </div>
   </section>
 
   <section id="videoSection" data-category-section="video" class="pb-12">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <div class="me-head"><span class="me-sec-kicker">Bring ideas to life</span><h2>Video Models</h2></div>
-      <a class="me-spot" href="/search-models.html?model=seedance25" data-hansora-model="seedance25">
-        <div class="me-spot-copy">
-          <span class="me-badge me-badge-new">NEW</span>
-          <h3>Seedance 2.5</h3>
-          <p>Cinematic video with sound, smooth motion and real camera moves. Our most powerful video model.</p>
-          <span class="me-spot-btn">Try Seedance 2.5 <b aria-hidden="true">→</b></span>
-        </div>
-        <div class="me-spot-media">
-          <img src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/HANSORA%20%286%29.jpg" alt="Seedance 2.5" loading="lazy" decoding="async">
-          <video muted loop playsinline preload="none" aria-label="Video made with Seedance 2.5" data-me-src="https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/images/user-uploads/2026/09/18/8e5cdfb95e664d99-seedance-energy.mp4"></video>
-        </div>
-      </a>
-      <div id="videoGrid" class="me-grid"></div>
+      <div class="mx-head"><h2>Video Models <em data-count></em></h2><p>Turn text or images into video</p></div>
+      <div id="videoGrid" class="mx-list"></div>
     </div>
   </section>
 
   <section id="featuresSection" data-category-section="features" class="pb-12">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <div class="me-head"><span class="me-sec-kicker">Ready-made tools</span><h2>Features</h2></div>
-      <div id="featuresGrid" class="me-grid"></div>
+      <div class="mx-head"><h2>Features <em data-count></em></h2><p>Ready-made tools for creators and shops</p></div>
+      <div id="featuresGrid" class="mx-visual"></div>
     </div>
   </section>
 
   <section id="audioSection" data-category-section="audio" class="pb-20">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <div class="me-head"><span class="me-sec-kicker">Voice and music</span><h2>Audio</h2></div>
-      <div id="audioGrid" class="me-grid"></div>
+      <div class="mx-head"><h2>Audio <em data-count></em></h2><p>Voices, sound and music</p></div>
+      <div id="audioGrid" class="mx-list"></div>
     </div>
   </section>
 
@@ -220,19 +216,19 @@
       'wan-2-7-video': `${MODEL_IMAGE_BASE}/10.png`,
       'kling-motion-control': `${MODEL_IMAGE_BASE}/20.png`,
       'aleph': `${MODEL_IMAGE_BASE}/21.png`,
-      '/upscale.html': `${MODEL_IMAGE_BASE}/22.png`,
-      '/expand.html?mode=angles': `${MODEL_IMAGE_BASE}/24.png`,
+      '/upscale.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/7.png',
+      '/expand.html?mode=angles': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/4.png',
       '/expand.html?mode=expand': `${MODEL_IMAGE_BASE}/25.png`,
       '/expand.html?mode=face-swap': `${MODEL_IMAGE_BASE}/26.png`,
-      '/character.html': `${MODEL_IMAGE_BASE}/27.png`,
+      '/character.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/5.png',
       '/upscale.html?mode=video': `${MODEL_IMAGE_BASE}/22.png`,
-      '/lipsync.html': `${MODEL_IMAGE_BASE}/23.png`,
-      '/analyse.html': `${MODEL_IMAGE_BASE}/29.png`,
-      '/product_card.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%201,%202026,%2007_54_29%20PM.png',
-      '/prompt-builder.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/HANSORA%20AI%20(4).png',
-      '/kid-cartoon.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/ChatGPT%20Image%20Jun%2025,%202026,%2004_33_20%20PM.png',
-      '/henshin.html?mode=edit': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/HANSORA.png',
-      '/background-change.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/HANSORA%20(1).png',
+      '/lipsync.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/Untitled%20design%20(27).png',
+      '/analyse.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design/6.png',
+      '/product_card.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(29).png',
+      '/prompt-builder.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(30).png',
+      '/kid-cartoon.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(37).png',
+      '/henshin.html?mode=edit': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(42).png',
+      '/background-change.html': 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/website%20content/Untitled%20design%20(43).png',
       '/audio.html?tool=text-to-speech': `${MODEL_IMAGE_BASE}/28.png`,
       '/audio.html?tool=voice-isolater': `${MODEL_IMAGE_BASE}/28.png`,
       '/audio.html?tool=voice-changer': `${MODEL_IMAGE_BASE}/28.png`,
@@ -310,24 +306,44 @@
       { label: 'Song Creation', href: '/audio.html?tool=song-creation' }
     ], 'audio', 9);
 
-    const NEW_MODELS = ['seedance25', 'gpt-image-2-5', 'wan-3'];
-    const HOT_MODELS = ['kling-3', 'nano-banana-pro', 'veo31'];
-    const TYPE_LABEL = { image: 'Image', video: 'Video', features: 'Tool', audio: 'Audio' };
+    const MX_TAGS = { 'seedance25': 'TOP', 'gpt-image-2-5': 'NEW', 'wan-3': 'NEW', 'kling-3': 'HOT', 'nano-banana-pro': 'HOT', 'veo31': 'HOT' };
+    const MX_INFO = {
+      'gpt-image-2-5': 'Newest OpenAI image model', 'gpt-image-2': 'Accurate text and layouts', 'nano-banana-2': 'Fast, sharp images by Google',
+      'nano-banana-pro': 'Google’s best for detail and edits', 'seedream-5-lite': 'Fast high-resolution images', 'grok-image': 'Bold creative images by xAI',
+      'seedream-4-5': 'Photoreal images and edits', 'wan-2-7': 'Vivid, detailed images', 'qwen-2': 'Great with text inside images',
+      'z-image': 'Quick, low-cost images', 'gpt-image-1-5': 'Reliable everyday images', 'nano-banana': 'Quick image edits by Google',
+      'seedance25': 'Cinematic video with sound', 'wan-3': 'Long, detailed video clips', 'seedance-2': 'Smooth cinematic motion',
+      'kling-3': 'Realistic motion and physics', 'seedance-2-mini': 'Fast and affordable video', 'kling-3-turbo': 'Faster Kling generations',
+      'gemini-omni': 'Google’s all-in-one video model', 'happyhorse-1': 'Playful, stylised video', 'veo31': 'Google video with native audio',
+      'grok-video': 'Fast video by xAI', 'kling26': 'Proven quality, lower cost', 'kling-2-5-turbo': 'Quick, budget-friendly video',
+      'wan-2-7-video': 'Open video model', 'kling-motion-control': 'Copy motion from any clip', 'aleph': 'Edit existing videos with AI',
+      '/upscale.html?mode=video': 'Sharper, higher-resolution video', '/lipsync.html': 'Make any face talk',
+      '/henshin.html?mode=edit': 'Change anything in a video', '/background-change.html': 'New background, same video',
+      '/kid-cartoon.html': 'Your kid as a cartoon hero', '/upscale.html': 'Enlarge images without blur',
+      '/expand.html?mode=angles': 'See a product from every side', '/expand.html?mode=expand': 'Extend images beyond the frame',
+      '/character.html': 'Keep one character consistent', '/analyse.html': 'Score your video hook',
+      '/product_card.html': 'Sales-ready product cards', '/prompt-builder.html': 'Build cartoon prompts fast',
+      '/audio.html?tool=text-to-speech': 'Natural voices in many languages', '/audio.html?tool=voice-isolater': 'Remove background noise',
+      '/audio.html?tool=voice-changer': 'Change any voice', '/audio.html?tool=song-creation': 'Full songs from a prompt'
+    };
 
     function tile(m) {
       const dataModel = m.id ? ` data-hansora-model="${m.id}"` : '';
-      const badge = NEW_MODELS.includes(m.id) ? '<span class="me-badge me-badge-new">NEW</span>'
-        : HOT_MODELS.includes(m.id) ? '<span class="me-badge me-badge-hot">HOT</span>' : '';
+      const key = m.id || m.href;
+      const tag = MX_TAGS[m.id] ? `<span class="mx-tag mx-tag-${MX_TAGS[m.id].toLowerCase()}">${MX_TAGS[m.id]}</span>` : '';
+      const info = MX_INFO[key] || '';
+      if (m.type === 'features') {
+        return `
+        <a href="${m.href}" data-model-link="1"${dataModel} data-name="${m.name.toLowerCase()}" class="model-name-card mx-card mx-vcard">
+          <div class="mx-vimg"><img src="${m.thumbnail}" alt="${m.name}" loading="lazy" decoding="async" /></div>
+          <h3>${m.name}</h3><p>${info}</p>
+        </a>`;
+      }
       return `
-        <a href="${m.href}" data-model-link="1"${dataModel} data-name="${m.name.toLowerCase()}" class="model-name-card me-card me-card-${m.type}">
-          <div class="model-thumb me-thumb">
-            <img src="${m.thumbnail}" alt="${m.name}" loading="lazy" decoding="async" />
-            ${badge}
-          </div>
-          <div class="me-card-body">
-            <h3>${m.name}</h3>
-            <span class="me-type">${TYPE_LABEL[m.type] || ''}</span>
-          </div>
+        <a href="${m.href}" data-model-link="1"${dataModel} data-name="${m.name.toLowerCase()}" class="model-name-card mx-card mx-row">
+          <span class="mx-thumb"><img src="${m.thumbnail}" alt="" loading="lazy" decoding="async" /></span>
+          <span class="mx-txt"><strong>${m.name}${tag}</strong><small>${info}</small></span>
+          <svg class="mx-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
         </a>`;
     }
 
@@ -674,6 +690,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 
-<script defer src="/models-epic.js?v=20261015"></script>
+<script defer src="/models-epic.js?v=20261016"></script>
 </body>
 </html>
