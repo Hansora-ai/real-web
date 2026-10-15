@@ -10,9 +10,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="preconnect" href="https://checkout.dodopayments.com" crossorigin><link rel="preconnect" href="https://yoomoney.ru" crossorigin>
-  <link rel="stylesheet" href="automation-header.css?v=20261008c"><link rel="stylesheet" href="automation-ui.css?v=20261014"><link rel="stylesheet" href="automation-compare.css?v=20261015">
+  <link rel="stylesheet" href="automation-header.css?v=20261008c"><link rel="stylesheet" href="automation-ui.css?v=20261014"><link rel="stylesheet" href="automation-compare.css?v=20261016">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261014"></script><script defer src="automation-pricing.js?v=20261013d"></script>
+  <script defer src="automation-client.js?v=20261008b"></script><script defer src="automation-ui.js?v=20261010b"></script><script defer src="automation-header.js?v=20261014"></script><script defer src="automation-pricing.js?v=20261016"></script>
 </head>
 <body class="ui" data-automation-page="pricing">
   <div data-automation-header></div>
@@ -36,59 +36,46 @@
 
     <section class="ui-compare ui-enter" aria-labelledby="compare-title">
       <div class="ui-compare-head">
-        <span class="ui-badge dot green">Compare</span>
-        <h2 id="compare-title">Same job. <span>Less money.</span></h2>
-        <p>Example: a shop gets about <b>1,000 customer messages a month</b> and wants AI to answer them.</p>
+        <span class="ui-badge dot green">Hansora vs ManyChat vs Chatfuel</span>
+        <h2 id="compare-title">Same job. <span>Up to 69% cheaper.</span></h2>
+        <p>What it costs to let AI answer <b>1,000 customer messages a month</b>.</p>
       </div>
-      <div class="ui-compare-cards">
-        <article class="ui-compare-card us">
-          <span class="ui-compare-flag">Hansora</span>
-          <h3>Hansora Automation</h3>
-          <div class="ui-compare-price"><strong>$14.99</strong><span>one time</span></div>
-          <p class="ui-compare-sub">1,000 AI replies × 1.2⚡ = 1,200⚡. The $14.99 pack has 1,500⚡, enough for 1,250 replies.</p>
-          <ul>
-            <li class="yes">No subscription</li>
-            <li class="yes">Credits never expire</li>
-            <li class="yes">AI replies on every option</li>
-            <li class="yes">Phone calls answered by AI</li>
-          </ul>
-        </article>
-        <article class="ui-compare-card">
-          <h3>ManyChat</h3>
-          <div class="ui-compare-price"><strong>$39</strong><span>every month</span></div>
-          <p class="ui-compare-sub">Pro plan. AI is not included in Essential ($17/month).</p>
-          <ul>
-            <li class="no">Monthly subscription</li>
-            <li class="no">Extra fee for each person over 2,500 a month</li>
-            <li class="yes">AI replies on Pro and higher</li>
-            <li class="no">No phone calls</li>
-          </ul>
-        </article>
-        <article class="ui-compare-card">
-          <h3>Chatfuel</h3>
-          <div class="ui-compare-price"><strong>$20</strong><span>every month</span></div>
-          <p class="ui-compare-sub">Business plan with $20 of AI usage per month.</p>
-          <ul>
-            <li class="no">Monthly subscription</li>
-            <li class="no">Bot pauses when the AI limit runs out, until the next month</li>
-            <li class="yes">AI replies included</li>
-            <li class="no">No phone calls</li>
-          </ul>
-        </article>
+
+      <div class="ui-vs">
+        <div class="ui-vs-row us" style="--w:31%">
+          <div class="ui-vs-name"><b>Hansora</b><small>pay as you go</small></div>
+          <div class="ui-vs-track"><i></i></div>
+          <div class="ui-vs-price"><strong>$12</strong><small>/ month</small></div>
+        </div>
+        <div class="ui-vs-row" style="--w:51%">
+          <div class="ui-vs-name"><b>Chatfuel</b><small>Business plan</small></div>
+          <div class="ui-vs-track"><i></i></div>
+          <div class="ui-vs-price"><strong>$20</strong><small>/ month</small><em>you save 40%</em></div>
+        </div>
+        <div class="ui-vs-row" style="--w:100%">
+          <div class="ui-vs-name"><b>ManyChat</b><small>Pro plan (needed for AI)</small></div>
+          <div class="ui-vs-track"><i></i></div>
+          <div class="ui-vs-price"><strong>$39</strong><small>/ month</small><em>you save 69%</em></div>
+        </div>
+        <div class="ui-vs-year">
+          <span>In a year:</span>
+          <b class="us">Hansora $144</b><b>Chatfuel $240</b><b>ManyChat $468</b>
+        </div>
       </div>
-      <div class="ui-rate-scroll">
+
+      <div class="ui-rate-scroll ui-vs-table-wrap">
         <table class="ui-compare-table" aria-label="Hansora compared with ManyChat and Chatfuel">
-          <thead><tr><th></th><th class="us">Hansora</th><th>ManyChat</th><th>Chatfuel</th></tr></thead>
+          <thead><tr><th></th><th class="us">Hansora</th><th>Chatfuel</th><th>ManyChat</th></tr></thead>
           <tbody>
-            <tr><th>How you pay</th><td class="us">Pay once, or monthly if you want</td><td>Monthly or yearly subscription</td><td>Monthly or yearly subscription</td></tr>
-            <tr><th>Cheapest option with AI</th><td class="us"><b>$14.99 once</b></td><td>$39 / month</td><td>$20 / month</td></tr>
-            <tr><th>Unused balance</th><td class="us"><b>Never expires</b></td><td>Contacts reset every month</td><td>AI allowance resets every month</td></tr>
-            <tr><th>When you hit the limit</th><td class="us">AI hands new chats to you. Top up any time</td><td>Extra fee per person</td><td>Bot stops replying until renewal</td></tr>
-            <tr><th>Phone calls by AI</th><td class="us"><span class="ok">Yes</span></td><td><span class="nope">No</span></td><td><span class="nope">No</span></td></tr>
+            <tr><th>No subscription needed</th><td class="us"><span class="ok">✓</span></td><td><span class="nope">✕</span></td><td><span class="nope">✕</span></td></tr>
+            <tr><th>Unused balance never expires</th><td class="us"><span class="ok">✓</span></td><td><span class="nope">✕</span></td><td><span class="nope">✕</span></td></tr>
+            <tr><th>AI replies on the cheapest option</th><td class="us"><span class="ok">✓</span></td><td><span class="ok">✓</span></td><td><span class="nope">✕</span></td></tr>
+            <tr><th>You pay only for what the AI does</th><td class="us"><span class="ok">✓</span><small>per reply</small></td><td><span class="nope">✕</span><small>fixed monthly fee</small></td><td><span class="nope">✕</span><small>fixed monthly fee</small></td></tr>
+            <tr><th>AI answers phone calls</th><td class="us"><span class="ok">✓</span></td><td><span class="nope">✕</span></td><td><span class="nope">✕</span></td></tr>
           </tbody>
         </table>
       </div>
-      <p class="ui-pricing-note">Competitor prices are their monthly-billing prices from <a href="https://manychat.com/pricing" target="_blank" rel="noopener">manychat.com/pricing</a>, <a href="https://chatfuel.com/pricing" target="_blank" rel="noopener">chatfuel.com/pricing</a> and <a href="https://limits.chatfuel.com/en" target="_blank" rel="noopener">Chatfuel usage limits</a>, checked on 15 October 2026. Yearly billing is cheaper on both. Your real usage depends on how many messages your customers send.</p>
+      <p class="ui-pricing-note">Hansora: 1,000 AI replies × 1.2⚡ = 1,200⚡ = $12 of credits (from the $14.99 pack, $1 = 100⚡). Competitors: monthly-billing prices from <a href="https://manychat.com/pricing" target="_blank" rel="noopener">manychat.com/pricing</a> and <a href="https://chatfuel.com/pricing" target="_blank" rel="noopener">chatfuel.com/pricing</a>; Chatfuel limit rules from <a href="https://limits.chatfuel.com/en" target="_blank" rel="noopener">limits.chatfuel.com</a>. Checked 15 October 2026. Yearly billing is cheaper on both. Your cost depends on how many messages your customers send.</p>
     </section>
 
     <section class="ui-card ui-pricing-costs ui-enter" aria-labelledby="costs-title">

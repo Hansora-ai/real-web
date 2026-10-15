@@ -281,3 +281,14 @@
   if (new URLSearchParams(location.search).get('plan') === 'monthly') { mode = 'monthly'; payment = 'international'; }
   renderRates(); render(); loadSubscription();
 })();
+
+// Comparison bars grow when they come into view (scroll + timer check; the prices are always visible, only the bars wait).
+(function () {
+  const vs = document.querySelector('.ui-vs');
+  if (!vs) return;
+  const check = () => { const r = vs.getBoundingClientRect(); if (r.top < window.innerHeight * 0.85 && r.bottom > 0) { vs.classList.add('is-on'); window.removeEventListener('scroll', check); clearInterval(timer); } };
+  const timer = setInterval(check, 700);
+  window.addEventListener('scroll', check, { passive: true });
+  check();
+  setTimeout(() => vs.classList.add('is-on'), 8000);
+})();

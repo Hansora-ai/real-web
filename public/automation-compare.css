@@ -32,3 +32,39 @@
 .ui-compare-table .nope{color:var(--red);font-weight:700}
 .ui-compare .ui-pricing-note a{color:var(--text-2);text-decoration:underline}
 @media (max-width:860px){.ui-compare-cards{grid-template-columns:minmax(0,1fr)}.ui-compare-sub{min-height:0}}
+
+/* Head-to-head bars */
+.ui-vs{display:grid;gap:14px;padding:26px 26px 20px;border:1px solid var(--border-2);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow)}
+.ui-vs-row{display:grid;grid-template-columns:180px minmax(0,1fr) 190px;align-items:center;gap:18px}
+.ui-vs-name{display:grid;gap:2px}
+.ui-vs-name b{font-size:17px}
+.ui-vs-name small{color:var(--text-3);font-size:12.5px}
+.ui-vs-track{height:44px;border-radius:12px;background:var(--surface-2);overflow:hidden}
+.ui-vs-track i{display:block;height:100%;width:0;border-radius:12px;background:linear-gradient(90deg,rgba(255,107,107,.35),rgba(255,107,107,.7));transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
+.ui-vs-row.us .ui-vs-track i{background:linear-gradient(90deg,#1fbf75,var(--green));box-shadow:0 0 30px -6px var(--green)}
+.ui-vs.is-on .ui-vs-track i{width:var(--w)}
+.ui-vs-price{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px}
+.ui-vs-price strong{font-size:30px;letter-spacing:-.03em}
+.ui-vs-price small{color:var(--text-3);font-size:13px}
+.ui-vs-price em{flex-basis:100%;color:var(--green);font-size:12.5px;font-style:normal;font-weight:700}
+.ui-vs-row.us .ui-vs-price strong{color:var(--green)}
+.ui-vs-row.us .ui-vs-name b{color:var(--green)}
+.ui-vs-year{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:6px;padding-top:16px;border-top:1px solid var(--border);color:var(--text-3);font-size:13.5px}
+.ui-vs-year b{padding:5px 12px;border-radius:999px;background:var(--surface-2);color:var(--text-2);font-weight:600}
+.ui-vs-year b.us{background:var(--green-soft);color:var(--green)}
+.ui-vs-table-wrap{margin-top:16px}
+.ui-compare-table td{text-align:center}
+.ui-compare-table thead th:not(:first-child){text-align:center}
+.ui-compare-table .ok,.ui-compare-table .nope{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:13px}
+.ui-compare-table .ok{background:var(--green-soft)}
+.ui-compare-table .nope{background:var(--red-soft)}
+.ui-compare-table td small{display:block;margin-top:4px;color:var(--text-3);font-size:12px}
+@media (max-width:760px){
+  .ui-vs{padding:18px 16px 14px}
+  .ui-vs-row{grid-template-columns:minmax(0,1fr) auto;gap:8px 12px}
+  .ui-vs-track{grid-column:1 / -1;grid-row:2;height:30px}
+  .ui-vs-price strong{font-size:24px}
+  .ui-vs-price{justify-content:flex-end}
+  .ui-vs-price em{text-align:right}
+}
+@media (prefers-reduced-motion:reduce){.ui-vs-track i{transition:none}}
