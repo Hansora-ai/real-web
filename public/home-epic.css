@@ -508,3 +508,5 @@ html[lang="hy"] .he-title { font-size: clamp(32px, 4.6vw, 72px); }
 }
 /* The hero headline intro always plays, even if the page opens scrolled down */
 .he-hero.he-paused .he-copy, .he-hero.he-paused .he-copy * { animation-play-state: running !important; }
+/* Side-scrolling rows snap gently, so a slightly diagonal trackpad swipe keeps scrolling the page */
+main .x-scroll, .home-features-grid { scroll-snap-type: x proximity !important; overscroll-behavior-y: auto; }
