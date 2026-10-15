@@ -421,3 +421,18 @@ a.he-go:hover { filter: brightness(1.15); transform: translateY(-1px); }
   .he-studio-cta { margin-top: 22px; }
   .he-studio-cta .he-btn { height: 46px; font-size: 15px !important; }
 }
+/* Studio demo uses a vertical (3:4) ad, like a phone post */
+.he-screen-body { aspect-ratio: 3 / 4; }
+.he-scr-caption { bottom: 24%; font-size: clamp(16px, 1.6vw, 22px) !important; }
+.he-scr-prompt { width: 86%; }
+@media (min-width: 901px) {
+  .he-studio-grid { grid-template-columns: minmax(0, 420px) auto; gap: 48px; }
+  .he-screen { width: calc(clamp(330px, 100svh - 300px, 500px) * .75); min-width: 0; }
+}
+@media (max-width: 900px) { .he-screen { width: min(300px, 80%); justify-self: center; } }
+.he-studio-left { display: grid; gap: 22px; min-width: 0; }
+@media (min-width: 901px) {
+  .he-studio-left .he-studio-cta { justify-content: flex-start; margin-top: 0; }
+  .he-screen { width: calc(clamp(330px, 100svh - 320px, 500px) * .75); }
+}
+@media (max-width: 900px) { .he-studio-left .he-studio-cta { margin-top: 6px; } }
