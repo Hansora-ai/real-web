@@ -13,6 +13,7 @@ exports.handler = async (event) => {
   const qs = event.queryStringParameters || {};
   let raw = String(qs.url || "").trim();
   let providedName = String(qs.name || "").trim();
+  const preview = qs.preview === "1";
   if (!raw) return json(400, { ok: false, error: "missing_url" });
 
   raw = unwrap(raw).replace(/^hhttps:\/\//i, "https://").replace(/^hhttp:\/\//i, "http://");
@@ -32,13 +33,15 @@ exports.handler = async (event) => {
   const nameFromUrl = safeFileName(decodePath(target.pathname.split("/").filter(Boolean).pop() || "hansora-audio"));
   let name = providedName ? safeFileName(providedName) : nameFromUrl;
 
-  if (isSupabaseHost(target.hostname)) {
+  if (isSupabaseHost(target.hostname) && (!preview || target.origin === SUPABASE_URL)) {
     name = ensureExt(name, nameFromUrl, null);
-    target.searchParams.set("download", name);
+    if (preview) target.searchParams.delete("download");
+    else target.searchParams.set("download", name);
     return redirect(target.toString());
   }
 
   if (!(SUPABASE_URL && SERVICE_KEY)) {
+    if (preview) return json(503, { ok:false, error:"audio_preview_unavailable" });
     return redirect(target.toString());
   }
 
@@ -73,13 +76,14 @@ exports.handler = async (event) => {
       body: buffer
     });
 
-    if (!upload.ok) return redirect(target.toString());
+    if (!upload.ok) return preview ? json(502, { ok:false, error:"audio_preview_cache_failed" }) : redirect(target.toString());
 
     const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${encodeURIComponent(BUCKET)}/${path}`;
     const downloadUrl = new URL(publicUrl);
-    downloadUrl.searchParams.set("download", name);
+    if (!preview) downloadUrl.searchParams.set("download", name);
     return redirect(downloadUrl.toString());
   } catch (_) {
+    if (preview) return json(502, { ok:false, error:"audio_preview_failed" });
     return redirect(target.toString());
   }
 };

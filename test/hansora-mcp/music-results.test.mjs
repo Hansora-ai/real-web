@@ -77,7 +77,7 @@ function cardHarness() {
   function node() {
     const classes = new Set();
     return { children: [], listeners: {}, attributes: {},
-      classList: { toggle(name, enabled) { if (enabled) classes.add(name); else classes.delete(name); }, contains: (name) => classes.has(name) },
+      classList: { toggle(name, enabled) { if (enabled) classes.add(name); else classes.delete(name); }, contains: (name) => classes.has(name), add: (name) => classes.add(name), remove: (name) => classes.delete(name) },
       replaceChildren() { this.children = []; }, appendChild(child) { this.children.push(child); },
       addEventListener(name, callback) { this.listeners[name] = callback; },
       setAttribute(name, value) { this.attributes[name] = value; } };
@@ -89,7 +89,7 @@ function cardHarness() {
   return { ...window.cardTest, nodes, messages };
 }
 
-test('card displays finished provider tracks and opens the selected version without blocked embeds', () => {
+test('card routes provider audio through the allowed preview cache and selects both versions', () => {
   const card = cardHarness(); card.render(normalizeGenerationResult(savedRow()));
   assert.equal(card.nodes.get('badge').textContent, 'Ready');
   assert.equal(card.nodes.get('processing').classList.contains('hidden'), true);
@@ -97,7 +97,10 @@ test('card displays finished provider tracks and opens the selected version with
   assert.equal(versions.length, 2);
   versions[1].listeners.click();
   assert.equal(card.nodes.get('audioVersions').children[1].attributes['aria-pressed'], 'true');
-  assert.equal(card.nodes.get('media').children[0].tag, 'p');
+  assert.equal(card.nodes.get('media').children[0].tag, 'audio');
+  assert.equal(card.nodes.get('media').children[0].src, 'https://hansora.co/.netlify/functions/audio-download?preview=1&url=' + encodeURIComponent(tracks[1].audioUrl));
+  card.nodes.get('media').children[0].listeners.error();
+  assert.match(card.nodes.get('actionStatus').textContent, /preview could not load/);
   card.openResult(false);
   assert.equal(card.messages.at(-1).params.url, tracks[1].audioUrl);
 });
