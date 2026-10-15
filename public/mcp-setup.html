@@ -3,35 +3,568 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Connect Hansora to your AI assistant</title><link rel="icon" href="/favicon.png" type="image/png"><link rel="apple-touch-icon" href="/favicon.png">
-  <meta name="description" content="Use every available Hansora image, video, and audio model from ChatGPT, Claude, and other MCP clients.">
+  <title>Hansora in ChatGPT, Claude &amp; Cursor — Hansora MCP</title>
+  <link rel="icon" href="/favicon.png" type="image/png"><link rel="apple-touch-icon" href="/favicon.png">
+  <meta name="description" content="Generate images, video and audio with Hansora right inside ChatGPT, Claude, Cursor and any MCP client. One click to connect.">
+  <meta property="og:title" content="Hansora in ChatGPT, Claude & Cursor">
+  <meta property="og:description" content="Generate images, video and audio with Hansora right inside your AI chat.">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="/header.css" rel="stylesheet">
+  <script defer src="/header.js"></script>
   <style>
-    :root{color-scheme:dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}*{box-sizing:border-box}body{margin:0;background:#080a10;color:#f7f8fc}.wrap{width:min(1100px,calc(100% - 32px));margin:auto;padding:72px 0 96px}.eyebrow{color:#55d6ff;font-weight:800;letter-spacing:.14em;text-transform:uppercase}.hero{max-width:820px}h1{font-size:clamp(42px,7vw,76px);line-height:.98;margin:18px 0 24px;background:linear-gradient(100deg,#fff 10%,#a88aff 50%,#37ceff);-webkit-background-clip:text;color:transparent}p{font-size:19px;line-height:1.65;color:#adb4c5}.endpoint{display:flex;gap:12px;align-items:center;margin:34px 0;padding:17px 19px;border:1px solid #2b3342;border-radius:16px;background:#10141d;overflow:auto}.endpoint code{white-space:nowrap;color:#fff}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:44px}.card{padding:24px;border:1px solid #242a37;border-radius:20px;background:linear-gradient(145deg,#11151f,#0c0f16)}.card h2{margin:0 0 10px;font-size:21px}.card p{font-size:15px;margin:0}.steps{margin-top:64px;max-width:820px}.steps li{margin:16px 0;padding-left:8px;color:#d5d9e4;line-height:1.6}.note{margin-top:36px;padding:20px;border-left:3px solid #745df6;background:#11151e;border-radius:0 14px 14px 0;font-size:15px}@media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding-top:46px}}
+    :root{
+      color-scheme:dark;
+      --bg:#06070c;--ink:#f6f7fb;--muted:#9aa2b5;--line:rgba(255,255,255,.09);--card:rgba(255,255,255,.035);
+      --cyan:#38bdf8;--violet:#a78bfa;--accent:#38bdf8;--accent2:#a78bfa;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--bg);color:var(--ink);overflow-x:hidden}
+    a{color:inherit}
+    button{font:inherit;color:inherit}
+    .wrap{width:min(1160px,calc(100% - 32px));margin:0 auto}
+
+    /* ---------- hero ---------- */
+    .hero{position:relative;min-height:calc(100vh - 64px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 16px 72px;isolation:isolate;overflow:hidden}
+    #dots{position:absolute;inset:0;width:100%;height:100%;z-index:-2}
+    .hero::before{content:"";position:absolute;inset:auto 0 0 0;height:40%;z-index:-1;background:linear-gradient(transparent,var(--bg))}
+    .glow{position:absolute;z-index:-1;width:720px;height:720px;left:50%;top:44%;translate:-50% -50%;border-radius:50%;
+      background:radial-gradient(circle,color-mix(in srgb,var(--accent) 22%,transparent),transparent 62%);filter:blur(20px);transition:background .6s ease;animation:breathe 7s ease-in-out infinite}
+    @keyframes breathe{50%{scale:1.12;opacity:.75}}
+
+    .tabs{position:relative;display:flex;gap:4px;padding:5px;border:1px solid var(--line);border-radius:999px;background:rgba(10,12,19,.72);backdrop-filter:blur(14px);max-width:100%;overflow-x:auto;scrollbar-width:none}
+    .tabs::-webkit-scrollbar{display:none}
+    .tab{position:relative;z-index:1;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;padding:10px 16px;border:0;border-radius:999px;background:none;color:var(--muted);font-size:15px;font-weight:600;cursor:pointer;transition:color .25s}
+    .tab:hover{color:#fff}
+    .tab[aria-selected="true"]{color:#0a0b10}
+    .tab svg,.tab img{width:18px;height:18px;flex:none}
+    .tab-pill{position:absolute;z-index:0;top:5px;bottom:5px;left:0;width:0;border-radius:999px;background:#fff;box-shadow:0 6px 24px rgba(255,255,255,.18);transition:transform .45s cubic-bezier(.2,.9,.25,1.15),width .45s cubic-bezier(.2,.9,.25,1.15)}
+
+    h1{margin:46px 0 0;text-align:center;font-weight:900;text-transform:uppercase;letter-spacing:-.035em;line-height:1.04;font-size:clamp(30px,4.6vw,70px);max-width:1180px}
+    h1 .line{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:.22em}
+    .chip{display:inline-grid;place-items:center;width:1.08em;height:1.08em;border-radius:.24em;vertical-align:middle;flex:none}
+    .chip svg,.chip img{width:68%;height:68%}
+    .chip.client{background:linear-gradient(145deg,#2a2d38,#14161e);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 10px 30px rgba(0,0,0,.4)}
+    .chip.brand{background:#0d0f1a;box-shadow:0 0 0 2px color-mix(in srgb,var(--cyan) 55%,transparent),0 0 40px color-mix(in srgb,var(--violet) 45%,transparent)}
+    .chip.brand img{width:82%;height:82%}
+    .swap{position:relative;display:inline-flex;align-items:center;gap:.22em}
+    .swap.out{animation:swapOut .26s ease-in forwards}
+    .swap.in{animation:swapIn .5s cubic-bezier(.2,.9,.25,1.2)}
+    @keyframes swapOut{to{opacity:0;transform:translateY(-.35em) rotateX(60deg);filter:blur(6px)}}
+    @keyframes swapIn{from{opacity:0;transform:translateY(.4em) rotateX(-60deg);filter:blur(8px)}}
+    .grad{background:linear-gradient(100deg,#fff 15%,var(--violet) 55%,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+    .sub{max-width:640px;margin:22px auto 0;text-align:center;color:var(--muted);font-size:clamp(16px,2vw,19px);line-height:1.6}
+    .ctas{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-top:36px}
+    .btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:11px;min-height:58px;padding:0 28px;border-radius:16px;font-size:18px;font-weight:700;text-decoration:none;cursor:pointer;transition:transform .2s,box-shadow .2s,background .2s}
+    .btn svg,.btn img{width:22px;height:22px;flex:none}
+    .btn-primary{border:0;background:#fff;color:#0a0b10;box-shadow:0 5px 0 #b9bfd0,0 18px 50px color-mix(in srgb,var(--accent) 35%,transparent);overflow:hidden}
+    .btn-primary::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.85) 50%,transparent 70%);translate:-120% 0;animation:shine 3.6s ease-in-out infinite}
+    @keyframes shine{55%,100%{translate:120% 0}}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 7px 0 #b9bfd0,0 24px 60px color-mix(in srgb,var(--accent) 50%,transparent)}
+    .btn-primary:active{transform:translateY(4px);box-shadow:0 1px 0 #b9bfd0,0 10px 30px color-mix(in srgb,var(--accent) 30%,transparent)}
+    .btn-ghost{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);backdrop-filter:blur(10px)}
+    .btn-ghost:hover{background:rgba(255,255,255,.09)}
+    .endpoint{display:inline-flex;align-items:center;gap:10px;margin-top:26px;padding:8px 8px 8px 16px;border:1px solid var(--line);border-radius:12px;background:rgba(8,10,16,.7);color:var(--muted);font:500 14px ui-monospace,SFMono-Regular,Menlo,monospace;max-width:100%}
+    .endpoint code{color:#d9deea;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .copy{flex:none;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.05);font:600 12px Inter,sans-serif;color:#fff;cursor:pointer}
+    .copy:hover{background:rgba(255,255,255,.1)}
+    .hint{margin-top:12px;min-height:20px;color:var(--muted);font-size:13px;text-align:center}
+
+    /* ---------- sections ---------- */
+    section.block{padding:96px 0}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--cyan);font-weight:800;font-size:13px;letter-spacing:.16em;text-transform:uppercase}
+    h2{margin:14px 0 0;font-size:clamp(30px,4.4vw,52px);line-height:1.05;letter-spacing:-.03em;font-weight:850}
+    .lead{margin:16px 0 0;max-width:620px;color:var(--muted);font-size:18px;line-height:1.6}
+    .reveal{opacity:0;transform:translateY(28px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.8,.2,1)}
+    .reveal.on{opacity:1;transform:none}
+
+    /* demo chat */
+    .demo{display:grid;grid-template-columns:1fr 1.1fr;gap:56px;align-items:center}
+    .chat{position:relative;border:1px solid var(--line);border-radius:24px;background:linear-gradient(160deg,#10131c,#0a0c12);padding:20px;box-shadow:0 40px 100px rgba(0,0,0,.5);min-height:440px;overflow:hidden}
+    .chat-top{display:flex;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--line);color:var(--muted);font-size:14px;font-weight:600}
+    .chat-top .dot{width:9px;height:9px;border-radius:50%;background:#2b2f3b}
+    .chat-top .who{display:inline-flex;align-items:center;gap:8px;margin-left:auto;color:#fff}
+    .chat-top .who svg,.chat-top .who img{width:18px;height:18px}
+    .msgs{display:flex;flex-direction:column;gap:14px;padding-top:18px}
+    .msg{max-width:88%;padding:12px 15px;border-radius:16px;font-size:15px;line-height:1.5;animation:pop .45s cubic-bezier(.2,.9,.25,1.2) both}
+    .msg.user{align-self:flex-end;background:#2a2e3a;border-bottom-right-radius:5px}
+    .msg.bot{align-self:flex-start;background:transparent;border:1px solid var(--line);border-bottom-left-radius:5px;color:#d7dbe6}
+    .tool{display:inline-flex;align-items:center;gap:8px;margin-bottom:8px;padding:4px 10px 4px 5px;border-radius:999px;background:rgba(56,189,248,.1);color:#a5e4ff;font-size:12px;font-weight:700}
+    .tool img{width:18px;height:18px;border-radius:5px;background:#0d0f1a}
+    .tool .spin{width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{rotate:1turn}}
+    @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.97)}}
+    .result{position:relative;margin-top:10px;aspect-ratio:16/10;border-radius:12px;overflow:hidden;background:#151925}
+    .result .art{position:absolute;inset:0;opacity:0;transition:opacity 1s}
+    .result.done .art{opacity:1}
+    .result .bar{position:absolute;left:0;bottom:0;height:3px;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet));transition:width 2.2s ease}
+    .result.loading .bar{width:100%}
+    .result .shimmer{position:absolute;inset:0;background:linear-gradient(110deg,transparent 20%,rgba(255,255,255,.07) 50%,transparent 80%);animation:shim 1.3s linear infinite}
+    .result.done .shimmer{display:none}
+    @keyframes shim{from{translate:-100% 0}to{translate:100% 0}}
+    .result .tag{position:absolute;left:10px;top:10px;padding:4px 9px;border-radius:999px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);font-size:11px;font-weight:700;opacity:0;transition:opacity .6s .4s}
+    .result.done .tag{opacity:1}
+    .typing{display:inline-flex;gap:4px}.typing i{width:6px;height:6px;border-radius:50%;background:#7b8296;animation:blink 1s infinite}.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+    @keyframes blink{50%{opacity:.25}}
+    .caps{display:grid;gap:12px;margin-top:30px}
+    .cap{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+    .cap b{display:block;margin-bottom:3px;font-size:16px}
+    .cap span{color:var(--muted);font-size:14.5px;line-height:1.5}
+    .cap .ic{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,rgba(56,189,248,.18),rgba(167,139,250,.18));font-size:18px}
+
+    /* steps */
+    .steps-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px}
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px;counter-reset:s}
+    .step{position:relative;padding:28px 24px 26px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(160deg,rgba(255,255,255,.045),rgba(255,255,255,.015));counter-increment:s;overflow:hidden;animation:pop .5s both}
+    .step:nth-child(2){animation-delay:.07s}.step:nth-child(3){animation-delay:.14s}
+    .step::before{content:counter(s);display:grid;place-items:center;width:38px;height:38px;margin-bottom:18px;border-radius:12px;background:linear-gradient(145deg,var(--accent),var(--accent2));color:#07080d;font-weight:900}
+    .step h3{margin:0 0 8px;font-size:19px}
+    .step p{margin:0;color:var(--muted);font-size:15px;line-height:1.6}
+    .step code{padding:2px 6px;border-radius:6px;background:rgba(255,255,255,.07);color:#e4e8f2;font-size:13px;overflow-wrap:anywhere}
+    .cmd{display:flex;align-items:center;gap:10px;margin-top:22px;padding:14px 14px 14px 18px;border:1px solid var(--line);border-radius:14px;background:#0b0d14;font:500 14px ui-monospace,SFMono-Regular,Menlo,monospace;overflow:hidden}
+    .cmd code{flex:1;overflow-x:auto;white-space:nowrap;color:#d9deea;scrollbar-width:none}
+    .cmd[hidden]{display:none}
+
+    /* features */
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:44px}
+    .feat{position:relative;padding:28px;border:1px solid var(--line);border-radius:22px;background:var(--card);overflow:hidden;transition:transform .3s,border-color .3s}
+    .feat:hover{transform:translateY(-4px);border-color:rgba(167,139,250,.35)}
+    .feat::after{content:"";position:absolute;width:220px;height:220px;right:-90px;top:-90px;border-radius:50%;background:radial-gradient(circle,rgba(167,139,250,.18),transparent 70%)}
+    .feat h3{margin:14px 0 8px;font-size:20px}
+    .feat p{margin:0;color:var(--muted);font-size:15px;line-height:1.6}
+    .feat .ic{font-size:26px}
+    .marquee{margin-top:56px;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+    .marquee-track{display:flex;gap:12px;width:max-content;animation:marq 40s linear infinite}
+    .marquee span{padding:10px 18px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:#d4d9e5;font-weight:600;font-size:15px;white-space:nowrap}
+    @keyframes marq{to{transform:translateX(-50%)}}
+
+    /* faq + final */
+    .faq{max-width:820px;margin:40px auto 0}
+    details{border-bottom:1px solid var(--line)}
+    summary{display:flex;justify-content:space-between;gap:20px;padding:22px 0;font-size:18px;font-weight:700;cursor:pointer;list-style:none}
+    summary::-webkit-details-marker{display:none}
+    summary::after{content:"+";color:var(--muted);font-size:24px;line-height:1;transition:rotate .25s}
+    details[open] summary::after{rotate:45deg}
+    details p{margin:0 0 22px;color:var(--muted);line-height:1.65}
+    .final{position:relative;margin:40px auto 110px;padding:64px 28px;border:1px solid var(--line);border-radius:32px;text-align:center;overflow:hidden;background:radial-gradient(600px 300px at 50% 0%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 70%),#0a0c13}
+    .final h2{max-width:760px;margin:0 auto}
+    .toast{position:fixed;left:50%;bottom:28px;z-index:50;translate:-50% 140%;display:flex;align-items:center;gap:10px;padding:13px 18px;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(18,21,31,.94);backdrop-filter:blur(12px);box-shadow:0 20px 50px rgba(0,0,0,.5);font-weight:600;font-size:15px;transition:translate .4s cubic-bezier(.2,.9,.25,1.2);max-width:calc(100% - 32px)}
+    .toast.show{translate:-50% 0}
+    .toast i{font-style:normal;color:#4ade80}
+
+    @media(max-width:900px){.demo{grid-template-columns:1fr;gap:36px}.steps,.grid3{grid-template-columns:1fr}section.block{padding:72px 0}}
+    @media(max-width:560px){.hero{padding-top:28px}.tab{padding:9px 12px;font-size:14px}.btn{width:100%;min-height:54px;font-size:16px}.ctas{width:100%}.chat{min-height:400px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
   </style>
 </head>
 <body>
-  <main class="wrap">
+  <div id="sharedHeader"></div>
+
+  <!-- Brand icons, reused with <use> -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-chatgpt" viewBox="0 0 24 24"><path fill="currentColor" d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365 2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z"/></symbol>
+    <symbol id="i-claude" viewBox="0 0 24 24"><g fill="#D97757"><path d="M12 1.5l1.15 7.3L17.6 2.9l-2.9 6.85 6.85-2.9-5.9 4.45 7.35 1.2-7.35 1.2 5.9 4.45-6.85-2.9 2.9 6.85-4.45-5.9L12 22.5l-1.15-7.3-4.45 5.9 2.9-6.85-6.85 2.9 5.9-4.45-7.35-1.2 7.35-1.2-5.9-4.45 6.85 2.9L6.4 2.9l4.45 5.9z"/></g></symbol>
+    <symbol id="i-cursor" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2 20.66 7v10L12 22 3.34 17V7z"/><path d="M3.34 7 12 12l8.66-5M12 12v10"/></g><path fill="currentColor" d="M12 2 20.66 7 12 12z" opacity=".55"/></symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="3"/><path d="m7 9 3 3-3 3M12.5 15H17"/></g></symbol>
+    <symbol id="i-vscode" viewBox="0 0 24 24"><path fill="#3EA6F2" d="M17.6 2 8.4 10.4 4.3 7.3 2.6 8.2v7.6l1.7.9 4.1-3.1 9.2 8.4 3.8-1.8V3.8zM4.6 14.3V9.7L7 12zm12.9 1.5L12.4 12l5.1-3.8z"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 2v5M15 2v5M6 7h12v4a6 6 0 0 1-12 0zM12 17v5"/></g></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></g></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></g></symbol>
+  </svg>
+
+  <main>
+    <!-- ================= HERO ================= -->
     <section class="hero">
-      <div class="eyebrow">Hansora MCP</div>
-      <h1>Create with Hansora inside your AI chat.</h1>
-      <p>Connect your Hansora account to ChatGPT, Claude, or another MCP client. The assistant can discover the complete live Hansora catalog, quote the cost, create media, and check results using your existing account.</p>
-      <div class="endpoint"><strong>MCP URL</strong><code>https://hansora.co/mcp</code></div>
+      <canvas id="dots" aria-hidden="true"></canvas>
+      <div class="glow" aria-hidden="true"></div>
+
+      <div class="tabs" role="tablist" aria-label="Choose your AI app" id="tabs">
+        <span class="tab-pill" id="tabPill"></span>
+      </div>
+
+      <h1>
+        <span class="line"><span class="grad">Generate images, video</span> <span class="grad">&amp; audio</span></span>
+        <span class="line">in <span class="swap" id="swap"><span class="chip client" id="heroChip"></span><span id="heroName">ChatGPT</span></span> with <span class="chip brand"><img src="/media/compare/hansora.png" alt=""></span> Hansora</span>
+      </h1>
+
+      <p class="sub" id="heroSub">Every Hansora image, video and audio model inside your AI chat. Describe what you want and get the result right in the conversation, paid from your Hansora balance.</p>
+
+      <div class="ctas">
+        <button class="btn btn-primary" id="installBtn" type="button"><svg id="installIcon"><use href="#i-chatgpt"/></svg><span id="installLabel">Add Hansora to ChatGPT</span></button>
+        <a class="btn btn-ghost" href="#connect"><svg><use href="#i-help"/></svg>How to connect?</a>
+      </div>
+
+      <div class="endpoint"><code id="mcpUrl">https://hansora.co/mcp</code><button class="copy" type="button" data-copy="url"><svg width="13" height="13"><use href="#i-copy"/></svg>Copy</button></div>
+      <div class="hint" id="hint"></div>
     </section>
-    <section class="grid">
-      <article class="card"><h2>All current models</h2><p>The connector covers every available Hansora image and video model, plus text to speech, voice isolation, voice changing, and song creation.</p></article>
-      <article class="card"><h2>Your Hansora balance</h2><p>Generation requests use the connected user's balance and the same model-specific billing logic as the website.</p></article>
-      <article class="card"><h2>Existing safeguards</h2><p>Requests pass through Hansora's existing safe-run gateway and fixed runner allowlist.</p></article>
+
+    <!-- ================= DEMO ================= -->
+    <section class="block">
+      <div class="wrap demo">
+        <div class="reveal">
+          <span class="eyebrow">How it feels</span>
+          <h2>Just ask.<br><span class="grad">Hansora creates it.</span></h2>
+          <p class="lead">Your assistant picks a model, shows you the cost first, then generates. You can keep editing in the same chat.</p>
+          <div class="caps">
+            <div class="cap"><span class="ic">🖼️</span><div><b>Images</b><span>Nano Banana 2, GPT Image 2, Seedream, Z Image, Qwen and more, with reference images.</span></div></div>
+            <div class="cap"><span class="ic">🎬</span><div><b>Video</b><span>Text to video and image to video, including Wan 3.0 with frames and references.</span></div></div>
+            <div class="cap"><span class="ic">🎧</span><div><b>Audio</b><span>Text to speech, voice isolation, voice changing and full songs.</span></div></div>
+          </div>
+        </div>
+        <div class="chat reveal" id="chat">
+          <div class="chat-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="who" id="chatWho"></span></div>
+          <div class="msgs" id="msgs"></div>
+        </div>
+      </div>
     </section>
-    <section class="steps">
-      <h2>Connect it</h2>
-      <ol>
-        <li>In ChatGPT or Claude, open the area for connectors or custom integrations.</li>
-        <li>Add a custom MCP connector and enter <code>https://hansora.co/mcp</code>.</li>
-        <li>Sign in to Hansora and approve the connection.</li>
-        <li>Ask the assistant to list Hansora models, quote a generation, or create an image, video, speech track, or song.</li>
-      </ol>
-      <div class="note">Wan 3.0 is available through the connector with frames and image, video, or audio references.</div>
+
+    <!-- ================= STEPS ================= -->
+    <section class="block" id="connect" style="scroll-margin-top:20px">
+      <div class="wrap">
+        <div class="steps-head reveal">
+          <div>
+            <span class="eyebrow">Connect in a minute</span>
+            <h2>How to connect <span class="grad" id="stepsName">ChatGPT</span></h2>
+          </div>
+          <button class="btn btn-ghost" type="button" id="installBtn2"><svg id="installIcon2"><use href="#i-chatgpt"/></svg><span id="installLabel2">Add Hansora to ChatGPT</span></button>
+        </div>
+        <div class="steps" id="steps"></div>
+        <div class="cmd" id="cmd" hidden><code id="cmdText"></code><button class="copy" type="button" data-copy="cmd"><svg width="13" height="13"><use href="#i-copy"/></svg>Copy</button></div>
+      </div>
+    </section>
+
+    <!-- ================= FEATURES ================= -->
+    <section class="block">
+      <div class="wrap">
+        <div class="reveal">
+          <span class="eyebrow">Why Hansora MCP</span>
+          <h2>One connection. <span class="grad">Every model.</span></h2>
+        </div>
+        <div class="grid3">
+          <article class="feat reveal"><span class="ic">⚡</span><h3>All current models</h3><p>The connector sees the full live Hansora catalog. New models show up in your chat automatically, with nothing to update.</p></article>
+          <article class="feat reveal"><span class="ic">💳</span><h3>Your Hansora balance</h3><p>Generations use your existing Hansora credits, with the same prices as the website. The assistant shows the cost before it starts.</p></article>
+          <article class="feat reveal"><span class="ic">🛡️</span><h3>Safe by design</h3><p>You sign in with Hansora and approve access. Every request goes through Hansora's own secure gateway.</p></article>
+        </div>
+        <div class="marquee" aria-hidden="true"><div class="marquee-track" id="marquee"></div></div>
+      </div>
+    </section>
+
+    <!-- ================= FAQ ================= -->
+    <section class="block" style="padding-top:20px">
+      <div class="wrap">
+        <div class="reveal" style="text-align:center"><span class="eyebrow">FAQ</span><h2>Questions</h2></div>
+        <div class="faq">
+          <details><summary>Do I need a Hansora account?</summary><p>Yes. When you connect, you sign in to Hansora and approve access. Generations are paid from that account's balance, and results also appear in your Hansora history.</p></details>
+          <details><summary>Does it cost extra?</summary><p>No. Connecting is free. You only pay normal Hansora credits for what you generate, the same as on the website.</p></details>
+          <details><summary>Which apps does it work with?</summary><p>ChatGPT, Claude (web, desktop and Claude Code), Cursor, VS Code and any other app that supports remote MCP servers. Use the URL <code>https://hansora.co/mcp</code>.</p></details>
+          <details><summary>Can I disconnect later?</summary><p>Yes. Remove the Hansora app or connector in your AI app's settings at any time. Access stops right away.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="final reveal">
+        <h2>Bring Hansora into <span class="grad" id="finalName">ChatGPT</span></h2>
+        <p class="lead" style="margin:16px auto 0">Choose your app above, or connect it right now.</p>
+        <div class="ctas"><button class="btn btn-primary" type="button" id="installBtn3"><svg id="installIcon3"><use href="#i-chatgpt"/></svg><span id="installLabel3">Add Hansora to ChatGPT</span></button></div>
+      </div>
     </section>
   </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"><i>✓</i><span id="toastText"></span></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var MCP_URL = 'https://hansora.co/mcp';
+    // Public ChatGPT app link. Replace with the exact "Copy plugin link" value from platform.openai.com if it differs.
+    var CHATGPT_APP_URL = 'https://chatgpt.com/apps/hansora-ai/asdk_app_6ab42cbeb1f08191bf158f990f1c649e';
+    var CLAUDE_CONNECTORS_URL = 'https://claude.ai/settings/connectors';
+
+    function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
+    var CURSOR_URL = 'cursor://anysphere.cursor-deeplink/mcp/install?name=hansora&config=' + encodeURIComponent(b64(JSON.stringify({ url: MCP_URL })));
+    var VSCODE_URL = 'vscode:mcp/install?' + encodeURIComponent(JSON.stringify({ name: 'hansora', type: 'http', url: MCP_URL }));
+    var CLAUDE_CODE_CMD = 'claude mcp add --transport http hansora ' + MCP_URL;
+
+    var CLIENTS = [
+      { id: 'chatgpt', name: 'ChatGPT', icon: 'i-chatgpt', accent: '#10a37f', accent2: '#38bdf8',
+        label: 'Add Hansora to ChatGPT', action: 'open', href: CHATGPT_APP_URL,
+        hint: 'Opens the Hansora app in ChatGPT. Click Connect and sign in.',
+        steps: [
+          ['Open the Hansora app', 'Click <b>Add Hansora to ChatGPT</b>. The Hansora app page opens in ChatGPT.'],
+          ['Click Connect', 'Sign in to your Hansora account and approve access. That\'s the only setup.'],
+          ['Ask for anything', 'In any chat, type <code>@Hansora</code> or just ask: "Make a cinematic video of…"']
+        ] },
+      { id: 'claude', name: 'Claude', icon: 'i-claude', accent: '#d97757', accent2: '#a78bfa',
+        label: 'Add Hansora to Claude', action: 'claude', href: CLAUDE_CONNECTORS_URL,
+        hint: 'We copy the MCP URL for you and open Claude connector settings.',
+        steps: [
+          ['Open Claude connectors', 'Click <b>Add Hansora to Claude</b>. We copy the URL and open Settings → Connectors.'],
+          ['Add a custom connector', 'Click <b>Add custom connector</b>, name it <code>Hansora</code>, paste <code>' + MCP_URL + '</code> and click Add.'],
+          ['Connect and create', 'Click <b>Connect</b>, sign in to Hansora, then turn Hansora on in any chat and ask.']
+        ] },
+      { id: 'cursor', name: 'Cursor', icon: 'i-cursor', accent: '#e5e7eb', accent2: '#38bdf8',
+        label: 'Add Hansora to Cursor', action: 'open', href: CURSOR_URL, sameTab: true,
+        hint: 'Opens Cursor with Hansora ready to install. Cursor needs to be installed.',
+        steps: [
+          ['Open in Cursor', 'Click <b>Add Hansora to Cursor</b>. Cursor opens and shows the Hansora MCP server.'],
+          ['Install and sign in', 'Click <b>Install</b>, then sign in to Hansora when Cursor asks.'],
+          ['Use it in Agent', 'Ask the Cursor agent to generate images, video or audio for your project.']
+        ] },
+      { id: 'claude-code', name: 'Claude Code', icon: 'i-terminal', accent: '#d97757', accent2: '#38bdf8',
+        label: 'Copy install command', action: 'copy-cmd', cmd: CLAUDE_CODE_CMD,
+        hint: 'Run the command in your terminal.',
+        steps: [
+          ['Copy the command', 'Click <b>Copy install command</b> and paste it into your terminal.'],
+          ['Sign in', 'Start <code>claude</code>, run <code>/mcp</code>, choose <b>hansora</b> and sign in.'],
+          ['Generate assets', 'Ask Claude Code to create images, video or voice-overs right in your project.']
+        ] },
+      { id: 'vscode', name: 'VS Code', icon: 'i-vscode', accent: '#3ea6f2', accent2: '#a78bfa',
+        label: 'Add Hansora to VS Code', action: 'open', href: VSCODE_URL, sameTab: true,
+        hint: 'Opens VS Code with Hansora ready to install.',
+        steps: [
+          ['Open in VS Code', 'Click <b>Add Hansora to VS Code</b>. VS Code opens the MCP install screen.'],
+          ['Install and sign in', 'Click <b>Install</b>, then sign in to Hansora when asked.'],
+          ['Use Copilot Chat', 'In Agent mode, ask Copilot to generate media with Hansora.']
+        ] },
+      { id: 'other', name: 'any AI app', short: 'Other', icon: 'i-plug', accent: '#a78bfa', accent2: '#38bdf8',
+        label: 'Copy MCP URL', action: 'copy-url',
+        hint: 'Paste the URL wherever your app adds a remote MCP server.',
+        steps: [
+          ['Copy the URL', 'Click <b>Copy MCP URL</b> to copy <code>' + MCP_URL + '</code>.'],
+          ['Add a remote MCP server', 'In your app\'s settings, add a remote (HTTP) MCP server or connector and paste the URL.'],
+          ['Sign in to Hansora', 'Approve access when asked. The assistant can now use every Hansora model.']
+        ] }
+    ];
+
+    var DEMOS = [
+      { ask: 'Make a 16:9 photo of a neon ramen shop on a rainy Tokyo street, with Nano Banana 2', tool: 'Hansora · quote + generate image', reply: 'Done! Want a vertical version for Reels too?', label: 'Nano Banana 2 · 16:9',
+        art: 'radial-gradient(circle at 30% 70%,#ff3d7f 0,transparent 35%),radial-gradient(circle at 75% 30%,#38bdf8 0,transparent 40%),linear-gradient(160deg,#120a2a,#2a0f3a 50%,#06131f)' },
+      { ask: 'Turn that into a 6-second video with slow camera push-in', tool: 'Hansora · image to video', reply: 'Your video is ready. I used Wan 3.0 with your image as the first frame.', label: 'Wan 3.0 · 6s',
+        art: 'radial-gradient(circle at 60% 40%,#fbbf24 0,transparent 30%),radial-gradient(circle at 20% 80%,#a78bfa 0,transparent 45%),linear-gradient(200deg,#0b1026,#311046)' },
+      { ask: 'Now add a calm female voice-over: "Open late, every night."', tool: 'Hansora · text to speech', reply: 'Voice-over generated. Should I make a background song too?', label: 'Text to speech · 0:04',
+        art: 'repeating-linear-gradient(90deg,rgba(56,189,248,.8) 0 3px,transparent 3px 9px),linear-gradient(180deg,#0a1222,#1c0f33)' }
+    ];
+
+    var MODELS = ['Nano Banana 2', 'GPT Image 2', 'Seedream 5.0', 'Wan 3.0', 'Grok Video', 'Z Image', 'Qwen 2', 'Text to speech', 'Voice changer', 'Voice isolation', 'Song creation', 'Upscale', 'Background change', 'Image to video'];
+
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var $ = function (id) { return document.getElementById(id); };
+    var current = CLIENTS[0];
+
+    function icon(id) { return '<svg><use href="#' + id + '"/></svg>'; }
+
+    /* ---------- tabs ---------- */
+    var tabs = $('tabs');
+    CLIENTS.forEach(function (c, i) {
+      var b = document.createElement('button');
+      b.className = 'tab'; b.type = 'button'; b.setAttribute('role', 'tab'); b.dataset.id = c.id;
+      b.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+      b.innerHTML = icon(c.icon) + '<span>' + (c.short || c.name) + '</span>';
+      b.addEventListener('click', function () { select(c.id, true); });
+      tabs.appendChild(b);
+    });
+
+    function movePill() {
+      var active = tabs.querySelector('[aria-selected="true"]');
+      if (!active) return;
+      var pill = $('tabPill');
+      pill.style.width = active.offsetWidth + 'px';
+      pill.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+    }
+
+    function select(id, user) {
+      var c = CLIENTS.find(function (x) { return x.id === id; }) || CLIENTS[0];
+      if (c === current && !user) { render(c, false); return; }
+      current = c;
+      tabs.querySelectorAll('.tab').forEach(function (t) { t.setAttribute('aria-selected', t.dataset.id === c.id ? 'true' : 'false'); });
+      movePill();
+      var active = tabs.querySelector('[aria-selected="true"]');
+      if (active && active.scrollIntoView && user) active.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+      render(c, true);
+      if (user) { try { history.replaceState(null, '', '?tab=' + c.id + location.hash); } catch (_) {} }
+    }
+
+    function render(c, animate) {
+      document.documentElement.style.setProperty('--accent', c.accent);
+      document.documentElement.style.setProperty('--accent2', c.accent2);
+      var swap = $('swap');
+      var apply = function () {
+        $('heroChip').innerHTML = icon(c.icon);
+        $('heroName').textContent = c.name;
+        if (animate && !reduced) { swap.classList.remove('out'); void swap.offsetWidth; swap.classList.add('in'); }
+      };
+      if (animate && !reduced) { swap.classList.remove('in'); swap.classList.add('out'); setTimeout(apply, 240); } else apply();
+
+      [['installIcon', 'installLabel'], ['installIcon2', 'installLabel2'], ['installIcon3', 'installLabel3']].forEach(function (p) {
+        $(p[0]).innerHTML = '<use href="#' + c.icon + '"/>';
+        $(p[1]).textContent = c.label;
+      });
+      $('hint').textContent = c.hint;
+      $('stepsName').textContent = c.name;
+      $('finalName').textContent = c.name;
+      $('chatWho').innerHTML = icon(c.icon) + (c.short || c.name);
+
+      $('steps').innerHTML = c.steps.map(function (s) { return '<div class="step"><h3>' + s[0] + '</h3><p>' + s[1] + '</p></div>'; }).join('');
+      var cmdText = c.cmd || (c.id === 'other' || c.id === 'claude' ? MCP_URL : '');
+      $('cmd').hidden = !cmdText;
+      $('cmdText').textContent = cmdText;
+    }
+
+    /* ---------- actions ---------- */
+    function copyText(text, msg) {
+      var done = function () { toast(msg); };
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+      }
+      fallbackCopy(text); done(); return Promise.resolve();
+    }
+    function fallbackCopy(text) {
+      var t = document.createElement('textarea');
+      t.value = text; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
+      document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); } catch (_) {}
+      t.remove();
+    }
+    var toastTimer;
+    function toast(msg) {
+      $('toastText').textContent = msg;
+      $('toast').classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { $('toast').classList.remove('show'); }, 3200);
+    }
+    function track(c) {
+      try { if (window.gtag) window.gtag('event', 'mcp_connect_click', { client: c.id }); } catch (_) {}
+    }
+
+    function install() {
+      var c = current;
+      track(c);
+      if (c.action === 'open') {
+        if (c.sameTab) {
+          location.href = c.href;
+          toast('Opening ' + c.name + '… If nothing happens, install ' + c.name + ' first.');
+        } else {
+          window.open(c.href, '_blank', 'noopener');
+        }
+      } else if (c.action === 'claude') {
+        // Open the window synchronously so popup blockers allow it, then copy.
+        var w = window.open(c.href, '_blank');
+        if (w) w.opener = null;
+        copyText(MCP_URL, 'MCP URL copied. In Claude, click "Add custom connector" and paste it.');
+        if (!w) setTimeout(function () { location.href = c.href; }, 900);
+      } else if (c.action === 'copy-cmd') {
+        copyText(c.cmd, 'Command copied. Paste it into your terminal.');
+      } else {
+        copyText(MCP_URL, 'MCP URL copied. Paste it into your AI app.');
+      }
+    }
+    ['installBtn', 'installBtn2', 'installBtn3'].forEach(function (id) { $(id).addEventListener('click', install); });
+    document.querySelectorAll('[data-copy]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.dataset.copy === 'cmd') copyText($('cmdText').textContent, 'Copied.');
+        else copyText(MCP_URL, 'MCP URL copied.');
+      });
+    });
+
+    /* ---------- dot field background ---------- */
+    var cv = $('dots'), ctx = cv.getContext('2d'), W = 0, H = 0, dpr = 1, mouse = { x: -9999, y: -9999 }, t0 = performance.now();
+    function size() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = cv.clientWidth; H = cv.clientHeight;
+      cv.width = W * dpr; cv.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    function hexToRgb(h) { var n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+    var heroEl = cv.parentElement, heroVisible = true;
+    heroEl.addEventListener('pointermove', function (e) { var r = cv.getBoundingClientRect(); mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; });
+    heroEl.addEventListener('pointerleave', function () { mouse.x = mouse.y = -9999; });
+    function draw(now) {
+      if (heroVisible) {
+        var t = (now - t0) / 1000, gap = W < 600 ? 16 : 19, cx = W / 2, cy = H * 0.46, R = Math.max(W, H) * 0.55;
+        var a = hexToRgb(current.accent === '#e5e7eb' ? '#38bdf8' : current.accent);
+        ctx.clearRect(0, 0, W, H);
+        for (var y = gap / 2; y < H; y += gap) {
+          for (var x = gap / 2; x < W; x += gap) {
+            var dx = x - cx, dy = (y - cy) * 1.35, d = Math.sqrt(dx * dx + dy * dy) / R;
+            if (d > 1.05) continue;
+            var wave = Math.sin(d * 14 - t * 1.6) * 0.5 + 0.5;
+            var md = Math.hypot(x - mouse.x, y - mouse.y), m = md < 160 ? 1 - md / 160 : 0;
+            var base = (1 - d) * (0.10 + wave * 0.22) + m * 0.6;
+            if (base < 0.02) continue;
+            var r = 1 + wave * 0.9 * (1 - d) + m * 1.8;
+            var mix = Math.min(1, wave * (1 - d) * 0.9 + m);
+            ctx.fillStyle = 'rgba(' + Math.round(255 + (a[0] - 255) * mix) + ',' + Math.round(255 + (a[1] - 255) * mix) + ',' + Math.round(255 + (a[2] - 255) * mix) + ',' + base.toFixed(3) + ')';
+            ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+          }
+        }
+      }
+      if (!reduced) requestAnimationFrame(draw);
+    }
+    size(); window.addEventListener('resize', function () { size(); movePill(); if (reduced) draw(performance.now()); });
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (e) { heroVisible = e[0].isIntersecting; }).observe(heroEl);
+    requestAnimationFrame(draw);
+
+    /* ---------- chat demo ---------- */
+    var msgs = $('msgs'), demoIdx = 0, demoRunning = false;
+    function el(html, cls) { var d = document.createElement('div'); d.className = 'msg ' + cls; d.innerHTML = html; msgs.appendChild(d); return d; }
+    function wait(ms) { return new Promise(function (r) { setTimeout(r, reduced ? 0 : ms); }); }
+    function runDemo() {
+      if (demoRunning) return; demoRunning = true;
+      (function loop() {
+        var d = DEMOS[demoIdx % DEMOS.length];
+        if (demoIdx % DEMOS.length === 0) msgs.innerHTML = '';
+        while (msgs.children.length > 4) msgs.removeChild(msgs.firstChild);
+        var u = el('', 'user'), i = 0;
+        var typeStep = function () {
+          return new Promise(function (res) {
+            if (reduced) { u.textContent = d.ask; return res(); }
+            var iv = setInterval(function () { u.textContent = d.ask.slice(0, ++i); if (i >= d.ask.length) { clearInterval(iv); res(); } }, 22);
+          });
+        };
+        typeStep().then(function () { return wait(450); }).then(function () {
+          var b = el('<span class="tool"><img src="/media/compare/hansora.png" alt=""><span class="spin"></span>' + d.tool + '</span><div class="result loading"><div class="art" style="background:' + d.art + '"></div><div class="shimmer"></div><span class="tag">' + d.label + '</span><div class="bar"></div></div><div class="say"><span class="typing"><i></i><i></i><i></i></span></div>', 'bot');
+          return wait(2300).then(function () {
+            b.querySelector('.result').classList.replace('loading', 'done');
+            var sp = b.querySelector('.spin'); if (sp) sp.outerHTML = '✓';
+            b.querySelector('.say').textContent = d.reply;
+          });
+        }).then(function () { return wait(2600); }).then(function () { demoIdx++; loop(); });
+      })();
+    }
+
+    /* ---------- reveal ---------- */
+    var reveals = document.querySelectorAll('.reveal');
+    if ('IntersectionObserver' in window && !reduced) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          e.target.classList.add('on'); io.unobserve(e.target);
+          if (e.target.id === 'chat') runDemo();
+        });
+      }, { threshold: 0.15 });
+      reveals.forEach(function (r) { io.observe(r); });
+    } else { reveals.forEach(function (r) { r.classList.add('on'); }); runDemo(); }
+
+    $('marquee').innerHTML = MODELS.concat(MODELS).map(function (m) { return '<span>' + m + '</span>'; }).join('');
+
+    /* ---------- init ---------- */
+    var params = new URLSearchParams(location.search);
+    var wanted = params.get('tab') || params.get('client');
+    if (!wanted) {
+      var ua = navigator.userAgent;
+      if (/Cursor\//i.test(ua)) wanted = 'cursor';
+    }
+    current = null;
+    select(wanted || 'chatgpt', false);
+    // Fonts change tab widths; re-measure once they load.
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(movePill);
+    setTimeout(movePill, 300);
+  })();
+  </script>
 </body>
 </html>

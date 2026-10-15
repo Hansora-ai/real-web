@@ -2966,6 +2966,7 @@
               ]
             })}
             <a class="hansora-nav-trend" href="${siteHref('/examples.html')}">${copy('trend')}</a>
+            <a class="hansora-nav-trend" href="${withAffiliateRef('/mcp-setup.html')}">MCP</a>
           </nav>
           <div class="nav-actions">
             <a class="hansora-mobile-pricing" href="${siteHref('/pricing.html')}" aria-label="${copy('pricingAria')}">
