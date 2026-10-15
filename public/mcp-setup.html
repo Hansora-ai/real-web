@@ -10,6 +10,15 @@
   <meta property="og:description" content="Generate images, video and audio with Hansora right inside your AI chat.">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+    // One page, three languages: /mcp-setup_ru.html and /mcp-setup_arm.html are served from this file.
+    (function () {
+      var p = location.pathname, l = /_ru(\.html)?\/?$/i.test(p) ? 'ru' : /_arm(\.html)?\/?$/i.test(p) ? 'hy' : 'en';
+      document.documentElement.lang = l;
+      // Only Russian and Armenian visitors download the translations.
+      if (l !== 'en') document.write('<script src="/mcp-setup-i18n.js"><\/script>');
+    })();
+  </script>
   <link href="/header.css" rel="stylesheet">
   <script defer src="/header.js"></script>
   <style>
@@ -334,7 +343,7 @@
     .cg .m-u{background:#303030}
     @media(max-width:860px){.g-body{grid-template-columns:1fr}.stage{order:-1}.g-head h3{font-size:16px}}
     @media(max-width:900px){.hero{padding:36px 0 64px}.hero-inner{grid-template-columns:1fr;gap:8px}.orbit{width:min(300px,78vw);order:-1}.demo{grid-template-columns:1fr;gap:36px}.steps,.grid3{grid-template-columns:1fr}section.block{padding:72px 0}}
-    @media(max-width:560px){.badge,.tabs,.endpoint,.btn-ghost{backdrop-filter:none}h1{font-size:clamp(32px,9.6vw,44px)}.sub{font-size:16px}.tabs{display:flex;mask-image:linear-gradient(90deg,#000 85%,transparent)}.tab{padding:9px 12px;font-size:14px}.btn{width:100%;min-height:54px;font-size:16px}.ctas{width:100%}.endpoint{display:flex}.chat{min-height:400px}}
+    @media(max-width:560px){.badge,.tabs,.endpoint,.btn-ghost{backdrop-filter:none}h1{font-size:clamp(32px,9.6vw,44px)}html[lang=hy] h1,html[lang=ru] h1{font-size:clamp(28px,8.4vw,40px)}.sub{font-size:16px}.tabs{display:flex;mask-image:linear-gradient(90deg,#000 85%,transparent)}.tab{padding:9px 12px;font-size:14px}.btn{width:100%;min-height:54px;font-size:16px}.ctas{width:100%}.endpoint{display:flex}.chat{min-height:400px}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
   </style>
 </head>
@@ -486,6 +495,10 @@
   (function () {
     'use strict';
 
+    var LANG = document.documentElement.lang || 'en';
+    var DICT = (window.HANSORA_MCP_I18N || {})[LANG] || {};
+    window.__trMiss = {};
+    function tr(s) { if (LANG === 'en' || !s) return s; if (DICT[s] == null) window.__trMiss[s] = 1; return DICT[s] != null ? DICT[s] : s; }
     var MCP_URL = 'https://hansora.co/mcp';
     // Public Hansora plugin page in ChatGPT.
     var CHATGPT_APP_URL = 'https://chatgpt.com/plugins/plugin_asdk_app_6ab42cbeb1f08191bf158f990f1c649e';
@@ -555,13 +568,25 @@
 
     function icon(id) { return '<svg><use href="#' + id + '"/></svg>'; }
 
+    /* ---------- static text ---------- */
+    if (LANG !== 'en') {
+      document.title = tr(document.title);
+      var md = document.querySelector('meta[name="description"]'); if (md) md.content = tr(md.content);
+      [document.querySelector('main'), $('guide')].forEach(function (root) {
+        var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), n, list = [];
+        while ((n = w.nextNode())) if (n.nodeValue.trim() && !n.parentNode.closest('code,script,style')) list.push(n);
+        list.forEach(function (n) { var t = n.nodeValue.trim(), x = tr(t); if (x !== t) n.nodeValue = n.nodeValue.replace(t, x); });
+        root.querySelectorAll('[aria-label]').forEach(function (e) { e.setAttribute('aria-label', tr(e.getAttribute('aria-label'))); });
+      });
+    }
+
     /* ---------- tabs ---------- */
     var tabs = $('tabs');
     CLIENTS.forEach(function (c, i) {
       var b = document.createElement('button');
       b.className = 'tab'; b.type = 'button'; b.setAttribute('role', 'tab'); b.dataset.id = c.id;
       b.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
-      b.innerHTML = icon(c.icon) + '<span>' + (c.short || c.name) + '</span>';
+      b.innerHTML = icon(c.icon) + '<span>' + tr(c.short || c.name) + '</span>';
       b.addEventListener('click', function () { select(c.id, true); });
       tabs.appendChild(b);
     });
@@ -593,22 +618,22 @@
       var swap = $('swap');
       var apply = function () {
         $('heroChip').innerHTML = icon(c.icon);
-        $('heroName').textContent = c.name;
+        $('heroName').textContent = tr(c.name);
         if (animate && !reduced) { swap.classList.remove('out'); void swap.offsetWidth; swap.classList.add('in'); }
       };
       if (animate && !reduced) { swap.classList.remove('in'); swap.classList.add('out'); setTimeout(apply, 240); } else apply();
 
       [['installIcon', 'installLabel'], ['installIcon2', 'installLabel2'], ['installIcon3', 'installLabel3'], ['installIcon4', 'installLabel4']].forEach(function (p) {
         $(p[0]).innerHTML = '<use href="#' + c.icon + '"/>';
-        $(p[1]).textContent = c.label;
+        $(p[1]).textContent = tr(c.label);
       });
-      $('hint').textContent = c.hint;
+      $('hint').textContent = tr(c.hint);
       renderOrbit(c);
-      $('stepsName').textContent = c.name;
-      $('finalName').textContent = c.name;
-      $('chatWho').innerHTML = icon(c.icon) + (c.short || c.name);
+      $('stepsName').textContent = tr(c.name);
+      $('finalName').textContent = tr(c.name);
+      $('chatWho').innerHTML = icon(c.icon) + tr(c.short || c.name);
 
-      $('steps').innerHTML = c.steps.map(function (s) { return '<div class="step"><h3>' + s[0] + '</h3><p>' + s[1] + '</p></div>'; }).join('');
+      $('steps').innerHTML = c.steps.map(function (s) { return '<div class="step"><h3>' + tr(s[0]) + '</h3><p>' + tr(s[1]) + '</p></div>'; }).join('');
       var cmdText = c.cmd || (c.id === 'other' || c.id === 'claude' || c.id === 'cursor' ? MCP_URL : '');
       $('cmd').hidden = !cmdText;
       $('cmdText').textContent = cmdText;
@@ -647,16 +672,16 @@
         var w = window.open(c.href, '_blank');
         if (w) w.opener = null; else location.href = c.href;
       } else if (c.action === 'copy-cmd') {
-        copyText(c.cmd, 'Command copied. Paste it into your terminal.');
+        copyText(c.cmd, tr('Command copied. Paste it into your terminal.'));
       } else {
-        copyText(MCP_URL, 'Hansora link copied. Paste it into ' + (c.id === 'other' ? 'your AI app' : c.name) + '.');
+        copyText(MCP_URL, tr('Hansora link copied. Paste it into ' + (c.id === 'other' ? 'your AI app' : c.name) + '.'));
       }
     }
     ['installBtn', 'installBtn2', 'installBtn3'].forEach(function (id) { $(id).addEventListener('click', install); });
     document.querySelectorAll('[data-copy]').forEach(function (b) {
       b.addEventListener('click', function () {
-        if (b.dataset.copy === 'cmd') copyText($('cmdText').textContent, 'Copied.');
-        else copyText(MCP_URL, 'Hansora link copied.');
+        if (b.dataset.copy === 'cmd') copyText($('cmdText').textContent, tr('Copied.'));
+        else copyText(MCP_URL, tr('Hansora link copied.'));
       });
     });
 
@@ -861,10 +886,10 @@
     function openGuide() {
       var c = current;
       lastFocus = document.activeElement;
-      $('gTitle').textContent = 'Connect Hansora to ' + (c.id === 'other' ? 'your AI app' : c.name) + ' in under a minute';
+      $('gTitle').textContent = tr('Connect Hansora to ' + (c.id === 'other' ? 'your AI app' : c.name) + ' in under a minute');
       $('gChip').innerHTML = icon(c.icon);
       gSteps.innerHTML = c.steps.map(function (s, k) {
-        return '<div class="g-step" data-k="' + k + '"><span class="g-num">' + (k + 1) + '</span><div><h4>' + s[0] + '</h4><p>' + s[1] + '</p></div><span class="g-bar"><i></i></span></div>';
+        return '<div class="g-step" data-k="' + k + '"><span class="g-num">' + (k + 1) + '</span><div><h4>' + tr(s[0]) + '</h4><p>' + tr(s[1]) + '</p></div><span class="g-bar"><i></i></span></div>';
       }).join('');
       gSteps.querySelectorAll('.g-step').forEach(function (el) {
         el.addEventListener('click', function (ev) {
@@ -907,7 +932,7 @@
         var h = 25 + Math.round(70 * Math.abs(Math.sin(k * 1.7) * Math.cos(k * 0.45)));
         bars += '<i style="height:' + h + '%;animation-delay:' + (-(k % 7) * 0.13).toFixed(2) + 's"></i>';
       }
-      return '<div class="voice"><button class="vplay" type="button" aria-label="Play voice sample">' + playIcon + '</button><div class="vmeta"><div class="vname">Sarah · Voice-over<small class="vtime">0:00</small></div><div class="wave">' + bars + '</div></div></div>';
+      return '<div class="voice"><button class="vplay" type="button" aria-label="Play voice sample">' + playIcon + '</button><div class="vmeta"><div class="vname">' + tr('Sarah · Voice-over') + '<small class="vtime">0:00</small></div><div class="wave">' + bars + '</div></div></div>';
     }
     function wireVoice(card) {
       var btn = card.querySelector('.vplay'), bars = card.querySelectorAll('.wave i'), time = card.querySelector('.vtime');
@@ -934,8 +959,9 @@
         var u = el('', 'user'), i = 0;
         var typeStep = function () {
           return new Promise(function (res) {
-            if (reduced) { u.textContent = d.ask; return res(); }
-            var iv = setInterval(function () { u.textContent = d.ask.slice(0, ++i); if (i >= d.ask.length) { clearInterval(iv); res(); } }, 20);
+            var ask = tr(d.ask);
+            if (reduced) { u.textContent = ask; return res(); }
+            var iv = setInterval(function () { u.textContent = ask.slice(0, ++i); if (i >= ask.length) { clearInterval(iv); res(); } }, 20);
           });
         };
         var b;
@@ -955,7 +981,7 @@
             b.querySelector('.result').classList.replace('loading', 'done');
             var v = b.querySelector('video'); if (v) v.play().catch(function () {});
           }
-          b.querySelector('.say').textContent = d.reply;
+          b.querySelector('.say').textContent = tr(d.reply);
           return wait(d.hold);
         }).then(function waitVoice() {
           // Don't move on while someone is listening to the voice sample.
