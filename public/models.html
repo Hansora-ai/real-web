@@ -89,7 +89,7 @@
   </script>
   <!-- End Meta Pixel Code -->
 
-<link rel="stylesheet" href="/models-epic.css?v=20261020">
+<link rel="stylesheet" href="/models-epic.css?v=20261022">
 </head>
 <body class="min-h-screen">
   <!-- Meta Pixel (noscript) -->
@@ -309,9 +309,7 @@
     function tile(m) {
       const dataModel = m.id ? ` data-hansora-model="${m.id}"` : '';
       const tag = MX_TAGS[m.id] ? `<span class="mx-tag mx-tag-${MX_TAGS[m.id].toLowerCase()}">${MX_TAGS[m.id]}</span>` : '';
-      const pic = m.thumbnail
-        ? `<span class="mx-thumb"><img src="${m.thumbnail}" alt="" loading="lazy" decoding="async" /></span>`
-        : `<span class="mx-thumb mx-thumb-logo"><img src="${m.logo}" alt="" loading="lazy" decoding="async" /></span>`;
+      const pic = `<span class="mx-thumb mx-icon"><img src="${m.logo}" alt="" loading="lazy" decoding="async" /></span>`;
       return `
         <a href="${m.href}" data-model-link="1"${dataModel} data-name="${m.name.toLowerCase()}" class="model-name-card mx-card mx-row">
           ${pic}

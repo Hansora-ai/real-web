@@ -146,3 +146,19 @@ section[data-category-section] > div { width: min(100% - 32px, var(--mx-max)); p
 @media (max-width: 900px) { .mx-hero::before { width: 100%; } }
 html { overflow-x: clip; }
 @media (max-width: 900px) { .mx-orbit { margin: 14px 0 26px; } }
+
+/* Menu icons fill a square tile, no gaps */
+.mx-thumb.mx-icon { width: 56px; aspect-ratio: 1 / 1; border-radius: 14px; background: #101118; box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 8px 18px -10px rgba(0, 0, 0, .9); }
+.mx-thumb.mx-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
+.mx-row:hover .mx-thumb.mx-icon { box-shadow: 0 0 0 1px rgba(167, 139, 250, .55), 0 0 22px -6px rgba(139, 92, 246, .9); }
+.mx-row { min-height: 78px; }
+/* Shorter top: smaller orbit, less padding */
+.mx-hero { padding: 12px 0 0; gap: 56px; }
+.mx-orbit { zoom: .72; }
+.mx-hero h1 { font-size: clamp(36px, 4.4vw, 64px); }
+.mx-bar { margin-top: 18px; }
+@media (max-width: 1180px) { .mx-orbit { zoom: .64; } }
+@media (max-width: 900px) { .mx-orbit { zoom: .56; margin: 10px 0 22px; } }
+@media (max-width: 420px) { .mx-orbit { zoom: .5; } }
+@media (max-width: 760px) { .mx-thumb.mx-icon { width: 50px; } }
+@media (min-width: 901px) { .mx-hero { grid-template-columns: auto minmax(0, 1fr); padding-left: 20px; } .mx-orbit { margin: 8px 0; } }
