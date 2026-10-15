@@ -436,3 +436,11 @@ a.he-go:hover { filter: brightness(1.15); transform: translateY(-1px); }
   .he-screen { width: calc(clamp(330px, 100svh - 320px, 500px) * .75); }
 }
 @media (max-width: 900px) { .he-studio-left .he-studio-cta { margin-top: 6px; } }
+/* Studio demo back to a wide 16:9 ad */
+.he-screen-body { aspect-ratio: 16 / 9; }
+.he-scr-caption { bottom: 26%; }
+@media (min-width: 901px) {
+  .he-studio-grid { grid-template-columns: minmax(0, 380px) auto; gap: 36px; }
+  .he-screen { width: min(560px, calc((100svh - 390px) * 16 / 9)); min-width: 420px; }
+}
+@media (max-width: 900px) { .he-screen { width: 100%; } }
