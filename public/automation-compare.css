@@ -92,3 +92,5 @@
   .ui-vs-year{flex-direction:column;align-items:flex-start}
 }
 .ui-vs-switch{margin-top:10px}
+.ui-compare-table td b{color:var(--text);font-size:15px}
+.ui-compare-table .us b{color:var(--green)}
