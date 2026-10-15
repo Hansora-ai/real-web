@@ -354,3 +354,31 @@ main .faq details p { margin: 10px 0 0 !important; color: rgba(236, 233, 254, .7
   .he-studio > .shell, .he-studio-aura i, .he-scr-wave i, .he-step-bar { animation: none !important; }
   .he-screen { transform: none; }
 }
+
+/* ---------- Round 2 fixes ---------- */
+/* Gradient headline: keep the descenders (g, y, p) inside the painted area */
+.he-grad { padding-bottom: .14em; margin-bottom: -.14em; }
+/* Generate in the hero prompt is a real button now */
+a.he-go { text-decoration: none; cursor: pointer; }
+a.he-go:hover { filter: brightness(1.15); transform: translateY(-1px); }
+
+/* Studio demo: a slightly smaller screen so the whole thing fits on laptop screens */
+@media (min-width: 901px) { .he-studio-head { margin-bottom: 36px; } }
+@media (min-width: 901px) { .he-studio-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); } }
+@media (min-width: 901px) and (max-height: 920px) { .he-studio > .shell { padding-top: 48px !important; } .he-studio-head h2 { font-size: clamp(34px, 4vw, 56px); } .he-step button { padding: 15px 18px; } }
+
+/* Phones: tidy section headers and panels */
+@media (max-width: 760px) {
+  .home-features-section > .shell, .top-used-models-section > .shell, .latest-models-section > .shell, .pricing > .shell, main .faq { padding: 26px 16px 22px !important; border-radius: 24px; }
+  main .section-head { flex-direction: row !important; flex-wrap: wrap; align-items: flex-end !important; justify-content: space-between; gap: 12px 10px !important; margin-bottom: 18px !important; text-align: left; }
+  main .section-head > div { min-width: 0; flex: 1 1 auto; }
+  main .section-head h2 { font-size: clamp(28px, 8.4vw, 38px) !important; }
+  main .section-head .kicker { font-size: 10.5px !important; padding: 5px 10px; margin-bottom: 8px; }
+  main .section-head .btn, main .section-head .btn-ghost { flex: none; min-height: 0 !important; height: 38px; padding: 0 14px !important; font-size: 13.5px !important; }
+  /* Creator choices: big cards, about 1.4 per screen so it is clear the row scrolls */
+  .top-used-models-section .x-scroll.model-rail { grid-auto-columns: 70% !important; gap: 14px !important; padding: 10px 2px 58px !important; }
+  .top-used-models-section .model-rail .model-card img { padding: 4px !important; }
+  .top-used-models-section .model-card::after { bottom: -34px; height: 26px; }
+  .top-used-models-section > .shell::after { bottom: 48px; }
+  .he-cta .he-btn { width: 100%; justify-content: center; }
+}

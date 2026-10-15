@@ -14,6 +14,7 @@
     ['Chocolate bar ad, bright and playful, 9:16', 'Veo 3.1'],
     ['Product photo of a perfume on wet black stone', 'GPT Image 2.5'],
     ['Robot warrior in a misty forest, cinematic', 'Kling 3.0'],
+    ['Upbeat summer pop song about the beach', 'Suno Music'],
     ['My kid as a cartoon hero flying over the hills', 'Nano Banana 2']
   ];
   async function typeLoop() {
@@ -87,7 +88,7 @@
     const chip = screen.querySelector('.he-scr-chip em');
     const video = screen.querySelector('.he-scr-vid');
     const fullText = typedEl ? typedEl.textContent : '';
-    const chips = ['', 'GPT Image 2.5 · 4K', 'Veo 3.1 · 1080p', 'Music + captions'];
+    const chips = ['', 'GPT Image 2.5 · 4K', 'Seedance 2.5 · 1080p', 'Music + captions'];
     const times = [3600, 3200, 3600, 4600];
     let step = -1, timer = 0, typing = 0, running = false;
     const loadVideo = () => {
