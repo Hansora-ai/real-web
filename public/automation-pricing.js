@@ -292,3 +292,24 @@
   check();
   setTimeout(() => vs.classList.add('is-on'), 8000);
 })();
+
+// Comparison switch: chat replies or comment automation (same prices, different job).
+(function () {
+  const sw = document.querySelector('.ui-vs-switch');
+  if (!sw) return;
+  const set = (sel, text, html) => { const el = document.querySelector(sel); if (el) el[html ? 'innerHTML' : 'textContent'] = text; };
+  const views = {
+    chats: { lead: 'What you pay to let AI answer <b>1,000 customer messages</b>.', us: 'covers 1,250 replies', cf: 'Business plan', mc: 'Pro plan, needed for AI', year: 'A full year (12,000 replies)', yearUs: 'Hansora $149.98', save: '$318' },
+    comments: { lead: 'What you pay when <b>1,000 people comment</b> on your posts in a month.', us: 'covers 1,500 comment runs', cf: 'Business plan, comment replies included', mc: 'Pro plan, cheapest for 1,000 people', year: 'A full year (12,000 comment runs)', yearUs: 'Hansora $114.98', save: '$353' }
+  };
+  sw.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-vs]');
+    if (!btn) return;
+    sw.querySelectorAll('button').forEach(b => { const on = b === btn; b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); });
+    const v = views[btn.dataset.vs];
+    set('#vs-lead', v.lead, true); set('[data-vs-us]', v.us); set('[data-vs-cf]', v.cf); set('[data-vs-mc]', v.mc);
+    set('[data-vs-year]', v.year); set('[data-vs-year-us]', v.yearUs); set('[data-vs-save]', v.save);
+    const vs = document.querySelector('.ui-vs');
+    if (vs) { vs.classList.remove('is-on'); void vs.offsetWidth; setTimeout(() => vs.classList.add('is-on'), 40); }
+  });
+})();
