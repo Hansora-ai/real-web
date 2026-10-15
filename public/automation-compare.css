@@ -105,3 +105,4 @@
 .ui-vs-logo{flex:none;width:22px;height:22px;padding:2px;border-radius:7px;background:#fff;object-fit:contain;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 .ui-vs-name b{display:inline-flex;align-items:center;gap:9px}
 .ui-vs-brand img{width:22px;height:22px}
+.ui-vs-logo[src*="hansora"]{background:#0d0f1a;box-shadow:0 0 0 1px rgba(56,189,248,.35),0 2px 8px rgba(0,0,0,.35)}
