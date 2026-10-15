@@ -290,6 +290,48 @@
     .m-term img{display:block;width:46%;margin:2% 0;border-radius:1.4cqw}
     .m-site{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5%;height:100%;text-align:center;background:radial-gradient(circle at 50% 30%,rgba(124,92,255,.25),transparent 60%)}
     .m-site .m-h{background:linear-gradient(100deg,#fff,#a78bfa 60%,#38bdf8);-webkit-background-clip:text;background-clip:text;color:transparent}
+    /* hansora.co/oauth/consent replica */
+    .hc{position:absolute;inset:0;display:grid;place-items:center;padding:3%;background:radial-gradient(circle at 20% 0%,rgba(91,92,226,.25),transparent 55%),#0b0d16}
+    .hc-card{width:64%;padding:4%;border-radius:3cqw;background:#11131d;border:1px solid rgba(255,255,255,.07);font-size:2cqw;line-height:1.35}
+    .hc-brand{display:flex;align-items:center;gap:1.6cqw;font-weight:800;font-size:2.5cqw;margin-bottom:4%}
+    .hc-h,.cg-h{display:inline-grid;place-items:center;width:5cqw;height:5cqw;border-radius:1.2cqw;background:linear-gradient(135deg,#5b5ce2,#7c6cf5);color:#fff;font-weight:900;font-size:2.6cqw}
+    .hc-t{margin:0 0 2%;font-size:3.3cqw;font-weight:800;line-height:1.15}
+    .hc-s{margin:0 0 4%;color:#9aa2b5}.hc-s b{color:#fff}
+    .hc-li{margin-bottom:2%;padding:1.6% 3%;border-radius:1.4cqw;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.05)}
+    .hc-li::before{content:"✔ ";color:#34d399}
+    .hc-row{display:flex;gap:2.4cqw;margin-top:4%}.hc-row .m-btn{flex:1;padding:2.6% 0}
+    .hc-cancel{background:#1a1d29;border-color:transparent}
+    /* chatgpt.com replica */
+    .cg{position:absolute;inset:0;display:flex;background:#212121;font-size:2.3cqw;color:#ececec}
+    .cg-side{width:25%;padding:3% 2.4%;background:#181818;flex:none}
+    .cg-logo{display:block;margin-bottom:8%;font-size:2.7cqw}
+    .cg-nav{padding:3.2% 6%;border-radius:1.2cqw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cg-nav.on{background:#2f2f2f}.cg-nav.dim{color:#b4b4b4}
+    .cg-sec{margin:12% 0 4%;color:#8f8f8f;font-size:2.1cqw}
+    .cg-main{position:relative;flex:1;padding:3.5% 7% 0;overflow:hidden}
+    .cg-crumb{color:#b4b4b4;margin-bottom:5%}.cg-crumb b{color:#ececec;font-weight:500}
+    .cg-icon{width:8cqw;height:8cqw;padding:1cqw;border-radius:2cqw;background:#0b0d18;border:1px solid rgba(255,255,255,.1)}
+    .cg-head{display:flex;align-items:center;justify-content:space-between;gap:2cqw;margin:3% 0 5%}
+    .cg-title{display:block;font-size:3.2cqw;font-weight:600;white-space:nowrap}.cg-by{color:#b4b4b4}
+    .cg-acts{display:flex;align-items:center;gap:1.6cqw}
+    .cg-dots{color:#b4b4b4;font-weight:800}
+    .cg-pill{display:inline-flex;align-items:center;gap:1cqw;padding:1.3cqw 2.6cqw;border-radius:999px;background:#ececec;color:#0d0d0d;font-weight:600;white-space:nowrap;transition:transform .15s}
+    .cg-pill.ghost{background:transparent;color:#ececec;border:1px solid rgba(255,255,255,.15)}
+    .cg-pill.press{transform:scale(.93)}
+    .cg-spin{width:2cqw;height:2cqw;border:.4cqw solid #9b9b9b;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+    .cg-banner{display:grid;place-items:center;height:20cqw;border-radius:2cqw;background:linear-gradient(120deg,#1c2b5a,#3a3f7a 45%,#1d2240);margin-bottom:4%}
+    .cg-ex{width:76%;padding:2% 3%;border-radius:1.6cqw;background:rgba(20,22,35,.85);font-size:2.1cqw}.cg-ex span{color:#7aa2ff}.cg-ex i{float:right;font-style:normal}
+    .cg-desc{margin:0;color:#d1d1d1;line-height:1.5}
+    .cg-toast{position:absolute;z-index:4;left:50%;top:13%;translate:-50% 0;display:flex;align-items:center;gap:1.4cqw;padding:1.4% 2.4%;border-radius:1.6cqw;background:#2f2f2f;border:1px solid rgba(255,255,255,.1);font-size:2.3cqw;white-space:nowrap;animation:pop .35s both}
+    .cg-try{padding:.4cqw 1.6cqw;border-radius:999px;background:#ececec;color:#0d0d0d;font-weight:600}
+    .cg-chat{display:flex;flex-direction:column;height:100%;padding-bottom:5%}
+    .cg-begin{margin:auto 0 6%;text-align:center;font-size:3.4cqw}
+    .cg-box{padding:2.6% 3%;border-radius:3cqw;background:#303030;border:1px solid rgba(255,255,255,.06)}
+    .cg-tag{color:#7aa2ff;font-weight:500}
+    .cg-bar{display:flex;align-items:center;gap:2cqw;margin-top:3%;color:#b4b4b4}
+    .cg-med{margin-left:auto}
+    .cg-send{display:grid;place-items:center;width:5.4cqw;height:5.4cqw;border-radius:50%;background:#2b6cf6;color:#fff;font-weight:800}
+    .cg .m-u{background:#303030}
     @media(max-width:860px){.g-body{grid-template-columns:1fr}.stage{order:-1}.g-head h3{font-size:16px}}
     @media(max-width:900px){.hero{padding:36px 0 64px}.hero-inner{grid-template-columns:1fr;gap:8px}.orbit{width:min(300px,78vw);order:-1}.demo{grid-template-columns:1fr;gap:36px}.steps,.grid3{grid-template-columns:1fr}section.block{padding:72px 0}}
     @media(max-width:560px){h1{font-size:clamp(32px,9.6vw,44px)}.sub{font-size:16px}.tabs{display:flex;mask-image:linear-gradient(90deg,#000 85%,transparent)}.tab{padding:9px 12px;font-size:14px}.btn{width:100%;min-height:54px;font-size:16px}.ctas{width:100%}.endpoint{display:flex}.chat{min-height:400px}}
@@ -445,8 +487,8 @@
     'use strict';
 
     var MCP_URL = 'https://hansora.co/mcp';
-    // Public ChatGPT app link. Replace with the exact "Copy plugin link" value from platform.openai.com if it differs.
-    var CHATGPT_APP_URL = 'https://chatgpt.com/apps/hansora-ai/asdk_app_6ab42cbeb1f08191bf158f990f1c649e';
+    // Public Hansora plugin page in ChatGPT.
+    var CHATGPT_APP_URL = 'https://chatgpt.com/plugins/plugin_asdk_app_6ab42cbeb1f08191bf158f990f1c649e';
     // Opens Claude's "Add custom connector" dialog with the name and URL already filled in.
     var CLAUDE_INSTALL_URL = 'https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Hansora&connectorUrl=' + encodeURIComponent(MCP_URL);
 
@@ -455,11 +497,11 @@
     var CLIENTS = [
       { id: 'chatgpt', name: 'ChatGPT', icon: 'i-chatgpt', accent: '#10a37f', accent2: '#38bdf8',
         label: 'Add Hansora to ChatGPT', action: 'open', href: CHATGPT_APP_URL,
-        hint: 'Opens the Hansora app in ChatGPT. Click Connect and sign in.',
+        hint: 'Opens Hansora in ChatGPT. Click Install plugin and sign in.',
         steps: [
-          ['Open the Hansora app', 'Click <b>Add Hansora to ChatGPT</b>. The Hansora app page opens in ChatGPT.'],
-          ['Click Connect', 'Sign in to your Hansora account and approve access. That\'s the only setup.'],
-          ['Ask for anything', 'In any chat, type <code>@Hansora</code> or just ask: "Make a cinematic video of…"']
+          ['Install the plugin', 'Click <b>Add Hansora to ChatGPT</b>. The Hansora AI page opens in ChatGPT. Click <b>+ Install plugin</b>.'],
+          ['Connect your account', 'Sign in to Hansora and click <b>Connect Hansora</b>. ChatGPT shows <b>Hansora AI plugin installed</b>.'],
+          ['Try it in chat', 'Click <b>Try in chat</b> and describe what you want: "Create a cinematic video of…"']
         ] },
       { id: 'claude', name: 'Claude', icon: 'i-claude', accent: '#d97757', accent2: '#a78bfa',
         label: 'Add Hansora to Claude', action: 'open', href: CLAUDE_INSTALL_URL,
@@ -653,13 +695,28 @@
     var DEMO_IMG = '/media/mcp/demo-image.jpg';
     var PROMPT = 'Make a product photo of a chocolate bar in a pink retro wrapper';
 
-    function consentScene(step, app) {
+    // Same layout as hansora.co/oauth/consent.
+    function consentScene(step, app, noToast) {
       return { step: step, url: 'hansora.co/oauth/consent', html:
-        '<div class="m-center">' + LOGO.replace('m-logo', 'm-logo big') + '<p class="m-h" style="margin:2% 0 0">Connect ' + app + ' to Hansora</p>' +
-        '<p class="m-sub" style="margin:0">' + app + ' wants to use your Hansora account</p>' +
-        '<div class="m-perm"><div>See models and your balance</div><div>Create images, video and audio</div></div>' +
-        '<div class="m-row"><span class="m-btn">Deny</span><span class="m-btn pri" data-t="allow">Allow</span></div></div>',
-        acts: [['wait', 700], ['move', 'allow'], ['click', 'allow'], ['toast', '<b>✓</b> Hansora connected'], ['wait', 1300]] };
+        '<div class="hc"><div class="hc-card"><div class="hc-brand"><span class="hc-h">H</span>HANSORA AI</div>' +
+        '<p class="hc-t">Connect your Hansora account</p><p class="hc-s"><b>An AI assistant</b> is requesting access to Hansora.</p>' +
+        '<div class="hc-li">See Hansora\'s complete image, video, and audio catalog.</div>' +
+        '<div class="hc-li">Create images, videos, speech, and music using your Hansora account and credit balance.</div>' +
+        '<div class="hc-li">Check your balance and your own recent generations.</div>' +
+        '<div class="hc-row"><span class="m-btn hc-cancel">Cancel</span><span class="m-btn pri" data-t="allow">Connect Hansora</span></div></div></div>',
+        acts: [['wait', 900], ['move', 'allow'], ['click', 'allow']].concat(noToast ? [['wait', 500]] : [['toast', '<b>✓</b> Hansora connected to ' + app], ['wait', 1300]]) };
+    }
+    // ChatGPT plugin page frame: sidebar + main column, as on chatgpt.com/plugins.
+    function cgFrame(main, active) {
+      return '<div class="cg"><div class="cg-side"><b class="cg-logo">ChatGPT ⌄</b>' +
+        ['New chat', 'Scheduled', 'Library', 'Plugins', 'Explore'].map(function (x) { return '<div class="cg-nav' + (x === active ? ' on' : '') + '">' + x + '</div>'; }).join('') +
+        '<div class="cg-sec">Recents</div><div class="cg-nav dim">Generate Realistic Image</div><div class="cg-nav dim">App review status</div></div><div class="cg-main">' + main + '</div></div>';
+    }
+    function cgPlugin(btn) {
+      return cgFrame('<div class="cg-crumb">Plugins › <b>Hansora AI</b></div><img class="cg-icon" src="/media/compare/hansora.png" alt="">' +
+        '<div class="cg-head"><div><b class="cg-title">Hansora AI</b><span class="cg-by">By Hansora Ai</span></div><div class="cg-acts" data-t="acts">' + btn + '</div></div>' +
+        '<div class="cg-banner"><div class="cg-ex"><span>Hansora AI</span> Create a cinematic video of a futuristic city at sunset…<i>→</i></div></div>' +
+        '<p class="cg-desc">Create and work with AI directly inside ChatGPT using Hansora AI. Generate images, videos, audio, and other AI content through supported models.</p>', 'Plugins');
     }
     function chatScene(step, url, ask) {
       return { step: step, url: url, html:
@@ -686,12 +743,18 @@
 
     var GUIDES = {
       chatgpt: [
-        { step: 0, url: 'chatgpt.com/apps', html: '<p class="m-h">Apps</p><div class="m-search" data-t="search"></div><div class="m-card" data-t="card">' + LOGO + '<div class="m-name"><b>Hansora AI</b><span>Generate images, video &amp; audio</span></div><span class="m-btn white" data-t="open">View</span></div>',
-          acts: [['move', 'search'], ['click', 'search'], ['type', 'search', 'Hansora'], ['cls', 'card', 'show'], ['wait', 500], ['move', 'open'], ['click', 'open'], ['wait', 400]] },
-        { step: 1, url: 'chatgpt.com/apps/hansora-ai', html: '<div class="m-center">' + LOGO.replace('m-logo', 'm-logo big') + '<p class="m-h" style="margin:2% 0 0">Hansora AI</p><p class="m-sub">Create images, video and audio with every Hansora model.</p><span class="m-btn white" data-t="connect">Connect</span></div>',
-          acts: [['wait', 600], ['move', 'connect'], ['click', 'connect'], ['wait', 400]] },
-        consentScene(1, 'ChatGPT'),
-        chatScene(2, 'chatgpt.com', '@Hansora ' + PROMPT.charAt(0).toLowerCase() + PROMPT.slice(1))
+        { step: 0, url: 'chatgpt.com/plugins/plugin_asdk_app_6ab42cbe…', html: cgPlugin('<span class="cg-dots">···</span><span class="cg-pill" data-t="install">+ Install plugin</span>'),
+          acts: [['wait', 700], ['move', 'install'], ['click', 'install'], ['set', 'install', '<span class="cg-spin"></span>Loading'], ['wait', 900]] },
+        consentScene(1, 'ChatGPT', true),
+        { step: 1, url: 'chatgpt.com/plugins/plugin_asdk_app_6ab42cbe…', html: cgPlugin('<span class="cg-dots">···</span><span class="cg-pill" data-t="install"><span class="cg-spin"></span>Installing</span>'),
+          acts: [['wait', 1000], ['set', 'acts', '<span class="cg-dots">···</span><span class="cg-pill ghost">⚙ Manage</span><span class="cg-pill" data-t="try">↗ Try in chat</span>'],
+            ['banner', '<span class="cg-h">H</span>Hansora AI plugin installed <span class="cg-try">Try now</span> ×'], ['wait', 900], ['move', 'try'], ['click', 'try'], ['wait', 400]] },
+        { step: 2, url: 'chatgpt.com', html: cgFrame('<div class="cg-chat"><div class="m-msgs" data-t="msgs"><p class="cg-begin" data-t="begin">Where should we begin?</p></div>' +
+            '<div class="cg-box"><div><span class="cg-tag">Hansora AI</span> <span data-t="in"></span></div><div class="cg-bar"><span>＋</span><span class="cg-med">Medium ⌄</span><span class="cg-send" data-t="send">↑</span></div></div></div>', 'New chat'),
+          acts: [['type', 'in', PROMPT], ['move', 'send'], ['click', 'send'], ['hide', 'begin'], ['set', 'in', ''],
+            ['add', 'msgs', '<div class="m-u"><span class="cg-tag">Hansora AI</span> ' + PROMPT + '</div>'], ['wait', 500],
+            ['add', 'msgs', '<div class="m-b"><span class="m-chipt"><img src="/media/compare/hansora.png" alt="">Hansora AI · generating image</span></div>'], ['wait', 1300],
+            ['add', 'msgs', '<div class="m-b"><img src="' + DEMO_IMG + '" alt=""></div>'], ['wait', 2600]] }
       ],
       claude: [
         formScene(0, 'claude.ai/customize/connectors', 'Add custom connector', 'Filled in from a link on hansora.co. Check it before adding.', false, 'Add'),
@@ -734,7 +797,7 @@
       mCursor.style.top = ((r.top + r.height * 0.55 - s.top) / s.height * 100) + '%';
     }
     function act(a, id) {
-      var k = a[0], e = a[1] && q(a[1]);
+      var k = a[0], e = (k === 'toast' || k === 'banner' || k === 'wait') ? null : q(a[1]);
       if (k === 'wait') return sleep(a[1], id);
       if (k === 'move') { moveTo(a[1]); return sleep(750, id); }
       if (k === 'click') {
@@ -757,6 +820,9 @@
       if (k === 'clear') { e.innerHTML = '<span class="ph">Ask anything</span>'; return sleep(50, id); }
       if (k === 'add') { e.insertAdjacentHTML('beforeend', a[2]); return sleep(150, id); }
       if (k === 'cls') { e.classList.add(a[2]); return sleep(100, id); }
+      if (k === 'set') { e.innerHTML = a[2]; return sleep(100, id); }
+      if (k === 'hide') { e.style.display = 'none'; return sleep(50, id); }
+      if (k === 'banner') { sView.insertAdjacentHTML('beforeend', '<div class="cg-toast">' + a[1] + '</div>'); return sleep(200, id); }
       if (k === 'toast') { sView.insertAdjacentHTML('beforeend', '<div class="m-toast">' + a[1] + '</div>'); return sleep(200, id); }
       return Promise.resolve();
     }
