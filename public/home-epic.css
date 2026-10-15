@@ -382,3 +382,21 @@ a.he-go:hover { filter: brightness(1.15); transform: translateY(-1px); }
   .top-used-models-section > .shell::after { bottom: 48px; }
   .he-cta .he-btn { width: 100%; justify-content: center; }
 }
+
+/* Studio demo, compact: the screen shows the clip at about its real size (720px wide), so it stays sharp,
+   and the whole section fits on one laptop screen. */
+@media (min-width: 901px) {
+  .he-studio > .shell { padding: 44px 40px 40px !important; }
+  .he-studio-head { margin-bottom: 28px; }
+  .he-studio-head h2 { margin: 12px 0 10px; font-size: clamp(32px, 3.4vw, 50px); }
+  .he-studio-head p { font-size: 16px; }
+  .he-studio-grid { grid-template-columns: minmax(0, 420px) auto; justify-content: center; gap: 40px; }
+  .he-screen { width: min(640px, calc((100svh - 330px) * 16 / 9)); min-width: 460px; }
+  .he-steps { gap: 10px; }
+  .he-step button { padding: 14px 16px; gap: 14px; }
+  .he-step-n { width: 38px; height: 38px; border-radius: 12px; font-size: 16px; }
+  .he-step-t strong { font-size: 16px; }
+  .he-step-t small { font-size: 13px; }
+  .he-studio-cta { margin-top: 28px; }
+  .he-studio-cta .he-btn { height: 50px; }
+}
