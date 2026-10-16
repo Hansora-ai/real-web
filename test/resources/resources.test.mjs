@@ -42,7 +42,7 @@ test('all resource pages have consistent canonical/schema identities and resolva
   const file=path.join(center,slug,'index.html');const html=await readFile(file,'utf8');
   const canonical='https://hansora.co/resources/'+(slug?slug+'/':'');
   assert.match(html,/<html lang="en">/);assert.equal((html.match(/<h1\b/g)||[]).length,1);
-  assert.ok(html.includes('<link rel="canonical" href="'+canonical+'">'));assert.doesNotMatch(html,/noindex/i);
+  assert.ok(html.includes('<link rel="canonical" href="'+canonical+'">'));assert.doesNotMatch(html,/noindex/i);assert.doesNotMatch(html,/<(?:form|input|button)\b|<script[^>]+src=/i);
   descriptions.add(html.match(/<meta name="description" content="([^"]+)"/)[1]);titles.add(html.match(/<title>([^<]+)<\/title>/)[1]);
   const graph=JSON.parse(html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1])['@graph'];
   const breadcrumbs=graph.find(x=>x['@type']==='BreadcrumbList');assert.equal(breadcrumbs.itemListElement.at(-1).item,canonical);

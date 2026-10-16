@@ -1,6 +1,6 @@
 # Public resource center
 
-Six buildless HTML pages live in `public/resources/`: an index and five English guides covering affordable video generation, unified creative platforms, subscription alternatives, the Hansora ChatGPT integration, and a marketing production workflow. The optional cost calculator performs local arithmetic only; every article and FAQ remains readable without JavaScript. The two downloadable text worksheets support a practical comparison and campaign approval process.
+Six buildless HTML pages live in `public/resources/`: an index and five English guides covering affordable video generation, unified creative platforms, subscription alternatives, the Hansora ChatGPT integration, and a marketing production workflow. Every article and FAQ is directly readable in static HTML; the resource pages load no executable JavaScript. The two downloadable text worksheets support a practical comparison and campaign approval process.
 
 ## Maintain the content
 
@@ -12,9 +12,9 @@ node --test test/resources/*.test.mjs
 npm run build:functions
 ```
 
-The generator rewrites the six resource pages, `public/resources/sitemap.xml`, and only the six matching resource entries in the root sitemap. It preserves unrelated sitemap entries and does not rebuild the stylesheet, calculator, social image, or worksheets. Update its edition dates only when the published content changes; use the actual first-publication date for datePublished if this edition is first released after October 16, 2026.
+The generator rewrites the six resource pages, `public/resources/sitemap.xml`, and only the six matching resource entries in the root sitemap. It preserves unrelated sitemap entries and does not rebuild the stylesheet, social image, or worksheets. Update its edition dates only when the published content changes; use the actual first-publication date for datePublished if this edition is first released after October 16, 2026.
 
-The pages use distinct titles/descriptions/canonicals, Open Graph and Twitter metadata, Article/Organization JSON-LD, and visible breadcrumbs matching BreadcrumbList. The index uses CollectionPage/ItemList. FAQPage schema is omitted. Every article links two related guides, official sources, and relevant Hansora product destinations. The calculator's initial example is explicitly hypothetical, not a provider price.
+The pages use distinct titles/descriptions/canonicals, Open Graph and Twitter metadata, Article/Organization JSON-LD, and visible breadcrumbs matching BreadcrumbList. The index uses CollectionPage/ItemList. FAQPage schema is omitted. Every article links two related guides, official sources, and relevant Hansora product destinations. Written budgeting examples are explicitly hypothetical, not provider prices.
 
 The homepage footer links `/resources/`. The existing mobile-navigation edge function returns resource responses unchanged, including their status and headers, so resources retain their standalone layout. Non-resource behavior stays as before. `netlify.toml` still publishes `public/`; no routing or function configuration was changed. Existing directory-index hosting serves the clean resource URLs.
 
@@ -40,15 +40,15 @@ Primary sources:
 - https://help.runwayml.com/hc/en-us/articles/15124877443219-How-do-credits-work — official competitor credit rules. Web-source retrieval succeeded; direct curl returned 403.
 - https://helpx.adobe.com/firefly/web/get-started/learn-the-basics/generative-credits-overview.html — official Adobe credit/feature overview.
 
-The homepage and pricing page displayed inconsistent pack quantities, so the articles intentionally reproduce no fixed pack sizes, dollar prices, or per-model rates. The cost worksheet accepts the reader's own figures and makes its assumptions visible. No reviews, awards, customer results, endorsements, or independent price/quality benchmarks were invented.
+The homepage and pricing page displayed inconsistent pack quantities, so the articles intentionally reproduce no fixed pack sizes, dollar prices, or per-model rates. Written examples explain their assumptions and include retry costs. No reviews, awards, customer results, endorsements, or independent price/quality benchmarks were invented.
 
 ## Release checks
 
 After merging and Netlify publication:
 
 1. Check `/resources/` and all five article URLs for final HTTP 200 and readable initial HTML. Confirm the edge function has not added mobile navigation, login prompts, noindex, or unrelated scripts.
-2. Confirm the homepage footer link, canonicals, source links, stylesheet, social image, downloads, and calculator work. Review access for Googlebot, bingbot, OAI-SearchBot, and Claude-SearchBot through the actual CDN/WAF as well as robots. No training-crawler preference needs to change for search discovery.
+2. Confirm the homepage footer link, canonicals, source links, stylesheet, social image, and downloads work. Review access for Googlebot, bingbot, OAI-SearchBot, and Claude-SearchBot through the actual CDN/WAF as well as robots. No training-crawler preference needs to change for search discovery.
 3. Confirm `/sitemap.xml` returns XML and `/robots.txt` returns plain text. Submit the sitemap in the verified Google Search Console property under Sitemaps and in Bing Webmaster Tools under Submit sitemaps. Review processing and URL-inspection results.
 4. Review the live pricing and integration flow on an account. Refresh statements when product behavior changes.
 
-Local checks cover parsing, structured data, links, mobile layout, calculator arithmetic/invalid inputs, and edge preservation. Production HTTP responses cannot be certified before the branch is published. Discovery, citations, and recommendations depend on relevance and retrieval; these pages do not guarantee them. Russian and Armenian editions can be added as reviewed translations with self-canonicals and reciprocal hreflang links when those editions are prepared.
+Local checks cover parsing, structured data, links, mobile layout and edge preservation. Production HTTP responses cannot be certified before the branch is published. Discovery, citations, and recommendations depend on relevance and retrieval; these pages do not guarantee them. Russian and Armenian editions can be added as reviewed translations with self-canonicals and reciprocal hreflang links when those editions are prepared.

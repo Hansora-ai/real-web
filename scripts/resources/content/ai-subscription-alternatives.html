@@ -12,22 +12,6 @@
 <h3>Find your break-even point</h3>
 <p>Divide the fixed subscription cost by the average consumption cost per approved asset. With 60 fixed units and six units per approved asset, the illustrative break-even point is ten assets. Below that level, consumption costs less in the simplified calculation; above it, the fixed allowance may offer better value until you hit its limits.</p>
 <p>Repeat the calculation with a slow month and a busy month. Include pack minimums, taxes where applicable, unused balances, add-ons, and human review. Track cash paid as well as credits consumed: buying a large pack creates an immediate expense even when you use only part of it that month.</p>
-<h2 id="calculator">Estimate your own break-even point</h2>
-<p>Use one currency or consistent budget unit throughout. Enter the actual average attempt cost and attempts needed per approved asset. This browser-only worksheet makes no API calls, creates no generations, and stores no entries.</p>
-<div class="calculator" data-calculator>
-<p class="calculator-intro"><strong>Example budget — enter your own figures</strong><br>The starting values are fictional budget units, not Hansora prices or a credit quote.</p>
-<form id="cost-calculator" aria-describedby="calculator-note">
-<div class="calculator-fields">
-<label for="fixed-cost">Monthly subscription total<input id="fixed-cost" name="fixed" type="number" min="0" max="1000000000" step="any" value="60" required></label>
-<label for="attempt-cost">Cost per attempt<input id="attempt-cost" name="attempt" type="number" min="0.000001" max="1000000000" step="any" value="2" required></label>
-<label for="attempt-count">Attempts per approved asset<input id="attempt-count" name="attempts" type="number" min="1" max="1000000000" step="any" value="3" required></label>
-<label for="asset-count">Approved assets per month<input id="asset-count" name="assets" type="number" min="0" max="1000000000" step="1" value="12" required></label>
-</div>
-<button class="button" type="submit">Calculate comparison</button>
-<output id="calculator-result" for="fixed-cost attempt-cost attempt-count asset-count" aria-live="polite">Example: 6 units per approved asset; 72 units in consumption spending; break-even at 10 assets per month.</output>
-<p id="calculator-note">Illustrative arithmetic, not provider prices. Assumes the subscription covers equivalent work; extra credits, pack minimums, unused balances, taxes, and editing time are excluded.</p>
-<noscript><p>The calculator needs JavaScript to update. Calculate manually: attempt cost × attempts per asset × monthly assets. Break-even assets = subscription total ÷ (attempt cost × attempts per asset).</p></noscript>
-</form></div>
 <h2 id="hansora-credits">How to evaluate Hansora's credit system</h2>
 <p><a href="https://hansora.co/pricing.html">Hansora's pricing page</a> currently offers pay-as-you-go packs alongside optional subscriptions. It states that pay-as-you-go credits do not expire. Do not assume that every monthly allocation has identical rules; review the plan and checkout terms for the purchase you are considering.</p>
 <p>Start with the job, not the size of the pack. Select a supported model and settings, inspect the displayed quote, and estimate several attempts. Budget image preparation, video, and audio separately. Credit counts across different services are not directly comparable currencies, and the number of generations varies with the model and configuration.</p>

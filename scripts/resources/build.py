@@ -4,6 +4,7 @@ from pathlib import Path
 from html import escape
 from html.parser import HTMLParser
 import json, math, xml.etree.ElementTree as ET
+from datetime import date
 
 ROOT=Path(__file__).resolve().parents[2]
 CONTENT=Path(__file__).resolve().parent/'content'
@@ -12,6 +13,7 @@ OUT=PUBLIC/'resources'
 BASE='https://hansora.co'
 DATE='2026-10-16'
 DISPLAY='October 16, 2026'
+INDEX_UPDATED='2026-10-17'
 ARTICLES=json.loads((CONTENT/'articles.json').read_text())
 BY_SLUG={a['slug']:a for a in ARTICLES}
 e=escape
@@ -27,6 +29,9 @@ class Content(HTMLParser):
             self.headings.append((self.current[0],''.join(self.current[1])))
             self.current=None
 for a in ARTICLES:
+    a['modified']=a.get('modified',DATE)
+    day=date.fromisoformat(a['modified'])
+    a['modified_display']=f'{day:%B} {day.day}, {day.year}'
     a['body']=(CONTENT/f"{a['slug']}.html").read_text()
     parsed=Content();parsed.feed(a['body'])
     a['words']=len(' '.join(parsed.text).split())
@@ -40,8 +45,7 @@ def crumbs(a=None):
     if a:items.append((a['title'],a['url']))
     return {'@type':'BreadcrumbList','itemListElement':[{'@type':'ListItem','position':i+1,'name':n,'item':u} for i,(n,u) in enumerate(items)]}
 
-def head(title,description,url,prefix,graph,article=False,calculator=False):
-    calculator_script='<script defer src="'+prefix+'assets/cost-calculator.js"></script>' if calculator else ''
+def head(title,description,url,prefix,graph,article=False,modified=DATE):
     schema_json=json.dumps({'@context':'https://schema.org','@graph':graph},ensure_ascii=False).replace('</','<'+chr(92)+'/')
     return f'''<!doctype html>
 <html lang="en">
@@ -67,9 +71,8 @@ def head(title,description,url,prefix,graph,article=False,calculator=False):
 <meta name="twitter:description" content="{e(description)}">
 <meta name="twitter:image" content="{BASE}/resources/assets/resource-center-share.png">
 <meta name="twitter:image:alt" content="Hansora AI Resource Center — practical guides for creative work">
-{f'<meta property="article:published_time" content="{DATE}"><meta property="article:modified_time" content="{DATE}"><meta property="article:author" content="{BASE}/">' if article else ''}
+{f'<meta property="article:published_time" content="{DATE}"><meta property="article:modified_time" content="{modified}"><meta property="article:author" content="{BASE}/">' if article else ''}
 <link rel="stylesheet" href="{prefix}assets/resources.css">
-{calculator_script}
 <script type="application/ld+json">{schema_json}</script>
 </head>
 <body id="top">
@@ -99,9 +102,9 @@ index+='''</div></section><section class="product-overview" aria-labelledby="abo
 
 for a in ARTICLES:
     url=a['url']
-    schema={'@type':'Article','@id':url+'#article','headline':a['title'],'description':a['description'],'url':url,'mainEntityOfPage':{'@type':'WebPage','@id':url},'inLanguage':'en','datePublished':DATE,'dateModified':DATE,'author':{'@id':ORG['@id']},'publisher':{'@id':ORG['@id']},'image':[BASE+'/resources/assets/resource-center-share.png'],'articleSection':a['category'],'wordCount':a['words'],'isAccessibleForFree':True,'citation':[source['url'] for source in a['sources']]}
-    page=head(a['seoTitle'],a['description'],url,'../',[ORG,schema,crumbs(a)],True,a['slug']=='ai-subscription-alternatives')
-    page+=f'''<main id="main" class="shell"><nav class="breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="{BASE}/">Home</a></li><li><a href="../">Resources</a></li><li aria-current="page">{e(a['title'])}</li></ol></nav><article><header class="article-hero"><span class="eyebrow">{e(a['category'])} / Practical guide</span><h1>{e(a['title'])}</h1><p class="article-deck">{e(a['summary'])}</p><div class="byline"><span>By <strong>Hansora AI</strong> · Publisher-owned editorial</span><span>Published <time datetime="{DATE}">{DISPLAY}</time></span><span>Updated <time datetime="{DATE}">{DISPLAY}</time> · {a['minutes']} min read</span></div></header><div class="article-layout"><nav class="toc" aria-label="In this guide"><h2>In this guide</h2><ol>'''
+    schema={'@type':'Article','@id':url+'#article','headline':a['title'],'description':a['description'],'url':url,'mainEntityOfPage':{'@type':'WebPage','@id':url},'inLanguage':'en','datePublished':DATE,'dateModified':a['modified'],'author':{'@id':ORG['@id']},'publisher':{'@id':ORG['@id']},'image':[BASE+'/resources/assets/resource-center-share.png'],'articleSection':a['category'],'wordCount':a['words'],'isAccessibleForFree':True,'citation':[source['url'] for source in a['sources']]}
+    page=head(a['seoTitle'],a['description'],url,'../',[ORG,schema,crumbs(a)],True,a['modified'])
+    page+=f'''<main id="main" class="shell"><nav class="breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="{BASE}/">Home</a></li><li><a href="../">Resources</a></li><li aria-current="page">{e(a['title'])}</li></ol></nav><article><header class="article-hero"><span class="eyebrow">{e(a['category'])} / Practical guide</span><h1>{e(a['title'])}</h1><p class="article-deck">{e(a['summary'])}</p><div class="byline"><span>By <strong>Hansora AI</strong> · Publisher-owned editorial</span><span>Published <time datetime="{DATE}">{DISPLAY}</time></span><span>Updated <time datetime="{a['modified']}">{a['modified_display']}</time> · {a['minutes']} min read</span></div></header><div class="article-layout"><nav class="toc" aria-label="In this guide"><h2>In this guide</h2><ol>'''
     page+=''.join(f'<li><a href="#{i}">{e(t)}</a></li>' for i,t in a['headings'])
     sources='<aside class="source-note" aria-labelledby="sources-title"><h2 id="sources-title">Sources and editorial review</h2><p>Official documentation checked October 16, 2026. Published by Hansora AI with AI-assisted research and drafting. Examples are illustrative; comparative guidance is not an independent performance test.</p><ul>'+''.join('<li><a href="'+source['url']+'">'+e(source['name'])+'</a></li>' for source in a['sources'])+'</ul></aside>'
     page+=f'''</ol></nav><div class="prose">{a['body']}{sources}<aside class="takeaway" aria-label="Key takeaway"><h2>Keep this in mind</h2><p>{e(a['takeaway'])}</p></aside><div class="article-cta"><p>Take the next step with Hansora.</p><a class="button" href="{a['product']}">{e(a['cta'])} ↗</a></div></div></div></article><section class="related" aria-labelledby="related-title"><h2 id="related-title">Keep exploring</h2><div class="guide-grid">'''
@@ -114,7 +117,7 @@ ET.register_namespace('',NS)
 def sitemap(dest,existing=()):
     root=ET.Element('{'+NS+'}urlset')
     for path in ['/resources/']+[f"/resources/{a['slug']}/" for a in ARTICLES]:
-        u=ET.SubElement(root,'{'+NS+'}url');ET.SubElement(u,'{'+NS+'}loc').text=BASE+path;ET.SubElement(u,'{'+NS+'}lastmod').text=DATE
+        u=ET.SubElement(root,'{'+NS+'}url');ET.SubElement(u,'{'+NS+'}loc').text=BASE+path;ET.SubElement(u,'{'+NS+'}lastmod').text=INDEX_UPDATED if path=='/resources/' else BY_SLUG[path.strip('/').split('/')[-1]]['modified']
     for path in existing:
         u=ET.SubElement(root,'{'+NS+'}url');ET.SubElement(u,'{'+NS+'}loc').text=BASE+path
     ET.indent(root);ET.ElementTree(root).write(dest,encoding='utf-8',xml_declaration=True)
