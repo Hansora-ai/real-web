@@ -13,7 +13,7 @@ const complete = (kind = 'image', run_id = 'run-1') => ({ ...queued(run_id), sta
 // Only the browser/host boundary is simulated; no generation tools are run.
 function host({ output, input, widgetState, get = () => envelope(complete()), native = true, initialize = true } = {}) {
   const nodes = new Map(), listeners = new Map(), timers = new Map(), calls = [], messages = [];
-  let now = 100000, timerId = 0, intersection;
+  let now = 100000, timerId = 0, intersection, initializationAttempts = 0;
   const listen = (name, fn) => { if (!listeners.has(name)) listeners.set(name, []); listeners.get(name).push(fn); };
   const emit = (name, value = {}) => { for (const fn of listeners.get(name) || []) fn(value); };
   function element(tag = 'div') {
@@ -33,7 +33,11 @@ function host({ output, input, widgetState, get = () => envelope(complete()), na
     openai: { toolInput: input, toolOutput: output, widgetState, setWidgetState(value) { this.widgetState = structuredClone(value); } },
     parent: { postMessage(message) {
       messages.push(message);
-      if (message.method === 'ui/initialize' && initialize) Promise.resolve().then(() => emit('message', { source: window.parent, data: { jsonrpc: '2.0', id: message.id, result: {} } }));
+      if (message.method === 'ui/initialize') {
+        initializationAttempts++;
+        const respond = typeof initialize === 'function' ? initialize(initializationAttempts) : initialize;
+        if (respond) Promise.resolve().then(() => emit('message', { source: window.parent, data: { jsonrpc: '2.0', id: message.id, result: {} } }));
+      }
       if (message.method === 'tools/call') invoke(message.params).then((result) => emit('message', { source: window.parent, data: { jsonrpc: '2.0', id: message.id, result } }));
     } } };
   async function invoke(params) { calls.push(params); return get(params); }
@@ -190,6 +194,27 @@ test('bridge initialization failures preserve saved results and provide a non-sp
   await disconnected.tick(31000);
   assert.equal(disconnected.section(), 'unavailable');
   const nativeOnly = host({ output: queued(), initialize: false });
-  await nativeOnly.tick(31000);
+  await nativeOnly.tick(5100);
   assert.equal(nativeOnly.section(), 'ready');
+  assert.deepEqual(structuredClone(nativeOnly.messages.filter((message) => message.method === 'ui/notifications/initialized')), [
+    { jsonrpc: '2.0', method: 'ui/notifications/initialized', params: {} }
+  ]);
+  const attempts = nativeOnly.messages.filter((message) => message.method === 'ui/initialize').length;
+  await nativeOnly.tick(30000);
+  assert.equal(nativeOnly.messages.filter((message) => message.method === 'ui/initialize').length, attempts);
+});
+
+test('a cold parent that misses the first handshake messages can still open the card', async () => {
+  for (const native of [true, false]) {
+    const card = host({ output: queued(), native, initialize: (attempt) => attempt >= 3 });
+    await card.tick(1100);
+    assert.equal(card.section(), 'ready');
+    const attempts = card.messages.filter((message) => message.method === 'ui/initialize');
+    assert.equal(attempts.length, 3);
+    assert.equal(new Set(attempts.map((message) => message.id)).size, 1);
+    assert.equal(card.messages.filter((message) => message.method === 'ui/notifications/initialized').length, 1);
+    assert.deepEqual(structuredClone(card.calls), [{ name: 'get_generation', arguments: { run_id: 'run-1' } }]);
+    await card.tick(30000);
+    assert.equal(card.messages.filter((message) => message.method === 'ui/initialize').length, 3);
+  }
 });
