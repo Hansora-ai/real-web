@@ -11,10 +11,21 @@ test('several images for Seedance are sent as references, not a first frame', ()
   assert.deepEqual(tagged.reference_image_urls, [img('a'), img('b'), img('c')]);
   const explicit = buildGenerationPayload('seedance25', { prompt: '@image1 with @image2', first_frame_url: img('a'), image_urls: [img('b')] }, 'u', 'r');
   assert.deepEqual(explicit.reference_image_urls, [img('a'), img('b')]);
-  const single = buildGenerationPayload('seedance25', { prompt: 'animate this photo', image_urls: [img('a')] }, 'u', 'r');
-  assert.equal(single.first_frame_url, img('a'));
-  const frames = buildGenerationPayload('seedance20', { prompt: 'go', first_frame_url: img('a'), last_frame_url: img('b') }, 'u', 'r');
-  assert.deepEqual([frames.first_frame_url, frames.last_frame_url], [img('a'), img('b')]);
+  // One photo is a reference too, even if the host put it in first_frame_url.
+  const single = buildGenerationPayload('seedance25', { prompt: 'make a trend video of this guy dancing', image_urls: [img('a')] }, 'u', 'r');
+  assert.equal(single.first_frame_url, undefined);
+  assert.deepEqual(single.reference_image_urls, [img('a')]);
+  const hostFrame = buildGenerationPayload('seedance25', { prompt: 'dancing video', first_frame_url: img('a') }, 'u', 'r');
+  assert.equal(hostFrame.first_frame_url, undefined);
+  assert.deepEqual(hostFrame.reference_image_urls, [img('a')]);
+  // Frames only when the request asks for them.
+  const asked = buildGenerationPayload('seedance25', { prompt: 'Use this photo as the first frame and animate it', image_urls: [img('a')] }, 'u', 'r');
+  assert.deepEqual([asked.first_frame_url, asked.reference_image_urls], [img('a'), []]);
+  const both = buildGenerationPayload('seedance20', { prompt: 'Start frame is image 1, end frame is image 2', first_frame_url: img('a'), last_frame_url: img('b') }, 'u', 'r');
+  assert.deepEqual([both.first_frame_url, both.last_frame_url], [img('a'), img('b')]);
+  const russian = buildGenerationPayload('seedance20-mini', { prompt: 'Сделай это фото первый кадр видео', image_urls: [img('a')] }, 'u', 'r');
+  assert.equal(russian.first_frame_url, img('a'));
+  assert.match(getModel('seedance25').image_handling, /explicitly asks for a first or last frame/);
 });
 
 test('Henshin is available through create_generation with the website price', () => {
