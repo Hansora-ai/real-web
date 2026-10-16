@@ -108,9 +108,15 @@ async function batchFields(userId, runId) {
   if (rows.length < 2) return {};
   const batch = rows.map(batchItem);
   const count = (status) => batch.filter((item) => item.status === status).length;
+  const ready = batch.map((item, index) => ({ ...item, number: index + 1 })).filter((item) => item.status === 'ready');
   return {
     batch,
-    batch_summary: `${batch.length} generations were started together in this request: ${count('ready')} ready, ${count('processing')} still generating, ${count('failed')} failed. The card shows all of them and updates by itself; call get_generation again to refresh their status.`
+    batch_summary: [
+      `${batch.length} generations were started together in this request: ${count('ready')} ready, ${count('processing')} still generating, ${count('failed')} failed.`,
+      ready.length ? `Ready results: ${ready.map((item) => `#${item.number} ${item.result_url}`).join(' ; ')}.` : '',
+      'The card in the chat can show only one of them, so always give the user a link to every ready result above, numbered in this order.',
+      count('processing') ? 'Results that are still generating are not missing: call get_generation again with any of these run_ids in a little while to refresh all of them.' : ''
+    ].filter(Boolean).join(' ')
   };
 }
 
