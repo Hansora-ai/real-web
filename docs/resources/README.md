@@ -1,6 +1,6 @@
 # Public resource center
 
-Six buildless HTML pages live in `public/resources/`: an index and five English guides covering affordable video generation, unified creative platforms, subscription alternatives, the Hansora ChatGPT integration, and a marketing production workflow. Every article and FAQ is directly readable in static HTML; the resource pages load no executable JavaScript. The two downloadable text worksheets support a practical comparison and campaign approval process.
+Six buildless HTML pages live in `public/resources/`: an index and five English guides covering affordable video generation, unified creative platforms, subscription alternatives, the Hansora ChatGPT integration, and a marketing production workflow. Every article and FAQ is directly readable in static HTML; the authored resource HTML includes no executable JavaScript. The two downloadable text worksheets support a practical comparison and campaign approval process.
 
 ## Maintain the content
 
@@ -16,7 +16,7 @@ The generator rewrites the six resource pages, `public/resources/sitemap.xml`, a
 
 The pages use distinct titles/descriptions/canonicals, Open Graph and Twitter metadata, Article/Organization JSON-LD, and visible breadcrumbs matching BreadcrumbList. The index uses CollectionPage/ItemList. FAQPage schema is omitted. Every article links two related guides, official sources, and relevant Hansora product destinations. Written budgeting examples are explicitly hypothetical, not provider prices.
 
-The homepage footer links `/resources/`. The existing mobile-navigation edge function returns resource responses unchanged, including their status and headers, so resources retain their standalone layout. Non-resource behavior stays as before. `netlify.toml` still publishes `public/`; no routing or function configuration was changed. Existing directory-index hosting serves the clean resource URLs.
+This change adds new files only. It does not edit the existing homepage, footer, navigation, edge function, or Netlify configuration. There is no new link or button on existing pages directing users to the resources. The resource URLs are public, link to one another, and appear in the new sitemap. Existing hosting and edge-function behavior remains in effect, including any mobile-navigation injection.
 
 The newly added robots file declares the sitemap without adding User-agent, Allow, Disallow, or GPTBot rules. The previous repository had no robots file; default crawler permissions are preserved. The root sitemap includes the resources and existing verified public product/setup destinations. Existing-page lastmod values are omitted because their modification dates were not established.
 
@@ -46,9 +46,9 @@ The homepage and pricing page displayed inconsistent pack quantities, so the art
 
 After merging and Netlify publication:
 
-1. Check `/resources/` and all five article URLs for final HTTP 200 and readable initial HTML. Confirm the edge function has not added mobile navigation, login prompts, noindex, or unrelated scripts.
-2. Confirm the homepage footer link, canonicals, source links, stylesheet, social image, and downloads work. Review access for Googlebot, bingbot, OAI-SearchBot, and Claude-SearchBot through the actual CDN/WAF as well as robots. No training-crawler preference needs to change for search discovery.
+1. Check `/resources/` and all five article URLs for final HTTP 200 and readable initial HTML. Confirm the existing hosting behavior preserves readable articles and does not add login requirements or noindex.
+2. Confirm the resource canonicals, source links, stylesheet, social image, and downloads work. Review access for Googlebot, bingbot, OAI-SearchBot, and Claude-SearchBot through the actual CDN/WAF as well as robots. No training-crawler preference needs to change for search discovery.
 3. Confirm `/sitemap.xml` returns XML and `/robots.txt` returns plain text. Submit the sitemap in the verified Google Search Console property under Sitemaps and in Bing Webmaster Tools under Submit sitemaps. Review processing and URL-inspection results.
 4. Review the live pricing and integration flow on an account. Refresh statements when product behavior changes.
 
-Local checks cover parsing, structured data, links, mobile layout and edge preservation. Production HTTP responses cannot be certified before the branch is published. Discovery, citations, and recommendations depend on relevance and retrieval; these pages do not guarantee them. Russian and Armenian editions can be added as reviewed translations with self-canonicals and reciprocal hreflang links when those editions are prepared.
+Local checks cover parsing, structured data, links, mobile layout. Production HTTP responses cannot be certified before the branch is published. Discovery, citations, and recommendations depend on relevance and retrieval; these pages do not guarantee them. Russian and Armenian editions can be added as reviewed translations with self-canonicals and reciprocal hreflang links when those editions are prepared.
