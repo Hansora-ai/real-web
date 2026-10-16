@@ -121,3 +121,27 @@ test('a runner that refuses with 200 submitted:false is not reported as queued',
   assert.equal(result.structuredContent.error, 'insufficient_credits');
   assert.equal(result.structuredContent.credits_required, 20);
 });
+
+test('get_generation returns every generation ChatGPT started in the same burst', async () => {
+  const at = (seconds) => new Date(Date.UTC(2026, 9, 16, 10, 46, 0) + seconds * 1000).toISOString();
+  const target = { id: 'b', provider: 'Nano Banana 2', kind: 'image', prompt: 'outdoor', result_url: null, created_at: at(8),
+    meta: { run_id: 'u-mcp-2', status: 'processing', model: 'nano-banana-2' } };
+  const sibling = { id: 'a', provider: 'Nano Banana 2', kind: 'image', prompt: 'studio', result_url: 'https://cdn.test/a.png', created_at: at(0),
+    meta: { run_id: 'u-mcp-1', status: 'done', model: 'nano-banana-2' } };
+  const older = { id: 'z', provider: 'Grok', kind: 'video', prompt: 'old', result_url: 'https://cdn.test/z.mp4', created_at: at(-600),
+    meta: { run_id: 'u-mcp-0', status: 'done', engine: 'grok' } };
+  const { result } = await callTool('get_generation', { run_id: 'u-mcp-2' }, { credits: 3, generations: [target, sibling, older] });
+  const value = result.structuredContent;
+  assert.equal(value.model_name, 'Nano Banana 2');
+  assert.deepEqual(value.batch.map((item) => [item.run_id, item.status]), [['u-mcp-1', 'ready'], ['u-mcp-2', 'processing']]);
+  assert.equal(value.batch[0].result_url, 'https://cdn.test/a.png');
+  assert.match(value.batch_summary, /^2 generations .* 1 ready, 1 still generating, 0 failed/);
+});
+
+test('a single generation has no batch', async () => {
+  const row = { id: 'b', provider: 'Grok', kind: 'video', prompt: 'x', result_url: null, created_at: new Date().toISOString(),
+    meta: { run_id: 'u-mcp-9', status: 'processing', engine: 'grok' } };
+  const { result } = await callTool('get_generation', { run_id: 'u-mcp-9' }, { credits: 3, generations: [row] });
+  assert.equal('batch' in result.structuredContent, false);
+  assert.equal(result.structuredContent.model_name, 'Grok Video');
+});

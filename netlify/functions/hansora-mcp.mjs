@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { McpServer, createMcpHandler, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { authenticateToken, getAccount, getGeneration, listGenerations } from '../../lib/hansora-mcp/data.mjs';
+import { authenticateToken, getAccount, getGeneration, getGenerationBatch, listGenerations } from '../../lib/hansora-mcp/data.mjs';
 import {
   GENERATION_APP_MIME,
   GENERATION_APP_URI,
@@ -72,9 +72,45 @@ function presentGeneration(generation, runId) {
   }
   return {
     ...generation,
+    model_name: displayModelName(generation),
     run_id: String(meta.run_id || runId || ''),
     status,
     media_type: String(meta.media_type || generation?.kind || '')
+  };
+}
+
+function displayModelName(generation) {
+  const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
+  for (const id of [meta.model_id, meta.model, meta.engine]) {
+    const model = typeof id === 'string' && id ? getModel(id) : null;
+    if (model?.name) return model.name;
+  }
+  return String(generation?.provider || meta.model || '');
+}
+
+function batchItem(generation) {
+  const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
+  const presented = presentGeneration(generation, meta.run_id);
+  const status = presented.status === 'failed' ? 'failed' : generation?.result_url ? 'ready' : 'processing';
+  return {
+    run_id: String(meta.run_id || ''),
+    status,
+    result_url: status === 'ready' ? generation.result_url : null,
+    media_type: String(meta.media_type || generation?.kind || ''),
+    model_name: displayModelName(generation),
+    created_at: generation?.created_at
+  };
+}
+
+// Every generation ChatGPT started in the same burst, so one card (and the assistant) sees all of them.
+async function batchFields(userId, runId) {
+  const rows = await getGenerationBatch(userId, runId).catch(() => []);
+  if (rows.length < 2) return {};
+  const batch = rows.map(batchItem);
+  const count = (status) => batch.filter((item) => item.status === status).length;
+  return {
+    batch,
+    batch_summary: `${batch.length} generations were started together in this request: ${count('ready')} ready, ${count('processing')} still generating, ${count('failed')} failed. The card shows all of them and updates by itself; call get_generation again to refresh their status.`
   };
 }
 
@@ -562,11 +598,13 @@ export function createHansoraServer(ctx) {
       }
       if (!response.ok) throw new Error(result.message || result.error || `generation_submit_failed_${response.status}`);
       return jsonText({
+        ...(await batchFields(userId, runId)),
         ok: true,
         run_id: runId,
         model_id: model.id,
         model_name: model.name,
         media_type: model.category,
+        credits: price ? price.displayedCredits : undefined,
         status: response.status === 202 ? 'queued' : 'submitted',
         prompt: normalizedInput.prompt,
         aspect_ratio: normalizedInput.aspect_ratio || null,
@@ -655,7 +693,8 @@ export function createHansoraServer(ctx) {
   }, async ({ run_id }) => {
     try {
       const generation = await getGeneration(userId, run_id);
-      return generation ? jsonText(presentGeneration(generation, run_id)) : toolError(new Error('generation_not_found'));
+      if (!generation) return toolError(new Error('generation_not_found'));
+      return jsonText({ ...presentGeneration(generation, run_id), ...(await batchFields(userId, run_id)) });
     } catch (error) { return toolError(error); }
   });
 

@@ -63,7 +63,7 @@ function host({ output, input, widgetState, get = () => envelope(complete()), na
     result(value) { emit('message', { source: window.parent, data: { jsonrpc: '2.0', method: 'ui/notifications/tool-result', params: value } }); },
     visible(value) { intersection([{ isIntersecting: value }]); },
     snapshot: () => structuredClone(window.openai.widgetState),
-    section: () => ['ready', 'processing', 'failed', 'unavailable', 'upload', 'multiUpload'].find((id) => nodes.has(id) && !nodes.get(id).classList.contains('hidden'))
+    section: () => ['ready', 'processing', 'batch', 'failed', 'unavailable', 'upload', 'multiUpload'].find((id) => nodes.has(id) && !nodes.get(id).classList.contains('hidden'))
   };
 }
 
@@ -217,4 +217,30 @@ test('a cold parent that misses the first handshake messages can still open the 
     await card.tick(30000);
     assert.equal(card.messages.filter((message) => message.method === 'ui/initialize').length, 3);
   }
+});
+
+test('several generations started together show as one gallery that fills in as each finishes', async () => {
+  const item = (run_id, done) => ({ run_id, status: done ? 'ready' : 'processing', media_type: 'image', model_name: 'Nano Banana 2',
+    result_url: done ? `https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/history/${run_id}.png` : null });
+  let secondDone = false;
+  const card = host({
+    output: { ...queued('run-2'), batch: [item('run-1', true), item('run-2', false)] },
+    get: () => envelope({ ...queued('run-2'), status: secondDone ? 'ready' : 'processing', batch: [item('run-1', true), item('run-2', secondDone)] })
+  });
+  await flush();
+  assert.equal(card.section(), 'batch');
+  assert.equal(card.nodes.get('gallery').children.length, 2);
+  assert.equal(card.nodes.get('gallery').children[0].children[0].tag, 'img');
+  assert.match(card.nodes.get('batchText').textContent, /1 ready · 1 generating/);
+  assert.equal(card.nodes.get('badge').textContent, 'Generating');
+
+  secondDone = true;
+  await card.tick(7000);
+  assert.equal(card.section(), 'batch');
+  assert.match(card.nodes.get('batchText').textContent, /^2 ready/);
+  assert.equal(card.nodes.get('badge').textContent, 'Ready');
+  assert.ok(card.calls.every((call) => call.name === 'get_generation' && call.arguments.run_id === 'run-2'));
+  const calls = card.calls.length;
+  await card.tick(30000);
+  assert.equal(card.calls.length, calls); // nothing left to check, so polling stops
 });
