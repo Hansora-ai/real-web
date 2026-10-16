@@ -38,9 +38,34 @@ test('cheaper options never suggest clips shorter than 5 seconds', () => {
   for (const option of options) assert.ok(!(option.settings.duration < 5), `${option.model_name} ${option.settings.duration}s`);
 });
 
-test('Kling 2.5 uses extra photos as nothing more than the start image, never as an end frame', () => {
-  const several = buildGenerationPayload('kling25', { prompt: 'gymnast', image_urls: [img('a'), img('b'), img('c')] }, 'u', 'r');
-  assert.deepEqual([several.image_url, several.tail_image_url], [img('a'), undefined]);
-  const asked = buildGenerationPayload('kling25', { prompt: 'go', first_frame_url: img('a'), last_frame_url: img('b') }, 'u', 'r');
-  assert.deepEqual([asked.image_url, asked.tail_image_url], [img('a'), img('b')]);
+test('every video model uses images by its kind: frames, frames + references, references, or one image', () => {
+  const build = (id, request) => buildGenerationPayload(id, { prompt: 'p', ...request }, 'u', 'r');
+  // Frames only: one image is the first frame, two are first and last.
+  assert.deepEqual([build('kling25', { image_urls: [img('a')] }).image_url, build('kling25', { image_urls: [img('a')] }).tail_image_url], [img('a'), undefined]);
+  const kling = build('kling25', { image_urls: [img('a'), img('b')] });
+  assert.deepEqual([kling.image_url, kling.tail_image_url], [img('a'), img('b')]);
+  const kling30 = build('kling30', { image_urls: [img('a'), img('b')] });
+  assert.deepEqual([kling30.first_frame_url, kling30.last_frame_url], [img('a'), img('b')]);
+  const veo = build('veo31-lite', { image_urls: [img('a'), img('b')] });
+  assert.deepEqual([veo.firstFrameUrl, veo.lastFrameUrl, veo.referenceImageUrls], [img('a'), img('b'), []]);
+  // Frames + references: references unless a frame is passed explicitly.
+  for (const id of ['seedance25', 'wan27-video', 'happyhorse10', 'wan-3']) {
+    const one = build(id, { image_urls: [img('a')] });
+    assert.equal(one.first_frame_url, undefined, id);
+    assert.deepEqual(one.reference_image_urls, [img('a')], id);
+  }
+  const wanFrames = build('wan27-video', { first_frame_url: img('a'), last_frame_url: img('b') });
+  assert.deepEqual([wanFrames.first_frame_url, wanFrames.last_frame_url, wanFrames.reference_image_urls], [img('a'), img('b'), []]);
+  const horseFrame = build('happyhorse10', { first_frame_url: img('a') });
+  assert.deepEqual([horseFrame.image_urls, horseFrame.reference_image_urls], [[img('a')], []]);
+  // References only: a frame passed by the host is still a reference.
+  assert.deepEqual(build('gemini-omni-video', { first_frame_url: img('a'), image_urls: [img('b')] }).image_urls, [img('a'), img('b')]);
+  // One image: the first one is the starting image.
+  assert.deepEqual(build('grok-video', { image_urls: [img('a'), img('b')] }).image_urls, [img('a')]);
+  assert.equal(build('kling26', { image_urls: [img('a'), img('b')] }).image_url, img('a'));
+  // ChatGPT is told the rule for each kind.
+  assert.match(getModel('kling25').image_handling, /two images are the first and last frame/);
+  assert.match(getModel('wan27-video').image_handling, /reference images .* by default/);
+  assert.match(getModel('gemini-omni-flash-1-1').image_handling, /no first or last frame/);
+  assert.match(getModel('kling26').image_handling, /one image/);
 });
