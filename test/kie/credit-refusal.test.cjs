@@ -85,3 +85,12 @@ test('a provider rejection is recorded with the provider message instead of timi
   assert.equal(patches[0].body.meta.provider_message, 'The image contains content that is not allowed.');
   assert.equal(patches[0].body.meta.provider_code, 422);
 });
+
+test('a Veo failure callback (code and msg only) counts as failed, polling probes do not', () => {
+  const kieCheck = require('../../netlify/functions/kie-check.js');
+  const veoFail = { code: 400, msg: 'Your prompt was flagged.', data: { taskId: 't', info: null } };
+  assert.equal(kieCheck.callbackStatus(veoFail), 'failed');
+  assert.equal(kieCheck.failureReason(veoFail), 'Your prompt was flagged.');
+  assert.equal(kieCheck.callbackStatus({ code: 200, msg: 'generated successfully', data: { info: { resultUrls: ['https://x/v.mp4'] } } }), 'pending');
+  assert.equal(kieCheck.callbackStatus({ code: 200, data: { state: 'fail', failMsg: 'bad' } }), 'failed');
+});

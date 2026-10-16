@@ -109,6 +109,38 @@ function batchItem(generation) {
 }
 
 // Every generation ChatGPT started in the same burst, so one card (and the assistant) sees all of them.
+// The website asks KIE directly while it waits, which also repairs a missed or unreadable callback.
+// ChatGPT cards only read the row, so do the same check here for runs that stay "processing".
+const PROVIDER_CHECK_AFTER_MS = 60 * 1000;
+const PROVIDER_CHECK_EVERY_MS = 20 * 1000;
+const lastProviderCheck = new Map();
+
+function needsProviderCheck(generation) {
+  const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
+  if (generation?.result_url || !(meta.task_id || meta.taskId)) return false;
+  if (!/^(processing|pending|queued|running|)$/i.test(String(meta.status || ''))) return false;
+  if (meta.checker && meta.checker !== 'kie-check') return false;
+  if (meta.source_feature === 'henshin') return false;
+  const age = Date.now() - Date.parse(generation.created_at || '');
+  return Number.isFinite(age) && age > PROVIDER_CHECK_AFTER_MS;
+}
+
+async function refreshFromProvider(userId, generations, origin) {
+  const due = generations.filter((generation) => {
+    const runId = String(generation?.meta?.run_id || '');
+    if (!runId || !needsProviderCheck(generation)) return false;
+    if (Date.now() - (lastProviderCheck.get(runId) || 0) < PROVIDER_CHECK_EVERY_MS) return false;
+    lastProviderCheck.set(runId, Date.now());
+    return true;
+  }).slice(0, 4);
+  if (lastProviderCheck.size > 2000) lastProviderCheck.clear();
+  await Promise.all(due.map((generation) => fetch(
+    `${origin}/.netlify/functions/kie-check?uid=${encodeURIComponent(userId)}&run_id=${encodeURIComponent(generation.meta.run_id)}`,
+    { signal: AbortSignal.timeout(20000) }
+  ).catch(() => null)));
+  return due.length > 0;
+}
+
 async function batchFields(userId, runId) {
   const rows = await getGenerationBatch(userId, runId).catch(() => []);
   if (rows.length < 2) return {};
@@ -710,8 +742,13 @@ export function createHansoraServer(ctx) {
     _meta: generationToolMeta('Checking Hansora generation…', 'Hansora generation updated')
   }, async ({ run_id }) => {
     try {
-      const generation = await getGeneration(userId, run_id);
+      let generation = await getGeneration(userId, run_id);
       if (!generation) return toolError(new Error('generation_not_found'));
+      const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
+      const siblings = await getGenerationBatch(userId, run_id).catch(() => []);
+      if (await refreshFromProvider(userId, [generation, ...siblings], origin)) {
+        generation = (await getGeneration(userId, run_id)) || generation;
+      }
       return jsonText({ ...presentGeneration(generation, run_id), ...(await batchFields(userId, run_id)) });
     } catch (error) { return toolError(error); }
   });

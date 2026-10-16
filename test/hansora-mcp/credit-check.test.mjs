@@ -10,7 +10,7 @@ const { default: hansoraMcp } = await import('../../netlify/functions/hansora-mc
 const token = `x.${Buffer.from(JSON.stringify({ client_id: 'chatgpt', scope: 'email' })).toString('base64url')}.y`;
 
 // Drives the real /mcp handler; only Supabase and the generation runner are simulated.
-async function callTool(name, args, { credits, generations = [], runner = () => ({ status: 202, body: { ok: true, submitted: true } }) }) {
+async function callTool(name, args, { credits, generations = [], runner = () => ({ status: 202, body: { ok: true, submitted: true } }), kieCheck = null }) {
   const submitted = [];
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, options = {}) => {
@@ -20,6 +20,7 @@ async function callTool(name, args, { credits, generations = [], runner = () => 
     if (href.includes('/rest/v1/profiles')) return reply(200, [{ credits }]);
     if (href.includes('/rest/v1/user_subscriptions')) return reply(200, []);
     if (href.includes('/rest/v1/user_generations')) return reply(200, generations);
+    if (kieCheck && href.includes('/.netlify/functions/kie-check')) return reply(200, kieCheck(new URL(href)));
     if (href.includes('/.netlify/functions/safe-run')) {
       submitted.push(JSON.parse(options.body));
       const result = runner();
@@ -159,4 +160,31 @@ test('a provider refusal reaches ChatGPT with its reason, both at submit and on 
     meta: { run_id: 'u-mcp-7', status: 'failed', error_summary: 'provider_rejected', provider_message: 'Image not allowed' } };
   const status = await callTool('get_generation', { run_id: 'u-mcp-7' }, { credits: 30, generations: [row] });
   assert.match(status.result.structuredContent.message, /^The provider refused to start this generation: Image not allowed\./);
+});
+
+test('a run stuck on processing is checked with KIE, so a failed Veo job stops spinning', async () => {
+  const stuck = { id: 'v', provider: 'veo3.1lite', kind: 'video', prompt: 'Rikku on a beach', result_url: null,
+    created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    meta: { model: 'veo3_lite', run_id: 'u-mcp-veo-1', status: 'processing', task_id: 'e6c1b8', charged: 'true' } };
+  const generations = [stuck];
+  const checks = [];
+  const { result } = await callTool('get_generation', { run_id: 'u-mcp-veo-1' }, {
+    credits: 30, generations,
+    kieCheck: (url) => {
+      checks.push([url.searchParams.get('uid'), url.searchParams.get('run_id')]);
+      generations[0] = { ...stuck, meta: { ...stuck.meta, status: 'failed', failed: true, refunded: true } };
+      return { ok: false, failed: true, status: 'failed' };
+    }
+  });
+  assert.deepEqual(checks, [['user-1', 'u-mcp-veo-1']]);
+  assert.equal(result.structuredContent.status, 'failed');
+});
+
+test('a fresh run is not checked with KIE yet', async () => {
+  const fresh = { id: 'f', provider: 'Grok', kind: 'video', prompt: 'x', result_url: null, created_at: new Date().toISOString(),
+    meta: { run_id: 'u-mcp-fresh', status: 'processing', task_id: 't1', engine: 'grok' } };
+  let checked = false;
+  const { result } = await callTool('get_generation', { run_id: 'u-mcp-fresh' }, { credits: 30, generations: [fresh], kieCheck: () => { checked = true; return {}; } });
+  assert.equal(checked, false);
+  assert.equal(result.structuredContent.status, 'processing');
 });
