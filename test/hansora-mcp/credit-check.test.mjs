@@ -147,3 +147,16 @@ test('a single generation has no batch', async () => {
   assert.equal('batch' in result.structuredContent, false);
   assert.equal(result.structuredContent.model_name, 'Grok Video');
 });
+
+test('a provider refusal reaches ChatGPT with its reason, both at submit and on status checks', async () => {
+  const { result } = await callTool('create_generation', { model_id: 'kling25', prompt: 'a gymnast', image_urls: ['https://s.test/a.png'] }, {
+    credits: 30, runner: () => ({ status: 502, body: { ok: false, error: 'missing_task_id', details: { code: 422, msg: 'Image not allowed' } } })
+  });
+  assert.equal(result.isError, true);
+  assert.match(result.content[0].text, /missing_task_id: Image not allowed\. Nothing was generated and no credits were used\./);
+
+  const row = { id: 'r', provider: 'Kling-5s', kind: 'video', prompt: 'x', result_url: null, created_at: new Date().toISOString(),
+    meta: { run_id: 'u-mcp-7', status: 'failed', error_summary: 'provider_rejected', provider_message: 'Image not allowed' } };
+  const status = await callTool('get_generation', { run_id: 'u-mcp-7' }, { credits: 30, generations: [row] });
+  assert.match(status.result.structuredContent.message, /^The provider refused to start this generation: Image not allowed\./);
+});

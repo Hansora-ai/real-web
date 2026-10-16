@@ -44,11 +44,17 @@ function creditFailureMessage(meta) {
   return `Not enough credits for this generation.${amounts} Nothing was generated and no credits were used. Do not retry on your own; tell the user and let them choose how to continue.`;
 }
 
+function providerRejectionMessage(meta) {
+  if (meta.error_summary !== 'provider_rejected') return '';
+  const reason = String(meta.provider_message || meta.submit_error || '').slice(0, 300);
+  return `The provider refused to start this generation${reason ? `: ${reason}` : ''}. Nothing was generated and no credits were used. Tell the user the reason; do not resend the same request unchanged.`;
+}
+
 function presentGeneration(generation, runId) {
   const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
   const status = generation?.result_url ? 'ready' : String(meta.status || 'processing');
   if (/(fail|error|refund|cancel)/i.test(status)) {
-    const failure = creditFailureMessage(meta) || PUBLIC_GENERATION_FAILURE;
+    const failure = creditFailureMessage(meta) || providerRejectionMessage(meta) || PUBLIC_GENERATION_FAILURE;
     return {
       id: generation?.id,
       provider: generation?.provider,
@@ -602,7 +608,13 @@ export function createHansoraServer(ctx) {
           : price;
         return insufficientCreditsResult({ model, price: charged, balanceInternal: account.internal_credits, input: normalizedInput });
       }
-      if (!response.ok) throw new Error(result.message || result.error || `generation_submit_failed_${response.status}`);
+      if (!response.ok) {
+        // Pass the provider's own reason (e.g. a content refusal) so the assistant can explain it
+        // instead of retrying the same request.
+        const providerReason = String(result.details?.msg || result.details?.message || '').slice(0, 300);
+        const reason = result.message || result.error || `generation_submit_failed_${response.status}`;
+        throw new Error(providerReason && providerReason !== reason ? `${reason}: ${providerReason}. Nothing was generated and no credits were used.` : reason);
+      }
       return jsonText({
         ...(await batchFields(userId, runId)),
         ok: true,

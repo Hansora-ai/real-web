@@ -37,3 +37,10 @@ test('cheaper options never suggest clips shorter than 5 seconds', () => {
   assert.ok(options.length > 0);
   for (const option of options) assert.ok(!(option.settings.duration < 5), `${option.model_name} ${option.settings.duration}s`);
 });
+
+test('Kling 2.5 uses extra photos as nothing more than the start image, never as an end frame', () => {
+  const several = buildGenerationPayload('kling25', { prompt: 'gymnast', image_urls: [img('a'), img('b'), img('c')] }, 'u', 'r');
+  assert.deepEqual([several.image_url, several.tail_image_url], [img('a'), undefined]);
+  const asked = buildGenerationPayload('kling25', { prompt: 'go', first_frame_url: img('a'), last_frame_url: img('b') }, 'u', 'r');
+  assert.deepEqual([asked.image_url, asked.tail_image_url], [img('a'), img('b')]);
+});

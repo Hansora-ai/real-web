@@ -322,10 +322,10 @@ async function serviceRequest(path, options = {}) {
   });
 }
 
-// Runners create the history row before they check the balance. When they refuse with 402 the row
-// never gets a provider task, and the missing-task cleanup later labels it missing_task_id_timeout.
-// Record the real reason now so history and analytics say "not enough credits".
-async function recordCreditRefusal(event, payload, responseBody) {
+// Runners create the history row before they check the balance or call the provider. When they
+// refuse (402) or the provider rejects the task, the row never gets a task id and the missing-task
+// cleanup later labels it missing_task_id_timeout, losing the reason. Record the real reason now.
+async function recordSubmitFailure(event, payload, responseBody) {
   const runId = String(payload?.run_id || payload?.runId || '').trim();
   if (!runId) return;
   const user = await authenticateUser(event);
@@ -333,7 +333,10 @@ async function recordCreditRefusal(event, payload, responseBody) {
   let refusal = {};
   try { refusal = JSON.parse(responseBody || '{}') || {}; } catch {}
   const reason = String(refusal.error || refusal.message || refusal.error_summary || '');
-  if (!/not_enough_credits|insufficient/i.test(reason)) return;
+  const creditRefusal = /not_enough_credits|insufficient/i.test(reason);
+  const details = refusal.details && typeof refusal.details === 'object' ? refusal.details : {};
+  const providerMessage = String(details.msg || details.message || details.error?.message || details.error || refusal.message || '').slice(0, 300);
+  const providerCode = details.code ?? details.status ?? null;
   const lookup = await serviceRequest(`/rest/v1/user_generations?user_id=eq.${encodeURIComponent(user.id)}&meta->>run_id=eq.${encodeURIComponent(runId)}&select=id,meta`);
   if (!lookup.ok) return;
   const rows = await lookup.json().catch(() => []);
@@ -351,8 +354,11 @@ async function recordCreditRefusal(event, payload, responseBody) {
           ...meta,
           status: 'failed',
           failed: true,
-          error: 'not_enough_credits',
-          error_summary: 'not_enough_credits',
+          error: creditRefusal ? 'not_enough_credits' : 'provider_rejected',
+          error_summary: creditRefusal ? 'not_enough_credits' : 'provider_rejected',
+          ...(!creditRefusal && reason ? { submit_error: reason.slice(0, 120) } : {}),
+          ...(!creditRefusal && providerMessage && providerMessage !== reason ? { provider_message: providerMessage } : {}),
+          ...(!creditRefusal && providerCode != null ? { provider_code: providerCode } : {}),
           ...(Number.isFinite(need) ? { need } : {}),
           ...(Number.isFinite(credits) ? { credits } : {}),
           failed_at: new Date().toISOString()
@@ -647,9 +653,10 @@ exports.handler = async function handler(event) {
       signal: AbortSignal.timeout(55000)
     });
     const responseBody = await response.text();
-    if (response.status === 402) {
-      await recordCreditRefusal(event, request.payload, responseBody).catch((error) => {
-        console.warn('safe_run_credit_refusal_record_failed', error && error.message);
+    // 409 means another request for the same run is still being charged; leave that row alone.
+    if (response.status >= 400 && response.status !== 409) {
+      await recordSubmitFailure(event, request.payload, responseBody).catch((error) => {
+        console.warn('safe_run_submit_failure_record_failed', error && error.message);
       });
     }
     return {

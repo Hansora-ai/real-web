@@ -64,10 +64,24 @@ test('rows that already started or are not credit refusals are left alone', asyn
   });
   assert.equal(started.patches.length, 0);
 
-  const other = await run({
-    runnerStatus: 500,
-    runnerBody: { ok: false, error: 'kie_create_failed' },
+  const busy = await run({
+    runnerStatus: 409,
+    runnerBody: { ok: false, error: 'charge_in_progress' },
     rows: [{ id: 'row-1', meta: { run_id: 'run-1', status: 'pending' } }]
   });
-  assert.equal(other.patches.length, 0);
+  assert.equal(busy.patches.length, 0);
+});
+
+test('a provider rejection is recorded with the provider message instead of timing out later', async () => {
+  const { patches } = await run({
+    runnerStatus: 502,
+    runnerBody: { ok: false, error: 'missing_task_id', details: { code: 422, msg: 'The image contains content that is not allowed.' } },
+    rows: [{ id: 'row-1', meta: { run_id: 'run-1', status: 'pending', source: 'kling' } }]
+  });
+  assert.equal(patches.length, 1);
+  assert.equal(patches[0].body.meta.status, 'failed');
+  assert.equal(patches[0].body.meta.error_summary, 'provider_rejected');
+  assert.equal(patches[0].body.meta.submit_error, 'missing_task_id');
+  assert.equal(patches[0].body.meta.provider_message, 'The image contains content that is not allowed.');
+  assert.equal(patches[0].body.meta.provider_code, 422);
 });
