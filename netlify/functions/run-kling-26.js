@@ -68,7 +68,7 @@ async function debitCredits(uid, cost){
     const r0 = await fetch(profUrl, { headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
     if (!r0.ok) return { ok:false, error:'profile_fetch_failed', status:r0.status };
     const arr = await r0.json().catch(()=>null);
-    const cur = (Array.isArray(arr) && arr[0] && typeof arr[0].credits==='number') ? arr[0].credits : 0;
+    const cur = Number(Array.isArray(arr) && arr[0] ? arr[0].credits : 0) || 0;
     if (cur < cost) return { ok:false, error:'insufficient_credits', credits: cur };
     const newCredits = Math.max(0, cur - cost);
     const updUrl = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`;
@@ -82,6 +82,15 @@ async function debitCredits(uid, cost){
   }catch(e){ return { ok:false, error:'server_exception', details:String(e&&e.message||e) }; }
 }
 
+async function getCredits(uid){
+  if (!SUPABASE_URL || !SERVICE_KEY || !uid) return 0;
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`, {
+    headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+  });
+  if (!r.ok) throw new Error(`profile_fetch_failed_${r.status}`);
+  const arr = await r.json().catch(()=>null);
+  return Number(Array.isArray(arr) && arr[0] ? arr[0].credits : 0) || 0;
+}
 
 async function fetchUserGenByRunId(uid, run_id){
   if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) return null;
@@ -246,6 +255,13 @@ exports.handler = async (event) => {
     const existingTask = existing?.meta?.task_id || existing?.meta?.taskId || '';
     if (existingTask){
       return json(201, { ok:true, submitted:true, taskId: String(existingTask), id: String(existingTask), run_id, row_id: existing?.id || null, already:true });
+    }
+
+    // Check the balance BEFORE creating the KIE task. The debit below only runs after
+    // KIE accepts the job, so without this check a short balance still got the video.
+    const currentCredits = await getCredits(uid);
+    if (currentCredits < cost) {
+      return json(402, { ok:false, error:'not_enough_credits', credits: currentCredits, need: cost });
     }
 
     // Seed placeholder row early (used for idempotent charging)
