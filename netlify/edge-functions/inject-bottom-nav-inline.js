@@ -5,6 +5,9 @@ export default async (request, context) => {
   const res = await context.next();
   const requestPath = new URL(request.url).pathname.toLowerCase();
 
+  // The public resource center has its own responsive navigation and no account dependencies.
+  if (requestPath === '/resources' || requestPath.startsWith('/resources/')) return res;
+
   // Authentication, connector documentation and the full-screen video editor use focused standalone layouts.
   if (requestPath === '/oauth/consent' || requestPath === '/oauth/consent.html' || /^\/caption-studio(?:_(?:ru|arm))?(?:\.html)?\/?$/.test(requestPath) || /^\/automation(?:-[a-z]+)?(?:\.html)?(?:\/|$)/.test(requestPath)) {
     return res;
