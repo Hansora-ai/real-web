@@ -210,6 +210,7 @@ const ALLOWED_RUN_ENDPOINTS = new Set([
   '/.netlify/functions/run-grok-image',
   '/.netlify/functions/run-grok-video',
   '/.netlify/functions/run-happyhorse-1',
+  '/.netlify/functions/run-henshin',
   '/.netlify/functions/run-kling',
   '/.netlify/functions/run-kling-26',
   '/.netlify/functions/run-kling-3-turbo',

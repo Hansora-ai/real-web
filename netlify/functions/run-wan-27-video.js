@@ -1,355 +1,267 @@
-// netlify/functions/run-wan-2-7-image.js
-// Wan 2.7 Image launcher via KIE createTask with server-side credit debit (idempotent per run_id).
-// - Normal: model wan/2-7-image
-// - Pro: model wan/2-7-image-pro
-// Credits: 0.5 normal, 1 pro (server-side only; client must NOT debit)
+// netlify/functions/run-wan-27-video.js
+// Wan 2.7 video launcher via KIE createTask. The mode follows the inputs:
+// - reference images/videos      -> wan/2-7-r2v (reference to video, optional first frame)
+// - first/last frame or a clip   -> wan/2-7-image-to-video
+// - prompt only                  -> wan/2-7-text-to-video
+// Credits: 1.5 per second at 720p, 2 per second at 1080p (same as the website quote).
+// The balance is checked before KIE is called and debited once KIE accepts the task.
 //
-// Env: KIE_CREATE_URL (optional), KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SITE_BASE (optional)
-//
-const CREATE_URL = process.env.KIE_CREATE_URL || "https://api.kie.ai/api/v1/jobs/createTask";
-const API_KEY    = process.env.KIE_API_KEY || "";
+// Env: KIE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// Opt: KIE_BASE_URL, SITE_BASE, WAN_27_T2V_MODEL, WAN_27_I2V_MODEL, WAN_27_R2V_MODEL
+const KIE_BASE = (process.env.KIE_BASE_URL || 'https://api.kie.ai').replace(/\/+$/, '');
+const KIE_KEY = process.env.KIE_API_KEY || '';
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SITE_BASE = (process.env.SITE_BASE || 'https://hansora.co').replace(/\/+$/, '');
+const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-check`;
+const MODELS = {
+  t2v: process.env.WAN_27_T2V_MODEL || 'wan/2-7-text-to-video',
+  i2v: process.env.WAN_27_I2V_MODEL || 'wan/2-7-image-to-video',
+  r2v: process.env.WAN_27_R2V_MODEL || 'wan/2-7-r2v',
+};
+const ASPECT_RATIOS = ['16:9', '9:16', '1:1', '4:3', '3:4'];
+const MAX_REFERENCES = 5;
 
-const SUPABASE_URL  = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
-const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+function cors() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': '*',
+  };
+}
 
-const SITE_BASE   = (process.env.SITE_BASE || "https://hansora.co").replace(/\/+$/, "");
-const CALLBACK_URL = `${SITE_BASE}/.netlify/functions/kie-check`;
+const json = (statusCode, body) => ({
+  statusCode,
+  headers: { 'Content-Type': 'application/json', ...cors() },
+  body: JSON.stringify(body),
+});
 
-const VERSION_TAG  = "wan_2_7_image_kie_v1";
+function getHeader(event, key) {
+  return event.headers?.[key] || event.headers?.[key.toLowerCase()] || event.headers?.[key.toUpperCase()] || null;
+}
 
-function cors(){ return {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': '*',
-}; }
-const json = (c,o)=>({ statusCode:c, headers:{ 'Content-Type':'application/json', ...cors() }, body:JSON.stringify(o) });
-
-function getHeader(event, k){ return event.headers?.[k] || event.headers?.[k.toLowerCase()] || event.headers?.[k.toUpperCase()] || null; }
-function getUID(event, body){
+function getUID(event, body) {
   const qs = new URLSearchParams(event.queryStringParameters || {});
-  return ((getHeader(event,'x-user-id')||'') || (body && (body.uid||'')) || (qs.get('uid')||'')).trim();
+  return String(getHeader(event, 'x-user-id') || body?.uid || body?.user_id || qs.get('uid') || '').trim();
 }
 
-async function getUidFromBearer(event){
-  const auth = (getHeader(event,'authorization')||'').trim();
-  if (!auth) return '';
-  const m = auth.match(/Bearer\s+(.+)/i);
-  if (!m) return '';
-  const token = (m[1]||'').trim();
-  if (!token || !SUPABASE_URL || !SERVICE_KEY) return '';
-  try{
-    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${token}` }
-    });
-    if (!r.ok) return '';
-    const u = await r.json().catch(()=>null);
-    return (u && (u.id || u.user?.id) ? String(u.id || u.user.id) : '').trim();
-  }catch(_e){ return ''; }
+async function verifyAuth(event, uid) {
+  const auth = getHeader(event, 'authorization') || '';
+  const token = (auth.match(/^Bearer\s+(.+)$/i) || [])[1] || '';
+  if (!token) return { ok: false, error: 'missing_auth' };
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return { ok: false, error: 'bad_auth', status: res.status };
+  const user = await res.json().catch(() => null);
+  const id = user && (user.id || user.user?.id);
+  if (!id || String(id) !== String(uid)) return { ok: false, error: 'uid_mismatch' };
+  return { ok: true };
 }
 
-function normalizeAspectRatio(v) {
-  if (!v) return "1:1";
-  const s = String(v).trim().toLowerCase();
-  const direct = new Set(["1:1","2:3","3:2","3:4","4:3","4:5","5:4","9:16","16:9"]);
-  if (direct.has(s)) return s;
-  const coerced = s.replace(/(\d)[_\-:](\d)/g, "$1:$2");
-  if (direct.has(coerced)) return coerced;
-  return "1:1";
+function httpsUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    return url.protocol === 'https:' ? url.href : '';
+  } catch {
+    return '';
+  }
 }
 
-function normalizeTier(v) {
-  const s = String(v || "normal").trim().toLowerCase();
-  return s === "pro" ? "pro" : "normal";
+function urlList(...values) {
+  const out = [];
+  for (const value of values.flat()) {
+    const url = httpsUrl(value);
+    if (url && !out.includes(url)) out.push(url);
+  }
+  return out;
 }
 
-async function fetchUserGenByRunId(uid, run_id){
-  if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) return null;
-  try{
-    const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&select=id,meta,provider,kind,prompt,result_url,created_at`;
-    const r = await fetch(ug + q, { headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
-    if (!r.ok) return null;
-    const arr = await r.json().catch(()=>null);
-    return (Array.isArray(arr) && arr[0]) ? arr[0] : null;
-  }catch(_e){ return null; }
+function normalizeResolution(value) {
+  return String(value || '').toLowerCase() === '1080p' ? '1080p' : '720p';
 }
 
-async function seedUserGeneration(uid, run_id, prompt, provider, metaExtra){
-  if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { row_id:null };
-  try{
-    const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-    const meta = Object.assign({ source:'wan-2-7-image', run_id, model:'wan-2-7-image', status:'pending' }, (metaExtra||{}));
-    const rIns = await fetch(ug, {
-      method: 'POST',
-      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-      body: JSON.stringify({ user_id: uid, provider, kind: 'image', prompt, result_url: null, meta }),
-    });
-    if (!rIns.ok) return { row_id:null };
-    const arr = await rIns.json().catch(()=>null);
-    return { row_id: (Array.isArray(arr) && arr[0] && arr[0].id) ? arr[0].id : null };
-  }catch(_e){ return { row_id:null }; }
+function normalizeDuration(value) {
+  const seconds = Math.round(Number(value) || 5);
+  return Math.max(2, Math.min(10, seconds));
 }
 
-async function debitCredits(uid, cost){
-  if (!SUPABASE_URL || !SERVICE_KEY || !uid) return { ok:false, error:'missing_env_or_uid' };
-  try{
-    const profUrl = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`;
-    const r0 = await fetch(profUrl, { headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } });
-    if (!r0.ok) return { ok:false, error:'profile_fetch_failed', status:r0.status };
-    const arr = await r0.json().catch(()=>null);
-    const cur = (Array.isArray(arr) && arr[0] && typeof arr[0].credits==='number') ? arr[0].credits : 0;
-    if (cur < cost) return { ok:false, error:'insufficient_credits', credits: cur };
-    const newCredits = Math.max(0, cur - cost);
-    const updUrl = `${SUPABASE_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`;
-    const r1 = await fetch(updUrl, {
-      method:'PATCH',
-      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer':'return=representation' },
-      body: JSON.stringify({ credits: newCredits })
-    });
-    if (!r1.ok) return { ok:false, error:'profile_update_failed', status:r1.status };
-    return { ok:true, credits:newCredits };
-  }catch(e){ return { ok:false, error:'server_exception', details:String(e&&e.message||e) }; }
+function costFor(duration, resolution) {
+  return Number((duration * (resolution === '1080p' ? 2 : 1.5)).toFixed(1));
 }
 
-async function patchUserGenerationMetaById(id, meta){
-  if (!SUPABASE_URL || !SERVICE_KEY || !id) return false;
-  try{
-    const ug = `${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(id)}`;
-    const r = await fetch(ug, {
-      method:'PATCH',
-      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
-      body: JSON.stringify({ meta })
-    });
-    return !!r.ok;
-  }catch(_e){ return false; }
+// Picks the KIE model and input from what the caller supplied.
+function buildTask(body, prompt, duration, resolution) {
+  const aspect = ASPECT_RATIOS.includes(String(body.aspect_ratio)) ? String(body.aspect_ratio) : '16:9';
+  const firstFrame = httpsUrl(body.first_frame_url);
+  const lastFrame = httpsUrl(body.last_frame_url);
+  const clip = httpsUrl(body.first_clip_url || body.video_url);
+  const referenceImages = urlList(body.reference_image_urls || []).filter((url) => url !== firstFrame && url !== lastFrame);
+  const referenceVideos = urlList(body.reference_video_urls || []).filter((url) => url !== clip);
+  const voice = urlList(body.reference_audio_urls || [], body.audio_url)[0] || '';
+  const common = { prompt, resolution, duration, prompt_extend: body.prompt_extend !== false, watermark: false };
+
+  if (referenceImages.length || referenceVideos.length) {
+    if (referenceImages.length + referenceVideos.length > MAX_REFERENCES) {
+      return { error: 'too_many_references', details: `Wan 2.7 accepts up to ${MAX_REFERENCES} reference images and videos in total.` };
+    }
+    return {
+      mode: 'r2v',
+      input: {
+        ...common,
+        aspect_ratio: aspect,
+        ...(referenceImages.length ? { reference_image: referenceImages } : {}),
+        ...(referenceVideos.length ? { reference_video: referenceVideos } : {}),
+        ...(firstFrame ? { first_frame: firstFrame } : {}),
+        ...(voice ? { reference_voice: voice } : {}),
+      },
+    };
+  }
+  if (firstFrame || clip) {
+    return {
+      mode: 'i2v',
+      input: {
+        ...common,
+        ...(firstFrame ? { first_frame_url: firstFrame } : { first_clip_url: clip }),
+        ...(firstFrame && lastFrame ? { last_frame_url: lastFrame } : {}),
+      },
+    };
+  }
+  if (lastFrame) return { error: 'last_frame_requires_first_frame', details: 'Add a first frame to use a last frame.' };
+  return { mode: 't2v', input: { ...common, aspect_ratio: aspect } };
 }
 
-async function hasUnlimitedSubscription(uid, tier){
-  if (!SUPABASE_URL || !SERVICE_KEY || !uid || uid === "anon") return false;
-  try{
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/user_subscriptions?user_id=eq.${encodeURIComponent(uid)}&select=status,plan_id,current_period_end&limit=1`, {
-      headers:{ 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
-    });
-    if (!r.ok) return false;
-    const arr = await r.json().catch(()=>[]);
-    const row = Array.isArray(arr) ? arr[0] : null;
-    if (!row || row.status !== "active" || row.plan_id !== "pro_max_monthly") return false;
-    const endMs = row.current_period_end ? Date.parse(row.current_period_end) : 0;
-    if (!Number.isFinite(endMs) || endMs <= Date.now()) return false;
-    return normalizeTier(tier) === "normal";
-  }catch(_e){ return false; }
+function extractTaskId(data) {
+  const candidates = [data?.data?.taskId, data?.taskId, data?.data?.task_id, data?.task_id, data?.data?.id];
+  return candidates.map((value) => (value == null ? '' : String(value))).find((value) => value.length > 3) || '';
 }
 
-async function markSubscriptionUnlimitedCharged(row_id, meta){
-  if (!row_id) return false;
-  return patchUserGenerationMetaById(row_id, {
-    ...(meta || {}),
-    charged: "true",
-    charged_cost: 0,
-    charge_cost: 0,
-    debited: 0,
-    refund_amount: 0,
-    subscription_unlimited: true,
-    charged_at: (new Date()).toISOString()
+async function supabase(path, options = {}) {
+  return fetch(`${SUPABASE_URL}${path}`, {
+    ...options,
+    headers: {
+      apikey: SERVICE_KEY,
+      Authorization: `Bearer ${SERVICE_KEY}`,
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers || {}),
+    },
   });
 }
 
-async function chargeOnceForRun(uid, run_id, cost, row_id, baseMeta){
-  if (!SUPABASE_URL || !SERVICE_KEY || !uid || !run_id) {
-    const debit = await debitCredits(uid, cost);
-    return { ok: !!debit.ok, debit, idempotent: false, already: false };
-  }
+async function fetchGeneration(uid, runId) {
+  const res = await supabase(`/rest/v1/user_generations?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(runId)}&select=id,meta`);
+  const rows = await res.json().catch(() => []);
+  return Array.isArray(rows) && rows[0] ? rows[0] : null;
+}
 
-  try{
-    const existing = await fetchUserGenByRunId(uid, run_id);
-    const meta0 = existing?.meta || baseMeta || {};
-    if (String(meta0?.charged || '').toLowerCase() === 'true'){
-      return { ok:true, debit:{ ok:true, credits: null }, idempotent:true, already:true };
-    }
+async function insertGeneration(uid, prompt, meta) {
+  const res = await supabase('/rest/v1/user_generations', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify({ user_id: uid, provider: 'Wan 2.7', kind: 'video', prompt, result_url: null, meta }),
+  });
+  const rows = await res.json().catch(() => []);
+  return Array.isArray(rows) && rows[0] ? rows[0].id : null;
+}
 
-    const claim = `c_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    const mergedForClaim = { ...(meta0||{}), ...(baseMeta||{}), charge_claim: claim };
+async function patchGeneration(rowId, meta) {
+  if (!rowId) return;
+  await supabase(`/rest/v1/user_generations?id=eq.${encodeURIComponent(rowId)}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ meta }),
+  });
+}
 
-    const ug = `${SUPABASE_URL}/rest/v1/user_generations`;
-    const q = `?user_id=eq.${encodeURIComponent(uid)}&meta->>run_id=eq.${encodeURIComponent(run_id)}&meta->>charged=is.null&meta->>charge_claim=is.null&select=id`;
-    const rClaim = await fetch(ug + q, {
-      method: 'PATCH',
-      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type':'application/json', 'Prefer':'return=representation' },
-      body: JSON.stringify({ meta: mergedForClaim }),
-    });
+async function getCredits(uid) {
+  const res = await supabase(`/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=credits`);
+  if (!res.ok) throw new Error(`profile_fetch_failed_${res.status}`);
+  const rows = await res.json().catch(() => []);
+  return Number(Array.isArray(rows) && rows[0] ? rows[0].credits : 0) || 0;
+}
 
-    const claimedArr = await rClaim.json().catch(()=>[]);
-    const claimed = (rClaim.ok && Array.isArray(claimedArr) && claimedArr.length > 0);
-
-    if (!claimed){
-      const after = await fetchUserGenByRunId(uid, run_id);
-      const metaAfter = after?.meta || {};
-      if (String(metaAfter?.charged || '').toLowerCase() === 'true'){
-        return { ok:true, debit:{ ok:true, credits: null }, idempotent:true, already:true };
-      }
-      return { ok:false, error:'charge_in_progress', idempotent:true, already:false };
-    }
-
-    const debit = await debitCredits(uid, cost);
-    if (!debit.ok){
-      const rollbackMeta = { ...(mergedForClaim||{}) };
-      delete rollbackMeta.charge_claim;
-      await patchUserGenerationMetaById(row_id || (Array.isArray(claimedArr)&&claimedArr[0]?.id) || (existing?.id), rollbackMeta);
-      return { ok:false, debit, idempotent:true, already:false };
-    }
-
-    const chargedMeta = { ...(mergedForClaim||{}), charged:'true', charged_cost: cost, charged_at: (new Date()).toISOString(), refund_amount: cost };
-    await patchUserGenerationMetaById(row_id || (Array.isArray(claimedArr)&&claimedArr[0]?.id) || (existing?.id), chargedMeta);
-
-    return { ok:true, debit, idempotent:true, already:false };
-  }catch(e){
-    const debit = await debitCredits(uid, cost);
-    return { ok: !!debit.ok, debit, idempotent:false, already:false, error: String(e && e.message || e) };
-  }
+async function debitCredits(uid, cost) {
+  const current = await getCredits(uid);
+  if (current < cost) return { ok: false, error: 'not_enough_credits', credits: current };
+  const next = Number((current - cost).toFixed(2));
+  const res = await supabase(`/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ credits: next }),
+  });
+  if (!res.ok) return { ok: false, error: 'profile_update_failed', status: res.status };
+  return { ok: true, credits: next };
 }
 
 exports.handler = async (event) => {
-  if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: { ...cors() } };
-  if (event.httpMethod !== "POST") return json(405, { ok:false, error:"method_not_allowed", version: VERSION_TAG });
-  if (!API_KEY) return json(500, { ok:false, error:"missing_kie_key", version: VERSION_TAG });
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors(), body: '' };
+  if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'method_not_allowed' });
 
-  try{
-    const body = JSON.parse(event.body || "{}");
+  try {
+    if (!KIE_KEY || !SUPABASE_URL || !SERVICE_KEY) return json(500, { ok: false, error: 'missing_env' });
+    let body;
+    try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { ok: false, error: 'bad_json' }); }
+    const uid = getUID(event, body);
+    if (!uid) return json(401, { ok: false, error: 'missing_uid' });
+    const auth = await verifyAuth(event, uid);
+    if (!auth.ok) return json(401, { ok: false, error: auth.error });
 
-    // Identify user (X-USER-ID OR uid) + fallback to bearer token
-    let uid = getUID(event, body);
-    if (!uid || uid === "anon") {
-      const b = await getUidFromBearer(event);
-      if (b) uid = b;
-    }
-    if (!uid) uid = "anon";
+    const prompt = String(body.prompt || '').trim();
+    if (!prompt) return json(400, { ok: false, error: 'missing_prompt' });
 
-    const run_id = (body.run_id || body.runId || `${uid}-${Date.now()}`).toString();
+    const runId = String(body.run_id || `${uid}-${Date.now()}`);
+    const existing = await fetchGeneration(uid, runId);
+    const existingTask = existing?.meta?.task_id || '';
+    if (existingTask) return json(200, { ok: true, submitted: true, taskId: existingTask, run_id: runId, already_submitted: true });
 
-    const prompt = (body.prompt || "").toString();
-    const aspect_ratio = normalizeAspectRatio(body.aspect_ratio || body.size || body.aspectRatio);
+    const duration = normalizeDuration(body.duration);
+    const resolution = normalizeResolution(body.resolution);
+    const task = buildTask(body, prompt, duration, resolution);
+    if (task.error) return json(400, { ok: false, error: task.error, details: task.details });
 
-    // Optional images from client (already-uploaded URLs)
-    const urls = Array.isArray(body.urls) ? body.urls : (Array.isArray(body.input_urls) ? body.input_urls : []);
-    const input_urls = urls.map(u => String(u)).filter(Boolean);
+    const cost = costFor(duration, resolution);
+    const credits = await getCredits(uid);
+    if (credits < cost) return json(402, { ok: false, error: 'not_enough_credits', credits, need: cost });
 
-    const isImageToImage = input_urls.length > 0;
+    const model = MODELS[task.mode];
+    const metaBase = { source: 'kie', engine: 'wan-2.7', model_id: 'wan27-video', model, mode: task.mode, run_id: runId, status: 'pending', duration, resolution, refund_amount: cost };
+    const rowId = existing?.id || await insertGeneration(uid, prompt, metaBase);
 
-    const tier = normalizeTier(body.tier || body.quality);
-    const model = tier === "pro" ? "wan/2-7-image-pro" : "wan/2-7-image";
-    const cost = tier === "pro" ? 1 : 0.5;
-    const queueAuthorized = process.env.HANSORA_QUEUE_SECRET
-      && getHeader(event, "x-hansora-queue-secret") === process.env.HANSORA_QUEUE_SECRET;
-    const subscriptionUnlimited = String(body.billing_mode || "").toLowerCase() === "unlimited"
-      && queueAuthorized && await hasUnlimitedSubscription(uid, tier);
-    const chargeCost = subscriptionUnlimited ? 0 : cost;
-
-    // Provider label: keep stable, include mode
-    const provider = "Wan 2.7 Image";
-
-    // Seed user_generations row (pending)
-    const seeded = await seedUserGeneration(uid, run_id, prompt, provider, { aspect_ratio, tier, mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: chargeCost, charge_cost: chargeCost, model_cost: cost, subscription_unlimited: subscriptionUnlimited });
-    const row_id = seeded?.row_id || null;
-
-    // callback must include uid & run_id
-    const cb = `${CALLBACK_URL}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(run_id)}`;
-
-    // Build KIE payload (per docs: model, callBackUrl, input)
-    const input = {
-      prompt,
-      aspect_ratio,
-      resolution: "1K",
-      output_format: "png",
-      n: 1,
-      watermark: false,
-      thinking_mode: false,
-      enable_sequential: true
-    };
-    if (isImageToImage) input.input_urls = input_urls;
-
-    const payload = { model, callBackUrl: cb, input };
-
-    const create = await fetch(CREATE_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify(payload)
+    const kieRes = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${KIE_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        input: task.input,
+        callBackUrl: `${CALLBACK_BASE}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`,
+      }),
     });
-
-    const text = await create.text();
-    let js; try { js = JSON.parse(text); } catch { js = { raw: text }; }
-
-    const id = js?.data?.taskId || js?.taskId || js?.data?.id || js?.id || null;
-
-    if (!create.ok || !id) {
-      // best-effort mark failure in meta
-      try {
-        if (SUPABASE_URL && SERVICE_KEY && row_id) {
-          await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(row_id)}`, {
-            method: "PATCH",
-            headers: {
-              "apikey": SERVICE_KEY,
-              "Authorization": `Bearer ${SERVICE_KEY}`,
-              "Content-Type": "application/json",
-              "Prefer": "return=minimal"
-            },
-            body: JSON.stringify({ meta: { source:"wan-2-7-image", run_id, model, status:"create_failed", task_id: id, raw: js, refund_amount: chargeCost, charge_cost: chargeCost, model_cost: cost, subscription_unlimited: subscriptionUnlimited } })
-          });
-        }
-      } catch {}
-      return json(create.status || 500, { ok:false, error:"create_failed", status:create.status, response: js, version: VERSION_TAG });
+    const data = await kieRes.json().catch(() => ({}));
+    const taskId = kieRes.ok ? extractTaskId(data) : '';
+    if (!taskId) {
+      await patchGeneration(rowId, { ...metaBase, status: 'failed', failed: true, error: 'kie_create_failed', provider_response: data, failed_at: new Date().toISOString() });
+      return json(kieRes.ok ? 502 : (kieRes.status || 502), { ok: false, error: 'kie_create_failed', details: data });
     }
 
-    // best-effort update meta processing + task id
-    try {
-      if (SUPABASE_URL && SERVICE_KEY && row_id) {
-        await fetch(`${SUPABASE_URL}/rest/v1/user_generations?id=eq.${encodeURIComponent(row_id)}`, {
-          method: "PATCH",
-          headers: {
-            "apikey": SERVICE_KEY,
-            "Authorization": `Bearer ${SERVICE_KEY}`,
-            "Content-Type": "application/json",
-            "Prefer": "return=minimal"
-          },
-          body: JSON.stringify({ meta: { source:"wan-2-7-image", run_id, model, status:"processing", task_id: id, aspect_ratio, tier, resolution:"1K", mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: chargeCost, charge_cost: chargeCost, model_cost: cost, subscription_unlimited: subscriptionUnlimited } })
-        });
-      }
-    } catch {}
-
-    // Debit credits AFTER provider accepted and exactly once per (uid, run_id)
-    const baseMeta = { source:"wan-2-7-image", run_id, model, status:"processing", task_id: id, aspect_ratio, tier, resolution:"1K", mode: isImageToImage ? "image-to-image" : "text-to-image", refund_amount: chargeCost, charge_cost: chargeCost, model_cost: cost, subscription_unlimited: subscriptionUnlimited };
-    const charged = chargeCost > 0
-      ? await chargeOnceForRun(uid, run_id, chargeCost, row_id, baseMeta)
-      : { ok:true, debit:{ ok:true, credits:null }, already:false };
-    if (chargeCost === 0) await markSubscriptionUnlimitedCharged(row_id, baseMeta);
-
-    if (!charged.ok) {
-      if (charged.debit && !charged.debit.ok && charged.debit.error === "insufficient_credits") {
-        return json(402, { ok:false, error:"not_enough_credits", details: charged.debit, version: VERSION_TAG });
-      }
-      if (charged.error === "charge_in_progress") {
-        return json(409, { ok:false, error:"charge_in_progress", version: VERSION_TAG });
-      }
-      return json(500, { ok:false, error:"charge_failed", details: charged.debit || charged.error || charged, version: VERSION_TAG });
+    const debit = await debitCredits(uid, cost);
+    if (!debit.ok) {
+      await patchGeneration(rowId, { ...metaBase, status: 'processing', task_id: taskId, charged: false, charge_error: debit.error });
+      return json(402, { ok: false, error: 'not_enough_credits', credits: debit.credits, need: cost });
     }
-
-    return json(201, {
-      ok:true,
-      id,
-      run_id,
-      row_id,
-      cost: chargeCost,
-      model_cost: cost,
-      subscription_unlimited: subscriptionUnlimited,
-      already_charged: !!charged.already,
-      version: VERSION_TAG,
-      used_callback: cb
+    await patchGeneration(rowId, {
+      ...metaBase,
+      status: 'processing',
+      task_id: taskId,
+      charged: true,
+      charged_at: new Date().toISOString(),
+      charged_cost: cost,
+      debited: cost,
     });
-
-  }catch(e){
-    return json(500, { ok:false, error:"exception", message:String(e), version: VERSION_TAG });
+    return json(201, { ok: true, submitted: true, taskId, id: taskId, run_id: runId, row_id: rowId, mode: task.mode, debited: cost, credits: debit.credits });
+  } catch (error) {
+    return json(500, { ok: false, error: 'server_error', details: String(error && error.message || error) });
   }
 };
+
+exports.buildTask = buildTask;
+exports.costFor = costFor;

@@ -81,7 +81,7 @@ function presentGeneration(generation, runId) {
 
 function displayModelName(generation) {
   const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
-  for (const id of [meta.model_id, meta.model, meta.engine]) {
+  for (const id of [meta.model_id, meta.engine, meta.model]) {
     const model = typeof id === 'string' && id ? getModel(id) : null;
     if (model?.name) return model.name;
   }
@@ -114,7 +114,7 @@ async function batchFields(userId, runId) {
     batch_summary: [
       `${batch.length} generations were started together in this request: ${count('ready')} ready, ${count('processing')} still generating, ${count('failed')} failed.`,
       ready.length ? `Ready results: ${ready.map((item) => `#${item.number} ${item.result_url}`).join(' ; ')}.` : '',
-      'The card in the chat can show only one of them, so always give the user a link to every ready result above, numbered in this order.',
+      'The card shows all of them as a gallery; in your reply also give the user a link to every ready result above, numbered in this order, so none is missed.',
       count('processing') ? 'Results that are still generating are not missing: call get_generation again with any of these run_ids in a little while to refresh all of them.' : ''
     ].filter(Boolean).join(' ')
   };

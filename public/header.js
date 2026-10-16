@@ -4991,6 +4991,29 @@
     injectHeaderStyles();
     injectHeader();
     injectAuthModal();
+    // Pages that forget to load the Supabase library would otherwise show every visitor as
+    // logged out. Load it here when missing, then restore the session as usual.
+    withSupabaseLibrary(startHeaderSession);
+  });
+
+  function withSupabaseLibrary(callback) {
+    if (window.supabase && window.supabase.createClient) { callback(); return; }
+    let done = false;
+    const finish = function () { if (!done) { done = true; callback(); } };
+    let script = document.querySelector('script[data-hansora-supabase]');
+    if (!script) {
+      script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      script.async = true;
+      script.setAttribute('data-hansora-supabase', '1');
+      document.head.appendChild(script);
+    }
+    script.addEventListener('load', finish, { once: true });
+    script.addEventListener('error', finish, { once: true });
+    setTimeout(finish, 10000);
+  }
+
+  function startHeaderSession() {
     ensureSupabaseClient();
     exposeApi();
     loadSalesAgentWidget();
@@ -5012,5 +5035,5 @@
     restoreSession().then(function () {
       if (getPendingMcpAuthReturn() && !currentUser) openAuth('login');
     }).finally(initializeRegionalAnalyticsConsent);
-  });
+  }
 })();
