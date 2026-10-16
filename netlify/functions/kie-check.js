@@ -97,7 +97,7 @@ async function handlePost(event) {
   ids.run_id = ids.run_id || row.meta?.run_id || "";
   ids.taskId = ids.taskId || row.meta?.task_id || row.meta?.taskId || "";
 
-  const status = normalizeStatus(body);
+  const status = callbackStatus(body);
   if (status === "failed") {
     const refund = await failAndRefundOnce({ row, ids, reason: failureReason(body) });
     if (refund.waiting_for_charge) {
@@ -487,6 +487,15 @@ async function patchGeneration(id, payload) {
   return res.ok;
 }
 
+// KIE callbacks report failures for some APIs (Veo) only as {"code": 4xx/5xx, "msg": "..."},
+// without a status word. A callback is about this task, so a non-200 code there means it failed.
+// Do not use this for polling: probing several endpoints returns error codes for the wrong ones.
+function callbackStatus(value) {
+  const code = Number(value?.code);
+  if (Number.isFinite(code) && value?.code !== undefined && value?.code !== null && code !== 200) return "failed";
+  return normalizeStatus(value);
+}
+
 function normalizeStatus(value) {
   const flag = value?.data?.successFlag ?? value?.successFlag ?? value?.result?.successFlag;
   if (flag === 1 || flag === "1") return "done";
@@ -523,6 +532,9 @@ function failureReason(value) {
   return String(
     value?.error ||
     value?.message ||
+    value?.msg ||
+    value?.data?.failMsg ||
+    value?.data?.errorMessage ||
     value?.data?.error ||
     value?.data?.message ||
     value?.data?.reason ||
@@ -714,3 +726,6 @@ function collectResultUrls(value, excludeUrls = []) {
 function messageOf(error) {
   return error && error.message ? error.message : String(error);
 }
+
+exports.callbackStatus = callbackStatus;
+exports.failureReason = failureReason;
