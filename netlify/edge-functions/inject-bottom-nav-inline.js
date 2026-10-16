@@ -6,7 +6,7 @@ export default async (request, context) => {
   const requestPath = new URL(request.url).pathname.toLowerCase();
 
   // Authentication, connector documentation and the full-screen video editor use focused standalone layouts.
-  if (requestPath === '/oauth/consent' || requestPath === '/oauth/consent.html' || requestPath === '/mcp-setup.html' || /^\/caption-studio(?:_(?:ru|arm))?(?:\.html)?\/?$/.test(requestPath) || /^\/automation(?:-[a-z]+)?(?:\.html)?(?:\/|$)/.test(requestPath)) {
+  if (requestPath === '/oauth/consent' || requestPath === '/oauth/consent.html' || /^\/caption-studio(?:_(?:ru|arm))?(?:\.html)?\/?$/.test(requestPath) || /^\/automation(?:-[a-z]+)?(?:\.html)?(?:\/|$)/.test(requestPath)) {
     return res;
   }
 
@@ -38,6 +38,7 @@ export default async (request, context) => {
       image: 'Image',
       video: 'Video',
       audio: 'Audio',
+      chatgptPlugin: 'ChatGPT Plugin',
       trend: 'Trend',
       more: 'See more',
       closeModels: 'Close models menu',
@@ -58,6 +59,7 @@ export default async (request, context) => {
       image: 'Պատկեր',
       video: 'Տեսանյութ',
       audio: 'Ձայն',
+      chatgptPlugin: 'ChatGPT Plugin',
       trend: 'Թրենդ',
       more: 'Տեսնել ավելին',
       closeModels: 'Փակել մոդելների ընտրացանկը',
@@ -78,6 +80,7 @@ export default async (request, context) => {
       image: 'Изображение',
       video: 'Видео',
       audio: 'Аудио',
+      chatgptPlugin: 'ChatGPT Plugin',
       trend: 'Тренды',
       more: 'Смотреть ещё',
       closeModels: 'Закрыть меню моделей',
@@ -472,6 +475,7 @@ export default async (request, context) => {
       <a href="${localizedPath('/search-models.html')}"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"></path><path d="M8 13l2.5-3 3 4 2-2.5L20 17"></path></svg> ${copy.image}</a>
       <a data-hs-video-landing href="${localizedPath('/search-models.html?model=gemini-omni-flash-1-1')}"><svg viewBox="0 0 24 24"><path d="M4 6h11v12H4z"></path><path d="M15 10l5-3v10l-5-3"></path></svg> ${copy.video}</a>
       <a href="${localizedPath('/audio.html')}"><svg viewBox="0 0 24 24"><path d="M5 10v4"></path><path d="M9 7v10"></path><path d="M13 5v14"></path><path d="M17 8v8"></path></svg> ${copy.audio}</a>
+      <a href="${localizedPath('/mcp-setup.html')}"><svg viewBox="0 0 24 24"><path d="M9 2v5M15 2v5"></path><path d="M6 7h12v4a6 6 0 0 1-12 0z"></path><path d="M12 17v5"></path></svg> ${copy.chatgptPlugin}</a>
       <button class="hs-feature-toggle" id="hs-feature-toggle" type="button">
         <span><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"></path></svg> ${copy.features}</span>
         <svg class="hs-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>

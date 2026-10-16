@@ -97,3 +97,20 @@ function = "inject-bottom-nav-inline"
 # Buying stage of quiet chats (30 min without messages), once per conversation change
 [functions."automation-sales-stage"]
   schedule = "*/10 * * * *"
+
+# Friendly address for the ChatGPT plugin / AI-app connect page.
+[[redirects]]
+  from = "/chatgpt-plugin"
+  to = "/mcp-setup.html"
+  status = 200
+
+# Russian and Armenian versions are served by the same page, which picks its language from the address.
+[[redirects]]
+  from = "/mcp-setup_ru.html"
+  to = "/mcp-setup.html"
+  status = 200
+
+[[redirects]]
+  from = "/mcp-setup_arm.html"
+  to = "/mcp-setup.html"
+  status = 200

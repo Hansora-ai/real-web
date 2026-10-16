@@ -139,7 +139,7 @@
     en: {
       home: 'HANSORA AI home', primaryNav: 'Primary navigation', image: 'Image', imageMenu: 'Image tools and models', imageSection: 'Image models and tools',
       video: 'Video', videoMenu: 'Video models', features: 'Features', featureMenu: 'Feature tools', imageTools: 'Image tools', videoAudioTools: 'Video and audio tools',
-      audio: 'Audio', audioTools: 'Audio tools', trend: 'Trend', pricing: 'Pricing', pricingAria: 'Pricing, 30% off', discount: '30% OFF', login: 'Login', openAccount: 'Open account menu',
+      audio: 'Audio', audioTools: 'Audio tools', trend: 'Trend', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'ChatGPT Plugin', pricing: 'Pricing', pricingAria: 'Pricing, 30% off', discount: '30% OFF', login: 'Login', openAccount: 'Open account menu',
       startCreating: 'Start creating', profile: 'Profile', history: 'History', credits: 'Credits', aiCourse: 'AI Course', logout: 'Logout', language: 'Language',
       closeCourse: 'Close course selection', courseEyebrow: 'Hansora AI Course', courseTitle: 'Choose your course language', courseIntro: 'Select the language in which you would like to study.',
       closeLanguage: 'Close language selection', languageEyebrow: 'Hansora language', languageTitle: 'Choose website language', languageIntro: 'Select the language for this page and every Hansora menu and popup.', current: 'Current',
@@ -154,7 +154,7 @@
     hy: {
       home: 'HANSORA AI գլխավոր էջ', primaryNav: 'Հիմնական նավիգացիա', image: 'Պատկեր', imageMenu: 'Պատկերի գործիքներ և մոդելներ', imageSection: 'Պատկերի մոդելներ և գործիքներ',
       video: 'Տեսանյութ', videoMenu: 'Տեսանյութի մոդելներ', features: 'Գործիքներ', featureMenu: 'Լրացուցիչ գործիքներ', imageTools: 'Պատկերի գործիքներ', videoAudioTools: 'Տեսանյութի և ձայնի գործիքներ',
-      audio: 'Ձայն', audioTools: 'Ձայնային գործիքներ', trend: 'Թրենդ', pricing: 'Գներ', pricingAria: 'Գներ՝ 30% զեղչով', discount: '30% ԶԵՂՉ', login: 'Մուտք', openAccount: 'Բացել հաշվի ընտրացանկը',
+      audio: 'Ձայն', audioTools: 'Ձայնային գործիքներ', trend: 'Թրենդ', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'ChatGPT պլագին', pricing: 'Գներ', pricingAria: 'Գներ՝ 30% զեղչով', discount: '30% ԶԵՂՉ', login: 'Մուտք', openAccount: 'Բացել հաշվի ընտրացանկը',
       startCreating: 'Սկսել ստեղծել', profile: 'Պրոֆիլ', history: 'Պատմություն', credits: 'Կրեդիտներ', aiCourse: 'AI դասընթաց', logout: 'Դուրս գալ', language: 'Լեզու',
       closeCourse: 'Փակել դասընթացի լեզվի ընտրությունը', courseEyebrow: 'Hansora AI դասընթաց', courseTitle: 'Ընտրեք դասընթացի լեզուն', courseIntro: 'Ընտրեք, թե որ լեզվով եք ցանկանում սովորել։',
       closeLanguage: 'Փակել լեզվի ընտրությունը', languageEyebrow: 'Hansora-ի լեզու', languageTitle: 'Ընտրեք կայքի լեզուն', languageIntro: 'Ընտրեք այս էջի, Hansora-ի ընտրացանկերի և պատուհանների լեզուն։', current: 'Ընտրված',
@@ -169,7 +169,7 @@
     ru: {
       home: 'Главная страница HANSORA AI', primaryNav: 'Основная навигация', image: 'Изображения', imageMenu: 'Инструменты и модели изображений', imageSection: 'Модели и инструменты изображений',
       video: 'Видео', videoMenu: 'Видеомодели', features: 'Инструменты', featureMenu: 'Дополнительные инструменты', imageTools: 'Инструменты для изображений', videoAudioTools: 'Инструменты для видео и аудио',
-      audio: 'Аудио', audioTools: 'Аудиоинструменты', trend: 'Тренды', pricing: 'Цены', pricingAria: 'Цены со скидкой 30%', discount: 'СКИДКА 30%', login: 'Войти', openAccount: 'Открыть меню аккаунта',
+      audio: 'Аудио', audioTools: 'Аудиоинструменты', trend: 'Тренды', chatgptPlugin: 'ChatGPT Plugin', chatgptPluginFull: 'Плагин ChatGPT', pricing: 'Цены', pricingAria: 'Цены со скидкой 30%', discount: 'СКИДКА 30%', login: 'Войти', openAccount: 'Открыть меню аккаунта',
       startCreating: 'Начать создавать', profile: 'Профиль', history: 'История', credits: 'Кредиты', aiCourse: 'AI-курс', logout: 'Выйти', language: 'Язык',
       closeCourse: 'Закрыть выбор языка курса', courseEyebrow: 'AI-курс Hansora', courseTitle: 'Выберите язык курса', courseIntro: 'Выберите язык, на котором хотите проходить обучение.',
       closeLanguage: 'Закрыть выбор языка', languageEyebrow: 'Язык Hansora', languageTitle: 'Выберите язык сайта', languageIntro: 'Выберите язык этой страницы, меню и всех окон Hansora.', current: 'Выбрано',
@@ -2189,6 +2189,18 @@
       .nav-links .hansora-nav-item{ position:relative; display:inline-flex; align-items:center; }
       .site-header .shell.nav{ position:relative; }
       .site-header .nav-links{ position:absolute; left:48%; transform:translateX(-50%); }
+      html[lang="ru"] .site-header .nav-links, html[lang="hy"] .site-header .nav-links{ left:43.5%; }
+      @media (max-width:1400px){ html[lang="ru"] .site-header .nav-links, html[lang="hy"] .site-header .nav-links{ left:40.5%; } }
+      /* Mid-size screens: keep the menu between the logo and the buttons instead of floating over them. */
+      @media (min-width:901px) and (max-width:1400px){
+        .site-header .nav-links{ position:static; transform:none; margin:0 auto; gap:2px; flex:0 1 auto; min-width:0; }
+        .site-header .nav-links a{ padding:8px 9px; font-size:.84rem; white-space:nowrap; }
+        .nav-links .hansora-nav-trigger{ gap:6px; }
+      }
+      @media (min-width:901px) and (max-width:1120px){
+        .site-header #btnGetStarted{ display:none; }
+        .site-header .nav-links a{ padding:8px 7px; font-size:.8rem; }
+      }
       .site-header.auth-checking #btnLoginSignup{ visibility:hidden !important; pointer-events:none !important; }
       .site-header .user-menu .hansora-ai-course-button{ width:100%; text-align:left; }
       .hansora-auth-form .hansora-auth-view[hidden]{ display:none !important; }
@@ -2491,7 +2503,7 @@
       }
       .hansora-brand-mobile{ display:none; }
       .nav-links .hansora-nav-trigger{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; color:inherit; }
-      .nav-links .hansora-nav-trend{ display:inline-flex; align-items:center; color:inherit; text-decoration:none; }
+      .nav-links .hansora-nav-trend{ display:inline-flex; align-items:center; color:inherit; text-decoration:none; white-space:nowrap; }
       .nav-links .hansora-nav-trigger::after{ content:""; width:6px; height:6px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); opacity:.55; margin-top:-3px; transition:transform .18s ease, opacity .18s ease; }
       .nav-links .hansora-nav-item:hover .hansora-nav-trigger::after,
       .nav-links .hansora-nav-item:focus-within .hansora-nav-trigger::after{ transform:rotate(225deg); margin-top:3px; opacity:.9; }
@@ -2966,6 +2978,7 @@
               ]
             })}
             <a class="hansora-nav-trend" href="${siteHref('/examples.html')}">${copy('trend')}</a>
+            <a class="hansora-nav-trend" href="${siteHref('/mcp-setup.html')}" title="${copy('chatgptPluginFull')}">${copy('chatgptPlugin')}</a>
           </nav>
           <div class="nav-actions">
             <a class="hansora-mobile-pricing" href="${siteHref('/pricing.html')}" aria-label="${copy('pricingAria')}">
