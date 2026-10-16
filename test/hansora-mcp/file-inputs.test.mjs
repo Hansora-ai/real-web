@@ -112,3 +112,35 @@ test('an attachment in the wrong media field is rejected', () => {
     }]
   }), /image_file_mime_type_invalid/);
 });
+
+test('ChatGPT attachments are copied to Hansora storage with a real file extension', async () => {
+  const { storeGenerationFiles } = await import('../../lib/hansora-mcp/file-inputs.mjs');
+  const jpeg = Buffer.from('ffd8ffe000104a464946000101', 'hex');
+  const calls = [];
+  const fetchImpl = async (url, options = {}) => {
+    calls.push({ url: String(url), method: options.method || 'GET', headers: options.headers || {} });
+    if (String(url).startsWith('https://oaisdmntprcentralus.blob.core.windows.net/')) {
+      return new Response(jpeg, { status: 200, headers: { 'Content-Type': 'application/octet-stream' } });
+    }
+    return new Response('{}', { status: 200 });
+  };
+  const stored = await storeGenerationFiles({
+    prompt: 'bottle ad',
+    image_files: [{ download_url: 'https://oaisdmntprcentralus.blob.core.windows.net/files/file-abc?sig=x', file_id: 'file-abc' }]
+  }, { fetchImpl, supabaseUrl: 'https://sb.test', serviceKey: 'key', bucket: 'video', now: () => new Date('2026-10-16T10:00:00Z') });
+
+  assert.equal(stored.image_urls.length, 1);
+  assert.match(stored.image_urls[0], /^https:\/\/sb\.test\/storage\/v1\/object\/public\/video\/images\/user-uploads\/2026\/10\/16\/[0-9a-f]{16}-chatgpt\.jpg$/);
+  const upload = calls.find((call) => call.method === 'POST');
+  assert.equal(upload.headers['Content-Type'], 'image/jpeg');
+  assert.match(upload.url, /^https:\/\/sb\.test\/storage\/v1\/object\/video\/images\/user-uploads\//);
+});
+
+test('a failed copy falls back to the original ChatGPT link', async () => {
+  const { storeGenerationFiles } = await import('../../lib/hansora-mcp/file-inputs.mjs');
+  const original = 'https://oaisdmntprcentralus.blob.core.windows.net/files/file-abc?sig=x';
+  const stored = await storeGenerationFiles({
+    prompt: 'x', image_files: [{ download_url: original, file_id: 'file-abc', mime_type: 'image/png' }]
+  }, { fetchImpl: async () => new Response('no', { status: 403 }), supabaseUrl: 'https://sb.test', serviceKey: 'key', bucket: 'video' });
+  assert.deepEqual(stored.image_urls, [original]);
+});

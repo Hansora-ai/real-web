@@ -321,6 +321,46 @@ async function serviceRequest(path, options = {}) {
   });
 }
 
+// Runners create the history row before they check the balance. When they refuse with 402 the row
+// never gets a provider task, and the missing-task cleanup later labels it missing_task_id_timeout.
+// Record the real reason now so history and analytics say "not enough credits".
+async function recordCreditRefusal(event, payload, responseBody) {
+  const runId = String(payload?.run_id || payload?.runId || '').trim();
+  if (!runId) return;
+  const user = await authenticateUser(event);
+  if (!user) return;
+  let refusal = {};
+  try { refusal = JSON.parse(responseBody || '{}') || {}; } catch {}
+  const reason = String(refusal.error || refusal.message || refusal.error_summary || '');
+  if (!/not_enough_credits|insufficient/i.test(reason)) return;
+  const lookup = await serviceRequest(`/rest/v1/user_generations?user_id=eq.${encodeURIComponent(user.id)}&meta->>run_id=eq.${encodeURIComponent(runId)}&select=id,meta`);
+  if (!lookup.ok) return;
+  const rows = await lookup.json().catch(() => []);
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const meta = row?.meta && typeof row.meta === 'object' ? row.meta : {};
+    if (meta.task_id || meta.taskId || String(meta.charged || '') === 'true') continue;
+    if (/^(failed|done|ready|completed|succeeded)$/i.test(String(meta.status || ''))) continue;
+    const need = Number(refusal.need ?? refusal.details?.need);
+    const credits = Number(refusal.credits ?? refusal.details?.credits);
+    await serviceRequest(`/rest/v1/user_generations?id=eq.${encodeURIComponent(row.id)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        meta: {
+          ...meta,
+          status: 'failed',
+          failed: true,
+          error: 'not_enough_credits',
+          error_summary: 'not_enough_credits',
+          ...(Number.isFinite(need) ? { need } : {}),
+          ...(Number.isFinite(credits) ? { credits } : {}),
+          failed_at: new Date().toISOString()
+        }
+      })
+    });
+  }
+}
+
 async function serviceRpc(name, body) {
   const response = await serviceRequest(`/rest/v1/rpc/${name}`, { method: 'POST', body: JSON.stringify(body || {}) });
   if (!response.ok) throw new Error(`${name}_${response.status}_${await response.text().catch(() => '')}`);
@@ -606,6 +646,11 @@ exports.handler = async function handler(event) {
       signal: AbortSignal.timeout(55000)
     });
     const responseBody = await response.text();
+    if (response.status === 402) {
+      await recordCreditRefusal(event, request.payload, responseBody).catch((error) => {
+        console.warn('safe_run_credit_refusal_record_failed', error && error.message);
+      });
+    }
     return {
       statusCode: response.status,
       headers: {
