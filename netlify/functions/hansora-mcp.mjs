@@ -549,8 +549,11 @@ export function createHansoraServer(ctx) {
       const raw = await response.text();
       let result;
       try { result = JSON.parse(raw); } catch { result = { message: raw }; }
-      if (response.status === 402 && normalizedInput.usage_mode !== 'unlimited') {
-        const account = await getAccount(userId).catch(() => ({ internal_credits: result.credits }));
+      // Most runners refuse with 402; Veo 3.1, Motion Control and Aleph answer 200 with submitted:false.
+      const creditRefusal = response.status === 402
+        || (result?.submitted === false && /insufficient|not_enough_credits/i.test(String(result?.error || '')));
+      if (creditRefusal && normalizedInput.usage_mode !== 'unlimited') {
+        const account = await getAccount(userId).catch(() => ({ internal_credits: result.credits ?? result.have }));
         const need = Number(result.need ?? result.details?.need);
         const charged = Number.isFinite(need) && need > 0
           ? { ...(price || {}), displayedCredits: Number((need * 10).toFixed(2)) }

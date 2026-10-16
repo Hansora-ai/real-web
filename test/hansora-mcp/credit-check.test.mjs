@@ -112,3 +112,12 @@ test('a generation refused for credits is reported as that, not as a policy fail
   const failed = await callTool('get_generation', { run_id: 'run-1' }, { credits: 3, generations: [other] });
   assert.match(failed.result.structuredContent.message, /policy/);
 });
+
+test('a runner that refuses with 200 submitted:false is not reported as queued', async () => {
+  const { result } = await callTool('create_generation', {
+    model_id: 'veo31-lite', prompt: 'x', resolution: '720p'
+  }, { credits: 3, runner: () => ({ status: 200, body: { submitted: false, error: 'insufficient_credits', need: 2, have: 1 } }) });
+  assert.equal(result.isError, true);
+  assert.equal(result.structuredContent.error, 'insufficient_credits');
+  assert.equal(result.structuredContent.credits_required, 20);
+});
