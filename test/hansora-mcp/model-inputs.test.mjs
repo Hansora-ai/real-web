@@ -25,7 +25,9 @@ test('several images for Seedance are sent as references, not a first frame', ()
   assert.deepEqual([both.first_frame_url, both.last_frame_url], [img('a'), img('b')]);
   const russian = buildGenerationPayload('seedance20-mini', { prompt: 'Сделай это фото первый кадр видео', image_urls: [img('a')] }, 'u', 'r');
   assert.equal(russian.first_frame_url, img('a'));
-  assert.match(getModel('seedance25').image_handling, /explicitly asks for a first or last frame/);
+  assert.equal(buildGenerationPayload('seedance25', { prompt: 'Usa questa foto come primo fotogramma', image_urls: [img('a')] }, 'u', 'r').first_frame_url, img('a'));
+  assert.equal(buildGenerationPayload('seedance25', { prompt: 'Այս նկարը դարձրու առաջին կադր', image_urls: [img('a')] }, 'u', 'r').first_frame_url, img('a'));
+  assert.match(getModel('seedance25').image_handling, /Whatever language the user writes in/);
 });
 
 test('Henshin is available through create_generation with the website price', () => {
