@@ -8,8 +8,9 @@ import {
   GENERATION_TOOL_META,
   generationAppResource
 } from '../../lib/hansora-mcp/generation-app.mjs';
-import { OPENAI_FILE_PARAMS, normalizeGenerationFiles, openAIFileSchema } from '../../lib/hansora-mcp/file-inputs.mjs';
+import { OPENAI_FILE_PARAMS, normalizeGenerationFiles, openAIFileSchema, storeGenerationFiles } from '../../lib/hansora-mcp/file-inputs.mjs';
 import { buildAudioPayload, buildGenerationPayload, getModel, getRunner, listModels, quote } from '../../lib/hansora-mcp/registry.mjs';
+import { accountSummary, insufficientCreditsResult, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
@@ -32,10 +33,22 @@ function generationToolMeta(invoking, invoked) {
   };
 }
 
+function creditFailureMessage(meta) {
+  const reason = [meta.error_summary, meta.error, meta.fail_reason].map((value) => (typeof value === 'string' ? value : '')).join(' ');
+  if (!/not_enough_credits|insufficient_credits/i.test(reason)) return '';
+  const need = Number(meta.need);
+  const credits = Number(meta.credits);
+  const amounts = Number.isFinite(need) && Number.isFinite(credits)
+    ? ` It needed ${Number((need * 10).toFixed(2))} Hansora credits and the balance was ${Number((credits * 10).toFixed(2))}.`
+    : '';
+  return `Not enough credits for this generation.${amounts} Nothing was generated and no credits were used. Do not retry on your own; tell the user and let them choose how to continue.`;
+}
+
 function presentGeneration(generation, runId) {
   const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
   const status = generation?.result_url ? 'ready' : String(meta.status || 'processing');
   if (/(fail|error|refund|cancel)/i.test(status)) {
+    const failure = creditFailureMessage(meta) || PUBLIC_GENERATION_FAILURE;
     return {
       id: generation?.id,
       provider: generation?.provider,
@@ -46,14 +59,14 @@ function presentGeneration(generation, runId) {
       run_id: String(meta.run_id || runId || ''),
       status: 'failed',
       media_type: String(meta.media_type || generation?.kind || ''),
-      error: PUBLIC_GENERATION_FAILURE,
-      message: PUBLIC_GENERATION_FAILURE,
+      error: failure,
+      message: failure,
       meta: {
         run_id: String(meta.run_id || runId || ''),
         status: 'failed',
         media_type: String(meta.media_type || generation?.kind || ''),
-        error: PUBLIC_GENERATION_FAILURE,
-        fail_reason: PUBLIC_GENERATION_FAILURE
+        error: failure,
+        fail_reason: failure
       }
     };
   }
@@ -159,7 +172,7 @@ export function createHansoraServer(ctx) {
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     _meta: { ui: { visibility: ['model', 'app'] }, 'openai/widgetAccessible': true }
   }, async ({ model_id, ...options }) => {
-    try { return jsonText(quote(model_id, options)); } catch (error) { return toolError(error); }
+    try { return jsonText(publicQuote(quote(model_id, options))); } catch (error) { return toolError(error); }
   });
 
   server.registerTool('get_account', {
@@ -168,7 +181,7 @@ export function createHansoraServer(ctx) {
     inputSchema: z.object({}),
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async () => {
-    try { return jsonText(await getAccount(userId)); } catch (error) { return toolError(error); }
+    try { return jsonText(accountSummary(await getAccount(userId))); } catch (error) { return toolError(error); }
   });
 
   server.registerTool('open_image_to_video_upload_card', {
@@ -221,7 +234,7 @@ export function createHansoraServer(ctx) {
         generate_audio: input.generate_audio,
         prompt_extend: input.prompt_extend,
         usage_mode: input.usage_mode,
-        quote: price
+        quote: publicQuote(price)
       });
     } catch (error) { return toolError(error); }
   });
@@ -282,7 +295,7 @@ export function createHansoraServer(ctx) {
         motion_model: input.motion_model,
         image_url: input.image_url || null,
         usage_mode: input.usage_mode,
-        quote: price
+        quote: publicQuote(price)
       });
     } catch (error) { return toolError(error); }
   });
@@ -364,7 +377,7 @@ export function createHansoraServer(ctx) {
         video_end: input.video_end,
         motion_model: input.motion_model,
         usage_mode: input.usage_mode,
-        quote: price
+        quote: publicQuote(price)
       });
     } catch (error) { return toolError(error); }
   });
@@ -505,8 +518,19 @@ export function createHansoraServer(ctx) {
       if (!endpoint || model.availability !== 'available') throw new Error('model_not_available');
 
       const normalizedInput = normalizeGenerationFiles(input);
+      let price = null;
+      try { price = quote(model.id, quoteOptionsFromRequest(normalizedInput)); } catch { price = null; }
+      const checkBalance = normalizedInput.usage_mode !== 'unlimited' && price;
+      if (checkBalance) {
+        // The runner re-checks the balance, so a failed lookup here should not block the request.
+        const account = await getAccount(userId).catch(() => null);
+        if (account && Number(account.internal_credits || 0) < price.internalCredits) {
+          return insufficientCreditsResult({ model, price, balanceInternal: account.internal_credits, input: normalizedInput });
+        }
+      }
+      const storedInput = await storeGenerationFiles(input);
       const runId = `${userId}-mcp-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-      const payload = buildGenerationPayload(input.model_id, normalizedInput, userId, runId);
+      const payload = buildGenerationPayload(input.model_id, storedInput, userId, runId);
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
       const response = await fetch(`${origin}/.netlify/functions/safe-run`, {
         method: 'POST',
@@ -525,6 +549,14 @@ export function createHansoraServer(ctx) {
       const raw = await response.text();
       let result;
       try { result = JSON.parse(raw); } catch { result = { message: raw }; }
+      if (response.status === 402 && normalizedInput.usage_mode !== 'unlimited') {
+        const account = await getAccount(userId).catch(() => ({ internal_credits: result.credits }));
+        const need = Number(result.need ?? result.details?.need);
+        const charged = Number.isFinite(need) && need > 0
+          ? { ...(price || {}), displayedCredits: Number((need * 10).toFixed(2)) }
+          : price;
+        return insufficientCreditsResult({ model, price: charged, balanceInternal: account.internal_credits, input: normalizedInput });
+      }
       if (!response.ok) throw new Error(result.message || result.error || `generation_submit_failed_${response.status}`);
       return jsonText({
         ok: true,

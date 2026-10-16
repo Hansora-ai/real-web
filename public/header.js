@@ -4786,6 +4786,29 @@
     return handling;
   }
 
+  // ChatGPT/Claude connections leave for the OAuth consent page right after login, before the
+  // normal success tracking below runs. Record the same events first, but never hold the visitor
+  // for more than a few seconds.
+  async function recordAuthCompletionBeforeLeaving(user, profile, authAttempt) {
+    const funnelWrites = authCallbackArrivalWrite.then(function () {
+      return recordAuthFunnelEvent('auth_success', authAttempt, { userId: user.id });
+    }).then(async function (authSuccessRecorded) {
+      if (authAttempt && (profile.__hansoraNewSignup || isRecentlyCreatedAccount(user))) {
+        if (await recordRegistrationCompletedOnce(authAttempt, user.id)) clearAuthFunnelAttempt();
+      } else if (authSuccessRecorded) {
+        clearAuthFunnelAttempt();
+      }
+    });
+    const attributionWrite = recordSignupAttribution(user).catch(function (error) {
+      console.warn('Hansora signup attribution failed', error);
+      return false;
+    });
+    await Promise.race([
+      Promise.allSettled([funnelWrites, attributionWrite]),
+      new Promise(function (resolve) { setTimeout(resolve, 3000); })
+    ]);
+  }
+
   async function handleAuthenticatedUserOnce(user) {
     const authAttempt = readAuthFunnelAttempt();
     clearTelegramOAuthStart();
@@ -4813,6 +4836,7 @@
     const pendingMcpReturn = getPendingMcpAuthReturn();
     if (pendingMcpReturn) {
       clearPendingMcpAuthReturn();
+      await recordAuthCompletionBeforeLeaving(user, profile, authAttempt);
       window.location.replace(pendingMcpReturn);
       return profile;
     }
