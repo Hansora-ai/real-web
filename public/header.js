@@ -209,6 +209,10 @@
       if (/\/(?:course_arm|course_ru)\/?$/i.test(pathname) || !/\.html$/i.test(pathname)) {
         return location.protocol === 'file:' ? url.href : `${pathname}${url.search}${url.hash}`;
       }
+      // Hansora Automation pages are English only (there are no _arm/_ru copies): never send them to a language copy.
+      if (/^\/automation(?:[-_][a-z-]+)?\.html$/i.test(pathname)) {
+        return location.protocol === 'file:' ? url.href : `${pathname}${url.search}${url.hash}`;
+      }
       pathname = pathname.replace(/_(?:arm|ru)(?=\.html$)/i, '');
       pathname = pathname.replace(/\.html$/i, `${LANGUAGE_SUFFIX[lang]}.html`);
       url.pathname = pathname;
