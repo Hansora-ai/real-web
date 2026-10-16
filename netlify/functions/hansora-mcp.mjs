@@ -81,7 +81,7 @@ function presentGeneration(generation, runId) {
 
 function displayModelName(generation) {
   const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
-  for (const id of [meta.model_id, meta.model, meta.engine]) {
+  for (const id of [meta.model_id, meta.engine, meta.model]) {
     const model = typeof id === 'string' && id ? getModel(id) : null;
     if (model?.name) return model.name;
   }
