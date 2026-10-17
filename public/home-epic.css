@@ -522,3 +522,10 @@ main .x-scroll, .home-features-grid, .top-reel .x-scroll { overflow-y: hidden !i
 }
 /* The moving wall in the hero never takes touches */
 .he-wall, .he-shade, .he-models { pointer-events: none; touch-action: pan-y; }
+
+/* Phones: "overflow-x: hidden" on html + body (+ main) made the body its own inner scroll box, so a swipe
+   scrolled a few pixels and stopped. "clip" hides sideways overflow without creating a scroll box.
+   Browsers without "clip" ignore these lines and keep the old rule. */
+html, body { overflow-x: clip !important; overflow-y: visible !important; }
+main { overflow-x: clip !important; overflow-y: visible !important; }
+.he-hero, .he-col, .he-studio-aura, .ready-cta-section, .he-models { overflow: clip !important; }
