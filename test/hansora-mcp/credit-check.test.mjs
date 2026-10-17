@@ -111,7 +111,8 @@ test('a generation refused for credits is reported as that, not as a policy fail
 
   const other = { ...row, meta: { run_id: 'run-1', status: 'failed', error: 'provider_timeout' } };
   const failed = await callTool('get_generation', { run_id: 'run-1' }, { credits: 3, generations: [other] });
-  assert.match(failed.result.structuredContent.message, /policy/);
+  assert.match(failed.result.structuredContent.message, /is having a temporary issue right now/);
+  assert.doesNotMatch(failed.result.structuredContent.message, /policy/);
 });
 
 test('a runner that refuses with 200 submitted:false is not reported as queued', async () => {
@@ -159,7 +160,7 @@ test('a provider refusal reaches ChatGPT with its reason, both at submit and on 
   const row = { id: 'r', provider: 'Kling-5s', kind: 'video', prompt: 'x', result_url: null, created_at: new Date().toISOString(),
     meta: { run_id: 'u-mcp-7', status: 'failed', error_summary: 'provider_rejected', provider_message: 'Image not allowed' } };
   const status = await callTool('get_generation', { run_id: 'u-mcp-7' }, { credits: 30, generations: [row] });
-  assert.match(status.result.structuredContent.message, /^The provider refused to start this generation: Image not allowed\./);
+  assert.match(status.result.structuredContent.message, /^Kling 2\.5 Turbo can't create this content \(Image not allowed\)\. No credits were used\./);
 });
 
 test('a run stuck on processing is checked with KIE, so a failed Veo job stops spinning', async () => {
@@ -202,4 +203,32 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.equal(seedance.result.structuredContent.video_selection_guide, guide);
   const image = await callTool('get_model', { model_id: 'nano-banana-pro' }, { credits: 30 });
   assert.equal('video_selection_guide' in image.result.structuredContent, false);
+});
+
+test('failures are explained by kind: temporary issues offer another model, refusals do not', async () => {
+  const row = (meta, provider = 'veo3.1lite', kind = 'video') => ({ id: 'f', provider, kind, prompt: 'garden', result_url: null,
+    created_at: new Date().toISOString(), meta: { run_id: 'u-mcp-f', status: 'failed', failed: true, ...meta } });
+  const ask = async (generation) => (await callTool('get_generation', { run_id: 'u-mcp-f' }, { credits: 30, generations: [generation] })).result.structuredContent;
+
+  const veo = await ask(row({ model: 'veo3_lite', error: 'Internal Error, Please try again later.', error_code: 500, charged: 'true', refunded: true, refunded_cost: 2 }));
+  assert.equal(veo.failure_kind, 'temporary');
+  assert.equal(veo.failure_title, 'Veo 3.1 Lite is having a temporary issue');
+  assert.equal(veo.card_message, "Veo 3.1 Lite is having a temporary issue right now. It wasn't caused by your prompt or image. Your 20 credits were refunded.");
+  assert.deepEqual([veo.alternative.model_id, veo.alternative.credits], ['grok-video', 18]);
+  assert.match(veo.message, /Do you want me to try Grok Video instead\? It costs 18 credits\.$/);
+  assert.match(veo.next_step, /Start it only after they agree/);
+
+  const policy = await ask(row({ model: 'veo3_lite', error: 'Your prompt was flagged by the content policy', charged: 'true', refunded: true, refunded_cost: 2 }));
+  assert.equal(policy.failure_kind, 'content');
+  assert.equal('alternative' in policy, false);
+  assert.match(policy.next_step, /Do not switch to another model/);
+
+  const file = await ask(row({ engine: 'kling25', error_summary: 'provider_rejected', provider_message: 'image_input file type not supported', refund_skipped_reason: 'not_charged' }, 'Kling-5s'));
+  assert.equal(file.failure_kind, 'input');
+  assert.match(file.card_message, /No credits were used\. Please send a JPG or PNG under 10 MB\./);
+
+  const image = await ask(row({ model: 'nano-banana-pro', error: 'kie_failed', charged: 'true', refunded: true, refunded_cost: 1.2 }, 'Nano Banana Pro', 'image'));
+  assert.equal(image.failure_kind, 'unknown');
+  assert.equal(image.failure_title, "Nano Banana Pro couldn't finish this image");
+  assert.equal(image.alternative.model_id, 'seedream-4-5');
 });
