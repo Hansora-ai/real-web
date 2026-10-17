@@ -188,3 +188,18 @@ test('a fresh run is not checked with KIE yet', async () => {
   assert.equal(checked, false);
   assert.equal(result.structuredContent.status, 'processing');
 });
+
+test('ChatGPT gets the video selection guide with the model list and with each video model', async () => {
+  const list = await callTool('list_models', { category: 'video' }, { credits: 30 });
+  const guide = list.result.structuredContent.video_selection_guide;
+  assert.match(guide, /Before generating, ask the user which option they want/);
+  assert.match(guide, /Seedance 2\.5, 480p: recommended/);
+  assert.match(guide, /If the user says it does not matter, or asks you to choose, pick Seedance 2\.5 at 480p/);
+  assert.match(guide, /Quality order for complex prompts: Seedance 2\.5, Seedance 2\.0, Wan 3\.0, Seedance 2\.0 Mini, Kling 3\.0, Veo 3\.1\./);
+  assert.ok(list.result.structuredContent.models.every((model) => !('video_selection_guide' in model)));
+
+  const seedance = await callTool('get_model', { model_id: 'seedance25' }, { credits: 30 });
+  assert.equal(seedance.result.structuredContent.video_selection_guide, guide);
+  const image = await callTool('get_model', { model_id: 'nano-banana-pro' }, { credits: 30 });
+  assert.equal('video_selection_guide' in image.result.structuredContent, false);
+});

@@ -9,7 +9,7 @@ import {
   generationAppResource
 } from '../../lib/hansora-mcp/generation-app.mjs';
 import { OPENAI_FILE_PARAMS, normalizeGenerationFiles, openAIFileSchema, storeGenerationFiles } from '../../lib/hansora-mcp/file-inputs.mjs';
-import { buildAudioPayload, buildGenerationPayload, getModel, getRunner, listModels, quote } from '../../lib/hansora-mcp/registry.mjs';
+import { VIDEO_SELECTION_GUIDE, buildAudioPayload, buildGenerationPayload, getModel, getRunner, listModels, quote } from '../../lib/hansora-mcp/registry.mjs';
 import { accountSummary, insufficientCreditsResult, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
@@ -223,7 +223,9 @@ export function createHansoraServer(ctx) {
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async ({ category, include_unavailable }) => {
     const models = listModels({ category, includeUnavailable: include_unavailable });
-    return jsonText({ models, count: models.length });
+    const listed = models.map(({ video_selection_guide: _guide, ...model }) => model);
+    const hasVideo = listed.some((model) => model.category === 'video');
+    return jsonText({ ...(hasVideo ? { video_selection_guide: VIDEO_SELECTION_GUIDE } : {}), models: listed, count: listed.length });
   });
 
   server.registerTool('get_model', {
