@@ -94,3 +94,10 @@ test('a Veo failure callback (code and msg only) counts as failed, polling probe
   assert.equal(kieCheck.callbackStatus({ code: 200, msg: 'generated successfully', data: { info: { resultUrls: ['https://x/v.mp4'] } } }), 'pending');
   assert.equal(kieCheck.callbackStatus({ code: 200, data: { state: 'fail', failMsg: 'bad' } }), 'failed');
 });
+
+test('the provider error code is kept with the failure', () => {
+  const kieCheck = require('../../netlify/functions/kie-check.js');
+  assert.equal(kieCheck.failureCode({ code: 500, msg: 'Internal Error' }), 500);
+  assert.equal(kieCheck.failureCode({ code: 200, data: { state: 'fail', failCode: '501' } }), 501);
+  assert.equal(kieCheck.failureCode({ code: 200, data: { state: 'success' } }), null);
+});

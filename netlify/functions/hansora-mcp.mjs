@@ -10,6 +10,7 @@ import {
 } from '../../lib/hansora-mcp/generation-app.mjs';
 import { OPENAI_FILE_PARAMS, normalizeGenerationFiles, openAIFileSchema, storeGenerationFiles } from '../../lib/hansora-mcp/file-inputs.mjs';
 import { VIDEO_SELECTION_GUIDE, buildAudioPayload, buildGenerationPayload, getModel, getRunner, listModels, quote } from '../../lib/hansora-mcp/registry.mjs';
+import { failureView } from '../../lib/hansora-mcp/failures.mjs';
 import { accountSummary, insufficientCreditsResult, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
@@ -44,18 +45,23 @@ function creditFailureMessage(meta) {
   return `Not enough credits for this generation.${amounts} Nothing was generated and no credits were used. Do not retry on your own; tell the user and let them choose how to continue.`;
 }
 
-function providerRejectionMessage(meta) {
-  if (meta.error_summary !== 'provider_rejected') return '';
-  const reason = String(meta.provider_message || meta.submit_error || '').slice(0, 300);
-  return `The provider refused to start this generation${reason ? `: ${reason}` : ''}. Nothing was generated and no credits were used. Tell the user the reason; do not resend the same request unchanged.`;
-}
-
 function presentGeneration(generation, runId) {
   const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
   const status = generation?.result_url ? 'ready' : String(meta.status || 'processing');
   if (/(fail|error|refund|cancel)/i.test(status)) {
-    const failure = creditFailureMessage(meta) || providerRejectionMessage(meta) || PUBLIC_GENERATION_FAILURE;
+    const view = creditFailureMessage(meta) ? null : failureView(generation, displayModelName(generation) || 'This model');
+    const failure = creditFailureMessage(meta) || view?.message || PUBLIC_GENERATION_FAILURE;
     return {
+      ...(view ? {
+        failure_kind: view.failure_kind,
+        failure_title: view.failure_title,
+        card_message: view.card_message,
+        credits_refunded: view.credits_refunded,
+        ...(view.failure_reason ? { failure_reason: view.failure_reason } : {}),
+        ...(view.alternative ? { alternative: view.alternative } : {}),
+        next_step: view.next_step
+      } : {}),
+      model_name: displayModelName(generation),
       id: generation?.id,
       provider: generation?.provider,
       kind: generation?.kind,

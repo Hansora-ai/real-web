@@ -42,7 +42,7 @@ exports.handler = async (event) => {
     const state = await fetchKieState(ids.taskId, inputUrls, row.meta?.source_feature === "henshin" || row.meta?.provider_api === "market");
 
     if (state.failed) {
-      const refund = await failAndRefundOnce({ row, ids, reason: state.error || "kie_failed" });
+      const refund = await failAndRefundOnce({ row, ids, reason: state.error || "kie_failed", code: state.code ?? null });
       if (refund.waiting_for_charge) {
         return json(200, {
           ok: false,
@@ -99,7 +99,7 @@ async function handlePost(event) {
 
   const status = callbackStatus(body);
   if (status === "failed") {
-    const refund = await failAndRefundOnce({ row, ids, reason: failureReason(body) });
+    const refund = await failAndRefundOnce({ row, ids, reason: failureReason(body), code: failureCode(body) });
     if (refund.waiting_for_charge) {
       return json(200, {
         ok: false,
@@ -200,7 +200,7 @@ async function fetchKieState(taskId, excludeUrls = [], market = false) {
       const data = await res.json();
       if (!res.ok || !data.data || (data.data.taskId && data.data.taskId !== taskId)) return { pending: true };
       const state = String(data.data.state || "").toLowerCase();
-      if (state === "fail") return { failed: true, error: data.data.failMsg || "Generation failed." };
+      if (state === "fail") return { failed: true, error: data.data.failMsg || "Generation failed.", code: failureCode(data) };
       if (state === "success") {
         const urls = collectResultUrls(data, excludeUrls);
         return urls.length ? { done: true, urls } : { pending: true };
@@ -222,6 +222,7 @@ async function fetchKieState(taskId, excludeUrls = [], market = false) {
 
   let sawFailed = false;
   let failReason = "";
+  let failCode = null;
   for (const path of endpoints) {
     try {
       const res = await fetch(KIE_BASE + path, {
@@ -235,6 +236,7 @@ async function fetchKieState(taskId, excludeUrls = [], market = false) {
       if (status === "failed") {
         sawFailed = true;
         failReason = failReason || failureReason(data);
+        failCode = failCode ?? failureCode(data);
         continue;
       }
 
@@ -246,7 +248,7 @@ async function fetchKieState(taskId, excludeUrls = [], market = false) {
     }
   }
 
-  if (sawFailed) return { failed: true, error: failReason || "kie_failed" };
+  if (sawFailed) return { failed: true, error: failReason || "kie_failed", code: failCode };
   return { pending: true };
 }
 
@@ -405,7 +407,7 @@ function extensionForArchive(contentType, url) {
   return "mp4";
 }
 
-async function failAndRefundOnce({ row, ids, reason }) {
+async function failAndRefundOnce({ row, ids, reason, code = null }) {
   const meta = row.meta && typeof row.meta === "object" ? row.meta : {};
   const amount = Number(meta.refund_amount || 0);
   const charged = String(meta.charged || "").toLowerCase() === "true";
@@ -417,6 +419,7 @@ async function failAndRefundOnce({ row, ids, reason }) {
     status: "failed",
     failed: true,
     error: reason,
+    ...(code != null ? { error_code: code } : {}),
     failed_at: new Date().toISOString()
   };
 
@@ -542,6 +545,17 @@ function failureReason(value) {
     value?.result?.message ||
     "kie_failed"
   );
+}
+
+// The provider's own error code, when it gives one (HTTP-like code, failCode or errorCode).
+function failureCode(value) {
+  const candidates = [value?.data?.failCode, value?.data?.errorCode, value?.data?.error_code, value?.errorCode, value?.code];
+  for (const candidate of candidates) {
+    if (candidate === undefined || candidate === null || candidate === '') continue;
+    if (Number(candidate) === 200) continue;
+    return Number.isFinite(Number(candidate)) ? Number(candidate) : String(candidate).slice(0, 40);
+  }
+  return null;
 }
 
 function normalizeComparableUrl(url) {
@@ -729,3 +743,4 @@ function messageOf(error) {
 
 exports.callbackStatus = callbackStatus;
 exports.failureReason = failureReason;
+exports.failureCode = failureCode;
