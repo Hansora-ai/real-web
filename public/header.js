@@ -135,6 +135,8 @@
 
   const CURRENT_LANGUAGE = detectPageLanguage();
 
+  const FEEDBACK_LABEL = { en: 'Feedback', ru: 'Обратная связь', hy: 'Կարծիք հայտնել' };
+
   const HEADER_COPY = {
     en: {
       home: 'HANSORA AI home', primaryNav: 'Primary navigation', image: 'Image', imageMenu: 'Image tools and models', imageSection: 'Image models and tools',
@@ -2188,6 +2190,11 @@
     style.textContent = `
       .nav-links .hansora-nav-item{ position:relative; display:inline-flex; align-items:center; }
       .site-header .shell.nav{ position:relative; }
+      .site-header .hansora-feedback-button{ display:inline-flex; align-items:center; justify-content:center; flex:0 0 38px; width:38px; height:38px; padding:8px; border:1px solid rgba(255,255,255,.16); border-radius:12px; background:rgba(255,255,255,.04); color:#bfc4d4; cursor:pointer; }
+      .site-header .hansora-feedback-button:hover{ color:#fff; border-color:#a78bfa; background:rgba(167,139,250,.12); }
+      .site-header .hansora-feedback-button:focus-visible{ outline:2px solid #a78bfa; outline-offset:3px; }
+      .site-header .hansora-feedback-button svg{ width:20px; height:20px; }
+      @media (max-width:900px){ .site-header .hansora-feedback-button{ display:none; } }
       .site-header .nav-links{ position:absolute; left:48%; transform:translateX(-50%); }
       html[lang="ru"] .site-header .nav-links, html[lang="hy"] .site-header .nav-links{ left:43.5%; }
       @media (max-width:1400px){ html[lang="ru"] .site-header .nav-links, html[lang="hy"] .site-header .nav-links{ left:40.5%; } }
@@ -2981,6 +2988,7 @@
             <a class="hansora-nav-trend" href="${siteHref('/mcp-setup.html')}" title="${copy('chatgptPluginFull')}">${copy('chatgptPlugin')}</a>
           </nav>
           <div class="nav-actions">
+            <button class="hansora-feedback-button" type="button" data-hansora-feedback aria-label="${FEEDBACK_LABEL[CURRENT_LANGUAGE]}" title="${FEEDBACK_LABEL[CURRENT_LANGUAGE]}" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-8 8H5l-3 3V11.5a9 9 0 0 1 18 0Z"/><path d="M7 10h8M7 14h5"/></svg></button>
             <a class="hansora-mobile-pricing" href="${siteHref('/pricing.html')}" aria-label="${copy('pricingAria')}">
               <span>${copy('pricing')}</span>
               <strong class="hansora-mobile-pricing-badge">${copy('discount')}</strong>
@@ -4991,6 +4999,12 @@
     injectHeaderStyles();
     injectHeader();
     injectAuthModal();
+    if (!document.getElementById('hansoraFeedbackScript')) {
+      const feedbackScript = document.createElement('script');
+      feedbackScript.id = 'hansoraFeedbackScript';
+      feedbackScript.src = '/feedback.js?v=1';
+      document.head.appendChild(feedbackScript);
+    }
     // Pages that forget to load the Supabase library would otherwise show every visitor as
     // logged out. Load it here when missing, then restore the session as usual.
     withSupabaseLibrary(startHeaderSession);
