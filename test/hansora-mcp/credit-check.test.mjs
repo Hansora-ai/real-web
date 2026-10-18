@@ -204,6 +204,8 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /Seedance 2\.5, 480p \(good quality, lower price\)/);
   assert.match(guide, /Seedance 2\.0, 720p: very strong for complex scenes \(up to 15 seconds only\)/);
   assert.match(guide, /pick the first option that fits/);
+  assert.match(guide, /person or character to place into new scenes .*Gemini Omni Flash, 1080p, up to 10 seconds; Wan 3\.0, 720p, for longer/);
+  assert.match(guide, /8\. Stay with the model\..*Do not switch on your own\..*start only after they agree\./);
   assert.ok(list.result.structuredContent.models.every((model) => !('video_selection_guide' in model)));
 
   const seedance = await callTool('get_model', { model_id: 'seedance25' }, { credits: 30 });
