@@ -193,10 +193,17 @@ test('a fresh run is not checked with KIE yet', async () => {
 test('ChatGPT gets the video selection guide with the model list and with each video model', async () => {
   const list = await callTool('list_models', { category: 'video' }, { credits: 30 });
   const guide = list.result.structuredContent.video_selection_guide;
-  assert.match(guide, /Before generating, ask the user which option they want/);
-  assert.match(guide, /Seedance 2\.5, 480p: recommended/);
-  assert.match(guide, /If the user says it does not matter, or asks you to choose, pick Seedance 2\.5 at 480p/);
-  assert.match(guide, /Quality order for complex prompts: Seedance 2\.5, Seedance 2\.0, Wan 3\.0, Seedance 2\.0 Mini, Kling 3\.0, Veo 3\.1\./);
+  // Language first, then length, then meaning: simple clips never default to Seedance 2.5.
+  assert.ok(guide.indexOf('0. Spoken language') < guide.indexOf('1. Length') && guide.indexOf('1. Length') < guide.indexOf('2. Meaning'));
+  assert.match(guide, /only Veo 3\.1 Lite \(8 seconds\), Gemini Omni Flash and Gemini Omni \(up to 10 seconds\) can speak it/);
+  assert.match(guide, /offer to split the speech into parts of up to 10 seconds/);
+  assert.match(guide, /not from how long or detailed your own prompt is/);
+  assert.match(guide, /3\. Simple: generate directly, do not ask\.\n   - Up to 8 seconds: Veo 3\.1 Lite, 1080p\.\n   - 9 to 10 seconds: Gemini Omni Flash, 1080p\..*\n   - 11 to 30 seconds: Wan 3\.0, 720p\./);
+  assert.match(guide, /4\. Complex: ask the user before generating, at any length/);
+  assert.match(guide, /Seedance 2\.5, 720p \(sharper\): recommended/);
+  assert.match(guide, /Seedance 2\.5, 480p \(good quality, lower price\)/);
+  assert.match(guide, /Seedance 2\.0, 720p: very strong for complex scenes \(up to 15 seconds only\)/);
+  assert.match(guide, /pick the first option that fits/);
   assert.ok(list.result.structuredContent.models.every((model) => !('video_selection_guide' in model)));
 
   const seedance = await callTool('get_model', { model_id: 'seedance25' }, { credits: 30 });
