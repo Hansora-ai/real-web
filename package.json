@@ -13,7 +13,8 @@
     "test:kie": "node --test test/kie/*.test.*",
     "dev:caption-studio": "node scripts/caption-studio-dev.mjs",
     "test:caption-studio": "node --test test/caption-studio/*.test.mjs",
-    "build:caption-studio-locales": "node scripts/build-caption-studio-locales.mjs"
+    "build:caption-studio-locales": "node scripts/build-caption-studio-locales.mjs",
+    "test:feedback": "node --test test/feedback/*.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/core": "^2.0.0",

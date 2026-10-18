@@ -45,7 +45,8 @@ export default async (request, context) => {
       closeMenu: 'Close menu',
       pricing: 'Pricing',
       faq: 'FAQ',
-      contact: 'Contact'
+      contact: 'Contact',
+      feedback: 'Feedback'
     },
     arm: {
       mobileNav: 'Բջջային ստորին նավիգացիա',
@@ -66,7 +67,8 @@ export default async (request, context) => {
       closeMenu: 'Փակել ընտրացանկը',
       pricing: 'Գներ',
       faq: 'Հաճախ տրվող հարցեր',
-      contact: 'Կապ'
+      contact: 'Կապ',
+      feedback: 'Կարծիք հայտնել'
     },
     ru: {
       mobileNav: 'Нижняя мобильная навигация',
@@ -87,7 +89,8 @@ export default async (request, context) => {
       closeMenu: 'Закрыть меню',
       pricing: 'Цены',
       faq: 'Частые вопросы',
-      contact: 'Контакты'
+      contact: 'Контакты',
+      feedback: 'Обратная связь'
     }
   };
   const copy = COPY[language];
@@ -504,6 +507,7 @@ export default async (request, context) => {
       <a href="${localizedPath('/pricing.html')}"><svg viewBox="0 0 24 24"><path d="M3 7h18v10H3z"></path><path d="M8 10h8M8 14h8"></path></svg> ${copy.pricing}</a>
       <a href="${localizedPath('/index.html#faq')}"><svg viewBox="0 0 24 24"><path d="M12 17h.01"></path><path d="M9.09 9a3 3 0 1 1 5.91 1c0 2-3 2-3 4"></path></svg> ${copy.faq}</a>
       <a href="${localizedPath('/contact.html')}"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"></path><path d="M4 8l8 6 8-6"></path></svg> ${copy.contact}</a>
+      <button class="hs-feature-toggle" id="hs-feedback-btn" data-hansora-feedback type="button" aria-haspopup="dialog"><span><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 1-8 8H5l-3 3V11a9 9 0 0 1 18 0Z"></path><path d="M7 10h8M7 14h5"></path></svg> ${copy.feedback}</span></button>
     </div>
   </div>
 </div>
@@ -723,6 +727,7 @@ export default async (request, context) => {
     menuBtn && menuBtn.addEventListener('click', () => { closeRadial(); openMenu(false); });
     closeBtn && closeBtn.addEventListener('click', closeMenu);
     backdrop && backdrop.addEventListener('click', closeMenu);
+    document.getElementById('hs-feedback-btn')?.addEventListener('click', closeMenu);
     modelsBtn && modelsBtn.addEventListener('click', openRadial);
     radialBackdrop && radialBackdrop.addEventListener('click', closeRadial);
     radialClose && radialClose.addEventListener('click', closeRadial);
@@ -751,7 +756,8 @@ export default async (request, context) => {
       }
     });
   })();
-</script>`;
+</script>
+<script id="hansoraFeedbackScript" src="/feedback.js?v=1" defer></script>`;
 
   let out = html.replace(/<\/body>/i, STYLE + NAV + '</body>');
   if (out === html) out = html + STYLE + NAV;
