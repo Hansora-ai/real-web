@@ -75,6 +75,12 @@
   function displayError(error) {
     const message = String(error && error.message ? error.message : error || 'Something went wrong.');
     const code = String(error && error.code ? error.code : '');
+    if (/^missing_(meta_instagram|meta_webhook|hansora_automation_(oauth|encryption|internal))/.test(message.toLowerCase())) {
+      return 'Instagram connection setup is incomplete. Add the Meta app credentials in the site settings, then try again.';
+    }
+    if (/^missing_meta_whatsapp/.test(message.toLowerCase())) {
+      return 'WhatsApp connection setup is incomplete. Add the Meta app credentials in the site settings, then try again.';
+    }
     if (code === 'PGRST106' || message.includes('Invalid schema') || message.includes('automation_save_agent') || message.includes('schema cache')) {
       return 'Automation storage is temporarily unavailable. Your information is still on this page. Please try again shortly.';
     }
