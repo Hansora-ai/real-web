@@ -328,3 +328,22 @@ test('Wan MCP source quote reaches the runner and a measured mismatch is shown w
  const {result,submitted}=await callTool('create_generation',args,{credits:100,runner:()=>({status:409,body:{input_seconds:5.1,displayed_credits:151}})});
  assert.equal(submitted.length,1);assert.equal(submitted[0].payload.expected_credits,150);assert.equal(result.structuredContent.credits_used,0);assert.equal(result.structuredContent.credits_required,151);assert.equal(result.structuredContent.source_video_duration,5.1);assert.match(result.structuredContent.next_step,/only after they accept/);
 });
+
+test('a Seedance reference video longer than ChatGPT guessed is never charged at a price the user did not see', async () => {
+  const video = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/ref.mp4';
+  const request = { model_id: 'seedance25', prompt: 'the girl from the video dances', duration: 10, resolution: '720p', video_urls: [video] };
+  const first = await callTool('create_generation', request, {
+    credits: 100, runner: () => ({ status: 409, body: { ok: false, error: 'The verified media duration changed the price.', displayed_credits: 665, input_seconds: 25 } })
+  });
+  assert.equal(first.submitted[0].payload.expected_credits, 380); // the price ChatGPT quoted (video assumed 10 s)
+  const value = first.result.structuredContent;
+  assert.equal(value.error, 'quote_changed');
+  assert.equal(value.credits_used, 0);
+  assert.equal(value.credits_required, 665);
+  assert.match(value.next_step, /The exact price of this generation is 665 credits\. Tell the user this price and ask whether to start it; do not explain how it was calculated unless they ask\./);
+  assert.match(value.next_step, /source_video_duration: 25\.$/);
+
+  const retry = await callTool('create_generation', { ...request, source_video_duration: 25 }, { credits: 100 });
+  assert.equal(retry.submitted[0].payload.expected_credits, 665);
+  assert.equal(retry.result.structuredContent.credits, 665);
+});

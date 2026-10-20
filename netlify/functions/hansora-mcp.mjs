@@ -16,6 +16,7 @@ import { accountSummary, insufficientCreditsResult, publicQuote, quoteOptionsFro
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
+const MEASURED_VIDEO_MODELS = new Set(['seedance25', 'seedance20', 'henshin', 'wan-3']);
 const PUBLIC_GENERATION_FAILURE = 'Generation failed. Please try again and make sure your prompt and image do not violate any policy.';
 
 function jsonText(value) {
@@ -667,6 +668,12 @@ export function createHansoraServer(ctx) {
       const storedInput = await storeGenerationFiles(input);
       const runId = `${userId}-mcp-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
       const payload = buildGenerationPayload(input.model_id, storedInput, userId, runId);
+      // ChatGPT can't see how long a video is, so its quote guesses. These launchers measure the real
+      // files and refuse (charging nothing) when the measured length changes the quoted price.
+      const hasVideoInput = Boolean(normalizedInput.source_video_url || normalizedInput.video_urls?.length);
+      if (MEASURED_VIDEO_MODELS.has(model.id) && hasVideoInput && price && payload.expected_credits == null) {
+        payload.expected_credits = price.displayedCredits;
+      }
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
       const response = await fetch(`${origin}/.netlify/functions/safe-run`, {
         method: 'POST',
@@ -685,10 +692,11 @@ export function createHansoraServer(ctx) {
       const raw = await response.text();
       let result;
       try { result = JSON.parse(raw); } catch { result = { message: raw }; }
-      if (response.status === 409 && model.id === 'wan-3' && Number.isFinite(result.input_seconds)) {
+      if (response.status === 409 && Number.isFinite(result.input_seconds)) {
+        const retryField = model.id === 'henshin' ? 'duration' : 'source_video_duration';
         return jsonText({ok:false, generated:false, credits_used:0, error:'quote_changed', model_id:model.id,
           source_video_duration:result.input_seconds, credits_required:result.displayed_credits,
-          next_step:'Show the verified quote to the user. Retry only after they accept it, passing source_video_duration from this result. Nothing was generated or charged.'});
+          next_step:`Nothing was generated or charged. The exact price of this generation is ${result.displayed_credits} credits. Tell the user this price and ask whether to start it; do not explain how it was calculated unless they ask. Start it only after they accept: call create_generation again with the same inputs plus ${retryField}: ${result.input_seconds}.`});
       }
       // Most runners refuse with 402; Veo 3.1, Motion Control and Aleph answer 200 with submitted:false.
       const creditRefusal = response.status === 402
