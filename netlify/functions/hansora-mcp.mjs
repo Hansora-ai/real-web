@@ -290,7 +290,8 @@ export function createHansoraServer(ctx) {
       resolution: z.string().optional(),
       quantity: z.number().int().min(1).max(50).default(1),
       sound: z.boolean().optional(),
-      has_video_input: z.boolean().optional()
+      has_video_input: z.boolean().optional(),
+      source_video_duration: z.number().nonnegative().optional().describe('For Wan 3.0 video input, combined duration in seconds of all reference videos. Verified by the server before charging.')
     }),
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     _meta: { ui: { visibility: ['model', 'app'] }, 'openai/widgetAccessible': true }
@@ -618,6 +619,7 @@ export function createHansoraServer(ctx) {
       first_frame_url: z.string().url().optional(),
       last_frame_url: z.string().url().optional(),
       source_video_url: z.string().url().optional(),
+      source_video_duration: z.number().nonnegative().optional().describe('Combined reference video seconds for a Wan 3.0 quote. The server measures the actual files before charging.'),
       sound: z.boolean().optional(),
       generate_audio: z.boolean().optional(),
       enable_web_search: z.boolean().optional(),
@@ -683,6 +685,11 @@ export function createHansoraServer(ctx) {
       const raw = await response.text();
       let result;
       try { result = JSON.parse(raw); } catch { result = { message: raw }; }
+      if (response.status === 409 && model.id === 'wan-3' && Number.isFinite(result.input_seconds)) {
+        return jsonText({ok:false, generated:false, credits_used:0, error:'quote_changed', model_id:model.id,
+          source_video_duration:result.input_seconds, credits_required:result.displayed_credits,
+          next_step:'Show the verified quote to the user. Retry only after they accept it, passing source_video_duration from this result. Nothing was generated or charged.'});
+      }
       // Most runners refuse with 402; Veo 3.1, Motion Control and Aleph answer 200 with submitted:false.
       const creditRefusal = response.status === 402
         || (result?.submitted === false && /insufficient|not_enough_credits/i.test(String(result?.error || '')));
