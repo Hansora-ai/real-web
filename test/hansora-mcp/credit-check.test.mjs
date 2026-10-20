@@ -204,6 +204,7 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /4\. Complex: ask the user before generating, at any length/);
   assert.match(guide, /Seedance 2\.5, 720p \(sharper\): recommended/);
   assert.match(guide, /Seedance 2\.5, 480p \(good quality, lower price\)/);
+  assert.match(guide, /Seedance 2\.5, 1080p \(sharpest, highest price\): offer only when the user asks for 1080p/);
   assert.match(guide, /Seedance 2\.0, 720p: very strong for complex scenes \(up to 15 seconds only\)/);
   assert.match(guide, /pick the first option that fits/);
   assert.match(guide, /person or character to place into new scenes .*Gemini Omni Flash, 1080p, up to 10 seconds; Wan 3\.0, 720p, for longer/);
