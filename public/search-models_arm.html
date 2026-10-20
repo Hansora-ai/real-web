@@ -4242,6 +4242,7 @@
 
 	    </style>
   <script src="/seedance-pricing.js?v=20261020"></script>
+  <script src="/wan-pricing.js?v=20261021"></script>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
   <div id="sharedHeader"></div>
@@ -4648,6 +4649,7 @@
               <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
               </button>
               <div id="videoRefVideosThumbs" class="upload-thumb-zone upload-thumb-list"></div>
+              <p id="wan3BillingNote" class="hidden text-xs text-white/60 px-2 pb-2">Կրեդիտների հաշվարկում մուտքային տեսանյութերի տևողությունը գումարվում է ստացվող տեսանյութի տևողությանը։</p>
               </div>
               </div>
             </div>
@@ -6669,7 +6671,7 @@ function createResultCard(data) {
     }
 
     function checkerForCurrentModel(model, endpoint) {
-      return ['seedance25', 'seedance20'].includes(model?.id) ? 'reapi-check' : 'kie-check';
+      return ['seedance25', 'seedance20', 'wan-3'].includes(model?.id) ? 'reapi-check' : 'kie-check';
     }
 
     function directResultUrlFromCheck(js) {
@@ -7531,7 +7533,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         resolutionOptions: ['480p', '720p', '1080p'],
         defaultResolution: '1080p',
         durations: Array.from({ length: 29 }, (_, index) => index + 2),
-        costLabel: '480p 6⚡/վ · 720p 10⚡/վ · 1080p 20⚡/վ',
+        costLabel: '480p 6⚡/վ · 720p 10⚡/վ · 1080p 20⚡/վ · Մուտքային և ստացված տեսանյութերի տևողություն',
         minCredits: 1.2
       },
       {
@@ -8273,6 +8275,9 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let seedanceSingleVideoDuration = null;
     let seedanceVideoDurations = [];
     let seedanceVerifiedQuote = null;
+    const wan3VideoDurations = new WeakMap();
+    const wan3DurationReads = new WeakMap();
+    let wan3VerifiedQuote = null;
     let seedanceAudioRefFiles = [];
     let seedanceGenerateAudio = true;
     let seedanceWebSearch = false;
@@ -9246,9 +9251,10 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         return Number((seconds * rate).toFixed(1));
       }
       if (model.id === 'wan-3') {
-        const seconds = Math.max(2, Math.min(30, Number(currentDuration || 5)));
-        const rate = currentResolution === '480p' ? 0.6 : (currentResolution === '720p' ? 1 : 2);
-        return Number((seconds * rate).toFixed(2));
+        const inputSeconds = wan3InputSeconds();
+        if (inputSeconds === null) return null;
+        try { return window.WanPricing.quote({ resolution: currentResolution, duration: Number(currentDuration || 5), inputSeconds }).internalCredits; }
+        catch { return null; }
       }
       if (model.id === 'happyhorse10') {
         const seconds = Math.max(1, Number(currentDuration || 5));
@@ -9368,6 +9374,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function updateCostDisplay() {
+      const wanNote = document.getElementById('wan3BillingNote');
+      if (wanNote) wanNote.classList.toggle('hidden', currentModel?.id !== 'wan-3');
       const costLabelEl = document.getElementById('costLabel');
       if (costLabelEl && currentModel) setCostLabelContent(costLabelEl);
       const badge = document.getElementById('modelUnlimitedBadge');
@@ -10964,10 +10972,30 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       });
     }
 
+    function readWan3VideoDuration(file) {
+      if (!wan3DurationReads.has(file)) {
+        wan3DurationReads.set(file, readVideoFileDuration(file).then(value => {
+          wan3VideoDurations.set(file, value);
+          updateCostDisplay(); updateRunButtonLabel();
+          return value;
+        }));
+      }
+      return wan3DurationReads.get(file);
+    }
+
+    function wan3InputSeconds() {
+      const verified = wan3VerifiedQuote && wan3VerifiedQuote.files.length === videoRefVideoFiles.length && wan3VerifiedQuote.files.every((file, i) => file === videoRefVideoFiles[i]);
+      if (verified) return wan3VerifiedQuote.seconds;
+      videoRefVideoFiles.forEach(readWan3VideoDuration);
+      const values = videoRefVideoFiles.map(file => wan3VideoDurations.get(file));
+      return values.every(Number.isFinite) ? values.reduce((sum, value) => sum + value, 0) : null;
+    }
+
     async function validateWan3ReferenceDurations() {
       if (!currentModel || currentModel.id !== 'wan-3') return { ok: true };
-      const videoDurations = (await Promise.all(videoRefVideoFiles.map(readVideoFileDuration))).filter(Number.isFinite);
-      const audioDurations = (await Promise.all(videoRefAudioFiles.map(readAudioFileDuration))).filter(Number.isFinite);
+      const videoDurations = await Promise.all(videoRefVideoFiles.map(readWan3VideoDuration));
+      const audioDurations = await Promise.all(videoRefAudioFiles.map(readAudioFileDuration));
+      if (![...videoDurations, ...audioDurations].every(Number.isFinite)) return { ok: false, message: 'Could not read a reference duration. Please upload a valid video or audio file.' };
       if (videoDurations.some((value) => value < 1 || value > 15)) return { ok: false, message: 'Wan 3.0-ի յուրաքանչյուր հղումային տեսանյութ պետք է տևի 1-ից 15 վայրկյան։' };
       if (audioDurations.some((value) => value < 1 || value > 15)) return { ok: false, message: 'Wan 3.0-ի յուրաքանչյուր ձայնային հղում պետք է տևի 1-ից 15 վայրկյան։' };
       const videoTotal = videoDurations.reduce((sum, value) => sum + value, 0);
@@ -11519,9 +11547,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       renderFileListThumbs(videoRefVideoFiles, document.getElementById('videoRefVideosThumbs'), (index) => {
         videoRefVideoFiles.splice(index, 1);
         document.getElementById('videoRefVideosInput').value = '';
+        updateCostDisplay(); updateRunButtonLabel();
         syncVideoRefsInputLocks();
       });
       syncVideoRefsInputLocks();
+      updateCostDisplay(); updateRunButtonLabel();
     });
 	    document.getElementById('videoRefAudioInput').addEventListener('change', (e) => {
 	      if (usesExclusiveVideoFramePair() && (videoFirstFrameFile || videoLastFrameFile)) {
@@ -12884,7 +12914,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     }
 
     function persistGenerationInputUrlsInBackground(details) {
-      if (['seedance20','seedance25'].includes(details?.model?.id)) return; // Metadata is server-owned for reAPI jobs.
+      if (['seedance20','seedance25','wan-3'].includes(details?.model?.id)) return; // Metadata is server-owned for reAPI jobs.
       const uid = String(details && details.uid || '').trim();
       const runId = String(details && details.runId || '').trim();
       const inputUrls = Array.isArray(details && details.urls)
@@ -13183,7 +13213,11 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           soraQuality: __soraQuality,
           resolution: currentResolution
         });
-        if (['seedance20','seedance25'].includes(currentModel.id)) body.expected_credits = Math.round(getModelUnitCreditValue() * 10);
+        if (['seedance20','seedance25','wan-3'].includes(currentModel.id)) {
+          const unitCredits = getModelUnitCreditValue();
+          if (!Number.isFinite(unitCredits)) throw new Error('Please check the reference durations and output length before generating.');
+          body.expected_credits = Math.round(unitCredits * 10);
+        }
         body.client_diagnostic = {
           model_id: currentModel.id,
           model_name: currentModel.name,
@@ -13373,6 +13407,10 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
             const j = JSON.parse(txt);
             if (res.status === 409 && ['seedance20','seedance25'].includes(currentModel.id) && Number.isFinite(j.input_seconds)) {
               seedanceVerifiedQuote = {files:[...seedanceVideoRefFiles],seconds:j.input_seconds};
+              updateCostDisplay(); updateRunButtonLabel();
+            }
+            if (res.status === 409 && currentModel.id === 'wan-3' && Number.isFinite(j.input_seconds)) {
+              wan3VerifiedQuote = {files:[...videoRefVideoFiles],seconds:j.input_seconds};
               updateCostDisplay(); updateRunButtonLabel();
             }
             safetyBlocked = j && j.code === 'CONTENT_POLICY_BLOCKED';
@@ -13917,6 +13955,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           videoRefVideoFiles.splice(index, 1);
           const input = document.getElementById('videoRefVideosInput');
           if (input) input.value = '';
+          updateCostDisplay(); updateRunButtonLabel();
           syncVideoRefsInputLocks();
         });
         syncVideoRefsInputLocks();

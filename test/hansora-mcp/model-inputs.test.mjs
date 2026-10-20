@@ -69,3 +69,15 @@ test('every video model uses images by its kind: frames, frames + references, re
   assert.match(getModel('gemini-omni-flash-1-1').image_handling, /no first or last frame/);
   assert.match(getModel('kling26').image_handling, /one image/);
 });
+
+test('Wan MCP quotes, explicit source clips and all reference types match the website pricing',()=>{
+ assert.equal(getModel('wan-3').provider,'reAPI');assert.equal(getModel('wan-3').input.max_prompt_chars,20000);
+ assert.equal(quote('wan-3',{duration:10,resolution:'480p'}).displayedCredits,60);
+ assert.equal(quote('wan-3',{duration:10,resolution:'720p',has_video_input:true,source_video_duration:5}).displayedCredits,150);
+ assert.throws(()=>quote('wan-3',{has_video_input:true}),/source_video_duration/);
+ const request={prompt:'Follow Video 1 with Image 1 and Audio 1',source_video_url:'https://s.test/a.mp4',video_urls:['https://s.test/a.mp4','https://s.test/b.mp4'],audio_urls:['https://s.test/a.mp3'],image_urls:[img('a')],duration:10,resolution:'720p',source_video_duration:5,generate_audio:false,prompt_extend:false};
+ const payload=buildGenerationPayload('wan-3',request,'u','r');
+ assert.deepEqual(payload.reference_video_urls,request.video_urls);assert.deepEqual(payload.reference_audio_urls,request.audio_urls);assert.equal(payload.expected_credits,150);assert.equal(payload.audio,false);assert.equal(payload.prompt_extend,false);
+ const bare=buildGenerationPayload('wan-3',{prompt:'Text only'},'u','r');assert.equal(bare.resolution,'1080p');assert.equal(bare.expected_credits,quote('wan-3').displayedCredits);
+ assert.throws(()=>buildGenerationPayload('wan-3',{...request,first_frame_url:img('first')},'u','r'),/frames_cannot_mix/);
+});

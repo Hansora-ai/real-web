@@ -12,6 +12,9 @@ const pricing=require('../../public/seedance-pricing.js');
 const {build}=require('../../lib/reapi/request.cjs');
 const launch25=require('../../netlify/functions/run-seedance-25.js').handler;
 const launch20=require('../../netlify/functions/run-seedance-2.js').handler;
+const launchWan=require('../../netlify/functions/run-wan-3.js').handler;
+const wanPricing=require('../../public/wan-pricing.js');
+const buildWan=require('../../lib/reapi/wan-request.cjs').build;
 const checker=require('../../netlify/functions/reapi-check.js').handler;
 const {transition}=require('../../lib/reapi/billing.cjs');
 const db=new PGlite(),uid=randomUUID(),other=randomUUID();
@@ -223,4 +226,68 @@ test('legacy service-role writes cannot refund reAPI rows; audio workers keep th
   await db.query("update user_generations set result_url=$2,meta=meta || '{\"status\":\"done\",\"audio_restored\":true}'::jsonb where id=$1",[row.id,source]);
  } finally {await db.exec('reset role');}
  assert.equal((await saved())[0].meta.audio_restored,true);assert.equal(await balance(),985.4);
+});
+
+test('Wan prices preserve every current rate and bill fractional source length without rounding seconds',()=>{
+ for(const [resolution,expected] of [['480p',60],['720p',100],['1080p',200]]) {
+  assert.equal(wanPricing.quote({resolution,duration:10}).displayedCredits,expected);
+  assert.equal(wanPricing.quote({resolution,duration:10,inputSeconds:10}).displayedCredits,expected*2);
+ }
+ assert.equal(wanPricing.quote({resolution:'480p',duration:10,inputSeconds:5.1}).displayedCredits,91);
+ assert.equal(wanPricing.quote({resolution:'1080p',duration:10,inputSeconds:10.08}).displayedCredits,402);
+ for(const args of [{duration:-1},{duration:1},{duration:31},{duration:2.5},{resolution:'4k'},{inputSeconds:16},{inputSeconds:15,duration:16}]) assert.throws(()=>wanPricing.quote(args));
+});
+
+test('Wan maps native sound, frames and all reference types to the documented reAPI contract',()=>{
+ const request={prompt:'a'.repeat(20000),duration:10,resolution:'720p',reference_image_urls:Array(10).fill(source+'.png'),reference_video_urls:Array(5).fill(source),reference_audio_urls:Array(5).fill(source+'.mp3')};
+ const p=buildWan(request,'wan-3',{inputSeconds:5}).payload;
+ assert.equal(p.model,'wan3.0-video');assert.equal(p.resolution,'720P');assert.equal(p.audio,true);assert.equal(p.content_filter,true);assert.equal(p.watermark,false);assert.equal(p.prompt.length,20000);
+ assert.equal(p.input,undefined);assert.equal(p.generation_type,'reference');assert.equal(p.image_urls.length,10);assert.equal(p.video_urls.length,5);assert.equal(p.audio_urls.length,5);
+ const f=buildWan({prompt:'Frames',first_frame_url:source+'.png',last_frame_url:source+'.jpg',audio:false,prompt_extend:false,seed:42}).payload;
+ assert.deepEqual(f.image_with_roles.map(x=>x.role),['first_frame','last_frame']);assert.equal(f.audio,false);assert.equal(f.prompt_extend,false);assert.equal(f.seed,42);
+ assert.equal(buildWan({prompt:'Voice',reference_audio_urls:[source+'.mp3']}).payload.audio_urls.length,1);
+ for(const patch of [{prompt:'a'.repeat(20001)},{last_frame_url:source},{first_frame_url:source,reference_video_urls:[source]},{reference_video_urls:Array(6).fill(source)},{seed:-2}])assert.throws(()=>buildWan({prompt:'Test',...patch}));
+});
+
+test('Wan text jobs debit the displayed quote once even when submitted concurrently',async()=>{
+ const request=event({expected_credits:60});const responses=await Promise.all([launchWan(request),launchWan(request)]);
+ assert.ok(responses.every(r=>[200,201].includes(r.statusCode)));assert.equal(posts.length,1);assert.equal(posts[0].model,'wan3.0-video');assert.equal(await balance(),994);
+ const row=(await saved())[0];assert.equal(row.provider,'Wan 3.0');assert.equal(row.meta.model_id,'wan-3');assert.equal(row.meta.checker,'reapi-check');assert.equal(row.meta.refund_amount,6);
+ for(const [resolution,expected] of [['720p',100],['1080p',200]]) assert.equal((await launchWan(event({resolution,expected_credits:expected}))).statusCode,201);
+ assert.equal(await balance(),964);
+});
+
+test('Wan verifies reference duration and refuses stale or missing quotes before any charge',async()=>{
+ const body={reference_video_urls:[source],source_video_duration:1};
+ for(const expected_credits of [undefined,60]) {
+  const res=await launchWan(event({...body,expected_credits}));assert.equal(res.statusCode,409);assert.equal(JSON.parse(res.body).displayed_credits,90);assert.equal(JSON.parse(res.body).input_seconds,5);
+ }
+ assert.equal(await balance(),1000);assert.equal(posts.length,0);assert.equal((await saved()).length,0);
+ const res=await launchWan(event({...body,expected_credits:90}));assert.equal(res.statusCode,201);assert.equal(await balance(),991);
+ const row=(await saved())[0];assert.equal(row.meta.source_video_duration,5);assert.equal(row.meta.billed_seconds,15);assert.deepEqual(posts[0].video_urls,[source]);
+});
+
+test('Wan audio references add no video seconds and invalid combined media is rejected unpaid',async()=>{
+ assert.equal((await launchWan(event({reference_audio_urls:[source],expected_credits:60}))).statusCode,201);
+ assert.equal(await balance(),994);assert.deepEqual(posts[0].audio_urls,[source]);assert.equal(posts[0].audio,true);
+ const before=posts.length;
+ for(const patch of [{reference_video_urls:Array(4).fill(source)},{reference_audio_urls:Array(4).fill(source)},{reference_video_urls:[source],duration:26},{reference_video_urls:['https://untrusted.test/video.mp4']}]) {
+  const res=await launchWan(event(patch));assert.equal(res.statusCode,400,res.body);
+ }
+ assert.equal(posts.length,before);assert.equal(await balance(),994);
+});
+
+test('Wan submission failures and confirmed failed tasks refund exactly once',async()=>{
+ reject=true;assert.equal((await launchWan(event())).statusCode,422);assert.equal(await balance(),1000);
+ reject=false;await launchWan(event({resolution:'720p'}));const row=(await saved()).find(r=>r.meta.task_id);
+ assert.equal(await balance(),990);tasks.get(row.meta.task_id).status='failed';
+ await Promise.all([checker(polling(row)),checker(polling(row))]);assert.equal(await balance(),1000);assert.equal((await saved()).find(r=>r.id===row.id).meta.refunded,true);
+});
+
+test('Wan finished video is archived and legacy KIE retries keep the original job and checker',async()=>{
+ await launchWan(event());const row=(await saved())[0],task=tasks.get(row.meta.task_id);
+ task.status='completed';task.output={video_urls:['https://cdn.reapi.ai/wan.mp4']};
+ assert.equal(JSON.parse((await checker(polling(row))).body).status,'done');assert.match((await saved())[0].result_url,/generation-history/);assert.equal(await balance(),994);
+ const run=randomUUID();await db.query('insert into user_generations(id,user_id,provider,meta) values($1,$2,$3,$4)',[randomUUID(),uid,'Wan 3.0',{source:'kie',engine:'wan-3',status:'processing',run_id:run,task_id:'legacy-wan'}]);
+ const reply=JSON.parse((await launchWan(event({},run))).body);assert.equal(reply.taskId,'legacy-wan');assert.equal(reply.checker,'kie-check');assert.equal(posts.length,1);assert.equal(await balance(),994);
 });

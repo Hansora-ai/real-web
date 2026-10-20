@@ -310,3 +310,11 @@ test('a Grok prompt over 5000 characters is sent back to be shortened before any
   const model = await callTool('get_model', { model_id: 'grok-video' }, { credits: 30 });
   assert.equal(model.result.structuredContent.input.max_prompt_chars, 5000);
 });
+
+test('Wan MCP source quote reaches the runner and a measured mismatch is shown without retrying',async()=>{
+ const args={model_id:'wan-3',prompt:'A cat playing',duration:10,resolution:'720p',video_urls:['https://s.test/v.mp4'],source_video_duration:5};
+ const quoted=await callTool('quote_generation',{model_id:'wan-3',duration:10,resolution:'720p',has_video_input:true,source_video_duration:5},{credits:100});
+ assert.equal(quoted.result.structuredContent.credits,150);
+ const {result,submitted}=await callTool('create_generation',args,{credits:100,runner:()=>({status:409,body:{input_seconds:5.1,displayed_credits:151}})});
+ assert.equal(submitted.length,1);assert.equal(submitted[0].payload.expected_credits,150);assert.equal(result.structuredContent.credits_used,0);assert.equal(result.structuredContent.credits_required,151);assert.equal(result.structuredContent.source_video_duration,5.1);assert.match(result.structuredContent.next_step,/only after they accept/);
+});
