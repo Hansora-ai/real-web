@@ -340,7 +340,9 @@ test('a Seedance reference video longer than ChatGPT guessed is never charged at
   assert.equal(value.error, 'quote_changed');
   assert.equal(value.credits_used, 0);
   assert.equal(value.credits_required, 665);
-  assert.match(value.next_step, /The exact price of this generation is 665 credits, not the 380 you quoted\. Tell the user this price and ask whether to start it; do not explain how it was calculated unless they ask\./);
+  assert.match(value.next_step, /With this reference video the price is 665 credits, not the 380 you quoted\./);
+  assert.match(value.next_step, /also counts the video's length; it works the same way on every platform that offers this model\. The price is 665 credits\. Should I start it, or would you like to send a shorter clip\?/);
+  assert.match(value.next_step, /ask the user once about all the held ones together \(each price and the total\), not once per video/);
   assert.match(value.next_step, /source_video_duration: 25\.$/);
 
   const retry = await callTool('create_generation', { ...request, source_video_duration: 25 }, { credits: 100 });
@@ -363,4 +365,17 @@ test('a Seedance video job that turns out cheaper than quoted starts right away 
   assert.equal(result.structuredContent.ok, true);
   assert.equal(result.structuredContent.credits, 323);
   assert.match(result.structuredContent.credits_note, /final price is 323 credits, lower than the 380 quoted/);
+});
+
+test('Henshin never asks about price: it starts and reports what the uploaded video really cost', async () => {
+  const { result, submitted } = await callTool('create_generation', {
+    model_id: 'henshin', prompt: 'put the woman from the photo into the video', duration: 10, resolution: '720p',
+    source_video_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/dance.mp4',
+    image_urls: ['https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/woman.png']
+  }, { credits: 100, runner: () => ({ status: 201, body: { ok: true, submitted: true, debited: 41.8 } }) });
+  assert.equal(submitted.length, 1);
+  assert.equal(submitted[0].payload.expected_credits, undefined); // no price check, so no extra question
+  assert.equal(result.structuredContent.ok, true);
+  assert.equal(result.structuredContent.credits, 418);
+  assert.match(result.structuredContent.credits_note, /final price is 418 credits, based on the length of the uploaded video/);
 });
