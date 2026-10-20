@@ -12,6 +12,7 @@ const CALLBACK_BASE = `${SITE_BASE}/.netlify/functions/kie-check`;
 function cors() {
   return { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': '*' };
 }
+const MAX_PROMPT_CHARS = 5000;
 const json = (statusCode, body) => ({ statusCode, headers: { 'Content-Type': 'application/json', ...cors() }, body: JSON.stringify(body) });
 function getHeader(event, key) { return event.headers?.[key] || event.headers?.[key.toLowerCase()] || event.headers?.[key.toUpperCase()] || null; }
 function getUID(event, body) {
@@ -252,6 +253,15 @@ exports.handler = async (event) => {
     if (!auth.ok) return json(401, { ok: false, error: auth.error, details: auth });
     const prompt = String(body.prompt || '').trim();
     if (!prompt) return json(400, { ok: false, error: 'missing_prompt' });
+    // KIE's Grok Imagine accepts prompts up to 5000 characters; longer ones fail after submission.
+    if (prompt.length > MAX_PROMPT_CHARS) {
+      return json(400, {
+        ok: false,
+        error: `Prompt is too long for Grok (${prompt.length} characters). Grok accepts up to ${MAX_PROMPT_CHARS} characters, please shorten it.`,
+        code: 'prompt_too_long',
+        max_prompt_chars: MAX_PROMPT_CHARS
+      });
+    }
     const imageUrls = imageUrlsFromBody(body);
     if (resolution === '1080p' && imageUrls.length > 1) {
       return json(400, { ok: false, error: 'too_many_images_for_1080p', message: 'Grok 1080p supports one reference image.' });

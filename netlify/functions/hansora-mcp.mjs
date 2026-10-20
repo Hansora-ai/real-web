@@ -10,7 +10,8 @@ import {
 } from '../../lib/hansora-mcp/generation-app.mjs';
 import { OPENAI_FILE_PARAMS, normalizeGenerationFiles, openAIFileSchema, storeGenerationFiles } from '../../lib/hansora-mcp/file-inputs.mjs';
 import { VIDEO_SELECTION_GUIDE, buildAudioPayload, buildGenerationPayload, getModel, getRunner, listModels, quote } from '../../lib/hansora-mcp/registry.mjs';
-import { failureView } from '../../lib/hansora-mcp/failures.mjs';
+import { alternativeFor, classifyFailure, failureView, switchStep } from '../../lib/hansora-mcp/failures.mjs';
+import { unavailableModels } from '../../lib/hansora-mcp/health.mjs';
 import { accountSummary, insufficientCreditsResult, publicQuote, quoteOptionsFromRequest } from '../../lib/hansora-mcp/credits.mjs';
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
@@ -45,11 +46,11 @@ function creditFailureMessage(meta) {
   return `Not enough credits for this generation.${amounts} Nothing was generated and no credits were used. Do not retry on your own; tell the user and let them choose how to continue.`;
 }
 
-function presentGeneration(generation, runId) {
+function presentGeneration(generation, runId, unavailable = new Set()) {
   const meta = generation?.meta && typeof generation.meta === 'object' ? generation.meta : {};
   const status = generation?.result_url ? 'ready' : String(meta.status || 'processing');
   if (/(fail|error|refund|cancel)/i.test(status)) {
-    const view = creditFailureMessage(meta) ? null : failureView(generation, displayModelName(generation) || 'This model');
+    const view = creditFailureMessage(meta) ? null : failureView(generation, displayModelName(generation) || 'This model', { unavailable });
     const failure = creditFailureMessage(meta) || view?.message || PUBLIC_GENERATION_FAILURE;
     return {
       ...(view ? {
@@ -59,6 +60,7 @@ function presentGeneration(generation, runId) {
         credits_refunded: view.credits_refunded,
         ...(view.failure_reason ? { failure_reason: view.failure_reason } : {}),
         ...(view.alternative ? { alternative: view.alternative } : {}),
+        ...('auto_switch' in view ? { auto_switch: view.auto_switch } : {}),
         next_step: view.next_step
       } : {}),
       model_name: displayModelName(generation),
@@ -89,6 +91,38 @@ function presentGeneration(generation, runId) {
     status,
     media_type: String(meta.media_type || generation?.kind || '')
   };
+}
+
+// Marks a model that is failing for everyone right now (see health.mjs) and names its backup.
+function withHealth(model, unavailable) {
+  if (!model || !unavailable.has(model.id)) return model;
+  const backup = alternativeFor(model.id, unavailable);
+  return {
+    ...model,
+    current_status: 'temporarily_unavailable',
+    status_note: `${model.name} is having temporary issues right now.${backup ? ` Use ${backup.model_name} (${backup.model_id}) instead.` : ' Try again in about 10 minutes.'}`
+  };
+}
+
+// A model with a temporary issue at submit time, or already set aside: nothing is charged, and
+// ChatGPT switches to the backup on its own when it costs no more.
+function temporaryIssueResult(model, price, unavailable, reason = '') {
+  const backup = alternativeFor(model.id, unavailable);
+  const credits = price ? price.displayedCredits : NaN;
+  const step = backup ? switchStep(model.name, backup, credits, { refunded: false }) : null;
+  const value = {
+    ok: false,
+    error: 'model_temporarily_unavailable',
+    failure_kind: 'temporary',
+    generated: false,
+    credits_used: 0,
+    model_id: model.id,
+    model_name: model.name,
+    message: `${model.name} is having a temporary issue right now${reason ? ` (${reason})` : ''}. It wasn't caused by the prompt or image. Nothing was generated and no credits were used.`,
+    ...(backup ? { alternative: backup, auto_switch: step.auto } : {}),
+    next_step: step ? step.text : 'Tell the user this in their language and offer to try again in about 10 minutes.'
+  };
+  return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
 }
 
 function displayModelName(generation) {
@@ -228,7 +262,8 @@ export function createHansoraServer(ctx) {
     }),
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async ({ category, include_unavailable }) => {
-    const models = listModels({ category, includeUnavailable: include_unavailable });
+    const unavailable = await unavailableModels();
+    const models = listModels({ category, includeUnavailable: include_unavailable }).map((model) => withHealth(model, unavailable));
     const listed = models.map(({ video_selection_guide: _guide, ...model }) => model);
     const hasVideo = listed.some((model) => model.category === 'video');
     return jsonText({ ...(hasVideo ? { video_selection_guide: VIDEO_SELECTION_GUIDE } : {}), models: listed, count: listed.length });
@@ -241,7 +276,7 @@ export function createHansoraServer(ctx) {
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
   }, async ({ model_id }) => {
     const model = getModel(model_id);
-    return model ? jsonText(model) : toolError(new Error('unsupported_model'));
+    return model ? jsonText(withHealth(model, await unavailableModels())) : toolError(new Error('unsupported_model'));
   });
 
   server.registerTool('quote_generation', {
@@ -604,10 +639,21 @@ export function createHansoraServer(ctx) {
       const endpoint = getRunner(input.model_id);
       if (!model) throw new Error('unsupported_model');
       if (!endpoint || model.availability !== 'available') throw new Error('model_not_available');
+      const maxPrompt = Number(model.input?.max_prompt_chars);
+      if (maxPrompt && input.prompt.length > maxPrompt) {
+        const value = {
+          ok: false, error: 'prompt_too_long', generated: false, credits_used: 0,
+          model_id: model.id, model_name: model.name, prompt_characters: input.prompt.length, max_prompt_characters: maxPrompt,
+          next_step: `${model.name} accepts prompts up to ${maxPrompt} characters and this one has ${input.prompt.length}. Shorten it to under ${maxPrompt} characters, keeping the key details, and call create_generation again. No need to ask the user.`
+        };
+        return { isError: true, content: [{ type: 'text', text: JSON.stringify(value, null, 2) }], structuredContent: value };
+      }
 
       const normalizedInput = normalizeGenerationFiles(input);
       let price = null;
       try { price = quote(model.id, quoteOptionsFromRequest(normalizedInput)); } catch { price = null; }
+      const unavailable = await unavailableModels();
+      if (unavailable.has(model.id)) return temporaryIssueResult(model, price, unavailable);
       const checkBalance = normalizedInput.usage_mode !== 'unlimited' && price;
       if (checkBalance) {
         // The runner re-checks the balance, so a failed lookup here should not block the request.
@@ -653,6 +699,8 @@ export function createHansoraServer(ctx) {
         // instead of retrying the same request.
         const providerReason = String(result.details?.msg || result.details?.message || '').slice(0, 300);
         const reason = result.message || result.error || `generation_submit_failed_${response.status}`;
+        const submitKind = classifyFailure({ provider_message: providerReason, error: String(reason), error_code: result.details?.code ?? response.status });
+        if (submitKind === 'temporary') return temporaryIssueResult(model, price, unavailable, providerReason || String(reason).slice(0, 200));
         throw new Error(providerReason && providerReason !== reason ? `${reason}: ${providerReason}. Nothing was generated and no credits were used.` : reason);
       }
       return jsonText({
@@ -752,12 +800,13 @@ export function createHansoraServer(ctx) {
     try {
       let generation = await getGeneration(userId, run_id);
       if (!generation) return toolError(new Error('generation_not_found'));
+      const unavailable = await unavailableModels();
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
       const siblings = await getGenerationBatch(userId, run_id).catch(() => []);
       if (await refreshFromProvider(userId, [generation, ...siblings], origin)) {
         generation = (await getGeneration(userId, run_id)) || generation;
       }
-      return jsonText({ ...presentGeneration(generation, run_id), ...(await batchFields(userId, run_id)) });
+      return jsonText({ ...presentGeneration(generation, run_id, unavailable), ...(await batchFields(userId, run_id)) });
     } catch (error) { return toolError(error); }
   });
 
