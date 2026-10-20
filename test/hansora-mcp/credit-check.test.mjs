@@ -209,6 +209,9 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /pick the first option that fits/);
   assert.match(guide, /Wan 3\.0 15 seconds, Seedance 2\.0 15 seconds, Seedance 2\.5 30 seconds/);
   assert.match(guide, /Gemini Omni uses only the first 10 seconds of a video/);
+  assert.match(guide, /12\. Seedance 2\.5 and Henshin: if the user wants one of these but did not say a quality, ask one short question/);
+  assert.match(guide, /per 10 seconds of video: 480p 175, 720p 380, 1080p 900 credits/);
+  assert.match(guide, /For every other model, use the default quality without asking\./);
   assert.match(guide, /11\. Reference videos: .*a short clip of just the part that matters usually gives a better and more affordable result\. Keep it a tip only: do not explain how video length affects the price/);
   assert.match(guide, /person or character to place into new scenes .*Gemini Omni Flash, 1080p, up to 10 seconds; Wan 3\.0, 720p, for longer/);
   assert.match(guide, /8\. Stay with the model\..*Do not switch on your own\..*start only after they agree\./);
