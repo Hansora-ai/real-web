@@ -563,7 +563,9 @@
         background:linear-gradient(135deg,#6366f1,#8b5cf6);
         box-shadow:0 7px 18px rgba(99,102,241,.25);
       }
-      #resultsStrip .result-shortcut-spinner{
+      .result-shortcut-spinner{
+        display:inline-block;
+        flex-shrink:0;
         width:16px;
         height:16px;
         border:2px solid rgba(255,255,255,.42);
@@ -4649,7 +4651,6 @@
               <span class="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wide text-white/65">Ըստ ցանկության</span>
               </button>
               <div id="videoRefVideosThumbs" class="upload-thumb-zone upload-thumb-list"></div>
-              <p id="wan3BillingNote" class="hidden text-xs text-white/60 px-2 pb-2">Կրեդիտների հաշվարկում մուտքային տեսանյութերի տևողությունը գումարվում է ստացվող տեսանյութի տևողությանը։</p>
               </div>
               </div>
             </div>
@@ -5117,12 +5118,18 @@ async function __mjFetchNbCheck(params){
   if (actionsHost) {
     actionsHost.addEventListener('click', async (e) => {
       const btn = e.target && e.target.closest ? e.target.closest('[data-preview-action]') : null;
-      if (!btn || !currentPreview) return;
+      if (!btn || btn.disabled || !currentPreview) return;
       const action = btn.dataset.previewAction;
       const handler = window.hansoraPreviewActions && window.hansoraPreviewActions[action];
       if (typeof handler !== 'function') return;
       e.preventDefault();
+      const original = btn.innerHTML;
       btn.disabled = true;
+      if (action === 'download') {
+        btn.setAttribute('aria-busy', 'true');
+        const icon = btn.querySelector('svg');
+        if (icon) icon.outerHTML = '<span class="result-shortcut-spinner" aria-hidden="true"></span>';
+      }
       setPreviewStatus(action === 'download' ? 'Preparing download...' : 'Preparing...', '');
       try {
         await handler(currentPreview, setPreviewStatus);
@@ -5130,6 +5137,10 @@ async function __mjFetchNbCheck(params){
         setPreviewStatus(error && error.message ? error.message : 'Action failed. Please try again.', 'error');
       } finally {
         btn.disabled = false;
+        if (action === 'download') {
+          btn.removeAttribute('aria-busy');
+          btn.innerHTML = original;
+        }
       }
     });
   }
@@ -5515,19 +5526,16 @@ async function __mjFetchNbCheck(params){
 
     async function downloadResultShortcut(button, url, kind, provider) {
       if (!url || !button || button.disabled) return;
-      const showProgress = isMobileUI();
       const original = button.innerHTML;
-      if (showProgress) {
-        button.disabled = true;
-        button.innerHTML = '<span class="result-shortcut-spinner" aria-hidden="true"></span>';
-      }
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      button.innerHTML = '<span class="result-shortcut-spinner" aria-hidden="true"></span>';
       try {
         await downloadAsset(url, kind, provider);
       } finally {
-        if (showProgress) {
-          button.disabled = false;
-          button.innerHTML = original;
-        }
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+        button.innerHTML = original;
       }
     }
 
@@ -7533,7 +7541,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         resolutionOptions: ['480p', '720p', '1080p'],
         defaultResolution: '1080p',
         durations: Array.from({ length: 29 }, (_, index) => index + 2),
-        costLabel: '480p 6⚡/վ · 720p 10⚡/վ · 1080p 20⚡/վ · Մուտքային և ստացված տեսանյութերի տևողություն',
+        costLabel: '480p 6⚡/վ · 720p 10⚡/վ · 1080p 20⚡/վ',
         minCredits: 1.2
       },
       {
@@ -9374,8 +9382,6 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     function updateCostDisplay() {
-      const wanNote = document.getElementById('wan3BillingNote');
-      if (wanNote) wanNote.classList.toggle('hidden', currentModel?.id !== 'wan-3');
       const costLabelEl = document.getElementById('costLabel');
       if (costLabelEl && currentModel) setCostLabelContent(costLabelEl);
       const badge = document.getElementById('modelUnlimitedBadge');
