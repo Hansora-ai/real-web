@@ -340,10 +340,27 @@ test('a Seedance reference video longer than ChatGPT guessed is never charged at
   assert.equal(value.error, 'quote_changed');
   assert.equal(value.credits_used, 0);
   assert.equal(value.credits_required, 665);
-  assert.match(value.next_step, /The exact price of this generation is 665 credits\. Tell the user this price and ask whether to start it; do not explain how it was calculated unless they ask\./);
+  assert.match(value.next_step, /The exact price of this generation is 665 credits, not the 380 you quoted\. Tell the user this price and ask whether to start it; do not explain how it was calculated unless they ask\./);
   assert.match(value.next_step, /source_video_duration: 25\.$/);
 
   const retry = await callTool('create_generation', { ...request, source_video_duration: 25 }, { credits: 100 });
   assert.equal(retry.submitted[0].payload.expected_credits, 665);
   assert.equal(retry.result.structuredContent.credits, 665);
+});
+
+test('a Seedance video job that turns out cheaper than quoted starts right away at the real price', async () => {
+  let calls = 0;
+  const { result, submitted } = await callTool('create_generation', {
+    model_id: 'seedance25', prompt: 'the girl from the clip waves', duration: 10, resolution: '720p',
+    video_urls: ['https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/short.mp4']
+  }, {
+    credits: 100,
+    runner: () => (++calls === 1
+      ? { status: 409, body: { ok: false, displayed_credits: 323, input_seconds: 4.8 } }
+      : { status: 201, body: { ok: true, submitted: true } })
+  });
+  assert.deepEqual(submitted.map((call) => call.payload.expected_credits), [380, 323]);
+  assert.equal(result.structuredContent.ok, true);
+  assert.equal(result.structuredContent.credits, 323);
+  assert.match(result.structuredContent.credits_note, /final price is 323 credits, lower than the 380 quoted/);
 });

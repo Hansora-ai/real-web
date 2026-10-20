@@ -675,28 +675,41 @@ export function createHansoraServer(ctx) {
         payload.expected_credits = price.displayedCredits;
       }
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
-      const response = await fetch(`${origin}/.netlify/functions/safe-run`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-USER-ID': userId },
-        body: JSON.stringify({
-          target_endpoint: endpoint,
-          model_id: model.id,
-          model_name: model.name,
-          kind: model.category,
-          prompt: normalizedInput.prompt,
-          usage_mode: normalizedInput.usage_mode,
-          payload
-        }),
-        signal: AbortSignal.timeout(58000)
-      });
-      const raw = await response.text();
-      let result;
-      try { result = JSON.parse(raw); } catch { result = { message: raw }; }
+      const submit = async () => {
+        const reply = await fetch(`${origin}/.netlify/functions/safe-run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-USER-ID': userId },
+          body: JSON.stringify({
+            target_endpoint: endpoint,
+            model_id: model.id,
+            model_name: model.name,
+            kind: model.category,
+            prompt: normalizedInput.prompt,
+            usage_mode: normalizedInput.usage_mode,
+            payload
+          }),
+          signal: AbortSignal.timeout(58000)
+        });
+        const text = await reply.text();
+        let body;
+        try { body = JSON.parse(text); } catch { body = { message: text }; }
+        return { response: reply, result: body };
+      };
+      let { response, result } = await submit();
+      let charged = price ? price.displayedCredits : undefined;
+      // The measured video made it no more expensive than the price ChatGPT gave: start right away
+      // at the real price. Only a higher price goes back to the user.
+      const verified = Number(result?.displayed_credits);
+      if (response.status === 409 && Number.isFinite(result.input_seconds) && price && Number.isFinite(verified) && verified <= price.displayedCredits) {
+        payload.expected_credits = verified;
+        ({ response, result } = await submit());
+        charged = verified;
+      }
       if (response.status === 409 && Number.isFinite(result.input_seconds)) {
         const retryField = model.id === 'henshin' ? 'duration' : 'source_video_duration';
         return jsonText({ok:false, generated:false, credits_used:0, error:'quote_changed', model_id:model.id,
           source_video_duration:result.input_seconds, credits_required:result.displayed_credits,
-          next_step:`Nothing was generated or charged. The exact price of this generation is ${result.displayed_credits} credits. Tell the user this price and ask whether to start it; do not explain how it was calculated unless they ask. Start it only after they accept: call create_generation again with the same inputs plus ${retryField}: ${result.input_seconds}.`});
+          next_step:`Nothing was generated or charged. The exact price of this generation is ${result.displayed_credits} credits${price ? `, not the ${price.displayedCredits} you quoted` : ''}. Tell the user this price and ask whether to start it; do not explain how it was calculated unless they ask. Start it only after they accept: call create_generation again with the same inputs plus ${retryField}: ${result.input_seconds}.`});
       }
       // Most runners refuse with 402; Veo 3.1, Motion Control and Aleph answer 200 with submitted:false.
       const creditRefusal = response.status === 402
@@ -725,7 +738,8 @@ export function createHansoraServer(ctx) {
         model_id: model.id,
         model_name: model.name,
         media_type: model.category,
-        credits: price ? price.displayedCredits : undefined,
+        credits: charged,
+        ...(price && charged !== price.displayedCredits ? { credits_note: `The final price is ${charged} credits, lower than the ${price.displayedCredits} quoted. Tell the user the final amount.` } : {}),
         status: response.status === 202 ? 'queued' : 'submitted',
         prompt: normalizedInput.prompt,
         aspect_ratio: normalizedInput.aspect_ratio || null,
