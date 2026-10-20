@@ -207,6 +207,12 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /Seedance 2\.5, 1080p \(sharpest, highest price\): offer only when the user asks for 1080p/);
   assert.match(guide, /Seedance 2\.0, 720p: very strong for complex scenes \(up to 15 seconds only\)/);
   assert.match(guide, /pick the first option that fits/);
+  assert.match(guide, /Wan 3\.0 15 seconds, Seedance 2\.0 15 seconds, Seedance 2\.5 30 seconds/);
+  assert.match(guide, /Gemini Omni uses only the first 10 seconds of a video/);
+  assert.match(guide, /12\. Seedance 2\.5 and Henshin: if the user wants one of these but did not say a quality, ask one short question/);
+  assert.match(guide, /per 10 seconds of video: 480p 175, 720p 380, 1080p 900 credits/);
+  assert.match(guide, /For every other model, use the default quality without asking\./);
+  assert.match(guide, /11\. Reference videos: .*a short clip of just the part that matters usually gives a better and more affordable result\. Keep it a tip only: do not explain how video length affects the price/);
   assert.match(guide, /person or character to place into new scenes .*Gemini Omni Flash, 1080p, up to 10 seconds; Wan 3\.0, 720p, for longer/);
   assert.match(guide, /8\. Stay with the model\..*Do not switch on your own\..*start only after they agree\./);
   assert.ok(list.result.structuredContent.models.every((model) => !('video_selection_guide' in model)));
@@ -251,6 +257,13 @@ test('failures are explained by kind: temporary issues switch to another model, 
   assert.equal(audio.failure_title, "Wan 3.0 can't use these inputs");
   assert.equal('alternative' in audio, false);
   assert.match(audio.next_step, /shorten the audio/);
+
+  // reAPI rows: Seedance 2.0 is recognised, and reference video limits are input problems.
+  const video = await ask(row({ source: 'reapi', engine: 'seedance-2.0', error: { msg: 'reference_video_urls duration must be between 1 and 15 seconds', code: 422 } }, 'Seedance 2.0'));
+  assert.equal(video.failure_kind, 'input');
+  assert.equal(video.failure_title, "Seedance 2.0 can't use these inputs");
+  const invalid = await ask(row({ source: 'reapi', engine: 'wan-3', error: 'Invalid Wan 3.0 video duration.' }, 'Wan 3.0'));
+  assert.equal(invalid.failure_kind, 'input');
 
   const policy = await ask(row({ model: 'veo3_lite', error: 'Your prompt was flagged by the content policy', charged: 'true', refunded: true, refunded_cost: 2 }));
   assert.equal(policy.failure_kind, 'content');
@@ -317,4 +330,55 @@ test('Wan MCP source quote reaches the runner and a measured mismatch is shown w
  assert.equal(quoted.result.structuredContent.credits,150);
  const {result,submitted}=await callTool('create_generation',args,{credits:100,runner:()=>({status:409,body:{input_seconds:5.1,displayed_credits:151}})});
  assert.equal(submitted.length,1);assert.equal(submitted[0].payload.expected_credits,150);assert.equal(result.structuredContent.credits_used,0);assert.equal(result.structuredContent.credits_required,151);assert.equal(result.structuredContent.source_video_duration,5.1);assert.match(result.structuredContent.next_step,/only after they accept/);
+});
+
+test('a Seedance reference video longer than ChatGPT guessed is never charged at a price the user did not see', async () => {
+  const video = 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/ref.mp4';
+  const request = { model_id: 'seedance25', prompt: 'the girl from the video dances', duration: 10, resolution: '720p', video_urls: [video] };
+  const first = await callTool('create_generation', request, {
+    credits: 100, runner: () => ({ status: 409, body: { ok: false, error: 'The verified media duration changed the price.', displayed_credits: 665, input_seconds: 25 } })
+  });
+  assert.equal(first.submitted[0].payload.expected_credits, 380); // the price ChatGPT quoted (video assumed 10 s)
+  const value = first.result.structuredContent;
+  assert.equal(value.error, 'quote_changed');
+  assert.equal(value.credits_used, 0);
+  assert.equal(value.credits_required, 665);
+  assert.match(value.next_step, /With this reference video the price is 665 credits, not the 380 you quoted\./);
+  assert.match(value.next_step, /also counts the video's length; it works the same way on every platform that offers this model\. The price is 665 credits\. Should I start it, or would you like to send a shorter clip\?/);
+  assert.match(value.next_step, /ask the user once about all the held ones together \(each price and the total\), not once per video/);
+  assert.match(value.next_step, /source_video_duration: 25\.$/);
+
+  const retry = await callTool('create_generation', { ...request, source_video_duration: 25 }, { credits: 100 });
+  assert.equal(retry.submitted[0].payload.expected_credits, 665);
+  assert.equal(retry.result.structuredContent.credits, 665);
+});
+
+test('a Seedance video job that turns out cheaper than quoted starts right away at the real price', async () => {
+  let calls = 0;
+  const { result, submitted } = await callTool('create_generation', {
+    model_id: 'seedance25', prompt: 'the girl from the clip waves', duration: 10, resolution: '720p',
+    video_urls: ['https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/short.mp4']
+  }, {
+    credits: 100,
+    runner: () => (++calls === 1
+      ? { status: 409, body: { ok: false, displayed_credits: 323, input_seconds: 4.8 } }
+      : { status: 201, body: { ok: true, submitted: true } })
+  });
+  assert.deepEqual(submitted.map((call) => call.payload.expected_credits), [380, 323]);
+  assert.equal(result.structuredContent.ok, true);
+  assert.equal(result.structuredContent.credits, 323);
+  assert.match(result.structuredContent.credits_note, /final price is 323 credits, lower than the 380 quoted/);
+});
+
+test('Henshin never asks about price: it starts and reports what the uploaded video really cost', async () => {
+  const { result, submitted } = await callTool('create_generation', {
+    model_id: 'henshin', prompt: 'put the woman from the photo into the video', duration: 10, resolution: '720p',
+    source_video_url: 'https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/dance.mp4',
+    image_urls: ['https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/video/woman.png']
+  }, { credits: 100, runner: () => ({ status: 201, body: { ok: true, submitted: true, debited: 41.8 } }) });
+  assert.equal(submitted.length, 1);
+  assert.equal(submitted[0].payload.expected_credits, undefined); // no price check, so no extra question
+  assert.equal(result.structuredContent.ok, true);
+  assert.equal(result.structuredContent.credits, 418);
+  assert.match(result.structuredContent.credits_note, /final price is 418 credits, based on the length of the uploaded video/);
 });

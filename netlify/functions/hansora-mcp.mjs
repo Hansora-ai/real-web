@@ -16,6 +16,10 @@ import { accountSummary, insufficientCreditsResult, publicQuote, quoteOptionsFro
 
 const PUBLIC_ORIGIN = String(process.env.URL || 'https://hansora.co').replace(/\/+$/, '');
 const MCP_URL = new URL('/mcp', PUBLIC_ORIGIN);
+// Models that add a reference video's length to the price (on every platform that offers them).
+const REFERENCE_VIDEO_MODELS = new Set(['seedance25', 'seedance20', 'wan-3']);
+// Launchers that report the real charge, measured from the uploaded files.
+const MEASURED_CHARGE_MODELS = new Set(['seedance25', 'seedance20', 'wan-3', 'henshin']);
 const PUBLIC_GENERATION_FAILURE = 'Generation failed. Please try again and make sure your prompt and image do not violate any policy.';
 
 function jsonText(value) {
@@ -667,28 +671,53 @@ export function createHansoraServer(ctx) {
       const storedInput = await storeGenerationFiles(input);
       const runId = `${userId}-mcp-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
       const payload = buildGenerationPayload(input.model_id, storedInput, userId, runId);
+      // ChatGPT can't see how long a reference video is, so its quote guesses. These launchers measure
+      // the real files and refuse (charging nothing) when the measured length changes the quoted price.
+      const hasVideoInput = Boolean(normalizedInput.source_video_url || normalizedInput.video_urls?.length);
+      if (REFERENCE_VIDEO_MODELS.has(model.id) && hasVideoInput && price && payload.expected_credits == null) {
+        payload.expected_credits = price.displayedCredits;
+      }
       const origin = ctx.requestInfo ? new URL(ctx.requestInfo.url).origin : PUBLIC_ORIGIN;
-      const response = await fetch(`${origin}/.netlify/functions/safe-run`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-USER-ID': userId },
-        body: JSON.stringify({
-          target_endpoint: endpoint,
-          model_id: model.id,
-          model_name: model.name,
-          kind: model.category,
-          prompt: normalizedInput.prompt,
-          usage_mode: normalizedInput.usage_mode,
-          payload
-        }),
-        signal: AbortSignal.timeout(58000)
-      });
-      const raw = await response.text();
-      let result;
-      try { result = JSON.parse(raw); } catch { result = { message: raw }; }
-      if (response.status === 409 && model.id === 'wan-3' && Number.isFinite(result.input_seconds)) {
+      const submit = async () => {
+        const reply = await fetch(`${origin}/.netlify/functions/safe-run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-USER-ID': userId },
+          body: JSON.stringify({
+            target_endpoint: endpoint,
+            model_id: model.id,
+            model_name: model.name,
+            kind: model.category,
+            prompt: normalizedInput.prompt,
+            usage_mode: normalizedInput.usage_mode,
+            payload
+          }),
+          signal: AbortSignal.timeout(58000)
+        });
+        const text = await reply.text();
+        let body;
+        try { body = JSON.parse(text); } catch { body = { message: text }; }
+        return { response: reply, result: body };
+      };
+      let { response, result } = await submit();
+      let charged = price ? price.displayedCredits : undefined;
+      // The measured video made it no more expensive than the price ChatGPT gave (or ChatGPT gave none):
+      // start right away at the real price. Only a higher price goes back to the user.
+      const verified = Number(result?.displayed_credits);
+      const quoted = payload.expected_credits;
+      if (response.status === 409 && Number.isFinite(result.input_seconds) && Number.isFinite(verified) && (quoted == null || verified <= Number(quoted))) {
+        payload.expected_credits = verified;
+        ({ response, result } = await submit());
+        charged = verified;
+      }
+      if (response.status === 409 && Number.isFinite(result.input_seconds)) {
         return jsonText({ok:false, generated:false, credits_used:0, error:'quote_changed', model_id:model.id,
           source_video_duration:result.input_seconds, credits_required:result.displayed_credits,
-          next_step:'Show the verified quote to the user. Retry only after they accept it, passing source_video_duration from this result. Nothing was generated or charged.'});
+          next_step:[
+            `Nothing was generated or charged. With this reference video the price is ${result.displayed_credits} credits${quoted != null ? `, not the ${quoted} you quoted` : ''}.`,
+            `Tell the user briefly, in their language, something like: "With a reference video, ${model.name} also counts the video's length; it works the same way on every platform that offers this model. The price is ${result.displayed_credits} credits. Should I start it, or would you like to send a shorter clip?"`,
+            'If you are starting several generations in this request, submit all of them first: the ones that cost no more start right away and the others come back like this one. Then ask the user once about all the held ones together (each price and the total), not once per video.',
+            `Start it only after they accept: call create_generation again with the same inputs plus source_video_duration: ${result.input_seconds}.`
+          ].join(' ')});
       }
       // Most runners refuse with 402; Veo 3.1, Motion Control and Aleph answer 200 with submitted:false.
       const creditRefusal = response.status === 402
@@ -700,6 +729,11 @@ export function createHansoraServer(ctx) {
           ? { ...(price || {}), displayedCredits: Number((need * 10).toFixed(2)) }
           : price;
         return insufficientCreditsResult({ model, price: charged, balanceInternal: account.internal_credits, input: normalizedInput });
+      }
+      // Henshin and reference-video launchers measure the uploaded files and report the real charge.
+      const debited = Number(result?.debited);
+      if (response.ok && MEASURED_CHARGE_MODELS.has(model.id) && Number.isFinite(debited) && debited > 0) {
+        charged = Number((debited * 10).toFixed(2));
       }
       if (!response.ok) {
         // Pass the provider's own reason (e.g. a content refusal) so the assistant can explain it
@@ -717,7 +751,8 @@ export function createHansoraServer(ctx) {
         model_id: model.id,
         model_name: model.name,
         media_type: model.category,
-        credits: price ? price.displayedCredits : undefined,
+        credits: charged,
+        ...(price && charged != null && charged !== price.displayedCredits ? { credits_note: `The final price is ${charged} credits${model.id === 'henshin' ? ', based on the length of the uploaded video' : charged < price.displayedCredits ? `, lower than the ${price.displayedCredits} quoted` : ''}. Tell the user the final amount.` } : {}),
         status: response.status === 202 ? 'queued' : 'submitted',
         prompt: normalizedInput.prompt,
         aspect_ratio: normalizedInput.aspect_ratio || null,
