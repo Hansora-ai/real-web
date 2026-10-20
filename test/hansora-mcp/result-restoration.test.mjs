@@ -230,7 +230,14 @@ test('several generations started together show as one gallery that fills in as 
   await flush();
   assert.equal(card.section(), 'batch');
   assert.equal(card.nodes.get('gallery').children.length, 2);
-  assert.equal(card.nodes.get('gallery').children[0].children[0].tag, 'img');
+  const tile = card.nodes.get('gallery').children[0];
+  assert.equal(tile.children[0].className, 'tile-open');
+  assert.equal(tile.children[0].children[0].tag, 'img');
+  assert.equal(tile.children[1].className, 'tile-dl'); // each ready result has its own download button
+  tile.children[1].listeners.click();
+  await flush();
+  const opened = card.messages.filter((message) => message.method === 'ui/open-link').map((message) => message.params.url);
+  assert.deepEqual(opened, ['https://qmaealblegvcwodlmeht.supabase.co/storage/v1/object/public/history/run-1.png?download=']);
   assert.match(card.nodes.get('batchText').textContent, /1 ready · 1 generating/);
   assert.equal(card.nodes.get('badge').textContent, 'Generating');
 

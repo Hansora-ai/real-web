@@ -6,6 +6,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key';
 process.env.URL = 'https://hansora.test';
 
 const { default: hansoraMcp } = await import('../../netlify/functions/hansora-mcp.mjs');
+const { resetHealthCache, unavailableFromRuns } = await import('../../lib/hansora-mcp/health.mjs');
 
 const token = `x.${Buffer.from(JSON.stringify({ client_id: 'chatgpt', scope: 'email' })).toString('base64url')}.y`;
 
@@ -28,6 +29,7 @@ async function callTool(name, args, { credits, generations = [], runner = () => 
     }
     throw new Error(`unexpected fetch ${href}`);
   };
+  resetHealthCache();
   try {
     const response = await hansoraMcp(new Request('https://hansora.test/mcp', {
       method: 'POST',
@@ -214,7 +216,7 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.equal('video_selection_guide' in image.result.structuredContent, false);
 });
 
-test('failures are explained by kind: temporary issues offer another model, refusals do not', async () => {
+test('failures are explained by kind: temporary issues switch to another model, refusals do not', async () => {
   const row = (meta, provider = 'veo3.1lite', kind = 'video') => ({ id: 'f', provider, kind, prompt: 'garden', result_url: null,
     created_at: new Date().toISOString(), meta: { run_id: 'u-mcp-f', status: 'failed', failed: true, ...meta } });
   const ask = async (generation) => (await callTool('get_generation', { run_id: 'u-mcp-f' }, { credits: 30, generations: [generation] })).result.structuredContent;
@@ -224,8 +226,30 @@ test('failures are explained by kind: temporary issues offer another model, refu
   assert.equal(veo.failure_title, 'Veo 3.1 Lite is having a temporary issue');
   assert.equal(veo.card_message, "Veo 3.1 Lite is having a temporary issue right now. It wasn't caused by your prompt or image. Your 20 credits were refunded.");
   assert.deepEqual([veo.alternative.model_id, veo.alternative.credits], ['grok-video', 18]);
-  assert.match(veo.message, /Do you want me to try Grok Video instead\? It costs 18 credits\.$/);
-  assert.match(veo.next_step, /Start it only after they agree/);
+  // The backup costs no more than the failed run, so ChatGPT switches once without asking.
+  assert.equal(veo.auto_switch, true);
+  assert.match(veo.message, /Trying Grok Video instead \(18 credits\)\.$/);
+  assert.match(veo.next_step, /^Start Grok Video \(18 credits\) now with the same prompt and inputs, without asking the user\./);
+  assert.match(veo.next_step, /Switch only once: if the backup also fails, stop and ask the user\./);
+
+  // A pricier backup still needs the user's yes.
+  const omni = await ask(row({ model_id: 'gemini-omni-flash-1-1', error: 'Internal Error', charged: 'true', refunded: true, refunded_cost: 0.4 }, 'Gemini Omni 1.1 Flash'));
+  assert.equal(omni.alternative.model_id, 'veo31-lite');
+  assert.equal(omni.auto_switch, false);
+  assert.match(omni.next_step, /Start it only after they agree/);
+
+  // Kling's "playground task" errors are a provider problem: switch to Veo 3.1 Lite.
+  const kling = await ask(row({ engine: 'kling25', error: 'playground task error', charged: 'true', refunded: true, refunded_cost: 3 }, 'Kling-5s'));
+  assert.equal(kling.failure_kind, 'temporary');
+  assert.equal(kling.alternative.model_id, 'veo31-lite');
+  assert.equal(kling.auto_switch, true);
+
+  // Too much reference audio is an input problem: fix the input, never switch models.
+  const audio = await ask(row({ engine: 'wan-3', error: { msg: 'reference_audio_urls total duration must be less than or equal to 15 seconds', code: 422 } }, 'Wan 3.0'));
+  assert.equal(audio.failure_kind, 'input');
+  assert.equal(audio.failure_title, "Wan 3.0 can't use these inputs");
+  assert.equal('alternative' in audio, false);
+  assert.match(audio.next_step, /shorten the audio/);
 
   const policy = await ask(row({ model: 'veo3_lite', error: 'Your prompt was flagged by the content policy', charged: 'true', refunded: true, refunded_cost: 2 }));
   assert.equal(policy.failure_kind, 'content');
@@ -240,4 +264,48 @@ test('failures are explained by kind: temporary issues offer another model, refu
   assert.equal(image.failure_kind, 'unknown');
   assert.equal(image.failure_title, "Nano Banana Pro couldn't finish this image");
   assert.equal(image.alternative.model_id, 'seedream-4-5');
+});
+
+test('a model failing for everyone is set aside, then comes back on its own', async () => {
+  const now = Date.parse('2026-10-19T20:30:00Z');
+  const run = (minutesAgo, meta, result_url = null) => ({ provider: 'veo3.1lite', created_at: new Date(now - minutesAgo * 60000).toISOString(), result_url, meta: { model: 'veo3_lite', ...meta } });
+  const failed = (minutesAgo) => run(minutesAgo, { status: 'failed', error: 'Internal Error, Please try again later.', error_code: 500 });
+  assert.deepEqual([...unavailableFromRuns([failed(1), failed(2), failed(3)], now)], ['veo31-lite']);
+  assert.equal(unavailableFromRuns([failed(1), failed(2)], now).size, 0); // two errors are not enough
+  assert.equal(unavailableFromRuns([run(0.5, { status: 'done' }, 'https://x/v.mp4'), failed(1), failed(2), failed(3)], now).size, 0); // a success lifts it
+  assert.equal(unavailableFromRuns([failed(11), failed(12), failed(13)], now).size, 0); // retried 10 minutes after the last error
+  const refused = (minutesAgo) => run(minutesAgo, { status: 'failed', error: 'flagged by content policy' });
+  assert.equal(unavailableFromRuns([refused(1), refused(2), refused(3)], now).size, 0); // refusals say nothing about the model
+
+  const recent = [1, 2, 3].map((minutes) => ({ ...failed(0), created_at: new Date(Date.now() - minutes * 60000).toISOString() }));
+  const model = await callTool('get_model', { model_id: 'veo31-lite' }, { credits: 30, generations: recent });
+  assert.equal(model.result.structuredContent.current_status, 'temporarily_unavailable');
+  assert.match(model.result.structuredContent.status_note, /Use Grok Video \(grok-video\) instead/);
+
+  const { result, submitted } = await callTool('create_generation', { model_id: 'veo31-lite', prompt: 'office', resolution: '1080p' }, { credits: 30, generations: recent });
+  assert.equal(submitted.length, 0);
+  assert.equal(result.structuredContent.error, 'model_temporarily_unavailable');
+  assert.equal(result.structuredContent.credits_used, 0);
+  assert.equal(result.structuredContent.alternative.model_id, 'grok-video');
+  assert.equal(result.structuredContent.auto_switch, true);
+  assert.match(result.structuredContent.next_step, /no credits were used/);
+});
+
+test('a temporary error at submit time switches to the backup instead of a bare error', async () => {
+  const { result } = await callTool('create_generation', { model_id: 'kling25', prompt: 'car', duration: 5 }, {
+    credits: 30, runner: () => ({ status: 502, body: { ok: false, error: 'kie_create_failed', details: { code: 500, msg: 'playground task failed' } } })
+  });
+  assert.equal(result.structuredContent.error, 'model_temporarily_unavailable');
+  assert.equal(result.structuredContent.alternative.model_id, 'veo31-lite');
+  assert.match(result.structuredContent.message, /playground task failed/);
+});
+
+test('a Grok prompt over 5000 characters is sent back to be shortened before anything is charged', async () => {
+  const { result, submitted } = await callTool('create_generation', { model_id: 'grok-video', prompt: 'x'.repeat(5439), duration: 10 }, { credits: 30 });
+  assert.equal(submitted.length, 0);
+  assert.equal(result.structuredContent.error, 'prompt_too_long');
+  assert.equal(result.structuredContent.max_prompt_characters, 5000);
+  assert.match(result.structuredContent.next_step, /Shorten it to under 5000 characters/);
+  const model = await callTool('get_model', { model_id: 'grok-video' }, { credits: 30 });
+  assert.equal(model.result.structuredContent.input.max_prompt_chars, 5000);
 });
