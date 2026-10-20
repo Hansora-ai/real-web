@@ -207,6 +207,8 @@ test('ChatGPT gets the video selection guide with the model list and with each v
   assert.match(guide, /Seedance 2\.5, 1080p \(sharpest, highest price\): offer only when the user asks for 1080p/);
   assert.match(guide, /Seedance 2\.0, 720p: very strong for complex scenes \(up to 15 seconds only\)/);
   assert.match(guide, /pick the first option that fits/);
+  assert.match(guide, /Wan 3\.0 15 seconds, Seedance 2\.0 15 seconds, Seedance 2\.5 30 seconds/);
+  assert.match(guide, /Gemini Omni uses only the first 10 seconds of a video/);
   assert.match(guide, /person or character to place into new scenes .*Gemini Omni Flash, 1080p, up to 10 seconds; Wan 3\.0, 720p, for longer/);
   assert.match(guide, /8\. Stay with the model\..*Do not switch on your own\..*start only after they agree\./);
   assert.ok(list.result.structuredContent.models.every((model) => !('video_selection_guide' in model)));
@@ -251,6 +253,13 @@ test('failures are explained by kind: temporary issues switch to another model, 
   assert.equal(audio.failure_title, "Wan 3.0 can't use these inputs");
   assert.equal('alternative' in audio, false);
   assert.match(audio.next_step, /shorten the audio/);
+
+  // reAPI rows: Seedance 2.0 is recognised, and reference video limits are input problems.
+  const video = await ask(row({ source: 'reapi', engine: 'seedance-2.0', error: { msg: 'reference_video_urls duration must be between 1 and 15 seconds', code: 422 } }, 'Seedance 2.0'));
+  assert.equal(video.failure_kind, 'input');
+  assert.equal(video.failure_title, "Seedance 2.0 can't use these inputs");
+  const invalid = await ask(row({ source: 'reapi', engine: 'wan-3', error: 'Invalid Wan 3.0 video duration.' }, 'Wan 3.0'));
+  assert.equal(invalid.failure_kind, 'input');
 
   const policy = await ask(row({ model: 'veo3_lite', error: 'Your prompt was flagged by the content policy', charged: 'true', refunded: true, refunded_cost: 2 }));
   assert.equal(policy.failure_kind, 'content');
