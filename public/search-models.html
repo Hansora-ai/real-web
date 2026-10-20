@@ -4273,6 +4273,7 @@
     }
 
 	    </style>
+  <script src="/seedance-pricing.js?v=20261020"></script>
 </head>
 <body class="min-h-screen flex flex-col workspace-redesign">
   <div id="sharedHeader"></div>
@@ -4995,10 +4996,11 @@ async function __mjFetchNbCheck(params){
     url = `/.netlify/functions/${checker}?taskId=${encodeURIComponent(taskId)}&uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
   }
   else url = `/.netlify/functions/${checker}?uid=${encodeURIComponent(uid)}&run_id=${encodeURIComponent(runId)}`;
+  const session = checker === 'reapi-check' ? (await window.__HANSORA_SB__.auth.getSession()).data?.session : null;
   const r = await fetch(url, {
     method: 'GET',
     cache: 'no-store',
-    headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' }
+    headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache', ...(session ? { Authorization: 'Bearer ' + session.access_token } : {}) }
   });
   const t = await r.text();
   let js; try{ js = JSON.parse(t); }catch{ js = { raw:t }; }
@@ -6713,6 +6715,7 @@ function createResultCard(data) {
       const kindHint = String((row && row.kind) || '').toLowerCase();
       const meta = row && row.meta && typeof row.meta === 'object' ? row.meta : {};
       if (meta.checker) return String(meta.checker);
+      if (meta.source === 'reapi') return 'reapi-check';
       if (String(meta.engine || '').toLowerCase() === 'sora2') return 'sora2-check';
       if (String(meta.source || '').toLowerCase() === 'byteplus') return 'seedance-cheap-check';
       return 'kie-check';
@@ -6729,23 +6732,11 @@ function createResultCard(data) {
     }
 
     function endpointForCurrentRun(model) {
-      if (model && model.id === 'seedance25' && !seedanceHasUploadedMedia()) {
-        return '/.netlify/functions/run-seedance-25-cheap';
-      }
-      if (model && model.id === 'seedance20' && !seedanceHasUploadedMedia()) {
-        return '/.netlify/functions/run-seedance-cheap';
-      }
       return model && model.endpoint ? model.endpoint : '';
     }
 
     function checkerForCurrentModel(model, endpoint) {
-      if (model && model.id === 'seedance25' && String(endpoint || '').includes('run-seedance-25-cheap')) {
-        return 'seedance-cheap-check';
-      }
-      if (model && model.id === 'seedance20' && String(endpoint || '').includes('run-seedance-cheap')) {
-        return 'seedance-cheap-check';
-      }
-      return 'kie-check';
+      return ['seedance25', 'seedance20'].includes(model?.id) ? 'reapi-check' : 'kie-check';
     }
 
     function directResultUrlFromCheck(js) {
@@ -7506,15 +7497,15 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         maxFiles: 0,
         uploadMaxMB: 200,
         uploadLimitsMB: { image: 30, video: 200, audio: 15 },
-        referenceLimits: { image: 30, video: 10, audio: 3 },
+        referenceLimits: { image: 30, video: 10, audio: 10 },
         specificUpload: 'seedance',
         aspectOptions: ['16:9', '9:16', '1:1', '4:3', '3:4'],
         defaultAspect: '1:1',
-        resolutionOptions: ['480p', '720p'],
+        resolutionOptions: ['480p', '720p', '1080p'],
         defaultResolution: '720p',
         durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
-        costLabel: '480p 1.7⚡/s · 720p 3.8⚡/s',
-        minCredits: 6.8
+        costLabel: '',
+        minCredits: 5.9
       },
       {
         id: 'seedance20',
@@ -7531,11 +7522,11 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
 	        specificUpload: 'seedance',
 	        aspectOptions: ['16:9', '9:16', '1:1', '4:3', '3:4'],
 	        defaultAspect: '16:9',
-	        resolutionOptions: ['720p', '1080p', '4K'],
+	        resolutionOptions: ['480p', '720p', '1080p', '4K'],
 	        defaultResolution: '720p',
 	        durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-	        costLabel: 'Standard 720p 2.5⚡/s · 1080p 5.5⚡/s · 4K 12⚡/s · Fast 2⚡/s',
-	        minCredits: 10
+	        costLabel: '',
+	        minCredits: 3.6
 	      },
       {
         id: 'seedance20-mini',
@@ -8355,6 +8346,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     let seedanceImageRefFiles = [];
     let seedanceVideoRefFiles = [];
     let seedanceSingleVideoDuration = null;
+    let seedanceVideoDurations = [];
+    let seedanceVerifiedQuote = null;
     let seedanceAudioRefFiles = [];
     let seedanceGenerateAudio = true;
     let seedanceWebSearch = false;
@@ -9342,17 +9335,15 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
         const rate = currentResolution === '1080p' ? 0.6 : 0.3;
         return Number((seconds * rate).toFixed(1));
       }
-	      if (model.id === 'seedance20') {
-	        const seconds = Math.max(1, Number(currentDuration || 5));
-	        const rate = currentSeedanceVariant === 'fast' ? 2 : (currentResolution === '4K' ? 12 : (currentResolution === '1080p' ? 5.5 : 2.5));
-	        return Number((seconds * rate).toFixed(1));
-	      }
-      if (model.id === 'seedance25') {
-        const seconds = seedance25UsesSourceVideoSettings()
-          ? Math.max(4, Math.min(30, Math.ceil(Number(seedanceSingleVideoDuration || 4))))
-          : Math.max(1, Number(currentDuration || 5));
-        const rate = currentResolution === '480p' ? 1.7 : 3.8;
-        return Number((seconds * rate).toFixed(1));
+	      if (model.id === 'seedance20' || model.id === 'seedance25') {
+        if (seedanceVideoDurations.length !== seedanceVideoRefFiles.length || seedanceVideoDurations.some(value => !Number.isFinite(value))) return null;
+        const verified = seedanceVerifiedQuote && seedanceVerifiedQuote.files.length === seedanceVideoRefFiles.length && seedanceVerifiedQuote.files.every((file,i)=>file===seedanceVideoRefFiles[i]);
+        const inputSeconds = verified ? seedanceVerifiedQuote.seconds : seedanceVideoDurations.reduce((sum, value) => sum + (Number(value) || 0), 0);
+        try {
+          return window.SeedancePricing.quote({ model:model.id, variant:currentSeedanceVariant,
+            resolution:currentResolution, duration:Number(currentDuration || 5), inputSeconds,
+            edit:seedance25UsesSourceVideoSettings() }).internalCredits;
+        } catch { return null; }
       }
       if (model.id === 'seedance20-mini') {
         const seconds = Math.max(1, Number(currentDuration || 5));
@@ -10134,6 +10125,7 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
       seedanceLastFrameFile = null;
       seedanceImageRefFiles = [];
       seedanceVideoRefFiles = [];
+      seedanceVideoDurations = [];
       seedanceSingleVideoDuration = null;
       seedanceAudioRefFiles = [];
       seedanceGenerateAudio = true;
@@ -11082,9 +11074,8 @@ async function pollGeneration(runId, controllers, token, taskId, checker) {
     }
 
     async function syncSeedanceSingleVideoDuration() {
-      seedanceSingleVideoDuration = seedanceVideoRefFiles.length === 1
-        ? await readVideoFileDuration(seedanceVideoRefFiles[0])
-        : null;
+      seedanceVideoDurations = await Promise.all(seedanceVideoRefFiles.map(readVideoFileDuration));
+      seedanceSingleVideoDuration = seedanceVideoRefFiles.length === 1 ? seedanceVideoDurations[0] : null;
       if (seedance25UsesSourceVideoSettings() && (!seedanceSingleVideoDuration || seedanceSingleVideoDuration < 4 || seedanceSingleVideoDuration > 30)) {
         showStatus('For Seedance video editing, the uploaded video must be 4 to 30 seconds long.', 'error');
       }
@@ -13003,6 +12994,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
     }
 
     function persistGenerationInputUrlsInBackground(details) {
+      if (['seedance20','seedance25'].includes(details?.model?.id)) return; // Metadata is server-owned for reAPI jobs.
       const uid = String(details && details.uid || '').trim();
       const runId = String(details && details.runId || '').trim();
       const inputUrls = Array.isArray(details && details.urls)
@@ -13086,6 +13078,16 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
         removeClientRequestPlaceholder(initialRequestContext);
         showStatus('Please log in first.', 'error');
         return;
+      }
+
+      if (['seedance20','seedance25'].includes(currentModel.id)) {
+        await syncSeedanceSingleVideoDuration();
+        const limit = currentModel.id === 'seedance25' ? 30 : 15;
+        if (seedanceVideoDurations.some(value => !Number.isFinite(value) || value <= 0) || seedanceVideoDurations.reduce((a,b)=>a+b,0) > limit + .0001 || prompt.length > 20000 || prompt.length < 3) {
+          removeClientRequestPlaceholder(initialRequestContext);
+          showStatus('Check reference durations and use a prompt of 3–20,000 characters.', 'error');
+          return;
+        }
       }
 
       if (seedance25UsesSourceVideoSettings() && (!seedanceSingleVideoDuration || seedanceSingleVideoDuration < 4 || seedanceSingleVideoDuration > 30)) {
@@ -13291,6 +13293,7 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           soraQuality: __soraQuality,
           resolution: currentResolution
         });
+        if (['seedance20','seedance25'].includes(currentModel.id)) body.expected_credits = Math.round(getModelUnitCreditValue() * 10);
         body.client_diagnostic = {
           model_id: currentModel.id,
           model_name: currentModel.name,
@@ -13478,6 +13481,10 @@ document.getElementById('motionImageInput').addEventListener('change', (e) => {
           let safetyBlocked = false;
           try {
             const j = JSON.parse(txt);
+            if (res.status === 409 && ['seedance20','seedance25'].includes(currentModel.id) && Number.isFinite(j.input_seconds)) {
+              seedanceVerifiedQuote = {files:[...seedanceVideoRefFiles],seconds:j.input_seconds};
+              updateCostDisplay(); updateRunButtonLabel();
+            }
             safetyBlocked = j && j.code === 'CONTENT_POLICY_BLOCKED';
             const parsedMsg = cleanGenerationFailureReason(j.message) || cleanGenerationFailureReason(extractGenerationFailureReason(j)) || cleanGenerationFailureReason(extractProviderError(j)) || cleanGenerationFailureReason(j.error);
             if (parsedMsg) msg = parsedMsg;

@@ -28,7 +28,7 @@ test('Henshin is available through create_generation with the website price', ()
   const payload = buildGenerationPayload('henshin', { prompt: 'replace the bottle with my product', video_urls: ['https://s.test/v.mp4'], image_urls: [img('p')] }, 'u', 'u-mcp-1');
   assert.deepEqual([payload.mode, payload.video_url, payload.resolution, payload.keep_audio], ['swap', 'https://s.test/v.mp4', '720p', true]);
   assert.equal(buildGenerationPayload('henshin', { prompt: 'put her into this dance', video_urls: ['https://s.test/v.mp4'], image_urls: [img('w')] }, 'u', 'r').mode, 'motion');
-  assert.equal(quote('henshin', { duration: 7.2, resolution: '480p' }).displayedCredits, 160);
+  assert.equal(quote('henshin', { duration: 7.2, resolution: '480p' }).displayedCredits, 140);
   assert.throws(() => buildGenerationPayload('henshin', { prompt: 'x', image_urls: [img('p')] }, 'u', 'r'), /video_required/);
 });
 

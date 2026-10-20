@@ -1,9 +1,9 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
-process.env.SUPABASE_URL='https://example.supabase.co';process.env.SUPABASE_SERVICE_ROLE_KEY='test';process.env.KIE_API_KEY='test';
+process.env.SUPABASE_URL='https://example.supabase.co';process.env.SUPABASE_SERVICE_ROLE_KEY='test';process.env.KIE_API_KEY='test';process.env.REAPI_API_KEY='test';
 const common=require('../../lib/henshin/common.cjs');
 const url='https://example.supabase.co/storage/v1/object/public/generation-history/source.mp4';
 const body={run_id:'fixture-run',resolution:'480p',source_video_duration:5.1,video_url:url,image_urls:[url.replace('.mp4','.png')],mode:'motion'};
-test('All three resolutions round billing seconds upward and preserve decimal rates',()=>{for(const [resolution,expected]of [['480p',12],['720p',25.2],['1080p',54]])assert.equal(common.validate({...body,resolution}).cost,expected);});
+test('All three resolutions round billing seconds upward and preserve decimal rates',()=>{for(const [resolution,expected]of [['480p',10.5],['720p',22.8],['1080p',54]])assert.equal(common.validate({...body,resolution}).cost,expected);});
 test('Invalid resolution, duration, references and storage hosts are rejected',()=>{for(const patch of [{resolution:'780p'},{source_video_duration:NaN},{source_video_duration:3},{source_video_duration:31},{video_url:'http://127.0.0.1/video.mp4'},{image_urls:[]},{image_urls:Array(31).fill(url)},{mode:'bad'},{audio_url:'https://attacker.test/a.mp3'}])assert.throws(()=>common.validate({...body,...patch}));});
 test('Prompt assigns images to identity and video to the camera and timing',()=>{const prompt=common.promptFor(body);assert.match(prompt,/Strictly keep these exactly as in @Video 1/);assert.match(prompt,/@Image 1/);assert.match(prompt,/Ignore the pose, camera angle/);assert.doesNotMatch(common.promptFor({...body,mode:'swap',audio_url:url}),/@Audio/);});
 const response=data=>new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}});
@@ -23,24 +23,37 @@ function mockServices({credits=100,reject=false}={}){
    if(options.method==='POST'){record=b;return response([b]);}
    if(options.method==='PATCH'){record={...record,...b};return response([record]);}return response(record?[record]:[]);
   }
-  if(u.pathname.endsWith('/createTask')){submits++;providerInput=b.input;return response(reject?{code:422,msg:'Provider rejected input'}:{code:200,data:{taskId:'fixture-task'}});}
+  if(u.pathname.endsWith('/rpc/reapi_generation_transition')){
+   const action=b.p_action,p=b.p_payload;
+   if(action==='reserve'){
+    if(record)return response({created:false,row:record});
+    if(credits<p.meta.refund_amount)return new Response(JSON.stringify({message:'not_enough_credits'}),{status:400});
+    credits-=p.meta.refund_amount;record={id:b.p_id,user_id:b.p_user,prompt:p.prompt,result_url:null,meta:{...p.meta,charged:true,charged_cost:p.meta.refund_amount}};
+    return response({created:true,row:record,credits});
+   }
+   if(action==='attach')record.meta={...record.meta,...p,status:'processing'};
+   if(action==='uncertain')record.meta={...record.meta,submission_uncertain:true};
+   if(action==='fail'&&!record.meta.refunded){credits+=record.meta.refund_amount;record.meta={...record.meta,status:'failed',refunded:true};}
+   return response({changed:true,row:record,credits});
+  }
+  if(u.pathname.endsWith('/videos/generations')){submits++;providerInput=b;return reject?new Response(JSON.stringify({error:{message:'Provider rejected input'}}),{status:400}):response({id:'fixture-task',model:b.model,status:'processing'});}
   throw Error('Unexpected test request: '+u.pathname);
  }};
 }
 const event=patch=>({httpMethod:'POST',headers:{authorization:'Bearer test'},body:JSON.stringify({...body,...patch})});
 test('Successful run charges verified duration, saves audio only for restoration and submits once',async()=>{
  const original=global.fetch,services=mockServices();global.fetch=services.fetch;
- try{const {handler}=require('../../netlify/functions/run-henshin');let result=await handler(event({audio_url:url}));assert.equal(result.statusCode,201);assert.equal(JSON.parse(result.body).debited,10);assert.equal(services.state().credits,90);assert.equal(services.state().providerInput.duration,-1);assert.equal(services.state().providerInput.generate_audio,false);assert.equal(Object.hasOwn(services.state().providerInput,'reference_audio_urls'),false);assert.deepEqual(services.state().record.meta.reference_audio_urls,[]);assert.doesNotMatch(services.state().providerInput.prompt,/@Audio/);assert.match(services.state().record.meta.source_audio_url,/source-audio.m4a$/);assert.match(services.state().providerInput.reference_video_urls[0],/silent-source.mp4$/);assert.equal(services.state().record.meta.refund_amount,10);result=await handler(event());assert.equal(result.statusCode,200);assert.equal(services.state().submits,1);assert.equal(services.state().credits,90);}finally{global.fetch=original;}
+ try{const {handler}=require('../../netlify/functions/run-henshin');let result=await handler(event({audio_url:url}));assert.equal(result.statusCode,201);assert.equal(JSON.parse(result.body).debited,8.8);assert.equal(services.state().credits,91.2);assert.equal(services.state().providerInput.duration,-1);assert.equal(services.state().providerInput.omni_reference_task_type,'edit');assert.equal(services.state().providerInput.generate_audio,false);assert.equal(Object.hasOwn(services.state().providerInput,'audio_urls'),false);assert.deepEqual(services.state().record.meta.reference_audio_urls,[]);assert.doesNotMatch(services.state().providerInput.prompt,/@Audio/);assert.match(services.state().record.meta.source_audio_url,/source-audio.m4a$/);assert.match(services.state().providerInput.video_urls[0],/silent-source.mp4$/);assert.equal(services.state().record.meta.refund_amount,8.8);result=await handler(event());assert.equal(result.statusCode,200);assert.equal(services.state().submits,1);assert.equal(services.state().credits,91.2);}finally{global.fetch=original;}
 });
 test('Built-in instructions go only to the provider; the saved row keeps just the user text',async()=>{
  for(const [patch,saved] of [[{mode:'swap',prompt:'',keep_audio:true,audio_url:url},'Henshin · Object swap'],[{mode:'edit',prompt:'Make the jacket red.',keep_audio:false,audio_url:url},'Make the jacket red.']]){
   const original=global.fetch,services=mockServices();global.fetch=services.fetch;
   try{const result=await require('../../netlify/functions/run-henshin').handler(event(patch));assert.equal(result.statusCode,201);
    const {record,providerInput,media:objects}=services.state();assert.match(providerInput.prompt,/camera angle, camera position, camera movement/);
-   assert.equal(Object.hasOwn(providerInput,'reference_audio_urls'),false);assert.doesNotMatch(providerInput.prompt,/@Audio/);
+   assert.equal(Object.hasOwn(providerInput,'audio_urls'),false);assert.doesNotMatch(providerInput.prompt,/@Audio/);
    assert.equal(providerInput.generate_audio,!patch.keep_audio);assert.equal(!!record.meta.source_audio_url,patch.keep_audio);
    const media=require('../../lib/henshin/server-media.cjs');await media.withCore(async core=>{
-    core.FS.writeFile('provider-video.mp4',objects.get(providerInput.reference_video_urls[0]));
+    core.FS.writeFile('provider-video.mp4',objects.get(providerInput.video_urls[0]));
     assert.deepEqual(media.probe(core,'provider-video.mp4').streams.map(s=>s.codec_type),['video']);
    });
    assert.equal(record.prompt,saved);assert.equal(record.meta.user_prompt,patch.prompt);assert.doesNotMatch(JSON.stringify(record),/camera angle, camera position/);
@@ -50,7 +63,7 @@ test('Built-in instructions go only to the provider; the saved row keeps just th
 });
 test('Insufficient balance never launches a provider task',async()=>{const original=global.fetch,services=mockServices({credits:1});global.fetch=services.fetch;try{const result=await require('../../netlify/functions/run-henshin').handler(event());assert.equal(result.statusCode,402);assert.equal(services.state().submits,0);assert.equal(services.state().credits,1);}finally{global.fetch=original;}});
 test('Explicit provider rejection restores the debit and records a refund',async()=>{const original=global.fetch,services=mockServices({reject:true});global.fetch=services.fetch;try{await require('../../netlify/functions/run-henshin').handler(event());assert.equal(services.state().credits,100);assert.equal(services.state().record.meta.status,'failed');assert.equal(services.state().record.meta.refunded,true);}finally{global.fetch=original;}});
-test('Ambiguous provider timeout retains the reserved charge for callback reconciliation',async()=>{const original=global.fetch,services=mockServices();global.fetch=(url,options)=>String(url).includes('createTask')?Promise.reject(Error('Timed out')):services.fetch(url,options);try{const result=await require('../../netlify/functions/run-henshin').handler(event());assert.equal(result.statusCode,202);assert.equal(JSON.parse(result.body).submission_uncertain,true);assert.equal(services.state().credits,90);assert.equal(services.state().record.meta.status,'pending');assert.equal(services.state().record.meta.submission_uncertain,true);}finally{global.fetch=original;}});
+test('Ambiguous provider timeout retains the reserved charge for callback reconciliation',async()=>{const original=global.fetch,services=mockServices();global.fetch=(url,options)=>String(url).includes('/videos/generations')?Promise.reject(Error('Timed out')):services.fetch(url,options);try{const result=await require('../../netlify/functions/run-henshin').handler(event());assert.equal(result.statusCode,202);assert.equal(JSON.parse(result.body).submission_uncertain,true);assert.equal(services.state().credits,91.2);assert.equal(services.state().record.meta.status,'pending');assert.equal(services.state().record.meta.submission_uncertain,true);}finally{global.fetch=original;}});
 test('Templates preserve the complete recreation recipe and reject invalid modes/hosts',()=>{
  const {templateInput,templatePublic}=require('../../lib/henshin/templates.cjs');
  const input=templateInput({video_url:url,source_video_url:url,image_urls:body.image_urls,prompt:'Change the jacket',mode:'edit',resolution:'1080p',keep_audio:false});
@@ -98,8 +111,8 @@ test('A temporary Market HTTP error stays pending and never refunds or saves inp
  try{const result=JSON.parse((await require('../../netlify/functions/henshin-check').handler({httpMethod:'GET',headers:{authorization:'Bearer test'},queryStringParameters:{uid,run_id:'fixture-run'}})).body);assert.equal(result.status,'pending');assert.equal(result.failed,undefined);assert.equal(writes,0);}finally{global.fetch=original;}
 });
 test('Provider timeout does not overwrite a result already saved by the callback',async()=>{
- const original=global.fetch,services=mockServices();global.fetch=(raw,options)=>{if(String(raw).includes('createTask')){const record=services.state().record;record.meta={...record.meta,task_id:'callback-task',status:'done'};record.result_url='https://results.example/generated.mp4';return Promise.reject(Error('Timed out'));}return services.fetch(raw,options);};
- try{const result=await require('../../netlify/functions/run-henshin').handler(event());assert.equal(result.statusCode,202);assert.equal(JSON.parse(result.body).taskId,'callback-task');assert.equal(services.state().record.meta.status,'done');assert.equal(services.state().credits,90);}finally{global.fetch=original;}
+ const original=global.fetch,services=mockServices();global.fetch=(raw,options)=>{if(String(raw).includes('/videos/generations')){const record=services.state().record;record.meta={...record.meta,task_id:'callback-task',status:'done'};record.result_url='https://results.example/generated.mp4';return Promise.reject(Error('Timed out'));}return services.fetch(raw,options);};
+ try{const result=await require('../../netlify/functions/run-henshin').handler(event());assert.equal(result.statusCode,202);assert.equal(JSON.parse(result.body).taskId,'callback-task');assert.equal(services.state().record.meta.status,'done');assert.equal(services.state().credits,91.2);}finally{global.fetch=original;}
 });
 
 test('Every mode keeps its detailed built-in instructions; the user text is only added as an extra request',()=>{
@@ -236,11 +249,11 @@ test('Video edit accepts no images without inventing an image reference, includi
  const original=global.fetch,services=mockServices();global.fetch=services.fetch;
  try{
   const input={...body,mode:'edit',image_urls:[],prompt:'Make the background blue.',keep_audio:true};
-  assert.equal(common.validate(input).cost,12);assert.doesNotMatch(common.promptFor(input),/@Image|@Audio/);assert.match(common.promptFor(input),/Make the background blue/);
+  assert.equal(common.validate(input).cost,10.5);assert.doesNotMatch(common.promptFor(input),/@Image|@Audio/);assert.match(common.promptFor(input),/Make the background blue/);
   for(const mode of ['motion','swap'])assert.throws(()=>common.validate({...input,mode}),/1–30/);
   const {templateInput}=require('../../lib/henshin/templates.cjs');assert.deepEqual(templateInput(input).reference_image_urls,[]);
   const response=await require('../../netlify/functions/run-henshin').handler(event(input));assert.equal(response.statusCode,201);
-  assert.deepEqual(services.state().providerInput.reference_image_urls,[]);assert.doesNotMatch(services.state().providerInput.prompt,/@Image|@Audio/);assert.ok(services.state().record.meta.source_audio_url);
+  assert.equal(services.state().providerInput.image_urls,undefined);assert.doesNotMatch(services.state().providerInput.prompt,/@Image|@Audio/);assert.ok(services.state().record.meta.source_audio_url);
  }finally{global.fetch=original;}
 });
 test('Library pages return 24 recipes and an explicit next offset, with a separate playback preview',async()=>{

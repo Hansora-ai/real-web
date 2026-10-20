@@ -72,15 +72,15 @@
  const hero=$('heroVideo');hero.src=config.heroVideoURL;
  if(!matchMedia('(prefers-reduced-motion: reduce)').matches)hero.play().catch(()=>{});
  document.addEventListener('visibilitychange',()=>{if(document.hidden){hero.pause();syncLibraryPlayback();}else{if(!matchMedia('(prefers-reduced-motion: reduce)').matches)hero.play().catch(()=>{});syncLibraryPlayback();}});
- const rates={'480p':2,'720p':4.2,'1080p':9};
+ const rates=window.SeedancePricing.henshinRates;
  function status(text,error=false){if(busy&&submission){submission=text;renderResults();}$('status').textContent=text;$('status').classList.toggle('error',error);}
- function cost(){return seconds?Math.round(Math.ceil(seconds)*rates[resolution]*10):rates[resolution]*10;}
+ function cost(){return seconds?window.SeedancePricing.quote({model:'seedance25',resolution,inputSeconds:seconds,edit:true}).displayedCredits:0;}
  function update(){ $('cost').hidden=!seconds; $('cost').textContent=seconds?(i18n?.credits(cost())||`${cost()} credits`):'';$('generate').disabled=busy||sourcePending||imagePending>0||!source||!seconds||(mode!=='edit'&&!images.length);$('imagesAddEmpty').querySelector('small').textContent=mode==='edit'?t('Optional · up to 30 reference images'):t('Up to 30 reference images'); }
  async function session(){return (await sb.auth.getSession()).data.session;}
  async function request(route,body,method='POST'){
   const s=await session();if(!s) throw Error(t('Sign in first.'));
   const r=await fetch('/.netlify/functions/'+route,{method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+s.access_token},body:JSON.stringify(body)});
-  const data=await r.json();if(!r.ok||!data.ok) throw Error(data.error||t('Request failed.'));return data;
+  const data=await r.json();if(!r.ok||!data.ok){if(route==='run-henshin'&&r.status===409&&Number.isFinite(data.input_seconds)){seconds=data.input_seconds;update();}throw Error(data.error||t('Request failed.'));}return data;
  }
  async function upload(file){try{const result=await window.kieUploadBridge.upload(file,{bucket:'video',timeoutMs:300000});if(!result.publicUrl)throw Error(t('Upload returned no file URL.'));return result.publicUrl;}catch(e){throw Error(t('Could not upload “{name}”. {error}',{name:file.name,error:t(/timeout|network|aborted|failed_0/.test(e.message)?t('Check your connection and try again.'):e.message||t('Please try again.'))}));}}
  async function setSource(file){
@@ -209,7 +209,7 @@
    if(error)throw error;rows=(data||[]).filter(row=>isHenshin(row)||isSeedance(row));
    // Resume shared KIE checking after navigation or a browser reload.
    await Promise.allSettled(rows.filter(row=>!row.result_url&&!/fail|reject|cancel/.test(row.meta?.status||'')&&row.meta?.task_id).map(async row=>{
-    const qs=new URLSearchParams({uid:s.user.id,run_id:row.meta.run_id,taskId:row.meta.task_id});const checker=isHenshin(row)?'henshin-check':'kie-check';const r=await fetch('/.netlify/functions/'+checker+'?'+qs,{cache:'no-store',headers:isHenshin(row)?{Authorization:'Bearer '+s.access_token}:{}});const data=await r.json();const url=data.result_url||data.video_url||data.urls?.[0];if(url)row.result_url=url;if(data.meta)row.meta=data.meta;if(data.failed)row.meta.status='failed';
+    const qs=new URLSearchParams({uid:s.user.id,run_id:row.meta.run_id,taskId:row.meta.task_id});const checker=isHenshin(row)?'henshin-check':(row.meta.source==='reapi'?'reapi-check':'kie-check');const r=await fetch('/.netlify/functions/'+checker+'?'+qs,{cache:'no-store',headers:{Authorization:'Bearer '+s.access_token}});const data=await r.json();const url=data.result_url||data.video_url||data.urls?.[0];if(url)row.result_url=url;if(data.meta)row.meta=data.meta;if(data.failed)row.meta.status='failed';
    }));renderResults();
   }catch(e){status(t('Could not load recent generations.')+' '+t(e.message),true);}finally{refreshing=false;}
  }
@@ -222,7 +222,7 @@
    status(t('Preparing a compatible MP4 source…'));const prepared=await window.HenshinMedia.compress(input);
    status(t('Uploading your source video and references…'));const videoURL=await upload(prepared),imageURLs=[];for(const file of refs) imageURLs.push(await upload(file));
    setView('history');status(t('Starting your transformation…'));
-   const data=await request('run-henshin',{run_id:crypto.randomUUID(),video_url:videoURL,image_urls:imageURLs,keep_audio:preserve,source_video_duration:duration,resolution:quality,mode:chosenMode,prompt});
+   const data=await request('run-henshin',{run_id:crypto.randomUUID(),video_url:videoURL,image_urls:imageURLs,keep_audio:preserve,source_video_duration:duration,resolution:quality,mode:chosenMode,prompt,expected_credits:window.SeedancePricing.quote({model:'seedance25',resolution:quality,inputSeconds:duration,edit:true}).displayedCredits});
    if(data.credits!==undefined)window.HansoraHeader?.setCredits?.(data.credits);
    window.HansoraHeader?.startCreditsPolling?.(90000,1500);status(data.submission_uncertain?t(data.message):preserve?t('Generating. Your finished video will include the original soundtrack.'):t('Generating your Henshin video…'));await refresh();
   }catch(e){status(t(e.message),true);}finally{busy=false;submission=null;renderResults();update();}

@@ -24,6 +24,23 @@
 [functions."henshin-check"]
   timeout = 60
 
+[functions."run-seedance-2"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+[functions."run-seedance-25"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+[functions."run-seedance-cheap"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+[functions."run-seedance-25-cheap"]
+  timeout = 60
+  included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
+[functions."reapi-check"]
+  timeout = 60
+[functions."reapi-sweep"]
+  timeout = 60
+
 [functions."henshin-finish-background"]
   included_files = ["public/vendor/henshin/ffmpeg-core.wasm"]
 

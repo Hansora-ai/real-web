@@ -8,6 +8,7 @@
     "test:sales-agent": "node --test test/sales-agent/*.test.mjs",
     "test:mcp": "node --test test/hansora-mcp/*.test.mjs",
     "test:henshin": "node --test test/henshin/*.test.cjs",
+    "test:reapi": "node --test test/reapi/*.test.mjs",
     "build:functions": "node scripts/build-netlify-functions.mjs",
     "test:runtime": "node --test test/netlify/*.test.mjs",
     "test:kie": "node --test test/kie/*.test.*",

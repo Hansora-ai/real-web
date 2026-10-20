@@ -216,6 +216,7 @@ async function patchGenerationMeta(id, meta){
 async function markFailedAndRefundOnce({ uid, run_id, taskId, reason }){
   const row = await findGeneration({ uid, run_id, taskId });
   if (!row) return { ok:false, error:'generation_not_found' };
+  if (row.meta?.source === 'reapi') return { ok:false, error:'wrong_provider_checker' };
 
   const meta = row.meta || {};
   const nextMetaBase = {

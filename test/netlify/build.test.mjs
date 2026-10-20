@@ -20,6 +20,10 @@ test('Netlify bundles all endpoints on API v2 with routes, background jobs and s
       basePath: root, repositoryRoot: root, parallelLimit: 4,
       config: { '*': { nodeBundler: 'esbuild', nodeVersion: '22.x' },
         'run-henshin': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
+        'run-seedance-2': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
+        'run-seedance-25': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
+        'run-seedance-cheap': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
+        'run-seedance-25-cheap': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
         'henshin-templates': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
         'henshin-finish-background': { includedFiles: ['public/vendor/henshin/ffmpeg-core.wasm'] },
         'dispatch-unlimited-queue': { schedule: '* * * * *' },
@@ -39,6 +43,11 @@ test('Netlify bundles all endpoints on API v2 with routes, background jobs and s
     assert.equal(get('audio-eleven-background').invocationMode, 'background');
     assert.equal(get('henshin-finish-background').invocationMode, 'background');
     assert.equal(get('henshin-sweep').schedule, '* * * * *');
+    assert.equal(get('reapi-sweep').schedule, '* * * * *');
+    assert.ok(get('reapi-check'));
+    for (const name of ['run-henshin','run-seedance-2','run-seedance-25','run-seedance-cheap','run-seedance-25-cheap']) {
+      assert.ok((await readFile(get(name).path)).includes(Buffer.from('public/vendor/henshin/ffmpeg-core.wasm')), `${name} must include the duration-probing WASM`);
+    }
     assert.equal(get('kie-missing-task-sweep').schedule, '* * * * *');
     assert.equal(get('dispatch-unlimited-queue').schedule, '* * * * *');
     assert.equal(get('automation-flow-jobs').schedule, '* * * * *');
